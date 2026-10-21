@@ -113,7 +113,7 @@ black text so I can identify it. Nothing else on the sheet.
 44. Switch Tab — switch between the two tabs: a closed tan calf-leather notebook with two index tabs on its fore-edge, the
     front tab brass — no plain white sheet
 THE RENDER PLAYER'S GLYPHS ARE POLISHED STEEL, ONE FAMILY: the four drawn transport glyphs (45–48; Player Next is the
-mirrored fifth), the check mark (6), the X (13) and Up a Folder's arrow (54) — polished steel, a cool pale grey metal with
+mirrored fifth), the check mark (6), the X (13) and the up arrow of no. 54 — polished steel, a cool pale grey metal with
 the dark outline and the same gloss, every one the SAME shade, so they stand apart from the brass of the editor's acts.
 Not silver-white, not green, not red, not blue.
 45. Play — a bold polished-steel triangle pointing right
@@ -127,8 +127,9 @@ Not silver-white, not green, not red, not blue.
 52. BPM Iterations — render the tempo sweep over a run: a wooden pyramid metronome, its pendulum mid-swing on the front face
 53. Card Critical — the notification card's error glyph: a bold red "!" on the same round parchment medallion (the
     twin of no. 51)
-54. Up a Folder — go up to the parent folder: the closed tan calf-leather music portfolio of no. 10 with a POLISHED-STEEL
-    arrow (the brass arrow's shape in steel) pointing up beside it
+54. Up One Level — climb out to the level above: ONE bold POLISHED-STEEL ARROW pointing UP (the set's arrow shape in
+    steel, as the check mark of no. 6 and the X of no. 13 stand alone), nothing else — no portfolio, no case, no paper,
+    no folder of any kind
 55. Transport Play — start playback in the editor: the conductor's ONE hand in a white lace cuff, large, filling the cell,
     RAISED high at the upbeat holding the baton straight up at 90 degrees — no face, no body, seen from behind the condutor
 56. Transport Stop — stop playback in the editor: the SAME cuffed hand, large, LOWERED flat, palm down, the baton held

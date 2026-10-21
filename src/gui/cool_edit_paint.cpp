@@ -1,5 +1,6 @@
 #include "cool_edit_paint.h"
 
+#include "materials.h"   // the case's ebony, the tabs' brass, the inks
 #include "text_shape.h"
 
 #include <algorithm>
@@ -13,9 +14,7 @@
 
 namespace {
 
-void cell(cairo_t* cr, int x, int y, int w, int h, uint32_t word) {
-    paint_cell_rect(cr, GuiRect{x, y, w, h}, hex(word));
-}
+// One cell of a surface tone (paint_cell_rect: the scope's material).
 void cell(cairo_t* cr, int x, int y, int w, int h, GuiColor c) {
     paint_cell_rect(cr, GuiRect{x, y, w, h}, c);
 }
@@ -28,30 +27,6 @@ GuiColor lerp_color(const GuiColor& a, const GuiColor& b, double t) {
     return GuiColor{ch(a.r, b.r), ch(a.g, b.g), ch(a.b, b.b)};
 }
 
-// The shadow ramp's tone at step i of n (its two ends exact).
-GuiColor shadow_at(int i, int n) {
-    const double t = n > 1 ? static_cast<double>(i) / (n - 1) : 0.0;
-    return lerp_color(palette().ce_case_shadow_first,
-                      palette().ce_case_shadow_last, t);
-}
-
-// The seat's face over the g x g square at (x, y): stop i on the seat's W
-// row i, its device rows the rounded edges i·g/20 to (i+1)·g/20 (the
-// ramp's rule, cool_edit_paint.h).
-void paint_face_ramp(cairo_t* cr, int x, int y, int g) {
-    const auto& ramp = palette().ce_case_ramp;
-    const int m = static_cast<int>(ramp.size());
-    for (int i = 0; i < m; ++i) {
-        const int y0 = static_cast<int>(
-            std::nearbyint(static_cast<double>(i) * g / m));
-        const int y1 = static_cast<int>(
-            std::nearbyint(static_cast<double>(i + 1) * g / m));
-        if (y1 > y0)
-            cell(cr, x, y + y0, g, y1 - y0,
-                 ramp[static_cast<std::size_t>(i)]);
-    }
-}
-
 } // namespace
 
 int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
@@ -60,41 +35,52 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
     const int g  = r.w - 3 * lw;   // the glyph seat: the case less its lines
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // THE CASE'S OWN TONES ARE FLAT, never a scope's (the ebony's lines and
+    // Cool Edit's constants, materials.h's CASE).
+    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
     if (down) {
         // THE OUTER RING, black on the top row and left column and F8F8F8
         // on the bottom row and right column, MITRED at its top-right and
         // bottom-left corner blocks (the head's diagonal rule: a two-tone
         // ring, as the chrome's sunken edges are, accepted 2026-10-09); 808080
         // inside the black, square (one tone, its partner the face); the
-        // ramp on the seat one line further in.
+        // ramp on the seat one line further in, the ebony's pressed patch
+        // (materials::paint_case_ramp).
         paint_relief_frame(cr, r, hex(kCeRingOuter), hex(kCeRingLight));
-        cell(cr, r.x + lw, r.y + lw, lw + g, lw, kCeRingMid);
-        cell(cr, r.x + lw, r.y + lw, lw, lw + g, kCeRingMid);
-        paint_face_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, g);
+        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw + g, lw},
+                       hex(kCeRingMid));
+        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw, lw + g},
+                       hex(kCeRingMid));
+        materials::paint_case_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, g, true);
         cairo_restore(cr);
         return lw;
     }
-    paint_face_ramp(cr, r.x + lw, r.y + lw, g);
+    materials::paint_case_ramp(cr, r.x + lw, r.y + lw, g, false);
     // THE HIGHLIGHT / SHADOW RING inside the black line, MITRED at its
     // top-right and bottom-left corner blocks (the head's diagonal rule):
     // the highlight's square L, the shadow's first tone over it as the
     // mitred L — Cool Edit's measured ADAEAF junction pixel is exactly the
     // two tones' half-and-half, the diagonal at one capture px — then the
     // shadow's ramp over the ring's straight runs, each step one device row
-    // or column, the corner blocks left as the mitre drew them.
+    // or column, the corner blocks left as the mitre drew them: the ebony's
+    // flat strokes (materials::case_lines).
+    const materials::CaseLines lines = materials::case_lines();
     paint_relief_frame(cr, GuiRect{r.x, r.y, r.w - lw, r.h - lw},
-                       palette().ce_case_highlight,
-                       palette().ce_case_shadow_first);
+                       lines.highlight, lines.shadow_first);
     for (int i = 0; i < g; ++i) {
-        const GuiColor s = shadow_at(i, g);
-        cell(cr, r.x + lw + g, r.y + lw + i, lw, 1, s);
-        cell(cr, r.x + lw + i, r.y + lw + g, 1, lw, s);
+        const double t = g > 1 ? static_cast<double>(i) / (g - 1) : 0.0;
+        const GuiColor sh = lerp_color(lines.shadow_first, lines.shadow_last, t);
+        paint_ink_rect(cr, GuiRect{r.x + lw + g, r.y + lw + i, lw, 1}, sh);
+        paint_ink_rect(cr, GuiRect{r.x + lw + i, r.y + lw + g, 1, lw}, sh);
     }
     // The shadow's own corner (one tone, square), then the black line on
     // the right and bottom (one tone, square).
-    cell(cr, r.x + lw + g, r.y + lw + g, lw, lw, palette().ce_case_corner);
-    cell(cr, r.x + 2 * lw + g, r.y, lw, r.h, kCeCaseOuter);
-    cell(cr, r.x, r.y + 2 * lw + g, r.w, lw, kCeCaseOuter);
+    paint_ink_rect(cr, GuiRect{r.x + lw + g, r.y + lw + g, lw, lw},
+                   lines.corner);
+    paint_ink_rect(cr, GuiRect{r.x + 2 * lw + g, r.y, lw, r.h},
+                   hex(kCeCaseOuter));
+    paint_ink_rect(cr, GuiRect{r.x, r.y + 2 * lw + g, r.w, lw},
+                   hex(kCeCaseOuter));
     cairo_restore(cr);
     return 0;
 }
@@ -164,56 +150,18 @@ void paint_ce_dock_bar(cairo_t* cr, const GuiRect& bar) {
     cairo_restore(cr);
 }
 
-void paint_ce_gripper(cairo_t* cr, int x, int case_y, int case_h) {
+void paint_ce_row8_bar(cairo_t* cr, int x, int y, int h) {
+    if (h <= 0) return;
     const int lw = program_line_px();
-    const int reach = scaled_px(kProgramSpec.gripper_reach_px);
-    const int y0 = case_y - reach;
-    const int h  = case_h + 2 * reach;
-    const GuiPalette& p = palette();
-    // ONE ETCHED PAIR at column `cx`: the light column on rows [y0, y0 + h)
-    // and the mid column right of it one line lower — a two-line STAIRCASE
-    // at each end, drawn as its diagonal (the head's rule): each end cut
-    // along the 45-degree line through the two end cells' like corners (the
-    // top-left corners at the head, the bottom-right at the foot), so the
-    // pair is a parallelogram that keeps the staircase's two outermost
-    // corners and each end cell its half toward the column. The two share
-    // their pixel-aligned seam; the cuts are antialiased against the face.
-    const auto pair = [&](int cx) {
-        const double a = cx, b = cx + lw, c = cx + 2 * lw;
-        const double t = y0, e = y0 + h;
-        cairo_new_path(cr);
-        cairo_move_to(cr, a, t);
-        cairo_line_to(cr, b, t + lw);
-        cairo_line_to(cr, b, e);
-        cairo_line_to(cr, a, e - lw);
-        cairo_close_path(cr);
-        set_palette_source(cr, p.ce_hilight);
-        cairo_fill(cr);
-        cairo_move_to(cr, b, t + lw);
-        cairo_line_to(cr, c, t + 2 * lw);
-        cairo_line_to(cr, c, e + lw);
-        cairo_line_to(cr, b, e);
-        cairo_close_path(cr);
-        set_palette_source(cr, p.ce_mid);
-        cairo_fill(cr);
-    };
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    pair(x);
-    pair(x + 3 * lw);
-    cairo_restore(cr);
-}
-
-void paint_ce_end_bar(cairo_t* cr, int x, int y, int h) {
-    const int lw = program_line_px();
-    const int face = scaled_px(kProgramSpec.end_bar_face_px);
+    const int face = scaled_px(kProgramSpec.row8_bar_face_px);
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The light / mid ring, MITRED (the head's rule); the dark column right
-    // of it one tone, square.
-    paint_relief_frame(cr, GuiRect{x, y, 2 * lw + face, h}, p.ce_hilight,
-                       p.ce_mid);
+    // Four square columns the run's height (the declaration): the light, the
+    // face (the scope's cover as drawn), the mid and the dark.
+    cell(cr, x, y, lw, h, p.ce_hilight);
+    cell(cr, x + lw, y, face, h, p.face);
+    cell(cr, x + lw + face, y, lw, h, p.ce_mid);
     cell(cr, x + 2 * lw + face, y, lw, h, p.ce_dark);
     cairo_restore(cr);
 }
@@ -223,8 +171,11 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cell(cr, f.x, f.y, f.w, f.h, p.ce_mid);
-    // The field-dark / field-light ring, MITRED (the head's rule).
+    // THE GROUND BLACK (materials.h's kTimeFieldGround, 2026-10-21; Cool
+    // Edit's `mid` tone until then), ink: a constant, flat.
+    paint_ink_rect(cr, f, hex(kTimeFieldGround));
+    // The field-dark / field-light ring, MITRED (the head's rule), the
+    // scope's tones.
     paint_relief_frame(cr, f, p.ce_field_dark, p.ce_field_light);
     cairo_restore(cr);
 }
@@ -247,7 +198,7 @@ void mitre_top_right(cairo_t* cr, int bx, int by, int lw, GuiColor top,
     cairo_line_to(cr, bx + lw, by + lw);
     cairo_line_to(cr, bx, by + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, right);
+    set_surface_source(cr, right);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -266,7 +217,7 @@ void foot_bottom_right(cairo_t* cr, int bx, int by, int lw, GuiColor column,
     cairo_line_to(cr, bx + lw, by);
     cairo_line_to(cr, bx + lw, by + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, column);
+    set_surface_source(cr, column);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -285,7 +236,7 @@ void foot_bottom_left(cairo_t* cr, int bx, int by, int lw, GuiColor column,
     cairo_line_to(cr, bx + lw, by);
     cairo_line_to(cr, bx, by + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, column);
+    set_surface_source(cr, column);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -347,9 +298,16 @@ void paint_ce_tab_strip(
     const int page_y = lane.y + recess_h;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE GROUND: the recess, then the page's top light line.
-    cell(cr, lane.x, lane.y, lane.w, recess_h, p.ce_recess);
-    cell(cr, lane.x, page_y, lane.w, lane.h - recess_h, p.ce_hilight);
+    // THE GROUND, THE WOOD (materials.h's WOOD, 2026-10-21): the strip's
+    // recess the wood as drawn (the Face's cover — the frame's plank, not the
+    // band's void), then the page's top light line, the wood's flat stroke.
+    {
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+        cell(cr, lane.x, lane.y, lane.w, recess_h, p.face);
+        cell(cr, lane.x, page_y, lane.w, lane.h - recess_h, p.ce_hilight);
+    }
+    // THE TABS, THE BRASS (materials.h's METAL): every body and edge below.
+    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
     // THE TAB LINE, one run under the inactive tabs, one W past each end
     // (its own rounded part).
     const int reach = scaled_px(kProgramSpec.tab_line_reach_px);
@@ -366,20 +324,13 @@ void paint_ce_tab_strip(
     for (int i = 0; i < kCeTabCount; ++i) {
         const GuiRect& t = layout.tab[static_cast<std::size_t>(i)];
         if (i != active) {
-            // THE BODY: one measured stop per W row of its 15, the rows
-            // tiling it exactly (kCaseRamp's rule).
+            // THE BODY: the brass under Cool Edit's measured 15-row gradient
+            // as a luma ratio, one stop per W row of its 15, the rows tiling
+            // it exactly (kCaseRamp's rule) — its baked rows
+            // (materials::paint_tab_body; materials.h's METAL).
             const int body_y = t.y + lw;
-            const int g = page_y - body_y;
-            const int m = static_cast<int>(p.ce_tab_body.size());
-            for (int r = 0; r < m; ++r) {
-                const int y0 = static_cast<int>(
-                    std::nearbyint(static_cast<double>(r) * g / m));
-                const int y1 = static_cast<int>(
-                    std::nearbyint(static_cast<double>(r + 1) * g / m));
-                if (y1 > y0)
-                    cell(cr, t.x + lw, body_y + y0, t.w - 2 * lw, y1 - y0,
-                         p.ce_tab_body[static_cast<std::size_t>(r)]);
-            }
+            materials::paint_tab_body(
+                cr, GuiRect{t.x + lw, body_y, t.w - 2 * lw, page_y - body_y});
             // THE EDGES: the light top row and left column, the dark right
             // column, the top-right block mitred.
             cell(cr, t.x, t.y, lw, t.h, p.ce_tab_light);
@@ -395,19 +346,24 @@ void paint_ce_tab_strip(
         const int end = t.x + t.w;          // past the shadow column
         const int shadow_x = end - grow;    // the drop shadow
         const int mid_x = shadow_x - lw;    // the mid right column
-        // THE FACE through the page line (the tab merges into the page), the
-        // hilight left column through it too, the hilight top row, the mid
-        // right column under its mitred top-right block.
+        // THE FACE through the page line (the tab merges into the page) — the
+        // brass as drawn — the hilight left column through it too, the
+        // hilight top row, the mid right column under its mitred top-right
+        // block.
         cell(cr, t.x, t.y, shadow_x - t.x, t.h, p.face);
         cell(cr, t.x, t.y, lw, t.h, p.ce_hilight);
         cell(cr, t.x, t.y, mid_x - t.x, lw, p.ce_hilight);
         cell(cr, mid_x, t.y + lw, lw, page_y - t.y - lw, p.ce_mid);
         mitre_top_right(cr, mid_x, t.y, lw, p.ce_hilight, p.ce_mid);
-        // THE SHADOW, square: the recess in its top cell, the page-dark tone
-        // to the recess's last row, the page line under it.
+        // THE SHADOW, square: the strip's ground in its top cell (the wood as
+        // drawn), the page-dark tone to the recess's last row, the page line
+        // under it.
         const GuiColor under_shadow =
             run_covers(shadow_x) ? p.ce_tab_line : p.ce_hilight;
-        cell(cr, shadow_x, t.y, grow, lw, p.ce_recess);
+        {
+            const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+            cell(cr, shadow_x, t.y, grow, lw, p.face);
+        }
         cell(cr, shadow_x, t.y + lw, grow, page_y - t.y - lw, p.ce_page_dark);
         cell(cr, shadow_x, page_y, grow, lw, under_shadow);
         // THE TWO FEET, one ring's two bottom corners (the declaration): the
@@ -419,8 +375,11 @@ void paint_ce_tab_strip(
         if (run_covers(t.x - 1))
             foot_bottom_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
     }
-    // THE LABELS, the lit tab's in the program text, an unlit tab's in its
-    // measured ink, a dead tab's embossed.
+    // THE LABELS NEAR-WHITE over the words' drop shadow at (+d, +d) device
+    // px, d the `text_shadow` key (materials.h's INKS, 2026-10-21; the
+    // program text and Cool Edit's measured ink until then), lit or not; a
+    // dead tab's embossed in the brass's tones.
+    const double d = static_cast<double>(materials::text_shadow_px());
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
         const text_shape::ShapedRun& run = *labels[k];
@@ -428,7 +387,10 @@ void paint_ce_tab_strip(
             show_embossed_run(cr, run, layout.label_x[k], layout.baseline[k]);
             continue;
         }
-        set_palette_source(cr, i == active ? p.ce_text : p.ce_tab_label);
+        set_palette_source(cr, hex(kWordShadow));
+        text_shape::show_shaped_run(cr, run, layout.label_x[k] + d,
+                                    layout.baseline[k] + d);
+        set_palette_source(cr, hex(kNearWhite));
         text_shape::show_shaped_run(cr, run, layout.label_x[k],
                                     layout.baseline[k]);
     }

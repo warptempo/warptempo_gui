@@ -5,6 +5,7 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "icons.h"                  // drop_rasters on a scale change
+#include "materials.h"              // the materials' rebake at True Colors and a scale commit
 #include "onscreen_keyboard.h"      // the keyboard band's wheel swallow
 #include "render.h"
 #include "device_config.h"
@@ -4193,6 +4194,9 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     gui.set_touch_slop_px(drag_moved_threshold_px());
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
+    // THE MATERIALS AT THE NEW SCALE, AT ONCE (materials.h's BAKE RULE: one
+    // act, one bake — the settle gate is a frame drag's alone).
+    materials::ensure(app);
 }
 
 void GuiInputHandler::toggle_true_colors() {
@@ -4200,6 +4204,9 @@ void GuiInputHandler::toggle_true_colors() {
     const WaveformPlateInks before = waveform_plate_inks();
     install_true_colors(!display_transform::true_colors());
     icons::drop_rasters();
+    // THE MATERIALS HOLD THE WINDOW'S BYTES (materials.h's BAKE RULE): baked
+    // again now, before the flag cache's boxes are refreshed from them.
+    materials::ensure(app);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     viewport.invalidate_all();

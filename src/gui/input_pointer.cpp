@@ -1601,8 +1601,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // ever hidden. The keyboard is untouched: the chord is refused by the
 // allowlist exactly as before. Outside the view nothing is hidden.
 bool history_mode_hides_button(const AppState& app, RedesignButton b) {
-    return app.history_mode.active &&
-           history_mode_refuses_button_chord(nullptr, b);
+    return app.history_mode.active && history_view_hides_button(b);
+}
+bool history_view_hides_button(RedesignButton b) {
+    return history_mode_refuses_button_chord(nullptr, b);
 }
 
 // (THE MODE-COLLAPSING ROSTER IS DELETED — architect 2026-08-14, "no more

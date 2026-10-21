@@ -14,8 +14,9 @@
 // the program is Cool Edit: one source color, the tones its arithmetic) —
 // AND SINCE 2026-10-10 THE CHROME'S TOO (architect 2026-10-10, "the chrome
 // color should just be the Cool Edit theme color … even the font color, all
-// of that would be inherited from Cool Edit": every chrome role but the
-// caption's six is one of the tones below, chrome_derive.h the mapping).
+// of that would be inherited from Cool Edit": every chrome role is one of
+// the tones below, chrome_derive.h the mapping — the caption's six, a
+// scheme's, the exception until they left with the captions 2026-10-21).
 // The program's panel — the toolbar band, the dock
 // bar, row 8 and, in later parts, the canvas column's frames — takes ONE
 // palette role, `face` (Cool Edit's "Dockable Window 3D Color", its scheme
@@ -102,10 +103,11 @@
 // ground is the dark `mid` at every Face (§2a, §3a) — so the field text is
 // `text` at every Face (field_text below). THE CHROME WEARS THEM
 // (chrome_derive.h): the label, the clock text and the card text the swapping
-// text, the field text the never-swapping one — and so does THE PROGRAM'S
+// text, the field text the never-swapping one — and so did THE PROGRAM'S
 // OWN TIME FIELD (row 8's clock, the render player's two fields: the
 // `ce_field_text` member, architect 2026-10-10, "whatever Cool Edit seems to
-// be doing as far as the dark text, we do that as well").
+// be doing as far as the dark text, we do that as well") until the
+// fortepiano chrome's amber on black, 2026-10-21 (materials.h's INKS).
 //
 // THE PANEL LABEL AND ITS OWN SWAP (2026-10-10, the same ruling; §2c, §2e,
 // §3a, §3c): the label's ink on a dark Face is `label`, L' = .244·L + .750
@@ -281,13 +283,13 @@ inline constexpr Tone kTones[] = {
     // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
     // "Files"' and the field digits' light ink on a dark Face — the chrome's
     // label, clock and card text below the swap and its field text at
-    // every Face (chrome_derive.h), and THE PROGRAM'S TIME FIELDS' DIGITS at
-    // every Face (`ce_field_text`: the field's ground is the dark `mid`, so
-    // it never swaps) — and Cool Edit's swapped dark ink above the
+    // every Face (chrome_derive.h; THE PROGRAM'S TIME FIELDS' DIGITS too,
+    // `ce_field_text`, 2026-10-10..10-21, the amber since, materials.h) —
+    // and Cool Edit's swapped dark ink above the
     // threshold, measured on Safari So Good (C1B791, its clock 312A10). The
     // chrome's selected text is the pair's other member (selected_text,
     // architect 2026-10-16).
-    {"text",         0xEFF0F0, 0.086,  0.900, &GuiPalette::ce_field_text,
+    {"text",         0xEFF0F0, 0.086,  0.900, nullptr,
      ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
@@ -588,9 +590,9 @@ inline constexpr CaseTone kCaseHighlight = {0.02150, 0.97950, 1.18600, 0xFDFEFF}
 inline constexpr CaseTone kCaseShadowFirst = {-0.00100, 0.37000, 0.08200, 0x5D5E5E};
 inline constexpr CaseTone kCaseShadowLast  = {0.00650, 0.29850, 0.08200, 0x4C4D4D};
 inline constexpr CaseTone kCaseCorner      = {0.00450, 0.29500, 0.08100, 0x4B4C4C};
-// The GuiPalette members the case fills (the ramp's array and the four
-// lines), counted by palette_file.cpp's coverage check.
-inline constexpr std::size_t kCaseMemberCount = kCaseRamp.size() + 4;
+// (The GuiPalette members the case filled, its ramp's array and four lines
+// off the panel's Face, left 2026-10-21: the case is the ebony's,
+// materials.h's CASE, which takes its stop count from this ramp's.)
 
 constexpr bool within_two(uint32_t x, uint32_t y) {
     for (int shift = 0; shift <= 16; shift += 8) {
@@ -743,11 +745,11 @@ static_assert([] {
     const TabBody& d = tab_body(kDefaultFace);
     return d.rows == kMetrics && d.label == 0xCECFD1;
 }());
-// The GuiPalette members the inactive tab fills (the body's array and the
-// label) and THE ACTIVE TAB'S LABEL, the program text (program_text above,
-// `ce_text`), counted by palette_file.cpp's coverage check.
-inline constexpr std::size_t kTabMemberCount =
-    std::tuple_size_v<decltype(TabBody::rows)> + 2;
+// (The GuiPalette members the tabs filled — the inactive body's array, its
+// label and the active label in the program text — left 2026-10-21: the
+// install reads DEFAULT'S ROW alone, the gradient the inactive tab's brass
+// body wears as a luma ratio, materials.h's METAL; the labels are the
+// near-white.)
 
 // -- THE DISABLED CUE'S FADED LOOK (architect 2026-10-10 ~12:20) ---------------
 
@@ -764,9 +766,10 @@ inline constexpr std::size_t kTabMemberCount =
 //                  color of an invalid cue or a history REMOVED flag,
 //                  2026-10-11) 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;
-//   the LABEL      the resting label's tone (`hilight`, Cool Edit's cue-label
-//                  ink, re-verified on three captures 2026-10-10) 65 % toward
-//                  the Face — "blended further … a faded, opaque sort of
+//   the LABEL      the resting label's ink (Cool Edit's cue-label ink
+//                  `hilight`, re-verified on three captures 2026-10-10; the
+//                  lanes' near-white on the brass since 2026-10-21,
+//                  materials.h) 65 % toward the Face — "blended further … a faded, opaque sort of
 //                  look", the text legible least of the three.
 // A selected inert segment keeps the selected label color (the chrome's
 // `label`) so its selection still shows; a disabled cue has no dots.
@@ -795,10 +798,11 @@ constexpr uint32_t disabled_cue_shadow(uint32_t face) {
     return mix_toward(tone_of(named_tone("cue_shadow"), face, 0), face,
                       kDisabledShadowMix);
 }
-// The resting label tone of `face`, faded toward it.
-constexpr uint32_t disabled_cue_label(uint32_t face) {
-    return mix_toward(tone_of(named_tone("hilight"), face, 0), face,
-                      kDisabledLabelMix);
+// The resting label's ink `label` faded toward `face` — the lanes'
+// near-white on the brass since 2026-10-21 (materials.h's INKS; Cool Edit's
+// `hilight` tone of the Face until then).
+constexpr uint32_t disabled_cue_label(uint32_t label, uint32_t face) {
+    return mix_toward(label, face, kDisabledLabelMix);
 }
 // The GuiPalette members these fill (the faded cue triangle, the faded
 // invalid triangle, the faded shadow, the faded label), counted by

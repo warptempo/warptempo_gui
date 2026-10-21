@@ -1,7 +1,7 @@
 #include "platform_wayland.h"
 
 #include "gui_font.h"
-#include "palette_file.h"    // kGuiDefaultSchemeKey, kGuiDefaultPaletteKey: the template's defaults
+#include "palette_file.h"    // kGuiDefaultPaletteKey: the template's default
 #include "render.h"          // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
@@ -698,11 +698,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     }
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
-    // THE DEFAULTS SPELLED (architect 2026-10-14: every key required):
-    // `caption=default` and `chrome=cool-edit-default`, the tablet's
-    // template the same (palette_file.h owns both names).
-    cfg.scheme        = kGuiDefaultSchemeKey;
-    cfg.palette       = kGuiDefaultPaletteKey;
+    // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
+    // `waveform=cool-edit-default`, the tablet's template the same
+    // (palette_file.h owns the name).
+    cfg.waveform      = kGuiDefaultPaletteKey;
     // NO ROLE (architect 2026-10-10): the program never invents one, so the
     // stamped file's read-back refuses on the required `role` key and the
     // hand adds `role=mirror` here (GuiDeviceRole, device_config.h).
@@ -758,6 +757,49 @@ std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files() {
     return read_bundle_folder(
         std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR), {".svg", ".png"});
+}
+
+// The materials: assets/tiles/, every `.png` and `.jpg` by name, and one
+// file read in one sized fread (contract at the declaration; materials.h).
+std::expected<std::vector<std::string>, std::string>
+GuiPlatform::bundled_tile_names() {
+    const std::filesystem::path folder(WARPTEMPO_BUNDLED_TILES_DIR);
+    std::vector<std::string> out;
+    std::error_code ec;
+    std::filesystem::directory_iterator it(folder, ec);
+    for (; !ec && it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        const std::string name = it->path().filename().string();
+        if (!name.ends_with(".png") && !name.ends_with(".jpg")) continue;
+        std::error_code tec;
+        if (it->is_regular_file(tec)) out.push_back(name);
+    }
+    if (ec) {
+        return std::unexpected("could not read '" + folder.string() + "': " +
+                               ec.message());
+    }
+    return out;
+}
+
+std::expected<std::string, std::string>
+GuiPlatform::bundled_tile_bytes(const std::string& name, std::size_t limit) {
+    const std::filesystem::path path =
+        std::filesystem::path(WARPTEMPO_BUNDLED_TILES_DIR) / name;
+    std::error_code ec;
+    const std::uintmax_t size = std::filesystem::file_size(path, ec);
+    if (ec) {
+        return std::unexpected("could not read '" + path.string() + "': " +
+                               ec.message());
+    }
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) return std::unexpected("could not open '" + path.string() + "'");
+    std::string bytes(static_cast<std::size_t>(
+                          std::min<std::uintmax_t>(size, limit)),
+                      '\0');
+    const std::size_t got = std::fread(bytes.data(), 1, bytes.size(), f);
+    std::fclose(f);
+    if (got != bytes.size())
+        return std::unexpected("could not read '" + path.string() + "' whole");
+    return bytes;
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {
@@ -2016,10 +2058,6 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     // The app declares CLIENT-area rects; the lists hold surface rects, the
     // frame added back (frame_px_, the header).
     invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
-}
-
-void GuiPlatform::invalidate_surface() {
-    invalidate_surface_rect(0, 0, width_, height_);
 }
 
 void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {

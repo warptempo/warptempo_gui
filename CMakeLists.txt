@@ -175,6 +175,11 @@ set(WARPTEMPO_GUI_SOURCES
     # cross-built static one (android/deps/85_resvg.sh) on Android.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
+    # GUI-ONLY, for svg_icon.cpp's reason: THE FORTEPIANO CHROME'S MATERIALS
+    # (architect 2026-10-21, materials.h) — the walnut, the brass and the
+    # ebony read from the bundle, decoded and scaled through svg_icon's road,
+    # baked once per window geometry and painted as the chrome's surfaces.
+    src/gui/materials.cpp
     src/gui/render.cpp
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
     # case, the same under every chrome (cool_edit_paint.h).
@@ -205,11 +210,11 @@ set(WARPTEMPO_GUI_SOURCES
     # role table and each chrome's compiled theme, no files.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
-    # THE COMPILED-IN PRESETS (2026-10-07; the schemes 2026-10-08; compiled
-    # in alone since 2026-10-14): the program's role table (eleven roles
-    # since 2026-10-11), the built-in palettes (Cool Edit's twenty presets,
-    # the one default `cool-edit-default`) and schemes, and the lookups the
-    # device config and the Settings Chrome and Caption rows read. GUI-ONLY.
+    # THE WAVEFORM PRESETS (2026-10-07; compiled in alone since 2026-10-14;
+    # the caption schemes gone since 2026-10-21): the program's role table
+    # (eleven roles since 2026-10-11), the built-in palettes (Cool Edit's
+    # twenty presets, the one default `cool-edit-default`), and the lookups
+    # the device config and the Settings Waveform row read. GUI-ONLY.
     src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
@@ -703,6 +708,13 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # so the Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
+    # THE BUNDLED MATERIALS' SOURCE ON THE LAPTOP (architect 2026-10-21, the
+    # fortepiano chrome; materials.h's head): the repository's own
+    # assets/tiles/, read by name (GuiPlatform::bundled_tile_names / _bytes)
+    # — a dropped material needs no rebuild here; the APK packs the same files
+    # as assets.
+    target_compile_definitions(warptempo_gui PRIVATE
+        WARPTEMPO_BUNDLED_TILES_DIR="${CMAKE_SOURCE_DIR}/assets/tiles")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}

@@ -8,6 +8,7 @@
 #include "gui_font.h"
 #include "folder_overlay.h"
 #include "icons.h"
+#include "materials.h"
 #include "onscreen_keyboard.h"
 #include "render.h"
 #include "text_editor.h"
@@ -20,8 +21,11 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <initializer_list>
 #include <span>
@@ -1275,9 +1279,21 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
     if (label != nullptr)
-        paint_cell_rect(cr,
-                        access_underline_rect(run, label, access, x, baseline),
-                        ink);
+        paint_ink_rect(cr,
+                       access_underline_rect(run, label, access, x, baseline),
+                       ink);
+}
+// THE WORDS ON THE WOOD (materials.h's INKS, 2026-10-21): a label in the old
+// brass over its drop shadow at (+d, +d) device px, d the `text_shadow`
+// key — the shadow's copy first, its underline with it, then the brass at
+// its place, each show_access_run's.
+void show_word_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
+                          const char* label, int access, double x,
+                          double baseline) {
+    const double d = static_cast<double>(materials::text_shadow_px());
+    show_access_run(cr, run, label, access, x + d, baseline + d,
+                    hex(kWordShadow));
+    show_access_run(cr, run, label, access, x, baseline, hex(kWordInk));
 }
 // The same in THE DISABLED EMBOSS (show_embossed_run's two copies, render.h):
 // the Hilight copy one relief line right and down, its line with it, then
@@ -1285,10 +1301,12 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
 void show_embossed_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
                               const char* label, int access, double x,
                               double baseline) {
+    // On a material its own tones (materials::flat, materials.h's INKS).
     const int off = relief_line_px();
     show_access_run(cr, run, label, access, x + off, baseline + off,
-                    palette().hilight);
-    show_access_run(cr, run, label, access, x, baseline, palette().shadow);
+                    materials::flat(palette().hilight));
+    show_access_run(cr, run, label, access, x, baseline,
+                    materials::flat(palette().shadow));
 }
 // A DIALOG BUTTON'S WORD (architect 2026-10-10, Windows strict): `run` the
 // word shaped, its access key underlined at byte `access` (-1: the word
@@ -1397,9 +1415,9 @@ constexpr CaptionGlyphPoint kCaptionCloseOutline[2][4] = {
 void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                          int gx, int gy, int u, GuiColor ink) {
     for (const CaptionGlyphRect& r : glyph)
-        paint_cell_rect(cr, GuiRect{gx + r.x * u, gy + r.y * u, r.w * u,
-                                    r.h * u},
-                        ink);
+        paint_ink_rect(cr, GuiRect{gx + r.x * u, gy + r.y * u, r.w * u,
+                                   r.h * u},
+                       ink);
 }
 
 // Close (the rule above) in the cell at (gx, gy), unit u, in `ink`: the two
@@ -1433,14 +1451,17 @@ void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
     const int gx   = b.x + scaled_px(kCaptionGlyphSeatXPx) + shift;
     const int gy   = b.y + scaled_px(kCaptionGlyphSeatYPx) + shift;
     const int off  = relief_line_px();
-    // THE DISABLED EMBOSS (render.h's palette block): Hilight one Windows px
-    // right and down, Shadow at the glyph's place.
+    // THE GLYPH NEAR-WHITE on the ebony (materials.h's CASE and INKS,
+    // 2026-10-21; the label role until then). THE DISABLED EMBOSS (render.h's
+    // palette block): Hilight one Windows px right and down, Shadow at the
+    // glyph's place — the case's own tones (materials::flat).
+    const GuiColor ink = hex(kNearWhite);
+    const GuiColor light = materials::flat(pal.hilight);
+    const GuiColor dark = materials::flat(pal.shadow);
     if (id == GuiCaptionButton::Close) {
         if (!enabled)
-            paint_caption_close_outline(cr, gx + off, gy + off, u,
-                                        pal.hilight);
-        paint_caption_close_outline(cr, gx, gy, u,
-                                    enabled ? pal.label : pal.shadow);
+            paint_caption_close_outline(cr, gx + off, gy + off, u, light);
+        paint_caption_close_outline(cr, gx, gy, u, enabled ? ink : dark);
         return;
     }
     using Glyph = std::span<const CaptionGlyphRect>;
@@ -1449,16 +1470,18 @@ void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
                         : maximized ? Glyph(kCaptionRestoreGlyph)
                                     : Glyph(kCaptionMaximizeGlyph);
     if (!enabled)
-        paint_caption_glyph(cr, glyph, gx + off, gy + off, u, pal.hilight);
-    paint_caption_glyph(cr, glyph, gx, gy, u,
-                        enabled ? pal.label : pal.shadow);
+        paint_caption_glyph(cr, glyph, gx + off, gy + off, u, light);
+    paint_caption_glyph(cr, glyph, gx, gy, u, enabled ? ink : dark);
 }
+
+} // namespace
 
 // The three buttons' rects in a caption lane, left to right (render.h's
 // caption block, the chrome spec's caption_button_* fields): flush right,
 // the inset right of Close, the box's top inside the lane, the gap between
 // Minimise and Maximise (none under win2000), the gap before Close — each
-// edge a sum of rounded parts.
+// edge a sum of rounded parts. Read by the caption's painter and by the
+// materials' bake (program_case_rects' declaration, paint_handler.h).
 std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
         const GuiRect& lane) {
     const ChromeSpec& spec = live_chrome_spec();
@@ -1471,8 +1494,6 @@ std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
     return {GuiRect{nx, y, w, h}, GuiRect{mx, y, w, h},
             GuiRect{cx, y, w, h}};
 }
-
-} // namespace
 
 // THE CAPTION'S TITLE, ITS BOXES' ENABLED BIT AND THEIR PUSHED FACE — each
 // spelled once, read by the painter and by the caption's as-painted
@@ -1499,18 +1520,21 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     if (row.w <= 0 || row.h <= 0) return;
     cairo_save(cr);
 
-    // THE GROUND: the active roles while the window has the focus, the
-    // inactive ones without it (GuiPlatform::caption_active — always active
-    // on the tablet), through the one gradient painter.
+    // THE GROUND: THE WALNUT (materials.h's WOOD, architect 2026-10-21), one
+    // slab with the menu row, active and inactive alike — the walnut as
+    // drawn and THE TOP LIGHT LINE, one line of the wood's hilight tone, no
+    // line under it. (The 42 built-in captions' gradients in Windows'
+    // active and inactive pairs, 2026-10-05..10-21, left with the `caption`
+    // key; the window's activation moves no pixel of the caption since.)
     const GuiPalette& pal = palette();
-    const bool active = gui.caption_active();
     const std::array<GuiRect, kCaptionButtonCount> rects =
         caption_button_rects(row);
-    paint_caption_gradient(cr, row,
-                           active ? pal.caption_active
-                                  : pal.caption_inactive,
-                           active ? pal.caption_active_gradient
-                                  : pal.caption_inactive_gradient);
+    {
+        const GuiMaterialScope scope(GuiMaterialRegion::Wood);
+        paint_cell_rect(cr, row, pal.face);
+        paint_cell_rect(cr, GuiRect{row.x, row.y, row.w, relief_line_px()},
+                        pal.hilight);
+    }
 
     // THE APP'S ICON at the spec's seat ((2, 1) under win2000), 16 x 16: the
     // set's AppIcon (icons.h), no case, at the caption's own placement.
@@ -1528,7 +1552,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its captures
     // (2026-10-06). THE ROOM runs from the spec's caption_title_x_px to its
     // caption_title_trail_px short of Minimise: the title at the room's
-    // left, in the caption's text role. TOO LONG FOR THE ROOM it is CUT AT A
+    // left, in the old brass over its shadow. TOO LONG FOR THE ROOM it is CUT AT A
     // CODEPOINT and ends in Windows' "..." (DrawText's end ellipsis), the
     // longest prefix whose own run and the ellipsis's fit; a room too narrow
     // for even the ellipsis paints no title.
@@ -1544,13 +1568,19 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     const auto show_title = [&](const text_shape::ShapedRun& head,
                                 const text_shape::ShapedRun* tail) {
         const double x = title_x;
-        // The caption's text role (surface_text, render.h: Windows'
-        // CaptionText pair).
-        set_palette_source(cr, surface_text(active ? GuiSurface::CaptionActive
-                                                   : GuiSurface::CaptionInactive));
-        text_shape::show_shaped_run(cr, head, x, baseline);
-        if (tail)
-            text_shape::show_shaped_run(cr, *tail, x + head.width_px, baseline);
+        const auto show = [&](double off) {
+            text_shape::show_shaped_run(cr, head, x + off, baseline + off);
+            if (tail)
+                text_shape::show_shaped_run(cr, *tail,
+                                            x + off + head.width_px,
+                                            baseline + off);
+        };
+        // THE WORDS ON THE WOOD (materials.h's INKS): the old brass over
+        // its drop shadow at (+d, +d) device px.
+        set_palette_source(cr, hex(kWordShadow));
+        show(static_cast<double>(materials::text_shadow_px()));
+        set_palette_source(cr, hex(kWordInk));
+        show(0.0);
     };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
     if (run.width_px <= room) {
@@ -1588,6 +1618,11 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         // A box the clip does not reach is skipped (clip_meets).
         if (!clip_meets(cr, b)) continue;
         const bool pushed = caption_button_pushed(app, i);
+        // THE EBONY (materials.h's CASE, 2026-10-21): the box's face the
+        // case cover at kCaptionButtonFace, its light lines the case's
+        // highlight and its dark its shadow's first tone, under every
+        // caption.
+        const GuiMaterialScope on_case(GuiMaterialRegion::CaptionButton);
         const ButtonBoxFace box =
             paint_button_box(cr, b, /*lamp=*/false, pushed,
                              ButtonFamily::Toolbar);
@@ -1670,17 +1705,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // Windows' etched pair, a rebar's band border, stood here that morning).
 
     cairo_save(cr);
+    // THE WOOD (materials.h's WOOD, 2026-10-21): the menu row is the
+    // caption's slab, its open title's sunken box the wood's own tones.
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
 
     // THE GROUND IS THE CONTENT GROUND, the icon row's own (architect
     // 2026-10-01: the menu row takes the icon row's ground), one fill over
-    // the whole lane. It has one value focused and unfocused, so this row no
-    // longer darkens on the window's focus loss.
-    {
-        const GuiColor ground = palette().ground;
-        set_palette_source(cr, ground);
-        cairo_rectangle(cr, row.x, row.y, row.w, row.h);
-        cairo_fill(cr);
-    }
+    // the whole lane — THE WALNUT AS DRAWN since 2026-10-21. It has one value
+    // focused and unfocused, so this row no longer darkens on the window's
+    // focus loss.
+    paint_cell_rect(cr, row, palette().ground);
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
     // from the one ShapedRun, so a button's width and its glyphs come from the
@@ -1776,15 +1810,17 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // row block above): the band's text seat (label_baseline, above).
         // THE ACCESS KEY'S UNDERLINE rides the label in every face — at
         // rest, pushed in under the open title, embossed when dead
-        // (access_underline_rect).
+        // (access_underline_rect). A LIVE LABEL IS THE OLD BRASS over its
+        // drop shadow (materials.h's INKS, 2026-10-21, show_word_access_run;
+        // the label role until then).
         const double label_x = static_cast<double>(x + pad_l + push);
         const double label_y = label_baseline + push;
         if (!face.enabled && !open_anchor) {
             show_embossed_access_run(cr, run, def.label, def.access, label_x,
                                      label_y);
         } else {
-            show_access_run(cr, run, def.label, def.access, label_x, label_y,
-                            palette().label);
+            show_word_access_run(cr, run, def.label, def.access, label_x,
+                                 label_y);
         }
 
         x += btn_w;
@@ -1806,10 +1842,36 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 // floating surfaces cover it where they stand (the keyboard and the modal
 // family's box stand inside it since 2026-10-14). The outer damage clip
 // bounds it; the ring is a handful of rects, so it is not exposure-gated.
+// THE FRAME IS THE WOOD (materials.h's WOOD, the frame of record,
+// 2026-10-21): its TOP ROW the dark line under the menu row, the Shadow's
+// flat stroke on the walnut — Cool Edit's stack under it, the band's dark
+// groove and light line — and its COLUMNS AND BOTTOM ROW THE WALNUT AS DRAWN
+// beside the brass panel and under the border (materials::paint_rect, over
+// the wood's tiles); no mitre stands where the dark row meets the walnut.
 void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
     const GuiRect ring = program_frame_rect(app);
     if (ring.w <= 0 || ring.h <= 0) return;
-    paint_relief_sunken_outer(cr, ring);
+    if (!materials::baked()) {
+        paint_relief_sunken_outer(cr, ring);
+        return;
+    }
+    const int lw = relief_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    {
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+        paint_cell_rect(cr, GuiRect{ring.x, ring.y, ring.w, lw},
+                        palette().shadow);
+    }
+    const int body_h = std::max(0, ring.h - 2 * lw);
+    materials::paint_rect(cr, GuiRect{ring.x, ring.y + lw, lw, body_h},
+                          GuiMaterial::Wood);
+    materials::paint_rect(cr, GuiRect{ring.x + ring.w - lw, ring.y + lw, lw,
+                                      body_h},
+                          GuiMaterial::Wood);
+    materials::paint_rect(cr, GuiRect{ring.x, ring.y + ring.h - lw, ring.w, lw},
+                          GuiMaterial::Wood);
+    cairo_restore(cr);
 }
 
 // (THE BOTTOM OVERLAYS' PAINTER — paint_bottom_overlays, the taskbar line in
@@ -1946,15 +2008,21 @@ static std::string history_walk_line(AppState& app) {
 // open one. The membership forks are the history stand-ins' (2026-10-05) and
 // the `h` view's hide (2026-10-07), which asks a group whether it stands
 // before its pane is opened. The right-anchored opener and view pairs are
-// not in this walk: neither is ever hidden.
-static void icon_row_walk(const AppState& app,
+// not in this walk: neither is ever hidden. `history` is the view's bit —
+// the live one (app.history_mode.active) for the painter and the
+// fingerprint, either for the materials' seats (program_case_rects, which
+// walks both states).
+static void icon_row_walk(bool history,
                           std::vector<std::vector<IconRowDef>>& panes,
                           std::vector<RedesignButton>& absent) {
     // THE STAND-IN SWAP (kIconRowHistoryStandIns, its one owner): in the `h`
     // view a leader that names a stand-in group paints that group in its
     // place, as its pane, and the rest of the replaced group is skipped up to
     // the next leader; outside the view the stand-in groups never paint.
-    const bool history = app.history_mode.active;
+    // THE HIDE is history_mode_hides_button's answer under `history`.
+    const auto hides = [history](RedesignButton id) {
+        return history && history_view_hides_button(id);
+    };
     const auto stand_in_for =
         [&](RedesignButton leader) -> const IconRowStandIn* {
         if (!history) return nullptr;
@@ -1972,7 +2040,7 @@ static void icon_row_walk(const AppState& app,
         for (std::size_t j = lead_i; j < std::size(kIconRowButtons); ++j) {
             const RedesignButton id = kIconRowButtons[j].id;
             if (j != lead_i && redesign_button_opens_icon_group(id)) break;
-            if (!history_mode_hides_button(app, id)) return true;
+            if (!hides(id)) return true;
         }
         return false;
     };
@@ -1989,7 +2057,7 @@ static void icon_row_walk(const AppState& app,
                 panes.emplace_back();
             }
         }
-        if (replacing || history_mode_hides_button(app, def.id)) {
+        if (replacing || hides(def.id)) {
             absent.push_back(def.id);
             continue;
         }
@@ -2000,6 +2068,58 @@ static void icon_row_walk(const AppState& app,
         for (const IconRowStandIn& si : kIconRowHistoryStandIns)
             for (const IconRowDef& m : si.members) absent.push_back(m.id);
     }
+}
+
+// THE BAND'S SEATS (2026-10-21: lifted out of paint_icon_row so the painter
+// and the materials' case patches, program_case_rects below, read ONE
+// layout): the case's lengths, each a composite of its rounded parts
+// (render.h's program block); A PANE of n cases, from its light column
+// through its mid column (the groove's dark column after it is the pane's
+// outer edge, painted with it: paint_ce_pane takes the extent through that
+// column); THE CASE under the band's two head lines and its three W of face
+// (icon_case_top_offset_px, render.h: the one expression every reader of the
+// case's seat in the band takes).
+// THE RIGHT-ANCHORED PANES ARE RESOLVED FIRST, because they decide where
+// every pane to their left may paint (the overflow rule at
+// kIconRowViewPairs): the Warp / Phase pane ends at the band's dark right
+// edge column, the Source / Target pane stands one groove left of it, the
+// HISTORY OPENER's pane one groove left of that (kIconRowHistoryOpener,
+// architect 2026-10-06), and the dark column left of the opener's pane is
+// THE LEFT PANES' LIMIT: they paint under a clip ending there and publish
+// only the columns they painted, so a window too narrow for the band
+// covers them and never the opener or the view pairs. THE LEFT WALK starts
+// one line in from the band's dark left edge column, each pane's cases at
+// case_x, the next pane after the groove's dark column (next_pane_x).
+struct IconRowSeats {
+    int lw = 0, btn_w = 0, btn_h = 0, lead = 0, trail = 0, btn_y = 0;
+    std::array<int, std::size(kIconRowViewPairs)> view_x0{};  // light columns
+    int history_x0 = 0;    // the opener's pane's light column
+    int history_x  = 0;    // the opener's case
+    int left_limit = 0;    // the dark column before it
+    int first_pane_x = 0;  // the left walk's first pane's light column
+    int pane_w(int n) const { return lw + lead + n * btn_w + trail + lw; }
+    int case_x(int pane_x, int i) const { return pane_x + lw + lead + i * btn_w; }
+    int next_pane_x(int pane_x, int n) const { return pane_x + pane_w(n) + lw; }
+};
+static IconRowSeats icon_row_seats(const GuiRect& lane) {
+    IconRowSeats s;
+    s.lw    = program_line_px();
+    s.btn_w = icon_case_w_px();
+    s.btn_h = icon_case_h_px();
+    s.lead  = program_pane_lead_px();
+    s.trail = program_pane_trail_px();
+    s.btn_y = lane.y + icon_case_top_offset_px();
+    int pane_end = lane.x + lane.w - s.lw;   // the band's dark edge column
+    for (std::size_t p = std::size(kIconRowViewPairs); p-- > 0;) {
+        s.view_x0[p] =
+            pane_end - s.pane_w(static_cast<int>(std::size(kIconRowViewPairs[p])));
+        pane_end = s.view_x0[p] - s.lw;
+    }
+    s.history_x0   = pane_end - s.pane_w(1);
+    s.history_x    = s.case_x(s.history_x0, 0);
+    s.left_limit   = s.history_x0 - s.lw;
+    s.first_pane_x = lane.x + s.lw;
+    return s;
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
@@ -2133,8 +2253,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE IS COOL EDIT'S BAND (render.h's program block): no border of
-    // its own beyond the band's own lines.
+    // its own beyond the band's own lines. THE WOOD (materials.h's WOOD,
+    // 2026-10-21): its panes, grooves and edge columns the walnut, its void —
+    // the recess where no pane stands — the walnut under the luminance rule;
+    // its cases the ebony (paint_roster_case).
     cairo_save(cr);
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
 
     // THE BAND'S GROUND — the dark outline, the recess, the light last line:
     // the band where no pane stands (paint_ce_band_ground). The panes and the
@@ -2146,46 +2270,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // named here for the four view radios' shaped LETTER faces,
     // which the architect replaced with glyphs that day.)
     // THE CASE AND ITS GLYPH, each a composite of its rounded parts
-    // (render.h's program block): the glyph at the case's (+1, +1) lines.
-    const int lw       = program_line_px();
-    const int btn_w    = icon_case_w_px();
-    const int btn_h    = icon_case_h_px();
+    // (render.h's program block): the glyph at the case's (+1, +1) lines —
+    // THE BAND'S SEATS the one layout the materials' case patches read too
+    // (icon_row_seats, above, where the right-anchored panes' order and the
+    // left panes' limit are stated).
+    const IconRowSeats seats = icon_row_seats(lane);
+    const int lw       = seats.lw;
+    const int btn_w    = seats.btn_w;
+    const int btn_h    = seats.btn_h;
     const int glyph_px = icon_glyph_px();
-    const int lead     = program_pane_lead_px();
-    const int trail    = program_pane_trail_px();
-    // A PANE of n cases, from its light column through its mid column (the
-    // groove's dark column after it is the pane's outer edge, painted with
-    // it: paint_ce_pane takes the extent through that column).
-    const auto pane_w = [&](int n) {
-        return lw + lead + n * btn_w + trail + lw;
-    };
-
-    // THE CASE STANDS UNDER THE BAND'S TWO HEAD LINES AND ITS THREE W OF FACE
-    // (icon_case_top_offset_px, render.h: the one expression every reader of
-    // the case's seat in the band takes).
-    const int btn_y = lane.y + icon_case_top_offset_px();
-
-    // THE RIGHT-ANCHORED PANES ARE RESOLVED FIRST, because they decide where
-    // every pane to their left may paint (the overflow rule at
-    // kIconRowViewPairs): the Warp / Phase pane ends at the band's dark right
-    // edge column, the Source / Target pane stands one groove left of it, the
-    // HISTORY OPENER's pane one groove left of that (kIconRowHistoryOpener,
-    // architect 2026-10-06), and the dark column left of the opener's pane is
-    // THE LEFT PANES' LIMIT: they paint under a clip ending there and publish
-    // only the columns they painted, so a window too narrow for the band
-    // covers them and never the opener or the view pairs.
+    const auto pane_w = [&](int n) { return seats.pane_w(n); };
+    const int btn_y = seats.btn_y;
     constexpr int view_panes = static_cast<int>(std::size(kIconRowViewPairs));
-    const int right_edge = lane.x + lane.w - lw;   // the band's dark edge column
-    std::array<int, view_panes> view_x0{};          // each view pane's light column
-    int pane_end = right_edge;                      // the dark column after it
-    for (int p = view_panes - 1; p >= 0; --p) {
-        view_x0[static_cast<std::size_t>(p)] =
-            pane_end - pane_w(static_cast<int>(std::size(kIconRowViewPairs[p])));
-        pane_end = view_x0[static_cast<std::size_t>(p)] - lw;
-    }
-    const int history_x0 = pane_end - pane_w(1);
-    const int history_x  = history_x0 + lw + lead;  // the opener's case
-    const int left_limit = history_x0 - lw;         // the dark column before it
+    const int history_x0 = seats.history_x0;
+    const int history_x  = seats.history_x;
+    const int left_limit = seats.left_limit;
 
     // ONE MEMBER'S PAINT, shared by both walks: publish what is painted, then
     // the face and the glyph at the member's full box — the clip, when
@@ -2316,7 +2415,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (main.cpp's tick) reads a rect or a bit from the other state's row.
     std::vector<std::vector<IconRowDef>> panes;
     std::vector<RedesignButton>          absent;
-    icon_row_walk(app, panes, absent);
+    icon_row_walk(app.history_mode.active, panes, absent);
     for (const RedesignButton id : absent)
         (void)publish_button_face(cr, app, audio, playback, target_render, id,
                                   GuiRect{});
@@ -2329,17 +2428,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // dark column after it — the pane's own outer edge, its top the mitre
     // (paint_ce_pane).
     paint_ce_band_dark_column(cr, lane, lane.x);
-    int x = lane.x + lw;
+    int x = seats.first_pane_x;
     for (const std::vector<IconRowDef>& pane : panes) {
         const int n = static_cast<int>(pane.size());
         paint_ce_pane(cr, lane, x, x + pane_w(n) + lw);
-        int bx = x + lw + lead;
-        for (const IconRowDef& def : pane) {
+        for (int i = 0; i < n; ++i) {
+            const int bx = seats.case_x(x, i);
             const int shown_w = std::clamp(left_limit - bx, 0, btn_w);
-            paint_member(def, bx, GuiRect{bx, btn_y, shown_w, btn_h});
-            bx += btn_w;
+            paint_member(pane[static_cast<std::size_t>(i)], bx,
+                         GuiRect{bx, btn_y, shown_w, btn_h});
         }
-        x += pane_w(n) + lw;
+        x = seats.next_pane_x(x, n);
     }
     cairo_restore(cr);
 
@@ -2358,13 +2457,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     paint_member(kIconRowHistoryOpener, history_x,
                  GuiRect{history_x, btn_y, btn_w, btn_h});
     for (int p = 0; p < view_panes; ++p) {
-        const int x0 = view_x0[static_cast<std::size_t>(p)];
+        const int x0 = seats.view_x0[static_cast<std::size_t>(p)];
         const int n  = static_cast<int>(std::size(kIconRowViewPairs[p]));
         paint_ce_pane(cr, lane, x0, x0 + pane_w(n) + lw);
-        int vx = x0 + lw + lead;
-        for (const IconRowDef& def : kIconRowViewPairs[p]) {
-            paint_member(def, vx, GuiRect{vx, btn_y, btn_w, btn_h});
-            vx += btn_w;
+        for (int i = 0; i < n; ++i) {
+            const int vx = seats.case_x(x0, i);
+            paint_member(kIconRowViewPairs[p][i], vx,
+                         GuiRect{vx, btn_y, btn_w, btn_h});
         }
     }
 
@@ -2422,15 +2521,15 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 // buttons at the bottom right):
 //
 //   THE CLOCK in Cool Edit's dark TIME FIELD inside a group of its own —
-//   the gripper, the field, the end bar (architect 2026-10-09; the field's
-//   shape, face and fixed width at kTimeShape's block below) — with THE
-//   STATE LINE on the free face past that group's end bar in the panel
-//   label's shadowed pair, clipped short of the right block (architect
-//   2026-10-03 for the line);
+//   a bar, the field, a bar (architect 2026-10-21, program_spec.h's row-8
+//   bar fields; Cool Edit's gripper and end bar from 2026-10-09; the
+//   field's shape, face and fixed width at kTimeShape's block below) — with
+//   THE STATE LINE on the free face past that group's closing bar in the
+//   panel label's shadowed pair, clipped short of the right block
+//   (architect 2026-10-03 for the line);
 //
-//   and, PACKED AGAINST THE RIGHT EDGE, three groups, each Cool Edit's
-//   gripper, its cases and its end bar, two W of face between two of them
-//   (architect 2026-10-09; cool_edit_paint.h):
+//   and, PACKED AGAINST THE RIGHT EDGE, three groups between bars, adjacent
+//   groups sharing one (architect 2026-10-21; cool_edit_paint.h):
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
 //   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
 //   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
@@ -2457,7 +2556,8 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 //   ROW, THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap on the
 //   live audition bit — the reason this row's paint goes through
 //   redesign_button_icon; Shift+Space the A/B audition). The last button's
-//   right edge is one lane pad in from the lane's right edge. (The Go to
+//   right edge stands 4 W and the last bar in from the lane's right edge
+//   (2026-10-21). (The Go to
 //   Start / Go to End pair left the row 2026-10-12; their keys, Home and End
 //   with their Ctrl twins, are untouched.)
 //
@@ -2559,11 +2659,11 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 // below onto the content band under it.
 
 // THE ROW AUTHORS NO METRIC OF ITS OWN (program_spec.h owns every one): the
-// cases and glyphs are the band's, the groups' grippers, end bars and face
-// Cool Edit's. The render player's modal row in this lane takes the same
-// case at the same seat (bottom_row_seats) and stands its items its own
-// eight W apart on the row's face, no grippers (paint_modal_dialog's player
-// branch).
+// cases and glyphs are the band's, the groups' bars and pads the row's own
+// (2026-10-21; Cool Edit's grippers and end bars until then). The render
+// player's modal row in this lane takes the same case at the same seat
+// (bottom_row_seats) and stands its items its own eight W apart on the row's
+// face, no bars (paint_modal_dialog's player branch).
 
 // The painter's half of the row's roster: three groups, all in the right
 // block and painted left to right in the order the body lays them (the
@@ -2677,7 +2777,7 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // this group was the four arrows with Play.)
 //
 // PLAY / STOP IS THE GROUP'S LAST MEMBER, abutting the right nudge with no
-// gripper, end bar or gap between them, and so closes the row at the far
+// bar or gap between them, and so closes the row at the far
 // right outside the `h` view (architect 2026-10-12, revising his own ruling
 // of the same morning that seated Play at the marker group's head, and
 // correcting the one-member group of the hours after it: "no division
@@ -2747,11 +2847,12 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE UNDER EVERY CHROME: COOL EDIT'S DARK FIELD
 // (architect 2026-10-09, the program is Cool Edit; METRICS §5.4,
-// paint_ce_time_field) — its field-dark line on the top and left, the mid
-// tone inside, its field-light line on the bottom and right, all three the
-// palette's Face-derived tones, the digits the never-swapping light text
-// (`ce_field_text`, Face-derived since 2026-10-10 — EFEFEF on the default
-// Face for Cool Edit's measured EFF0F0; the chrome's time-field roles,
+// paint_ce_time_field) — its field-dark line on the top and left and its
+// field-light line on the bottom and right, the scope's tones (row 8's the
+// walnut's, the render player's flat), BLACK inside under AMBER digits (the
+// fortepiano chrome's, materials.h's kTimeFieldGround and kTimeFieldDigits,
+// 2026-10-21; Cool Edit's `mid` under its never-swapping light text,
+// `ce_field_text`, 2026-10-10..10-21; the chrome's time-field roles,
 // clock_ground and clock_text, are unread by the program) — kProgramSpec.field_h_px tall
 // (17 W), CENTRED ON THE CASE'S ROWS (a half-row tie toward the top, the cap
 // rule's own), its run in THE BODY FACE (gui_font.h; no period field used a
@@ -2888,10 +2989,10 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // a dialog's content starts, the RIGHT PAD where its right-aligned cluster
 // ends — the lane's one pad (icon_row_pad_x) from each edge; CASES_RIGHT is
 // where row 8's last case ends — the right block packed against the lane's
-// edge, its LAST GROUP WITH NO END BAR and 5 W of face from the last case to
-// the program frame's line (architect 2026-10-14, Cool Edit's own row 8;
-// program_spec.h's row8_tail_px; the last end bar and the 4-W air before it,
-// 2026-10-09 to 2026-10-14, stood there before). Every BUTTON on row 8 is
+// edge, Play's 4 W of face and THE LAST BAR against the program frame's line
+// (architect 2026-10-21, program_spec.h's row-8 bar fields; 5 W of bare
+// face with no end bar 2026-10-14 to 2026-10-21, the last end bar and the
+// 4-W air before it 2026-10-09 to 2026-10-14). Every BUTTON on row 8 is
 // THE PROGRAM'S CASE (render.h's program block) at the row's four W of face
 // under the content's top (row8_air_above_px), the faces paint_roster_case's.
 // THE RENDER PLAYER'S ROW took these seats from 2026-10-05 (architect, on his
@@ -2912,7 +3013,8 @@ static BottomRowSeats bottom_row_seats(const GuiRect& content) {
     const int right = content.x + content.w;
     return BottomRowSeats{
         content.x + pad, right - pad,
-        right - scaled_px(kProgramSpec.row8_tail_px),
+        right - ce_row8_bar_w_px() -
+            scaled_px(kProgramSpec.row8_case_to_bar_px),
         content.y + row8_air_above_px(), icon_case_w_px(), icon_case_h_px()};
 }
 
@@ -2932,6 +3034,157 @@ static BottomRowSeats modal_controls_seats(const AppState& app,
                           icon_case_w_px(), icon_case_h_px()};
 }
 
+// ROW 8'S RIGHT BLOCK (2026-10-21: lifted out of
+// paint_bottom_row_buttons_and_clock so the painter and the materials' case
+// patches, program_case_rects below, read ONE layout and ONE walk; the
+// numbers and the z rule at the painter's THE NUMBERS). THE THREE GROUPS IN
+// PAINTED ORDER, each read off its own table, so a box joining or leaving
+// moves the block with no second edit; IN THE `h` VIEW the nudge pair's
+// seats are the walk's two steps (kTransportHistoryStandIns, its one owner,
+// seated through transport_row_seated).
+constexpr int kRow8GroupCount = 3;
+constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
+    kMarkerVerbGroup, kTransportStepWalkGroup, kTransportNudgePlayGroup};
+// THE ROW'S LENGTHS (program_spec.h's row-8 bar fields, 2026-10-21): the
+// bar's width, the pad after a bar and the pad before one, the case.
+struct Row8Lengths {
+    int bar_w = 0, bar_to_case = 0, case_to_bar = 0, btn_w = 0;
+};
+static Row8Lengths row8_lengths(const GuiRect& content) {
+    const BottomRowSeats seats = bottom_row_seats(content);
+    return Row8Lengths{ce_row8_bar_w_px(),
+                       scaled_px(kProgramSpec.row8_bar_to_case_px),
+                       scaled_px(kProgramSpec.row8_case_to_bar_px),
+                       seats.case_w};
+}
+// THE BLOCK, MEASURED under the view's bit `history` (the live one for the
+// painter, either for the seats): EACH GROUP'S STANDING MEMBERS (the hide,
+// history_view_hides_button, asked of what the seat paints), whether any
+// group stands, and the block's left edge. THE BLOCK'S WIDTH IS THE PAINTED
+// GROUPS' (architect 2026-10-07): in the `h` view a button whose chord the
+// view refuses in every session is not painted (history_mode_hides_button,
+// input_pointer.cpp), so the count is of the members that stand, and a
+// group stands only while it keeps a member. Outside the view nothing is
+// hidden and this is every table's whole length. THE BLOCK OPENS ON A BAR
+// AND EACH STANDING GROUP CLOSES ON ONE (2026-10-21): a bar, then per group
+// the pad after a bar, its cases, the pad before a bar and the bar — the
+// last against the program frame's line — so adjacent groups share a bar.
+struct Row8Block {
+    int x = 0;                               // the block's left edge
+    bool any = false;                        // some group stands
+    int standing[kRow8GroupCount] = {};
+};
+static bool row8_hides(bool history, const TransportRowDef& seat) {
+    return history &&
+           history_view_hides_button(transport_row_seated(seat, history).id);
+}
+static Row8Block row8_block(bool history, const GuiRect& content) {
+    const Row8Lengths l = row8_lengths(content);
+    Row8Block b;
+    for (int gi = 0; gi < kRow8GroupCount; ++gi) {
+        for (const TransportRowDef& def : kRow8Groups[gi])
+            if (!row8_hides(history, def)) ++b.standing[gi];
+        if (b.standing[gi] > 0) b.any = true;
+    }
+    int block_w = b.any ? l.bar_w : 0;
+    for (int gi = 0; gi < kRow8GroupCount; ++gi) {
+        const int n = b.standing[gi];
+        if (n == 0) continue;
+        block_w += l.bar_to_case + n * l.btn_w + l.case_to_bar + l.bar_w;
+    }
+    b.x = content.x + content.w - block_w;
+    return b;
+}
+// THE BLOCK'S ONE WALK, left to right from its left edge: its opening bar
+// (`bar(x)`), then per standing group the pad, its standing members' cases
+// abutting (`member(def, x)`, `def` the seated member), the pad and the bar
+// closing it; each hidden member (`hidden(def)`) wherever it falls.
+template <class Bar, class Member, class Hidden>
+static void row8_block_walk(bool history, const Row8Block& b,
+                            const Row8Lengths& l, Bar&& bar, Member&& member,
+                            Hidden&& hidden) {
+    int ax = b.x;
+    if (b.any) {
+        bar(ax);
+        ax += l.bar_w;
+    }
+    for (int gi = 0; gi < kRow8GroupCount; ++gi) {
+        bool group_open = false;
+        for (const TransportRowDef& seat : kRow8Groups[gi]) {
+            const TransportRowDef& def = transport_row_seated(seat, history);
+            if (row8_hides(history, seat)) {
+                hidden(def);
+                continue;
+            }
+            if (!group_open) {
+                ax += l.bar_to_case;
+                group_open = true;
+            }
+            member(def, ax);
+            ax += l.btn_w;
+        }
+        if (group_open) {
+            ax += l.case_to_bar;
+            bar(ax);
+            ax += l.bar_w;
+        }
+    }
+}
+
+// THE CLOCK'S GROUP (2026-10-21): its opening bar on the lane's first
+// column, against the program frame's line, the pad after a bar, the time
+// field (its cell and its two pads, time_field_w_px), the pad before a bar
+// and the closing bar. One layout for the row's painter and the border's
+// (paint_bottom_border, which carries the bars' last rows).
+struct Row8ClockGroup {
+    int bar0_x = 0, field_x = 0, field_w = 0, bar1_x = 0;
+    double cell_w = 0.0;    // the digits' specimen (time_field_metrics)
+};
+static int time_field_w_px(double cell_w);
+static Row8ClockGroup row8_clock_group(const GuiRect& content,
+                                       const Row8Lengths& l) {
+    Row8ClockGroup g;
+    g.cell_w  = time_field_metrics(gui_font(GuiFace::Body)).time_w;
+    g.bar0_x  = content.x;
+    g.field_x = g.bar0_x + l.bar_w + l.bar_to_case;
+    g.field_w = time_field_w_px(g.cell_w);
+    g.bar1_x  = g.field_x + g.field_w + l.case_to_bar;
+    return g;
+}
+
+// ROW 8'S BARS' LAST ROWS ON THE BORDER UNDER IT (architect 2026-10-21,
+// program_spec.h's row-8 bar fields: the bars run through the border's light
+// row): the border's painter lays them over its own light row where row 8
+// stands — the clock's group's two, then, as the row's painter lays the
+// block last (its z rule), the light row fresh under the block's span where
+// the block has walked over the clock's group, then the block's own.
+static void paint_row8_bar_feet(cairo_t* cr, const AppState& app,
+                                const GuiRect& border) {
+    const GuiRect content = bottom_row_content_area(app);
+    if (content.w <= 0 || content.h <= 0) return;
+    const int lw = program_line_px();
+    const Row8Lengths l = row8_lengths(content);
+    const Row8ClockGroup clock = row8_clock_group(content, l);
+    const bool history = app.history_mode.active;
+    const Row8Block block = row8_block(history, content);
+    paint_ce_row8_bar(cr, clock.bar0_x, border.y, lw);
+    paint_ce_row8_bar(cr, clock.bar1_x, border.y, lw);
+    const int block_x0 = std::max(block.x, content.x);
+    if (block_x0 < clock.bar1_x + l.bar_w) {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        paint_cell_rect(cr,
+                        GuiRect{block_x0, border.y,
+                                content.x + content.w - block_x0, lw},
+                        palette().ce_hilight);
+        cairo_restore(cr);
+    }
+    row8_block_walk(
+        history, block, l,
+        [&](int bx) { paint_ce_row8_bar(cr, bx, border.y, lw); },
+        [](const TransportRowDef&, int) {}, [](const TransportRowDef&) {});
+}
+
 // ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
 // case's rows [case_y, case_y + case_h).
 static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
@@ -2944,6 +3197,7 @@ static int time_field_w_px(double cell_w) {
     return static_cast<int>(std::ceil(cell_w)) + 2 * time_field_pad_px();
 }
 
+
 void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const GuiRect lane    = bottom_row_area(app);
     const GuiRect content = bottom_row_content_area(app);
@@ -2952,6 +3206,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int content_h = content.h;
 
     cairo_save(cr);
+    // THE WOOD (materials.h's WOOD, 2026-10-21): the bars and the clock
+    // field's ring the walnut's flat strokes, the bars' face the walnut as
+    // drawn; the cases the ebony (paint_roster_case).
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
 
     // The row's seats, shared with the render player's row (bottom_row_seats):
     // the band's case on the row's four W of face.
@@ -2960,21 +3218,21 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_h     = seats.case_h;
     const int glyph_px  = icon_glyph_px();
     const int btn_y     = seats.case_y;
-    // COOL EDIT'S GROUP (program_spec.h, METRICS §5.2): the gripper, its
-    // air, the cases abutting, the air, the end bar — the air Cool Edit's
-    // measured 6 W after the gripper and 4 W before the end bar (architect
-    // 2026-10-12, program_spec.h's group fields; the product's symmetric 5 W
-    // of 2026-10-09 evening retired); two W of face before the first group
-    // and between two. THE ROW'S LAST GROUP HAS NO END BAR: its last case
-    // stands `tail` (5 W) of face short of the lane's right edge, the
-    // program frame's line (architect 2026-10-14, program_spec.h's
-    // row8_tail_px — bottom_row_seats' cases_right, the one expression).
-    const int group_gap = scaled_px(kProgramSpec.row8_group_gap_px);
-    const int grip_w    = ce_gripper_w_px();
-    const int grip_face = scaled_px(kProgramSpec.gripper_to_case_px);
-    const int end_face  = scaled_px(kProgramSpec.case_to_end_bar_px);
-    const int end_w     = ce_end_bar_w_px();
-    const int tail      = content.x + content.w - seats.cases_right;
+    // THE GROUPS BETWEEN BARS (architect 2026-10-21, program_spec.h's row-8
+    // bar fields): a bar, 5 W of face, the cases abutting, 4 W of face, a
+    // bar — adjacent groups sharing one, the first bar of each run against
+    // the program frame's line at the lane's left, the last against it at
+    // the right — every bar running from the dock bar's mid row through the
+    // content band (the border's painter carries its last row,
+    // paint_row8_bar_feet). (Cool Edit's grippers and end bars, 2026-10-09
+    // to 2026-10-21; git history.)
+    const Row8Lengths lengths = row8_lengths(content);
+    const int bar_w   = lengths.bar_w;
+    const int lw      = program_line_px();
+    // The bars' rows in this lane: from the dock bar's mid row (its last two
+    // lines, paint_ce_dock_bar) to the content band's foot.
+    const int bar_y   = content_y - 2 * lw;
+    const int bar_h   = content_y + content_h - bar_y;
 
     // One button, the band's face logic verbatim (paint_roster_case). THE
     // CHECKED FACE'S SUBJECT ON THIS ROW IS ADD TO SELECTION (2026-08-18),
@@ -3014,22 +3272,22 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
-    // layout: the most-used buttons at the bottom right; Cool Edit's groups
-    // 2026-10-09): THE CLOCK'S GROUP two W in from the lane's left edge — the
-    // gripper, the dark time field, the end bar — with THE STATE LINE on the
-    // free face past it (the block at the clock below) — then THE RIGHT
-    // BLOCK, packed against the lane's right edge: the MARKER-VERB GROUP (its
-    // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
-    // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
-    // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
-    // Play, kTransportNudgePlayGroup; architect 2026-10-18), each Cool Edit's
-    // group, two W of face between two. The whole block is measured first and
-    // laid left to right from there, so one expression owns the anchor and no
-    // group re-derives it.
+    // layout: the most-used buttons at the bottom right; the groups between
+    // bars 2026-10-21): THE CLOCK'S GROUP on the lane's left edge — a bar,
+    // the dark time field, a bar — with THE STATE LINE on the free face past
+    // it (the block at the clock below) — then THE RIGHT BLOCK, packed
+    // against the lane's right edge: the MARKER-VERB GROUP (its eight counted
+    // off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑, Previous Marker
+    // and Next Marker, kTransportStepWalkGroup) and the NUDGE-AND-PLAY GROUP
+    // with Play / Stop last (Switch Tab, Center, ← → Play,
+    // kTransportNudgePlayGroup; architect 2026-10-18), a bar before the
+    // first, between two and after the last. The whole block is measured
+    // first and laid left to right from there, so one expression owns the
+    // anchor and no group re-derives it.
     // ITS TWO MODE TERMS are the `h` view's: the hide (architect 2026-10-07,
     // history_mode_hides_button) — a member hidden there publishes an empty
     // rect, the block is measured over the members that stand, and a group
-    // hidden whole takes its gripper and end bar with it — and the stand-in
+    // hidden whole takes its closing bar with it — and the stand-in
     // (architect 2026-10-11, kTransportHistoryStandIns): Older / Newer in
     // the nudge pair's seats; every other button
     // on this row publishes a real rect on every frame, except under a modal
@@ -3041,46 +3299,47 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // Value Drag joined 2026-10-11, the step-and-walk group four and the
     // nudge-and-play group five with Play since 2026-10-18 (the walk group
     // four and the arrows five with Play before — the same sizes, so the
-    // regroup moved no number), the air Cool Edit's measured 6 before the
-    // first case and 4 after the last since 2026-10-12, the last group's end
-    // bar gone since 2026-10-14): a group of n is 5 + 6 + 23n + 4 + 6 =
-    // 23n + 21, THE LAST 5 + 6 + 23n + 5 = 23n + 16, so the block is the 8
-    // verbs' 205, the step-and-walk group's 113 and the nudge-and-play
-    // group's 131 with two gaps of 2,
-    // 453 W — on the tablet's 768 at 300 %, the lane W 1..766 inside the
-    // program frame's columns (2026-10-10), starting at W 314, Play's case
-    // ending at W 761 (device x 2285) and its 5 W of face W 762..766 (2286..
-    // 2300) before the frame's line at W 767, the clock's
-    // group W 3..100 (the ~67-W cell — 67.4 W re-derived for Liberation
-    // Sans, 2026-10-13: 5.93 em of advances at its 11.357-W em — and its two
-    // 5-W pads, a ~77-W field; 2026-10-10), the state line's first ink at W 106, clipped at
-    // W 312 (~206 W of line). IN THE `h` VIEW (the hide, 2026-10-07; Play,
-    // Open Text Editor and Toggle Value Drag hidden there with the verbs,
-    // Down and Up with them) the block is 1 verb + the walk pair +
-    // Switch Tab, Center and Older / Newer in the nudge pair's seats
-    // (2026-10-11; regrouped 2026-10-18), the row's last group, in three
-    // groups, Play not standing, 44 + 67 + 108 + 4 = 223 W (44 + 113 + 62 + 4
-    // before the regroup — the same block), the clip standing at W 542 (767 -
-    // 223 - 2), the line's room 436 W from its first ink at W 106. THE ROW
-    // CARRIES NO COLLISION
-    // RULE — none of the redesign does — and the crop-at-the-floor allowance
-    // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 1 + 2 + 98 + 453 +
-    // 1 = 555 W outside the view (the program frame's two lines among them).
-    // THE STATE
-    // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
-    // line is cut rather than colliding.
+    // regroup moved no number), the bars and their 5 / 4 pads since
+    // 2026-10-21): the block opens on a 6-W bar and a group of n is
+    // 5 + 23n + 4 + 6 = 23n + 15, so the block is 6 + the 8 verbs' 199, the
+    // step-and-walk group's 107 and the nudge-and-play group's 130, 442 W —
+    // on the tablet's 768 at 300 %, the lane W 1..766 inside the program
+    // frame's columns (2026-10-10): its bars at W 325, 524, 631 and 761
+    // (device x 975, 1572, 1893 and 2283, each 18 px), the verbs' first case
+    // at W 336, the walk's at W 535, the nudge's at W 642, Play's case W
+    // 734..756 (device x 2202..2270), its 4 W of face and the last bar
+    // W 761..766 (2283..2300) before the frame's line at W 767; the clock's
+    // group W 1..82 (device x 3..247) — its first bar W 1..6 (3..20), the
+    // field from W 12 (x 36: the ~50.5-W cell — 4.45 em of Liberation Sans
+    // advances, seven digits, the colon and the point, at its 11.357-W em,
+    // 152 px ceiled at 300 % — and its two 5-W pads, a 182-px field, x
+    // 36..217), its closing bar W 77..82 (x 230..247) — the state line's
+    // first ink 5 W past that bar at ~W 88 (x 263), clipped at W 321 (x
+    // 963), the pad before the block's first bar (~233 W of line). IN THE
+    // `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and Toggle Value
+    // Drag hidden there with the verbs, Down and Up with them) the block is
+    // 1 verb + the walk pair + Switch Tab, Center and Older / Newer in the
+    // nudge pair's seats (2026-10-11; regrouped 2026-10-18), Play not
+    // standing, 6 + 38 + 61 + 107 = 212 W, from W 555, the clip standing at
+    // W 551, the line's room ~463 W from its first ink. THE ROW CARRIES NO
+    // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
+    // allowance recorded at kMinWindowWidthPx covers a narrow window: the
+    // block reaches the clock's group once the window falls below about
+    // 1 + 82 + 442 + 1 = 526 W outside the view (the program frame's two
+    // lines among them). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped
+    // short of the block, so a long line is cut rather than colliding.
     //
     // THE BLOCK WINS IN Z (architect 2026-10-14, on a restored laptop window
     // about 392 W wide: "icons row should win in z-index … msg goes under it.
     // It should be fully opaque"): the block is MEASURED here, ahead of the
     // clock, because the state line's clip reads its left edge, but it is
     // PAINTED LAST — after the clock's group and the state line, on its own
-    // span of the panel's face laid fresh — so where the window is narrow
-    // enough for it to walk over the clock's group, the block is what shows,
-    // whole and opaque, and nothing of the field, its digits, its gripper or
-    // its end bar comes through, exactly as the state line already goes under
-    // it. The press agrees by construction: the clock and the line are
+    // span of the panel's face laid fresh with the dock bar's two lines over
+    // it (the border's light row the same, paint_row8_bar_feet) — so where
+    // the window is narrow enough for it to walk over the clock's group, the
+    // block is what shows, whole and opaque, and nothing of the field, its
+    // digits or its bars comes through, exactly as the state line already
+    // goes under it. The press agrees by construction: the clock and the line are
     // pointer-inert ground and the press resolves against the cases' published
     // rects alone (claim_button_row_press, input_pointer.cpp). Every repaint
     // of the clock is this body run whole under the damage clip (the clock
@@ -3089,8 +3348,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // inside the clip too and cannot put the clock back on top mid-play. At a
     // width where nothing overlaps the order changes no byte: the clock's
     // group and the clipped line lie wholly left of the block, and the block's
-    // fresh face is paint_bottom_strip's own face over the same band, so the
-    // cases, grippers and end bars land on the very ground they landed on
+    // fresh ground is paint_bottom_strip's own face and dock lines over the
+    // same span, so the cases and bars land on the very ground they landed on
     // before.
     int right_block_x = content.x + content.w;
     // THE THREE GROUPS IN PAINTED ORDER, each read off its own table, so a
@@ -3100,98 +3359,65 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // transport_row_seated): the side that does not stand publishes its
     // empty rects here.
     const bool history = app.history_mode.active;
-    constexpr int kGroupCount = 3;
-    const std::span<const TransportRowDef> groups[kGroupCount] = {
-        kMarkerVerbGroup, kTransportStepWalkGroup, kTransportNudgePlayGroup};
-    // EACH GROUP'S STANDING MEMBERS (the hide, below, asked of what the seat
-    // paints) and THE ROW'S LAST STANDING GROUP — the one with no end bar
-    // (the group block above): the nudge-and-play group in either state, Play
-    // its last case outside the `h` view and Older / Newer inside it.
-    int standing[kGroupCount] = {};
-    int last_group = -1;
-    for (int gi = 0; gi < kGroupCount; ++gi) {
-        for (const TransportRowDef& def : groups[gi])
-            if (!history_mode_hides_button(
-                    app, transport_row_seated(def, history).id))
-                ++standing[gi];
-        if (standing[gi] > 0) last_group = gi;
-    }
-    {
-        for (const TransportStandIn& s : kTransportHistoryStandIns)
-            (void)publish_button_face(cr, app, audio, playback,
-                                      target_render,
-                                      history ? s.seat : s.stand_in.id,
-                                      GuiRect{});
-        // THE BLOCK'S WIDTH IS THE PAINTED GROUPS' (architect 2026-10-07): in
-        // the `h` view a button whose chord the view refuses in every session
-        // is not painted (history_mode_hides_button, input_pointer.cpp), so
-        // the count is of the members that stand, and a group stands only
-        // while it keeps a member. Outside the view nothing is hidden and this
-        // is every table's whole length. THE LAST STANDING GROUP closes the
-        // row with the tail and no end bar (the group block above).
-        int block_w = 0;
-        int standing_groups = 0;
-        for (int gi = 0; gi < kGroupCount; ++gi) {
-            const int n = standing[gi];
-            if (n == 0) continue;
-            block_w += grip_w + grip_face + n * btn_w;
-            block_w += gi == last_group ? tail : end_face + end_w;
-            ++standing_groups;
-        }
-        block_w += std::max(0, standing_groups - 1) * group_gap;
-        // THE STATE LINE'S RIGHT BOUND (below) is this block's own left
-        // edge, published out of the scope so the line cannot guess it — so
-        // the line widens by construction when the `h` view hides members;
-        // the block's painting (after the clock) starts from it too.
-        right_block_x = content.x + content.w - block_w;
-    }
+    // THE BLOCK, MEASURED (row8_block: the standing members, the left
+    // edge). THE STATE LINE'S RIGHT BOUND (below)
+    // is its left edge, published out of the measure so the line cannot
+    // guess it — so the line widens by construction when the `h` view hides
+    // members; the block's painting (after the clock) starts from it too.
+    const Row8Block block = row8_block(history, content);
+    right_block_x = block.x;
+    for (const TransportStandIn& s : kTransportHistoryStandIns)
+        (void)publish_button_face(cr, app, audio, playback, target_render,
+                                  history ? s.seat : s.stand_in.id,
+                                  GuiRect{});
 
     // THE CLOCK — the first TIME FIELD (the shape, the face and the
     // fixed-width rule at kTimeShape's block above), in the body face named
     // through the one face owner (gui_font.h), inside the save/restore this
-    // body already opened, in ITS OWN COOL EDIT GROUP: the gripper, the
-    // field, the end bar (2026-10-09). The render player's two fields share
-    // its shape, face and metrics; THE TWO NEVER PAINT IN THE SAME FRAME: the
-    // player owns the row whole while it stands.
+    // body already opened, in ITS OWN GROUP: a bar, the field, a bar
+    // (2026-10-21; Cool Edit's gripper and end bar 2026-10-09 until then).
+    // The render player's two fields share its shape, face and metrics; THE
+    // TWO NEVER PAINT IN THE SAME FRAME: the player owns the row whole while
+    // it stands.
     {
         const GuiFont font = gui_font(GuiFace::Body);
-        const TimeFieldMetrics& tm =
-            time_field_metrics(font);
-        // THE CELL IS THE DIGITS' SPECIMEN ALONE (architect 2026-10-18: the
-        // tab letter and its pipe left the clock with the tab strip's
-        // arrival, "like the media player cells"), so it is ONE WIDTH AT
-        // EVERY TIME, the run starting at its left edge (kTimeShape's block).
-        const double cell_w = tm.time_w;
-        // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
-        // gripper, the 6-W air, the field (its widest string and its pads),
-        // the 4-W air, the end bar (program_spec.h's group fields).
-        const int group_x = content.x + group_gap;
-        paint_ce_gripper(cr, group_x, btn_y, btn_h);
-        const int field_x = group_x + grip_w + grip_face;
-        const int field_w = time_field_w_px(cell_w);
+        // THE CLOCK'S GROUP (row8_clock_group, the one layout the border's
+        // painter reads too): the bar on the lane's first column, the 5-W
+        // pad, the field (its widest string and its pads), the 4-W pad, the
+        // bar (program_spec.h's row-8 bar fields). THE CELL IS THE DIGITS'
+        // SPECIMEN ALONE (architect 2026-10-18: the tab letter and its pipe
+        // left the clock with the tab strip's arrival, "like the media player
+        // cells"), so it is ONE WIDTH AT EVERY TIME, the run starting at its
+        // left edge (kTimeShape's block).
+        const Row8ClockGroup group = row8_clock_group(content, lengths);
+        const double cell_w  = group.cell_w;
+        const int    field_x = group.field_x;
+        const int    field_w = group.field_w;
         const GuiRect clock_field =
             time_field_rect(field_x, field_w, btn_y, btn_h);
-        const int end_x = field_x + field_w + end_face;
+        const int end_x = group.bar1_x;
         // THE FIELD AND ITS RUN ARE SKIPPED WHERE THE CLIP MISSES THE GROUP
         // (clip_meets): both lie inside the group's content band, the run
         // inside the cell published below.
         const bool clock_drawn = clip_meets(
-            cr, GuiRect{group_x, content_y, end_x + end_w - group_x,
+            cr, GuiRect{group.bar0_x, content_y, end_x + bar_w - group.bar0_x,
                         content_h});
+        paint_ce_row8_bar(cr, group.bar0_x, bar_y, bar_h);
         if (clock_drawn) paint_ce_time_field(cr, clock_field);
-        paint_ce_end_bar(cr, end_x, content_y, content_h);
+        paint_ce_row8_bar(cr, end_x, bar_y, bar_h);
         // THE STATE LINE: on the row's free face, no panel, ITS FIRST INK
-        // the state air (5 W) past the clock group's end bar — the field's
-        // own symmetric air of 2026-10-08, the end bar now standing between
-        // the field and the line: the clip starts there and the run's origin
-        // stands its own left bearing short of it (ink_left_px,
-        // text_shape.h). Its RIGHT CLIP stands one group gap short of the
-        // right block; a window too narrow to leave that span positive paints
-        // no state text — the row's crop-at-the-floor allowance (the block
+        // the state air (5 W, the pad after a bar) past the clock group's
+        // closing bar: the clip starts there and the run's origin stands its
+        // own left bearing short of it (ink_left_px, text_shape.h). Its RIGHT
+        // CLIP stands the pad before a bar short of the right block's first
+        // bar (2026-10-21; one group gap of 2 W short of its gripper until
+        // then); a window too narrow to leave that span positive paints no
+        // state text — the row's crop-at-the-floor allowance (the block
         // above).
         const int state_x =
-            end_x + end_w + scaled_px(kProgramSpec.state_air_px);
-        const int state_w = (right_block_x - group_gap) - state_x;
+            end_x + bar_w + scaled_px(kProgramSpec.state_air_px);
+        const int state_w =
+            (right_block_x - lengths.case_to_bar) - state_x;
         // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the face
         // split above and below its digits by the one box solver. THE STATE
         // LINE TAKES IT TOO (the ONE BASELINE block below).
@@ -3300,7 +3526,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (clock_drawn) {
             const text_shape::ShapedRun time_run =
                 text_shape::shape_text_run(font, clock_time_text(app, audio));
-            set_palette_source(cr, palette().ce_field_text);
+            // THE AMBER on the field's black (materials.h's kTimeFieldDigits,
+            // 2026-10-21; Cool Edit's never-swapping light text until then).
+            set_palette_source(cr, hex(kTimeFieldDigits));
             text_shape::show_shaped_run(cr, time_run,
                                         static_cast<double>(cell_x), baseline);
         }
@@ -3322,56 +3550,43 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     }
 
     // THE RIGHT BLOCK, PAINTED LAST (the z rule at THE NUMBERS above): its
-    // span of the content band laid in the panel's face first — the cell
-    // fill paint_bottom_strip lays, so at a width where nothing overlaps it
-    // rewrites the face that is already there — then the groups left to
-    // right on it, so no pixel of the clock's group survives under the block.
+    // span of the content band laid in the panel's face first, and of the
+    // dock bar's mid and dark rows over it in their tones — the fills
+    // paint_bottom_strip lays, so at a width where nothing overlaps it
+    // rewrites the ground that is already there — then the groups left to
+    // right on it, so no pixel of the clock's group, its bars included,
+    // survives under the block.
     {
         const int block_x0 = std::max(right_block_x, content.x);
         const int block_x1 = content.x + content.w;
         if (block_x1 > block_x0) {
+            const GuiPalette& p = palette();
+            const int span = block_x1 - block_x0;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            paint_cell_rect(cr, GuiRect{block_x0, bar_y, span, lw}, p.ce_mid);
+            paint_cell_rect(cr, GuiRect{block_x0, bar_y + lw, span, lw},
+                            p.ce_dark);
             paint_cell_rect(cr,
-                            GuiRect{block_x0, content_y, block_x1 - block_x0,
-                                    content_h},
-                            palette().face);
+                            GuiRect{block_x0, content_y, span, content_h},
+                            p.face);
             cairo_restore(cr);
         }
-        int ax = right_block_x;
         // A HIDDEN MEMBER PUBLISHES THE EMPTY RECT (the band's absent
         // members' shape): no point is inside it, so no press, hover or
         // tooltip reaches it, and its bits refresh unconditionally
         // (publish_button_face) — the same rect the modal yield publishes
         // for the whole row. Each seat paints what transport_row_seated
-        // answers: the member, or its stand-in in the `h` view.
-        for (int gi = 0; gi < kGroupCount; ++gi) {
-            bool group_open = false;
-            for (const TransportRowDef& seat : groups[gi]) {
-                const TransportRowDef& def =
-                    transport_row_seated(seat, history);
-                if (history_mode_hides_button(app, def.id)) {
-                    (void)publish_button_face(cr, app, audio, playback,
-                                              target_render, def.id,
-                                              GuiRect{});
-                    continue;
-                }
-                if (!group_open) {
-                    paint_ce_gripper(cr, ax, btn_y, btn_h);
-                    ax += grip_w + grip_face;
-                    group_open = true;
-                }
-                paint_button(def, ax);
-                ax += btn_w;
-            }
-            // THE LAST GROUP ENDS AT ITS LAST CASE, the tail of face after
-            // it the block's own ground (the group block above).
-            if (group_open && gi != last_group) {
-                ax += end_face;
-                paint_ce_end_bar(cr, ax, content_y, content_h);
-                ax += end_w + group_gap;
-            }
-        }
+        // answers: the member, or its stand-in in the `h` view
+        // (row8_block_walk, the one walk).
+        row8_block_walk(
+            history, block, lengths,
+            [&](int bx) { paint_ce_row8_bar(cr, bx, bar_y, bar_h); },
+            [&](const TransportRowDef& def, int bx) { paint_button(def, bx); },
+            [&](const TransportRowDef& def) {
+                (void)publish_button_face(cr, app, audio, playback,
+                                          target_render, def.id, GuiRect{});
+            });
     }
 
     cairo_restore(cr);
@@ -4374,6 +4589,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
 
     cairo_save(cr);
+    // THE BRASS (materials.h's METAL, 2026-10-21): the lane's and the marker
+    // lane's grounds the brass as drawn, the ruler's ground and frame its flat
+    // strokes, the ticks and digits near-white (kCeRulerTick).
+    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
     // THE LANE'S FACE, then THE GROUND AND ITS FRAME over the canvas's
     // columns (render.h's canvas-column paragraph, below once the width is
     // read): the column's margins beside them stay the panel's face, as the
@@ -5171,6 +5390,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // column's margins beside the bar's frame (render_trim_flags spans the
     // canvas's columns and its two frame columns alone, 2026-10-09) read as
     // the panel.
+    // THE BRASS (materials.h's METAL, 2026-10-21): the air, the lane's ground
+    // and the view bar's frame (render_trim_flags) under the one scope.
+    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
     const GuiRect trim_row = top_trim_row_area(app);
     {
         const GuiRect air = top_column_air_area(app);
@@ -5664,13 +5886,27 @@ static bool modal_owns_bottom_row(AppState& app) {
 // on-screen keyboard's band covers it after (paint_keyboard_slot), and under
 // a dialog editor on the glass the modal family paints the same six rows
 // again on the keyboard's band (paint_modal_box, modal_box.h's
-// modal_border_rect). Publishes nothing: the lane is inert ground for input.
-static void paint_bottom_border(cairo_t* cr, const AppState& app) {
+// modal_border_rect). ROW 8'S BARS END ON ITS LIGHT ROW (architect
+// 2026-10-21, program_spec.h's row-8 bar fields): while row 8 stands
+// (`row8_stands` — no modal owning the row, no on-screen keyboard over it,
+// paint_bottom_strip's yield) each bar's four columns run on through the
+// border's top line (paint_row8_bar_feet), the one layout the row's painter
+// reads; under a yield the line runs plain. THE DAMAGE THAT CHANGES THE
+// YIELD REACHES THIS LANE: a modal's open and the prompt's raise and answer
+// damage the whole window, the dialog editors' closers the row's lane with
+// this one (Viewport::invalidate_modal_dialog_area), the keyboard's slot
+// its band over both, and the `h` view's edges, which move the block, the
+// whole window. Publishes nothing: the lane is inert ground for input.
+static void paint_bottom_border(cairo_t* cr, const AppState& app,
+                                bool row8_stands) {
     const GuiRect lane = bottom_border_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // THE WOOD (materials.h's WOOD, 2026-10-21).
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
     paint_ce_dock_bar(cr, lane);
+    if (row8_stands) paint_row8_bar_feet(cr, app, lane);
     cairo_restore(cr);
 }
 
@@ -5727,12 +5963,22 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // own (paint_modal_dialog) — but under a dialog editor on the glass,
     // whose stack stands on the keyboard's band, the controls row is lifted
     // off this lane and laid by the family's painter (paint_modal_box).
+    // THE WOOD (materials.h's WOOD, 2026-10-21) — the dock bar and the
+    // content band — but THE MODAL FAMILY'S CONTROLS ROW is flat (materials.h's
+    // FLAT): under a modal that owns the row the content band is the flat
+    // face its controls stand on.
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
         paint_ce_dock_bar(cr,
                           GuiRect{lane.x, lane.y, lane.w, content.y - lane.y});
-        paint_cell_rect(cr, content, palette().face);
+        if (modal_owns_bottom_row(app)) {
+            const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+            paint_cell_rect(cr, content, palette().face);
+        } else {
+            paint_cell_rect(cr, content, palette().face);
+        }
         cairo_restore(cr);
     }
 
@@ -6025,6 +6271,156 @@ constexpr double kPlayerGlyphGapPx    = 1.0;
 constexpr double kPlayerGroupGapPx    = 8.0;
 
 } // namespace
+
+// THE RENDER PLAYER'S ROW LAYOUT (2026-10-21: lifted out of the modal
+// painter's player branch so the painter and the materials' case patches,
+// program_case_rects below, read ONE layout): each of the nine cases' left
+// column in the plan's order, the clock's two fields and the scrub's span,
+// on the controls row's seats (modal_controls_seats). The row's arrangement
+// and its rulings are at the painter's player branch.
+struct PlayerRowLayout {
+    std::array<int, 9> x{};
+    int field_pad = 0, field_w = 0, field_gap = 0;
+    int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
+};
+static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
+    PlayerRowLayout l;
+    // THE GLYPH GAP between two of the row's boxes is kPlayerGlyphGapPx,
+    // the player's own since the roster's buttons began to touch; THE
+    // GROUP SPACE between its items is kPlayerGroupGapPx, its own since
+    // the roster's groups became Cool Edit's (2026-10-09).
+    const int ggap     = scaled_px(kPlayerGlyphGapPx, 1);
+    const int group    = scaled_px(kPlayerGroupGapPx);
+
+    // THE CLOCK'S TWO FIELDS ARE MEASURED BEFORE ANYTHING IS PLACED,
+    // their width being one of the fixed terms the scrub's own is what is
+    // left over. Each is a TIME FIELD (the shape, the face and the
+    // fixed-width rule at kTimeShape's block), its cell the widest-digit
+    // specimen alone (time_field_metrics, row 8's own memo), so neither
+    // field nor anything right of it moves as the position runs or an
+    // item of another length loads — the cell and its pads, as row 8's
+    // clock is.
+    const double cell_w =
+        time_field_metrics(gui_font(GuiFace::Body)).time_w;
+    l.field_pad = time_field_pad_px();
+    l.field_w   = time_field_w_px(cell_w);
+    l.field_gap = scaled_px(kTimeFieldGapPx);
+    const int clock_w = l.field_w + l.field_gap + l.field_w;
+
+    // -- The walk: the fixed left run, the right-flushed PAIR (word
+    //    buttons until 2026-09-01, glyph boxes since), and the scrub
+    //    taking what is between them. --
+    const int bw  = seats.case_w;
+    const int cx0 = seats.left_x;
+    int px = cx0;
+    l.x[0] = px; px += bw + ggap;          // Home (skip back)
+    l.x[1] = px; px += bw + ggap;          // Play / Pause
+    l.x[2] = px; px += bw;                 // End (skip forward)
+    l.scrub_x0 = px + group;
+
+    // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
+    // was Load in place · Close as WORDS, measured runs in label boxes):
+    // both are the box's own square now, so the cluster is two boxes and
+    // the GLYPH GAP between them — right-flushed where THE CONTROLS ROW'S
+    // CASES END, the last box's right edge the box's ring's outer edge
+    // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
+    // last case's from 2026-10-05; the other owners' clusters keep the
+    // reserved ring).
+    const int words_w  = bw + ggap + bw;
+    const int words_x0 = std::max(cx0, seats.cases_right - words_w);
+    // What the row owes AFTER the scrub: the group space, the clock
+    // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
+    // FOLDER BUTTON with the glyph gap between each two of the four
+    // boxes, and the GAP BEFORE THE RIGHT-FLUSHED PAIR, which is
+    // that same glyph gap since 2026-09-01. THE 2026-08-29 SPACING RULING
+    // IS SPENT, not overruled: it put the WORD BUTTONS' OWN gap there ("the
+    // air between the last glyph and Load in place is the air between Load
+    // in place and Close", the modal word buttons' spacing winning over
+    // the icon gap between clusters, where the layout had spent the
+    // reserved ring plus a pad) — and with the words gone there is no
+    // word-button gap left on this row to win: every gap between two
+    // boxes on it is the row's one glyph gap (kPlayerGlyphGapPx).
+    const int after_scrub =
+        group + clock_w + group + 4 * bw + 4 * ggap;
+    // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
+    // at each end is not a track (28 Windows px since the unit's change).
+    l.scrub_w = words_x0 - after_scrub - l.scrub_x0;
+    if (l.scrub_w < 2 * scrub_handle_box_px()) l.scrub_w = 0;
+
+    l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
+    l.clock_end = l.clock_x0 + clock_w;
+    l.x[3] = l.clock_end + group;          // Repeat one
+    l.x[4] = l.x[3] + bw + ggap;           // Highlight Next (Down)
+    l.x[5] = l.x[4] + bw + ggap;           // Highlight Previous (Up)
+    l.x[6] = l.x[5] + bw + ggap;           // Up a Folder
+    l.x[7] = words_x0;                     // Load in place
+    l.x[8] = words_x0 + bw + ggap;         // Close
+    return l;
+}
+
+// THE PROGRAM'S CASES AT THIS GEOMETRY (the declaration, paint_handler.h):
+// every case the three rows lay out, in both states of the `h` view, each
+// the layout's own (icon_row_seats with icon_row_walk, row8_block with
+// row8_block_walk, player_row_layout) — the painters read the same.
+std::vector<GuiRect> program_case_rects(const AppState& app) {
+    std::vector<GuiRect> out;
+    const auto add = [&](int x, int y, int w, int h) {
+        const GuiRect r{x, y, w, h};
+        if (std::none_of(out.begin(), out.end(), [&](const GuiRect& o) {
+                return o.x == r.x && o.y == r.y && o.w == r.w && o.h == r.h;
+            }))
+            out.push_back(r);
+    };
+    // THE BAND: the left walk in both states, its cases cut at the left
+    // panes' limit (a case wholly past it is never painted); the opener and
+    // the view pairs, which stand in both.
+    const GuiRect lane = top_icon_row_area(app);
+    if (lane.w > 0 && lane.h > 0) {
+        const IconRowSeats seats = icon_row_seats(lane);
+        for (const bool history : {false, true}) {
+            std::vector<std::vector<IconRowDef>> panes;
+            std::vector<RedesignButton>          absent;
+            icon_row_walk(history, panes, absent);
+            int x = seats.first_pane_x;
+            for (const std::vector<IconRowDef>& pane : panes) {
+                const int n = static_cast<int>(pane.size());
+                for (int i = 0; i < n; ++i) {
+                    const int bx = seats.case_x(x, i);
+                    if (bx < seats.left_limit)
+                        add(bx, seats.btn_y, seats.btn_w, seats.btn_h);
+                }
+                x = seats.next_pane_x(x, n);
+            }
+        }
+        add(seats.history_x, seats.btn_y, seats.btn_w, seats.btn_h);
+        for (std::size_t p = 0; p < std::size(kIconRowViewPairs); ++p)
+            for (int i = 0;
+                 i < static_cast<int>(std::size(kIconRowViewPairs[p])); ++i)
+                add(seats.case_x(seats.view_x0[p], i), seats.btn_y,
+                    seats.btn_w, seats.btn_h);
+    }
+    // ROW 8'S RIGHT BLOCK, in both states.
+    const GuiRect content = bottom_row_content_area(app);
+    if (content.w > 0 && content.h > 0) {
+        const BottomRowSeats seats = bottom_row_seats(content);
+        const Row8Lengths lengths = row8_lengths(content);
+        for (const bool history : {false, true})
+            row8_block_walk(
+                history, row8_block(history, content), lengths, [](int) {},
+                [&](const TransportRowDef&, int bx) {
+                    add(bx, seats.case_y, seats.case_w, seats.case_h);
+                },
+                [](const TransportRowDef&) {});
+    }
+    // THE RENDER PLAYER'S NINE, on the controls row with no keyboard under
+    // it (the player never stands over the on-screen keyboard).
+    const BottomRowSeats ps = modal_controls_seats(app, 0);
+    if (ps.case_w > 0 && ps.case_h > 0)
+        for (const int x : player_row_layout(ps).x)
+            add(x, ps.case_y, ps.case_w, ps.case_h);
+    return out;
+}
+
 
 // THE MODAL FAMILY'S BOX'S PAINTER (defined with the folder overlay's
 // painter below, its other caller).
@@ -6685,7 +7081,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    THE ROW IS THE MODAL FAMILY'S CONTROLS ROW (architect
         //    2026-10-14, modal_box.h; row 8's own from 2026-10-05): the
         //    buttons stand at row 8's case seat on row 8's content rows, no
-        //    grippers, no end bars and no dock bar above, the transport's
+        //    bars (row 8's, 2026-10-21) and no dock bar above, the transport's
         //    first case at the box's ring's left outer edge and the
         //    right-flushed pair's last ending at its right outer edge (no
         //    focus-frame reserve inside it; modal_controls_seats), today's
@@ -6700,76 +7096,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner  = AppState::ModalDialogOwner::Player;
         buttons_x0 = cx0;   // unread on this branch; the plan carries the x's
 
-        // THE GLYPH GAP between two of the row's boxes is kPlayerGlyphGapPx,
-        // the player's own since the roster's buttons began to touch; THE
-        // GROUP SPACE between its items is kPlayerGroupGapPx, its own since
-        // the roster's groups became Cool Edit's (2026-10-09).
-        const int ggap     = scaled_px(kPlayerGlyphGapPx, 1);
-        const int group    = scaled_px(kPlayerGroupGapPx);
-
-        // THE CLOCK'S TWO FIELDS ARE MEASURED BEFORE ANYTHING IS PLACED,
-        // their width being one of the fixed terms the scrub's own is what is
-        // left over. Each is a TIME FIELD (the shape, the face and the
-        // fixed-width rule at kTimeShape's block), its cell the widest-digit
-        // specimen alone (time_field_metrics, row 8's own memo), so neither
-        // field nor anything right of it moves as the position runs or an
-        // item of another length loads — the cell and its pads, as row 8's
-        // clock is.
+        // THE ROW'S LAYOUT is player_row_layout's (the glyph gap, the group
+        // space, the clock's two fields measured first, the fixed left run,
+        // the right-flushed pair and the scrub taking what is between them —
+        // the rules stated there), the one layout the materials' case
+        // patches read too (program_case_rects).
         const GuiFont cfont = gui_font(GuiFace::Body);
-        const double cell_w =
-            time_field_metrics(cfont).time_w;
-        const int field_pad = time_field_pad_px();
-        const int field_w   = time_field_w_px(cell_w);
-        const int field_gap = scaled_px(kTimeFieldGapPx);
-        const int clock_w   = field_w + field_gap + field_w;
-
-        // -- The walk: the fixed left run, the right-flushed PAIR (word
-        //    buttons until 2026-09-01, glyph boxes since), and the scrub
-        //    taking what is between them. --
-        const int bw = seats.case_w;
-        int px = cx0;
-        plan[0].x = px; px += bw + ggap;         // Home (skip back)
-        plan[1].x = px; px += bw + ggap;         // Play / Pause
-        plan[2].x = px; px += bw;                // End (skip forward)
-        const int scrub_x0 = px + group;
-
-        // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
-        // was Load in place · Close as WORDS, measured runs in label boxes):
-        // both are the box's own square now, so the cluster is two boxes and
-        // the GLYPH GAP between them — right-flushed where THE CONTROLS ROW'S
-        // CASES END, the last box's right edge the box's ring's outer edge
-        // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
-        // last case's from 2026-10-05; the other owners' clusters keep the
-        // reserved ring).
-        const int words_w  = bw + ggap + bw;
-        const int words_x0 = std::max(cx0, seats.cases_right - words_w);
-        // What the row owes AFTER the scrub: the group space, the clock
-        // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
-        // FOLDER BUTTON with the glyph gap between each two of the four
-        // boxes, and the GAP BEFORE THE RIGHT-FLUSHED PAIR, which is
-        // that same glyph gap since 2026-09-01. THE 2026-08-29 SPACING RULING
-        // IS SPENT, not overruled: it put the WORD BUTTONS' OWN gap there ("the
-        // air between the last glyph and Load in place is the air between Load
-        // in place and Close", the modal word buttons' spacing winning over
-        // the icon gap between clusters, where the layout had spent the
-        // reserved ring plus a pad) — and with the words gone there is no
-        // word-button gap left on this row to win: every gap between two
-        // boxes on it is the row's one glyph gap (kPlayerGlyphGapPx).
-        const int after_scrub =
-            group + clock_w + group + 4 * bw + 4 * ggap;
-        // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
-        // at each end is not a track (28 Windows px since the unit's change).
-        int scrub_w = words_x0 - after_scrub - scrub_x0;
-        if (scrub_w < 2 * scrub_handle_box_px()) scrub_w = 0;
-
-        const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + group : 0);
-        const int clock_end = clock_x0 + clock_w;
-        plan[3].x = clock_end + group;              // Repeat one
-        plan[4].x = plan[3].x + bw + ggap;          // Highlight Next (Down)
-        plan[5].x = plan[4].x + bw + ggap;          // Highlight Previous (Up)
-        plan[6].x = plan[5].x + bw + ggap;          // Up a Folder
-        plan[7].x = words_x0;                       // Load in place
-        plan[8].x = words_x0 + bw + ggap;           // Close
+        const PlayerRowLayout pl = player_row_layout(seats);
+        assert(plan.size() == pl.x.size());
+        for (std::size_t i = 0; i < pl.x.size(); ++i) plan[i].x = pl.x[i];
+        const int field_pad = pl.field_pad;
+        const int field_w   = pl.field_w;
+        const int field_gap = pl.field_gap;
+        const int scrub_x0  = pl.scrub_x0;
+        const int scrub_w   = pl.scrub_w;
+        const int clock_x0  = pl.clock_x0;
+        const int clock_end = pl.clock_end;
 
         // -- THE PLAY-SCRUB, SOUND RECORDER'S CHANNEL UNDER WINDOWS'
         //    TRACKBAR THUMB (architect 2026-10-02, the thumb 2026-10-06; the
@@ -6836,7 +7178,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    FIELDS since 2026-10-05, the POSITION and then the LENGTH, each
         //    centred on the case's rows with its run on the field's own
         //    seat, Cool Edit's dark field and its ink (paint_ce_time_field,
-        //    `ce_field_text`) — the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
+        //    kTimeFieldDigits) — the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
         //    tick's per-position damage, beside the scrub's, and the two CLIP
         //    at the lane's right pad on a narrow window. --
         const int sr = audio.sample_rate();
@@ -6860,7 +7202,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // kTimeShape's block).
                 const text_shape::ShapedRun run = text_shape::shape_text_run(
                     cfont, format_timestamp(seconds_of(shown[i])));
-                set_palette_source(cr, palette().ce_field_text);
+                // Row 8's clock's amber (kTimeFieldDigits, 2026-10-21).
+                set_palette_source(cr, hex(kTimeFieldDigits));
                 text_shape::show_shaped_run(
                     cr, run,
                     static_cast<double>(field_x + field_w - field_pad) -
@@ -7724,6 +8067,11 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     const int lw = program_line_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // THE BRASS (materials.h's METAL, 2026-10-21): the face the brass as
+    // drawn over its tiles (materials::paint_rect — the canvas interior none
+    // of them, its flat mean there under the canvas), the rings its flat
+    // strokes.
+    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
     const GuiRect face{top.x, top.y, top.w, y1 - top.y};
     if (hole) {
         // THE HOLE IS LEFT ALONE WHOLE: the face and the rings below paint
@@ -7735,7 +8083,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
         });
         cairo_clip(cr);
     }
-    paint_cell_rect(cr, face, p.face);
+    materials::paint_rect(cr, face, GuiMaterial::Metal);
     // THE TWO WELLS' RINGS (the stereo divider, render.h's waveform_divider;
     // architect 2026-10-16): the upper from the top frame row through its
     // light bottom line, the divider's first rows; the lower from its dark
@@ -7808,8 +8156,7 @@ static bool floating_surface_stands(const AppState& app) {
 //   * the GROUND and the PROGRAM FRAME'S TOP ROW AND COLUMNS (render_background,
 //     paint_program_frame): the palette and the window's geometry — the
 //     globals, with the scale every length and the one face read;
-//   * THE CAPTION (paint_caption_row): its row; the activation
-//     (gui.caption_active: the gradient's pair and the title's ink); the
+//   * THE CAPTION (paint_caption_row): its row; the
 //     title (caption_title, its shaping and ellipsis a function of it, the
 //     face and the room); per box the enabled bit (caption_button_enabled,
 //     the stash a covering clip refreshes), the pushed face
@@ -7842,7 +8189,6 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
         app.width, app.height, gui_scale_percent(), palette_generation()};
 
     fp.caption.row       = top_caption_row_area(app);
-    fp.caption.active    = gui.caption_active();
     fp.caption.maximized = gui.window_maximized();
     fp.caption.title     = caption_title(app);
     for (int i = 0; i < kCaptionButtonCount; ++i) {
@@ -7879,7 +8225,7 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
     };
     std::vector<std::vector<IconRowDef>> panes;
     std::vector<RedesignButton>          absent;
-    icon_row_walk(app, panes, absent);
+    icon_row_walk(app.history_mode.active, panes, absent);
     int pane = 0;
     for (const std::vector<IconRowDef>& members : panes) {
         for (const IconRowDef& def : members) add(def.id, pane);
@@ -8017,6 +8363,12 @@ void GuiPaintHandler::settle_owed_lane_damage() {
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
+    // THE MATERIALS FOR THIS GEOMETRY (materials.h's BAKE RULE): a compare
+    // of the key when nothing moved; the first bake, or a size change's once
+    // the settle gate has armed it, before any pixel; otherwise the last
+    // bake's tiles.
+    materials::ensure_settled(app);
+
     // (The monospace grid measure that opened every frame is gone with the face
     // — row 7. Nothing in the product measures text outside a shaping pass now,
     // and every such pass owns its own font selection.)
@@ -8393,6 +8745,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // it except the floating surfaces, which paint over everything by design.
     {
         const GuiRect exposed{x, y, w, h};
+        // THE CHROME'S PAINT TIME (a throwaway trace for the planner,
+        // 2026-10-21; materials.cpp's bake line the other): one stderr line
+        // per full-window paint of the lanes below, behind
+        // materials::trace_enabled — WT_PAINT_TRACE=1, or on the tablet the
+        // system property debug.warptempo.trace=1, its stderr logcat.
+        static const bool trace = materials::trace_enabled();
+        const auto trace_t0 = std::chrono::steady_clock::now();
         // THE CAPTION (top lane 0, 2026-10-05) joins them on the same terms:
         // audio-independent, its buttons claimed above every veil the File
         // anchor passes, so it paints on every frame class its lane is
@@ -8426,9 +8785,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_bottom_strip(cr);
         }
         // THE BORDER UNDER ROW 8 (2026-10-14, paint_bottom_border): its own
-        // lane on its own exposure, before the frame that wraps it.
+        // lane on its own exposure, before the frame that wraps it, row 8's
+        // bars running on through its light row where the row stands
+        // (2026-10-21, the row's own yield predicate).
         if (rects_intersect(exposed, bottom_border_area(app))) {
-            paint_bottom_border(cr, app);
+            paint_bottom_border(cr, app,
+                                !modal_owns_bottom_row(app) &&
+                                    !onscreen_keyboard::stands(app, gui));
         }
         // THE PROGRAM'S FRAME (2026-10-10, render.h's program_frame_rect):
         // the ring round the program, with the rows it wraps — its columns
@@ -8436,6 +8799,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // covers it. Not exposure-gated: a handful of rects, the outer clip
         // bounding them.
         paint_program_frame(cr);
+        if (trace && x == 0 && y == 0 && w >= app.width && h >= app.height)
+            std::fprintf(stderr, "warptempo_gui: chrome paint %.3f ms\n",
+                         std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - trace_t0)
+                             .count());
     }
 
     if (plate_branch) {
@@ -8812,6 +9180,10 @@ void GuiPaintHandler::begin_canvas_frame() {
 void GuiPaintHandler::on_resize(int w, int h) {
     app.width  = w;
     app.height = h;
+    // THE MATERIALS ARE NOT BAKED HERE (materials.h's BAKE RULE, the settle
+    // gate, 2026-10-21): a frame drag configures at every motion, so a resize
+    // only stamps its arrival, and the paint bakes once the size has held.
+    materials::note_resize();
     // THE CANVAS'S KNOWN-CLEAR RECORD IS FORGOTTEN (2026-10-14; the rule at
     // on_redraw's CLEAR): the backbuffer may be new, or the client area moved
     // inside it, so the next frame clears.

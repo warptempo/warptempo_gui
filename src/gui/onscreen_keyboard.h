@@ -522,8 +522,8 @@ inline int surface_height_px() {
 //
 // (A THIRD TERM, the settings CHOICE editor's, stood 2026-10-07 to
 // 2026-10-14: a choice row had nothing to type, so the band did not rise for
-// it. The choice editor is removed — the Chrome and Caption rows are line
-// editors like every other row, architect 2026-10-14 — and the term with it.)
+// it. The choice editor is removed — the color rows are line editors like
+// every other row, architect 2026-10-14 — and the term with it.)
 inline bool stands(const AppState& a, const GuiPlatform& gui) {
     return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
 }

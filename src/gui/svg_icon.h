@@ -28,8 +28,11 @@
 // picture. rasterise() cannot fail.
 //
 // THREADS: a parsed tree is immutable and a render writes only the caller's
-// surface, so any thread may render any tree; the product parses and renders
-// on the main thread alone (every draw is the painter's).
+// surface, so any thread may render any tree; the icons parse and render on
+// the main thread alone (every draw is the painter's), and the materials'
+// bake runs raster_info and raster_regions on three threads at once, one
+// material each (materials.h's launch road, 2026-10-21) — each call parses
+// its own wrapper and touches no shared state.
 //
 // GUI-ONLY, like icons.cpp: warptempo_cli never carries this TU nor resvg.
 
@@ -39,9 +42,11 @@
 #include <expected>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 struct resvg_render_tree;   // resvg.h's opaque tree
 
@@ -153,6 +158,55 @@ std::pair<float, float> body_center_shift(const Document& doc);
 cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
                                uint32_t light_rgb, uint32_t shadow_rgb,
                                uint32_t inset_rgb);
+
+// -- THE MATERIALS' ROAD (architect 2026-10-21, the fortepiano chrome;
+// materials.h) ----------------------------------------------------------------
+//
+// A MATERIAL is a raster file, PNG or JPEG, decoded by the icons' own detour
+// (parse_png's: the bytes wrapped in a one-<image> SVG as a base64 data URL,
+// rendered by resvg at the identity, nearest — resvg's raster-images feature
+// decodes both kinds on both devices) and, where it must be scaled, SCALED BY
+// THE ICONS' AREA FILTER (Lanczos-3, separable, PIL's construction). Unlike an
+// icon a material is a RECTANGLE, OPAQUE and LARGE: only the regions the
+// caller keeps are ever resampled, from ONE decode of their source span, and
+// past the image's border the filter reads the border's own pixels (a
+// material has no transparent margin to fade into).
+
+// The file's kind and pixel size, read off its header. THE ERROR ARM'S
+// PRODUCER is a bundled material that is neither a PNG (its signature and
+// IHDR, parse_png's test) nor a JPEG (FF D8 and a start-of-frame marker
+// before the scan) — a drop defect, caught at launch, the caller prefixing
+// the file.
+struct RasterInfo {
+    uint32_t w    = 0;
+    uint32_t h    = 0;
+    bool     jpeg = false;
+};
+std::expected<RasterInfo, std::string> raster_info(std::string_view bytes);
+
+// One region [x0, x0 + w) x [y0, y0 + h) of the image DRAWN AT k (device px
+// per source px), in the drawn image's pixels.
+struct RasterRegion {
+    int x0 = 0, y0 = 0, w = 0, h = 0;
+};
+// EACH REGION INTO A NEW opaque ARGB32 surface w x h the caller owns, sRGB as
+// the file holds it, from ONE resvg decode of the regions' union source span:
+// the two passes in double in a fixed order (the icons' rasterise's
+// construction, the kernel stretched by 1 / k on a reduction), the
+// horizontal pass on demand over a few rows at a time (the intermediate never
+// the span), each tap's index clamped into the image, std::nearbyint at each
+// channel; AT k = 1 EXACTLY a region is the decoded pixels themselves, its
+// rows copied straight out of the decode with no pass at all (a bundled
+// cover's bake, materials.h; every region then inside the image). ONE
+// RENDER, NEVER ONE PER REGION (2026-10-21): resvg decodes the whole file at
+// every render, ~20 ms for a 1920 x 1080 PNG and ~31 ms for 2304 x 1440 on
+// the laptop, against ~7 / ~11 ms for filling the whole span, so the regions
+// share one render of their union's bounding box. The image's alpha is not
+// read: a material is opaque. The error arm's producer is resvg's refusal of
+// the wrapper (the code, parse's line).
+std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
+    std::string_view bytes, const RasterInfo& info, double k,
+    std::span<const RasterRegion> regions);
 
 // THE WINDOW'S COPY (architect 2026-10-08, display_transform.h's head): an
 // icon's own inks are sRGB, as every authored color, so on the tablet's

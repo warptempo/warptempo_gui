@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Seven keys live here and nowhere else,
+// piece (architect 2026-08-27). Nine keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -21,38 +21,35 @@
 //                            projects (project_model.h owns the model)
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
-//   caption=<name>          THE CAPTION PRESET the title bar is painted in, its
-//                            six keys (the caption alone since 2026-10-10): a
-//                            built-in's key alone (`default`, the
-//                            product's own, `windows-storm` and the
-//                            catalog's others; is_builtin_scheme_name,
-//                            palette_file.h; a caption file's name until
-//                            2026-10-14), chosen by the Settings Caption
-//                            row; REQUIRED (architect 2026-10-14; absent
-//                            meant the chrome's own caption 2026-10-08..14),
-//                            the default SPELLED: both first-run templates
-//                            write `caption=default`
-//                            (kGuiDefaultSchemeKey, palette_file.h), the
-//                            chrome's own caption, the compiled caption
-//                            exactly (scheme_record). Named `scheme`
-//                            until 2026-10-13 (architect 2026-10-11 ~03:05);
-//                            the struct's member keeps that name.
-//   chrome=<name>            THE CHROME PRESET the program (and, through the
-//                            Face, the whole window) is painted in: a built-in,
-//                            one of Cool Edit's presets' keys alone
-//                            (`cool-edit-default`, `cool-edit-midnight`, ...;
+//   waveform=<name>          THE WAVEFORM PRESET the program's colors are
+//                            painted in — the waveform, its canvas, the
+//                            grid and center lines, the cues and the
+//                            playhead (palette_file.h's head; its Face
+//                            unread under the materials since 2026-10-21):
+//                            a built-in, one of Cool Edit's presets' keys
+//                            alone (`cool-edit-default`,
+//                            `cool-edit-midnight`, ...;
 //                            is_builtin_palette_name, palette_file.h; a
-//                            chrome file's name until 2026-10-14), chosen by
-//                            the Settings Chrome row; REQUIRED (architect
+//                            preset file's name until 2026-10-14), chosen by
+//                            the Settings Waveform row; REQUIRED (architect
 //                            2026-10-14; absent meant the default
 //                            2026-10-07..14), the default SPELLED: both
 //                            first-run templates write
-//                            `chrome=cool-edit-default`, Cool Edit's
-//                            "Default" since 2026-10-16 (kGuiDefaultPaletteKey,
-//                            palette_file.h). Named
-//                            `palette` until 2026-10-13, and the key `chrome`
-//                            of 2026-10-07 to 2026-10-10 was another thing
-//                            (retired); the struct's member keeps `palette`.
+//                            `waveform=cool-edit-default`, Cool Edit's
+//                            "Default" since 2026-10-16
+//                            (kGuiDefaultPaletteKey, palette_file.h). Named
+//                            `palette` until 2026-10-13 and `chrome` until
+//                            2026-10-21 (the key `chrome` of 2026-10-07 to
+//                            2026-10-10 was another thing, retired); an old
+//                            `palette=` or `chrome=` line is the ordinary
+//                            unknown-key hard fail. (THE `caption` KEY — the
+//                            title bar's preset, `scheme` until 2026-10-13,
+//                            one of 42 built-in Windows and Plus! schemes or
+//                            the product's own `default` — stood before it
+//                            2026-10-08..10-21 and left with the captions:
+//                            the caption is the walnut, materials.h; an old
+//                            `caption=` line is the ordinary unknown-key
+//                            hard fail.)
 //   role=<role>              THE DEVICE'S PART IN THE PROJECTS REPOSITORY
 //                            (architect 2026-10-10): `author` (the tablet:
 //                            it authors every movement, commits and pushes,
@@ -67,6 +64,26 @@
 //                            road; a harmless redundancy and a sanity
 //                            check ("the tablet should never pull [but to
 //                            recover], and the laptop should never push")
+//   bevel_light=<percent>  THE FORTEPIANO CHROME'S TWO BEVEL WEIGHTS
+//   bevel_dark=<percent>     (architect 2026-10-21), a TUNING PHASE: an integer
+//                            [0, 400], 100 Cool Edit's tone rule exactly;
+//                            every LIGHTER-than-Face tone's per-channel factor
+//                            f on a material becomes 1 + (f − 1)·p / 100 with
+//                            p the light key, every darker one's the same
+//                            with the dark key (materials.h's BEVEL KEYS);
+//                            each with a Settings row, applied live at OK
+//                            (the solid tones recomputed, never a bake), both
+//                            templates writing 100; the keys leave when he
+//                            settles the values, which become constants
+//   text_shadow=<px>       THE WORDS' DROP SHADOW (architect 2026-10-21), a
+//                            TUNING key like the bevels: an integer [1, 100]
+//                            in DEVICE PX — the offset (+d, +d) of the
+//                            shadow under the caption's title, the menu
+//                            row's words and the tab labels (materials.h's
+//                            INKS; the settled mock's 2 at 300 %), with a
+//                            Settings row applied live at the OK, both
+//                            templates writing 2; it leaves when he settles
+//                            the value
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -75,7 +92,12 @@
 // `palette` APPENDED after `theme` 2026-10-07, the program's colors' own
 // file type; `theme` gone 2026-10-08, below; `scheme` placed before `palette`
 // 2026-10-08 ~18:15, the chrome's colors before the program's; `role` APPENDED after
-// `palette` 2026-10-10; `icons` and `font` stood 2026-10-09 to 2026-10-12);
+// `palette` 2026-10-10; `icons` and `font` stood 2026-10-09 to 2026-10-12;
+// `scheme` (`caption` since 2026-10-13) gone and `palette` (`chrome` since
+// 2026-10-13) renamed `waveform` in its place 2026-10-21;
+// the three tuning keys of the fortepiano chrome APPENDED after `role`
+// 2026-10-21, a tuning phase's keys at the end as the 2026-09 phases'
+// stood);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -197,8 +219,8 @@
 // read at launch from a themes folder beside this file (the imported
 // catalog shipped as bundled files, copied in at every launch), absent the
 // chrome's own, with a Settings row; every chrome's colors are compiled in
-// since (theme_file.h), and THE SCHEME AND THE PALETTE (palette_file.h)
-// choose among compiled-in presets. A config still carrying `theme=` is unknown-key fatal, no
+// since (theme_file.h), and THE WAVEFORM PRESET (palette_file.h) chooses
+// among compiled-in presets. A config still carrying `theme=` is unknown-key fatal, no
 // migration (neither install's carried one).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
@@ -213,14 +235,14 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nine
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
-// means something's wrong with the config or the setup" — `caption` and
-// `chrome` were the two that might be absent 2026-10-07..14, the absence
+// means something's wrong with the config or the setup" — the two color
+// keys were the two that might be absent 2026-10-07..14, the absence
 // spelling the default; the default is SPELLED since, the writer emitting
-// every line and the first-run templates naming `caption=default` and
-// `chrome=cool-edit-default`, so an absent line is the shared scanner's
+// every line and the first-run templates naming
+// `waveform=cool-edit-default`, so an absent line is the shared scanner's
 // missing-required-key refusal like any other, with no migration and no
 // launch-time repair — the planner edits the two devices' configs at the
 // install), one canonical spelling per
@@ -248,12 +270,15 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
-// `Projects Path` and, since 2026-10-14, `Chrome` and `Caption` — the
-// `chrome` and `caption` keys' rows, line editors like the rest since the
-// same day's removal of their choice drop-downs (a `Chrome` row of the retired
-// vocabulary key stood 2026-10-07..10-10, `Icons` and `Font`
-// 2026-10-09..10-12 and `Theme` 2026-10-03..10-08; the two color keys were
-// the color picker's preset menu's 2026-10-07..14; kSettingsPopupItems,
+// `Projects Path`, since 2026-10-21 the three tuning keys' `Bevel Light`,
+// `Bevel Dark` and `Text Shadow` (live at the OK, no card, as the color
+// key) and, since 2026-10-14, `Waveform` — the `waveform` key's row (`Chrome`
+// until 2026-10-21, beside the `caption` key's `Caption`, both since
+// 2026-10-14), a line editor like the rest since the same day's removal of
+// its choice drop-down (a `Chrome` row of the retired vocabulary key stood
+// 2026-10-07..10-10, `Icons` and `Font` 2026-10-09..10-12 and `Theme`
+// 2026-10-03..10-08; the two color keys were the color picker's preset
+// menu's 2026-10-07..14; kSettingsPopupItems,
 // app_state.h) — as rows that open the settings editor prefilled, and the
 // editor commits each through this file's writer under the key's own
 // grammar below. `role` (2026-10-10) is NOT EDITABLE
@@ -271,14 +296,12 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for every key: each is required, so a successful read always
-// assigns them. `scheme` and `palette` (the struct's members of the
-// `caption` and `chrome` keys) are EMPTY as construction state, never a
-// read's (an empty value is refused); both backends' templates
-// (GuiPlatform::device_config_defaults) SPELL THE DEFAULTS into them
-// (architect 2026-10-14: every key required) — kGuiDefaultSchemeKey and
-// kGuiDefaultPaletteKey (palette_file.h), `default` and
+// assigns them. `waveform` is EMPTY as construction state, never a read's
+// (an empty value is refused); both backends' templates
+// (GuiPlatform::device_config_defaults) SPELL THE DEFAULT into it (architect
+// 2026-10-14: every key required) — kGuiDefaultPaletteKey (palette_file.h),
 // `cool-edit-default` — so the first-run file of either device names its
-// caption and its chrome. THE ROLE'S
+// waveform preset. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
 // first run stamps a file WITHOUT `role` and its read-back refuses the launch
@@ -296,14 +319,10 @@
 //
 // The members are in the writer's order.
 //
-// THE SCHEME AND THE PALETTE ARE THEIR KEYS VERBATIM (the palette
-// 2026-10-07, the scheme 2026-10-08); the install resolves the palette and
-// the scheme (install_palette, render.h, through palette_record and
-// scheme_record, palette_file.h) and
-// derives the chrome's colors from the palette's Cool Edit tones and the
-// scheme's caption keys, or with none — the chrome's own scheme — the
-// compiled caption
-// (live_chrome_words, chrome_derive.h; chrome_caption, palette_file.h).
+// THE WAVEFORM PRESET IS ITS KEY VERBATIM (2026-10-07); the install
+// resolves it (install_palette, render.h, through palette_record,
+// palette_file.h) and derives the chrome's colors by Cool Edit's tones
+// (live_chrome_words, chrome_derive.h).
 // THE DEVICE'S ROLE (architect 2026-10-10; the key's ruling is in the head's
 // list): what this device may do to the projects repository. `Unset` is
 // CONSTRUCTION STATE alone — the first-run template's, which writes no line —
@@ -317,18 +336,37 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE SCHEME, the `caption` key's built-in name (2026-10-08 ~18:15):
-    // required since 2026-10-14, so empty only before a read; the templates
-    // spell the default, `default` (kGuiDefaultSchemeKey; the product's own
-    // caption since architect 2026-10-21).
-    std::string scheme;
-    // THE PALETTE, the `chrome` key's built-in name (architect 2026-10-07):
-    // required since 2026-10-14, so empty only before a read; the templates
-    // spell the default, `cool-edit-default` (kGuiDefaultPaletteKey).
-    std::string palette;
+    // THE WAVEFORM PRESET, the `waveform` key's built-in name (architect
+    // 2026-10-07; `palette` the member's name until 2026-10-21): required
+    // since 2026-10-14, so empty only before a read; the templates spell the
+    // default, `cool-edit-default` (kGuiDefaultPaletteKey). (`scheme`, the
+    // `caption` key's, stood before it 2026-10-08..10-21.)
+    std::string waveform;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
+    // THE BEVEL WEIGHTS AND THE WORDS' SHADOW (2026-10-21, the head's list):
+    // required; 100, 100 and 2 the templates' and the construction state's.
+    int         bevel_light = 100;
+    int         bevel_dark  = 100;
+    int         text_shadow = 2;
 };
+
+// THE BEVEL KEYS' RANGE — the one owner, the reader's and the settings
+// editor's (the scale's shape): an integer percent in [0, 400] — 0 a flat
+// material, 100 the tone rule exactly, 400 four times its departure from the
+// Face (a tuning range, the head's list).
+inline constexpr bool is_bevel_percent(int64_t v) {
+    return v >= 0 && v <= 400;
+}
+inline constexpr const char* kBevelGrammarReason =
+    "must be an integer in [0, 400] in canonical spelling";
+// THE TEXT SHADOW KEY'S RANGE — the one owner: an integer offset in device
+// px, [1, 100] (the head's list).
+inline constexpr bool is_text_shadow_px(int64_t v) {
+    return v >= 1 && v <= 100;
+}
+inline constexpr const char* kTextShadowGrammarReason =
+    "must be an integer in [1, 100] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -482,9 +520,9 @@ inline constexpr const char* kDeviceRoleMirror = "mirror";
 inline constexpr const char* kDeviceRoleGrammarReason =
     "must be author or mirror";
 
-// (THE palette AND scheme GRAMMARS are palette_file.h's
-// is_builtin_palette_name and kPaletteGrammarReason, is_builtin_scheme_name
-// and kSchemeGrammarReason — a built-in's key alone since 2026-10-14. The
+// (THE waveform GRAMMAR is palette_file.h's is_builtin_palette_name and
+// kPaletteGrammarReason — a built-in's key alone since 2026-10-14; the
+// `caption` key's, is_builtin_scheme_name, left with the key 2026-10-21. The
 // `theme_level` grammar and the program color grammar of the twelve keys
 // left with those keys 2026-10-04; the `theme` key's own grammar left with
 // the key 2026-10-08.)
@@ -599,11 +637,13 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // struct they were handed rather than composing one from AppState's fields.
 //
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-grepped 2026-10-14):
+// (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves four keys —
-// `projects_repo=`, `projects_path=`, and since 2026-10-14 `chrome=` and
-// `caption=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// the settings editor's ONE device-key body, which serves six keys —
+// `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
+// until 2026-10-21, beside `caption=` until then), and since 2026-10-21
+// `bevel_light=`, `bevel_dark=` and
+// `text_shadow=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
 // 2026-10-07..10-10; the color picker's preset menu wrote the two color
@@ -621,8 +661,9 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp `caption=default` and `chrome=cool-edit-default` (the
-// defaults spelled, every key required since 2026-10-14) and no role line
+// both stamp `waveform=cool-edit-default` (the default spelled, every key
+// required since 2026-10-14), `bevel_light=100`,
+// `bevel_dark=100` and `text_shadow=2` (the struct's own values) and no role line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and
 // a blank

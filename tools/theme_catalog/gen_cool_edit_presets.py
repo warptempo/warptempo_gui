@@ -41,9 +41,10 @@
 #     drawn), _Sel, ChLi, ChBk, ChGr, ChDt, SpHi, SpLo, SpRv, SpGm, _LED, Edit, UseW, PBSg, prog, STWa, STSp, AnyL,
 #     AnyR.
 # THE KEY is `cool-edit-` and the display name lowercased, every run of other characters one hyphen ("CEPro 1.2" ->
-# `cool-edit-cepro-1-2`), the `chrome` device key's word (the key was named `palette` until 2026-10-13, the preset
-# files' names admitted beside the built-ins until 2026-10-14, a built-in's key alone since); THE DISPLAY NAME is Cool Edit's own, "Default" for its
-# "(Default Scheme)". Keys and display names are checked unique, every key in the catalog key grammar and every
+# `cool-edit-cepro-1-2`), the `waveform` device key's word (the key was named `palette` until 2026-10-13 and `chrome`
+# until 2026-10-21, the preset files' names admitted beside the built-ins until 2026-10-14, a built-in's key alone
+# since); THE DISPLAY NAME is Cool Edit's own, "Default" for its "(Default Scheme)". Keys and display names are checked
+# unique, every key in the key grammar (palette_file.cpp's is_preset_key_spelling) and every
 # display name printable ASCII within 40 bytes (the color picker's typed-name grammar, 2026-10-07..14; the check
 # stays as the names' bound).
 #

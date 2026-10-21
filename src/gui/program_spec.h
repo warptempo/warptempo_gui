@@ -132,35 +132,37 @@ struct ProgramSpec {
     // above the case and below it.
     int  row8_air_above_px;
     int  row8_air_below_px;
-    // ROW 8'S GROUPS (METRICS §5.2): the face before the first group and
-    // between two groups; the GRIPPER's five columns (light, mid, face,
-    // light, mid — two etched double lines) running the case's rows and
-    // `gripper_reach_px` more above and below (each mid column one row lower
-    // than its light one, the etch), the face from
-    // the gripper to the first case and from the last case to the END BAR,
-    // whose six columns are a light column, this much face, a mid and a dark
-    // column (its top row light and its bottom row mid).
-    // THE GROUP'S AIR IS COOL EDIT'S MEASURED 6 W from the gripper to the
-    // first case and 4 W from the last case to the end bar (architect
-    // 2026-10-12, on his mocks tmp/mocks/row8_air/): the asymmetry is
-    // optical — the end bar's bevel makes 4 W after the last case read as
-    // much air as 6 W after the gripper, the same 5-before / 4-after he
-    // measured in the toolbar band ("the Cool Edit row spacing has had a
-    // purpose for being asymmetrical"). METRICS §5.2's chain is the source.
-    // ROW 8'S LAST GROUP HAS NO END BAR (architect 2026-10-14, Cool Edit's
-    // row 8 measured on his 1:1 capture tmp/Screenshot_2026-10-14_11-20-10.png:
-    // its last group — the Begin / End / Length fields, x 1675..1913 — ends
-    // in five columns of face, 1914..1918, and the frame at 1919, no end
-    // bar): the row closes with `row8_tail_px` of face from the last case to
-    // the program frame's line. The clock's group and every other group keep
-    // their end bars (Cool Edit's clock group has one).
-    int  row8_group_gap_px;
-    int  gripper_cols;
-    int  gripper_reach_px;
-    int  gripper_to_case_px;
-    int  case_to_end_bar_px;
-    int  end_bar_face_px;
-    int  row8_tail_px;
+    // ROW 8'S BARS (architect 2026-10-21, the fortepiano chrome; the frame of
+    // record tmp/theme_next/out/cover_walnut1.png, rows 1305..1440 at 300 %,
+    // its generator make_tiles4.py's row8_relayout3): THE GROUPS ARE
+    // SEPARATED BY BARS, NO GRIPPERS. A BAR is six W of columns — a light
+    // column, `row8_bar_face_px` of face, a mid and a dark column, Cool
+    // Edit's end bar taken whole across — and RUNS FROM THE DOCK BAR'S MID
+    // ROW THROUGH THE BORDER'S LIGHT ROW, so the vertical bars MERGE INTO
+    // THE HORIZONTAL LINES: its columns continue through the dock bar's two
+    // lower lines above the row and the border's top line below it, no top
+    // or bottom row of its own and no ridge where they meet
+    // (cool_edit_paint.h's paint_ce_row8_bar). BARS STAND against the frame
+    // column at the row's left, before the clock's group; after the clock's
+    // group; before the first right-anchored group; after each group,
+    // ADJACENT GROUPS SHARING ONE BAR (no gap between groups); and after
+    // Play against the frame column at the row's right. THE PADS ARE THE
+    // BAND'S ASYMMETRIC PUSH-IN (his word): `row8_bar_to_case_px` of face
+    // after a bar, `row8_case_to_bar_px` before one — Cool Edit's measured
+    // 5-before / 4-after, the bar's bevel making 4 W before it read as much
+    // air as 5 after it ("the Cool Edit row spacing has had a purpose for
+    // being asymmetrical", 2026-10-12). Between the clock's group and the
+    // right block the dock bar's lines and the border's run on unbroken over
+    // the walnut. (COOL EDIT'S OWN GROUPS stood 2026-10-09 to 2026-10-21: a
+    // five-column GRIPPER of two etched pairs, 6 W of air, the cases, 4 W
+    // and the end bar with its light top and mid bottom rows inside the
+    // row's content band, two W of face between groups and before the first,
+    // and from 2026-10-14 the last group with no end bar, closing in 5 W of
+    // face to the frame's line as Cool Edit's Begin / End / Length group
+    // does; git history.)
+    int  row8_bar_face_px;
+    int  row8_bar_to_case_px;
+    int  row8_case_to_bar_px;
     // THE DARK TIME FIELD (METRICS §5.4: 72 x 17, its TL line, its ground,
     // its BR line): its height. Every time field takes the shape — row 8's
     // clock and the render player's position and length — and EVERY TIME
@@ -192,9 +194,10 @@ struct ProgramSpec {
     // since 2026-10-10.
     double field_h_px;
     double field_pad_px;
-    // THE STATE LINE'S AIR: its first ink this far past the time-field
-    // group's end bar (the field's own symmetric air of 2026-10-08, the end
-    // bar now standing between the field and the line).
+    // THE STATE LINE'S AIR: its first ink this far past the bar closing the
+    // time field's group — the pad after a bar (the assert below; the
+    // field's own symmetric air of 2026-10-08 before the bar stood between
+    // the field and the line).
     double state_air_px;
 
     // -- THE CANVAS COLUMN (METRICS §3, §4; NOTES.md sets 2 and 3) ----------
@@ -384,13 +387,9 @@ inline constexpr ProgramSpec kProgramSpec = {
     .bottom_border_face_px = 3,
     .row8_air_above_px  = 4,
     .row8_air_below_px  = 5,
-    .row8_group_gap_px  = 2,
-    .gripper_cols       = 5,
-    .gripper_reach_px   = 2,
-    .gripper_to_case_px = 6,
-    .case_to_end_bar_px = 4,
-    .end_bar_face_px    = 3,
-    .row8_tail_px       = 5,
+    .row8_bar_face_px    = 3,
+    .row8_bar_to_case_px = 5,
+    .row8_case_to_bar_px = 4,
     .field_h_px         = 17.0,
     .field_pad_px       = 5.0,
     .state_air_px       = 5.0,
@@ -486,6 +485,14 @@ static_assert(kProgramSpec.bottom_border_face_px ==
               kProgramSpec.dock_bar_face_px);
 static_assert(program_bottom_border_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
+// ROW 8'S BAR (2026-10-21): a light column, the face, a mid and a dark
+// column, 6 W across — the frame of record's 18 px at 300 %; the state
+// line's first ink stands the pad after a bar past the clock group's.
+constexpr int program_row8_bar_authored_w(const ProgramSpec& p) {
+    return 1 + p.row8_bar_face_px + 1 + 1;
+}
+static_assert(program_row8_bar_authored_w(kProgramSpec) == 6);
+static_assert(kProgramSpec.state_air_px == kProgramSpec.row8_bar_to_case_px);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);

@@ -3,7 +3,7 @@
 #include "canvas_sink.h"   // GuiCanvasDrawList, the GL canvas's frame
 #include "gui_font.h"
 #include "gui_main.h"
-#include "palette_file.h"   // kGuiDefaultSchemeKey, kGuiDefaultPaletteKey: the template's defaults
+#include "palette_file.h"   // kGuiDefaultPaletteKey: the template's default
 #include "render.h"   // window_frame_px, paint_window_sizing_frame
 
 #include <android/asset_manager.h>
@@ -565,11 +565,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
-    // THE DEFAULTS SPELLED (architect 2026-10-14: every key required):
-    // `caption=default` and `chrome=cool-edit-default`, the laptop's
-    // template the same (palette_file.h owns both names).
-    cfg.scheme        = kGuiDefaultSchemeKey;
-    cfg.palette       = kGuiDefaultPaletteKey;
+    // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
+    // `waveform=cool-edit-default`, the laptop's template the same
+    // (palette_file.h owns the name).
+    cfg.waveform      = kGuiDefaultPaletteKey;
     // NO ROLE (architect 2026-10-10): the program never invents one, so the
     // first start's read-back refuses on the required `role` key;
     // `warptempo_sync setup` writes `role=author` (GuiDeviceRole,
@@ -643,6 +642,55 @@ read_asset_dir(const std::string& dir_name,
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files() {
     return read_asset_dir("icons", {".svg", ".png"});
+}
+
+// THE MATERIALS, BY NAME (contract at platform_wayland.h's declaration,
+// 2026-10-21): the `tiles/` directory's `.png` and `.jpg` names, and one
+// asset read in one sized read — its first `limit` bytes or the whole file.
+// The error arms' producers are read_asset_dir's (an asset that will not
+// open or read whole; no manager, breach-only). A material missing from the
+// package is the check's missing file (materials.h).
+std::expected<std::vector<std::string>, std::string>
+GuiPlatform::bundled_tile_names() {
+    AAssetManager* mgr = (g_android_app && g_android_app->activity)
+                             ? g_android_app->activity->assetManager
+                             : nullptr;
+    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
+    AAssetDir* dir = AAssetManager_openDir(mgr, "tiles");
+    if (!dir)
+        return std::unexpected(std::string("could not list the APK's tiles/ assets"));
+    std::vector<std::string> out;
+    while (const char* entry = AAssetDir_getNextFileName(dir)) {
+        const std::string name = entry;
+        if (name.ends_with(".png") || name.ends_with(".jpg")) out.push_back(name);
+    }
+    AAssetDir_close(dir);
+    return out;
+}
+
+std::expected<std::string, std::string>
+GuiPlatform::bundled_tile_bytes(const std::string& name, std::size_t limit) {
+    AAssetManager* mgr = (g_android_app && g_android_app->activity)
+                             ? g_android_app->activity->assetManager
+                             : nullptr;
+    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
+    const std::string path = "tiles/" + name;
+    AAsset* asset = AAssetManager_open(mgr, path.c_str(), AASSET_MODE_STREAMING);
+    if (!asset)
+        return std::unexpected("could not open the APK asset '" + path + "'");
+    const off_t len = AAsset_getLength(asset);
+    std::string bytes(std::min(len > 0 ? static_cast<std::size_t>(len) : 0, limit),
+                      '\0');
+    std::size_t got = 0;
+    while (got < bytes.size()) {
+        const int n = AAsset_read(asset, bytes.data() + got, bytes.size() - got);
+        if (n <= 0) break;
+        got += static_cast<std::size_t>(n);
+    }
+    AAsset_close(asset);
+    if (got != bytes.size())
+        return std::unexpected("could not read the APK asset '" + path + "' whole");
+    return bytes;
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {
@@ -1332,10 +1380,6 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
 }
 
-void GuiPlatform::invalidate_surface() {
-    invalidate_surface_rect(0, 0, width_, height_);
-}
-
 void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the damage
@@ -1405,11 +1449,9 @@ void GuiPlatform::paint_one_frame() {
         cairo_save(cr);
         cairo_rectangle(cr, d.x, d.y, d.w, d.h);
         cairo_clip(cr);
-        // The frame's colors the caption's: always active here
-        // (caption_active, the header).
         if (f > 0)
             paint_window_sizing_frame(cr, width_, height_, f,
-                                      caption_active());
+                                      window_activated_);
         const int cx0 = std::max(d.x, f);
         const int cy0 = std::max(d.y, f);
         const int cx1 = std::min(d.x + d.w, width_ - f);

@@ -1,5 +1,5 @@
 """tools/classical_set/act_strip.py: ONE ACT ACROSS EVERY SLICED SHEET, a close-up strip for judging a single act's
-versions side by side (eleven to a row on the Face gray, each tile labelled with its tag <prefix>-<HHMMSS>, as
+versions side by side (eleven to a row on ebony #291D1B, each tile labelled with its tag <prefix>-<HHMMSS>, as
 family_sheets.py labels its blocks; a sheet that never drew the act is left out).
 Inputs: the act's enumerator name and the sliced folders (slice_sheets.py's <folder>/sliced/), each with a tag prefix.
 Output: one PNG at the path given (keep it under tmp/).
@@ -9,6 +9,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 R = Path(__file__).resolve().parent.parent.parent
+# The tile ground: the ebony button case the icons stand on since 2026-10-21 (the chrome follows Mozart's fortepiano,
+# whose natural keys are ebony) — the mean of the settled ebony tile, a flat color so the strip needs no tmp/.
+EBONY = (0x29, 0x1D, 0x1B)
 F = ImageFont.truetype(str(R / "fonts" / "LiberationSans-Bold.ttf"), 16)
 
 
@@ -33,7 +36,7 @@ def main():
         r, c = divmod(i, cols); x, y = c * (px + 6), r * (px + 26)
         dr.text((x + 4, y + 2), t, font=F, fill=(230, 230, 230))
         g = Image.open(d / f"{act}.png").convert("RGBA").resize((px, px), Image.LANCZOS)
-        b = Image.new("RGB", (px, px), (0x62, 0x6C, 0x7B)); b.paste(g, (0, 0), g); im.paste(b, (x, y + 22))
+        b = Image.new("RGB", (px, px), EBONY); b.paste(g, (0, 0), g); im.paste(b, (x, y + 22))
     im.save(out)
 
 

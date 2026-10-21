@@ -148,6 +148,23 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
+# THE BUNDLED MATERIALS (architect 2026-10-21, the fortepiano chrome;
+# materials.h's head): THE TABLET'S THREE COVERS, the repository's
+# assets/tiles/<Name>-2304x1440.png, copied into the package's assets/tiles/,
+# AND NOT THE MASTERS (the tablet's window is always 2304 x 1440, and a cover
+# bakes with no filtering) -- tools/tiles/render_covers.py renders them after
+# a drop. The app reads them in place at launch, by name (GuiPlatform::
+# bundled_tile_names / _bytes, platform_android.cpp); a cover missing from
+# them fails the launch, naming the file. Anything but three is a build
+# defect and stops the script here.
+TILE_DIR="$APPDIR/../../assets/tiles"
+shopt -s nullglob
+TILE_FILES=("$TILE_DIR"/*-2304x1440.png)
+shopt -u nullglob
+[ "${#TILE_FILES[@]}" -eq 3 ] || wt_die "expected three <Name>-2304x1440.png covers under $TILE_DIR (tools/tiles/render_covers.py)"
+mkdir -p "$ASSETS/tiles"
+cp -fL "${TILE_FILES[@]}" "$ASSETS/tiles/"
+wt_say "assets: tiles, ${#TILE_FILES[@]} files"
 
 # --- 2/3. configure + build ----------------------------------------------
 # WT_CANVAS is in the environment, so configure.sh reads the same canvas and

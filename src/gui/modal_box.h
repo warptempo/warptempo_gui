@@ -34,7 +34,7 @@
 //   2. under the box's bottom light row, THE MAIN WINDOW'S 5 W FOOT of face
 //      (column_foot_face_h_px);
 //   3. THE CONTROLS ROW: row 8's content height (4 W of air, the 23-W case,
-//      5 W of air) on the face, no grippers, no end bars and NO DOCK BAR
+//      5 W of air) on the face, NO BARS (row 8's, 2026-10-21) and NO DOCK BAR
 //      ABOVE IT (the dock bar's six rows go to the box), its outermost cases
 //      or buttons FLUSH WITH THE RING'S OUTER EDGES;
 //   4. then THE BORDER UNDER ROW 8 and the program frame's bottom row.

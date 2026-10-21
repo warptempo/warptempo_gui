@@ -1,5 +1,6 @@
 #pragma once
 
+#include "materials.h"   // the fortepiano chrome's inks (kNearWhite)
 #include "render.h"   // GuiRect, GuiColor, palette(), the program's accessors
 
 #include <array>
@@ -9,8 +10,8 @@
 // THE PROGRAM'S PAINTERS — COOL EDIT PRO 2.1'S PANEL (architect 2026-10-09,
 // "chrome means chrome, the program is Cool Edit"; program_spec.h's head):
 // the button case in its faces, the toolbar band's lines and panes and
-// grooves, the tab strip (2026-10-18), the dock bar, row 8's grippers and end
-// bars, the dark time field, the shadowed panel label and the cue's
+// grooves, the tab strip (2026-10-18), the dock bar, row 8's bars
+// (2026-10-21), the dark time field, the shadowed panel label and the cue's
 // triangle — THE SAME UNDER EVERY
 // CHROME (the canvas column's lanes — the view bar, the ruler, the cues —
 // are painted by render_trim_flags, paint_ruler_row and the flag pass out of
@@ -20,16 +21,22 @@
 // W, and the approved mock is tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png
 // (its generator mock_ce.py the construction these painters follow).
 //
-// THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` role
-// and the tones Cool Edit derives from it (cool_edit_derive.h, the COOL EDIT
-// BLOCK of palette()), so a new Face moves the whole panel — the time
-// field's digits and the panel label's swapping pair among them, and since
-// 2026-10-10 THE BUTTON CASE'S face ramp, highlight, shadow ramp and corner
-// (the per-row case tones, cool_edit_derive.h's head with the fit's worst
-// errors; the default Face's within 2 of the bytes it replaced). THE
-// CONSTANTS below are what Cool Edit draws whatever its preset: the case's
-// black outline and the pressed and checked rings, the ruler's ink and the
-// view bar's field.
+// THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` (the
+// brass's mean since 2026-10-21) and the tones Cool Edit derives from it
+// (cool_edit_derive.h, the COOL EDIT BLOCK of palette()) — the panel
+// label's swapping pair among them — and SINCE 2026-10-21 EVERY SURFACE TONE
+// IS A MATERIAL (architect, the fortepiano chrome; materials.h): the
+// painters below hand their tones to paint_cell_rect and paint_relief_frame,
+// whose surface chokepoint lays each on the caller's material scope — the
+// Face as the cover as drawn, every other tone the material's flat stroke —
+// the band, the tab strip's ground, the dock bar and row 8 on the walnut,
+// the tabs and the canvas column's lanes on the brass; THE BUTTON CASE is
+// the ebony's (its ramp the cover under Cool Edit's case span, its lines
+// flat, materials::paint_case_ramp and case_lines). THE CONSTANTS below are
+// what Cool Edit draws whatever its preset — the case's black outline and
+// the pressed and checked rings, the view bar's field — and the fortepiano
+// chrome's own inks (materials.h: the lanes' near-white, the time fields'
+// amber on black), flat, never a material.
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as
 // an intention of a diagonal, so that when they're scaled they don't look
@@ -44,33 +51,36 @@
 // capture px) and the down face's black / F8F8F8 ring; the pane's two-line
 // edge, the groove's dark column its outer bottom-right (Cool Edit's one mid
 // pixel atop the groove is that ring's corner at one capture px); the dock
-// bar's and the end bar's light / mid rings; the time field's ring; the
+// bar's light / mid ring; the time field's ring; the
 // view bar's span (render_trim_flags); each tab's top-right block and the
 // lit tab's two feet (paint_ce_tab_strip, whose declaration says which way
 // each foot runs). A two-line staircase that is no ring
-// — the gripper's etched pairs, the cue's and the playhead head's
+// — the cue's and the playhead head's
 // 9-7-5-3-1 rows — is drawn as its diagonal (their painters say how). A
 // one-tone line stays square: the case's black outline, the down face's
-// 808080 line, the dock bar's dark row, the end bar's dark column, the
-// band's edge columns, the lit tab's drop shadow. The dots are cells (a dot is not a line). (Every
+// 808080 line, the dock bar's dark row, row 8's bars' columns (no corner,
+// 2026-10-21), the band's edge columns, the lit tab's drop shadow. The dots
+// are cells (a dot is not a line). (Every
 // line square-joined as the capture's pixels show stood the morning of
 // 2026-10-09; git history.)
-// NOT DRAWN: the face's brushed grain (METRICS §1.4: a ±5 2-px texture over
-// the ramp, a texture and not a tone — the ramp is drawn smooth).
+// (NOT DRAWN 2026-10-09..10-21: the face's brushed grain, METRICS §1.4's ±5
+// 2-px texture over the ramp; the ebony's own grain rides the ramp since,
+// materials.h.)
 
 // -- THE CASE'S CONSTANTS (METRICS §1.3–1.5; 0xRRGGBB, sRGB) -----------------
 
-// THE FACE RAMP (palette().ce_case_ramp, the case tones): ONE STOP PER W ROW
-// OF THE 20-W GLYPH SEAT, never resampled (architect 2026-10-09 ~10:25, the
-// seat Cool Edit's own 20): stop i fills the seat's W row i, whose device
-// rows are [nearbyint(i·g/20), nearbyint((i+1)·g/20)) of the seat's g, so the
-// rows tile the seat exactly at every scale, each stop a flat band of its
-// bytes. THE HIGHLIGHT (ce_case_highlight) on the top row and left column;
-// THE SHADOW on the right column and the bottom row, a ramp from
-// ce_case_shadow_first to ce_case_shadow_last across the glyph seat, its
-// first tone also the mitre's dark half at the top-right and bottom-left;
-// THE SHADOW'S OWN CORNER (ce_case_corner) at the bottom-right inside the
-// black line. Where the highlight meets the shadow Cool Edit's measured
+// THE FACE RAMP (materials::paint_case_ramp, the ebony's): ONE STOP PER W
+// ROW OF THE 20-W GLYPH SEAT, never resampled (architect 2026-10-09 ~10:25,
+// the seat Cool Edit's own 20): stop i fills the seat's W row i, whose
+// device rows are [nearbyint(i·g/20), nearbyint((i+1)·g/20)) of the seat's
+// g, so the rows tile the seat exactly at every scale, each stop a band of
+// the ebony cover under its luma ratio (materials.h's CASE, 2026-10-21; a
+// flat band of Cool Edit's per-row case tones until then). THE HIGHLIGHT
+// (materials::case_lines) on the top row and left column; THE SHADOW on the
+// right column and the bottom row, a ramp from its first to its last tone
+// across the glyph seat, its first tone also the mitre's dark half at the
+// top-right and bottom-left; THE SHADOW'S OWN CORNER at the bottom-right
+// inside the black line — each a flat stroke off the ebony's Face. Where the highlight meets the shadow Cool Edit's measured
 // ADAEAF is the two tones' half-and-half — the mitre, drawn as the diagonal
 // (the head's rule), so no tone stands for it.
 // THE BLACK LINE on the right and bottom, 000000 on every captured Face.
@@ -120,9 +130,11 @@ inline constexpr uint32_t kCeDisabledInset  = 0x505050;
 // and its digits' cores the same ink over the same black shadow — the
 // ruler's ground is the dark `mid` at every Face, so Cool Edit keeps it
 // light where the panel's text and label swap. Not a Face tone left
-// undone: following Face here would depart from Cool Edit.
+// undone: following Face here would depart from Cool Edit. ON THE BRASS THE
+// TICKS AND DIGITS ARE THE LANES' NEAR-WHITE (materials.h's INKS, architect
+// 2026-10-21: Cool Edit's E0E0E0 until then).
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
-inline constexpr uint32_t kCeRulerTick      = 0xE0E0E0;
+inline constexpr uint32_t kCeRulerTick      = kNearWhite;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 
 // -- THE CASE ------------------------------------------------------------------
@@ -180,31 +192,32 @@ void paint_ce_band_dark_column(cairo_t* cr, const GuiRect& band, int x);
 // and the mid row, the ring mitred, the face rows within, and the dark row
 // across its foot.
 void paint_ce_dock_bar(cairo_t* cr, const GuiRect& bar);
-// THE GRIPPER at column `x` (five lines wide): two etched double lines —
-// light, mid, a face line, light, mid — the light ones from the reach above
-// the case's top `case_y` to the reach below its bottom, the mid ones one
-// line lower, each pair's two-line step at either end drawn as its diagonal
-// (the painter's cut).
-void paint_ce_gripper(cairo_t* cr, int x, int case_y, int case_h);
-inline int ce_gripper_w_px() {
-    return kProgramSpec.gripper_cols * program_line_px();
-}
-// THE END BAR at column `x` over the row's content band [y, y + h): a light
-// column and a light top row over its face against a mid column and a mid
-// row along its foot, the ring mitred, and a dark column the band's height
-// right of it.
-void paint_ce_end_bar(cairo_t* cr, int x, int y, int h);
-inline int ce_end_bar_w_px() {
-    return 3 * program_line_px() + scaled_px(kProgramSpec.end_bar_face_px);
+// ROW 8'S BAR at column `x` over the rows [y, y + h) (architect 2026-10-21;
+// program_spec.h's row-8 bar fields, where the frame of record and the
+// placement stand): FOUR COLUMNS THE RUN'S WHOLE HEIGHT — a light column,
+// the bar's face, a mid column and a dark column, each a square cell, no
+// top or bottom row and so no corner and no mitre: the caller runs it from
+// the dock bar's mid row through the row's content band
+// (paint_bottom_row_buttons_and_clock) and over the border's light row
+// (paint_bottom_border), so it merges into the horizontal lines it crosses.
+// Cool Edit's end bar taken across, its ring's top and bottom rows dropped
+// (the grippers and the end bar inside the content band stood 2026-10-09 to
+// 2026-10-21).
+void paint_ce_row8_bar(cairo_t* cr, int x, int y, int h);
+inline int ce_row8_bar_w_px() {
+    return 3 * program_line_px() + scaled_px(kProgramSpec.row8_bar_face_px);
 }
 
 // -- THE TIME FIELD AND THE LABEL -------------------------------------------------
 
 // THE DARK TIME FIELD on `field` (METRICS §5.4): the field-dark line on its
-// top row and left column, the mid tone inside, the field-light line on its
-// bottom row and right column, the ring mitred. Its digits are the caller's,
-// in the palette's `ce_field_text` (the never-swapping light text: the
-// field's ground is dark at every Face, cool_edit_derive.h's head).
+// top row and left column, BLACK inside (materials.h's kTimeFieldGround,
+// 2026-10-21; Cool Edit's `mid` tone until then), the field-light line on
+// its bottom row and right column, the ring mitred, its two lines the
+// caller's scope's tones (row 8's the walnut's, the render player's flat).
+// Its digits are the caller's, in the fortepiano chrome's AMBER
+// (kTimeFieldDigits; Cool Edit's never-swapping light text, `ce_field_text`,
+// until then).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // A PANEL LABEL (METRICS §6): `run` in the palette's `ce_label` with
 // `ce_label_shadow` under it one line right and down — the label tone over
@@ -224,8 +237,10 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // "Tab A" and "Tab B", the lit one the active tab. In W, from the lane's top
 // and its first column, THE PAGE EDGE (the program frame's inner
 // neighbour):
-//   THE GROUND — the dock's RECESS over the lane's first 20 W, then THE
-//     PAGE'S TOP LIGHT LINE, one line in the hilight tone; under the
+//   THE GROUND — THE WALNUT AS DRAWN over the lane's first 20 W (the dock's
+//     recess until 2026-10-21; materials.h's WOOD: the plank, never the
+//     band's void), then THE PAGE'S TOP LIGHT LINE, one line in the hilight
+//     tone, the walnut's flat stroke; THE TABS ARE THE BRASS; under the
 //     inactive tabs it is THE TAB LINE (ce_tab_line), ONE RUN from one W
 //     before the first inactive footprint to one W after the last, across
 //     the gaps (with the active tab last, the line under and past its shadow
@@ -242,9 +257,10 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     program_spec.h's tab fields, architect 2026-10-18 ~19:55).
 //   AN INACTIVE TAB on its footprint from row 4 to the recess's last row
 //     (16 W): its top row and left column in ce_tab_light, its right column
-//     in ce_tab_dark, the body inside them the Face's measured 15 stops
-//     (ce_tab_body, one stop per W row, never resampled — kCaseRamp's rule,
-//     cool_edit_derive.h's kTabBodies), the label in ce_tab_label.
+//     in ce_tab_dark, the body inside them the brass under Cool Edit's
+//     measured 15 stops as a luma ratio (Default's kTabBodies row, one stop
+//     per W row, never resampled — kCaseRamp's rule; materials.h's METAL,
+//     materials::paint_tab_body).
 //   THE ACTIVE TAB one W wider each side and from row 2 (18 W), its face
 //     the panel's Face running down THROUGH THE PAGE LINE (the tab merges
 //     into the page), its left column in the hilight running through the
@@ -252,11 +268,15 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     and beside it THE SHADOW on the right growth's columns, the page-dark
 //     tone (ce_page_dark), Cool Edit's one drop shadow — SQUARE, NO MITRE,
 //     from one line under the
-//     tab's top (the recess in the cell above it) to the recess's last row,
-//     the page line running under it; the label the program text (ce_text).
+//     tab's top (the strip's ground in the cell above it) to the recess's
+//     last row,
+//     the page line running under it.
 //     So the gap beside it closes to one W, and the first tab active
 //     stands flush on the page edge.
-//   THE LABELS in the body face, no shadow, no hover face (Cool Edit's
+//   THE LABELS in the body face, NEAR-WHITE over the words' drop shadow at
+//     (+d, +d) device px, lit or unlit (materials.h's INKS, 2026-10-21; no
+//     shadow, the program text and Cool Edit's ink until then), no hover
+//     face (Cool Edit's
 //     F6F6F6 hover does not apply, program_spec.h's case_hot_face), the cap
 //     band centred by redesign_baseline in the tab's body under its top
 //     light row — 15 W inactive, 17 W active, so the active label lands one

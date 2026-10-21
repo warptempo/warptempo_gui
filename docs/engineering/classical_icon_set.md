@@ -78,7 +78,7 @@ row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label
 at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
 (`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
 labels cleared, full resolution: the base for a manual fix in GIMP), `sheet_cut_raw.png` (GIMP's cut alone) and
-`contact.png` (the cells on the Face gray, each made act — mirrored or turned — a tile of its own in an eighth row). Every file it
+`contact.png` (the cells on ebony #291D1B, the case the icons stand on since 2026-10-21, each made act — mirrored or turned — a tile of its own in an eighth row). Every file it
 writes is an act. After the cells, `PlayerNext.png` is `PlayerPrevious.png` flipped left to right (the same 256-px
 RGBA), and `Newer.png` is `Older.png` with its arrow turned (`turned_twin`: of Older's alpha components the largest is
 the watch and the rest the arrow; the whole image is flipped and the original watch put back in its mirrored box, so
@@ -100,7 +100,7 @@ drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY`
 ## (d) The family pages for the pick
 
 The architect picks FROM FAMILIES, not from whole sheets: a family's members must share shading and lighting.
-`family_sheets.py` lays every sliced sheet's block of each family side by side on 1920 x 1080 PNG pages, judged on
+`family_sheets.py` lays every sliced sheet's block of each family side by side on 1920 x 1080 PNG pages, its tiles on ebony like contact.png, judged on
 the laptop only (never pushed to the tablet). The families: Starlings (Left, Right), Flags (Drop Marker, Previous / Next
 Marker, Jump to Defining Marker: the flag is the marker, so the acts that carry it are judged together, since
 2026-10-20), Undo and Redo, Watches (Revert, History View, Older, Newer — Newer the turned Older since draft 14), Transport keys

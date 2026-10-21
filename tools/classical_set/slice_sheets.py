@@ -62,7 +62,7 @@ slicer never writes a file that is not an act.
      fill, LANCZOS to 256 -> <out>/<Act>.png, named by the act's enumerator (src/gui/icons.h's kIconNames); then each act in
      MIRRORS the list lacks is made from its source, the same 256-px RGBA: flipped left to right (PIL FLIP_LEFT_RIGHT),
      or for TURNED (Newer) the arrow alone turned (turned_twin; 'TOUCHING Older: Newer not derived' when Older's arrow
-     touches its watch, no file written — the cue to redraw); a contact.png of the cells on the Face gray for the
+     touches its watch, no file written — the cue to redraw); a contact.png of the cells on the ebony case tone (#291D1B, the icons' real ground since 2026-10-21) for the
      check, each made act a tile of its own in an eighth row.
 Inputs: the sheet JPEGs on the command line. Outputs: <out> = <the sheet's folder>/sliced/<the file's 14-digit stamp>/
 (--out <dir>: <dir>/sliced/<stamp>/), never in the repository; GIMP's job lists and the pass-1 cut in the sibling
@@ -98,7 +98,7 @@ LEGACY56 = _WITH_REDO[:45] + [None] + _WITH_REDO[45:55]   # --legacy56: cell 46 
 # right; Newer, in TURNED, from Older by turned_twin (architect 2026-10-21: the watch keeps its digits, the arrow turns).
 MIRRORS = {'Redo': 'Undo', 'PlayerNext': 'PlayerPrevious', 'Newer': 'Older'}
 TURNED = {'Newer'}
-ARROW_MIN = 200   # turned_twin: px of alpha > 0 a part besides the watch needs to be the arrow (the cut's AA specks are 1-14 px; an arrow thousands)
+ARROW_MIN = 200   # turned_twin: px of alpha > 0 a part left of the watch needs to be the arrow (the cut's AA specks are 1-14 px; an arrow thousands)
 assert len(ORDER) == len(NEWER_DRAWN) == len(ONEDAY) == len(LEGACY56) == COLS * ROWS
 assert ORDER[33] == 'Redo' and 'PlayerNext' not in ORDER and ORDER[46] == 'PlayerPrevious' and ONEDAY[46] == 'PlayerNext'
 assert ORDER[35] == 'Older' and ORDER[36] == 'BackgroundSound' and 'Newer' not in ORDER and NEWER_DRAWN[36] == 'Newer'
@@ -280,14 +280,22 @@ def components(m):
 
 def turned_twin(src):
     """NEWER FROM OLDER (architect 2026-10-21): the watch is not mirrored — its digits would read backwards — but the arrow
-    moves to the other side and turns. Of src's (256 RGBA) alpha > 0 8-connected components the WATCH is the largest and
-    the ARROW everything else; the whole image is flipped left to right, the flipped watch's pixels cleared, and the
-    ORIGINAL watch (its own pixels and alpha alone) composited back over its flipped box (x' = W - (x + w), y kept). The
-    prompt asks the arrow lit straight from above, so its gradient survives the flip. None when no part besides the watch
-    reaches ARROW_MIN px: the arrow touches the watch, one component, and cannot be parted from it."""
+    moves to the other side and turns. Of src's (256 RGBA) alpha > 0 8-connected components the WATCH is the largest;
+    Older's arrow stands at the LEFT of the watch, so the ARROW is the largest other component lying WHOLLY LEFT of the
+    watch's bounding box (its x1 < the watch's x0) and reaching ARROW_MIN px. The whole image is flipped left to right,
+    the flipped watch's pixels cleared, and the ORIGINAL watch (its own pixels and alpha alone) composited back over its
+    flipped box (x' = W - (x + w), y kept). The prompt asks the arrow lit straight from above, so its gradient survives
+    the flip. None when no component satisfies the arrow rule: the arrow touches the watch, one component, and cannot be
+    parted from it. A part that is not left of the watch (specks, the stray label text Gemini wrote above the watch on
+    the 20261021165746 sheet, each its own component over ARROW_MIN) is neither watch nor arrow and is not what the
+    test asks about: it flips with the image, and a polluted tile is the planner's to discard."""
     a = np.asarray(Image.open(src).convert('RGBA')); W = a.shape[1]
     lab, sizes = components(a[..., 3] > 0); k = int(np.argmax(sizes))
-    if not any(n >= ARROW_MIN for i, n in enumerate(sizes) if i != k): return None
+    wx0 = np.nonzero((lab == k + 1).any(axis=0))[0].min()
+    def left_of_watch(i):
+        cols = np.nonzero((lab == i + 1).any(axis=0))[0]
+        return cols.max() + 1 < wx0
+    if not any(n >= ARROW_MIN and left_of_watch(i) for i, n in enumerate(sizes) if i != k): return None
     watch = lab == k + 1; ys, xs = np.nonzero(watch); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
     out = a[:, ::-1].copy(); out[watch[:, ::-1]] = 0
     layer = np.zeros_like(a); nx0 = W - x1
@@ -343,7 +351,7 @@ def slice_sheet(src, root, acts):
         tops = [b[0] for b in own_boxes(r, c)]; return min(tops) if tops else bands[r][0]   # sit under a neighbor's taller two-line label's top
     arr = np.asarray(im).copy(); arr[..., 3] = alpha; clean = Image.fromarray(arr); clean.save(out + 'sheet_cut.png'); ink = alpha >= 26
     made = [a for a in MIRRORS if a not in acts]   # the acts this list makes from their twins
-    contact = Image.new('RGBA', (COLS * 112, (len(bands) + bool(made)) * 112), (0x62, 0x6C, 0x7B, 255))   # the eighth row holds the made acts
+    contact = Image.new('RGBA', (COLS * 112, (len(bands) + bool(made)) * 112), (0x29, 0x1D, 0x1B, 255))   # ebony, the case the icons stand on since 2026-10-21; the eighth row holds the made acts
     for i, act in enumerate(acts):
         if act is None: continue   # a legacy sheet's silver Stop: no act, no file
         c, r = i % COLS, i // COLS; t0, t1 = cell_top(r, c), cell_bot(r, c)   # the icon band of a cell: from the label above it to its own

@@ -23,8 +23,9 @@
 #include "history_prefetch.h"
 #include "audio.h"
 #include "device_config.h"
-#include "palette_file.h"  // the chromes and captions folders' launch reads
+#include "palette_file.h"  // palette_record: the `waveform` key's preset at launch
 #include "icons.h"         // the icon set's launch load
+#include "materials.h"     // the fortepiano chrome's materials' launch check
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -195,8 +196,8 @@ namespace {
 // (2026-10-03),
 // and, packed against the right edge, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
-// walk, the nudge and play with Play / Stop last (2026-10-18), each Cool Edit's
-// group of gripper, cases and end bar, the last with no end bar (2026-10-14)
+// walk, the nudge and play with Play / Stop last (2026-10-18), each a
+// group between bars, the last against the frame's line (2026-10-21)
 // — then THE BORDER UNDER ROW 8 (bottom_border_h_px(), the dock bar's six
 // rows again, 6 W, architect 2026-10-14) and THE PROGRAM FRAME'S BOTTOM ROW
 // (program_frame_line_px(), one Hilight line), ON THE WINDOW'S FOOT under
@@ -561,7 +562,7 @@ int strip_total_h(bool top_strip) {
 // 2026-10-10, the border under row 8 since 2026-10-14, the tab strip since
 // 2026-10-18). A COLOR moves no
 // lane: the 879 rows
-// hold under every palette and scheme. May
+// hold under every waveform preset. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -966,9 +967,11 @@ GuiRect bottom_column_foot_area(const AppState& a) {
 // packed against the right edge, the MARKER-VERB GROUP (kMarkerVerbGroup,
 // paint_handler.cpp, owns its membership), the step and walk (Down, Up,
 // Previous Marker, Next Marker) and the nudge and play (Switch Tab, Center,
-// Left, Right and Play / Stop, the last case; architect 2026-10-18), each Cool
-// Edit's group between its gripper and end bar, the row's last group with
-// no end bar (program_spec.h, 2026-10-14). It is BOTTOM LANE 2, between
+// Left, Right and Play / Stop, the last case; architect 2026-10-18), each a
+// group between bars, adjacent groups sharing one, the last against the
+// frame's line (program_spec.h's row-8 bar fields, 2026-10-21) — the bars
+// running from the dock bar's mid row through the border's light row
+// (paint_bottom_row_buttons_and_clock, paint_bottom_border). It is BOTTOM LANE 2, between
 // the column's foot (lane 3, bottom_column_foot_area above, the canvas's
 // light bottom frame row and 5 W of face) and the border under row 8 (lane
 // 1, bottom_border_area, over the program frame's bottom row on the window's
@@ -2282,14 +2285,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // flips (the platform owns the edge test). NOTHING ELSE TAKES AN
     // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
     // render.h's palette block — the folder overlay's inactive highlight, the
-    // edge's other reader from 2026-09-02, retired with it) BUT THE CAPTION
-    // (architect 2026-10-05): it wears its inactive roles while the window
-    // has lost the focus, so the edge damages its lane (on the tablet the
-    // caption is always active, GuiPlatform::caption_active, and the damage
-    // repaints the same pixels).
+    // edge's other reader from 2026-09-02, retired with it), THE CAPTION
+    // INCLUDED since 2026-10-21: the walnut is the same focused or not
+    // (materials.h's WOOD; its inactive roles, 2026-10-05..10-21, went with
+    // the captions, so the edge damages no lane).
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
-        viewport.invalidate_rect(top_caption_row_area(app));
     });
 
     // THE PLATFORM'S CONSUMED KEYBOARD EDGES (2026-08-11):
@@ -2445,6 +2446,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the remembered pointer, so a card that slid up under a resting
         // pointer pauses.
         notifications.fire_if_due();
+
+        // THE MATERIALS' SETTLE GATE, ON EVERY TICK for the same reason
+        // (materials.h's BAKE RULE, 2026-10-21): a size change a paint found
+        // and did not bake is armed once it has held kBakeSettle, and the
+        // whole window damaged so the frame that bakes is the whole window's.
+        if (materials::settle_due())
+            gui.invalidate_region(0, 0, app.width, app.height);
 
         // Startup file load, deferred out of pre-run() so the window maps and
         // paints first (the compositor's initial configure / first frame only
@@ -3589,24 +3597,31 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE SCHEME the
-    // config's `caption` key names (a built-in; 2026-10-08 ~18:15) —
-    // its six caption keys (the caption alone since 2026-10-10), or none for
-    // THE LIVE CHROME'S OWN SCHEME, which paints the chrome's compiled caption
-    // (scheme_record; chrome_caption, palette_file.h), every other chrome color
-    // derived from the palette's Cool Edit tones (live_chrome_words,
-    // chrome_derive.h); and the palette the config's `chrome` key
-    // names (a built-in, one of Cool Edit's presets)
-    // for the program's — both keys REQUIRED (architect 2026-10-14: the
-    // read refuses an absent line, so there is no default to resolve here) —
-    // THE LIVE WORDS' SEED (2026-10-07: resolved here
-    // through palette_record and handed to the install explicitly —
-    // render.h's install_palette) — the scheme resolved against the chrome
-    // set above;
-    // installed once, before the first paint. Every painter reads it through
-    // palette() (render.h's palette block).
-    install_palette(palette_record(device_config.palette),
-                    scheme_record(device_config.scheme));
+    // THE MATERIALS ARE CHECKED AT LAUNCH (architect 2026-10-21, the
+    // fortepiano chrome; materials.h's head): every material's master or
+    // cover in the bundle, every file a PNG or a JPEG — a drop defect is the
+    // blunt terminal line naming the file, and no window. The bake waits for
+    // the window's size (materials::ensure_settled, the first paint's head);
+    // the two bevel weights and the words' shadow are the config's.
+    if (const std::optional<std::string> err = materials::check()) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
+    }
+    materials::set_bevel(device_config.bevel_light, device_config.bevel_dark);
+    materials::set_text_shadow(device_config.text_shadow);
+    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
+    // preset the config's `waveform` key names (a built-in, one of Cool
+    // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an
+    // absent line, so there is no default to resolve here) — THE LIVE
+    // WORDS' SEED (2026-10-07: resolved here through palette_record and
+    // handed to the install explicitly — render.h's install_palette), every
+    // chrome color derived by Cool Edit's tones (live_chrome_words,
+    // chrome_derive.h); installed here and again at the materials' first
+    // bake, whose metal Face the panel's face and the chrome's roles become
+    // (materials.h's BAKE RULE). (The `caption` key's scheme, a second
+    // argument, 2026-10-08..10-21, left with the captions.)
+    // Every painter reads it through palette() (render.h's palette block).
+    install_palette(palette_record(device_config.waveform));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

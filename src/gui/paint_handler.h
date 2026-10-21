@@ -8,6 +8,7 @@
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <cairo/cairo.h>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,21 @@ struct GuiTargetRender;
 //   - GuiPlayback& is non-const because on_resize calls
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
+// THE PROGRAM'S CASES, ONE LIST FOR THE MATERIALS' BAKE (2026-10-21,
+// materials.h's CASE PATCHES): every case — its outer rect — the band, row 8
+// and the render player lay out at this window geometry, IN BOTH STATES OF
+// THE `h` VIEW (its hide and stand-ins move the band's left panes and row
+// 8's block), each row's own layout function the painter reads too
+// (paint_handler.cpp: icon_row_seats and icon_row_walk, row8_block and
+// row8_block_walk, player_row_layout), so the bake seats a patch wherever a
+// case can stand and never where none does. A function of the client size
+// and the scale alone (the faces compiled in), which is the bake's key.
+std::vector<GuiRect> program_case_rects(const AppState& app);
+// THE CAPTION'S THREE BUTTONS in `lane`, left to right (the caption's
+// painter's layout, read by the bake for the caption buttons' patches).
+std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
+    const GuiRect& lane);
+
 // -- Constants used by paint code ----------------------------------------
 //
 // Declared here so paint_handler.cpp can reach them. No pointer-side grab
@@ -56,7 +72,7 @@ struct GuiTargetRender;
 // THE MODAL ROW'S PAD — the bottom row's 8px lead-in and lead-out for the
 // modal that displaces its tenants and the render player's transport (since
 // 2026-10-09 the band and row 8 themselves walk from Cool Edit's edge
-// columns and grippers, program_spec.h; the name is the icon row's, whose
+// columns and row 8's bars, program_spec.h; the name is the icon row's, whose
 // pad it was from 2026-08-14, architect: "make sure bottom row is same
 // height and metrics (padding, etc.) as main icon row"). It lives in this header rather than in
 // the painter's file because that unification gave it a reader outside the row
@@ -186,7 +202,7 @@ struct WaveformCache {
     // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
     // and `waveform_outline` roles, waveform_plate_inks, render.h): the plate
     // writes their words, so an install that moves either (the Settings
-    // Chrome row's commit, install_program_palette, palette_file.h)
+    // Waveform row's commit, install_program_palette, palette_file.h)
     // re-renders it BY FIELD, keyed directly like the line width (architect
     // 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};
@@ -898,10 +914,10 @@ private:
     // retired with the taskbars.)
     void paint_program_frame(cairo_t* cr);
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
-    // record at render.h's caption block): the gradient in the
-    // caption roles of the window's activation (GuiPlatform::caption_active),
-    // the app's icon, the title — "<piece> - Warptempo", or "Warptempo"
-    // where no piece is open — in the bold face cut with "..." before the
+    // record at render.h's caption block): the walnut, active and inactive
+    // alike (materials.h's WOOD), the app's icon, the title — "<piece> -
+    // Warptempo", or "Warptempo" where no piece is open — in the bold face
+    // in the old brass (materials.h's INKS) cut with "..." before the
     // buttons, and the three caption buttons, whose rects and enabled bits it
     // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
     // gate) for the press claim (claim_caption_press, input_pointer.cpp).
@@ -911,17 +927,18 @@ private:
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
     // 2026-10-09): the clock in its dark time field (2026-10-05) in a
-    // grippered group of its own at the left, with THE STATE LINE on the
-    // face its own air past that group's end bar (architect 2026-10-03: the
-    // `h` walk line or the render's progress line at the normal face, clipped
-    // short of the right block), then the right block packed against the
-    // lane's edge — the MARKER-VERB GROUP (its membership is
-    // kMarkerVerbGroup's, in the .cpp), the step and walk and the nudge and
-    // play with Play / Stop its last case (2026-10-18) — each Cool Edit's group of
-    // gripper, air, the program's cases, air and end bar, the row's last
-    // group with no end bar (2026-10-14), two W of face between groups
-    // (program_spec.h's group fields; eight Windows px of bare ground between
-    // groups 2026-09-29 to 2026-10-09) — painted onto the lane
+    // group of its own between two bars at the left, with THE STATE LINE on
+    // the face its own air past that group's closing bar (architect
+    // 2026-10-03: the `h` walk line or the render's progress line at the
+    // normal face, clipped short of the right block), then the right block
+    // packed against the lane's edge — the MARKER-VERB GROUP (its membership
+    // is kMarkerVerbGroup's, in the .cpp), the step and walk and the nudge
+    // and play with Play / Stop its last case (2026-10-18) — each group
+    // between bars, adjacent groups sharing one, the last against the frame's
+    // line (2026-10-21, program_spec.h's row-8 bar fields; Cool Edit's
+    // grippers and end bars 2026-10-09 to 2026-10-21; eight Windows px of
+    // bare ground between groups 2026-09-29 to 2026-10-09) — painted onto
+    // the lane
     // paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row

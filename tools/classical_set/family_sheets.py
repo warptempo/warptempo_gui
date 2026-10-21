@@ -38,7 +38,9 @@ FONT = R / "fonts" / "LiberationSans-Regular.ttf"
 FONTB = R / "fonts" / "LiberationSans-Bold.ttf"
 W, H = 1920, 1080
 TILE_PX = 110   # the Flags page's tile of 2026-10-20 ~13:40, his "about the size of the flags"
-FACE = (0x62, 0x6C, 0x7B)
+# The tile ground: the ebony button case the icons stand on since 2026-10-21 (the chrome follows Mozart's fortepiano,
+# whose natural keys are ebony) — the mean of the settled ebony tile, a flat color so the pages need no tmp/.
+EBONY = (0x29, 0x1D, 0x1B)
 BG = (0x30, 0x34, 0x3A)
 INK = (0xE8, 0xE8, 0xE8)
 DIM = (0xA8, 0xB0, 0xBC)
@@ -103,7 +105,7 @@ def tile(d, act, px):
     k = (str(d), act, px)
     if k not in _cache:
         im = Image.open(d / f"{act}.png").convert("RGBA").resize((px, px), Image.LANCZOS)
-        t = Image.new("RGB", (px, px), FACE)
+        t = Image.new("RGB", (px, px), EBONY)
         t.paste(im, (0, 0), im)
         _cache[k] = t
     return _cache[k]
@@ -132,7 +134,7 @@ def family_pages(key, title, acts, blocks):
     pages = []
     for pi in range(0, max(1, len(blocks)), per):
         chunk = blocks[pi:pi + per]
-        sub = f"page {pi // per + 1} of {-(-len(blocks) // per)}  ·  tiles at {px} px on the Face  ·  each block one source sheet"
+        sub = f"page {pi // per + 1} of {-(-len(blocks) // per)}  ·  tiles at {px} px on ebony  ·  each block one source sheet"
         p, dr = new_page(title, sub)
         y0 = 56
         # column headers once per page above the first row of each block column
@@ -169,7 +171,7 @@ def single_pages(title, acts, versions):
         nonlocal p, dr, y
         if p is not None:
             pages.append(p)
-        p, dr = new_page(title, f"tiles at {px} px on the Face  ·  each row one act, every version")
+        p, dr = new_page(title, f"tiles at {px} px on ebony  ·  each row one act, every version")
         y = 56
     for a in acts:
         vs = versions.get(a, [])

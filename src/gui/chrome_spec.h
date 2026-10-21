@@ -3,12 +3,13 @@
 
 // THE CHROME SPEC (architect 2026-10-06): the choices of the period desktop
 // the chrome follows, read by the chokepoint that paints each element, never
-// a literal at the painter. The colors are the palette's (palette_file.h),
-// the chrome inheriting its Cool Edit tones (chrome_derive.h), and the
-// caption's the scheme's or the compiled caption (theme_file.h's
-// chrome_caption); the spec chooses shapes and seats, and names the default
-// scheme, the one the first-run templates spell. It names NO FACE: the face is the
-// product's one (gui_font.h's gui_live_face_set).
+// a literal at the painter. The colors are the materials' and the
+// palette's (materials.h, palette_file.h), the chrome inheriting Cool Edit's
+// tones (chrome_derive.h), the caption the walnut (materials.h's WOOD); the
+// spec chooses shapes and seats. It names NO FACE: the face is the product's
+// one (gui_font.h's gui_live_face_set), and no color (its own scheme, the
+// `caption` key's default, stood 2026-10-08..10-21 and left with the
+// captions).
 //
 // THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"): the chrome is the caption, the
@@ -37,7 +38,7 @@
 // `win2000` as the abbreviation (kChromeSpecWin2000,
 // docs/engineering/win2000_deviations.md), and prose may say win2000.
 // Windows 95's chrome, Clearlooks and CDE were dropped (they stand in git
-// history; the theme catalog keeps their colors' record).
+// history).
 // The one instance is kChromeSpecWin2000 below, read through
 // live_chrome_spec(). What the chrome never varies is a plain constant at its
 // owner, not a field here: the caption icon's 16-px size (kCaptionIconPx),
@@ -45,18 +46,6 @@
 // word (onscreen_keyboard.h's cap_word).
 
 struct ChromeSpec {
-    // THE CHROME'S OWN BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10; palette_file.h's
-    // head): THE DEFAULT SCHEME, the `caption=` value both first-run
-    // templates spell (kGuiDefaultSchemeKey, palette_file.h; the key required
-    // since architect 2026-10-14, a config with no `caption` line taking it
-    // 2026-10-08..14), which carries no keys under this chrome — the
-    // compiled caption exactly. THE PRODUCT'S OWN `default` since architect
-    // 2026-10-21 (the one scheme that is no catalog entry, hand-written in
-    // palette_file.h's kGuiChromeSchemes; the catalog key `windows-storm`
-    // 2026-10-12..21, `windows-2000-standard` before). It names no palette: the default palette is
-    // Cool Edit's one "Default" under every chrome (2026-10-16,
-    // palette_file.h's head).
-    const char*        own_scheme;
     // (THE VOCABULARY'S FACE SET left the spec 2026-10-09: the face is the
     // product's one, gui_font.h.)
     // THE CAPTION, the top strip's lane 0, in Windows px (render.h's caption
@@ -163,7 +152,6 @@ struct ChromeSpec {
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
-    .own_scheme                   = "default",
     .caption_height_px            = 18,
     .caption_icon_x_px            = 2,
     .caption_icon_y_px            = 1,

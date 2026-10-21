@@ -7,6 +7,7 @@
 #include "gl_canvas.h"   // GuiGlCanvas, the GL canvas's owner
 #endif
 #include <cairo/cairo.h>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -102,6 +103,26 @@ public:
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
 
+    // THE BUNDLED MATERIALS' FILES (architect 2026-10-21, the fortepiano
+    // chrome; materials.h's head) — the materials of assets/tiles/, one flat
+    // drop folder, READ BY NAME (2026-10-21: a launch read every file whole,
+    // 47 MB on the laptop twice over, the masters' bytes though a cover
+    // stood): bundled_tile_names lists every regular file of the folder
+    // whose name ends `.png` or `.jpg` (a symlink as the file it names),
+    // and bundled_tile_bytes reads ONE of them in one sized read — its first
+    // `limit` bytes, or the whole file under the default — the path compiled
+    // in (WARPTEMPO_BUNDLED_TILES_DIR, CMakeLists.txt), the APK's `tiles/`
+    // assets on the tablet. THE ERROR ARMS' PRODUCERS: a folder that will not
+    // list and a file that will not open or read whole (the repository moved
+    // under a built executable; IO), with the system's words. Read by
+    // materials.cpp alone — the launch's check (each file's header prefix)
+    // and every bake (the one file each material's source is), the bake's
+    // three threads at once: both are reentrant, each call its own handle.
+    static std::expected<std::vector<std::string>, std::string>
+        bundled_tile_names();
+    static std::expected<std::string, std::string> bundled_tile_bytes(
+        const std::string& name, std::size_t limit = SIZE_MAX);
+
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
     // is private below so the composition cannot be bypassed by an inline string
@@ -149,15 +170,6 @@ public:
     // that configure delivers it). One call, one fire.
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
-    // THE WHOLE SURFACE, the window's band with it (2026-10-09): where
-    // invalidate_region takes a CLIENT rect and so never reaches the frame,
-    // this damages every surface pixel, so the next paint repaints the
-    // sizing frame (paint_window_sizing_frame) along
-    // with the client. ONE CALLER, A LIVE CHROME PICK
-    // (GuiSettingsEditor::install_color_preset, through
-    // Viewport::invalidate_surface): the frame paints in the chrome's roles,
-    // and nothing else changes them while the window stands (platform.h).
-    void invalidate_surface();
     void drain_events();
     void paint_now();
 
@@ -274,12 +286,11 @@ public:
     // window_restorable: whether this window can leave the maximised state at
     //   all — true here; the caption's double click and the Maximise / Restore
     //   button act only where it holds.
-    // caption_active: whether the caption wears its ACTIVE roles — the
-    //   window's activation here (window_activated), the INACTIVE roles on
-    //   focus loss (Windows' inactive caption).
+    // (caption_active, whether the caption wore its ACTIVE or INACTIVE
+    //   roles, 2026-10-05..10-21, left with the caption's roles: the walnut
+    //   caption is the same either way.)
     bool window_maximized() const { return window_maximized_; }
     bool window_restorable() const { return true; }
-    bool caption_active() const { return window_activated_; }
 
     // THE PAINT TARGETS (2026-10-13): the buffers this backend paints into
     // and, inside the paint loop (paint_one_frame), the one this frame
@@ -919,8 +930,7 @@ private:
     // One rect of SURFACE damage, coalesced into the global list and, under
     // the cpu canvas, every buffer's pending list, and the frame callback
     // armed (invalidate_region's body, the app's client rect offset by the
-    // frame; invalidate_surface's whole surface) — the Android twin's one
-    // road of the same name.
+    // frame) — the Android twin's one road of the same name.
     void invalidate_surface_rect(int x, int y, int w, int h);
     // A COMPOSITOR GRAB TOOK THE PRESS (begin_window_move / _resize): the
     // compositor owns the pointer until the lift, and nothing guarantees the

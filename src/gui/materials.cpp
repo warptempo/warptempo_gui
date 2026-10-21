@@ -1,0 +1,1113 @@
+#include "materials.h"
+
+#include "app_state.h"          // the lane accessors the bake's geometry reads
+#include "cool_edit_derive.h"   // the tone rule, kTabBodies' Default row
+#include "display_transform.h"
+#include "modal_box.h"          // the render player's controls row
+#include "paint_handler.h"      // program_case_rects, caption_button_rects
+#include "palette_file.h"       // program_palette_words' type
+#include "platform.h"           // GuiPlatform::bundled_tile_names / _bytes
+#include "svg_icon.h"           // the materials' road: raster_info, raster_regions
+
+#include <algorithm>
+#include <array>
+#include <charconv>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <string_view>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#if defined(__ANDROID__)
+#include <sys/system_properties.h>
+#endif
+
+// The rules are at the declarations (materials.h).
+
+namespace {
+
+struct SurfaceDeleter {
+    void operator()(cairo_surface_t* s) const { cairo_surface_destroy(s); }
+};
+using Surface = std::unique_ptr<cairo_surface_t, SurfaceDeleter>;
+struct PatternDeleter {
+    void operator()(cairo_pattern_t* p) const { cairo_pattern_destroy(p); }
+};
+using Pattern = std::unique_ptr<cairo_pattern_t, PatternDeleter>;
+
+// ONE BAKED TILE: its rect in client coordinates, its window bytes and the
+// pattern a fill takes them through (EXTEND_NONE, FILTER_NEAREST, its matrix
+// the tile's offset, set at each use).
+struct Tile {
+    GuiRect rect{};
+    Surface surface;
+    Pattern pattern;
+};
+
+Tile make_tile(const GuiRect& r, Surface s) {
+    Tile t;
+    t.rect = r;
+    t.surface = std::move(s);
+    t.pattern.reset(cairo_pattern_create_for_surface(t.surface.get()));
+    cairo_pattern_set_extend(t.pattern.get(), CAIRO_EXTEND_NONE);
+    cairo_pattern_set_filter(t.pattern.get(), CAIRO_FILTER_NEAREST);
+    return t;
+}
+
+// THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale and
+// the conversion — every lane, every seat and so every tile's rect is a
+// function of them (program_case_rects' declaration), so a frame compares
+// these four and never lays anything out.
+struct Key {
+    int  w = 0, h = 0, scale = 0;
+    bool converted = false;
+    bool operator==(const Key&) const = default;
+};
+Key key_of(const AppState& app) {
+    return Key{app.width, app.height, gui_scale_percent(),
+               display_transform::active()};
+}
+
+// THE WINDOW'S GEOMETRY A BAKE IS FOR — every tile's rect, laid out at the
+// bake alone.
+struct Geometry {
+    int w = 0, h = 0;
+    // Wood: above the panel [0, panel_top), below it [panel_bottom, h), the
+    // frame's columns beside it (frame_lw wide).
+    int panel_top = 0, panel_bottom = 0, frame_lw = 0;
+    // Metal: from the tab strip's top to the canvas's top, the canvas's foot
+    // to the panel's bottom, and the canvas's two side margins between.
+    int metal_top = 0;
+    GuiRect canvas{};
+    // The void's rows (the band).
+    int band_y = 0, band_h = 0;
+    // The inactive tab's body rows.
+    int tab_body_y0 = 0, tab_body_y1 = 0;
+    // THE CASES (program_case_rects: every case's outer rect, both states of
+    // the `h` view) and the case's line and glyph seat.
+    std::vector<GuiRect> cases;
+    int lw = 0, g = 0;
+    // THE CAPTION'S ROW and its three buttons.
+    int caption_y = 0, caption_h = 0;
+    std::array<GuiRect, kCaptionButtonCount> caption_buttons{};
+};
+
+Geometry geometry_of(const AppState& app) {
+    Geometry g;
+    g.w = app.width;
+    g.h = app.height;
+    const GuiRect strip = top_tab_strip_area(app);
+    g.metal_top = strip.y;
+    g.panel_top = strip.y + strip.h;
+    g.panel_bottom = bottom_row_area(app).y;
+    g.frame_lw = program_frame_line_px();
+    g.canvas = waveform_area(app);
+    const GuiRect band = top_icon_row_area(app);
+    g.band_y = band.y;
+    g.band_h = band.h;
+    g.lw = program_line_px();
+    g.tab_body_y0 = strip.y + scaled_px(kProgramSpec.tab_inactive_top_px) + g.lw;
+    g.tab_body_y1 = strip.y + tab_strip_recess_h_px();
+    g.g = icon_case_w_px() - 3 * g.lw;
+    g.cases = program_case_rects(app);
+    const GuiRect caption = top_caption_row_area(app);
+    g.caption_y = caption.y;
+    g.caption_h = caption.h;
+    g.caption_buttons = caption_button_rects(caption);
+    return g;
+}
+
+uint32_t channel(uint32_t word, int c) { return (word >> (16 - 8 * c)) & 0xFF; }
+
+uint32_t word_of(GuiColor c) {
+    const auto byte = [](double u) {
+        return static_cast<uint32_t>(
+            std::clamp(std::nearbyint(u * 255.0), 0.0, 255.0));
+    };
+    return (byte(c.r) << 16) | (byte(c.g) << 8) | byte(c.b);
+}
+
+// Rec. 601 luma of a word (the mocks' luminance rule).
+double luma(uint32_t w) {
+    return 0.299 * channel(w, 0) + 0.587 * channel(w, 1) + 0.114 * channel(w, 2);
+}
+
+// A TONE KEY: the Face (-1), or kTones' row `i`.
+constexpr int kFaceKey = -1;
+
+// THE SETTLE GATE (materials.h's BAKE RULE): a size change of a baked
+// window bakes once no size change has arrived for this long.
+constexpr auto kBakeSettle = std::chrono::milliseconds(150);
+
+struct State {
+    bool     baked = false;
+    Key      key;
+    std::array<uint32_t, kGuiMaterialCount> faces{};
+    // THE TILES (materials.h's BAKE RULE): the wood's and the metal's
+    // grounds, the void, the inactive tab's body, the caption buttons' faces
+    // and THE CASE PATCHES, one per seat at rest and one pressed.
+    std::vector<Tile> wood, metal, void_tiles, tab_body, caption_case;
+    std::vector<Tile> case_rest, case_down;
+    // THE CLIENT THE PAINTERS PAINT (every on_redraw head's): while a size
+    // change waits on the gate the tiles are the last bake's, and none is
+    // ever blitted outside this.
+    int client_w = 0, client_h = 0;
+    // THE GATE: a changed key seen by a paint and not yet baked (`deferred`),
+    // the last size change's arrival (note_resize), and the tick's arming
+    // (settle_due) — the frame that bakes is the whole window's.
+    bool deferred = false;
+    bool armed    = false;
+    std::chrono::steady_clock::time_point last_resize{};
+    int                    bevel_light = 100;
+    int                    bevel_dark  = 100;
+    int                    text_shadow = 2;
+    GuiMaterialRegion      region = GuiMaterialRegion::Flat;
+    // THE TONE TABLE (set_tone_face): a flat word and its key.
+    std::vector<std::pair<uint32_t, int>> tones;
+    int                                   recess_key = kFaceKey;
+    // Each region's flat strokes, by the table's order (rebuilt with it and
+    // at a bevel change).
+    std::vector<uint32_t> wood_flat, metal_flat, caption_flat;
+    materials::CaseLines  case_lines{};
+};
+
+State& state() {
+    static State s;
+    return s;
+}
+
+// THE FACTORS OF A TONE on a Face (materials.h's TONE RULE and BEVEL KEYS):
+// per channel tone / Face, a lighter-than-Face tone's (its HLS L above the
+// Face's) pulled toward 1 by the light key, a darker one's by the dark key —
+// then the Face scaled by them, each channel rounded and clamped.
+uint32_t beveled(uint32_t tone, uint32_t face) {
+    using cool_edit_derive::hls_of;
+    const State& s = state();
+    const bool lighter = hls_of(tone).l > hls_of(face).l;
+    const double p = (lighter ? s.bevel_light : s.bevel_dark) / 100.0;
+    uint32_t out = 0;
+    for (int c = 0; c < 3; ++c) {
+        const double f0 = static_cast<double>(channel(tone, c)) /
+                          std::max<double>(channel(face, c), 1.0);
+        const double f = 1.0 + (f0 - 1.0) * p;
+        out |= static_cast<uint32_t>(std::clamp(
+                   std::nearbyint(static_cast<double>(channel(face, c)) * f),
+                   0.0, 255.0))
+               << (16 - 8 * c);
+    }
+    return out;
+}
+
+// The case's tone at HLS lightness offset `b` (saturation kept).
+uint32_t case_tone(uint32_t face, double b) {
+    return cool_edit_derive::tone(face, 1.0, b);
+}
+
+// EVERY FLAT STROKE, rebuilt off the Faces and the bevel keys.
+void rebuild_flats() {
+    State& s = state();
+    const auto row = [&](uint32_t face) {
+        std::vector<uint32_t> v;
+        for (const auto& [word, key] : s.tones) {
+            if (key == kFaceKey) { v.push_back(face); continue; }
+            v.push_back(beveled(cool_edit_derive::tone_of(
+                                    cool_edit_derive::kTones[static_cast<std::size_t>(key)],
+                                    face, 0),
+                                face));
+        }
+        return v;
+    };
+    const uint32_t wood = s.faces[static_cast<std::size_t>(GuiMaterial::Wood)];
+    const uint32_t metal = s.faces[static_cast<std::size_t>(GuiMaterial::Metal)];
+    const uint32_t ebony = s.faces[static_cast<std::size_t>(GuiMaterial::Case)];
+    s.wood_flat = row(wood);
+    s.metal_flat = row(metal);
+    // THE CAPTION BUTTONS (materials.h's CASE): a tone lighter than the
+    // chrome's Face the case's highlight, a darker one its shadow's first
+    // tone, the Face its face.
+    const uint32_t hi = beveled(case_tone(ebony, kCaseHighlight), ebony);
+    const uint32_t lo = beveled(case_tone(ebony, kCaseShadowFirst), ebony);
+    s.caption_flat.clear();
+    for (const auto& [word, key] : s.tones) {
+        if (key == kFaceKey) {
+            s.caption_flat.push_back(case_tone(ebony, kCaptionButtonFace));
+            continue;
+        }
+        const uint32_t chrome_face = s.tones.front().first;
+        s.caption_flat.push_back(
+            cool_edit_derive::hls_of(word).l > cool_edit_derive::hls_of(chrome_face).l
+                ? hi
+                : lo);
+    }
+    s.case_lines = materials::CaseLines{
+        hex(beveled(case_tone(ebony, kCaseHighlight), ebony)),
+        hex(beveled(case_tone(ebony, kCaseShadowFirst), ebony)),
+        hex(beveled(case_tone(ebony, kCaseShadowLast), ebony)),
+        hex(beveled(case_tone(ebony, kCaseCorner), ebony))};
+}
+
+// THE FACE'S RATIO of a tone to its Face, Rec. 601 luma (the luminance rule).
+double luma_ratio(uint32_t tone, uint32_t face) {
+    return luma(tone) / std::max(luma(face), 1e-6);
+}
+
+// THE CASE RAMP'S STOP on the seat's device row `row` of `g`
+// (cool_edit_paint.h's FACE RAMP: stop i on [nearbyint(i·g/20),
+// nearbyint((i+1)·g/20))).
+constexpr int kCaseStops = static_cast<int>(cool_edit_derive::kCaseRamp.size());
+int stop_of(int row, int g, int stops) {
+    for (int i = 0; i < stops; ++i) {
+        const int y1 = static_cast<int>(
+            std::nearbyint(static_cast<double>(i + 1) * g / stops));
+        if (row < y1) return i;
+    }
+    return stops - 1;
+}
+// The ramp's luma ratio at stop i (materials.h's CASE).
+double case_ramp_ratio(int i, uint32_t ebony) {
+    const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
+                                        static_cast<double>(kCaseStops - 1);
+    return luma_ratio(case_tone(ebony, b), ebony);
+}
+// The inactive tab body's luma ratio at stop k (materials.h's METAL):
+// kTabBodies' Default row, each row's HLS lightness over the Default Face's,
+// taken onto `brass`.
+double tab_body_ratio(int k, uint32_t brass) {
+    using namespace cool_edit_derive;
+    const TabBody& d = tab_body(kDefaultFace);
+    const double a = hls_of(d.rows[static_cast<std::size_t>(k)]).l /
+                     hls_of(kDefaultFace).l;
+    return luma_ratio(tone(brass, a, 0.0), brass);
+}
+
+// One pixel row's channels times `f`, rounded and clamped, opaque.
+void scale_row(const uint32_t* src, uint32_t* dst, int w, double f) {
+    for (int x = 0; x < w; ++x) {
+        uint32_t word = 0xFF000000u;
+        for (int c = 0; c < 3; ++c)
+            word |= static_cast<uint32_t>(std::clamp(
+                        std::nearbyint(static_cast<double>(channel(src[x], c)) * f),
+                        0.0, 255.0))
+                    << (16 - 8 * c);
+        dst[x] = word;
+    }
+}
+
+// A NEW SURFACE of `src`'s rows [y0, y0 + h) (client rows; `src_y` the
+// source tile's first row), each row's pixels times its luma ratio — sRGB,
+// converted for the window later.
+Surface scaled_rows(cairo_surface_t* src, int src_y, int y0, int h,
+                    const auto& ratio_of_row) {
+    const int w = cairo_image_surface_get_width(src);
+    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+    cairo_surface_flush(src);
+    cairo_surface_flush(out);
+    const unsigned char* sdata = cairo_image_surface_get_data(src);
+    const int sstride = cairo_image_surface_get_stride(src);
+    unsigned char* ddata = cairo_image_surface_get_data(out);
+    const int dstride = cairo_image_surface_get_stride(out);
+    for (int y = 0; y < h; ++y)
+        scale_row(reinterpret_cast<const uint32_t*>(
+                      sdata + static_cast<std::size_t>(y0 + y - src_y) * sstride),
+                  reinterpret_cast<uint32_t*>(ddata + static_cast<std::size_t>(y) * dstride),
+                  w, ratio_of_row(y));
+    cairo_surface_mark_dirty(out);
+    return Surface(out);
+}
+
+// THE SAME IN PLACE: each of `s`'s rows times its luma ratio.
+void scale_in_place(cairo_surface_t* s, const auto& ratio_of_row) {
+    cairo_surface_flush(s);
+    const int w = cairo_image_surface_get_width(s);
+    const int h = cairo_image_surface_get_height(s);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    for (int y = 0; y < h; ++y) {
+        auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+        scale_row(row, row, w, ratio_of_row(y));
+    }
+    cairo_surface_mark_dirty(s);
+}
+
+// THE MEAN of a set of surfaces' pixels, each channel's rounded sum.
+uint32_t mean_of(const std::vector<Surface>& surfaces) {
+    double sum[3] = {0.0, 0.0, 0.0};
+    double n = 0.0;
+    for (const Surface& sp : surfaces) {
+        cairo_surface_t* s = sp.get();
+        cairo_surface_flush(s);
+        const int w = cairo_image_surface_get_width(s);
+        const int h = cairo_image_surface_get_height(s);
+        const unsigned char* data = cairo_image_surface_get_data(s);
+        const int stride = cairo_image_surface_get_stride(s);
+        for (int y = 0; y < h; ++y) {
+            const auto* row = reinterpret_cast<const uint32_t*>(data + y * stride);
+            for (int x = 0; x < w; ++x)
+                for (int c = 0; c < 3; ++c)
+                    sum[c] += static_cast<double>(channel(row[x], c));
+        }
+        n += static_cast<double>(w) * h;
+    }
+    uint32_t out = 0;
+    if (n <= 0.0) return out;
+    for (int c = 0; c < 3; ++c)
+        out |= static_cast<uint32_t>(std::nearbyint(sum[c] / n)) << (16 - 8 * c);
+    return out;
+}
+
+// A BAKED SURFACE IN THE WINDOW'S BYTES (display_transform.h): converted in
+// place, once, at the bake — the transform's word exactly, through its
+// table-driven encode (p3_word_from_srgb_fast), a run of equal pixels
+// converted once.
+void convert(cairo_surface_t* s) {
+    if (!display_transform::active()) return;
+    cairo_surface_flush(s);
+    const int w = cairo_image_surface_get_width(s);
+    const int h = cairo_image_surface_get_height(s);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    uint32_t last_in = 0xFFFFFFFFu, last_out = 0;
+    for (int y = 0; y < h; ++y) {
+        auto* row = reinterpret_cast<uint32_t*>(data + y * stride);
+        for (int x = 0; x < w; ++x) {
+            const uint32_t in = row[x] & 0xFFFFFFu;
+            if (in != last_in) {
+                last_in = in;
+                last_out = 0xFF000000u | display_transform::p3_word_from_srgb_fast(in);
+            }
+            row[x] = last_out;
+        }
+    }
+    cairo_surface_mark_dirty(s);
+}
+
+// -- THE BUNDLE'S CATALOG (materials.h's head: the drop folder by name) -----
+
+// A COVER'S NAME, `<Name>-<W>x<H>.png`: its W and H, or false.
+bool parse_cover(std::string_view file, std::string_view stem, int& w, int& h) {
+    if (file.size() <= stem.size() + 5 || !file.starts_with(stem) ||
+        file[stem.size()] != '-' || !file.ends_with(".png"))
+        return false;
+    const std::string_view mid =
+        file.substr(stem.size() + 1, file.size() - stem.size() - 5);
+    const std::size_t x = mid.find('x');
+    if (x == std::string_view::npos) return false;
+    const auto num = [](std::string_view t, int& v) {
+        const auto r = std::from_chars(t.data(), t.data() + t.size(), v);
+        return !t.empty() && r.ec == std::errc{} && r.ptr == t.data() + t.size() &&
+               v > 0;
+    };
+    return num(mid.substr(0, x), w) && num(mid.substr(x + 1), h);
+}
+
+struct Catalog {
+    struct Cover {
+        int         w = 0, h = 0;
+        std::string file;
+    };
+    // Each material's master (the PNG winning; empty: none) and covers.
+    std::array<std::string, kGuiMaterialCount>        master;
+    std::array<std::vector<Cover>, kGuiMaterialCount> covers;
+};
+
+Catalog catalog_of(const std::vector<std::string>& names) {
+    Catalog c;
+    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
+        const std::string stem(kGuiMaterialNames[m]);
+        bool png = false;
+        for (const std::string& f : names) {
+            int w = 0, h = 0;
+            if (f == stem + ".png") { c.master[m] = f; png = true; }
+            else if (f == stem + ".jpg" && !png) c.master[m] = f;
+            else if (parse_cover(f, stem, w, h))
+                c.covers[m].push_back(Catalog::Cover{w, h, f});
+        }
+    }
+    return c;
+}
+
+// ONE MATERIAL'S SOURCE FOR THE CLIENT w x h (materials.h's COVER RULE):
+// the smallest bundled cover reaching it in both dimensions (by area, the
+// exact size the smallest of all) — its centre crop, no filtering — else
+// the master under the cover rule, else none.
+struct Source {
+    std::string file;
+    bool        cover = false;
+    int         cw = 0, ch = 0;   // a cover's size (its name's)
+};
+std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
+    const std::size_t i = static_cast<std::size_t>(m);
+    const Catalog::Cover* best = nullptr;
+    for (const Catalog::Cover& cv : c.covers[i]) {
+        if (cv.w < w || cv.h < h) continue;
+        const long long area = static_cast<long long>(cv.w) * cv.h;
+        if (!best || area < static_cast<long long>(best->w) * best->h)
+            best = &cv;
+    }
+    if (best) return Source{best->file, true, best->w, best->h};
+    if (!c.master[i].empty()) return Source{c.master[i], false, 0, 0};
+    return std::nullopt;
+}
+
+// THE RAW REGIONS of one material for the client w x h (client rects in,
+// the sRGB surfaces out): its source read by name (the one file), a cover's
+// centre crop at the identity, a master under the cover rule.
+std::expected<std::vector<Surface>, std::string> source_regions(
+    const Source& src, int w, int h, const std::vector<GuiRect>& rects) {
+    const auto bytes = GuiPlatform::bundled_tile_bytes(src.file);
+    if (!bytes) return std::unexpected("tiles: " + bytes.error());
+    const auto info = svg_icon::raster_info(*bytes);
+    if (!info) return std::unexpected("tiles: " + src.file + ": " + info.error());
+    double k = 1.0;
+    int ox = 0, oy = 0;
+    if (src.cover) {
+        if (static_cast<int>(info->w) != src.cw ||
+            static_cast<int>(info->h) != src.ch)
+            return std::unexpected("tiles: " + src.file + ": not " +
+                                   std::to_string(src.cw) + "x" +
+                                   std::to_string(src.ch));
+        ox = (src.cw - w) / 2;
+        oy = (src.ch - h) / 2;
+    } else {
+        // THE COVER RULE (materials.h): one factor, the overhang cropped
+        // evenly (the tool's own arithmetic, tools/tiles/render_covers.py).
+        k = std::max(static_cast<double>(w) / info->w,
+                     static_cast<double>(h) / info->h);
+        const int sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
+        const int sh = std::max(h, static_cast<int>(std::nearbyint(info->h * k)));
+        ox = (sw - w) / 2;
+        oy = (sh - h) / 2;
+    }
+    std::vector<svg_icon::RasterRegion> regions;
+    for (const GuiRect& r : rects)
+        regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
+    auto out = svg_icon::raster_regions(*bytes, *info, k, regions);
+    if (!out) return std::unexpected("tiles: " + src.file + ": " + out.error());
+    std::vector<Surface> owned;
+    owned.reserve(out->size());
+    for (cairo_surface_t* s : *out) owned.emplace_back(s);
+    return owned;
+}
+
+// ONE MATERIAL'S BAKE, built on its own thread (materials.h's launch road):
+// the Face, the tiles in sRGB converted for the window, each beside its
+// rect. Nothing here touches State.
+struct Baked {
+    std::string                             error;   // empty: success
+    uint32_t                                face = 0;
+    std::vector<std::pair<GuiRect, Surface>> grounds, extra, rest, down;
+    double                                  ms = 0.0;   // read, decode, derive
+};
+
+// Whether `inner` lies whole inside `outer`.
+bool contains_rect(const GuiRect& outer, const GuiRect& inner) {
+    return inner.x >= outer.x && inner.y >= outer.y &&
+           inner.x + inner.w <= outer.x + outer.w &&
+           inner.y + inner.h <= outer.y + outer.h;
+}
+
+std::vector<GuiRect> nonempty(std::vector<GuiRect> v) {
+    v.erase(std::remove_if(v.begin(), v.end(),
+                           [](const GuiRect& r) { return r.w <= 0 || r.h <= 0; }),
+            v.end());
+    return v;
+}
+GuiRect band_of(const Geometry& g, int y0, int y1) {
+    return GuiRect{0, y0, g.w, std::max(0, y1 - y0)};
+}
+
+// THE WOOD: above and below the panel, the frame's columns beside it, and
+// THE VOID, the band's rows of the upper wood times kWoodVoidLuma.
+void bake_wood(const Source& src, const Geometry& g, Baked& out) {
+    const std::vector<GuiRect> rects = nonempty({
+        band_of(g, 0, g.panel_top), band_of(g, g.panel_bottom, g.h),
+        GuiRect{0, g.panel_top, g.frame_lw, g.panel_bottom - g.panel_top},
+        GuiRect{g.w - g.frame_lw, g.panel_top, g.frame_lw,
+                g.panel_bottom - g.panel_top}});
+    auto raw = source_regions(src, g.w, g.h, rects);
+    if (!raw) { out.error = raw.error(); return; }
+    out.face = mean_of(*raw);
+    const GuiRect& top = rects.empty() ? GuiRect{} : rects.front();
+    if (top.y == 0 && g.band_h > 0 && g.band_y >= 0 &&
+        g.band_y + g.band_h <= top.h)
+        out.extra.emplace_back(
+            band_of(g, g.band_y, g.band_y + g.band_h),
+            scaled_rows(raw->front().get(), 0, g.band_y, g.band_h,
+                        [](int) { return kWoodVoidLuma; }));
+    for (std::size_t i = 0; i < rects.size(); ++i)
+        out.grounds.emplace_back(rects[i], std::move((*raw)[i]));
+}
+
+// THE METAL: the strip's top to the canvas's top, its foot to the panel's
+// bottom, the two margins between; and THE INACTIVE TAB'S BODY, its rows of
+// the upper metal, each W row's stop its luma ratio.
+void bake_metal(const Source& src, const Geometry& g, Baked& out) {
+    const GuiRect& c = g.canvas;
+    const int c_top = std::clamp(c.y, g.metal_top, g.panel_bottom);
+    const int c_bot = std::clamp(c.y + c.h, c_top, g.panel_bottom);
+    const std::vector<GuiRect> rects = nonempty({
+        band_of(g, g.metal_top, c_top), band_of(g, c_bot, g.panel_bottom),
+        GuiRect{0, c_top, std::clamp(c.x, 0, g.w), c_bot - c_top},
+        GuiRect{std::clamp(c.x + c.w, 0, g.w), c_top,
+                g.w - std::clamp(c.x + c.w, 0, g.w), c_bot - c_top}});
+    auto raw = source_regions(src, g.w, g.h, rects);
+    if (!raw) { out.error = raw.error(); return; }
+    out.face = mean_of(*raw);
+    const int body_h = g.tab_body_y1 - g.tab_body_y0;
+    if (!rects.empty() && body_h > 0 && rects.front().y <= g.tab_body_y0 &&
+        g.tab_body_y1 <= rects.front().y + rects.front().h) {
+        constexpr int kStops = 15;
+        const uint32_t brass = out.face;
+        out.extra.emplace_back(
+            band_of(g, g.tab_body_y0, g.tab_body_y1),
+            scaled_rows(raw->front().get(), rects.front().y, g.tab_body_y0,
+                        body_h, [&](int y) {
+                            return tab_body_ratio(stop_of(y, body_h, kStops), brass);
+                        }));
+    }
+    for (std::size_t i = 0; i < rects.size(); ++i)
+        out.grounds.emplace_back(rects[i], std::move((*raw)[i]));
+}
+
+// A NEW SURFACE, `r` (client rect) cut out of `band`, whose first pixel is
+// client (bx, by).
+Surface cut(cairo_surface_t* band, int bx, int by, const GuiRect& r) {
+    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
+    cairo_surface_flush(band);
+    cairo_surface_flush(out);
+    const unsigned char* sdata = cairo_image_surface_get_data(band);
+    const int sstride = cairo_image_surface_get_stride(band);
+    unsigned char* ddata = cairo_image_surface_get_data(out);
+    const int dstride = cairo_image_surface_get_stride(out);
+    for (int y = 0; y < r.h; ++y)
+        std::memcpy(ddata + static_cast<std::size_t>(y) * dstride,
+                    sdata + static_cast<std::size_t>(r.y - by + y) * sstride +
+                        static_cast<std::size_t>(r.x - bx) * 4,
+                    static_cast<std::size_t>(r.w) * 4);
+    cairo_surface_mark_dirty(out);
+    return Surface(out);
+}
+
+// THE EBONY: the caption buttons' faces at kCaptionButtonFace and THE CASE
+// PATCHES — per case its g x g seat at rest, (lw, lw) in, and pressed,
+// (2·lw, 2·lw) in, each the cover at its own place under the ramp. They are
+// CUT FROM THE ROWS THEY STAND ON — the caption row and each seat row's
+// g + lw rows, window-wide, decoded together and dropped after the cut —
+// and the Face is THOSE ROWS' MEAN, the ebony's sample since the landing,
+// so the patches move no tone a case derives from it.
+void bake_case(const Source& src, const Geometry& g, Baked& out) {
+    std::vector<int> tops;
+    for (const GuiRect& c : g.cases)
+        if (std::find(tops.begin(), tops.end(), c.y) == tops.end())
+            tops.push_back(c.y);
+    std::vector<GuiRect> rows{band_of(g, g.caption_y, g.caption_y + g.caption_h)};
+    for (const int t : tops)
+        rows.push_back(band_of(g, t + g.lw, t + 2 * g.lw + g.g));
+    for (GuiRect& r : rows) {   // clipped to the client
+        const int y0 = std::max(r.y, 0);
+        const int y1 = std::min(r.y + r.h, g.h);
+        r = GuiRect{0, y0, g.w, std::max(0, y1 - y0)};
+    }
+    // The rows' indices as decoded (an empty row seats nothing).
+    std::vector<int> at(rows.size(), -1);
+    std::vector<GuiRect> kept;
+    for (std::size_t i = 0; i < rows.size(); ++i)
+        if (rows[i].w > 0 && rows[i].h > 0 && g.g > 0) {
+            at[i] = static_cast<int>(kept.size());
+            kept.push_back(rows[i]);
+        }
+    auto raw = source_regions(src, g.w, g.h, kept);
+    if (!raw) { out.error = raw.error(); return; }
+    const uint32_t eb = out.face = mean_of(*raw);
+    // A rect inside the decoded row `i`, else none.
+    const auto row_holds = [&](std::size_t i, const GuiRect& r) {
+        return at[i] >= 0 &&
+               contains_rect(rows[i], r);
+    };
+    const double cap_f = luma_ratio(case_tone(eb, kCaptionButtonFace), eb);
+    for (const GuiRect& b : g.caption_buttons) {
+        if (!row_holds(0, b) || b.w <= 0 || b.h <= 0) continue;
+        Surface s = cut((*raw)[static_cast<std::size_t>(at[0])].get(), 0,
+                        rows[0].y, b);
+        scale_in_place(s.get(), [&](int) { return cap_f; });
+        out.extra.emplace_back(b, std::move(s));
+    }
+    std::array<double, kCaseStops> ramp{};
+    for (int i = 0; i < kCaseStops; ++i)
+        ramp[static_cast<std::size_t>(i)] = case_ramp_ratio(i, eb);
+    const auto ramp_of = [&](int y) {
+        return ramp[static_cast<std::size_t>(stop_of(y, g.g, kCaseStops))];
+    };
+    for (const GuiRect& c : g.cases) {
+        const std::size_t i = 1 + static_cast<std::size_t>(
+            std::find(tops.begin(), tops.end(), c.y) - tops.begin());
+        const GuiRect rest{c.x + g.lw, c.y + g.lw, g.g, g.g};
+        const GuiRect down{c.x + 2 * g.lw, c.y + 2 * g.lw, g.g, g.g};
+        for (const auto& [r, to] : {std::pair{rest, &out.rest},
+                                    std::pair{down, &out.down}}) {
+            if (!row_holds(i, r)) continue;   // past the window's edge
+            Surface s = cut((*raw)[static_cast<std::size_t>(at[i])].get(), 0,
+                            rows[i].y, r);
+            scale_in_place(s.get(), ramp_of);
+            to->emplace_back(r, std::move(s));
+        }
+    }
+}
+
+// ONE MATERIAL'S WHOLE THREAD: the bake, then every tile in the window's
+// bytes; its own time.
+void bake_one(GuiMaterial m, const Source& src, const Geometry& g, Baked& out) {
+    const auto t0 = std::chrono::steady_clock::now();
+    switch (m) {
+        case GuiMaterial::Wood:  bake_wood(src, g, out);  break;
+        case GuiMaterial::Metal: bake_metal(src, g, out); break;
+        case GuiMaterial::Case:  bake_case(src, g, out);  break;
+    }
+    if (out.error.empty())
+        for (auto* set : {&out.grounds, &out.extra, &out.rest, &out.down})
+            for (auto& [rect, s] : *set) convert(s.get());
+    out.ms = std::chrono::duration<double, std::milli>(
+                 std::chrono::steady_clock::now() - t0)
+                 .count();
+}
+
+// Whether `inner` lies whole inside `outer`.
+bool contains(const GuiRect& outer, double x0, double y0, double x1, double y1) {
+    return x0 >= outer.x && y0 >= outer.y && x1 <= outer.x + outer.w &&
+           y1 <= outer.y + outer.h;
+}
+
+// THE CLIENT the painters paint (State::client_w / client_h).
+GuiRect client_rect() {
+    const State& s = state();
+    return GuiRect{0, 0, s.client_w, s.client_h};
+}
+
+// `t` as the source, its origin at its rect's corner.
+void set_tile_source(cairo_t* cr, const Tile& t) {
+    cairo_matrix_t at;
+    cairo_matrix_init_translate(&at, -static_cast<double>(t.rect.x),
+                                -static_cast<double>(t.rect.y));
+    cairo_pattern_set_matrix(t.pattern.get(), &at);
+    cairo_set_source(cr, t.pattern.get());
+}
+
+// THE TILE OF `tiles` holding the current path's extents, or null — and
+// never a stale tile's pixels outside the client (the gate's guard).
+const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
+    double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
+    cairo_fill_extents(cr, &x0, &y0, &x1, &y1);
+    x0 = std::floor(x0);
+    y0 = std::floor(y0);
+    x1 = std::ceil(x1);
+    y1 = std::ceil(y1);
+    if (!contains(client_rect(), x0, y0, x1, y1)) return nullptr;
+    for (const Tile& t : tiles)
+        if (contains(t.rect, x0, y0, x1, y1)) return &t;
+    return nullptr;
+}
+
+std::vector<Tile>& tiles_of(GuiMaterial m) {
+    State& s = state();
+    switch (m) {
+        case GuiMaterial::Wood:  return s.wood;
+        case GuiMaterial::Metal: return s.metal;
+        case GuiMaterial::Case:  return s.caption_case;
+    }
+    return s.wood;
+}
+
+std::size_t bytes_of(const std::vector<Tile>& tiles) {
+    std::size_t n = 0;
+    for (const Tile& t : tiles)
+        if (t.surface)
+            n += static_cast<std::size_t>(cairo_image_surface_get_stride(t.surface.get())) *
+                 static_cast<std::size_t>(cairo_image_surface_get_height(t.surface.get()));
+    return n;
+}
+
+// THE BAKE ITSELF (materials.h's BAKE RULE and LAUNCH ROAD) for geometry
+// `g`: the bundle's names, each material's source, the three materials on
+// three threads, then the tiles into State on this one.
+std::optional<std::string> bake(const Geometry& g) {
+    const auto t0 = std::chrono::steady_clock::now();
+    const auto names = GuiPlatform::bundled_tile_names();
+    if (!names) return "tiles: " + names.error();
+    const Catalog catalog = catalog_of(*names);
+    std::array<Source, kGuiMaterialCount> sources;
+    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
+        const auto src = source_of(catalog, static_cast<GuiMaterial>(m), g.w, g.h);
+        if (!src)
+            return "tiles: " + std::string(kGuiMaterialNames[m]) + ": no cover reaches " +
+                   std::to_string(g.w) + "x" + std::to_string(g.h) + " and no master";
+        sources[m] = *src;
+    }
+    // The transform's tables built here, before the threads read them.
+    if (display_transform::active()) (void)display_transform::p3_word_from_srgb_fast(0);
+    std::array<Baked, kGuiMaterialCount> baked;
+    {
+        std::array<std::jthread, kGuiMaterialCount> threads;
+        for (std::size_t m = 0; m < kGuiMaterialCount; ++m)
+            threads[m] = std::jthread([&, m] {
+                bake_one(static_cast<GuiMaterial>(m), sources[m], g, baked[m]);
+            });
+    }   // joined
+    for (const Baked& b : baked)
+        if (!b.error.empty()) return b.error;
+
+    State& s = state();
+    s.wood.clear();
+    s.metal.clear();
+    s.void_tiles.clear();
+    s.tab_body.clear();
+    s.caption_case.clear();
+    s.case_rest.clear();
+    s.case_down.clear();
+    const auto take = [](std::vector<std::pair<GuiRect, Surface>>& from,
+                         std::vector<Tile>& to) {
+        for (auto& [rect, surface] : from) to.push_back(make_tile(rect, std::move(surface)));
+    };
+    Baked& wood = baked[static_cast<std::size_t>(GuiMaterial::Wood)];
+    Baked& metal = baked[static_cast<std::size_t>(GuiMaterial::Metal)];
+    Baked& ebony = baked[static_cast<std::size_t>(GuiMaterial::Case)];
+    take(wood.grounds, s.wood);
+    take(wood.extra, s.void_tiles);
+    take(metal.grounds, s.metal);
+    take(metal.extra, s.tab_body);
+    take(ebony.extra, s.caption_case);
+    take(ebony.rest, s.case_rest);
+    take(ebony.down, s.case_down);
+    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) s.faces[m] = baked[m].face;
+    s.baked = true;
+    rebuild_flats();
+    // THE TRACE (materials::trace_enabled; paint_handler.cpp's on_redraw the
+    // other line): each material's file and thread time (its read, decode,
+    // derived tiles and conversion), the bake's wall time and the resident
+    // bytes.
+    if (materials::trace_enabled())
+        std::fprintf(stderr,
+                     "warptempo_gui: materials baked %dx%d: decode wood %.1f "
+                     "metal %.1f case %.1f ms (%s, %s, %s), wall %.1f ms, "
+                     "resident %zu bytes\n",
+                     g.w, g.h, wood.ms, metal.ms, ebony.ms,
+                     sources[0].file.c_str(), sources[1].file.c_str(),
+                     sources[2].file.c_str(),
+                     std::chrono::duration<double, std::milli>(
+                         std::chrono::steady_clock::now() - t0)
+                         .count(),
+                     materials::resident_bytes());
+    return std::nullopt;
+}
+
+// A BAKE NOW for the app's geometry, `k` its key: the hard fail on a
+// failure (the bundle changed under the running process), and the palette
+// installed again off the new Faces — always, since the tiles every cached
+// surface was painted from have moved even where the Faces have not, and
+// the install's generation is what rebuilds those surfaces (render.h's
+// palette_generation; the flag cache's label boxes among them).
+void bake_now(const AppState& app, const Key& k) {
+    State& s = state();
+    if (const std::optional<std::string> err = bake(geometry_of(app))) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        std::exit(1);
+    }
+    s.key = k;
+    s.deferred = false;
+    s.armed = false;
+    install_palette(program_palette_words());
+}
+
+} // namespace
+
+namespace materials {
+
+bool trace_enabled() {
+    static const bool on = [] {
+        if (const char* t = std::getenv("WT_PAINT_TRACE"); t && t[0] == '1')
+            return true;
+#if defined(__ANDROID__)
+        char value[PROP_VALUE_MAX] = {};
+        if (__system_property_get("debug.warptempo.trace", value) > 0 &&
+            std::strcmp(value, "1") == 0)
+            return true;
+#endif
+        return false;
+    }();
+    return on;
+}
+
+std::optional<std::string> check() {
+    const auto names = GuiPlatform::bundled_tile_names();
+    if (!names) return "tiles: " + names.error();
+    // EACH FILE'S HEADER, read off its first bytes alone (a JPEG's frame
+    // header can follow an ICC or EXIF segment, hence the 64 KiB): a PNG or
+    // a JPEG, and a cover the size its name says.
+    constexpr std::size_t kHeaderBytes = 64 * 1024;
+    for (const std::string& file : *names) {
+        const auto head = GuiPlatform::bundled_tile_bytes(file, kHeaderBytes);
+        if (!head) return "tiles: " + head.error();
+        const auto info = svg_icon::raster_info(*head);
+        if (!info) return "tiles: " + file + ": " + info.error();
+        for (const char* name : kGuiMaterialNames) {
+            int w = 0, h = 0;
+            if (parse_cover(file, name, w, h) &&
+                (static_cast<int>(info->w) != w || static_cast<int>(info->h) != h))
+                return "tiles: " + file + ": not " + std::to_string(w) + "x" +
+                       std::to_string(h);
+        }
+    }
+    const Catalog catalog = catalog_of(*names);
+    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
+        const std::string stem(kGuiMaterialNames[m]);
+        if (catalog.master[m].empty() && catalog.covers[m].empty())
+            return "tiles: " + stem + ": missing (no " + stem + ".png, " + stem +
+                   ".jpg or " + stem + "-<W>x<H>.png)";
+    }
+    return std::nullopt;
+}
+
+void ensure(const AppState& app) {
+    if (app.width <= 0 || app.height <= 0) return;
+    State& s = state();
+    s.client_w = app.width;
+    s.client_h = app.height;
+    const Key k = key_of(app);
+    if (s.baked && k == s.key) {
+        s.deferred = false;
+        s.armed = false;
+        return;
+    }
+    bake_now(app, k);
+}
+
+void ensure_settled(const AppState& app) {
+    if (app.width <= 0 || app.height <= 0) return;
+    State& s = state();
+    s.client_w = app.width;
+    s.client_h = app.height;
+    const Key k = key_of(app);
+    if (s.baked && k == s.key) {
+        s.deferred = false;
+        s.armed = false;
+        return;
+    }
+    // THE FIRST BAKE IS IMMEDIATE; a change of a baked one waits for the
+    // tick's arming (settle_due), whose frame is the whole window's.
+    if (!s.baked || s.armed) {
+        bake_now(app, k);
+        return;
+    }
+    s.deferred = true;
+}
+
+void note_resize() {
+    State& s = state();
+    s.last_resize = std::chrono::steady_clock::now();
+    s.armed = false;
+}
+
+bool settle_due() {
+    State& s = state();
+    if (!s.deferred || s.armed) return false;
+    if (std::chrono::steady_clock::now() - s.last_resize < kBakeSettle) return false;
+    s.armed = true;
+    return true;
+}
+
+bool baked() { return state().baked; }
+
+uint32_t face(GuiMaterial m) {
+    return state().faces[static_cast<std::size_t>(m)];
+}
+
+void set_bevel(int light_percent, int dark_percent) {
+    State& s = state();
+    s.bevel_light = light_percent;
+    s.bevel_dark  = dark_percent;
+    if (s.baked) rebuild_flats();
+}
+
+void set_text_shadow(int px) { state().text_shadow = px; }
+int text_shadow_px() { return state().text_shadow; }
+
+void set_tone_face(uint32_t chrome_face) {
+    // THE SURFACE TONES (the declaration): the Face, then kTones' Face tones
+    // a relief or a ground puts down — the text, the label and the cue's
+    // shadow are ink and stay flat. A word two tones share (a dark Face can
+    // round two near tones to one byte triple) answers the first.
+    static constexpr std::string_view kSurfaceTones[] = {
+        "recess", "mid", "gripper_dark", "dark", "tab_dark", "field_dark",
+        "page_dark", "hilight", "gripper_light", "field_light", "tab_light",
+        "tab_line"};
+    State& s = state();
+    s.tones.clear();
+    s.tones.emplace_back(chrome_face & 0xFFFFFFu, kFaceKey);
+    s.recess_key = kFaceKey;
+    for (std::size_t i = 0; i < std::size(cool_edit_derive::kTones); ++i) {
+        const cool_edit_derive::Tone& t = cool_edit_derive::kTones[i];
+        if (t.source != cool_edit_derive::ToneSource::Face) continue;
+        if (std::find(std::begin(kSurfaceTones), std::end(kSurfaceTones),
+                      std::string_view(t.name)) == std::end(kSurfaceTones))
+            continue;
+        const uint32_t w = cool_edit_derive::tone_of(t, chrome_face, 0);
+        const bool taken =
+            std::any_of(s.tones.begin(), s.tones.end(),
+                        [&](const auto& e) { return e.first == w; });
+        if (!taken) s.tones.emplace_back(w, static_cast<int>(i));
+        if (std::string_view(t.name) == "recess")
+            s.recess_key = static_cast<int>(i);
+    }
+    if (s.baked) rebuild_flats();
+}
+
+namespace {
+// The tone table's row of `c`, or -1.
+int tone_row(GuiColor c) {
+    const State& s = state();
+    const uint32_t w = word_of(c);
+    for (std::size_t i = 0; i < s.tones.size(); ++i)
+        if (s.tones[i].first == w) return static_cast<int>(i);
+    return -1;
+}
+const std::vector<uint32_t>* flats_of_region() {
+    State& s = state();
+    switch (s.region) {
+        case GuiMaterialRegion::Wood:          return &s.wood_flat;
+        case GuiMaterialRegion::Metal:         return &s.metal_flat;
+        case GuiMaterialRegion::CaptionButton: return &s.caption_flat;
+        case GuiMaterialRegion::Flat:          return nullptr;
+    }
+    return nullptr;
+}
+} // namespace
+
+bool set_source(cairo_t* cr, GuiColor c) {
+    State& s = state();
+    if (!s.baked || s.region == GuiMaterialRegion::Flat) return false;
+    const int row = tone_row(c);
+    if (row < 0) return false;
+    const int key = s.tones[static_cast<std::size_t>(row)].second;
+    const std::vector<uint32_t>& flats = *flats_of_region();
+    // THE FACE, and the band's void: the tile under the path, else the flat.
+    const std::vector<Tile>* tiles = nullptr;
+    if (key == kFaceKey) {
+        tiles = s.region == GuiMaterialRegion::Wood   ? &s.wood
+              : s.region == GuiMaterialRegion::Metal  ? &s.metal
+                                                      : &s.caption_case;
+    } else if (key == s.recess_key && s.region == GuiMaterialRegion::Wood) {
+        tiles = &s.void_tiles;
+    }
+    if (tiles) {
+        if (const Tile* t = tile_under_path(cr, *tiles)) {
+            set_tile_source(cr, *t);
+            return true;
+        }
+    }
+    set_palette_source(cr, hex(flats[static_cast<std::size_t>(row)]));
+    return true;
+}
+
+GuiColor flat(GuiColor c) {
+    const State& s = state();
+    if (!s.baked || s.region == GuiMaterialRegion::Flat) return c;
+    const int row = tone_row(c);
+    if (row < 0) return c;
+    return hex((*flats_of_region())[static_cast<std::size_t>(row)]);
+}
+
+void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
+    if (r.w <= 0 || r.h <= 0) return;
+    State& s = state();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // The flat mean under the whole rect (the panel's face before a bake),
+    // then each tile's part over it, inside the client (the gate's guard).
+    set_palette_source(cr, s.baked ? hex(s.faces[static_cast<std::size_t>(m)])
+                                   : palette().face);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    cairo_fill(cr);
+    if (s.baked) {
+        const int cx1 = std::min(r.x + r.w, s.client_w);
+        const int cy1 = std::min(r.y + r.h, s.client_h);
+        for (const Tile& t : tiles_of(m)) {
+            const int x0 = std::max({r.x, t.rect.x, 0});
+            const int y0 = std::max({r.y, t.rect.y, 0});
+            const int x1 = std::min(cx1, t.rect.x + t.rect.w);
+            const int y1 = std::min(cy1, t.rect.y + t.rect.h);
+            if (x1 <= x0 || y1 <= y0) continue;
+            set_tile_source(cr, t);
+            cairo_rectangle(cr, x0, y0, x1 - x0, y1 - y0);
+            cairo_fill(cr);
+        }
+    }
+    cairo_restore(cr);
+}
+
+CaseLines case_lines() { return state().case_lines; }
+
+void paint_case_ramp(cairo_t* cr, int x, int y, int g, bool down) {
+    if (g <= 0) return;
+    State& s = state();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    if (contains(client_rect(), x, y, x + g, y + g)) {
+        for (const Tile& t : down ? s.case_down : s.case_rest) {
+            if (t.rect.x != x || t.rect.y != y || t.rect.w != g || t.rect.h != g)
+                continue;
+            set_tile_source(cr, t);
+            cairo_rectangle(cr, x, y, g, g);
+            cairo_fill(cr);
+            cairo_restore(cr);
+            return;
+        }
+    }
+    // NO PATCH FOR THIS SEAT (the declaration): the ramp's flat stops.
+    const uint32_t eb = s.faces[static_cast<std::size_t>(GuiMaterial::Case)];
+    for (int i = 0; i < kCaseStops; ++i) {
+        const int y0 = static_cast<int>(std::nearbyint(static_cast<double>(i) * g / kCaseStops));
+        const int y1 = static_cast<int>(std::nearbyint(static_cast<double>(i + 1) * g / kCaseStops));
+        if (y1 <= y0) continue;
+        const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
+                                            static_cast<double>(kCaseStops - 1);
+        set_palette_source(cr, hex(case_tone(eb, b)));
+        cairo_rectangle(cr, x, y + y0, g, y1 - y0);
+        cairo_fill(cr);
+    }
+    cairo_restore(cr);
+}
+
+void paint_tab_body(cairo_t* cr, const GuiRect& body) {
+    if (body.w <= 0 || body.h <= 0) return;
+    State& s = state();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_rectangle(cr, body.x, body.y, body.w, body.h);
+    const Tile* t = s.baked ? tile_under_path(cr, s.tab_body) : nullptr;
+    if (t) set_tile_source(cr, *t);
+    else   set_palette_source(cr, palette().face);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+std::size_t resident_bytes() {
+    const State& s = state();
+    std::size_t n = 0;
+    for (const auto* set : {&s.wood, &s.metal, &s.void_tiles, &s.tab_body,
+                            &s.caption_case, &s.case_rest, &s.case_down})
+        n += bytes_of(*set);
+    return n;
+}
+
+} // namespace materials
+
+GuiMaterialScope::GuiMaterialScope(GuiMaterialRegion region)
+    : previous_(state().region) {
+    state().region = region;
+}
+
+GuiMaterialScope::~GuiMaterialScope() { state().region = previous_; }

@@ -4,11 +4,10 @@
 #include "app_state.h"
 #include "audio.h"
 #include "notifications.h"
-#include "palette_file.h"   // GuiPaletteWords, GuiChromePick: the color rows' install
+#include "palette_file.h"   // GuiPaletteWords: the Waveform row's install
 #include "playback_lifecycle.h"
 #include "viewport.h"
 
-#include <optional>
 #include <string>
 
 struct Undo;
@@ -32,8 +31,11 @@ struct GuiInputHandler;
 // FIVE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, and since 2026-10-14 (architect) the two
-// color keys chrome and caption, the color picker's until that day (icons
+// which had been hand-edited only, and since 2026-10-14 (architect) the
+// color key waveform (`chrome` until 2026-10-21; the caption key, editable
+// 2026-10-14..10-21, left with its key), the color picker's until that day,
+// and since 2026-10-21 the three tuning keys bevel_light, bevel_dark and
+// text_shadow (icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,
 // editable 2026-10-07..10-10, and theme,
 // editable 2026-10-03..10-08, its level and the twelve
@@ -48,17 +50,17 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    chrome and caption — in ONE body,
+//    waveform and the three tuning keys — in ONE body,
 //    commit_device_setting: the key's own grammar
-//    owner in device_config.h (palette_file.h for the two color keys)
+//    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
 //    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; chrome and caption at once, the preset installed live at the OK,
-//    no card (the screen is the answer).
+//    card; waveform and the tuning keys at once, applied live at the OK, no
+//    card (the screen is the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -97,8 +99,8 @@ struct GuiInputHandler;
 // the Icons and Font rows 2026-10-09..12, the Chrome and Caption rows its
 // last); it is removed whole with its combo, its list, the popup lists'
 // scroll road it was the last reader of and the on-screen keyboard's term for
-// it. THE CHROME AND CAPTION ROWS' HELP IS TAB (complete_preset_value,
-// below): a typed prefix completes against the kind's built-in names, and
+// it. THE WAVEFORM ROW'S HELP IS TAB (complete_preset_value, below): a typed
+// prefix completes against the built-in names, and
 // the commit is OK's and Enter's as on every row — the screen changing at
 // the commit, never before.
 struct GuiSettingsEditor {
@@ -158,9 +160,9 @@ struct GuiSettingsEditor {
     // Open the settings prompt PREFILLED with `<key>=<current value>`, the
     // settings dropdown's item click. Identical to open() plus the same recall
     // autocomplete_value performs, so there is no second serializer: the
-    // value is what the writer writes, byte for byte, the two color keys
-    // (`chrome`, `caption`) included — required since 2026-10-14, so their
-    // line is the preset on screen (recall_gui_setting_value). The cursor
+    // value is what the writer writes, byte for byte, the color key
+    // (`waveform`) included — required since 2026-10-14, so its line is the
+    // preset on screen (recall_gui_setting_value). The cursor
     // rests at
     // the end of the line, ready to be edited or replaced; an unknown or
     // unrecallable key opens with the bare `<key>=` so the surface still tells
@@ -195,24 +197,23 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `chrome=` and `caption=` — in one body (the head's
+    // `waveform=`, `bevel_light=`, `bevel_dark=` and `text_shadow=` — in one
+    // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the
     // routers.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
-    // THE COLOR ROWS' INSTALL (architect 2026-10-14; the color picker's
+    // THE WAVEFORM ROW'S INSTALL (architect 2026-10-14; the color picker's
     // install_live_words until that day, its shape kept): the eleven
-    // installed (install_program_palette, palette_file.h) and the caption's
-    // keys (install_chrome_pick, render.h), then the apply shape run once, as
-    // install_program_palette's declaration states it — the plate kicked when
-    // its inks moved, else the flag cache refreshed; ITS DAMAGE a changed
-    // chrome's whole surface, the window's sizing frame with it
-    // (Viewport::invalidate_surface), any other palette change the client
-    // alone (invalidate_all) — the rule at the body.
-    void install_color_preset(const GuiPaletteWords& words,
-                              const std::optional<GuiChromePick>& scheme);
+    // installed (install_program_palette, palette_file.h), then the apply
+    // shape run once, as install_program_palette's declaration states it —
+    // the plate kicked when its inks moved, else the flag cache refreshed,
+    // and the client invalidated. (The caption's keys rode beside, through
+    // install_chrome_pick, with the whole surface's damage when the chrome
+    // moved, 2026-10-14..10-21.)
+    void install_waveform_preset(const GuiPaletteWords& words);
     // THE PATH COMPLETER (2026-09-02), autocomplete_value's arm for the path
     // key — `projects_path` — when the value side is
     // NON-EMPTY: the value side is split at its last `/`, the directory the
@@ -228,26 +229,25 @@ private:
     // completion works on what is literally typed).
     bool complete_path_value(const std::string& value);
     // THE PRESET COMPLETER (architect 2026-10-14 afternoon, CONFIRMED: "ok to
-    // add autocomplete", "agree all"), autocomplete_value's arm for the two
-    // color keys — `chrome` and `caption` — when the value side is NON-EMPTY,
-    // the path completer's model on a closed list: the value side is a
-    // PREFIX (byte compare, the names being ASCII) of the kind's compiled-in
-    // preset names — Cool Edit's twenty for `chrome` (kGuiBuiltinPalettes'
-    // keys), the product's own `default` and the 42 Windows and Plus!
-    // schemes for `caption` (kGuiChromeSchemes' keys, the own one first since
-    // 2026-10-21), palette_file.h — and the buffer advances by
-    // the matches' longest common prefix past it: a UNIQUE match completes
-    // the name WITH NO TRAILING CHARACTER (a name is not a folder), an
-    // ambiguous prefix stops at the common prefix (`caption=w` stops at
-    // `windows-`; he accepts that a prefix completer cannot show the list),
-    // and no advance — no match, or a prefix already at the common prefix —
-    // is a Tab that walks. The empty value side keeps recalling the live
-    // preset's key (the recall above). The commit's grammar and its live apply
-    // (commit_device_setting, install_color_preset) are unchanged. Returns
-    // whether the buffer advanced; `key` is the trimmed key, `value` the raw
-    // value side less its leading whitespace (ltrim_ws's reasons).
-    bool complete_preset_value(const std::string& key,
-                               const std::string& value);
+    // add autocomplete", "agree all"), autocomplete_value's arm for the color
+    // key — `waveform` (`chrome` until 2026-10-21; the `caption` key's arm,
+    // over its 43 schemes, 2026-10-14..10-21) — when the value side is
+    // NON-EMPTY, the path completer's model on a closed list: the value side
+    // is a PREFIX (byte compare, the names being ASCII) of the compiled-in
+    // preset names — Cool Edit's twenty (kGuiBuiltinPalettes' keys,
+    // palette_file.h) — and the buffer advances by the matches' longest
+    // common prefix past it: a UNIQUE match completes the name WITH NO
+    // TRAILING CHARACTER (a name is not a folder), an ambiguous prefix stops
+    // at the common prefix (`waveform=cool-edit-m` stops at
+    // `cool-edit-midnight`; he accepts that a prefix completer cannot show
+    // the list), and no advance — no match, or a prefix already at the
+    // common prefix — is a Tab that walks. The empty value side keeps
+    // recalling the live preset's key (the recall above). The commit's
+    // grammar and its live apply (commit_device_setting,
+    // install_waveform_preset) are unchanged. Returns whether the buffer
+    // advanced; `value` is the raw value side less its leading whitespace
+    // (ltrim_ws's reasons; one key, so the key is not passed).
+    bool complete_preset_value(const std::string& value);
     // GUI-kind key router. Returns true when `key` is a recognized GUI-kind
     // key, in which case the commit is fully handled inside (applied +
     // deactivated, or refused with a card); false when `key` is not a

@@ -193,7 +193,7 @@ struct Viewport {
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
-    //  - THE PLATE'S INKS (2026-10-05): the Settings Chrome row's live
+    //  - THE PLATE'S INKS (2026-10-05): the Settings Waveform row's live
     //    install (install_program_palette's apply shape, palette_file.h)
     //    installs words whose waveform ink and outline the plate bakes and
     //    whose flag faces the flag cache bakes, and kicks so the new plate
@@ -571,7 +571,9 @@ struct Viewport {
     // spells both.
     void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
-    // onto the row 2026-08-13, and the row yields to it whole), WITH THE
+    // onto the row 2026-08-13, and the row yields to it whole) AND THE
+    // BORDER UNDER IT (2026-10-21: row 8's bars run through the border's
+    // light row while the row stands, paint_bottom_border), WITH THE
     // MODAL FAMILY'S WHOLE AREA while a prompt, a dialog editor or the
     // progress modal stands or was last painted (2026-10-14, modal_box.h — the box over the canvas
     // column and its controls row; the taskbar dialog's overlay to the
@@ -766,11 +768,10 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
-    // THE WHOLE SURFACE, the window's sizing frame with it (2026-10-09;
-    // GuiPlatform::invalidate_surface, the rule at platform.h): a live
-    // chrome pick's damage alone (GuiSettingsEditor::install_color_preset) — every
-    // other caller's change paints inside the client, invalidate_all's area.
-    void invalidate_surface();
+    // (THE WHOLE SURFACE's damage, invalidate_surface, the window's sizing
+    // frame with it, stood 2026-10-09..10-21 for a live chrome or caption
+    // pick, its one caller; no live change paints outside the client since,
+    // platform.h.)
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
     // tooltip and the menu row's dropdown): both hang outside the strip that

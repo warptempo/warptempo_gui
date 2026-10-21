@@ -193,6 +193,11 @@ void Viewport::invalidate_status_cell_area() {
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
+    // The border under the row with it: row 8's bars run through its light
+    // row while the row stands (2026-10-21, paint_bottom_border), so a
+    // closer that gives the row back gives the bars' last rows back too.
+    const GuiRect b = bottom_border_area(app);
+    gui.invalidate_region(b.x, b.y, b.w, b.h);
     const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
     if (modal_box_dialog_stands(app) ||
         painted == AppState::ModalDialogOwner::Prompt ||
@@ -975,10 +980,6 @@ void Viewport::invalidate_rect(const GuiRect& r) {
 
 void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
-}
-
-void Viewport::invalidate_surface() {
-    gui.invalidate_surface();
 }
 
 // THE NUDGE HOLDS ITS SUBJECT'S COLUMN WHILE THE HOLD POSTURE STANDS
