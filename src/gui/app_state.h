@@ -10,7 +10,7 @@
 #include "render.h"
 #include "settings_file.h"
 #include "text_editor.h"
-#include "palette_file.h"   // the Waveform row's domain (kGuiBuiltinPalettes)
+#include "palette_file.h"   // the Chrome and Caption rows' domains (kGuiBuiltinPalettes, kGuiChromeSchemes)
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map_view.h"
@@ -3477,8 +3477,9 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // edits (the metadata), then the editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row), then the COLORS'
-// group — the `waveform` key's row (the `chrome` and `caption` keys' two
-// rows 2026-10-14..10-20, Chrome first) and the True Colors command.
+// group — the `chrome` and `caption` keys' two rows, Chrome first
+// (architect 2026-10-14: the program's colors before the title bar's), and
+// the True Colors command.
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and
@@ -3498,8 +3499,8 @@ enum class SettingsPopupAct { EditKey, TrueColors };
 // dropping over the well, for a key whose domain is a short closed list —
 // stood 2026-10-07 to 2026-10-14, the Chrome and Caption rows its last;
 // removed by the architect 2026-10-14, "we can remove dropdowns for
-// chrome/caption and leave the autocomplete as the only help": the waveform
-// key's Tab completes a typed prefix against its built-in names,
+// chrome/caption and leave the autocomplete as the only help": the two keys'
+// Tab completes a typed prefix against their built-in names,
 // GuiSettingsEditor::complete_preset_value.)
 struct SettingsPopupItem {
     const char*                 label;
@@ -3550,10 +3551,18 @@ struct SettingsPopupItem {
 // with a Settings row), the last row of the device group, a text row whose
 // domain — the built-in theme plus the catalog's entries as bundled theme
 // files — no list could show; it LEFT WITH ITS KEY when every chrome's
-// colors were compiled in (architect 2026-10-08, theme_file.h). (The
-// catalog's Windows and Plus! entries were the 42 built-in caption SCHEMES
-// the Caption row chose among, 2026-10-08..10-20; the catalog and the
-// schemes left 2026-10-20, below.)
+// colors were compiled in (architect 2026-10-08, theme_file.h). No theme
+// file ships now: the catalog's entries are the built-in SCHEMES, compiled
+// from it by tools/theme_catalog/gen_theme_files.py, chosen by the Caption
+// row below: 42 since 2026-10-12 (103 until the KDE 3 and CDE families
+// were dropped) — chrome_schemes.inc's rows, one per catalog entry of the
+// windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-storm` among them
+// rather than beside them (palette_file.h's kGuiChromeSchemes; the Caption
+// row is a line editor since 2026-10-14, its list removed — it listed the
+// own scheme first and the other 41 after it — and Tab completes a typed
+// prefix over the 42 keys in the table's order, GuiSettingsEditor::
+// complete_preset_value; the product's
+// own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).
 //
 // `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
 // KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
@@ -3564,42 +3573,29 @@ struct SettingsPopupItem {
 // one icon set — Adwaita 3.22 since 2026-10-14 — and Liberation Sans,
 // hard-coded).
 //
-// `Waveform` (architect 2026-10-14, "remove picker and preset file road":
-// the in-app color picker and the preset files, 2026-10-07..14, removed
-// whole — the families landed are what exists; `Chrome` until 2026-10-20,
-// renamed with its key when the preset came to set the waveform's colors
-// alone), the `waveform` device key's one road, AFTER Projects Path BEHIND
-// A SEPARATOR, its own group with True Colors: the waveform's ten (Cool
-// Edit's twenty presets, kGuiBuiltinPalettes) — A LINE EDITOR LIKE EVERY
-// OTHER ROW since the same day's later ruling (its choice drop-down removed:
-// "dropdowns would need more work to make them real win95 style dropdowns
-// and it's just not worth it"), Tab completing a typed prefix against the
-// built-in names (GuiSettingsEditor::complete_preset_value), its commit the
-// text road's (commit_device_setting) with its own difference: THE PRESET IS
-// INSTALLED LIVE AT THE OK, no card (the screen is the answer), and every
-// pick writes its key, the default included (architect 2026-10-14: every
-// device key required; a pick of the default wrote no line until then).
-// `Caption` STOOD BESIDE IT 2026-10-14..10-20, the `caption` key's row over
-// the 42 Windows and Plus! schemes, and LEFT WITH ITS KEY (architect
-// 2026-10-20, "remove all other themes — both chrome and caption").
-//
-// `Bevel Light` AND `Bevel Dark` (architect 2026-10-20, the wood chrome's
-// tuning phase: "make it a tuneable config temporarily … for all tuneable
-// fields"), the two bevel keys' rows (device_config.h), AFTER Waveform
-// BEHIND A SEPARATOR, their own group, each a line editor like every row,
-// its commit the device keys' body (commit_device_setting) applied live at
-// the OK, no card; they leave with their keys when he settles the values.
-// `Tile Scale` (architect 2026-10-20 ~23:35, the tiles' downscale, key
-// `tile_scale`) follows Bevel Dark in the same group, the same way (the
-// materials reloaded at the new scale).
+// `Chrome` AND `Caption` (architect 2026-10-14, "remove picker and preset
+// file road": the in-app color picker and the preset files, 2026-10-07..14,
+// removed whole — the families landed are what exists), the `chrome` and
+// `caption` device keys' one road, AFTER Projects Path BEHIND A SEPARATOR,
+// their own group with True Colors: `Chrome` the program's eleven (Cool
+// Edit's twenty presets, kGuiBuiltinPalettes) and `Caption` the title bar's
+// six (the Windows and Plus! schemes, kGuiChromeSchemes) — LINE EDITORS LIKE
+// EVERY OTHER ROW since the same day's later ruling (their choice drop-downs
+// removed: "dropdowns would need more work to make them real win95 style
+// dropdowns and it's just not worth it"), Tab completing a typed prefix
+// against the kind's built-in names (GuiSettingsEditor::
+// complete_preset_value), each commit the text road's
+// (commit_device_setting) with its own difference: THE PRESET IS INSTALLED
+// LIVE AT THE OK, no card (the screen is the answer), and every pick writes
+// its key, the kind's default included (architect 2026-10-14: every device
+// key required; a pick of the default wrote no line until then).
 //
 // `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
 // colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
 // conversion's toggle, CHECKED while it is on — at every launch — and
 // unchecked by a press only for a screenshot whose bytes are the colors as
 // typed (the ruling at display_transform.h's head). A command row in the
-// same group as the bevel rows, no separator between them (Waveform's group
-// until 2026-10-20). Its state is
+// same group as Chrome and Caption, no separator between them. Its state is
 // Windows' menu check mark in the popup's check-mark column
 // (dropdown_item_checked; the dropdown painter); its release flips the bit
 // (GuiInputHandler::toggle_true_colors) and cards nothing; it grays as every
@@ -3607,9 +3603,8 @@ struct SettingsPopupItem {
 //
 // THE ACCESS KEYS (architect 2026-10-10; the rule at
 // dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
-// Projects &Repository, Projects &Path, &Waveform (2026-10-20; &Chrome and
-// C&aption 2026-10-14..10-20), &Bevel Light, Bevel &Dark (2026-10-20
-// evening), Tile &Scale (2026-10-20 night) and True
+// Projects &Repository, Projects &Path, &Chrome, C&aption (2026-10-14: the
+// C free once Pick &Colors left, the A Caption's first free letter) and True
 // C&olors — the O of Colors, not the planner's E of True: bare `e` is the
 // left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
 // so an E row could never answer its own letter while the menu stands.
@@ -3621,11 +3616,9 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI Scale",           0,  "gui_scale",     true},
     {"Projects Repository", 9,  "projects_repo", false},
     {"Projects Path",       9,  "projects_path", false},
-    {"Waveform",            0,  "waveform",      true},
-    {"Bevel Light",         0,  "bevel_light",   true},
-    {"Bevel Dark",          6,  "bevel_dark",    false},
-    {"Tile Scale",          5,  "tile_scale",    false},
-    {"True Colors",        6,  nullptr,         false,
+    {"Chrome",              0,  "chrome",        true},
+    {"Caption",             1,  "caption",       false},
+    {"True Colors",         6,  nullptr,         false,
      SettingsPopupAct::TrueColors},
 };
 inline constexpr int kSettingsPopupItemCount =

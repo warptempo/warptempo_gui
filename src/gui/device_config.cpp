@@ -4,7 +4,7 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "palette_file.h"      // is_builtin_palette_name and its reason
+#include "palette_file.h"      // is_builtin_palette_name, is_builtin_scheme_name and their reasons
 
 #include <cstddef>
 #include <cstdio>
@@ -19,10 +19,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (EIGHT keys since 2026-10-20 evening, the
-// two bevel keys appended, below; six that afternoon, `caption` gone
-// and `chrome` renamed `waveform`; seven 2026-10-12, `icons` and `font`
-// gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
+// REQUIRED SET, every one of them (SEVEN keys since 2026-10-12, `icons` and
+// `font` gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
 // `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
 // `icons` appended; seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
@@ -34,35 +32,29 @@ namespace {
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). ONE LIST SERVES BOTH, the writer's
 // order and the scanner's presence check (architect 2026-10-14, every key
-// required), so no key can be written and not demanded. `role` (2026-10-10)
-// was the first appended key to be required: "if one of these lines is not
-// in place, it means something's wrong with the config or the setup"
-// (architect), the rule every key follows now.
+// required): from 2026-10-07 to 2026-10-14 a second, required list stood
+// beside it less `caption` and `chrome`, whose absence spelled the default;
+// the default is spelled in the line since, so no key can be written and not
+// demanded. `role` (2026-10-10) was the first appended key to be required:
+// "if one of these lines is not in place, it means something's wrong with
+// the config or the setup" (architect), the rule every key follows now.
 //
-// THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13; and
-// 2026-10-20): `waveform` (`palette` until 2026-10-13, then `chrome` until
-// 2026-10-20, renamed for what it sets) FOLLOWS last_project, where the
-// `caption` key (formerly `scheme`) stood before it until it left
-// 2026-10-20; `role` is APPENDED after it (2026-10-10). (`theme` stood
+// THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13): the
+// key `caption` (formerly `scheme`) FOLLOWS last_project, the caption's six,
+// and the key `chrome` (formerly `palette`; the OLD `chrome` key, retired
+// 2026-10-10, returns with this meaning) FOLLOWS THAT, the program's colors
+// after the caption's; `role` is APPENDED after it (2026-10-10). The struct's
+// members keep their old names, `scheme` and `palette`. (`theme` stood
 // 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
 // header's record.)
-//
-// THE BEVEL KEYS (architect 2026-10-20, the wood chrome's tuning phase:
-// "make it a tuneable config temporarily … for all tuneable fields"):
-// `bevel_light` and `bevel_dark` APPENDED after `role`, where the tuning
-// phases' keys have always stood, each required like every key and each
-// leaving when he settles its value. `tile_scale` (2026-10-20 night, the
-// tiles' downscale) follows them, the same phase's.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
     "projects_path",
     "last_project",
-    "waveform",
+    "caption",
+    "chrome",
     "role",
-    "bevel_light",
-    "bevel_dark",
-    "tile_scale",
 };
 } // namespace
 
@@ -70,10 +62,6 @@ std::string format_gui_scale_percent(int percent) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", percent);
     return std::string(buf);
-}
-
-std::string format_bevel_percent(int percent) {
-    return format_gui_scale_percent(percent);
 }
 
 std::filesystem::path device_config_path() {
@@ -97,8 +85,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
         // EVERY KEY WRITES ITS LINE but an unset role (architect
-        // 2026-10-14: the color keys, which wrote none while unset
-        // 2026-10-07..14, are required and always named). AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
+        // 2026-10-14: the caption and the chrome, which wrote none while
+        // unset 2026-10-07..14, are required and always named).
+        // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
         // alone carries it, and the program never invents a role — the
         // read-back then refuses on the required key (device_config.h).
         if (std::string_view(key) == "role" &&
@@ -121,19 +110,16 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
-        } else if (k == "waveform") {
+        } else if (k == "caption") {
             // The built-in's key verbatim (palette_file.h's key grammar).
-            s += cfg.waveform;
+            s += cfg.scheme;
+        } else if (k == "chrome") {
+            // The built-in's key verbatim (palette_file.h's key grammar).
+            s += cfg.palette;
         } else if (k == "role") {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
                                                    : kDeviceRoleMirror;
-        } else if (k == "bevel_light") {
-            s += format_bevel_percent(cfg.bevel_light);
-        } else if (k == "bevel_dark") {
-            s += format_bevel_percent(cfg.bevel_dark);
-        } else if (k == "tile_scale") {
-            s += format_bevel_percent(cfg.tile_scale);
         }
         s += '\n';
     }
@@ -206,23 +192,29 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.last_project = value;
             return {};
         }
-        // THE WAVEFORM PRESET (2026-10-07 as `palette`, `chrome` 2026-10-13,
-        // `waveform` 2026-10-20): A BUILT-IN'S KEY ALONE since 2026-10-14
-        // (architect, "remove picker and preset file road": the preset files
-        // are gone), under its one grammar owner (is_builtin_palette_name,
-        // palette_file.h) — any other word, a former file's name included,
-        // the ordinary bad-value hard fail with no migration. An EMPTY value
-        // is refused like any other non-name, and an ABSENT line is the
-        // scanner's missing-required-key refusal (architect 2026-10-14: every
-        // key required, the default spelled — `waveform=cool-edit-default`).
-        // An old `palette=`, `chrome=`, `scheme=` or `caption=` line is the
-        // unknown key below (the `caption` key's arm stood here
-        // 2026-10-08..10-20).
-        if (key == "waveform") {
+        // THE CAPTION (2026-10-08) AND THE CHROME (2026-10-07; both words
+        // 2026-10-13): A BUILT-IN'S KEY ALONE since 2026-10-14 (architect,
+        // "remove picker and preset file road": the preset files are gone),
+        // each under its one grammar owner (is_builtin_scheme_name,
+        // is_builtin_palette_name, palette_file.h) — any other word, a former
+        // file's name included, the ordinary bad-value hard fail with no
+        // migration. An EMPTY value is refused like any other non-name, and
+        // an ABSENT line is the scanner's missing-required-key refusal
+        // (architect 2026-10-14: every key required, the default spelled —
+        // `caption=windows-storm`, `chrome=cool-edit-default`). An old
+        // `scheme=` or `palette=` line is the unknown key below.
+        if (key == "caption") {
+            if (!is_builtin_scheme_name(value)) {
+                return bad_value(ln, key, value, kSchemeGrammarReason);
+            }
+            out.scheme = value;
+            return {};
+        }
+        if (key == "chrome") {
             if (!is_builtin_palette_name(value)) {
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }
-            out.waveform = value;
+            out.palette = value;
             return {};
         }
         // THE ROLE (architect 2026-10-10): one of the two words, required
@@ -236,29 +228,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
             } else {
                 return bad_value(ln, key, value, kDeviceRoleGrammarReason);
             }
-            return {};
-        }
-        // THE BEVEL KEYS (2026-10-20, the wood chrome's tuning phase): the
-        // scale's canonical integer spelling, the range the one owner's
-        // (is_bevel_percent, device_config.h).
-        if (key == "bevel_light" || key == "bevel_dark") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
-                return bad_value(ln, key, value, kBevelGrammarReason);
-            }
-            (key == "bevel_light" ? out.bevel_light : out.bevel_dark) =
-                static_cast<int>(v);
-            return {};
-        }
-        // THE TILE SCALE KEY (2026-10-20 night, materials.h's head): the
-        // same canonical integer spelling, the range the one owner's
-        // (is_tile_scale_percent, device_config.h).
-        if (key == "tile_scale") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) || !is_tile_scale_percent(v)) {
-                return bad_value(ln, key, value, kTileScaleGrammarReason);
-            }
-            out.tile_scale = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

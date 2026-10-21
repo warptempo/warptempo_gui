@@ -12,9 +12,9 @@
 // THE CHROME'S COLORS (architect 2026-10-04; COMPILED IN since 2026-10-08;
 // INHERITED FROM COOL EDIT since 2026-10-10) — every color the CHROME
 // paints, as ROLES. THE PROGRAM'S COLORS ARE NO THEME'S since 2026-10-07:
-// the waveform, the flags, the playhead's stem and the scanner are THE
-// PALETTE's, the waveform preset (palette_file.h, whose head owns the rule
-// that parts the two).
+// the waveform, the flags, the playhead's stem, the scanner and the panel's
+// face are THE PALETTE's, a file type of its own (palette_file.h, whose head
+// owns the rule that parts the two).
 //
 // THE CHROME INHERITS COOL EDIT (architect 2026-10-10: "the chrome color
 // should just be the Cool Edit theme color … we're getting rid of chrome
@@ -22,14 +22,14 @@
 // Edit … even the font color, all of that would be inherited from Cool
 // Edit"; "whatever luminous rules we previously had are superseded by the
 // Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX IS A TONE OF
-// THE FACE — the panel's one Face and the tones Cool Edit derives from it,
-// the default preset's waveform ink, and the program text's two members, the
-// selection taking the other one (cool_edit_derive.h's tones; the per-role
-// mapping is chrome_derive.h's, the one owner) — off THE METAL'S FACE since
-// 2026-10-20 (gui_chrome_words, chrome_derive.h: the MetalDark tile's mean,
-// materials.h, and no preset moves the chrome; a surface role painted as its
-// region's material). THE CAPTION'S SIX ARE THE COMPILED CAPTION BELOW,
-// unread by any painter since the caption became the wood (2026-10-20).
+// THE LIVE PALETTE — the panel's `face` and the tones Cool Edit derives from
+// it, the waveform's ink, and the program text's two members, the selection
+// taking the other one (cool_edit_derive.h's tones;
+// the per-role mapping is chrome_derive.h's, the one owner) — re-derived at
+// every install of the palette, so a new Face or ink moves the
+// chrome live. THE CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a
+// scheme is the caption alone since 2026-10-10), or, with no scheme keys
+// live, the live chrome's COMPILED CAPTION below.
 //
 // THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
 // its name and the GuiPalette field it fills (render.h, whose palette block
@@ -39,11 +39,14 @@
 // tooltip's border, and the six of the caption), the chrome's painters
 // written against them; the values are no longer Windows'.
 //
-// THE COMPILED CAPTION (chrome_caption, palette_file.h): Windows 95 Plus!'s
-// Storm scheme's six caption colors (architect 2026-10-12), typed in as
-// constants since 2026-10-20, when the 42 built-in caption schemes and the
-// imported theme catalog they were generated from were removed (architect
-// 2026-10-20, "remove all other themes — both chrome and caption").
+// THE COMPILED CAPTION (chrome_caption, palette_file.h): the caption the
+// default `caption=windows-storm` paints, the six caption keys of the chrome's own
+// scheme (chrome_spec.h's own_scheme), which since architect 2026-10-12 is
+// `windows-storm`. It is read straight from the generated built-in table
+// (chrome_schemes.inc), never retyped.
+// The imported catalog's other entries stay in the catalog as the tool's
+// RECORD; what ships of them is their caption keys alone, as the BUILT-IN
+// SCHEMES (palette_file.h's kGuiChromeSchemes, generated).
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15): Windows'
 // scheme bytes are what those systems put into an sRGB frame buffer, as the
 // captures show them; the tablet converts each at the painter's entry
@@ -82,8 +85,8 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // always active, GuiPlatform::caption_active), each a START at the left,
     // a GRADIENT END at the right and the title's TEXT — Windows' ActiveTitle
     // / GradientActiveTitle / TitleText and InactiveTitle /
-    // GradientInactiveTitle / InactiveTitleText; the compiled caption's six,
-    // the one part of the chrome outside Cool Edit (2026-10-10).
+    // GradientInactiveTitle / InactiveTitleText; the scheme's six keys, the
+    // one part of the chrome outside Cool Edit (2026-10-10).
     {"caption_active",            &GuiPalette::caption_active},
     {"caption_active_gradient",   &GuiPalette::caption_active_gradient},
     {"caption_active_text",       &GuiPalette::caption_active_text},
@@ -102,7 +105,7 @@ constexpr std::size_t theme_role_index(std::string_view name) {
 }
 
 // THE CHROME'S WORDS, in the role table's order — what the derivation
-// answers (gui_chrome_words, chrome_derive.h) and install_palette reads.
+// answers and install_palette reads.
 using GuiThemeWords = std::array<uint32_t, kGuiThemeRoleCount>;
 
 // (THE ONE COLOUR GRAMMAR — `#rrggbb` or one of Windows' twenty always-solid

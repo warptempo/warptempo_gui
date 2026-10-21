@@ -154,42 +154,6 @@ cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
                                uint32_t light_rgb, uint32_t shadow_rgb,
                                uint32_t inset_rgb);
 
-// -- THE TILES' ROAD (architect 2026-10-20, the wood chrome; materials.h) -----
-//
-// A MATERIAL'S TILE is a raster file, PNG or JPEG, decoded by the icons' own
-// detour (parse_png's: the bytes wrapped in a one-<image> SVG as a base64
-// data URL, rendered by resvg at the identity, nearest — resvg's
-// raster-images feature decodes both kinds on both devices) and SCALED BY
-// THE ICONS' AREA FILTER (Lanczos-3, separable, PIL's construction). Unlike
-// an icon a tile is a RECTANGLE, OPAQUE and LARGE (a 4K master): only the
-// region the caller keeps is ever rendered or resampled, and past the
-// image's border the filter reads the border's own pixels (a tile has no
-// transparent margin to fade into).
-
-// The file's kind and pixel size, read off its header. THE ERROR ARM'S
-// PRODUCER is a bundled tile that is neither a PNG (its signature and IHDR,
-// parse_png's test) nor a JPEG (FF D8 and a start-of-frame marker before the
-// scan) — a drop defect, caught at launch, the caller prefixing the file.
-struct RasterInfo {
-    uint32_t w    = 0;
-    uint32_t h    = 0;
-    bool     jpeg = false;
-};
-std::expected<RasterInfo, std::string> raster_info(std::string_view bytes);
-
-// THE REGION [x0, x0 + w) x [y0, y0 + h) OF THE IMAGE DRAWN AT k DEVICE PX
-// PER SOURCE PX (k > 0), into a NEW opaque ARGB32 surface w x h the caller
-// owns: the source rows and columns the filter's taps reach rendered once at
-// the identity, then the two passes in double in a fixed order (the icons'
-// rasterise's construction, the kernel stretched by 1 / k on a reduction),
-// each tap's index clamped into the image, std::nearbyint at each channel;
-// at k = 1 exactly the region is the decoded pixels themselves. The image's
-// alpha is not read: a tile is opaque. The error arm's producer is resvg's
-// refusal of the wrapper (the code, parse's line).
-std::expected<cairo_surface_t*, std::string> raster_region(
-    std::string_view bytes, const RasterInfo& info, double k, int x0, int y0,
-    int w, int h);
-
 // THE WINDOW'S COPY (architect 2026-10-08, display_transform.h's head): an
 // icon's own inks are sRGB, as every authored color, so on the tablet's
 // Display-P3 window each pixel of a raster is converted IN PLACE once, at

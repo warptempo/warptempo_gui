@@ -1,6 +1,7 @@
 #include "palette_file.h"
 
 #include "theme_file.h"        // kGuiThemeRoles (the chrome's members)
+#include "chrome_derive.h"     // derive_chrome: the keys' mapping check
 #include "cool_edit_derive.h"  // the Cool Edit block's tones: the coverage check
 
 #include <algorithm>
@@ -12,7 +13,7 @@
 namespace {
 
 // The role table names each role once, so the lookup (palette_role_index) is a
-// bijection (ten names: the pairwise form is cheap here).
+// bijection (eleven names: the pairwise form is cheap here).
 constexpr bool palette_role_names_unique() {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         for (std::size_t j = i + 1; j < kGuiPaletteRoleCount; ++j)
@@ -22,11 +23,68 @@ constexpr bool palette_role_names_unique() {
     return true;
 }
 static_assert(palette_role_names_unique());
+// The scheme's keys are no program role's name, so the two tables' lookups
+// never answer for each other's names.
+static_assert(std::ranges::none_of(kGuiChromeLines, [](const GuiChromeLine& c) {
+    return palette_role_index(c.key) < kGuiPaletteRoleCount;
+}));
 
-// THE TABLES COVER GuiPalette EXACTLY (install_palette fills it off them,
-// render.cpp): the palette's members are distinct, none of them is a chrome
-// role's member nor the panel's `face`, and the counts sum to the struct's
-// members — so no member is filled twice or left at construction state.
+// THE KEYS' TABLE IS WELL FORMED (palette_file.h's kGuiChromeLines): the keys
+// distinct; each a block key (a word, no follow) or an inactive key (an
+// optional, following an EARLIER block key); each role a chrome role; and
+// the block is three, the inactive caption three.
+constexpr bool chrome_lines_well_formed() {
+    std::size_t block = 0;
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i) {
+        const GuiChromeLine& l = kGuiChromeLines[i];
+        for (std::size_t j = i + 1; j < kGuiChromeLineCount; ++j)
+            if (std::string_view(l.key) == kGuiChromeLines[j].key) return false;
+        if (theme_role_index(l.role) >= kGuiThemeRoleCount) return false;
+        if ((l.word != nullptr) == (l.optional != nullptr)) return false;
+        if (l.word != nullptr) {
+            if (l.follows != kGuiChromeNoFollow) return false;
+            ++block;
+        } else if (l.follows >= i || !is_chrome_block_line(l.follows)) {
+            return false;
+        }
+    }
+    return block == 3 && kGuiChromeLineCount == 6;
+}
+static_assert(chrome_lines_well_formed());
+
+// EACH KEY MOVES ITS OWN ROLE: for a pick whose six words are all distinct,
+// each key's role in the derived chrome (chrome_derive::derive_chrome) holds
+// exactly that key's word — the table's `role` column is what the
+// derivation paints. Then an inactive key absent: its role holds the
+// followed key's word.
+constexpr GuiChromePick distinct_pick() {
+    GuiChromePick p;
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
+        set_chrome_line_word(p, i, 0x100000u + static_cast<uint32_t>(i));
+    return p;
+}
+constexpr bool keys_map_onto_their_roles(const GuiChromePick& p) {
+    const GuiThemeWords w =
+        chrome_derive::derive_chrome(default_palette_words(), p);
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
+        if (w[theme_role_index(kGuiChromeLines[i].role)] !=
+            chrome_line_word(p, i))
+            return false;
+    return true;
+}
+static_assert(keys_map_onto_their_roles(distinct_pick()));
+static_assert(keys_map_onto_their_roles([] {
+    GuiChromePick p = distinct_pick();
+    p.inactive_title_start.reset();
+    p.inactive_title_end.reset();
+    p.inactive_title_text.reset();
+    return p;
+}()));
+
+// THE TWO TABLES COVER GuiPalette EXACTLY (install_palette fills it off
+// both, render.cpp): the program's members are distinct, none of them is a
+// chrome role's member, and the two counts sum to the struct's members — so
+// no member is filled twice or left at construction state.
 constexpr bool palette_members_disjoint() {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i) {
         for (std::size_t j = i + 1; j < kGuiPaletteRoleCount; ++j)
@@ -34,24 +92,17 @@ constexpr bool palette_members_disjoint() {
                 return false;
         for (const GuiThemeRole& t : kGuiThemeRoles)
             if (t.member == kGuiPaletteRoles[i].member) return false;
-        if (kGuiPaletteRoles[i].member == &GuiPalette::face) return false;
     }
-    for (const GuiThemeRole& t : kGuiThemeRoles)
-        if (t.member == &GuiPalette::face) return false;
     return true;
 }
 static_assert(palette_members_disjoint());
-// THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled off the
-// metal's Face and the palette's ink, render.cpp) are the struct's third
-// part — the table's painted tones and the panel label's swapping pair:
-// distinct, and neither a chrome role's member nor a palette role's nor the
-// face — and the tab strip's active label (kTabMemberCount; its inactive
-// body and label 2026-10-18..10-20) and the disabled cue's four faded
-// colors (kDisabledCueMemberCount) after them; and THE PANEL'S `face`
-// itself, one member, the metal's Face (2026-10-20, materials.h; a palette
-// role 2026-10-09..10-20). (The button case's twenty-four members left with
-// the tiles, 2026-10-20: the case is the Case tile's,
-// materials::paint_case_face.)
+// THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled with the
+// program's words, render.cpp) are the struct's third part — the table's
+// painted tones and the panel label's swapping pair: distinct, and neither a
+// chrome role's member nor a program role's — and the button case's members
+// (kCaseMemberCount, the ramp's array and four lines), the tab strip's
+// body, inactive label and active label (kTabMemberCount, 2026-10-18) and
+// the disabled cue's four faded colors (kDisabledCueMemberCount) after them.
 constexpr bool cool_edit_tones_disjoint() {
     std::array<GuiColor GuiPalette::*,
                cool_edit_derive::kPaintedToneCount +
@@ -69,22 +120,50 @@ constexpr bool cool_edit_tones_disjoint() {
             if (t.member == members[i]) return false;
         for (const GuiPaletteRole& p : kGuiPaletteRoles)
             if (p.member == members[i]) return false;
-        if (members[i] == &GuiPalette::face) return false;
     }
     return true;
 }
 static_assert(cool_edit_tones_disjoint());
 static_assert(sizeof(GuiPalette) ==
-              (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1 /* face */ +
+              (kGuiThemeRoleCount + kGuiPaletteRoleCount +
                cool_edit_derive::kPaintedToneCount +
                std::size(cool_edit_derive::kLabelPairMembers) +
+               cool_edit_derive::kCaseMemberCount +
                cool_edit_derive::kTabMemberCount +
                cool_edit_derive::kDisabledCueMemberCount) *
                   sizeof(GuiColor));
+// EVERY BUILT-IN PALETTE'S FACE HAS A ROW IN THE TAB TABLE (2026-10-18,
+// cool_edit_derive.h's kTabBodies: the inactive tab's body and label are each
+// preset's measured bytes, no rule), so the lookup the install runs
+// (tab_body, fill_program_palette) can never miss and carries no error arm.
+static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
+                                  [](const GuiBuiltinPalette& b) {
+    const uint32_t face = b.words[palette_role_index("face")];
+    return std::ranges::any_of(cool_edit_derive::kTabBodies,
+                               [face](const cool_edit_derive::TabBody& t) {
+                                   return t.face == face;
+                               });
+}));
 
-// THE KEY GRAMMAR OF A BUILT-IN (the catalog's hyphen grammar): one or more
-// of lowercase ASCII letters, digits and '-' — a value the device config
-// writes and reads verbatim.
+// THE CHROME'S OWN SCHEME IS THE COMPILED CAPTION BY CONSTRUCTION
+// (kGuiCaptionOwn reads the scheme's row of the generated table), so the
+// scheme that carries no keys (scheme_record) is no loss of a word.
+
+// WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S SIX (the catalog's
+// windows-me-standard, kept as an entry under Me's name; the generator
+// asserts the same): Me's one difference from 2000 was its font, MS Sans
+// Serif, which a scheme does not carry — the face is the product's
+// one (architect 2026-10-09 ~21:20, gui_font.h).
+static_assert([] {
+    const GuiChromeScheme* me = builtin_scheme("windows-me-standard");
+    const GuiChromeScheme* w2k = builtin_scheme("windows-2000-standard");
+    if (me == nullptr || w2k == nullptr) return false;
+    return me->chrome == w2k->chrome;
+}());
+
+// THE KEY GRAMMAR OF A BUILT-IN (the catalog's hyphen grammar, both kinds):
+// one or more of lowercase ASCII letters, digits and '-' — a value the
+// device config writes and reads verbatim.
 constexpr bool is_preset_key_spelling(std::string_view v) {
     if (v.empty()) return false;
     for (const char c : v)
@@ -92,6 +171,26 @@ constexpr bool is_preset_key_spelling(std::string_view v) {
             return false;
     return true;
 }
+
+// THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
+// same), the keys in the key grammar, and every scheme records its inactive
+// caption (the struct's comment).
+constexpr bool builtins_well_formed() {
+    for (std::size_t i = 0; i < std::size(kGuiChromeSchemes); ++i) {
+        const GuiChromeScheme& a = kGuiChromeSchemes[i];
+        if (!is_preset_key_spelling(a.key)) return false;
+        if (!a.chrome.inactive_title_start || !a.chrome.inactive_title_end ||
+            !a.chrome.inactive_title_text)
+            return false;
+        for (std::size_t j = i + 1; j < std::size(kGuiChromeSchemes); ++j)
+            if (std::string_view(a.key) == kGuiChromeSchemes[j].key ||
+                std::string_view(a.display_name) ==
+                    kGuiChromeSchemes[j].display_name)
+                return false;
+    }
+    return true;
+}
+static_assert(builtins_well_formed());
 
 // THE BUILT-IN PALETTES ARE WELL FORMED (palette_file.h's
 // kGuiBuiltinPalettes; the generator checks the same): the keys and display
@@ -130,11 +229,7 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
            b.words[palette_role_index("center")];
 }));
 // (THE CHOICE ROWS' ORDERS' PROOFS — each a permutation of its table, its
-// first row the kind's default — went with the orders, 2026-10-14; THE
-// CAPTION SCHEMES' PROOFS — the keys' table well formed, each key moving its
-// own role, Windows Me Standard the 2000 Standard's six, every built-in
-// recording its inactive caption — and THE TAB TABLE'S WALK OVER EVERY
-// PRESET'S FACE went with the schemes and the Face role, 2026-10-20.)
+// first row the kind's default — went with the orders, 2026-10-14.)
 
 } // namespace
 
@@ -144,4 +239,15 @@ GuiPaletteWords palette_record(std::string_view name) {
     // program bug.
     assert(b != nullptr);
     return b->words;
+}
+
+std::optional<GuiChromePick> scheme_record(std::string_view name) {
+    const GuiChromeScheme* b = builtin_scheme(name);
+    // Every caller's name came through is_builtin_scheme_name: a miss is a
+    // program bug.
+    assert(b != nullptr);
+    // Its six, unless it is the live chrome's own scheme, which carries none
+    // (the declaration).
+    if (name == live_chrome_spec().own_scheme) return std::nullopt;
+    return b->chrome;
 }

@@ -148,21 +148,6 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
-# THE BUNDLED TILES (architect 2026-10-20, the wood chrome; materials.h's
-# head): every `.png` and `.jpg` of the repository's assets/tiles/ copied into
-# the package's assets/tiles/, the icons' road -- a dropped tile rides the
-# next build with no other step; the app reads them in place at launch
-# (GuiPlatform::bundled_tile_files, platform_android.cpp), and a material
-# missing from them fails the launch, naming the file. An empty folder is a
-# build defect and stops the script here.
-TILE_DIR="$APPDIR/../../assets/tiles"
-shopt -s nullglob
-TILE_FILES=("$TILE_DIR"/*.png "$TILE_DIR"/*.jpg)
-shopt -u nullglob
-[ "${#TILE_FILES[@]}" -gt 0 ] || wt_die "no .png or .jpg files under $TILE_DIR"
-mkdir -p "$ASSETS/tiles"
-cp -fL "${TILE_FILES[@]}" "$ASSETS/tiles/"
-wt_say "assets: tiles, ${#TILE_FILES[@]} files"
 
 # --- 2/3. configure + build ----------------------------------------------
 # WT_CANVAS is in the environment, so configure.sh reads the same canvas and

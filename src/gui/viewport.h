@@ -193,7 +193,7 @@ struct Viewport {
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
-    //  - THE PLATE'S INKS (2026-10-05): the Settings Waveform row's live
+    //  - THE PLATE'S INKS (2026-10-05): the Settings Chrome row's live
     //    install (install_program_palette's apply shape, palette_file.h)
     //    installs words whose waveform ink and outline the plate bakes and
     //    whose flag faces the flag cache bakes, and kicks so the new plate
@@ -346,8 +346,8 @@ struct Viewport {
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // THE MARKER DRAG RELEASE'S SEAM (2026-09-14; the rule
-    // is at MarkerDragOps::commit_drag's tail), and the Settings Waveform
-    // row's for a preset that leaves the plate's inks alone (2026-10-07; the apply
+    // is at MarkerDragOps::commit_drag's tail), and the Settings color rows'
+    // for a preset that leaves the plate's inks alone (2026-10-07; the apply
     // shape at install_program_palette's declaration, palette_file.h).
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
@@ -766,10 +766,11 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
-    // (THE WHOLE SURFACE's damage, invalidate_surface, the window's sizing
-    // frame with it, stood 2026-10-09..10-20 for a live chrome pick, its one
-    // caller; the chrome is compiled since, so no change paints outside the
-    // client, platform.h.)
+    // THE WHOLE SURFACE, the window's sizing frame with it (2026-10-09;
+    // GuiPlatform::invalidate_surface, the rule at platform.h): a live
+    // chrome pick's damage alone (GuiSettingsEditor::install_color_preset) — every
+    // other caller's change paints inside the client, invalidate_all's area.
+    void invalidate_surface();
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
     // tooltip and the menu row's dropdown): both hang outside the strip that

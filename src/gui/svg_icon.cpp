@@ -121,44 +121,6 @@ AxisTaps axis_taps(int side, double k, double shift_src) {
     return t;
 }
 
-// A TILE REGION'S AXIS (svg_icon.h's raster_region): axis_taps for the
-// destination pixels [first, first + side) of an image drawn at k, unshifted —
-// pixel first + i's centre maps to c = (first + i + 0.5) / k — the source
-// indices unclamped (the caller clamps them into the image). At k = 1 exactly
-// each pixel is its own source pixel, one tap of weight 1: the decode itself.
-AxisTaps region_taps(int first, int side, double k) {
-    AxisTaps t;
-    t.first.resize(static_cast<size_t>(side));
-    t.count.resize(static_cast<size_t>(side));
-    t.offset.resize(static_cast<size_t>(side));
-    const bool identity = k == 1.0;
-    const double scale = std::max(1.0 / k, 1.0);
-    const double support = 3.0 * scale;
-    for (int i = 0; i < side; ++i) {
-        const size_t at = t.weights.size();
-        t.offset[static_cast<size_t>(i)] = at;
-        if (identity) {
-            t.first[static_cast<size_t>(i)] = first + i;
-            t.count[static_cast<size_t>(i)] = 1;
-            t.weights.push_back(1.0);
-            continue;
-        }
-        const double c = (first + i + 0.5) / k;
-        const int lo = static_cast<int>(std::floor(c - support - 0.5));
-        const int hi = static_cast<int>(std::ceil(c + support - 0.5));
-        double sum = 0.0;
-        for (int s = lo; s <= hi; ++s) {
-            const double w = lanczos3((s + 0.5 - c) / scale);
-            t.weights.push_back(w);
-            sum += w;
-        }
-        for (size_t j = at; j < t.weights.size(); ++j) t.weights[j] /= sum;
-        t.first[static_cast<size_t>(i)] = lo;
-        t.count[static_cast<size_t>(i)] = hi - lo + 1;
-    }
-    return t;
-}
-
 // A PNG'S SCALE (svg_icon.h's rasterise): the decoded N x N
 // premultiplied surface resampled into a new (px + margin_px)² ARGB32
 // surface, the drawing filling the px cell. Two passes in double —
@@ -234,27 +196,6 @@ cairo_surface_t* resample_raster(cairo_surface_t* src, int px, double shift_x,
     }
     cairo_surface_mark_dirty(s);
     return s;
-}
-
-// A 2-byte big-endian integer at `at` (a JPEG segment's own byte order).
-uint32_t be16(std::string_view b, size_t at) {
-    return (static_cast<uint32_t>(static_cast<uint8_t>(b[at])) << 8) |
-           static_cast<uint32_t>(static_cast<uint8_t>(b[at + 1]));
-}
-
-// THE ONE-<image> WRAPPER (parse_png's head says why the detour): the file's
-// bytes as a base64 data URL of its own mime in an <image> of its own
-// width x height at the top-left of a frame_w x frame_h root, nearest.
-std::string image_wrapper(std::string_view bytes, const char* mime,
-                          uint32_t w, uint32_t h, uint32_t frame_w,
-                          uint32_t frame_h) {
-    return "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-           "xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"" +
-           std::to_string(frame_w) + "\" height=\"" + std::to_string(frame_h) +
-           "\"><image width=\"" + std::to_string(w) + "\" height=\"" +
-           std::to_string(h) +
-           "\" image-rendering=\"optimizeSpeed\" xlink:href=\"data:" + mime +
-           ";base64," + base64(bytes) + "\"/></svg>";
 }
 
 // THE DECLARED SHIFT (svg_icon.h's body_center_shift head): the root tag's
@@ -348,8 +289,15 @@ std::expected<Document, std::string> parse_png(std::string_view bytes) {
     const uint32_t w = be32(bytes, 16);
     const uint32_t h = be32(bytes, 20);
     const uint32_t frame = std::max(w, h);
-    auto wrapper =
-        parse(image_wrapper(bytes, "image/png", w, h, frame, frame));
+    const std::string side = std::to_string(frame);
+    const std::string svg =
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+        "xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"" + side +
+        "\" height=\"" + side + "\"><image width=\"" + std::to_string(w) +
+        "\" height=\"" + std::to_string(h) +
+        "\" image-rendering=\"optimizeSpeed\" "
+        "xlink:href=\"data:image/png;base64," + base64(bytes) + "\"/></svg>";
+    auto wrapper = parse(svg);
     if (!wrapper) return std::unexpected(wrapper.error());
 
     const int n = static_cast<int>(frame);
@@ -365,141 +313,6 @@ std::expected<Document, std::string> parse_png(std::string_view bytes) {
     return Document{nullptr,
                     std::shared_ptr<cairo_surface_t>(s, cairo_surface_destroy),
                     std::nullopt};
-}
-
-std::expected<RasterInfo, std::string> raster_info(std::string_view bytes) {
-    static constexpr char kPng[] = "\x89PNG\r\n\x1a\n";
-    if (bytes.size() >= 24 && bytes.substr(0, 8) == std::string_view(kPng, 8) &&
-        bytes.substr(12, 4) == "IHDR")
-        return RasterInfo{be32(bytes, 16), be32(bytes, 20), false};
-    // A JPEG: FF D8, then marker segments up to the scan. The size is the
-    // first START-OF-FRAME's (C0..CF but C4 DHT, C8 JPG and CC DAC): its
-    // segment holds the precision byte, the height and the width.
-    const auto byte = [&](size_t at) {
-        return static_cast<uint8_t>(bytes[at]);
-    };
-    if (bytes.size() >= 4 && byte(0) == 0xFF && byte(1) == 0xD8) {
-        size_t at = 2;
-        while (at + 4 <= bytes.size()) {
-            if (byte(at) != 0xFF) break;
-            const uint8_t marker = byte(at + 1);
-            if (marker == 0xFF) { ++at; continue; }   // a fill byte
-            if (marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
-                at += 2;                               // no length
-                continue;
-            }
-            if (marker == 0xDA || marker == 0xD9) break;   // the scan, the end
-            const size_t len = be16(bytes, at + 2);
-            const bool sof = marker >= 0xC0 && marker <= 0xCF &&
-                             marker != 0xC4 && marker != 0xC8 &&
-                             marker != 0xCC;
-            if (sof && len >= 7 && at + 9 <= bytes.size())
-                return RasterInfo{be16(bytes, at + 7), be16(bytes, at + 5),
-                                  true};
-            at += 2 + len;
-        }
-    }
-    return std::unexpected(std::string("not a PNG or JPEG"));
-}
-
-std::expected<cairo_surface_t*, std::string> raster_region(
-    std::string_view bytes, const RasterInfo& info, double k, int x0, int y0,
-    int w, int h) {
-    assert(k > 0.0 && w > 0 && h > 0 && info.w > 0 && info.h > 0);
-    const int iw = static_cast<int>(info.w);
-    const int ih = static_cast<int>(info.h);
-    const AxisTaps tx = region_taps(x0, w, k);
-    const AxisTaps ty = region_taps(y0, h, k);
-    const auto span = [](const AxisTaps& t, int n) {
-        int lo = n, hi = -1;
-        for (size_t i = 0; i < t.first.size(); ++i) {
-            lo = std::min(lo, std::clamp(t.first[i], 0, n - 1));
-            hi = std::max(hi, std::clamp(t.first[i] + t.count[i] - 1, 0, n - 1));
-        }
-        return std::pair{lo, hi + 1};
-    };
-    const auto [sx0, sx1] = span(tx, iw);
-    const auto [sy0, sy1] = span(ty, ih);
-    const int sw = sx1 - sx0;
-    const int sh = sy1 - sy0;
-
-    // THE SOURCE SPAN, decoded: the wrapper at the image's own size, rendered
-    // at the identity translated by the span's corner, so every sample lands
-    // on a pixel centre (parse_png's reasoning).
-    auto wrapper = parse(image_wrapper(bytes,
-                                       info.jpeg ? "image/jpeg" : "image/png",
-                                       info.w, info.h, info.w, info.h));
-    if (!wrapper) return std::unexpected(wrapper.error());
-    std::vector<unsigned char> src(static_cast<size_t>(sw) * sh * 4, 0);
-    const resvg_transform at{1.0f, 0.0f, 0.0f, 1.0f,
-                             -static_cast<float>(sx0),
-                             -static_cast<float>(sy0)};
-    resvg_render(wrapper->tree.get(), at, static_cast<uint32_t>(sw),
-                 static_cast<uint32_t>(sh), reinterpret_cast<char*>(src.data()));
-    wrapper->tree.reset();   // the decoded image goes with the tree
-    // EACH HORIZONTAL TAP'S BYTE OFFSET in a span row, its index clamped into
-    // the image once (the weights' own order).
-    std::vector<size_t> tap_at(tx.weights.size());
-    for (int i = 0; i < w; ++i)
-        for (int j = 0; j < tx.count[static_cast<size_t>(i)]; ++j)
-            tap_at[tx.offset[static_cast<size_t>(i)] + static_cast<size_t>(j)] =
-                static_cast<size_t>(
-                    std::clamp(tx.first[static_cast<size_t>(i)] + j, 0, iw - 1) -
-                    sx0) * 4;
-
-    // The two passes: horizontal into a span-rows x w intermediate (three
-    // channels, R G B — resvg's byte order), then vertical.
-    std::vector<double> mid(static_cast<size_t>(sh) * w * 3, 0.0);
-    for (int y = sy0; y < sy1; ++y) {
-        double* out = mid.data() + static_cast<size_t>(y - sy0) * w * 3;
-        const unsigned char* row =
-            src.data() + static_cast<size_t>(y - sy0) * sw * 4;
-        for (int i = 0; i < w; ++i) {
-            const int cnt = tx.count[static_cast<size_t>(i)];
-            const size_t off = tx.offset[static_cast<size_t>(i)];
-            const double* wt = tx.weights.data() + off;
-            const size_t* at_px = tap_at.data() + off;
-            double acc[3] = {0.0, 0.0, 0.0};
-            for (int j = 0; j < cnt; ++j)
-                for (int c = 0; c < 3; ++c)
-                    acc[c] += wt[j] * static_cast<double>(
-                                          row[at_px[j] + static_cast<size_t>(c)]);
-            for (int c = 0; c < 3; ++c) out[i * 3 + c] = acc[c];
-        }
-    }
-    cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-    cairo_surface_flush(s);
-    unsigned char* ddata = cairo_image_surface_get_data(s);
-    const int dstride = cairo_image_surface_get_stride(s);
-    std::vector<const double*> tap_rows;
-    for (int y = 0; y < h; ++y) {
-        const int lo = ty.first[static_cast<size_t>(y)];
-        const int cnt = ty.count[static_cast<size_t>(y)];
-        const double* wt = ty.weights.data() + ty.offset[static_cast<size_t>(y)];
-        // Each vertical tap's intermediate row, its index clamped once.
-        tap_rows.resize(static_cast<size_t>(cnt));
-        for (int j = 0; j < cnt; ++j)
-            tap_rows[static_cast<size_t>(j)] =
-                mid.data() +
-                static_cast<size_t>(std::clamp(lo + j, 0, ih - 1) - sy0) * w * 3;
-        auto* drow = reinterpret_cast<uint32_t*>(ddata + y * dstride);
-        for (int x = 0; x < w; ++x) {
-            double acc[3] = {0.0, 0.0, 0.0};
-            for (int j = 0; j < cnt; ++j) {
-                const double* m =
-                    tap_rows[static_cast<size_t>(j)] + static_cast<size_t>(x) * 3;
-                for (int c = 0; c < 3; ++c) acc[c] += wt[j] * m[c];
-            }
-            uint32_t word = 0xFF000000u;
-            for (int c = 0; c < 3; ++c)
-                word |= static_cast<uint32_t>(std::clamp(
-                            std::nearbyint(acc[c]), 0.0, 255.0))
-                        << (16 - 8 * c);
-            drow[x] = word;
-        }
-    }
-    cairo_surface_mark_dirty(s);
-    return s;
 }
 
 double unit_px(const Document& doc, int px) {

@@ -97,57 +97,41 @@ struct TrimRange {
 // -- Palette ---------------------------------------------------------------
 //
 // THE GUI'S COLORS ARE ROLES AND NOTHING ELSE (architect 2026-10-04; the
-// split 2026-10-07; the chrome's inheritance 2026-10-10; the chrome compiled
-// 2026-10-20): THE PALETTE holds every color the PROGRAM draws in the well
-// or on a thing that enters it (the waveform's canvas, ink and outline, the
-// canvas's grid and center line, the cues' two colors and the invalid
-// color, the playhead and the scanner; palette_file.h's head owns the rule
-// that parts program from chrome) — the WAVEFORM PRESET, the one choice of
-// color left; THE PANEL'S FACE is THE METAL'S (the MetalDark tile's mean,
-// materials.h — architect 2026-10-20, the wood chrome; Cool Edit's default
-// 626C7B, cool_edit_derive.h's kDefaultFace, for that day before the tiles),
-// and THE CHROME'S ROLES — the chrome and its relief, the time fields' own
-// pair, the cards' three, the selected and field pairs, the caption — ARE
-// INHERITED FROM IT, every one but the caption's six a tone of the Face (or,
-// the selection fill, the default preset's ink) by Cool Edit's own
+// split 2026-10-07; the chrome's inheritance 2026-10-10): THE PALETTE holds
+// every color the PROGRAM draws in the well or on a thing that enters it
+// (the waveform's canvas, ink and outline, the canvas's grid and center
+// line, the cues' two colors and the invalid color, the playhead and
+// the scanner, the panel's face; palette_file.h's head owns the rule that
+// parts program from chrome), and THE CHROME'S ROLES — the chrome and its
+// relief, the time fields' own pair, the cards' three, the selected and
+// field pairs, the caption — ARE INHERITED FROM IT, every one but the
+// caption's six a tone of the palette's face or ink by Cool Edit's own
 // arithmetic (architect 2026-10-10: "we follow Cool Edit's theming";
-// chrome_derive.h's head, the per-role table, gui_chrome_words), THE
-// CAPTION'S SIX THE COMPILED CAPTION (palette_file.h's kGuiCaptionOwn:
-// Windows Storm's, architect 2026-10-12) — UNREAD BY ANY PAINTER since the
-// caption became the wood (2026-10-20), the roles kept in the table.
-// THE CHROME'S SURFACES ARE MATERIALS (architect 2026-10-20, the wood
-// chrome; materials.h owns the rule): every tone a chrome surface puts down —
-// a ground, a relief line — is painted through set_surface_source as the
-// tone itself, a flat opaque stroke on every material (architect 2026-10-20
-// ~22:50; the wood's since ~22:30), the Face alone the tile as drawn, so the rules
-// below name TONES and the material is the region's (Wood above the program
-// frame's top row and in the band, MetalDark below, MetalVeryDark in the
-// recesses, the Case tile in the cases and the caption's buttons).
-// The chrome's roles and their order are the role table (kGuiThemeRoles,
-// theme_file.h).
-// The palette's roles are kGuiPaletteRoles and the compiled built-in
+// chrome_derive.h's head, the per-role table), THE CAPTION'S SIX a
+// SCHEME'S. The chrome's roles and their order are the role table
+// (kGuiThemeRoles, theme_file.h).
+// The program's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
-// active palette is the device config's `waveform` — a built-in's key,
-// chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-20;
-// files from a `chromes/` folder were read 2026-10-07..14), the first-run
-// default Cool Edit's "Default" (2026-10-16). (The preset set the Face, and
-// through it the whole window, 2026-10-09..10-20, and the 42 caption schemes
-// were a second choice, the `caption` key, 2026-10-08..10-20.) There is
+// active palette is the device config's `chrome` — a built-in's key, chosen
+// by the Settings Chrome row (architect 2026-10-14; files from a `chromes/`
+// folder were read 2026-10-07..14), the first-run default Cool Edit's
+// "Default" under every chrome (2026-10-16); the active SCHEME, the
+// caption's six keys, is its `caption` — a built-in's key, chosen by the
+// Settings Caption row, the first-run default the live chrome's own, which
+// carries no keys and paints the chrome's COMPILED CAPTION (palette_file.h's
+// kGuiCaptionOwn: Windows Storm's, architect 2026-10-12). There is
 // NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
 // would be a chrome variant of its own (2026-10-08). The app computes no
 // color but COOL EDIT'S: the program's panel tones derived from the
-// one Face (cool_edit_derive.h, the COOL EDIT BLOCK) and, through
+// palette's `face` (cool_edit_derive.h, the COOL EDIT BLOCK) and, through
 // the same tones, the chrome's roles (chrome_derive.h).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
 // not follow its preset — the case's black outline and down rings, the
 // disabled glyph's two tones, the view bar's black field, the ruler's ticks and digits and their black shadow;
-// the case's tones Default's own scaled to the Case tile's mean since
-// 2026-10-20 ~23:10, materials::paint_case_face)
-// — or THE WOOD CHROME'S CONSTANTS (materials.h: the caption's and the menu
-// row's gold over its shadow, the time fields' black and amber) — or THE
-// MATERIALS' BAKED TILES (set_surface_source) — or THE ICON SET'S
+// the case's ramps and the time field's digits derive from the Face, ce_case_*
+// and ce_field_text) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the icon drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
@@ -168,14 +152,16 @@ struct TrimRange {
 // (Cool Edit's toolbar has none, program_spec.h's case_hot_face, 2026-10-09)
 // and the chrome's buttons never had one; the menus' and lists' lit rows are
 // a selection, not a button face. Every colour is a solid fill of integer
-// cells — EXCEPT THE CHROME'S SURFACES, WHICH ARE MATERIALS since 2026-10-20
-// (architect, the wood chrome; materials.h): a baked tile, opaque, nothing
-// blended at paint time, every line the tone's own solid (2026-10-20 ~22:50),
-// the case's measured ramps (cool_edit_derive.h's kCaseRamp) baked
-// into its tile per row. (The color picker's hue ring and SV triangle,
-// 2026-10-07..14, were the one place the product painted colors that were
-// not roles; the caption's smooth 24-bit gradient, Windows 98 and 2000's
-// title bar, 2026-10-05..10-20, the one gradient, left with the wood.)
+// cells. (The color picker's hue ring and SV triangle, 2026-10-07..14, were
+// the one place the product painted colors that were not roles.) THE ONE
+// EXCEPTION IS THE CAPTION'S GRADIENT (architect 2026-10-05), Windows 98 and
+// 2000's title bar where a theme records a gradient end: a SMOOTH 24-bit
+// ramp, each device column its own rounded colour (architect 2026-10-06,
+// ReactOS's caption as captured) — still solid cells, nothing blended at
+// paint time (paint_caption_gradient, the rule's one owner) — BESIDE THE
+// PROGRAM CASE'S FACE AND SHADOW RAMPS (2026-10-09, Cool Edit's measured
+// rows resampled to device rows, each row one solid colour;
+// cool_edit_paint.h).
 // A DITHER'S CELL IS ONE DEVICE PX (architect 2026-10-06, the whole chrome
 // made scalable: "all colours used are period-authentic; dithering gets
 // translated into whatever it perceptually becomes"): a dither stays a
@@ -282,17 +268,17 @@ struct TrimRange {
 //                 2026-10-10);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
-//   caption six   UNREAD since 2026-10-20 (the caption is the wood, its
-//                 title the wood chrome's gold, materials.h): until then THE
-//                 CAPTION (architect 2026-10-05, the window's title bar, top
-//                 lane 0), the active start, gradient end and text while the
-//                 window had the focus, the inactive three without it. Its
-//                 three buttons are Windows' caption buttons — the SOFT edges
-//                 on the ground in the Case region, the glyph in the label —
-//                 and the sizing frame round a restored laptop window is the
-//                 quartet and the ground (paint_window_sizing_frame);
-//   THE PALETTE   the waveform preset's TEN (palette_file.h, 2026-10-07; ten
-//                 since 2026-10-20): the waveform's canvas, ink and outline
+//   caption six   THE CAPTION (architect 2026-10-05, the window's title
+//                 bar, top lane 0): the active start, gradient end and text
+//                 while the window has the focus, the inactive three without
+//                 it (paint_caption_row, paint_handler.cpp; the gradient at
+//                 paint_caption_gradient). Its three buttons are Windows'
+//                 caption buttons — the SOFT edges on the ground, the glyph
+//                 in the label — and the sizing frame round a
+//                 restored laptop window is the quartet and the ground
+//                 (paint_window_sizing_frame);
+//   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; eleven
+//                 since 2026-10-11): the waveform's canvas, ink and outline
 //                 (ROW 6, below; the ink also the view bar's span, its
 //                 bevels derived from it); THE CANVAS'S TWO LINES, Cool
 //                 Edit's — `grid` under the waveform and `center` on each
@@ -307,14 +293,11 @@ struct TrimRange {
 //                 the canvas, nothing else (THE PLAYHEAD, below); the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
-//                 (architect 2026-10-09);
-//   face          THE PANEL'S FACE (2026-10-09: the program's band, dock
-//                 bar, row 8 and the canvas column's lanes — Cool Edit's —
-//                 every other panel tone derived from it, the COOL EDIT
-//                 BLOCK, cool_edit_derive.h): the metal's Face, the
-//                 MetalDark tile's mean, since 2026-10-20 (materials.h; a
-//                 palette role until that morning, the constant kDefaultFace
-//                 that day), painted as its region's material as drawn.
+//                 (architect 2026-10-09); and THE
+//                 PANEL'S `face` (2026-10-09: the program's band, dock bar,
+//                 row 8 and the canvas column's lanes — Cool Edit's — every
+//                 other panel tone derived from it, the COOL EDIT BLOCK,
+//                 cool_edit_derive.h).
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -367,38 +350,29 @@ struct TrimRange {
 
 // -- THE CHOKEPOINTS ----------------------------------------------------------
 //
-// EVERY COLOUR THIS PRODUCT HANDS CAIRO GOES THROUGH ONE OF THESE THREE, and
-// no site calls cairo_set_source_rgb itself (re-grepped 2026-10-03: none
-// outside render.cpp's bodies): set_palette_source for the chrome's INK —
-// every word, glyph cell and mark, flat — set_surface_source for the
-// chrome's SURFACES (2026-10-20, the wood chrome: a chrome tone through it
-// is its region's MATERIAL, the tile scaled by the tone, or on a flat
-// material the tone's own solid through set_palette_source, materials.h; any
-// other color flat, set_palette_source's road) — the cell fills and every
-// relief line (paint_cell_rect, paint_relief_frame and their family) — and
+// EVERY COLOUR THIS PRODUCT HANDS CAIRO GOES THROUGH ONE OF THESE TWO, and no
+// site calls cairo_set_source_rgb itself (re-grepped 2026-10-03: none outside
+// render.cpp's two bodies): set_palette_source for the chrome and
 // set_waveform_source for the canvas's cairo fills, its ground and grid
-// (render_canvas) and its center lines (render_center_lines). Each converts
-// the authored sRGB color for the window (display_color, the painter's entry;
-// a material's baked copies at their bake) and hands it over; the plate's own
-// pixels are written as words (argb32_opaque_word), not through cairo, as is
-// the checked dither's tile (paint_checker_rect), converting at its own
-// entry. TEXT takes its ink from the source these set: no glyph road sets a
-// color of its own (text_shape.cpp draws in the current source), and every
-// text road sets its ink through set_palette_source, never a surface's.
+// (render_canvas) and its center lines (render_center_lines). Each converts the authored sRGB color for the window
+// (display_color, the painter's entry) and hands it over; the plate's own
+// pixels are written as words (argb32_opaque_word), not through cairo, as
+// are the caption gradient's ramp (paint_caption_gradient) and the checked
+// dither's tile (paint_checker_rect), each converting at its own entry. TEXT
+// takes its ink from the source these set: no glyph road sets a color of its
+// own (text_shape.cpp draws in the current source).
 void set_palette_source(cairo_t* cr, GuiColor c);
-void set_surface_source(cairo_t* cr, GuiColor c);
 void set_waveform_source(cairo_t* cr, GuiColor c);
 
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
-// The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES — off the
-// metal's Face (the MetalDark tile's mean, materials.h) and the compiled
-// caption since 2026-10-20 (chrome_derive.h's gui_chrome_words) — and the
-// active palette's roles, one
+// The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
+// derived from the live palette and the live scheme's caption since
+// 2026-10-10 (chrome_derive.h) — and the active palette's program roles, one
 // field each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
-// palette's in kGuiPaletteRoles' (palette_file.h), the panel's `face`, and
-// THE COOL EDIT BLOCK derived from that Face (cool_edit_derive.h's painted
-// tones, 2026-10-09) — the tables covering the struct exactly
+// program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
+// derived from the program's `face` (cool_edit_derive.h's painted tones,
+// 2026-10-09) — the three tables covering the struct exactly
 // (palette_file.cpp's static_asserts); the mapping above says what each
 // paints. Every field is a solid byte triple.
 struct GuiPalette {
@@ -425,8 +399,8 @@ struct GuiPalette {
     GuiColor caption_inactive;           // COLOR_INACTIVECAPTION
     GuiColor caption_inactive_gradient;  // COLOR_GRADIENTINACTIVECAPTION
     GuiColor caption_inactive_text;      // COLOR_INACTIVECAPTIONTEXT
-    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE, the waveform preset
-    // (kGuiPaletteRoles, palette_file.h).
+    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
+    // palette_file.h).
     GuiColor waveform_canvas;
     GuiColor waveform_ink;
     GuiColor waveform_outline;
@@ -439,10 +413,7 @@ struct GuiPalette {
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
     // Cool Edit's Face, the ground of the toolbar band, the dock bar and row
-    // 8 — THE METAL'S FACE, the MetalDark tile's mean (materials.h, the wood
-    // chrome, 2026-10-20; the constant kDefaultFace for that day before the
-    // tiles), under every waveform preset. Painted as a surface it is the
-    // region's material as drawn (set_surface_source).
+    // 8 under every chrome.
     GuiColor face;
     // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
     // the panel's tones, each DERIVED from `face` — the view bar's span
@@ -456,9 +427,9 @@ struct GuiPalette {
     GuiColor ce_hilight;
     GuiColor ce_field_dark;
     GuiColor ce_field_light;
-    // (The program's time fields' digits, the never-swapping light text
-    // `ce_field_text` 2026-10-10..10-20, are the wood chrome's amber since,
-    // materials.h's kTimeFieldDigits, on the black kTimeFieldGround.)
+    // the program's time fields' digits, the never-swapping light text
+    // (2026-10-10)
+    GuiColor ce_field_text;
     // the panel label's ink and its (+1, +1) shadow, swapped to the engraved
     // pair past the label threshold (2026-10-10; cool_edit_derive.h's
     // label_ink / label_shadow, not the tone table)
@@ -476,16 +447,23 @@ struct GuiPalette {
     GuiColor ce_tab_dark;
     GuiColor ce_tab_line;
     GuiColor ce_page_dark;
-    // THE PROGRAM TEXT (program_text: the light ink, the dark past the
-    // swap), the active tab's label (2026-10-18). (The inactive tab's
-    // measured 15-row body and its label's ink, kTabBodies' row, retired
-    // with the tiles 2026-10-20: the body is the metal, the label
-    // cool_edit_paint.h's kCeTabLabel. THE BUTTON CASE's twenty-four
-    // members — its ramp, highlight, shadow ends and corner off the Face
-    // 2026-10-10..10-20 — left the same day: the case is the Case tile's,
-    // its tones Default's own scaled to that tile's mean (2026-10-20
-    // ~23:10), materials::paint_case_face.)
+    // THE TAB STRIP'S BODIES AND LABELS (2026-10-18; cool_edit_derive.h's
+    // tab table, kTabBodies, a measured row per preset Face, not a tone of
+    // the table above): the inactive tab's 15-row body, one stop per W row,
+    // and its label's ink; and THE PROGRAM TEXT (program_text: the light ink,
+    // the dark past the swap), the active tab's label.
+    std::array<GuiColor, 15> ce_tab_body;
+    GuiColor ce_tab_label;
     GuiColor ce_text;
+    // THE BUTTON CASE, tinted by `face` (2026-10-10; cool_edit_derive.h's
+    // case tones, the per-row fit): the glyph seat's ramp, one stop per W
+    // row, the highlight, the shadow ramp's two ends and the shadow's corner
+    // — the black outline and the down rings stay the painter's constants.
+    std::array<GuiColor, 20> ce_case_ramp;
+    GuiColor ce_case_highlight;
+    GuiColor ce_case_shadow_first;
+    GuiColor ce_case_shadow_last;
+    GuiColor ce_case_corner;
     // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
     // disabled_* mixes toward the Face): the triangle of the `cue` red, the
     // triangle of the invalid color (2026-10-11, the `range` blue's until
@@ -500,9 +478,9 @@ struct GuiPalette {
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by the install family below alone:
 // install_palette at its ONE application point, gui_main's startup, before
-// the window exists; install_program_palette, the Settings Waveform row's
-// live road; and install_true_colors. Before the first install it is
-// construction state (black), never painted.
+// the window exists; and install_program_palette and install_chrome_pick,
+// the Settings Chrome and Caption rows' live road. Before the first install it is construction state
+// (black), never painted.
 const GuiPalette& palette();
 
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
@@ -511,31 +489,33 @@ const GuiPalette& palette();
 // owner of the choice a later vocabulary with roles of its own would fork
 // (no glyph reads it since 2026-10-09: the icons wear their own inks,
 // icons.h's head):
+//   CaptionActive    the caption's text, active and inactive — Windows'
+//   CaptionInactive  CaptionText pair; the title (paint_caption_row)
 //   ListRow          the list's text pair, resting and lit — the field's
 //   ListRowLit       text and the selection's; the folder overlay's and
 //                    the project picker's row names (paint_folder_overlay)
-// (The caption's pair, CaptionActive / CaptionInactive — Windows' CaptionText
-// for the title — left 2026-10-20 with the wood chrome: the title is the
-// wood's gold, materials.h.)
 enum class GuiSurface {
+    CaptionActive,
+    CaptionInactive,
     ListRow,
     ListRowLit,
 };
 GuiColor surface_text(GuiSurface surface);
 
-// THE CAPTION'S SIX (architect 2026-10-10: "the caption remains the only
-// thing that's outside of Cool Edit"; every other chrome role inherits Cool
-// Edit's tones, chrome_derive.h): the title's start, end and text, and the
-// inactive caption's three — ONE INSTANCE, the compiled caption
-// (palette_file.h's kGuiCaptionOwn, Windows Storm's; the 42 picked schemes
-// it was one of left 2026-10-20), chrome_derive.h the mapping onto the
-// caption's roles. "WE SHOULD NEVER HAVE A TOGGLE" (2026-10-08): the
-// caption's text is a recorded word, never a rule's white-or-black. THE
-// INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while absent ("on the
-// tablet I'm not even going to fill them out; there is no inactive state
-// there") — the inactive_* accessors below resolve them; the compiled
-// caption records all six. IT CARRIES NO FACE: the face is the product's one
-// (gui_font.h's gui_live_face_set).
+// A SCHEME'S KEYS — THE CAPTION ALONE since 2026-10-10 (architect
+// 2026-10-10: "the caption remains the only thing that's outside of Cool
+// Edit"; "scheme files shrink to the caption's keys"; every other chrome
+// role inherits the palette's Cool Edit tones, chrome_derive.h): the title's
+// start, end and text, and the inactive caption's three — palette_file.h
+// owns their table (kGuiChromeLines: the three of the block and the three
+// inactive, each optional in a pick), chrome_derive.h the
+// mapping onto the caption's roles. "WE SHOULD NEVER HAVE A TOGGLE"
+// (2026-10-08): the caption's text is a picked word, never a rule's
+// white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
+// absent ("on the tablet I'm not even going to fill them out; there is no
+// inactive state there") — the inactive_* accessors below resolve them.
+// A SCHEME CARRIES NO FACE: the face is the product's one (gui_font.h's
+// gui_live_face_set).
 struct GuiChromePick {
     uint32_t                title_start    = 0;   // 0xRRGGBB, sRGB, each
     uint32_t                title_end      = 0;
@@ -555,41 +535,67 @@ struct GuiChromePick {
     constexpr bool operator==(const GuiChromePick&) const = default;
 };
 
-// Install every color: THE WAVEFORM'S off `program`, the waveform preset's
-// ten (2026-10-07; the device config's `waveform` key names the preset at
-// launch — a built-in's key, is_builtin_palette_name, gui_main resolving it
-// with palette_record, palette_file.h) — and THE CHROME'S, THE PANEL'S FACE
-// AND EVERY COOL EDIT TONE OFF IT, off THE METAL'S FACE (2026-10-20, the
-// wood chrome: the MetalDark tile's mean, materials::face, and
-// gui_chrome_words, chrome_derive.h, the caption's six the compiled
-// caption's), so no preset moves them — the tiles LOADED FIRST
-// (materials::load; gui_main, and the scale's chokepoint, which loads them
-// again at the new scale and calls this again), the material's tone table
-// rebuilt here (materials::set_tone_face).
+// Install every color: THE PROGRAM'S off `program`, THE LIVE WORDS
+// (2026-10-07): the eleven program colors as they
+// stand in the process, which the caller hands in explicitly — and THE
+// CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
+// every role but the caption's six a tone of the palette's face or ink,
+// live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
+// scheme's keys, or with none the compiled caption
+// (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `chrome`
+// key names and the scheme its `caption` key names (2026-10-08; built-ins
+// alone since 2026-10-14, is_builtin_palette_name and is_builtin_scheme_name,
+// both keys required: gui_main resolves them with palette_record and
+// scheme_record, palette_file.h, and passes the two).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
-// `waveform` key names THE ACTIVE PRESET and gives the words at launch; the
-// Settings Waveform row's commit installs a preset's words live and writes
-// its key (GuiSettingsEditor::commit_device_setting, architect 2026-10-14).
-// This resolves and never refuses. It bumps palette_generation below, the
-// flag cache's fingerprint term, and the plate's two baked inks
-// (waveform_plate_inks) move with it. The words type is palette_file.h's.
-// (The caption's six were a picked scheme's — a `caption` key, its row and
-// a second argument here, with install_chrome_pick and live_chrome_pick
-// beside — 2026-10-08..10-20.)
-void install_palette(const std::array<uint32_t, 10>& program);
+// `chrome` and `caption` keys name THE ACTIVE PRESETS and give the words at
+// launch; the Settings Chrome and Caption rows' commit installs a preset's
+// words live and writes its key (GuiSettingsEditor::commit_device_setting,
+// architect 2026-10-14). This resolves and never refuses. It bumps
+// palette_generation below, the flag cache's fingerprint term, and the
+// plate's two baked inks (waveform_plate_inks) move with it. The words type
+// is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
+// none for the live chrome's own scheme.
+void install_palette(const std::array<uint32_t, 11>& program,
+                     const std::optional<GuiChromePick>& chrome);
 
-// THE LIVE WORDS AS INSTALLED — the waveform's ten the install family
+// THE INSTALL FAMILY'S CAPTION MEMBER (2026-10-08, the chrome knob; the
+// caption alone since 2026-10-10): the chrome's members re-derived off
+// live_chrome_words(the live program words, `chrome`)
+// (chrome_derive.h) and palette_generation bumped, the program's eleven
+// untouched — only the caption's six can move. THE LIVE ROAD beside
+// install_program_palette is the Settings rows' commit
+// (GuiSettingsEditor::install_color_preset, which runs that member's apply
+// shape after both; the color picker's until 2026-10-14). Why that shape is enough for
+// the chrome: the chrome's colors bake into one cached thing, the flag cache
+// (a disabled flag's ground), keyed by the generation; the caption's ramp
+// image keys its two words itself (paint_caption_gradient); no icon raster
+// carries a role (icons.h's head); every other chrome painter reads
+// palette() each frame (re-checked 2026-10-09).
+void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
+
+// THE LIVE CHROME PICK AS INSTALLED — the caption keys the install family
+// last wrote (install_palette's or install_chrome_pick's `chrome`), carried
+// as given under every chrome — THE LIVE SCHEME, as program_palette_words is THE LIVE
+// PALETTE, file-scope for the same reason. Its readers: the Settings rows'
+// commit (the other kind's words passed through unchanged, and the chrome's
+// before-and-after compare, GuiSettingsEditor::install_color_preset).
+const std::optional<GuiChromePick>& live_chrome_pick();
+
+// THE LIVE WORDS AS INSTALLED — the program's eleven the install family
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 10 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 11 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not — so a reopen
-// keeps them.
-const std::array<uint32_t, 10>& program_palette_words();
+// keeps them. ITS READER: the Settings rows' commit
+// (GuiSettingsEditor::install_color_preset — the Caption row passes them
+// through unchanged, and the chrome's before-and-after compare reads them).
+const std::array<uint32_t, 11>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// waveform's ten alone, the Waveform row's live road — is declared in
+// program's eleven alone, the Chrome row's live road — is declared in
 // palette_file.h beside the words it takes and defined in render.cpp beside
 // install_palette.)
 
@@ -609,9 +615,8 @@ uint64_t palette_generation();
 // PIXEL IS REBUILT, re-grepped 2026-10-08 against the head's list of
 // converting sites: the flag cache by the generation bumped here; the
 // waveform plate by its inks' fingerprint (waveform_plate_inks hands the
-// window's words); the materials' baked copies and cases dropped here
-// (materials::drop_baked, rebaked at their next ask; the caption ramp's
-// cache stood in this list 2026-10-08..10-20);
+// window's words); the caption ramp by the conversion state in its own
+// cache key (paint_caption_gradient);
 // the checker's tile is built per fill and keeps nothing. THE APPLY SHAPE THE
 // CALLER OWES, after the call (GuiInputHandler::toggle_true_colors): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
@@ -1177,10 +1182,9 @@ constexpr int kMinWindowHeightPx = 480;
 // and DrawFrameControl box on the ReactOS captures (tmp/reactos*.png):
 //   THE LANE is caption_height_px whole (18 Windows px under win2000): the
 //     caption's ground across the whole lane, under the icon and the buttons
-//     too — THE WOOD as drawn, active and inactive alike (architect
-//     2026-10-20, the wood chrome, materials.h; Windows Storm's smooth
-//     start-to-end ramp, ReactOS's span, 2026-10-05..10-20), nothing above
-//     or below it inside the lane;
+//     too — the active or inactive start-to-end colours,
+//     paint_caption_gradient's smooth ramp (ReactOS's span), nothing above or
+//     below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
 //     (SM_CXSMICON; kCaptionIconPx) at the spec's (caption_icon_x_px,
 //     caption_icon_y_px) from the lane's top-left — (2, 1) under win2000 —
@@ -1189,9 +1193,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     bold, the caption font being the body face in bold), its pen at
 //     caption_title_x_px (20, two px past win2000's icon) and its cap band
 //     centred in the lane (redesign_baseline) — cut before the buttons with
-//     Windows' "..." (paint_caption_row owns the words and the cut) — in
-//     the wood chrome's brushed gold over its one-device-px shadow
-//     (materials.h's kWoodTextInk / kWoodTextShadow, 2026-10-20);
+//     Windows' "..." (paint_caption_row owns the words and the cut);
 //   THE THREE BUTTONS, flush right: each caption_button_w_px x
 //     caption_button_h_px with caption_button_y_px of caption above it,
 //     caption_button_gap_px between Minimise and Maximise,
@@ -1201,11 +1203,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     DrawFrameControl's DFC_CAPTION: EDGE_RAISED with BF_SOFT, and
 //     EDGE_SUNKEN with BF_SOFT while pressed (paint_button_box's TOOLBAR
 //     family, the SOFT edges; the reference's white outer line and 3DLight
-//     inner one agree) ON THE CASE MATERIAL (architect 2026-10-20 ~20:15,
-//     the region Case, materials.h), its lines THE CASE'S OWN — the light
-//     ones the case's highlight, the dark its shadow's first tone, Default's
-//     case scaled to the Case tile's mean (2026-10-20 ~23:10) — its glyph
-//     Marlett's character in the label
+//     inner one agree), its glyph Marlett's character in the label
 //     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
 //     Restore authored cells — ReactOS's 7-wide Minimise and Restore — and
 //     Close the smooth outline of Marlett's staircase, the cell on its unit
@@ -1218,12 +1216,14 @@ inline int caption_row_h_px() {
     return scaled_px(live_chrome_spec().caption_height_px, 5);
 }
 
-// (THE CAPTION'S GRADIENT, paint_caption_gradient, 2026-10-05..10-20, is
-// gone: the caption IS THE WOOD, active and inactive alike — paint_caption_row
-// lays the Wood material as drawn, its title the wood chrome's brushed gold
-// over a one-device-px shadow, its three buttons the Case material under
-// their own soft relief (materials.h; architect 2026-10-20 ~20:15 and
-// ~20:40, "a VST style like this … wouldn't show any difference").)
+// THE CAPTION'S GRADIENT — THE ONE GRADIENT IN THE PRODUCT (architect
+// 2026-10-05; the palette head's exception), its rule and reason at the
+// definition (render.cpp): `start` at the left of `r`, `end` at its right,
+// linear per channel across the width, each device column's rounded 24-bit
+// colour (architect 2026-10-06); a flat caption (end equal to start) is one
+// solid fill of the exact colour. Opaque.
+void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
+                            GuiColor end);
 
 // THE SIZING FRAME (architect 2026-10-05) — Windows 95's sizable window
 // border, 4 Windows px (SM_CXFRAME, kWindowFramePx), drawn round a RESTORED
@@ -1385,12 +1385,7 @@ inline int relief_line_px() {
 // the
 // two two-tone corners MITRED (paint_relief_sunken_outer over
 // paint_relief_frame, the program's diagonal rule at cool_edit_paint.h's
-// head). THE LINE TAKES THE MATERIAL OF THE REGION IT STANDS BESIDE
-// (architect 2026-10-20 ~23:10, "yes"; materials.h's REGIONS): the top row
-// and the columns alongside the upper region — the ring's top down to the
-// band's last row — the WOOD's flat tones, from the band's foot down the
-// metal's; one ring, split by clip at the band's foot, its mitres kept
-// (paint_program_frame).
+// head).
 // THE GEOMETRY (main.cpp's lane table; one geometry for paint and hit): the
 // ring's TOP ROW is a top lane of its own between the menu row and the band,
 // its BOTTOM ROW a bottom lane of its own, and its two COLUMNS stand on the
@@ -2566,9 +2561,6 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 // (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin
 // design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
-// EVERY LINE AND FACE THEY LAY IS A SURFACE (set_surface_source): a tone of
-// the region's material, the tone's own solid (2026-10-20 ~22:50;
-// materials.h), a mitre's diagonal the two sources.
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right);
 void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);
@@ -2578,15 +2570,8 @@ void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
-// One cell rect in `c` — the face fill every relief caller lays first — A
-// SURFACE: `c` through set_surface_source, so a chrome tone lands as its
-// region's material (materials.h) and any other color flat.
+// One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
-// One cell rect of INK in `c`, flat whatever its color (set_palette_source):
-// a glyph's or a word's own cells — the caption buttons' Marlett cells, an
-// access key's underline — which no material ever wears, even in a tone's
-// bytes (the disabled emboss's Hilight and Shadow copies).
-void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 
 // THE DIRECT ROAD (2026-10-13): the context's own target as pixel words, and
 // the clip it holds in device pixels, for a painter that writes the words
@@ -2835,11 +2820,11 @@ struct WaveformBasis {
 // the exact n/255 hex palette, decisive only if a mixed colour ever ties. The
 // one word owner for every image the painters write as words: the plate
 // (render_waveform) and the checked dither's tile (paint_checker_rect), each
-// handing it the color already converted for the window (display_color); a
-// bound icon's color (icons.cpp) takes the authored word's low 24 bits, its
-// raster converted after. (The caption's gradient, a reader until 2026-10-20,
-// left with the wood chrome; the materials' baked tiles write their own
-// words, materials.cpp.)
+// handing it the color already converted for the window (display_color), and
+// the caption's gradient (paint_caption_gradient), which keys its cache on
+// the authored words and writes its converted ramp itself; a bound icon's
+// color (icons.cpp) takes the authored word's low 24 bits, its raster
+// converted after.
 inline uint32_t argb32_opaque_word(GuiColor c) {
     return (UINT32_C(255) << 24) |
            (static_cast<uint32_t>(std::nearbyint(c.r * 255.0)) << 16) |

@@ -186,7 +186,7 @@ struct WaveformCache {
     // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
     // and `waveform_outline` roles, waveform_plate_inks, render.h): the plate
     // writes their words, so an install that moves either (the Settings
-    // Waveform row's commit, install_program_palette, palette_file.h)
+    // Chrome row's commit, install_program_palette, palette_file.h)
     // re-renders it BY FIELD, keyed directly like the line width (architect
     // 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};

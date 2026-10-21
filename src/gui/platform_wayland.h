@@ -102,18 +102,6 @@ public:
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
 
-    // THE BUNDLED TILES' FILES (architect 2026-10-20, the wood chrome;
-    // materials.h's head) — the materials of assets/tiles/, one flat drop
-    // folder, as a map from FILE NAME (`<Material>.png` or `<Material>.jpg`,
-    // materials.h's kGuiMaterialNames) to the file's whole bytes, every file
-    // of the folder whose name ends `.png` or `.jpg`: bundled_icon_files'
-    // road and rules exactly, the path compiled in
-    // (WARPTEMPO_BUNDLED_TILES_DIR, CMakeLists.txt), the APK's `tiles/`
-    // assets on the tablet. Read by materials::load alone, at the launch and
-    // at a gui_scale commit.
-    static std::expected<std::map<std::string, std::string>, std::string>
-        bundled_tile_files();
-
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
     // is private below so the composition cannot be bypassed by an inline string
@@ -161,6 +149,15 @@ public:
     // that configure delivers it). One call, one fire.
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
+    // THE WHOLE SURFACE, the window's band with it (2026-10-09): where
+    // invalidate_region takes a CLIENT rect and so never reaches the frame,
+    // this damages every surface pixel, so the next paint repaints the
+    // sizing frame (paint_window_sizing_frame) along
+    // with the client. ONE CALLER, A LIVE CHROME PICK
+    // (GuiSettingsEditor::install_color_preset, through
+    // Viewport::invalidate_surface): the frame paints in the chrome's roles,
+    // and nothing else changes them while the window stands (platform.h).
+    void invalidate_surface();
     void drain_events();
     void paint_now();
 
@@ -922,7 +919,8 @@ private:
     // One rect of SURFACE damage, coalesced into the global list and, under
     // the cpu canvas, every buffer's pending list, and the frame callback
     // armed (invalidate_region's body, the app's client rect offset by the
-    // frame) — the Android twin's one road of the same name.
+    // frame; invalidate_surface's whole surface) — the Android twin's one
+    // road of the same name.
     void invalidate_surface_rect(int x, int y, int w, int h);
     // A COMPOSITOR GRAB TOOK THE PRESS (begin_window_move / _resize): the
     // compositor owns the pointer until the lift, and nothing guarantees the

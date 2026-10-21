@@ -163,12 +163,6 @@ public:
     // the road device_config_defaults takes.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
-    // THE BUNDLED TILES' FILES (contract at platform_wayland.h, 2026-10-20):
-    // the APK's `tiles/` assets — the repository's `assets/tiles/*.png` and
-    // `*.jpg`, which build_apk.sh's asset step packs — by bundled_icon_files'
-    // own road.
-    static std::expected<std::map<std::string, std::string>, std::string>
-        bundled_tile_files();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no system titlebar, so this setter stores
@@ -195,6 +189,15 @@ public:
     bool exit_requested() const { return should_exit_; }
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
+    // THE WHOLE SURFACE, the window's band with it (2026-10-09): where
+    // invalidate_region takes a CLIENT rect and so never reaches the frame,
+    // this damages every surface pixel, so the next paint repaints the
+    // sizing frame (paint_window_sizing_frame) along
+    // with the client. ONE CALLER, A LIVE CHROME PICK
+    // (GuiSettingsEditor::install_color_preset, through
+    // Viewport::invalidate_surface): the frame paints in the chrome's roles,
+    // and nothing else changes them while the window stands (platform.h).
+    void invalidate_surface();
     void drain_events();
     void paint_now();
 
@@ -656,7 +659,8 @@ private:
     int  client_w() const { return width_  - 2 * frame_px_; }
     int  client_h() const { return height_ - 2 * frame_px_; }
     // One rect of SURFACE damage, coalesced (invalidate_region's body, the
-    // GUI's client rect offset by the frame; the adoption's whole surface).
+    // GUI's client rect offset by the frame; the adoption's and
+    // invalidate_surface's whole surface).
     void invalidate_surface_rect(int x, int y, int w, int h);
     bool should_exit_ = false;
     // The run-stop request, cleared at the head of every run() (platform.h).

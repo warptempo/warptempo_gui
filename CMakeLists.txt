@@ -175,11 +175,6 @@ set(WARPTEMPO_GUI_SOURCES
     # cross-built static one (android/deps/85_resvg.sh) on Android.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
-    # GUI-ONLY, for svg_icon.cpp's reason: the wood chrome's materials
-    # (2026-10-20, materials.h) — the tiles read from the bundle, decoded and
-    # scaled through svg_icon's road, baked per tone and painted as the
-    # chrome's surfaces.
-    src/gui/materials.cpp
     src/gui/render.cpp
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
     # case, the same under every chrome (cool_edit_paint.h).
@@ -207,15 +202,14 @@ set(WARPTEMPO_GUI_SOURCES
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
     # THE CHROME'S COLORS (2026-10-04; compiled in since 2026-10-08): the
-    # role table, no files.
+    # role table and each chrome's compiled theme, no files.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
-    # THE WAVEFORM PRESETS (2026-10-07; compiled in alone since 2026-10-14;
-    # the waveform's alone, the caption schemes gone, since 2026-10-20): the
-    # palette's role table (ten roles), the built-in palettes (Cool Edit's
-    # twenty presets, the one default `cool-edit-default`), the compiled
-    # caption, and the lookups the device config and the Settings Waveform
-    # row read. GUI-ONLY.
+    # THE COMPILED-IN PRESETS (2026-10-07; the schemes 2026-10-08; compiled
+    # in alone since 2026-10-14): the program's role table (eleven roles
+    # since 2026-10-11), the built-in palettes (Cool Edit's twenty presets,
+    # the one default `cool-edit-default`) and schemes, and the lookups the
+    # device config and the Settings Chrome and Caption rows read. GUI-ONLY.
     src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
@@ -709,12 +703,6 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # so the Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
-    # THE BUNDLED TILES' SOURCE ON THE LAPTOP (architect 2026-10-20, the wood
-    # chrome; materials.h's head): the repository's own assets/tiles/, the
-    # icons' road exactly (GuiPlatform::bundled_tile_files) — a dropped tile
-    # needs no rebuild here; the APK packs the same files as assets.
-    target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_BUNDLED_TILES_DIR="${CMAKE_SOURCE_DIR}/assets/tiles")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}

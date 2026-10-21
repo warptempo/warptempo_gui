@@ -8,17 +8,16 @@
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
-#include "palette_file.h"      // the waveform row's presets (palette_record)
-#include "materials.h"         // the bevel rows' live rebake (set_bevel)
+#include "chrome_derive.h"     // live_chrome_words: whether a color commit moved the chrome
+#include "palette_file.h"      // the two color rows' presets (palette_record, scheme_record)
 
-#include "settings_file.h"   // warptempo_settings::validate_gui_setting
+#include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
 
 #include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -73,10 +72,11 @@ bool is_path_completed_key(const std::string& key) {
     return key == "projects_path";
 }
 
-// THE WAVEFORM KEY — the device config's `waveform`, whose Tab completion is
-// the built-in preset names (complete_preset_value, architect 2026-10-14).
+// THE TWO COLOR KEYS — the device config's `chrome` and `caption`, whose Tab
+// completion is their kind's built-in preset names (complete_preset_value,
+// architect 2026-10-14).
 bool is_preset_completed_key(const std::string& key) {
-    return key == "waveform";
+    return key == "chrome" || key == "caption";
 }
 
 // The longest common prefix of the matches, cut back to a CODEPOINT BOUNDARY:
@@ -161,7 +161,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the selected text every other refusal there leaves, while commit_device_setting's
-// three keys and the `gui_scale` arm commit regardless. So every Settings
+// four keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -680,7 +680,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The three device keys other than the scale — one body, ahead of the
+    // 2. The four device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -942,15 +942,13 @@ void GuiSettingsEditor::commit() {
 // THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
-// project is opened first — a rename-by-hand case, accepted. `waveform`
-// (architect 2026-10-14, as `chrome` until 2026-10-20): AT ONCE, live, no
-// card — its arm below; `bevel_light` and `bevel_dark` (2026-10-20 evening,
-// the wood chrome's tuning phase) the same, their arm after it, and `tile_scale` (2026-10-20 night) after those. (`theme`, in force at once with the palette
-// repainted whole, had an arm here 2026-10-03..10-08, `icons` and `font`
-// 2026-10-09..10-12 and `caption` 2026-10-14..10-20; each left with its
-// key.) The commit is the OK's or Enter's, as on every row (the choice
-// rows' list rows, which showed a value and committed nothing, went with
-// the choice editor, 2026-10-14).
+// project is opened first — a rename-by-hand case, accepted. `chrome` and
+// `caption` (architect 2026-10-14): AT ONCE, live, no card — their arm below.
+// (`theme`, in force at once with the palette repainted whole, had an arm
+// here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
+// with its key.) The commit is the OK's or Enter's, as on every row (the
+// choice rows' list rows, which showed a value and committed nothing, went
+// with the choice editor, 2026-10-14).
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
@@ -993,84 +991,35 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         text_editor::deactivate(app.settings_editor);
     };
 
-    // THE WAVEFORM KEY (architect 2026-10-14, "remove picker and preset file
-    // road"; `chrome` until 2026-10-20, when the preset came to set the
-    // waveform's colors alone): a built-in's key under its one grammar owner
-    // (is_builtin_palette_name, palette_file.h), THE KEY WRITTEN WHATEVER
-    // THE PICK, the default included (architect 2026-10-14: every device key
-    // required, the default spelled — a pick of the default wrote no line
-    // until then, device_config.h) — and, unlike the path keys and like the
-    // font of 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT, which is the
-    // OK's (or Enter's) (architect 2026-10-14, "OK alone"; settings_editor.h's
-    // head): the preset is installed and the screen repainted
-    // (install_waveform_preset), so NO CARD — the color is on screen, the
-    // answer; this key applies at the commit, every other device key at the
-    // next open or launch. A failed write keeps the live colors for the
-    // session, the card saying the persist failed. A pick that leaves the
-    // file as it stands is the unchanged no-op.
-    if (key == "waveform") {
-        if (!is_builtin_palette_name(value)) {
-            reject(kPaletteGrammarReason);
+    // THE TWO COLOR KEYS (architect 2026-10-14, "remove picker and preset
+    // file road"; the Settings Chrome and Caption rows): a built-in's key
+    // under its kind's one grammar owner (is_builtin_palette_name,
+    // is_builtin_scheme_name, palette_file.h), THE KEY WRITTEN WHATEVER THE
+    // PICK, the kind's default included (architect 2026-10-14: every device
+    // key required, the default spelled — a pick of the default wrote no line
+    // until then, device_config.h) — and, unlike the path keys and like the font of
+    // 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT, which is the OK's (or
+    // Enter's), never a list row's (architect 2026-10-14, "OK alone";
+    // settings_editor.h's head): the preset is installed and the screen
+    // repainted (install_color_preset), so NO CARD — the color is on screen,
+    // the answer; these two keys apply at the commit, every other device key
+    // at the next open or launch. A failed write keeps the live colors for
+    // the session, the card saying the persist failed. A pick that leaves
+    // the file as it stands is the unchanged no-op.
+    if (key == "chrome" || key == "caption") {
+        const bool chrome = key == "chrome";
+        if (chrome ? !is_builtin_palette_name(value)
+                   : !is_builtin_scheme_name(value)) {
+            reject(chrome ? kPaletteGrammarReason : kSchemeGrammarReason);
             return true;
         }
-        if (value == app.device_config->waveform) { unchanged(); return true; }
-        app.device_config->waveform = value;
-        install_waveform_preset(palette_record(value));
-        (void)persist();
-        applied();
-        return true;
-    }
-
-    // THE BEVEL KEYS (architect 2026-10-20, the wood chrome's tuning phase:
-    // "make it a tuneable config temporarily … for all tuneable fields"):
-    // the scale's canonical integer spelling and the range's one owner
-    // (is_bevel_percent, device_config.h), APPLIED LIVE AT THE COMMIT as the
-    // waveform key is — the materials' baked copies dropped and the window
-    // repainted, every surface rebaking at its next paint (materials.h's
-    // set_bevel), so NO CARD: the bevels on screen are the answer.
-    if (key == "bevel_light" || key == "bevel_dark") {
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
-            reject(kBevelGrammarReason);
-            return true;
-        }
-        int& live = key == "bevel_light" ? app.device_config->bevel_light
-                                         : app.device_config->bevel_dark;
-        if (static_cast<int>(v) == live) { unchanged(); return true; }
-        live = static_cast<int>(v);
-        materials::set_bevel(app.device_config->bevel_light,
-                             app.device_config->bevel_dark);
-        viewport.invalidate_all();
-        (void)persist();
-        applied();
-        return true;
-    }
-
-    // THE TILE SCALE KEY (architect 2026-10-20 ~23:35, the tiles'
-    // downscale; materials.h's head): [10, 100] under its one grammar owner
-    // (is_tile_scale_percent, device_config.h), APPLIED LIVE AT THE COMMIT as
-    // gui_scale is — the files read again at the new scale, the palette
-    // reinstalled off the Faces measured there (apply_gui_scale's road), NO
-    // CARD. The files loaded at launch, so a failure here is the bundle
-    // changed under the running process: its line, and the hard fail.
-    if (key == "tile_scale") {
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_tile_scale_percent(v)) {
-            reject(kTileScaleGrammarReason);
-            return true;
-        }
-        if (static_cast<int>(v) == app.device_config->tile_scale) {
-            unchanged();
-            return true;
-        }
-        app.device_config->tile_scale = static_cast<int>(v);
-        materials::set_tile_scale(app.device_config->tile_scale);
-        if (const std::optional<std::string> err = materials::load()) {
-            std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-            std::exit(1);
-        }
-        install_palette(program_palette_words());
-        viewport.invalidate_all();
+        std::string& field = chrome ? app.device_config->palette
+                                    : app.device_config->scheme;
+        if (value == field) { unchanged(); return true; }
+        field = value;
+        // ONE KIND MOVES: the other kind's live words stand.
+        if (chrome) install_color_preset(palette_record(value), live_chrome_pick());
+        else        install_color_preset(program_palette_words(), scheme_record(value));
         (void)persist();
         applied();
         return true;
@@ -1113,20 +1062,36 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     return true;
 }
 
-void GuiSettingsEditor::install_waveform_preset(
-        const std::array<uint32_t, 10>& words) {
+void GuiSettingsEditor::install_color_preset(
+        const GuiPaletteWords& words,
+        const std::optional<GuiChromePick>& scheme) {
     // The shape and why it is enough are at install_program_palette's
-    // declaration (palette_file.h). NO CHROME ROLE MOVES (2026-10-20: the
-    // chrome is the metal's Face's, chrome_derive.h's gui_chrome_words, which
-    // no preset reaches), so the damage
-    // is the client's alone — every color the preset sets paints in the
-    // well, the lanes and what enters the well, never on the restored
-    // laptop's sizing frame outside the client.
+    // declaration (palette_file.h) and, for the caption, install_chrome_pick's
+    // (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
+    const GuiThemeWords chrome_before = live_chrome_words(
+        program_palette_words(), live_chrome_pick());
     install_program_palette(words);
+    install_chrome_pick(scheme);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
-    viewport.invalidate_all();
+    // A CHANGED CHROME — THE SCHEME'S CAPTION KEYS (kGuiChromeLines), OR THE
+    // PALETTE'S FACE OR INK, WHICH EVERY OTHER CHROME ROLE DERIVES FROM
+    // SINCE 2026-10-10 (chrome_derive.h) — DAMAGES THE WHOLE SURFACE
+    // (2026-10-09): the window's sizing frame — the restored laptop's —
+    // paints in the chrome's roles outside the client area, which
+    // invalidate_all never reaches (platform.h's two damage calls). A
+    // PALETTE CHANGE THAT MOVES NO CHROME ROLE NEEDS NO MORE THAN THE CLIENT:
+    // those roles paint in the program's panels, the well and what enters
+    // it, never on the frame. Neither kind touches an icon (every glyph
+    // wears its drawing's own inks, icons.h's head) or the face (a scheme
+    // carries none, gui_font.h's one).
+    if (live_chrome_words(program_palette_words(),
+                          live_chrome_pick()) != chrome_before) {
+        viewport.invalidate_surface();
+    } else {
+        viewport.invalidate_all();
+    }
 }
 
 bool GuiSettingsEditor::complete_path_value(const std::string& value) {
@@ -1197,19 +1162,24 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
 }
 
 // THE PRESET COMPLETER (the ruling and its examples at the declaration,
-// architect 2026-10-14): the path completer's model over the closed list of
-// built-in preset names. The value side is matched as typed — a name is
+// architect 2026-10-14): the path completer's model over the kind's closed
+// list of built-in names. The value side is matched as typed — a name is
 // ASCII, so the byte compare is the character compare, and the common prefix
 // needs no codepoint cut (common_prefix_on_codepoint_boundary cuts nothing
 // on ASCII and is called for the one rule's sake). A unique match takes NO
 // trailing character, unlike the path's `/`: a preset name ends the line.
-bool GuiSettingsEditor::complete_preset_value(const std::string& value) {
+bool GuiSettingsEditor::complete_preset_value(const std::string& key,
+                                              const std::string& value) {
     std::vector<std::string> matches;
-    for (const GuiBuiltinPalette& p : kGuiBuiltinPalettes) {
-        const std::string_view name = p.key;
+    const auto offer = [&](std::string_view name) {
         if (name.size() >= value.size() &&
             name.compare(0, value.size(), value) == 0)
             matches.emplace_back(name);
+    };
+    if (key == "chrome") {
+        for (const auto& p : kGuiBuiltinPalettes) offer(p.key);
+    } else {
+        for (const auto& s : kGuiChromeSchemes) offer(s.key);
     }
     if (matches.empty()) return false;
     const std::string lcp = common_prefix_on_codepoint_boundary(matches);
@@ -1250,10 +1220,10 @@ bool GuiSettingsEditor::autocomplete_value() {
     // behave as every other key's do, and the path road opens only once
     // something has been typed. The path completer's own no-advance cases
     // (an ambiguous prefix already at the common prefix, no match, a relative
-    // or unlistable head) are Tabs that walk, exactly as here. THE WAVEFORM
-    // KEY TAKES THE SAME ROAD (architect 2026-10-14): a non-empty value side
-    // there is a preset-name prefix, completed against the built-in names
-    // (complete_preset_value), its no-advance cases Tabs that walk.
+    // or unlistable head) are Tabs that walk, exactly as here. THE TWO COLOR
+    // KEYS TAKE THE SAME ROAD (architect 2026-10-14): a non-empty value side
+    // there is a preset-name prefix, completed against the kind's built-in
+    // names (complete_preset_value), its no-advance cases Tabs that walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
         // Leading whitespace off, trailing whitespace kept — the reasons are
         // at ltrim_ws. The completer used to be handed the raw substring, so a
@@ -1262,14 +1232,15 @@ bool GuiSettingsEditor::autocomplete_value() {
         if (is_path_completed_key(key))
             return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
         if (is_preset_completed_key(key))
-            return complete_preset_value(ltrim_ws(pending.substr(eq + 1)));
+            return complete_preset_value(key,
+                                         ltrim_ws(pending.substr(eq + 1)));
         return false;
     }
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, waveform — the last four the
-    // device config's — per-tab trim / read_only)
+    // gui_scale, projects_repo, projects_path, chrome, caption — gui_scale
+    // and the last four the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S (or, for a device key, the config's writer)
     // would write, so recall and save never diverge.

@@ -379,23 +379,16 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
-    // THE WAVEFORM KEY (architect 2026-10-14, the Waveform row — `chrome`
-    // until 2026-10-20, the `caption` key recalled beside it until then):
-    // verbatim like the path key — required and always written since the
-    // same day, so the line is the preset on screen. (The effective preset,
-    // recalled where no line stood, was this recall's one departure from the
-    // byte-exact rule 2026-10-14 until the key became required.)
-    if (key == "waveform" && app.device_config != nullptr)
-        return app.device_config->waveform;
-    // THE BEVEL KEYS (2026-10-20, the wood chrome's tuning phase): through the
-    // config's own serializer, as the scale.
-    if (key == "bevel_light" && app.device_config != nullptr)
-        return format_bevel_percent(app.device_config->bevel_light);
-    if (key == "bevel_dark" && app.device_config != nullptr)
-        return format_bevel_percent(app.device_config->bevel_dark);
-    // THE TILE SCALE (2026-10-20 night), the same road.
-    if (key == "tile_scale" && app.device_config != nullptr)
-        return format_bevel_percent(app.device_config->tile_scale);
+    // THE TWO COLOR KEYS (architect 2026-10-14, the Chrome and Caption
+    // rows): verbatim like the path key — both are required and always
+    // written since the same day, so the line is the preset on screen. (The
+    // effective preset, recalled where no line stood, was this recall's one
+    // departure from the byte-exact rule 2026-10-14 until the keys became
+    // required.)
+    if (key == "chrome" && app.device_config != nullptr)
+        return app.device_config->palette;
+    if (key == "caption" && app.device_config != nullptr)
+        return app.device_config->scheme;
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

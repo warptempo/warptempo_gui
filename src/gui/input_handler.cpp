@@ -5,7 +5,6 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "icons.h"                  // drop_rasters on a scale change
-#include "materials.h"              // the tiles' reload on a scale change
 #include "onscreen_keyboard.h"      // the keyboard band's wheel swallow
 #include "render.h"
 #include "device_config.h"
@@ -20,8 +19,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -4186,17 +4183,6 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // THE ICON RASTERS ARE PER DEVICE PX (icons.h): the cache drops and
     // refills lazily at the new scale's sizes.
     icons::drop_rasters();
-    // THE TILES ARE DRAWN AT gui_scale / 300 (materials.h's head, 2026-10-20):
-    // the files are read again at the new scale — the masters never stay
-    // resident — and the palette reinstalled off the Faces measured there
-    // (install_palette: the chrome's roles and the tone table are the metal
-    // Face's). The files loaded at launch, so a failure here is the bundle
-    // changed under the running process: its line, and the hard fail.
-    if (const std::optional<std::string> err = materials::load()) {
-        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-        std::exit(1);
-    }
-    install_palette(program_palette_words());
     // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
     // below the GUI model and cannot resolve it (the contract and the
     // two-call-site inventory are at GuiInputCore::set_touch_slop_px). This is
