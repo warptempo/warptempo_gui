@@ -123,7 +123,7 @@ AxisTaps axis_taps(int side, double k, double shift_src) {
 
 // A MATERIAL REGION'S AXIS (svg_icon.h's raster_regions): axis_taps for the
 // destination pixels [first, first + side) of an image drawn at k, unshifted —
-// pixel first + i's centre maps to c = (first + i + 0.5) / k — the source
+// pixel first + i's center maps to c = (first + i + 0.5) / k — the source
 // indices unclamped (the caller clamps them into the image: a material has no
 // transparent margin to fade into, so past its border the filter reads the
 // border's own pixels). Never called at k = 1 exactly: there the regions are
@@ -483,7 +483,7 @@ std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
 
     // THE SOURCE SPAN, decoded: the wrapper at the image's own size, rendered
     // at the identity translated by the span's corner, so every sample lands
-    // on a pixel centre (parse_png's reasoning). The decode is resvg's and
+    // on a pixel center (parse_png's reasoning). The decode is resvg's and
     // its buffer is freed before the resample's rows are kept.
     auto wrapper =
         parse(image_wrapper(bytes, mime, info.w, info.h, info.w, info.h));

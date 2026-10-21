@@ -161,7 +161,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the selected text every other refusal there leaves, while commit_device_setting's
-// four keys and the `gui_scale` arm commit regardless. So every Settings
+// six keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -298,10 +298,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other four editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, since
-    // 2026-10-09 icons and since 2026-10-09 font — take their one
-    // direct-set body in commit(),
+    // move. (The other six editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
+    // 2026-10-21) and since 2026-10-21 bevel_light, bevel_dark and
+    // text_shadow — take their one direct-set body in commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
@@ -680,7 +680,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The four device keys other than the scale — one body, ahead of the
+    // 2. The six device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1098,7 +1098,7 @@ void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
     install_program_palette(words);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
-    // THE CLIENT ALONE (platform.h's one damage call): of the chrome's roles
+    // THE CLIENT ALONE (platform.h's damage pair): of the chrome's roles
     // a preset moves the selection fill alone, which paints inside the
     // client; the restored laptop's sizing frame outside it wears the
     // brass's tones, which no preset moves. No icon moves (every glyph wears

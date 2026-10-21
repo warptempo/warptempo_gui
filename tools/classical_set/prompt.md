@@ -20,7 +20,8 @@ ANYWHERE IN THE SET); POLISHED STEEL — its strings and tuning pins, a cool pal
 keys, a warm off-white, not ivory; WALNUT — its case, a plain honey-brown wood; and beside them tan calf leather, burgundy,
 parchment and a little deep blue — never neon, never orange or lime. ALL ARROWS ARE ONE SHAPE: a thick, chunky BRASS
 arrow with a dark outline and a gloss highlight — the same arrow, only turned, for left, right, up and down, and the
-same arrow beside a pennant flag, a watch or a podium where the list says so. Never a thin, pale, black or grey arrow.
+same arrow beside a pennant flag, a watch or a podium where the list says so; the render player's two arrows the same
+shape in POLISHED STEEL. Never a thin, pale, black or grey arrow.
 
 Lay the 56 icons out on a grid of 8 columns by 7 rows of equal square cells, in the order listed, left to right, top
 to bottom. One icon per cell, centered, filling about 80 % of its cell, generous empty space between cells. The whole
@@ -81,55 +82,50 @@ black text so I can identify it. Nothing else on the sheet.
     (as no. 21, cloth to the right) standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak
     pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
-31. Toggle Value Drag — drag a tempo value up or down freely: the SAME flat, straight-edged sheet of score paper as nos. 40
-    and 41 with TWO staves drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the
-    right (as no. 40), the LOWER staff's notes open wider and wider toward the right (as no. 41); the sheet itself a plain
-    rectangle, never pinched, curved or waisted
+31. Toggle Value Drag — drag a tempo value up or down freely: a flat, straight-edged sheet of score paper with TWO staves
+    drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the right (the music getting
+    faster across the page), the LOWER staff's notes open wider and wider toward the right (the music slowing); the notes
+    drawn ON the sheet, never floating; the sheet itself a plain rectangle, never pinched, curved or waisted
 32. Read-Only — editing locked: a closed BRASS padlock on a tan calf-leather music case
 33. Undo — ONE curved BRASS UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
-34. Redo — ONE curved BRASS REDO ARROW, the same thick parallel-edged band as no. 33 turned the other way, LIT FROM THE
-    SAME SIDE as no. 33 (the same highlight at the top left, the same shadow at the lower right — the two are drawn side
-    by side on one toolbar), never a tail that tapers
-35. Toggle History View — show the checkpoint history: the antique brass-cased pocket watch alone, open on its chain, no arrow
-36. Older — the previous checkpoint: the antique brass-cased pocket watch with THE BRASS ARROW pointing left beside it, at
-    the LEFT; THE ARROW STANDS CLEAR OF THE WATCH with a gap of plain ground between its head and the watch's rim, nothing
-    touching, and the arrow is lit straight from above (its highlight along its top edge, its shadow along its bottom edge)
+    (its Redo twin is not drawn — the slicer mirrors this one)
+34. Toggle History View — show the checkpoint history: the antique brass-cased pocket watch alone, open on its chain, no arrow
+35. Older — the previous checkpoint: the antique brass-cased pocket watch with THE BRASS ARROW pointing left beside it, at
+    the LEFT
+36. Newer — the next checkpoint: the SAME pocket watch with THE BRASS ARROW pointing right beside it, at the RIGHT
 37. Background Sound — a soothing sound (rain) played in the background while one works: an OPEN UMBRELLA seen front-on,
     held upright, ONE closed object — a canopy of burgundy silk with bone-colored tips at its rib ends, a turned walnut
     handle below and a brass ferrule at its top; no rain, no drops, nothing detached, nothing below the handle fading
-38. Left — nudge left by a hair: a starling (Mozart's pet bird) standing and facing LEFT — a glossy bird with the
-    starling's own green-and-purple iridescent sheen on its plumage and its yellow bill, so it reads on a dark ground; NO
-    speckles, no dust, no spots on its plumage — nothing else
-39. Right — nudge right by a hair: the SAME starling turned to face RIGHT, nothing else
-40. Up — speed up the tempo (accelerando): a flat, straight-edged sheet of score paper with one staff of notes drawn on it,
-    the notes spaced WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting
-    faster across the page; the notes drawn ON the sheet, never floating; the sheet a plain rectangle
-41. Down — slow the tempo (ritardando): the SAME flat sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
-    wider and wider apart toward the RIGHT — the music slowing across the page
-42. Previous Marker — walk to the previous marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at
+38. Left — nudge left by a hair: ONE bold BRASS ARROW pointing LEFT (the set's arrow shape), nothing else (its Right twin is
+    not drawn — the slicer mirrors this one)
+39. Up — speed up the tempo (accelerando): ONE bold BRASS ARROW pointing UP, the same arrow as no. 38 turned, nothing else
+40. Down — slow the tempo (ritardando): ONE bold BRASS ARROW pointing DOWN, the same arrow as no. 38 turned, drawn in full,
+    nothing else
+41. Previous Marker — walk to the previous marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at
     the LEFT, THE BRASS ARROW at the right pointing LEFT, its head touching the flag
-43. Next Marker — walk to the next marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at the
+42. Next Marker — walk to the next marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at the
     RIGHT, THE BRASS ARROW at the left pointing RIGHT, its head touching the flag
-44. Switch Tab — switch between the two tabs: a closed tan calf-leather notebook with two index tabs on its fore-edge, the
+43. Switch Tab — switch between the two tabs: a closed tan calf-leather notebook with two index tabs on its fore-edge, the
     front tab brass — no plain white sheet
-THE RENDER PLAYER'S GLYPHS ARE POLISHED STEEL, ONE FAMILY: the four drawn transport glyphs (45–48; Player Next is the
-mirrored fifth), the check mark (6), the X (13) and the up arrow of no. 54 — polished steel, a cool pale grey metal with
+THE RENDER PLAYER'S GLYPHS ARE POLISHED STEEL, ONE FAMILY: the four drawn transport glyphs (44–47; Player Next is the
+mirrored fifth), its two arrows (48–49), the check mark (6) and the X (13) — polished steel, a cool pale grey metal with
 the dark outline and the same gloss, every one the SAME shade, so they stand apart from the brass of the editor's acts.
 Not silver-white, not green, not red, not blue.
-45. Play — a bold polished-steel triangle pointing right
-46. Pause — two bold polished-steel bars
-47. Player Previous — skip to the previous render: a bold polished-steel double-arrow left with a bar (its Player Next twin is not
+44. Play — a bold polished-steel triangle pointing right
+45. Pause — two bold polished-steel bars
+46. Player Previous — skip to the previous render: a bold polished-steel double-arrow left with a bar (its Player Next twin is not
     drawn — the slicer mirrors this one)
-48. Repeat One — repeat the one render: a circular polished-steel arrow, nothing inside it
-49. Settings — a tuning key and a tuning fork crossed
-50. Toggle Tooltips — show help: an open programme booklet with a question mark
-51. Card Normal — the notification card's information glyph: a bold blue "i" on a round parchment medallion
-52. BPM Iterations — render the tempo sweep over a run: a wooden pyramid metronome, its pendulum mid-swing on the front face
-53. Card Critical — the notification card's error glyph: a bold red "!" on the same round parchment medallion (the
-    twin of no. 51)
-54. Up One Level — climb out to the level above: ONE bold POLISHED-STEEL ARROW pointing UP (the set's arrow shape in
-    steel, as the check mark of no. 6 and the X of no. 13 stand alone), nothing else — no portfolio, no case, no paper,
-    no folder of any kind
+47. Repeat One — repeat the one render: a circular polished-steel arrow, nothing inside it
+48. Player Up — move the highlight up one row in the list of renders: ONE bold POLISHED-STEEL ARROW pointing UP (the set's
+    arrow shape in steel, as the check mark of no. 6 and the X of no. 13 stand alone), nothing else
+49. Player Down — move the highlight down one row: ONE bold POLISHED-STEEL ARROW pointing DOWN, the same arrow as no. 48
+    turned, drawn in full, nothing else
+50. Settings — a tuning key and a tuning fork crossed
+51. Toggle Tooltips — show help: an open programme booklet with a question mark
+52. Card Normal — the notification card's information glyph: a bold blue "i" on a round parchment medallion
+53. BPM Iterations — render the tempo sweep over a run: a wooden pyramid metronome, its pendulum mid-swing on the front face
+54. Card Critical — the notification card's error glyph: a bold red "!" on the same round parchment medallion (the
+    twin of no. 52)
 55. Transport Play — start playback in the editor: the conductor's ONE hand in a white lace cuff, large, filling the cell,
     RAISED high at the upbeat holding the baton straight up at 90 degrees — no face, no body, seen from behind the condutor
 56. Transport Stop — stop playback in the editor: the SAME cuffed hand, large, LOWERED flat, palm down, the baton held

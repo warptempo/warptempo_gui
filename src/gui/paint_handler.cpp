@@ -8363,11 +8363,9 @@ void GuiPaintHandler::settle_owed_lane_damage() {
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
-    // THE MATERIALS FOR THIS GEOMETRY (materials.h's BAKE RULE): a compare
-    // of the key when nothing moved; the first bake, or a size change's once
-    // the settle gate has armed it, before any pixel; otherwise the last
-    // bake's tiles.
-    materials::ensure_settled(app);
+    // (THE MATERIALS FOR THIS GEOMETRY were settled before the backend's
+    // paint walk began, at the pre-paint hook — main.cpp, materials.h's
+    // BAKE RULE: the walk paints the sizing frame before this call.)
 
     // (The monospace grid measure that opened every frame is gone with the face
     // — row 7. Nothing in the product measures text outside a shaping pass now,

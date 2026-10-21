@@ -153,15 +153,19 @@ struct State {
     // and THE CASE PATCHES, one per seat at rest and one pressed.
     std::vector<Tile> wood, metal, void_tiles, tab_body, caption_case;
     std::vector<Tile> case_rest, case_down;
-    // THE CLIENT THE PAINTERS PAINT (every on_redraw head's): while a size
+    // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
     // change waits on the gate the tiles are the last bake's, and none is
     // ever blitted outside this.
     int client_w = 0, client_h = 0;
-    // THE GATE: a changed key seen by a paint and not yet baked (`deferred`),
+    // THE GATE: a changed key seen by a frame and not yet baked (`deferred`),
     // the last size change's arrival (note_resize), and the tick's arming
-    // (settle_due) — the frame that bakes is the whole window's.
+    // (settle_due) — the frame that bakes is the whole surface's
+    // (take_bake_landed).
     bool deferred = false;
     bool armed    = false;
+    // A BAKE LANDED and its palette install has not yet been answered by a
+    // frame's whole-surface damage (take_bake_landed).
+    bool landed   = false;
     std::chrono::steady_clock::time_point last_resize{};
     int                    bevel_light = 100;
     int                    bevel_dark  = 100;
@@ -433,7 +437,7 @@ Catalog catalog_of(const std::vector<std::string>& names) {
 
 // ONE MATERIAL'S SOURCE FOR THE CLIENT w x h (materials.h's COVER RULE):
 // the smallest bundled cover reaching it in both dimensions (by area, the
-// exact size the smallest of all) — its centre crop, no filtering — else
+// exact size the smallest of all) — its center crop, no filtering — else
 // the master under the cover rule, else none.
 struct Source {
     std::string file;
@@ -456,7 +460,7 @@ std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
 
 // THE RAW REGIONS of one material for the client w x h (client rects in,
 // the sRGB surfaces out): its source read by name (the one file), a cover's
-// centre crop at the identity, a master under the cover rule.
+// center crop at the identity, a master under the cover rule.
 std::expected<std::vector<Surface>, std::string> source_regions(
     const Source& src, int w, int h, const std::vector<GuiRect>& rects) {
     const auto bytes = GuiPlatform::bundled_tile_bytes(src.file);
@@ -697,16 +701,24 @@ void set_tile_source(cairo_t* cr, const Tile& t) {
     cairo_set_source(cr, t.pattern.get());
 }
 
-// THE TILE OF `tiles` holding the current path's extents, or null — and
-// never a stale tile's pixels outside the client (the gate's guard).
+// THE TILE OF `tiles` holding the current path's extents WHERE THEY MEET
+// THE CLIENT, or null where they miss it. A path may run past the window's
+// edge in ordinary use (a cue label's face box near the right edge, a cue
+// panned partly offscreen; 2026-10-21): the paint context is clipped to the
+// client (both backends' paint walk), so only the part inside it is ever
+// filled, and that part is what a tile must hold. A stale tile's pixel
+// therefore never lands outside the client (the gate's guard): a tile of a
+// larger, older window holds the intersection and the clip cuts the rest; a
+// smaller, older one that misses part of it answers null, the flat mean.
 const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
     double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
     cairo_fill_extents(cr, &x0, &y0, &x1, &y1);
-    x0 = std::floor(x0);
-    y0 = std::floor(y0);
-    x1 = std::ceil(x1);
-    y1 = std::ceil(y1);
-    if (!contains(client_rect(), x0, y0, x1, y1)) return nullptr;
+    const GuiRect c = client_rect();
+    x0 = std::max(std::floor(x0), static_cast<double>(c.x));
+    y0 = std::max(std::floor(y0), static_cast<double>(c.y));
+    x1 = std::min(std::ceil(x1), static_cast<double>(c.x + c.w));
+    y1 = std::min(std::ceil(y1), static_cast<double>(c.y + c.h));
+    if (x1 <= x0 || y1 <= y0) return nullptr;
     for (const Tile& t : tiles)
         if (contains(t.rect, x0, y0, x1, y1)) return &t;
     return nullptr;
@@ -809,7 +821,9 @@ std::optional<std::string> bake(const Geometry& g) {
 // installed again off the new Faces — always, since the tiles every cached
 // surface was painted from have moved even where the Faces have not, and
 // the install's generation is what rebuilds those surfaces (render.h's
-// palette_generation; the flag cache's label boxes among them).
+// palette_generation; the flag cache's label boxes among them) — and the
+// landing flagged for the pre-paint hook's whole-surface damage
+// (take_bake_landed).
 void bake_now(const AppState& app, const Key& k) {
     State& s = state();
     if (const std::optional<std::string> err = bake(geometry_of(app))) {
@@ -819,6 +833,7 @@ void bake_now(const AppState& app, const Key& k) {
     s.key = k;
     s.deferred = false;
     s.armed = false;
+    s.landed = true;
     install_palette(program_palette_words());
 }
 
@@ -897,7 +912,7 @@ void ensure_settled(const AppState& app) {
         return;
     }
     // THE FIRST BAKE IS IMMEDIATE; a change of a baked one waits for the
-    // tick's arming (settle_due), whose frame is the whole window's.
+    // tick's arming (settle_due), whose frame is the whole surface's.
     if (!s.baked || s.armed) {
         bake_now(app, k);
         return;
@@ -917,6 +932,11 @@ bool settle_due() {
     if (std::chrono::steady_clock::now() - s.last_resize < kBakeSettle) return false;
     s.armed = true;
     return true;
+}
+
+bool take_bake_landed() {
+    State& s = state();
+    return std::exchange(s.landed, false);
 }
 
 bool baked() { return state().baked; }

@@ -170,6 +170,11 @@ public:
     // that configure delivers it). One call, one fire.
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
+    // THE WHOLE SURFACE's damage, the window's sizing frame with it
+    // (platform.h's damage call). ONE CALLER, the pre-paint hook after a
+    // materials bake (main.cpp): the bake reinstalls the palette off the new
+    // Faces, which moves the band's tones.
+    void invalidate_surface();
     void drain_events();
     void paint_now();
 
@@ -930,7 +935,8 @@ private:
     // One rect of SURFACE damage, coalesced into the global list and, under
     // the cpu canvas, every buffer's pending list, and the frame callback
     // armed (invalidate_region's body, the app's client rect offset by the
-    // frame) — the Android twin's one road of the same name.
+    // frame; invalidate_surface's whole surface) — the Android twin's one
+    // road of the same name.
     void invalidate_surface_rect(int x, int y, int w, int h);
     // A COMPOSITOR GRAB TOOK THE PRESS (begin_window_move / _resize): the
     // compositor owns the pointer until the lift, and nothing guarantees the

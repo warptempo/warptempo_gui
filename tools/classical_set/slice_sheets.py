@@ -3,15 +3,20 @@
 Each sheet given is prompt.md's: the 56 acts of ORDER on 8 x 7 cells, left to right, top to bottom, a label under
 each drawn icon (architect 2026-10-20: Gemini fills the grid and never draws a partial last row, and more cells cost
 resolution, so an act the toolbar or the player wears as a twin is not drawn but made from its twin after the cells):
-  PLAYERNEXT.PNG IS PLAYERPREVIOUS.PNG FLIPPED LEFT TO RIGHT — the steel transport glyphs are lit straight from above, so
-    the mirror keeps their light; Redo is drawn, its brass arrow lit from the top left like Undo's, a mirror would flip
-    the light;
-  NEWER.PNG IS OLDER.PNG WITH ITS ARROW TURNED (architect 2026-10-21: cell 37 went to the new act Background Sound, the
-    umbrella) — the watch is NOT mirrored (its digits), the arrow moves to the other side and turns; the prompt asks
-    Older's arrow CLEAR of the watch and lit straight from above, so the flip keeps its light (turned_twin).
-THE FOUR LISTS THE SHEETS HAVE CARRIED — all 8 x 7, so nothing in a sheet tells them apart and the flag picks:
-  default      ORDER: the prompt of 2026-10-21 (draft 14): Redo at cell 34, Background Sound at cell 37, Player Next
-               and Newer absent; PlayerNext mirrored, Newer turned.
+  RIGHT.PNG IS LEFT.PNG, REDO.PNG IS UNDO.PNG AND PLAYERNEXT.PNG IS PLAYERPREVIOUS.PNG, EACH FLIPPED LEFT TO RIGHT
+    (architect 2026-10-21 evening: "we mirror left/right but never up/down since the latter can have diff shading —
+    gemini generally doesn't give left/right diff shading"; Up and Down are both drawn, the main page's in brass, the
+    player's own Player Up / Player Down in steel);
+  NEWER.PNG IS OLDER.PNG WITH ITS ARROW TURNED — the --draft14 list's alone (architect 2026-10-21: cell 37 went to the
+    new act Background Sound, the umbrella; Newer is drawn again since draft 15) — the watch is NOT mirrored (its
+    digits), the arrow moves to the other side and turns; that prompt asked Older's arrow CLEAR of the watch and lit
+    straight from above, so the flip keeps its light (turned_twin).
+THE FIVE LISTS THE SHEETS HAVE CARRIED — all 8 x 7, so nothing in a sheet tells them apart and the flag picks:
+  default      ORDER = DRAFT15: the prompt of 2026-10-21 evening (draft 15): Older and Newer drawn at cells 35-36,
+               Background Sound at 37, the plain brass Left, Up, Down at 38-40, the steel Player Up / Player Down at
+               48-49; Redo, Right, Player Next and Up a Folder absent; Redo, Right and PlayerNext mirrored.
+  --draft14    DRAFT14: the sheets of 2026-10-21 ~16:50-17:00 (draft 14; tmp/classical_set/gemini-new9): Redo drawn at
+               cell 34, Background Sound at cell 37, Player Next and Newer absent; PlayerNext mirrored, Newer turned.
   --newer-drawn  NEWER_DRAWN: the sheets of 2026-10-20 ~10:05 to 2026-10-21 (Newer drawn at cell 37, Player Next
                absent); PlayerNext mirrored.
   --redo-mirrored  ONEDAY: the prompt of 2026-10-20 ~09:50, the ONE COMMIT efb39ea5 (Redo absent, Player Next drawn at
@@ -19,8 +24,8 @@ THE FOUR LISTS THE SHEETS HAVE CARRIED — all 8 x 7, so nothing in a sheet tell
                file written (it is drawn); every cell after 33 is one off NEWER_DRAWN's.
   --legacy56   LEGACY56: the sheets of 2026-10-19 (Stop at cell 46, no enumerator wears it; Redo at 34 and Player Next
                drawn): 55 files, nothing mirrored.
-A sheet fed the wrong list slices wrong from its first differing cell (between the first two cell 37 alone, misnamed;
-33 on against the others). A sheet from the prompt of 2026-10-20
+A sheet fed the wrong list slices wrong from its first differing cell (34 on between the first two; between --draft14
+and --newer-drawn cell 37 alone, misnamed; 33 on against the others). A sheet from the prompt of 2026-10-20
 morning (one cell more than any list, packed into seven rows with a cell lost) slices WRONG and must not be fed in. The
 slicer never writes a file that is not an act.
   1. GIMP pass 1 (gimp_fuzzy.py beside this file, headless): fuzzy select at threshold 20 from the top-left corner and
@@ -61,7 +66,7 @@ slicer never writes a file that is not an act.
   5. THE CELLS: each icon's ink box (alpha >= 26, specks and edge border dashes dropped) centered in a square at 44/48
      fill, LANCZOS to 256 -> <out>/<Act>.png, named by the act's enumerator (src/gui/icons.h's kIconNames); then each act in
      MIRRORS the list lacks is made from its source, the same 256-px RGBA: flipped left to right (PIL FLIP_LEFT_RIGHT),
-     or for TURNED (Newer) the arrow alone turned (turned_twin; 'TOUCHING Older: Newer not derived' when Older's arrow
+     or for TURNED (Newer, --draft14) the arrow alone turned (turned_twin; 'TOUCHING Older: Newer not derived' when Older's arrow
      touches its watch, no file written — the cue to redraw); a contact.png of the cells on the ebony case tone (#291D1B, the icons' real ground since 2026-10-21) for the
      check, each made act a tile of its own in an eighth row.
 Inputs: the sheet JPEGs on the command line. Outputs: <out> = <the sheet's folder>/sliced/<the file's 14-digit stamp>/
@@ -71,7 +76,7 @@ a sheet; ~30 s with GIMP), and the second pocket pass too where sheet_cut_raw.js
 record gets the pass: ~3 s to find the seeds, one GIMP run when there are any). A 'CLIPPED?' line names a cell whose ink continues just past its band's edge: so far always
 a label piece pooled into the icon above it (outside the crop, left in sheet_cut.png) or a drawn border's dash, never a
 cut icon — but look. 'EMPTY' names a cell with no ink.
-Run: python3 -I tools/classical_set/slice_sheets.py [--newer-drawn | --redo-mirrored | --legacy56] [--out dir] sheet.jpg ..."""
+Run: python3 -I tools/classical_set/slice_sheets.py [--draft14 | --newer-drawn | --redo-mirrored | --legacy56] [--out dir] sheet.jpg ..."""
 import os, sys, json, subprocess, numpy as np
 from collections import deque
 from PIL import Image
@@ -87,22 +92,34 @@ _CELLS = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlac
           'Play', 'Pause', 'PlayerPrevious', 'PlayerNext', 'RepeatOne',
           'Settings', 'Tooltips', 'CardNormal',
           'BpmIterations', 'CardCritical', 'UpAFolder',
-          'TransportPlay', 'TransportStop']   # the 56 of the ONE-COMMIT list (Redo absent, Player Next drawn): the base of the other two
+          'TransportPlay', 'TransportStop']   # the 56 of the ONE-COMMIT list (Redo absent, Player Next drawn): the base of the others
 COLS = 8; ROWS = 7
 ONEDAY = _CELLS   # --redo-mirrored: the prompt of 2026-10-20 ~09:50
 NEWER_DRAWN = _CELLS[:33] + ['Redo'] + _CELLS[33:46] + _CELLS[47:]   # --newer-drawn: Redo drawn at cell 34, Player Next not drawn
-ORDER = NEWER_DRAWN[:36] + ['BackgroundSound'] + NEWER_DRAWN[37:]   # the current prompt (draft 14): cell 37 the umbrella, Newer not drawn
+DRAFT14 = NEWER_DRAWN[:36] + ['BackgroundSound'] + NEWER_DRAWN[37:]   # --draft14: cell 37 the umbrella, Newer not drawn
+DRAFT15 = _CELLS[:33] + ['HistoryView', 'Older', 'Newer', 'BackgroundSound',   # the current prompt (draft 15), Undo at cell 33:
+                         'Left', 'Up', 'Down', 'PreviousMarker', 'NextMarker', 'SwitchTab',   # Older and Newer drawn, Right mirrored,
+                         'Play', 'Pause', 'PlayerPrevious', 'RepeatOne', 'PlayerUp', 'PlayerDown',   # the player's own steel Up / Down,
+                         'Settings', 'Tooltips', 'CardNormal', 'BpmIterations', 'CardCritical',   # Up a Folder off the sheet
+                         'TransportPlay', 'TransportStop']
+ORDER = DRAFT15
 _WITH_REDO = _CELLS[:33] + ['Redo'] + _CELLS[33:]
 LEGACY56 = _WITH_REDO[:45] + [None] + _WITH_REDO[45:55]   # --legacy56: cell 46 the silver Stop (no act), no Transport pair
-# An act no sheet of a list draws, made from its twin after the cells: Redo (--redo-mirrored) and PlayerNext flipped left to
-# right; Newer, in TURNED, from Older by turned_twin (architect 2026-10-21: the watch keeps its digits, the arrow turns).
-MIRRORS = {'Redo': 'Undo', 'PlayerNext': 'PlayerPrevious', 'Newer': 'Older'}
+# An act no sheet of a list draws, made from its twin after the cells: Right, Redo and PlayerNext flipped left to right
+# (architect 2026-10-21 evening: "we mirror left/right but never up/down since the latter can have diff shading" — Right
+# from Left and Redo from Undo again since draft 15; Redo drawn under --draft14 and --newer-drawn); Newer, in TURNED,
+# from Older by turned_twin under --draft14 alone (architect 2026-10-21: the watch keeps its digits, the arrow turns).
+MIRRORS = {'Redo': 'Undo', 'PlayerNext': 'PlayerPrevious', 'Newer': 'Older', 'Right': 'Left'}
 TURNED = {'Newer'}
 ARROW_MIN = 200   # turned_twin: px of alpha > 0 a part left of the watch needs to be the arrow (the cut's AA specks are 1-14 px; an arrow thousands)
-assert len(ORDER) == len(NEWER_DRAWN) == len(ONEDAY) == len(LEGACY56) == COLS * ROWS
-assert ORDER[33] == 'Redo' and 'PlayerNext' not in ORDER and ORDER[46] == 'PlayerPrevious' and ONEDAY[46] == 'PlayerNext'
-assert ORDER[35] == 'Older' and ORDER[36] == 'BackgroundSound' and 'Newer' not in ORDER and NEWER_DRAWN[36] == 'Newer'
-assert [a for a in ORDER if a not in NEWER_DRAWN] == ['BackgroundSound'] and ORDER[37:] == NEWER_DRAWN[37:]
+assert len(DRAFT15) == len(DRAFT14) == len(NEWER_DRAWN) == len(ONEDAY) == len(LEGACY56) == COLS * ROWS
+assert ORDER[32] == 'Undo' and 'Redo' not in ORDER and ORDER[35] == 'Newer' and ORDER[36] == 'BackgroundSound'
+assert ORDER[37] == 'Left' and 'Right' not in ORDER and ORDER[38:40] == ['Up', 'Down'] and ORDER[45] == 'PlayerPrevious'
+assert 'PlayerNext' not in ORDER and ORDER[47:49] == ['PlayerUp', 'PlayerDown'] and 'UpAFolder' not in ORDER
+assert ORDER[54:] == ['TransportPlay', 'TransportStop']
+assert DRAFT14[33] == 'Redo' and 'PlayerNext' not in DRAFT14 and DRAFT14[46] == 'PlayerPrevious' and ONEDAY[46] == 'PlayerNext'
+assert DRAFT14[35] == 'Older' and DRAFT14[36] == 'BackgroundSound' and 'Newer' not in DRAFT14 and NEWER_DRAWN[36] == 'Newer'
+assert [a for a in DRAFT14 if a not in NEWER_DRAWN] == ['BackgroundSound'] and DRAFT14[37:] == NEWER_DRAWN[37:]
 assert LEGACY56[33] == 'Redo' and LEGACY56[45] is None and 'PlayerNext' in LEGACY56
 
 def gimp(jobs, tag, work):
@@ -377,7 +394,7 @@ def slice_sheet(src, root, acts):
 
 def main():
     a = sys.argv[1:]; root = None
-    lists = {'--newer-drawn': NEWER_DRAWN, '--redo-mirrored': ONEDAY, '--legacy56': LEGACY56}
+    lists = {'--draft14': DRAFT14, '--newer-drawn': NEWER_DRAWN, '--redo-mirrored': ONEDAY, '--legacy56': LEGACY56}
     given = [x for x in a if x in lists]
     if len(given) > 1: sys.exit(' and '.join(given) + ' name %d lists: give one' % len(given))
     acts = lists[given[0]] if given else ORDER

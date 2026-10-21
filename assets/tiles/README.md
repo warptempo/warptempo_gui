@@ -20,10 +20,10 @@ window). THIS FOLDER IS A DROP ROAD: drop a master under a material's name, then
 opaque (its alpha is not read); a 4K master is the intent.
 
 THE COVER RULE: each master is scaled by one factor, max(W / w, H / h) for the window W x H, so it fills the window
-exactly, centred, the overhang cropped evenly both sides — no tiling, no mirror, no repeat, ever (the tablet: the
+exactly, centered, the overhang cropped evenly both sides — no tiling, no mirror, no repeat, ever (the tablet: the
 5504 x 3072 master drawn at 2580 x 1440, 138 px cut each side). The covers are that rule run once with PIL's Lanczos,
 the filter the mocks were judged in. THE MATCH (2026-10-21): for a window W x H the program takes THE SMALLEST COVER
-AT LEAST W WIDE AND H TALL (by area; the exact size the smallest of all) and bakes ITS CENTRE CROP, the rows and
+AT LEAST W WIDE AND H TALL (by area; the exact size the smallest of all) and bakes ITS CENTER CROP, the rows and
 columns its overhang leaves evenly either side, with no filtering — the laptop's maximized 1920 x 1047 (labwc's panel
 takes 33 rows) and a restored laptop window both from the 1920 x 1080 cover, the tablet from its 2304 x 1440. Only a
 window larger than every cover in one dimension scales the master itself (the icons' Lanczos-3 area filter,

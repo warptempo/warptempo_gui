@@ -44,7 +44,7 @@ struct AppState;
 // THE COVER RULE (his "zoom to fit so there is no empty space on the screen,
 // exactly"): each master is scaled by ONE factor s = max(W / w, H / h) over
 // the CLIENT window W x H — the whole window, the caption to the frame's
-// bottom row — and CENTRED on it, the overhang cropped evenly both sides; no
+// bottom row — and CENTERED on it, the overhang cropped evenly both sides; no
 // tiling, no mirror, no repeat, no seam, ever (the tablet: 1440 / 3072, the
 // master 2580 x 1440, 138 px cut each side). A MATERIAL PIXEL ON SCREEN AT
 // (x, y) IS THE COVER'S PIXEL AT (x, y), whatever paints it: the three are
@@ -53,9 +53,9 @@ struct AppState;
 // takes 33 rows — matched no cover and fell to the masters): for a client
 // W x H the bake takes THE SMALLEST BUNDLED COVER w x h WITH w >= W AND
 // h >= H (by area; the exact size the smallest of all) AND DECODES ITS
-// CENTRE CROP — rows (h − H) / 2 on and columns (w − W) / 2 on, no
+// CENTER CROP — rows (h − H) / 2 on and columns (w − W) / 2 on, no
 // filtering, the decode the bake (the 1920 x 1080 cover serves 1920 x 1047
-// at a scale 1 % off the exact rule; a restored window shows the centre of
+// at a scale 1 % off the exact rule; a restored window shows the center of
 // the same grain); ONLY A WINDOW BEYOND EVERY COVER IN A DIMENSION scales a
 // master under the cover rule, by the icons' Lanczos-3 area filter
 // (svg_icon::raster_regions) from one decode.
@@ -68,14 +68,19 @@ struct AppState;
 // and True Colors (the bakes hold the window's bytes) — never at a palette
 // install, a project open or a bevel key's OK. A frame compares the key
 // alone; the layout is read at the bake. THE FIRST BAKE IS IMMEDIATE, at the
-// first paint's head (materials::ensure_settled); a gui_scale commit and
-// True Colors bake at once, one act one bake (materials::ensure). A CHANGE
+// first frame's PRE-PAINT HOOK (materials::ensure_settled, main.cpp — ahead
+// of the backend's paint walk, whose sizing frame paints before any client
+// rect); a gui_scale commit and True Colors bake at once, one act one bake
+// (materials::ensure). EVERY BAKE REINSTALLS THE PALETTE off the new Faces,
+// so the next pre-paint widens that frame's damage to the whole surface,
+// the restored window's sizing frame with it, and rebuilds the flag cache
+// from the new tiles (take_bake_landed; 2026-10-21). A CHANGE
 // OF SIZE OF A BAKED WINDOW WAITS ON THE SETTLE GATE (2026-10-21, the
 // laptop's frame drag, a configure per motion): no resize bakes (on_resize
 // only stamps its arrival, materials::note_resize), and a paint that finds
 // the size moved bakes nothing until kBakeSettle (150 ms) has passed with
-// no further size change — the tick then arms the bake and damages the whole
-// window (materials::settle_due), and that frame's first paint bakes.
+// no further size change — the tick then arms the bake and damages the
+// client (materials::settle_due), and that frame's pre-paint hook bakes.
 // Meanwhile the painters draw from the LAST BAKE'S TILES where one still
 // holds the fill, the material's flat mean where none does, and never a
 // stale tile's pixel outside the new client. The tablet never resizes, so
@@ -166,8 +171,14 @@ struct AppState;
 // every glyph, the cases' black outline and constant rings.
 //
 // THE TONE RULE (architect 2026-10-21): EACH MATERIAL'S FACE IS ITS BAKED
-// COVER'S MEAN COLOR, measured over its baked pixels at the bake (the
-// ebony's over its patches; materials::face), and EVERY TONE A PAINTER PUTS
+// COVER'S MEAN COLOR, measured at the bake (materials::face) — the wood's
+// and the brass's over their ground tiles as decoded (before the void and
+// the tab body are derived from them), THE EBONY'S OVER THE FULL-WIDTH ROWS
+// ITS PATCHES ARE CUT FROM (the caption row and each seat row's g + lw rows,
+// window-wide), NOT OVER THE PATCHES: those rows were the ebony's sample
+// when the case tones were judged, before the patches replaced the seat
+// rows' bands, and measuring them still keeps every tone a case derives
+// from the Face where it shipped (bake_case) — and EVERY TONE A PAINTER PUTS
 // DOWN ON A MATERIAL IS COOL EDIT'S TONE RULE (cool_edit_derive.h's kTones:
 // HLS L' = a·L + b, the hue and saturation kept; the case's own span above)
 // ON THAT FACE, AS A FLAT STROKE — no grain on a line: the 1-W light and
@@ -178,7 +189,8 @@ struct AppState;
 // Face, the palette's `face` (render.h's install) — and set_surface_source
 // (render.h) knows each flat tone by its bytes (set_tone_face) and swaps the
 // source for the scope's material: the Face its cover, the tile under the
-// fill's own extents; any other tone that material's flat stroke. NO
+// fill's own extents where they meet the client; any other tone that
+// material's flat stroke. NO
 // PAINT-TIME ALPHA: a mitre's antialiased diagonal is the two sources.
 //
 // THE BEVEL KEYS (tuning keys with Settings rows, device_config.h): the
@@ -249,7 +261,8 @@ std::optional<std::string> check();
 // differs from the baked one, every material is baked again from the bundle
 // and the palette reinstalled off the new Faces (install_palette, render.h —
 // its generation rebuilds every cached surface the tiles were painted into)
-// — the window repainted by the caller's damage. A zero-sized client bakes
+// — the client repainted by the caller's damage, the whole surface by the
+// next pre-paint (take_bake_landed). A zero-sized client bakes
 // nothing. A FAILURE is the bundle changed under the running process (check
 // passed at launch): its stderr line and the hard fail. Callers: the one-act
 // roads, GuiInputHandler::apply_gui_scale and toggle_true_colors.
@@ -257,14 +270,20 @@ void ensure(const AppState& app);
 // THE BAKE BEHIND THE SETTLE GATE (the head's BAKE RULE): the first bake at
 // once; a changed key of a baked window only once the tick has armed it
 // (settle_due), else nothing — the paint draws from the last bake's tiles.
-// Caller: the head of GuiPaintHandler::on_redraw, before any pixel.
+// Caller: the pre-paint hook (main.cpp), before the backend paints any
+// pixel, the sizing frame's among them.
 void ensure_settled(const AppState& app);
+// WHETHER A BAKE HAS LANDED since the last ask (either road above), the
+// flag cleared: the pre-paint hook's question, answered by the whole
+// surface's damage and the flag cache's rebuild in that frame.
+bool take_bake_landed();
 // A SIZE CHANGE ARRIVED (GuiPaintHandler::on_resize): the gate's clock
 // restarts and any armed bake waits again.
 void note_resize();
-// THE GATE'S RE-ARM (the loop's tick, main.cpp): true ONCE when a paint has
+// THE GATE'S RE-ARM (the loop's tick, main.cpp): true ONCE when a frame has
 // found the size moved and kBakeSettle has passed since the last size
-// change — the caller then damages the whole window, whose frame bakes.
+// change — the caller then damages the client, whose frame's pre-paint
+// hook bakes.
 bool settle_due();
 // THE TRACE'S GATE, read once: WT_PAINT_TRACE=1 in the environment, or on
 // Android, which cannot set one for an app, the system property
@@ -294,8 +313,10 @@ void set_tone_face(uint32_t chrome_face);
 
 // THE SURFACE CHOKEPOINT'S ROAD (render.h's set_surface_source), called with
 // the fill's PATH ALREADY BUILT: `c` as a tone of the current region's
-// material — the Face its baked tile under the path's extents (the
-// material's flat mean where no one tile holds them), the void its copy,
+// material — the Face its baked tile under the path's extents where they
+// meet the client (a path running past the window's edge, a cue label's box
+// near it, takes the tile holding its visible part; the material's flat
+// mean where no one tile holds that), the void its copy,
 // any other tone the material's flat stroke — set as the source; false
 // where `c` is no tone, the region is Flat or nothing is baked, the caller
 // then setting it flat.

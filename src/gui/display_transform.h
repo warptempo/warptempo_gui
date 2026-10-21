@@ -84,9 +84,15 @@
 //     palette words' reason, render.h's program_palette_words). Its one
 //     writer is install_true_colors (render.h), which owes the rebuild of
 //     every cached converted pixel.
-// BOTH ARE PLAIN FLAGS READ ON THE GUI THREAD ALONE: every reader above runs
-// there (the waveform worker is handed the plate's inks already converted),
-// so the flip between two frames needs no synchronisation.
+// BOTH ARE PLAIN FLAGS, WRITTEN ON THE GUI THREAD ALONE AND READ THERE OR
+// UNDER IT: every reader above runs on the GUI thread (the waveform worker
+// is handed the plate's inks already converted) but one — the materials'
+// three bake workers, whose convert reads active() (materials.cpp's bake,
+// 2026-10-21). They are SAFE BY THE JOIN: the GUI thread starts them and
+// joins them inside the one bake call, the flags read at their start as
+// the GUI thread left them, and no toggle can run until that call returns
+// (the table p3_word_from_srgb_fast reads is built before they start, the
+// same reason). So the flip between two frames needs no synchronization.
 //
 // GUI-ONLY: warptempo_cli paints nothing and never includes this header.
 

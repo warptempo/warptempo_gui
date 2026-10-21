@@ -25,7 +25,7 @@
 #include "device_config.h"
 #include "palette_file.h"  // palette_record: the `waveform` key's preset at launch
 #include "icons.h"         // the icon set's launch load
-#include "materials.h"     // the fortepiano chrome's materials' launch check
+#include "materials.h"     // the materials' launch check and the pre-paint bake
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -2448,9 +2448,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         notifications.fire_if_due();
 
         // THE MATERIALS' SETTLE GATE, ON EVERY TICK for the same reason
-        // (materials.h's BAKE RULE, 2026-10-21): a size change a paint found
+        // (materials.h's BAKE RULE, 2026-10-21): a size change a frame found
         // and did not bake is armed once it has held kBakeSettle, and the
-        // whole window damaged so the frame that bakes is the whole window's.
+        // client damaged so a frame comes — its pre-paint hook bakes and
+        // widens the damage to the whole surface (the hook's materials
+        // block below).
         if (materials::settle_due())
             gui.invalidate_region(0, 0, app.width, app.height);
 
@@ -3413,6 +3415,25 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     };
     gui.set_on_pre_paint([&]() {
         pre_paint_advance();
+        // THE MATERIALS FOR THIS GEOMETRY (materials.h's BAKE RULE,
+        // 2026-10-21): a compare of the key when nothing moved; the first
+        // bake, or a size change's once the settle gate has armed it. HERE,
+        // AHEAD OF THE BACKEND'S PAINT WALK, because that walk paints the
+        // restored window's sizing frame before it hands any rect to
+        // on_redraw, and the bake's palette install moves the frame's tones
+        // (platform.h's damage pair). After ANY bake — this one, or a
+        // gui_scale commit's or True Colors' at its act (materials::ensure)
+        // — the frame's damage is the whole surface, the band with it, and
+        // the flag cache is rebuilt at once from the new palette's
+        // generation and tiles, so this frame's cue face boxes copy the new
+        // bake rather than waiting a tick for the cache to notice. Before
+        // the owed plate rebuild below, whose tail reaches the same flag
+        // cache.
+        materials::ensure_settled(app);
+        if (materials::take_bake_landed()) {
+            gui.invalidate_surface();
+            paint_handler.maybe_rebuild_flag_cache();
+        }
         // THE OWED PLATE REBUILD, ONCE PER FRAME (architect 2026-10-13; the
         // rule at Viewport::kick_waveform_sync): every kick since the last
         // frame owed it, and it runs here from the latest state — AFTER the
@@ -3601,7 +3622,8 @@ int gui_main(const char* argument) {
     // fortepiano chrome; materials.h's head): every material's master or
     // cover in the bundle, every file a PNG or a JPEG — a drop defect is the
     // blunt terminal line naming the file, and no window. The bake waits for
-    // the window's size (materials::ensure_settled, the first paint's head);
+    // the window's size (materials::ensure_settled, the first frame's
+    // pre-paint hook);
     // the two bevel weights and the words' shadow are the config's.
     if (const std::optional<std::string> err = materials::check()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());

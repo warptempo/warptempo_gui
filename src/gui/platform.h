@@ -47,17 +47,21 @@
 // the set, so a reopen costs one AAudio stream start (its one transient), the
 // accepted price.
 //
-// THE ONE DAMAGE CALL: invalidate_region takes a CLIENT rect — the GUI's
-// whole geometry, the window's band outside it — so no GUI damage ever
-// reaches the sizing frame (the restored laptop's, or a band a chrome keeps
-// on the maximized window on both devices, window_frame_maximized). The band
+// THE DAMAGE PAIR: invalidate_region takes a CLIENT rect — the GUI's whole
+// geometry, the window's band outside it — so no client damage ever reaches
+// the sizing frame (the restored laptop's, or a band a chrome keeps on the
+// maximized window on both devices, window_frame_maximized);
+// invalidate_surface damages the WHOLE SURFACE, the band with it. The band
 // paints in the chrome's ground and relief quartet, tones of the brass's
-// Face that no live act moves (the Settings Waveform row moves the
-// selection fill alone, palette_file.h's install_program_palette): every
-// repaint of the band rides the backend's own full damage (a configure or a
-// window adoption). (invalidate_surface, the WHOLE SURFACE's damage, stood
-// beside it 2026-10-09..10-21 for the one GUI event that changed the band's
-// roles live, a chrome or caption pick.) Both backends implement it alike.
+// Face, which no Settings act moves (the Waveform row moves the selection
+// fill alone, palette_file.h's install_program_palette) and A MATERIALS BAKE
+// DOES: the brass's Face is its bake's mean, and the bake reinstalls the
+// palette off it (materials.h's BAKE RULE) — at a settled resize, a
+// gui_scale commit or True Colors. So the pre-paint hook (main.cpp), the
+// settled bake's seat, asks for the whole surface in the first frame after
+// any bake (2026-10-21); every other repaint of the band rides the
+// backend's own full damage (a configure or a window adoption). Both
+// backends implement the pair alike.
 //
 // THE CANVAS FRAME (2026-10-13, the GPU canvas; canvas_sink.h owns the rule):
 // set_canvas_frame(list) names the GUI's one process-wide draw list

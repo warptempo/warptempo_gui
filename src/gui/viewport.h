@@ -768,10 +768,10 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
-    // (THE WHOLE SURFACE's damage, invalidate_surface, the window's sizing
-    // frame with it, stood 2026-10-09..10-21 for a live chrome or caption
-    // pick, its one caller; no live change paints outside the client since,
-    // platform.h.)
+    // (THE WHOLE SURFACE's damage, the window's sizing frame with it, is
+    // GuiPlatform::invalidate_surface's, its one caller the pre-paint hook
+    // after a materials bake (main.cpp, platform.h's damage pair); no
+    // Viewport act moves the band, so none damages it.)
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
     // tooltip and the menu row's dropdown): both hang outside the strip that
