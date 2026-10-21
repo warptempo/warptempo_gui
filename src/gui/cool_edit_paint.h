@@ -26,8 +26,10 @@
 // SINCE 2026-10-20 EVERY SURFACE TONE IS A MATERIAL (architect, the wood
 // chrome; materials.h): the painters below hand their tones to
 // paint_cell_rect and paint_relief_frame, whose surface chokepoint lays each
-// as its region's tile scaled by the tone — the band's in the Wood (its
-// recess the WoodDark), every other lane's in the MetalDark (the tab
+// as its region's tile scaled by the tone — the band's in the Wood, its
+// lines FLAT STROKES of the tone since 2026-10-20 ~22:30 (materials.h's
+// kGuiMaterialLineStyle; its recess the WoodDark as drawn), every other
+// lane's in the MetalDark (the tab
 // strip's recess the MetalVeryDark) — and THE BUTTON CASE'S face ramp,
 // highlight, shadow ramp and corner (the per-row case tones,
 // cool_edit_derive.h's head with the fit's worst errors) are the CASE tile's,

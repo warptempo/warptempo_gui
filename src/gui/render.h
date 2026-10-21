@@ -118,7 +118,9 @@ struct TrimRange {
 // THE CHROME'S SURFACES ARE MATERIALS (architect 2026-10-20, the wood
 // chrome; materials.h owns the rule): every tone a chrome surface puts down —
 // a ground, a relief line — is painted through set_surface_source as its
-// region's tile scaled per channel by tone / that tile's Face, so the rules
+// region's tile scaled per channel by tone / that tile's Face, or, on a
+// FLAT material (the wood since 2026-10-20 ~22:30, kGuiMaterialLineStyle),
+// as the tone itself, a flat opaque stroke, so the rules
 // below name TONES and the material is the region's (Wood above the program
 // frame's top row and in the band, MetalDark below, MetalVeryDark in the
 // recesses, the Case tile in the cases and the caption's buttons).
@@ -169,7 +171,8 @@ struct TrimRange {
 // cells — EXCEPT THE CHROME'S SURFACES, WHICH ARE MATERIALS since 2026-10-20
 // (architect, the wood chrome; materials.h): a baked tile, opaque, nothing
 // blended at paint time, the tile scaled per channel by its tone at the
-// bake, the case's measured ramps (cool_edit_derive.h's kCaseRamp) baked
+// bake (a flat material's lines the tone's own solid, kGuiMaterialLineStyle),
+// the case's measured ramps (cool_edit_derive.h's kCaseRamp) baked
 // into its tile per row. (The color picker's hue ring and SV triangle,
 // 2026-10-07..14, were the one place the product painted colors that were
 // not roles; the caption's smooth 24-bit gradient, Windows 98 and 2000's
@@ -370,7 +373,8 @@ struct TrimRange {
 // outside render.cpp's bodies): set_palette_source for the chrome's INK —
 // every word, glyph cell and mark, flat — set_surface_source for the
 // chrome's SURFACES (2026-10-20, the wood chrome: a chrome tone through it
-// is its region's MATERIAL, the tile scaled by the tone, materials.h; any
+// is its region's MATERIAL, the tile scaled by the tone, or on a flat
+// material the tone's own solid through set_palette_source, materials.h; any
 // other color flat, set_palette_source's road) — the cell fills and every
 // relief line (paint_cell_rect, paint_relief_frame and their family) — and
 // set_waveform_source for the canvas's cairo fills, its ground and grid
@@ -2556,8 +2560,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 // design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
 // EVERY LINE AND FACE THEY LAY IS A SURFACE (set_surface_source): a tone of
-// the region's material, its tile scaled by the tone (materials.h, the wood
-// chrome, 2026-10-20), a mitre's diagonal the two patterns.
+// the region's material, its tile scaled by the tone or, on a flat material
+// (the wood, 2026-10-20 ~22:30), the tone's own solid (materials.h's
+// kGuiMaterialLineStyle), a mitre's diagonal the two sources.
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right);
 void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);

@@ -109,11 +109,24 @@ uint32_t scaled_pixel(uint32_t base, const std::array<double, 3>& f) {
     return rgb;
 }
 
+GuiMaterialLines line_style(GuiMaterial m) {
+    return kGuiMaterialLineStyle[static_cast<size_t>(m)];
+}
+
+// THE FACTORS OF kTones' ROW `key` on the material's Face.
+std::array<double, 3> key_factors(const Tile& t, int key) {
+    const cool_edit_derive::Tone& tone =
+        cool_edit_derive::kTones[static_cast<size_t>(key)];
+    return tone_factors(cool_edit_derive::tone_of(tone, t.face, 0), t.face);
+}
+
 // THE BAKED COPY OF `key` ON `m`, made on its first ask: every pixel of the
 // base scaled by the tone's factors (the as-drawn copy factors of one),
 // converted for the window (display_transform::display_rgb); where the window
-// takes sRGB the as-drawn copy is the base itself.
+// takes sRGB the as-drawn copy is the base itself. A FLAT material bakes its
+// as-drawn copy alone (its tones are set_tone_source's solid strokes).
 Baked& baked(GuiMaterial m, int key) {
+    assert(key == kAsDrawn || line_style(m) == GuiMaterialLines::Tile);
     Tile& t = tile(m);
     auto it = t.baked.find(key);
     if (it != t.baked.end()) return it->second;
@@ -122,11 +135,7 @@ Baked& baked(GuiMaterial m, int key) {
         b.surface.reset(cairo_surface_reference(t.base.get()));
     } else {
         std::array<double, 3> f{1.0, 1.0, 1.0};
-        if (key != kAsDrawn) {
-            const cool_edit_derive::Tone& tone =
-                cool_edit_derive::kTones[static_cast<size_t>(key)];
-            f = tone_factors(cool_edit_derive::tone_of(tone, t.face, 0), t.face);
-        }
+        if (key != kAsDrawn) f = key_factors(t, key);
         b.surface.reset(
             cairo_image_surface_create(CAIRO_FORMAT_ARGB32, t.w, t.h));
         cairo_surface_flush(t.base.get());
@@ -151,11 +160,21 @@ Baked& baked(GuiMaterial m, int key) {
     return t.baked.emplace(key, std::move(b)).first->second;
 }
 
-// THE ANCHOR (the head's SCALE paragraph): the woods' strip centred on the
-// client's columns from the client's top row, every other tile from the
-// client's corner — user space being the client's on every road that paints
-// chrome (the flag cache translates to it).
-void set_baked_source(cairo_t* cr, GuiMaterial m, int key) {
+// THE SOURCE OF `key` ON `m`. A tone on a FLAT material (materials.h's
+// kGuiMaterialLineStyle) is the flat stroke: the Face's mean scaled by the
+// tone's factors, the bevel keys with them, set solid through the ink's
+// chokepoint (render.h's set_palette_source, which converts it for the
+// window). Every other is its baked copy, ANCHORED (the head's SCALE
+// paragraph): the woods' strip centred on the client's columns from the
+// client's top row, every other tile from the client's corner — user space
+// being the client's on every road that paints chrome (the flag cache
+// translates to it).
+void set_tone_source(cairo_t* cr, GuiMaterial m, int key) {
+    if (key != kAsDrawn && line_style(m) == GuiMaterialLines::Flat) {
+        const Tile& t = tile(m);
+        set_palette_source(cr, hex(scaled_pixel(t.face, key_factors(t, key))));
+        return;
+    }
     Baked& b = baked(m, key);
     cairo_matrix_t at;
     if (m == GuiMaterial::Wood || m == GuiMaterial::WoodDark) {
@@ -376,7 +395,7 @@ bool set_source(cairo_t* cr, GuiColor c) {
             m = GuiMaterial::Case;
             break;
     }
-    set_baked_source(cr, m, tone);
+    set_tone_source(cr, m, tone);
     return true;
 }
 
@@ -385,7 +404,7 @@ void set_material_source(cairo_t* cr, GuiMaterial m) {
         cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
         return;
     }
-    set_baked_source(cr, m, kAsDrawn);
+    set_tone_source(cr, m, kAsDrawn);
 }
 
 void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
@@ -412,30 +431,39 @@ void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
         for (std::size_t i = 0; i < kCaseRamp.size(); ++i)
             ct.ramp[i] = case_tone(kCaseRamp[i], t.face);
         // The tone (or the mitre's two) at the square's pixel (x, y), x and
-        // y from the case's corner — paint_ce_case's construction.
-        const auto tones_at = [&](int x, int y)
-            -> std::pair<std::pair<uint32_t, uint32_t>, double> {
-            const auto one = [](uint32_t w) {
-                return std::pair{std::pair{w, w}, 1.0};
-            };
-            if (down) return one(ramp_row(ct, y - 2 * lw, g));
+        // y from the case's corner — paint_ce_case's construction — and
+        // whether it is a LINE (the highlight, the shadow ramp, the corner)
+        // or the ramp, the case's face.
+        struct At {
+            uint32_t first, second;
+            double   weight;
+            bool     line;
+        };
+        const auto tones_at = [&](int x, int y) -> At {
+            const auto line = [](uint32_t w) { return At{w, w, 1.0, true}; };
+            const auto ramp = [](uint32_t w) { return At{w, w, 1.0, false}; };
+            if (down) return ramp(ramp_row(ct, y - 2 * lw, g));
             const int e = a - lw;   // the shadow's line, row and column
             // The mitre's two blocks: the light tone above the diagonal
             // u + v = lw, the shadow's first tone below, the diagonal's
             // pixel the half-and-half.
             const auto mitre = [&](int u, int v) {
-                if (u + v + 2 <= lw) return one(ct.highlight);
-                if (u + v >= lw) return one(ct.shadow_first);
-                return std::pair{std::pair{ct.highlight, ct.shadow_first}, 0.5};
+                if (u + v + 2 <= lw) return line(ct.highlight);
+                if (u + v >= lw) return line(ct.shadow_first);
+                return At{ct.highlight, ct.shadow_first, 0.5, true};
             };
             if (x >= e && y < lw) return mitre(x - e, y);
             if (x < lw && y >= e) return mitre(x, y - e);
-            if (y < lw || x < lw) return one(ct.highlight);
-            if (x >= e && y >= e) return one(ct.corner);
-            if (x >= e) return one(shadow_step(ct, y - lw, g));
-            if (y >= e) return one(shadow_step(ct, x - lw, g));
-            return one(ramp_row(ct, y - lw, g));
+            if (y < lw || x < lw) return line(ct.highlight);
+            if (x >= e && y >= e) return line(ct.corner);
+            if (x >= e) return line(shadow_step(ct, y - lw, g));
+            if (y >= e) return line(shadow_step(ct, x - lw, g));
+            return ramp(ramp_row(ct, y - lw, g));
         };
+        // THE CASE'S LINE STYLE (materials.h's kGuiMaterialLineStyle): a
+        // FLAT line scales the Face's mean, not the tile's pixel.
+        const bool flat_lines =
+            line_style(GuiMaterial::Case) == GuiMaterialLines::Flat;
         const auto [ox, oy] = seat_offset(seat, t.w - side, t.h - side);
         Surface out(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, side, side));
         cairo_surface_flush(t.base.get());
@@ -459,16 +487,15 @@ void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
                 const int ty = fold(oy + y, t.h);
                 const uint32_t base = reinterpret_cast<const uint32_t*>(
                     src + ty * sstride)[tx];
-                const auto [pair, wgt] = tones_at(at + x, at + y);
-                const std::array<double, 3> f0 =
-                    tone_factors(pair.first, t.face);
-                const std::array<double, 3> f1 =
-                    tone_factors(pair.second, t.face);
+                const At p = tones_at(at + x, at + y);
+                const std::array<double, 3> f0 = tone_factors(p.first, t.face);
+                const std::array<double, 3> f1 = tone_factors(p.second, t.face);
                 std::array<double, 3> f{};
                 for (std::size_t c = 0; c < 3; ++c)
-                    f[c] = f0[c] * wgt + f1[c] * (1.0 - wgt);
+                    f[c] = f0[c] * p.weight + f1[c] * (1.0 - p.weight);
+                const uint32_t under = p.line && flat_lines ? t.face : base;
                 drow[x] = 0xFF000000u |
-                          display_transform::display_rgb(scaled_pixel(base, f));
+                          display_transform::display_rgb(scaled_pixel(under, f));
             }
         }
         cairo_surface_mark_dirty(out.get());

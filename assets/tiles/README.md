@@ -25,7 +25,9 @@ the icons' data-URL detour, PNG and JPEG alike) and draws it at `gui_scale / 300
 (the tablet's 300 % takes the master 1:1). Only the part kept is rendered: the woods' strip (the master's whole scaled
 width by the upper region's height, from its vertical centre), the metals' and the case's centre crops (mirror-tiled
 on screen). Each material's FACE is its kept tile's mean color, and every tone a painter puts down on it is Cool
-Edit's tone rule on that Face, painted as the tile scaled per channel by tone / Face (`materials.h`'s head).
+Edit's tone rule on that Face, painted on the metals and the case as the tile scaled per channel by tone / Face, the
+grain running through the line, and on the wood as the tone itself, a flat opaque stroke (architect 2026-10-20: the
+wood's edges a painted stroke; `materials.h`'s `kGuiMaterialLineStyle` and head).
 
 ## Provenance and licence
 
