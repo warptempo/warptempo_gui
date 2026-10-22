@@ -67,7 +67,8 @@ struct AppState;
 // exactly"): each master is scaled by ONE factor s = max(W / w, H / h) over
 // the CLIENT window W x H — the whole window, the caption to the border's
 // last row — and CENTERED on it, the overhang cropped evenly both sides; no
-// tiling, no mirror, no repeat, no seam, ever (the tablet: 1440 / 3072, the
+// tiling, no mirror, no repeat, no seam, ever — THE BRASS'S LOOP
+// (below) its one exception, a seamless strip under the pan (the tablet: 1440 / 3072, the
 // master 2580 x 1440, 138 px cut each side). A MATERIAL PIXEL ON SCREEN AT
 // (x, y) IS THE COVER'S PIXEL AT (x, y), whatever paints it: the three are
 // covers of the one window geometry, the client alone (the restored laptop's
@@ -100,6 +101,40 @@ struct AppState;
 // is the strip's center row for the lane's row y, not the cover's (x, y);
 // a window wider than every strip scales the master under this rule
 // (materials.cpp's source_regions, bake_metal).
+//
+// THE LOOP (architect 2026-10-22: "it just looks odd scrolling the markers
+// but not the background"; "can't we create a wraparound brass image by
+// taking a portion of the image, off-shifting it, and then just blending it
+// into itself so that it creates a seamless repeating loop … and then just
+// have that loop infinitely. I'd much rather have that than a flat color";
+// "yes, I think that's what we should do. We should create a looping
+// tile"): THE BRASS UNDER THE CUES PANS WITH THEM. (1) THE STRIP IS A
+// SEAMLESS LOOP, made offline by tools/tiles/render_covers.py with GIMP's
+// tile-seamless method — out(x) = (1 − w(x))·A(x) + w(x)·A((x + W/2) mod W),
+// w(x) = |2x/W − 1|, per channel — so its two ends meet with no seam and
+// nothing composites in the app (a strip dropped through the tuning road
+// loops only if it was rendered that way). (2) THE PHASE: the lane's brass
+// stands at a horizontal phase that MOVES WITH THE CONTENT AT CONSTANT ZOOM
+// AND HOLDS ACROSS A ZOOM (the planner's rule, his "yes" to it): at every
+// change of THE DISPLAYED BASIS — the plate's published span, the basis the
+// cues are painted on, so ground and cues move in the same frame even where
+// the live viewport runs ahead of an async plate — where spp is unchanged
+// the phase advances by the content's travel in device px, (old vp − new vp)
+// / spp, accumulated in a double, and where spp moved (a zoom) it stands;
+// pans, Follow's pages and the jumps carry the plate with the markers, a zoom
+// never slides it (materials::follow_displayed_basis, at the plate's two
+// publish sites, waveform_cache.cpp; every publish damages the viewport's
+// lanes, the marker lane among them, so a moved phase is always repainted).
+// THE PERIOD IS THE TILE'S WIDTH, the window's — the strip's own on the two
+// standard windows; a narrower window's tile is the strip's center columns
+// and shows one seam where it wraps. (3) THE BLIT stays the BAKE RULE's 1:1
+// nearest copy at identity, EXTEND_NONE, never EXTEND_REPEAT or REFLECT: the
+// lane's tile is baked TWICE ITS WIDTH (the wrap's two blits, at +p and at
+// p − W, read as one copy out of the doubled surface), and the phase enters
+// at the brass's one chokepoint (set_source's Metal Face), so every reader
+// of the tile — the lane's ground (paint_ruler_row) and the cue labels' face
+// boxes in the flag cache — moves together at nearbyint(phase) mod W. The
+// ruler's ground and the foot lines keep their flats.
 //
 // THE BAKE RULE (architect: "absolutely has to be"; the cost table, cairo
 // into a 2304 x 1440 surface: a solid fill 0.016 ms, a 1:1 blit of a
@@ -138,7 +173,8 @@ struct AppState;
 //           earlier that day; the caption's rows 2026-10-21 to 2026-10-22);
 //           THE VOID's copy of the band's rows (below); and THE INACTIVE
 //           TAB'S BODY rows (below);
-//   METAL   ONE TILE, THE MARKER LANE'S ROWS, window-wide, from the strip
+//   METAL   ONE TILE, THE MARKER LANE'S ROWS, window-wide, from the strip,
+//           its surface twice the window's width (the LOOP)
 //           (2026-10-22, the STRIP RULE; THE WHOLE CLIENT 2026-10-21 to
 //           2026-10-22, when the flat family stood on it, the brass panel
 //           from the tab strip's top to the dock bar before that; the
@@ -170,14 +206,14 @@ struct AppState;
 // pixels are copied straight out of it (svg_icon::raster_regions); the
 // window's conversion is the transform's word through its table-driven
 // encode (display_transform.h's p3_word_from_srgb_fast).
-// RESIDENT at 300 % on 2304 x 1440 about 22 MB (the wood 14.1 — its tile
+// RESIDENT at 300 % on 2304 x 1440 about 22.5 MB (the wood 14.1 — its tile
 // 12.8, rows 54..1440 window-wide, its void 0.9 and the tab body 0.4 — the
-// brass's lane tile 0.47, 2304 x 51, the ebony 7.4: the program's cases'
+// brass's lane tile 0.94, 2304 x 51 doubled (the LOOP), the ebony 7.4: the program's cases'
 // patches 1.4, about fifty seats, THE WORD BUTTONS 0.5, their seats
 // 216 x 60 at three cluster places on the row's two lifts, and THE KEYS
 // 5.5, 38 tiles of 78 rows at rest and pressed over the three pages'
-// slots), on the laptop's maximized 1920 x 1047 at 138 % about 9.2 MB (the
-// wood about 8.4, the brass 0.18, the word buttons 0.07 and no keys — the
+// slots), on the laptop's maximized 1920 x 1047 at 138 % about 9.4 MB (the
+// wood about 8.4, the brass 0.36 doubled, the word buttons 0.07 and no keys — the
 // laptop paints no keyboard) (ARGB32, computed off the geometry 2026-10-22
 // when the flat family took the wood and the brass became the lane's strip;
 // 26.5 and 10.6 earlier that day, when the wood took the panel, the brass's
@@ -203,10 +239,11 @@ struct AppState;
 //          pixel is the cover itself. AND SINCE 2026-10-22 (architect: "in
 //          the original the brass is used only for accents"; the brass
 //          2026-10-21 to 2026-10-22) EVERYTHING THE BRASS PANEL HELD BUT THE
-//          MARKER LANE BETWEEN THE FRAME COLUMNS, THE RULER'S GROUND AND THE
-//          VIEW BAR'S FRAME: the column's air, the view bar's, the ruler's
-//          and the marker lane's columns outside the canvas's (the margins'
-//          width each side), the canvas's side margins and its rings, the
+//          MARKER LANE BETWEEN THE RING'S COLUMNS, THE RULER'S GROUND AND THE
+//          TWO FOOT LINES BETWEEN THE LANES: the column's air, the view bar's,
+//          the ruler's and the marker lane's columns outside the canvas's (the
+//          margins' width each side), THE WOOD'S RING (below), the canvas's
+//          side margins and its rings, the
 //          divider's face row in the margins, the foot; AND THE TWO TABS
 //          ("leave the tabs in wood"): the lit tab the wood as drawn, the
 //          inactive tab's body the wood under Cool Edit's measured 15-row
@@ -226,31 +263,51 @@ struct AppState;
 //          DERIVED ROLES (chrome_derive.h's kChromeRoles: the palette's
 //          `face` is the wood's, render.cpp's panel_face). EVERY LINE, BEVEL
 //          AND RING ON THE WOOD is the wood's flat stroke (the TONE RULE) —
-//          the canvas's rings, the ruler frame's two side columns, the tab
-//          edges — and A STROKE BETWEEN THE TWO MATERIALS TAKES THE WOOD'S
-//          (the ruler frame's side columns, between its brass-derived ground
-//          and the wood's margin: paint_ruler_row). THE STEREO DIVIDER'S ROWS
+//          the canvas's rings, the wood's ring, the tab edges — and A STROKE
+//          BETWEEN THE TWO MATERIALS TAKES THE WOOD'S. THE WOOD'S RING
+//          (architect 2026-10-22, "B": "the wood bevel should run along the
+//          entire length of the left/right frames — the times and other lanes
+//          are below the bevel metaphorically"; "the ruler, the timestamp
+//          ruler and the marker lane should not have a bevel on top of the
+//          wood's bevel. The wood sits on top of the other two … implement the
+//          basic plain rule for the wood bevel here"; the mock of record
+//          tmp/theme_next/out/flat3/flat_L100.png, rows 231..341 at the two
+//          sides): ONE PLAIN SUNKEN RING in the wood's strokes round the whole
+//          canvas column from the view bar's top row to the canvas's foot —
+//          the view bar's top line and the left column the DARK stroke, the
+//          right column the LIGHT, the top-right corner the ordinary mitre,
+//          the two columns ONE UNBROKEN RUN down the view bar's, the ruler's
+//          and the marker lane's rows into the canvas ring's own
+//          (render_trim_flags, paint_ruler_row, paint_canvas_column_frame);
+//          the lanes stand inside it, the brass's two foot lines between them
+//          running from column to column. (The view bar's own ring in the
+//          brass's strokes, the ruler frame's wood columns mitred into its
+//          foot, and the marker lane with no columns at all — its brass
+//          abutting the wood — 2026-10-21 to 2026-10-22: a column that changed
+//          color halfway, a brass panel glued onto the wood.) THE STEREO DIVIDER'S ROWS
 //          ARE THE WOOD'S END TO END, inside the canvas too (render.h's
 //          waveform_divider: no seam at the frame columns).
 //   METAL  AN ACCENT since 2026-10-22 (ONE PANEL from the column's air to
 //          the dock bar, window-wide, and the two tabs' bodies 2026-10-21 to
 //          2026-10-22; the flat family's grounds 2026-10-21 to 2026-10-22).
-//          THE BRASS'S THREE PLACES, its only readers: (1) THE MARKER LANE'S
-//          GROUND BETWEEN THE FRAME COLUMNS' INNER EDGES — the canvas's x
-//          extent on the lane's rows, the cue labels' face boxes with it
-//          (clipped to the canvas's columns; the flag editor's riding cells
-//          the wood past them) — the brass tile as drawn, no ring on the
-//          lane, the one reader of the tile's pixels; (2) THE RULER'S GROUND,
-//          its flat `mid`, and the ruler frame's foot line under it, as they
-//          were ("leave the timestamp lane a flat solid color as you have
-//          it"); (3) THE VIEW BAR'S FRAME, its flat strokes — (2) and (3)
-//          reading its Face, the lane's mean (the TONE RULE), through
-//          set_source's Metal flats (paint_ruler_row, render_trim_flags under
-//          the Metal scope); and (4) THE DISABLED CUE'S FADED TRIANGLE, LABEL
-//          AND SHADOW, mixed toward its Face, the material they stand on
-//          (architect 2026-10-22; render.cpp's fill_program_palette,
-//          cool_edit_derive.h's faded look) — the four the Metal Face's only
-//          readers.
+//          THE BRASS'S TWO PLACES AND ITS FADES, its only readers: (1) THE
+//          MARKER LANE'S GROUND BETWEEN THE WOOD RING'S COLUMNS — the
+//          canvas's x extent on the lane's rows, the cue labels' face boxes
+//          with it (clipped to the canvas's columns; the flag editor's riding
+//          cells the wood past them) — the brass tile as drawn AT THE PHASE
+//          (the LOOP below), the one reader of the tile's pixels; (2) THE
+//          RULER'S GROUND, its flat `mid`, AND THE TWO FOOT LINES between the
+//          ring's columns — the view bar's light line under its field and the
+//          ruler's under its ground — as they were ("leave the timestamp lane
+//          a flat solid color as you have it"), reading its Face, the lane's
+//          mean (the TONE RULE), through set_source's Metal flats
+//          (paint_ruler_row, render_trim_flags under the Metal scope); and
+//          (3) THE DISABLED CUE'S FADED TRIANGLE, LABEL AND SHADOW, mixed
+//          toward its Face, the material they stand on (architect 2026-10-22;
+//          render.cpp's fill_program_palette, cool_edit_derive.h's faded
+//          look) — the three the Metal Face's only readers. (THE VIEW BAR'S
+//          FRAME was the brass's third place until the wood's ring took its
+//          columns and top line the same day, WOOD above.)
 //   CASE   EVERY CASE (the band's, row 8's, the render player's) AND SINCE
 //          2026-10-22 EVERY WORD BUTTON AND EVERY KEY OF THE ON-SCREEN
 //          KEYBOARD (architect: "buttons in ebony — yes"; paint_ce_case on
@@ -335,7 +392,7 @@ struct AppState;
 // tones were a multiplicative shortcut that clips, FFD688; the HLS tone
 // differing a little from them is the mock's inaccuracy.)
 //
-// THE INKS (constants, but the shadow's offset a key): ONE INK, THE BONE,
+// THE INKS (constants all): ONE INK, THE BONE,
 // kBoneInk F0F0F0 (architect 2026-10-22: "the flags' F0 works well
 // everywhere … I'm committed to F0 in the other places"; the light glyphs on
 // the ebony stand for the bone accidentals), ON EVERY WORD AND DIGIT THE
@@ -351,12 +408,19 @@ struct AppState;
 // ALONE KEEP E6D5A8, the words' ink of 2026-10-21, as their own constant
 // while it is under consideration — row 8's clock and the render player's
 // two fields, kTimeFieldDigits on kTimeFieldGround (their rings the
-// region's tones, geometry and pads unchanged). THE WORDS that wore a drop
-// shadow keep it — kWordShadow at (+d, +d) DEVICE PX, d the `text_shadow`
-// key (materials::text_shadow_px; the settled mock's 2 at 300 %), on the
-// title and the tab labels, and on the ebony's words (the underline's
-// shadow with its word's) — and the ruler's digits and the state line their
-// own (+1, +1) shadows. (The old brass C9A961 on the title and the menu
+// region's tones, geometry and pads unchanged). ONE SHADOW OFFSET, ONE
+// SCALED WINDOWS PX (program_line_px — 3 device px at 300 %) EVERYWHERE A
+// WORD WEARS ONE (architect 2026-10-22: the tab shadow "looks like one
+// device pixel, but I would think that everything should be one Windows
+// pixel … that's how the timestamp font offset looks, and the marker font
+// as well"; "yes to implement all, incl 1 wpx shadow"): kWordShadow at
+// (+d, +d) on the caption's title, the tab labels and the ebony's words
+// (the underline's shadow with its word's), the ruler's digits, the state
+// line and the flag labels their own shadows at the same (+d, +d), so the tabs, the
+// timestamp lane and the marker lane read one offset at every scale. (The
+// words' offset was the `text_shadow` key's device px, 2 at 300 %,
+// 2026-10-21 to 2026-10-22; the key is retired, an old line the ordinary
+// unknown-key hard fail.) (The old brass C9A961 on the title and the menu
 // row's words, the near-white on the tab labels, the ruler, the caption
 // glyphs, and the amber F0B030 on the clock, retired 2026-10-21 for one ink
 // E6D5A8 on the words, the flags near-white apart; that two-ink split
@@ -479,10 +543,12 @@ uint32_t face(GuiMaterial m);
 
 // THE BEVEL KEYS (the head), in percent: the solid tones recomputed.
 void set_bevel(int light_percent, int dark_percent);
-// THE WORDS' SHADOW OFFSET, device px (the `text_shadow` key, the head's
-// INKS).
-void set_text_shadow(int px);
-int text_shadow_px();
+// THE BRASS'S PHASE FOLLOWS THE DISPLAYED BASIS (the head's LOOP): called
+// at every publish of the plate's displayed fingerprint (the two sites in
+// waveform_cache.cpp, the async swap and the synchronous rebuild) with its
+// span and width — the phase advanced by the content's travel in device px,
+// (old vp − new vp) / spp, where spp is unchanged, and held where it moved.
+void follow_displayed_basis(int64_t vp_start, int64_t vp_end, int area_w);
 
 // THE TONE TABLE: the flat tones a painter hands the surface chokepoint,
 // each Cool Edit's tone of THE CHROME'S FACE (the palette's `face`, the

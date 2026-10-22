@@ -177,7 +177,12 @@ struct State {
     std::chrono::steady_clock::time_point last_resize{};
     int                    bevel_light = 100;
     int                    bevel_dark  = 100;
-    int                    text_shadow = 2;
+    // THE BRASS'S PHASE (materials.h's LOOP), device px, accumulated, and
+    // the displayed basis it last followed (follow_displayed_basis).
+    double                 metal_phase = 0.0;
+    bool                   phase_seen  = false;
+    int64_t                phase_vp    = 0;
+    double                 phase_spp   = 0.0;
     GuiMaterialRegion      region = GuiMaterialRegion::Flat;
     // THE TONE TABLE (set_tone_face): a flat word and its key.
     std::vector<std::pair<uint32_t, int>> tones;
@@ -764,8 +769,13 @@ void bake_wood(const Source& src, const Geometry& g, Baked& out) {
 // ONE TILE, THE MARKER LANE'S ROWS window-wide, the strip's center rows; ITS
 // FACE THE MEAN OF THOSE PIXELS, the strip's rows the bake reads (the whole
 // client's panel rects 2026-10-21 to 2026-10-22) — read by the ruler's flat
-// ground, the view bar's frame and the disabled cue's fades alone. (The whole-client tile, and the
+// ground, the two foot lines and the disabled cue's fades alone. (The whole-client tile, and the
 // inactive tab's body under the luma ratio, 2026-10-21 to 2026-10-22.)
+// THE TILE IS BAKED TWICE ITS WIDTH, the lane's pixels and a copy of them
+// beside, so the phased blit (materials.h's LOOP) is ONE 1:1 EXTEND_NONE
+// NEAREST copy at any phase: its source window [W − p, 2W − p) lies inside
+// the doubled surface for every phase p in [0, W) — the two blits the wrap
+// needs, at +p and at p − W, as one copy (set_metal_tile_source).
 void bake_metal(const Source& src, const Geometry& g, Baked& out) {
     const GuiRect lane = band_of(g, std::clamp(g.lane_y, 0, g.h),
                                  std::clamp(g.lane_y + g.lane_h, 0, g.h));
@@ -774,8 +784,25 @@ void bake_metal(const Source& src, const Geometry& g, Baked& out) {
     auto raw = source_regions(src, g.w, g.h, {lane}, &strip);
     if (!raw) { out.error = raw.error(); return; }
     if (raw->empty() || !(*raw)[0]) return;
-    out.face = mean_over((*raw)[0].get(), lane, {lane});
-    out.grounds.emplace_back(lane, std::move((*raw)[0]));
+    cairo_surface_t* one = (*raw)[0].get();
+    out.face = mean_over(one, lane, {lane});
+    cairo_surface_t* two =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2 * lane.w, lane.h);
+    cairo_surface_flush(one);
+    cairo_surface_flush(two);
+    const unsigned char* sdata = cairo_image_surface_get_data(one);
+    const int sstride = cairo_image_surface_get_stride(one);
+    unsigned char* ddata = cairo_image_surface_get_data(two);
+    const int dstride = cairo_image_surface_get_stride(two);
+    const std::size_t row_bytes = static_cast<std::size_t>(lane.w) * 4;
+    for (int y = 0; y < lane.h; ++y) {
+        const unsigned char* srow = sdata + static_cast<std::size_t>(y) * sstride;
+        unsigned char* drow = ddata + static_cast<std::size_t>(y) * dstride;
+        std::memcpy(drow, srow, row_bytes);
+        std::memcpy(drow + row_bytes, srow, row_bytes);
+    }
+    cairo_surface_mark_dirty(two);
+    out.grounds.emplace_back(lane, Surface(two));
 }
 
 // THE SEATS MERGED INTO TILES (materials.h's CASE PATCHES): seats sharing
@@ -929,6 +956,24 @@ void set_tile_source(cairo_t* cr, const Tile& t) {
     cairo_matrix_t at;
     cairo_matrix_init_translate(&at, -static_cast<double>(t.rect.x),
                                 -static_cast<double>(t.rect.y));
+    cairo_pattern_set_matrix(t.pattern.get(), &at);
+    cairo_set_source(cr, t.pattern.get());
+}
+
+// THE BRASS'S TILE AT THE PHASE (materials.h's LOOP): client x shows the
+// lane's column (x − rect.x − p) mod W, p the phase's whole px in [0, W) and
+// W the tile's rect width, read out of the doubled surface (bake_metal) at
+// column x − rect.x − p + W — one 1:1 nearest copy, EXTEND_NONE, never a
+// repeat or a reflect (the BAKE RULE's cost table).
+void set_metal_tile_source(cairo_t* cr, const Tile& t, double phase) {
+    const int64_t w = t.rect.w;
+    int64_t p = w > 0 ? static_cast<int64_t>(std::llrint(phase)) % w : 0;
+    if (p < 0) p += w;
+    cairo_matrix_t at;
+    cairo_matrix_init_translate(
+        &at, -static_cast<double>(t.rect.x) - static_cast<double>(p) +
+                 static_cast<double>(w),
+        -static_cast<double>(t.rect.y));
     cairo_pattern_set_matrix(t.pattern.get(), &at);
     cairo_set_source(cr, t.pattern.get());
 }
@@ -1192,8 +1237,24 @@ void set_bevel(int light_percent, int dark_percent) {
     if (s.baked) rebuild_flats();
 }
 
-void set_text_shadow(int px) { state().text_shadow = px; }
-int text_shadow_px() { return state().text_shadow; }
+void follow_displayed_basis(int64_t vp_start, int64_t vp_end, int area_w) {
+    State& s = state();
+    if (area_w <= 0 || vp_end <= vp_start) return;
+    const double spp =
+        static_cast<double>(vp_end - vp_start) / static_cast<double>(area_w);
+    // AT CONSTANT spp THE CONTENT'S TRAVEL; ACROSS A CHANGE OF spp NOTHING.
+    if (s.phase_seen && spp == s.phase_spp)
+        s.metal_phase += static_cast<double>(s.phase_vp - vp_start) / spp;
+    s.phase_seen = true;
+    s.phase_vp   = vp_start;
+    s.phase_spp  = spp;
+    // Kept inside one period of the live tile, so the double never grows.
+    if (!s.metal.empty() && s.metal.front().rect.w > 0) {
+        const double w = static_cast<double>(s.metal.front().rect.w);
+        s.metal_phase = std::fmod(s.metal_phase, w);
+        if (s.metal_phase < 0.0) s.metal_phase += w;
+    }
+}
 
 void set_tone_face(uint32_t chrome_face) {
     // THE SURFACE TONES (the declaration): the Face, then kTones' Face tones
@@ -1261,7 +1322,10 @@ bool set_source(cairo_t* cr, GuiColor c) {
     }
     if (tiles) {
         if (const Tile* t = tile_under_path(cr, *tiles)) {
-            set_tile_source(cr, *t);
+            // THE BRASS AT ITS PHASE, every reader of its tile together —
+            // the lane's ground and the cue labels' face boxes (the LOOP).
+            if (tiles == &s.metal) set_metal_tile_source(cr, *t, s.metal_phase);
+            else                   set_tile_source(cr, *t);
             return true;
         }
     }

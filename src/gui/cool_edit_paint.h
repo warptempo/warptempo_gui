@@ -33,8 +33,9 @@
 // Face as the cover as drawn, every other tone the material's flat stroke —
 // the band, the tab strip and its tabs, the canvas column's margins, air,
 // ring and foot, the dock bar and row 8 on the walnut, the marker lane
-// between the frame columns, the view bar's frame and the ruler's ground on
-// the brass (2026-10-22, materials.h's REGIONS); THE BUTTON CASE is
+// between the ring's columns, the ruler's ground and the two foot lines on
+// the brass, the wood's ring round the column (2026-10-22, materials.h's
+// REGIONS); THE BUTTON CASE is
 // the ebony's (its ramp the cover under Cool Edit's case span, its lines
 // flat, materials::paint_case_ramp and case_lines). THE CONSTANTS below are
 // what Cool Edit draws whatever its preset — the case's black outline and

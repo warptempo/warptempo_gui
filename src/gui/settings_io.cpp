@@ -397,8 +397,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         return format_gui_scale_percent(app.device_config->bevel_light);
     if (key == "bevel_dark" && app.device_config != nullptr)
         return format_gui_scale_percent(app.device_config->bevel_dark);
-    if (key == "text_shadow" && app.device_config != nullptr)
-        return format_gui_scale_percent(app.device_config->text_shadow);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

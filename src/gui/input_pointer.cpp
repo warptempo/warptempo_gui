@@ -2980,6 +2980,13 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // TouchNavZoomState, app_state.h). Whether it outlives THIS gesture is
     // decided afresh at this gesture's end.
     app.touch_nav_zoom.retained = false;
+    // THE PAN'S SEAT DIES AT EVERY ZOOM FRAME (2026-10-22; the seat's record
+    // at the one-finger arm below): a zoom — two fingers, or one under ctrl —
+    // moves the content under the finger by the level, refused or applied or
+    // not, so the pan that follows it (the pinch's downgrade, the pen's ctrl
+    // edge back to the pan) seats afresh on its own first frame, which is
+    // what keeps the downgrade clean.
+    if (f.two_finger || one_finger_zoom) app.touch_nav_zoom.pan_seated = false;
 
     // THE GESTURE'S SURFACE IS DECIDED AT ITS START (architect 2026-10-16:
     // "all gestures that start on waveform can continue on chrome"). Every
@@ -3009,11 +3016,18 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // gesture or toggled under it (the laptop's bare `h`): the same
     // waveform navigates either way. The keyboard-modal flag
     // editor is punched through as the wheel punches it.
+    // A REFUSED FRAME ALSO BREAKS THE PAN'S HOLD (2026-10-22): the finger
+    // travels on while nothing navigates, so the first frame after the state
+    // clears seats afresh where the finger then is and the pan resumes from
+    // there — the content never jumps to catch up with travel the refusal
+    // swallowed.
     if (app.prompt.active || app.batch_progress.active ||
         any_pointer_gesture_active(app) ||
         folder_overlay_stands(app) || modal_dialog_editor_active() ||
-        app.loading || audio.total_frames() <= 0)
+        app.loading || audio.total_frames() <= 0) {
+        app.touch_nav_zoom.pan_seated = false;
         return;
+    }
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
     double dist_ratio = f.dist_ratio;
@@ -3126,22 +3140,58 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // app_state.h).
     double anchor_sample = 0.0;   // active-domain song frame the pivot holds
     double anchor_col    = 0.0;   // its column under the LIVE viewport
-    if (!f.two_finger && !one_finger_zoom) {
-        // ONE FINGER — the phone model's pan, unchanged and stateless: the
-        // content under the PREVIOUS centroid column (x - eff_dx) is what the
-        // finger holds, placed at the CURRENT centroid. The anchor column
-        // convention is the mouse zoom's own (the waveform's column, window x
-        // less the area's x, against the live viewport — the canvas standing
-        // the column's margin in from the window's side since 2026-10-09), and no clamp is
-        // needed on a pan: nothing persists between frames for an off-area
-        // column to corrupt, and the placement runs through the viewport
-        // chokepoint's own clamps either way. The seat is already cleared at
-        // the top of the body — which is what makes the DOWNGRADE clean: a
-        // finger lifting from the pair continues as this pan, and the next
-        // upgrade takes a FRESH pivot rather than inheriting the dead pinch's.
-        const double col = static_cast<double>(f.x - wf_area.x);
-        anchor_sample = vp + (col - eff_dx) * spp_old;
-        anchor_col    = col;
+    const bool pan = !f.two_finger && !one_finger_zoom;
+    double pan_col = 0.0;   // the pan's placement column (fractional)
+    if (pan) {
+        // ONE FINGER — THE PAN, PLACED LIKE THE MARKER DRAG (architect
+        // 2026-10-22: "I don't understand why the pan can't just use whatever
+        // math the marker drag is using, because that's basically flawless").
+        // THE STALL IT REPLACES, measured that day on the tablet over adb with
+        // injected motion, finger and stylus sources alike: the pan was
+        // STATELESS, placing the content under the previous centroid column
+        // (x - dx) at the current one every frame, and the viewport's grid
+        // snap (clamp_viewport_start) rounded each frame's travel to a whole
+        // column and dropped the rest — steps of 0.3 px a frame moved
+        // nothing, 0.6 px a frame moved a whole px each (an expected +45 px
+        // measured +75), 1 and 2 px were exact. So a pan slower than half a
+        // device px a frame (about 30 px/s at 60 Hz, 45 at 90) stood still,
+        // and the S Pen's smooth 480-Hz stream showed it whenever he crept.
+        // The marker drag never stalls because it is ABSOLUTE: it seats the
+        // grabbed frame once and places by the travel from that seat, so its
+        // snap rounds a cumulative value (marker_drag.cpp's anchor).
+        // THE SEAT, TAKEN ONCE PER PAN PHASE: on the phase's first applied
+        // frame, the content under the PREVIOUS centroid column (cx - dx) —
+        // the latch folds the slop's travel into that frame's dx, so this is
+        // the content under the DOWN point — and every frame after places
+        // that one song frame at the LIVE FRACTIONAL centroid column
+        // (GuiTouchNavFrame::cx), no delta arithmetic at all. THE RE-SEATS,
+        // wherever the finger's hold on the content is broken: (1) every zoom
+        // frame and every refused frame (above), so a pan after a pinch's
+        // downgrade or a refused stretch seats afresh; (2) the gesture's end
+        // (end_touch_nav); (3) A PLACEMENT THE WALLS REFUSED (below the
+        // apply): the seat moves to the content now under the finger, so a
+        // reversal at the song's ends follows the finger at once, the Android
+        // way, no rubber band; and (4) a camera another writer moved under the
+        // finger (a key, a view switch, a load — the camera the last pan frame
+        // settled no longer stands), seated afresh exactly as on a first
+        // frame. The column convention is the mouse zoom's own (the
+        // waveform's column, window x less the area's x, against the live
+        // viewport), and no clamp is needed on the column: the placement runs
+        // through the viewport chokepoint's own clamps, and (3) reads them.
+        TouchNavZoomState& z = app.touch_nav_zoom;
+        pan_col = f.cx - static_cast<double>(wf_area.x);
+        const bool hold_stands =
+            z.pan_seated &&
+            z.pan_vp == app.viewport_start_sample &&
+            z.pan_level == app.zoom_level &&
+            z.pan_tab_view == app.active_tab_view &&
+            z.pan_audio_view == app.active_audio_view;
+        if (!hold_stands) {
+            z.pan_anchor_sample = vp + (pan_col - eff_dx) * spp_old;
+            z.pan_seated        = true;
+        }
+        anchor_sample = z.pan_anchor_sample;
+        anchor_col    = pan_col;
     } else {
         // A ZOOM — TWO FINGERS, OR ONE UNDER CTRL — PIVOTS ABOUT THE POINT ON
         // THE WAVEFORM THE GESTURE GRABBED, held for the phase's life: seated
@@ -3185,17 +3235,43 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     }
 
     // ONE placement carries whichever axis is live, and the fork above decided
-    // both of its anchor terms: a ONE-FINGER frame places the content under the
-    // previous centroid at the CURRENT centroid column, which is the pan, while
-    // a TWO-FINGER frame places the HELD frame back at its own re-derived
-    // column, which is a pure zoom about the grabbed point (the ratio is 1.0 on
-    // the first and the centroid delta is 0 on the second, so the off term is a
-    // literal no-op either way). Everything downstream is the strip drag's own
+    // both of its anchor terms: a ONE-FINGER frame places the pan's SEATED
+    // frame at the CURRENT fractional centroid column, which is the pan, while
+    // a ZOOM frame places its HELD frame back at its own re-derived column,
+    // which is a pure zoom about the grabbed point (the ratio is 1.0 on the
+    // first, and the zoom's column moves only by the level). Everything downstream is the strip drag's own
     // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
     // camera chokepoint's compare on either axis, and the mid-gesture true-no-op
     // skip.
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    /*final=*/false);
+
+    if (pan) {
+        // THE WALLS' REFUSAL RE-SEATS (re-seat (3) at the arm above): the
+        // placement asked for the grid point nearest the seat's start, and a
+        // settled start anywhere else is the chokepoint's wall (or the
+        // whole-song park at 0). The seat then becomes the content under the
+        // finger NOW, so the travel spent pushing past the end is forgotten
+        // and a reversal moves the content on its first frame. The applier's
+        // true-no-op skip and the camera compare are untouched by this: it
+        // reads only where the start settled.
+        TouchNavZoomState& z = app.touch_nav_zoom;
+        const double spp_now = painter_samples_per_pixel(app, audio, wf_area);
+        if (spp_now > 0.0) {
+            const int64_t requested = static_cast<int64_t>(
+                std::nearbyint(anchor_sample - anchor_col * spp_now));
+            if (nearest_viewport_grid_point(requested, spp_now) !=
+                app.viewport_start_sample)
+                z.pan_anchor_sample =
+                    static_cast<double>(app.viewport_start_sample) +
+                    pan_col * spp_now;
+        }
+        // The camera this frame settled, which re-seat (4) compares.
+        z.pan_vp         = app.viewport_start_sample;
+        z.pan_level      = app.zoom_level;
+        z.pan_tab_view   = app.active_tab_view;
+        z.pan_audio_view = app.active_audio_view;
+    }
 }
 
 // THE SEATED PINCH'S CLEAR AND ITS ERASE (contract at the declaration,
@@ -3232,7 +3308,11 @@ void GuiInputHandler::end_touch_nav() {
     // the Wayland backend answers false, so the laptop clears at every end
     // exactly as before. Nothing on screen changes at a retention, so it owes
     // no damage; the stem the seat gates simply stays.
+    // THE PAN'S SEAT DIES AT EVERY END, the pen's retained lift included
+    // (2026-10-22; its record at apply_touch_nav_update's one-finger arm): a
+    // fresh landing grabs fresh content.
     TouchNavZoomState& z = app.touch_nav_zoom;
+    z.pan_seated = false;
     if (z.seated && z.one_finger && gui.pen_lift_keeps_zoom_anchor())
         z.retained = true;
     else

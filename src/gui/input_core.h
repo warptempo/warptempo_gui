@@ -260,6 +260,14 @@ inline int containing_pixel(double v) {
 // learns the scale.
 inline constexpr double kDefaultTouchSlopPx = 6.0;
 
+// THE TOUCH STILLNESS RADIUS AT gui_scale 100, in device pixels (2026-10-22):
+// the Chebyshev distance from the down point a pan-zone contact must stay
+// within for the whole hold beat if the window's expiry is to be the REGION
+// HOLD (the rule and its measured reason at maybe_resolve_touch_window,
+// input_core.cpp). 2 Windows px, a third of the slop; pushed down scaled by
+// the slop's own road (set_touch_stillness_px).
+inline constexpr double kDefaultTouchStillnessPx = 2.0;
+
 // THE MONOTONIC CLOCK EVERY DEADLINE IN THIS LAYER IS MEASURED AGAINST, in
 // microseconds. One owner for the whole GUI: the key-repeat deadline, the touch
 // window and the backend's own bounded clipboard read all read
@@ -906,6 +914,13 @@ public:
     // Reached through GuiPlatform, which re-exports it like every other door of
     // this class.
     void set_touch_slop_px(double px) { touch_slop_px_ = px; }
+    // THE STILLNESS RADIUS, the slop's sibling (2026-10-22; the rule at
+    // maybe_resolve_touch_window, input_core.cpp): a scaled length pushed
+    // down at the SAME two call sites as the slop, beside it, so the two
+    // always stand at one scale. It is NO GATE TWIN — the GUI has no
+    // stillness test of its own; the twin-gate invariant above concerns the
+    // slop alone and stays true.
+    void set_touch_stillness_px(double px) { touch_stillness_px_ = px; }
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
     // Idle. The full rationale (and why Drain's inclusion is harmless) is at
@@ -1422,7 +1437,9 @@ private:
     //     deferred click act — the playhead placement, the pan-primary mouse
     //     half's own machinery); on the zone's EXPIRY to THE REGION HOLD
     //     (-> Region below — hold-then-drag sweeps a region, the deliberate
-    //     act's glass form), the field having no expiry; on MOTION beyond
+    //     act's glass form — a MOTIONLESS contact's alone since 2026-10-22,
+    //     the edge inventory's expiry clause), the field having no expiry;
+    //     on MOTION beyond
     //     the touch slop to SINGLE-FINGER Nav on the zone (the PHONE MODEL,
     //     second glass session 2026-08-11: the finger drags the pan, or
     //     under the ctrl bit the one-finger zoom; no press was ever delivered
@@ -1506,7 +1523,8 @@ private:
     //     rides AND HOWEVER LONG THE FINGER RESTED where it rides none (the
     //     editor field, 2026-09-05 — its window has no expiry, so a slow tap
     //     there is still a tap and still seeds the double-tap candidate the
-    //     release owes): resolve (enter-motion + press at
+    //     release owes; and on the zone, a contact that left the stillness
+    //     radius, whose window lost its expiry, 2026-10-22): resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> the Pointer arm's own
     //     end, Drain if an ignored contact is still down or Idle if not (a
@@ -1543,9 +1561,14 @@ private:
     //     tap's press consumes the candidate).
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
     //     deadline, and lazily at every touch event's arrival) — the ZONE'S
-    //     window only -> Region (the region hold at the kTouchRegionHoldMs
-    //     beat; the begin hook fires at the down point, and any sub-slop
-    //     drift inside the window stages as the gesture's first frame). THE
+    //     window only, and only for a MOTIONLESS contact -> Region (the region
+    //     hold at the kTouchRegionHoldMs beat; the begin hook fires at the
+    //     down point, and any sub-stillness drift inside the window stages as
+    //     the gesture's first frame). A ZONE CONTACT THAT LEFT THE STILLNESS
+    //     RADIUS inside the beat (2026-10-22, kDefaultTouchStillnessPx;
+    //     touch_window_left_still_) HAS NO EXPIRY EDGE: it stays Pending at
+    //     any age and leaves only by the slop crossing (the nav) or its lift
+    //     (the tap) — a slow-starting pan is never the hold. THE
     //     EDITOR'S FIELD HAS NO EXPIRY EDGE AT ALL (2026-09-05): its window
     //     carries kTouchWindowNoExpiry, so a finger resting there is still
     //     Pending at any age and leaves this phase only by the slop crossing
@@ -1736,6 +1759,9 @@ private:
     // set_touch_slop_px. Born at the authored 100 % value so a core nobody
     // pushes to is the core this file always had.
     double     touch_slop_px_     = kDefaultTouchSlopPx;
+    // The stillness radius (set_touch_stillness_px), device px, born at the
+    // authored 100 % value like the slop.
+    double     touch_stillness_px_ = kDefaultTouchStillnessPx;
     double     touch_down_x_      = 0.0;
     double     touch_down_y_      = 0.0;
     double     touch_last_x_      = 0.0;
@@ -1748,6 +1774,11 @@ private:
     // motion the resolution replays).
     uint64_t   touch_window_deadline_us_ = 0;
     bool       touch_window_moved_       = false;
+    // Pending: the contact has LEFT THE STILLNESS RADIUS of its down point
+    // (2026-10-22) — set at the Pending motion arm, cleared at every down.
+    // While it stands the window's expiry resolves nothing (the region hold is
+    // a MOTIONLESS press; maybe_resolve_touch_window).
+    bool       touch_window_left_still_  = false;
     // Pending: the down point's PAN-ZONE answer, captured ONCE at the first
     // contact's down (the pan_zone query at set_touch_nav_hooks). It decides
     // whether a window opens at all (off the zone and outside a field the

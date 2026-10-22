@@ -157,8 +157,8 @@ shopt -s nocaseglob
 #      waveform= line already stands), a waveform= line added with the default
 #      (waveform=cool-edit-default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
-#      fortepiano chrome's three tuning lines (bevel_light=100, bevel_dark=100,
-#      text_shadow=2, TUNING_LINES below; 2026-10-21) and the true_colors=on
+#      fortepiano chrome's two tuning lines (bevel_light=100, bevel_dark=100,
+#      TUNING_LINES below; 2026-10-21; text_shadow= retired 2026-10-22) and the true_colors=on
 #      line (TRUE_COLORS_LINE below; 2026-10-21) the same way, and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
 #      the thirteen colour keys that left 2026-10-04 when every colour became
@@ -204,7 +204,7 @@ ROLE_LINE="role=author"
 WAVEFORM_LINE="waveform=cool-edit-default"
 # THE FORTEPIANO CHROME'S TUNING KEYS AND THEIR FIRST-RUN VALUES (2026-10-21,
 # src/gui/device_config.h): each added only where the tablet's file has no line.
-TUNING_LINES="bevel_light=100 bevel_dark=100 text_shadow=2"
+TUNING_LINES="bevel_light=100 bevel_dark=100"
 # THE sRGB -> DISPLAY-P3 SWITCH, a required key since 2026-10-21 (the Settings
 # menu's True Colors row made a key; src/gui/device_config.h), on on both
 # devices: added only where the tablet's file has no line.

@@ -1194,8 +1194,9 @@ struct GuiInputHandler {
     // or touch-capability loss; the platform fires this only if an update was
     // delivered): one predictor resync, the grab-pan release's own tail — each
     // applied frame already rebuilt synchronously — PLUS the pinch's seated
-    // pivot cleared, the gesture's one GUI-side record since 2026-08-14
-    // (TouchNavZoomState, app_state.h) through clear_touch_zoom_seat below, so
+    // pivot cleared, the gesture's GUI-side record since 2026-08-14
+    // (TouchNavZoomState, app_state.h; the pan's seat beside it, 2026-10-22,
+    // dies at every end) through clear_touch_zoom_seat below, so
     // a later pair seats afresh instead of inheriting a dead pinch's anchor —
     // and so the anchor stem it gates is rubbed out at every end but ONE: the
     // pen lifting with its side button held keeps a one-finger seat as the

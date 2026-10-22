@@ -1736,8 +1736,9 @@ struct ScrollDragState {
 // THE COLUMN IS RE-DERIVED EVERY FRAME from the held frame against the live
 // viewport, and a column pushed outside the waveform CLAMPS to the edge pixel
 // and REBINDS this field to that pixel's content — apply_nav_zoom_at's pivot
-// block exactly, edge trick included, which the stateless model did without
-// because it had no persistent anchor for an off-screen column to corrupt.
+// block exactly, edge trick included. (The pan's seat needs no edge trick: it
+// is placed at the finger's own column, and a placement the walls refuse
+// re-seats it there — apply_touch_nav_update's one-finger arm.)
 // NO RE-JOIN WINDOW is built for a panel that drops a contact mid-pinch: the
 // downgrade clears the seat and the next upgrade takes a fresh one, which is
 // the architect's explicit ruling for the second time (the first and its
@@ -1755,11 +1756,25 @@ struct ScrollDragState {
 // otherwise never appear), and the CLEAR
 // through clear_touch_zoom_seat (a clear can land on a frame that applies
 // nothing at all).
+// THE PAN'S SEAT rides beside it since 2026-10-22 (the record and its three
+// re-seats at apply_touch_nav_update's one-finger arm, input_pointer.cpp): the
+// song frame the panning finger holds, seated once per pan phase and placed
+// at the live fractional centroid every frame, the marker drag's absolute
+// model; the camera the last pan frame settled (pan_vp .. pan_audio_view)
+// is what tells a later frame that another writer moved the view under the
+// finger, which re-seats it. Cleared by every zoom frame, at the gesture's
+// end and with the zoom seat's own clears.
 struct TouchNavZoomState {
     bool   seated        = false;
     double anchor_sample = 0.0;   // the held SONG frame (active domain)
     bool   one_finger    = false; // seated by the one-finger (ctrl) zoom
     bool   retained      = false; // the pen's anchor, kept past its gesture's end
+    bool    pan_seated        = false;
+    double  pan_anchor_sample = 0.0;  // the pan's held SONG frame (active domain)
+    int64_t pan_vp            = 0;    // the camera the last pan frame settled
+    double  pan_level         = 0.0;
+    char    pan_tab_view      = 'A';
+    char    pan_audio_view    = 'S';
 };
 
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides

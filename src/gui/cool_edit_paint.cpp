@@ -397,12 +397,11 @@ void paint_ce_tab_strip(
             foot_bottom_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
     }
     // THE LABELS IN THE CHROME'S ONE INK over the words' drop shadow at
-    // (+d, +d) device px, d the `text_shadow` key (materials.h's INKS,
-    // architect 2026-10-22: the bone kBoneInk; E6D5A8 2026-10-21, the
-    // near-white earlier that day, the program text and Cool Edit's measured
-    // ink before), lit or not; a dead
-    // tab's embossed in the wood's tones.
-    const double d = static_cast<double>(materials::text_shadow_px());
+    // (+d, +d), d ONE SCALED WINDOWS PX (materials.h's INKS, architect
+    // 2026-10-22: the bone kBoneInk; E6D5A8 2026-10-21, the near-white
+    // earlier that day, the program text and Cool Edit's measured ink
+    // before), lit or not; a dead tab's embossed in the wood's tones.
+    const double d = static_cast<double>(program_line_px());
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
         const text_shape::ShapedRun& run = *labels[k];

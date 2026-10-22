@@ -39,7 +39,14 @@ namespace {
 // 2026-09-29; that declaration names the two holds that read it), one number
 // with the chrome shift long press — and it is long past an aimed drag's
 // natural dwell, which crosses the slop into the pan within the first
-// frames, the lesson
+// frames. A DELIBERATE SLOW START DOES NOT (measured 2026-10-22 on the
+// tablet: a press creeping under the slop for the whole beat — 18 device px
+// in 300 ms at 300 %, under ~60 px/s — reached the expiry and swept a trim
+// region where a pan was meant), so since that day THE EXPIRY IS THE HOLD
+// ONLY FOR A MOTIONLESS PRESS: a contact that left the stillness radius
+// (kDefaultTouchStillnessPx, 2 W, input_core.h) inside the beat keeps its
+// window open with no deadline until the slop or the lift, and no hold can
+// form again before that lift (maybe_resolve_touch_window). The lesson
 // of the dead kTouchTrimHoldMs (the trim band's hold-a-beat deadline of
 // 2026-08-11, whose first cut rode the 60 ms window and turned every
 // deliberate band drag into the trim move; that GESTURE stayed dead — this
@@ -1082,10 +1089,27 @@ void GuiInputCore::pointer_frame() {
 
 void GuiInputCore::maybe_resolve_touch_window() {
     if (touch_phase_ != TouchPhase::Pending) return;
+    // THE REGION HOLD IS A MOTIONLESS PRESS (architect 2026-10-22, "2 yes"):
+    // the expiry is the hold ONLY WHILE THE CONTACT HAS NEVER LEFT THE
+    // STILLNESS RADIUS round its down point (touch_window_left_still_,
+    // kDefaultTouchStillnessPx — 2 Windows px, a third of the slop). A
+    // contact that has left it and not crossed the slop is a pan starting
+    // slowly: its window stays Pending with no deadline to the slop crossing
+    // (the nav) or the lift (the tap — a sub-slop lift is a tap already),
+    // and no hold can form again before that lift — the latch is a latch,
+    // cleared only at the next down. MEASURED THAT DAY on the tablet: a press creeping
+    // slower than the slop over the 300 ms beat (6 W, 18 device px at
+    // 300 %: under ~60 px/s) reached the expiry first and became the hold,
+    // so every slow-starting pan swept a trim region and seated the playhead
+    // at the press point — what his test swipes left behind. A latch read
+    // here, ahead of the clock, so a strayed contact never pays the time
+    // compare.
+    if (touch_window_left_still_) return;
     if (gui_monotonic_us() < touch_window_deadline_us_) return;
-    // The window EXPIRED with one contact down, and only the ZONE'S window
-    // can: it is THE REGION HOLD — the region former armed at the down point,
-    // so hold-then-drag sweeps a region (the eighth glass ruling).
+    // The window EXPIRED with one MOTIONLESS contact down, and only the
+    // ZONE'S window can: it is THE REGION HOLD — the region former armed at
+    // the down point, so hold-then-drag sweeps a region (the eighth glass
+    // ruling).
     //
     // THE EDITOR FIELD NEVER GETS HERE, because its window has no deadline to
     // expire (kTouchWindowNoExpiry at the down site): a finger resting in the
@@ -1428,6 +1452,7 @@ void GuiInputCore::touch_down(int32_t id, double x, double y,
             touch_down_x_ = touch_last_x_ = x;
             touch_down_y_ = touch_last_y_ = y;
             touch_window_moved_ = false;
+            touch_window_left_still_ = false;
             // The PAN-ZONE answer is captured ONCE, here at the down (the
             // phone model): it decides whether the window opens, and the
             // window's slop crossing, expiry and second-down arm all fork on
@@ -1814,6 +1839,16 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             touch_last_x_ = x;
             touch_last_y_ = y;
             touch_window_moved_ = true;
+            // THE STILLNESS LATCH (2026-10-22; the rule at
+            // maybe_resolve_touch_window): once the contact has left the
+            // stillness radius of its down point, the window's expiry can no
+            // longer be the region hold — it stays Pending with no deadline
+            // until the slop crossing below or the lift. A latch, not a
+            // distance read at the expiry: a finger that strays and returns
+            // has not been motionless.
+            if (std::max(std::abs(x - touch_down_x_),
+                         std::abs(y - touch_down_y_)) >= touch_stillness_px_)
+                touch_window_left_still_ = true;
             // Motion beyond the slop resolves the window EARLY — a finger
             // already dragging should not wait the window out — and FORKS on
             // the down point's captured answers, the only two a window opens
@@ -1961,6 +1996,7 @@ void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
         GuiTouchNavFrame frame;
         frame.x          = containing_pixel(cx);
         frame.y          = containing_pixel(cy);
+        frame.cx         = cx;
         frame.dx         = dx;
         frame.dist_ratio = ratio;
         // The finger count is the GUI's one fork (contract at
@@ -2169,6 +2205,7 @@ void GuiInputCore::forget_touch_state() {
     touch_last_x_ = touch_last_y_ = 0.0;
     touch_window_deadline_us_ = 0;
     touch_window_moved_       = false;
+    touch_window_left_still_  = false;
     touch_left_held_          = false;  // any delivering edge already ended it
     // A reset, not a swallow: every delivering end flushed this already (the
     // invariant at flush_touch_frame_motion); only never-delivered phases can

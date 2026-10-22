@@ -1470,6 +1470,12 @@ struct GuiTouchNavFrame {
     // the two-finger gesture's zoom pivot.
     int    x = 0;
     int    y = 0;
+    // THE SAME CENTROID'S x UNROUNDED, window px (2026-10-22): the pan's
+    // placement column. The pan seats a song frame once per phase and places
+    // it at this column every frame (apply_touch_nav_update's one-finger
+    // arm), so the column must keep its fraction — a cell index would round
+    // the creep away again; the zoom's seat and the pinch read `x` as before.
+    double cx = 0.0;
     // Centroid horizontal delta since the previous delivered frame
     // (fractional — sub-pixel centroid motion accumulates rather than
     // truncating away). Read on SINGLE-finger frames only — the pan's

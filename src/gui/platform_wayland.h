@@ -404,6 +404,9 @@ public:
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
     // inventory are all at GuiInputCore::set_touch_slop_px, input_core.h.
     void set_touch_slop_px(double px);
+    // THE TOUCH STILLNESS RADIUS, its sibling (GuiInputCore::
+    // set_touch_stillness_px), pushed at the slop's two call sites.
+    void set_touch_stillness_px(double px);
 
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes

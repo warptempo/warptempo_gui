@@ -67,14 +67,15 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// EIGHT editable ones the per-device config carries — gui_scale and
+// SEVEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // and since 2026-10-21 true_colors (the popup's command row made a key) and
-// the three tuning keys bevel_light, bevel_dark and text_shadow (icons
+// the two tuning keys bevel_light and bevel_dark (text_shadow, editable
+// 2026-10-21..10-22, left with its key, the shadow one scaled px; icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,
 // editable 2026-10-07..10-10, and theme,
 // editable 2026-10-03..10-08, its level and the twelve
@@ -154,7 +155,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "bevel_light", "bevel_dark", "text_shadow",
+    "bevel_light", "bevel_dark",
 };
 
 struct GuiSettingsEditor {
@@ -239,8 +240,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `bevel_light=`, `bevel_dark=` and
-    // `text_shadow=` — in one
+    // `waveform=`, `true_colors=`, `bevel_light=` and `bevel_dark=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or

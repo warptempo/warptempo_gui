@@ -589,12 +589,13 @@ void install_true_colors(bool on);
 // preset (cool_edit_paint.h).
 //
 // THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3, §4.1; render_trim_flags
-// owns the drawing, trim_lane_h_px the rows): A SUNKEN RING round a BLACK
-// field 6 W tall (kCeViewBarField) — the `ce_mid` line on top and its dark
-// LEFT column, the `ce_hilight` line under the field (the ruler's top line)
-// and its light RIGHT column, mitred (2026-10-09, the third part: the
-// column's two frame columns, the canvas's own, outside the field's
-// columns, which are the canvas's); and in the field THE SPAN, the trim window's columns as
+// owns the drawing, trim_lane_h_px the rows): a BLACK field 6 W tall
+// (kCeViewBarField) under THE WOOD'S RING's top line, between its dark LEFT
+// and light RIGHT columns (the canvas ring's own, carried up the whole
+// column, the top-right mitred; architect 2026-10-22, materials.h's WOOD),
+// the brass's flat `ce_hilight` line under the field (the ruler's top line);
+// (Cool Edit's own sunken ring of `ce_mid` and `ce_hilight` 2026-10-09 to
+// 2026-10-22); and in the field THE SPAN, the trim window's columns as
 // a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
 // its body `waveform_ink`, its bottom row and right column `ce_span_shadow`
 // (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h), the two mitred
@@ -609,9 +610,10 @@ void install_true_colors(bool on);
 //
 // THE RULER IS COOL EDIT'S, FLIPPED (METRICS §4.4; NOTES.md's "flipped
 // ruler"; paint_ruler_row): `ce_mid` ground under the view bar's light line,
-// its own `ce_hilight` line along its foot, a `ce_dark` LEFT column and a
-// `ce_hilight` RIGHT column beside the ground (2026-10-09, the column's
-// frame columns; the dark one meeting the foot line mitred); THE TICKS kCeRulerTick (E0E0E0,
+// its own `ce_hilight` line along its foot, between THE WOOD'S RING's dark
+// LEFT and light RIGHT columns, which run unbroken past the foot (2026-10-22;
+// the frame's own columns mitred into the foot 2026-10-09 to 2026-10-22);
+// THE TICKS kCeRulerTick (E0E0E0,
 // face-independent in every preset), one quantum wide, STANDING ON THE
 // GROUND'S BOTTOM ROW and rising into it, painted over the digits' shadow
 // where a major's top row meets it; THE DIGITS the base's SIX-ROW SMALL

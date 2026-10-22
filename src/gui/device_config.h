@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Ten keys live here and nowhere else,
+// piece (architect 2026-08-27). Nine keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -89,15 +89,13 @@
 //                            (the solid tones recomputed, never a bake), both
 //                            templates writing 100; the keys leave when he
 //                            settles the values, which become constants
-//   text_shadow=<px>       THE WORDS' DROP SHADOW (architect 2026-10-21), a
-//                            TUNING key like the bevels: an integer [1, 100]
-//                            in DEVICE PX — the offset (+d, +d) of the
-//                            shadow under the caption's title, the menu
-//                            row's words and the tab labels (materials.h's
-//                            INKS; the settled mock's 2 at 300 %), with a
-//                            Settings row applied live at the OK, both
-//                            templates writing 2; it leaves when he settles
-//                            the value
+//   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
+//                            with a Settings row 2026-10-21 to 2026-10-22,
+//                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
+//                            every word, materials.h's INKS — architect: "I
+//                            would think that everything should be one
+//                            Windows pixel"; an old `text_shadow=` line is
+//                            the ordinary unknown-key hard fail)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -111,7 +109,7 @@
 // 2026-10-13) renamed `waveform` in its place 2026-10-21;
 // the three tuning keys of the fortepiano chrome APPENDED after `role`
 // 2026-10-21, a tuning phase's keys at the end as the 2026-09 phases'
-// stood; `true_colors` placed after `waveform` 2026-10-21, the two display
+// stood, `text_shadow` gone 2026-10-22; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together, the tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -361,11 +359,10 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
-    // THE BEVEL WEIGHTS AND THE WORDS' SHADOW (2026-10-21, the head's list):
-    // required; 100, 100 and 2 the templates' and the construction state's.
+    // THE BEVEL WEIGHTS (2026-10-21, the head's list): required; 100 and
+    // 100 the templates' and the construction state's.
     int         bevel_light = 100;
     int         bevel_dark  = 100;
-    int         text_shadow = 2;
 };
 
 // THE BEVEL KEYS' RANGE — the one owner, the reader's and the settings
@@ -377,13 +374,6 @@ inline constexpr bool is_bevel_percent(int64_t v) {
 }
 inline constexpr const char* kBevelGrammarReason =
     "must be an integer in [0, 400] in canonical spelling";
-// THE TEXT SHADOW KEY'S RANGE — the one owner: an integer offset in device
-// px, [1, 100] (the head's list).
-inline constexpr bool is_text_shadow_px(int64_t v) {
-    return v >= 1 && v <= 100;
-}
-inline constexpr const char* kTextShadowGrammarReason =
-    "must be an integer in [1, 100] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -673,11 +663,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves seven keys —
+// the settings editor's ONE device-key body, which serves six keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
-// `true_colors=`, `bevel_light=`, `bevel_dark=` and
-// `text_shadow=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// `true_colors=`, `bevel_light=` and `bevel_dark=` (`text_shadow=` beside
+// them until 2026-10-22) (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
 // 2026-10-07..10-10; the color picker's preset menu wrote the two color
@@ -696,8 +686,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=cool-edit-default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on`, `bevel_light=100`,
-// `bevel_dark=100` and `text_shadow=2` (the struct's own values) and no role line
+// required since 2026-10-14), `true_colors=on`, `bevel_light=100` and
+// `bevel_dark=100` (the struct's own values) and no role line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and
 // a blank

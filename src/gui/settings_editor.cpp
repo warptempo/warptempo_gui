@@ -9,7 +9,7 @@
 #include "text_editor.h"
 #include "undo.h"
 #include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
-#include "materials.h"         // the tuning keys' live apply (set_bevel, set_text_shadow)
+#include "materials.h"         // the tuning keys' live apply (set_bevel)
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -313,8 +313,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // file's reader runs, so "loadable iff it commits" still holds across the
     // move. (The other six editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
-    // 2026-10-21) and since 2026-10-21 bevel_light, bevel_dark and
-    // text_shadow — take their one direct-set body in commit(),
+    // 2026-10-21) and since 2026-10-21 true_colors, bevel_light and
+    // bevel_dark — take their one direct-set body in commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
@@ -958,9 +958,9 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it; `bevel_light`, `bevel_dark` and `text_shadow`
-// (2026-10-21, the fortepiano chrome's tuning phase) the same, their arm
-// last.
+// its arm after it; `bevel_light` and `bevel_dark` (2026-10-21, the
+// fortepiano chrome's tuning phase; `text_shadow` beside them until
+// 2026-10-22) the same, their arm last.
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key.) The commit is the OK's or Enter's (the choice rows' list
@@ -1060,27 +1060,22 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
 
     // THE FORTEPIANO CHROME'S TUNING KEYS (architect 2026-10-21; a number
     // under tuning gets a key and a Settings row): the scale's canonical
-    // integer spelling under each range's one owner (is_bevel_percent,
-    // is_text_shadow_px, device_config.h), APPLIED LIVE AT THE COMMIT as the
-    // color keys are — the solid tones recomputed (materials::set_bevel) or
-    // the shadow's offset set, never a bake, and the window repainted — so
-    // NO CARD: the chrome on screen is the answer.
-    if (key == "bevel_light" || key == "bevel_dark" || key == "text_shadow") {
-        const bool shadow = key == "text_shadow";
+    // integer spelling under the range's one owner (is_bevel_percent,
+    // device_config.h), APPLIED LIVE AT THE COMMIT as the color keys are —
+    // the solid tones recomputed (materials::set_bevel), never a bake, and
+    // the window repainted — so NO CARD: the chrome on screen is the answer.
+    if (key == "bevel_light" || key == "bevel_dark") {
         int64_t v = 0;
-        if (!parse_authored_frame(value, v) ||
-            !(shadow ? is_text_shadow_px(v) : is_bevel_percent(v))) {
-            reject(shadow ? kTextShadowGrammarReason : kBevelGrammarReason);
+        if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
+            reject(kBevelGrammarReason);
             return true;
         }
-        int& live = shadow                 ? app.device_config->text_shadow
-                    : key == "bevel_light" ? app.device_config->bevel_light
-                                           : app.device_config->bevel_dark;
+        int& live = key == "bevel_light" ? app.device_config->bevel_light
+                                         : app.device_config->bevel_dark;
         if (static_cast<int>(v) == live) { unchanged(); return true; }
         live = static_cast<int>(v);
         materials::set_bevel(app.device_config->bevel_light,
                              app.device_config->bevel_dark);
-        materials::set_text_shadow(app.device_config->text_shadow);
         viewport.refresh_flag_cache();
         viewport.invalidate_all();
         (void)persist();

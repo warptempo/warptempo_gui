@@ -52,10 +52,11 @@ namespace {
 // key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
 // the tuning keys keep the end where they leave from.
 //
-// THE FORTEPIANO CHROME'S TUNING KEYS (architect 2026-10-21): `bevel_light`,
-// `bevel_dark` and `text_shadow` APPENDED after `role`, where the tuning
-// phases' keys have always stood, each required like every key and each
-// leaving when he settles its value.
+// THE FORTEPIANO CHROME'S TUNING KEYS (architect 2026-10-21): `bevel_light`
+// and `bevel_dark` APPENDED after `role`, where the tuning phases' keys have
+// always stood, each required like every key and each leaving when he
+// settles its value (`text_shadow` beside them left 2026-10-22, the words'
+// shadow one scaled Windows px, materials.h's INKS).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -66,7 +67,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "role",
     "bevel_light",
     "bevel_dark",
-    "text_shadow",
 };
 } // namespace
 
@@ -137,8 +137,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_gui_scale_percent(cfg.bevel_light);
         } else if (k == "bevel_dark") {
             s += format_gui_scale_percent(cfg.bevel_dark);
-        } else if (k == "text_shadow") {
-            s += format_gui_scale_percent(cfg.text_shadow);
         }
         s += '\n';
     }
@@ -255,8 +253,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         // THE FORTEPIANO CHROME'S TUNING KEYS (2026-10-21): the scale's
-        // canonical integer spelling, each range its one owner's
-        // (is_bevel_percent, is_text_shadow_px, device_config.h).
+        // canonical integer spelling, the range its one owner's
+        // (is_bevel_percent, device_config.h).
         if (key == "bevel_light" || key == "bevel_dark") {
             int64_t v = 0;
             if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
@@ -264,14 +262,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             (key == "bevel_light" ? out.bevel_light : out.bevel_dark) =
                 static_cast<int>(v);
-            return {};
-        }
-        if (key == "text_shadow") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) || !is_text_shadow_px(v)) {
-                return bad_value(ln, key, value, kTextShadowGrammarReason);
-            }
-            out.text_shadow = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

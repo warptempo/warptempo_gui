@@ -4100,6 +4100,8 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // set_gui_scale_percent:
     // drag_moved_threshold_px() reads the value that call just installed.
     gui.set_touch_slop_px(drag_moved_threshold_px());
+    // The stillness radius rides the same road (set_touch_stillness_px).
+    gui.set_touch_stillness_px(scaled_px(kDefaultTouchStillnessPx, 1));
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
     // THE MATERIALS AT THE NEW SCALE, AT ONCE (materials.h's BAKE RULE: one

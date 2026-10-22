@@ -399,8 +399,8 @@ struct Viewport {
     // (pure zoom about the seated pivot — the viewport arrives unpanned) and
     // the two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
-    // the anchor is the content under the previous finger centroid, placed at
-    // the current one). Both pre-clamp the level; this
+    // the anchor is the song frame the pan seated, placed at the current
+    // fractional finger centroid, 2026-10-22). Both pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport

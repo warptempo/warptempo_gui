@@ -1324,21 +1324,50 @@ void render_trim_flags(cairo_t* cr,
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
-    // THE BAR (METRICS §3, §4.1): a SUNKEN RING round the black field — the
-    // mid line along its top and the mid column on its left, the hilight
-    // line along its foot (the ruler's top line, the lane below standing
-    // straight on it) and the hilight column on its right, the two tones
-    // MITRED at the top-right and bottom-left corner blocks
-    // (paint_relief_frame, cool_edit_paint.h's diagonal rule) — its side
-    // columns the canvas frame's, one line outside the field's columns.
+    // THE BAR (METRICS §3, §4.1): the black field inside THE WOOD'S RING
+    // (architect 2026-10-22, "B": "the wood bevel should run along the
+    // entire length of the left/right frames — the times and other lanes
+    // are below the bevel metaphorically"; "the ruler, the timestamp ruler
+    // and the marker lane should not have a bevel on top of the wood's
+    // bevel. The wood sits on top of the other two … implement the basic
+    // plain rule for the wood bevel here"): ONE PLAIN SUNKEN RING in the
+    // wood's flat strokes round the whole column, from this bar's top row to
+    // the canvas's foot — this bar's top line and left column the wood's
+    // DARK stroke, its right column the wood's LIGHT, the top-right corner
+    // the ordinary mitre (paint_relief_frame, cool_edit_paint.h's diagonal
+    // rule), and the two side columns running UNBROKEN down through its foot
+    // row into the ruler's and the marker lane's columns (paint_ruler_row)
+    // and on into the canvas ring's own. The foot line between the columns
+    // stays the BRASS'S FLAT LIGHT under the caller's Metal scope (the
+    // ruler's top line, the lane below standing straight on it), as he saw
+    // it on B and picked. (Cool Edit's own view bar ring — the brass's mid
+    // on the top and left, its light on the right and foot, both corners
+    // mitred — stood 2026-10-21 to 2026-10-22: a column that changed color
+    // halfway, the brass glued onto the wood.)
     const GuiPalette& pal = palette();
     const int lw = program_line_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     paint_cell_rect(cr, GuiRect{lane_x, lane_y, lane_w, lane_h},
                     hex(kCeViewBarField));
-    paint_relief_frame(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw, lane_h},
-                       pal.ce_mid, pal.ce_hilight);
+    {
+        // The ring's rect runs one line past the lane's foot, so its own
+        // bottom line and bottom-left mitre fall below the clip and the side
+        // columns reach the lane's last row whole.
+        cairo_save(cr);
+        cairo_rectangle(cr, lane_x - lw, lane_y, lane_w + 2 * lw, lane_h - lw);
+        cairo_rectangle(cr, lane_x - lw, lane_y + lane_h - lw, lw, lw);
+        cairo_rectangle(cr, lane_x + lane_w, lane_y + lane_h - lw, lw, lw);
+        cairo_clip(cr);
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+        paint_relief_frame(cr,
+                           GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw,
+                                   lane_h + lw},
+                           pal.ce_dark, pal.ce_hilight);
+        cairo_restore(cr);
+    }
+    paint_cell_rect(cr, GuiRect{lane_x, lane_y + lane_h - lw, lane_w, lw},
+                    pal.ce_hilight);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 

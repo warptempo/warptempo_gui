@@ -3447,13 +3447,12 @@ int gui_main(const char* argument) {
     // blunt terminal line naming the file, and no window. The bake waits for
     // the window's size (materials::ensure_settled, the first frame's
     // pre-paint hook);
-    // the two bevel weights and the words' shadow are the config's.
+    // the two bevel weights are the config's.
     if (const std::optional<std::string> err = materials::check()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }
     materials::set_bevel(device_config.bevel_light, device_config.bevel_dark);
-    materials::set_text_shadow(device_config.text_shadow);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an
@@ -3493,6 +3492,8 @@ int gui_main(const char* argument) {
     // size it is opened at.
     GuiPlatform gui;
     gui.set_touch_slop_px(drag_moved_threshold_px());
+    // The stillness radius rides the same road (set_touch_stillness_px).
+    gui.set_touch_stillness_px(scaled_px(kDefaultTouchStillnessPx, 1));
 
     // THE RENDER CACHE, ONCE PER PROCESS: its keying is fingerprint-only — the
     // source path and its identity are INSIDE the key (render_fingerprint,

@@ -11,9 +11,10 @@ MASTER PER MATERIAL, NAMED BY ITS ROLE (`src/gui/materials.h`, `kGuiMaterialName
   chrome's derived roles are tones of its average color (the caption, walnut on 2026-10-21, is flat ebony since
   2026-10-22, a constant in `src/gui/render.h`'s caption block);
 - `Metal` — the dark, even brass of the lock plate, AN ACCENT (2026-10-22: "the brass is supposed to be little touches
-  here and there"): the marker lane's ground between the frame columns, as drawn; the ruler's ground and the view
-  bar's frame are flat tones of its average color (the two tabs, the panel from the column's air to the dock bar and
-  the flat family were brass 2026-10-21 to 2026-10-22);
+  here and there"): the marker lane's ground between the wood ring's columns, as drawn and LOOPING under the pan (the
+  loop below); the ruler's ground and the two foot lines between the lanes are flat tones of its average color (the
+  view bar's frame until the wood's ring took it, 2026-10-22; the two tabs, the panel from the column's air to the dock
+  bar and the flat family were brass 2026-10-21 to 2026-10-22);
 - `Case` — the ebony of the naturals: every button case (the caption's three buttons, ebony on 2026-10-21, are Windows
   2000's own since 2026-10-22).
 
@@ -44,6 +45,12 @@ scaled by one factor, W / w, to the window's WIDTH, the strip its CENTER rows, t
 for the strip is the tool's and the bake's hard stop, never a stretch. Its match is the smallest strip at least W wide
 and at least the lane's rows tall, and the program bakes the lane's rows from the strip's center rows (its center
 columns as any cover's) — the tile the lane's rows alone.
+
+THE LOOP (2026-10-22, "I'd much rather have that than a flat color"): the brass under the cues pans with them, so the
+two strips are SEAMLESS LOOPS, made by the same tool with GIMP's tile-seamless method — each strip blended with itself
+shifted half its width, the weight |2x/W − 1| per column — and the program blits the lane's brass at a phase that
+follows the cues at constant zoom and holds across a zoom (`src/gui/materials.h`'s LOOP). A strip dropped by hand
+(the tuning road below) loops only if it was rendered that way.
 
 THE ROAD: the program reads the folder in place, by name — on the laptop from this folder (its path compiled in,
 `CMakeLists.txt`'s `WARPTEMPO_BUNDLED_TILES_DIR`); on the tablet from the APK's `tiles/` assets, which carry the three
