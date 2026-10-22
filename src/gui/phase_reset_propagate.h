@@ -39,8 +39,9 @@ std::string format_domain_timestamp(double source_frame, const AppState& app,
 // menu's rows greyed on them from 2026-09-24, the truthful menus, and the
 // pigeon's seat in the phase-reset view for the evening of 2026-10-21).
 // THE FIRST RUNG IS THE WARP COLUMN: both act on a warp-marker selection,
-// so in the phase-reset column both refuse there (architect 2026-10-21: the
-// P-column question is open and the pair is not widened). Pure: they read
+// so in the phase-reset column both refuse there (architect 2026-10-21,
+// "phase clipboard only in warp": the P-column question is closed and the
+// pair is never widened). Pure: they read
 // the AppState and write nothing.
 //
 // THE COPY'S LAST RUNG, NothingToCopy, is phase_reset_copy_captures below,

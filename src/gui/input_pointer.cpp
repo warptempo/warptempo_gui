@@ -227,7 +227,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false},   // Ctrl+Alt+R (+Shift)
-    // THE TAB STRIP (architect 2026-10-18, lane 4 under the band, Cool
+    // THE TAB STRIP (architect 2026-10-18, lane 2 under the band, Cool
     // Edit's Organizer tabs): BOTH TABS CARRY THE SAME CHORD, Ctrl+Tab,
     // Switch Tab's — "it's ctrl+tab, so long press or shift press does
     // history walk" — and both are RADIOS: with two tabs the toggle IS the
@@ -958,7 +958,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // carve themselves out (point_on_placement_lanes below, and the band walks'
 // own flag claims), and the TRIM BAR is a disjoint y-band that never answers
 // true here (it has its own claim and its own cue). Deliberately NOT the
-// flexible gap band (main.cpp's lane 4, under the tab strip) — that ground
+// flexible gap band (above main.cpp's lane 3, under the tab strip) — that ground
 // is chrome, not surface, and stays inert.
 bool point_in_placement_lanes(const AppState& app, int x, int y) {
     return rect_contains(top_ruler_row_area(app), x, y) ||
@@ -5726,7 +5726,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         claim_button_row_press();
         return;
     }
-    // THE TAB STRIP (architect 2026-10-18, lane 4 under the band): the same
+    // THE TAB STRIP (architect 2026-10-18, lane 2 under the band): the same
     // body — its two tabs are roster buttons, each resolving against the
     // rect the strip's painter published (paint_tab_strip: the lit tab's
     // grown box, the other's footprint), the lit one's press swallowed at
@@ -6469,8 +6469,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // playhead, no marker, no selection or region change, and no
                 // playback effect either, because this press claimed nothing
                 // and the stops all live at the claims. That covers the
-                // inter-lane gaps, the program frame's top row and its two
-                // columns beside every inset lane (2026-10-10, inert ground),
+                // inter-lane gaps (the program frame's top row and its two
+                // columns, inert ground 2026-10-10 to 2026-10-22, are gone),
                 // and any press in the FLEXIBLE GAP 1 band,
                 // (the centering rule's remainder, main.cpp's vertical rule: inside
                 // top_strip_area but in no lane, so it falls to exactly this

@@ -481,6 +481,27 @@ void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r) {
                       palette().light_3d);
 }
 
+// THE WINDOWS PARTS' EDGES (2026-10-22; the rule at kWindowsStandard,
+// render.h's caption block): the families above, line for line, in Windows
+// 2000's Standard quartet.
+void paint_windows_soft_raised(cairo_t* cr, const GuiRect& r) {
+    const GuiWindowsScheme& w = kWindowsStandard;
+    paint_relief_edge(cr, r, hex(w.hilight), hex(w.dk_shadow),
+                      hex(w.light_3d), hex(w.shadow));
+}
+
+void paint_windows_soft_sunken(cairo_t* cr, const GuiRect& r) {
+    const GuiWindowsScheme& w = kWindowsStandard;
+    paint_relief_edge(cr, r, hex(w.dk_shadow), hex(w.hilight),
+                      hex(w.shadow), hex(w.light_3d));
+}
+
+void paint_windows_plain_raised(cairo_t* cr, const GuiRect& r) {
+    const GuiWindowsScheme& w = kWindowsStandard;
+    paint_relief_edge(cr, r, hex(w.light_3d), hex(w.dk_shadow),
+                      hex(w.hilight), hex(w.shadow));
+}
+
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
                         int phase_y, GuiColor lit, GuiColor ground) {
     if (r.w <= 0 || r.h <= 0) return;
@@ -602,21 +623,17 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px, bool /*focused*/) {
     if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
     const int f = frame_px;
-    // THE BRASS AS DRAWN (architect 2026-10-21, materials.h's METAL — the
-    // FLAT family retired as a ground): the ground the metal's cover at its
-    // own place round the client, the relief its tones, the context's origin
-    // the surface's (the client inset by the frame).
-    const GuiMaterialScope       metal(GuiMaterialRegion::Metal);
-    const GuiMaterialOriginScope origin(f, f);
-    // The ground across the band, then the window's raised edge on its outer
-    // two lines.
-    paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, palette().ground);
-    paint_cell_rect(cr, GuiRect{0, surface_h - f, surface_w, f},
-                    palette().ground);
-    paint_cell_rect(cr, GuiRect{0, f, f, surface_h - 2 * f}, palette().ground);
-    paint_cell_rect(cr, GuiRect{surface_w - f, f, f, surface_h - 2 * f},
-                    palette().ground);
-    paint_relief_plain_raised(cr, GuiRect{0, 0, surface_w, surface_h});
+    // THE WINDOWS RULE (architect 2026-10-22, the declaration): the flat
+    // ButtonFace across the band, then the window's raised edge on its outer
+    // two lines, every tone Windows 2000's Standard scheme — no material, no
+    // palette role, each tone laid flat.
+    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+    const GuiColor face = hex(kWindowsStandard.face);
+    paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, face);
+    paint_cell_rect(cr, GuiRect{0, surface_h - f, surface_w, f}, face);
+    paint_cell_rect(cr, GuiRect{0, f, f, surface_h - 2 * f}, face);
+    paint_cell_rect(cr, GuiRect{surface_w - f, f, f, surface_h - 2 * f}, face);
+    paint_windows_plain_raised(cr, GuiRect{0, 0, surface_w, surface_h});
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):

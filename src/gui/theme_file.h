@@ -24,9 +24,10 @@
 // — and the tones Cool Edit derives from it, the waveform's ink, and the
 // program text's two members, the selection taking the other one
 // (cool_edit_derive.h's tones; the per-role mapping is chrome_derive.h's,
-// the one owner), re-derived at every install. THE CAPTION HAS NO ROLE: it
-// is the walnut as drawn under the ink's title (materials.h's WOOD and
-// INKS, render.h's caption block); its six roles — the active and inactive
+// the one owner), re-derived at every install. THE CAPTION HAS NO ROLE: its
+// flat ground and its inactive pair are constants under the ink's title,
+// its buttons Windows 2000's Standard scheme (render.h's caption block,
+// 2026-10-22; the walnut as drawn 2026-10-21 to 2026-10-22); its six roles — the active and inactive
 // title's start, gradient end and text, a scheme's keys — were removed
 // 2026-10-21 with the 42 built-in captions and the `caption` key
 // (palette_file.h's head).

@@ -6,7 +6,7 @@
 #include "display_transform.h"
 #include "modal_box.h"          // the render player's controls row
 #include "onscreen_keyboard.h"  // the band's height (the lifted border)
-#include "paint_handler.h"      // program_case_rects, caption_button_rects
+#include "paint_handler.h"      // program_case_rects
 #include "palette_file.h"       // program_palette_words' type
 #include "platform.h"           // GuiPlatform::bundled_tile_names / _bytes
 #include "svg_icon.h"           // the materials' road: raster_info, raster_regions
@@ -79,20 +79,20 @@ Key key_of(const AppState& app) {
 // bake alone.
 struct Geometry {
     int w = 0, h = 0;
-    // Wood: above the panel [0, panel_top) and below it [panel_bottom, h),
-    // window-wide (the program frame's columns beside the panel went
-    // 2026-10-21).
+    // Wood: above the panel [band_y, panel_top) and below it [panel_bottom,
+    // h), window-wide (the program frame's columns beside the panel went
+    // 2026-10-21; the caption's rows [0, band_y) are its Face's sample alone
+    // since 2026-10-22, materials.h's TONE RULE).
     int panel_top = 0, panel_bottom = 0;
     // ...and THE BORDER UNDER ROW 8 LIFTED ONTO THE ON-SCREEN KEYBOARD'S
     // BAND under a dialog editor (modal_box.h's modal_border_rect), whose
     // rows stand inside the panel: the walnut there too.
     int lifted_border_y = 0, lifted_border_h = 0;
-    // Metal: THE WHOLE CLIENT AND THE SIZING FRAME'S BAND ROUND IT (`frame`
-    // wide each side, window_frame_px; 2026-10-21, materials.h's METAL) —
-    // its Face measured over the panel alone, as it shipped: the tab strip's
-    // top to the canvas's top, the canvas's foot to the panel's bottom, and
-    // the canvas's two side margins between.
-    int metal_top = 0, frame = 0;
+    // Metal: THE WHOLE CLIENT (2026-10-21, materials.h's METAL) — its Face
+    // measured over the panel alone, as it shipped: the tab strip's top to
+    // the canvas's top, the canvas's foot to the panel's bottom, and the
+    // canvas's two side margins between.
+    int metal_top = 0;
     GuiRect canvas{};
     // The void's rows (the band).
     int band_y = 0, band_h = 0;
@@ -102,9 +102,9 @@ struct Geometry {
     // the `h` view) and the case's line and glyph seat.
     std::vector<GuiRect> cases;
     int lw = 0, g = 0;
-    // THE CAPTION'S ROW and its three buttons.
+    // THE CAPTION'S ROW: the ebony's Face sample alone since 2026-10-22
+    // (bake_case).
     int caption_y = 0, caption_h = 0;
-    std::array<GuiRect, kCaptionButtonCount> caption_buttons{};
 };
 
 Geometry geometry_of(const AppState& app) {
@@ -118,7 +118,6 @@ Geometry geometry_of(const AppState& app) {
     const GuiRect border = bottom_border_area(app);
     g.lifted_border_y = border.y - onscreen_keyboard::surface_height_px();
     g.lifted_border_h = border.h;
-    g.frame = window_frame_px();
     g.canvas = waveform_area(app);
     const GuiRect band = top_icon_row_area(app);
     g.band_y = band.y;
@@ -131,7 +130,6 @@ Geometry geometry_of(const AppState& app) {
     const GuiRect caption = top_caption_row_area(app);
     g.caption_y = caption.y;
     g.caption_h = caption.h;
-    g.caption_buttons = caption_button_rects(caption);
     return g;
 }
 
@@ -162,9 +160,9 @@ struct State {
     Key      key;
     std::array<uint32_t, kGuiMaterialCount> faces{};
     // THE TILES (materials.h's BAKE RULE): the wood's and the metal's
-    // grounds, the void, the inactive tab's body, the caption buttons' faces
-    // and THE CASE PATCHES, one per seat at rest and one pressed.
-    std::vector<Tile> wood, metal, void_tiles, tab_body, caption_case;
+    // grounds, the void, the inactive tab's body and THE CASE PATCHES, one
+    // per seat at rest and one pressed.
+    std::vector<Tile> wood, metal, void_tiles, tab_body;
     std::vector<Tile> case_rest, case_down;
     // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
     // change waits on the gate the tiles are the last bake's, and none is
@@ -172,28 +170,24 @@ struct State {
     int client_w = 0, client_h = 0;
     // THE GATE: a changed key seen by a frame and not yet baked (`deferred`),
     // the last size change's arrival (note_resize), and the tick's arming
-    // (settle_due) — the frame that bakes is the whole surface's
+    // (settle_due) — the frame that bakes is the whole client's
     // (take_bake_landed).
     bool deferred = false;
     bool armed    = false;
     // A BAKE LANDED and its palette install has not yet been answered by a
-    // frame's whole-surface damage (take_bake_landed).
+    // frame's whole-client damage (take_bake_landed).
     bool landed   = false;
     std::chrono::steady_clock::time_point last_resize{};
     int                    bevel_light = 100;
     int                    bevel_dark  = 100;
     int                    text_shadow = 2;
     GuiMaterialRegion      region = GuiMaterialRegion::Flat;
-    // THE ORIGIN SCOPE (GuiMaterialOriginScope): the client's origin in the
-    // context's coordinates, (0, 0) but under the sizing frame's painter,
-    // whose context is the surface's, the client inset by the frame.
-    int                    origin_dx = 0, origin_dy = 0;
     // THE TONE TABLE (set_tone_face): a flat word and its key.
     std::vector<std::pair<uint32_t, int>> tones;
     int                                   recess_key = kFaceKey;
     // Each region's flat strokes, by the table's order (rebuilt with it and
     // at a bevel change).
-    std::vector<uint32_t> wood_flat, metal_flat, caption_flat;
+    std::vector<uint32_t> wood_flat, metal_flat;
     materials::CaseLines  case_lines{};
     materials::DisabledGlyphTones disabled{kCeDisabledShadow, kCeDisabledLight,
                                            kCeDisabledInset};
@@ -250,23 +244,6 @@ void rebuild_flats() {
     const uint32_t ebony = s.faces[static_cast<std::size_t>(GuiMaterial::Case)];
     s.wood_flat = row(wood);
     s.metal_flat = row(metal);
-    // THE CAPTION BUTTONS (materials.h's CASE): a tone lighter than the
-    // chrome's Face the case's highlight, a darker one its shadow's first
-    // tone, the Face its face.
-    const uint32_t hi = beveled(case_tone(ebony, kCaseHighlight), ebony);
-    const uint32_t lo = beveled(case_tone(ebony, kCaseShadowFirst), ebony);
-    s.caption_flat.clear();
-    for (const auto& [word, key] : s.tones) {
-        if (key == kFaceKey) {
-            s.caption_flat.push_back(case_tone(ebony, kCaptionButtonFace));
-            continue;
-        }
-        const uint32_t chrome_face = s.tones.front().first;
-        s.caption_flat.push_back(
-            cool_edit_derive::hls_of(word).l > cool_edit_derive::hls_of(chrome_face).l
-                ? hi
-                : lo);
-    }
     s.case_lines = materials::CaseLines{
         hex(beveled(case_tone(ebony, kCaseHighlight), ebony)),
         hex(beveled(case_tone(ebony, kCaseShadowFirst), ebony)),
@@ -495,22 +472,17 @@ std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
 }
 
 // THE RAW REGIONS of one material for the client w x h (client rects in,
-// the sRGB surfaces out): its source read by name (the one file), a cover's
-// center crop at the identity, a master under the cover rule. With `clamped`
-// a rect may run past the client (the sizing frame's band, the metal's): it
-// is cut to the pixels the source holds round the client — a cover's
-// overhang, a master's scaled overhang — and written back cut, a rect the
-// source holds none of answering an empty rect and a null surface.
+// every one inside the client; the sRGB surfaces out): its source read by
+// name (the one file), a cover's center crop at the identity, a master under
+// the cover rule.
 std::expected<std::vector<Surface>, std::string> source_regions(
-    const Source& src, int w, int h, const std::vector<GuiRect>& rects,
-    std::vector<GuiRect>* clamped = nullptr) {
+    const Source& src, int w, int h, const std::vector<GuiRect>& rects) {
     const auto bytes = GuiPlatform::bundled_tile_bytes(src.file);
     if (!bytes) return std::unexpected("tiles: " + bytes.error());
     const auto info = svg_icon::raster_info(*bytes);
     if (!info) return std::unexpected("tiles: " + src.file + ": " + info.error());
     double k = 1.0;
     int ox = 0, oy = 0;
-    int sw = w, sh = h;   // the source's pixels in its own frame
     if (src.cover) {
         if (static_cast<int>(info->w) != src.cw ||
             static_cast<int>(info->h) != src.ch)
@@ -519,42 +491,24 @@ std::expected<std::vector<Surface>, std::string> source_regions(
                                    std::to_string(src.ch));
         ox = (src.cw - w) / 2;
         oy = (src.ch - h) / 2;
-        sw = src.cw;
-        sh = src.ch;
     } else {
         // THE COVER RULE (materials.h): one factor, the overhang cropped
         // evenly (the tool's own arithmetic, tools/tiles/render_covers.py).
         k = std::max(static_cast<double>(w) / info->w,
                      static_cast<double>(h) / info->h);
-        sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
-        sh = std::max(h, static_cast<int>(std::nearbyint(info->h * k)));
+        const int sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
+        const int sh = std::max(h, static_cast<int>(std::nearbyint(info->h * k)));
         ox = (sw - w) / 2;
         oy = (sh - h) / 2;
     }
-    std::vector<GuiRect> cut = rects;
-    if (clamped) {
-        for (GuiRect& r : cut) {
-            const int x0 = std::max(r.x, -ox), y0 = std::max(r.y, -oy);
-            const int x1 = std::min(r.x + r.w, sw - ox);
-            const int y1 = std::min(r.y + r.h, sh - oy);
-            r = (x1 > x0 && y1 > y0) ? GuiRect{x0, y0, x1 - x0, y1 - y0}
-                                     : GuiRect{0, 0, 0, 0};
-        }
-        *clamped = cut;
-    }
     std::vector<svg_icon::RasterRegion> regions;
-    for (const GuiRect& r : cut)
-        if (r.w > 0 && r.h > 0)
-            regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
+    for (const GuiRect& r : rects)
+        regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
     auto out = svg_icon::raster_regions(*bytes, *info, k, regions);
     if (!out) return std::unexpected("tiles: " + src.file + ": " + out.error());
     std::vector<Surface> owned;
-    owned.reserve(cut.size());
-    std::size_t next = 0;
-    for (const GuiRect& r : cut) {
-        if (r.w > 0 && r.h > 0) owned.emplace_back((*out)[next++]);
-        else                    owned.emplace_back(nullptr);
-    }
+    owned.reserve(out->size());
+    for (cairo_surface_t* s : *out) owned.emplace_back(s);
     return owned;
 }
 
@@ -585,8 +539,32 @@ GuiRect band_of(const Geometry& g, int y0, int y1) {
     return GuiRect{0, y0, g.w, std::max(0, y1 - y0)};
 }
 
-// THE WOOD: above and below the panel, window-wide, and THE VOID, the band's
-// rows of the upper wood times kWoodVoidLuma.
+// A NEW SURFACE, `r` (client rect) cut out of `band`, whose first pixel is
+// client (bx, by).
+Surface cut(cairo_surface_t* band, int bx, int by, const GuiRect& r) {
+    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
+    cairo_surface_flush(band);
+    cairo_surface_flush(out);
+    const unsigned char* sdata = cairo_image_surface_get_data(band);
+    const int sstride = cairo_image_surface_get_stride(band);
+    unsigned char* ddata = cairo_image_surface_get_data(out);
+    const int dstride = cairo_image_surface_get_stride(out);
+    for (int y = 0; y < r.h; ++y)
+        std::memcpy(ddata + static_cast<std::size_t>(y) * dstride,
+                    sdata + static_cast<std::size_t>(r.y - by + y) * sstride +
+                        static_cast<std::size_t>(r.x - bx) * 4,
+                    static_cast<std::size_t>(r.w) * 4);
+    cairo_surface_mark_dirty(out);
+    return Surface(out);
+}
+
+// THE WOOD: above the panel from the band's top and below it, window-wide,
+// and THE VOID, the band's rows of the upper wood times kWoodVoidLuma. The
+// rows above the panel are DECODED FROM THE WINDOW'S TOP, the caption's
+// with them, for THE FACE's sample (materials.h's TONE RULE: the caption
+// left the wood 2026-10-22, and its rows stay in the mean so no wood tone
+// moved), and the upper ground tile is CUT from the band's top, the
+// caption's rows dropped with the decode.
 void bake_wood(const Source& src, const Geometry& g, Baked& out) {
     const std::vector<GuiRect> rects = nonempty({
         band_of(g, 0, g.panel_top), band_of(g, g.panel_bottom, g.h),
@@ -598,14 +576,26 @@ void bake_wood(const Source& src, const Geometry& g, Baked& out) {
     // for one painter, not the wood's sample).
     out.face = mean_of(*raw, 2);
     const GuiRect& top = rects.empty() ? GuiRect{} : rects.front();
-    if (top.y == 0 && g.band_h > 0 && g.band_y >= 0 &&
+    const bool top_decoded = top.y == 0 && top.h == g.panel_top;
+    if (top_decoded && g.band_h > 0 && g.band_y >= 0 &&
         g.band_y + g.band_h <= top.h)
         out.extra.emplace_back(
             band_of(g, g.band_y, g.band_y + g.band_h),
             scaled_rows(raw->front().get(), 0, g.band_y, g.band_h,
                         [](int) { return kWoodVoidLuma; }));
-    for (std::size_t i = 0; i < rects.size(); ++i)
+    for (std::size_t i = 0; i < rects.size(); ++i) {
+        if (i == 0 && top_decoded) {
+            // The upper ground from the band's top (the caption's rows the
+            // sample's alone).
+            const GuiRect ground =
+                band_of(g, std::clamp(g.band_y, 0, top.h), top.h);
+            if (ground.h > 0)
+                out.grounds.emplace_back(
+                    ground, cut(raw->front().get(), 0, 0, ground));
+            continue;
+        }
         out.grounds.emplace_back(rects[i], std::move((*raw)[i]));
+    }
 }
 
 // THE MEAN of `surface` (client rect `at`) over the parts of `rects` inside
@@ -637,10 +627,9 @@ uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
     return out;
 }
 
-// THE METAL: ONE TILE, THE WHOLE CLIENT AND THE SIZING FRAME'S BAND ROUND IT
-// as far as the source holds pixels there (materials.h's METAL, 2026-10-21:
-// the cards, the tooltip, the modal family, the keyboard's band and the
-// sizing frame stand anywhere); ITS FACE the mean over the panel's rects as
+// THE METAL: ONE TILE, THE WHOLE CLIENT (materials.h's METAL, 2026-10-21:
+// the cards, the tooltip, the modal family and the keyboard's band stand
+// anywhere); ITS FACE the mean over the panel's rects as
 // it shipped (the strip's top to the canvas's top, its foot to the panel's
 // bottom, the two margins between), so no tone a painter derives from it
 // moved; and THE INACTIVE TAB'S BODY, its rows of the tile, each W row's
@@ -654,14 +643,10 @@ void bake_metal(const Source& src, const Geometry& g, Baked& out) {
         GuiRect{0, c_top, std::clamp(c.x, 0, g.w), c_bot - c_top},
         GuiRect{std::clamp(c.x + c.w, 0, g.w), c_top,
                 g.w - std::clamp(c.x + c.w, 0, g.w), c_bot - c_top}});
-    std::vector<GuiRect> cut;
-    auto raw = source_regions(
-        src, g.w, g.h,
-        {GuiRect{-g.frame, -g.frame, g.w + 2 * g.frame, g.h + 2 * g.frame}},
-        &cut);
+    const GuiRect tile{0, 0, g.w, g.h};
+    auto raw = source_regions(src, g.w, g.h, {tile});
     if (!raw) { out.error = raw.error(); return; }
-    if (cut.empty() || !(*raw)[0]) return;
-    const GuiRect tile = cut[0];
+    if (raw->empty() || !(*raw)[0]) return;
     out.face = mean_over((*raw)[0].get(), tile, panel);
     const int body_h = g.tab_body_y1 - g.tab_body_y0;
     if (body_h > 0 && tile.x <= 0 && tile.x + tile.w >= g.w &&
@@ -697,32 +682,14 @@ void bake_metal(const Source& src, const Geometry& g, Baked& out) {
     out.grounds.emplace_back(tile, std::move((*raw)[0]));
 }
 
-// A NEW SURFACE, `r` (client rect) cut out of `band`, whose first pixel is
-// client (bx, by).
-Surface cut(cairo_surface_t* band, int bx, int by, const GuiRect& r) {
-    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
-    cairo_surface_flush(band);
-    cairo_surface_flush(out);
-    const unsigned char* sdata = cairo_image_surface_get_data(band);
-    const int sstride = cairo_image_surface_get_stride(band);
-    unsigned char* ddata = cairo_image_surface_get_data(out);
-    const int dstride = cairo_image_surface_get_stride(out);
-    for (int y = 0; y < r.h; ++y)
-        std::memcpy(ddata + static_cast<std::size_t>(y) * dstride,
-                    sdata + static_cast<std::size_t>(r.y - by + y) * sstride +
-                        static_cast<std::size_t>(r.x - bx) * 4,
-                    static_cast<std::size_t>(r.w) * 4);
-    cairo_surface_mark_dirty(out);
-    return Surface(out);
-}
-
-// THE EBONY: the caption buttons' faces at kCaptionButtonFace and THE CASE
-// PATCHES — per case its g x g seat at rest, (lw, lw) in, and pressed,
-// (2·lw, 2·lw) in, each the cover at its own place under the ramp. They are
-// CUT FROM THE ROWS THEY STAND ON — the caption row and each seat row's
-// g + lw rows, window-wide, decoded together and dropped after the cut —
-// and the Face is THOSE ROWS' MEAN, the ebony's sample since the landing,
-// so the patches move no tone a case derives from it.
+// THE EBONY: THE CASE PATCHES — per case its g x g seat at rest, (lw, lw)
+// in, and pressed, (2·lw, 2·lw) in, each the cover at its own place under
+// the ramp. They are CUT FROM THE ROWS THEY STAND ON — each seat row's
+// g + lw rows, window-wide, decoded together with the caption row and
+// dropped after the cut — and the Face is THOSE ROWS' MEAN, the caption's
+// with them, the ebony's sample since the landing, so the patches move no
+// tone a case derives from it (the caption row the sample's alone since its
+// buttons left the ebony, 2026-10-22, materials.h's TONE RULE).
 void bake_case(const Source& src, const Geometry& g, Baked& out) {
     std::vector<int> tops;
     for (const GuiRect& c : g.cases)
@@ -752,14 +719,6 @@ void bake_case(const Source& src, const Geometry& g, Baked& out) {
         return at[i] >= 0 &&
                contains_rect(rows[i], r);
     };
-    const double cap_f = luma_ratio(case_tone(eb, kCaptionButtonFace), eb);
-    for (const GuiRect& b : g.caption_buttons) {
-        if (!row_holds(0, b) || b.w <= 0 || b.h <= 0) continue;
-        Surface s = cut((*raw)[static_cast<std::size_t>(at[0])].get(), 0,
-                        rows[0].y, b);
-        scale_in_place(s.get(), [&](int) { return cap_f; });
-        out.extra.emplace_back(b, std::move(s));
-    }
     std::array<double, kCaseStops> ramp{};
     for (int i = 0; i < kCaseStops; ++i)
         ramp[static_cast<std::size_t>(i)] = case_ramp_ratio(i, eb);
@@ -806,21 +765,17 @@ bool contains(const GuiRect& outer, double x0, double y0, double x1, double y1) 
 }
 
 // THE PIXELS THE PAINTERS PAINT, in client coordinates: the client (State::
-// client_w / client_h), widened by the origin scope's offset on every side
-// under the sizing frame's painter, whose band lies round the client.
+// client_w / client_h).
 GuiRect client_rect() {
     const State& s = state();
-    return GuiRect{-s.origin_dx, -s.origin_dy, s.client_w + 2 * s.origin_dx,
-                   s.client_h + 2 * s.origin_dy};
+    return GuiRect{0, 0, s.client_w, s.client_h};
 }
 
-// `t` as the source, its origin at its rect's corner (in the context's
-// coordinates, the origin scope's offset added).
+// `t` as the source, its origin at its rect's corner.
 void set_tile_source(cairo_t* cr, const Tile& t) {
-    const State& s = state();
     cairo_matrix_t at;
-    cairo_matrix_init_translate(&at, -static_cast<double>(t.rect.x + s.origin_dx),
-                                -static_cast<double>(t.rect.y + s.origin_dy));
+    cairo_matrix_init_translate(&at, -static_cast<double>(t.rect.x),
+                                -static_cast<double>(t.rect.y));
     cairo_pattern_set_matrix(t.pattern.get(), &at);
     cairo_set_source(cr, t.pattern.get());
 }
@@ -837,12 +792,6 @@ void set_tile_source(cairo_t* cr, const Tile& t) {
 const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
     double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
     cairo_fill_extents(cr, &x0, &y0, &x1, &y1);
-    // Into client coordinates (the origin scope's offset).
-    const State& s = state();
-    x0 -= s.origin_dx;
-    x1 -= s.origin_dx;
-    y0 -= s.origin_dy;
-    y1 -= s.origin_dy;
     const GuiRect c = client_rect();
     x0 = std::max(std::floor(x0), static_cast<double>(c.x));
     y0 = std::max(std::floor(y0), static_cast<double>(c.y));
@@ -854,14 +803,18 @@ const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
     return nullptr;
 }
 
-std::vector<Tile>& tiles_of(GuiMaterial m) {
+// THE GROUND TILES of a material: the ebony has none (its patches are
+// seats, paint_case_ramp's, and its caption-button faces left 2026-10-22),
+// so a rect of it is its flat mean.
+const std::vector<Tile>& tiles_of(GuiMaterial m) {
+    static const std::vector<Tile> kNone;
     State& s = state();
     switch (m) {
         case GuiMaterial::Wood:  return s.wood;
         case GuiMaterial::Metal: return s.metal;
-        case GuiMaterial::Case:  return s.caption_case;
+        case GuiMaterial::Case:  return kNone;
     }
-    return s.wood;
+    return kNone;
 }
 
 std::size_t bytes_of(const std::vector<Tile>& tiles) {
@@ -907,7 +860,6 @@ std::optional<std::string> bake(const Geometry& g) {
     s.metal.clear();
     s.void_tiles.clear();
     s.tab_body.clear();
-    s.caption_case.clear();
     s.case_rest.clear();
     s.case_down.clear();
     const auto take = [](std::vector<std::pair<GuiRect, Surface>>& from,
@@ -921,7 +873,6 @@ std::optional<std::string> bake(const Geometry& g) {
     take(wood.extra, s.void_tiles);
     take(metal.grounds, s.metal);
     take(metal.extra, s.tab_body);
-    take(ebony.extra, s.caption_case);
     take(ebony.rest, s.case_rest);
     take(ebony.down, s.case_down);
     for (std::size_t m = 0; m < kGuiMaterialCount; ++m) s.faces[m] = baked[m].face;
@@ -952,7 +903,7 @@ std::optional<std::string> bake(const Geometry& g) {
 // surface was painted from have moved even where the Faces have not, and
 // the install's generation is what rebuilds those surfaces (render.h's
 // palette_generation; the flag cache's label boxes among them) — and the
-// landing flagged for the pre-paint hook's whole-surface damage
+// landing flagged for the pre-paint hook's whole-client damage
 // (take_bake_landed).
 void bake_now(const AppState& app, const Key& k) {
     State& s = state();
@@ -1042,7 +993,7 @@ void ensure_settled(const AppState& app) {
         return;
     }
     // THE FIRST BAKE IS IMMEDIATE; a change of a baked one waits for the
-    // tick's arming (settle_due), whose frame is the whole surface's.
+    // tick's arming (settle_due), whose frame is the whole client's.
     if (!s.baked || s.armed) {
         bake_now(app, k);
         return;
@@ -1129,7 +1080,6 @@ const std::vector<uint32_t>* flats_of_region() {
     switch (s.region) {
         case GuiMaterialRegion::Wood:          return &s.wood_flat;
         case GuiMaterialRegion::Metal:         return &s.metal_flat;
-        case GuiMaterialRegion::CaptionButton: return &s.caption_flat;
         case GuiMaterialRegion::Flat:          return nullptr;
     }
     return nullptr;
@@ -1146,9 +1096,7 @@ bool set_source(cairo_t* cr, GuiColor c) {
     // THE FACE, and the band's void: the tile under the path, else the flat.
     const std::vector<Tile>* tiles = nullptr;
     if (key == kFaceKey) {
-        tiles = s.region == GuiMaterialRegion::Wood   ? &s.wood
-              : s.region == GuiMaterialRegion::Metal  ? &s.metal
-                                                      : &s.caption_case;
+        tiles = s.region == GuiMaterialRegion::Wood ? &s.wood : &s.metal;
     } else if (key == s.recess_key && s.region == GuiMaterialRegion::Wood) {
         tiles = &s.void_tiles;
     }
@@ -1249,7 +1197,7 @@ std::size_t resident_bytes() {
     const State& s = state();
     std::size_t n = 0;
     for (const auto* set : {&s.wood, &s.metal, &s.void_tiles, &s.tab_body,
-                            &s.caption_case, &s.case_rest, &s.case_down})
+                            &s.case_rest, &s.case_down})
         n += bytes_of(*set);
     return n;
 }
@@ -1262,14 +1210,3 @@ GuiMaterialScope::GuiMaterialScope(GuiMaterialRegion region)
 }
 
 GuiMaterialScope::~GuiMaterialScope() { state().region = previous_; }
-
-GuiMaterialOriginScope::GuiMaterialOriginScope(int dx, int dy)
-    : previous_dx_(state().origin_dx), previous_dy_(state().origin_dy) {
-    state().origin_dx = dx;
-    state().origin_dy = dy;
-}
-
-GuiMaterialOriginScope::~GuiMaterialOriginScope() {
-    state().origin_dx = previous_dx_;
-    state().origin_dy = previous_dy_;
-}

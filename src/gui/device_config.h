@@ -47,7 +47,8 @@
 //                            one of 42 built-in Windows and Plus! schemes or
 //                            the product's own `default` — stood before it
 //                            2026-10-08..10-21 and left with the captions:
-//                            the caption is the walnut, materials.h; an old
+//                            the caption's colors are constants, render.h's
+//                            caption block; an old
 //                            `caption=` line is the ordinary unknown-key
 //                            hard fail.)
 //   true_colors=<on|off>     THE sRGB -> DISPLAY-P3 CONVERSION'S SWITCH
@@ -415,14 +416,13 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
-// pixel the lanes above the waveform — the caption 18 W, the program
-// frame's top row 1, the program's band 33, the tab strip 21 and its canvas
-// column's 43 — and below it — the column's foot 6, the dock bar 6, row 8's
-// 32 and the border under row 8 6 — stand 116 + 50 = 166 W under
-// windows-2000 (re-derived 2026-10-21 with the menu row's and the frame's
-// bottom row's retirement, main.cpp's stack record), 464 device rows above
-// the waveform and 200 below at 400 %, 664 in all, leaving the tablet's 1440 rows 776 of
-// waveform; they pass 1440 near 870 %, past which the waveform is the zero
+// pixel the lanes above the waveform — the caption 18 W, the program's band
+// 33, the tab strip 21 and its canvas column's 43 — and below it — the
+// column's foot 6, the dock bar 6, row 8's 32 and the border under row 8 6
+// — stand 115 + 50 = 165 W under windows-2000 (re-derived 2026-10-22 with
+// the frame's top row's retirement, main.cpp's stack record), 460 device
+// rows above the waveform and 200 below at 400 %, 660 in all, leaving the
+// tablet's 1440 rows 780 of waveform; they pass 1440 near 870 %, past which the waveform is the zero
 // height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //

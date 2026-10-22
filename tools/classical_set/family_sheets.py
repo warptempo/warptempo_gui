@@ -58,6 +58,14 @@ to the pre-session wording plus the agreed materials (brass, steel, bone, walnut
 "no X" clause the session added stripped; the pocket watches lose their chain ("that makes the icons smaller"), a
 refinement, no act redrawn for it; Toggle Tooltips becomes one bold question mark alone and Toggle Inherit one bold ditto
 mark alone, both light bone-colored — two new objects, so both are REDRAWN at 22.
+DRAFT 24 (architect 2026-10-22 ~00:10, "make the render stamp not inside paper but free floating also") draws Render as
+one red wax seal alone, large and free-standing, no paper or score under it — a different object from the seal on the
+score, so Render is REDRAWN at 24, and it leaves Paper and books for the isolated acts.
+DRAFT 25 (architect 2026-10-22 ~00:20, "value drag should be double headed updown arrow, and add to selection should be
+simple plus") draws Toggle Add to Selection as one bold brass plus sign alone (the manicule with its cuff retired) and
+Toggle Value Drag as one bold brass double-headed vertical arrow (the two-staff score sheet retired) — two new objects, so
+both are REDRAWN at 25; Add to Selection leaves the Hands for the isolated acts and Value Drag leaves Paper and books for
+the Arrows family.
 EVERY TILE IS ONE SIZE, TILE_PX, on every page (architect 2026-10-20 ~13:50, "a uniform size, about the size of the
 flags, and use more pages as needed": the families are compared against each other, so a tile must not shrink with the
 family's width; a wide family flows onto more pages instead).
@@ -81,34 +89,38 @@ DIM = (0xA8, 0xB0, 0xBC)
 
 # Groups (architect 2026-10-19 ~22:50): an icon with an object besides the arrow goes with its object; a group is
 # all or nothing — a sheet whose group has ANY hidden member shows no block for that group; hidden is omitted, never shown.
-# ValueDrag is in Paper and books since 2026-10-20: the prompt draws it as a sheet of score paper, no arrow and no hand
-# (tools/classical_set/prompt.md, cell 31). Switch Tab left Paper and books for the isolated acts 2026-10-21: since draft 16
+# ValueDrag is in the Arrows family since 2026-10-22: since draft 25 the prompt draws it as one brass double-headed
+# vertical arrow (tools/classical_set/prompt.md, cell 31), the set's brass arrow judged with the other arrows; it was in
+# Paper and books from 2026-10-20 as the two-staff score sheet. Add to Selection left the Hands for the isolated acts
+# 2026-10-22: since draft 25 it is one brass plus sign alone, no hand, so no cuff to match. Switch Tab left Paper and books for the isolated acts 2026-10-21: since draft 16
 # it is two index tabs alone, no paper object, and under the all-or-nothing rule one bad tab drawing would blank the
-# whole Paper page.
+# whole Paper page. Toggle Inherit, Toggle Tooltips and Render left it for the isolated acts the same way 2026-10-22: the
+# ditto mark and the question mark are bare glyphs since draft 22 and the wax seal stands alone since draft 24, none a
+# paper object any more.
 # Drop Marker joined the flag group from Paper and books 2026-10-20: the flag is the marker, so the acts that carry it are
 # judged together. Since draft 15 (architect 2026-10-21 evening) Up and Down are plain brass arrows again, judged with Left
 # and Right as the Arrows family (Right the slicer's mirrored Left), the starlings and Up / Down's score sheets retired.
 FAMILIES = [
-    ("arrows", "Arrows", ["Left", "Right", "Up", "Down"]),
+    ("arrows", "Arrows", ["Left", "Right", "Up", "Down", "ValueDrag"]),   # ValueDrag the double-headed arrow since draft 25
     ("flags", "Flags", ["DropMarker", "PreviousMarker", "NextMarker", "JumpToDefiningMarker"]),
     ("undo", "Undo and Redo", ["Undo", "Redo"]),   # Redo the slicer's mirrored Undo since draft 15
     ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),   # Newer drawn again since draft 15 (draft 14's the turned Older)
     ("transport", "Transport keys", ["Play", "Pause", "PlayerPrevious", "PlayerNext", "RepeatOne",
                                      "PlayerUp", "PlayerDown", "LoadInPlace", "Close"]),
     ("folder", "Folders, read-only and save", ["FolderRow", "ReadOnly", "Save"]),   # Up One Level off the sheet since draft 15
-    ("hands", "Hands", ["Cancel", "AddToSelection", "Follow", "TransportPlay", "TransportStop"]),   # the conductor's figures: the cuffs must match
+    ("hands", "Hands", ["Cancel", "Follow", "TransportPlay", "TransportStop"]),   # the conductor's figures: the cuffs must match (Add to Selection out since draft 25)
     ("paper", "Paper and books", ["OpenProject", "Source", "Target", "WavRow", "OpenTextEditor",
-                                  "DeleteMarkers", "Inherit", "Tooltips", "Render", "SaveCommit",
-                                  "SavePull", "ValueDrag"]),
+                                  "DeleteMarkers", "SaveCommit", "SavePull"]),   # Value Drag out since draft 25
     ("zoom", "Magnifying glasses", ["FullZoomOut", "Center"]),
     ("cards", "Card medallions", ["CardNormal", "CardCritical"]),
 ]
 ISOLATED = ("single", "Isolated acts", [
     "BpmIterations", "Warp", "PhaseReset", "WaveformMagnification", "Settings", "PlayRenders", "DeleteFolder",
-    "Disabled", "Flatten", "GridIterations", "BackgroundSound", "SwitchTab"])
+    "Disabled", "Flatten", "GridIterations", "BackgroundSound", "SwitchTab",
+    "Inherit", "Tooltips", "Render", "AddToSelection"])
 # The act's current drawing and the draft that first asked for it (tools/classical_set/prompt.md's git history; drafts 7
 # and 8 lived in tmp/ before a51f45d0 — tmp/classical_set/NOTES.md): the starlings (7; the ball out in 10, no speckles
-# 79bf5052; retired in 15), Up / Down's score sheets (9; retired in 15), Value Drag's two staves (10), the pigeon and the flag-and-arrow pairs (7; spelled by
+# 79bf5052; retired in 15), Up / Down's score sheets (9; retired in 15), Value Drag's two staves (10; retired in 25), the pigeon and the flag-and-arrow pairs (7; spelled by
 # position in 8), the record (8), the bare lens and the gold minus (7), Repeat One without its note (7). The 10-19
 # batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50, gemini-new5 draft 10, gemini-new6
 # draft 11 and gemini-new7 draft 12 (Revert's gold undo arrow beside the watch, his edit of ~14:30); draft 13 (~15:40) the
@@ -127,13 +139,16 @@ ISOLATED = ("single", "Isolated acts", [
 # Phase Reset's bronze clapperboard, a redraw of the black-and-white one (Wav Row's black record kept by his word);
 # draft 20 (2026-10-21 ~21:25) brass again, the clapperboard with it, a refinement, no act redrawn for it; draft 22
 # (2026-10-21 ~22:45) Toggle Tooltips' bare question mark (the programme booklet retired) and Toggle Inherit's ditto mark
-# (the repeat-one bar sign retired), new objects — the chainless watches a refinement, no act redrawn for them.
-REDRAWN = {"Left": 15, "Right": 15, "Up": 15, "Down": 15, "ValueDrag": 10, "JumpToDefiningMarker": 8,
+# (the repeat-one bar sign retired), new objects — the chainless watches a refinement, no act redrawn for them; draft 24
+# (2026-10-22 ~00:10) Render's red wax seal alone and free-standing (the seal pressed onto the score retired), a new object;
+# draft 25 (2026-10-22 ~00:20) Add to Selection's bare brass plus (the manicule retired) and Value Drag's brass
+# double-headed vertical arrow (the two-staff sheet retired), new objects.
+REDRAWN = {"Left": 15, "Right": 15, "Up": 15, "Down": 15, "ValueDrag": 25, "AddToSelection": 25, "JumpToDefiningMarker": 8,
            "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "RepeatOne": 7,
            "Revert": 12, "Center": 13, "FullZoomOut": 13, "Older": 14, "Newer": 15, "Redo": 15,
            "BackgroundSound": 14, "PlayerUp": 15, "PlayerDown": 15,
            "FolderRow": 16, "Save": 16, "ReadOnly": 16, "SwitchTab": 17,
-           "PhaseReset": 19, "Tooltips": 22, "Inherit": 22}
+           "PhaseReset": 19, "Tooltips": 22, "Inherit": 22, "Render": 24}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "OpenTextEditor": "TextEditor",

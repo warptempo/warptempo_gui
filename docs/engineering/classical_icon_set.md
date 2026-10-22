@@ -50,7 +50,12 @@ walnut, the marbled Viennese portfolio), every "no X" framing clause the session
 the slicer cuts them cleanly (proven on 20261021223831). Since draft 22 the pocket watches have no chain ("that makes
 the icons smaller"), Toggle Tooltips is one bold question mark alone and Toggle Inherit one bold ditto mark alone (the
 copyist's "the same again"), both in brass with the set's gloss since draft 23 (2026-10-21 ~23:05, "make the tooltips
-and the idem brass"; light bone-colored for draft 22 alone). Since draft 19 Phase Reset's clapperboard is metal — its clapper sticks and
+and the idem brass"; light bone-colored for draft 22 alone). Since draft 24 (2026-10-22 ~00:10, "make the render stamp
+not inside paper but free floating also") Render is one red wax seal alone, large and free-standing, no paper or score
+under it. Since draft 25 (2026-10-22 ~00:20, "value drag should be double headed updown arrow, and add to selection
+should be simple plus") Toggle Add to Selection is one bold brass plus sign alone (the manicule with its cuff retired)
+and Toggle Value Drag one bold brass double-headed vertical arrow, a head up and a head down (the two-staff score sheet
+retired). Since draft 19 Phase Reset's clapperboard is metal — its clapper sticks and
 rim, the stripes metal and bone, never black and white ("the clapper should be changed to bronze to stand
 out"), brass since draft 20 ("keep the clapper as brass") — while Wav Row's black record stays by his word ("the wavrow shows only on mid-level bg, so dark record is
 fine"). Since draft 16 (architect 2026-10-21 ~19:50, the tan folders "a bit too bright and tan … kind of modern")
@@ -95,7 +100,7 @@ but a hole through the object, never a mark mid-page). Each such pocket is seede
 under `SLICE_REUSE=1` skips the pass where the raw cut already carries it (the raw cut's sidecar is the marker; a raw cut
 without one gets the pass, ~3 s to find the seeds plus one GIMP run). The bounds and their measurements are at
 `pockets2`'s head. It reads the label rows and each
-row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label glyph boxes — and a glyph is NEUTRAL INK: a component with 2 % or more of its pixels colored (JPEG chroma >= 40) is an icon part, never cleared, whatever its size (Add to Selection's gold plus stands high beside the hand, inside the label row above's window, and was cleared with the text under the size rule alone) — crops each cell's ink
+row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label glyph boxes — and a glyph is NEUTRAL INK: a component with 2 % or more of its pixels colored (JPEG chroma >= 40) is an icon part, never cleared, whatever its size (Add to Selection's gold plus stood high beside the hand before draft 25, inside the label row above's window, and was cleared with the text under the size rule alone) — crops each cell's ink
 at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
 (`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
 labels cleared, full resolution: the base for a manual fix in GIMP), `sheet_cut_raw.png` (GIMP's cut alone) and
@@ -126,15 +131,17 @@ drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY`
 The architect picks FROM FAMILIES, not from whole sheets: a family's members must share shading and lighting.
 `family_sheets.py` lays every sliced sheet's block of each family side by side on 1920 x 1080 PNG pages, its tiles on ebony like contact.png, judged on
 the laptop only (never pushed to the tablet). The families: Arrows (Left, Right, Up, Down — the plain brass arrows of
-draft 15, Right the mirrored Left), Flags (Drop Marker, Previous / Next
+draft 15, Right the mirrored Left — and, since 2026-10-22, Value Drag, the double-headed brass arrow of draft 25), Flags (Drop Marker, Previous / Next
 Marker, Jump to Defining Marker: the flag is the marker, so the acts that carry it are judged together, since
 2026-10-20), Undo and Redo (Redo the mirrored Undo), Watches (Revert, History View, Older, Newer — both drawn again since draft 15),
 Transport keys (Play, Pause, Player Previous / Next, Repeat One, Player Up / Down, Load in Place, Close), Folders,
 read-only and save (Folder, Read-Only, Save — Up One Level left with the sheet), Hands
-(Cancel, Add to Selection, Follow, and the conductor's Transport Play / Transport Stop — the cuffs must match), Paper
-and books (without Drop Marker, with Save Commit / Save Pull's podiums, and, since 2026-10-20, Value Drag, drawn as a
-sheet of score paper), Magnifying glasses (Full Zoom Out, Center), Card medallions; the
-other acts are isolated, one row per act with every version. An icon with an object besides the arrow goes with its
+(Cancel, Follow, and the conductor's Transport Play / Transport Stop — the cuffs must match; Add to Selection, the
+bare plus of draft 25, among the isolated acts since 2026-10-22), Paper
+and books (without Drop Marker, with Save Commit / Save Pull's podiums; without Value Drag, which joined the Arrows,
+and without Toggle Inherit, Toggle Tooltips and Render since 2026-10-22 — the bare ditto mark,
+question mark and wax seal of drafts 22 and 24 are no paper objects, so they are judged among the isolated acts),
+Magnifying glasses (Full Zoom Out, Center), Card medallions; the other acts are isolated, one row per act with every version. An icon with an object besides the arrow goes with its
 object; a group is all or nothing. A `hide.json` beside the sheets (kept with them, never in the repository) names
 the members to hide per sheet — an input drawing copied verbatim, an isometric drawing — and a sheet whose group has
 ANY hidden member shows no block for that group; hidden is omitted, never shown. ALL FLAGS FLY RIGHT (architect

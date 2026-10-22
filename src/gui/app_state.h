@@ -2041,7 +2041,7 @@ enum class RedesignButton {
     // evening for the one settings editor.)
     // THE TAB STRIP'S TWO TABS (architect 2026-10-18, reversing the tab row's
     // deletion of 2026-10-01: Cool Edit's Organizer tab strip under the band,
-    // top lane 4 — render.h's tab strip block, cool_edit_paint.h's
+    // top lane 2 — render.h's tab strip block, cool_edit_paint.h's
     // paint_ce_tab_strip), "Tab A" and "Tab B", the LIT one the active tab
     // (redesign_button_selected: active_tab_view). BOTH CARRY SWITCH TAB'S
     // CHORD, Ctrl+Tab (his words: "it's ctrl+tab, so long press or shift
@@ -4387,8 +4387,7 @@ struct GuiAuditionSequence {
 // damages the lanes that read the viewport, the zoom or the cursor
 // (Viewport::invalidate_waveform_area's rect, viewport.h, where the lanes
 // above it are inventoried) and OWES the rows above them — the caption, the
-// program frame's top row, the toolbar band and the tab strip (2026-10-18)
-// — a check
+// toolbar band and the tab strip (2026-10-18) — a check
 // instead of a repaint: each fingerprint is the WHOLE of what the paint of
 // those rows reads, so rows whose painted fingerprint equals the live one
 // would repaint exactly the pixels they already show, and rows whose
@@ -4411,12 +4410,13 @@ struct GuiChromeGlobalsFingerprint {
     uint64_t palette_generation = 0;
     bool operator==(const GuiChromeGlobalsFingerprint&) const = default;
 };
-// The caption (paint_caption_row): its row, the title, the Maximize glyph's
-// state, and each box's face — the enabled bit and the pushed face. (The
-// window's activation, the active or inactive caption's roles, was a member
-// until 2026-10-21: the walnut caption is the same either way.)
+// The caption (paint_caption_row): its row, the activation (its ground's
+// tone and the title's ink, 2026-10-22 — the walnut caption, the same
+// either way, kept none 2026-10-21 to 2026-10-22), the title, the Maximize
+// glyph's state, and each box's face — the enabled bit and the pushed face.
 struct GuiCaptionFingerprint {
     GuiRect     row{0, 0, 0, 0};
+    bool        active    = false;
     bool        maximized = false;
     std::string title;
     std::array<bool, kCaptionButtonCount> enabled{};
@@ -9327,7 +9327,7 @@ GuiRect top_icon_row_area(const AppState& a);
 // from 2026-10-13 until the strip, 2026-10-18), the first row of the column's
 // air. Every lane from here through the waveform's
 // bottom a viewport step repaints UNCONDITIONALLY; the rows above it (the
-// caption, the program frame's top row, the band, the tab strip) repaint only when the fingerprint of their
+// caption, the band, the tab strip) repaint only when the fingerprint of their
 // complete painted inputs differs from the one the paint buffer last painted
 // (GuiPaintHandler::upper_rows_fingerprint, settled by
 // settle_owed_lane_damage) — the band's Full Zoom Out reads the zoom level, so
@@ -9379,10 +9379,9 @@ GuiRect top_marker_row_area(const AppState& a);
 // 2026-10-09; each flexible gap is strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
-// (The program frame's two lanes and its ring are declared in render.h,
-// beside the frame's rule: top_program_frame_area, bottom_program_frame_area,
-// program_frame_rect; and the border under row 8 beside its height,
-// bottom_border_area, 2026-10-14.)
+// (The border under row 8 is declared in render.h beside its height,
+// bottom_border_area, 2026-10-14; the program frame's lanes and ring, there
+// 2026-10-10 to 2026-10-22, are retired.)
 
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay

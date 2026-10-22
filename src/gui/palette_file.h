@@ -28,9 +28,10 @@
 //     stands in the table and the generated rows as the record of Cool
 //     Edit's preset, read only as the construction state before the first
 //     bake.
-//   THE CAPTION IS THE WALNUT (materials.h's WOOD; render.h's caption
-//     block): the title bar is the wood cover as drawn, active and inactive
-//     alike, under the ink's title. The caption's six colors and the
+//   THE CAPTION IS A CONSTANT (render.h's caption block, 2026-10-22): the
+//     title bar is flat ebony, its inactive ground and ink constants too,
+//     under the ink's title (the walnut cover as drawn, active and inactive
+//     alike, 2026-10-21 to 2026-10-22). The caption's six colors and the
 //     second kind of preset that set them — the `caption` device key, its
 //     Settings Caption row, the product's flat `default` (9B4B2C, the
 //     morning of 2026-10-21) and the 42 Windows and Plus! schemes generated

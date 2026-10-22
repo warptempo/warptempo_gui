@@ -28,8 +28,8 @@ enum class LandingKind { Walk, Restore };
 
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
 // LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
-// now, and the rows above it — the caption, the program frame's top
-// row, the toolbar band, the tab strip — are OWED to every paint target a check
+// now, and the rows above it — the caption, the toolbar band, the tab
+// strip — are OWED to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
 // fingerprint has moved past what the target shows or a floating surface
@@ -502,8 +502,8 @@ struct Viewport {
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
-    // ABOVE IT DRAW NONE OF THOSE: the caption, the program frame's top
-    // row, the toolbar band and the tab strip paint the window's state, the
+    // ABOVE IT DRAW NONE OF THOSE: the caption, the toolbar band and the
+    // tab strip paint the window's state, the
     // project's name and the roster's faces. Some of those FACES
     // are predicates over the view (Full Zoom Out greys where the view
     // already frames what it would), and many more move with the acts that
@@ -768,10 +768,10 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
-    // (THE WHOLE SURFACE's damage, the window's sizing frame with it, is
-    // GuiPlatform::invalidate_surface's, its one caller the pre-paint hook
-    // after a materials bake (main.cpp, platform.h's damage pair); no
-    // Viewport act moves the band, so none damages it.)
+    // (THE WINDOW'S SIZING FRAME takes no damage from here: it wears Windows'
+    // constants, which no act moves (platform.h's damage call, 2026-10-22);
+    // the pre-paint hook's whole-client damage after a materials bake is
+    // invalidate_all's.)
 
     // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
     // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs

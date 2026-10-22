@@ -170,11 +170,6 @@ public:
     // that configure delivers it). One call, one fire.
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
-    // THE WHOLE SURFACE's damage, the window's sizing frame with it
-    // (platform.h's damage call). ONE CALLER, the pre-paint hook after a
-    // materials bake (main.cpp): the bake reinstalls the palette off the new
-    // Faces, which moves the band's tones.
-    void invalidate_surface();
     void drain_events();
     void paint_now();
 
@@ -291,11 +286,14 @@ public:
     // window_restorable: whether this window can leave the maximised state at
     //   all — true here; the caption's double click and the Maximise / Restore
     //   button act only where it holds.
-    // (caption_active, whether the caption wore its ACTIVE or INACTIVE
-    //   roles, 2026-10-05..10-21, left with the caption's roles: the walnut
-    //   caption is the same either way.)
+    // caption_active: whether the caption wears its ACTIVE look — the
+    //   window's activation here (window_activated), the inactive ground and
+    //   ink on focus loss (Windows' inactive caption; render.h's caption
+    //   block, 2026-10-22 — the walnut caption, the same either way, read no
+    //   such bit 2026-10-21 to 2026-10-22).
     bool window_maximized() const { return window_maximized_; }
     bool window_restorable() const { return true; }
+    bool caption_active() const { return window_activated_; }
 
     // THE PAINT TARGETS (2026-10-13): the buffers this backend paints into
     // and, inside the paint loop (paint_one_frame), the one this frame
@@ -935,8 +933,8 @@ private:
     // One rect of SURFACE damage, coalesced into the global list and, under
     // the cpu canvas, every buffer's pending list, and the frame callback
     // armed (invalidate_region's body, the app's client rect offset by the
-    // frame; invalidate_surface's whole surface) — the Android twin's one
-    // road of the same name.
+    // frame; the configure's whole surface) — the Android twin's one road of
+    // the same name.
     void invalidate_surface_rect(int x, int y, int w, int h);
     // A COMPOSITOR GRAB TOOK THE PRESS (begin_window_move / _resize): the
     // compositor owns the pointer until the lift, and nothing guarantees the

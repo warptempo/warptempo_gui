@@ -146,8 +146,8 @@ std::string closed_list_advance(const std::string& typed,
 // THE RECALL — `key`'s current value as the writer writes it (the engine
 // key's through format_engine_setting_value, every other settable key's
 // through recall_gui_setting_value), or nothing for a key this editor does
-// not know. The key completer's unique match and autocomplete_value's
-// complete key and empty value side read it alike.
+// not know. autocomplete_value reads it for a complete key (whether the
+// line names a key it knows) and for an empty value side (the value).
 std::optional<std::string> recall_setting_value(const AppState& app,
                                                 const std::string& key) {
     std::optional<std::string> cur =
@@ -1134,8 +1134,8 @@ void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
     else                                 viewport.refresh_flag_cache();
     // THE CLIENT ALONE (platform.h's damage pair): of the chrome's roles
     // a preset moves the selection fill alone, which paints inside the
-    // client; the restored laptop's sizing frame outside it wears the
-    // brass's tones, which no preset moves. No icon moves (every glyph wears
+    // client; the restored laptop's sizing frame outside it wears Windows'
+    // constants (render.h's caption block), which no preset moves. No icon moves (every glyph wears
     // its drawing's own inks, icons.h's head).
     viewport.invalidate_all();
 }
@@ -1200,11 +1200,11 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
 }
 
 bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
-    // ONE MATCH TAKES ITS `=` AND VALUE IN THE SAME TAB (architect 2026-10-21
-    // ~23:55, "the tab autocomplete should include the = on the first tab
-    // press if the key is unambiguous"): the key's rest, `=` and the recall in
-    // one append, the caret at the line's end. A table key the recall cannot
-    // answer (no device config) completes to the key alone, the prefix rule's.
+    // ONE MATCH STOPS AT ITS `=` (architect 2026-10-21 ~23:40, "no, the
+    // unambiguous should stop at the ="): the key's rest and `=` in one
+    // append, the caret at the line's end, the value the next Tab's (the
+    // empty value side's recall). Several matches stop at their common
+    // prefix.
     const char* only = nullptr;
     int count = 0;
     for (const char* k : kSettingsEditorKeys) {
@@ -1215,14 +1215,9 @@ bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
             ++count;
         }
     }
-    if (count == 1) {
-        const std::string key(only);
-        if (const std::optional<std::string> cur =
-                recall_setting_value(app, key)) {
-            return append_at_line_end(
-                app, viewport, key.substr(prefix.size()) + "=" + *cur);
-        }
-    }
+    if (count == 1)
+        return append_at_line_end(
+            app, viewport, std::string(only).substr(prefix.size()) + "=");
     const std::string append = closed_list_advance(prefix, kSettingsEditorKeys);
     if (append.empty()) return false;
     return append_at_line_end(app, viewport, append);
@@ -1259,23 +1254,20 @@ bool GuiSettingsEditor::autocomplete_value() {
     };
 
     const size_t eq = pending.find('=');
-    // NO `=` YET: THE KEY WITH ITS `=` AND VALUE (the head's stage 1,
-    // architect 2026-10-21).
+    // NO `=` YET: THE KEY AND ITS `=` (the head's stage 1, architect
+    // 2026-10-21 ~23:40).
     // The typed text less its leading whitespace — the trailing side kept,
     // ltrim_ws's reason: a key that does not end where the line ends has
     // nothing to append to, so it matches nothing and the Tab walks.
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
-        // A COMPLETE KEY takes `=` and its value, so a value is edited and
-        // never retyped — any key the recall knows, the table's twelve and
-        // the keys typed whole alike.
-        if (!typed.empty()) {
-            if (const std::optional<std::string> cur = recall(typed))
-                return append_at_line_end(app, viewport, "=" + *cur);
-        }
+        // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
+        // one key does — any key the recall knows, the table's twelve and
+        // the keys typed whole alike; the value is the next Tab's.
+        if (!typed.empty() && recall(typed))
+            return append_at_line_end(app, viewport, "=");
         // A PREFIX completes against the table (complete_key_name): one
-        // match takes its `=` and value too, several stop at their common
-        // prefix.
+        // match to the key and its `=`, several to their common prefix.
         return complete_key_name(typed);
     }
 

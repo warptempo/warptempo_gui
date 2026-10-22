@@ -199,9 +199,6 @@ public:
     bool exit_requested() const { return should_exit_; }
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
-    // THE WHOLE SURFACE's damage (the Wayland twin's; platform.h's damage
-    // call): the frame's band with the client.
-    void invalidate_surface();
     void drain_events();
     void paint_now();
 
@@ -282,6 +279,9 @@ public:
     // ordinary window-loss and window-adoption cycle.
     bool window_maximized() const { return true; }
     bool window_restorable() const { return false; }
+    // The caption is always ACTIVE here (platform_wayland.h's caption_active):
+    // the tablet's one full-screen window is the one in front.
+    bool caption_active() const { return true; }
 
     // THE PAINT TARGETS (2026-10-13; the Wayland twin's contract): ONE — the
     // persistent backbuffer every frame paints into.
@@ -661,8 +661,7 @@ private:
     int  client_w() const { return width_  - 2 * frame_px_; }
     int  client_h() const { return height_ - 2 * frame_px_; }
     // One rect of SURFACE damage, coalesced (invalidate_region's body, the
-    // GUI's client rect offset by the frame; the adoption's and
-    // invalidate_surface's whole surface).
+    // GUI's client rect offset by the frame; the adoption's whole surface).
     void invalidate_surface_rect(int x, int y, int w, int h);
     bool should_exit_ = false;
     // The run-stop request, cleared at the head of every run() (platform.h).

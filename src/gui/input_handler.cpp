@@ -3312,8 +3312,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
             // (The menu row's band left with its lane, 2026-10-21.)
-            top_caption_row_area(app),
-            top_program_frame_area(app), top_icon_row_area(app),
+            // (The program frame's top row's band left with its lane,
+            // 2026-10-22.)
+            top_caption_row_area(app), top_icon_row_area(app),
             // THE TAB STRIP (2026-10-18), Cool Edit's Organizer tabs under
             // the band: chrome, its two tabs buttons and its ground inert.
             top_tab_strip_area(app),
@@ -3350,21 +3351,17 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // there falls to the no-context 0 as on the frame's columns beside the
     // waveform (a running touch gesture navigates on across them, its
     // surface decided at its start, apply_touch_nav_update).
-    // THE TOP STRIP LESS THE PROGRAM'S FRAME'S TOP ROW (inert ground —
-    // paint_program_frame publishes nothing; its columns and bottom row went
-    // 2026-10-21): the row spans the window inside the strip, so the strip's
-    // surface is the rows under it across the program lanes' columns, read
-    // off the trim lane's rect; a wheel on the row falls to the no-context 0,
-    // as on the canvas frame's columns beside the waveform.
+    // THE TOP STRIP across the program lanes' columns, read off the trim
+    // lane's rect (the window's width since 2026-10-21; the program frame's
+    // top row, inert ground inside the strip and answering the no-context 0,
+    // left with its lane 2026-10-22).
     const GuiRect area  = onscreen_keyboard::waveform_paint_area(app, gui);
     const GuiRect top   = top_strip_area(app);
-    const GuiRect frame = top_program_frame_area(app);
     const GuiRect lanes = top_trim_row_area(app);
     const bool inside_waveform =
         rect_contains(area, x, y) &&
         !point_on_waveform_divider(waveform_area(app), y);
     const bool inside_top      = rect_contains(top, x, y) &&
-                                 !rect_contains(frame, x, y) &&
                                  x >= lanes.x && x < lanes.x + lanes.w;
     if (inside_waveform) return 1;
     // A FLAG CELL (context 5, architect 2026-09-14): the plain wheel over a

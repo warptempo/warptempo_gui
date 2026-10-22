@@ -316,8 +316,10 @@ namespace {
 // face filled, then its two-line edge, and the answer is what the glyph or
 // label must sit on and how far it shifts. TWO FAMILIES (the edge grammar at
 // render.h's palette head): a TOOLBAR button — the on-screen keyboard's keys
-// and the caption's three buttons (Windows' DFC_CAPTION, 2026-10-05) —
-// wears the SOFT edges (DrawEdge's BF_SOFT, Windows' classic toolbar), a
+// (the caption's three buttons, Windows' DFC_CAPTION, wear the same
+// construction in Windows' own constants since 2026-10-22,
+// paint_caption_button_box) — wears the SOFT edges (DrawEdge's BF_SOFT,
+// Windows' classic toolbar), a
 // PUSH button — the dialogs' — the PLAIN ones. (The two roster rows are the
 // program's case, paint_roster_case below, not this family.) Three faces and
 // no hover:
@@ -1141,10 +1143,12 @@ static void show_button_word(cairo_t* cr, const text_shape::ShapedRun& run,
 // pick of the mocks (variant (a)).
 // Every glyph sits in ONE 9 x 9 Windows-px CELL, the character cell Windows
 // places in the 16 x 14 button at (3, 2), of unit u = scaled_px(1, 1) per
-// Windows px, in the theme's LABEL, the emboss when disabled, one relief
-// line right and down while pushed (paint_button_box's shift). THE GLYPHS
-// ARE CHROME, NOT THE ICON SET'S BITMAPS: Windows drew them in the button
-// text, so they wear the label role and never a drawing's literal inks.
+// Windows px, in Windows' ButtonText (black, 2026-10-22; the theme's LABEL
+// until 2026-10-21, the chrome's one ink that day), the DSS_DISABLED emboss
+// when disabled, one relief line right and down while pushed
+// (paint_caption_button_box's shift). THE GLYPHS ARE CHROME, NOT THE ICON
+// SET'S BITMAPS: Windows drew them in the button text, so they wear its
+// color and never a drawing's literal inks.
 //
 // THE CELL STANDS AT WINDOWS' AUTHORED SEAT (3, 2) THROUGH scaled_px (Sol's
 // finding 2026-10-06): the seat is the rounding doctrine's composite, offset
@@ -1186,7 +1190,7 @@ static void show_button_word(cairo_t* cr, const text_shape::ShapedRun& run,
 // degrees). The vertices are authored in the cell's Windows px
 // (kCaptionCloseOutline) and stand on the cell's unit grid, as the
 // rectangles do; ONE PATH, ONE FILL, the two parallelograms wound alike so
-// their crossing is ink, never a hole, antialiased; in the label, the
+// their crossing is ink, never a hole, antialiased; in the button text, the
 // emboss's two copies the same outline.
 struct CaptionGlyphRect {
     int x, y, w, h;
@@ -1245,114 +1249,56 @@ void paint_caption_close_outline(cairo_t* cr, int gx, int gy, int u,
     cairo_restore(cr);
 }
 
-// THE DEAD CAPTION GLYPH — COOL EDIT'S GLYPH EMBOSS (architect 2026-10-21:
-// a dead caption button's glyph "exactly as a disabled toolbar glyph",
-// icons::draw_disabled's road): the Marlett cell RASTERIZED ONCE PER SCALE —
-// the live mask the glyph at the cell's origin, the light mask the same
-// glyph drawn ONE UNIT right and down (the cell's unit u, the glyph's own
-// line, as an icon's unit is its drawing's) — and the two embossed by
-// svg_icon::embossed_copy in Cool Edit's tones taken onto the case
-// (materials::disabled_glyph_tones, 2026-10-21: the silhouette over the
-// F8F8F8 copy, the product's rim inside the silhouette's top-left edges),
-// converted for the window. Cached per glyph, unit, conversion and tones;
-// main thread only. (Windows' DSS_DISABLED emboss in
-// the case's own hilight and shadow, 2026-10-05..10-21, retired.)
-enum class CaptionGlyphKind { Minimize, Maximize, Restore, Close };
-void draw_caption_glyph_mask(cairo_t* cr, CaptionGlyphKind kind, int x,
-                             int y, int u) {
-    const GuiColor white{1.0, 1.0, 1.0};
-    switch (kind) {
-        case CaptionGlyphKind::Minimize:
-            paint_caption_glyph(cr, kCaptionMinimizeGlyph, x, y, u, white);
-            break;
-        case CaptionGlyphKind::Maximize:
-            paint_caption_glyph(cr, kCaptionMaximizeGlyph, x, y, u, white);
-            break;
-        case CaptionGlyphKind::Restore:
-            paint_caption_glyph(cr, kCaptionRestoreGlyph, x, y, u, white);
-            break;
-        case CaptionGlyphKind::Close:
-            paint_caption_close_outline(cr, x, y, u, white);
-            break;
-    }
-}
-cairo_surface_t* caption_glyph_disabled(CaptionGlyphKind kind, int u) {
-    struct Entry {
-        CaptionGlyphKind              kind;
-        int                           u;
-        bool                          converted;
-        materials::DisabledGlyphTones tones;
-        cairo_surface_t*              surface;
-    };
-    static std::vector<Entry> cache;
-    const bool converted = display_transform::active();
-    const materials::DisabledGlyphTones tones = materials::disabled_glyph_tones();
-    for (const Entry& e : cache)
-        if (e.kind == kind && e.u == u && e.converted == converted &&
-            e.tones == tones)
-            return e.surface;
-    // A bake that moved the tones replaces the glyph's old entry.
-    std::erase_if(cache, [&](const Entry& e) {
-        if (e.kind != kind || e.u != u || e.converted != converted) return false;
-        cairo_surface_destroy(e.surface);
-        return true;
-    });
-    const int side = (kCaptionGlyphCellPx + 1) * u;
-    const auto mask = [&](int at) {
-        cairo_surface_t* m =
-            cairo_image_surface_create(CAIRO_FORMAT_ARGB32, side, side);
-        cairo_t* mc = cairo_create(m);
-        draw_caption_glyph_mask(mc, kind, at, at, u);
-        cairo_destroy(mc);
-        return m;
-    };
-    cairo_surface_t* live  = mask(0);
-    cairo_surface_t* light = mask(u);
-    cairo_surface_t* out = svg_icon::embossed_copy(
-        live, light, tones.light, tones.shadow, tones.inset);
-    cairo_surface_destroy(live);
-    cairo_surface_destroy(light);
-    svg_icon::convert_to_display(out);
-    cache.push_back(Entry{kind, u, converted, tones, out});
-    return out;
+// THE CAPTION BUTTON'S BOX (architect 2026-10-22, "marlett buttons follow
+// win rules"; render.h's caption block): Windows' DFC_CAPTION in Windows
+// 2000's Standard scheme (kWindowsStandard) — the flat ButtonFace, the SOFT
+// raised edge at rest and the SOFT sunken one while pressed, the glyph one
+// relief line further right and down — the construction paint_button_box's
+// TOOLBAR family gives the keyboard's keys, in the constants instead of the
+// palette's roles, and in no material (the ebony case at kCaptionButtonFace,
+// 2026-10-21 to 2026-10-22, retired). Answers the glyph's shift.
+ButtonBoxFace paint_caption_button_box(cairo_t* cr, const GuiRect& r,
+                                       bool pressed) {
+    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+    paint_cell_rect(cr, r, hex(kWindowsStandard.face));
+    if (pressed) paint_windows_soft_sunken(cr, r);
+    else         paint_windows_soft_raised(cr, r);
+    return ButtonBoxFace{pressed ? relief_line_px() : 0};
 }
 
 // One caption button's glyph on its box `b` (already painted,
-// paint_button_box; `shift` its answer): the cell on its unit grid, the
-// glyph by `id` (Restore for Maximise while `maximized`), in THE CHROME'S
-// ONE INK (materials.h's kWordInk, architect 2026-10-21; the near-white
-// earlier that day, the label role until then) or, dead, Cool Edit's glyph
-// emboss (caption_glyph_disabled above).
+// paint_caption_button_box; `shift` its answer): the cell on its unit grid,
+// the glyph by `id` (Restore for Maximise while `maximized`), in Windows'
+// ButtonText, black (kWindowsButtonText), or, dead, WINDOWS' DSS_DISABLED
+// EMBOSS — the glyph in the Hilight one unit right and down (the cell's
+// unit u, the glyph's own line), then in the Shadow at its place over it
+// (architect 2026-10-22, "marlett buttons follow win rules": the shape the
+// dead Marlett face had until 2026-10-21; Cool Edit's glyph emboss in the
+// ebony case's tones 2026-10-21 to 2026-10-22, and the chrome's one ink on
+// a live glyph, retired).
 void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
                                 GuiCaptionButton id, bool maximized,
                                 bool enabled, int shift) {
     const int u    = scaled_px(1, 1);
     const int gx   = b.x + scaled_px(kCaptionGlyphSeatXPx) + shift;
     const int gy   = b.y + scaled_px(kCaptionGlyphSeatYPx) + shift;
-    const CaptionGlyphKind kind =
-        id == GuiCaptionButton::Close      ? CaptionGlyphKind::Close
-        : id == GuiCaptionButton::Minimize ? CaptionGlyphKind::Minimize
-        : maximized                        ? CaptionGlyphKind::Restore
-                                           : CaptionGlyphKind::Maximize;
-    if (!enabled) {
-        cairo_save(cr);
-        cairo_set_source_surface(cr, caption_glyph_disabled(kind, u), gx, gy);
-        cairo_paint(cr);
-        cairo_restore(cr);
-        return;
-    }
-    const GuiColor ink = hex(kWordInk);
-    if (kind == CaptionGlyphKind::Close) {
-        paint_caption_close_outline(cr, gx, gy, u, ink);
-        return;
-    }
     using Glyph = std::span<const CaptionGlyphRect>;
-    const Glyph glyph = kind == CaptionGlyphKind::Minimize
+    const Glyph glyph = id == GuiCaptionButton::Minimize
                             ? Glyph(kCaptionMinimizeGlyph)
-                        : kind == CaptionGlyphKind::Restore
-                            ? Glyph(kCaptionRestoreGlyph)
-                            : Glyph(kCaptionMaximizeGlyph);
-    paint_caption_glyph(cr, glyph, gx, gy, u, ink);
+                        : maximized ? Glyph(kCaptionRestoreGlyph)
+                                    : Glyph(kCaptionMaximizeGlyph);
+    const auto draw = [&](int x, int y, GuiColor ink) {
+        if (id == GuiCaptionButton::Close)
+            paint_caption_close_outline(cr, x, y, u, ink);
+        else
+            paint_caption_glyph(cr, glyph, x, y, u, ink);
+    };
+    if (!enabled) {
+        draw(gx + u, gy + u, hex(kWindowsStandard.hilight));
+        draw(gx, gy, hex(kWindowsStandard.shadow));
+        return;
+    }
+    draw(gx, gy, hex(kWindowsButtonText));
 }
 
 } // namespace
@@ -1361,9 +1307,10 @@ void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
 // caption block, the chrome spec's caption_button_* fields): flush right,
 // the inset right of Close, the box's top inside the lane, the gap between
 // Minimise and Maximise (none under win2000), the gap before Close — each
-// edge a sum of rounded parts. Read by the caption's painter and by the
-// materials' bake (program_case_rects' declaration, paint_handler.h).
-std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
+// edge a sum of rounded parts. Read by the caption's painter alone (the
+// materials' bake read them too while the buttons wore the ebony,
+// 2026-10-21 to 2026-10-22).
+static std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
         const GuiRect& lane) {
     const ChromeSpec& spec = live_chrome_spec();
     const int w   = scaled_px(spec.caption_button_w_px, 1);
@@ -1401,21 +1348,20 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     if (row.w <= 0 || row.h <= 0) return;
     cairo_save(cr);
 
-    // THE GROUND: THE WALNUT (materials.h's WOOD, architect 2026-10-21), one
-    // slab with the menu row, active and inactive alike — the walnut as
-    // drawn and THE TOP LIGHT LINE, one line of the wood's hilight tone, no
-    // line under it. (The 42 built-in captions' gradients in Windows'
-    // active and inactive pairs, 2026-10-05..10-21, left with the `caption`
-    // key; the window's activation moves no pixel of the caption since.)
-    const GuiPalette& pal = palette();
+    // THE GROUND: FLAT EBONY (render.h's caption block, architect
+    // 2026-10-22): kCaptionGround while the window is active,
+    // kCaptionGroundInactive while it is not (GuiPlatform::caption_active —
+    // always active on the tablet), across the whole lane, no light line,
+    // no line under it, no material. (The walnut as drawn with its top light
+    // line, 2026-10-21 to 2026-10-22, and the 42 built-in captions'
+    // gradients in Windows' active and inactive pairs, 2026-10-05..10-21,
+    // retired.)
+    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+    const bool active = gui.caption_active();
     const std::array<GuiRect, kCaptionButtonCount> rects =
         caption_button_rects(row);
-    {
-        const GuiMaterialScope scope(GuiMaterialRegion::Wood);
-        paint_cell_rect(cr, row, pal.face);
-        paint_cell_rect(cr, GuiRect{row.x, row.y, row.w, relief_line_px()},
-                        pal.hilight);
-    }
+    paint_cell_rect(cr, row,
+                    hex(active ? kCaptionGround : kCaptionGroundInactive));
 
     // THE APP'S ICON at the spec's seat ((2, 1) under win2000), 16 x 16: the
     // set's AppIcon (icons.h), no case, at the caption's own placement.
@@ -1433,7 +1379,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its captures
     // (2026-10-06). THE ROOM runs from the spec's caption_title_x_px to its
     // caption_title_trail_px short of Minimise: the title at the room's
-    // left, in the ink over its shadow. TOO LONG FOR THE ROOM it is CUT AT A
+    // left, in the ink over its shadow (the inactive ink while the window is
+    // inactive). TOO LONG FOR THE ROOM it is CUT AT A
     // CODEPOINT and ends in Windows' "..." (DrawText's end ellipsis), the
     // longest prefix whose own run and the ellipsis's fit; a room too narrow
     // for even the ellipsis paints no title.
@@ -1456,11 +1403,13 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                                             x + off + head.width_px,
                                             baseline + off);
         };
-        // THE WORDS ON THE WOOD (materials.h's INKS): the ink over
-        // its drop shadow at (+d, +d) device px.
+        // THE TITLE'S INK (materials.h's INKS; render.h's caption block):
+        // the ink over its drop shadow at (+d, +d) device px, the ink
+        // dulled to kCaptionInkInactive while the window is inactive, the
+        // shadow the same.
         set_palette_source(cr, hex(kWordShadow));
         show(static_cast<double>(materials::text_shadow_px()));
-        set_palette_source(cr, hex(kWordInk));
+        set_palette_source(cr, hex(active ? kWordInk : kCaptionInkInactive));
         show(0.0);
     };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
@@ -1499,14 +1448,10 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         // A box the clip does not reach is skipped (clip_meets).
         if (!clip_meets(cr, b)) continue;
         const bool pushed = caption_button_pushed(app, i);
-        // THE EBONY (materials.h's CASE, 2026-10-21): the box's face the
-        // case cover at kCaptionButtonFace, its light lines the case's
-        // highlight and its dark its shadow's first tone, under every
-        // caption.
-        const GuiMaterialScope on_case(GuiMaterialRegion::CaptionButton);
-        const ButtonBoxFace box =
-            paint_button_box(cr, b, /*lamp=*/false, pushed,
-                             ButtonFamily::Toolbar);
+        // WINDOWS' CAPTION BUTTON IN WINDOWS 2000'S STANDARD SCHEME
+        // (paint_caption_button_box, architect 2026-10-22), the same with the
+        // window inactive.
+        const ButtonBoxFace box = paint_caption_button_box(cr, b, pushed);
         paint_caption_button_glyph(cr, b, id, gui.window_maximized(),
                                    face.enabled, box.shift);
     }
@@ -1514,28 +1459,11 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- THE PROGRAM'S FRAME (2026-10-10) ---------------------------------------
-//
-// COOL EDIT'S FRAME WINDOW ROUND THE PROGRAM, REDUCED TO ITS TOP ROW
-// (architect 2026-10-21, "every row grows 1 W px each side"; the geometry
-// and the record at render.h's program_frame_rect): one line across the
-// window directly under the caption — the Shadow's flat stroke on the walnut
-// (materials.h's WOOD), Cool Edit's stack under it, the band's dark groove
-// and light line. No columns, no bottom row, no mitre. Painted with the rows
-// (on_redraw's step 3); the outer damage clip bounds it, a single rect, so
-// it is not exposure-gated. Before the first bake (construction state) the
-// row is the chrome's flat Shadow.
-void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
-    const GuiRect row = program_frame_rect(app);
-    if (row.w <= 0 || row.h <= 0) return;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    {
-        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
-        paint_cell_rect(cr, row, palette().shadow);
-    }
-    cairo_restore(cr);
-}
+// (THE PROGRAM'S FRAME'S PAINTER — paint_program_frame, Cool Edit's frame
+// window round the program from 2026-10-10, its top row alone, one Shadow
+// line under the caption, from 2026-10-21 — is retired with the row,
+// architect 2026-10-22: the band stands directly under the Windows-style
+// caption, render.h's caption block.)
 
 // (THE BOTTOM OVERLAYS' PAINTER — paint_bottom_overlays, the taskbar line in
 // the chrome's Hilight across the window's whole width over the keyboard and
@@ -1786,9 +1714,9 @@ static IconRowSeats icon_row_seats(const GuiRect& lane) {
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
-    // THE ICON ROW (top lane 3, directly under the program frame's top row;
-    // row 4 of the redesign; one frame line in from each side since
-    // 2026-10-10): COOL EDIT'S TOOLBAR BAND since 2026-10-09 (the roster block
+    // THE ICON ROW (top lane 1, directly under the caption since 2026-10-22;
+    // row 4 of the redesign; the window's width since 2026-10-21): COOL
+    // EDIT'S TOOLBAR BAND since 2026-10-09 (the roster block
     // above), its groups the band's panes, the cases abutting within a pane,
     // a groove between two panes — TWENTY members in
     // EIGHT groups outside the `h` view and TWELVE in seven inside it (the
@@ -1864,14 +1792,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     //   1 + 57 + 1 + 57 + 1 + 34 + 1 = 152
     // (two panes of two cost 12 more than one pane of four: the second pane's
     // side air and lines), so the band holds every pane when it is at least
-    // 558 Windows px wide outside the view (362 inside it); the band stands
-    // one program frame line in from each side (2026-10-10,
-    // program_frame_rect), so the WINDOW holds it from two frame lines more,
-    // 560 (364) at 100 % — the tablet's 768 at 300 % a band of 766 with a
-    // recess of 208 between. IN DEVICE PX, off the painted walk (each line one
+    // 558 Windows px wide outside the view (362 inside it); the band spans
+    // the window since 2026-10-21 (one program frame line in from each side
+    // 2026-10-10 to 2026-10-21), so the WINDOW holds it at 558 (362) at 100 %
+    // — the tablet's 768 at 300 % a band of 768 with a recess of 210
+    // between. IN DEVICE PX, off the painted walk (each line one
     // relief line, each face and the glyph its own scaled_px): at the tablet's
-    // 300 % (cases 69) 1218 + 456 of its band's 2298; at the laptop's 138 %
-    // (lines 1, faces 7 and 6, cases 31) 546 + 204 of its 1918. A roster move
+    // 300 % (cases 69) 1218 + 456 of its band's 2304; at the laptop's 138 %
+    // (lines 1, faces 7 and 6, cases 31) 546 + 204 of its 1920. A roster move
     // restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
@@ -2151,7 +2079,7 @@ static int tab_strip_lit_index(const AppState& app) {
 }
 
 void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
-    // THE TAB STRIP (top lane 4; the picture and its rules at
+    // THE TAB STRIP (top lane 2; the picture and its rules at
     // cool_edit_paint.h's paint_ce_tab_strip): the layout first, each tab's
     // painted box PUBLISHED as its press target and its bits stashed
     // (publish_button_face), then the strip painted from the same layout —
@@ -3894,7 +3822,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 // the True Colors row's menu check mark — RETIRED 2026-10-21 with the Settings
 // popup, its last menu: the settings editor completes the keys on Tab.)
 
-// -- THE RULER LANE (top lane 7) ---------------------------------------------
+// -- THE RULER LANE (top lane 5) ---------------------------------------------
 //
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
 // and REAPER'S GEOMETRY MODEL.
@@ -4841,7 +4769,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // THE COLUMN'S AIR above the view bar (top lane 5, render.h's canvas
+    // THE COLUMN'S AIR above the view bar (top lane 3, render.h's canvas
     // column lanes): 5 W of the panel face under the tab strip's page line
     // (METRICS §4.1), the lane's whole width inside the program's frame,
     // painted with the bar it heads.
@@ -7513,8 +7441,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // (architect 2026-10-09, the third part, "accurate to the mock-up"; METRICS
 // §4.1, the mock of record's set 3; program_spec.h's column_margin_px and
 // column_foot_px, render.h's canvas-frame accessors.) ONE PAINTER for the
-// rows from the canvas's top frame row (top lane 9) through the column's
-// foot (bottom lane 3 since the border under row 8 took lane 1, 2026-10-14):
+// rows from the canvas's top frame row (top lane 7) through the column's
+// foot (bottom lane 2):
 // the panel's FACE across them, the program's columns
 // inside its frame (2026-10-10) — the margins beside the canvas, the frame
 // rows' own ground and the foot's 5 W — then THE CANVAS'S FRAME, A RING
@@ -7616,8 +7544,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 
 // WHETHER A FLOATING SURFACE MAY STAND OVER THE ROWS THE CHECK SPARES — the
 // upper rows or the clock cell. Re-derived from on_redraw's paint sequence
-// 2026-10-13: past the lane painters, the ground, the program frame and the
-// canvas column (each inside its own rows), the passes that paint OUTSIDE
+// 2026-10-13: past the lane painters, the ground and the canvas column (each inside its own rows), the passes that paint OUTSIDE
 // their lane are the floating surfaces — the notification cards (row 1
 // down), the tooltip (under the pointer, or above its button) (the
 // Settings dropdown, hanging from its button, until 2026-10-21). (The keyboard slot starts below the toolbar
@@ -7648,10 +7575,12 @@ static bool floating_surface_stands(const AppState& app) {
 // what it painted, note_upper_rows_painted) and the owed check (comparing,
 // settle_owed_lane_damage) both call. EVERY INPUT THE ROWS' PIXELS READ,
 // enumerated from their painters:
-//   * the GROUND and the PROGRAM FRAME'S TOP ROW AND COLUMNS (render_background,
-//     paint_program_frame): the palette and the window's geometry — the
-//     globals, with the scale every length and the one face read;
-//   * THE CAPTION (paint_caption_row): its row; the
+//   * the GROUND (render_background): the palette and the window's
+//     geometry — the globals, with the scale every length and the one face
+//     read;
+//   * THE CAPTION (paint_caption_row): its row; the activation
+//     (gui.caption_active: the ground's tone and the title's ink,
+//     2026-10-22); the
 //     title (caption_title, its shaping and ellipsis a function of it, the
 //     face and the room); per box the enabled bit (caption_button_enabled,
 //     the stash a covering clip refreshes), the pushed face
@@ -7681,6 +7610,7 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
         app.width, app.height, gui_scale_percent(), palette_generation()};
 
     fp.caption.row       = top_caption_row_area(app);
+    fp.caption.active    = gui.caption_active();
     fp.caption.maximized = gui.window_maximized();
     fp.caption.title     = caption_title(app);
     for (int i = 0; i < kCaptionButtonCount; ++i) {
@@ -7846,7 +7776,7 @@ void GuiPaintHandler::settle_owed_lane_damage() {
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // (THE MATERIALS FOR THIS GEOMETRY were settled before the backend's
     // paint walk began, at the pre-paint hook — main.cpp, materials.h's
-    // BAKE RULE: the walk paints the sizing frame before this call.)
+    // BAKE RULE.)
 
     // (The monospace grid measure that opened every frame is gone with the face
     // — row 7. Nothing in the product measures text outside a shaping pass now,
@@ -8135,8 +8065,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     keyboard under a dialog editor's stack — empties the area (nothing
     //     is cleared or skipped under it); the column's face and its two
     //     wells' rings above skip the area (its hole, a clip);
-    //     every other pass keeps to its own lane (the caption, the menu
-    //     row, the band, row 8, the border under it and the program frame;
+    //     every other pass keeps to its own lane (the caption, the band,
+    //     the tab strip, row 8 and the border under it;
     //     paint_trim, the ruler and the flag blit in the top strip; the flag
     //     editor's field in the marker lane). Nothing writes the backbuffer
     //     between frames (the
@@ -8270,10 +8200,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                 !modal_owns_bottom_row(app) &&
                                     !onscreen_keyboard::stands(app, gui));
         }
-        // THE PROGRAM'S FRAME'S TOP ROW (render.h's program_frame_rect; its
-        // columns and bottom row went 2026-10-21): its own lane under the
-        // caption. Not exposure-gated: one rect, the outer clip bounding it.
-        paint_program_frame(cr);
         if (trace && x == 0 && y == 0 && w >= app.width && h >= app.height)
             std::fprintf(stderr, "warptempo_gui: chrome paint %.3f ms\n",
                          std::chrono::duration<double, std::milli>(
@@ -8348,9 +8274,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      2026-10-14),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
-        //      below them paints on), then THE PROGRAM'S FRAME round the
-        //      program (paint_program_frame, 2026-10-10: its two rows lanes of
-        //      their own, its columns the line every program lane leaves).
+        //      below them paints on). (THE PROGRAM'S FRAME, paint_program_frame,
+        //      2026-10-10 to 2026-10-22, is retired.)
         //   4. waveform plate -> THE CENTER LINES over the ink
         //      (render_center_lines, architect 2026-10-09 evening; with audio
         //      loaded they paint here and not at step 2, a null plate's frame

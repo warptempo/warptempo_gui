@@ -2060,10 +2060,6 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
 }
 
-void GuiPlatform::invalidate_surface() {
-    invalidate_surface_rect(0, 0, width_, height_);
-}
-
 void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the
@@ -2580,7 +2576,8 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     } else if (maximized_changed || damage_.empty()) {
         // No size change — still schedule a paint so the compositor's
         // reconfigure (an activation or maximize state change: the caption's
-        // roles, the Maximise / Restore glyph) gets honored. (Windows 2000's
+        // active or inactive look, the Maximise / Restore glyph) gets
+        // honored. (Windows 2000's
         // sizing frame does not follow the activation, so a flip needs no
         // full damage of its own; a later vocabulary whose frame does adds
         // that arm here.)

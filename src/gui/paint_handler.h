@@ -55,10 +55,9 @@ struct GuiTargetRender;
 // case can stand and never where none does. A function of the client size
 // and the scale alone (the faces compiled in), which is the bake's key.
 std::vector<GuiRect> program_case_rects(const AppState& app);
-// THE CAPTION'S THREE BUTTONS in `lane`, left to right (the caption's
-// painter's layout, read by the bake for the caption buttons' patches).
-std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
-    const GuiRect& lane);
+// (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
+// bake for their ebony patches 2026-10-21 to 2026-10-22, are the caption
+// painter's own again, paint_handler.cpp.)
 
 // -- Constants used by paint code ----------------------------------------
 //
@@ -860,7 +859,7 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 7): Cool Edit's flipped ruler — its ground and
+    // THE RULER LANE (top lane 5): Cool Edit's flipped ruler — its ground and
     // bottom line, the timestamp ladder's ticks and digits and the playhead's
     // head (the `playhead_stem` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
@@ -869,7 +868,7 @@ private:
     // head drag's target, 2026-10-09).
     void paint_ruler_row(cairo_t* cr);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
-    // 2026-10-21) — the ICON ROW (top lane 2, row 4: the
+    // 2026-10-21) — the ICON ROW (top lane 1 since 2026-10-22, row 4: the
     // twenty-six view/mode/action buttons, no border of its own since
     // 2026-10-01, twenty-two standing outside the `h` view and thirteen
     // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
@@ -896,26 +895,25 @@ private:
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
     // after them touches their lanes, the flag cache being transparent there.
     void paint_icon_row(cairo_t* cr);
-    // THE TAB STRIP (top lane 3, architect 2026-10-18; cool_edit_paint.h's
+    // THE TAB STRIP (top lane 2, architect 2026-10-18; cool_edit_paint.h's
     // paint_ce_tab_strip owns the picture): the two tabs, TabA and TabB,
     // PUBLISHED like the rows above (publish_button_face, the painted box
     // each tab's press target), the lit one the active tab; called beside
     // them on its own exposure.
     void paint_tab_strip(cairo_t* cr);
-    // THE PROGRAM'S FRAME (2026-10-10; the law and the geometry at render.h's
-    // program_frame_rect): ITS TOP ROW ALONE since 2026-10-21, one Shadow
-    // line across the window under the caption, painted with the rows on
-    // every frame class. It publishes nothing: the frame is inert ground for
-    // input. (THE BOTTOM OVERLAYS' painter, paint_bottom_overlays — the
-    // taskbar line and the dialog's ground, 2026-10-10 to 2026-10-14 — is
-    // retired with the taskbars.)
-    void paint_program_frame(cairo_t* cr);
+    // (THE PROGRAM'S FRAME's painter, paint_program_frame — its top row
+    // alone, one Shadow line under the caption, from 2026-10-21 — is retired
+    // with the row, 2026-10-22; THE BOTTOM OVERLAYS' painter,
+    // paint_bottom_overlays — the taskbar line and the dialog's ground,
+    // 2026-10-10 to 2026-10-14 — with the taskbars.)
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
-    // record at render.h's caption block): the walnut, active and inactive
-    // alike (materials.h's WOOD), the app's icon, the title — "<piece> -
-    // Warptempo", or "Warptempo" where no piece is open — in the bold face
-    // in the ink (materials.h's INKS, kWordInk) cut with "..." before the
-    // buttons, and the three caption buttons, whose rects and enabled bits it
+    // record at render.h's caption block): the flat ebony ground, its
+    // inactive tone while the window is inactive (2026-10-22), the app's
+    // icon, the title — "<piece> - Warptempo", or "Warptempo" where no piece
+    // is open — in the bold face in the ink (materials.h's INKS, kWordInk;
+    // kCaptionInkInactive while inactive) cut with "..." before the buttons,
+    // and the three caption buttons in Windows 2000's Standard scheme
+    // (kWindowsStandard), whose rects and enabled bits it
     // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
     // gate) for the press claim (claim_caption_press, input_pointer.cpp).
     // Audio-independent like the rows above and called beside them, gated on

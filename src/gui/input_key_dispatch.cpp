@@ -8715,7 +8715,9 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // completion first and walks the focus ring when it did not advance the
 // buffer, so the completion's own refusals (2026-10-21: a key prefix with no
 // match or already at its common prefix, a value side that adds nothing —
-// which is every second Tab — and an unknown key) are exactly the Tabs that step.
+// the Tab after the value's recall: the first Tab on a key stops at its `=`,
+// the second recalls the value, the third steps — and an unknown key) are
+// exactly the Tabs that step.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     return route_modal_editor_key(

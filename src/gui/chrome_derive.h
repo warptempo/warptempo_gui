@@ -24,8 +24,10 @@
 // whose head has the measurements and the proofs), re-derived at every
 // install of the palette (render.cpp's install family) — but the selection
 // pair, a constant since 2026-10-21. THE CAPTION
-// HAS NO ROLE since 2026-10-21: it is the walnut (theme_file.h's head; its
-// six roles were a scheme's 2026-10-05..10-21).
+// HAS NO ROLE since 2026-10-21: its ground is a flat constant and its
+// buttons Windows 2000's Standard scheme since 2026-10-22 (render.h's
+// caption block; the walnut 2026-10-21 to 2026-10-22; its six roles were a
+// scheme's 2026-10-05..10-21).
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 15, each decided
 // once — the build proves every role is listed exactly once):

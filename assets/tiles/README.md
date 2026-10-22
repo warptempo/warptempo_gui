@@ -3,12 +3,14 @@
 THE FORTEPIANO CHROME'S MATERIALS (architect 2026-10-21, after a Salzburg Walter fortepiano): ONE FLAT FOLDER, ONE
 MASTER PER MATERIAL, NAMED BY ITS ROLE (`src/gui/materials.h`, `kGuiMaterialNames`, whose head owns every rule here):
 
-- `Wood` — the walnut: the caption and the menu row, the toolbar band (its void between the panes the walnut under the
-  luminance rule), the tab strip's ground, the dock bar, row 8, the border under it and the window's frame;
+- `Wood` — the walnut: the toolbar band (its void between the panes the walnut under the luminance rule), the tab
+  strip's ground, the dock bar, row 8 and the border under it (the caption, walnut on 2026-10-21, is flat ebony since
+  2026-10-22, a constant in `src/gui/render.h`'s caption block);
 - `Metal` — the dark, even brass of the lock plate: the two tabs and the panel from the column's air to the dock bar
   (the view bar's, the ruler's and the marker lane's grounds, the margins and frames round the waveform, the foot); the
   menus, cards, dialogs and the keyboard are flat in its average color's tones;
-- `Case` — the ebony of the naturals: every button case and the caption's three buttons.
+- `Case` — the ebony of the naturals: every button case (the caption's three buttons, ebony on 2026-10-21, are Windows
+  2000's own since 2026-10-22).
 
 Each is `<Name>.png` or `<Name>.jpg`; WHERE BOTH STAND THE PNG WINS (the icons' rule). Beside each master stand its two
 PRE-RENDERED COVERS, `<Name>-2304x1440.png` (the tablet's window) and `<Name>-1920x1080.png` (the laptop's maximized

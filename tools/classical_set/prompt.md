@@ -46,7 +46,8 @@ black text so I can identify it. Nothing else on the sheet.
     curving back round it
 6. Load in Place — load the walked version into the editor, a big act that must be unmistakable: ONE bold CHECK MARK
     (a tick), polished steel with the dark outline, nothing else
-7. Render — perform the warp (the "record" act): a red wax seal pressed onto the score
+7. Render — perform the warp (the "record" act): ONE red wax seal alone, large, free-standing — the round seal itself
+    with its pressed impression, no paper, no score under it, nothing else
 8. Cancel — stop the running render: a conductor's raised palm
 9. Play Renders — audition the rendered files: a gramophone with its brass horn
 10. Folder — a folder in a file list: THE VIENNESE PORTFOLIO closed, its two cloth ties tied in a bow
@@ -81,16 +82,15 @@ black text so I can identify it. Nothing else on the sheet.
     on a wooden handle), alone
 26. Toggle Follow — the view follows the playhead during playback: a page-turner's hand turning a score page
 27. Toggle Grid Iterations — render every cell of a grid of variants: a chessboard, 6 x 6 squares in a wooden frame, seen from the front, no pieces
-28. Toggle Add to Selection — add to the selection rather than replace: a printer's pointing hand (a manicule, with
-    its cuff) with a small brass plus sign beside the fingertip
+28. Toggle Add to Selection — add to the selection rather than replace: ONE bold BRASS PLUS SIGN alone, large, with the
+    dark outline and the gloss of the set's arrows, nothing else
 29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the brass pennant flag of no. 21
     (as no. 21, cloth to the right) standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak
     pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
-31. Toggle Value Drag — drag a tempo value up or down freely: a flat, straight-edged sheet of score paper with TWO staves
-    drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the right (the music getting
-    faster across the page), the LOWER staff's notes open wider and wider toward the right (the music slowing); the notes
-    drawn ON the sheet, never floating; the sheet itself a plain rectangle, never pinched, curved or waisted
+31. Toggle Value Drag — drag a tempo value up or down freely: ONE bold BRASS DOUBLE-HEADED ARROW standing vertical, an
+    arrowhead at its top pointing UP and one at its bottom pointing DOWN (the set's arrow with a head at each end),
+    nothing else
 32. Read-Only — editing locked: ONE closed BRASS padlock alone, large, nothing else
 33. Undo — ONE curved BRASS UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
     (its Redo twin is not drawn — the slicer mirrors this one)

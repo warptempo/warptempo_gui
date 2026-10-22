@@ -33,10 +33,10 @@
 // row 8 stood for the morning of 2026-10-09; git history.)
 //
 // THE PROGRAM'S LANES (2026-10-09): THE TOOLBAR BAND (the top strip's lane
-// 2, under the program frame's top row, which stands directly under the
-// caption since the menu row's removal, 2026-10-21), THE TAB STRIP under it
-// (lane 3, 2026-10-18: Cool Edit's Organizer tabs, the two tabs' own lane,
-// its fields below) and ROW 8 under its DOCK BAR (the bottom strip's lane 1)
+// 1, directly under the caption since 2026-10-22 — the program frame's top
+// row stood between them from the menu row's removal, 2026-10-21, until
+// then), THE TAB STRIP under it (lane 2, 2026-10-18: Cool Edit's Organizer
+// tabs, the two tabs' own lane, its fields below) and ROW 8 under its DOCK BAR (the bottom strip's lane 1)
 // over COOL EDIT'S BORDER UNDER ROW 8 (bottom lane 0, 2026-10-14, on the
 // window's foot since the program frame's bottom row went, 2026-10-21), the
 // roster's; EVERY PROGRAM LANE SPANS THE WINDOW since 2026-10-21 (architect:

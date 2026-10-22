@@ -279,7 +279,7 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 
 // -- THE TAB STRIP (architect 2026-10-18) ---------------------------------------
 
-// COOL EDIT'S ORGANIZER TAB STRIP, top lane 4 (render.h's tab strip block;
+// COOL EDIT'S ORGANIZER TAB STRIP, top lane 2 (render.h's tab strip block;
 // program_spec.h's tab fields, where the law — his Wine capture
 // tmp/Screenshot_2026-10-18_16-07-45.png and METRICS §2.3 — and the mocks of
 // record, tmp/tabs_mock/tabs_v11_A.png / _B.png and their generator
