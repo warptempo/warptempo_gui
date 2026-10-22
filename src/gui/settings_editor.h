@@ -38,18 +38,22 @@ struct GuiInputHandler;
 // buffer is consumed, one that did not walks the dialog's focus ring onto
 // OK and Cancel — so a second Tab, or a Tab on a prefix that completes to
 // nothing, is the walk; there is no list to show, the popups being gone):
-//   1. THE KEY. On a line with no `=` yet, the typed text is a PREFIX of the
-//      key names in kSettingsEditorKeys: a unique match completes to the key,
-//      several to their longest common prefix (the path completer's rule); no
-//      match, an empty line or a prefix already at the common prefix advances
-//      nothing.
-//   2. THE KEY'S CURRENT VALUE. On a COMPLETE key with no `=` yet — any key
-//      this editor recalls, the twelve, the engine's and the per-tab band
-//      keys alike — Tab
-//      appends `=` AND THE VALUE THE KEY HOLDS, the caret at the end, so a
-//      value is edited and never retyped; on `key=` with an empty value side
-//      the same recall fills the value (the 2026-08-13 recall, unchanged).
-//      The value is what the writer writes, byte for byte
+//   1. THE KEY, WITH ITS `=` AND VALUE WHEN THE LINE NAMES ONE KEY. On a line
+//      with no `=` yet, a COMPLETE key — any key this editor recalls, the
+//      twelve, the engine's and the per-tab band keys alike — and a PREFIX
+//      that ONE key in kSettingsEditorKeys starts with both complete, in ONE
+//      Tab, to the key, `=` AND THE VALUE THE KEY HOLDS, the caret at the end
+//      (architect 2026-10-21 ~23:55, "the tab autocomplete should include the
+//      = on the first tab press if the key is unambiguous": `bevel_l` to
+//      `bevel_light=100`; from ~21:05 the key alone, its `=` and value a
+//      second Tab's), so a value is edited and never retyped. A prefix
+//      several keys start with stops at their longest common prefix (the
+//      path completer's rule; `bevel_` against `bevel_light` and
+//      `bevel_dark`); no match, an empty line or a prefix already at the
+//      common prefix advances nothing.
+//   2. THE EMPTY VALUE SIDE. On `key=` with nothing after the `=`, the same
+//      recall fills the value (the 2026-08-13 recall, unchanged). In both
+//      stages the value is what the writer writes, byte for byte
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
 //      short closed list — `waveform`'s built-in preset names (2026-10-14) and
@@ -206,14 +210,16 @@ struct GuiSettingsEditor {
     // THE ONE OPEN (the head): an empty line, the caret at column 0. The band's
     // Settings button and bare `;` reach it, the button by synthesizing the
     // chord. (open_prefilled, the Settings popup's row click seeding
-    // `<key>=<value>`, retired with the popup, 2026-10-21; Tab's stage 2 is
+    // `<key>=<value>`, retired with the popup, 2026-10-21; Tab's stage 1 is
     // its typed spelling.)
     void open();
     void exit_no_commit();
     void commit();
     // THE COMPLETION, run on BARE TAB with the focus in the field — the head's
-    // three stages: with no `=` on the line, the key (complete_key_name), and
-    // on a complete key `=` and its current value; with `key=` and an empty
+    // three stages: with no `=` on the line, a complete key or a prefix
+    // naming one key taking the key, `=` and its current value in one Tab
+    // (complete_key_name the prefix's), an ambiguous prefix its common
+    // prefix; with `key=` and an empty
     // value side, that key's current live value; with a non-empty value side,
     // the path key's filesystem (complete_path_value) or a closed domain's
     // words (complete_closed_value), and nothing for every other key. The
@@ -268,13 +274,13 @@ private:
     // THE KEY COMPLETER (architect 2026-10-21, the popup's retirement), the
     // head's stage 1: `prefix` — the line less its leading whitespace, no `=`
     // on it — against kSettingsEditorKeys by byte compare (the keys are
-    // ASCII), the buffer advancing at the line's end by the matches' longest
-    // common prefix past it: a UNIQUE match completes the key with NO
-    // trailing character (the next Tab is stage 2's), an ambiguous prefix
-    // stops at the common prefix (`bevel_` against `bevel_light` and
-    // `bevel_dark`), and no advance — no match, an empty line, a prefix
-    // already at the common prefix — is a Tab that walks. Returns whether the
-    // buffer advanced.
+    // ASCII), the buffer advancing at the line's end: a UNIQUE match
+    // completes the key AND APPENDS `=` AND ITS CURRENT VALUE in the same
+    // Tab (architect 2026-10-21 ~23:55; from ~21:05 the key alone, its value the
+    // next Tab's), an ambiguous prefix stops at the matches' longest
+    // common prefix (`bevel_` against `bevel_light` and `bevel_dark`), and no
+    // advance — no match, an empty line, a prefix already at the common
+    // prefix — is a Tab that walks. Returns whether the buffer advanced.
     bool complete_key_name(const std::string& prefix);
     // THE CLOSED-VALUE COMPLETER (architect 2026-10-14 afternoon, CONFIRMED:
     // "ok to add autocomplete", "agree all" — the preset completer for the

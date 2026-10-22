@@ -75,8 +75,8 @@ black text so I can identify it. Nothing else on the sheet.
 23. Toggle Disabled — mute a marker (it stays but has no effect): a SIMPLE brass post horn — one plain curl of tube and a
     bell, no valves, no inner machinery — with a mute stopped in its bell
 24. Toggle Inherit — this marker takes its value from the one before it: ONE bold DITTO MARK alone — the copyist's
-    "the same again" sign, two short strokes like a closing double quotation mark (”) — light bone-colored with the
-    dark outline, large, nothing else
+    "the same again" sign, two short strokes like a closing double quotation mark (”) — in BRASS with the dark outline
+    and the gloss of the set's arrows, large, nothing else
 25. Flatten — sweep the sweep's variants away, back to one plain value everywhere: a besom broom (birch twigs bound
     on a wooden handle), alone
 26. Toggle Follow — the view follows the playhead during playback: a page-turner's hand turning a score page
@@ -126,8 +126,8 @@ Not green, not red, not blue.
     nothing else
 49. Player Down — move the highlight down one row: ONE bold POLISHED-STEEL ARROW pointing DOWN, nothing else
 50. Settings — a tuning key and a tuning fork crossed
-51. Toggle Tooltips — show help: ONE bold QUESTION MARK alone, light bone-colored with the dark outline, large, nothing
-    else
+51. Toggle Tooltips — show help: ONE bold QUESTION MARK alone, in BRASS with the dark outline and the gloss of the set's
+    arrows, large, nothing else
 52. Card Normal — the notification card's information glyph: a bold blue "i" on a round parchment medallion
 53. BPM Iterations — render the tempo sweep over a run: a wooden pyramid metronome, its pendulum mid-swing on the front face
 54. Card Critical — the notification card's error glyph: a bold red "!" on the same round parchment medallion (the

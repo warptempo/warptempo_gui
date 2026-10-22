@@ -8712,9 +8712,10 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // all autocompletes"). The TYPED `=` carried this completion for part of that
 // day and the trigger is REVERTED with the ruling: an `=` is once more an
 // ordinary character, and this route says nothing about it. Tab offers the
-// recall first and walks the focus ring when it did not advance the buffer, so
-// the completion's own refusals (no `=` yet, a non-empty value side — which is
-// every second Tab — and an unknown key) are exactly the Tabs that step.
+// completion first and walks the focus ring when it did not advance the
+// buffer, so the completion's own refusals (2026-10-21: a key prefix with no
+// match or already at its common prefix, a value side that adds nothing —
+// which is every second Tab — and an unknown key) are exactly the Tabs that step.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     return route_modal_editor_key(

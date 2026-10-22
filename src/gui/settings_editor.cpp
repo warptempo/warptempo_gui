@@ -143,6 +143,19 @@ std::string closed_list_advance(const std::string& typed,
     return lcp.substr(typed.size());
 }
 
+// THE RECALL — `key`'s current value as the writer writes it (the engine
+// key's through format_engine_setting_value, every other settable key's
+// through recall_gui_setting_value), or nothing for a key this editor does
+// not know. The key completer's unique match and autocomplete_value's
+// complete key and empty value side read it alike.
+std::optional<std::string> recall_setting_value(const AppState& app,
+                                                const std::string& key) {
+    std::optional<std::string> cur =
+        format_engine_setting_value(app.engine_settings, key);
+    if (!cur) cur = recall_gui_setting_value(app, key);
+    return cur;
+}
+
 } // namespace
 
 // The one opener, and it carries no read-only decision at all: the lock
@@ -1187,6 +1200,29 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
 }
 
 bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
+    // ONE MATCH TAKES ITS `=` AND VALUE IN THE SAME TAB (architect 2026-10-21
+    // ~23:55, "the tab autocomplete should include the = on the first tab
+    // press if the key is unambiguous"): the key's rest, `=` and the recall in
+    // one append, the caret at the line's end. A table key the recall cannot
+    // answer (no device config) completes to the key alone, the prefix rule's.
+    const char* only = nullptr;
+    int count = 0;
+    for (const char* k : kSettingsEditorKeys) {
+        const std::string_view w(k);
+        if (w.size() >= prefix.size() &&
+            w.compare(0, prefix.size(), prefix) == 0) {
+            only = k;
+            ++count;
+        }
+    }
+    if (count == 1) {
+        const std::string key(only);
+        if (const std::optional<std::string> cur =
+                recall_setting_value(app, key)) {
+            return append_at_line_end(
+                app, viewport, key.substr(prefix.size()) + "=" + *cur);
+        }
+    }
     const std::string append = closed_list_advance(prefix, kSettingsEditorKeys);
     if (append.empty()) return false;
     return append_at_line_end(app, viewport, append);
@@ -1217,18 +1253,14 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (!text_editor::is_active(app.settings_editor)) return false;
     const std::string pending = app.settings_editor.pending;
 
-    // THE RECALL — the key's current value as the writer writes it, or
-    // nothing for a key this editor does not know (the account below).
-    const auto recall = [this](const std::string& key)
-            -> std::optional<std::string> {
-        std::optional<std::string> cur =
-            format_engine_setting_value(app.engine_settings, key);
-        if (!cur) cur = recall_gui_setting_value(app, key);
-        return cur;
+    // THE RECALL (recall_setting_value; the account below).
+    const auto recall = [this](const std::string& key) {
+        return recall_setting_value(app, key);
     };
 
     const size_t eq = pending.find('=');
-    // NO `=` YET: THE KEY (the head's stages 1 and 2, architect 2026-10-21).
+    // NO `=` YET: THE KEY WITH ITS `=` AND VALUE (the head's stage 1,
+    // architect 2026-10-21).
     // The typed text less its leading whitespace — the trailing side kept,
     // ltrim_ws's reason: a key that does not end where the line ends has
     // nothing to append to, so it matches nothing and the Tab walks.
@@ -1241,7 +1273,9 @@ bool GuiSettingsEditor::autocomplete_value() {
             if (const std::optional<std::string> cur = recall(typed))
                 return append_at_line_end(app, viewport, "=" + *cur);
         }
-        // A PREFIX completes against the table (complete_key_name).
+        // A PREFIX completes against the table (complete_key_name): one
+        // match takes its `=` and value too, several stop at their common
+        // prefix.
         return complete_key_name(typed);
     }
 
