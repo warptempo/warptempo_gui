@@ -918,14 +918,6 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // change. render.h carries only a BOUND on this for the
 // damage band.
 constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
-// THE TEXT'S LIFT (architect 2026-10-21, his U1 pick on the padding mock): the
-// tooltip's and the cards' text stands ONE Windows px ABOVE the line box's
-// centered seat, the box and its pads unmoved. Centering the face's line box
-// (ascent + descent) still read low: the descent band is mostly empty under
-// a label with few descenders, so the ink sat below the box's middle. One
-// constant for both floaters, the cards taking the tooltip's look; it is a
-// rounded part of its own (scaled_px), subtracted from each baseline.
-constexpr double kTooltipTextLiftPx      = 1.0;
 // (The damage BOUND on the height and the timing constants live in render.h —
 // the tooltip's clock reads them, for the deadlines and for the band beside
 // the strip.)
@@ -969,23 +961,22 @@ constexpr double kTooltipTextLiftPx      = 1.0;
 // rows (17 x 1.38 = 23.46) seat at floor((23 + 11.04) / 2) = 17. The answer is
 // independent of the box's y by construction rather than by a tie rule.
 //
-// TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
-// centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
-// band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. THE BOX SEATS: the
+// ONE SEAT FOR EVERY CHROME LABEL (architect 2026-10-22: the tooltip and the
+// cards came back to it — the line box centered in their interior read low
+// under descenders and the one-W lift on it overshot). THE BOX SEATS: the
 // caption's title, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
-// is at paint_bottom_row_buttons_and_clock), the notification
-// card's first line (until 2026-10-21), the prompt's question and the
+// is at paint_bottom_row_buttons_and_clock), the tooltip's and the
+// notification card's first lines (a further line one line height lower),
+// the prompt's question and the
 // dialog editor's line in the modal family's box (each row on the list's
 // row box, 2026-10-14), the render player's
 // two time fields, the modal buttons' own labels, the on-screen
 // keyboard's caps, the folder overlay's rows, the menu row's anchors
 // (the plain menu bar's seat, a capture of the real OS
-// beating ReactOS's band, architect 2026-10-09 ~17:40). ONE LINE SEAT: the
-// tooltip's two lines (line_baseline).
+// beating ReactOS's band, architect 2026-10-09 ~17:40).
 //
-// THE CANVAS COLUMN'S TEXT TAKES NEITHER SEAT (2026-10-09, the program is
+// THE CANVAS COLUMN'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is
 // Cool Edit): THE RULER'S DIGITS stand on an AUTHORED BASELINE ROW of their
 // lane — program_spec.h's ruler_baseline_px (the architect's row under one
 // W of air, 2026-10-09 ~21:00); THE CUES' LABELS stand on THE LINE BOX
@@ -1015,15 +1006,6 @@ double redesign_baseline(const GuiFont& font, double box_y,
     return box_y + std::floor((box_h + gui_font_cap_px(font)) * 0.5);
 }
 namespace {
-
-// THE BASELINE FOR A LINE — a band that IS the face's ascent plus its descent,
-// with no margins to centre anything in, so the seat is the ascent and the
-// rule above is not asked. The ceil keeps a seat on a whole pixel; on both
-// backends the hinted ascent is a whole pixel already and it changes
-// nothing.
-double line_baseline(const GuiFont& font, double line_y) {
-    return line_y + std::nearbyint(gui_font_ascent_px(font));
-}
 
 // THE ACCESS KEY'S UNDERLINE — WINDOWS' MENU MNEMONIC (architect 2026-10-10:
 // "accelerators are not used on the tablet, but they are part of the
@@ -3420,30 +3402,24 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     paint_popup_chrome(cr, box);
 
-    // EACH LINE SITS ON ITS OWN BAND, and a band IS the face's ascent plus
-    // its descent — a LINE and not a box, so each baseline is
-    // line_baseline's, its own band's ascent. THE LINE BOX IS CENTERED IN
-    // THE BOX'S INTERIOR, the same pad above the first band and below the
-    // last (the box's height, above): Windows draws tooltip text with the
-    // line box centered (DT_VCENTER), the product's cap-band rule read low
-    // under descenders — architect 2026-10-21. (The box was already built
-    // so: the cap-band solver, redesign_baseline, was never asked here; the
-    // cards took it until that day.)
-    // THEN LIFTED ONE W (kTooltipTextLiftPx, architect 2026-10-21).
-    const double lift = static_cast<double>(scaled_px(kTooltipTextLiftPx));
+    // EACH LINE SITS ON ITS OWN BAND, the face's ascent plus its descent
+    // (the box's height, above). THE FIRST LINE'S CAP BAND IS CENTERED IN
+    // ITS BAND by redesign_baseline — the interior itself on a one-line
+    // tooltip — the one rule every chrome label takes (architect 2026-10-22:
+    // the line box centered there read low under descenders, and the one-W
+    // lift on it overshot); the hint line stands one band and the gap lower.
     set_palette_source(cr, palette().card_text);
-    text_shape::show_shaped_run(
-        cr, r1, static_cast<double>(x + pad_x),
-        line_baseline(font, static_cast<double>(y + pad_y)) - lift);
+    const double base1 =
+        redesign_baseline(font, static_cast<double>(y + pad_y),
+                          std::nearbyint(band1));
+    text_shape::show_shaped_run(cr, r1, static_cast<double>(x + pad_x),
+                                base1);
     if (two_line) {
         // The hint line takes THE CARD TEXT like the first (architect
         // 2026-10-03, Windows' ink, no dims; the card face's words are
         // `card_text` since 2026-10-04, render.h's palette block).
-        text_shape::show_shaped_run(
-            cr, r2, static_cast<double>(x + pad_x),
-            line_baseline(font,
-                          static_cast<double>(y + pad_y) + band1 + gap) -
-                lift);
+        text_shape::show_shaped_run(cr, r2, static_cast<double>(x + pad_x),
+                                    base1 + band1 + static_cast<double>(gap));
     }
 
     cairo_restore(cr);
@@ -3746,20 +3722,15 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
             set_palette_source(cr, palette().card_text);
-            // The FIRST line's baseline is the one-line card's: THE FACE'S
-            // LINE BOX (its recorded ascent + descent, gui_font_line_px)
-            // CENTERED in the one-line card, the floor of the leftover above
-            // (cue_line_box_top_px's rule), the baseline the box's top plus
-            // the ascent — Windows draws tooltip text with the line box
-            // centered (DT_VCENTER), the product's cap-band rule read low
-            // under descenders — architect 2026-10-21 (the cap band centered
-            // by redesign_baseline until then), THEN LIFTED ONE W, the
-            // tooltip's own lift (kTooltipTextLiftPx, architect 2026-10-21).
-            // Each further line is one face line-height lower.
+            // The FIRST line's baseline is the one-line card's: ITS CAP BAND
+            // CENTERED in the one-line card by redesign_baseline, the one
+            // rule every chrome label takes (architect 2026-10-22: the line
+            // box centered there read low under descenders, and the one-W
+            // lift on it overshot). Each further line is one face
+            // line-height lower.
             const double base =
-                static_cast<double>(card.y + (line1_h - line_h) / 2) +
-                std::nearbyint(gui_font_ascent_px(font)) -
-                static_cast<double>(scaled_px(kTooltipTextLiftPx));
+                redesign_baseline(font, static_cast<double>(card.y),
+                                  static_cast<double>(line1_h));
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run(
                     cr, lines[li], static_cast<double>(text_x),
@@ -5609,11 +5580,6 @@ constexpr double kModalBtnMinWidthPx  = 75.0;
 // margin is (32 − 23) / 2 Windows px (the controls row's content round the
 // spec's push button) against its 1.
 constexpr double kModalFocusFramePx   = 1.0;
-// THE PLAYER ROW'S GLYPH GAP — between two of the render player's glyph
-// boxes, the player's own since the roster's buttons began to touch
-// (architect 2026-10-02): 1 Windows px, the laptop pixel's 2-px button gap
-// re-authored.
-constexpr double kPlayerGlyphGapPx    = 1.0;
 // THE PLAYER ROW'S GROUP SPACE — between its items (transport → scrub,
 // scrub → clock, clock → the lamp): 8 Windows px, the roster's group gap it
 // stood at from 2026-10-02 until the roster's groups became Cool Edit's
@@ -5690,11 +5656,13 @@ struct PlayerRowLayout {
 };
 static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     PlayerRowLayout l;
-    // THE GLYPH GAP between two of the row's boxes is kPlayerGlyphGapPx,
-    // the player's own since the roster's buttons began to touch; THE
-    // GROUP SPACE between its items is kPlayerGroupGapPx, its own since
-    // the roster's groups became Cool Edit's (2026-10-09).
-    const int ggap     = scaled_px(kPlayerGlyphGapPx, 1);
+    // THE CASES ABUT (architect 2026-10-22, "the buttons should be
+    // touching"): nothing stands between two of the row's boxes, as the
+    // band's and row 8's cases abut; THE GROUP SPACE between its items is
+    // kPlayerGroupGapPx, its own since the roster's groups became Cool
+    // Edit's (2026-10-09). The press reads the rects the button walk
+    // publishes from this layout (modal_dialog_button_hit), half-open, so
+    // two abutting cases share no pixel.
     const int group    = scaled_px(kPlayerGroupGapPx);
 
     // THE CLOCK'S TWO FIELDS ARE MEASURED BEFORE ANYTHING IS PLACED,
@@ -5718,35 +5686,28 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     const int bw  = seats.case_w;
     const int cx0 = seats.left_x;
     int px = cx0;
-    l.x[0] = px; px += bw + ggap;          // Home (skip back)
-    l.x[1] = px; px += bw + ggap;          // Play / Pause
+    l.x[0] = px; px += bw;                 // Home (skip back)
+    l.x[1] = px; px += bw;                 // Play / Pause
     l.x[2] = px; px += bw;                 // End (skip forward)
     l.scrub_x0 = px + group;
 
     // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
     // was Load in place · Close as WORDS, measured runs in label boxes):
-    // both are the box's own square now, so the cluster is two boxes and
-    // the GLYPH GAP between them — right-flushed where THE CONTROLS ROW'S
+    // both are the box's own square now, so the cluster is two abutting
+    // boxes — right-flushed where THE CONTROLS ROW'S
     // CASES END, the last box's right edge the box's ring's outer edge
     // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
     // last case's from 2026-10-05; the other owners' clusters keep the
     // reserved ring).
-    const int words_w  = bw + ggap + bw;
+    const int words_w  = bw + bw;
     const int words_x0 = std::max(cx0, seats.cases_right - words_w);
     // What the row owes AFTER the scrub: the group space, the clock
     // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
-    // FOLDER BUTTON with the glyph gap between each two of the four
-    // boxes, and the GAP BEFORE THE RIGHT-FLUSHED PAIR, which is
-    // that same glyph gap since 2026-09-01. THE 2026-08-29 SPACING RULING
-    // IS SPENT, not overruled: it put the WORD BUTTONS' OWN gap there ("the
-    // air between the last glyph and Load in place is the air between Load
-    // in place and Close", the modal word buttons' spacing winning over
-    // the icon gap between clusters, where the layout had spent the
-    // reserved ring plus a pad) — and with the words gone there is no
-    // word-button gap left on this row to win: every gap between two
-    // boxes on it is the row's one glyph gap (kPlayerGlyphGapPx).
+    // FOLDER BUTTON, the four boxes abutting, and the right-flushed pair
+    // directly after them (the 2026-08-29 spacing ruling, the word buttons'
+    // own gap there, spent with the words on 2026-09-01).
     const int after_scrub =
-        group + clock_w + group + 4 * bw + 4 * ggap;
+        group + clock_w + group + 4 * bw;
     // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
     // at each end is not a track (28 Windows px since the unit's change).
     l.scrub_w = words_x0 - after_scrub - l.scrub_x0;
@@ -5755,11 +5716,11 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
     l.x[3] = l.clock_end + group;          // Repeat one
-    l.x[4] = l.x[3] + bw + ggap;           // Highlight Next (Down)
-    l.x[5] = l.x[4] + bw + ggap;           // Highlight Previous (Up)
-    l.x[6] = l.x[5] + bw + ggap;           // Up a Folder
+    l.x[4] = l.x[3] + bw;                  // Highlight Next (Down)
+    l.x[5] = l.x[4] + bw;                  // Highlight Previous (Up)
+    l.x[6] = l.x[5] + bw;                  // Up a Folder
     l.x[7] = words_x0;                     // Load in place
-    l.x[8] = words_x0 + bw + ggap;         // Close
+    l.x[8] = words_x0 + bw;                // Close
     return l;
 }
 
@@ -6541,8 +6502,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    ordering of convenience. --
         dlg.owner  = AppState::ModalDialogOwner::Player;
 
-        // THE ROW'S LAYOUT is player_row_layout's (the glyph gap, the group
-        // space, the clock's two fields measured first, the fixed left run,
+        // THE ROW'S LAYOUT is player_row_layout's (the abutting cases, the
+        // group space, the clock's two fields measured first, the fixed left run,
         // the right-flushed pair and the scrub taking what is between them —
         // the rules stated there), the one layout the materials' case
         // patches read too (program_case_rects).

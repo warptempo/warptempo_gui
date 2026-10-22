@@ -712,7 +712,8 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # fortepiano chrome; materials.h's head): the repository's own
     # assets/tiles/, read by name (GuiPlatform::bundled_tile_names / _bytes)
     # — a dropped material needs no rebuild here; the APK packs the same files
-    # as assets.
+    # as assets. The tiles/ folder beside the device config, when it stands,
+    # wins over this one by name on both devices (materials.cpp's tile_files).
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_BUNDLED_TILES_DIR="${CMAKE_SOURCE_DIR}/assets/tiles")
     target_link_libraries(warptempo_gui PRIVATE

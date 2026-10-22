@@ -34,7 +34,17 @@ struct AppState;
 // icons are, BY NAME (GuiPlatform::bundled_tile_names and
 // bundled_tile_bytes: the laptop's compiled-in folder, every file of it; the
 // APK's `tiles/` assets, THE TABLET'S THREE COVERS AND NOT THE MASTERS,
-// build_apk.sh). A MATERIAL WITH NEITHER A MASTER NOR A COVER, A FILE THAT
+// build_apk.sh). THE TUNING ROAD (architect 2026-10-22, "tune live, not on
+// mocks"): A FOLDER `tiles/` BESIDE THE DEVICE CONFIG (device_config_path's
+// folder — on the tablet under `adb shell run-as com.warptempo.gui`, on the
+// laptop beside its config; the one road on both platforms) WHOSE FILES WIN
+// OVER THE BUNDLE'S BY NAME: the catalog is every name of that folder, then
+// every bundle name none of them shadows, read at the launch check and at
+// every bake under the rules below unchanged — so a material is retuned by
+// dropping the cover the window matches (the tablet's `<Name>-2304x1440.png`;
+// a master alone loses to a bundled cover that reaches the window). An absent
+// folder is nothing (no file, no line, no card); no device key, no Settings
+// row (materials.cpp's tile_files). A MATERIAL WITH NEITHER A MASTER NOR A COVER, A FILE THAT
 // IS NEITHER A PNG NOR A JPEG, OR A COVER NOT THE SIZE ITS NAME SAYS, IS THE
 // LAUNCH'S HARD FAIL naming the file (materials::check, which reads each
 // file's first 64 KiB alone); a window no cover reaches with no master to
@@ -54,7 +64,7 @@ struct AppState;
 // THE COVER MATCH (the planner's ruling
 // 2026-10-21, after the laptop's maximized 1920 x 1047 — labwc's panel
 // takes 33 rows — matched no cover and fell to the masters): for a client
-// W x H the bake takes THE SMALLEST BUNDLED COVER w x h WITH w >= W AND
+// W x H the bake takes THE SMALLEST CATALOG COVER w x h WITH w >= W AND
 // h >= H (by area; the exact size the smallest of all) AND DECODES ITS
 // CENTER CROP — rows (h − H) / 2 on and columns (w − W) / 2 on, no
 // filtering, the decode the bake (the 1920 x 1080 cover serves 1920 x 1047
@@ -122,7 +132,7 @@ struct AppState;
 //           player case's) — each the cover at its own place under the
 //           case's ramp (below) (the caption buttons' three faces with them
 //           2026-10-21 to 2026-10-22).
-// THE LAUNCH ROAD (2026-10-21): the bundle listed once, each material's
+// THE LAUNCH ROAD (2026-10-21): the catalog listed once, each material's
 // source chosen by name, and ONLY THAT FILE READ, in one sized read; the
 // three materials READ, DECODED, DERIVED AND CONVERTED ON THREE THREADS AT
 // ONCE (std::jthread; each its own file, its own tiles, nothing shared), the
@@ -339,17 +349,17 @@ inline constexpr uint32_t kSelectionText = kNearWhite;
 namespace materials {
 
 // THE LAUNCH'S CHECK (the head): every material has a master or a cover in
-// the bundle and every one of its files is a PNG or a JPEG. Answers the first
+// the catalog and every one of its files is a PNG or a JPEG. Answers the first
 // error, prefixed `tiles: ` and naming the file — gui_main's hard fail.
 std::optional<std::string> check();
 
 // THE BAKE, AT ONCE (the head's BAKE RULE): when the key `app` gives
-// differs from the baked one, every material is baked again from the bundle
+// differs from the baked one, every material is baked again from the catalog
 // and the palette reinstalled off the new Faces (install_palette, render.h —
 // its generation rebuilds every cached surface the tiles were painted into)
 // — the client repainted by the caller's damage, the whole surface by the
 // next pre-paint (take_bake_landed). A zero-sized client bakes
-// nothing. A FAILURE is the bundle changed under the running process (check
+// nothing. A FAILURE is the catalog changed under the running process (check
 // passed at launch): its stderr line and the hard fail. Callers: the one-act
 // roads, GuiInputHandler::apply_gui_scale and apply_true_colors.
 void ensure(const AppState& app);

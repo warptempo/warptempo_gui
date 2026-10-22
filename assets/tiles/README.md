@@ -38,7 +38,10 @@ that every material has a master or a cover, that every file is a PNG or a JPEG 
 name says; then, per window geometry, it reads the one file each material's match chose and bakes the pixels each
 material is drawn on, the three materials at once (`materials::ensure_settled`). A launch that misses a material, or
 finds a file that is neither a PNG nor a JPEG, stops at startup with one line naming the file; on the tablet a missing
-cover stops it the same way.
+cover stops it the same way. THE TUNING ROAD (2026-10-22): a folder `tiles/` beside the device config (on the tablet
+under `adb shell run-as com.warptempo.gui`) is read first, its files winning over this folder's by name under the same
+rules — retune a material by dropping the cover its window matches there, and nothing happens while the folder is
+absent.
 
 ## Provenance and licence
 

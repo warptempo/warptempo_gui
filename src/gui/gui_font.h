@@ -38,7 +38,7 @@
 // THE VERTICAL METRICS ARE RECORDED CONSTANTS, the ONLY SOURCE OF VERTICAL
 // METRICS (the set's, gui_face_metrics below; architect 2026-10-05, the
 // constants 2026-10-06): ascent, descent, the line band, the cap band
-// (redesign_baseline, line_baseline), the flag box, the lane heights and the
+// (redesign_baseline), the flag box, the lane heights and the
 // ruler lane are the recorded integers in Windows px times the scale, as
 // unrounded doubles (a font quantity is not a grid point), rounded at the
 // element by the seat that reads them - save one derived figure, the cap
@@ -62,7 +62,8 @@
 // (architect 2026-10-05). A FACE'S OWN LINE BOX IS NEVER READ: the recorded
 // metrics seat every run, every label's cap band centred by the recorded
 // cap, or the derived one (redesign_baseline), or seated on the recorded
-// ascent (line_baseline), so no face's line box can misplace a label.
+// ascent (the cues' line box, cue_baseline_px), so no face's line box can
+// misplace a label.
 // HORIZONTALLY THE FACE IS ITS OWN: every width used for layout is the
 // shaped run's (text_shape), the face's own advances at the live size less
 // the tracking.

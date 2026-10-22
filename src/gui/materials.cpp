@@ -3,6 +3,7 @@
 #include "app_state.h"          // the lane accessors the bake's geometry reads
 #include "cool_edit_derive.h"   // the tone rule, kTabBodies' Default row
 #include "cool_edit_paint.h"    // the disabled emboss's measured tones and ratios
+#include "device_config.h"      // device_config_path — the override folder beside it
 #include "display_transform.h"
 #include "modal_box.h"          // the render player's controls row
 #include "onscreen_keyboard.h"  // the band's height (the lifted border)
@@ -19,6 +20,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <string_view>
 #include <thread>
@@ -409,7 +411,90 @@ void convert(cairo_surface_t* s) {
     cairo_surface_mark_dirty(s);
 }
 
-// -- THE BUNDLE'S CATALOG (materials.h's head: the drop folder by name) -----
+// -- THE CATALOG (materials.h's head: the drop folder by name) --------------
+
+// THE TILE FILES THE CATALOG READS (architect 2026-10-22, the tuning road;
+// materials.h's head): every name of the OVERRIDE FOLDER `tiles/` beside the
+// device config, then every bundle name none of them shadows. `local` holds
+// the override folder's names alone, each read from `folder`; every other
+// name is the bundle's (GuiPlatform::bundled_tile_bytes).
+struct TileFiles {
+    std::filesystem::path    folder;
+    std::vector<std::string> local;
+    std::vector<std::string> names;
+    // The override file's path for `name`, or an empty path: the bundle's.
+    std::filesystem::path local_path(const std::string& name) const {
+        return std::find(local.begin(), local.end(), name) != local.end()
+                   ? folder / name
+                   : std::filesystem::path{};
+    }
+};
+
+// THE LISTING. NOTHING WHEN THE OVERRIDE FOLDER IS ABSENT (no file, no line,
+// no card); its files filtered as the bundle's are (`.png` and `.jpg`, a
+// symlink as the file it names). THE ERROR ARMS' PRODUCERS: the bundle's
+// (platform_wayland.h's declaration) and an override folder that stands but
+// will not list (IO), with the system's words.
+std::expected<TileFiles, std::string> tile_files() {
+    TileFiles f;
+    const std::filesystem::path config = device_config_path();
+    if (!config.empty()) {
+        const std::filesystem::path folder = config.parent_path() / "tiles";
+        std::error_code ec;
+        if (std::filesystem::exists(folder, ec)) {
+            f.folder = folder;
+            std::filesystem::directory_iterator it(folder, ec);
+            for (; !ec && it != std::filesystem::directory_iterator();
+                 it.increment(ec)) {
+                const std::string name = it->path().filename().string();
+                if (!name.ends_with(".png") && !name.ends_with(".jpg")) continue;
+                std::error_code tec;
+                if (it->is_regular_file(tec)) f.local.push_back(name);
+            }
+        }
+        if (ec)
+            return std::unexpected("could not read '" + folder.string() + "': " +
+                                   ec.message());
+    }
+    const auto bundle = GuiPlatform::bundled_tile_names();
+    if (!bundle) return std::unexpected(bundle.error());
+    f.names = f.local;
+    for (const std::string& name : *bundle)
+        if (std::find(f.local.begin(), f.local.end(), name) == f.local.end())
+            f.names.push_back(name);
+    return f;
+}
+
+// ONE TILE FILE'S BYTES, its first `limit` or the whole file, in one sized
+// read: the override file at `local` when there is one, the bundle's `name`
+// otherwise. The error arms' producers: a file that will not open or read
+// whole (IO), the bundle's own.
+std::expected<std::string, std::string> tile_bytes(
+    const std::string& name, const std::filesystem::path& local,
+    std::size_t limit = SIZE_MAX) {
+    if (local.empty()) return GuiPlatform::bundled_tile_bytes(name, limit);
+    std::error_code ec;
+    const std::uintmax_t size = std::filesystem::file_size(local, ec);
+    if (ec)
+        return std::unexpected("could not read '" + local.string() + "': " +
+                               ec.message());
+    std::FILE* f = std::fopen(local.c_str(), "rb");
+    if (!f) return std::unexpected("could not open '" + local.string() + "'");
+    std::string bytes(
+        static_cast<std::size_t>(std::min<std::uintmax_t>(size, limit)), '\0');
+    const std::size_t got = std::fread(bytes.data(), 1, bytes.size(), f);
+    std::fclose(f);
+    if (got != bytes.size())
+        return std::unexpected("could not read '" + local.string() + "' whole");
+    return bytes;
+}
+
+// The name a tile file's error line carries: the override file's path, so
+// the line says which folder it came from, else the bundle's bare name.
+std::string tile_label(const std::string& name,
+                       const std::filesystem::path& local) {
+    return local.empty() ? name : local.string();
+}
 
 // A COVER'S NAME, `<Name>-<W>x<H>.png`: its W and H, or false.
 bool parse_cover(std::string_view file, std::string_view stem, int& w, int& h) {
@@ -455,13 +540,14 @@ Catalog catalog_of(const std::vector<std::string>& names) {
 }
 
 // ONE MATERIAL'S SOURCE FOR THE CLIENT w x h (materials.h's COVER RULE):
-// the smallest bundled cover reaching it in both dimensions (by area, the
+// the smallest catalog cover reaching it in both dimensions (by area, the
 // exact size the smallest of all) — its center crop, no filtering — else
 // the master under the cover rule, else none.
 struct Source {
     std::string file;
     bool        cover = false;
     int         cw = 0, ch = 0;   // a cover's size (its name's)
+    std::filesystem::path local;   // the override file's path; empty: the bundle's
 };
 std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
     const std::size_t i = static_cast<std::size_t>(m);
@@ -472,8 +558,8 @@ std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
         if (!best || area < static_cast<long long>(best->w) * best->h)
             best = &cv;
     }
-    if (best) return Source{best->file, true, best->w, best->h};
-    if (!c.master[i].empty()) return Source{c.master[i], false, 0, 0};
+    if (best) return Source{best->file, true, best->w, best->h, {}};
+    if (!c.master[i].empty()) return Source{c.master[i], false, 0, 0, {}};
     return std::nullopt;
 }
 
@@ -483,16 +569,17 @@ std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
 // the cover rule.
 std::expected<std::vector<Surface>, std::string> source_regions(
     const Source& src, int w, int h, const std::vector<GuiRect>& rects) {
-    const auto bytes = GuiPlatform::bundled_tile_bytes(src.file);
+    const auto bytes = tile_bytes(src.file, src.local);
     if (!bytes) return std::unexpected("tiles: " + bytes.error());
+    const std::string label = tile_label(src.file, src.local);
     const auto info = svg_icon::raster_info(*bytes);
-    if (!info) return std::unexpected("tiles: " + src.file + ": " + info.error());
+    if (!info) return std::unexpected("tiles: " + label + ": " + info.error());
     double k = 1.0;
     int ox = 0, oy = 0;
     if (src.cover) {
         if (static_cast<int>(info->w) != src.cw ||
             static_cast<int>(info->h) != src.ch)
-            return std::unexpected("tiles: " + src.file + ": not " +
+            return std::unexpected("tiles: " + label + ": not " +
                                    std::to_string(src.cw) + "x" +
                                    std::to_string(src.ch));
         ox = (src.cw - w) / 2;
@@ -511,7 +598,7 @@ std::expected<std::vector<Surface>, std::string> source_regions(
     for (const GuiRect& r : rects)
         regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
     auto out = svg_icon::raster_regions(*bytes, *info, k, regions);
-    if (!out) return std::unexpected("tiles: " + src.file + ": " + out.error());
+    if (!out) return std::unexpected("tiles: " + label + ": " + out.error());
     std::vector<Surface> owned;
     owned.reserve(out->size());
     for (cairo_surface_t* s : *out) owned.emplace_back(s);
@@ -890,13 +977,13 @@ std::size_t bytes_of(const std::vector<Tile>& tiles) {
 }
 
 // THE BAKE ITSELF (materials.h's BAKE RULE and LAUNCH ROAD) for geometry
-// `g`: the bundle's names, each material's source, the three materials on
+// `g`: the tile files' names, each material's source, the three materials on
 // three threads, then the tiles into State on this one.
 std::optional<std::string> bake(const Geometry& g) {
     const auto t0 = std::chrono::steady_clock::now();
-    const auto names = GuiPlatform::bundled_tile_names();
-    if (!names) return "tiles: " + names.error();
-    const Catalog catalog = catalog_of(*names);
+    const auto files = tile_files();
+    if (!files) return "tiles: " + files.error();
+    const Catalog catalog = catalog_of(files->names);
     std::array<Source, kGuiMaterialCount> sources;
     for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
         const auto src = source_of(catalog, static_cast<GuiMaterial>(m), g.w, g.h);
@@ -904,6 +991,7 @@ std::optional<std::string> bake(const Geometry& g) {
             return "tiles: " + std::string(kGuiMaterialNames[m]) + ": no cover reaches " +
                    std::to_string(g.w) + "x" + std::to_string(g.h) + " and no master";
         sources[m] = *src;
+        sources[m].local = files->local_path(src->file);
     }
     // The transform's tables built here, before the threads read them.
     if (display_transform::active()) (void)display_transform::p3_word_from_srgb_fast(0);
@@ -961,7 +1049,7 @@ std::optional<std::string> bake(const Geometry& g) {
 }
 
 // A BAKE NOW for the app's geometry, `k` its key: the hard fail on a
-// failure (the bundle changed under the running process), and the palette
+// failure (the catalog changed under the running process), and the palette
 // installed again off the new Faces — always, since the tiles every cached
 // surface was painted from have moved even where the Faces have not, and
 // the install's generation is what rebuilds those surfaces (render.h's
@@ -1001,26 +1089,27 @@ bool trace_enabled() {
 }
 
 std::optional<std::string> check() {
-    const auto names = GuiPlatform::bundled_tile_names();
-    if (!names) return "tiles: " + names.error();
+    const auto files = tile_files();
+    if (!files) return "tiles: " + files.error();
     // EACH FILE'S HEADER, read off its first bytes alone (a JPEG's frame
     // header can follow an ICC or EXIF segment, hence the 64 KiB): a PNG or
     // a JPEG, and a cover the size its name says.
     constexpr std::size_t kHeaderBytes = 64 * 1024;
-    for (const std::string& file : *names) {
-        const auto head = GuiPlatform::bundled_tile_bytes(file, kHeaderBytes);
+    for (const std::string& file : files->names) {
+        const std::filesystem::path local = files->local_path(file);
+        const auto head = tile_bytes(file, local, kHeaderBytes);
         if (!head) return "tiles: " + head.error();
         const auto info = svg_icon::raster_info(*head);
-        if (!info) return "tiles: " + file + ": " + info.error();
+        if (!info) return "tiles: " + tile_label(file, local) + ": " + info.error();
         for (const char* name : kGuiMaterialNames) {
             int w = 0, h = 0;
             if (parse_cover(file, name, w, h) &&
                 (static_cast<int>(info->w) != w || static_cast<int>(info->h) != h))
-                return "tiles: " + file + ": not " + std::to_string(w) + "x" +
-                       std::to_string(h);
+                return "tiles: " + tile_label(file, local) + ": not " +
+                       std::to_string(w) + "x" + std::to_string(h);
         }
     }
-    const Catalog catalog = catalog_of(*names);
+    const Catalog catalog = catalog_of(files->names);
     for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
         const std::string stem(kGuiMaterialNames[m]);
         if (catalog.master[m].empty() && catalog.covers[m].empty())
