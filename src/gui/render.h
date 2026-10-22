@@ -179,11 +179,11 @@ struct TrimRange {
 // dither — no blended colour is ever computed in its place — but its cell is
 // the panel's own pixel, the period technique at native resolution, so at
 // 400 % the pattern is four times finer than a 96-dpi screen's and the eye
-// blends it as it blended the original. THE ONE DITHER is the checked face
-// and the popup lists' scroll track (paint_checker_rect, Windows' pattern
-// brush; the trim track's checker went with the view bar, 2026-10-09).
-// THIS PARAGRAPH IS THE RULE'S ONE STATEMENT; every other chrome length stays
-// in Windows px (scaled_px).
+// blends it as it blended the original. NO DITHER IS DRAWN TODAY: the last,
+// Windows' checked face, went 2026-10-22 when its last wearers became the
+// ebony case (the popup lists' scroll track 2026-10-14, the trim track's
+// checker with the view bar 2026-10-09). THIS PARAGRAPH IS THE RULE'S ONE
+// STATEMENT; every other chrome length stays in Windows px (scaled_px).
 //
 // A HEX HERE IS AN sRGB BYTE TRIPLE, AS EVERY SCREENSHOT RECORDS IT
 // (architect 2026-10-08 ~05:15: "if I open that image in the web
@@ -204,25 +204,24 @@ struct TrimRange {
 // 2026-10-06, overruling Windows' square join: the top-right and bottom-left
 // corner blocks split along the 45-degree diagonal, the rule and its words at
 // paint_relief_frame, render.cpp). RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
-// edge below takes the theme's quartet by Windows 95's scheme of how many
-// lines a side, and no other role draws a relief line — THE WINDOWS PARTS
-// EXCEPTED (2026-10-22): the caption's three buttons and the sizing frame
-// take the same families in Windows 2000's Standard quartet, constants
-// (kWindowsStandard, the caption block; paint_windows_soft_raised and its
-// siblings). THE FAMILIES (the painters are paint_relief_soft_raised and its
-// siblings, below), lines given outer then inner, top-left / bottom-right,
-// in the theme's quartet:
-//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a caption button
-//                 (EDGE_RAISED | BF_SOFT; Windows' DFC_CAPTION, architect
-//                 2026-10-05), an on-screen keyboard key, the scrub's
-//                 pointed thumb (paint_scrub_thumb, 2026-10-06);
+// edge below takes its quartet by Windows 95's scheme of how many lines a
+// side, and no other role draws a relief line. THE FAMILIES, lines given
+// outer then inner, top-left / bottom-right, each with its painter and its
+// wearers:
+//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow (EDGE_RAISED |
+//                 BF_SOFT) — a caption button at rest (Windows' DFC_CAPTION,
+//                 architect 2026-10-05; paint_windows_soft_raised in Windows
+//                 2000's Standard quartet, kWindowsStandard, the caption
+//                 block, 2026-10-22) and the scrub's pointed thumb in the
+//                 theme's (its own pentagon, paint_scrub_thumb, 2026-10-06);
 //   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a caption button
-//                 pressed, a keyboard key checked or pressed;
-//   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
-//                 window's sizing frame (EDGE_RAISED; a dropdown's frame
-//                 until 2026-10-21);
-//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field
-//                 (EDGE_SUNKEN);
+//                 pressed (paint_windows_soft_sunken, the Standard quartet);
+//   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow (EDGE_RAISED) — the
+//                 restored window's sizing frame (paint_windows_plain_raised,
+//                 the Standard quartet);
+//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) — the
+//                 render player's scrub channel (paint_relief_plain_sunken,
+//                 the theme's quartet);
 //   (SUNKEN OUTER, ONE line, Shadow / Hilight — the open menu title and
 //                 the program's frame's ring — went 2026-10-21 with both,
 //                 the frame's top row alone a flat Shadow line until it
@@ -236,9 +235,6 @@ struct TrimRange {
 // cool_edit_paint.h's head.)
 // THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
 // four sides (THE CARD FACE, below).
-// The CHECKED face is Windows' dither: a checkerboard of Hilight over the
-// ground in one-device-px cells (paint_checker_rect, below; the dither rule
-// above).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
@@ -377,9 +373,8 @@ struct TrimRange {
 // (render_canvas) and its center lines (render_center_lines). Each converts
 // the authored sRGB color for the window (display_color, the painter's
 // entry; a material's tiles at their bake) and hands it over; the plate's own
-// pixels are written as words (argb32_opaque_word), not through cairo, as
-// is the checked dither's tile (paint_checker_rect), each converting at its
-// own entry. TEXT
+// pixels are written as words (argb32_opaque_word), not through cairo,
+// converting at their own entry. TEXT
 // takes its ink from the source these set: no glyph road sets a color of its
 // own (text_shape.cpp draws in the current source), and every text road
 // sets its ink through set_palette_source, never a surface's.
@@ -567,8 +562,7 @@ uint64_t palette_generation();
 // waveform plate by its inks' fingerprint (waveform_plate_inks hands the
 // window's words); the materials' tiles baked again, the
 // conversion state in their key (materials::ensure, the caller's apply
-// shape below);
-// the checker's tile is built per fill and keeps nothing. THE APPLY SHAPE THE
+// shape below). THE APPLY SHAPE THE
 // CALLER OWES, after the call (GuiInputHandler::apply_true_colors; the
 // launch's call, before the window and every cache exist, owes none): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
@@ -1277,13 +1271,13 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // dark field, its height and its pad program_spec.h's own, the pad 5 W
 // since 2026-10-10, equal to this field's then.)
 
-// THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
-// sunken, status or etched edge in the chrome, and of one cell of the checked
-// dither (architect 2026-10-02: Windows' DrawEdge draws one-pixel lines, two
-// to an edge; the grammar is at the palette head): 3 device px at the
-// tablet's 300 % (its scale since 2026-10-06), 4 at 360 %, 1 at the laptop's
-// 138 %, floored at 1 so it never vanishes at 50 %. The relief helpers
-// (paint_relief_soft_raised and its siblings) paint every line at it.
+// THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised or
+// sunken edge in the chrome (architect 2026-10-02: Windows' DrawEdge draws
+// one-pixel lines, two to an edge; the grammar is at the palette head): 3
+// device px at the tablet's 300 % (its scale since 2026-10-06), 4 at 360 %,
+// 1 at the laptop's 138 %, floored at 1 so it never vanishes at 50 %. The
+// relief helpers (paint_relief_plain_sunken, the paint_windows_ family and
+// paint_relief_line_frame) paint every line at it.
 inline constexpr int kReliefLinePx = 1;
 inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
@@ -2344,19 +2338,14 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //                         helper below calls, and THE PROGRAM'S MITRE since
 //                         2026-10-09: every two-tone ring cool_edit_paint.cpp
 //                         draws and the view bar's span — its head).
-//   paint_relief_soft_raised  — SOFT RAISED: an on-screen keyboard key.
-//   paint_relief_soft_sunken  — SOFT SUNKEN: a keyboard key checked or
-//                         pressed.
-//   paint_relief_plain_raised — PLAIN RAISED: a push button (a dropdown's
-//                         frame until 2026-10-21) (the popup scroll bar's
-//                         thumb and arrows until 2026-10-14). (The scrub's
-//                         pointed thumb draws its own soft raised pentagon,
-//                         paint_scrub_thumb.)
-//   paint_windows_soft_raised / _soft_sunken / _plain_raised — THE SAME
-//                         FAMILIES IN WINDOWS 2000'S STANDARD QUARTET
-//                         (kWindowsStandard, the caption block; 2026-10-22):
-//                         a caption button at rest and pressed, the restored
-//                         window's sizing frame.
+//   paint_windows_soft_raised / _soft_sunken / _plain_raised — SOFT RAISED,
+//                         SOFT SUNKEN and PLAIN RAISED IN WINDOWS 2000'S
+//                         STANDARD QUARTET (kWindowsStandard, the caption
+//                         block; 2026-10-22): a caption button at rest and
+//                         pressed (paint_caption_button_box), the restored
+//                         window's sizing frame (paint_window_sizing_frame).
+//                         (The scrub's pointed thumb draws its own soft
+//                         raised pentagon, paint_scrub_thumb.)
 //   paint_relief_plain_sunken — PLAIN SUNKEN: the scrub's channel (the
 //                         dialog editor's field and the choice combo wore it
 //                         until 2026-10-14, the folder overlay's list
@@ -2383,9 +2372,6 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 // None of them fills the face: a caller fills first and frames after.
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right);
-void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);
-void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r);
-void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
 void paint_windows_soft_raised(cairo_t* cr, const GuiRect& r);
 void paint_windows_soft_sunken(cairo_t* cr, const GuiRect& r);
@@ -2428,21 +2414,6 @@ struct DirectPixelTarget {
     cairo_surface_t* surface = nullptr;
 };
 bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
-// THE CHECKED DITHER (architect 2026-10-02, Windows' checked toolbar button
-// and its scroll-bar track): `r` filled as a checkerboard of `lit` and
-// `ground`, both theme roles the caller passes (Hilight and the ground at
-// both sites), in square cells ONE DEVICE PX on a side (architect
-// 2026-10-06, the palette head's dither rule), the pixel at (phase_x,
-// phase_y) lit and its neighbours alternating — a pixel is lit when its
-// column plus its row, counted from the phase, is even — so two surfaces
-// sharing a phase dither alike. Drawn as WINDOWS' OWN PATTERN BRUSH: a 2 x 2
-// image (lit / ground / ground / lit) repeated, nearest-filtered and offset to
-// the phase, one opaque fill of the rect — nothing blended, every pixel one
-// of the two roles. The callers still lay the ground first, as every face
-// does.
-void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
-                        int phase_y, GuiColor lit, GuiColor ground);
-
 // THE DISABLED EMBOSS, THE WORD HALF (architect 2026-10-03, Windows' DrawState
 // DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
 // Hilight one Windows px (relief_line_px) right and down, then in its
@@ -2647,7 +2618,7 @@ struct WaveformBasis {
 // The channel bytes round with std::nearbyint, the project's rule — vacuous for
 // the exact n/255 hex palette, decisive only if a mixed colour ever ties. The
 // one word owner for every image the painters write as words: the plate
-// (render_waveform) and the checked dither's tile (paint_checker_rect), each
+// (render_waveform) and the GPU canvas's sink (canvas_sink.cpp), each
 // handing it the color already converted for the window (display_color); a
 // bound icon's color (icons.cpp) takes the authored word's low 24 bits, its
 // raster converted after.

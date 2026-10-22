@@ -8,7 +8,6 @@
 #include "gui_font.h"
 #include "folder_overlay.h"
 #include "icons.h"
-#include "svg_icon.h"   // the dead caption glyph's emboss
 #include "display_transform.h"
 #include "materials.h"
 #include "onscreen_keyboard.h"
@@ -311,60 +310,29 @@ namespace {
 // derivation recorded there. The crops and the full row-2 record are git
 // history.)
 
-// A BUTTON'S BOX — THE ONE PAINTER of the chrome's two-line button faces
-// (architect 2026-10-02, the Windows-95 design at the Windows pixel): the
-// face filled, then its two-line edge, and the answer is what the glyph or
-// label must sit on and how far it shifts. TWO FAMILIES (the edge grammar at
-// render.h's palette head): a TOOLBAR button — the on-screen keyboard's keys
-// (the caption's three buttons, Windows' DFC_CAPTION, wear the same
-// construction in Windows' own constants since 2026-10-22,
-// paint_caption_button_box) — wears the SOFT edges (DrawEdge's BF_SOFT,
-// Windows' classic toolbar), a
-// PUSH button — the dialogs' — the PLAIN ones. (The two roster rows are the
-// program's case, paint_roster_case below, not this family.) Three faces and
-// no hover:
-//   REST     — RAISED on the ground, glyph unshifted. EVERY button rests
-//              raised, enabled or disabled: a disabled button keeps its edge
-//              and changes only its glyph (its disabled face,
-//              icons::draw_disabled, Cool Edit's emboss) or its label
-//              (embossed, show_embossed_run — Windows' DSS_DISABLED).
-//   CHECKED  — a toggled-on button (the player's Repeat One, the keyboard's
-//              armed keys): SUNKEN over Windows'
-//              checked face — the ground dithered with Hilight in one device
-//              px cells (paint_checker_rect), its phase at the button's
-//              top-left so two checked neighbours tile alike — the glyph one
-//              Windows px down and right.
-//   PRESSED  — a live press (AppState::ChromePress's face, the modal arm, a
-//              held key): SUNKEN on the plain ground, the glyph shifted the
-//              same — Windows' pushed button. It wins over the checked face
-//              while it is held.
-enum class ButtonFamily { Toolbar, Push };
+// A BUTTON'S FACE ANSWER: how far the glyph or the word on it shifts, down
+// and right, in device px — the program's case's (paint_roster_case below,
+// one line when down) and the caption buttons' (paint_caption_button_box,
+// one relief line while pushed). (THE CHROME'S OWN BUTTON PAINTER,
+// paint_button_box — Windows' two-line faces in two families, a TOOLBAR
+// button's SOFT edges on the on-screen keyboard's keys and a PUSH button's
+// PLAIN ones on the dialogs' word buttons, raised at rest, sunken pressed
+// and sunken over the Hilight dither checked — stood from 2026-10-02 until
+// its last two wearers became the ebony case, 2026-10-22: architect,
+// "buttons in ebony — yes".)
 struct ButtonBoxFace {
     int      shift;   // the glyph's down-and-right offset, device px
 };
-ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
-                               bool pressed, ButtonFamily family) {
-    const bool down = lamp || pressed;
-    paint_cell_rect(cr, r, palette().ground);
-    if (lamp && !pressed)
-        paint_checker_rect(cr, r, r.x, r.y, palette().hilight,
-                           palette().ground);
-    if (family == ButtonFamily::Toolbar) {
-        if (down) paint_relief_soft_sunken(cr, r);
-        else      paint_relief_soft_raised(cr, r);
-    } else {
-        if (down) paint_relief_plain_sunken(cr, r);
-        else      paint_relief_plain_raised(cr, r);
-    }
-    return ButtonBoxFace{down ? relief_line_px() : 0};
-}
 
 // THE ROSTER'S CASE — the band's and row 8's every button, and the render
 // player's: THE PROGRAM'S CASE (architect 2026-10-09, the program is Cool
 // Edit; paint_ce_case, cool_edit_paint.h, where its faces stand), the same
-// under every chrome. A PRESSED button (a live press) and a CHECKED one (the
-// roster's `selected`) wear Cool Edit's one down face, the glyph one line
-// further right and down; a DISABLED button keeps the face its state gives —
+// under every chrome — AND SINCE 2026-10-22 THE DIALOGS' WORD BUTTONS AND
+// THE ON-SCREEN KEYBOARD'S KEYS on their own boxes (architect, "buttons in
+// ebony — yes": the controls row's walk and paint_onscreen_keyboard; a word
+// or a cap shifts as a glyph does). A PRESSED button (a live press) and a
+// CHECKED one (the roster's `selected`, the keyboard's armed key) wear Cool
+// Edit's one down face, the glyph one line further right and down; a DISABLED button keeps the face its state gives —
 // a dead checked button still reads checked (the roster's rule at
 // paint_icon_row), only its glyph embossed (icons::draw_cased_disabled).
 // NO HOT FACE: Cool Edit's toolbar has none (program_spec.h's
@@ -1103,31 +1071,21 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        access_underline_rect(run, label, access, x, baseline),
                        ink);
 }
-// The same in THE DISABLED EMBOSS (show_embossed_run's two copies, render.h):
-// the Hilight copy one relief line right and down, its line with it, then
-// the Shadow copy at its place over it.
-void show_embossed_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
-                              const char* label, int access, double x,
-                              double baseline) {
-    // On a material its own tones (materials::flat, materials.h's INKS).
-    const int off = relief_line_px();
-    show_access_run(cr, run, label, access, x + off, baseline + off,
-                    materials::flat(palette().hilight));
-    show_access_run(cr, run, label, access, x, baseline,
-                    materials::flat(palette().shadow));
-}
 // A DIALOG BUTTON'S WORD (architect 2026-10-10, Windows strict): `run` the
 // word shaped, its access key underlined at byte `access` (-1: the word
-// alone — OK, Cancel, Close), in the label ink or, disabled, the emboss.
+// alone — OK, Cancel, Close). ON THE EBONY CASE since 2026-10-22 (architect,
+// "buttons in ebony — yes"; materials.h's INKS): the chrome's one ink,
+// kWordInk, over the words' drop shadow kWordShadow at (+d, +d) device px,
+// d the `text_shadow` key, the underline with its word in both copies. (The
+// chrome's label role on the flat raised button until then.)
 static void show_button_word(cairo_t* cr, const text_shape::ShapedRun& run,
                              const char* label, int access, double x,
-                             double baseline, bool enabled) {
+                             double baseline) {
     const char* marked = access >= 0 ? label : nullptr;
-    if (enabled)
-        show_access_run(cr, run, marked, access, x, baseline,
-                        palette().label);
-    else
-        show_embossed_access_run(cr, run, marked, access, x, baseline);
+    const double d = static_cast<double>(materials::text_shadow_px());
+    show_access_run(cr, run, marked, access, x + d, baseline + d,
+                    hex(kWordShadow));
+    show_access_run(cr, run, marked, access, x, baseline, hex(kWordInk));
 }
 
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
@@ -1253,10 +1211,11 @@ void paint_caption_close_outline(cairo_t* cr, int gx, int gy, int u,
 // win rules"; render.h's caption block): Windows' DFC_CAPTION in Windows
 // 2000's Standard scheme (kWindowsStandard) — the flat ButtonFace, the SOFT
 // raised edge at rest and the SOFT sunken one while pressed, the glyph one
-// relief line further right and down — the construction paint_button_box's
-// TOOLBAR family gives the keyboard's keys, in the constants instead of the
-// palette's roles, and in no material (the ebony case at kCaptionButtonFace,
-// 2026-10-21 to 2026-10-22, retired). Answers the glyph's shift.
+// relief line further right and down — Windows' toolbar construction (the
+// keyboard's keys wore it in the palette's roles until they became the
+// ebony case the same day), in the constants, and in no material (the ebony
+// case at kCaptionButtonFace, 2026-10-21 to 2026-10-22, retired). Answers
+// the glyph's shift.
 ButtonBoxFace paint_caption_button_box(cairo_t* cr, const GuiRect& r,
                                        bool pressed) {
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
@@ -5539,14 +5498,17 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // (update_modal_dialog_hover), and as everywhere no wait starts under a held
 // press (the model is at AppState::RedesignTooltip).
 //
-// THE BUTTONS ARE PUSH BUTTONS (architect 2026-10-02, the Windows-95 design):
-// the deleted toolbar row's box (row 2's height and its own label pads, in
-// Windows px — these buttons carry words or glyphs) painted by the one button
-// painter the roster uses (paint_button_box) in its PUSH family: PLAIN RAISED
-// at rest, a checked button PLAIN SUNKEN over the dither, a live press PLAIN
-// SUNKEN on the ground with its glyph or label one Windows px down and right,
-// and the keyboard's FOCUS the Windows default-button frame — one DkShadow
-// line outside the box. No hover face.
+// THE BUTTONS ARE PUSH BUTTONS IN SHAPE (architect 2026-10-02, the
+// Windows-95 design): the deleted toolbar row's box (row 2's height and its
+// own label pads, in Windows px — these buttons carry words or glyphs),
+// laid out by modal_word_buttons, and SINCE 2026-10-22 THE EBONY CASE IN
+// FACE (architect, "buttons in ebony — yes"): the roster's own case
+// painter (paint_roster_case) on each box — Cool Edit's rest face at rest,
+// its one down face checked and under a live press, the glyph or the word
+// one line down and right — the words in the chrome's one ink over its
+// shadow (show_button_word); the keyboard's FOCUS still the Windows
+// default-button frame, one DkShadow line outside the box. No hover face.
+// (Windows' PLAIN push-button faces, flat, 2026-10-02 to 2026-10-22.)
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
 // lift"), which is what makes the click face real: a press ARMS the button
@@ -5656,6 +5618,61 @@ constexpr double kPlayerGlyphGapPx    = 1.0;
 // stood at from 2026-10-02 until the roster's groups became Cool Edit's
 // (2026-10-09), kept as the player's own.
 constexpr double kPlayerGroupGapPx    = 8.0;
+
+// THE TWO WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel,
+// and the field-less owners' Cancel alone (the picker's, the progress
+// modal's) — the painter's plans and the bake's walk read these
+// (word_and_key_case_rects).
+constexpr std::string_view kModalOkLabel     = "OK";
+constexpr std::string_view kModalCancelLabel = "Cancel";
+
+// THE WORD BUTTONS' LAYOUT — ONE FOR THE PAINTER AND THE BAKE (2026-10-22:
+// the ebony's patches, word_and_key_case_rects, seat wherever
+// paint_modal_dialog paints): on `seats` (the controls row's,
+// modal_controls_seats) the words `labels`, in painted order, in the body
+// face `font`. EACH BUTTON the spec's push-button box tall
+// (push_button_box_px) CENTRED ON THE CASE ROWS (architect 2026-10-14: 23 W
+// on 23 W under win2000, so the rows coincide), its width the label's run
+// CEILED between the spec's two pads — CEIL, NOT nearbyint: a measured run
+// is fractional and the box it sizes must CONTAIN the ink, so it rounds up
+// (the clock cell's damage box takes the same rule, paint_bottom_strip) —
+// FLOORED AT WINDOWS' 75 (kModalBtnMinWidthPx), the label centred in it by
+// the walk. THE CLUSTER FLUSH RIGHT, its last button's right edge the row's
+// right seat (the box's ring's outer edge), the button gap between; wider
+// than the row it starts at the row's left seat and runs past the right one
+// (the buttons stay whole).
+struct ModalWordButtons {
+    std::vector<GuiRect> rect;
+    std::vector<int>     label_w;   // each run, ceiled
+};
+ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
+                                    const GuiFont& font,
+                                    std::span<const std::string_view> labels) {
+    const ChromeSpec& spec = live_chrome_spec();
+    const int btn_h = scaled_px(spec.push_button_box_px);
+    const int pad_l = scaled_px(spec.push_button_pad_left_px);
+    const int pad_r = scaled_px(spec.push_button_pad_right_px);
+    const int bgap  = scaled_px(kModalButtonGapPx);
+    const int btn_y = seats.case_y + (seats.case_h - btn_h) / 2;
+    ModalWordButtons out;
+    int total = 0;
+    for (std::size_t i = 0; i < labels.size(); ++i) {
+        const double run =
+            text_shape::shape_text_run(font, labels[i]).width_px;
+        const int label_w = static_cast<int>(std::ceil(run));
+        const int w = std::max(scaled_px(kModalBtnMinWidthPx),
+                               pad_l + label_w + pad_r);
+        out.label_w.push_back(label_w);
+        out.rect.push_back(GuiRect{0, btn_y, w, btn_h});
+        total += w + (i > 0 ? bgap : 0);
+    }
+    int x = std::max(seats.left_x, seats.right_x - total);
+    for (GuiRect& r : out.rect) {
+        r.x = x;
+        x += r.w + bgap;
+    }
+    return out;
+}
 
 } // namespace
 
@@ -5805,6 +5822,54 @@ std::vector<GuiRect> program_case_rects(const AppState& app) {
     if (ps.case_w > 0 && ps.case_h > 0)
         for (const int x : player_row_layout(ps).x)
             add(x, ps.case_y, ps.case_w, ps.case_h);
+    return out;
+}
+
+// THE WORD BUTTONS AND THE KEYS AT THIS GEOMETRY (the declaration,
+// paint_handler.h): every answer set's cluster through modal_word_buttons,
+// the painter's own layout, on the controls row at its two lifts, and every
+// page's keys through onscreen_keyboard::for_each_key, the painter's and the
+// hit test's own walk.
+std::vector<GuiRect> word_and_key_case_rects(const AppState& app) {
+    std::vector<GuiRect> out;
+    const auto add = [&](const GuiRect& r) {
+        if (r.w <= 0 || r.h <= 0) return;
+        if (std::none_of(out.begin(), out.end(), [&](const GuiRect& o) {
+                return o.x == r.x && o.y == r.y && o.w == r.w && o.h == r.h;
+            }))
+            out.push_back(r);
+    };
+    const bool keyboard = GuiPlatform::wants_onscreen_keyboard();
+    // THE ANSWER SETS: every prompt table's words, the dialog editors' OK
+    // and Cancel, the field-less owners' Cancel.
+    std::vector<std::vector<std::string_view>> sets;
+    for (const std::span<const PromptAnswer> t : kPromptAnswerTables) {
+        std::vector<std::string_view> words;
+        for (const PromptAnswer& a : t) words.push_back(a.label);
+        sets.push_back(std::move(words));
+    }
+    sets.push_back({kModalOkLabel, kModalCancelLabel});
+    sets.push_back({kModalCancelLabel});
+    // THE ROW'S TWO LIFTS: on the window's foot, and on the keyboard's band
+    // where a keyboard is painted (a dialog editor's stack — or a prompt over
+    // one — standing on it, modal_box.h's head).
+    const GuiFont font = gui_font(GuiFace::Body);
+    std::vector<int> lifts{0};
+    if (keyboard) lifts.push_back(onscreen_keyboard::surface_height_px());
+    for (const int kb_h : lifts) {
+        if (modal_controls_row_rect(app, kb_h).h <= 0) continue;   // the painter's own gate
+        const BottomRowSeats seats = modal_controls_seats(app, kb_h);
+        for (const std::vector<std::string_view>& words : sets)
+            for (const GuiRect& r : modal_word_buttons(seats, font, words).rect)
+                add(r);
+    }
+    // EVERY PAGE'S KEYS, where a keyboard is painted.
+    if (keyboard)
+        for (int p = 0; p < onscreen_keyboard::kPageCount; ++p)
+            onscreen_keyboard::for_each_key(
+                app, static_cast<onscreen_keyboard::Page>(p),
+                [&](uint32_t, const onscreen_keyboard::KeyDef&,
+                    const GuiRect& r) { add(r); });
     return out;
 }
 
@@ -5967,9 +6032,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const GuiFont font = gui_font(GuiFace::Body);
     // THE BRASS AS DRAWN (architect 2026-10-21, materials.h's METAL): every
     // tone this body lays on the box and the controls row — the scrub's
-    // channel and thumb among them — the metal's; THE FIELDS AND THE WORD
-    // BUTTONS FLAT (their own scopes below: "the user shouldn't be typing on
-    // a non-flat color", the buttons "flat fine for now").
+    // channel and thumb among them — the metal's; THE FIELDS FLAT (their own
+    // scopes below: "the user shouldn't be typing on a non-flat color"); every
+    // button the ebony case, flat inside (paint_ce_case's own scope).
     const GuiMaterialScope metal(GuiMaterialRegion::Metal);
 
     // THE BOX, for a prompt and a dialog editor (the surface block above):
@@ -5980,10 +6045,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                    : ModalBoxGround::Field,
                         kb_h);
 
-    const int bgap  = scaled_px(kModalButtonGapPx);
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
-    // kModal* block) — on every
+    // kModal* block; modal_word_buttons the one layout) — on every
     // owner's row but THE PLAYER'S, whose buttons are row 8's case, the
     // program's, at row 8's seat (architect 2026-10-05). EVERY OWNER'S SEATS
     // ARE THE FAMILY'S CONTROLS ROW'S (modal_controls_seats, architect
@@ -5991,11 +6055,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // the prompts and the editors took row 8's pads until that afternoon).
     // `btn_y` and `btn_h` are the one band the walk and the scrub read.
     const BottomRowSeats seats = modal_controls_seats(app, kb_h);
-    const ChromeSpec& spec = live_chrome_spec();
     const int btn_h = player_up ? seats.case_h
-                                : scaled_px(spec.push_button_box_px);
-    const int btn_pad_l = scaled_px(spec.push_button_pad_left_px);
-    const int btn_pad_r = scaled_px(spec.push_button_pad_right_px);
+                                : scaled_px(live_chrome_spec().push_button_box_px);
     // The focus frame's width (kModalFocusFramePx, above): painted in the gap
     // or beside the ring, never reserved, so the frame can never push the row
     // around when the focus moves. One relief line.
@@ -6262,38 +6323,31 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // progress arm). No access letter: Cancel is Esc, Windows strict.
         if (!picker_up && !progress_up) {
             DialogButtonPlan ok;
-            ok.label     = "OK";
+            ok.label     = std::string(kModalOkLabel);
             ok.editor_ok = true;
             plan.push_back(std::move(ok));
         }
         DialogButtonPlan last;
-        last.label = "Cancel";
+        last.label = std::string(kModalCancelLabel);
         plan.push_back(std::move(last));
     }
-    // EVERY BUTTON'S WIDTH, and the ONE CLUSTER'S total behind it — the total
-    // is the SINGLE-CLUSTER owners' (a prompt, the picker, an editor), whose
-    // flush-right start is measured against it; the player spends the same
-    // widths on its own two-cluster arrangement and reads no total.
-    int buttons_w = 0;
-    for (size_t i = 0; i < plan.size(); ++i) {
-        if (plan[i].glyph) {
-            // A glyph button is the PROGRAM'S CASE (the player's alone, its
-            // nine being the plan's only glyph buttons): row 8's width.
-            plan[i].w = seats.case_w;
-        } else {
-            const double lw =
-                text_shape::shape_text_run(font, plan[i].label).width_px;
-            // CEIL, NOT nearbyint: a measured run width is fractional and the
-            // box it sizes must CONTAIN the ink, so it rounds UP — rounding
-            // to nearest could clip the label's last column inside its own
-            // pads. The same round-up rule the clock cell's damage box takes
-            // on its width (paint_bottom_strip). FLOORED AT WINDOWS' 75
-            // (kModalBtnMinWidthPx), the label centred in it (the walk).
-            plan[i].label_w = static_cast<int>(std::ceil(lw));
-            plan[i].w = std::max(scaled_px(kModalBtnMinWidthPx),
-                                 btn_pad_l + plan[i].label_w + btn_pad_r);
+    // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at row 8's width
+    // (the player's alone, its nine the plan's only glyph buttons, placed by
+    // its own branch below); every other owner's row ONE CLUSTER OF WORD
+    // BUTTONS, laid out whole — widths, the flush-right start and each x —
+    // by modal_word_buttons, the layout the ebony's patches read too
+    // (word_and_key_case_rects).
+    if (player_up) {
+        for (DialogButtonPlan& b : plan) b.w = seats.case_w;
+    } else {
+        std::vector<std::string_view> labels;
+        for (const DialogButtonPlan& b : plan) labels.push_back(b.label);
+        const ModalWordButtons words = modal_word_buttons(seats, font, labels);
+        for (std::size_t i = 0; i < plan.size(); ++i) {
+            plan[i].x       = words.rect[i].x;
+            plan[i].w       = words.rect[i].w;
+            plan[i].label_w = words.label_w[i];
         }
-        buttons_w += plan[i].w + (i > 0 ? bgap : 0);
     }
 
     // A PROMPT IS RAISED WITH PASSIVE FOCUS ON A BUTTON (architect 2026-08-13,
@@ -6353,22 +6407,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // THE BUTTONS STAY WHOLE: in the pathological case where they are wider
     // than the row, the cluster starts at the row's left seat and runs past
-    // the right one.
+    // the right one (modal_word_buttons).
     //
     // THE FOCUS FRAME RESERVES NOTHING: between neighbours the 6-W gap
     // absorbs it (kModalFocusFramePx) and at the row's ends it paints in the
     // face beyond the ring's outer edge, so the focus can move anywhere on
     // the row without reflowing it.
-    const int cx0 = seats.left_x;                       // the row's left seat
-    const int cx1 = seats.right_x;                      // one past its right seat
+    const int cx1 = seats.right_x;                      // one past the row's right seat
     // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
     // family's controls row): the push button on the rows the player's cases
-    // take, 23 W on 23 W under win2000, so the rows coincide. (Centred in the
-    // bottom row's content band, the taskbar dialog's centred band before it,
-    // until that day.)
+    // take, 23 W on 23 W under win2000, so the rows coincide
+    // (modal_word_buttons). (Centred in the bottom row's content band, the
+    // taskbar dialog's centred band before it, until that day.)
     const int btn_y = player_up ? seats.case_y
                                 : seats.case_y + (seats.case_h - btn_h) / 2;
-    int buttons_x0 = std::max(cx0, cx1 - buttons_w);   // flush right
 
     // THE TEXT IN THE BOX — a prompt's question, an editor's line — stands on
     // the list's rows (folder_overlay.h's row box: the first row its pad under
@@ -6487,7 +6539,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    are disjoint, so painting them ahead of the buttons is only an
         //    ordering of convenience. --
         dlg.owner  = AppState::ModalDialogOwner::Player;
-        buttons_x0 = cx0;   // unread on this branch; the plan carries the x's
 
         // THE ROW'S LAYOUT is player_row_layout's (the glyph gap, the group
         // space, the clock's two fields measured first, the fixed left run,
@@ -6850,29 +6901,23 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
 
     // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
-    //    player's relaid row): the single left-flushed cluster is laid out
-    //    here, in the walk that has always laid it out, and the PLAYER's
-    //    branch above has already written all nine of its own — one walk, two
-    //    arrangements, and no second painter. --
-    if (!player_up) {
-        int cluster_x = buttons_x0;
-        for (size_t i = 0; i < plan.size(); ++i) {
-            if (i > 0) cluster_x += bgap;
-            plan[i].x = cluster_x;
-            cluster_x += plan[i].w;
-        }
-    }
+    //    player's relaid row): the word cluster's x's are modal_word_buttons'
+    //    (written with the widths, above), and the PLAYER's branch above has
+    //    written all nine of its own — one walk, two arrangements, and no
+    //    second painter. --
     for (size_t i = 0; i < plan.size(); ++i) {
         const int x = plan[i].x;
         const GuiRect r{x, btn_y, plan[i].w, btn_h};
-        // THE FACE IS THE ROSTER'S PAINTER IN ITS PUSH-BUTTON FAMILY (architect
-        // 2026-10-02; the one painter is paint_button_box): a PLAIN RAISED box
-        // at rest, word button and glyph button alike; the row's one checked
-        // button (Repeat One, `lit`) PLAIN SUNKEN over the Hilight dither; a
-        // LIVE PRESS — armed with the pointer inside it, or armed from the
-        // keyboard — PLAIN SUNKEN on the ground with the glyph or label one
-        // Windows px down and right, winning over the checked face while
-        // held. THE FOCUS IS
+        // THE FACE IS THE EBONY CASE ON EVERY OWNER'S ROW (architect
+        // 2026-10-22, "buttons in ebony — yes"; paint_roster_case, the one
+        // painter, paint_ce_case on the button's own box): the case's rest
+        // face at rest, word button and glyph button alike; Cool Edit's one
+        // down face for the row's one checked button (Repeat One, `lit`)
+        // and for a LIVE PRESS — armed with the pointer inside it, or armed
+        // from the keyboard — the glyph or the label one line down and
+        // right. (Windows' push button — PLAIN RAISED at rest, PLAIN SUNKEN
+        // pressed and over the Hilight dither checked — on the word buttons
+        // 2026-10-02 to 2026-10-22.) THE FOCUS IS
         // THE WINDOWS DEFAULT-BUTTON FRAME: one DkShadow line round the
         // OUTSIDE of the box, in the reserved band (kModalFocusFramePx), worn
         // by the ACTIVELY focused button and by the PASSIVELY focused one —
@@ -6916,15 +6961,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 cr, GuiRect{r.x - ring, r.y - ring, r.w + 2 * ring,
                             r.h + 2 * ring},
                 palette().dk_shadow);
-        // THE WORD BUTTONS KEEP THEIR FLAT RAISED FACES (architect
-        // 2026-10-21: "ebony eventually, flat fine for now"); the player's
-        // cases are the ebony (paint_ce_case, flat inside).
+        // THE CASE, flat inside (paint_ce_case's own scope); the word on it
+        // flat ink.
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
         const ButtonBoxFace box =
-            player_up
-                ? paint_roster_case(cr, r, plan[i].lit, pressed)
-                : paint_button_box(cr, r, plan[i].lit, pressed,
-                                   ButtonFamily::Push);
+            paint_roster_case(cr, r, plan[i].lit, pressed);
         if (plan[i].glyph) {
             // THE GLYPH, the band's own draw: the roster's glyph at the
             // case's (+1, +1) lines — the box is that case
@@ -6942,18 +6983,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                            box.shift);
         } else {
             // CENTRED, Windows' push-button text (kModalBtnMinWidthPx); a
-            // label that set its button's width lands on its left pad. A
-            // DISABLED label is THE DISABLED EMBOSS (architect 2026-10-03,
-            // Windows' DSS_DISABLED), the glyph's rule for the word.
+            // label that set its button's width lands on its left pad, in
+            // the chrome's one ink over the words' shadow (show_button_word).
+            // A WORD BUTTON IS ALWAYS LIVE WHILE ITS DIALOG STANDS, so no
+            // dead arm exists here (the disabled rung is the player's glyphs').
             const double lx = static_cast<double>(
                 r.x + (r.w - plan[i].label_w) / 2 + box.shift);
             const double ly =
                 redesign_baseline(font, static_cast<double>(r.y),
                                   static_cast<double>(r.h)) +
                 static_cast<double>(box.shift);
-            show_button_word(cr, text_shape::shape_text_run(font, plan[i].label),
-                             plan[i].label.c_str(), plan[i].access, lx, ly,
-                             enabled);
+            show_button_word(cr,
+                             text_shape::shape_text_run(font, plan[i].label),
+                             plan[i].label.c_str(), plan[i].access, lx, ly);
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
@@ -7026,22 +7068,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // the declaration; the layout table, the geometry walk and the two lamps are at
 // onscreen_keyboard.h, which this body reads and never restates.
 //
-// THE KEYS ARE THE ROSTER'S BUTTONS (architect 2026-10-02, the Windows-95
-// design; the one painter is paint_button_box in its TOOLBAR family): each
-// key a SOFT RAISED box on the ground with its cap in the theme's label, the
-// band's ground between and around them the bottom row's — so the keyboard
-// and the row it sits on read as one block, which is why the band paints NO
-// LINE at its own top edge (architect 2026-08-27, on glass). THE OTHER TWO
-// FACES:
-//   ARMED     — the CHECKED face: SOFT SUNKEN over the Hilight dither, the cap
-//               one Windows px down and right. Worn by SHIFT while it is armed and by the
-//               SYMBOL-MODE key while a symbol page stands — the two lamps.
+// THE KEYS ARE THE ROSTER'S CASES (architect 2026-10-22, "buttons in ebony
+// — yes"; the one painter is paint_roster_case, paint_ce_case on the key's
+// own box): each key THE EBONY CASE at rest on the band's brass, its cap in
+// the chrome's one ink over the words' shadow (materials.h's INKS) — the
+// band painting NO LINE at its own top edge (architect 2026-08-27, on
+// glass). THE OTHER TWO FACES ARE COOL EDIT'S ONE DOWN FACE, the cap one
+// line down and right:
+//   ARMED     — the CHECKED face, the band's checked case's. Worn by SHIFT
+//               while it is armed and by the SYMBOL-MODE key while a symbol
+//               page stands — the two lamps.
 //               IT IS ALL SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap
 //               is the word "Shift" in both states — that, and the letter
 //               caps, every one of which turns capital while the arm stands.
-//   PRESSED   — SOFT SUNKEN on the ground with the same shift, the roster's pressed
-//               face, AND IT WINS OVER ARMED while the finger is down, the
-//               roster's own rule for the same collision.
+//   PRESSED   — the same down face, the roster's pressed face; ARMED and
+//               PRESSED read alike, as the band's checked and pressed cases
+//               do.
+// (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
+// Hilight dither armed, the cap in the theme's label — 2026-10-02 to
+// 2026-10-22.)
 // NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
 // pointer, so a hover has no producer and a hint has nowhere to hang.
 //
@@ -7091,8 +7136,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // above it. (The taskbar overlay's raised Hilight line on its top,
     // 2026-10-10 to 2026-10-14, is gone with the overlay.)
     // THE BAND'S GROUND IS THE BRASS AS DRAWN (architect 2026-10-21,
-    // materials.h's METAL); the keys keep their flat raised faces ("ebony
-    // eventually, flat fine for now"), each under the Flat scope below.
+    // materials.h's METAL); the keys the ebony case (architect 2026-10-22),
+    // each under the Flat scope below.
     {
         const GuiMaterialScope metal(GuiMaterialRegion::Metal);
         paint_cell_rect(cr, surf, palette().ground);
@@ -7127,11 +7172,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 (k.role == Role::SymbolMode &&
                  page != onscreen_keyboard::Page::Letters);
 
-            // The three faces (the block above), through the roster's one
-            // button painter, flat (the band's head).
+            // The case in its face (the block above), through the roster's
+            // one case painter, flat inside.
             const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-            const ButtonBoxFace box = paint_button_box(
-                cr, r, armed, pressed, ButtonFamily::Toolbar);
+            const ButtonBoxFace box = paint_roster_case(cr, r, armed, pressed);
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
             // the function keys, Space and the page keys), or, where it
@@ -7153,7 +7197,13 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h)) +
                 box.shift;
-            set_palette_source(cr, palette().label);
+            // THE CAP IN THE CHROME'S ONE INK over the words' shadow at
+            // (+d, +d) device px, d the `text_shadow` key (materials.h's
+            // INKS, 2026-10-22).
+            const double d = static_cast<double>(materials::text_shadow_px());
+            set_palette_source(cr, hex(kWordShadow));
+            text_shape::show_shaped_run(cr, run, cap_x + d, baseline + d);
+            set_palette_source(cr, hex(kWordInk));
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });
 

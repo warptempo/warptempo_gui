@@ -18,8 +18,7 @@
 // WHERE IT RUNS, the one list (re-grep `display_transform::` to re-derive it):
 // set_palette_source and set_waveform_source (render.cpp — every role paint,
 // the text's ink included); the words the painters write by hand (render.cpp:
-// paint_checker_rect's two cells and the
-// waveform plate's two inks, converted on the GUI thread as
+// the waveform plate's two inks, converted on the GUI thread as
 // waveform_plate_inks hands them to the job, so the worker writes them
 // as they come); the icon rasters (icons.cpp, through
 // svg_icon::convert_to_display); the materials' baked tiles (materials.cpp's

@@ -3834,11 +3834,19 @@ inline constexpr PromptAnswer kPromptOkCancel[] = {
     {'o', "OK", -1}, {'\x1b', "Cancel", -1}};
 inline constexpr PromptAnswer kPromptDeleteCancel[] = {
     {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
+// EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
+// walks it, and so does the materials' bake for the word buttons' ebony
+// patches (word_and_key_case_rects, paint_handler.h, 2026-10-22), which
+// seats a patch wherever a prompt's buttons can stand. A table a raise
+// passes must be listed here.
+inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
+    kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
+    kPromptOkCancel, kPromptDeleteCancel};
 // A TABLE IS WELL FORMED when every dispatch char is distinct, a marked
 // letter lies inside its word and IS its answer's key (folded, access_key_of),
 // no two marked letters coincide, and the last answer is the Esc one.
-template <std::size_t N>
-inline constexpr bool prompt_answers_valid(const PromptAnswer (&t)[N]) {
+inline constexpr bool prompt_answers_valid(std::span<const PromptAnswer> t) {
+    const std::size_t N = t.size();
     if (N == 0 || t[N - 1].key != '\x1b' || t[N - 1].access >= 0)
         return false;
     for (std::size_t i = 0; i < N; ++i) {
@@ -3855,12 +3863,11 @@ inline constexpr bool prompt_answers_valid(const PromptAnswer (&t)[N]) {
     }
     return true;
 }
-inline constexpr bool kPromptAnswerTablesValid =
-    prompt_answers_valid(kPromptSaveDiscardCancel) &&
-    prompt_answers_valid(kPromptRetryDiscardCancel) &&
-    prompt_answers_valid(kPromptYesCancel) &&
-    prompt_answers_valid(kPromptOkCancel) &&
-    prompt_answers_valid(kPromptDeleteCancel);
+inline constexpr bool kPromptAnswerTablesValid = [] {
+    for (const std::span<const PromptAnswer> t : kPromptAnswerTables)
+        if (!prompt_answers_valid(t)) return false;
+    return true;
+}();
 static_assert(kPromptAnswerTablesValid,
               "a prompt's access letter must be in its word, be its key, be "
               "unique, and Cancel (Esc, no letter) must stand last");

@@ -32,7 +32,11 @@ GuiColor lerp_color(const GuiColor& a, const GuiColor& b, double t) {
 int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
     if (r.w <= 0 || r.h <= 0) return 0;
     const int lw = program_line_px();
-    const int g  = r.w - 3 * lw;   // the glyph seat: the case less its lines
+    // THE GLYPH SEAT: the case less its lines on each axis — square on the
+    // band's, row 8's and the render player's cases (r.w == r.h), gw x gh on
+    // a word button or a key (the declaration).
+    const int gw = r.w - 3 * lw;
+    const int gh = r.h - 3 * lw;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE CASE'S OWN TONES ARE FLAT, never a scope's (the ebony's lines and
@@ -54,39 +58,63 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
         // ebony's Face (materials::case_lines).
         const materials::CaseLines lines = materials::case_lines();
         paint_relief_frame(cr, r, hex(kCeRingOuter), lines.highlight);
-        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw + g, lw},
+        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw + gw, lw},
                        lines.shadow_last);
-        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw, lw + g},
+        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw, lw + gh},
                        lines.shadow_last);
-        materials::paint_case_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, g, true);
+        materials::paint_case_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, gw, gh,
+                                   true);
         cairo_restore(cr);
         return lw;
     }
-    materials::paint_case_ramp(cr, r.x + lw, r.y + lw, g, false);
+    materials::paint_case_ramp(cr, r.x + lw, r.y + lw, gw, gh, false);
     // THE HIGHLIGHT / SHADOW RING inside the black line, MITRED at its
     // top-right and bottom-left corner blocks (the head's diagonal rule):
     // the highlight's square L, the shadow's first tone over it as the
     // mitred L — Cool Edit's measured ADAEAF junction pixel is exactly the
     // two tones' half-and-half, the diagonal at one capture px — then the
     // shadow's ramp over the ring's straight runs, each step one device row
-    // or column, the corner blocks left as the mitre drew them: the ebony's
-    // flat strokes (materials::case_lines).
+    // down the right column (gh steps) or one device column along the bottom
+    // row (gw steps), the corner blocks left as the mitre drew them: the
+    // ebony's flat strokes (materials::case_lines). The two runs' cells are
+    // disjoint (the column's rows end where the bottom row's begins), so the
+    // order between them paints nothing differently; within a run, STEPS OF
+    // ONE BYTE TRIPLE ARE ONE FILL (2026-10-22, the same opaque aliased
+    // pixels: the ramp's two ends lie a few bytes apart, so a key's 200-odd
+    // columns are a handful of fills, not one each).
     const materials::CaseLines lines = materials::case_lines();
     paint_relief_frame(cr, GuiRect{r.x, r.y, r.w - lw, r.h - lw},
                        lines.highlight, lines.shadow_first);
-    for (int i = 0; i < g; ++i) {
-        const double t = g > 1 ? static_cast<double>(i) / (g - 1) : 0.0;
-        const GuiColor sh = lerp_color(lines.shadow_first, lines.shadow_last, t);
-        paint_ink_rect(cr, GuiRect{r.x + lw + g, r.y + lw + i, lw, 1}, sh);
-        paint_ink_rect(cr, GuiRect{r.x + lw + i, r.y + lw + g, 1, lw}, sh);
-    }
+    const auto shadow_ramp = [&](int n, const auto& cells) {
+        const auto tone = [&](int i) {
+            const double t = n > 1 ? static_cast<double>(i) / (n - 1) : 0.0;
+            return lerp_color(lines.shadow_first, lines.shadow_last, t);
+        };
+        int      i0 = 0;
+        GuiColor c0 = tone(0);
+        for (int i = 1; i <= n; ++i) {
+            const GuiColor c = i < n ? tone(i) : c0;
+            if (i < n && c.r == c0.r && c.g == c0.g && c.b == c0.b) continue;
+            paint_ink_rect(cr, cells(i0, i - i0), c0);
+            i0 = i;
+            c0 = c;
+        }
+    };
+    if (gh > 0)
+        shadow_ramp(gh, [&](int i, int n) {
+            return GuiRect{r.x + lw + gw, r.y + lw + i, lw, n};
+        });
+    if (gw > 0)
+        shadow_ramp(gw, [&](int i, int n) {
+            return GuiRect{r.x + lw + i, r.y + lw + gh, n, lw};
+        });
     // The shadow's own corner (one tone, square), then the black line on
     // the right and bottom (one tone, square).
-    paint_ink_rect(cr, GuiRect{r.x + lw + g, r.y + lw + g, lw, lw},
+    paint_ink_rect(cr, GuiRect{r.x + lw + gw, r.y + lw + gh, lw, lw},
                    lines.corner);
-    paint_ink_rect(cr, GuiRect{r.x + 2 * lw + g, r.y, lw, r.h},
+    paint_ink_rect(cr, GuiRect{r.x + 2 * lw + gw, r.y, lw, r.h},
                    hex(kCeCaseOuter));
-    paint_ink_rect(cr, GuiRect{r.x, r.y + 2 * lw + g, r.w, lw},
+    paint_ink_rect(cr, GuiRect{r.x, r.y + 2 * lw + gh, r.w, lw},
                    hex(kCeCaseOuter));
     cairo_restore(cr);
     return 0;

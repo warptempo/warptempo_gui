@@ -630,8 +630,11 @@ public:
     // It is a PLATFORM question and not a settings one deliberately. A backend
     // knows whether the machine it runs on has keys; a preference would let
     // the laptop grow a surface with no reason to exist, and the glass has no
-    // choice to offer.
-    bool wants_onscreen_keyboard() const;
+    // choice to offer. STATIC (2026-10-22): a fact of the backend compiled
+    // in, so the materials' bake, which holds no platform, asks it too —
+    // the keys' ebony patches are baked only where a keyboard is ever
+    // painted (word_and_key_case_rects, paint_handler.h).
+    static bool wants_onscreen_keyboard();
 
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD — the road
     // the painted on-screen keyboard takes into the core's key path. THE

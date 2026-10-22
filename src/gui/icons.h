@@ -413,8 +413,8 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
 // THE CASED GLYPH, a toolbar button's: the cell at the case's fixed lead
 // Windows px (icon_case_lead_px — the spec's seat, the head's PLACEMENT)
 // from `case_x`/`case_y`, the case's own top-left corner, plus
-// `button_shift_px`, the button's pressed/checked shift (paint_button_box's
-// `ButtonBoxFace::shift`, one Windows px right and down). Every roster
+// `button_shift_px`, the button's pressed/checked shift (paint_roster_case's
+// `ButtonBoxFace::shift`, one line right and down). Every roster
 // button's glyph goes through here or draw_cased_disabled, so the seat has
 // one owner.
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,

@@ -6,7 +6,7 @@
 #include "display_transform.h"
 #include "modal_box.h"          // the render player's controls row
 #include "onscreen_keyboard.h"  // the band's height (the lifted border)
-#include "paint_handler.h"      // program_case_rects
+#include "paint_handler.h"      // program_case_rects, word_and_key_case_rects
 #include "palette_file.h"       // program_palette_words' type
 #include "platform.h"           // GuiPlatform::bundled_tile_names / _bytes
 #include "svg_icon.h"           // the materials' road: raster_info, raster_regions
@@ -99,9 +99,14 @@ struct Geometry {
     // The inactive tab's body rows.
     int tab_body_y0 = 0, tab_body_y1 = 0;
     // THE CASES (program_case_rects: every case's outer rect, both states of
-    // the `h` view) and the case's line and glyph seat.
+    // the `h` view) and the case's line and glyph seat — the rows the
+    // ebony's Face is sampled from (bake_case).
     std::vector<GuiRect> cases;
     int lw = 0, g = 0;
+    // THE WORD BUTTONS AND THE KEYS (word_and_key_case_rects, 2026-10-22):
+    // their outer rects, each its own w x h — patches alone, never the
+    // Face's sample.
+    std::vector<GuiRect> word_and_key_cases;
     // THE CAPTION'S ROW: the ebony's Face sample alone since 2026-10-22
     // (bake_case).
     int caption_y = 0, caption_h = 0;
@@ -127,6 +132,7 @@ Geometry geometry_of(const AppState& app) {
     g.tab_body_y1 = strip.y + tab_strip_recess_h_px();
     g.g = icon_case_w_px() - 3 * g.lw;
     g.cases = program_case_rects(app);
+    g.word_and_key_cases = word_and_key_case_rects(app);
     const GuiRect caption = top_caption_row_area(app);
     g.caption_y = caption.y;
     g.caption_h = caption.h;
@@ -682,14 +688,48 @@ void bake_metal(const Source& src, const Geometry& g, Baked& out) {
     out.grounds.emplace_back(tile, std::move((*raw)[0]));
 }
 
-// THE EBONY: THE CASE PATCHES — per case its g x g seat at rest, (lw, lw)
-// in, and pressed, (2·lw, 2·lw) in, each the cover at its own place under
-// the ramp. They are CUT FROM THE ROWS THEY STAND ON — each seat row's
-// g + lw rows, window-wide, decoded together with the caption row and
-// dropped after the cut — and the Face is THOSE ROWS' MEAN, the caption's
-// with them, the ebony's sample since the landing, so the patches move no
-// tone a case derives from it (the caption row the sample's alone since its
-// buttons left the ebony, 2026-10-22, materials.h's TONE RULE).
+// THE SEATS MERGED INTO TILES (materials.h's CASE PATCHES): seats sharing
+// their rows (y and h) whose columns OVERLAP are one tile over the union of
+// their columns — the on-screen keyboard's letter page and symbol pages lay
+// different keys over the same rows, a word button's seat and a render
+// player case's can share rows and columns — so no pixel is baked twice; a
+// seat overlapping none (every band case, row 8's, the keys of a row all
+// pages share) stays its own patch. The ramp is a function of the seat's
+// row alone over its height, so a merged tile holds, at each seat it covers,
+// exactly the bytes that seat's own patch would.
+std::vector<GuiRect> merged_seats(std::vector<GuiRect> seats) {
+    std::sort(seats.begin(), seats.end(), [](const GuiRect& a, const GuiRect& b) {
+        if (a.y != b.y) return a.y < b.y;
+        if (a.h != b.h) return a.h < b.h;
+        return a.x < b.x;
+    });
+    std::vector<GuiRect> out;
+    for (const GuiRect& r : seats) {
+        if (!out.empty()) {
+            GuiRect& last = out.back();
+            if (last.y == r.y && last.h == r.h && r.x < last.x + last.w) {
+                last.w = std::max(last.x + last.w, r.x + r.w) - last.x;
+                continue;
+            }
+        }
+        out.push_back(r);
+    }
+    return out;
+}
+
+// THE EBONY: THE CASE PATCHES — per case its glyph seat, the case less its
+// lines on each axis (paint_ce_case: (w − 3·lw) x (h − 3·lw), square on the
+// program's cases), at rest, (lw, lw) in, and pressed, (2·lw, 2·lw) in,
+// merged where they overlap (merged_seats), each the cover at its own place
+// under the ramp over its own height. The Face is THE ROWS THE PROGRAM'S
+// CASES STAND ON — each seat row's g + lw rows, window-wide, decoded
+// together with the caption row — the ebony's sample since the landing, so
+// the patches move no tone a case derives from it (the caption row the
+// sample's alone since its buttons left the ebony, 2026-10-22, materials.h's
+// TONE RULE; the word buttons' and the keys' rows, ebony since 2026-10-22,
+// never join it). A patch inside a decoded row is CUT from it; any other —
+// a word button's, a key's — is decoded at its own rect; a patch past the
+// window's edge is not baked.
 void bake_case(const Source& src, const Geometry& g, Baked& out) {
     std::vector<int> tops;
     for (const GuiRect& c : g.cases)
@@ -705,39 +745,62 @@ void bake_case(const Source& src, const Geometry& g, Baked& out) {
     }
     // The rows' indices as decoded (an empty row seats nothing).
     std::vector<int> at(rows.size(), -1);
-    std::vector<GuiRect> kept;
+    std::vector<GuiRect> regions;
     for (std::size_t i = 0; i < rows.size(); ++i)
         if (rows[i].w > 0 && rows[i].h > 0 && g.g > 0) {
-            at[i] = static_cast<int>(kept.size());
-            kept.push_back(rows[i]);
+            at[i] = static_cast<int>(regions.size());
+            regions.push_back(rows[i]);
         }
-    auto raw = source_regions(src, g.w, g.h, kept);
-    if (!raw) { out.error = raw.error(); return; }
-    const uint32_t eb = out.face = mean_of(*raw);
-    // A rect inside the decoded row `i`, else none.
-    const auto row_holds = [&](std::size_t i, const GuiRect& r) {
-        return at[i] >= 0 &&
-               contains_rect(rows[i], r);
+    const std::size_t sample_n = regions.size();
+    // THE SEATS, at rest and pressed, merged.
+    std::vector<GuiRect> rest_seats, down_seats;
+    for (const std::vector<GuiRect>* set : {&g.cases, &g.word_and_key_cases})
+        for (const GuiRect& c : *set) {
+            const int gw = c.w - 3 * g.lw;
+            const int gh = c.h - 3 * g.lw;
+            if (gw <= 0 || gh <= 0) continue;
+            rest_seats.push_back(GuiRect{c.x + g.lw, c.y + g.lw, gw, gh});
+            down_seats.push_back(GuiRect{c.x + 2 * g.lw, c.y + 2 * g.lw, gw, gh});
+        }
+    // EACH PATCH'S SOURCE: the decoded row holding it, else its own region
+    // (inside the client), else none.
+    struct Patch {
+        GuiRect rect{};
+        bool    down = false;
+        int     row = -1;      // the decoded row's index in `rows`
+        int     region = -1;   // its own region's index
     };
+    std::vector<Patch> patches;
+    const GuiRect client{0, 0, g.w, g.h};
+    for (const bool down : {false, true})
+        for (const GuiRect& r : merged_seats(down ? down_seats : rest_seats)) {
+            Patch p{r, down};
+            for (std::size_t i = 0; i < rows.size() && p.row < 0; ++i)
+                if (at[i] >= 0 && contains_rect(rows[i], r))
+                    p.row = static_cast<int>(i);
+            if (p.row < 0) {
+                if (!contains_rect(client, r)) continue;   // past the window's edge
+                p.region = static_cast<int>(regions.size());
+                regions.push_back(r);
+            }
+            patches.push_back(p);
+        }
+    auto raw = source_regions(src, g.w, g.h, regions);
+    if (!raw) { out.error = raw.error(); return; }
+    const uint32_t eb = out.face = mean_of(*raw, sample_n);
     std::array<double, kCaseStops> ramp{};
     for (int i = 0; i < kCaseStops; ++i)
         ramp[static_cast<std::size_t>(i)] = case_ramp_ratio(i, eb);
-    const auto ramp_of = [&](int y) {
-        return ramp[static_cast<std::size_t>(stop_of(y, g.g, kCaseStops))];
-    };
-    for (const GuiRect& c : g.cases) {
-        const std::size_t i = 1 + static_cast<std::size_t>(
-            std::find(tops.begin(), tops.end(), c.y) - tops.begin());
-        const GuiRect rest{c.x + g.lw, c.y + g.lw, g.g, g.g};
-        const GuiRect down{c.x + 2 * g.lw, c.y + 2 * g.lw, g.g, g.g};
-        for (const auto& [r, to] : {std::pair{rest, &out.rest},
-                                    std::pair{down, &out.down}}) {
-            if (!row_holds(i, r)) continue;   // past the window's edge
-            Surface s = cut((*raw)[static_cast<std::size_t>(at[i])].get(), 0,
-                            rows[i].y, r);
-            scale_in_place(s.get(), ramp_of);
-            to->emplace_back(r, std::move(s));
-        }
+    for (Patch& p : patches) {
+        Surface s = p.row >= 0
+                        ? cut((*raw)[static_cast<std::size_t>(at[static_cast<std::size_t>(p.row)])].get(),
+                              0, rows[static_cast<std::size_t>(p.row)].y, p.rect)
+                        : std::move((*raw)[static_cast<std::size_t>(p.region)]);
+        const int h = p.rect.h;
+        scale_in_place(s.get(), [&](int y) {
+            return ramp[static_cast<std::size_t>(stop_of(y, h, kCaseStops))];
+        });
+        (p.down ? out.down : out.rest).emplace_back(p.rect, std::move(s));
     }
 }
 
@@ -1149,17 +1212,20 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
 CaseLines case_lines() { return state().case_lines; }
 DisabledGlyphTones disabled_glyph_tones() { return state().disabled; }
 
-void paint_case_ramp(cairo_t* cr, int x, int y, int g, bool down) {
-    if (g <= 0) return;
+void paint_case_ramp(cairo_t* cr, int x, int y, int w, int h, bool down) {
+    if (w <= 0 || h <= 0) return;
     State& s = state();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (contains(client_rect(), x, y, x + g, y + g)) {
+    if (contains(client_rect(), x, y, x + w, y + h)) {
+        // THE TILE ON THE SEAT'S ROWS holding its columns (a patch the seat's
+        // own, or a merged tile over it — bake_case's merged_seats).
         for (const Tile& t : down ? s.case_down : s.case_rest) {
-            if (t.rect.x != x || t.rect.y != y || t.rect.w != g || t.rect.h != g)
+            if (t.rect.y != y || t.rect.h != h || x < t.rect.x ||
+                x + w > t.rect.x + t.rect.w)
                 continue;
             set_tile_source(cr, t);
-            cairo_rectangle(cr, x, y, g, g);
+            cairo_rectangle(cr, x, y, w, h);
             cairo_fill(cr);
             cairo_restore(cr);
             return;
@@ -1168,13 +1234,13 @@ void paint_case_ramp(cairo_t* cr, int x, int y, int g, bool down) {
     // NO PATCH FOR THIS SEAT (the declaration): the ramp's flat stops.
     const uint32_t eb = s.faces[static_cast<std::size_t>(GuiMaterial::Case)];
     for (int i = 0; i < kCaseStops; ++i) {
-        const int y0 = static_cast<int>(std::nearbyint(static_cast<double>(i) * g / kCaseStops));
-        const int y1 = static_cast<int>(std::nearbyint(static_cast<double>(i + 1) * g / kCaseStops));
+        const int y0 = static_cast<int>(std::nearbyint(static_cast<double>(i) * h / kCaseStops));
+        const int y1 = static_cast<int>(std::nearbyint(static_cast<double>(i + 1) * h / kCaseStops));
         if (y1 <= y0) continue;
         const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
                                             static_cast<double>(kCaseStops - 1);
         set_palette_source(cr, hex(case_tone(eb, b)));
-        cairo_rectangle(cr, x, y + y0, g, y1 - y0);
+        cairo_rectangle(cr, x, y + y0, w, y1 - y0);
         cairo_fill(cr);
     }
     cairo_restore(cr);

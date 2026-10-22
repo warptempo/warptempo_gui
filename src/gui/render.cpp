@@ -461,29 +461,15 @@ void paint_relief_edge(cairo_t* cr, const GuiRect& r, GuiColor outer_tl,
 }
 } // namespace
 
-void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r) {
-    paint_relief_edge(cr, r, palette().hilight, palette().dk_shadow, palette().light_3d,
-                      palette().shadow);
-}
-
-void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r) {
-    paint_relief_edge(cr, r, palette().dk_shadow, palette().hilight, palette().shadow,
-                      palette().light_3d);
-}
-
-void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r) {
-    paint_relief_edge(cr, r, palette().light_3d, palette().dk_shadow, palette().hilight,
-                      palette().shadow);
-}
-
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r) {
     paint_relief_edge(cr, r, palette().shadow, palette().hilight, palette().dk_shadow,
                       palette().light_3d);
 }
 
 // THE WINDOWS PARTS' EDGES (2026-10-22; the rule at kWindowsStandard,
-// render.h's caption block): the families above, line for line, in Windows
-// 2000's Standard quartet.
+// render.h's caption block): DrawEdge's SOFT raised and sunken and PLAIN
+// raised families (render.h's relief head), in Windows 2000's Standard
+// quartet.
 void paint_windows_soft_raised(cairo_t* cr, const GuiRect& r) {
     const GuiWindowsScheme& w = kWindowsStandard;
     paint_relief_edge(cr, r, hex(w.hilight), hex(w.dk_shadow),
@@ -500,47 +486,6 @@ void paint_windows_plain_raised(cairo_t* cr, const GuiRect& r) {
     const GuiWindowsScheme& w = kWindowsStandard;
     paint_relief_edge(cr, r, hex(w.light_3d), hex(w.dk_shadow),
                       hex(w.hilight), hex(w.shadow));
-}
-
-void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
-                        int phase_y, GuiColor lit, GuiColor ground) {
-    if (r.w <= 0 || r.h <= 0) return;
-    // THE TILE, Windows' pattern brush: 2 x 2 device px, lit at (0, 0) and
-    // (1, 1), the ground at the other two — both cells theme roles handed in,
-    // written as words (argb32_opaque_word), so every pixel the fill lays is
-    // one of the two and the fill is opaque; each cell's authored color
-    // converted for the window (display_color, the painter's entry).
-    cairo_surface_t* tile =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2, 2);
-    cairo_surface_flush(tile);
-    unsigned char* data = cairo_image_surface_get_data(tile);
-    const int stride = cairo_image_surface_get_stride(tile);
-    const uint32_t lit_word    = argb32_opaque_word(display_color(lit));
-    const uint32_t ground_word = argb32_opaque_word(display_color(ground));
-    for (int y = 0; y < 2; ++y) {
-        uint32_t* row = reinterpret_cast<uint32_t*>(data + y * stride);
-        for (int x = 0; x < 2; ++x)
-            row[x] = (x + y) % 2 == 0 ? lit_word : ground_word;
-    }
-    cairo_surface_mark_dirty(tile);
-    // REPEATED, NEAREST, ITS ORIGIN AT THE PHASE: the pattern's (0, 0) lies on
-    // (phase_x, phase_y), so that pixel is lit and the lattice runs on from
-    // it either way; one fill of the rect, cairo cutting it to the clip.
-    cairo_pattern_t* brush = cairo_pattern_create_for_surface(tile);
-    cairo_pattern_set_extend(brush, CAIRO_EXTEND_REPEAT);
-    cairo_pattern_set_filter(brush, CAIRO_FILTER_NEAREST);
-    cairo_matrix_t to_tile;
-    cairo_matrix_init_translate(&to_tile, -static_cast<double>(phase_x),
-                                -static_cast<double>(phase_y));
-    cairo_pattern_set_matrix(brush, &to_tile);
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source(cr, brush);
-    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
-    cairo_fill(cr);
-    cairo_restore(cr);
-    cairo_pattern_destroy(brush);
-    cairo_surface_destroy(tile);
 }
 
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {

@@ -55,6 +55,21 @@ struct GuiTargetRender;
 // case can stand and never where none does. A function of the client size
 // and the scale alone (the faces compiled in), which is the bake's key.
 std::vector<GuiRect> program_case_rects(const AppState& app);
+// THE WORD BUTTONS AND THE KEYS, THE EBONY'S OTHER PATCHES (architect
+// 2026-10-22, "buttons in ebony — yes"; materials.h's CASE PATCHES): every
+// word button's outer rect the modal family's controls row can show — each
+// prompt answer table's cluster (kPromptAnswerTables, app_state.h), the
+// dialog editors' OK and Cancel, the picker's and the progress modal's
+// Cancel, flush right as the painter lays them (paint_handler.cpp's
+// modal_word_buttons, the one layout both read) — on the row standing on
+// the window's foot and, on a platform that paints the on-screen keyboard
+// (GuiPlatform::wants_onscreen_keyboard), on the row lifted onto the
+// keyboard's band; and there every page's keys (onscreen_keyboard::
+// for_each_key, the walk the painter and the hit test read). Each rect
+// its own w x h, none twice. A function of the client size and the scale
+// alone (the faces and the tables compiled in), the bake's key; never the
+// ebony Face's sample (bake_case).
+std::vector<GuiRect> word_and_key_case_rects(const AppState& app);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
 // bake for their ebony patches 2026-10-21 to 2026-10-22, are the caption
 // painter's own again, paint_handler.cpp.)

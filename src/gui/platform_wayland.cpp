@@ -2865,7 +2865,7 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
 // repeat's codepoint probe here, and it cannot know about a key no keyboard
 // pressed. That difference is why this body would be WRONG for a producer on
 // this platform and is exactly right for the one it has, which is none.
-bool GuiPlatform::wants_onscreen_keyboard() const {
+bool GuiPlatform::wants_onscreen_keyboard() {
     return false;
 }
 

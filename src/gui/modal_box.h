@@ -43,9 +43,12 @@
 // 2026-10-21, "the light brown should be brass": materials.h's METAL, the
 // FLAT region retired as a ground); THE FIELDS STAY FLAT ("the user
 // shouldn't be typing on a non-flat color") — a dialog editor's line, the
-// lists' ground — and the word buttons keep their flat raised faces ("ebony
-// eventually, flat fine for now"); a prompt's question stands on the face,
-// the brass (paint_modal_box).
+// lists' ground; THE WORD BUTTONS ARE THE EBONY CASE (architect 2026-10-22,
+// "buttons in ebony — yes": the band's case on each button's own box, its
+// word in the chrome's one ink — materials.h's CASE and INKS; their flat
+// raised faces, "ebony eventually, flat fine for now", 2026-10-21 to
+// 2026-10-22); a prompt's question stands on the face, the brass
+// (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the border, the
 // controls row, the foot), and it lands 6 W below the main window's canvas
 // bottom: the mock's picture, intended. At the tablet's 2304 x 1440 and

@@ -107,13 +107,21 @@ struct AppState;
 //           client with it 2026-10-21 to 2026-10-22); and THE INACTIVE TAB'S
 //           BODY rows (below);
 //   CASE    THE CASE PATCHES (2026-10-21, a window-wide band per seat row
-//           until then) — ONE g x g PATCH PER SEAT, at rest and pressed (one
+//           until then) — ONE PATCH PER GLYPH SEAT, at rest and pressed (one
 //           line further in), for every case the band, row 8 and the render
 //           player lay out in either state of the `h` view
-//           (program_case_rects, paint_handler.h: the rows' own layouts),
-//           each the cover at its own place under the case's ramp (below)
-//           (the caption buttons' three faces with them 2026-10-21 to
-//           2026-10-22).
+//           (program_case_rects, paint_handler.h: the rows' own layouts), a
+//           g x g square, and SINCE 2026-10-22 for every WORD BUTTON and
+//           every ON-SCREEN KEYBOARD KEY the window can show
+//           (word_and_key_case_rects: the controls row's word clusters of
+//           every answer set, with and without the keyboard under the stack,
+//           and every page's keys — the two keyboard forms on a platform
+//           that paints one alone), each its own w x h; seats sharing rows
+//           whose columns overlap baked as ONE TILE over their union (the
+//           letter and symbol pages' rows, a word button's seat over a
+//           player case's) — each the cover at its own place under the
+//           case's ramp (below) (the caption buttons' three faces with them
+//           2026-10-21 to 2026-10-22).
 // THE LAUNCH ROAD (2026-10-21): the bundle listed once, each material's
 // source chosen by name, and ONLY THAT FILE READ, in one sized read; the
 // three materials READ, DECODED, DERIVED AND CONVERTED ON THREE THREADS AT
@@ -124,14 +132,19 @@ struct AppState;
 // pixels are copied straight out of it (svg_icon::raster_regions); the
 // window's conversion is the transform's word through its table-driven
 // encode (display_transform.h's p3_word_from_srgb_fast).
-// RESIDENT at 300 % on 2304 x 1440 about 19 MB (the brass's one tile 13.3
-// and its tab body 0.4, the wood 3.8 with its void, the ebony 1.4 — about
-// fifty seats' patches), on the laptop's maximized 1920 x 1047 at 138 %
-// about 10 MB (the brass 8.0, the wood 1.4) (ARGB32, computed off the
-// geometry 2026-10-22 when the caption left the wood and the ebony and the
-// sizing frame's band the brass — 19.5 and the brass 8.1 the day before,
-// 8.7 and 3.0 MB measured that morning; materials::resident_bytes, which
-// the trace line prints at every bake, is the measure).
+// RESIDENT at 300 % on 2304 x 1440 about 25 MB (the brass's one tile 13.3
+// and its tab body 0.4, the wood 3.8 with its void, the ebony 7.4 — the
+// program's cases' patches 1.4, about fifty seats, THE WORD BUTTONS 0.5,
+// their seats 216 x 60 at three cluster places on the row's two lifts, and
+// THE KEYS 5.5, 38 tiles of 78 rows at rest and pressed over the three
+// pages' slots), on the laptop's maximized 1920 x 1047 at 138 % about 10 MB
+// (the brass 8.0, the wood 1.4, the word buttons 0.07 and no keys — the
+// laptop paints no keyboard) (ARGB32, computed off the geometry 2026-10-22
+// when the word buttons and the keys took the ebony — 19 and 10 that
+// morning, when the caption left the wood and the ebony and the sizing
+// frame's band the brass; 19.5 and the brass 8.1 the day before, 8.7 and
+// 3.0 MB measured that morning; materials::resident_bytes, which the trace
+// line prints at every bake, is the measure).
 //
 // THE REGIONS — WHICH MATERIAL A SURFACE IS (GuiMaterialRegion, a scope the
 // painter names):
@@ -166,7 +179,10 @@ struct AppState;
 //          ON-SCREEN KEYBOARD'S BAND and THE SETTINGS POPUP — each the brass
 //          as drawn at its own place, its relief the brass Face's tones (the
 //          laptop's sizing frame among them 2026-10-21 to 2026-10-22).
-//   CASE   EVERY CASE (the band's, row 8's, the render player's). The
+//   CASE   EVERY CASE (the band's, row 8's, the render player's) AND SINCE
+//          2026-10-22 EVERY WORD BUTTON AND EVERY KEY OF THE ON-SCREEN
+//          KEYBOARD (architect: "buttons in ebony — yes"; paint_ce_case on
+//          their own w x h boxes, the ramp over the seat's height). The
 //          case's 20 ramp rows are the ebony UNDER
 //          THE LUMINANCE RULE off its own Face with Cool Edit's case span,
 //          kCaseRampTop at the top row to kCaseRampBottom at the bottom (HLS
@@ -191,9 +207,10 @@ struct AppState;
 //   FLAT   NO GROUND SINCE 2026-10-21 (the family above went to the brass).
 //          The scope's default still: what stays flat is named by its painter
 //          — EVERY FIELD (a dialog editor's line, the lists' ground where you
-//          pick, the time fields: the chrome's field pair), THE WORD BUTTONS
-//          AND THE KEYBOARD'S KEYS ("ebony eventually, flat fine for now"),
-//          every case's own lines and rings — their roles derived by
+//          pick, the time fields: the chrome's field pair) and every case's
+//          own lines and rings (THE WORD BUTTONS AND THE KEYBOARD'S KEYS were
+//          flat raised faces here until 2026-10-22, "ebony eventually, flat
+//          fine for now", the ebony's CASE since) — their roles derived by
 //          chrome_derive.h's rules FROM THE METAL'S FACE (the text's swaps
 //          following it).
 // UNTOUCHED: the well and everything the palette draws (the canvas, the view
@@ -207,8 +224,10 @@ struct AppState;
 // over its ground tile as decoded (before the tab body is derived from it),
 // THE WOOD'S OVER THE ROWS ABOVE AND BELOW THE PANEL WINDOW-WIDE, THE
 // CAPTION'S AMONG THEM (before the void is derived), and THE EBONY'S OVER
-// THE FULL-WIDTH ROWS ITS PATCHES ARE CUT FROM AND THE CAPTION ROW
-// (each seat row's g + lw rows, window-wide), NOT OVER THE TILES: those
+// THE FULL-WIDTH ROWS THE PROGRAM'S CASES' PATCHES ARE CUT FROM AND THE
+// CAPTION ROW (each seat row's g + lw rows, window-wide; the word buttons'
+// and the keys' rows, ebony since 2026-10-22, never in it), NOT OVER THE
+// TILES: those
 // rows were each material's sample when its tones were judged — the ebony's
 // before the patches replaced the seat rows' bands, both before the caption
 // left the wood and the ebony (2026-10-22), its rows decoded for the means
@@ -244,12 +263,15 @@ struct AppState;
 // kCaptionInkInactive while the window is inactive, 2026-10-22), the tab
 // labels, the ruler's digits and ticks, row 8's clock and the render
 // player's two fields (on kTimeFieldGround, their rings the region's tones,
-// geometry and pads unchanged) and row 8's state line (the caption
+// geometry and pads unchanged), row 8's state line and, SINCE 2026-10-22,
+// THE WORDS ON THE EBONY — the word buttons' labels with their access-key
+// underlines and the on-screen keyboard's caps (the caption
 // buttons' glyphs 2026-10-21 to 2026-10-22: Windows' black since, render.h's
 // caption block); THE WORDS
 // that wore a drop shadow keep it — kWordShadow at (+d, +d) DEVICE PX, d the
 // `text_shadow` key (materials::text_shadow_px; the settled mock's 2 at
-// 300 %), on the title and the tab labels — and the ruler's digits and the
+// 300 %), on the title and the tab labels, and on the ebony's words (the
+// underline's shadow with its word's) — and the ruler's digits and the
 // state line their own (+1, +1) shadows. THE MARKER LANE'S RESTING LABELS
 // stay kNearWhite, THE ONE HIGH-CONTRAST TEXT (a disabled cue's label fading
 // from it toward the metal's Face; the triangles, the yellow head, the dots,
@@ -258,8 +280,9 @@ struct AppState;
 // ruler, the caption glyphs, and the amber F0B030 on the clock, retired the
 // same day.) THE SELECTION PAIR is the constant kSelectionFill under
 // kSelectionText (chrome_derive.h's rows). The cards', the tooltip's and the
-// dialogs' words keep the chrome's text roles. A disabled word's emboss is
-// as before, its light copy the material's own light tone (materials::flat);
+// dialogs' text in their boxes keep the chrome's text roles. A disabled
+// word's emboss is as before, its light copy the material's own light tone
+// (materials::flat) — no word on the ebony is ever dead;
 // a disabled glyph is Cool Edit's emboss (the caption's Marlett cell
 // Windows' DSS_DISABLED emboss since 2026-10-22, render.h's caption block).
 
@@ -290,7 +313,8 @@ inline constexpr double kCaseCorner        = -0.10;
 // contrast; only flags should be very high contrast"): ONE COLOR on every
 // word and digit on the chrome but the flags — the caption's title, the tab
 // labels, the ruler's digits and ticks, row 8's clock and the render
-// player's two fields and the state line —
+// player's two fields, the state line and, since 2026-10-22, the word
+// buttons' labels and the keyboard's caps on the ebony —
 // over the words' shadow where a word wore it (the old brass C9A961, "too
 // golden", retired). THE FLAG LABELS' NEAR-WHITE is the one high-contrast
 // text, and the selection's text.
@@ -410,11 +434,14 @@ struct DisabledGlyphTones {
     bool operator==(const DisabledGlyphTones&) const = default;
 };
 DisabledGlyphTones disabled_glyph_tones();
-// THE CASE'S RAMP on the g x g glyph seat at (x, y): the case patch baked for
-// that seat (`down` the pressed one, one line further in), a copy at the
-// same rectangle; a seat no patch was baked for (a size change waiting on
-// the gate) takes the ramp's twenty flat stops off the ebony Face.
-void paint_case_ramp(cairo_t* cr, int x, int y, int g, bool down);
+// THE CASE'S RAMP on the w x h glyph seat at (x, y) (paint_ce_case's: square
+// on the program's cases, a word button's or a key's its own): the tile
+// baked on that seat's rows holding its columns — its own patch, or the
+// merged tile over it (`down` the pressed set, one line further in) — a
+// copy at the same rectangle; a seat no tile holds (a size change waiting
+// on the gate) takes the ramp's twenty flat stops off the ebony Face over
+// its height.
+void paint_case_ramp(cairo_t* cr, int x, int y, int w, int h, bool down);
 // THE INACTIVE TAB'S BODY over `body` (the head's METAL): a copy of its
 // baked rows at the same rectangle.
 void paint_tab_body(cairo_t* cr, const GuiRect& body);

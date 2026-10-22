@@ -406,9 +406,10 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // Windows px in Tahoma, 2 clear each side (measured 2026-10-06).
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
-// what says the arm is the key's ARMED FACE — the button painter's CHECKED
-// face, soft sunken over the Hilight dither (paint_button_box), which this key and the
-// symbol-mode key (while a symbol page stands) wear off their lamps — and
+// what says the arm is the key's ARMED FACE — the ebony case's CHECKED face,
+// Cool Edit's one down face (paint_roster_case, since 2026-10-22; Windows'
+// soft sunken face over the Hilight dither until then), which this key and
+// the symbol-mode key (while a symbol page stands) wear off their lamps — and
 // the letter caps themselves, every one of which turns capital while the arm
 // stands. The page key wears no lamp: its cap already says the page.
 inline const char* cap_word(const KeyDef& k, Page page) {
@@ -536,8 +537,10 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // x and width, the window's since 2026-10-21, when the program frame's
 // columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT;
 // it carries its edge pad on all four sides (edge_pad_px) and NO LINE OF ITS
-// OWN. ITS GROUND IS THE BRASS AS DRAWN, its keys the flat raised faces
-// (architect 2026-10-21; paint_onscreen_keyboard, materials.h's METAL). Under a dialog editor the modal
+// OWN. ITS GROUND IS THE BRASS AS DRAWN (architect 2026-10-21), ITS KEYS
+// THE EBONY CASE (architect 2026-10-22, "buttons in ebony — yes"; the flat
+// raised faces until then) — paint_onscreen_keyboard, materials.h's METAL
+// and CASE. Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit,
 // the foot, the controls row and the border under row 8, all lifted onto the
 // band); under the flag editor, the one editor with no dialog, it stands

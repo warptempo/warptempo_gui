@@ -505,7 +505,7 @@ public:
     // question rather than a setting, and what the false answer buys the
     // laptop build — is at platform_wayland.h's own, which this file does not
     // copy.
-    bool wants_onscreen_keyboard() const;
+    static bool wants_onscreen_keyboard();
 
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. Hardware
     // keyboards are out of scope on this platform (on_input_event's key arm)

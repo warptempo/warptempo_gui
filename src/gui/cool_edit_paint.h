@@ -74,13 +74,17 @@
 // THE FACE RAMP (materials::paint_case_ramp, the ebony's): ONE STOP PER W
 // ROW OF THE 20-W GLYPH SEAT, never resampled (architect 2026-10-09 ~10:25,
 // the seat Cool Edit's own 20): stop i fills the seat's W row i, whose
-// device rows are [nearbyint(i·g/20), nearbyint((i+1)·g/20)) of the seat's
-// g, so the rows tile the seat exactly at every scale, each stop a band of
-// the ebony cover under its luma ratio (materials.h's CASE, 2026-10-21; a
-// flat band of Cool Edit's per-row case tones until then). THE HIGHLIGHT
+// device rows are [nearbyint(i·h/20), nearbyint((i+1)·h/20)) of the seat's
+// height h, so the rows tile the seat exactly at every scale, each stop a
+// band of the ebony cover under its luma ratio (materials.h's CASE,
+// 2026-10-21; a flat band of Cool Edit's per-row case tones until then). ON
+// A SEAT THAT IS NO SQUARE — a word button's or a key's (2026-10-22,
+// paint_ce_case) — the twenty stops tile its own height the same way and
+// run across its whole width. THE HIGHLIGHT
 // (materials::case_lines) on the top row and left column; THE SHADOW on the
 // right column and the bottom row, a ramp from its first to its last tone
-// across the glyph seat, its first tone also the mitre's dark half at the
+// across the glyph seat — down its height on the column, along its width on
+// the row — its first tone also the mitre's dark half at the
 // top-right and bottom-left; THE SHADOW'S OWN CORNER at the bottom-right
 // inside the black line — each a flat stroke off the ebony's Face. Where the highlight meets the shadow Cool Edit's measured
 // ADAEAF is the two tones' half-and-half — the mitre, drawn as the diagonal
@@ -190,11 +194,20 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 
 // -- THE CASE ------------------------------------------------------------------
 
-// ONE BUTTON CASE on `r` (icon_case_w_px square), in its face:
+// ONE BUTTON CASE on `r`, in its face: the band's, row 8's and the render
+// player's (icon_case_w_px square) and, SINCE 2026-10-22, THE WORD BUTTONS
+// AND THE ON-SCREEN KEYBOARD'S KEYS (architect: "buttons in ebony — yes";
+// the modal family's controls row and paint_onscreen_keyboard, which the
+// case wears on their own boxes, w x h). ONE CONSTRUCTION FOR EVERY BOX: the
+// glyph seat is the case less its lines on each axis, gw = r.w − 3 lines
+// across and gh = r.h − 3 lines down (gw = gh = the square seat on the
+// square cases, every expression there the square's), the lines' places
+// below read off it:
 //   REST     — the highlight on the top row and left column, the face ramp
 //              on the glyph seat, the shadow ramp on the right column and
 //              bottom row, the two mitred where they meet, the black line
-//              on the right and bottom; the glyph at (+1, +1) lines.
+//              on the right and bottom; the glyph (or a word, a cap) at
+//              (+1, +1) lines.
 //   DOWN     — PRESSED (a live press) or CHECKED (`lamp`), the same face
 //              (Cool Edit draws them alike, the window group's checked cases
 //              and the zoom button's press on his captures): black on the
@@ -202,7 +215,8 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 //              it, the ramp on the seat one line further in, the case's
 //              highlight on the bottom row and right column, mitred against
 //              the black (2026-10-21; Cool Edit's 808080 and F8F8F8 until
-//              then); the glyph at (+2, +2).
+//              then); the glyph at (+2, +2) — a word or a cap one line
+//              right and down of its rest place, the answer below.
 //   DISABLED — the face its state gives, the glyph EMBOSSED (the caller's
 //              icons::draw_cased_disabled — Cool Edit's own disabled art,
 //              its silhouette over a kCeDisabledLight copy of the drawing
@@ -210,7 +224,9 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 //              the silhouette's top-left edges — the silhouette the case
 //              ramp's mean lightness times kCeDisabledShadowRatio and the
 //              rim black since 2026-10-21,
-//              icons.h's THE DISABLED GLYPH).
+//              icons.h's THE DISABLED GLYPH). A word or a cap on a case
+//              is never dead (a word button lives while its dialog
+//              stands; a key while its keyboard does).
 //   HOT      — none: Cool Edit's toolbar has no hover face (program_spec.h's
 //              case_hot_face).
 // Answers the glyph's shift in device px (one line when down).

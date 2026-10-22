@@ -2723,7 +2723,7 @@ void GuiPlatform::release_pen_zoom_anchor() {
 // the platform-question ruling is at platform_wayland.h's twin). YES,
 // unconditionally: this backend translates no hardware key event, so the
 // painted surface is the only key producer the platform has.
-bool GuiPlatform::wants_onscreen_keyboard() const {
+bool GuiPlatform::wants_onscreen_keyboard() {
     return true;
 }
 
