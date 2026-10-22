@@ -135,4 +135,4 @@ Not green, not red, not blue.
 55. Transport Play — start playback in the editor: the conductor's ONE hand in a white lace cuff, large, filling the cell,
     RAISED high at the upbeat holding the baton straight up at 90 degrees — no face, no body, seen from behind the condutor
 56. Transport Stop — stop playback in the editor: the SAME cuffed hand, large, LOWERED flat, palm down, the baton held
-    level — no face, no body, seen from behind the condutor
+    level — no face, no body, seen from behind the condutor. the view is from behind, so the thumb should not be seen, only the ulnar side should be seen. 
