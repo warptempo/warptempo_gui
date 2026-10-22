@@ -45,10 +45,11 @@ absent.
 
 ## Provenance and licence
 
-Every master in this folder is drawn at the architect's prompt for this project — `Metal` and `Case` with Google's
-Gemini, 2026-10-21; `Wood` with OpenAI's ChatGPT from the Walter photos and upscaled to 5504 x 3072 by Gemini,
+Every master in this folder is drawn at the architect's prompt for this project — `Case` with Google's Gemini,
+2026-10-21; `Metal` with Gemini from a brass tile, 2026-10-22 (his pick off six live candidates, "the one most realistic to
+what a music instrument would look like"; the darker even sheet of 2026-10-21 until then); `Wood` with OpenAI's ChatGPT from the Walter photos and upscaled to 5504 x 3072 by Gemini,
 2026-10-22 (architect: "the most realistic … I'm OK with red if it's realistic"; the first Gemini walnut, 2026-10-21,
 read as a stylized, hot red) — and licensed under the GNU LGPL v3, the icon set's own licence (`assets/icons/README.md`, "Licence": each file a separate
 data file read at run time, never linked or compiled into the program's code); the covers are renders of them under
-the same licence. A JPEG or PNG carries no notice, so this README is their record. The settled three: `Wood` the ChatGPT walnut of 2026-10-22, `Metal` the darker step of the first even-sheet brass pair, `Case` the ebony run. The generation
+the same licence. A JPEG or PNG carries no notice, so this README is their record. The settled three: `Wood` the ChatGPT walnut of 2026-10-22, `Metal` the brass of 2026-10-22, `Case` the ebony run. The generation
 records (the prompts, the sheets, every candidate) are the planner's `tmp/theme_next/gemini_out/`, not shipped.
