@@ -1508,8 +1508,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE WINDOW'S COLOR SPACE, read once, here: after init() adopted the
         // window and before any painter or worker thread runs
         // (display_transform.h's head, architect 2026-10-08). True Colors,
-        // the switch's other bit, starts true and is never reset here: it
-        // is the process's (install_true_colors).
+        // the switch's other bit, is never reset here: it is the process's,
+        // seeded from the `true_colors` key before the first session
+        // (install_true_colors, gui_main).
         display_transform::set_window_display_p3(gui.window_is_display_p3());
     }
 
@@ -1895,15 +1896,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // selection drag is finalized there too (collapsed to a caret,
         // selection-only, nothing to revert).
         input_handler.finalize_active_drags();
-        // ANY FULL RELAYOUT CLOSES THE OPEN DROPDOWN, and a resize is the
-        // one relayout edge that can reach it: it moves the anchor and every
-        // published rect with it, so a popup left open would hang from a button
-        // no longer under it. The other relayout-class events cannot happen
-        // while it is open — a file load is startup-only, and a tab switch or a
-        // gui_scale commit both need the keyboard, which the popup gate
-        // swallows. Ordered with finalize_active_drags above and the layout
-        // below, so the resize still lands on a gesture-free, popup-free state.
-        input_handler.close_dropdown();
+        // (ANY FULL RELAYOUT CLOSED THE OPEN DROPDOWN here until the Settings
+        // popup retired, 2026-10-21.)
         paint_handler.on_resize(w, h);
         // (THE CURSOR RE-RESOLVE THAT STOOD HERE IS GONE, 2026-08-03. This
         // callback force-ends the gestures and rebuilds the layout — both facts
@@ -1942,7 +1936,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // A PHYSICAL KEY ARRIVAL ENDS A HELD ARROW BUTTON'S REPEAT BURST, and
         // THIS hook is that edge: it sees exactly the platform's key
         // deliveries and none of the synthetic on_key entries (the chrome
-        // lift, the dropdown item, and the burst's own tick fires — which
+        // lift and the burst's own tick fires — which
         // must not end the schedule they ride, so the disarm cannot live at
         // on_key's own top). It is LOAD-BEARING FOR UNDO rather than
         // hand-feel: Undo::coalesce_gesture merges a synthesized repeat by
@@ -2096,8 +2090,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // inability of those events to arrive.
     // The pointer-position-dependent state must therefore be cleared here, or
     // a pointer that slides out of the window leaves it standing for as long
-    // as it stays outside: an open dropdown's item face and the notification
-    // cards' hover are the two left (below).
+    // as it stays outside: the notification cards' hover is the one left
+    // (below; an open dropdown's item face was the other until 2026-10-21).
     // THE ARMED CHROME PRESS joins it, and since the act moved to the release
     // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
     // this is the BUTTON-LOST edge — the hold stops being the pointer's to
@@ -2105,18 +2099,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // release that does arrive later (the ordinary-leave case) finds no arm
     // and dispatches nothing: the harmless no-op named above, and the intended
     // answer — a release outside the window's visit runs nothing.
-    // AN OPEN POPUP'S TWO FACES GO WITH THEM, and only they: the item under
-    // the pointer is lit by `hovered_item` with no in-window term in the
-    // painter, and the armed item by `pressed_item`, so both would outlive the
-    // pointer that named them — a flick out of the
-    // window whose last on-surface motion was still over an item leaves it lit
-    // until a RETURN motion recomputes. One call clears both faces AND the press
-    // claim (clear_dropdown_pointer_state), and dropping the claim is what
-    // leaves a re-entry's motion and any later release owning nothing; the MENU
-    // ITSELF STAYS UP, because leaving the window is not a dismissal. THE
-    // PEN'S HOVER END (PenHoverEnd) KEEPS THE FACES and drops the claim alone
-    // (architect 2026-10-10: the HOVER_EXIT before every tip DOWN blinked the
-    // row — the rule at GuiPointerLeaveReason, input_core.h).
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
     // must end HERE rather than be left to the tick's hover recompute, which
     // refuses outright while the pointer is outside. THE REASON FORKS IT: the
@@ -2134,8 +2116,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (end_tooltip_hover). (The S Pen's lift off an empty glass never reaches
     // this body since 2026-10-07: the pen stays the pointer at its lift, the
     // restore motion's arm — pointer_focus_at.) Every other effect here
-    // reads every reason alike but one: the open popup's lit row, which the
-    // pen's hover end keeps (the popup's paragraph above).
+    // reads every reason alike (the open popup's lit row, which the pen's
+    // hover end kept, went with the Settings popup, 2026-10-21).
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         app.pointer_in_window = false;
         using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
@@ -2143,16 +2125,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             reason == GuiPointerLeaveReason::TouchLift
                 ? TooltipHoverEnd::ContactLift
                 : TooltipHoverEnd::Hard);
-        // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end:
+        // THE RELEASE-TIME ARMS. This hook is no longer their only end:
         // they also die at the BUTTON-LOST edge, an unheld
         // motion while one of them stands — which is what the touch layer's
         // abnormal end delivers, and what a lost physical button delivers too
         // (clear_release_time_press_arms). The calls stay spelled out here
         // rather than routed through that owner because THIS edge asks a
         // different question and clears more with it: a pointer that has left
-        // is on no button AND at no position, so the tooltip goes too, and the
-        // popup's HOVERED item goes on an ordinary leave (the pen's hover end
-        // keeps it, below) whether or not anything was armed. The narrower
+        // is on no button AND at no position, so the tooltip goes too whether
+        // or not anything was armed. The narrower
         // owner is a subset of
         // this body, deliberately.
         input_handler.clear_redesign_button_press();
@@ -2161,14 +2142,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // not happened yet, and the pointer is on no button now (the contract
         // is at clear_modal_dialog_press).
         input_handler.clear_modal_dialog_press();
-        // THE OPEN POPUP'S LIT ROW STAYS LIT ACROSS THE PEN'S HOVER END
-        // (architect 2026-10-10, "the word Pick Colors blinks": the HOVER_EXIT
-        // before every tip DOWN darkened it for a frame; the rule at
-        // GuiPointerLeaveReason's PenHoverEnd, input_core.h): the one
-        // predicate keeps the face, the press claim still dropped. Every
-        // other reason clears both faces as ever.
-        input_handler.clear_dropdown_pointer_state(
-            pointer_leave_keeps_lit_rows(reason));
         // THE RENDER PLAYER'S TWO ARMS go on the same edge (2026-08-28) — the
         // overlay's row press and the scrub's marker drag, both acts that
         // have not happened yet and both dropped uncommitted here exactly as
@@ -2261,7 +2234,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // handles under a resting pointer, the zoom and navigation keys, the trim
     // keys, an
     // undo restoring trim, `o`, a gui_scale relayout, every keyboard editor open
-    // and close, a dropdown item click) had no site to hang a call on at all.
+    // and close, a dropdown item click while there was one) had no site to hang a call on at all.
     // A LOOP BOUNDARY IS AFTER EVERY SETTLE BY DEFINITION, so all of them are
     // answered by this one call and the ordering rule itself is gone.
     //
@@ -2272,50 +2245,25 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // damage, no gesture logic. `mods` is the platform's live modifier truth,
     // handed over rather than fetched.
     //
-    // THE OPEN DROPDOWN'S ITEM FACES ARE THE SECOND CONSUMER (2026-08-03),
-    // and they are the same disease at a different surface: the popup's
-    // item rects are PAINTER-PUBLISHED, zero from the open until paint_dropdown
-    // publishes them, so a motion delivered before that paint resolves NO item —
-    // and if the pointer then RESTS, no further motion exists to correct it.
-    // Press Settings, hold, slide down onto an item's position inside the frame
-    // the menu came up in, stop moving, release after it paints: nothing was ever
-    // armed, nothing was lit, and the release ran nothing — permanently, not for
-    // one frame. Rects moving under a stationary pointer is exactly what this
-    // boundary answers, so the iteration that PAINTS them ends by resolving hover
-    // and arm against them, under the live button state the hook already carries.
-    // recompute_dropdown_hover returns immediately with no menu open and damages
-    // only on a change, so the standing cost is a compare per wakeup.
-    // IT DOES NOT REPLACE on_motion's call: that one is per DELIVERED MOTION, and
-    // a dispatch batch can carry a motion and then the PAINT that reads these
-    // faces with no loop tail between them. What neither caller has to be is LAST
-    // before a release: the release derives its item from its own coordinates
-    // (finish_dropdown_release), precisely because this walk's inputs can move at
-    // an in-batch paint. The two callers answer different questions; the reasoning
-    // is at the definition.
+    // (THE OPEN DROPDOWN'S ITEM FACES WERE A SECOND CONSUMER, 2026-08-03 —
+    // painter-published rects moving under a resting pointer — until the
+    // Settings popup retired, 2026-10-21.) THE CURSOR does not re-light what
+    // the pointer-leave hook above dropped: it refuses on app.pointer_in_window
+    // inside its own body.
     //
-    // THE CONSUMERS ARE INDEPENDENT, so the order here is free: the zone map
-    // refuses every cue while a popup is open and reads neither item face, and
-    // the recompute writes nothing the map reads.
-    // NEITHER OF THOSE TWO RE-LIGHTS WHAT THE POINTER-LEAVE HOOK ABOVE DROPPED:
-    // each refuses on app.pointer_in_window inside its own body, so a
-    // per-iteration call cannot resurrect a face from coordinates the pointer
-    // has left behind.
-    //
-    // THE NAV DRAG'S ZOOM/PAN MODE IS THE THIRD CONSUMER (2026-08-14), and it
+    // THE NAV DRAG'S ZOOM/PAN MODE IS THE SECOND CONSUMER (2026-08-14), and it
     // is the same disease once more: ctrl SELECTS what a live navigation drag
     // means, so releasing it under a MOTIONLESS pointer must drop the zoom stem
     // and re-stamp the capture's restore there and then — the old model synced
     // in on_motion alone, so the stem stood until the mouse moved again
     // (architect, from the rig). It refuses immediately with no nav drag
-    // standing, and unlike the two above it is deliberately NOT gated on the
+    // standing, and unlike the cursor it is deliberately NOT gated on the
     // pointer being in the window: a captured drag's pointer is virtual and
     // may be anywhere, and the gesture is what owns the answer. It is
-    // independent of both — the map refuses every cue while a gesture is live,
-    // and the hover walk reads nothing it writes — so the order here stays
-    // free.
+    // independent of it — the map refuses every cue while a gesture is live —
+    // so the order here is free.
     gui.set_loop_settled_hook([&](GuiInputState mods) {
         input_handler.refresh_pointer_cursor(mods);
-        input_handler.recompute_dropdown_hover(mods);
         input_handler.sync_nav_drag_mode(mods);
     });
 
@@ -2571,7 +2519,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // two frames; the reason is at that compare.)
         // IT IS ALSO WHAT MAKES THE PAINTED CLAIM TRUTHFUL (architect
         // 2026-09-24, strictly as-painted): every chrome claim — the roster's
-        // press, lift, hold-repeat, the dropdown's rows, the
+        // press, lift, hold-repeat, the
         // render player's modal row — reads the painted bit rather than the
         // live predicate, so these walks are what carry reality to the face
         // the input acts on.
@@ -2720,28 +2668,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
 
-        // THE OPEN DROPDOWN'S ITEMS, the same comparator for one more stash
-        // (architect 2026-09-24, the truthful menus): a row's verdict
-        // (dropdown_item_enabled) moves with background state — a checkpoint
-        // landing, a load ending — that damages no
-        // part of the box, so the as-painted bits (AppState::Dropdown::
-        // item_enabled, published by paint_dropdown under a covering clip)
-        // are held against the live verdict here and any drift pays one
-        // damage of the box's published rect. No writer of those states
-        // spells the repaint. Above the loading return, like the roster's.
-        if (app.dropdown.open()) {
-            const DropdownMenu menu = app.dropdown.menu;
-            for (int i = 0; i < dropdown_item_count(menu); ++i) {
-                if (app.dropdown.item_enabled[static_cast<size_t>(i)] !=
-                    dropdown_item_enabled(app, audio, menu, i)) {
-                    viewport.invalidate_rect(app.dropdown.rect);
-                    break;
-                }
-            }
-        }
-
-        // THE RENDER PLAYER'S MODAL ROW, the same comparator for the third
-        // stash (architect 2026-09-24, strictly as-painted): a button's face
+        // THE RENDER PLAYER'S MODAL ROW, the same comparator for the second
+        // stash (the open dropdown's items were another until 2026-10-21;
+        // architect 2026-09-24, strictly as-painted): a button's face
         // (render_player_button_enabled) moves with state that damages no part
         // of the row — the device coming up or going absent, a render run
         // starting or finishing under the Load face, a lock flipping — so the
@@ -3560,6 +3489,11 @@ int gui_main(const char* argument) {
     // argument, 2026-10-08..10-21, left with the captions.)
     // Every painter reads it through palette() (render.h's palette block).
     install_palette(palette_record(device_config.waveform));
+    // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
+    // display_transform.h's head): the switch's bit seeded here, before the
+    // window and every cache that converts exist, so the launch owes none of
+    // the live commit's apply shape (GuiInputHandler::apply_true_colors).
+    install_true_colors(device_config.true_colors);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

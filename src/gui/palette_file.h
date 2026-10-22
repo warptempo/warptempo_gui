@@ -18,9 +18,9 @@
 //     twenty presets (kGuiBuiltinPalettes), the `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
-//     window), chosen by the Settings menu's Waveform row, a line editor
-//     whose Tab completes a typed prefix against the built-in names
-//     (GuiSettingsEditor::complete_preset_value) and whose commit installs
+//     window), set by the settings editor's `waveform=` line, whose Tab
+//     completes a typed prefix against the built-in names
+//     (GuiSettingsEditor::complete_closed_value) and whose commit installs
 //     the preset live (install_program_palette below). It sets THE
 //     WAVEFORM'S ROLES ALONE: no chrome surface reads its `face` once the
 //     materials are baked — the panel's Face is the brass's mean
@@ -268,8 +268,8 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // first and the other nineteen alphabetically by display name, architect
 // 2026-10-11 — was the color picker's preset menu's and then the Settings
 // choice row's domain; it went with the choice drop-downs, architect
-// 2026-10-14. The row's Tab completion matches the built-in names in the
-// table's own order, GuiSettingsEditor::complete_preset_value.)
+// 2026-10-14. The key's Tab completion matches the built-in names in the
+// table's own order, GuiSettingsEditor::complete_closed_value.)
 
 // THE ACTIVE PRESET THE INSTALL TAKES IS THE DEVICE CONFIG'S KEY AS WRITTEN
 // (architect 2026-10-14: every key required, the default spelled):

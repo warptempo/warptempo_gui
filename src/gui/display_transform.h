@@ -68,18 +68,22 @@
 //     window_is_display_p3, read once by gui_main right after the window
 //     exists and before any painter or worker thread runs; nothing changes it
 //     after.
-//   * TRUE COLORS (set_true_colors; architect 2026-10-08 ~05:35) — the
-//     Settings menu's "True Colors" row, CHECKED, TRUE AT EVERY LAUNCH ("the
-//     default is on, not something off by default") and no device key: with
+//   * TRUE COLORS (set_true_colors; architect 2026-10-08 ~05:35) — THE
+//     `true_colors` DEVICE KEY since 2026-10-21 (`on` | `off`, required, read
+//     at launch and set live by the settings editor's commit; device_config.h),
+//     ON in both devices' configs ("the default is on, not something off by
+//     default"); from 2026-10-08 until then the Settings menu's "True Colors"
+//     command row, checked, true at every launch and persisted nowhere. With
 //     the conversion on, a screenshot holds the converted P3 bytes, so a hex
 //     read off it in GIMP is not the authored one ("I won't be able to
 //     round-trip"); app screenshots are "only for occasional documentation
-//     or sharing, not design", so he unchecks it for the capture alone. While
+//     or sharing, not design", so he sets it off for the capture alone. While
 //     it is FALSE nothing converts: the raw sRGB bytes go to the P3 layer, a
 //     capture round-trips byte for byte, and the glass reads oversaturated
-//     meanwhile. On the laptop the row is present and acts (symmetry), and
+//     meanwhile. On the laptop the key is present and acts (symmetry), and
 //     changes nothing: there is no conversion to turn off. PROCESS-LIFETIME
-//     STATE, FILE-SCOPE HERE AND NOT ON AppState, which gui_main rebuilds at
+//     STATE (seeded from the key at launch), FILE-SCOPE HERE AND NOT ON
+//     AppState, which gui_main rebuilds at
 //     every project reopen while the window and its caches stand (the live
 //     palette words' reason, render.h's program_palette_words). Its one
 //     writer is install_true_colors (render.h), which owes the rebuild of

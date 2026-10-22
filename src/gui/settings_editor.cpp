@@ -8,8 +8,8 @@
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
-#include "palette_file.h"      // the Waveform row's presets (palette_record, kGuiBuiltinPalettes)
-#include "materials.h"         // the tuning rows' live apply (set_bevel, set_text_shadow)
+#include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
+#include "materials.h"         // the tuning keys' live apply (set_bevel, set_text_shadow)
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -72,12 +73,6 @@ bool is_path_completed_key(const std::string& key) {
     return key == "projects_path";
 }
 
-// THE COLOR KEY — the device config's `waveform`, whose Tab completion is
-// the built-in preset names (complete_preset_value, architect 2026-10-14;
-// the `caption` key's beside it 2026-10-14..10-21).
-bool is_preset_completed_key(const std::string& key) {
-    return key == "waveform";
-}
 
 // The longest common prefix of the matches, cut back to a CODEPOINT BOUNDARY:
 // two names sharing only the lead byte of different multi-byte characters
@@ -113,37 +108,42 @@ std::string common_prefix_on_codepoint_boundary(
     return lcp;
 }
 
-} // namespace
-
-void GuiSettingsEditor::open_prefilled(const char* key) {
-    // THE DROPDOWN'S ITEM CLICK, and it is open() plus the recall
-    // autocomplete_value already performs — no parallel opener and no second
-    // serializer. Seed `<key>=`, then let autocomplete_value fill the value
-    // side through format_engine_setting_value / recall_gui_setting_value,
-    // which is byte-identical to what the writer writes; it leaves the cursor
-    // at the line end and no-ops on an unrecallable key, so the bare `<key>=` is
-    // the honest fallback rather than an error. Its bool answer is the TAB
-    // arm's question and means nothing here, so this caller drops it.
-    //
-    // It carries no gate of its own and needs none: it delegates to open()
-    // whole, so whatever that one owner decides is what this route gets, and
-    // the is_active test on the next line is the belt that turns an open which
-    // did not take into this route's silent return — the seed never runs.
-    // Since 2026-09-04 the opener refuses nothing but a standing editor, the
-    // read-only decision
-    // having moved to the key's own commit arm (the account is at open()), so
-    // a locked tab's menu click raises the editor like any other and the
-    // commit says the lock's sentence where the key is the piece's.
-    if (key == nullptr) return;
-    open();
-    if (!text_editor::is_active(app.settings_editor)) return;
-    app.settings_editor.pending          = std::string(key) + "=";
+// THE BUFFER'S ADVANCE, the three completers' shared tail: `append` lands at
+// the LINE'S END whatever the caret was doing, through the one incoming
+// filter, as the recall's does; its over-capacity refusal is silent for the
+// recall's reason (the text is the product's own, not the user's), and
+// answers false because the buffer stood still.
+bool append_at_line_end(AppState& app, Viewport& viewport,
+                               const std::string& append) {
+    const std::string before = app.settings_editor.pending;
     app.settings_editor.cursor_pos       =
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
-    (void)autocomplete_value();
-    viewport.invalidate_modal_dialog_area();
+    (void)text_editor::replace_selection(app.settings_editor, append);
+    viewport.invalidate_dialog_editor_box();
+    return app.settings_editor.pending != before;
 }
+
+// THE PREFIX RULE over a closed list of ASCII words — the key completer's and
+// the closed-value completer's one body (the rules at their declarations):
+// the matches' longest common prefix past `typed`, or nothing. The words are
+// ASCII, so the codepoint cut cuts nothing and is called for the one rule's
+// sake (the path completer's).
+template <typename Words>
+std::string closed_list_advance(const std::string& typed,
+                                       const Words& words) {
+    std::vector<std::string> matches;
+    for (std::string_view w : words) {
+        if (w.size() >= typed.size() && w.compare(0, typed.size(), typed) == 0)
+            matches.emplace_back(w);
+    }
+    if (matches.empty()) return {};
+    const std::string lcp = common_prefix_on_codepoint_boundary(matches);
+    if (lcp.size() <= typed.size()) return {};
+    return lcp.substr(typed.size());
+}
+
+} // namespace
 
 // The one opener, and it carries no read-only decision at all: the lock
 // governs the keys, not the surface (architect 2026-09-04).
@@ -158,27 +158,27 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // Ctrl+S), so a locked tab killed the one road to `projects_path`,
 // `projects_repo` and the scale (and now the waveform cap) — and on the
 // tablet the menu
-// is that road. The decision sits at each key's own commit arm now: the
+// was that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the selected text every other refusal there leaves, while commit_device_setting's
-// six keys and the `gui_scale` arm commit regardless. So every Settings
-// dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
-// URL, Cover) say the lock's sentence when they commit.
+// keys and the `gui_scale` arm commit regardless, and the GUI-kind keys —
+// band rather than authored content: view state, the per-tab viewport, zoom,
+// playhead, trim and the read_only bit itself, read-only-legal since
+// 2026-08-07 — owe no read-only gate here either.
 //
-// The typed road did not move and keeps its refusal one level up: bare `;` is
+// THE OPENER ITSELF IS REFUSED UNDER EITHER LOCK, one level up: bare `;` is
 // off the read-only allowlist and dies at the keyboard gate, which names the
-// press in its own voice ("; is not available on a read-only tab"). What the
-// dropdown opens on a locked tab is the whole editor, though, and its field is
-// free text — a row prefills a key, it does not restrict the buffer — so every
-// GUI-kind key can now be typed from a locked ACTIVE tab, the typed
-// `tab_X_trim_*=` relaxation of 2026-08-07 among them, and
-// `tab_X_read_only=false` with them as a self-unlock beside bare `o` and the
-// icon row's toggle. That is the ruling working rather than a hole, and it is
-// why the READ-ONLY arm in commit() stays engine-only: the GUI-kind keys are
-// band rather than authored content — view state,
-// the per-tab viewport, zoom, playhead, trim and the
-// read_only bit itself — and have been read-only-legal since 2026-08-07, so
-// none of them owes a read-only gate here.
+// press in its own voice ("; is not available on a read-only tab"), the
+// iteration gate refusing everything that list refuses, and the band's
+// Settings button — the chord's pointer spelling — greys under both. From
+// 2026-09-04 until 2026-10-21 the Settings popup's rows opened this editor on
+// a locked tab regardless, each prefilling its key, the field free text (a
+// self-unlock typed as `tab_X_read_only=false` among what it admitted); the
+// popup retired that evening for this one editor, and with it that road: a
+// locked ACTIVE tab now reaches the device keys only after an unlock (bare
+// `o`, or the lamp's off edge) or from the other tab. THE LOCK ARMS BELOW ARE
+// KEPT AS THE KEYS' OWN RULE (the engine-key arm's, and the iteration lock's
+// three), though no open reaches them under a lock since.
 //
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
@@ -380,10 +380,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // LIT FOR THE COLUMN IT WAS PRESSED IN and the column is frozen with
         // it, so a typed `active_markers_view=P` under a lit lamp would leave
         // the cells painted and the sweep aimed at a column the brackets were
-        // never authored on. The Settings dropdown opens this editor under
-        // the lock — the lock governs the KEYS and not the surface — and its
-        // field is free text, so without this arm the editor is a second
-        // road onto the state the ruling exists to delete; it is the sibling
+        // never authored on. The lock governs the KEYS and not the surface,
+        // and the editor's field is free text, so without this arm the editor
+        // would be a second road onto the state the ruling exists to delete
+        // (the Settings dropdown opened it under the lock until 2026-10-21;
+        // `;` is refused there since, the open's account); it is the sibling
         // of the tab_X_read_only refusal below, which answers bare `o` the
         // same way.
         //
@@ -519,14 +520,13 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // from this surface to the keys (the account is at open()): the editor
         // did not raise on a locked ACTIVE tab, so the arm was reached only by
         // typing `tab_X_read_only=false` from an unlocked tab about the other
-        // one. The Settings dropdown raises the editor on a locked tab now,
-        // and its field is free text — the row is a prefill, not a
-        // restriction — so a self-unlock can be typed there. That is the
-        // ruling working rather than a hole: this key is band, not authored
-        // content, navigation-class on the read-only allowlist's own reading,
-        // and the ordinary unlock is bare `o` or the icon row's toggle
-        // standing right there. Bare `;` still cannot open the editor on a
-        // locked tab at all, being off that allowlist one level up.
+        // one. The Settings dropdown raised the editor on a locked tab from
+        // then until it retired, 2026-10-21, so a self-unlock could be typed
+        // there; bare `;` cannot open the editor on a locked tab at all,
+        // being off that allowlist one level up, so the arm is the remote
+        // route again. This key is band, not authored content,
+        // navigation-class on the read-only allowlist's own reading, and the
+        // ordinary unlock is bare `o` or the icon row's toggle.
         if (gv.b == band.read_only) { unchanged(); return true; }
         // THE ITERATION LOCK REFUSES A LOCK OF THE ACTIVE TAB (architect
         // 2026-09-10; scoped to the active tab 2026-10-13), the typed
@@ -540,8 +540,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // COMMITS: it can only widen what is reachable, which is why the
         // `gv.b` term is the whole of the direction test. The refused field
         // plus card, this surface's shape, on the gate's own sentence.
-        // Without this arm the editor — which the Settings dropdown opens
-        // under a lit lamp, the lock governing the keys and not the surface —
+        // Without this arm the editor — the lock governing the keys and not
+        // the surface (the Settings dropdown opened it under a lit lamp until
+        // 2026-10-21) —
         // would be a second road onto the state the padlock refuses.
         if (gv.b && active && app.iteration_mode_enabled) {
             text_editor::refuse(app.settings_editor);
@@ -721,8 +722,8 @@ void GuiSettingsEditor::commit() {
     // 2026-09-04, moving the decision off GuiSettingsEditor::open — the
     // account is there). An engine key IS the piece: read-only protects the
     // authored musical content, the two marker stores and the engine settings
-    // (read_only_key_blocked, input_key_dispatch.cpp), so the four sidecar
-    // dropdown rows and every typed engine key refuse here while the device
+    // (read_only_key_blocked, input_key_dispatch.cpp), so every engine key
+    // (the four sidecar keys among them) refuses here while the device
     // keys and the GUI-kind band above commit on a locked tab. It sits past
     // is_canonical_engine_key so an unknown key still hears that it is
     // unknown, and ahead of the value validator because the lock outranks the
@@ -737,10 +738,10 @@ void GuiSettingsEditor::commit() {
     // under a lit lamp, because the lock governs the KEYS and not the surface.
     // The sentence forks at the one composer (authoring_lock_card,
     // notifications.h) because this site knows its act and needs no chord in
-    // it. The editor still OPENS under the lock: `;` is dropped at the
-    // keyboard gate, and the Settings dropdown's rows grey on a load alone
-    // (the open refuses nothing under the lock), so the commit owes the
-    // answer itself.
+    // it. (The editor OPENED under the lock through the Settings dropdown's
+    // rows until the popup retired, 2026-10-21; `;` is dropped at the
+    // keyboard gate under either lock, so no open reaches this arm under one
+    // since — kept as the keys' own rule, the open's account.)
     if (authoring_locked(app)) {
         const char* card = authoring_lock_card(app);
         text_editor::refuse(app.settings_editor);
@@ -903,8 +904,8 @@ void GuiSettingsEditor::commit() {
 // — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
 // repository, so the projects home is the device config's (device_config.h)
 // and Ctrl+S does not carry it. projects_path JOINED IT 2026-09-02
-// (architect — the Settings dropdown carries
-// both as rows), which is what made the arm a body: ONE SHAPE FOR THE TWO.
+// (architect — the Settings dropdown carried
+// both as rows until 2026-10-21), which is what made the arm a body: ONE SHAPE FOR THE TWO.
 // The key's own grammar owner in device_config.h decides —
 // is_projects_repo, is_projects_path, never a second spelling
 // — and a refusal is the refused field and the card with the grammar's own
@@ -945,13 +946,15 @@ void GuiSettingsEditor::commit() {
 // project is opened first — a rename-by-hand case, accepted. `waveform`
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
-// `bevel_light`, `bevel_dark` and `text_shadow` (2026-10-21, the fortepiano
-// chrome's tuning phase) the same, their arm after it.
+// `true_colors` (2026-10-21, the popup's command row made a key) the same,
+// its arm after it; `bevel_light`, `bevel_dark` and `text_shadow`
+// (2026-10-21, the fortepiano chrome's tuning phase) the same, their arm
+// last.
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
-// with its key.) The commit is the OK's or Enter's, as on every row (the
-// choice rows' list rows, which showed a value and committed nothing, went
-// with the choice editor, 2026-10-14).
+// with its key.) The commit is the OK's or Enter's (the choice rows' list
+// rows, which showed a value and committed nothing, went with the choice
+// editor, 2026-10-14).
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
@@ -1019,6 +1022,26 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         if (value == field) { unchanged(); return true; }
         field = value;
         install_waveform_preset(palette_record(value));
+        (void)persist();
+        applied();
+        return true;
+    }
+
+    // TRUE COLORS (architect 2026-10-21, the Settings popup's "True Colors"
+    // command row made a key): one of the two words under its one owner
+    // (parse_true_colors, device_config.h), APPLIED LIVE AT THE COMMIT through
+    // the toggle's own apply shape (GuiInputHandler::apply_true_colors — the
+    // switch's bit, the icon rasters, the materials' bake, the plate or the
+    // flag cache, the whole window), so NO CARD: the colors on screen are the
+    // answer.
+    if (key == "true_colors") {
+        const std::optional<bool> on = parse_true_colors(value);
+        if (!on) { reject(kTrueColorsGrammarReason); return true; }
+        if (*on == app.device_config->true_colors) {
+            unchanged(); return true;
+        }
+        app.device_config->true_colors = *on;
+        input->apply_true_colors(*on);
         (void)persist();
         applied();
         return true;
@@ -1160,48 +1183,32 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
     if (matches.size() == 1) append += '/';
     if (append.empty()) return false;
 
-    // The append lands at the LINE'S END whatever the cursor was doing, through
-    // the one incoming filter, as the recall does; its over-capacity refusal is
-    // silent for the recall's reason (the text is the product's own, not the
-    // user's), and answers false below because the buffer stood still.
-    const std::string before = app.settings_editor.pending;
-    app.settings_editor.cursor_pos       =
-        static_cast<int>(app.settings_editor.pending.size());
-    app.settings_editor.selection_anchor = -1;
-    (void)text_editor::replace_selection(app.settings_editor, append);
-    viewport.invalidate_dialog_editor_box();
-    return app.settings_editor.pending != before;
+    // The append lands at the LINE'S END (append_at_line_end, the
+    // completers' shared tail).
+    return append_at_line_end(app, viewport, append);
 }
 
-// THE PRESET COMPLETER (the ruling and its examples at the declaration,
-// architect 2026-10-14): the path completer's model over the kind's closed
-// list of built-in names. The value side is matched as typed — a name is
-// ASCII, so the byte compare is the character compare, and the common prefix
-// needs no codepoint cut (common_prefix_on_codepoint_boundary cuts nothing
-// on ASCII and is called for the one rule's sake). A unique match takes NO
-// trailing character, unlike the path's `/`: a preset name ends the line.
-bool GuiSettingsEditor::complete_preset_value(const std::string& value) {
-    std::vector<std::string> matches;
-    const auto offer = [&](std::string_view name) {
-        if (name.size() >= value.size() &&
-            name.compare(0, value.size(), value) == 0)
-            matches.emplace_back(name);
-    };
-    for (const auto& p : kGuiBuiltinPalettes) offer(p.key);
-    if (matches.empty()) return false;
-    const std::string lcp = common_prefix_on_codepoint_boundary(matches);
-    if (lcp.size() <= value.size()) return false;
-    const std::string append = lcp.substr(value.size());
+bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
+    const std::string append = closed_list_advance(prefix, kSettingsEditorKeys);
+    if (append.empty()) return false;
+    return append_at_line_end(app, viewport, append);
+}
 
-    // The append lands at the LINE'S END, through the one incoming filter,
-    // as the path completer's does (its reasons there).
-    const std::string before = app.settings_editor.pending;
-    app.settings_editor.cursor_pos       =
-        static_cast<int>(app.settings_editor.pending.size());
-    app.settings_editor.selection_anchor = -1;
-    (void)text_editor::replace_selection(app.settings_editor, append);
-    viewport.invalidate_dialog_editor_box();
-    return app.settings_editor.pending != before;
+// THE CLOSED-VALUE COMPLETER (the ruling and its examples at the declaration,
+// architect 2026-10-14 and 2026-10-21): the key names its closed domain, and
+// a key with none advances nothing.
+bool GuiSettingsEditor::complete_closed_value(const std::string& key,
+                                              const std::string& value) {
+    std::string append;
+    if (key == "waveform") {
+        std::vector<std::string_view> names;
+        for (const auto& p : kGuiBuiltinPalettes) names.emplace_back(p.key);
+        append = closed_list_advance(value, names);
+    } else if (key == "true_colors") {
+        append = closed_list_advance(value, kTrueColorsWords);
+    }
+    if (append.empty()) return false;
+    return append_at_line_end(app, viewport, append);
 }
 
 // Returns whether the buffer CHANGED — the one autocomplete model's question
@@ -1212,9 +1219,33 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (!text_editor::is_active(app.settings_editor)) return false;
     const std::string pending = app.settings_editor.pending;
 
+    // THE RECALL — the key's current value as the writer writes it, or
+    // nothing for a key this editor does not know (the account below).
+    const auto recall = [this](const std::string& key)
+            -> std::optional<std::string> {
+        std::optional<std::string> cur =
+            format_engine_setting_value(app.engine_settings, key);
+        if (!cur) cur = recall_gui_setting_value(app, key);
+        return cur;
+    };
+
     const size_t eq = pending.find('=');
-    // No `key=` yet; nothing to complete.
-    if (eq == std::string::npos) return false;
+    // NO `=` YET: THE KEY (the head's stages 1 and 2, architect 2026-10-21).
+    // The typed text less its leading whitespace — the trailing side kept,
+    // ltrim_ws's reason: a key that does not end where the line ends has
+    // nothing to append to, so it matches nothing and the Tab walks.
+    if (eq == std::string::npos) {
+        const std::string typed = ltrim_ws(pending);
+        // A COMPLETE KEY takes `=` and its value, so a value is edited and
+        // never retyped — any key the recall knows, the table's twelve and
+        // the keys typed whole alike.
+        if (!typed.empty()) {
+            if (const std::optional<std::string> cur = recall(typed))
+                return append_at_line_end(app, viewport, "=" + *cur);
+        }
+        // A PREFIX completes against the table (complete_key_name).
+        return complete_key_name(typed);
+    }
 
     const std::string key = trim_ws(pending.substr(0, eq));
     // Only fill an empty value side, so an in-progress value is never
@@ -1223,14 +1254,14 @@ bool GuiSettingsEditor::autocomplete_value() {
     // written is a non-empty value side. THE PATH KEY IS THE EXCEPTION
     // (2026-09-02): a non-empty value side there is a path PREFIX, and Tab
     // completes it against the filesystem — the recall below still answers
-    // the empty side, so the dropdown's prefill and a bare `projects_path=` Tab
-    // behave as every other key's do, and the path road opens only once
-    // something has been typed. The path completer's own no-advance cases
-    // (an ambiguous prefix already at the common prefix, no match, a relative
-    // or unlistable head) are Tabs that walk, exactly as here. THE COLOR KEY
-    // TAKES THE SAME ROAD (architect 2026-10-14): a non-empty value side
-    // there is a preset-name prefix, completed against the built-in names
-    // (complete_preset_value), its no-advance cases Tabs that walk.
+    // the empty side, so a bare `projects_path=` Tab behaves as every other
+    // key's does, and the path road opens only once something has been
+    // typed. The path completer's own no-advance cases (an ambiguous prefix
+    // already at the common prefix, no match, a relative or unlistable head)
+    // are Tabs that walk, exactly as here. THE CLOSED DOMAINS TAKE THE SAME
+    // ROAD (architect 2026-10-14 and 2026-10-21): a non-empty value side on
+    // `waveform` or `true_colors` is a prefix of the key's words
+    // (complete_closed_value), its no-advance cases Tabs that walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
         // Leading whitespace off, trailing whitespace kept — the reasons are
         // at ltrim_ws. The completer used to be handed the raw substring, so a
@@ -1238,15 +1269,13 @@ bool GuiSettingsEditor::autocomplete_value() {
         // accepts exactly that value.
         if (is_path_completed_key(key))
             return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
-        if (is_preset_completed_key(key))
-            return complete_preset_value(ltrim_ws(pending.substr(eq + 1)));
-        return false;
+        return complete_closed_value(key, ltrim_ws(pending.substr(eq + 1)));
     }
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, waveform and the three tuning
-    // keys — gui_scale and the rest the device config's — per-tab trim /
+    // gui_scale, projects_repo, projects_path, waveform, true_colors and the
+    // three tuning keys — gui_scale and the rest the device config's — per-tab trim /
     // read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S (or, for a device key, the config's writer)
@@ -1268,9 +1297,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // the product (the typed path encodes real codepoints and the file writer
     // writes what it held), and reachable only by hand-editing a value into a
     // state the GUI cannot express.
-    std::optional<std::string> cur =
-        format_engine_setting_value(app.engine_settings, key);
-    if (!cur) cur = recall_gui_setting_value(app, key);
+    const std::optional<std::string> cur = recall(key);
     if (!cur) return false;  // unknown key: nothing to recall
 
     // Rebuild as `<prefix>=<current value>`, cap-aware, cursor at end. The

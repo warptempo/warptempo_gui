@@ -77,8 +77,9 @@ namespace GuiKeys {
 // modifier state (shift/ctrl/alt) rides along to the synthesized button,
 // exactly as it would for a physical BTN_LEFT device (Alt alone reached
 // on_key as the Edit title's access key 2026-10-10 to 2026-10-21, until the
-// menu row went). So bare `e` can be no pull-down row's letter
-// (dropdown_access_keys_valid, app_state.h).
+// menu row went). So bare `e` can be no access key's letter (the pull-down
+// rows' check, dropdown_access_keys_valid, retired with the popups
+// 2026-10-21).
 constexpr GuiKey kLeftClickKey = GuiKeys::E;
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
@@ -909,7 +910,7 @@ static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
               "bare 1 is the Source selector and bare 4 the Phase Reset one; "
               "digits 5..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
-              "bare Esc is bound; it is one of the eight-place contract's own "
+              "bare Esc is bound; it is one of the seven-place contract's own "
               "arms (the notification stack's clear), and its top-level "
               "silence is that arm's own, reached only with no card standing");
 static_assert(!chord_is_bound(GuiKeys::Escape,

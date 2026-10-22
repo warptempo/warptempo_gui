@@ -260,17 +260,12 @@
 //     dismiss (the arm's other half clears the stack; the hit section below).
 //     Esc inside a drag gate is NOT this case: Esc is bound, so the gate
 //     cards it with every other bound key.
-//   * EVERY CHORD UNDER AN OPEN MENU DROPDOWN (2026-09-02): dropdown_key_blocked
-//     consumes everything but bare Esc, Ctrl+Q and the menus' access keys
-//     (2026-10-10), bound chords included, without asking chord_is_bound — a
-//     popup is a question on screen, the standing prompt's own silence; a
-//     greyed row's letter is consumed silently, as its press is.
 //   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
 //     DOUBLE-CLICK DROP (the warp column's alone), because a gesture that
 //     never begins is its own answer; the double-click drop's READ-ONLY arm is
 //     silent on the same ground. Their keyboard twins card.
-//   * A GREYED BUTTON'S LIFT and A GREYED DROPDOWN ITEM'S PRESS (the latter
-//     consumed with the menu left open, 2026-09-24): the grey IS the message,
+//   * A GREYED BUTTON'S LIFT (a greyed dropdown item's press beside it
+//     until the popup retired, 2026-10-21): the grey IS the message,
 //     the card answering the keyboard; the grey is the PAINTED grey, so a
 //     face painted live whose act refused inside the comparator's tick
 //     dispatches and is answered as its key is. A tooltip states no reason
@@ -409,17 +404,16 @@
 // should clear all notifications", one act wanting one chord rather than two
 // roads onto it. Ctrl+Esc is unbound-silent now like every other modified
 // Escape, and the bare key's rank is unchanged — it is still the LAST of the
-// eight places, under every modal, so a standing surface takes the press for
+// seven places, under every modal, so a standing surface takes the press for
 // its own close and the stack waits.
 //
 // THE PRESS IS CONSUMED WHOLE, on both backends and whatever the button: it
 // arms nothing else, moves nothing, lands no playhead and reaches nothing
 // underneath (a non-left press is the consumed nothing it always was, and
 // arms no card). The claim ranks ABOVE EVERY VEIL (the prompt's, the
-// progress modal's, the player's, the picker's, the dialog editors') and
-// above the open dropdown's
-// claim, and THE RELEASE IS TAKEN AT THE SAME RANK — above the dropdown's
-// release, which would otherwise consume it, and above every veil's —
+// progress modal's, the player's, the picker's, the dialog editors'), and
+// THE RELEASE IS TAKEN AT THE SAME RANK, above every veil's (the open
+// dropdown's claim and release stood under both until 2026-10-21) —
 // because a card is not a reach into the veiled surface: it is the message
 // about the act the veil stands over, and it must be dismissable under any
 // of them.
@@ -902,12 +896,10 @@ bool notification_visible(const AppState& a, uint64_t id);
 // notification_visible still holds for it, so a card that expired or was
 // bumped between the paint and the event is hit by nothing,
 // and a press on the stale rect falls through to whatever the NEXT paint will
-// put there, which is what the user is about to see. A card under ANY LIST
-// POPUP'S PUBLISHED BOX yields to it (2026-10-08,
-// floater_above_cards_at, app_state.h: the Settings drop-down, the one
-// pointer-owning surface that paints above the cards since the settings
-// choice editor's list went, 2026-10-14), so every reader agrees on the
-// z-order in one place too.
+// put there, which is what the user is about to see. (A card under a list
+// popup's published box yielded to it from 2026-10-08 until the Settings
+// drop-down, the last such popup, retired 2026-10-21: no pointer-owning
+// surface paints above the cards since.)
 //
 // THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the
 // press claim (claim_notification_press) and its lift

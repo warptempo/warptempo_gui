@@ -619,15 +619,6 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
     paint_relief_plain_raised(cr, GuiRect{0, 0, surface_w, surface_h});
 }
 
-void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
-    const int lw = relief_line_px();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
-    paint_cell_rect(cr, GuiRect{x, y + lw, w, lw}, palette().hilight);
-    cairo_restore(cr);
-}
-
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
 // every step of the plate's render but the store, so the cairo road's writer
 // below and the GL canvas's plate (waveform_cache.cpp's

@@ -19,8 +19,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (NINE keys since 2026-10-21, the three
-// tuning keys appended, below, `caption` gone and `chrome` renamed
+// REQUIRED SET, every one of them (TEN keys since 2026-10-21 evening,
+// `true_colors` placed after `waveform`, below; nine that afternoon, the three
+// tuning keys appended, `caption` gone and `chrome` renamed
 // `waveform`; seven 2026-10-12, `icons` and `font` gone;
 // nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
 // `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
@@ -47,6 +48,10 @@ namespace {
 // 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
 // header's record.)
 //
+// TRUE COLORS (architect 2026-10-21, the Settings popup's command row made a
+// key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
+// the tuning keys keep the end where they leave from.
+//
 // THE FORTEPIANO CHROME'S TUNING KEYS (architect 2026-10-21): `bevel_light`,
 // `bevel_dark` and `text_shadow` APPENDED after `role`, where the tuning
 // phases' keys have always stood, each required like every key and each
@@ -57,6 +62,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "waveform",
+    "true_colors",
     "role",
     "bevel_light",
     "bevel_dark",
@@ -119,6 +125,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "waveform") {
             // The built-in's key verbatim (palette_file.h's key grammar).
             s += cfg.waveform;
+        } else if (k == "true_colors") {
+            // The switch's word (format_true_colors, the grammar's owner).
+            s += format_true_colors(cfg.true_colors);
         } else if (k == "role") {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
@@ -219,6 +228,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }
             out.waveform = value;
+            return {};
+        }
+        // TRUE COLORS (2026-10-21): one of the two words under its one owner
+        // (parse_true_colors, device_config.h), required like every key; any
+        // other word the launch's hard fail.
+        if (key == "true_colors") {
+            const std::optional<bool> on = parse_true_colors(value);
+            if (!on) {
+                return bad_value(ln, key, value, kTrueColorsGrammarReason);
+            }
+            out.true_colors = *on;
             return {};
         }
         // THE ROLE (architect 2026-10-10): one of the two words, required

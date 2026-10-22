@@ -387,6 +387,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // byte-exact rule 2026-10-14 until the keys became required.)
     if (key == "waveform" && app.device_config != nullptr)
         return app.device_config->waveform;
+    // TRUE COLORS (2026-10-21): the switch's word through its one owner
+    // (format_true_colors, device_config.h), the writer's own spelling.
+    if (key == "true_colors" && app.device_config != nullptr)
+        return std::string(format_true_colors(app.device_config->true_colors));
     // THE FORTEPIANO CHROME'S TUNING KEYS (2026-10-21): through the config's
     // own serializer, as the scale.
     if (key == "bevel_light" && app.device_config != nullptr)

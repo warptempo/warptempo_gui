@@ -14,28 +14,63 @@ struct Undo;
 struct GuiTargetRender;
 struct GuiInputHandler;
 
-// Settings-prompt editor cluster. Opens on `;`, accepts a single
-// `key=value` line, applies it on Enter, and closes. Same primitive as
-// the flag editor (text_editor::State, kind-dispatched keyboard
-// vocabulary, the whole text selected and a card on a refusal) but painted
-// IN THE MODAL FAMILY'S BOX (architect 2026-10-14, modal_box.h: the box is
-// the edit control, the whole `key=value` line on its field ground from the
-// box's first row, soft-wrapped at its width and never scrolling, OK and
-// Cancel flush right on the controls row under it, NO LABEL — "Setting:"
-// removed, "pointless that far away"; a modal on the bottom row from
-// 2026-08-13, its label, its sunken field and its two buttons in one row)
-// instead of over the flag rect.
+// THE SETTINGS EDITOR — THE ONE ROAD TO EVERY SETTING (architect 2026-10-21
+// ~21:05, with the menu row's removal: "settings could gain a tab autocomplete
+// for the keys, making the dropdown less useful" — "yes"). The band's Settings
+// button and its chord, bare `;`, open it EMPTY — an empty line, the caret at
+// column 0 — and the line is `key=value`, typed by hand. It is the flag
+// editor's primitive (text_editor::State, kind-dispatched keyboard
+// vocabulary, the whole text selected and a card on a refusal) painted IN THE
+// MODAL FAMILY'S BOX (architect 2026-10-14, modal_box.h: the box is the edit
+// control, the whole line on its field ground from the box's first row,
+// soft-wrapped at its width and never scrolling, OK and Cancel flush right on
+// the controls row under it, NO LABEL — "Setting:" removed, "pointless that
+// far away"), the on-screen keyboard standing inside the frame under it on
+// the glass as under every dialog editor. OK or Enter commits the line, Esc
+// or Cancel closes it. (THE SETTINGS POPUP — a pull-down hanging from the
+// Settings button, one row per key opening this editor PREFILLED with
+// `<key>=<value>`, and the "True Colors" command row — stood 2026-07-31 to
+// 2026-10-21 and is retired whole: its rows' keys are kSettingsEditorKeys
+// below, and True Colors is the `true_colors` device key.)
+//
+// TAB COMPLETES, IN THREE STAGES, under the ONE AUTOCOMPLETE MODEL
+// (route_modal_editor_key, input_key_dispatch.cpp: a Tab that advanced the
+// buffer is consumed, one that did not walks the dialog's focus ring onto
+// OK and Cancel — so a second Tab, or a Tab on a prefix that completes to
+// nothing, is the walk; there is no list to show, the popups being gone):
+//   1. THE KEY. On a line with no `=` yet, the typed text is a PREFIX of the
+//      key names in kSettingsEditorKeys: a unique match completes to the key,
+//      several to their longest common prefix (the path completer's rule); no
+//      match, an empty line or a prefix already at the common prefix advances
+//      nothing.
+//   2. THE KEY'S CURRENT VALUE. On a COMPLETE key with no `=` yet — any key
+//      this editor recalls, the twelve, the engine's and the per-tab band
+//      keys alike — Tab
+//      appends `=` AND THE VALUE THE KEY HOLDS, the caret at the end, so a
+//      value is edited and never retyped; on `key=` with an empty value side
+//      the same recall fills the value (the 2026-08-13 recall, unchanged).
+//      The value is what the writer writes, byte for byte
+//      (format_engine_setting_value, recall_gui_setting_value).
+//   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
+//      short closed list — `waveform`'s built-in preset names (2026-10-14) and
+//      `true_colors`'s `on` / `off` (2026-10-21) — the prefix completes
+//      against those words by the same rule as the keys
+//      (complete_closed_value); `projects_path=<prefix>` completes against the
+//      filesystem (complete_path_value, 2026-09-02). Every other non-empty
+//      value side advances nothing.
+// Every advance lands at the LINE'S END through text_editor::replace_selection,
+// the one incoming filter.
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// SEVEN editable ones the per-device config carries — gui_scale and
+// EIGHT editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
-// and since 2026-10-21 the three tuning keys bevel_light, bevel_dark and
-// text_shadow (icons
+// and since 2026-10-21 true_colors (the popup's command row made a key) and
+// the three tuning keys bevel_light, bevel_dark and text_shadow (icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,
 // editable 2026-10-07..10-10, and theme,
 // editable 2026-10-03..10-08, its level and the twelve
@@ -50,7 +85,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform and the three tuning keys — in ONE body,
+//    waveform, true_colors and the three tuning keys — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -59,8 +94,8 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; waveform and the tuning keys at once, applied live at the OK, no
-//    card (the screen is the answer).
+//    card; waveform, true_colors and the tuning keys at once, applied live
+//    at the OK, no card (the screen is the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -86,23 +121,39 @@ struct GuiInputHandler;
 //    keys, not the surface): an engine key IS the piece, so a locked active
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
 //    the device keys and the band — commit on a locked tab. The opener
-//    refuses no lock; the account is at GuiSettingsEditor::open.
+//    refuses no lock; the account is at GuiSettingsEditor::open. (Its road
+//    onto a locked tab, the Settings popup's rows, retired 2026-10-21:
+//    bare `;` is off the read-only allowlist, which the iteration gate
+//    inherits, and the Settings button, its chord, greys under either lock,
+//    so the editor does not open under a lock since; the commit arms' lock
+//    refusals stay as the keys' own rule.)
 //
-// EVERY ROW IS THIS ONE LINE EDITOR (architect 2026-10-14, ~12:25: "we can
-// remove dropdowns for chrome/caption and leave the autocomplete as the only
-// help. dropdowns would need more work to make them real win95 style
-// dropdowns and it's just not worth it"). THE CHOICE EDITOR — a Settings row
-// whose key's domain was a short closed list opening this editor with a
-// combo box where the field stood and its list dropping over the well, the
-// shown value moved by the list and the arrows and committed at OK alone —
-// stood 2026-10-07 to 2026-10-14 (the vocabulary Chrome row 2026-10-07..10,
-// the Icons and Font rows 2026-10-09..12, the Chrome and Caption rows its
-// last); it is removed whole with its combo, its list, the popup lists'
-// scroll road it was the last reader of and the on-screen keyboard's term for
-// it. THE WAVEFORM ROW'S HELP IS TAB (complete_preset_value, below): a typed
-// prefix completes against the built-in names, and
-// the commit is OK's and Enter's as on every row — the screen changing at
-// the commit, never before.
+// NO CHOICE EDITOR (architect 2026-10-14, ~12:25: "we can remove dropdowns
+// for chrome/caption and leave the autocomplete as the only help. dropdowns
+// would need more work to make them real win95 style dropdowns and it's just
+// not worth it"). THE CHOICE EDITOR — a Settings row whose key's domain was a
+// short closed list opening this editor with a combo box where the field
+// stood and its list dropping over the well — stood 2026-10-07 to 2026-10-14
+// and is removed whole; a closed domain's help is Tab (stage 3 above), and
+// the commit is OK's and Enter's — the screen changing at the commit, never
+// before.
+//
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TWELVE: the Settings popup's eleven
+// key rows and its True Colors row (2026-09-02..10-21) by their config names:
+// the four
+// SIDECAR keys a hand edits (the piece's metadata, the engine keys of
+// engine_settings.h), then the DEVICE CONFIG's editable keys in that file's
+// writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
+// `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
+// the view and per-tab band keys) are typed whole, Tab recalling their
+// values once complete; a key added to the product's editable set joins this
+// table by hand.
+inline constexpr const char* kSettingsEditorKeys[] = {
+    "title", "notes", "url", "cover",
+    "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
+    "bevel_light", "bevel_dark", "text_shadow",
+};
+
 struct GuiSettingsEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -121,19 +172,17 @@ struct GuiSettingsEditor {
     // with a sentence: every refused commit says its reason on a card, and the
     // read-only lock says its own at the engine-key commit arm (it stood at
     // open() from 2026-08-30 until 2026-09-04, when the lock moved to the
-    // keys). The SETTINGS DROPDOWN's item clicks are the only road onto a
-    // locked tab's editor — bare `;` is off the read-only allowlist and dies
-    // at the keyboard gate, whose own card says the same words — and the
-    // dropdown items grey on a load alone (dropdown_item_enabled), the lock
-    // being no refusal of the OPEN, so the commit's refusals are what answer
-    // them.
+    // keys). (The Settings dropdown's item clicks were the road onto a
+    // locked tab's editor until the popup retired, 2026-10-21; bare `;` is
+    // off the read-only allowlist and dies at the keyboard gate, whose own
+    // card says the same words.)
     GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this editor by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
     // the same shape as the viewport request_* callbacks). Used to reach the
     // gesture chokepoints that live on GuiInputHandler:
-    // handle_active_audio_view_toggle, apply_gui_scale,
+    // handle_active_audio_view_toggle, apply_gui_scale, apply_true_colors,
     // commit_trim_mutation, set_tab_read_only.
     GuiInputHandler*      input = nullptr;
 
@@ -156,34 +205,24 @@ struct GuiSettingsEditor {
           playback_lifecycle(playback_lifecycle_),
           notifications(notifications_) {}
 
+    // THE ONE OPEN (the head): an empty line, the caret at column 0. The band's
+    // Settings button and bare `;` reach it, the button by synthesizing the
+    // chord. (open_prefilled, the Settings popup's row click seeding
+    // `<key>=<value>`, retired with the popup, 2026-10-21; Tab's stage 2 is
+    // its typed spelling.)
     void open();
-    // Open the settings prompt PREFILLED with `<key>=<current value>`, the
-    // settings dropdown's item click. Identical to open() plus the same recall
-    // autocomplete_value performs, so there is no second serializer: the
-    // value is what the writer writes, byte for byte, the color key
-    // (`waveform`) included — required since 2026-10-14, so its line is the
-    // preset on screen (recall_gui_setting_value). The cursor
-    // rests at
-    // the end of the line, ready to be edited or replaced; an unknown or
-    // unrecallable key opens with the bare `<key>=` so the surface still tells
-    // the user which key they picked.
-    void open_prefilled(const char* key);
     void exit_no_commit();
     void commit();
-    // The value completion, run on BARE TAB in the field and by open_prefilled:
-    // when any settable key is typed with an empty
-    // value side (e.g. `notes=`, `gui_scale=`, `tab_a_trim_begin=`),
-    // replace the value side with that key's current live value for recall and
-    // editing — byte-identical to what a Ctrl+S would write, UTF-8 provenance
-    // text included since the 2026-08-02 relaxation (the old non-ASCII
-    // exception is closed; the remaining edge is stated at the definition).
-    // No-op when the value side is already non-empty, when there is no `=`, or
-    // when the key is unknown — EXCEPT on the path key (2026-09-02), where
-    // a NON-EMPTY value side is a path prefix and Tab completes it against the
-    // filesystem through complete_path_value below, and on THE TWO COLOR KEYS
-    // (architect 2026-10-14), where a non-empty value side is a preset-name
-    // prefix and Tab completes it against the kind's built-in names through
-    // complete_preset_value below — the path key's model.
+    // THE COMPLETION, run on BARE TAB with the focus in the field — the head's
+    // three stages: with no `=` on the line, the key (complete_key_name), and
+    // on a complete key `=` and its current value; with `key=` and an empty
+    // value side, that key's current live value; with a non-empty value side,
+    // the path key's filesystem (complete_path_value) or a closed domain's
+    // words (complete_closed_value), and nothing for every other key. The
+    // value recalled is byte-identical to what a Ctrl+S (or, for a device
+    // key, the config's writer) would write, UTF-8 provenance text included
+    // since the 2026-08-02 relaxation (the remaining edge is stated at the
+    // definition). An unknown key recalls nothing.
     //
     // IT RETURNS WHETHER THE BUFFER CHANGED, which is the ONE AUTOCOMPLETE
     // MODEL's whole question (architect 2026-08-13: "we should use one model
@@ -191,13 +230,13 @@ struct GuiSettingsEditor {
     // modal's focus ring when it did not advance; the rule is stated once at
     // route_modal_editor_key's Tab arm, input_key_dispatch.cpp, and the typed
     // `=` this completion rode for part of that day is reverted with it). Every
-    // no-op above answers false, so each is a Tab that walks. open_prefilled
-    // ignores the answer: it seeds the line either way.
+    // no-op answers false, so each is a Tab that walks.
     bool autocomplete_value();
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `bevel_light=`, `bevel_dark=` and `text_shadow=` — in one
+    // `waveform=`, `true_colors=`, `bevel_light=`, `bevel_dark=` and
+    // `text_shadow=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
@@ -228,26 +267,38 @@ private:
     // model's question; `value` is the raw value side (untrimmed: the
     // completion works on what is literally typed).
     bool complete_path_value(const std::string& value);
-    // THE PRESET COMPLETER (architect 2026-10-14 afternoon, CONFIRMED: "ok to
-    // add autocomplete", "agree all"), autocomplete_value's arm for the color
-    // key — `waveform` (`chrome` until 2026-10-21; the `caption` key's arm,
-    // over its 43 schemes, 2026-10-14..10-21) — when the value side is
-    // NON-EMPTY, the path completer's model on a closed list: the value side
-    // is a PREFIX (byte compare, the names being ASCII) of the compiled-in
-    // preset names — Cool Edit's twenty (kGuiBuiltinPalettes' keys,
-    // palette_file.h) — and the buffer advances by the matches' longest
-    // common prefix past it: a UNIQUE match completes the name WITH NO
-    // TRAILING CHARACTER (a name is not a folder), an ambiguous prefix stops
-    // at the common prefix (`waveform=cool-edit-m` stops at
-    // `cool-edit-midnight`; he accepts that a prefix completer cannot show
-    // the list), and no advance — no match, or a prefix already at the
-    // common prefix — is a Tab that walks. The empty value side keeps
-    // recalling the live preset's key (the recall above). The commit's
-    // grammar and its live apply (commit_device_setting,
-    // install_waveform_preset) are unchanged. Returns whether the buffer
+    // THE KEY COMPLETER (architect 2026-10-21, the popup's retirement), the
+    // head's stage 1: `prefix` — the line less its leading whitespace, no `=`
+    // on it — against kSettingsEditorKeys by byte compare (the keys are
+    // ASCII), the buffer advancing at the line's end by the matches' longest
+    // common prefix past it: a UNIQUE match completes the key with NO
+    // trailing character (the next Tab is stage 2's), an ambiguous prefix
+    // stops at the common prefix (`bevel_` against `bevel_light` and
+    // `bevel_dark`), and no advance — no match, an empty line, a prefix
+    // already at the common prefix — is a Tab that walks. Returns whether the
+    // buffer advanced.
+    bool complete_key_name(const std::string& prefix);
+    // THE CLOSED-VALUE COMPLETER (architect 2026-10-14 afternoon, CONFIRMED:
+    // "ok to add autocomplete", "agree all" — the preset completer for the
+    // color key, `waveform` (`chrome` until 2026-10-21; the `caption` key's
+    // arm, over its 43 schemes, 2026-10-14..10-21); `true_colors`'s two words
+    // since 2026-10-21), the head's stage 3: the path completer's model on a
+    // closed list. The value side is a PREFIX (byte compare, the words being
+    // ASCII) of the key's words — Cool Edit's twenty preset names
+    // (kGuiBuiltinPalettes' keys, palette_file.h) for `waveform`, `on` and
+    // `off` (kTrueColorsWords, device_config.h) for `true_colors` — and the
+    // buffer advances by the matches' longest common prefix past it: a
+    // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is
+    // not a folder), an ambiguous prefix stops at the common prefix (he
+    // accepts that a prefix completer cannot show the list), and no advance
+    // — no match, a prefix already at the common prefix, a key with no
+    // closed domain — is a Tab that walks. The empty value side keeps
+    // recalling the live value (stage 2). The commit's grammar and its live
+    // apply (commit_device_setting) are unchanged. Returns whether the buffer
     // advanced; `value` is the raw value side less its leading whitespace
-    // (ltrim_ws's reasons; one key, so the key is not passed).
-    bool complete_preset_value(const std::string& value);
+    // (ltrim_ws's reasons).
+    bool complete_closed_value(const std::string& key,
+                               const std::string& value);
     // GUI-kind key router. Returns true when `key` is a recognized GUI-kind
     // key, in which case the commit is fully handled inside (applied +
     // deactivated, or refused with a card); false when `key` is not a

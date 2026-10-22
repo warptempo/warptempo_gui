@@ -142,16 +142,18 @@ std::string format_settings_text(
 //
 // THE DEVICE CONFIG'S EDITABLE KEYS RECALL HERE TOO, off the live
 // AppState and the live struct it points at, even though they are not in the
-// `.settings` schema: the settings editor is their authoring surface — the
-// Settings dropdown's device rows prefill through this very call — so a
-// recall that answered nothing for them would break those rows and the Tab
-// completion together. What they recall is byte-identical to what the device
+// `.settings` schema: the settings editor is their authoring surface — its
+// Tab on a complete key (`gui_scale` → `gui_scale=138`) recalls through this
+// very call — so a recall that answered nothing for them would leave the
+// value to be retyped (the Settings dropdown's rows prefilled through it
+// 2026-09-02..10-21). What they recall is byte-identical to what the device
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`)
-// and the two color keys (`chrome` and `caption`, 2026-10-14; required
-// since the same day, so the line is always there to recall), the same
+// and the color key (`waveform`, `chrome` 2026-10-14..10-21 beside the
+// retired `caption`; required since 2026-10-14, so the line is always there
+// to recall), or the switch's word (`true_colors`, 2026-10-21), the same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is
 // the program's own.)

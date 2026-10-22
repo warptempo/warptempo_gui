@@ -210,16 +210,16 @@ struct TrimRange {
 //   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a caption button
 //                 pressed, a keyboard key checked or pressed;
 //   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
-//                 scroll-bar thumb, a menu's and a dropdown's frame
-//                 (EDGE_RAISED);
+//                 window's sizing frame (EDGE_RAISED; a dropdown's frame
+//                 until 2026-10-21);
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field
 //                 (EDGE_SUNKEN);
 //   (SUNKEN OUTER, ONE line, Shadow / Hilight — the open menu title and
 //                 the program's frame's ring — went 2026-10-21 with both,
 //                 the frame's top row alone a flat Shadow line since,
 //                 program_frame_rect);
-//   ETCHED        a Shadow line with a Hilight line immediately beside it —
-//                 a menu separator.
+//   (ETCHED, a Shadow line with a Hilight line beside it — the menu
+//                 separator — went with the Settings popup, 2026-10-21.)
 // (The toolbar band, row 8 and their cases and time fields, the view bar,
 // the ruler and the marker lane are the PROGRAM'S since 2026-10-09 — Cool
 // Edit's, cool_edit_paint.h — and wear none of these families; THE MITRE
@@ -237,7 +237,7 @@ struct TrimRange {
 //                 under the band, the caption's buttons, the on-screen
 //                 keyboard's band (inside the program frame since 2026-10-14;
 //                 the dialog's taskbar ground beside it 2026-10-10 to
-//                 2026-10-14) — the dropdowns, every chrome button face, a
+//                 2026-10-14) — every chrome button face, a
 //                 DISABLED cue's triangle (the band, row 8, the canvas
 //                 column's lanes and the modal family's box are the program's
 //                 panel since 2026-10-09, below);
@@ -248,7 +248,7 @@ struct TrimRange {
 //                 label's included (the taskbar overlays' one top line,
 //                 2026-10-10 to 2026-10-14, is retired); DkShadow also the
 //                 dialog focus frame;
-//   selected pair a dropdown's lit row, the folder
+//   selected pair the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
@@ -336,9 +336,7 @@ struct TrimRange {
 // mix, the accelerator column's and the tooltip line's) retired with the
 // luminance rule the same day. (A CUE'S LABEL IS THE ONE EXCEPTION: an inert
 // cue label is the faded tone, not the emboss — the marker-lane paragraph.)
-// A DROPDOWN'S ACCELERATOR COLUMN takes its
-// item's own ink: the item's label ink, the selected text on a lit row, the
-// emboss on a disabled one. A disabled glyph is the program's case's, Cool
+// A disabled glyph is the program's case's, Cool
 // Edit's emboss under every chrome (icons::draw_disabled, 2026-10-15).
 //
 // WHAT WAS HERE BEFORE, in one sentence, because the file's shape is its
@@ -549,7 +547,9 @@ uint64_t palette_generation();
 
 // THE INSTALL FAMILY'S THIRD MEMBER, TRUE COLORS (architect 2026-10-08
 // ~05:35; the rule and the ruling at display_transform.h's head): the
-// Settings menu's "True Colors" row writes the switch's process-lifetime
+// `true_colors` device key (2026-10-21; the Settings menu's "True Colors"
+// row 2026-10-08..10-21) — read at launch and committed by the settings
+// editor — writes the switch's process-lifetime
 // bit (display_transform::set_true_colors) and bumps palette_generation, as
 // every color the window is handed moves with it. EVERY CACHED CONVERTED
 // PIXEL IS REBUILT, re-grepped 2026-10-08 against the head's list of
@@ -559,7 +559,8 @@ uint64_t palette_generation();
 // conversion state in their key (materials::ensure, the caller's apply
 // shape below);
 // the checker's tile is built per fill and keeps nothing. THE APPLY SHAPE THE
-// CALLER OWES, after the call (GuiInputHandler::toggle_true_colors): the
+// CALLER OWES, after the call (GuiInputHandler::apply_true_colors; the
+// launch's call, before the window and every cache exist, owes none): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
 // and key on the device px alone), the materials baked again
 // (materials::ensure, before the flag cache reads them), the plate kicked when its inks moved and
@@ -1064,8 +1065,7 @@ inline int scaled_px(double authored) {
 // to 0 — std::nearbyint is banker's rounding and takes 0.5 DOWN — so each 1px
 // border, edge, pad and separator in the tree reaches its floor and paints as
 // the one pixel that keeps the surface visible. A metric whose authored value
-// may legitimately vanish floors at 0 and says so at its own accessor
-// (popup_sep_margin_y_px).
+// may legitimately vanish floors at 0 and says so at its own accessor.
 inline int scaled_px(double authored, int floor_px) {
     const int v = scaled_px(authored);
     return v < floor_px ? floor_px : v;
@@ -2132,80 +2132,12 @@ inline int tooltip_hover_slop_px() {
 // them: the tooltips and the armed presses' inside bits (the menu row's
 // hover switch went with the row, 2026-10-21). The record is in git history.)
 
-// THE DROPDOWNS' VERTICAL metrics — one set for every menu, out here for the
-// same reason the tooltip's height is: the popup's OPEN EDGE must damage the box
-// before the box has ever been painted, and its HEIGHT is fully derivable
-// without shaping a single label (item count x item height, plus the separator
-// blocks and the two borders). Its WIDTH is not — that needs the widest shaped
-// label — so the horizontal terms stay with the painter and the open edge
-// damages full-width instead. dropdown_h_px (app_state.h) does the sum, where
-// the item tables are visible.
-//
-// THE DROPDOWN IS WINDOWS 95's POPUP MENU, AT THE WINDOWS PIXEL (architect
-// 2026-10-02): a PLAIN RAISED two-line frame, then ONE Windows px of ground
-// margin on every side, then the items, 17 Windows px each and touching; the
-// highlight fills an item inside the margin, its full width. A SEPARATOR is
-// an etched pair (two lines) with 3 Windows px of ground above and below it —
-// 8 in all, Windows' separator item (the planner's reading of the Windows
-// shots; the laptop pixel's 2 would have been 1). The item's height and the
-// margin are the spec's; the frame's and the separator's line counts are the
-// vocabulary's drawing.
-inline constexpr int kPopupSepMarginYPx = 3;   // above and below the separator
-// THE FRAME'S LINES a side — Windows' plain raised edge, two relief lines —
-// read, not a second number.
-inline int popup_border_px() {
-    return 2 * relief_line_px();
-}
-// The rows the frame spends at the box's TOP: the whole frame, whether the
-// box hangs from its opener or stands on its head (`upward`: the settings
-// choice editor's list, 2026-10-07 to 2026-10-14) — the parameter
-// kept for a later vocabulary whose hanging menu draws its top line on its
-// opener's last row (GtkMenu's did, 2026-10-07 to 2026-10-09).
-inline int popup_border_top_px(bool /*upward*/) {
-    return popup_border_px();
-}
-inline int popup_item_h_px() {
-    return scaled_px(live_chrome_spec().popup_item_height_px, 5);
-}
-inline int popup_sep_margin_y_px() {
-    return scaled_px(kPopupSepMarginYPx, 0);
-}
-// A separator's whole block: its margin, the etched pair, its margin.
-inline int popup_sep_block_px() {
-    return 2 * popup_sep_margin_y_px() + 2 * relief_line_px();
-}
-// The item block's own margin inside the frame, top AND bottom (the
-// horizontal one, the same spec field, is the painter's item inset): the
-// spec's popup_margin_px, floored at one device px where it is not zero.
-inline int popup_item_margin_y_px() {
-    const int m = live_chrome_spec().popup_margin_px;
-    return scaled_px(m, m > 0 ? 1 : 0);
-}
-
-// THE DROPDOWN'S HORIZONTAL PADS, authored in POPUP-BOX coordinates — from
-// the box's own outer edges, which is how a menu with an accelerator column is
-// easiest to state. EVERY PULL-DOWN TAKES THEM (architect 2026-08-03;
-// the Settings popup alone since the menu row's retirement, 2026-10-21): a
-// pull-down differs in one derived term (whether an accelerator column
-// exists) rather than in its padding.
-//
-//  - THE LABEL PAD AND THE RIGHT PAD ARE ONE NUMBER, 22 WINDOWS PX (architect
-//    2026-10-02, the mirror rule): from the popup's left edge to the label's
-//    pen, and from the popup's right edge to the accelerator's last ink
-//    column (or, on a menu without one, the widest label's) — Windows' popup
-//    reserves its check-mark column on the left and its submenu-arrow column
-//    on the right, the same width, and this product has neither and keeps
-//    their space as plain padding. It is the right margin the kdenlive crop
-//    measured (30 laptop px, re-authored at the unit's change); the crop's
-//    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror. THEY ARE THE PULL-DOWNS' ALONE, the Settings popup's since 2026-10-21 (the settings
-//    editor's choice list, 2026-10-07 to 2026-10-14, took the drop-down
-//    inset of 7 W on both sides and went with its editor).
-//  - THE COLUMN GAP is the guaranteed minimum separation between the widest
-//    label and the widest accelerator, the kdenlive crop's 13 laptop px
-//    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
-inline constexpr double kPopupPadXPx      = 22.0;
-inline constexpr double kPopupHotkeyGapPx = 9.0;
+// (THE DROPDOWN'S METRICS — Windows 95's popup menu at the Windows pixel,
+// architect 2026-10-02: the plain raised two-line frame, one W of margin, the
+// 17-W items touching, the etched separator's 3-W block margins, the 22-W
+// label and right pads and the 9-W accelerator gap — RETIRED 2026-10-21 with
+// the Settings popup, the last pull-down: the settings editor completes the
+// keys on Tab, settings_editor.h. Git history.)
 
 // (THE POPUP LISTS' SCROLL ROAD — architect 2026-10-08 ~11:20, "expand the
 // drop-downs so we can scroll up and down": a list popup placed by the
@@ -2376,9 +2308,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //                         (2026-10-05), an on-screen keyboard key.
 //   paint_relief_soft_sunken  — SOFT SUNKEN: a caption button pressed, a
 //                         keyboard key checked or pressed.
-//   paint_relief_plain_raised — PLAIN RAISED: a push button, a menu's and a
-//                         dropdown's frame, the restored window's sizing
-//                         frame (the popup scroll bar's thumb and arrows
+//   paint_relief_plain_raised — PLAIN RAISED: a push button, the restored
+//                         window's sizing frame (a dropdown's frame until
+//                         2026-10-21) (the popup scroll bar's thumb and arrows
 //                         until 2026-10-14). (The scrub's pointed thumb draws
 //                         its own soft raised pentagon, paint_scrub_thumb.)
 //   paint_relief_plain_sunken — PLAIN SUNKEN: the scrub's channel (the
@@ -2397,9 +2329,8 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //                         2026-10-14).
 //   (The CARD FRAME — the tooltip's and the cards' — is no relief: its
 //   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
-//   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
-//                         [y, y + lw) and a Hilight line under it, columns
-//                         [x, x + w) (the dropdown's separator).
+//   (paint_relief_etched_hline — an ETCHED line, the dropdown's separator —
+//   went 2026-10-21 with the Settings popup, its last wearer.)
 // (The one-line raised inner edge — the flat toolbars' hot face — and the
 // vertical etched line — their group separators — went with the program's
 // band, 2026-10-09: Cool Edit's band is cool_edit_paint.h's.)
@@ -2413,7 +2344,6 @@ void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
-void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
 // One cell rect in `c` — the face fill every relief caller lays first — A
 // SURFACE: `c` through set_surface_source, so under a material scope a chrome
 // tone lands as its material (materials.h) and any other color flat.

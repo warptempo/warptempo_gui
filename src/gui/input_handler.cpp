@@ -256,7 +256,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE PROGRESS MODAL IS KEYBOARD-MODAL (architect 2026-10-14, AppState::
     // BatchProgress), ranked directly under the prompt (a WM close's
     // unsaved-work question can stand over a running batch) and above every
-    // other gate — no dropdown, list owner or editor stands beside it. ITS
+    // other gate — no list owner or editor stands beside it. ITS
     // VOCABULARY IS ITS CANCEL: bare Esc cancels at the press (the batch's
     // cancel road, cancel_batch_progress — the render cancel's own act, (d)
     // in the bare-Esc enumeration below), and the focus ring's Tab / Left /
@@ -274,46 +274,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // THE OPEN DROPDOWN IS KEYBOARD-MODAL, in the editors' shape and ranked
-    // directly under the prompt (a prompt still wins: it is the older modal and
-    // Ctrl+Q below can open one). While the popup is up NO COMMAND RUNS — the
-    // gate swallows every chord it does not name, which is the whole point: a
-    // popup that let `s` drop a marker underneath it would be a trap.
-    //
-    // It admits two keys that DISMISS, and since 2026-10-10 the ACCESS KEYS
-    // (dropdown_key_blocked: a row's letter, bare or with Alt, runs the row as
-    // its release does; a title's Alt+letter is that title's press):
-    //   - bare Esc CLOSES it, and that is ONE OF THE BARE-ESC BINDINGS (the
-    //     enumeration further down carries the full list, the count and this
-    //     rank). ONE
-    //     BINDING FOR EVERY MENU: the gate reads the shared popup state, so the
-    //     Navigation dropdown (2026-08-02) and the File one (2026-08-13) joined
-    //     the existing binding rather
-    //     than adding a place of their own — a dropdown is a dropdown — and the
-    //     Navigation one's deletion (2026-08-15) took none away for the same
-    //     reason;
-    //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
-    //     below, matching every other modal's Ctrl+Q hatch.
-    // A popup and an editor CANNOT be open together, so this gate can never
-    // contend with route_modal_editor_key — and the claim rests on TWO
-    // mechanisms, one per class. The popup opens only from row 1 or the
-    // titles' Alt access keys, whose arm stands below the editor gate (so no
-    // editor is up when they open one), and while a
-    // DIALOG editor is up the press that would open it dies at the dialog's
-    // veil in on_button_press, which since 2026-08-13 swallows the roster
-    // whole. The pointer-transparent FLAG
-    // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
-    // open path discards the edit, exactly as a press outside its box does. The
-    // reverse direction is this gate's own doing — `;` is swallowed here, so no
-    // editor opens under a popup either.
-    if (app.dropdown.open()) {
-        if (dropdown_key_blocked(key, mods)) return;
-    }
+    // (THE OPEN DROPDOWN WAS KEYBOARD-MODAL HERE, directly under the prompt —
+    // bare Esc closed it, Ctrl+Q closed it and fell through, a row's access
+    // key ran the row and every other chord was swallowed — until the
+    // Settings popup, its last menu, retired 2026-10-21.)
 
     // THE RENDER PLAYER IS KEYBOARD-MODAL (2026-08-28), ranked under the
-    // prompt (its load confirmation is a prompt and outranks it) and the
-    // dropdown (which could stand over the band while the menu row's File
-    // anchor was live above it, 2026-09-03 to 2026-10-21). Above everything else:
+    // prompt (its load confirmation is a prompt and outranks it). Above
+    // everything else:
     // while the mode stands ITS ROUTER IS THE WHOLE VOCABULARY (the contract
     // at route_render_player_key), and only Ctrl+S and Ctrl+Q fall through to
     // the ordinary dispatch — Ctrl+S to the save, which touches no transport,
@@ -716,8 +684,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // directly under the drag-modal gate and directly over the read-only one,
     // and the position carries two facts rather than being a convenience.
     //
-    // (1) EVERY ENTRY REFUSAL THE MODE NEEDS HAS ALREADY RUN. A prompt, an open
-    // dropdown, loading-or-absent audio, the editor text drag, any of the three
+    // (1) EVERY ENTRY REFUSAL THE MODE NEEDS HAS ALREADY RUN. A prompt,
+    // loading-or-absent audio, the editor text drag, any of the three
     // keyboard-modal editors and any live pointer gesture all swallow the press
     // above this line, so `h` cannot open the mode in any of those states and no
     // predicate is re-tested here to say so. The full statement is at
@@ -899,7 +867,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              selection/region ladder it used to serve here
     //                              is deleted, so a bare Esc with no render
     //                              running and no card standing is a plain
-    //                              no-op (the eight-place contract at its
+    //                              no-op (the seven-place contract at its
     //                              enumeration's home, input_handler.cpp's
     //                              on_key)
     //   - Ctrl+Q                 → close-prompt routing
@@ -1183,17 +1151,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
     // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN
-    // EIGHT PLACES AND NOWHERE ELSE (re-greped 2026-09-30, when the AV SYNC
+    // SEVEN PLACES AND NOWHERE ELSE (re-derived 2026-10-21, when the dropdowns'
+    // (c2) left with the Settings popup; EIGHT from 2026-09-30, when the AV SYNC
     // STATS PANEL's (c5) left with the panel — the drag-modal gate above tests
     // only Ctrl+Q, so Esc is UNBOUND there and falls through with every other
-    // key while a gesture is in flight; it is NOT one of the eight), the first
-    // seven earlier in this function than this point, so reaching here means
+    // key while a gesture is in flight; it is NOT one of the seven), the first
+    // six earlier in this function than this point, so reaching here means
     // the press has nothing left to do BUT the stack. THE LETTERING BELOW IS
     // AN ENUMERATION, NOT THE DISPATCH'S ORDER (corrected 2026-09-02): on_key
     // tests the PROMPT gate first of all, ahead of the loading gate and so
     // ahead of the editor hatch and the editors — which is right, a prompt
     // outranking an editor everywhere — while the letters below run
-    // editor-first. Read them as a list of the eight places, and read on_key
+    // editor-first. Read them as a list of the seven places (c2 the retired
+    // dropdowns' letter, kept so the others keep theirs), and read on_key
     // itself for which one answers when two could:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
@@ -1208,27 +1178,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       being one route;
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
-    //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
-    //       under the prompt gate; architect 2026-07-31, joining as the sixth of
-    //       the six the count then stood at). EVERY menu — re-greped
-    //       2026-09-09, the three of kDropdownMenus: File, Edit and
-    //       Settings — is this ONE
-    //       binding: they
-    //       share one popup state and one gate, so the second dropdown
-    //       (Navigation, 2026-08-02), the third (File, 2026-08-13), the
-    //       fourth-then-third (Edit, 2026-08-20), the Series menu
-    //       (2026-08-27) and the Help menu (2026-09-03) added no
-    //       place of their own and the Navigation one's deletion (2026-08-15),
-    //       the Iterations one's (2026-09-04) and the Help one's (2026-09-09)
-    //       took none away — the count is a property of the GATE, not of the
-    //       menu list. It cannot collide with (a)/(b):
-    //       a popup and an editor can never be open together, by TWO mechanisms
-    //       — the dialog editors' veil swallows the press that would open
-    //       a menu, and the pointer-transparent flag editor, which does not, is
-    //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
-    //       prompt because Ctrl+Q from inside the popup can raise one;
+    //   (c2) THE DROPDOWNS — Esc closed the open popup (architect 2026-07-31)
+    //       until the Settings popup, the last menu, retired 2026-10-21;
     //   (c3) THE RENDER PLAYER (2026-08-28, the sixth) — Esc closes the mode
-    //       (route_render_player_key, under the dropdown gate and over every
+    //       (route_render_player_key, under the prompt gate and over every
     //       gate below it). It ranks below the prompt because its load
     //       confirmation IS a prompt, and it cannot collide with (a)/(b): the
     //       player never opens under an editor and admits no editor opener;
@@ -1254,7 +1207,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
     //       rung, at the bare-key tail (handle_plain_bare_keys' Escape arm,
     //       input_key_dispatch.cpp, where the reasoning lives): a press none
-    //       of the eight above claims clears every card, whatever its class,
+    //       of the six above claims clears every card, whatever its class,
     //       and with no card standing the arm is the ruled silence it has
     //       always been. It is the keyboard twin of the shifted or held lift
     //       on a card (the card's X until 2026-10-01) and it is RANKED
@@ -1289,7 +1242,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is place (e) — the stack's clear, and an explicit no-op with no card
     // standing (handle_plain_bare_keys) — the one place the press ends.
-    // THE EIGHT PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
+    // THE SEVEN PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
     // every Escape reader. CTRL+ESC IS THE RETIREMENT RECORD: it was bound at
     // the very head of this function on the morning of 2026-09-01 to clear the
     // whole notification stack from above every gate, a DIFFERENT CHORD that
@@ -1312,8 +1265,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // consumed no-op. IT SITS BESIDE QUIT because it is the same family — the
     // two acts on the session as a whole — and the placement is otherwise free:
     // every state that must refuse the picker refuses it ABOVE this line (a
-    // standing prompt, the player's and the picker's own routers, an open
-    // dropdown, loading-or-absent audio, the editor text drag, any
+    // standing prompt, the player's and the picker's own routers,
+    // loading-or-absent audio, the editor text drag, any
     // keyboard-modal editor) or inside the opener's own body, which is the
     // road the band's Open Project button takes and carries the gates for
     // both. Nothing
@@ -1335,7 +1288,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // acts on the session as a whole — and the placement is otherwise free on
     // the same terms as Open's: every state that must refuse it refuses it
     // ABOVE this line (a standing prompt, the two list owners' routers, which
-    // consume it in silence as they consume Ctrl+O, an open dropdown, the
+    // consume it in silence as they consume Ctrl+O, the
     // loading gate, the editor text drag, any keyboard-modal editor) or inside
     // the act's own body. The `h` view and both locks ADMIT it (their
     // allowlists name the shared predicate). Ctrl+alt-exact through that
@@ -3306,19 +3259,15 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // one must neither reach the waveform under it nor scroll the band it may
     // overlap. -1 rather than 0 for the inert bands' own reason — the
     // platform grows no sub-detent remainder in a context that can fire
-    // nothing. It yields to an open dropdown inside the one hit owner
-    // (notification_card_at), so the two floaters need no ordering here.
+    // nothing.
     if (notification_card_at(app, x, y) != 0) return -1;
     if (app.prompt.active) return -1;
     // THE PROGRESS MODAL SWALLOWS THE WHEEL (2026-10-14): its box covers the
     // canvas column and nothing under it scrolls; the touch navigation
     // refuses under it too (apply_touch_nav_update's state list).
     if (app.batch_progress.active) return -1;
-    // AN OPEN DROPDOWN SWALLOWS THE WHEEL. It cannot close from here — this
-    // predicate is const and the platform probes it speculatively — so on_wheel
-    // owns the close and this owns only the swallow, which is also what keeps
-    // the sub-detent accumulator from growing remainder under a popup.
-    if (app.dropdown.open()) return -1;
+    // (AN OPEN DROPDOWN SWALLOWED THE WHEEL here until the Settings popup
+    // retired, 2026-10-21.)
     // THE LIVE-GESTURE REFUSAL IS RANKED ABOVE THE OVERLAY (2026-08-28), not
     // below it as it was when the player's context landed: the overlay's row
     // press and the scrub's marker drag are members of the predicate now, and
@@ -3459,11 +3408,9 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // after accumulating sub-detent remainder itself, so every call here is a
     // completed detent frame, matching on_key's unconditional placement.
     app.double_click = DoubleClickCandidate{};
-    // A WHEEL DISMISSES BOTH FLOATING SURFACES: the popup closes (and the event
-    // is consumed — wheel_context refuses it while open, so nothing scrolls
-    // under it), and the tooltip hides. Both run before the context test so the
-    // dismissal happens on the very frame the wheel arrives.
-    close_dropdown();
+    // A WHEEL DISMISSES THE TOOLTIP, before the context test so the
+    // dismissal happens on the very frame the wheel arrives. (It closed the
+    // Settings dropdown too, until the popup retired, 2026-10-21.)
     hide_shift_tooltip();
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
@@ -4166,10 +4113,10 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     materials::ensure(app);
 }
 
-void GuiInputHandler::toggle_true_colors() {
+void GuiInputHandler::apply_true_colors(bool on) {
     // The apply shape is at install_true_colors' declaration (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
-    install_true_colors(!display_transform::true_colors());
+    install_true_colors(on);
     icons::drop_rasters();
     // THE MATERIALS HOLD THE WINDOW'S BYTES (materials.h's BAKE RULE): baked
     // again now, before the flag cache's boxes are refreshed from them.

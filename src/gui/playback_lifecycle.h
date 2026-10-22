@@ -212,7 +212,9 @@ struct GuiPlaybackLifecycle {
     // audition and open nothing. The count did not move back when that
     // refusal left the opener on 2026-09-04 (the lock governs the keys now —
     // GuiSettingsEditor::open): one owner for the two doors is the shape to
-    // keep whether or not the opener can refuse.
+    // keep whether or not the opener can refuse. (The dropdown door retired
+    // with the Settings popup, 2026-10-21; the `;` key and the band's
+    // Settings button, its chord, are the editor's one door since.)
     // The count had held across the day's earlier change by coincidence: the
     // commit-title editor replaced the history commit confirmation, so one
     // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.

@@ -349,7 +349,7 @@ static_assert(std::size(kIconNames) == kIconCount);
 std::optional<std::string> load_set();
 
 // THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale)
-// and on a flip of True Colors (GuiInputHandler::toggle_true_colors — the
+// and on a flip of True Colors (GuiInputHandler::apply_true_colors — the
 // rasters are converted for the window as they are made, svg_icon.h): the
 // cache refills lazily at the new sizes and in the new conversion; the
 // parsed drawings stay. (No color pick drops anything: no glyph wears a

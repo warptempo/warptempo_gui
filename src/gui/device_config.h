@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Nine keys live here and nowhere else,
+// piece (architect 2026-08-27). Ten keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -50,6 +50,19 @@
 //                            the caption is the walnut, materials.h; an old
 //                            `caption=` line is the ordinary unknown-key
 //                            hard fail.)
+//   true_colors=<on|off>     THE sRGB -> DISPLAY-P3 CONVERSION'S SWITCH
+//                            (architect 2026-10-21, the Settings menu's
+//                            "True Colors" command row made a key with the
+//                            popup's retirement; the ruling at
+//                            display_transform.h's head): `on` or `off`, the
+//                            two lowercase words and nothing else, any other
+//                            word the launch's hard fail; REQUIRED, read at
+//                            launch to seed the switch and applied LIVE at
+//                            the settings editor's OK (the apply shape,
+//                            GuiInputHandler::apply_true_colors); both
+//                            templates and both installs `on`. (The row's
+//                            toggle, 2026-10-08..10-21, persisted nothing:
+//                            the switch was true at every launch.)
 //   role=<role>              THE DEVICE'S PART IN THE PROJECTS REPOSITORY
 //                            (architect 2026-10-10): `author` (the tablet:
 //                            it authors every movement, commits and pushes,
@@ -97,7 +110,8 @@
 // 2026-10-13) renamed `waveform` in its place 2026-10-21;
 // the three tuning keys of the fortepiano chrome APPENDED after `role`
 // 2026-10-21, a tuning phase's keys at the end as the 2026-09 phases'
-// stood);
+// stood; `true_colors` placed after `waveform` 2026-10-21, the two display
+// keys together, the tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -235,7 +249,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nine
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the ten
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -268,20 +282,19 @@
 // file is always the last committed state and a save carries none of them.
 // The chokepoints are the callers inventory at write_device_config below.
 //
-// EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
-// Settings dropdown carries `GUI Scale`, `Projects Repository`,
-// `Projects Path`, since 2026-10-21 the three tuning keys' `Bevel Light`,
-// `Bevel Dark` and `Text Shadow` (live at the OK, no card, as the color
-// key) and, since 2026-10-14, `Waveform` — the `waveform` key's row (`Chrome`
-// until 2026-10-21, beside the `caption` key's `Caption`, both since
-// 2026-10-14), a line editor like the rest since the same day's removal of
-// its choice drop-down (a `Chrome` row of the retired vocabulary key stood
-// 2026-10-07..10-10, `Icons` and `Font` 2026-10-09..10-12 and `Theme`
-// 2026-10-03..10-08; the two color keys were the color picker's preset
-// menu's 2026-10-07..14; kSettingsPopupItems,
-// app_state.h) — as rows that open the settings editor prefilled, and the
-// editor commits each through this file's writer under the key's own
-// grammar below. `role` (2026-10-10) is NOT EDITABLE
+// EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
+// SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
+// completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
+// `waveform`, `true_colors` and the three tuning keys among them
+// (kSettingsEditorKeys) — then a key's current value, then a closed value's
+// words, and committing each through this file's writer under the key's own
+// grammar below. (The Settings popup's rows opened it prefilled, one per key,
+// 2026-09-02..10-21: `GUI Scale`, `Projects Repository`, `Projects Path`,
+// `Waveform` (`Chrome` 2026-10-14..10-21, beside `Caption`), the tuning rows
+// and the "True Colors" command row; `Chrome` the vocabulary 2026-10-07..10,
+// `Icons` and `Font` 2026-10-09..12, `Theme` 2026-10-03..08; the color
+// picker's preset menu wrote the two color keys 2026-10-07..14.) `role`
+// (2026-10-10) is NOT EDITABLE
 // IN THE APP: the planner sets it on each device by hand, the program not
 // running, and the program only carries it through its rewrites. Until
 // 2026-09-02 the path keys
@@ -342,6 +355,9 @@ struct DeviceConfig {
     // default, `cool-edit-default` (kGuiDefaultPaletteKey). (`scheme`, the
     // `caption` key's, stood before it 2026-10-08..10-21.)
     std::string waveform;
+    // TRUE COLORS (2026-10-21, the head's list): required; `on` the
+    // templates' and the construction state's.
+    bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
     // THE BEVEL WEIGHTS AND THE WORDS' SHADOW (2026-10-21, the head's list):
@@ -513,6 +529,24 @@ inline bool is_projects_repo(const std::string& v) {
     return true;
 }
 
+// THE true_colors GRAMMAR (2026-10-21) — the two lowercase words, exactly;
+// the one owner the reader, the writer, the settings editor's commit and its
+// recall read (format_true_colors, parse_true_colors), and the words its Tab
+// completes (kTrueColorsWords).
+inline constexpr const char* kTrueColorsOn  = "on";
+inline constexpr const char* kTrueColorsOff = "off";
+inline constexpr const char* kTrueColorsWords[] = {kTrueColorsOn,
+                                                   kTrueColorsOff};
+inline constexpr const char* kTrueColorsGrammarReason = "must be on or off";
+inline const char* format_true_colors(bool on) {
+    return on ? kTrueColorsOn : kTrueColorsOff;
+}
+inline std::optional<bool> parse_true_colors(std::string_view v) {
+    if (v == kTrueColorsOn)  return true;
+    if (v == kTrueColorsOff) return false;
+    return std::nullopt;
+}
+
 // THE role GRAMMAR (architect 2026-10-10) — the two words, exactly; the one
 // owner the reader and the writer read.
 inline constexpr const char* kDeviceRoleAuthor = "author";
@@ -639,10 +673,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves six keys —
+// the settings editor's ONE device-key body, which serves seven keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
-// `bevel_light=`, `bevel_dark=` and
+// `true_colors=`, `bevel_light=`, `bevel_dark=` and
 // `text_shadow=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
@@ -662,7 +696,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=cool-edit-default` (the default spelled, every key
-// required since 2026-10-14), `bevel_light=100`,
+// required since 2026-10-14), `true_colors=on`, `bevel_light=100`,
 // `bevel_dark=100` and `text_shadow=2` (the struct's own values) and no role line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

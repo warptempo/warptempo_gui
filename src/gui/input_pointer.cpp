@@ -55,17 +55,10 @@ namespace {
 // RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
 // through 4 and row 8 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. THREE roster entries are absent — row 1's FILE, EDIT and
-// SETTINGS anchors (re-greped 2026-09-09 against kDropdownMenus, the Help
-// anchor having left with the top strip relayout), each of
-// whose action is a POPUP TOGGLE,
-// not a chord at all — the keyboard reaches the toggle only by the titles' Alt
-// access keys (2026-10-10, on_key's access-key arm), never this table. All
-// three are spelled at their own claim, which walks kDropdownMenus rather than
-// naming them.
-// THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
-// table, which is what makes "the table's length plus those three IS the
-// roster" a build-time fact rather than a remembered list of names.
+// the same ids. NO ROSTER ENTRY IS ABSENT since 2026-10-21: row 1's FILE,
+// EDIT and SETTINGS anchors, whose action was a POPUP TOGGLE and not a chord,
+// went with the menu row, and the popups with them; the static_assert below
+// this table makes "the table's length IS the roster" a build-time fact.
 //
 // The `shift` column is each button's OWN chord — TWO rows set it: Redo's
 // Ctrl+Shift+Z and, since 2026-09-29, PREVIOUS MARKER's Shift+Tab, which set
@@ -857,8 +850,7 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // 2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
-// of any row, or on one of the three dropdown anchors (which carry no chord row
-// at all) is refused exactly as it always was. The walk is kToolbarChords in the
+// of any row is refused exactly as it always was. The walk is kToolbarChords in the
 // arm's own order, so the button this answers about is the button that would
 // arm.
 //
@@ -2027,8 +2019,7 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      outside the dialog's own field and buttons — the
 //      shared predicate is modal_dialog_editor_active, whose membership is
 //      AppState::dialog_editor_session's;
-//   3. the open dropdown, which owns the pointer and consumes every press over
-//      the pixels it floats above;
+//   3. (the open dropdown, which owned the pointer, until 2026-10-21);
 //   4. the loading / empty-audio return, above the whole waveform band. The four
 //      REDESIGNED ROWS are claimed ABOVE it and stay live through a load — they
 //      carry no cue of their own, so they need no arm here and take the Arrow
@@ -2131,7 +2122,6 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         return rect_contains(app.modal_dialog.field, x, y)
                    ? GuiCursorKind::Text : GuiCursorKind::Arrow;
     }
-    if (app.dropdown.open()) return GuiCursorKind::Arrow;
     if (app.loading || audio.total_frames() <= 0) return GuiCursorKind::Arrow;
 
     // A LIVE TRIM GESTURE OWNS THE CURSOR (architect 2026-08-03) — the ONE
@@ -2152,7 +2142,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // record and the hover map name the same cue — reading the record here
     // just keeps one owner across the whole press-to-release span. (The modal
     // gates above are structurally inert mid-drag — no press or key opens a
-    // prompt, editor or dropdown while the button is held — so their rank
+    // prompt or editor while the button is held — so their rank
     // costs nothing.)
     // TWO PENDINGS SINCE 2026-08-15: the ctrl / ctrl+shift BOUND SET no longer
     // writes its bound at the press and arms the endcap pending there — it arms
@@ -2983,7 +2973,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // off the waveform froze there.)
     // WHAT THE FRAME STILL ASKS IS STATE, NEVER PLACE — the wheel's modal
     // refusals, which can come to stand mid-gesture without the finger
-    // choosing a surface: a prompt, the progress modal, an open dropdown, a
+    // choosing a surface: a prompt, the progress modal, a
     // live pointer gesture (a mouse press on the laptop — no two writers), a
     // dialog editor, loading or empty audio, and THE FOLDER OVERLAY, the
     // render player or the picker, standing whole (a complete batch swaps the
@@ -2996,7 +2986,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // waveform navigates either way. The keyboard-modal flag
     // editor is punched through as the wheel punches it.
     if (app.prompt.active || app.batch_progress.active ||
-        app.dropdown.open() || any_pointer_gesture_active(app) ||
+        any_pointer_gesture_active(app) ||
         folder_overlay_stands(app) || modal_dialog_editor_active() ||
         app.loading || audio.total_frames() <= 0)
         return;
@@ -3268,31 +3258,10 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // tap places the playhead (a double tap on the empty marker lane creates)
 // and a drag does nothing — the placement pending begins no pan.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
-    // THE ZONE YIELDS WHOLE WHILE A MENU STANDS (architect 2026-10-01, "Good,
-    // I agree"): with a dropdown open, every touch is the pointer on contact,
-    // so the first touch outside the menu is a PRESS AT THE DOWN, reaches the
-    // dropdown's claim, closes the menu and is consumed — exactly the mouse's
-    // press (on_button_press's dropdown claim, "ONE PRESS, ONE ACT"); the drag
-    // that follows starts on a closed menu, one wasted gesture after a menu,
-    // the cost every desktop charges. THE DIVERGENCE IT CLOSES: on the tablet
-    // a tap outside closed the menu at its lift, but a drag or a hold there
-    // opened the zone's window — the pan and the region hold, which the
-    // downstream refusals freeze under an open menu — and the menu stayed,
-    // while the laptop's press-and-drag closes it and does not pan.
-    // THE HISTORY THAT LED HERE: the same day this clause yielded under the
-    // dropdown's BOX alone, from his glass pass (the Settings menu's device
-    // rows lost their pressed face at the pen's down while every other row
-    // took it) — a menu hanging over the waveform puts its lower rows on the
-    // pan zone, and a contact there opened the window and DELIVERED NO PRESS
-    // until the lift, the pen's HOVER_EXIT before the tip having already
-    // dropped the hover face, so the row painted at rest from the down to the
-    // lift. The whole-zone yield keeps that answer (a row's press arms it at
-    // the down, as a mouse press does) and widens it to every point.
-    // THE KINDS STAY DISTINCT: a dropdown is a POPUP — one press, one act, its
-    // claim's rank (2026-09-03) untouched — while a card is a NOTICE that
-    // claims its own rect only and is never a mode, so a drag beside a card
-    // pans (the clause below yields under the card alone).
-    if (app.dropdown.open()) return false;
+    // (THE ZONE YIELDED WHOLE WHILE A MENU STOOD, architect 2026-10-01 — every
+    // touch the pointer on contact, so a touch outside the open dropdown
+    // closed it at the down as the mouse's press did; the clause went with
+    // the Settings popup, 2026-10-21.)
     // (A CLAUSE FOR THE SETTINGS CHOICE EDITOR'S DROPPED LIST stood here
     // 2026-10-07 to 2026-10-14, for the dropdown's reason, and went with the
     // list.)
@@ -3368,8 +3337,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
 void GuiInputHandler::begin_touch_region(int x, int y) {
     // The press path's own gates, restated because this gesture never passes
     // through on_button_press (the shift former's claim sits below every one
-    // of these): a prompt or modal editor owns the input, an open dropdown
-    // owns the pointer, unloaded audio has no columns to span, and a live
+    // of these): a prompt or modal editor owns the input, unloaded audio has no columns to span, and a live
     // pointer gesture must not be torn by a second writer. THE EDITOR GATE
     // IS THE SIX-EDITOR PREDICATE, the marker-lane editors
     // deliberately included though they are pointer-transparent: every
@@ -3392,7 +3360,6 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // AND THE PROGRESS MODAL'S (2026-10-14), for the same gesture's reason.
     if (app.batch_progress.active) return;
     if (keyboard_modal_editor_active()) return;
-    if (app.dropdown.open()) return;
     if (app.loading || audio.total_frames() <= 0) return;
     if (any_pointer_gesture_active(app)) return;
     const GuiRect area = waveform_area(app);
@@ -4790,13 +4757,6 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
 bool GuiInputHandler::claim_folder_overlay_press(
         int x, int y, GuiMouseButton button, GuiInputState mods) {
     if (!folder_overlay::stands(app)) return false;
-    // (AN OPEN DROPDOWN OWNS THE POINTER, THIS BAND INCLUDED, and this claim
-    // no longer says so itself: the popup's claim is RANKED above this call
-    // since 2026-09-03, so a press while a menu stands never arrives here at
-    // all — it selects an item or dismisses the menu, consumed whole. The line
-    // that used to stand here, `if (app.dropdown.open()) return false;`, was
-    // the band's own half of a rule the rank now owns for every surface under
-    // the popup; the whole reasoning is at the claim, on_button_press.)
     if (button != GuiMouseButton::Left) return false;
     const GuiRect surf = folder_overlay::surface_rect(app);
     if (!rect_contains(surf, x, y)) return false;
@@ -4955,8 +4915,8 @@ bool GuiInputHandler::claim_notification_press(GuiMouseButton button, int x,
 }
 
 // THE CARD'S LIFT — the press claim's other half (architect 2026-10-01),
-// called by on_button_release at the claim's own rank (above the dropdown's
-// release and every veil's) with the arm already taken, so the card's clock
+// called by on_button_release at the claim's own rank (above every veil's
+// release) with the arm already taken, so the card's clock
 // has resumed before this runs (take_chrome_press) and a dismissal finds it
 // running or gone. The lift dismisses iff it lands ON THE SAME CARD the
 // press armed — re-hit at the release's own coordinates against the last
@@ -5101,28 +5061,10 @@ void GuiInputHandler::on_window_close() {
     // stopped raising anything; it is a critical notification card since
     // 2026-08-29, which raises no modal either.)
     // Ordered ABOVE request_close so the box's published rect is
-    // damaged before the prompt's own repaint, and beside the popup close for
-    // the reason below — the two floating surfaces go down together.
+    // damaged before the prompt's own repaint.
     hide_shift_tooltip();
-    // THE POPUP GOES DOWN BEFORE THE PROMPT GOES UP — including its armed
-    // item, both being the one close owner's job. Without this the two would
-    // stand together and ownership would
-    // SPLIT: the prompt takes keys and presses (its gates are tested first),
-    // but motion reaches the DROPDOWN branch, which sits above the prompt's,
-    // and a left RELEASE reaches finish_dropdown_release, which sits above
-    // the prompt gate in on_button_release — so an item pressed and still
-    // HELD when the compositor close arrived would fire on release and raise
-    // the settings editor UNDERNEATH the prompt. Closing here makes "the
-    // prompt outranks the dropdown" structural in all four input channels
-    // instead of an ordering accident in two of them.
-    // THE RESIZE PATH DOES THE EQUIVALENT for the same class of reason (a
-    // popup that cannot stay coherent through what follows), and Ctrl+Q needs
-    // no line of its own: it reaches the popup's own keyboard gate first,
-    // which closes the menu and only then lets the close route run. (The
-    // checkpoint notice's opener owed this same pair from 2026-08-08 until
-    // 2026-08-09; it raises no modal now, so these two routes are again the
-    // whole list.)
-    close_dropdown();
+    // (THE POPUP WENT DOWN HERE BEFORE THE PROMPT WENT UP, close_dropdown,
+    // until the Settings dropdown retired, 2026-10-21.)
     // THE RENDER PLAYER, THE PICKER AND EVERY STANDING MODAL EDITOR GO
     // DOWN INSIDE request_close, not here: the close road owns those
     // steps for Ctrl+Q and for this road alike, so neither a mode
@@ -5345,10 +5287,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // manner and arms nothing. It ranks above the veils because a card is
     // the message ABOUT the act a veil stands over, not a reach into the
     // veiled surface (the record at the retired reach-through's site above),
-    // and ABOVE THE OPEN DROPDOWN'S CLAIM, so a press on a card beside an open
-    // menu arms the card and leaves the menu standing; the lift is taken at
-    // the same rank in on_button_release, above the dropdown's release, which
-    // would otherwise consume it. This return precedes every arm below, so
+    // and the lift is taken at the same rank in on_button_release. This return precedes every arm below, so
     // the card's is the only arm the press leaves. ON GLASS the pan zone
     // answers false on a card (touch_point_in_pan_zone), so a finger landing
     // on one resolves to this press ON CONTACT (the off-zone down,
@@ -5417,165 +5356,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         return;
     }
 
-    // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
-    // FLOATS over them: a press on one of its items runs that item, and a press
-    // anywhere else closes it and is CONSUMED so nothing underneath acts. The
-    // presses it does not swallow are those on the MENU BUTTONS themselves,
-    // which fall through to the band claim below: on this menu's own button the
-    // toggle closes it — the same gesture that opened it, closing it — and on the
-    // OTHER menu's button the toggle switches, closing this one as it opens that
-    // one (one popup state, so the switch is free). WHILE A FOLDER-OVERLAY
-    // CONTENT STANDS that fall-through reaches the band claim only for the LIVE
-    // anchor; a DEAD one is consumed by the veil below instead, which is the
-    // same nothing the band claim gave it (toggle_dropdown refuses a dead
-    // anchor) — the popup stays up either way.
-    //
-    // SINCE THE HOVER SWITCHES TOO (2026-08-03, on_motion), that second case is
-    // now the rare one from a real pointer: crossing onto the other button has
-    // already switched the menu, so the press landing there finds that menu open
-    // and TOGGLES IT CLOSED — the ordinary menu-bar answer for pressing the
-    // button whose menu is up. Neither route changed; they simply meet here, and
-    // a press that arrives with no motion before it still takes the switch
-    // through this claim.
-    //
-    // THE CLAIM'S RANK IS THE FIX FOR THE STRANDED ARM (2026-09-03): it sits
-    // BELOW the notification cards, the on-screen keyboard and the prompt gate
-    // — the three surfaces that outrank every band — and ABOVE EVERYTHING ELSE
-    // the pointer has: the folder overlay's band claim, its two mode veils
-    // and the modal-row arm inside each of them, the dialog editors' field and
-    // button claims and their veil. It stood under all of those until this
-    // ruling, which is what let a press on the overlay's modal row while the
-    // File menu was up reach arm_modal_dialog_press BEFORE this claim could
-    // dismiss the popup: the release then ran finish_dropdown_release first,
-    // and that body consumes every release the popup is open for without
-    // taking or clearing the arm, so the button stayed visually pressed and a
-    // LATER release over it acted with no press of its own. ONE PRESS, ONE
-    // ACT is what the rank now says: a press that dismisses the popup arms no
-    // modal button and opens no row. (Touch reaches this order too — the
-    // one-finger translation delivers an ordinary press — so the rank answers
-    // both hosts.)
-    //
-    // AND NO ARM CAN BE STANDING WHEN THE POPUP OPENS, which is why the
-    // dismissal owes no clear of its own. SINCE THE MENU ROW'S REMOVAL
-    // (2026-10-21) THE POPUP HAS NO OPENER AT ALL — toggle_dropdown has no
-    // caller until the Settings popup is given a road of its own — and every
-    // producer it had was a LEFT PRESS (the anchor press's toggle_dropdown at
-    // the menu-row claim, and the hover switch under that same held button —
-    // there was no keyboard opener): a press exists only after the previous
-    // one came up,
-    // and both arms a dismissal could strand are consumed at their own release
-    // whatever it lands on (take_modal_dialog_release, take_chrome_press). The
-    // anchor press moreover arms NOTHING — it toggles instead of calling
-    // arm_redesign_press — so the very gesture that opens a menu leaves the
-    // roster and the modal row clean.
-    //
-    // MOVING ABOVE THE EDITOR GATES MOVED NO BEHAVIOR: a popup and a dialog
-    // editor are never open together. The popup opens only from a press, and
-    // while a DIALOG editor is up every press outside the box's own field and
-    // buttons dies at the veil, which has had NO EXCEPTION since 2026-08-13
-    // (the retired reach-through's record is at its own site below) — so the
-    // MENU ANCHORS are never reached and no press can open a popup under an
-    // editor. That invariant is carried by the ANCHOR claim's rank at the foot
-    // of this function, which is still under the veil, and never by this
-    // claim's. The other half is not here — the
-    // pointer-transparent FLAG editor swallows nothing, so a press does reach
-    // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
-    // that edit (the rule is stated there). Two mechanisms, one claim. (The
-    // reverse direction is closed by the keyboard gate: while the popup is open,
-    // `;` is swallowed, so the editor cannot open under it either.)
-    //
-    // THE FOLDER OVERLAY'S BAND IS UNDER IT LIKE EVERY OTHER BAND: the band's
-    // own claim below carries no popup line of its own (a File menu could
-    // stand over the band from 2026-09-03 evening until the menu row's
-    // removal, 2026-10-21). THE PANEL CANNOT RISE UNDER A POPUP: every opener
-    // the two contents have — bare `l`, bare `'`, Ctrl+O and the Play renders
-    // button's press — arrives through on_key, whose popup gate admits Esc and
-    // Ctrl+Q and swallows the rest. (This claim stood BELOW the mode veils for the evening
-    // of 2026-09-03 alone, and below the editor gates from the redesign until
-    // then; on 2026-09-02, with the panel's ceiling at row 1's foot, it stood
-    // above the veils and no popup could reach the band at all for the hours
-    // the anchors were all dead.)
-    if (app.dropdown.open()) {
-        // OWNING THE POINTER MEANS EVERY BUTTON, not just the left one: only
-        // LEFT carries
-        // claims inside the popup, so any other button is CONSUMED INERT here
-        // rather than falling through to the bands underneath. (The arm dates
-        // from the right-click scrub, 2026-08-01..12; with the right button
-        // unbound it defends nothing live, and stays as the popup's shape —
-        // owning the pointer is owning every button.) The popup
-        // stays open (a non-Left press is not one of its two answers, item-arm
-        // or dismiss) and nothing acts.
-        if (button != GuiMouseButton::Left) return;
-        const AppState::Dropdown& pop = app.dropdown;
-        // (A press on the menu row's emitting title fell through to the
-        // title's own toggle below until the row went, 2026-10-21; every
-        // press now answers here.)
-        {
-            const int hit = dropdown_item_at(x, y);
-            // A MODIFIED press inside the popup closes it and does nothing else:
-            // no item carries a modified binding, and leaving the popup open
-            // under a press it refused would be the worse answer.
-            const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
-            // A GREYED ITEM ARMS NOTHING AND DISMISSES NOTHING (architect
-            // 2026-09-24, the truthful menus; it stood 2026-08-08..15 too): the
-            // press is consumed where it landed and the MENU STAYS UP,
-            // kdenlive's own answer for a greyed row — pressing one is a
-            // nothing, not a dismissal — so this arm RETURNS rather than
-            // falling into the close below, which is the answer for the
-            // separator, the chrome and the box's outside: those are the
-            // popup's DEAD SPACE, and a greyed item is a row that is simply not
-            // for you. THE CLAIM READS THE PAINTED BIT (architect 2026-09-24,
-            // strictly as-painted): the row's face as paint_dropdown last
-            // published it (AppState::Dropdown::item_enabled), never the live
-            // verdict, so the press does what the row shows; the per-tick
-            // comparator (main.cpp) keeps the bit honest. No claim is set, so
-            // the release that follows arms nothing either.
-            if (hit >= 0 && plain &&
-                !app.dropdown.item_enabled[static_cast<size_t>(hit)])
-                return;
-            if (hit >= 0 && plain) {
-                // ITEMS ACT ON RELEASE — this press only ARMS one. The items
-                // were the redesign's FIRST act-on-release surface (the
-                // universal menu convention: press, slide, release on what you
-                // meant), the model the modal dialog buttons and then the
-                // whole chrome roster took on 2026-08-13. What stays the
-                // items' own is the SLIDE: the arm travels between items,
-                // where a button's arm stays on the button it pressed.
-                //
-                // THE ARM DOES NOT STAY HERE: from this press until the button
-                // comes up it FOLLOWS THE POINTER (recompute_dropdown_hover),
-                // so the slide of "press, slide, release on what you meant" is
-                // literally the FACE arm moving — but the release does not act
-                // on wherever it ended: it DERIVES the acted-on item from its
-                // own coordinates under the claim (finish_dropdown_release),
-                // which the arm only paints. The bit is what tells that walk the
-                // held button belongs to this popup's gesture — it has a SECOND
-                // producer since
-                // 2026-08-03, the anchor press that opened the menu, whose drag
-                // into the box is the same gesture arriving from outside — and it
-                // is set OUTSIDE the transition test below, which is about
-                // damage.
-                app.dropdown.press_began_on_item = true;
-                if (pop.pressed_item != hit) {
-                    app.dropdown.pressed_item = hit;
-                    viewport.invalidate_top_strip();
-                    viewport.invalidate_rect(pop.rect);
-                }
-                return;
-            }
-            // Anywhere else inside the popup, or a modified press: close and
-            // consume, so nothing underneath acts.
-            close_dropdown();
-            return;
-        }
-    }
+    // (THE OPEN DROPDOWN OWNED THE POINTER HERE, claimed above every band —
+    // a press on an item armed it, a press anywhere else closed the menu and
+    // was consumed, ONE PRESS, ONE ACT (2026-09-03) — until the Settings
+    // popup, its last menu, retired 2026-10-21.)
 
     // THE FOLDER OVERLAY'S BAND, claimed for EVERY content and ranked here —
     // under the prompt gate (a prompt outranks every surface; the
     // player's load confirmation and the reopen's unsaved-tab question paint
-    // over their own rows), under the OPEN DROPDOWN'S claim just above (a
-    // standing menu owns the press before any band does, so a row press
-    // dismisses the menu instead of opening the row) and above the TWO mode
+    // over their own rows) and above the TWO mode
     // veils below — the player's and the picker's, each of which
     // admits the band and its own modal row
     // and consumes the rest. The claim is opaque and owns its own button
@@ -5882,7 +5671,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // any press in the band that is not on a button
     // a consumed nothing. Each band differs ONLY in its rect (row 1's dropdown
     // toggle of its three non-chord menu anchors went with the menu row,
-    // 2026-10-21) — so the press is ONE arm body,
+    // 2026-10-21, and the dropdown with the Settings popup) — so the press is ONE arm body,
     // arm_redesign_press, driven
     // by the table's per-button flags — and the act one release body,
     // finish_chrome_press_release, in on_button_release.
@@ -5994,11 +5783,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // again 2026-08-18 when the walk selector did, and again 2026-08-20 when
     // the EDIT anchor arrived, and again 2026-08-27 with SERIES, and again
     // 2026-09-09 when the HELP anchor left): the three menu
-    // anchors,
-    // which have none and are
-    // shut at toggle_dropdown instead. That exception is a refusal decided
-    // ABOVE this gate, so
-    // it leaves the mode uncovered nowhere.
+    // anchors, which had none — went with the menu row, 2026-10-21; every
+    // roster button carries a chord since.
     // The double-click SNAPSHOT is handed in because the mode has a double-click
     // act of its own (the trim bar's framing) and this function's own field was
     // cleared at the top of the press; nothing else about the call is special.
@@ -7072,10 +6858,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     hide_shift_tooltip();
     // THE NOTIFICATION CARD'S LIFT (architect 2026-10-01), FIRST — the press
     // claim's mirror at the press claim's rank: the card's claim outranks
-    // every veil and the open dropdown's claim, so its lift must outrank
-    // their releases too, the dropdown's above all, which consumes every
-    // release while a menu stands (a card pressed beside an open menu would
-    // otherwise never be dismissed). Guarded on the Card arm alone, which
+    // every veil, so its lift must outrank their releases too. Guarded on the Card arm alone, which
     // only that claim sets, so it claims nothing that is not its own; the
     // arm is taken whole here (take_chrome_press, which resumes the card's
     // clock) and the act is the lift's (finish_notification_release).
@@ -7084,26 +6867,16 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         finish_notification_release(take_chrome_press(), x, y);
         return;
     }
-    // THE ON-SCREEN KEYBOARD'S OWED KEY-UP, above every gate and above even the
-    // dropdown's release — the press's mirror. It is guarded on the held key
+    // THE ON-SCREEN KEYBOARD'S OWED KEY-UP, above every gate — the press's
+    // mirror. It is guarded on the held key
     // index alone, which only that surface's own press ever sets, so it claims
     // nothing that is not its; and it fires even when the press's act closed
     // the editor under it, because a delivered key-down owes its pair whatever
     // became of the surface (contract at the declaration).
     if (button == GuiMouseButton::Left && finish_onscreen_keyboard_release())
         return;
-    // THE DROPDOWN'S RELEASE, above every gate but the card's lift (whose
-    // claim outranks the dropdown's, above): while it is open it owns the
-    // pointer, and its items were the redesign's FIRST act-on-release surface
-    // (the modal's dialog buttons joined it 2026-08-13, and the whole chrome
-    // roster the same day). It
-    // takes THIS RELEASE'S coordinates because it derives the acted-on item from
-    // them under a live press claim, rather than trusting an arm that may have
-    // been resolved before the item rects were published (the full argument is at
-    // the definition).
-    if (button == GuiMouseButton::Left && app.dropdown.open()) {
-        if (finish_dropdown_release(x, y)) return;
-    }
+    // (THE DROPDOWN'S RELEASE stood here, above every gate but the card's
+    // lift, until the Settings popup retired, 2026-10-21.)
     // THE CHROME ARM IS TAKEN WHOLE, above every gate below (2026-08-13, the
     // act-at-release conversion; a CARD arm was taken at the top of this
     // body): the hold ends with this release whatever
@@ -7638,9 +7411,7 @@ void GuiInputHandler::clear_pen_hot_latch() {
 }
 
 void GuiInputHandler::recompute_redesign_button_hover() {
-    // IT REFUSES WHILE THE POINTER IS OUTSIDE THE WINDOW — the same first line
-    // and the same reason as recompute_dropdown_hover's, the boundary's other
-    // pointer-derived walk: the remembered coordinates name a point INSIDE the
+    // IT REFUSES WHILE THE POINTER IS OUTSIDE THE WINDOW: the remembered coordinates name a point INSIDE the
     // window even after the pointer has left, so this walk has no honest answer
     // to give while it is out. Its per-TICK caller (main.cpp) keeps running after
     // a leave, and the refusal is what makes that call inert: it cannot start a
@@ -7689,15 +7460,12 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // and the pre-motion (-1, -1) cursor is outside every rect, so both cold
         // states resolve to "not under the pointer" without a special case.
         //
-        // THE ZONE IS THE SECOND TERM (redesign_button_hover_zone, app_state.h):
-        // an open dropdown answers nothing to the pointer at all, and the
-        // refusal lives in that one predicate rather than as a condition here.
         // There is no in-window term: the whole walk refused above. AND NO
         // ENABLED TERM (architect 2026-08-07): a disabled button still explains
-        // itself, kdenlive's own behaviour.
+        // itself, kdenlive's own behaviour. (The hover zone's open-dropdown
+        // term went with the popup, 2026-10-21.)
         const bool under_pointer = !modal_veil && !under_card &&
-                                   rect_contains(f.rect, mx, my) &&
-                                   redesign_button_hover_zone(app, id);
+                                   rect_contains(f.rect, mx, my);
         // THE HOT CANDIDATE (stored by no write while the program's case has
         // no hot face, below): the toolbar button under the pointer on the
         // same gates — and NO keyboard-modal term:
@@ -7810,9 +7578,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // rather than gating the tick keeps the wait's writer in one place; the
     // modal's OPEN edge is a hard end of its own (on_key's or the press's, or
     // the compositor close's), which takes any standing box down at once.
-    // THE DROPDOWN NEEDS NO TERM OF ITS OWN: redesign_button_hover_zone refuses
-    // the whole roster while a popup is up, so the walk finds no owner by itself
-    // — the two floating surfaces cannot coexist by construction.
+    // (THE DROPDOWN needed no term of its own here until it retired,
+    // 2026-10-21: the hover zone refused the whole roster under it.)
     //
     // A STANDING DIALOG'S WAIT IS THE DIALOG'S (2026-08-13, when the modal's
     // buttons took tooltips): this walk answers for the ROSTER's index space
@@ -7885,124 +7652,6 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // last one; the rule is at note_tooltip_hover.
     note_tooltip_hover({AppState::RedesignTooltip::Surface::Roster,
                         hovered_tip});
-}
-
-// THE OPEN DROPDOWN'S OWN HOVER AND ITS ARMED ITEM, the pointer's only hover
-// while it is up. One transition writer like the roster's, damaging the strip
-// and the popup box on a change; the rects are the painter's published item
-// boxes, so a highlighted item is exactly the box that lights and exactly the
-// box a click hits. The closed menu's rects are zero and contain no point, so
-// the walk needs no membership test beyond the open check.
-//
-// (A DISABLED ITEM RESOLVED TO NO ITEM from 2026-08-08 to 2026-08-15, which was
-// what kept the two faces honest with one line rather than a term in the
-// painter: neither face could name a row the press and the release refused. The
-// predicate went producer-less with the Navigation menu — its "Walk both tabs"
-// row inside the `h` view was the only item that ever greyed — and this walk's
-// resolve line is deleted with it.)
-//
-// TWO CALLERS, AND EACH ANSWERS A QUESTION THE OTHER CANNOT (2026-08-03).
-// PER DELIVERED MOTION, from on_motion's open-dropdown branch: the settled hook
-// does NOT run between the events one wl_display_dispatch_pending delivers, so a
-// batch carrying a motion onto item 2 and then a PAINT would light item 1 on the
-// frame that batch produces if this call moved to the loop tail. THIS WALK SERVES
-// THE FACES, and the faces are consumed by the painter, which can run inside the
-// batch. The RELEASE no longer depends on it being last: finish_dropdown_release
-// re-reads the arm's own definition at the release's coordinates, because the
-// walk's INPUTS can move at that same in-batch paint (the whole argument, and the
-// equivalence that makes it safe, are at that function).
-// PER RUN-LOOP ITERATION, from main.cpp's settled hook: the INPUTS of this walk
-// move with no pointer event under them. The item rects are PAINTER-PUBLISHED
-// and are zero from the open until paint_dropdown publishes them, so a motion
-// delivered before that paint resolves nothing — and a pointer that then RESTS
-// has no next motion to be self-corrected by, which left the anchor-press
-// gesture (press Settings, slide onto an item within the opening frame, stop,
-// release) permanently missing its item. The iteration that paints the box ends
-// by resolving against it, so the face lands on the next painted frame with no
-// pointer event of any kind required. Same cure as the pointer cursor's, same
-// boundary, one class: a pointer-derived face whose inputs can settle on their
-// own.
-//
-// THE ARM FOLLOWS THE POINTER while a press is live inside the popup (architect
-// 2026-08-03): slide from one item onto the next and the pressed face travels
-// with the pointer, slide onto the separator, the chrome or off the box and
-// NOTHING is lit though the press is still live, slide back on and it re-arms.
-// That is why the two answers are resolved in ONE walk from ONE hit: a menu
-// shows exactly one item in a distinguished state, and which FACE that item
-// wears is only the question of whether the button is down. An arm that stayed
-// where it went down lit the accent fill there while this hover lit the tint
-// under the pointer — the two lit items this rule exists to prevent.
-//
-// WHY THE ARM CANNOT ANSWER "IS A PRESS LIVE" ANY MORE: it is -1 both before
-// any press and while a live press stands over a separator, so `pressed_item >=
-// 0` as the liveness test would strand the drag at the first separator
-// crossing. The two facts are read from their own owners instead — WHETHER the
-// button is still down is the PLATFORM's tracking, threaded in with the motion
-// (GuiInputState::primary_button_held, the same field every button-lost arm in
-// on_motion reads, so there is no second copy to desync), and WHERE it went
-// down is the popup's own bit.
-//
-// THAT SECOND TERM WAS THE SCOPE LINE AND THE SCOPE WIDENED (architect
-// 2026-08-03): a press on ANY ANCHOR button (File, Edit or Settings) followed by
-// a drag into the popup is the other half of the standard menu gesture, and it
-// now works — the anchor press that OPENS a menu records the same claim an item
-// press does, so this walk serves both halves with nothing added here. The bit
-// was scoped for exactly that, and the widening cost the one line at the press
-// site it was designed to cost. What the term still buys is the two routes that
-// must NOT arm: an anchor press that CLOSED a menu (there is no popup to belong
-// to), and any held button whose press this popup never saw at all.
-void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
-    if (!app.dropdown.open()) return;
-    // THE REMEMBERED COORDINATES NAME A POINT INSIDE THE WINDOW even after the
-    // pointer has left, and a LEAVE IS NOT A DISMISSAL — the menu stays up — so
-    // without this the per-iteration caller would find the last on-surface
-    // position still inside an item rect and RE-LIGHT, on every wakeup, exactly
-    // the two faces the pointer-leave / capability-loss hook just dropped
-    // (clear_dropdown_pointer_state, which is the only thing that can drop them
-    // while the pointer is outside). The pen's hover end (PenHoverEnd) keeps
-    // them as painted instead, and this refusal leaves them so until the
-    // pen's next event.
-    // THE GUARD LIVES HERE, NOT AT THE HOOK WIRING, because this function is the
-    // two faces' one derivation: on_motion writes app.pointer_in_window true at
-    // its top and seeds the coordinates in the same breath, so the motion caller
-    // is unaffected by construction, and a future third caller inherits the rule
-    // instead of having to remember it. Same first line and same reason as
-    // refresh_pointer_cursor's, the boundary's other consumer.
-    if (!app.pointer_in_window) return;
-    // AND THE WALK IS SKIPPED WHILE THE PEN'S HOT-FACE LATCH HOLDS
-    // (pen_hot_latch_holds, the rule at pen_hot_latch_, 2026-10-09): after a
-    // pen lift the lit row — and the arm, which no held button can move
-    // then — stay as painted, no damage requested, until the pen moves off
-    // its anchor; the rearm motion's own call (and every iteration after)
-    // walks as usual. The release never reads these faces
-    // (finish_dropdown_release re-derives at its own coordinates).
-    if (pen_hot_latch_holds()) return;
-    // THE GEOMETRY IS dropdown_item_at'S, asked at the remembered coordinates —
-    // one walk over the published rects for this face derivation, for the press
-    // claim and for the release's derive, so "which item is here" cannot mean
-    // three slightly different things.
-    // A GREYED ROW RESOLVES TO "NO ITEM" here (2026-09-24): it is never
-    // hovered or armed, so it wears no face and the release can never find
-    // it lit. GREYED MEANS PAINTED GREY — the as-painted bit, the one the
-    // press and the release claim on (architect 2026-09-24, strictly
-    // as-painted).
-    int hit = dropdown_item_at(app.last_mouse_x, app.last_mouse_y);
-    if (hit >= 0 && !app.dropdown.item_enabled[static_cast<size_t>(hit)])
-        hit = -1;
-    const bool press_live =
-        mods.primary_button_held && app.dropdown.press_began_on_item;
-    const int armed = press_live ? hit : app.dropdown.pressed_item;
-    if (app.dropdown.hovered_item == hit &&
-        app.dropdown.pressed_item == armed) return;
-    app.dropdown.hovered_item = hit;
-    app.dropdown.pressed_item = armed;
-    // ONE DAMAGE PAIR FOR BOTH ITEMS. The popup's WHOLE published box is
-    // invalidated, so a frame in which the arm leaves one item and lands on
-    // another erases and repaints both with no per-item rect arithmetic — the
-    // same path the hover move already took, and the reason the following arm
-    // needed no second invalidation of its own.
-    viewport.invalidate_top_strip();
-    viewport.invalidate_rect(app.dropdown.rect);
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect
@@ -8593,191 +8242,11 @@ void GuiInputHandler::tick_chrome_press_repeat() {
     }
 }
 
-// WHICH ITEM IS AT (x, y), or -1. The rects are the painter's published item
-// boxes, so a hit is exactly the box that lights; a closed popup has zero rects
-// and therefore contains no point, which is the correct cold answer.
-//
-// PURE GEOMETRY, DELIBERATELY. Whether a row can be hovered, armed or
-// activated is a SEPARATE question, the row's PAINTED enabled bit
-// (AppState::Dropdown::item_enabled, architect 2026-09-24), asked by each of
-// this function's three callers on its own side — one geometric answer, one
-// enablement answer, neither hiding inside the other. (The separation was
-// kept through 2026-08-15..09-24, when no item could grey, as the shape a
-// disabled item takes; the truthful menus put it back to work.)
-int GuiInputHandler::dropdown_item_at(int x, int y) const {
-    for (int i = 0; i < dropdown_item_count(app.dropdown.menu); ++i) {
-        const GuiRect& r = app.dropdown.item_rects[static_cast<size_t>(i)];
-        if (rect_contains(r, x, y)) return i;
-    }
-    return -1;
-}
+// (THE DROPDOWN'S ITEM HIT, ITS RELEASE AND ITS ACTIVATION — dropdown_item_at,
+// finish_dropdown_release, activate_dropdown_item, the one act-on-release
+// surface the chrome roster modeled itself on — RETIRED 2026-10-21 with the
+// Settings popup.)
 
-// THE DROPDOWN'S RELEASE — the one place in the redesign where an action fires
-// on the button coming UP. Returns true when the release belonged to the popup
-// and the caller must stop.
-//
-// IT ACTS ON THE ITEM UNDER THE POINTER, which is the arm's own DEFINITION
-// (recompute_dropdown_hover): the armed item IS the item under the pointer and
-// is the ONE item lit, so "the release runs what is lit" and "the release runs
-// the item under the pointer" are one sentence — and where the two clauses can
-// part company, this body reads the second (the derive, below). NOTHING UNDER
-// THE POINTER — a claimed press (on an item, or on the ANCHOR that opened the
-// menu) standing over the separator, the chrome, the anchor button itself or off
-// the box — runs nothing, is consumed, and LEAVES THE POPUP OPEN: that is the
-// escape hatch for a press that landed on the wrong row, and it is the same act
-// the user sees, since nothing was lit to release onto.
-//
-// THE TWO GESTURES MEET HERE, which is why the dismissal rule is stated at this
-// one site: DISMISSAL IS A PRESS ACT IN THIS PRODUCT and a release never
-// dismisses. A press outside the popup closes and consumes; a release that
-// armed nothing leaves the menu standing, whichever gesture it belonged to. So
-// the classic CLICK on the anchor — press and release without moving — opens
-// the menu and leaves it up by construction rather than by exception: the
-// anchor is not an item, so the release finds nothing armed and takes the
-// return below. The two rules cannot overlap either — a press outside never
-// arms anything, so no release can be owed there.
-//
-// THE POSITION COMPARE THIS BODY ONCE CARRIED (the item under the release point
-// against the armed one, REFUSING when they differed) IS GONE AND STAYS GONE: it
-// was deleted as structurally dead under the premise "the arm is recomputed at
-// EVERY delivered motion", and with an item armed it could not be true. What
-// stands here now is the opposite act on the same coordinates — a DERIVE, which
-// ACTS on the freshest truth where the compare refused on disagreement.
-//
-// WHY THE DERIVE (2026-08-03): that premise has exactly ONE
-// exception, and it is not about motion at all. The item rects are
-// PAINTER-PUBLISHED and are zero from the open until paint_dropdown publishes
-// them, so they can move — from nothing to real — at a PAINT with no pointer
-// event between the publish and the release. paint_one_frame runs from the frame
-// callback, which wl_display_dispatch_pending delivers out of the same batch as
-// the pointer events, and the loop's settled tail runs only after the WHOLE
-// batch: one batch can therefore carry [frame done → rects published] and then
-// [the release], with nothing resolving the arm in between. Press the anchor,
-// flick onto an item and release inside the frame the menu came up in, and the
-// arm the release read was still the pre-paint -1 — the activation LOST, the
-// release consumed, the menu standing. Reading the definition at delivery time is
-// the premise's honest completion.
-//
-// IT CAN NEVER DISAGREE WITH A CORRECT ARM, which is what makes it a completion
-// rather than the compare's return: whenever the arm IS current, the recompute
-// set it from dropdown_item_at at app.last_mouse_x/y against the same published
-// rects, and the platform delivers a release AT THOSE COORDINATES — absolute
-// motion is delivered synchronously (GuiInputCore::pointer_motion) and the
-// release carries the input core's own pointer_x_/pointer_y_, while the one
-// deferred kind, a captured drag's coalesced relative motion, is flushed
-// immediately BEFORE any button event with the held bit crossing on the
-// pre-release side so that flushed motion still reads the button as down
-// (flush_deferred_motion, input_core.cpp). Same expression, same coordinates, same rects: the two
-// answers are equal by construction wherever the arm is resolvable at all, and
-// where they differ the ARM is the stale one. So nothing that fires today stops
-// firing, and the stale-rect window stops swallowing an activation.
-//
-// THE ACCEPTED COSMETIC RESIDUE, stated rather than papered over: in exactly that
-// window the publish and the release are sub-frame apart, so the item ACTS
-// without its pressed face ever having been painted. A face nobody had time to
-// see is strictly better than an activation nobody gets.
-//
-// The release's own consumed no-op case is still the armed-nothing return below,
-// which the compare never owned either: it predates all of this and answers a
-// press that armed nothing at all.
-bool GuiInputHandler::finish_dropdown_release(int x, int y) {
-    if (!app.dropdown.open()) return false;
-    // THE CLAIM IS THE GATE, NOT THE ARM. Only a press this popup owns can
-    // activate anything, so with no claim nothing is derived and the recorded arm
-    // answers — which is -1 in every reachable unclaimed state. Not because the
-    // item press is the arm's only raising writer: recompute_dropdown_hover can
-    // also raise it, from -1, for either press origin (the item press or the
-    // anchor press whose drag lands on an item). The true producer invariant is
-    // this: the item press raises the arm while SETTING the claim; the recompute
-    // may raise the arm only while the claim AND the platform's held bit are both
-    // live; and every clearer of the claim (the pointer-leave / capability-loss
-    // edge, every close's struct reset, and THIS RELEASE ITSELF, a few lines
-    // below) drops the arm with it — the pen's hover end, which keeps the
-    // faces, finding the arm already -1 (clear_dropdown_pointer_state). The release is the third clearer, and it
-    // takes both its outcomes: an activating release clears the arm explicitly
-    // (`pressed_item = -1`) before the close, and a consumed no-item release can
-    // return above that assignment only because the derive equivalence above
-    // already makes the recorded arm `-1` there too — `dropdown_item_at(x, y)`
-    // answering `-1` when `press_began_on_item` is true, or `pressed_item`
-    // already reading `-1` when it is not. So an unclaimed press can never
-    // observe a raised arm — the recompute that could have raised one needs the
-    // claim to run at all. Deriving here without the claim would be the one
-    // behavior change this round refuses: a held button this popup never saw
-    // must not fire an item it happens to come up over.
-    int armed = app.dropdown.press_began_on_item
-                    ? dropdown_item_at(x, y)
-                    : app.dropdown.pressed_item;
-    // A GREYED ITEM ACTIVATES NOTHING AND CLOSES NOTHING (2026-09-24, and
-    // 2026-08-08..15 before it). The recorded arm can never name one — the
-    // hover walk resolves a greyed row to "no item" — but the DERIVE reads raw
-    // geometry, so the gate belongs on this side of it too, and answering -1
-    // routes the release into the armed-nothing return below: consumed, menu
-    // still up, the same answer the press over that row already gave. THE
-    // BIT IS THE PAINTED ONE (architect 2026-09-24, strictly as-painted),
-    // asked AT THE RELEASE: a row the comparator has already repainted grey
-    // under a held press does not fire, and a row still painted live
-    // dispatches — the command's own body answering a refusal that landed
-    // inside that one tick, carding where its key would card (the expensive
-    // checks card there already).
-    if (armed >= 0 && !app.dropdown.item_enabled[static_cast<size_t>(armed)])
-        armed = -1;
-    // The press claim ends here whatever it armed, so nothing the pointer does
-    // afterwards can move an arm this button-down no longer owns.
-    app.dropdown.press_began_on_item = false;
-    if (armed < 0) return true;   // nothing was lit; consumed, menu stays up
-    activate_dropdown_item(armed);
-    return true;
-}
-
-// THE ROW'S ACT — the release's body above, and since 2026-10-10 the access
-// key's too (dropdown_key_blocked: a row's letter under an open menu runs
-// exactly what its release runs; the callers ask the row's painted enabled
-// bit first).
-void GuiInputHandler::activate_dropdown_item(int armed) {
-    app.dropdown.pressed_item = -1;
-    // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
-    // runs, so a modal it opens never overlaps the menu even for a frame.
-    // (THE COMMAND MENUS' ARM — a File or Edit row dispatching its chord
-    // through on_key — went with those menus, 2026-10-21; the Settings menu,
-    // the one left, opens the editor prefilled.)
-    // SETTINGS: the editor's open is its own ordinary route, prefilled through
-    // the one recall serializer.
-    // IT OPENS ON A LOCKED TAB SINCE 2026-09-04, and this site says nothing
-    // about the lock either way: the editor refused on a read-only ACTIVE tab
-    // from 2026-08-07 to that date, and the lock now governs the KEYS at their
-    // own commit arms instead — the four sidecar rows are engine keys and say
-    // the lock's sentence when they commit, while the five device rows commit
-    // regardless (the account is at GuiSettingsEditor::open). The modal
-    // playback stop stays at that opener, where it moved off this line in
-    // 2026-08-07. THE ITEMS GREY DURING A LOAD ALONE (2026-09-24,
-    // dropdown_item_enabled): the opener refuses nothing cheap, and the
-    // commit arms' refusals answer on the editor's own surfaces.
-    const SettingsPopupItem& item =
-        kSettingsPopupItems[static_cast<size_t>(armed)];
-    close_dropdown();
-    // THE MENU'S COMMAND ROW (2026-10-08, SettingsPopupAct): TRUE COLORS,
-    // the conversion's toggle, its apply shape whole at its one act.
-    if (item.act == SettingsPopupAct::TrueColors) {
-        toggle_true_colors();
-        return;
-    }
-    settings_editor.open_prefilled(item.key);
-}
-
-// THE DROPDOWN'S TWO WRITERS. Both damage the same pair of rects —
-// the top strip AND the popup's own published box — because the popup hangs
-// BELOW the strip and overlaps the rows and the waveform under it, so strip
-// damage alone would leave its overhang stale on the close. On the OPEN the box
-// has not been painted yet (its rect is still zero), so the strip damage is what
-// schedules the frame that paints it and publishes the rect; on the CLOSE the
-// rect from the last paint is exactly the region to erase, which is why the
-// close reads it BEFORE zeroing the state.
-//
-// A CLOSED MENU LEAVES NOTHING BEHIND (architect 2026-10-01): the menu row
-// kept no "closed but armed" mode after its one producer — a non-menu row-1
-// button's hover close — went with the view bar, and the mode was deleted
-// whole, so every close is the struct reset and a cold row answers a click
-// alone.
 // THE `h` HISTORY MODE's POINTER ALLOWLIST and its acts. True = the press is
 // CONSUMED here (refused outright, or handled as one of the mode's own acts);
 // false = the press is one of the navigation gestures the mode leaves alone, and
@@ -9252,176 +8721,9 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
     viewport.invalidate_all();
 }
 
-void GuiInputHandler::close_dropdown() {
-    if (!app.dropdown.open()) return;
-    const GuiRect painted = app.dropdown.rect;
-    app.dropdown = AppState::Dropdown{};
-    viewport.invalidate_top_strip();
-    viewport.invalidate_rect(painted);
-}
-
-void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
-    // THE ONE OPEN ROAD — WITH NO CALLER SINCE 2026-10-21: the menu row's
-    // title press, its hover switch and the titles' Alt access keys went with
-    // the row, and the Settings popup it opens survives until the settings
-    // editor's Tab completion over the keys retires it (DropdownMenu's head,
-    // app_state.h). Its guard reads the anchor's painted face (architect
-    // 2026-09-24, strictly as-painted) — the band's Settings case since the
-    // row went, grey in the `h` view and under the folder overlay, so the
-    // Settings menu and the `h` mode are never up together, the rule this
-    // guard has carried since 2026-08-08; the long record of the menus'
-    // lockout scopes is git history.
-    if (!app.redesign_buttons[static_cast<size_t>(
-             redesign_button_index(dropdown_anchor_button(menu)))].enabled)
-        return;
-    // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
-    // (the gesture that opened it, closing it), and a press on ANOTHER menu's
-    // button switches — the close below runs first, damaging the box that is
-    // leaving, and the open then proceeds. "Two dropdowns are never open
-    // together" needs no rule beyond this: the field holds one value, whatever
-    // the menu count.
-    const bool same = (app.dropdown.menu == menu);
-    close_dropdown();
-    if (same) return;
-    // OPENING A MENU ENDS AN ACTIVE FLAG EDIT, discarding it — exactly what a
-    // press anywhere outside the editor's box already does. It is what keeps "a
-    // popup and an editor are never open together" true, and the FLAG editor is
-    // the one class that needs it: the DIALOG modal editors (the settings
-    // editor and the BPM bracket, the membership
-    // modal_dialog_editor_active names) veil every press at the top of
-    // on_button_press, above the row-1 band claim, so a menu button is not even
-    // reachable while one of them is up — but the FlagPayload editor is
-    // pointer-TRANSPARENT by ruling and swallows nothing, so its edit would
-    // otherwise stand under the open menu. That is not merely untidy: a settings
-    // item opens the settings editor, on_key tests the flag editor FIRST, and
-    // the typing would land in the flag buffer while the settings editor is what
-    // looks focused.
-    //
-    // IT SITS ON THE OPEN PATH RATHER THAN AT THE BAND CLAIM because this is the
-    // ONE route every open passes — the anchor click and the hover switch both
-    // arrive here — while the band claim carries only the click. The hover
-    // switch is arguably out of reach with an edit open (it needs a menu
-    // already up, opened by a click, which would itself have closed the edit),
-    // but a rule that is impossible by construction is worth more here than one
-    // that is unreachable by argument. A toggle that CLOSES a menu discards
-    // nothing: it returned above.
-    //
-    // The teardown is called DIRECTLY rather than through
-    // close_top_flag_editor_for_outside_press, whose job includes the
-    // is-the-press-inside-the-box test. There is no press here at all on the
-    // hover switch, and the rect test is not merely skipped but INAPPLICABLE: a
-    // row-1 button cannot be inside the flag editor's box, which lives in the
-    // marker lane below the whole top strip's button rows.
-    //
-    // ROW 1 IS THE ANCHORS ALONE, so a menu's open is the whole of the row's
-    // reach into an edit. (Quit needed nothing here while it was a button,
-    // its Ctrl+Q being one of the three chords that gate admits; since
-    // 2026-08-13 it is an ITEM of this menu, so the discard above covers it like
-    // every other row.)
-    if (text_editor::is_active(app.top_flag_editor)) {
-        flag_editor.exit_top_flag_edit_no_commit();
-    }
-    // THE ITEMS OPEN COLD. close_dropdown's reset above (or the default
-    // state, when nothing was open) left AppState::Dropdown::item_enabled all
-    // false and item_rects all zero, and nothing else writes them before
-    // paint_dropdown's first pass publishes both — so an open whose first
-    // paint has not run yet offers nothing clickable, the stash doctrine
-    // (nothing painted, nothing clickable), for at most one frame.
-    app.dropdown.menu         = menu;
-    app.dropdown.hovered_item = -1;
-    // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
-    // published until paint_dropdown runs, and a redraw is CLIPPED to the
-    // damage it was handed — so strip damage alone would clip away whatever the
-    // popup hangs past the strip.
-    //
-    // The HEIGHT is derivable without painting (dropdown_h_px — item count
-    // times item height, plus the separator blocks and the borders), so the
-    // damage is exact vertically. The WIDTH is not (it needs the widest shaped
-    // label), so this damages FULL WIDTH from the button's top down — a band,
-    // not a guess, and cheap because it happens once per open.
-    //
-    // THE TOP EDGE IS THE ANCHOR'S FOOT (dropdown_hang_y's rule), the same
-    // expression paint_dropdown places the box at — so the damaged band and
-    // the painted box start on the same row of pixels; a band anchored
-    // anywhere else would leave a strip of the popup unpainted at one end.
-    // The x is still the anchor's (the dropdown hangs off the thing that
-    // opened it, architect 2026-08-02); only this band's y reads the seat,
-    // and it damages FULL WIDTH anyway.
-    viewport.invalidate_rect(
-        GuiRect{0, dropdown_hang_y(app, menu), app.width, dropdown_h_px(menu)});
-    // THE TOOLTIP GOES DOWN ON THE OPEN EDGE, A HARD END (a menu opening
-    // hides the tip at once) — the two floating surfaces cannot coexist
-    // (paint_handler.h states the pair), and this is the one line that makes
-    // that structural rather than a reachability argument about which routes
-    // reach an open. The roster walk alone would find no owner under the
-    // popup only on its next pass — the next tick, after a frame may already
-    // have painted the two together.
-    hide_shift_tooltip();
-    // THE TOOLTIP STAYS DOWN for as long as the popup is up:
-    // redesign_button_hover_zone refuses every roster button while a menu is
-    // open, so the roster walk (recompute_redesign_button_hover) can never
-    // start a wait.
-    viewport.invalidate_top_strip();
-}
-
-// THE POPUP'S POINTER-DERIVED STATE, DROPPED AT THE ONE HOOK FIRED ON BOTH
-// the pointer-leave AND capability-loss edges (2026-08-03: the two are
-// not the same). Capability loss ends that pointer stream outright — no
-// motion or release for it will ever arrive again. An ordinary leave has no
-// event only WHILE the pointer stays outside; it may re-enter (a synthesized
-// motion) and a still-held button may release normally afterward. Both faces
-// are dropped here regardless, and BOTH FACES GO, one function rather than
-// two, because BOTH are answers to "where is the pointer" and the pointer is
-// gone:
-//   * the ARMED item — the pressed face would otherwise stay lit under a
-//     pointer that has left; on capability loss no release ever comes to
-//     un-press it, and on an ordinary leave a later release lands on nothing
-//     because clearing the press claim below leaves it unowned (below);
-//   * the HOVERED item, with no motion to follow while the pointer stays
-//     outside — the painter lights an item whenever `hovered_item` names it,
-//     with no pointer_in_window term of its own, so a flick out of the
-//     window whose last on-surface motion was still over an item leaves that
-//     item lit until a RETURN motion recomputes it (capability loss has no
-//     return to wait for; this branch's actual audience is the ordinary
-//     leave). Nothing else clears it: recompute_dropdown_hover REFUSES while
-//     the pointer is outside the window — that guard is precisely what stops
-//     its per-iteration caller (main.cpp's settled hook) from re-lighting from
-//     the remembered coordinates what this function drops — and
-//     close_dropdown's struct reset needs a dismissal this edge is not.
-// THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — on
-// every leave reason, capability loss included: the popup has no
-// pointer-derived existence at all, and only its pointer-derived faces go.
-// THE PRESS CLAIM GOES ABOVE THE TRANSITION GATE: this is the button-LOST edge,
-// so a re-entry that still reports the button down must not resurrect an arm no
-// release will ever be attributed to. Coming back takes a fresh press, exactly
-// as it did before the arm followed the pointer.
-// ONE DAMAGE PAIR FOR BOTH FACES — the strip plus the popup's whole published
-// box, recompute_dropdown_hover's own shape, which is what lets a frame that
-// drops a hover on one item and an arm on another erase both with no per-item
-// arithmetic. It is transition-gated like the roster clears beside it; with the
-// menu closed both indices are already -1 (the struct reset) and this is a
-// compare, which is also why the zero rect is never handed to the damage.
-// `keep_faces` — the pen's hover end (GuiPointerLeaveReason::PenHoverEnd,
-// pointer_leave_keeps_lit_rows; architect 2026-10-10, "the word Pick Colors
-// blinks") — drops the claim alone and leaves both faces as painted: the
-// HOVER_EXIT before every tip DOWN is no pointer leaving the menu, and the
-// DOWN's own walk re-derives them (on the same row, no change). THE KEPT ARM
-// IS −1 BY CONSTRUCTION: the arm stands only under a live press (raised with
-// the claim, or by the walk while the claim and the held bit are both live)
-// and every release drops it (finish_dropdown_release), while the pen hovers
-// only with no contact on the glass — its DOWN, and any finger's, ends the
-// hover first (GuiPlatform::end_pen_hover), and its lift's release runs
-// before the next hover can end — so no press stands through this leave and
-// only the hovered face is ever kept.
-void GuiInputHandler::clear_dropdown_pointer_state(bool keep_faces) {
-    app.dropdown.press_began_on_item = false;
-    if (keep_faces) return;
-    if (app.dropdown.hovered_item < 0 && app.dropdown.pressed_item < 0) return;
-    app.dropdown.hovered_item = -1;
-    app.dropdown.pressed_item = -1;
-    viewport.invalidate_top_strip();
-    viewport.invalidate_rect(app.dropdown.rect);
-}
+// (THE DROPDOWN'S TWO WRITERS AND ITS POINTER-LEAVE DROP — close_dropdown,
+// toggle_dropdown and clear_dropdown_pointer_state — RETIRED 2026-10-21 with
+// the Settings popup.)
 
 // THE HOVER TOOLTIP'S BOX GOES DOWN — the one hide body, shared by the hard
 // end, the pointer leaving the box's button (note_tooltip_hover) and the
@@ -9663,12 +8965,9 @@ void GuiInputHandler::clear_redesign_button_press() {
 // It calls the three arms' OWN clears rather than touching their fields, so
 // each keeps its damage, its transition gate and its own reasoning; what this
 // body adds is the QUESTION — is any of them standing — because two of those
-// clears are unconditional in the leave hook's sense and one of them
-// (clear_dropdown_pointer_state) also drops a HOVER face, which an ordinary
-// unheld motion must not disturb. With an arm standing, dropping that face
-// with it is right and not collateral: the pointer that lit it is the one whose
-// press has just vanished, and any pointer still in the window re-derives the
-// face on its very next motion.
+// clears are unconditional in the leave hook's sense (the dropdown's pointer
+// drop, which also took a HOVER face, was a third until the popup retired,
+// 2026-10-21).
 void GuiInputHandler::clear_release_time_press_arms() {
     // THE ON-SCREEN KEYBOARD'S HELD KEY IS THE FOURTH MEMBER (2026-08-27) and
     // it is the one that DELIVERS rather than merely clears: a key acts at the
@@ -9695,13 +8994,10 @@ void GuiInputHandler::clear_release_time_press_arms() {
     clear_folder_overlay_press();
     clear_player_scrub_drag();
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
-        app.modal_dialog_pressed < 0 &&
-        app.dropdown.pressed_item < 0 &&
-        !app.dropdown.press_began_on_item)
+        app.modal_dialog_pressed < 0)
         return;
     clear_redesign_button_press();
     clear_modal_dialog_press();
-    clear_dropdown_pointer_state();
 }
 
 // THE REGION DRAG'S ONE MOTION PATH, hoisted 2026-08-12 (the touch half) for
@@ -9858,9 +9154,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         pen_hot_latch_.armed = false;
     }
     // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
-    // and it sits at the very TOP because every branch below returns: an open
-    // dropdown takes the motion whole, a modal branch returns, each live gesture
-    // returns. The arms this drops belong to none of those branches — they are
+    // and it sits at the very TOP because every branch below returns: a modal
+    // branch returns, each live gesture returns. The arms this drops belong to none of those branches — they are
     // claims on a release that the unheld button says can no longer come — so
     // the only placement that sees them all is above the lot. The FAMILY'S
     // ARGUMENT and the defect it answers are at clear_release_time_press_arms's
@@ -9907,43 +9202,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // through update_modal_dialog_hover in the same branches. What DOES
     // freeze the walk is an active pointer GESTURE — the branches below all
     // return without this call.
-    //
-    // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hover_zone,
-    // app_state.h), so the walk in its branch below finds no hint owner while
-    // the menu stays up.
-    //
-    // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
-    // so no gesture can be live under it (its own press consumed everything).
-    if (app.dropdown.open()) {
-        // The roster walk. While a popup is up it finds no hint owner on the
-        // WHOLE roster (redesign_button_hover_zone refuses every button then —
-        // the pointer belongs to the popup).
-        recompute_redesign_button_hover();
-        // (THE HOVER SWITCH ONTO ANOTHER MENU'S TITLE — the menu bar's
-        // standing behaviour, refused under a held button — went with the
-        // menu row, 2026-10-21: one menu is left.)
-        // The popup's own item hover AND its armed item, beside row 1's — the
-        // two are the whole hover answer while a menu is up, and they cannot
-        // collide, since the box starts below the row. AFTER
-        // A SWITCH (and after any open) the new menu's item rects have not been
-        // published yet — the painter publishes them — so this call resolves to
-        // no item, and nothing here reaches into the painter for geometry to
-        // avoid that. WHAT FINISHES THE JOB IS THE SETTLED BOUNDARY, not the next
-        // motion: main.cpp's per-iteration hook calls this same walk again, so the
-        // iteration that paints the box ends by resolving against it and the item
-        // lights on the next painted frame even if the pointer never moves again
-        // (the standing "self-corrects on the next motion" reading was true only
-        // while the pointer kept moving, and it is retired).
-        // THIS CALL STAYS ANYWAY, and per DELIVERED MOTION rather than per
-        // iteration: a dispatch batch can carry a motion and then a PAINT with no
-        // loop tail in between, and the faces this walk writes are what that paint
-        // reads. The RELEASE is no longer among its dependants — it derives the
-        // item from its own coordinates (the full argument is at the definition).
-        // `mods` carries the platform's button state, which is what lets the arm
-        // follow the pointer under a live press (the rule is at the definition).
-        recompute_dropdown_hover(mods);
-        return;
-    }
+
+    // (THE OPEN DROPDOWN TOOK THE MOTION here, above every gate, until the
+    // Settings popup retired, 2026-10-21.)
     if (app.prompt.active) {
         // THE PROMPT DIALOG'S MOTION: the dialog buttons' walk, then the
         // roster walk (which under a prompt finds no hint owner through its
@@ -10104,7 +9365,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // dispatch batch can carry the modifiers event and then a motion with
         // no loop tail between them, and the mode must be right BEFORE this
         // event's delta is applied — the same two-caller shape, and the same
-        // argument, as the dropdown hover walk. Both reach the one body.
+        // argument the retired dropdown hover walk made. Both reach the one body.
         sync_nav_drag_mode(mods);
         // THE HEAD DRAG'S ONE STEP (architect 2026-10-09 ~17:40; contract at
         // ScrollDragState::head_drag): THE CLICK ACT ITSELF at the pointer's

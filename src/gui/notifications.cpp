@@ -106,11 +106,9 @@ bool notification_visible(const AppState& a, uint64_t id) {
 }
 
 uint64_t notification_card_at(const AppState& a, int x, int y) {
-    // A CARD UNDER A LIST POPUP IS HIDDEN THERE (floater_above_cards_at,
-    // app_state.h: the Settings drop-down, painting above the cards — the
-    // settings choice editor's list beside it until 2026-10-14), so the
-    // press, the hover and the cursor reach the surface on top.
-    if (floater_above_cards_at(a, x, y)) return 0;
+    // NOTHING THAT TAKES A PRESS PAINTS ABOVE THE CARDS since the Settings
+    // drop-down retired (2026-10-21; it hid a card under its box until then),
+    // so the published rects are the whole answer.
     for (const AppState::NotificationPainted& p : a.notifications.painted) {
         if (!rect_contains(p.rect, x, y)) continue;
         // THE PUBLICATION SELECTS, THE LIVE STACK DECIDES: the rects were

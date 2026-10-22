@@ -609,10 +609,9 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // hook owns the erase damage, and main.cpp's hook body is
     // the authoritative list of what it clears. (The MARKER hover popup rode this
     // edge too until row 5 deleted it; a marker's value lives on its flag now,
-    // so there is no pointer-position-dependent marker surface left — but an
-    // open dropdown's item hover/arm is one, and it rides this same edge:
-    // main.cpp's hook widened 2026-08-03 to drop it alongside the roster's;
-    // see clear_dropdown_pointer_state.)
+    // so there is no pointer-position-dependent marker surface left; an open
+    // dropdown's item hover/arm rode this same edge from 2026-08-03 until the
+    // popup retired, 2026-10-21.)
     // THE STAGED RELATIVE MOTION IS DELIVERED FIRST, and this edge owes that for
     // the same reason the capability branch's hold ends do: WHAT IS STILL OWED
     // GOES BEFORE THE INVARIANT RESTORE (2026-08-08). A captured drag's
@@ -690,10 +689,11 @@ void GuiInputCore::pointer_capability_lost() {
     // will arrive from this device again. Ordered hook and holds, one clause
     // each, and both are owed BEFORE the backend tears its pointer objects
     // down (the split is at the declaration). THE HOOK LEADS because its
-    // clear_dropdown_pointer_state drops the popup's press claim and armed
-    // item, so a held menu item does not fire on a hardware edge — a menu item
-    // is a click convention, not a drag commit (architect 2026-08-08), while
-    // the no-cancel ruling governs the GESTURES. THE HOLDS END NEXT, both
+    // clears drop the armed chrome and dialog presses, so a held button does
+    // not fire on a hardware edge — a button is a click convention, not a drag
+    // commit (architect 2026-08-08; the dropdown's armed item the first such
+    // claim, until 2026-10-21), while the no-cancel ruling governs the
+    // GESTURES. THE HOLDS END NEXT, both
     // sources — the synthesized bare-`e` one included, its gesture being a
     // pointer gesture in all but origin — because an undelivered release would
     // latch the drag-modal gate with no event left to lift it; the pair
@@ -1115,8 +1115,8 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // has factually been down since the window opened, so EVERY delivery in
     // this burst — the entry motion included — reads primary_button_held
     // through current_mods(). That is the state the GUI's hover-switch guard
-    // reads (on_motion's open-dropdown branch refuses the anchor switch under
-    // a held primary button): with the bit raised only after the entry
+    // read (on_motion's open-dropdown branch refused the anchor switch under
+    // a held primary button, until the menu row and its popups went, 2026-10-21): with the bit raised only after the entry
     // motion, that pre-press motion read UNHELD, switched to the tapped
     // anchor's menu, and the press in the same burst toggle-closed it — a tap
     // on the other anchor with a menu up closed the popup instead of

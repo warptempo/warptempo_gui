@@ -924,10 +924,11 @@ struct GuiInputHandler {
 
     // KEYBOARD COMMANDS ACT AT THE PRESS. This is the one ranked key
     // dispatch: the platform delivers physical presses and synthesized
-    // repeats to it (main.cpp's set_on_key hook), and three pointer surfaces
+    // repeats to it (main.cpp's set_on_key hook), and two pointer surfaces
     // synthesize chords through this same body so every gate applies to them
-    // identically — the chrome lift, the dropdown item, and the arrow
-    // buttons' hold-repeat tick (input_pointer.cpp). Its boundaries each
+    // identically — the chrome lift and the arrow buttons' hold-repeat tick
+    // (input_pointer.cpp; the command menus' items were a third until
+    // 2026-10-21). Its boundaries each
     // live at their own homes: the editors' modality
     // (route_modal_editor_key), strict modifier validation (stated in full
     // below), the Super
@@ -1163,7 +1164,7 @@ struct GuiInputHandler {
     // navigation-class sibling (it never delivers pointer events and punches
     // through the keyboard-modal flag editor exactly as the wheel does), so
     // each frame refuses under the wheel's own modal states — the prompt,
-    // the progress modal, an open dropdown, the folder overlay, the dialog
+    // the progress modal, the folder overlay, the dialog
     // modal editors, loading/empty audio and any live pointer gesture. A
     // modal opening MID-gesture therefore freezes it (the wheel's own
     // behavior), and a live mouse gesture freezes it too (no two writers).
@@ -1173,8 +1174,8 @@ struct GuiInputHandler {
     // the pan zone (touch_point_in_pan_zone) — so a frame whose point has
     // travelled onto chrome, a card or the keys navigates the waveform as
     // the mouse's captured drags do; the list is at the body's gate
-    // (input_pointer.cpp). The wheel's dismissal pair (dropdown close,
-    // tooltip hide) is deliberately NOT copied — this is a refusal, not a
+    // (input_pointer.cpp). The wheel's dismissal (the tooltip hide) is
+    // deliberately NOT copied — this is a refusal, not a
     // press act — but the
     // DOUBLE-CLICK CANDIDATE IS CLEARED on every applied frame (the C8 rule: a
     // navigation that moves content between two clicks must not let the second
@@ -1232,20 +1233,15 @@ struct GuiInputHandler {
     // until 2026-09-22, when the overlay's endcap and bridge drags were
     // deleted with its resting form — the tablet's pen reaches the trim bar.)
     // THE BODY IS THE
-    // CARVE-OUT'S ONE INVENTORY: an OPEN DROPDOWN, WHOLE (architect
-    // 2026-10-01 — its box alone at first, so a row hanging over the
-    // waveform armed at the down; the whole zone later that day, so the first
-    // touch outside a menu is the press that closes it, as the mouse's is;
-    // the why is at the clause), the notification cards, the
+    // CARVE-OUT'S ONE INVENTORY: the notification cards, the
     // on-screen keyboard's band and the folder overlay's band. (The OPEN
     // MARKER-LANE EDITOR'S BOX had a clause from 2026-09-05 until the marker
     // lane left the zone on 2026-09-25; it paints in that lane, so it is off
     // the zone by the owner and the platform's editor-field query (below)
-    // routes a drag there to the caret drag.) SURFACE GEOMETRY ONLY, the
-    // open dropdown excepted (a popup is the one STATE this query answers,
-    // because a menu's press must close it at the down — a refusal
-    // downstream would only freeze the pan under a menu that stays): every
-    // other refusal (modal, prompt, loading/empty audio, live
+    // routes a drag there to the caret drag; an OPEN DROPDOWN, whole, had one
+    // from 2026-10-01 until the popup retired, 2026-10-21 — the one STATE the
+    // query answered.) SURFACE GEOMETRY ONLY: every
+    // refusal (modal, prompt, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame state refusal, so a refused pan
     // FREEZES exactly as a refused two-finger frame does rather than falling
@@ -1290,7 +1286,7 @@ struct GuiInputHandler {
     // pointer press CLOSES an open flag editor before any claim runs, and
     // this begin, which skips the press path, must not become the first
     // gesture to run under one; the user's tap closes the editor as any
-    // click does, and the next hold works), open dropdown, loading/empty
+    // click does, and the next hold works), loading/empty
     // audio, a live pointer gesture. A refused begin arms nothing and the
     // update/end bodies no-op on the drag's own !active guard, so the
     // refused stream is dead rather than a fallback pointer drag.
@@ -1392,9 +1388,9 @@ struct GuiInputHandler {
     // at the tail of the loop body — after the display dispatch, the tick and
     // both worker completions — so this runs against a fully settled state, once
     // per poll wakeup, and nothing else in the product pushes a cursor kind.
-    // The HOOK has a second consumer beside this one (the open dropdown's item
-    // faces, the same class of answer for the same reason); this function does
-    // not, and its own job stays exactly the cursor.
+    // The HOOK has a second consumer beside this one (the nav drag's mode
+    // sync, sync_nav_drag_mode); this function's own job stays exactly the
+    // cursor.
     // WHY THAT IS THE SHAPE (architect 2026-08-03, replacing a per-site model
     // with twenty-three push sites): the map reads about ten independent fact
     // families, so a push was owed by EVERY writer of any of them — a set that
@@ -1403,7 +1399,7 @@ struct GuiInputHandler {
     // to hang a call on at all (a keyboard zoom moving the trim endcaps under a
     // resting pointer, the zoom and navigation keys, the trim keys, an undo
     // restoring trim, `o`, a gui_scale relayout, every keyboard editor open and
-    // close, the dropdown item click). A LOOP BOUNDARY IS AFTER EVERY SETTLE BY
+    // close, the dropdown item click while it stood). A LOOP BOUNDARY IS AFTER EVERY SETTLE BY
     // DEFINITION, so the "call this after your state has settled" rule that each
     // site owed is gone with the sites.
     // IT IS A NO-OP WHILE THE POINTER IS OUTSIDE THE WINDOW, where the
@@ -1520,91 +1516,12 @@ struct GuiInputHandler {
     void arm_pen_hot_latch();
     void clear_pen_hot_latch();
 
-    // THE DROPDOWN — two state writers and one hover, over the ONE popup
-    // state (AppState::Dropdown; the Settings popup, the one menu left since
-    // the menu row's removal, 2026-10-21, with NO OPENING ROAD until the
-    // settings editor's Tab completion retires it — toggle_dropdown's
-    // definition). toggle_ closes the named menu if it is the open one and
-    // otherwise opens it, refusing on its anchor's painted face (the `h`
-    // view greys it). close_ is what every dismissal route calls — an outside
-    // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
-    // Both damage the top strip AND the popup's published rect, because the
-    // popup hangs below the strip. toggle_ does NOT record the press claim that
-    // the anchor-press gesture needs: its other caller carries no press at all
-    // (the hover switch), so the claim is the press
-    // site's, written from this toggle's outcome (AppState::Dropdown::
-    // press_began_on_item). recompute_ resolves the item hover while it is open
-    // AND, under a live press CLAIMED BY THE POPUP — one that went down on an
-    // item, or on the anchor whose menu it opened — the ARMED item with it, one
-    // walk, one hit, because a menu lights exactly one item and the press only
-    // decides which face it wears (the rule, and why the arm cannot double as the
-    // liveness test, are at the definition). IT HAS TWO CALLERS AND BOTH ARE
-    // LOAD-BEARING: on_motion's open-dropdown branch runs it per DELIVERED
-    // MOTION, because a dispatch batch can carry a motion and then the PAINT that
-    // reads these faces with no loop tail in between, and main.cpp's settled hook
-    // runs it once per RUN-LOOP ITERATION, because the walk's inputs — the
-    // painter-published item rects — can move with no pointer event under them.
-    // WHAT IT WRITES SERVES THE FACES; the RELEASE derives its own item from the
-    // release coordinates rather than depending on either caller having run last
-    // (finish_dropdown_release). It refuses while the pointer is outside
-    // the window (its own first lines), so the per-iteration caller cannot
-    // re-light what the pointer-leave drop cleared.
-    void toggle_dropdown(DropdownMenu menu);
-    void close_dropdown();
-    void recompute_dropdown_hover(GuiInputState mods);
-
-    // THE POPUP'S POINTER VOCABULARY: it CLOSES on its own routes — the
-    // popup's, Esc's and the dismissals' through close_dropdown — and a
-    // press on a row arms that row for the lift. (The menu row's opening
-    // click, its hover switch between titles and its "closed but armed" mode
-    // went with the row, 2026-10-21 and 2026-10-01.)
-    // Which item is at (x, y), or -1 — the painter's published boxes. PURE
-    // GEOMETRY: whether the row is live is its painted enabled bit
-    // (AppState::Dropdown::item_enabled), asked by each caller on its own
-    // side (the record is at the definition, input_pointer.cpp).
-    int  dropdown_item_at(int x, int y) const;
-    // The dropdown's RELEASE body: the redesign's one act-on-release surface.
-    // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
-    // THE POINTER — CLOSE FIRST, then the menu's own action (settings: the modal
-    // stop and the prefilled editor; a command menu: the item's chord through
-    // on_key).
-    // IT TAKES THE RELEASE'S OWN (x, y) and, while the press CLAIM is live,
-    // DERIVES that item with dropdown_item_at — the arm's own defining
-    // expression, read at delivery — instead of trusting the recorded arm, which
-    // a paint publishing the item rects later in the same dispatch batch can
-    // leave one step behind. It is NOT the old position compare: that one refused
-    // when the two disagreed; this one acts, and cannot disagree with an arm that
-    // is current (the equivalence, and the batch that motivates it, are at the
-    // definition). With nothing derived (the claimed press stands over the
-    // separator, the chrome, the anchor button or off the box) nothing runs, the
-    // release is consumed and the menu stays open — dismissal is a PRESS act here
-    // and a release never dismisses, which is what makes the plain anchor click
-    // open-and-stay-up by construction. A DISABLED row takes that same
-    // consumed-and-still-open answer (2026-08-08): the derive reads raw geometry,
-    // so the enablement gate is applied on this side of it. An UNCLAIMED release
-    // derives nothing and takes the recorded arm, which is -1 in every state that
-    // can reach it.
-    bool finish_dropdown_release(int x, int y);
-    // The open menu's row `item` RUN — close first, then the menu's own
-    // action — the release's body, shared since 2026-10-10 with the row's
-    // access key (dropdown_key_blocked). The caller has asked the row's
-    // painted enabled bit.
-    void activate_dropdown_item(int item);
-    // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
-    // face and the press claim — at the hook fired by both the pointer-leave
-    // and capability-loss edges (its only caller). Only capability loss ends
-    // that pointer stream outright; an ordinary leave has no event WHILE the
-    // pointer stays outside, and may re-enter (a synthesized motion) with a
-    // still-held button releasing normally afterward — clearing the press
-    // claim here is what leaves that later motion/release owning nothing, not
-    // an inability of those events to arrive. Both faces answer "where is the
-    // pointer" and the pointer is
-    // gone; the painter lights the hovered item with no in-window term of its
-    // own, so dropping the arm alone would leave an item lit outside the
-    // window. The menu stays OPEN — leaving the window is not a dismissal.
-    // `keep_faces` (the pen's hover end, pointer_leave_keeps_lit_rows,
-    // 2026-10-10) drops the claim alone, both faces kept as painted.
-    void clear_dropdown_pointer_state(bool keep_faces = false);
+    // (THE DROPDOWN — toggle_dropdown, close_dropdown, recompute_dropdown_hover,
+    // dropdown_item_at, finish_dropdown_release, activate_dropdown_item and
+    // clear_dropdown_pointer_state, over the one popup state — RETIRED
+    // 2026-10-21 with the Settings popup, its last menu: the band's Settings
+    // button and `;` open the one settings editor, whose Tab completes the
+    // key names, settings_editor.h.)
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
     // hides the box at once, stops the wait and disarms the reshow, leaving
@@ -1612,7 +1529,7 @@ struct GuiInputHandler {
     // where they are, so a resting pointer starts nothing (the press spends
     // the button at its own site, after this call). Its callers, re-derived
     // by grep 2026-10-06: every pointer press and every release, every
-    // wheel, the dropdown's open edge, on_key's modal-opening end (a key that raised a
+    // wheel, on_key's modal-opening end (a key that raised a
     // modal under a roster hint — keys themselves do not hide it), the
     // compositor close (the one modal opener no key or press reaches), the
     // roster walk's tail for a dialog owner whose surface closed or was
@@ -1735,14 +1652,6 @@ struct GuiInputHandler {
     // the field (caret / drag-select), so it returns having done nothing.
     void close_top_flag_editor_for_outside_press(int x, int y);
 
-    // True when the open dropdown swallowed `key` — the popup-modal gate,
-    // ranked directly under the prompt at the top of on_key. Bare Esc closes,
-    // Ctrl+Q closes and falls through to the close route, a row's access key
-    // (bare or Alt) runs that row and a title's Alt+letter switches menus
-    // (2026-10-10), and everything else is swallowed inert so no command can
-    // run under an open popup.
-    bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
-
     // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss
     // hook's clear: a pointer that has
     // left the window is on no button, and since the act moved to the release
@@ -1804,7 +1713,7 @@ struct GuiInputHandler {
     // window only, a frame that stands on the maximised window (a spec's
     // window_frame_maximized: the laptop maximised, the tablet always) taking
     // its press as a consumed nothing, its hover the arrow. THE CAPTION'S
-    // ranks below the prompt's veil, the open dropdown's close and every
+    // ranks below the prompt's veil and every
     // dialog editor's swallow, but admitted through the render player's, the
     // picker's and the progress modal's veils (the menu row's live File
     // anchor beside it until 2026-10-21): on a CAPTION BUTTON whose painted face is enabled
@@ -1881,14 +1790,15 @@ struct GuiInputHandler {
     // caller, exactly as the editors' body above is.
     void close_picker();
 
-    // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
+    // THE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
     // mechanism: the touch layer's ABNORMAL END (its producers are the touch
     // hard ends — a cancel, a capability loss) ends every MOTION-DRIVEN
     // gesture correctly, because those have a button-lost
     // end — on_motion's `!primary_button_held` arms, one per drag state. THESE
-    // THREE HAVE NONE. The armed chrome press, the modal dialog's armed button
-    // and the dropdown's item claim are not button-lost consumers at all: they
+    // HAVE NONE. The armed chrome press and the modal dialog's armed button
+    // (the dropdown's item claim beside them until 2026-10-21) are not
+    // button-lost consumers at all: they
     // are claims on a FUTURE RELEASE, and until now the only thing that dropped
     // them was the pointer-LEAVE hook. Calling the abnormal end "the standing
     // lost-button shape" was therefore true of one family and FALSE of this
@@ -2908,7 +2818,7 @@ private:
     //       predicate answering false). A no-op when no picker stands.
     //     route_picker_key: THE WHOLE PLASTIC VOCABULARY while a picker
     //       stands, in the render player's router's shape and at its rank in
-    //       on_key (under the prompt gate and the dropdown gate, above every
+    //       on_key (under the prompt gate, above every
     //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, Cancel]
     //       through the one modal ring route (opening NOWHERE, the
     //       first Tab landing on the list); Enter presses a ring-focused
@@ -3001,8 +2911,8 @@ private:
     //     LIGHT NOTHING since the cases became the program's, 2026-10-09:
     //     Cool Edit's toolbar has no hover face under any chrome,
     //     program_spec.h's case_hot_face, and the walks store none);
-    //   the pull-down menus' lit row (AppState::Dropdown::hovered_item; its
-    //     walk recompute_dropdown_hover, run per motion and per iteration).
+    //   (the pull-down menus' lit row, the last hover-lit face, went with the
+    //     Settings popup, 2026-10-21).
     //   (The Settings combo's lit row was the second, 2026-10-07 to
     //   2026-10-14, and went with the choice editor.)
     //   NOTHING ELSE LIGHTS BY HOVER: a flag has no hover face (render.h's
@@ -3805,14 +3715,19 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
-    // TRUE COLORS' ONE ACT (architect 2026-10-08 ~05:35; the ruling at
-    // display_transform.h's head): the Settings menu's "True Colors" row's
-    // release flips the conversion's process-lifetime bit through
-    // install_true_colors and runs the apply shape its declaration owes
-    // (render.h): the icon rasters dropped, the plate kicked when its inks
-    // moved and the flag cache refreshed otherwise, the whole window
-    // invalidated. It cards nothing: the row's check mark is the state.
-    void toggle_true_colors();
+    // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
+    // display_transform.h's head; a device key since 2026-10-21): the
+    // settings editor's `true_colors=` commit sets the conversion's bit to
+    // `on` through install_true_colors and runs the apply shape its
+    // declaration owes (render.h): the icon rasters dropped, the materials
+    // baked again, the plate kicked when its inks moved and the flag cache
+    // refreshed otherwise, the whole window invalidated. It cards nothing:
+    // the screen is the answer. The commit gates the no-op and writes the
+    // device config; the launch sets the bit from the config before the
+    // window exists (main.cpp), with nothing cached to rebuild. (The Settings
+    // menu's "True Colors" command row, its toggle 2026-10-08..10-21, retired
+    // with the popup.)
+    void apply_true_colors(bool on);
 
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the
@@ -4108,7 +4023,7 @@ private:
     // surface, and ctrl, alt and every other shift press stay the consumed
     // nothing they were. THE CHORD MODALITY is the key
     // router below, which runs in on_key ahead of every ordinary dispatch (the
-    // prompt gate and the dropdown gate above it, a prompt outranking the
+    // prompt gate above it, a prompt outranking the
     // player). This predicate is what every one of those readers asks; it is
     // the mode bit and nothing else, named so the readers say what they mean.
     // (modal_dialog_editor_active stays the four-editor question and is NOT
@@ -4170,9 +4085,7 @@ private:
     // it the feint's inside bit), and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the
-    // prompt gate and under the OPEN DROPDOWN'S claim (a standing menu owns
-    // every press before any band does — 2026-09-03, on_button_press), and
-    // ABOVE the TWO mode veils (the player's and the picker's), each of which
+    // prompt gate and ABOVE the TWO mode veils (the player's and the picker's), each of which
     // admits exactly the band and its own modal row;
     // it owns its own button gate so the rank costs the veils nothing.
     bool claim_folder_overlay_press(int x, int y, GuiMouseButton button,

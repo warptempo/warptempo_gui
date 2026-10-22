@@ -961,20 +961,8 @@ void GuiInputHandler::run_iter_tie_toggle() {
 // over any of them. AppState::HistoryMode's field block owns the ruling and the
 // record of what went.
 //
-// THIS OWNER DOES NOT CLOSE A DROPDOWN, and since 2026-08-09 that is a decision
-// rather than an unreachable case. EVERY USER-ACT CLOSER STILL CANNOT FIRE WITH
-// ONE UP, positionally: bare `h`, the Ctrl+Shift+S checkpoint act, the bare `v` revert
-// and the loads behind `'` are all KEYBOARD routes dispatching BELOW on_key's
-// popup gate, which swallows every chord but Ctrl+Q and the open menu's access
-// keys while a menu is up (none of them is one of these; Ctrl+Q
-// closes the popup itself and then takes the close-window route, which ends the
-// process rather than the view; the WM close is the same), and there is no
-// pointer closer at all. THE PREFETCH ARRIVAL IS THE EXCEPTION — it runs off a
-// poll, not a key, and a standing menu is LEFT STANDING there, deliberately:
-// closing it would be a second dismissal riding an event the user did not
-// cause. (The File menu, which opened inside the view from 2026-08-13, was the
-// case; since the menu row's removal, 2026-10-21, no menu opens in the view,
-// the Settings popup refused there at toggle_dropdown.)
+// (THIS OWNER CLOSED NO DROPDOWN, a decision from 2026-08-09 until the last
+// popup, the Settings menu, retired 2026-10-21.)
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
     // (THE EXIT'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
@@ -1580,8 +1568,6 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // reached from on_key's main body, BELOW every gate that must refuse an entry,
 // so each refusal is the existing gate's and there is no second copy to
 // drift. In on_key's own order — the prompt swallow (returns unconditionally),
-// the open dropdown (dropdown_key_blocked: every chord but Ctrl+Q and the
-// menus' access keys — no `h` among them — is inert while a popup is up),
 // loading-or-absent audio (returns), the editor text drag, the
 // keyboard-modal editor gate (keyboard_modal_editor_active + modal_editor_key_-
 // blocked, and a printable `h` is a PrintableKey, so it is not merely dropped
@@ -2495,11 +2481,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // THE REDESIGNED BUTTONS PASS THROUGH HERE UNCHANGED, which is why they need
 // no rule of their own: they synthesize a chord and call on_key
 // (finish_chrome_press_release, at the lift; the command menus' items did the
-// same through finish_dropdown_release until the menu row's removal,
-// 2026-10-21), so Save, Undo, Redo, Render and the view pairs drop at this gate exactly as
+// same until the menu row's removal, 2026-10-21), so Save, Undo, Redo, Render and the view pairs drop at this gate exactly as
 // their keys do. (A command menu OPENED inside the view from 2026-08-08 —
-// toggle_dropdown's lockout narrowed to the Settings popup, whose items reach
-// the settings editor by a direct call — and this predicate admitted the File
+// the dropdown's lockout narrowed to the Settings popup, retired the same
+// evening — and this predicate admitted the File
 // menu's Ctrl+Q, Ctrl+O since 2026-08-29 (architect, "admit both") and
 // Ctrl+Alt+O since 2026-09-13, until the menu row's removal, 2026-10-21; the
 // three chords stay admitted.)
@@ -3152,8 +3137,8 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 // notice, its three park classes, the dropdown close and the release-owned scrap
 // clears, all deleted 2026-08-09 as producer-less). One asynchronous modal
 // opener remains, the compositor's WM close (main.cpp's set_on_close), and it
-// owes those guards in its own body: it force-ends every live gesture, hides the
-// hint and closes the popup before raising the unsaved-work prompt. What is gone
+// owes those guards in its own body: it force-ends every live gesture and hides
+// the hint before raising the unsaved-work prompt. What is gone
 // is an async opener that had to park and clear on someone ELSE's behalf — a
 // card can be pushed from any clock at all, because it takes nothing from
 // anyone.
@@ -3948,56 +3933,10 @@ void GuiInputHandler::run_history_revert() {
     close_history_mode();
 }
 
-// THE OPEN DROPDOWN'S keyboard gate — ONE gate for the one popup (Settings',
-// the last menu since the menu row's removal, 2026-10-21; the File, Edit and
-// Navigation menus needed nothing here in their time: the popup's bare Esc is
-// ONE bare-Esc binding through all of it, never two). Returns true when the
-// press is SWALLOWED (the popup consumed it, or it was inert, or an access
-// key ran a row);
-// false only for Ctrl+Q, which closes the popup and then lets on_key run the
-// close route.
-//
-// Bare-exact and ctrl-exact respectively, like every other modal predicate here:
-// a modified Escape and a shifted Ctrl+Q carry no binding anywhere, so they fall
-// into the swallow with everything else rather than dismissing. (CTRL+ESC, the
-// notification stack's bulk clear since 2026-09-01, is the exception that never
-// arrives: on_key claims it at its head, above this gate, so a popup neither
-// swallows it nor closes on it.)
-bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
-    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
-    if (key == GuiKeys::Escape && bare) {
-        close_dropdown();
-        return true;
-    }
-    if (key == GuiKeys::Q && mods.ctrl && !mods.shift && !mods.alt) {
-        close_dropdown();
-        return false;   // fall through to the close route
-    }
-    // THE ACCESS KEYS (architect 2026-10-10; the letters and the rule at
-    // kSettingsPopupItems, app_state.h): A ROW'S LETTER, BARE OR WITH ALT,
-    // RUNS THAT ROW exactly as its release does (activate_dropdown_item, the
-    // release's own body, at the painted row's center x), its painted
-    // enabled bit asked first — a greyed row's letter is consumed doing
-    // nothing, as a press on it is. (The titles' Alt+letter, a menu switch,
-    // went with the menu row, 2026-10-21.) Ctrl and Shift spell none of
-    // them, so every Ctrl+Alt chord keeps its swallow.
-    if (!mods.ctrl && !mods.shift) {
-        const int item =
-            dropdown_item_for_access_key(app.dropdown.menu, key);
-        if (item >= 0) {
-            const std::size_t at = static_cast<std::size_t>(item);
-            if (app.dropdown.item_enabled[at]) activate_dropdown_item(item);
-            return true;
-        }
-    }
-    // Every other chord is inert while the popup is up — AND SILENT, a BOUND
-    // one included: it is a RULED silence (notifications.h's what-stays-silent
-    // list, recorded 2026-09-02), the standing prompt's own — a popup is a
-    // question on screen, its rows are the answer, and the keyboard's next act
-    // is to close it. `chord_is_bound` is deliberately not asked here, so this
-    // is not one of the gate-card sites.
-    return true;
-}
+// (THE OPEN DROPDOWN'S keyboard gate, dropdown_key_blocked — bare Esc closed
+// the popup, Ctrl+Q closed it and fell through, a row's access key ran the row,
+// and every other chord was a ruled silence — RETIRED 2026-10-21 with the
+// Settings popup.)
 
 // The DIALOG-HOSTED modal editors: the settings editor, the bpm editor
 // (top_flag_editor reused with Kind::BpmBracket) — the two surfaces painting
@@ -6887,16 +6826,8 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
                          std::string("The clipboard did not take the ") + verb);
 }
 
-// THE DROPDOWN ITEMS' ONE ENABLED VERDICT (architect 2026-09-24, the truthful
-// menus; the contract is at the declaration, app_state.h). Each row greys on
-// its command's CHEAP refusals; the one menu left (Settings, since the menu
-// row's File and Edit went 2026-10-21) greys on the load alone — the
-// editor's opener refuses nothing cheap.
-bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
-                           DropdownMenu menu, int item) {
-    if (item < 0 || item >= dropdown_item_count(menu)) return false;
-    return !no_audio_to_dispatch_on(a, audio.total_frames());
-}
+// (THE DROPDOWN ITEMS' ONE ENABLED VERDICT, dropdown_item_enabled — the
+// truthful menus, 2026-09-24 — RETIRED 2026-10-21 with the Settings popup.)
 
 // P / I / K / L letter-key handlers. See the declaration for the chord list.
 // THE CLIPBOARD CHORDS' SHARED SENTENCES (architect 2026-08-30, the

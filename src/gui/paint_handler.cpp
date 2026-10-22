@@ -251,9 +251,8 @@ namespace {
 //     TOOLTIP naming the same act is that control's name ("Render Grid
 //     Iterations (Ctrl+Alt+R)"), which is also the icon-row button's own
 //     ("BPM Iterations (Ctrl+B)"). No reader compares any of these as strings — the
-//     three item
-//     tables are read by index (kFilePopupItems, kEditPopupItems,
-//     kSettingsPopupItems, app_state.h) —
+//     menus' item
+//     tables were read by index (until the popups retired, 2026-10-21) —
 //     so each surface is free to spell its own class.
 //   * TITLE CASE SPELLING: principal words capitalized; articles,
 //     conjunctions and prepositions of three letters or fewer lowercase unless
@@ -375,13 +374,12 @@ ButtonBoxFace paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
 // publisher of an as-painted stash that a per-tick comparator replays — the
-// roster's faces (publish_button_face) and the open dropdown's item verdicts
-// (paint_dropdown). A stash may be refreshed only on a frame whose clip
+// roster's faces (publish_button_face) (the open dropdown's item verdicts
+// were a second until 2026-10-21). A stash may be refreshed only on a frame whose clip
 // repaints every pixel the stash describes, and THOSE PIXELS ARE THE RECT'S
 // DRAWABLE PART, the rect intersected with the surface — never the logical
 // rect whole: cairo bounds every clip by the surface, so a rect running past
-// the window's edge (a dropdown taller than a short window at a large
-// gui_scale, the icon row's rightmost buttons cropping past the tablet's fit
+// the window's edge (the icon row's rightmost buttons cropping past the tablet's fit
 // ceiling) could never be covered, its stash would never publish, and the
 // comparator would invalidate it on every tick for as long as it stood. A
 // rect with NO drawable part — empty, or wholly off the surface — refreshes
@@ -917,7 +915,7 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
     }
 }
 
-// -- THE FLOATING SURFACES: the hover tooltip and the menu row's dropdowns --
+// -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
 // The tooltip's metrics are measured off its period capture, ReactOS's
 // "Views" (tmp/reactos-tooltips.png); its chrome is the floating surfaces' one box
@@ -950,6 +948,14 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // change. render.h carries only a BOUND on this for the
 // damage band.
 constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
+// THE TEXT'S LIFT (architect 2026-10-21, his U1 pick on the padding mock): the
+// tooltip's and the cards' text stands ONE Windows px ABOVE the line box's
+// centered seat, the box and its pads unmoved. Centering the face's line box
+// (ascent + descent) still read low: the descent band is mostly empty under
+// a label with few descenders, so the ink sat below the box's middle. One
+// constant for both floaters, the cards taking the tooltip's look; it is a
+// rounded part of its own (scaled_px), subtracted from each baseline.
+constexpr double kTooltipTextLiftPx      = 1.0;
 // (The damage BOUND on the height and the timing constants live in render.h —
 // the tooltip's clock reads them, for the deadlines and for the band beside
 // the strip.)
@@ -967,62 +973,6 @@ constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 // while iteration mode is OFF, where its shift press has a twin to reach.
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)
-
-// THE DROPDOWN, Windows 95's popup menu at the Windows pixel (architect
-// 2026-10-02). Its vertical terms — the 17-px item, the frame, the one-px
-// margin, the separator's block — live with dropdown_h_px's other
-// ingredients in render.h (the popup's OPEN EDGE must size the box before it
-// is painted); only the HORIZONTAL terms, which depend on the widest shaped
-// label, are the painter's alone, and every menu shares every one of them.
-//
-// IT IS NOT THE TOOLTIP'S INTERIOR: the floating surfaces share their CHROME —
-// one box painter (paint_popup_chrome, its two faces) — and not their heights.
-// The tooltip's box is not authored at all, its height falling out of pad +
-// band [+ gap + band] + pad on the face's own cell (the record at
-// kTooltipLineGapPx); do not re-derive one from the other.
-//
-// THE ITEM'S INSET: the highlight box stands one Windows px inside the frame
-// on every side — the margin Windows leaves between a popup's edge and its
-// lit row — so the published item rect is the frame's interior less that px
-// (the spec's popup_margin_px, which the vertical margin reads too).
-// THE SEPARATOR'S INSET: its etched pair runs 5 Windows px in from the popup's
-// edge each side (the laptop pixel's 7 re-authored at the unit's change).
-constexpr double kPopupSepInsetPx    = 5.0;   // the separator, per side
-
-// THE POPUP SEPARATOR — ONE PAINTER, EVERY POPUP MENU'S (2026-10-08 ~21:20:
-// the menu row's pull-downs, paint_dropdown, read it; a later vocabulary's
-// own kind forks here). `x0` is the box's left edge and `x1` its right edge, or the
-// scroll bar's left edge while a bar stands (`at_bar`, which a vocabulary
-// whose separator runs to the frame reads); `y` the pair's top row, below
-// the block's margin (popup_sep_margin_y_px). Windows' etched pair,
-// kPopupSepInsetPx in from the box's edge each side (from the bar's edge
-// while it stands).
-static void paint_popup_separator(cairo_t* cr, int x0, int x1,
-                                  bool /*at_bar*/, int y) {
-    const int inset = scaled_px(kPopupSepInsetPx);
-    paint_relief_etched_hline(cr, x0 + inset, y, x1 - x0 - 2 * inset);
-}
-
-// THE MINIMUM ITEM WIDTH — the tab-min-width pattern, and the reason a menu of
-// short labels still reads as a menu. THE VALUE IS AUTHORED, NOT DERIVED: the
-// architect's knob turned at the live look (2026-08-03, 242 laptop px, a flat
-// +42 on the crop's derivation), 176 Windows px since the unit's change
-// (architect 2026-10-02, the same device width on the tablet). Nothing
-// re-derives it and nothing should try. The painter takes the LARGER of this
-// floor and a menu's content ask at every paint, so which term wins is all it
-// says: the short menus, FILE and SETTINGS, sit on the floor by the
-// advance-width estimate, and EDIT's widest row ("Paste Phase Reset State" |
-// "Ctrl+Alt+Shift+P") asks past it. No content figure is stated here: the
-// ink is the shaper's and the rows are app_state.h's (kFilePopupItems and its
-// siblings), so a number written down would go stale the next time either
-// moves. (The floor's measured history — the crop's 200, the deleted menus
-// it bound on — is git history.)
-constexpr double kPopupItemMinWidthPx = 176.0;
-
-// (THE DROPDOWN'S HORIZONTAL PADS, kPopupPadXPx and kPopupHotkeyGapPx, are
-// render.h's since 2026-10-07, beside the vertical metrics; the menu row's
-// pull-downs alone take them — the settings choice editor's drop-down took
-// its own 7-W inset, 2026-10-09 to 2026-10-14.)
 
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
@@ -1044,9 +994,9 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // 300 %, 32 at 400 % — the face's em being the one that stands its "H"
 // exactly that tall.
 //
-// THE SEATS AT THE TABLET'S 300 %: the dropdown's 17-W item, 51 rows, seats
-// at row floor((51 + 24) / 2) = 37; at the laptop's 138 % the item's 23 rows
-// (17 x 1.38 = 23.46) seat at floor((23 + 11.04) / 2) = 17. The answer is
+// THE SEATS AT THE TABLET'S 300 %: a 17-W box (a folder overlay row), 51
+// rows, seats at row floor((51 + 24) / 2) = 37; at the laptop's 138 % its 23
+// rows (17 x 1.38 = 23.46) seat at floor((23 + 11.04) / 2) = 17. The answer is
 // independent of the box's y by construction rather than by a tie rule.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
@@ -1056,7 +1006,7 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // caption's title, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
 // is at paint_bottom_row_buttons_and_clock), the notification
-// card's first line, the dropdown items, the prompt's question and the
+// card's first line (until 2026-10-21), the prompt's question and the
 // dialog editor's line in the modal family's box (each row on the list's
 // row box, 2026-10-14), the render player's
 // two time fields, the modal buttons' own labels, the on-screen
@@ -3409,45 +3359,36 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
 // -- The floating surfaces ---------------------------------------------------
 
-void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
-                                         PopupFace face) {
-    // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, TWO FACES (architect
-    // 2026-10-02, the Windows-95 chrome), each a square fill then its frame:
-    //   MENU — the ground inside the PLAIN RAISED two-line edge: a dropdown
-    //          (Windows drew menus as raised panels, EDGE_RAISED);
-    //   INFO — THE CARD FACE, the period's tooltip (architect 2026-10-04;
-    //          the rule is render.h's palette block): `card_ground` with a
-    //          THIN flat line of `card_frame`, ONE Windows px, ON ALL FOUR
-    //          SIDES (architect 2026-10-06: WS_BORDER, ReactOS's tooltip and
-    //          Windows 2000's) — each side laid on the face as a square cell
-    //          rect, the bottom row and the right column last, so they own
-    //          their corners whole as the captures' border does (a flat
-    //          line, no bevel: the relief's mitre, paint_relief_frame, is not
-    //          drawn here) — the tooltip and every notification card, whose
-    //          words their painters set in `card_text`. Since 2026-10-10 the
-    //          three are Cool Edit's (the panel's Face, the program text and
-    //          the `dark` tone, chrome_derive.h). A card keeps its own height
-    //          rule: the line is drawn on its outer rows; its pad is the
-    //          spec's (tooltip_pad_px).
+void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
+    // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, THE CARD FACE, the period's
+    // tooltip (architect 2026-10-04; the rule is render.h's palette block): a
+    // square fill of `card_ground` with a THIN flat line of `card_frame`, ONE
+    // Windows px, ON ALL FOUR SIDES (architect 2026-10-06: WS_BORDER,
+    // ReactOS's tooltip and Windows 2000's) — each side laid on the face as a
+    // square cell rect, the bottom row and the right column last, so they own
+    // their corners whole as the captures' border does (a flat line, no bevel:
+    // the relief's mitre, paint_relief_frame, is not drawn here) — the tooltip
+    // and every notification card, whose words their painters set in
+    // `card_text`. Since 2026-10-10 the three are Cool Edit's (the panel's
+    // Face, the program text and the `dark` tone, chrome_derive.h). A card
+    // keeps its own height rule: the line is drawn on its outer rows; its pad
+    // is the spec's (tooltip_pad_px). (The MENU face — the ground inside the
+    // plain raised two-line edge, Windows' EDGE_RAISED popup menu — went with
+    // the Settings dropdown, 2026-10-21.)
     // THE BRASS AS DRAWN (architect 2026-10-21, "the light brown should be
     // brass": materials.h's METAL, the FLAT family retired as a ground): the
     // face the metal's cover at its own place, the frame's tones its flat
     // strokes.
     const GuiMaterialScope metal(GuiMaterialRegion::Metal);
-    if (face == PopupFace::Menu) {
-        paint_cell_rect(cr, r, palette().ground);
-        paint_relief_plain_raised(cr, r);
-    } else {
-        const int lx = std::min(relief_line_px(), r.w);
-        const int ly = std::min(relief_line_px(), r.h);
-        paint_cell_rect(cr, r, palette().card_ground);
-        paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, ly}, palette().card_frame);
-        paint_cell_rect(cr, GuiRect{r.x, r.y, lx, r.h}, palette().card_frame);
-        paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - ly, r.w, ly},
-                        palette().card_frame);
-        paint_cell_rect(cr, GuiRect{r.x + r.w - lx, r.y, lx, r.h},
-                        palette().card_frame);
-    }
+    const int lx = std::min(relief_line_px(), r.w);
+    const int ly = std::min(relief_line_px(), r.h);
+    paint_cell_rect(cr, r, palette().card_ground);
+    paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, ly}, palette().card_frame);
+    paint_cell_rect(cr, GuiRect{r.x, r.y, lx, r.h}, palette().card_frame);
+    paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - ly, r.w, ly},
+                    palette().card_frame);
+    paint_cell_rect(cr, GuiRect{r.x + r.w - lx, r.y, lx, r.h},
+                    palette().card_frame);
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
@@ -3589,7 +3530,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                                                  : box;
     }
 
-    paint_popup_chrome(cr, box, PopupFace::Info);
+    paint_popup_chrome(cr, box);
 
     // EACH LINE SITS ON ITS OWN BAND, and a band IS the face's ascent plus
     // its descent — a LINE and not a box, so each baseline is
@@ -3600,10 +3541,12 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // under descenders — architect 2026-10-21. (The box was already built
     // so: the cap-band solver, redesign_baseline, was never asked here; the
     // cards took it until that day.)
+    // THEN LIFTED ONE W (kTooltipTextLiftPx, architect 2026-10-21).
+    const double lift = static_cast<double>(scaled_px(kTooltipTextLiftPx));
     set_palette_source(cr, palette().card_text);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
-        line_baseline(font, static_cast<double>(y + pad_y)));
+        line_baseline(font, static_cast<double>(y + pad_y)) - lift);
     if (two_line) {
         // The hint line takes THE CARD TEXT like the first (architect
         // 2026-10-03, Windows' ink, no dims; the card face's words are
@@ -3611,7 +3554,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
             line_baseline(font,
-                          static_cast<double>(y + pad_y) + band1 + gap));
+                          static_cast<double>(y + pad_y) + band1 + gap) -
+                lift);
     }
 
     cairo_restore(cr);
@@ -3897,7 +3841,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const int text_x    = c.text_x;
         const int text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
-        paint_popup_chrome(cr, card, PopupFace::Info);
+        paint_popup_chrome(cr, card);
 
         const int box_y = card.y + pad;
         // The card's class glyph, no case, at the card's own placement.
@@ -3921,11 +3865,13 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             // the ascent — Windows draws tooltip text with the line box
             // centered (DT_VCENTER), the product's cap-band rule read low
             // under descenders — architect 2026-10-21 (the cap band centred
-            // by redesign_baseline until then). Each further line is one
-            // face line-height lower.
+            // by redesign_baseline until then), THEN LIFTED ONE W, the
+            // tooltip's own lift (kTooltipTextLiftPx, architect 2026-10-21).
+            // Each further line is one face line-height lower.
             const double base =
                 static_cast<double>(card.y + (line1_h - line_h) / 2) +
-                std::nearbyint(gui_font_ascent_px(font));
+                std::nearbyint(gui_font_ascent_px(font)) -
+                static_cast<double>(scaled_px(kTooltipTextLiftPx));
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run(
                     cr, lines[li], static_cast<double>(text_x),
@@ -3943,321 +3889,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-namespace {
-// WINDOWS' MENU CHECK MARK (architect 2026-10-08, the "True Colors" row:
-// dropdown_item_checked) — Marlett's check, the glyph DrawFrameControl's
-// DFCS_MENUCHECK puts in a popup's check-mark column, a 7 x 7 staircase
-// whose rows are (6, 1) / (5, 2) / (0, 1)(4, 3) / (0, 2)(3, 3) / (0, 5) /
-// (1, 3) / (2, 1) as (x, width) runs. DRAWN AS THE STAIRCASE'S SMOOTH HULL,
-// the caption's Close X's road (paint_caption_close_outline): the polygon
-// through the runs' outer corners and the notch where the two arms' inner
-// edges meet, in the cell's Windows px on the unit grid u, one path, one
-// antialiased fill. The column is the popup's left pad (kPopupPadXPx, the
-// space Windows reserves for this mark), the cell centred in it between the
-// item box's left edge and the label's pen and centred on the item's
-// height. Its ink is the row's label ink; a disabled row embosses it as the
-// label is (Hilight one relief line right and down, Shadow in place —
-// show_embossed_run's two tones).
-struct MenuCheckPoint {
-    double x, y;
-};
-constexpr int kMenuCheckCellPx = 7;
-constexpr MenuCheckPoint kMenuCheckOutline[] = {
-    {0, 2}, {1, 2}, {2.5, 3.5}, {6, 0}, {7, 0},
-    {7, 3}, {3, 7}, {2, 7}, {0, 5}};
-
-void fill_menu_check(cairo_t* cr, int gx, int gy, int u, GuiColor ink) {
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    cairo_new_path(cr);
-    for (const MenuCheckPoint& p : kMenuCheckOutline)
-        cairo_line_to(cr, gx + p.x * u, gy + p.y * u);
-    cairo_close_path(cr);
-    set_palette_source(cr, ink);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-
-// The mark in the check-mark column of `item` (the published item box),
-// the label's pen at `pen_x`, in `ink` — or embossed when `!enabled`.
-void paint_menu_check(cairo_t* cr, const GuiRect& item, int pen_x,
-                      bool enabled, GuiColor ink) {
-    const int u    = scaled_px(1, 1);
-    const int cell = kMenuCheckCellPx * u;
-    const int gx   = item.x + static_cast<int>(std::nearbyint(
-                                  (pen_x - item.x - cell) / 2.0));
-    const int gy   = item.y + static_cast<int>(std::nearbyint(
-                                  (item.h - cell) / 2.0));
-    if (enabled) {
-        fill_menu_check(cr, gx, gy, u, ink);
-        return;
-    }
-    const int off = relief_line_px();
-    fill_menu_check(cr, gx + off, gy + off, u, palette().hilight);
-    fill_menu_check(cr, gx, gy, u, palette().shadow);
-}
-} // namespace
-
-void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
-    // THE MENU ROW'S DROPDOWN — ONE painter for EVERY menu, hanging flush under
-    // the menu bar at ZERO margin: its top edge is the row under the menu
-    // bar's CONTENT — the program frame's top row since 2026-10-10, which it
-    // covers while it stands (Windows' pull-down; dropdown_hang_y owns the
-    // seat) — under the emitting button's left edge. Publishes its own
-    // rect and every item rect, so the press claim hit-tests exactly what was
-    // painted and never re-shapes a label.
-    //
-    // ITS CHROME (architect 2026-10-02, the Windows-95 popup menu): the ONE
-    // ground inside the PLAIN RAISED two-line frame, square
-    // (paint_popup_chrome), one Windows px of ground margin inside it, its
-    // separators ETCHED; the highlighted row a FLAT FILL in the theme's
-    // selected pair (render.h's palette block).
-    //
-    // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
-    // all three columns and this product has none of them, exactly as the tabs
-    // dropped theirs. What the columns' SPACE becomes is the labels' left INDENT
-    // and the accelerator's right margin. ONE CHECK MARK STANDS IN THAT INDENT
-    // SINCE 2026-10-08 (architect, the "True Colors" row; paint_menu_check):
-    // the ruling's reason is that a badge restates what the picture shows,
-    // and the sRGB conversion's state is the one state the picture cannot
-    // show — the mark is Windows' own, in the column Windows reserved for
-    // it, and no row but that one has a state (dropdown_item_checked).
-    //
-    // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD, and
-    // it has no producer at all again since 2026-09-04: the ITERATIONS menu's
-    // "Grid Iterations" row toggled a MODE, which is the only item this
-    // product has ever had that could have worn one, and it did not — the
-    // label was the constant act's name and the mode said what it was doing on
-    // the screen itself (every warp flag grows its iteration bracket, and the
-    // Render button's hint reads "Render Grid Iterations"). A checkbox column
-    // would have existed
-    // for one row in one menu, and the roster's own no-blink argument answered
-    // it: a badge would restate what the picture already shows. That row is a
-    // ROSTER BUTTON now and the mode wears the icon row's own LAMP, which is
-    // the state cue a menu row never had. The full record is at the deleted
-    // table's own note (app_state.h).
-    //
-    // THE MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
-    // accelerator COLUMN, which the two COMMAND menus (File, and Edit since
-    // 2026-08-20; Help had it 2026-09-03..09) have and Settings does not. The
-    // width FOLLOWS from it — one expression with an optional term — rather
-    // than being a second difference of its own, and everything else (chrome,
-    // item height, insets, separator, faces, baseline, and now the label
-    // indent and right margin) is one set of numbers by construction.
-    //
-    // (THE PER-ITEM DISABLED STATE, 2026-08-08 to 2026-08-15, was not a second
-    // difference either, for the same reason the accelerator column is not two
-    // rules: this painter asked one predicate per row, dropdown_item_enabled,
-    // and the MENUS were not named in it. The Navigation menu's "Walk both
-    // tabs" row inside the `h` history view was its ONE producer for its whole
-    // life, and it went producer-less with that menu; this painter's own
-    // disabled arms — the two dim inks and the face suppression — went with it.
-    // THEY RETURNED 2026-09-24 with the truthful menus, below, the predicate
-    // under its old name and asked of every row of every menu. Geometry is
-    // untouched on any menu, a greyed row still occupying its slot at its full
-    // height, which is why nothing about the layout below moves with the grey.
-    // The record is at kFilePopupItems, app_state.h.)
-    app.dropdown.rect = GuiRect{0, 0, 0, 0};
-    app.dropdown.item_rects = {};
-    if (!app.dropdown.open()) return;
-
-    const DropdownMenu menu = app.dropdown.menu;
-    const int count = dropdown_item_count(menu);
-    // THE ANCHOR: the menu row's button, as painted.
-    const GuiRect& btn = app.redesign_buttons[redesign_button_index(
-        dropdown_anchor_button(menu))].rect;
-    if (btn.w <= 0 || btn.h <= 0) return;
-
-    cairo_save(cr);
-    // THE BRASS (materials.h's METAL, 2026-10-21): the separators and the
-    // embossed rows' tones its own; the lit row the constant selection fill.
-    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
-    const GuiFont font = gui_font(GuiFace::Body);
-
-    const int border    = popup_border_px();
-    const int side      = border;
-    const int item_h    = popup_item_h_px();
-    const int block_mar = popup_item_margin_y_px();
-    const int margin_x  = live_chrome_spec().popup_margin_px;
-    const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-    const int sep_mar   = popup_sep_margin_y_px();
-    const int sep_block = popup_sep_block_px();   // margin, etched pair, margin
-
-    // WIDTH FROM THE WIDEST SHAPED RUN(S) behind the authored minimum — every
-    // run is shaped once here and reused for the paint below, so the box and the
-    // glyphs come from the same measurements (the displayed-basis doctrine).
-    text_shape::ShapedRun runs[kDropdownMaxItemCount];
-    text_shape::ShapedRun hot_runs[kDropdownMaxItemCount];
-    double widest = 0.0, widest_hot = 0.0;
-    bool has_hotkeys = false;
-    for (int i = 0; i < count; ++i) {
-        const DropdownRow row = dropdown_row(menu, i);
-        runs[i] = text_shape::shape_text_run(font, row.label);
-        widest = std::max(widest, runs[i].width_px);
-        if (row.hotkey != nullptr) {
-            has_hotkeys = true;
-            hot_runs[i] = text_shape::shape_text_run(font, row.hotkey);
-            widest_hot = std::max(widest_hot, hot_runs[i].width_px);
-        }
-    }
-    // ONE WIDTH RULE WITH AN OPTIONAL COLUMN, authored on the POPUP box: the
-    // label pad, the widest label, then — only where an accelerator column
-    // exists — the guaranteed column gap and the widest accelerator, then the
-    // right pad (the same number, the mirror rule), less the chrome the item
-    // box adds back below.
-    //
-    // THE OPTIONAL TERM IS DRIVEN OFF THE ITEM TABLE, not off the menu
-    // enumerator: an accelerator column is a property of the rows (a menu whose
-    // rows carry no hotkey has none), and expressing it that way is what leaves
-    // the menus differing by one DERIVED term instead of by hand-written
-    // rules per menu — which is exactly what let the FILE menu land in 2026-08-13
-    // with an accelerator column and no edit in this body at all.
-    //
-    // The authored minimum applies to both — it is the item box's floor and the
-    // reason a menu of short labels still reads as a menu. Whether it or a
-    // menu's own content wins is the expression's answer at every paint, the
-    // floor and the shaped run simply trading which one wins. (The deleted NAVIGATION
-    // menu's long labels never reached the floor either, which is how the two
-    // were shown to compose.)
-    const int pad_l    = scaled_px(kPopupPadXPx);
-    const int gap      = scaled_px(kPopupHotkeyGapPx);
-    const int pad_r    = pad_l;
-    const int chrome_w = 2 * inset + 2 * side;
-    const int content_w =
-        pad_l + static_cast<int>(std::nearbyint(widest)) +
-        (has_hotkeys ? gap + static_cast<int>(std::nearbyint(widest_hot)) : 0) +
-        pad_r - chrome_w;
-    const int item_w = std::max(scaled_px(kPopupItemMinWidthPx), content_w);
-    const int w = item_w + chrome_w;
-    // THE HEIGHT COMES FROM THE SHARED SUM, not a second walk here: the open
-    // edge damages dropdown_h_px() before this ever runs, so the two must be one
-    // expression.
-    const int h = dropdown_h_px(menu);
-
-    // FLUSH WITH THE BUTTON IT EMITS FROM, ON X AND ON Y. The x is the
-    // anchor's own left edge (architect 2026-08-02), the published rect's;
-    // THE Y IS THE ROW UNDER THE ANCHOR'S CASE (dropdown_hang_y): a Windows
-    // pull-down drops from its anchor's bottom row and covers what stands
-    // beneath it. The anchor is the band's Settings case since the menu
-    // row's removal (2026-10-21); the menu bar's content's foot until then.
-    int x = btn.x;
-    int y = dropdown_hang_y(app, menu);   // flush: zero margin under the content
-    if (x + w > app.width) x = app.width - w;
-    if (x < 0) x = 0;
-    app.dropdown.rect = GuiRect{x, y, w, h};
-
-    paint_popup_chrome(cr, app.dropdown.rect, PopupFace::Menu);
-
-    // THE ITEMS' ENABLED VERDICTS (architect 2026-09-24, the truthful menus),
-    // asked once per paint of the one owner (dropdown_item_enabled); the
-    // input side claims on the stash this publishes, never on the owner
-    // (strictly as-painted). The as-painted stash is republished only when
-    // the clip covers the box's DRAWABLE part — publish_button_face's rule,
-    // one owner (clip_covers_drawable) — so a narrow damage in the frame a
-    // verdict flips cannot record a face these pixels never took, the
-    // per-tick comparator (main.cpp) repairs it, and a box running past the
-    // window's foot still publishes on the repair's own frame.
-    bool enabled[kDropdownMaxItemCount] = {};
-    for (int i = 0; i < count; ++i)
-        enabled[i] = dropdown_item_enabled(app, audio, menu, i);
-    if (clip_covers_drawable(cr, app, app.dropdown.rect)) {
-        for (int i = 0; i < count; ++i)
-            app.dropdown.item_enabled[static_cast<size_t>(i)] = enabled[i];
-    }
-
-    // The item block opens BELOW the frame by its own one-px margin, and
-    // closes with the same margin above the bottom frame.
-    int iy = y + popup_border_top_px(/*upward=*/false) + block_mar;
-    for (int i = 0; i < count; ++i) {
-        const DropdownRow row = dropdown_row(menu, i);
-        if (row.separator_before) {
-            // THE SEPARATOR IS ETCHED (architect 2026-10-02, Windows' menu
-            // separator), inset horizontally: its Shadow line and its Hilight
-            // line under it, with the block's own vertical margin above and
-            // below the pair (popup_sep_block_px, dropdown_h_px's sum) — the
-            // vocabulary's own painter (paint_popup_separator).
-            paint_popup_separator(cr, x, x + w, /*at_bar=*/false, iy + sep_mar);
-            iy += sep_block;
-        }
-        // ITEMS TOUCH — zero vertical gap between adjacent ones — and each
-        // one's box insets horizontally from the frame by the one-px margin —
-        // inside the frame's two lines, then the margin, on both sides (the
-        // width chrome_w budgets is 2·inset + 2·border). The published rect is
-        // that box, so the clickable area is exactly the area that lights; the
-        // press claim reads it (dropdown.item_rects), and the label and the
-        // accelerator are placed from the popup's own edges, not from it.
-        const GuiRect item{x + side + inset, iy, item_w, item_h};
-        app.dropdown.item_rects[static_cast<size_t>(i)] = item;
-
-        // THE HIGHLIGHTED ROW (architect 2026-10-02, the Windows highlight):
-        // the row the pointer is over, or the press is armed on, is a FLAT
-        // FILL IN THE SELECTED FILL over the whole item box — square, no
-        // outline, inside the frame's one-px margin — under the selected text,
-        // label and accelerator alike (the theme's selected pair).
-        // It is a SELECTION FACE,
-        // NOT A HOVER: the hovered-item tracking is what a press resolves
-        // against, and the row it lights is the row a press arms (ON SCREEN
-        // IS AS PAINTED). EXACTLY ONE ITEM IS EVER LIT: the arm follows the
-        // pointer while a press is live, so the pressed and hovered indices
-        // are then the same item.
-        // A GREYED ROW WEARS NO FACE, gated here rather than trusted to the
-        // input side's resolve: a row can grey under a resting pointer with no
-        // event to refresh it. It keeps its geometry and its slot and differs
-        // in ink alone.
-        const bool lit = enabled[i] && (app.dropdown.pressed_item == i ||
-                                        app.dropdown.hovered_item == i);
-        if (lit) paint_cell_rect(cr, item, palette().selected_fill);
-
-        // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
-        // edge in every menu, and vertically centred by the shared solver. On
-        // the settings menu the right side carries the leftover, which the
-        // minimum width above is what guarantees; on a COMMAND menu the
-        // accelerator carries it.
-        const double base = redesign_baseline(font,
-                                              static_cast<double>(item.y),
-                                              static_cast<double>(item.h));
-        // THE INKS: the selected text on the highlight; the theme's label on
-        // a live row; a DISABLED row's label THE DISABLED EMBOSS
-        // (show_embossed_run) — one disabled rule for the menu anchors and
-        // the menus (architect 2026-10-03, Windows' DSS_DISABLED). A disabled
-        // row is never lit (the gate above). THE LABEL CARRIES ITS ACCESS
-        // KEY'S UNDERLINE in whichever ink it takes, the emboss's two copies
-        // included (access_underline_rect); the accelerator column none.
-        const GuiColor row_ink =
-            lit ? palette().selected_text : palette().label;
-        const auto show_row_run = [&](const text_shape::ShapedRun& r,
-                                      const char* label, double rx) {
-            if (!enabled[i]) {
-                show_embossed_access_run(cr, r, label, row.access, rx, base);
-                return;
-            }
-            show_access_run(cr, r, label, row.access, rx, base, row_ink);
-        };
-        show_row_run(runs[i], row.label, static_cast<double>(x + pad_l));
-        // THE CHECK MARK (paint_menu_check), in the label's ink.
-        if (dropdown_item_checked(menu, i))
-            paint_menu_check(cr, item, x + pad_l, enabled[i], row_ink);
-
-        // THE ACCELERATOR COLUMN is RIGHT-ALIGNED to the popup's own right
-        // margin, not to the item box's: the margin is a fact about the box,
-        // and aligning to it keeps every hotkey's last ink column on one line
-        // whatever the item inset is. ITS INK IS ITS ITEM'S OWN (architect
-        // 2026-10-03, Windows' ink, no dims: the kdenlive design's dimmer
-        // accelerator column retired with the luminance rule) — the label on
-        // a live row, the selected text on the lit one, the emboss on a
-        // disabled one. The column exists wherever a menu's rows carry a
-        // hotkey string (the optional width term above).
-        if (row.hotkey != nullptr) {
-            const double hot_x =
-                static_cast<double>(x + w - pad_r) -
-                std::nearbyint(hot_runs[i].width_px);
-            show_row_run(hot_runs[i], nullptr, hot_x);
-        }
-        iy += item_h;
-    }
-
-    cairo_restore(cr);
-}
+// (THE DROPDOWN'S PAINTER — paint_dropdown, Windows 95's popup menu hanging
+// from its anchor, its lit row, its access-key underlines, its separators and
+// the True Colors row's menu check mark — RETIRED 2026-10-21 with the Settings
+// popup, its last menu: the settings editor completes the keys on Tab.)
 
 // -- THE RULER LANE (top lane 7) ---------------------------------------------
 //
@@ -7984,8 +7619,8 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // 2026-10-13: past the lane painters, the ground, the program frame and the
 // canvas column (each inside its own rows), the passes that paint OUTSIDE
 // their lane are the floating surfaces — the notification cards (row 1
-// down), the dropdown (the menu row's foot down), the tooltip (under the
-// pointer, or above its button). (The keyboard slot starts below the toolbar
+// down), the tooltip (under the pointer, or above its button) (the
+// Settings dropdown, hanging from its button, until 2026-10-21). (The keyboard slot starts below the toolbar
 // band's foot, and the folder overlay and the modal family's box of a prompt
 // or a dialog editor at the view bar's top row, under the column's air
 // (modal_box.h, 2026-10-14), and all yield the clock's row,
@@ -8006,8 +7641,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // 2026-10-14; it went with the list. THE MODAL FAMILY'S BOX IS NO FLOATER:
 // it empties the canvas's paint area outright, waveform_paint_area.)
 static bool floating_surface_stands(const AppState& app) {
-    return app.dropdown.open() || app.redesign_tooltip.visible ||
-           !app.notifications.cards.empty();
+    return app.redesign_tooltip.visible || !app.notifications.cards.empty();
 }
 
 // THE UPPER ROWS' LIVE FINGERPRINT — the ONE function the paint (publishing
@@ -8491,8 +8125,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     pixel 0), or the frame skipped (it began known clear). Nothing
     //     else in a frame writes inside the area: THE PAINTERS OVER THE
     //     WELL, re-derived from the passes below (2026-10-14), are the cards
-    //     (paint_notifications), the pull-downs (paint_dropdown) and the
-    //     tooltip (paint_shift_tooltip) — the floater bit's three; the
+    //     (paint_notifications) and the
+    //     tooltip (paint_shift_tooltip) — the floater bit's two (the
+    //     pull-downs a third until 2026-10-21); the
     //     keyboard alone (paint_keyboard_slot) stands below the area's foot,
     //     which waveform_paint_area cuts at its band's top; the modal
     //     family's box — the folder overlay's (paint_keyboard_slot) and a
@@ -8769,7 +8404,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      modal's controls row), then the flag editor's box, then THE
         //      NOTIFICATION CARDS (paint_notifications, 2026-08-29 — the
         //      top-right stack, above every lane, the keyboard slot and the
-        //      modal's box), then the dropdown — the floating surfaces, after
+        //      modal's box) — the floating surfaces, after
         //      every pass above and outside this branch — and LAST the
         //      TOOLTIP, which reads the modal's stash.
         // (The bottom row left the tail of this sequence in row 7 — it paints
@@ -8889,7 +8524,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // every pass that paints there
     // (the top button rows, the plate, the
     // trim, the ruler, the flags, the stems, the scanner, the anchor) and
-    // precede the modal, the flag editor's box and the dropdown, which float
+    // precede the modal and the flag editor's box, which float
     // over it by design. It is OUTSIDE the loading /
     // total>0 branch above for the flag editor's own reason: an editor can
     // stand with no audio loaded, and the keyboard must stand with it.
@@ -8907,9 +8542,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // editor's stack stands, and BELOW THE FLOATING SURFACES, so a refusal's
     // notification card hangs over the box it answers (the cards' press
     // claim already ranked above the modal, notification_card_at). It cannot
-    // coexist with the dropdown (a dropdown and a modal are never open
-    // together by the standing two-mechanism claim) nor with the flag editor
-    // (ended by any dialog's open). UNCONDITIONAL for the floating surfaces'
+    // coexist with the flag editor (ended by any dialog's open). UNCONDITIONAL for the floating surfaces'
     // own reason: it publishes the geometry the pointer path reads
     // (AppState::modal_dialog), and a run that skipped would strand a stale
     // box. (From 2026-08-12 it painted after the dropdown, last but the
@@ -8919,22 +8552,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     paint_modal_dialog(cr);
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
-    // the waveform, because both hang outside their strips (the dropdown below
-    // the top strip, the tooltip under the pointer) and overlap whatever is
+    // the waveform, because they hang outside their strips (the cards from
+    // the band's foot down, the tooltip under the pointer) and overlap whatever is
     // under them. They are NOT exposure-gated the way the rows are: each
     // writes the rect it painted (or a zero rect) on every run, and a run that
     // skipped would strand a stale rect for the hit tests and the damage to
     // read. Hidden, each costs one boolean. THE NOTIFICATION CARDS (2026-08-29)
-    // are a third floater of the same kind — they hang from row 1 down over
-    // the lanes and the waveform and publish what they drew on every run —
-    // and paint BELOW these two and ABOVE the modal (2026-10-14, the modal's
-    // block above): a dropdown or a hint the pointer just raised belongs on
-    // top of a message, and a message on top of the box it answers.
-    //
-    // THE DROPDOWN AND THE TOOLTIP CANNOT COEXIST, so their order between
-    // themselves is moot: the dropdown opens on a PRESS and a press hides the
-    // tooltip, and while the dropdown is open no roster button hovers, so no
-    // tooltip can arm under it.
+    // publish what they drew on every run and paint BELOW the tooltip and
+    // ABOVE the modal (2026-10-14, the modal's block above): a hint the
+    // pointer just raised belongs on top of a message, and a message on top
+    // of the box it answers. (The Settings dropdown painted between the cards
+    // and the tooltip until it retired, 2026-10-21.)
     //
     // THE OPEN FLAG EDITOR'S BOX PAINTS HERE, ahead of those two and after every
     // pass above — including the flag blit it must cover — and UNCONDITIONALLY,
@@ -8945,14 +8573,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // for the same reason — that branch is where the publication would go
     // missing.
     render_flag_editor_box(cr, app, audio);
-    // THE NOTIFICATION CARDS (2026-08-29) paint after the flag editor's box
-    // and before the dropdown: above every lane, the waveform, the keyboard
-    // slot, the folder overlay's band and the modal family's box (2026-10-14),
-    // below the two surfaces that stay topmost — the dropdown and the tooltip,
-    // the two pointer-transient floaters. Unconditional for the floating
-    // surfaces' reason: it publishes the geometry the pointer path reads.
+    // THE NOTIFICATION CARDS (2026-08-29) paint after the flag editor's box:
+    // above every lane, the waveform, the keyboard slot, the folder overlay's
+    // band and the modal family's box (2026-10-14), below the tooltip, the
+    // pointer-transient floater. Unconditional for the floating surfaces'
+    // reason: it publishes the geometry the pointer path reads.
     paint_notifications(cr);
-    paint_dropdown(cr);
 
     // THE TOOLTIP IS LAST OF ALL since 2026-08-13, when the MODAL's buttons
     // took hints of their own: this body READS the modal stash

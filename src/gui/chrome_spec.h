@@ -94,12 +94,8 @@ struct ChromeSpec {
     // laptop pixel's 20 re-authored, architect 2026-10-02), the 11-px
     // trackbar thumb widened to it.
     double             scrub_handle_box_px;
-    // THE DROPDOWN, in Windows px (render.h's dropdown block, where the
-    // frame and the separator's rule stand; dropdown_h_px sums them): an
-    // item's height, and the menu's own margin between its frame and the
-    // items, each way (the item block's top and bottom, the item's sides).
-    int                popup_item_height_px;
-    int                popup_margin_px;
+    // (THE DROPDOWN's item height and margin, Windows' popup menu, went with
+    // the Settings popup, 2026-10-21.)
     // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY
     // VOCABULARY, read off the live lane table at the trim lane's first row —
     // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
@@ -122,8 +118,8 @@ struct ChromeSpec {
 // block); (THE MENU ROW, Explorer's menu band and the plain menu bar's
 // seat, 2026-10-02 to 2026-10-21, left with the row; git history); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
-// (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
-// one px inside the frame, hanging from its anchor's foot (dropdown_hang_y);
+// (tmp/reactos-tooltips.png) (THE DROPDOWN, Windows' popup menu, until
+// 2026-10-21);
 // THE ICONS Adwaita 3.22's drawings
 // (icons.h's head; architect 2026-10-14). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
@@ -145,8 +141,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
     .scrub_handle_box_px          = 14.0,
-    .popup_item_height_px         = 17,
-    .popup_margin_px              = 1,
     .window_frame_lines           = 2,
     .window_frame_maximized       = false,
 };

@@ -323,7 +323,7 @@ std::optional<std::string> check();
 // next pre-paint (take_bake_landed). A zero-sized client bakes
 // nothing. A FAILURE is the bundle changed under the running process (check
 // passed at launch): its stderr line and the hard fail. Callers: the one-act
-// roads, GuiInputHandler::apply_gui_scale and toggle_true_colors.
+// roads, GuiInputHandler::apply_gui_scale and apply_true_colors.
 void ensure(const AppState& app);
 // THE BAKE BEHIND THE SETTLE GATE (the head's BAKE RULE): the first bake at
 // once; a changed key of a baked window only once the tick has armed it

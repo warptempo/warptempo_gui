@@ -2037,7 +2037,8 @@ enum class RedesignButton {
     // 2026-10-21: "I'd like to see v1 without the file/edit... row". Its
     // three enumerators went with it; the anchors' succession — Navigation,
     // Iterations and Help before them, File in the Quit button's slot — is
-    // git history. DropdownMenu's head says where each menu's rows went.)
+    // git history; the Settings popup that outlived it retired the same
+    // evening for the one settings editor.)
     // THE TAB STRIP'S TWO TABS (architect 2026-10-18, reversing the tab row's
     // deletion of 2026-10-01: Cool Edit's Organizer tab strip under the band,
     // top lane 4 — render.h's tab strip block, cool_edit_paint.h's
@@ -2419,8 +2420,9 @@ enum class RedesignButton {
     // mode's allowlist, through the derived partition) — and a dialog editor
     // already standing is the veil's, the press never reaching it. It is the
     // typed road's pointer spelling (the menu row's Settings anchor, whose
-    // rows each prefilled one key, went with the row 2026-10-21; the popup
-    // hangs from this case while it survives, dropdown_anchor_button). An
+    // rows each prefilled one key, went with the row 2026-10-21, and the
+    // popup that hung from this case after it the same evening — the editor
+    // opens empty and Tab completes the key names, settings_editor.h). An
     // act, not a mode: no lamp.
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
@@ -3266,56 +3268,24 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     }
 }
 
-// THE DROPDOWN — WHICH ONE IS UP. There is ONE popup state in the product
-// (AppState::dropdown below), and this names its content; `None` IS the
-// closed state, which is what makes "two dropdowns are never open together"
-// structural rather than an invariant to maintain: opening one is writing
-// this field, and a field holds one value. THE MENU ROW IS REMOVED
-// (architect 2026-10-21: "I'd like to see v1 without the file/edit... row"),
-// and with it the FILE and EDIT menus, their titles and the titles' Alt
-// access keys: File's Open Project (Ctrl+O), Revert (Ctrl+Alt+O) and Quit
-// (Ctrl+Q) keep their chords and the band's Open Project button with its
-// Revert twin; Edit's Copy Phase Resets and Paste Phase Resets are THE
-// PIGEON'S ACTS IN THE PHASE-RESET VIEW (Jump to Defining Marker's seat,
-// jump_seat_act), and Paste Phase Reset State is removed (closed_questions.md).
-// SETTINGS IS THE ONE MENU LEFT, its popup surviving until the settings
-// editor's Tab completion over the keys replaces it; NO ROAD OPENS IT
-// (its title and Alt+S went with the row, and the band's Settings button and
-// `;` open the typed editor as they always did), toggle_dropdown kept with
-// its geometry for that one landing. (The menus' succession — Navigation,
-// File, Edit, Series, Help — and the no-second-road doctrine that decided
-// every departure are git history.)
-enum class DropdownMenu { None, Settings };
+// (THE DROPDOWN — the one popup state, `DropdownMenu` and AppState::Dropdown,
+// its anchor, its hang row and its open / close / hover / release roads —
+// RETIRED 2026-10-21 with the Settings popup, its last menu (architect: "settings
+// could gain a tab autocomplete for the keys, making the dropdown less
+// useful" — "yes"): the band's Settings button and `;` open the one settings
+// editor, whose Tab completes the key names (GuiSettingsEditor's head,
+// settings_editor.h). The menu row and its File and Edit menus went the same
+// day; the menus' succession and their rows are git history.)
 
-// EVERY MENU, in one place, so the routes that must walk them all walk this
-// instead of naming one. `None` is deliberately absent: it is the closed
-// state, not a menu.
-inline constexpr DropdownMenu kDropdownMenus[] = {
-    DropdownMenu::Settings,
-};
-
-// WHICH BUTTON A MENU HANGS FROM: the band's Settings button since the menu
-// row's removal (2026-10-21; the row's Settings title until then), the
-// painter and the open edge's damage reading ONE expression so the damaged
-// band and the painted box start on the same row (dropdown_hang_y).
-inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu /*m*/) {
-    return RedesignButton::IconSettings;
-}
-
-// THE POPUP ROWS' ACCESS KEYS (architect 2026-10-10: "accelerators are not
-// used on the tablet, but they are part of the aesthetic and therefore
-// important") — Windows' underlined letter on every pull-down row, ALWAYS
-// SHOWN (Windows 2000 hides them until Alt is held; a recorded departure,
-// win2000_deviations.md's product section: the tablet has no Alt to reveal
-// them). THE LETTER IS DATA ON EACH ROW: a BYTE INDEX into the row's plain
-// label (`access`), so the label stays the plain word wherever else it is
-// read and Windows' `&` spelling never enters a string; the painter
-// underlines that glyph (paint_access_underline, paint_handler.cpp) and the
-// keyboard reads the same index through access_key_of. While the menu is
-// open a row's letter, bare or with Alt, is that row's release
-// (activate_dropdown_item, GuiInputHandler::dropdown_key_blocked), a greyed
-// row's letter consumed doing nothing as its press is. (The titles' Alt+F,
-// Alt+E and Alt+S, 2026-10-10 to 2026-10-21, went with the menu row.)
+// AN ACCESS KEY'S LETTER (architect 2026-10-10: "accelerators are not used on
+// the tablet, but they are part of the aesthetic and therefore important") —
+// Windows' underlined letter, ALWAYS SHOWN, on the dialogs' word buttons
+// (PromptAnswer, below). THE LETTER IS DATA: a BYTE INDEX into the button's
+// plain label (`access`), so the label stays the plain word wherever else it
+// is read and Windows' `&` spelling never enters a string; the painter
+// underlines that glyph (show_access_run and access_underline_rect, paint_handler.cpp) and the
+// keyboard reads the same index through this. (The pull-down rows' letters,
+// 2026-10-10 to 2026-10-21, went with the popups.)
 //
 // AN ASCII LETTER'S KEY: the letter folded to the lowercase keysym every
 // GuiKeys letter is (gui_input.h), the platform case-folding alike.
@@ -3324,259 +3294,13 @@ inline constexpr GuiKey access_key_of(const char* label, int access) {
     return static_cast<GuiKey>(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
 }
 
-// THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
-// what the Settings popup drops down (the menu row's Settings title until
-// 2026-10-21). Each row pairs the HUMAN
-// LABEL (Title Case since 2026-09-03, kdenlive's own menu spelling and, since
-// that evening, an INSTANCE of the two-class rule rather than an exception to
-// one — an item is a control's name; the capitalization block,
-// paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
-// with the SETTINGS KEY the click prefills into the editor, and
-// `separator_before` marks where a group parts: the four SIDECAR keys a hand
-// edits (the metadata), then the editable DEVICE CONFIG keys
-// in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
-// `last_project` is the program's own and has no row), then the `waveform`
-// key's row (the `chrome` and `caption` keys' two, 2026-10-14..10-21), then
-// the tuning keys' group with the True Colors command.
-//
-// It lives here rather than in the painter because three domains read it — the
-// painter (labels, layout), the press claim (which key a click prefills) and
-// the popup's own geometry (item count). The keys are the canonical spellings
-// the settings editor takes, so the prefill goes through the ordinary recall
-// serializer with nothing translated on the way.
-// THE ROW'S ACT (2026-10-07): the menu carries A COMMAND ROW beside its keys
-// — since 2026-10-08 "True Colors", the conversion's toggle
-// (GuiInputHandler::toggle_true_colors; "Pick Colors", the color picker's
-// opener, stood beside it 2026-10-07..14) — so a row says which it is:
-// EditKey prefills the settings editor with `key`, TrueColors flips the
-// bit, and a command row's `key` is unread (nullptr).
-enum class SettingsPopupAct { EditKey, TrueColors };
-// EVERY EditKey ROW OPENS THE ONE LINE EDITOR, the `key=value` line in the
-// modal family's box (GuiSettingsEditor's head, settings_editor.h). (A second
-// KIND, the CHOICE editor — a combo box where the field stood and its list
-// dropping over the well, for a key whose domain is a short closed list —
-// stood 2026-10-07 to 2026-10-14, the Chrome and Caption rows its last;
-// removed by the architect 2026-10-14, "we can remove dropdowns for
-// chrome/caption and leave the autocomplete as the only help": the color
-// key's Tab completes a typed prefix against its built-in names,
-// GuiSettingsEditor::complete_preset_value.)
-struct SettingsPopupItem {
-    const char*                 label;
-    int                         access;   // the access key's byte in `label`
-    const char*                 key;
-    bool                        separator_before;
-    SettingsPopupAct            act     = SettingsPopupAct::EditKey;
-};
-// (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. "Playback speed"
-// was the widest label from then until 2026-08-26; only the item count and the
-// height derived from it moved at that deletion — and the item itself left with
-// ITS key 2026-08-27, when playback_speed retired whole.)
-//
-// "GUI Scale" IS NOT A `.settings` KEY ANY MORE and is still here (2026-08-27):
-// it moved to the per-device config (device_config.h), the settings editor is
-// still its authoring surface, and the click still prefills through the
-// ordinary recall serializer — which answers for it off the live AppState
-// exactly as it does for a sidecar key (recall_gui_setting_value, settings_io.h).
-// A menu of KEYS TO EDIT does not care which file a key rests in.
-//
-// THE WAVEFORM MAGNIFICATION LEVEL'S ROW LIVED HERE FROM 2026-08-26 TO
-// 2026-09-02 (architect: "it does not belong
-// beside the device-config key it sits next to"). It joined as a third GUI
-// key beside `gui_scale` and `playback_speed`, the GUI half fell to two the
-// next day when playback_speed retired whole, and it was the WIDEST LABEL for
-// its whole stay (the paint site's width table carries the figure). Only the
-// ROW went then, a dropdown item being the typed route's convenience and not
-// the act's home; THE KEY ITSELF LEFT THE SCHEMA 2026-09-14 (architect approval
-// 2026-09-14), the picture's gain varying over source time since (the
-// continuous curve derived from the source since 2026-09-23).
-//
-// THE DEVICE HALF OPENS WITH THREE: `GUI Scale` (the waveform's height cap
-// stood right after it 2026-09-13..10-07, and `Hold Delay` after that for
-// the hold delay's one-day tuning phase, 2026-09-29, each row leaving with
-// its key), then
-// the two gesture-less device keys `Projects Repository` and `Projects Path`
-// (architect 2026-09-02), each opening the settings editor
-// prefilled through the ordinary recall serializer (recall_gui_setting_value
-// answers all of them off the live struct) and committing through the device
-// config's writer under the key's own grammar (commit_device_setting,
-// settings_editor.cpp). The Projects Path row is the one whose Tab completion
-// is the FILESYSTEM's rather than a recall (complete_path_value). The two
-// halves are ordered SIDECAR THEN DEVICE, a separator between them —
-// which moved `GUI Scale` from the first row to the device group's head, the
-// group keeping kDeviceConfigKeys' own order.
-//
-// `Theme` STOOD 2026-10-03..10-08 (architect: the theme was a device key
-// with a Settings row), the last row of the device group, a text row whose
-// domain — the built-in theme plus the catalog's entries as bundled theme
-// files — no list could show; it LEFT WITH ITS KEY when every chrome's
-// colors were compiled in (architect 2026-10-08, theme_file.h).
-//
-// `Caption` STOOD 2026-10-14..10-21, the `caption` key's row after Chrome:
-// the title bar's six off one of 43 built-in schemes (the product's own
-// `default` and the catalog's 42 Windows and Plus! schemes, generated by
-// tools/theme_catalog/gen_theme_files.py), and LEFT WITH ITS KEY (architect
-// 2026-10-21, "ok to delete other captions": the caption is the walnut,
-// materials.h).
-//
-// `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
-// KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
-// chrome.
-//
-// `Icons` AND `Font` STOOD 2026-10-09..10-12 (the choice rows: the bundled
-// icon sets, the face sets) and LEFT WITH THEIR KEYS (architect 2026-10-12:
-// one icon set — Adwaita 3.22 since 2026-10-14 — and Liberation Sans,
-// hard-coded).
-//
-// `Waveform` (architect 2026-10-14, "remove picker and preset file road":
-// the in-app color picker and the preset files, 2026-10-07..14, removed
-// whole — the families landed are what exists; the row was `Chrome` until
-// 2026-10-21, renamed with its key for what it sets), the `waveform` device
-// key's one road, AFTER Projects Path BEHIND A SEPARATOR, its own group: the
-// program's eleven, Cool Edit's twenty presets (kGuiBuiltinPalettes) — A
-// LINE EDITOR LIKE EVERY OTHER ROW since the same day's later ruling (its
-// choice drop-down removed: "dropdowns would need more work to make them
-// real win95 style dropdowns and it's just not worth it"), Tab completing a
-// typed prefix against the built-in names (GuiSettingsEditor::
-// complete_preset_value), its commit the text road's
-// (commit_device_setting) with its own difference: THE PRESET IS INSTALLED
-// LIVE AT THE OK, no card (the screen is the answer), and every pick writes
-// its key, the default included (architect 2026-10-14: every device key
-// required; a pick of the default wrote no line until then).
-//
-// `Bevel Light`, `Bevel Dark` AND `Text Shadow` (architect 2026-10-21, the
-// fortepiano chrome's tuning phase; a number under tuning gets a key and a
-// row), the three tuning keys' rows (device_config.h), AFTER Waveform
-// BEHIND A SEPARATOR, their own group with True Colors, each a line editor like
-// every row, its commit the device keys' body (commit_device_setting)
-// applied live at the OK, no card; they leave with their keys when he
-// settles the values.
-//
-// `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
-// colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
-// conversion's toggle, CHECKED while it is on — at every launch — and
-// unchecked by a press only for a screenshot whose bytes are the colors as
-// typed (the ruling at display_transform.h's head). A command row in the
-// same group as the tuning rows, no separator between them (Chrome and
-// Caption's group until 2026-10-21). Its state is
-// Windows' menu check mark in the popup's check-mark column
-// (dropdown_item_checked; the dropdown painter); its release flips the bit
-// (GuiInputHandler::toggle_true_colors) and cards nothing; it grays as every
-// Settings row does.
-//
-// THE ACCESS KEYS (architect 2026-10-10; the rule at
-// access_key_of): &Title, &Notes, &URL, Co&ver, &GUI Scale,
-// Projects &Repository, Projects &Path, &Waveform (2026-10-21; &Chrome and
-// C&aption 2026-10-14..10-21), &Bevel Light, Bevel &Dark, Text &Shadow
-// (2026-10-21) and True
-// C&olors — the O of Colors, not the planner's E of True: bare `e` is the
-// left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
-// so an E row could never answer its own letter while the menu stands.
-inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
-    {"Title",               0,  "title",         false},
-    {"Notes",               0,  "notes",         false},
-    {"URL",                 0,  "url",           false},
-    {"Cover",               2,  "cover",         false},
-    {"GUI Scale",           0,  "gui_scale",     true},
-    {"Projects Repository", 9,  "projects_repo", false},
-    {"Projects Path",       9,  "projects_path", false},
-    {"Waveform",            0,  "waveform",      true},
-    {"Bevel Light",         0,  "bevel_light",   true},
-    {"Bevel Dark",          6,  "bevel_dark",    false},
-    {"Text Shadow",         5,  "text_shadow",   false},
-    {"True Colors",         6,  nullptr,         false,
-     SettingsPopupAct::TrueColors},
-};
-inline constexpr int kSettingsPopupItemCount =
-    static_cast<int>(std::size(kSettingsPopupItems));
-
-// (THE COMMAND MENUS — File's three rows, Open Project / Revert / Quit, and
-// Edit's three, Copy Phase Resets / Paste Phase Resets / Paste Phase Reset
-// State, each row its chord dispatched through on_key with an accelerator
-// column — WENT WITH THE MENU ROW, architect 2026-10-21. The chords stand:
-// Ctrl+O, Ctrl+Alt+O and Ctrl+Q, Ctrl+P and Ctrl+Alt+P; Ctrl+Alt+Shift+P
-// went with its act. The deleted Iterations, Help and Navigation menus'
-// records are git history.)
-
-// The published-rect array's size: the one menu's row count.
-inline constexpr int kDropdownMaxItemCount = kSettingsPopupItemCount;
-
-// THE PAINTER'S AND THE GEOMETRY'S VIEW OF AN ITEM — the row's TEXT and where
-// the categories part (the accelerator column's `hotkey`, the command menus'
-// alone, stays in the shape and answers nullptr: the painter's optional
-// column has no producer since 2026-10-21).
-struct DropdownRow {
-    const char* label;
-    int         access;   // the access key's byte in `label`
-    const char* hotkey;   // nullptr -> this menu has no accelerator column
-    bool        separator_before;
-};
-inline constexpr int dropdown_item_count(DropdownMenu m) {
-    return m == DropdownMenu::Settings ? kSettingsPopupItemCount : 0;
-}
-inline constexpr DropdownRow dropdown_row(DropdownMenu /*m*/, int i) {
-    const SettingsPopupItem& it = kSettingsPopupItems[static_cast<size_t>(i)];
-    return {it.label, it.access, nullptr, it.separator_before};
-}
-
-// THE ROW A KEY NAMES IN AN OPEN MENU (the access keys' rule above), or -1:
-// the row whose marked letter is `key`.
-inline constexpr int dropdown_item_for_access_key(DropdownMenu m, GuiKey key) {
-    for (int i = 0; i < dropdown_item_count(m); ++i) {
-        const DropdownRow row = dropdown_row(m, i);
-        if (access_key_of(row.label, row.access) == key) return i;
-    }
-    return -1;
-}
-// EVERY ROW'S MARK IS A LETTER OF ITS OWN LABEL, UNIQUE IN ITS MENU, and
-// never bare `e` — the left mouse button at the platform boundary
-// (kLeftClickKey), which no open menu could hear as its letter.
-inline constexpr bool dropdown_access_keys_valid(DropdownMenu m) {
-    for (int i = 0; i < dropdown_item_count(m); ++i) {
-        const DropdownRow row = dropdown_row(m, i);
-        if (row.access < 0 ||
-            static_cast<std::size_t>(row.access) >=
-                std::char_traits<char>::length(row.label))
-            return false;
-        const GuiKey k = access_key_of(row.label, row.access);
-        if (k < GuiKeys::A || k > GuiKeys::Z || k == kLeftClickKey)
-            return false;
-        if (dropdown_item_for_access_key(m, k) != i) return false;
-    }
-    return true;
-}
-static_assert(dropdown_access_keys_valid(DropdownMenu::Settings),
-              "each pull-down row marks one letter of its own label, unique "
-              "in its menu and never bare `e` (the left mouse button)");
-
-// IS THIS ROW CHECKED — the one pull-down row with a state, Settings' "True
-// Colors" (architect 2026-10-08), answers the live bit
-// (display_transform::true_colors); every other row of every menu answers
-// false. The dropdown painter draws Windows' menu check mark on a true
-// answer; the act is the row's release.
-inline bool dropdown_item_checked(DropdownMenu m, int i) {
-    if (m != DropdownMenu::Settings) return false;
-    return kSettingsPopupItems[static_cast<size_t>(i)].act ==
-               SettingsPopupAct::TrueColors &&
-           display_transform::true_colors();
-}
-
-// The open dropdown's painted HEIGHT, derived from its table and the scale
-// alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
-// (toggle_dropdown), which has to damage the box on the frame BEFORE the box
-// exists: the settings popup (kSettingsPopupItems' rows and separators)
-// hangs past the top strip at every scale, and a redraw is clipped to the
-// damage it was given. The painter calls this too, so the damaged height and the painted
-// height are one expression and cannot drift.
-inline int dropdown_h_px(DropdownMenu m) {
-    const int count = dropdown_item_count(m);
-    int separators = 0;
-    for (int i = 0; i < count; ++i)
-        if (dropdown_row(m, i).separator_before) ++separators;
-    return count * popup_item_h_px() +
-           separators * popup_sep_block_px() +
-           2 * popup_item_margin_y_px() +
-           popup_border_top_px(/*upward=*/false) + popup_border_px();
-}
+// (THE SETTINGS POPUP'S ROWS — kSettingsPopupItems, Title / Notes / URL /
+// Cover, GUI Scale / Projects Repository / Projects Path, Waveform, Bevel
+// Light / Bevel Dark / Text Shadow and the True Colors command row, each
+// prefilling the settings editor with its key — RETIRED 2026-10-21 for the
+// one editor that opens empty and completes the key names on Tab
+// (kSettingsEditorKeys, settings_editor.h); True Colors is the device key
+// `true_colors` (device_config.h). The rows' record is git history.)
 
 // Double-click window and positional slack (architect-tunable). Two motionless
 // plain clicks in the same strip row inside this time and pixel distance are a
@@ -6391,8 +6115,7 @@ struct AppState {
         // with the choice editor, architect 2026-10-14.)
         std::vector<ModalDialogButton> buttons;
         // THE BUTTON A KEY'S ACCESS LETTER NAMES, by index, or -1 — read off
-        // the published buttons (ON SCREEN IS AS PAINTED), the dialog
-        // buttons' twin of dropdown_item_for_access_key. The focus kind's
+        // the published buttons (ON SCREEN IS AS PAINTED). The focus kind's
         // rule and the act are GuiInputHandler::modal_dialog_access_button's.
         int button_for_access_key(GuiKey key) const {
             if (key == 0) return -1;
@@ -6812,13 +6535,14 @@ struct AppState {
     // DECLARATION IS THE RULE'S AUTHORITATIVE STATEMENT; every other site
     // states its own class and points here. EVERY CLICKABLE CHROME SURFACE
     // ACTS AT THE LIFT with slide-away cancel — the model the dropdown items
-    // always had and the modal dialog buttons took first — and a press-time
+    // had (2026-07-31..10-21) and the modal dialog buttons took first — and a press-time
     // refusal (the modifier admissions, a painted-dead face) arms nothing
     // and paints nothing (the lit radio's consume is a LIFT refusal since
     // 2026-10-07 evening: its press arms and paints). WHAT STAYS AT THE PRESS, by
-    // ruling: (1) the dropdown ANCHORS' toggle (below); (2) EVERY DISMISSAL —
-    // the open dropdown's press-anywhere close, the flag editor's
-    // outside-press close, the veil's consumption —
+    // ruling: (1) the dropdown ANCHORS' toggle, while there were anchors
+    // (until 2026-10-21); (2) EVERY DISMISSAL —
+    // the flag editor's outside-press close, the veil's consumption (the open
+    // dropdown's press-anywhere close until 2026-10-21) —
     // only ACTS moved to the lift, WITH ONE STATED EXCEPTION SINCE 2026-10-01:
     // THE NOTIFICATION CARD (architect: "whole card dismisses, X gone"), whose
     // dismissal moved to the lift with the X's retirement. A card is an EVENT
@@ -6843,8 +6567,8 @@ struct AppState {
     //            hit section of notifications.h); `card_id` is the card's id
     //            and `index` stays -1. Armed by claim_notification_press at
     //            the cards' own rank, above every veil, and taken and
-    //            dispatched by the release at the SAME rank, above the
-    //            dropdown's release and every veil's
+    //            dispatched by the release at the SAME rank, above every
+    //            veil's
     //            (finish_notification_release): the lift inside the same
     //            card dismisses it, or the whole stack when the carried
     //            shift or the hold says so (`press_ms` below). SHIFT IS THE
@@ -6863,15 +6587,9 @@ struct AppState {
     // button. HistoryWalkTab armed the `h` view's walk-selector TABS, whose act
     // was set_history_delta rather than a chord, and went with that
     // repurposing on 2026-08-18.)
-    // (The THREE dropdown ANCHORS — File, Edit and Settings,
-    // re-greped 2026-09-09 against kDropdownMenus, a Navigation anchor having
-    // left 2026-08-15, Edit having arrived 2026-08-20, Iterations having
-    // arrived 2026-08-27 and left 2026-09-04, and Help having arrived
-    // 2026-09-03 and left 2026-09-09 — are
-    // deliberately NOT armed: their toggle is the recorded press-time
-    // exception, and the reasoning is at their press claim in on_button_press.
-    // The claim walks kDropdownMenus, so none of those changes touched
-    // it or this note's membership.)
+    // (The dropdown ANCHORS — File, Edit and Settings until the menu row
+    // went, 2026-10-21 — were deliberately NOT armed, their toggle the
+    // recorded press-time exception; they and the popups are git history.)
     //
     // `shift` and `ctrl` are THE PRESS-TIME MODIFIERS, carried with the arm
     // because the release deliberately does not re-read modifiers (the modal
@@ -7053,9 +6771,9 @@ struct AppState {
     // clears it on every reason (a pointer that has left is on no button; a
     // finger's lift is that leave) — on the pen's hover end too, whose rule
     // keeps every hover-lit face (PenHoverEnd, input_core.h): the slot holds
-    // -1 there by construction, so the clear changes nothing, and a hot face
-    // ruled back would have its clear ask pointer_leave_keeps_lit_rows as the
-    // pull-down's does. It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
+    // -1 there by construction, so the clear changes nothing (a hot face
+    // ruled back would want PenHoverEnd's keep, the retired pull-down's
+    // pointer_leave_keeps_lit_rows). It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
     // comctl32's capture: a toolbar holding the mouse shows no hot item
     // (TOOLBAR_TranslateState's bHot & !bCaptured) — under the walk's own
     // gates (no veil, no card over it, the hover zone).
@@ -7121,7 +6839,7 @@ struct AppState {
     //     clears it as the leave it is.
     //   * A HARD END hides at once and clears `reshow`: any pointer press or
     //     release (a click hides the hint), any wheel (Windows 95 had none;
-    //     the dismissal stands), a menu opening (the dropdown's open edge), a
+    //     the dismissal stands), a
     //     modal opening with no press to carry it (the compositor close), the
     //     pointer leaving the window or the pen's hover leaving the plane
     //     (both leaving the tool), the window's activation flipping either way
@@ -7252,107 +6970,9 @@ struct AppState {
     };
     RedesignTooltip redesign_tooltip;
 
-    // THE DROPDOWN — ONE popup state for EVERY menu (Settings since
-    // 2026-07-31, the one left since the menu row's removal, 2026-10-21;
-    // File 2026-08-13 and Edit 2026-08-20 until then, Navigation from
-    // 2026-08-02 until its deletion 2026-08-15, and not one of those arrivals
-    // or departures needed a line in here — which is the shape's whole
-    // point),
-    // hanging under whichever button
-    // emits it. `menu` is the whole modality AND the whole "never two at once"
-    // rule: while it is not None the popup owns the keyboard (on_key's popup
-    // gate), the pointer (the press claim's popup-first block) and the wheel,
-    // the roster stops hovering, and opening the other menu is simply writing
-    // this field — one value, one menu, no invariant to keep.
-    // `hovered_item` is -1 or an index into the open menu's item table, written
-    // by the hover recompute (from motion AND from the run loop's settled tail,
-    // the two callers named at recompute_dropdown_hover — the rects it hit-tests
-    // are published by the painter, so they move with no pointer event under
-    // them), by every close (the struct reset) and by the
-    // POINTER-LEAVE drop — that last one because the painter lights the item it
-    // names with no pointer_in_window term of its own, so the item would stay
-    // lit for the whole time the pointer is outside (until a re-entry's
-    // synthesized motion recomputes it — or forever, on capability loss, which
-    // has no return to wait for).
-    // `rect` and `item_rects` are PAINTER-PUBLISHED, so the hit tests read
-    // exactly the painted boxes and never re-shape a label (the displayed-basis
-    // doctrine).
-    // Every rect is zero while closed, which is the correct cold answer: an
-    // empty rect contains no point.
-    // `pressed_item` is the ARMED item: set by a press on one, cleared by the
-    // release, by every close and by the same pointer-leave drop. The items
-    // were the redesign's FIRST act-on-release surface (a menu triggers on
-    // release by universal convention), the model the modal dialog buttons
-    // took 2026-08-13 and the whole chrome roster took the same day.
-    // THE ARM FOLLOWS THE POINTER while the press is live (architect
-    // 2026-08-03): sliding from one item to the next moves it, and sliding onto
-    // the separator, the chrome or off the box sets it to -1 with the press
-    // still live — which is also how a press that began on the ANCHOR arms its
-    // first item without ever having pressed one (`press_began_on_item` below).
-    // That is what keeps EXACTLY ONE item distinguished at a time —
-    // an arm that stayed where it went down lit the pressed face there while
-    // `hovered_item` lit the hover face under the pointer, two lit items in a
-    // menu that shows one. The rule lives at recompute_dropdown_hover
-    // (input_pointer.cpp). THE RELEASE READS THAT SAME DEFINITION FOR ITSELF, at
-    // the coordinates the release carries (finish_dropdown_release), rather than
-    // this field: the rects the walk hit-tests are published by the PAINTER, and
-    // a paint can land between the last walk and the release inside one dispatch
-    // batch, so the act is derived where the face is remembered.
-    // `press_began_on_item` is WHETHER THE HELD BUTTON BELONGS TO THIS POPUP'S
-    // GESTURE — where it went down, NOT whether it is still down: the platform's
-    // own tracking answers that (GuiInputState::primary_button_held), and the
-    // arm cannot answer either question now that it moves — it reads -1 both
-    // before any press and while a live press stands over a separator.
-    // TWO PRODUCERS, ONE MEANING: the popup's own ITEM press, and (architect
-    // 2026-08-03) the ANCHOR press that OPENS a menu — press any of the three,
-    // hold, drag down into the menu that came up, and releasing on
-    // an item fires it, the desktop menu bar's one continuous gesture. The name
-    // predates the second producer and is kept: both are the same fact, "the
-    // button now down was pressed on this popup — either on one of its items or
-    // on the anchor that brought it up". An anchor press that CLOSES its menu
-    // claims nothing (nothing is left to belong to), and the claim's value is
-    // read back from the toggle's outcome rather than predicted, at the press
-    // site rather than in toggle_dropdown — whose other caller, the hover
-    // switch, carries no held button at all.
-    // Cleared by the release, by the pointer-leave drop and by every close (the
-    // struct reset — which is why a mid-hold hover switch onto the other anchor
-    // drops claim and arm together).
-    // NOTHING HERE MEANS ANYTHING WHILE THE POPUP IS CLOSED (architect
-    // 2026-10-01): the struct's reset is the whole closed state. A menu opens
-    // on a CLICK (the hover switch to another anchor went with the menu row,
-    // 2026-10-21) and closes on its own routes — the popup's, Esc's and the dismissals',
-    // all through close_dropdown; a cold anchor answers a click alone and a
-    // hover never opens a menu. (The menu row's "closed but armed" mode —
-    // `menu_row_armed`, its hover-open from a closed row, its band exit, its
-    // disarms on every press and key, and the pointer-leave hook's titlebar
-    // exception — was deleted whole that day: its one producer, a non-menu
-    // row-1 button's hover close, went with the view bar, and the row had
-    // been unable to reach the state since.)
-    struct Dropdown {
-        DropdownMenu menu                = DropdownMenu::None;
-        int          hovered_item        = -1;
-        int          pressed_item        = -1;
-        bool         press_began_on_item = false;
-        GuiRect      rect{0, 0, 0, 0};
-        std::array<GuiRect, kDropdownMaxItemCount> item_rects{};
-        // THE ITEMS' ENABLED BITS AS PAINTED (2026-09-24, the truthful
-        // menus) — the stash the per-tick comparator (main.cpp) holds against
-        // the live verdict (dropdown_item_enabled), so an open menu whose rows
-        // change verdict with no damage of their own — a checkpoint landing,
-        // a load ending — repaints within one tick with no
-        // writer spelling the damage. AS-PAINTED, NOT AS-COMPUTED: paint_dropdown
-        // republishes it only when the current clip covers the whole box,
-        // publish_button_face's rule for the roster's own bits. IT IS ALSO
-        // THE CLAIM (architect 2026-09-24, strictly as-painted): the hover
-        // walk, the item press and the release read these bits and never the
-        // live verdict, so a row acts exactly as it is painted; they open cold
-        // (all false, the reset close_dropdown leaves), so nothing is
-        // clickable before paint_dropdown's first pass.
-        std::array<bool, kDropdownMaxItemCount> item_enabled{};
-
-        bool open() const { return menu != DropdownMenu::None; }
-    };
-    Dropdown dropdown;
+    // (THE DROPDOWN'S STATE — the one popup, its menu, its lit and armed
+    // rows and their published rects — RETIRED 2026-10-21 with the Settings
+    // popup, its last menu: the settings editor completes the keys on Tab.)
 
     // THE GITHUB RECHECK'S HISTORY VIEW — a READ-ONLY MODE over the committed
     // sidecar history of the loaded source (the model, and what "committed
@@ -7400,7 +7020,7 @@ struct AppState {
     // open is a consumed no-op with one stderr line while
     // history_checkpoint_in_flight stands. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
-    // refusal for free — a prompt, any of the editors, an open dropdown,
+    // refusal for free — a prompt, any of the editors,
     // loading or absent audio, and any live pointer gesture (the authoritative
     // ordering is at the gate itself, handle_history_mode_key in
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
@@ -7440,11 +7060,9 @@ struct AppState {
     // while it stands, through TWO gates and no scattered ifs — history_mode_-
     // key_blocked (the keyboard allowlist, which the redesigned buttons pass
     // through too, since they dispatch as chords via on_key) and handle_history_mode_press (the pointer allowlist). Each
-    // states its own admitted set at its definition. THE SETTINGS DROPDOWN is
-    // shut out structurally instead, at toggle_dropdown: its eight items all open
-    // the settings editor, a modal this view has no place for, and refusing the
-    // menu is one line where covering that one pointer bypass per item would be
-    // several.
+    // states its own admitted set at its definition. (THE SETTINGS DROPDOWN
+    // was shut out structurally at its toggle until it retired, 2026-10-21;
+    // the Settings button is `;`'s chord, refused by the keyboard gate.)
     //
     // THE FILE DROPDOWN OPENS IN HERE, so a popup and this mode DO stand
     // together and the old "never together" invariant is retired to the Settings
@@ -7473,8 +7091,8 @@ struct AppState {
     //   left the allowlist with its shifted twin on 2026-08-08 when the
     //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
     //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
-    //   the SETTINGS button (the menu row's Settings anchor until 2026-10-21;
-    //   its popup's road shut by the toggle_dropdown lockout).
+    //   the SETTINGS button (bare `;`; the menu row's Settings anchor until
+    //   2026-10-21).
     //   LIT — the view pairs' four (bare 1/2/3/4), the
     //   COMMIT-FACED SAVE (Ctrl+Shift+S since 2026-10-10, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
@@ -7508,8 +7126,7 @@ struct AppState {
     //   roster's standing shape for a refusal; the record is at that arm.
     // The partition is
     // DERIVED
-    // from the two gates above (plus the Settings anchor's toggle_dropdown
-    // lockout, the one hand entry left) and
+    // from the two gates above and
     // inventoried in one place — history_mode_disables_button, input_pointer.cpp
     // — and it is read live from `active` below, so leaving the mode restores
     // every face on the next frame with nothing latched.
@@ -7997,13 +7614,11 @@ struct AppState {
     //     tooltip's owner and the armed press's inside bit), repaired from the
     //     TICK, gated on "no pointer gesture" so the freeze rule holds —
     //     geometry changes move the rects under a stationary cursor;
-    //   * the POINTER CURSOR (refresh_pointer_cursor) and the open dropdown's
-    //     ITEM FACES (recompute_dropdown_hover), both repaired from the run
-    //     loop's per-iteration SETTLED HOOK, because their inputs — about ten
-    //     fact families for the one, the painter-published item rects for the
-    //     other — settle with no pointer event of any kind under them.
-    // The dropdown's RELEASE is deliberately NOT a reader: it derives its item
-    // from the coordinates the release itself carries (finish_dropdown_release).
+    //   * the POINTER CURSOR (refresh_pointer_cursor), repaired from the run
+    //     loop's per-iteration SETTLED HOOK, because its inputs — about ten
+    //     fact families — settle with no pointer event of any kind under them
+    //     (the open dropdown's item faces shared the hook until the popup
+    //     retired, 2026-10-21).
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
 
@@ -8971,28 +8586,10 @@ struct AppState {
     RenderPlayer render_player;
 };
 
-// EVERY LIST POPUP'S PUBLISHED BOX UNDER A POINT (2026-10-08, ON SCREEN IS AS
-// PAINTED): the Settings drop-down (AppState::Dropdown's rect while it is
-// open) — the one list popup since 2026-10-14, the settings choice editor's
-// list (2026-10-07..14) gone with its editor. It paints ABOVE the
-// notification cards (paint_notifications runs before paint_dropdown), so a
-// card under it is hidden there and notification_card_at yields to this one
-// predicate's family (floater_above_cards_at, below) — the popup's published
-// box the truth, no state of its own. (The modal family's box paints BELOW
-// the cards since 2026-10-14 — paint_modal_dialog runs before
-// paint_notifications — so a card over the box takes its press as it shows.)
-inline bool list_popup_at(const AppState& a, int x, int y) {
-    return a.dropdown.open() && rect_contains(a.dropdown.rect, x, y);
-}
-
-// EVERY POINTER-OWNING SURFACE THAT PAINTS ABOVE THE NOTIFICATION CARDS
-// UNDER A POINT (2026-10-08, ON SCREEN IS AS PAINTED): the list popups
-// (list_popup_at), the one predicate notification_card_at yields to — the
-// published boxes the truth, no state of its own. (The color picker's card
-// stood beside them 2026-10-08..14.)
-inline bool floater_above_cards_at(const AppState& a, int x, int y) {
-    return list_popup_at(a, x, y);
-}
+// (THE FLOATERS ABOVE THE NOTIFICATION CARDS — list_popup_at and
+// floater_above_cards_at, the Settings drop-down's box hiding a card under it —
+// RETIRED 2026-10-21 with the popup: nothing paints above the cards but the
+// tooltip, which takes no press.)
 
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
@@ -9019,7 +8616,8 @@ inline bool floater_above_cards_at(const AppState& a, int x, int y) {
 //   wheel_context — the wheel context (input_handler.cpp)
 //   GuiCarTransport::admits — the car transport refuses (car_transport.cpp)
 // (dropdown_item_enabled's File-menu greying and menu_anchor_live's Edit and
-// Settings partition left this list with the menu row, 2026-10-21.)
+// Settings partition left this list with the menu row and its popups,
+// 2026-10-21.)
 //   redesign_button_enabled — the roster's greying arm (below)
 // (The on-screen keyboard's standing predicate carried
 // its negation as a third term until 2026-08-28, when the picker stopped
@@ -9038,8 +8636,8 @@ inline bool folder_overlay_stands(const AppState& a) {
 // surfaces answer (architect 2026-09-24): on_key's head gate, which drops
 // every chord but Ctrl+Q there (GuiInputHandler::no_audio_to_dispatch_on
 // forwards here); the roster's face, which greys every button but the File
-// anchor there (redesign_button_enabled's head); and the dropdown items' faces
-// (dropdown_item_enabled), where Quit alone stays live. It takes the frame
+// anchor there (redesign_button_enabled's head) (the dropdown items' faces
+// were a third, until 2026-10-21). It takes the frame
 // count rather than the GuiAudio because this header only forward-declares
 // the class.
 inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
@@ -9708,18 +9306,6 @@ GuiRect top_caption_row_area(const AppState& a);
 // main.cpp; read by the press claim (claim_window_frame_press) and the cursor
 // zone map (pointer_cursor_kind). Hit tests are not guards (CLAUDE.md).
 unsigned window_frame_edges_at(const AppState& a, int x, int y);
-// THE ROW A DROPDOWN HANGS FROM — ITS ANCHOR'S FOOT, as painted (the band's
-// Settings case since the menu row's removal, 2026-10-21; the menu bar's
-// content's foot, over the program frame's top row, until then). The ONE
-// expression the painter's box and the open edge's damage both read
-// (paint_dropdown, toggle_dropdown), so the damaged band and the painted box
-// start on the same row; the box's published rect, its hit rect and the
-// close edge's damage are that box.
-inline int dropdown_hang_y(const AppState& a, DropdownMenu m) {
-    const GuiRect& r = a.redesign_buttons[static_cast<std::size_t>(
-        dropdown_anchor_button(m))].rect;
-    return r.y + r.h;
-}
 GuiRect top_icon_row_area(const AppState& a);
 // THE VIEWPORT'S LANES' TOP ROW — the tab strip's foot (the toolbar band's
 // from 2026-10-13 until the strip, 2026-10-18), the first row of the column's
@@ -13948,8 +13534,8 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // a never-grey rule. The truthful menus (architect 2026-09-24) overturned that
 // rule, and the predicate is back under its old name with the same four
 // readers, the same geometry-free shape and the same inks, now greying every
-// item on its command's cheap refusals — declared with the anchor verdict
-// below, defined beside the acts.)
+// item on its command's cheap refusals. It retired whole with the Settings
+// popup, 2026-10-21.)
 
 // WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `h` HISTORY VIEW? True for exactly
 // the buttons the view refuses, false for the ones that still work in it.
@@ -13989,18 +13575,6 @@ bool history_mode_hides_button(const AppState& app, RedesignButton b);
 // patches seat every case either state paints); history_mode_hides_button
 // is this under the live view's bit.
 bool history_view_hides_button(RedesignButton b);
-
-// A DROPDOWN ITEM'S ONE ENABLED VERDICT (architect 2026-09-24, the truthful
-// menus) — ONE OWNER, read by the dropdown's painter (the disabled ink, no
-// hover or press face), by the pointer's three item roads (the hover walk,
-// the item press, the release's derive — a greyed row is never lit, and a
-// press on one is CONSUMED SILENTLY WITH THE MENU LEFT OPEN, kdenlive's own
-// answer) and by the per-tick comparator's dropdown block (main.cpp). Each
-// item greys on its command's CHEAP refusals only, read off the act's own
-// predicate so face and act are one decision; the term list is at the
-// definition (input_key_dispatch.cpp, beside the acts).
-bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
-                           DropdownMenu menu, int item);
 
 // (THE MENU ANCHOR'S VERDICT — menu_anchor_live, the menu row's File, Edit
 // and Settings titles' face, live while any row under it was — went with the
@@ -17710,36 +17284,12 @@ constexpr bool redesign_button_modifier_hint_agrees() {
 static_assert(redesign_button_modifier_hint_agrees(),
     "the modifier hint and the modifier binding must name the same buttons");
 
-// THE HOVER ZONE — "the pointer is over this button in a way the surface
-// answers at all", which carries NO ENABLED TERM: a disabled button still
-// explains itself through its TOOLTIP (architect 2026-08-07). Its one reader
-// is the roster's pointer walk (recompute_redesign_button_hover), for the
-// tooltip's owner and the hot toolbar button (AppState::roster_hot, the one
-// hover face, 2026-10-06).
-//
-// AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON IS IN THE ZONE UNDER
-// IT: a HINT under an open menu would break the two-floating-surfaces rule,
-// which this term is what makes structural. (The menu row's anchors, whose
-// open frame was their painter's own condition, went 2026-10-21.)
-inline bool redesign_button_hover_zone(const AppState& a,
-                                       RedesignButton /*b*/) {
-    return !a.dropdown.open();
-}
-
-// TWO NOTES THE ZONE KEEPS, both about the terms it deliberately does NOT
-// carry:
-//
-// SELECTED BUTTONS DO HOVER (for the tooltip), so the icon row's lamp toggles
-// (Follow, Waveform Magnification and Enable Tooltips among them) and
-// its view pairs' four radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION — at
-// its lift (the chord table's `radio` flag, whose users are the view pairs'
-// four) — not in its hoverability.
-//
-// AND redesign_button_hoverable — this zone AND the enabled term, one call —
-// IS DELETED, found caller-less at the 2026-08-13 resolver sweep and dead
-// since the 2026-08-07 tooltips-on-disabled ruling split its two consumers
-// apart; the face it served is gone too (2026-10-02), so the hint's zone
-// answer BY ITSELF is all the walk asks.
+// (THE HOVER ZONE — redesign_button_hover_zone, whose one term refused every
+// roster button under an open dropdown — RETIRED 2026-10-21 with the popup:
+// the roster's pointer walk asks the button's rect alone, with NO ENABLED
+// TERM (a disabled button still explains itself through its tooltip,
+// architect 2026-08-07), and SELECTED BUTTONS HOVER too, a radio's
+// already-selected press refused in the ACTION at its lift.)
 
 // Snapshot the undo-tracked settings from `app` (engine_settings; trim is
 // excluded). Called by Undo's push helpers at push time so every entry
@@ -17886,11 +17436,11 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 //     a drag's playhead tow writes through Viewport::translate_playhead_to, so
 //     no synchronous plate render moves the flag off the pointer mid-drag.
 //   * CHROME: every claim — roster press, lift and hold-repeat,
-//     dropdown rows, the render player's row — reads the FACE the painter
-//     published (AppState::RedesignButtonFace, Dropdown::item_enabled,
+//     the render player's row — reads the FACE the painter
+//     published (AppState::RedesignButtonFace,
 //     ModalDialogButton::enabled), the per-tick comparators carry reality onto
 //     it, and a face painted live dispatches, its act's own body answering. No
-//     input road reads redesign_button_enabled, dropdown_item_enabled or
+//     input road reads redesign_button_enabled or
 //     render_player_button_enabled as a claim gate.
 // WHAT IS NOT IN IT: the KEYBOARD, which has no painted face — a key acts on
 // live state and its gate answers with its own card (its thread swept every

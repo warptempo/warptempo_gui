@@ -773,15 +773,14 @@ struct Viewport {
     // after a materials bake (main.cpp, platform.h's damage pair); no
     // Viewport act moves the band, so none damages it.)
 
-    // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
-    // tooltip and the Settings dropdown): both hang outside the strip that
-    // owns them — the dropdown below the top strip, the tooltip under the
-    // pointer or above the bottom row — so invalidate_top_strip alone would
-    // leave their overhang stale. Hide edges damage the strip AND the
-    // surface's own published rect — two cheap calls the platform coalesces —
-    // and a show edge the room the surface will stand in (the dropdown's
-    // derivable box, the tooltip's tooltip_hang_bands), rather than growing a
-    // union helper that only these two callers would ever use. Since row 8 (2026-08-11) it is
+    // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
+    // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs
+    // outside the strip that owns it — under the pointer or above the bottom
+    // row — so invalidate_top_strip alone would leave its overhang stale. The
+    // hide edge damages the strip AND the surface's own published rect — two
+    // cheap calls the platform coalesces — and a show edge the room the
+    // surface will stand in (tooltip_hang_bands), rather than growing a
+    // union helper. Since row 8 (2026-08-11) it is
     // also the BOTTOM ROW'S button-face damage entry: the transport/arrow
     // faces live in the bottom strip, so every face writer's damage fork
     // passes bottom_row_area here where the top rows call

@@ -159,8 +159,7 @@ enum GuiWindowEdge : unsigned {
 //     why one enumerator serves both. (The S Pen's hover ending is its own
 //     reason, PenHoverEnd below.) WHAT THE CAPABILITY LOSS PROMISES IS
 //     BOUNDED, and no more than its fire site does: the logical left hold
-//     ends in both its sources, the popup's claim drops, and every face
-//     clears ONCE. It does not promise a cold stream at a later capability
+//     ends in both its sources, and every face clears ONCE. It does not promise a cold stream at a later capability
 //     return — a staged-motion flush can put `pointer_in_window` back and
 //     leave a hover face stale, which is a recorded ACCEPTED GLITCH
 //     (architect 2026-08-09; the record is at the fire site) and self-heals
@@ -182,12 +181,14 @@ enum GuiWindowEdge : unsigned {
 //     (GuiPlatform::end_pen_hover: a HOVER_EXIT — which the platform sends
 //     just before every tip DOWN — a report above the GUI's plane, any first
 //     down, focus loss; architect 2026-09-27, every pen hover effect acts
-//     only within the plane). An ordinary leave in every respect but one:
-//     THE PEN'S HOVER END DARKENS NOTHING (architect 2026-10-10, his S Pen
+//     only within the plane). An ordinary leave in every respect but one
+//     (and, since the Settings popup retired 2026-10-21, no face it would
+//     spare is left: the record follows): THE PEN'S HOVER END DARKENED
+//     NOTHING (architect 2026-10-10, his S Pen
 //     touching down on the open Settings menu's row: "the word Pick Colors
 //     blinks" — the exit's leave put the lit row out for the frame before the
 //     DOWN's own walk re-lit it): every hover-lit face keeps what was painted
-//     (pointer_leave_keeps_lit_rows, below), the pen latch's own principle
+//     (pointer_leave_keeps_lit_rows, retired with the popup), the pen latch's own principle
 //     (GuiInputHandler::pen_hot_latch_), and the next pointer event re-derives
 //     the faces as ever — a DOWN on the same row changes nothing, a hover
 //     re-entry elsewhere moves the row by its walk, a pen withdrawn for good
@@ -207,28 +208,17 @@ enum GuiWindowEdge : unsigned {
 //     (the popup list's scroll holds beside them until 2026-10-14). A mouse
 //     leaving the window (OrdinaryLeave) still
 //     darkens.
-// The distinction is read in one place, main.cpp's hook body, by two
-// consumers: the tooltip's leave (end_tooltip_hover), which the contact's lift
+// The distinction is read in one place, main.cpp's hook body, by one
+// consumer: the tooltip's leave (end_tooltip_hover), which the contact's lift
 // (TouchLift) makes no leave at all, OrdinaryLeave and PenHoverEnd being its
-// hard end; and the lit rows' clear (pointer_leave_keeps_lit_rows), which
-// PenHoverEnd skips. Every other clear the hook performs is unconditional
-// and reads this not at all.
+// hard end. (The lit rows' clear, pointer_leave_keeps_lit_rows, which
+// PenHoverEnd skipped, went with the Settings popup, 2026-10-21.) Every other
+// clear the hook performs is unconditional and reads this not at all.
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
     TouchLift,
     PenHoverEnd,
 };
-
-// THE ONE PREDICATE the leave's lit-row clears ask (PenHoverEnd's rule,
-// above; 2026-10-10): true where the leave keeps every hover-lit face as
-// painted. Of the hover-lit faces in the pen latch's inventory
-// (GuiInputHandler::pen_hot_latch_) the pull-down menus' lit row is the one
-// a leave darkens (clear_dropdown_pointer_state, main.cpp's hook), and the
-// two toolbars store no hot face (the Settings combo's list, which no leave
-// cleared, went with the choice editor 2026-10-14).
-inline bool pointer_leave_keeps_lit_rows(GuiPointerLeaveReason reason) {
-    return reason == GuiPointerLeaveReason::PenHoverEnd;
-}
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names
@@ -613,8 +603,8 @@ public:
     // behind (the pen's hover end keeping the lit menu item, PenHoverEnd's
     // rule at the enum). It USED to clear the
     // marker hover popup as well; that whole surface died with the marker-text
-    // lane in row 5. Widened 2026-08-03 to the open dropdown's pointer-derived
-    // state; full story at clear_dropdown_pointer_state. Null-safe.
+    // lane in row 5. (Widened 2026-08-03 to the open dropdown's pointer-derived
+    // state, until the popup retired 2026-10-21.) Null-safe.
     void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
 
     // THE KEYBOARD-INTENT CANCELLATION HOOK (2026-08-11): fired
@@ -769,7 +759,7 @@ public:
     //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
     //     the GUI arms its region former at the DOWN point (the former's own
     //     press half: deselect, playhead seat, the drag arm), or refuses
-    //     inside the body (prompt, the editors, the two overlay modes, open dropdown,
+    //     inside the body (prompt, the editors, the two overlay modes,
     //     loading/empty audio, live pointer gesture); a refused begin makes
     //     the two hooks below no-ops through the drag's own !active guard, so
     //     the refused stream is dead. NOTHING pointer-shaped starts — no

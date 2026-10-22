@@ -977,7 +977,7 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // activity — either landscape is admitted, never portrait — whose surface
     // never changes size, the 180° flip included, so most adoptions move
     // nothing. Only a real move owes the resize callback (which force-ends
-    // every pointer gesture, closes the dropdown and rebuilds the layout) and
+    // every pointer gesture and rebuilds the layout) and
     // the one startup line.
     // THE FRAME (frame_px_, the header), taken at every adoption: a frame
     // that came or went moves the client area as a size change does.

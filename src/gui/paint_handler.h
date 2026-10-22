@@ -948,38 +948,28 @@ private:
     // above's own cell, right of the clock. The record is at that deletion's
     // note in the .cpp.)
 
-    // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
-    // overlap the rows they hang over. They cannot coexist, and the claim rests
-    // on the OPEN EDGE rather than on which gestures can reach it: toggle_
-    // dropdown's open path hides the tooltip outright (a press opens a menu, and
-    // so does the hover switch), and while the popup stands NO roster button
-    // answers the pointer at all (redesign_button_hover_zone — the term the hint
-    // and the hover face still share), so nothing can start a tooltip wait
-    // under it. Both PUBLISH the rect
-    // they painted (AppState::redesign_tooltip.rect,
-    // AppState::dropdown.rect + item_rects) — the dropdown's for its hit
-    // tests, the tooltip's only so the hide edge can damage it — and both write
-    // a zero rect when not shown, which is the correct empty answer.
-    // THE TOOLTIP SERVES TWO SURFACES since 2026-08-13 — the roster and the
-    // MODAL DIALOG's buttons, one tooltip state whose owner names which (the
+    // THE TOOLTIP, painted TOPMOST — after every row pass, so it overlaps the
+    // rows it hangs over. It PUBLISHES the rect it painted
+    // (AppState::redesign_tooltip.rect) only so the hide edge can damage it,
+    // and writes a zero rect when not shown, which is the correct empty answer.
+    // IT SERVES TWO SURFACES since 2026-08-13 — the roster and the MODAL
+    // DIALOG's buttons, one tooltip state whose owner names which (the
     // encoding is at AppState::RedesignTooltip) — which is why it paints
-    // AFTER paint_modal_dialog rather than beside the dropdown: it reads the
-    // stash that call publishes, and a hint over the modal is the one floating
-    // surface a modal does coexist with.
+    // AFTER paint_modal_dialog: it reads the stash that call publishes, and a
+    // hint over the modal is the one floating surface a modal does coexist
+    // with. (The Settings dropdown, the second floater of this kind, retired
+    // 2026-10-21 with paint_dropdown.)
     void paint_shift_tooltip(cairo_t* cr);
-    void paint_dropdown(cairo_t* cr);
-    // The shared box every floating surface draws, one of TWO FACES
-    // (architect 2026-10-02): MENU — the ground inside the PLAIN RAISED edge
-    // (the dropdown) — or INFO — THE CARD FACE, the period's tooltip:
-    // `card_ground` with a thin `card_frame` line on all four sides (the
-    // tooltip and the notification cards, architect 2026-10-04; the sides
-    // 2026-10-06; Cool Edit's colors 2026-10-10; render.h's palette block).
-    enum class PopupFace { Menu, Info };
-    void paint_popup_chrome(cairo_t* cr, const GuiRect& r, PopupFace face);
+    // THE CARD FACE every floating surface draws, the period's tooltip
+    // (architect 2026-10-04): `card_ground` with a thin `card_frame` line on
+    // all four sides (the tooltip and the notification cards; the sides
+    // 2026-10-06; Cool Edit's colors 2026-10-10; the brass 2026-10-21;
+    // render.h's palette block). (Its MENU face, the dropdown's plain raised
+    // panel, went with the Settings popup, 2026-10-21.)
+    void paint_popup_chrome(cairo_t* cr, const GuiRect& r);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
-    // row 1, painted after the flag editor's box and before the dropdown —
-    // above every lane and the keyboard slot, below the two pointer-transient
-    // floaters and the modal row (the order is on_redraw's step 13). It
+    // row 1, painted after the flag editor's box — above every lane and the
+    // keyboard slot, below the pointer-transient tooltip and above the modal (the order is on_redraw's step 13). It
     // PUBLISHES each card's rect (AppState::Notifications::painted)
     // for the press claim, the cursor map and the hover walk, and runs on
     // every frame for the floating surfaces' own reason: a skipped run would

@@ -158,7 +158,8 @@ shopt -s nocaseglob
 #      (waveform=cool-edit-default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
 #      fortepiano chrome's three tuning lines (bevel_light=100, bevel_dark=100,
-#      text_shadow=2, TUNING_LINES below; 2026-10-21) the same way, and every
+#      text_shadow=2, TUNING_LINES below; 2026-10-21) and the true_colors=on
+#      line (TRUE_COLORS_LINE below; 2026-10-21) the same way, and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
 #      the thirteen colour keys that left 2026-10-04 when every colour became
 #      a role of a theme file (theme_level and the twelve program colour keys),
@@ -204,6 +205,10 @@ WAVEFORM_LINE="waveform=cool-edit-default"
 # THE FORTEPIANO CHROME'S TUNING KEYS AND THEIR FIRST-RUN VALUES (2026-10-21,
 # src/gui/device_config.h): each added only where the tablet's file has no line.
 TUNING_LINES="bevel_light=100 bevel_dark=100 text_shadow=2"
+# THE sRGB -> DISPLAY-P3 SWITCH, a required key since 2026-10-21 (the Settings
+# menu's True Colors row made a key; src/gui/device_config.h), on on both
+# devices: added only where the tablet's file has no line.
+TRUE_COLORS_LINE="true_colors=on"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -1106,7 +1111,7 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v tuning="$TUNING_LINES" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v tuning="$TUNING_LINES $TRUE_COLORS_LINE" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1
                                 nt = split(tuning, t, " "); for (i = 1; i <= nt; i++) tkey[i] = substr(t[i], 1, index(t[i], "=")) }
                               { for (i = 1; i <= nt; i++) if (substr($0, 1, length(tkey[i])) == tkey[i]) had_t[i] = 1 }
@@ -1121,15 +1126,15 @@ apply_setup() {
                                 if (had_role == 0) print role
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role and the tuning keys and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, the tuning keys and true_colors and has no chrome line and no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), the tuning lines ($TUNING_LINES where none stands), and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), the tuning lines ($TUNING_LINES where none stands), $TRUE_COLORS_LINE where none stands, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE where none stands, the tuning lines where none stands, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE where none stands, the tuning lines and $TRUE_COLORS_LINE where none stands, and no line of a retired key"
     fi
     printf '\n'
 
