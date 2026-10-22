@@ -107,8 +107,8 @@ struct TrimRange {
 // FACE is the brass's mean once the materials are baked (materials.h's TONE
 // RULE), and THE CHROME'S ROLES — the chrome and its relief, the time
 // fields' own pair, the cards' three, the selected and field pairs — ARE
-// INHERITED FROM IT, every one a tone of that Face (or, the selection fill,
-// the waveform's ink) by Cool Edit's own arithmetic (architect 2026-10-10:
+// INHERITED FROM IT, every one a tone of that Face (but the selection pair,
+// a constant since 2026-10-21) by Cool Edit's own arithmetic (architect 2026-10-10:
 // "we follow Cool Edit's theming"; chrome_derive.h's head, the per-role
 // table). The chrome's roles and their order are the role table
 // (kGuiThemeRoles, theme_file.h). THE CAPTION WEARS NO ROLE: its ground is
@@ -385,8 +385,8 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
 // The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
-// derived from the panel's Face and the waveform's ink since 2026-10-10
-// (chrome_derive.h) — and the active palette's program roles, one
+// derived from the panel's Face since 2026-10-10, the selection pair a
+// constant since 2026-10-21 (chrome_derive.h) — and the active palette's program roles, one
 // field each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
 // program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
 // derived from the program's `face` (cool_edit_derive.h's painted tones,
@@ -1180,7 +1180,7 @@ constexpr int kMinWindowHeightPx = 480;
 // THE CAPTION'S GROUND AND ITS INACTIVE INK (architect 2026-10-22; 0xRRGGBB,
 // sRGB): the active ground the ebony 1C1412 of the mock of record; the
 // inactive pair the planner's pick, "a reasonable inactive color", tunable
-// later — the ground the ebony lifted and greyed, the ink dulled (Windows'
+// later — the ground the ebony lifted and grayed, the ink dulled (Windows'
 // own rule: an inactive caption is lighter and duller). The active title's
 // ink and both titles' shadow are materials.h's kWordInk and kWordShadow.
 inline constexpr uint32_t kCaptionGround         = 0x1C1412;

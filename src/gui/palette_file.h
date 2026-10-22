@@ -46,7 +46,7 @@
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the waveform, and THE
 // MATERIALS every chrome role — Cool Edit's tones off the brass's Face, the
-// selection fill the waveform's live ink (chrome_derive.h). GuiPalette
+// selection pair a constant (chrome_derive.h). GuiPalette
 // (render.h) keeps every member; install_palette (render.h) fills the
 // program members off this file's table (kGuiPaletteRoles), the panel's
 // `face` member and THE COOL EDIT BLOCK off the panel's Face, and the chrome
@@ -192,8 +192,9 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED (chrome_derive.h's live_chrome_words: the
-// panel's Face the brass's once the materials are baked, so of the chrome's
-// roles only the selection fill, the waveform's ink, moves with a preset)
+// panel's Face the brass's once the materials are baked and the selection
+// pair a constant, so no chrome role moves with a preset; the waveform's
+// and the program's roles do, the view bar's ink-derived tones among them)
 // and palette_generation bumped. THE LIVE ROAD is the Settings Waveform
 // row's commit (GuiSettingsEditor's install_waveform_preset,
 // settings_editor.cpp, which calls this and then runs the apply shape once;
@@ -208,9 +209,9 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // the scanner: no plate render), the flag cache alone, synchronously
 // (Viewport::refresh_flag_cache, so a frame callback served before the tick
 // cannot blit flags in the old colors); then Viewport::invalidate_all, so
-// the swap is one frame (the client alone: the selection fill paints inside
-// it, and the restored laptop's sizing frame outside it wears none of the
-// roles a preset moves, platform.h).
+// the swap is one frame (the client alone: the roles a preset moves paint
+// inside it, and the restored laptop's sizing frame outside it wears none of
+// them, platform.h).
 // WHY THAT IS ENOUGH (re-read 2026-10-09): the eleven bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,

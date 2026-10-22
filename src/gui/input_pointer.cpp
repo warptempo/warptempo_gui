@@ -5743,25 +5743,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is bottom lane 2 (bottom_row_area,
-    // over the border under row 8 and the program frame's bottom row; the
-    // strip's one lane on the window's foot from the unification until the
-    // frame, 2026-10-10, and the border, 2026-10-14), and everything else is
-    // the shape above — below the modal gates (a prompt, a dialog editor or
-    // the progress modal swallows the press; the pointer-transparent flag
-    // editor does not, and its KEYBOARD modality then answers the dispatched chord exactly as it answers the
-    // key), above the loading/empty guard, ctrl/alt strict no-ops, and every
+    // on the block's own terms: the band is bottom lane 1 (bottom_row_area,
+    // over the border under row 8 as lane 0, the window's lowest line since
+    // 2026-10-14; no program frame stands under it, the frame's columns and
+    // bottom row having gone 2026-10-21 and its top row 2026-10-22), and
+    // everything else is the shape above — below the modal gates (a prompt,
+    // a dialog editor or the progress modal swallows the press; the
+    // pointer-transparent flag editor does not, and its KEYBOARD modality
+    // then answers the dispatched chord exactly as it answers the key),
+    // above the loading/empty guard, ctrl/alt strict no-ops, and every
     // press in the band that is not on a button a consumed nothing — which
     // since the unification includes the clock cell and the bare ground
     // beside it, the lane's pointer-inert span (the status chain that shared
     // that ground until 2026-08-13 took no clicks either, and took none away
     // with it) — and the STATE CELL right of the clock since 2026-08-29 is that
     // same inert ground, a text cell with no rect of its own to test. BELOW
-    // THE LANE stand only the border under row 8 (2026-10-14) and the program
-    // frame's bottom row on the window's foot, inert ground falling through
-    // to the tail's consumed nothing, and ABOVE it lies GAP 2's blank window
-    // ground — outside every band here and falling through the same way, as
-    // window ground by the vertical rule (main.cpp).
+    // THE LANE stands only the border under row 8 (2026-10-14), inert ground
+    // falling through to the tail's consumed nothing, and ABOVE it lies GAP
+    // 2's blank window ground — outside every band here and falling through
+    // the same way, as window ground by the vertical rule (main.cpp).
     // (THE BODY IS claim_button_row_press, above the veils.)
     if (rect_contains(bottom_row_area(app), x, y)) {
         claim_button_row_press();

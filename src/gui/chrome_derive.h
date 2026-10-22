@@ -19,11 +19,12 @@
 // superseded by the Cool Edit follow. We follow Cool Edit's theming"). This
 // header is THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: every role is A
 // TONE OF THE PANEL'S FACE — the brass's mean since 2026-10-21 (materials.h's
-// TONE RULE; render.cpp's panel_face hands it in as the words' `face`) — or
-// the waveform's ink, by Cool Edit's own arithmetic (cool_edit_derive.h,
-// whose head has the measurements and the proofs), re-derived at every
-// install of the palette (render.cpp's install family) — but the selection
-// pair, a constant since 2026-10-21. THE CAPTION
+// TONE RULE; render.cpp's panel_face hands it in as the words' `face`) — by
+// Cool Edit's own arithmetic (cool_edit_derive.h, whose head has the
+// measurements and the proofs), re-derived at every install of the palette
+// (render.cpp's install family) — but the selection pair, a constant since
+// 2026-10-21 (no role reads the waveform's ink: the 2026-10-10 selection
+// fill did, until then). THE CAPTION
 // HAS NO ROLE since 2026-10-21: its ground is a flat constant and its
 // buttons Windows 2000's Standard scheme since 2026-10-22 (render.h's
 // caption block; the walnut 2026-10-21 to 2026-10-22; its six roles were a

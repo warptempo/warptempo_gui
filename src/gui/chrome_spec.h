@@ -14,8 +14,8 @@
 //
 // THE CHROME ENDS AT THE CAPTION (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"; the menu row under it removed
-// 2026-10-21): the chrome is the caption, the window frame, the pull-downs,
-// the cards, the prompts and the
+// 2026-10-21, with its three pull-downs): the chrome is the caption, the
+// window frame, the cards, the prompts and the
 // dialogs with their fields and buttons, the scrub and the well's frame (the
 // canvas until the program's later parts take it); THE TOOLBAR BAND, ROW 8
 // AND THE CANVAS COLUMN'S LANES — the view bar, the ruler, the cues — ARE

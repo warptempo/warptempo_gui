@@ -2755,7 +2755,7 @@ void fill_program_palette(const GuiPaletteWords& w) {
 }
 // THE CHROME'S MEMBERS off the live words (live_chrome_words,
 // chrome_derive.h: every role a tone of the panel's face — the metal's,
-// 2026-10-21 — or the program's live ink, 2026-10-10) — the install
+// 2026-10-21 — but the selection pair, a constant) — the install
 // family's other shared half, run after the program's whenever either
 // moves.
 void fill_chrome_palette() {
@@ -3113,8 +3113,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // SELECTED PAIR, `selected_text` on `selected_fill`, the ordinary
     // highlight — the pair that exists "precisely to avoid this problem" —
     // part of the chrome, as every selection in the product is: the program
-    // text's other member on the waveform's ink (chrome_derive.h's
-    // kChromeRoles). AN INVALID
+    // constant pair kSelectionFill / kSelectionText since 2026-10-21
+    // (chrome_derive.h's kChromeRoles). AN INVALID
     // MARKER'S FIELD IS THE SAME FIELD, its text and caret the field's own
     // (architect 2026-10-11: "No flags change color when you select them …
     // the flag should be the indicator that it's invalid"; the bright

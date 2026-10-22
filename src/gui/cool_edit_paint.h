@@ -96,7 +96,7 @@ inline constexpr uint32_t kCeCaseOuter = 0x000000;
 // "the top and left should be darker than the case"): the case's highlight
 // on the bottom and right of the outer ring, its last shadow tone on the
 // top and left inside it (paint_ce_case; Cool Edit's constant 808080 inner
-// and F8F8F8 light, measured on a light grey case, read as a raised white
+// and F8F8F8 light, measured on a light gray case, read as a raised white
 // frame on the ebony, closed_questions.md).
 inline constexpr uint32_t kCeRingOuter = 0x000000;
 // THE DISABLED GLYPH'S TWO TONES (architect 2026-10-15; icons.h's THE
@@ -116,7 +116,7 @@ inline constexpr uint32_t kCeRingOuter = 0x000000;
 // grew the glyph. The tone his pick off a 70 / 60 / 50 / 40 / 30 / 20 / 10 /
 // 00 series judged on the glass the same evening.
 // THE TONES ARE CASE-RELATIVE ON THE EBONY (architect 2026-10-21, "r1", his
-// pick off three 1:1 mocks: the constant silhouette read as a light grey
+// pick off three 1:1 mocks: the constant silhouette read as a light gray
 // blob on the dark case), AND SINCE HIS PICK v2 THE SAME NIGHT (~23:05, on
 // four renders of the real painter composited into his tablet capture) THEY
 // ARE HIS OWN NUMBERS, NOT COOL EDIT'S RATIOS: THE SILHOUETTE's HLS lightness

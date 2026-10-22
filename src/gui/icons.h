@@ -379,7 +379,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // so the shadow line falls down and to the right as the pressed case goes;
 // inside the silhouette because a dark copy peeking out up-left grew the
 // glyph. THE TONES ARE THE CASE'S SINCE 2026-10-21 (architect, "r1": the
-// constant 808080 read as a light grey blob on the ebony), and HIS OWN
+// constant 808080 read as a light gray blob on the ebony), and HIS OWN
 // NUMBERS since his pick v2 the same night: the silhouette at the case
 // ramp's mean lightness times 0.84 on the ebony's hue and saturation
 // (2A1E1C on the shipped ebony; Cool Edit's 0.502 / 0.809 = 0.620 the rule
@@ -387,7 +387,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // until then), the light copy F8F8F8 unchanged
 // (materials::disabled_glyph_tones; the record at cool_edit_paint.h's
 // kCeDisabledShadow). The silhouette the
-// live raster's ALPHA MASK (the body grey where
+// live raster's ALPHA MASK (the body gray where
 // the light copy overlaps it, the rim where it does not), the
 // light copy THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
 // (architect 2026-10-15, "the glyph's own line thickness": one of the file's

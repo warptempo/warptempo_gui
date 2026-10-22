@@ -101,7 +101,7 @@ struct AppState;
 //           the on-screen keyboard's band (modal_box.h); and THE VOID's copy
 //           of the band's rows (below);
 //   METAL   ONE TILE, THE WHOLE CLIENT (2026-10-21: the cards, the tooltip,
-//           the modal family, the keyboard's band and the Settings popup
+//           the modal family and the keyboard's band
 //           stand anywhere on it — the brass panel from the tab strip's top
 //           to the dock bar until then; the sizing frame's band round the
 //           client with it 2026-10-21 to 2026-10-22); and THE INACTIVE TAB'S
@@ -176,8 +176,9 @@ struct AppState;
 //          MODAL FAMILY'S BOX MARGINS, ITS RING, A PROMPT'S FACE INTERIOR AND
 //          ITS CONTROLS ROW (modal_box.h: the dialog editors, the prompts,
 //          the render player, the project picker, the progress modal), THE
-//          ON-SCREEN KEYBOARD'S BAND and THE SETTINGS POPUP — each the brass
-//          as drawn at its own place, its relief the brass Face's tones (the
+//          ON-SCREEN KEYBOARD'S BAND (and, until 2026-10-21, THE SETTINGS
+//          POPUP, which d3e1d275 replaced with the one editor in the modal
+//          box) — each the brass as drawn at its own place, its relief the brass Face's tones (the
 //          laptop's sizing frame among them 2026-10-21 to 2026-10-22).
 //   CASE   EVERY CASE (the band's, row 8's, the render player's) AND SINCE
 //          2026-10-22 EVERY WORD BUTTON AND EVERY KEY OF THE ON-SCREEN
@@ -192,7 +193,7 @@ struct AppState;
 //          Edit's constant. THE PRESSED AND CHECKED FACE (architect
 //          2026-10-21, "the top and left should be darker than the case";
 //          Cool Edit's constant 808080 / F8F8F8 rings, measured on a light
-//          grey case, read as a raised white frame on the ebony): the outer
+//          gray case, read as a raised white frame on the ebony): the outer
 //          ring black on the top and left and THE CASE'S HIGHLIGHT on the
 //          bottom and right, the inner ring THE CASE'S LAST SHADOW TONE on
 //          the top and left and nothing on the bottom and right, the ramp one

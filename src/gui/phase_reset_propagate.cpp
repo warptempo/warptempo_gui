@@ -722,7 +722,7 @@ void PhaseResetPropagate::land_paste_in_phase_reset_view(
         // it) depending on a NEIGHBOUR to clear it: the column switch two
         // lines up, whose clear_selection puts its clear above its own
         // already-empty early return. THAT ARGUMENT HOLDS TODAY and the change
-        // is behaviour-neutral — the paste's chord is W-gated, so the
+        // is behavior-neutral — the paste's chord is W-gated, so the
         // switch to P always fires — but it rests on the switch not being a
         // no-op, which is a property of the paste's ENTRY GATE rather than of
         // this act, and switch_active_markers_view_to DOES return early when

@@ -1285,7 +1285,8 @@ static std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
 // THE CAPTION'S TITLE, ITS BOXES' ENABLED BIT AND THEIR PUSHED FACE — each
 // spelled once, read by the painter and by the caption's as-painted
 // fingerprint (GuiPaintHandler::upper_rows_fingerprint, the one owner of the
-// caption, menu row and band fingerprints), so the two cannot disagree.
+// caption and band fingerprints; the menu row's went with the row,
+// 2026-10-21), so the two cannot disagree.
 static std::string caption_title(const AppState& app) {
     return app.project_name.empty() ? std::string("Warptempo")
                                     : app.project_name + " - Warptempo";
@@ -3751,7 +3752,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             // (cue_line_box_top_px's rule), the baseline the box's top plus
             // the ascent — Windows draws tooltip text with the line box
             // centered (DT_VCENTER), the product's cap-band rule read low
-            // under descenders — architect 2026-10-21 (the cap band centred
+            // under descenders — architect 2026-10-21 (the cap band centered
             // by redesign_baseline until then), THEN LIFTED ONE W, the
             // tooltip's own lift (kTooltipTextLiftPx, architect 2026-10-21).
             // Each further line is one face line-height lower.
@@ -5631,12 +5632,12 @@ constexpr std::string_view kModalCancelLabel = "Cancel";
 // paint_modal_dialog paints): on `seats` (the controls row's,
 // modal_controls_seats) the words `labels`, in painted order, in the body
 // face `font`. EACH BUTTON the spec's push-button box tall
-// (push_button_box_px) CENTRED ON THE CASE ROWS (architect 2026-10-14: 23 W
+// (push_button_box_px) CENTERED ON THE CASE ROWS (architect 2026-10-14: 23 W
 // on 23 W under win2000, so the rows coincide), its width the label's run
 // CEILED between the spec's two pads — CEIL, NOT nearbyint: a measured run
 // is fractional and the box it sizes must CONTAIN the ink, so it rounds up
 // (the clock cell's damage box takes the same rule, paint_bottom_strip) —
-// FLOORED AT WINDOWS' 75 (kModalBtnMinWidthPx), the label centred in it by
+// FLOORED AT WINDOWS' 75 (kModalBtnMinWidthPx), the label centered in it by
 // the walk. THE CLUSTER FLUSH RIGHT, its last button's right edge the row's
 // right seat (the box's ring's outer edge), the button gap between; wider
 // than the row it starts at the row's left seat and runs past the right one
@@ -6417,8 +6418,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
     // family's controls row): the push button on the rows the player's cases
     // take, 23 W on 23 W under win2000, so the rows coincide
-    // (modal_word_buttons). (Centred in the bottom row's content band, the
-    // taskbar dialog's centred band before it, until that day.)
+    // (modal_word_buttons). (Centered in the bottom row's content band, the
+    // taskbar dialog's centered band before it, until that day.)
     const int btn_y = player_up ? seats.case_y
                                 : seats.case_y + (seats.case_h - btn_h) / 2;
 
@@ -7130,10 +7131,11 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
     // The band's ground, one fill across the whole band in the chrome's
     // ground, and NO LINE on any side (architect 2026-10-14,
-    // onscreen_keyboard.h's placement block): the band stands inside the
-    // program frame's columns on its bottom row, the frame round it and the
+    // onscreen_keyboard.h's placement block): the band spans the window's
+    // width and ends on its foot (onscreen_keyboard::surface_rect), the
     // modal family's border, when a dialog editor's stack stands on it,
-    // above it. (The taskbar overlay's raised Hilight line on its top,
+    // above it. (The program frame the band once stood inside went
+    // 2026-10-21 and 2026-10-22; the taskbar overlay's raised Hilight line on its top,
     // 2026-10-10 to 2026-10-14, is gone with the overlay.)
     // THE BAND'S GROUND IS THE BRASS AS DRAWN (architect 2026-10-21,
     // materials.h's METAL); the keys the ebony case (architect 2026-10-22),

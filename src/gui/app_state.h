@@ -16113,7 +16113,8 @@ inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
 }
 // THE SHIFT A PRESS CARRIES, ASKED IN ONE PLACE: alone it is the shift
 // admission, and beside a carried ctrl it is the PAIR's — so beside a
-// carried ctrl a shift is admitted on the walk alone. THREE READERS, all in
+// carried ctrl a shift is admitted on the walk and Open Text Editor alone
+// (the pair's two members). THREE READERS, all in
 // input_pointer.cpp: the arm's shift refusal (arm_redesign_press), the lift's
 // re-ask and its long-press term (finish_chrome_press_release).
 inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,

@@ -45,7 +45,7 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
     if (down) {
         // THE PRESSED AND CHECKED FACE ON THE EBONY (architect 2026-10-21,
         // "the top and left should be darker than the case"; Cool Edit's
-        // constant F8F8F8 / 808080 rings, measured on a light grey case,
+        // constant F8F8F8 / 808080 rings, measured on a light gray case,
         // read as a raised white frame on the ebony): THE OUTER RING black on
         // the top row and left column and THE CASE'S HIGHLIGHT on the bottom
         // row and right column, MITRED at its top-right and bottom-left
