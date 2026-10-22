@@ -925,7 +925,7 @@ private:
     // record at render.h's caption block): the flat ebony ground, its
     // inactive tone while the window is inactive (2026-10-22), the app's
     // icon, the title — "<piece> - Warptempo", or "Warptempo" where no piece
-    // is open — in the bold face in the ink (materials.h's INKS, kWordInk;
+    // is open — in the bold face in the ink (materials.h's INKS, kBoneInk;
     // kCaptionInkInactive while inactive) cut with "..." before the buttons,
     // and the three caption buttons in Windows 2000's Standard scheme
     // (kWindowsStandard), whose rects and enabled bits it
@@ -976,7 +976,8 @@ private:
     // THE CARD FACE every floating surface draws, the period's tooltip
     // (architect 2026-10-04): `card_ground` with a thin `card_frame` line on
     // all four sides (the tooltip and the notification cards; the sides
-    // 2026-10-06; Cool Edit's colors 2026-10-10; the brass 2026-10-21;
+    // 2026-10-06; Cool Edit's colors 2026-10-10; the brass 2026-10-21; the
+    // wood 2026-10-22;
     // render.h's palette block). (Its MENU face, the dropdown's plain raised
     // panel, went with the Settings popup, 2026-10-21.)
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r);

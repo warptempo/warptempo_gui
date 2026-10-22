@@ -23,7 +23,7 @@
 //     (GuiSettingsEditor::complete_closed_value) and whose commit installs
 //     the preset live (install_program_palette below). It sets THE
 //     WAVEFORM'S ROLES ALONE: no chrome surface reads its `face` once the
-//     materials are baked — the panel's Face is the brass's mean
+//     materials are baked — the panel's Face is the wood's mean
 //     (render.cpp's panel_face, materials.h's TONE RULE) — so the role
 //     stands in the table and the generated rows as the record of Cool
 //     Edit's preset, read only as the construction state before the first
@@ -45,7 +45,7 @@
 // whole; a hand-edited file is adversarial territory.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the waveform, and THE
-// MATERIALS every chrome role — Cool Edit's tones off the brass's Face, the
+// MATERIALS every chrome role — Cool Edit's tones off the wood's Face, the
 // selection pair a constant (chrome_derive.h). GuiPalette
 // (render.h) keeps every member; install_palette (render.h) fills the
 // program members off this file's table (kGuiPaletteRoles), the panel's
@@ -113,8 +113,8 @@
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color": the
 // ground of the program's panel — the toolbar band, the dock bar, row 8 and
 // the canvas column's lanes — whose every other tone derives from it,
-// cool_edit_derive.h; the brass's mean in its place on every surface since
-// 2026-10-21, the head; a scheme recording none — Classic Cool, for which
+// cool_edit_derive.h; a material's mean in its place on every surface since
+// 2026-10-21 — the wood's since 2026-10-22 — the head; a scheme recording none — Classic Cool, for which
 // Cool Edit follows the Windows 3D face — takes THE DEFAULT PRESET'S FACE,
 // 626C7B, read off Default's own row by the generator (architect 2026-10-16:
 // "make classic cool inherit from default again. default is the chrome so
@@ -192,7 +192,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED (chrome_derive.h's live_chrome_words: the
-// panel's Face the brass's once the materials are baked and the selection
+// panel's Face the wood's once the materials are baked and the selection
 // pair a constant, so no chrome role moves with a preset; the waveform's
 // and the program's roles do, the view bar's ink-derived tones among them)
 // and palette_generation bumped. THE LIVE ROAD is the Settings Waveform

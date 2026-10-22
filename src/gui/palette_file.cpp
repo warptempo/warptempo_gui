@@ -74,8 +74,9 @@ static_assert(sizeof(GuiPalette) ==
 // EVERY BUILT-IN PALETTE'S FACE HAS A ROW IN THE TAB TABLE (2026-10-18,
 // cool_edit_derive.h's kTabBodies: the inactive tab's body and label are each
 // preset's measured bytes, no rule) — the table's completeness as a record;
-// the install reads Default's row alone since 2026-10-21 (the brass tab's
-// gradient, materials.h's METAL), so the lookup can never miss.
+// the install reads Default's row alone since 2026-10-21 (the inactive
+// tab's gradient on its material, the wood's since 2026-10-22, materials.h's
+// WOOD), so the lookup can never miss.
 static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
                                   [](const GuiBuiltinPalette& b) {
     const uint32_t face = b.words[palette_role_index("face")];

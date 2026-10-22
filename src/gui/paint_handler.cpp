@@ -1057,7 +1057,7 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // word shaped, its access key underlined at byte `access` (-1: the word
 // alone — OK, Cancel, Close). ON THE EBONY CASE since 2026-10-22 (architect,
 // "buttons in ebony — yes"; materials.h's INKS): the chrome's one ink,
-// kWordInk, over the words' drop shadow kWordShadow at (+d, +d) device px,
+// the bone kBoneInk, over the words' drop shadow kWordShadow at (+d, +d) device px,
 // d the `text_shadow` key, the underline with its word in both copies. (The
 // chrome's label role on the flat raised button until then.)
 static void show_button_word(cairo_t* cr, const text_shape::ShapedRun& run,
@@ -1067,7 +1067,7 @@ static void show_button_word(cairo_t* cr, const text_shape::ShapedRun& run,
     const double d = static_cast<double>(materials::text_shadow_px());
     show_access_run(cr, run, marked, access, x + d, baseline + d,
                     hex(kWordShadow));
-    show_access_run(cr, run, marked, access, x, baseline, hex(kWordInk));
+    show_access_run(cr, run, marked, access, x, baseline, hex(kBoneInk));
 }
 
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
@@ -1346,12 +1346,12 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                                             baseline + off);
         };
         // THE TITLE'S INK (materials.h's INKS; render.h's caption block):
-        // the ink over its drop shadow at (+d, +d) device px, the ink
+        // the bone ink over its drop shadow at (+d, +d) device px, the ink
         // dulled to kCaptionInkInactive while the window is inactive, the
         // shadow the same.
         set_palette_source(cr, hex(kWordShadow));
         show(static_cast<double>(materials::text_shadow_px()));
-        set_palette_source(cr, hex(active ? kWordInk : kCaptionInkInactive));
+        set_palette_source(cr, hex(active ? kBoneInk : kCaptionInkInactive));
         show(0.0);
     };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
@@ -2383,8 +2383,9 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // paint_ce_time_field) — its field-dark line on the top and left and its
 // field-light line on the bottom and right, the scope's tones (row 8's the
 // walnut's, the render player's flat), BLACK inside under THE INK's digits (the
-// fortepiano chrome's, materials.h's kTimeFieldGround and kTimeFieldDigits =
-// kWordInk, 2026-10-21, the amber F0B030 that morning; Cool Edit's `mid` under its never-swapping light text,
+// fortepiano chrome's, materials.h's kTimeFieldGround and kTimeFieldDigits,
+// E6D5A8, 2026-10-21 — the clocks' own since the words took the bone
+// 2026-10-22 — the amber F0B030 that morning; Cool Edit's `mid` under its never-swapping light text,
 // `ce_field_text`, 2026-10-10..10-21; the chrome's time-field roles,
 // clock_ground and clock_text, are unread by the program) — kProgramSpec.field_h_px tall
 // (17 W), CENTRED ON THE CASE'S ROWS (a half-row tie toward the top, the cap
@@ -3161,8 +3162,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (clock_drawn) {
             const text_shape::ShapedRun time_run =
                 text_shape::shape_text_run(font, clock_time_text(app, audio));
-            // THE INK on the field's black (materials.h's kTimeFieldDigits,
-            // 2026-10-21; Cool Edit's never-swapping light text until then).
+            // THE CLOCKS' OWN INK on the field's black (materials.h's
+            // kTimeFieldDigits, 2026-10-21, left on E6D5A8 2026-10-22; Cool
+            // Edit's never-swapping light text until then).
             set_palette_source(cr, hex(kTimeFieldDigits));
             text_shape::show_shaped_run(cr, time_run,
                                         static_cast<double>(cell_x), baseline);
@@ -3245,11 +3247,11 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
     // is the spec's (tooltip_pad_px). (The MENU face — the ground inside the
     // plain raised two-line edge, Windows' EDGE_RAISED popup menu — went with
     // the Settings dropdown, 2026-10-21.)
-    // THE BRASS AS DRAWN (architect 2026-10-21, "the light brown should be
-    // brass": materials.h's METAL, the FLAT family retired as a ground): the
-    // face the metal's cover at its own place, the frame's tones its flat
-    // strokes.
-    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+    // THE WOOD AS DRAWN (architect 2026-10-22, "just make the rest wood —
+    // the brass is supposed to be little touches"; materials.h's WOOD; the
+    // brass 2026-10-21 to 2026-10-22, the FLAT family before): the face the
+    // wood's cover at its own place, the frame's tones its flat strokes.
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
     const int lx = std::min(relief_line_px(), r.w);
     const int ly = std::min(relief_line_px(), r.h);
     paint_cell_rect(cr, r, palette().card_ground);
@@ -3907,21 +3909,50 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
 
     cairo_save(cr);
-    // THE BRASS (materials.h's METAL, 2026-10-21): the lane's and the marker
-    // lane's grounds the brass as drawn, the ruler's ground and frame its flat
-    // strokes, the ticks and digits the ink (kCeRulerTick = kWordInk).
+    // THE MATERIALS (materials.h's REGIONS, architect 2026-10-22: the brass
+    // an accent — "put the brass just on the marker lane … leave the
+    // timestamp lane a flat solid color as you have it"): the lane's face
+    // beside the ruler the WOOD as drawn; the ruler's ground THE BRASS'S
+    // FLAT `mid`, as it was; its frame's two side columns (the canvas
+    // ring's, carried up) the wood's strokes and its foot line the brass's;
+    // the marker lane THE BRASS AS DRAWN between the frame columns' inner
+    // edges alone, the wood outside them; the ticks and digits the ink
+    // (kCeRulerTick = kBoneInk). (The brass for all of it 2026-10-21 to
+    // 2026-10-22.)
     const GuiMaterialScope metal(GuiMaterialRegion::Metal);
     // THE LANE'S FACE, then THE GROUND AND ITS FRAME over the canvas's
     // columns (render.h's canvas-column paragraph, below once the width is
     // read): the column's margins beside them stay the panel's face, as the
     // view bar's do. THE MARKER LANE'S PANEL FACE is laid here
     // too, before the flag blit, the lane's ground under every cue (the flag
-    // cache paints the cues alone).
+    // cache paints the cues alone, clipped to the canvas's columns).
     const GuiPalette& pal = palette();
     const int ground_h = ruler_ground_h_px();
     const int lw       = program_line_px();
-    paint_cell_rect(cr, lane, pal.face);
-    if (marker.w > 0 && marker.h > 0) paint_cell_rect(cr, marker, pal.face);
+    const GuiRect canvas_cols = waveform_area(app);
+    {
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+        paint_cell_rect(cr, lane, pal.face);
+    }
+    if (marker.w > 0 && marker.h > 0) {
+        const int in0 = std::clamp(canvas_cols.x, marker.x, marker.x + marker.w);
+        const int in1 = std::clamp(canvas_cols.x + canvas_cols.w, in0,
+                                   marker.x + marker.w);
+        {
+            const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+            if (in0 > marker.x)
+                paint_cell_rect(cr, GuiRect{marker.x, marker.y, in0 - marker.x,
+                                            marker.h},
+                                pal.face);
+            if (marker.x + marker.w > in1)
+                paint_cell_rect(cr, GuiRect{in1, marker.y,
+                                            marker.x + marker.w - in1, marker.h},
+                                pal.face);
+        }
+        if (in1 > in0)
+            paint_cell_rect(cr, GuiRect{in0, marker.y, in1 - in0, marker.h},
+                            pal.face);
+    }
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
     // pixels actually on screen, so it reads the same plate epoch the playheads
@@ -3969,14 +4000,33 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (paint_relief_frame, cool_edit_paint.h's diagonal rule). The ground and
     // the frame read the LIVE area, as the canvas's own frame does
     // (paint_canvas_column_frame); the walk below reads the plate's width.
+    // THE FRAME TWICE UNDER TWO CLIPS (materials.h's REGIONS, 2026-10-22):
+    // its two side columns, the mitred bottom-left block with them, stand
+    // between the brass's flat ground and the wood's margin and TAKE THE
+    // WOOD'S TONES (the canvas ring's columns carried up, paint_canvas_column_frame);
+    // the foot line between them stands between the ground and the marker
+    // lane's brass and keeps the brass's.
     paint_cell_rect(cr, GuiRect{cx, lane.y, area.w, ground_h}, pal.ce_mid);
-    cairo_save(cr);
-    cairo_rectangle(cr, lane.x, lane.y, lane.w, ground_h + lw);
-    cairo_clip(cr);
-    paint_relief_frame(cr, GuiRect{cx - lw, lane.y - lw, area.w + 2 * lw,
-                                   ground_h + 2 * lw},
-                       pal.ce_dark, pal.ce_hilight);
-    cairo_restore(cr);
+    const GuiRect ruler_frame{cx - lw, lane.y - lw, area.w + 2 * lw,
+                              ground_h + 2 * lw};
+    const int frame_h = ground_h + lw;
+    {
+        cairo_save(cr);
+        cairo_rectangle(cr, lane.x, lane.y, std::max(cx - lane.x, 0), frame_h);
+        cairo_rectangle(cr, cx + area.w, lane.y,
+                        std::max(lane.x + lane.w - (cx + area.w), 0), frame_h);
+        cairo_clip(cr);
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+        paint_relief_frame(cr, ruler_frame, pal.ce_dark, pal.ce_hilight);
+        cairo_restore(cr);
+    }
+    {
+        cairo_save(cr);
+        cairo_rectangle(cr, cx, lane.y, area.w, frame_h);
+        cairo_clip(cr);
+        paint_relief_frame(cr, ruler_frame, pal.ce_dark, pal.ce_hilight);
+        cairo_restore(cr);
+    }
 
     const int64_t step   = comb.step;
     const double  end_ms = comb.end_ms();
@@ -4708,11 +4758,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // column's margins beside the bar's frame (render_trim_flags spans the
     // canvas's columns and its two frame columns alone, 2026-10-09) read as
     // the panel.
-    // THE BRASS (materials.h's METAL, 2026-10-21): the air, the lane's ground
-    // and the view bar's frame (render_trim_flags) under the one scope.
-    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+    // THE WOOD (materials.h's WOOD, architect 2026-10-22: the brass an
+    // accent, the marker lane alone): the air and the lane's ground, the
+    // column's margins beside the bar; THE VIEW BAR'S FRAME KEEPS THE
+    // BRASS'S TONES, as the ruler's ground keeps its flat (render_trim_flags
+    // under the scope below; the brass 2026-10-21 to 2026-10-22 for all
+    // three).
     const GuiRect trim_row = top_trim_row_area(app);
     {
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
         const GuiRect air = top_column_air_area(app);
         if (air.w > 0 && air.h > 0) paint_cell_rect(cr, air, palette().face);
         if (trim_row.w > 0 && trim_row.h > 0)
@@ -4781,6 +4835,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // nothing pressed (the held scroll arrow of 2026-10-03 went with them).
     // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the
     // trim bar"; render.h's view-bar paragraph).
+    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame, trim,
                       out_hit);
@@ -5282,21 +5337,16 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // whose stack stands on the keyboard's band, the controls row is lifted
     // off this lane and laid by the family's painter (paint_modal_box).
     // THE WOOD (materials.h's WOOD, 2026-10-21) — the dock bar and the
-    // content band — but THE MODAL FAMILY'S CONTROLS ROW is THE BRASS AS
-    // DRAWN (architect 2026-10-21, materials.h's METAL): under a modal that
-    // owns the row the content band is the brass its controls stand on.
+    // content band, under a modal that owns the row its controls row too
+    // (architect 2026-10-22, the flat family's grounds the wood; the brass
+    // there 2026-10-21 to 2026-10-22).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         const GuiMaterialScope wood(GuiMaterialRegion::Wood);
         paint_ce_dock_bar(cr,
                           GuiRect{lane.x, lane.y, lane.w, content.y - lane.y});
-        if (modal_owns_bottom_row(app)) {
-            const GuiMaterialScope metal(GuiMaterialRegion::Metal);
-            paint_cell_rect(cr, content, palette().face);
-        } else {
-            paint_cell_rect(cr, content, palette().face);
-        }
+        paint_cell_rect(cr, content, palette().face);
         cairo_restore(cr);
     }
 
@@ -5992,12 +6042,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     cairo_save(cr);
     const GuiFont font = gui_font(GuiFace::Body);
-    // THE BRASS AS DRAWN (architect 2026-10-21, materials.h's METAL): every
-    // tone this body lays on the box and the controls row — the scrub's
-    // channel and thumb among them — the metal's; THE FIELDS FLAT (their own
+    // THE WOOD AS DRAWN (architect 2026-10-22, materials.h's WOOD; the brass
+    // 2026-10-21 to 2026-10-22): every tone this body lays on the box and the
+    // controls row — the scrub's channel and thumb among them — the wood's;
+    // THE FIELDS FLAT (their own
     // scopes below: "the user shouldn't be typing on a non-flat color"); every
     // button the ebony case, flat inside (paint_ce_case's own scope).
-    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
 
     // THE BOX, for a prompt and a dialog editor (the surface block above):
     // laid first, the controls after it on the row it leaves.
@@ -6612,7 +6663,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // kTimeShape's block).
                 const text_shape::ShapedRun run = text_shape::shape_text_run(
                     cfont, format_timestamp(seconds_of(shown[i])));
-                // Row 8's clock's amber (kTimeFieldDigits, 2026-10-21).
+                // Row 8's clock's ink (kTimeFieldDigits, 2026-10-21).
                 set_palette_source(cr, hex(kTimeFieldDigits));
                 text_shape::show_shaped_run(
                     cr, run,
@@ -7032,7 +7083,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //
 // THE KEYS ARE THE ROSTER'S CASES (architect 2026-10-22, "buttons in ebony
 // — yes"; the one painter is paint_roster_case, paint_ce_case on the key's
-// own box): each key THE EBONY CASE at rest on the band's brass, its cap in
+// own box): each key THE EBONY CASE at rest on the band's wood, its cap in
 // the chrome's one ink over the words' shadow (materials.h's INKS) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
 // glass). THE OTHER TWO FACES ARE COOL EDIT'S ONE DOWN FACE, the cap one
@@ -7098,11 +7149,11 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // above it. (The program frame the band once stood inside went
     // 2026-10-21 and 2026-10-22; the taskbar overlay's raised Hilight line on its top,
     // 2026-10-10 to 2026-10-14, is gone with the overlay.)
-    // THE BAND'S GROUND IS THE BRASS AS DRAWN (architect 2026-10-21,
-    // materials.h's METAL); the keys the ebony case (architect 2026-10-22),
-    // each under the Flat scope below.
+    // THE BAND'S GROUND IS THE WOOD AS DRAWN (architect 2026-10-22,
+    // materials.h's WOOD; the brass 2026-10-21 to 2026-10-22); the keys the
+    // ebony case (architect 2026-10-22), each under the Flat scope below.
     {
-        const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
         paint_cell_rect(cr, surf, palette().ground);
     }
 
@@ -7160,13 +7211,13 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h)) +
                 box.shift;
-            // THE CAP IN THE CHROME'S ONE INK over the words' shadow at
-            // (+d, +d) device px, d the `text_shadow` key (materials.h's
-            // INKS, 2026-10-22).
+            // THE CAP IN THE CHROME'S ONE INK, the bone, over the words'
+            // shadow at (+d, +d) device px, d the `text_shadow` key
+            // (materials.h's INKS, 2026-10-22).
             const double d = static_cast<double>(materials::text_shadow_px());
             set_palette_source(cr, hex(kWordShadow));
             text_shape::show_shaped_run(cr, run, cap_x + d, baseline + d);
-            set_palette_source(cr, hex(kWordInk));
+            set_palette_source(cr, hex(kBoneInk));
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });
 
@@ -7246,12 +7297,12 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     {
-        // THE PANEL, THE RING AND THE LIFTED CONTROLS ROW ARE THE BRASS AS
-        // DRAWN (architect 2026-10-21, materials.h's METAL); A FACE INTERIOR
-        // (a prompt's question) the brass too, A FIELD INTERIOR FLAT — "the
-        // user shouldn't be typing on a non-flat color" — the chrome's field
-        // ground as ever.
-        const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+        // THE PANEL, THE RING AND THE LIFTED CONTROLS ROW ARE THE WOOD AS
+        // DRAWN (architect 2026-10-22, materials.h's WOOD; the brass
+        // 2026-10-21 to 2026-10-22); A FACE INTERIOR (a prompt's question)
+        // the wood too, A FIELD INTERIOR FLAT — "the user shouldn't be typing
+        // on a non-flat color" — the chrome's field ground as ever.
+        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
         paint_cell_rect(cr, panel, p.face);
         if (box.w > 0 && box.h > 0) {
             const GuiRect interior = modal_box_interior_rect(app, keyboard_h);
@@ -7504,11 +7555,14 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     const int lw = program_line_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE BRASS (materials.h's METAL, 2026-10-21): the face the brass as
-    // drawn over its tiles (materials::paint_rect — the canvas interior none
-    // of them, its flat mean there under the canvas), the rings its flat
-    // strokes.
-    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+    // THE WOOD (materials.h's WOOD, architect 2026-10-22: the brass an
+    // accent, the marker lane alone; the brass 2026-10-21 to 2026-10-22):
+    // the face the wood as drawn over its tiles (materials::paint_rect — the
+    // canvas interior none of them, its flat mean there under the canvas),
+    // the rings — the frame columns, each well's top and bottom rows — the
+    // wood's flat strokes, the columns standing between the wood's margins
+    // and the canvas.
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
     const GuiRect face{top.x, top.y, top.w, y1 - top.y};
     if (hole) {
         // THE HOLE IS LEFT ALONE WHOLE: the face and the rings below paint
@@ -7520,7 +7574,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
         });
         cairo_clip(cr);
     }
-    materials::paint_rect(cr, face, GuiMaterial::Metal);
+    materials::paint_rect(cr, face, GuiMaterial::Wood);
     // THE TWO WELLS' RINGS (the stereo divider, render.h's waveform_divider;
     // architect 2026-10-16): the upper from the top frame row through its
     // light bottom line, the divider's first rows; the lower from its dark

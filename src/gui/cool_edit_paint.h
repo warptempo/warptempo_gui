@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cool_edit_derive.h"   // the case ramp's Default bytes, the HLS rule
-#include "materials.h"   // the fortepiano chrome's inks (kWordInk)
+#include "materials.h"   // the fortepiano chrome's inks (kBoneInk)
 #include "render.h"   // GuiRect, GuiColor, palette(), the program's accessors
 
 #include <array>
@@ -23,21 +23,25 @@
 // (its generator mock_ce.py the construction these painters follow).
 //
 // THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` (the
-// brass's mean since 2026-10-21) and the tones Cool Edit derives from it
+// wood's mean since 2026-10-22, the brass's 2026-10-21 to 2026-10-22) and
+// the tones Cool Edit derives from it
 // (cool_edit_derive.h, the COOL EDIT BLOCK of palette()) — the panel
 // label's swapping pair among them — and SINCE 2026-10-21 EVERY SURFACE TONE
 // IS A MATERIAL (architect, the fortepiano chrome; materials.h): the
 // painters below hand their tones to paint_cell_rect and paint_relief_frame,
 // whose surface chokepoint lays each on the caller's material scope — the
 // Face as the cover as drawn, every other tone the material's flat stroke —
-// the band, the tab strip's ground, the dock bar and row 8 on the walnut,
-// the tabs and the canvas column's lanes on the brass; THE BUTTON CASE is
+// the band, the tab strip and its tabs, the canvas column's margins, air,
+// ring and foot, the dock bar and row 8 on the walnut, the marker lane
+// between the frame columns, the view bar's frame and the ruler's ground on
+// the brass (2026-10-22, materials.h's REGIONS); THE BUTTON CASE is
 // the ebony's (its ramp the cover under Cool Edit's case span, its lines
 // flat, materials::paint_case_ramp and case_lines). THE CONSTANTS below are
 // what Cool Edit draws whatever its preset — the case's black outline and
 // the down face's outer black, the view bar's field — and the fortepiano
-// chrome's own inks (materials.h's INKS: the one word ink kWordInk, the
-// flags' near-white, the time fields' black ground), flat, never a material.
+// chrome's own inks (materials.h's INKS: the one bone ink kBoneInk on the
+// words and the flags, the time fields' own digits on their black ground),
+// flat, never a material.
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as
 // an intention of a diagonal, so that when they're scaled they don't look
@@ -185,11 +189,11 @@ static_assert(ce_default_case_ramp_mean_l() > 0.804 &&
 // ruler's ground is the dark `mid` at every Face, so Cool Edit keeps it
 // light where the panel's text and label swap. Not a Face tone left
 // undone: following Face here would depart from Cool Edit. ON THE BRASS THE
-// TICKS AND DIGITS ARE THE CHROME'S ONE INK, kWordInk (materials.h's INKS,
-// architect 2026-10-21, "they should be lower contrast"; the near-white
-// earlier that day, Cool Edit's E0E0E0 before).
+// TICKS AND DIGITS ARE THE CHROME'S ONE INK, the bone kBoneInk (materials.h's
+// INKS, architect 2026-10-22; E6D5A8 2026-10-21 to 2026-10-22, the
+// near-white before that, Cool Edit's E0E0E0 before).
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
-inline constexpr uint32_t kCeRulerTick      = kWordInk;
+inline constexpr uint32_t kCeRulerTick      = kBoneInk;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 
 // -- THE CASE ------------------------------------------------------------------
@@ -280,12 +284,13 @@ inline int ce_row8_bar_w_px() {
 // 2026-10-21; Cool Edit's `mid` tone until then), the field-light line on
 // its bottom row and right column, the ring mitred, its two lines the
 // caller's scope's tones (row 8's the walnut's, the render player's flat).
-// Its digits are the caller's, in the fortepiano chrome's one ink
-// (kTimeFieldDigits = kWordInk since 2026-10-21; the amber F0B030 that
-// morning, Cool Edit's never-swapping light text, `ce_field_text`, before).
+// Its digits are the caller's, in the clocks' own E6D5A8 (kTimeFieldDigits,
+// materials.h's INKS: the words' ink 2026-10-21, left on the clocks when the
+// words took the bone 2026-10-22; the amber F0B030 that morning, Cool Edit's
+// never-swapping light text, `ce_field_text`, before).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // A PANEL LABEL (METRICS §6) — row 8's state line, its one reader: `run`
-// in THE CHROME'S ONE INK, kWordInk (architect 2026-10-21: the GitHub
+// in THE CHROME'S ONE INK, the bone kBoneInk (2026-10-22; architect 2026-10-21: the GitHub
 // message "in plain white on the same wooden surface — inconsistent"; the
 // palette's `ce_label` until then) with `ce_label_shadow` under it one line
 // right and down — the dark tone on a dark Face, past the label threshold
@@ -323,10 +328,10 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     program_spec.h's tab fields, architect 2026-10-18 ~19:55).
 //   AN INACTIVE TAB on its footprint from row 4 to the recess's last row
 //     (16 W): its top row and left column in ce_tab_light, its right column
-//     in ce_tab_dark, the body inside them the brass under Cool Edit's
+//     in ce_tab_dark, the body inside them the wood under Cool Edit's
 //     measured 15 stops as a luma ratio (Default's kTabBodies row, one stop
-//     per W row, never resampled — kCaseRamp's rule; materials.h's METAL,
-//     materials::paint_tab_body).
+//     per W row, never resampled — kCaseRamp's rule; materials.h's WOOD,
+//     materials::paint_tab_body; the brass 2026-10-21 to 2026-10-22).
 //   THE ACTIVE TAB one W wider each side and from row 2 (18 W), its face
 //     the panel's Face running down THROUGH THE PAGE LINE (the tab merges
 //     into the page), its left column in the hilight running through the
@@ -339,9 +344,10 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     the page line running under it.
 //     So the gap beside it closes to one W, and the first tab active
 //     stands flush on the page edge.
-//   THE LABELS in the body face, THE INK (kWordInk) over the words' drop
+//   THE LABELS in the body face, THE INK (kBoneInk) over the words' drop
 //     shadow at
-//     (+d, +d) device px, lit or unlit (materials.h's INKS, 2026-10-21; no
+//     (+d, +d) device px, lit or unlit (materials.h's INKS, 2026-10-21, the
+//     bone since 2026-10-22; no
 //     shadow, the program text and Cool Edit's ink until then), no hover
 //     face (Cool Edit's
 //     F6F6F6 hover does not apply, program_spec.h's case_hot_face), the cap

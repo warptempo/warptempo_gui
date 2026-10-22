@@ -104,7 +104,7 @@ struct TrimRange {
 // color, the playhead and the scanner, and Cool Edit's panel face as its
 // record; palette_file.h's head owns the rule that parts program from
 // chrome) — the WAVEFORM PRESET, the one choice of color left; THE PANEL'S
-// FACE is the brass's mean once the materials are baked (materials.h's TONE
+// FACE is the wood's mean once the materials are baked (materials.h's TONE
 // RULE), and THE CHROME'S ROLES — the chrome and its relief, the time
 // fields' own pair, the cards' three, the selected and field pairs — ARE
 // INHERITED FROM IT, every one a tone of that Face (but the selection pair,
@@ -135,8 +135,8 @@ struct TrimRange {
 // disabled glyph's two tones, the view bar's black field, the ruler's ticks and digits and their black shadow;
 // the case's ramps and the time field's digits derived from the Face,
 // ce_case_* and ce_field_text, until 2026-10-21) — or THE FORTEPIANO
-// CHROME'S CONSTANTS AND MATERIALS (materials.h: the words' one ink and
-// shadow, the flags' near-white, the time fields' black ground, and the baked
+// CHROME'S CONSTANTS AND MATERIALS (materials.h: the words' and the flags'
+// one bone ink, the words' shadow, the time fields' ground and digits, and the baked
 // covers of the walnut, the brass and the ebony through set_surface_source)
 // — or THE CAPTION'S AND THE WINDOWS PARTS' CONSTANTS (2026-10-22, the
 // caption block: the caption's flat ground and inactive ink, and Windows
@@ -425,8 +425,9 @@ struct GuiPalette {
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
     // Cool Edit's Face, the ground of the toolbar band, the dock bar and row
-    // 8 under every chrome — THE METAL'S FACE, the brass cover's mean, since
-    // 2026-10-21 (materials.h; the palette's own `face` until the first bake,
+    // 8 under every chrome — THE WOOD'S FACE, the walnut cover's mean, since
+    // 2026-10-22, the brass's 2026-10-21 to 2026-10-22 (materials.h; the
+    // palette's own `face` until the first bake,
     // construction state), whatever the preset: every panel tone and every
     // chrome role derives from it, and painted as a surface it is the scope's
     // material as drawn (set_surface_source).
@@ -466,7 +467,7 @@ struct GuiPalette {
     // (THE TAB STRIP'S BODY AND LABELS — the inactive tab's measured 15-row
     // body and its label's ink, kTabBodies' row of the preset's Face, and the
     // active label in the program text, `ce_text`, 2026-10-18..10-21 — are
-    // the brass's body and kNearWhite since, materials.h's METAL and INKS;
+    // the wood's body and kBoneInk since, materials.h's WOOD and INKS;
     // THE BUTTON CASE's twenty-four members, its ramp, highlight, shadow ends
     // and corner off the Face 2026-10-10..10-21, the ebony's, materials.h's
     // CASE.)
@@ -512,7 +513,8 @@ GuiColor surface_text(GuiSurface surface);
 // at launch — a built-in's key, is_builtin_palette_name, gui_main resolving
 // it with palette_record, palette_file.h) — and THE CHROME'S, DERIVED FROM
 // THE PANEL'S FACE AND THE INK (2026-10-10, the chrome inherits Cool Edit;
-// the Face the brass's once the materials are baked, 2026-10-21;
+// the Face a material's once the materials are baked, 2026-10-21, the
+// wood's since 2026-10-22;
 // live_chrome_words, chrome_derive.h).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
 // `waveform` key names THE ACTIVE PRESET and gives the words at launch; the
@@ -1151,7 +1153,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     centred in the lane (redesign_baseline) — cut before the buttons with
 //     Windows' "..." (paint_caption_row owns the words and the cut) — in the
 //     chrome's one ink over the words' drop shadow (materials.h's INKS,
-//     2026-10-21; architect 2026-10-22, "leave the ink as it is"), the ink
+//     2026-10-21; architect 2026-10-22, "leave the ink as it is" at the
+//     caption's landing, the bone with every word later that day), the ink
 //     dulled to kCaptionInkInactive while the window is inactive, the shadow
 //     the same;
 //   THE THREE BUTTONS, flush right: each caption_button_w_px x
@@ -1182,10 +1185,15 @@ constexpr int kMinWindowHeightPx = 480;
 // inactive pair the planner's pick, "a reasonable inactive color", tunable
 // later — the ground the ebony lifted and grayed, the ink dulled (Windows'
 // own rule: an inactive caption is lighter and duller). The active title's
-// ink and both titles' shadow are materials.h's kWordInk and kWordShadow.
+// ink and both titles' shadow are materials.h's kBoneInk and kWordShadow.
+// THE INACTIVE INK IS THE BONE DULLED BY THE RATIO THE PICK OF 2026-10-22
+// MORNING STOOD IN (architect 2026-10-22, the words' bone): 9E9480 under the
+// ink E6D5A8 is HLS lightness 143/255 over 199/255, 0.7186; the bone F0F0F0
+// (L 240/255) times it is 172.46/255, its hue and saturation the bone's
+// (grey), so ACACAC.
 inline constexpr uint32_t kCaptionGround         = 0x1C1412;
 inline constexpr uint32_t kCaptionGroundInactive = 0x2E2A28;
-inline constexpr uint32_t kCaptionInkInactive    = 0x9E9480;
+inline constexpr uint32_t kCaptionInkInactive    = 0xACACAC;
 // THE WINDOWS PARTS' COLORS — WINDOWS 2000'S STANDARD SCHEME (its setup
 // hive's "Windows Standard", the scheme ReactOS 0.4.16 ships as its default):
 // ButtonFace, Hilight, 3DLight, Shadow and DkShadow, CONSTANTS, the one set
@@ -2453,7 +2461,14 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // after the plate and the center lines, on_redraw's paint order on both
 // roads), so the GL canvas draws them from its list exactly as the cairo
 // road fills them (canvas_sink.h's head); across the frame columns they are
-// the frame painter's. EVERY OTHER CANVAS PAINTER PAINTS NOTHING ON THEM: the
+// the frame painter's. THEIR TONES ARE THE WOOD'S END TO END (architect
+// 2026-10-22: the divider is a seam, not a choice): inside the area the two
+// lines are the wood's flat strokes of `ce_hilight` and `ce_dark` and the
+// face row the wood's flat mean (materials::flat under the wood's scope),
+// the very strokes the frame painter puts on the frame columns and the
+// margins, so no seam can stand where they meet (the brass's flat tones
+// inside the area, the wood's outside, for one landing of 2026-10-22).
+// EVERY OTHER CANVAS PAINTER PAINTS NOTHING ON THEM: the
 // plate's bands, the grid and the center lines stand inside the two bands,
 // and every vertical line — the cues' and the cursor's dots, the lead-in
 // ring's right side, the scanner and the zoom anchor's stem — is cut into

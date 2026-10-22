@@ -18,7 +18,8 @@
 // inherited from Cool Edit"; "whatever luminous rules we previously had are
 // superseded by the Cool Edit follow. We follow Cool Edit's theming"). This
 // header is THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: every role is A
-// TONE OF THE PANEL'S FACE — the brass's mean since 2026-10-21 (materials.h's
+// TONE OF THE PANEL'S FACE — the wood's mean since 2026-10-22, the brass's
+// 2026-10-21 to 2026-10-22 (materials.h's
 // TONE RULE; render.cpp's panel_face hands it in as the words' `face`) — by
 // Cool Edit's own arithmetic (cool_edit_derive.h, whose head has the
 // measurements and the proofs), re-derived at every install of the palette
@@ -56,7 +57,9 @@
 //                                          9C7B3A, brass-like (materials.h;
 //                                          architect 2026-10-21)
 //   selected_text                        = THE CONSTANT kSelectionText, the
-//                                          near-white (architect 2026-10-21:
+//                                          bone F0F0F0, the words' and the
+//                                          flags' one ink since 2026-10-22
+//                                          (architect 2026-10-21:
 //                                          "the selection text white or
 //                                          near-white"); the waveform's ink
 //                                          under the program text's other
@@ -156,7 +159,7 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
 
 // THE DEFAULT PALETTE (Cool Edit's "(Default Scheme)": Face 626C7B, ink
 // 4BF3A7): the chrome it derives, role by role — the rule's proof on Cool
-// Edit's own Face (the live Face is the brass's, measured at the bake).
+// Edit's own Face (the live Face is the wood's, measured at the bake).
 inline constexpr GuiThemeWords kDefaultCheck =
     derive_chrome(default_palette_words());
 static_assert(kDefaultCheck[theme_role_index("ground")] == 0x626C7B);

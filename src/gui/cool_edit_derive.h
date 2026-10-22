@@ -717,9 +717,9 @@ static_assert([] {
 }());
 // (The GuiPalette members the tabs filled — the inactive body's array, its
 // label and the active label in the program text — left 2026-10-21: the
-// install reads DEFAULT'S ROW alone, the gradient the inactive tab's brass
-// body wears as a luma ratio, materials.h's METAL; the labels are the
-// near-white.)
+// install reads DEFAULT'S ROW alone, the gradient the inactive tab's wood
+// body wears as a luma ratio (the brass's 2026-10-21 to 2026-10-22),
+// materials.h's WOOD; the labels are the bone, materials.h's INKS.)
 
 // -- THE DISABLED CUE'S FADED LOOK (architect 2026-10-10 ~12:20) ---------------
 
@@ -731,15 +731,18 @@ static_assert([] {
 // SOLID COLORS (the palette composites nothing at paint time; each a
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
 // of the program's words so a new Face, `cue` or `invalid_label` moves
-// them live; render.cpp's fill_program_palette):
+// them live; render.cpp's fill_program_palette). THE FACE HERE IS THE BRASS'S
+// since 2026-10-22 (architect: truthful to the surface — the cues stand on
+// the marker lane, the brass's accent; materials.h's METAL, the Metal Face's
+// fourth reader), the panel's Face, the wood's, everywhere else:
 //   the TRIANGLE   the live triangle's color (the `cue` red, or the invalid
 //                  color of an invalid cue or a history REMOVED flag,
 //                  2026-10-11) 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;
 //   the LABEL      the resting label's ink (Cool Edit's cue-label ink
 //                  `hilight`, re-verified on three captures 2026-10-10; the
-//                  lanes' near-white on the brass since 2026-10-21,
-//                  materials.h) 65 % toward the Face — "blended further … a faded, opaque sort of
+//                  bone F0F0F0 since 2026-10-21 (the near-white on the
+//                  brass that day), materials.h) 65 % toward the Face — "blended further … a faded, opaque sort of
 //                  look", the text legible least of the three.
 // A selected inert segment keeps the selected label color (the chrome's
 // `label`) so its selection still shows; a disabled cue has no dots.
@@ -768,8 +771,8 @@ constexpr uint32_t disabled_cue_shadow(uint32_t face) {
     return mix_toward(tone_of(named_tone("cue_shadow"), face, 0), face,
                       kDisabledShadowMix);
 }
-// The resting label's ink `label` faded toward `face` — the lanes'
-// near-white on the brass since 2026-10-21 (materials.h's INKS; Cool Edit's
+// The resting label's ink `label` faded toward `face` — the bone F0F0F0
+// since 2026-10-21 (materials.h's INKS, the near-white that day; Cool Edit's
 // `hilight` tone of the Face until then).
 constexpr uint32_t disabled_cue_label(uint32_t label, uint32_t face) {
     return mix_toward(label, face, kDisabledLabelMix);

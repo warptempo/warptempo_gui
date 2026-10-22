@@ -20,7 +20,7 @@
 // inside the body … even the font color, all of that would be inherited
 // from Cool Edit"; "whatever luminous rules we previously had are
 // superseded by the Cool Edit follow"): EVERY CHROME ROLE IS A TONE OF THE
-// PANEL'S FACE — the brass's mean since 2026-10-21 (materials.h's TONE RULE)
+// PANEL'S FACE — the wood's mean since 2026-10-22 (materials.h's TONE RULE)
 // — and the tones Cool Edit derives from it, the waveform's ink, and the
 // program text's two members, the selection taking the other one
 // (cool_edit_derive.h's tones; the per-role mapping is chrome_derive.h's,

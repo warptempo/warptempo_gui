@@ -12,11 +12,18 @@ struct AppState;
 
 // THE MATERIALS — THE FORTEPIANO CHROME (architect 2026-10-21, a Salzburg
 // Walter fortepiano: "we follow the Salzburg instrument as much as we can").
-// THE FRAME OF RECORD is tmp/theme_next/out/cover_walnut1.png (the tablet at
-// 300 %), its generator tmp/theme_next/make_tiles4.py (build_frame4); where a
-// number here and that frame part, the frame is the law. Cool Edit's flat
-// chrome becomes THREE MATERIALS — WALNUT, an even dark BRASS (the lock
-// plate) and EBONY (the naturals) — and every lane, case, bar (row 8's,
+// THE FRAME OF RECORD is
+// tmp/theme_next/out/accent1/accent_C_marker_lane_inside_frame.png (the
+// tablet at 300 %, his true-color capture recomposed; its generator
+// tmp/theme_next/make_accent1.py, round 2, 2026-10-22 — the brass an accent),
+// tmp/theme_next/out/cover_walnut1.png (make_tiles4.py's build_frame4) the
+// frame of 2026-10-21 for what that one leaves unchanged; where a number
+// here and the frame part, the frame is the law. Cool Edit's flat chrome
+// becomes THREE MATERIALS — WALNUT, an even dark BRASS (the lock plate,
+// AN ACCENT since 2026-10-22: architect, "in the original the brass is used
+// only for accents — the lock, some hinges"; "put the brass just on the
+// marker lane … leave the tabs in wood") and EBONY (the naturals) — and
+// every lane, case, bar (row 8's,
 // re-laid the same day: program_spec.h's row-8 bar fields), tab, ruler and
 // line keeps its geometry exactly; only what fills it
 // changes. This header is the one owner of the materials, the cover and bake
@@ -28,7 +35,9 @@ struct AppState;
 // rule, icons.h) — Gemini-drawn 4K masters (assets/tiles/README.md) — and
 // BESIDE EACH MASTER ITS PRE-RENDERED COVERS (architect 2026-10-21: "launch
 // must not filter 17-megapixel masters"), `<Name>-<W>x<H>.png` at the two
-// devices' standard windows, 2304 x 1440 and 1920 x 1080, rendered by
+// devices' standard windows, 2304 x 1440 and 1920 x 1080 — THE BRASS'S A
+// QUARTER-HEIGHT STRIP of them, 2304 x 360 and 1920 x 270 (the STRIP RULE
+// below) — rendered by
 // tools/tiles/render_covers.py under the cover rule below with PIL's Lanczos
 // (the mocks' own filter) and rerun after a drop. Read from the bundle as the
 // icons are, BY NAME (GuiPlatform::bundled_tile_names and
@@ -41,13 +50,16 @@ struct AppState;
 // OVER THE BUNDLE'S BY NAME: the catalog is every name of that folder, then
 // every bundle name none of them shadows, read at the launch check and at
 // every bake under the rules below unchanged — so a material is retuned by
-// dropping the cover the window matches (the tablet's `<Name>-2304x1440.png`;
+// dropping the cover the window matches (the tablet's `<Name>-2304x1440.png`,
+// the brass's `Metal-2304x360.png`;
 // a master alone loses to a bundled cover that reaches the window). An absent
 // folder is nothing (no file, no line, no card); no device key, no Settings
 // row (materials.cpp's tile_files). A MATERIAL WITH NEITHER A MASTER NOR A COVER, A FILE THAT
 // IS NEITHER A PNG NOR A JPEG, OR A COVER NOT THE SIZE ITS NAME SAYS, IS THE
 // LAUNCH'S HARD FAIL naming the file (materials::check, which reads each
-// file's first 64 KiB alone); a window no cover reaches with no master to
+// file's first 64 KiB alone; a cover of any height its name proves — a
+// strip's height against its lane is the match's, below); a window no
+// cover reaches with no master to
 // scale — the tablet's, were it ever larger than 2304 x 1440 — the bake's,
 // the same way.
 //
@@ -72,6 +84,22 @@ struct AppState;
 // the same grain); ONLY A WINDOW BEYOND EVERY COVER IN A DIMENSION scales a
 // master under the cover rule, by the icons' Lanczos-3 area filter
 // (svg_icon::raster_regions) from one decode.
+//
+// THE STRIP RULE (architect 2026-10-22, "make the brass image a lot smaller
+// … cutting the image in half or a quarter vertically, keeping the same
+// length"): A MATERIAL'S COVER HEIGHT IS ITS OWN (kGuiMaterialCoverDivisor) —
+// the brass, the marker lane's accent alone (17 W, 51 rows at 300 %), covers
+// A QUARTER OF THE WINDOW'S HEIGHT at its full width, the others the whole
+// window. A strip is the master scaled by ONE factor s = W / w to the
+// window's WIDTH, its CENTER rows (the overhang cropped evenly top and
+// bottom); a master too short for the strip at that factor is the master's
+// hard fail, never a stretch (the masters are 16:9, so none is). THE MATCH
+// for a strip material is the smallest cover at least W wide and at least
+// THE LANE'S rows tall, and the bake decodes its center columns and THE
+// LANE'S ROWS FROM ITS CENTER ROWS — so the brass pixel on screen at (x, y)
+// is the strip's center row for the lane's row y, not the cover's (x, y);
+// a window wider than every strip scales the master under this rule
+// (materials.cpp's source_regions, bake_metal).
 //
 // THE BAKE RULE (architect: "absolutely has to be"; the cost table, cairo
 // into a 2304 x 1440 surface: a solid fill 0.016 ms, a 1:1 blit of a
@@ -102,20 +130,20 @@ struct AppState;
 // RECTANGLE; every line, bevel, ring and word a solid fill. ONLY THE PIXELS
 // A MATERIAL IS EVER DRAWN ON ARE BAKED, as tiles of the window (the masters
 // and covers never stay resident):
-//   WOOD    the rows above the brass panel (the band's top to the tab
-//           strip's foot; the caption's rows from 2026-10-21 to 2026-10-22,
-//           when the caption left the wood) and below it (the dock bar to
-//           the border's last row), window-wide (the program frame's two
-//           columns beside the panel went 2026-10-21); the rows THE BORDER
-//           UNDER ROW 8 stands on when a dialog editor's stack lifts it onto
-//           the on-screen keyboard's band (modal_box.h); and THE VOID's copy
-//           of the band's rows (below);
-//   METAL   ONE TILE, THE WHOLE CLIENT (2026-10-21: the cards, the tooltip,
-//           the modal family and the keyboard's band
-//           stand anywhere on it — the brass panel from the tab strip's top
-//           to the dock bar until then; the sizing frame's band round the
-//           client with it 2026-10-21 to 2026-10-22); and THE INACTIVE TAB'S
-//           BODY rows (below);
+//   WOOD    ONE TILE, THE BAND'S TOP TO THE WINDOW'S LAST ROW, window-wide
+//           (2026-10-22, the brass an accent and the flat family the wood:
+//           the cards, the tooltip, the modal family and the keyboard's band
+//           stand anywhere below the caption; the rows above and below the
+//           brass panel, the canvas's margins and the lifted border's rows
+//           earlier that day; the caption's rows 2026-10-21 to 2026-10-22);
+//           THE VOID's copy of the band's rows (below); and THE INACTIVE
+//           TAB'S BODY rows (below);
+//   METAL   ONE TILE, THE MARKER LANE'S ROWS, window-wide, from the strip
+//           (2026-10-22, the STRIP RULE; THE WHOLE CLIENT 2026-10-21 to
+//           2026-10-22, when the flat family stood on it, the brass panel
+//           from the tab strip's top to the dock bar before that; the
+//           sizing frame's band round the client and the inactive tab's body
+//           rows with it 2026-10-21 to 2026-10-22);
 //   CASE    THE CASE PATCHES (2026-10-21, a window-wide band per seat row
 //           until then) — ONE PATCH PER GLYPH SEAT, at rest and pressed (one
 //           line further in), for every case the band, row 8 and the render
@@ -142,19 +170,23 @@ struct AppState;
 // pixels are copied straight out of it (svg_icon::raster_regions); the
 // window's conversion is the transform's word through its table-driven
 // encode (display_transform.h's p3_word_from_srgb_fast).
-// RESIDENT at 300 % on 2304 x 1440 about 25 MB (the brass's one tile 13.3
-// and its tab body 0.4, the wood 3.8 with its void, the ebony 7.4 — the
-// program's cases' patches 1.4, about fifty seats, THE WORD BUTTONS 0.5,
-// their seats 216 x 60 at three cluster places on the row's two lifts, and
-// THE KEYS 5.5, 38 tiles of 78 rows at rest and pressed over the three
-// pages' slots), on the laptop's maximized 1920 x 1047 at 138 % about 10 MB
-// (the brass 8.0, the wood 1.4, the word buttons 0.07 and no keys — the
+// RESIDENT at 300 % on 2304 x 1440 about 22 MB (the wood 14.1 — its tile
+// 12.8, rows 54..1440 window-wide, its void 0.9 and the tab body 0.4 — the
+// brass's lane tile 0.47, 2304 x 51, the ebony 7.4: the program's cases'
+// patches 1.4, about fifty seats, THE WORD BUTTONS 0.5, their seats
+// 216 x 60 at three cluster places on the row's two lifts, and THE KEYS
+// 5.5, 38 tiles of 78 rows at rest and pressed over the three pages'
+// slots), on the laptop's maximized 1920 x 1047 at 138 % about 9.2 MB (the
+// wood about 8.4, the brass 0.18, the word buttons 0.07 and no keys — the
 // laptop paints no keyboard) (ARGB32, computed off the geometry 2026-10-22
-// when the word buttons and the keys took the ebony — 19 and 10 that
-// morning, when the caption left the wood and the ebony and the sizing
-// frame's band the brass; 19.5 and the brass 8.1 the day before, 8.7 and
-// 3.0 MB measured that morning; materials::resident_bytes, which the trace
-// line prints at every bake, is the measure).
+// when the flat family took the wood and the brass became the lane's strip;
+// 26.5 and 10.6 earlier that day, when the wood took the panel, the brass's
+// whole-client tile 13.3 / 8.0; 25 and 10 that morning, when the word
+// buttons and the keys took the ebony; 19 and 10 before that, when the
+// caption left the wood and the ebony and the sizing frame's band the
+// brass; 19.5 and the brass 8.1 the day before, 8.7 and 3.0 MB measured
+// that morning; materials::resident_bytes, which the trace line prints at
+// every bake, is the measure).
 //
 // THE REGIONS — WHICH MATERIAL A SURFACE IS (GuiMaterialRegion, a scope the
 // painter names):
@@ -168,28 +200,57 @@ struct AppState;
 //          render.h's caption block.) THE VOID — the band's recess between
 //          the panes — is the wood UNDER THE LUMINANCE RULE AT kWoodVoidLuma
 //          (his one exception to "the wood as drawn"); every other wood Face
-//          pixel is the cover itself.
-//   METAL  ONE PANEL from the column's air to the dock bar, window-wide (the
-//          air, the view bar's, the ruler's and the marker lane's grounds,
-//          the cue labels' face boxes with them, the canvas's side margins
-//          and its rings, the divider's face row in the margins, the foot)
-//          and THE TWO TABS' BODIES, the strip's ground staying wood: the lit
-//          tab the brass as drawn, the inactive tab's body the brass under
-//          Cool Edit's measured 15-row gradient as a LUMA RATIO (kTabBodies'
-//          Default row, each row's HLS lightness over the Default Face's
-//          taken onto the brass Face — the frame's lighter inactive tab). The
-//          divider's face row inside the canvas is the GPU's flat Face. AND
-//          SINCE 2026-10-21 THE FAMILY THAT WAS FLAT (architect: "the light
-//          brown should be brass, but the dark brown should stay a flat
-//          surface — the user shouldn't be typing on a non-flat color";
-//          "dropdowns should be brass"): THE CARDS AND THE TOOLTIP, THE
-//          MODAL FAMILY'S BOX MARGINS, ITS RING, A PROMPT'S FACE INTERIOR AND
-//          ITS CONTROLS ROW (modal_box.h: the dialog editors, the prompts,
-//          the render player, the project picker, the progress modal), THE
-//          ON-SCREEN KEYBOARD'S BAND (and, until 2026-10-21, THE SETTINGS
-//          POPUP, which d3e1d275 replaced with the one editor in the modal
-//          box) — each the brass as drawn at its own place, its relief the brass Face's tones (the
-//          laptop's sizing frame among them 2026-10-21 to 2026-10-22).
+//          pixel is the cover itself. AND SINCE 2026-10-22 (architect: "in
+//          the original the brass is used only for accents"; the brass
+//          2026-10-21 to 2026-10-22) EVERYTHING THE BRASS PANEL HELD BUT THE
+//          MARKER LANE BETWEEN THE FRAME COLUMNS, THE RULER'S GROUND AND THE
+//          VIEW BAR'S FRAME: the column's air, the view bar's, the ruler's
+//          and the marker lane's columns outside the canvas's (the margins'
+//          width each side), the canvas's side margins and its rings, the
+//          divider's face row in the margins, the foot; AND THE TWO TABS
+//          ("leave the tabs in wood"): the lit tab the wood as drawn, the
+//          inactive tab's body the wood under Cool Edit's measured 15-row
+//          gradient as a LUMA RATIO (kTabBodies' Default row, each row's HLS
+//          lightness over the Default Face's taken onto the wood Face — the
+//          frame's lighter inactive tab). AND SINCE 2026-10-22 THE FAMILY
+//          THAT WAS FLAT, then the brass (architect 2026-10-22, "just make
+//          the rest wood — that's in keeping with the instrument: the brass
+//          is supposed to be little touches here and there"; the brass
+//          2026-10-21 to 2026-10-22 — "the light brown should be brass" —
+//          the flat chrome before): THE CARDS AND THE TOOLTIP, THE MODAL
+//          FAMILY'S BOX MARGINS, ITS RING, A PROMPT'S FACE INTERIOR AND ITS
+//          CONTROLS ROW (modal_box.h: the dialog editors, the prompts, the
+//          render player, the project picker, the progress modal), THE
+//          ON-SCREEN KEYBOARD'S BAND — each the wood as drawn at its own
+//          place, its relief the wood Face's strokes — and THE CHROME'S
+//          DERIVED ROLES (chrome_derive.h's kChromeRoles: the palette's
+//          `face` is the wood's, render.cpp's panel_face). EVERY LINE, BEVEL
+//          AND RING ON THE WOOD is the wood's flat stroke (the TONE RULE) —
+//          the canvas's rings, the ruler frame's two side columns, the tab
+//          edges — and A STROKE BETWEEN THE TWO MATERIALS TAKES THE WOOD'S
+//          (the ruler frame's side columns, between its brass-derived ground
+//          and the wood's margin: paint_ruler_row). THE STEREO DIVIDER'S ROWS
+//          ARE THE WOOD'S END TO END, inside the canvas too (render.h's
+//          waveform_divider: no seam at the frame columns).
+//   METAL  AN ACCENT since 2026-10-22 (ONE PANEL from the column's air to
+//          the dock bar, window-wide, and the two tabs' bodies 2026-10-21 to
+//          2026-10-22; the flat family's grounds 2026-10-21 to 2026-10-22).
+//          THE BRASS'S THREE PLACES, its only readers: (1) THE MARKER LANE'S
+//          GROUND BETWEEN THE FRAME COLUMNS' INNER EDGES — the canvas's x
+//          extent on the lane's rows, the cue labels' face boxes with it
+//          (clipped to the canvas's columns; the flag editor's riding cells
+//          the wood past them) — the brass tile as drawn, no ring on the
+//          lane, the one reader of the tile's pixels; (2) THE RULER'S GROUND,
+//          its flat `mid`, and the ruler frame's foot line under it, as they
+//          were ("leave the timestamp lane a flat solid color as you have
+//          it"); (3) THE VIEW BAR'S FRAME, its flat strokes — (2) and (3)
+//          reading its Face, the lane's mean (the TONE RULE), through
+//          set_source's Metal flats (paint_ruler_row, render_trim_flags under
+//          the Metal scope); and (4) THE DISABLED CUE'S FADED TRIANGLE, LABEL
+//          AND SHADOW, mixed toward its Face, the material they stand on
+//          (architect 2026-10-22; render.cpp's fill_program_palette,
+//          cool_edit_derive.h's faded look) — the four the Metal Face's only
+//          readers.
 //   CASE   EVERY CASE (the band's, row 8's, the render player's) AND SINCE
 //          2026-10-22 EVERY WORD BUTTON AND EVERY KEY OF THE ON-SCREEN
 //          KEYBOARD (architect: "buttons in ebony — yes"; paint_ce_case on
@@ -215,15 +276,16 @@ struct AppState;
 //          lightness, the light copy F8F8F8 (disabled_glyph_tones, below).
 //          (The caption buttons wore the same ebony at a face of their own,
 //          their Marlett glyphs the ink, 2026-10-21 to 2026-10-22.)
-//   FLAT   NO GROUND SINCE 2026-10-21 (the family above went to the brass).
+//   FLAT   NO GROUND SINCE 2026-10-21 (the family went to the brass, and
+//          to the wood 2026-10-22).
 //          The scope's default still: what stays flat is named by its painter
 //          — EVERY FIELD (a dialog editor's line, the lists' ground where you
 //          pick, the time fields: the chrome's field pair) and every case's
 //          own lines and rings (THE WORD BUTTONS AND THE KEYBOARD'S KEYS were
 //          flat raised faces here until 2026-10-22, "ebony eventually, flat
 //          fine for now", the ebony's CASE since) — their roles derived by
-//          chrome_derive.h's rules FROM THE METAL'S FACE (the text's swaps
-//          following it).
+//          chrome_derive.h's rules FROM THE WOOD'S FACE since 2026-10-22, the
+//          metal's 2026-10-21 to 2026-10-22 (the text's swaps following it).
 // UNTOUCHED: the well and everything the palette draws (the canvas, the view
 // bar's black field and span, the cues' triangles and dots, the playhead),
 // every glyph, the cases' black outline; and THE WINDOWS PARTS (2026-10-22,
@@ -231,10 +293,15 @@ struct AppState;
 // and the sizing frame, constants all.
 //
 // THE TONE RULE (architect 2026-10-21): EACH MATERIAL'S FACE IS ITS BAKED
-// COVER'S MEAN COLOR, measured at the bake (materials::face) — the brass's
-// over its ground tile as decoded (before the tab body is derived from it),
-// THE WOOD'S OVER THE ROWS ABOVE AND BELOW THE PANEL WINDOW-WIDE, THE
-// CAPTION'S AMONG THEM (before the void is derived), and THE EBONY'S OVER
+// COVER'S MEAN COLOR, measured at the bake (materials::face) — THE BRASS'S
+// OVER ITS LANE TILE, the strip's center rows the bake reads (2026-10-22;
+// over the whole cover's panel rects, the tab strip's top to the canvas's
+// top, the canvas's foot to the dock bar and the two margins between,
+// 2026-10-21 to 2026-10-22 — 765327 there, 775429 the lane's on the tablet's
+// covers), THE WOOD'S OVER THE ROWS
+// ABOVE AND BELOW THE PANEL WINDOW-WIDE, THE CAPTION'S AMONG THEM (before the
+// void and the tab body are derived; the panel it took 2026-10-22 never in
+// it), and THE EBONY'S OVER
 // THE FULL-WIDTH ROWS THE PROGRAM'S CASES' PATCHES ARE CUT FROM AND THE
 // CAPTION ROW (each seat row's g + lw rows, window-wide; the word buttons'
 // and the keys' rows, ebony since 2026-10-22, never in it), NOT OVER THE
@@ -250,8 +317,9 @@ struct AppState;
 // dark lines, the pane frames, the grooves, the rings, row 8's bars' lines.
 // Only the Face tone itself is the cover as drawn. THE ROAD IS ONE
 // CHOKEPOINT: the
-// painters keep their palette members — every panel tone a tone of the metal
-// Face, the palette's `face` (render.h's install) — and set_surface_source
+// painters keep their palette members — every panel tone a tone of the wood
+// Face (the metal's 2026-10-21 to 2026-10-22), the palette's `face`
+// (render.h's install) — and set_surface_source
 // (render.h) knows each flat tone by its bytes (set_tone_face) and swaps the
 // source for the scope's material: the Face its cover, the tile under the
 // fill's own extents where they meet the client; any other tone that
@@ -267,33 +335,37 @@ struct AppState;
 // tones were a multiplicative shortcut that clips, FFD688; the HLS tone
 // differing a little from them is the mock's inaccuracy.)
 //
-// THE INKS (constants, but the shadow's offset a key): ONE INK, kWordInk
-// (architect 2026-10-21, v1 of five: "they should be lower contrast; only
-// flags should be very high contrast"), ON EVERY WORD AND DIGIT ON THE CHROME
-// BUT THE FLAGS — the caption's title (dulled to render.h's
-// kCaptionInkInactive while the window is inactive, 2026-10-22), the tab
-// labels, the ruler's digits and ticks, row 8's clock and the render
-// player's two fields (on kTimeFieldGround, their rings the region's tones,
-// geometry and pads unchanged), row 8's state line and, SINCE 2026-10-22,
-// THE WORDS ON THE EBONY — the word buttons' labels with their access-key
-// underlines and the on-screen keyboard's caps (the caption
+// THE INKS (constants, but the shadow's offset a key): ONE INK, THE BONE,
+// kBoneInk F0F0F0 (architect 2026-10-22: "the flags' F0 works well
+// everywhere … I'm committed to F0 in the other places"; the light glyphs on
+// the ebony stand for the bone accidentals), ON EVERY WORD AND DIGIT THE
+// CHROME PAINTS AND ON THE FLAG LABELS, the words and the flags one ink — the
+// caption's title (dulled to render.h's kCaptionInkInactive while the window
+// is inactive), the tab labels, the ruler's digits and ticks, row 8's state
+// line, THE WORDS ON THE EBONY — the word buttons' labels with their
+// access-key underlines and the on-screen keyboard's caps (the caption
 // buttons' glyphs 2026-10-21 to 2026-10-22: Windows' black since, render.h's
-// caption block); THE WORDS
-// that wore a drop shadow keep it — kWordShadow at (+d, +d) DEVICE PX, d the
-// `text_shadow` key (materials::text_shadow_px; the settled mock's 2 at
-// 300 %), on the title and the tab labels, and on the ebony's words (the
-// underline's shadow with its word's) — and the ruler's digits and the
-// state line their own (+1, +1) shadows. THE MARKER LANE'S RESTING LABELS
-// stay kNearWhite, THE ONE HIGH-CONTRAST TEXT (a disabled cue's label fading
-// from it toward the metal's Face; the triangles, the yellow head, the dots,
-// the selected label's chrome text unchanged). (The old brass C9A961 on the
-// title and the menu row's words, the near-white on the tab labels, the
-// ruler, the caption glyphs, and the amber F0B030 on the clock, retired the
-// same day.) THE SELECTION PAIR is the constant kSelectionFill under
-// kSelectionText (chrome_derive.h's rows). The cards', the tooltip's and the
-// dialogs' text in their boxes keep the chrome's text roles. A disabled
-// word's emboss is as before, its light copy the material's own light tone
-// (materials::flat) — no word on the ebony is ever dead;
+// caption block) — and THE MARKER LANE'S RESTING LABELS (a disabled cue's
+// label fading from it toward the brass's Face, the lane's, 2026-10-22; the triangles, the yellow
+// head, the dots, the selected label's chrome text unchanged). THE CLOCKS
+// ALONE KEEP E6D5A8, the words' ink of 2026-10-21, as their own constant
+// while it is under consideration — row 8's clock and the render player's
+// two fields, kTimeFieldDigits on kTimeFieldGround (their rings the
+// region's tones, geometry and pads unchanged). THE WORDS that wore a drop
+// shadow keep it — kWordShadow at (+d, +d) DEVICE PX, d the `text_shadow`
+// key (materials::text_shadow_px; the settled mock's 2 at 300 %), on the
+// title and the tab labels, and on the ebony's words (the underline's
+// shadow with its word's) — and the ruler's digits and the state line their
+// own (+1, +1) shadows. (The old brass C9A961 on the title and the menu
+// row's words, the near-white on the tab labels, the ruler, the caption
+// glyphs, and the amber F0B030 on the clock, retired 2026-10-21 for one ink
+// E6D5A8 on the words, the flags near-white apart; that two-ink split
+// retired 2026-10-22.) THE SELECTION PAIR is the constant kSelectionFill
+// under kSelectionText, the bone (chrome_derive.h's rows). The cards', the
+// tooltip's and the dialogs' text in their boxes keep the chrome's text
+// roles. A disabled word's emboss is as before, its light copy the
+// material's own light tone (materials::flat) — no word on the ebony is ever
+// dead;
 // a disabled glyph is Cool Edit's emboss (the caption's Marlett cell
 // Windows' DSS_DISABLED emboss since 2026-10-22, render.h's caption block).
 
@@ -302,6 +374,12 @@ inline constexpr int kGuiMaterialCount = 3;
 // THE DROP NAMES, the masters' file stems, in the enum's order.
 inline constexpr const char* kGuiMaterialNames[kGuiMaterialCount] = {
     "Wood", "Metal", "Case"};
+// EACH MATERIAL'S COVER HEIGHT, the window's height over this (the head's
+// STRIP RULE, architect 2026-10-22, "make the brass image a lot smaller …
+// cutting the image in half or a quarter vertically, keeping the same
+// length"): the brass a quarter-height strip, the others the whole window.
+// tools/tiles/render_covers.py's FRACTION is the same table.
+inline constexpr int kGuiMaterialCoverDivisor[kGuiMaterialCount] = {1, 4, 1};
 
 // THE REGION A SURFACE STANDS IN (the head's map), the current one a scope's
 // (GuiMaterialScope): which material a flat tone resolves to. Flat the
@@ -320,37 +398,43 @@ inline constexpr double kCaseHighlight     = 0.14;
 inline constexpr double kCaseShadowFirst   = -0.08;
 inline constexpr double kCaseShadowLast    = -0.10;
 inline constexpr double kCaseCorner        = -0.10;
-// THE INK (architect 2026-10-21, v1 his pick of five: "they should be lower
-// contrast; only flags should be very high contrast"): ONE COLOR on every
-// word and digit on the chrome but the flags — the caption's title, the tab
-// labels, the ruler's digits and ticks, row 8's clock and the render
-// player's two fields, the state line and, since 2026-10-22, the word
-// buttons' labels and the keyboard's caps on the ebony —
-// over the words' shadow where a word wore it (the old brass C9A961, "too
-// golden", retired). THE FLAG LABELS' NEAR-WHITE is the one high-contrast
-// text, and the selection's text.
-inline constexpr uint32_t kWordInk    = 0xE6D5A8;
+// THE BONE INK (architect 2026-10-22: "the flags' F0 works well everywhere
+// … I'm committed to F0 in the other places"; "the F0 bone color"): ONE INK,
+// the light glyphs on the ebony standing for the bone accidentals, on EVERY
+// WORD AND DIGIT THE CHROME PAINTS AND ON THE FLAG LABELS — the caption's
+// title, the tab labels, the ruler's digits and ticks, the state line, the
+// word buttons' labels and the keyboard's caps on the ebony, the cue labels
+// at rest — over the words' shadow where a word wore it. The words and the
+// flags are one ink (the head's INKS), and it is the selection's text.
+inline constexpr uint32_t kBoneInk    = 0xF0F0F0;
 inline constexpr uint32_t kWordShadow = 0x140C06;
-inline constexpr uint32_t kNearWhite  = 0xF0F0F0;
-// THE TIME FIELDS' GROUND (black) AND DIGITS (the ink; the amber F0B030
+// THE TIME FIELDS' GROUND (black) AND DIGITS: row 8's clock and the render
+// player's two fields alone, LEFT ON E6D5A8 (architect 2026-10-22, "let's
+// leave the timestamp alone for now": the words' ink of 2026-10-21, kept
+// here as the clocks' own constant while it is under consideration — a
+// brassy tone was mocked and not picked; no key, no row; the amber F0B030
 // until 2026-10-21).
 inline constexpr uint32_t kTimeFieldGround = 0x000000;
-inline constexpr uint32_t kTimeFieldDigits = kWordInk;
+inline constexpr uint32_t kTimeFieldDigits = 0xE6D5A8;
 // THE SELECTION PAIR (architect 2026-10-21, "brass-like … the selection text
-// white or near-white"): a constant fill and the near-white text everywhere
+// white or near-white"): a constant fill and the bone text everywhere
 // the chrome's selected pair paints — the flag editor's selected substring,
 // the lit popup rows, the lists' selected rows, the dialog editors'
 // selections (chrome_derive.h's selected_fill / selected_text rows; the
 // waveform's ink under the program text's other member, 2026-10-16..10-21,
 // retired).
 inline constexpr uint32_t kSelectionFill = 0x9C7B3A;
-inline constexpr uint32_t kSelectionText = kNearWhite;
+inline constexpr uint32_t kSelectionText = kBoneInk;
 
 namespace materials {
 
 // THE LAUNCH'S CHECK (the head): every material has a master or a cover in
-// the catalog and every one of its files is a PNG or a JPEG. Answers the first
-// error, prefixed `tiles: ` and naming the file — gui_main's hard fail.
+// the catalog and every one of its files is a PNG or a JPEG, a cover the
+// size its name says — of ANY height, so a strip's `Metal-<W>x<H>.png`
+// passes whatever its H (the STRIP RULE: its height against the lane's rows
+// is the bake's match, which skips a strip too short and fails the bake
+// where none reaches and no master stands). Answers the first error,
+// prefixed `tiles: ` and naming the file — gui_main's hard fail.
 std::optional<std::string> check();
 
 // THE BAKE, AT ONCE (the head's BAKE RULE): when the key `app` gives
@@ -402,7 +486,7 @@ int text_shadow_px();
 
 // THE TONE TABLE: the flat tones a painter hands the surface chokepoint,
 // each Cool Edit's tone of THE CHROME'S FACE (the palette's `face`, the
-// metal's) — the Face itself and the panel tones a relief or a ground puts
+// wood's since 2026-10-22) — the Face itself and the panel tones a relief or a ground puts
 // down (kTones' Face tones but the text, the label and the cue's shadow,
 // which are ink) — rebuilt by every palette install.
 void set_tone_face(uint32_t chrome_face);
@@ -453,8 +537,9 @@ DisabledGlyphTones disabled_glyph_tones();
 // on the gate) takes the ramp's twenty flat stops off the ebony Face over
 // its height.
 void paint_case_ramp(cairo_t* cr, int x, int y, int w, int h, bool down);
-// THE INACTIVE TAB'S BODY over `body` (the head's METAL): a copy of its
-// baked rows at the same rectangle.
+// THE INACTIVE TAB'S BODY over `body` (the head's WOOD): a copy of its
+// baked rows at the same rectangle, the wood's flat mean where none holds
+// it.
 void paint_tab_body(cairo_t* cr, const GuiRect& body);
 
 // THE RESIDENT BAKES' BYTES (the head's figures).

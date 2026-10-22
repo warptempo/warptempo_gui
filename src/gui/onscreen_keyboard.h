@@ -537,10 +537,10 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // x and width, the window's since 2026-10-21, when the program frame's
 // columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT;
 // it carries its edge pad on all four sides (edge_pad_px) and NO LINE OF ITS
-// OWN. ITS GROUND IS THE BRASS AS DRAWN (architect 2026-10-21), ITS KEYS
-// THE EBONY CASE (architect 2026-10-22, "buttons in ebony — yes"; the flat
-// raised faces until then) — paint_onscreen_keyboard, materials.h's METAL
-// and CASE. Under a dialog editor the modal
+// OWN. ITS GROUND IS THE WOOD AS DRAWN (architect 2026-10-22; the brass
+// 2026-10-21 to 2026-10-22), ITS KEYS THE EBONY CASE (architect 2026-10-22,
+// "buttons in ebony — yes"; the flat raised faces until then) —
+// paint_onscreen_keyboard, materials.h's WOOD and CASE. Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit,
 // the foot, the controls row and the border under row 8, all lifted onto the
 // band); under the flag editor, the one editor with no dialog, it stands

@@ -1134,7 +1134,7 @@ void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
     else                                 viewport.refresh_flag_cache();
     // THE CLIENT ALONE (platform.h's damage pair): a preset moves no chrome
     // role (the selection pair is a constant since 2026-10-21,
-    // chrome_derive.h; every other role a tone of the brass's Face), only
+    // chrome_derive.h; every other role a tone of the wood's Face), only
     // the waveform's and the program's roles, which paint inside the client;
     // the restored laptop's sizing frame outside it wears Windows' constants
     // (render.h's caption block), which no preset moves. No icon moves

@@ -9,7 +9,7 @@
 #include "palette_file.h"   // kGuiPaletteRoles
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "chrome_derive.h"  // live_chrome_words (the chrome off the metal's Face)
+#include "chrome_derive.h"  // live_chrome_words (the chrome off the wood's Face)
 #include "materials.h"      // the surface chokepoint's materials
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -283,6 +283,13 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     sink.begin(/*aliased=*/true);
     const GuiPalette& pal = palette();
+    // THE WOOD'S TONES END TO END (architect 2026-10-22, the seam ruled out:
+    // render.h's waveform_divider): each row the wood's flat stroke of its
+    // tone, materials::flat under the wood's scope — the strokes the frame
+    // columns' share takes in the margins (paint_canvas_column_frame), so no
+    // seam stands where the divider meets them; the face row the wood's
+    // flat mean, the canvas interior never a tile.
+    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
     const WaveformDivider div = waveform_divider(area.h);
     const auto divider_row = [&](int y, int h, GuiColor color) {
         const int top = std::max(area.y, area.y + y);
@@ -291,9 +298,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
         const GuiRect r{area.x, top, area.w, bot - top};
         sink.rects(std::span<const GuiRect>(&r, 1), color);
     };
-    divider_row(div.y, div.line, pal.ce_hilight);
-    divider_row(div.y + div.line, div.face, pal.face);
-    divider_row(div.y + div.line + div.face, div.line, pal.ce_dark);
+    divider_row(div.y, div.line, materials::flat(pal.ce_hilight));
+    divider_row(div.y + div.line, div.face, materials::flat(pal.face));
+    divider_row(div.y + div.line + div.face, div.line, materials::flat(pal.ce_dark));
     sink.end();
 }
 
@@ -1696,7 +1703,7 @@ enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 // render.h, owns the look): the triangle's color, the dots on each of the
 // stem's two phases (none at all on a disabled cue), and whether its resting
 // label wears the invalid color. The label's other looks are the segment's
-// own (selected, inert or the lanes' near-white, materials.h's kNearWhite).
+// own (selected, inert or the bone, materials.h's kBoneInk).
 struct FlagFace {
     GuiColor  triangle;
     GuiColor  shadow;
@@ -1737,8 +1744,9 @@ struct FlagFace {
 // ≡ 7 and the blue's ≡ 3 (mod 8), the blue's first from the top — the
 // capture's absolute red y ≡ 3 / blue y ≡ 7 re-counted from Cool Edit's
 // canvas top at y = 108 ≡ 4 (mod 8) (program_spec.h's dot fields, the
-// derivation's owner); "light" the lanes' near-white (materials.h's
-// kNearWhite on the brass, 2026-10-21; the panel's `ce_hilight` until then),
+// derivation's owner); "light" the bone (materials.h's kBoneInk, the words'
+// and the flags' one ink since 2026-10-22; the near-white F0F0F0 on the
+// brass, the same bytes, 2026-10-21; the panel's `ce_hilight` until then),
 // "white" the
 // chrome's `label` — Cool Edit's program text, EFEFEF on the default Face,
 // dark past its light-face swap (2026-10-10: the chrome's `selected_text` it
@@ -1786,7 +1794,7 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
 // memo's shared handle, CueRun — null exactly when the segment is absent),
 // its face box [x0, x1) in window x (the text at x0 plus the pad quantum),
 // and its look — the chrome's selected text on the face, the faded inert
-// label, or the lanes' near-white.
+// label, or the bone.
 struct CueSegment {
     bool   present  = false;
     CueRun run;
@@ -1978,14 +1986,14 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             // The label's ink (resolve_flag_face's table): a selected
             // segment the chrome's text on the face, an invalid cue's
             // included (2026-10-11), else the faded inert label, an invalid
-            // cue's resting invalid color, or the near-white — a selected
+            // cue's resting invalid color, or the bone — a selected
             // inert segment the chrome's text, so its selection shows.
             show_cue_label(cr, *s.run, tx, base,
                            s.selected ? pal.label
                            : s.inert  ? pal.ce_off_label
                            : c.face.invalid_label
                                       ? pal.invalid_label
-                                      : hex(kNearWhite),
+                                      : hex(kBoneInk),
                            c.face.shadow);
         }
         cairo_restore(cr);
@@ -2706,15 +2714,17 @@ namespace {
 // THE PROGRAM'S ELEVEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's first shared half (the
 // chrome's members, derived from the same Face, are the other's; the
-// generation is each member's own bump) — with THE PANEL'S FACE THE METAL'S
+// generation is each member's own bump) — with THE PANEL'S FACE THE WOOD'S
 // once the materials are baked (materials.h's TONE RULE: every chrome tone
 // derives from the material it stands on, the chrome's roles from the
-// brass's Face; the preset's `face` before the first bake, construction
-// state no frame paints).
+// wood's Face since 2026-10-22, the brass's 2026-10-21 to 2026-10-22 — the
+// brass's own strokes are materials::set_source's Metal flats off its own
+// Face; the preset's `face` before the first bake, construction state no
+// frame paints).
 uint32_t panel_face(const GuiPaletteWords& w) {
     static constexpr std::size_t kFace = palette_role_index("face");
     static_assert(kFace < kGuiPaletteRoleCount);
-    return materials::baked() ? materials::face(GuiMaterial::Metal) : w[kFace];
+    return materials::baked() ? materials::face(GuiMaterial::Wood) : w[kFace];
 }
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
@@ -2735,9 +2745,16 @@ void fill_program_palette(const GuiPaletteWords& w) {
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
     // The disabled cue's faded triangles, shadow and label (2026-10-10): the
-    // label from the lanes' near-white (materials.h's INKS, 2026-10-21).
+    // label from the bone (materials.h's INKS, 2026-10-21), ALL FOUR MIXED
+    // TOWARD THE BRASS FACE, the material the cues stand on (architect
+    // 2026-10-22, truthful to the surface: the marker lane is the brass's
+    // accent — materials.h's METAL, the brass's fourth place; the panel's
+    // face, the wood's, before the bake).
     {
         using namespace cool_edit_derive;
+        const uint32_t face = materials::baked()
+                                  ? materials::face(GuiMaterial::Metal)
+                                  : panel_face(w);
         static constexpr std::size_t kCue = palette_role_index("cue");
         static constexpr std::size_t kInvalid =
             palette_role_index("invalid_label");
@@ -2745,7 +2762,7 @@ void fill_program_palette(const GuiPaletteWords& w) {
         g_palette.ce_off_invalid =
             hex(disabled_triangle(w[kInvalid], face));
         g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(face));
-        g_palette.ce_off_label = hex(disabled_cue_label(kNearWhite, face));
+        g_palette.ce_off_label = hex(disabled_cue_label(kBoneInk, face));
     }
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");
@@ -2754,13 +2771,14 @@ void fill_program_palette(const GuiPaletteWords& w) {
     g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
 }
 // THE CHROME'S MEMBERS off the live words (live_chrome_words,
-// chrome_derive.h: every role a tone of the panel's face — the metal's,
-// 2026-10-21 — but the selection pair, a constant) — the install
+// chrome_derive.h: every role a tone of the panel's face — the wood's since
+// 2026-10-22, the metal's 2026-10-21 to 2026-10-22 — but the selection
+// pair, a constant) — the install
 // family's other shared half, run after the program's whenever either
 // moves.
 void fill_chrome_palette() {
-    // THE CHROME OFF THE PANEL'S FACE, the metal's once baked (materials.h's
-    // FLAT scope: the chrome's roles from the brass's Face).
+    // THE CHROME OFF THE PANEL'S FACE, the wood's once baked (materials.h's
+    // FLAT scope: the chrome's roles from the wood's Face, 2026-10-22).
     GuiPaletteWords words = g_program_words;
     words[palette_role_index("face")] = panel_face(g_program_words);
     const GuiThemeWords w = live_chrome_words(words);
@@ -3087,7 +3105,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MARKER'S OWN STATE for the segments riding the field's right edge,
     // which keep their resting look: the faded inert label, a tie follower's
-    // cells faded (2026-09-19), else the lanes' near-white, or an invalid
+    // cells faded (2026-09-19), else the bone, or an invalid
     // marker's invalid color (below).
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
@@ -3301,7 +3319,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // only by what is typed.
     //
     // Each segment wears its resting look — its box in the panel face (the
-    // brass as drawn), the text in the lanes' near-white, an invalid marker's
+    // brass as drawn over the canvas's columns, the wood past them), the text
+    // in the bone, an invalid marker's
     // dim red or the
     // faded inert label — and none takes
     // the selected look while the field stands, each open having seated the
@@ -3327,6 +3346,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // open gates, and `phase` already answered that question for the box
     // above.
     if (ride_cells) {
+        const GuiRect canvas_cols = waveform_area(app);
         // The cells, off the ONE composer and the ONE measurer the flag pass
         // reads (`ride_text`, composed above), so the re-paint cannot show a
         // different token or a different width from the cell it stands in
@@ -3372,21 +3392,31 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int w  = pad_l + seg_w + pad_r;
             // The face box over the gap and the segment, as the resting
             // label's one box covers its gaps — the brass as drawn
-            // (paint_cues' box, materials.h's METAL).
+            // (paint_cues' box, materials.h's METAL) over the canvas's
+            // columns, THE WOOD past them (the run is not clipped, so a ride
+            // near the right edge reaches the margin, which is the wood's
+            // since 2026-10-22, materials.h's REGIONS).
             const int fx = std::max(cursor_x, face_x0);
-            {
+            const int fx1 = x0 + w;
+            const int brass1 = std::clamp(canvas_cols.x + canvas_cols.w, fx, std::max(fx, fx1));
+            if (brass1 > fx) {
                 const GuiMaterialScope metal(GuiMaterialRegion::Metal);
-                paint_cell_rect(cr, GuiRect{fx, lane.y, x0 + w - fx, fill_h},
+                paint_cell_rect(cr, GuiRect{fx, lane.y, brass1 - fx, fill_h},
+                                pal.face);
+            }
+            if (fx1 > brass1) {
+                const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+                paint_cell_rect(cr, GuiRect{brass1, lane.y, fx1 - brass1, fill_h},
                                 pal.face);
             }
             const double tx = static_cast<double>(x0 + pad_l);
             // The resting label's ink: the faded inert label, else an invalid
-            // marker's invalid color, else the lanes' near-white
+            // marker's invalid color, else the bone
             // (resolve_flag_face's table; materials.h's INKS).
             show_cue_label(cr, seg_run, tx, baseline,
                            cell_dis ? pal.ce_off_label
                            : red    ? pal.invalid_label
-                                    : hex(kNearWhite),
+                                    : hex(kBoneInk),
                            dis ? pal.ce_off_cue_shadow : pal.ce_cue_shadow);
             cursor_x = x0 + w;
         };

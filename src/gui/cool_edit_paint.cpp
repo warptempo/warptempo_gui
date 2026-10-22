@@ -1,6 +1,6 @@
 #include "cool_edit_paint.h"
 
-#include "materials.h"   // the case's ebony, the tabs' brass, the inks
+#include "materials.h"   // the case's ebony, the tabs' wood, the inks
 #include "text_shape.h"
 
 #include <algorithm>
@@ -325,8 +325,10 @@ void paint_ce_tab_strip(
         cell(cr, lane.x, lane.y, lane.w, recess_h, p.face);
         cell(cr, lane.x, page_y, lane.w, lane.h - recess_h, p.ce_hilight);
     }
-    // THE TABS, THE BRASS (materials.h's METAL): every body and edge below.
-    const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+    // THE TABS, THE WOOD (materials.h's WOOD, architect 2026-10-22, "leave
+    // the tabs in wood"; the brass 2026-10-21 to 2026-10-22): every body
+    // and edge below, the edges the wood's flat strokes.
+    const GuiMaterialScope wood_tabs(GuiMaterialRegion::Wood);
     // THE TAB LINE, one run under the inactive tabs, one W past each end
     // (its own rounded part).
     const int reach = scaled_px(kProgramSpec.tab_line_reach_px);
@@ -343,10 +345,10 @@ void paint_ce_tab_strip(
     for (int i = 0; i < kCeTabCount; ++i) {
         const GuiRect& t = layout.tab[static_cast<std::size_t>(i)];
         if (i != active) {
-            // THE BODY: the brass under Cool Edit's measured 15-row gradient
+            // THE BODY: the wood under Cool Edit's measured 15-row gradient
             // as a luma ratio, one stop per W row of its 15, the rows tiling
             // it exactly (kCaseRamp's rule) — its baked rows
-            // (materials::paint_tab_body; materials.h's METAL).
+            // (materials::paint_tab_body; materials.h's WOOD).
             const int body_y = t.y + lw;
             materials::paint_tab_body(
                 cr, GuiRect{t.x + lw, body_y, t.w - 2 * lw, page_y - body_y});
@@ -366,7 +368,7 @@ void paint_ce_tab_strip(
         const int shadow_x = end - grow;    // the drop shadow
         const int mid_x = shadow_x - lw;    // the mid right column
         // THE FACE through the page line (the tab merges into the page) — the
-        // brass as drawn — the hilight left column through it too, the
+        // wood as drawn — the hilight left column through it too, the
         // hilight top row, the mid right column under its mitred top-right
         // block.
         cell(cr, t.x, t.y, shadow_x - t.x, t.h, p.face);
@@ -396,9 +398,10 @@ void paint_ce_tab_strip(
     }
     // THE LABELS IN THE CHROME'S ONE INK over the words' drop shadow at
     // (+d, +d) device px, d the `text_shadow` key (materials.h's INKS,
-    // architect 2026-10-21: kWordInk, the near-white earlier that day, the
-    // program text and Cool Edit's measured ink before), lit or not; a dead
-    // tab's embossed in the brass's tones.
+    // architect 2026-10-22: the bone kBoneInk; E6D5A8 2026-10-21, the
+    // near-white earlier that day, the program text and Cool Edit's measured
+    // ink before), lit or not; a dead
+    // tab's embossed in the wood's tones.
     const double d = static_cast<double>(materials::text_shadow_px());
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
@@ -410,7 +413,7 @@ void paint_ce_tab_strip(
         set_palette_source(cr, hex(kWordShadow));
         text_shape::show_shaped_run(cr, run, layout.label_x[k] + d,
                                     layout.baseline[k] + d);
-        set_palette_source(cr, hex(kWordInk));
+        set_palette_source(cr, hex(kBoneInk));
         text_shape::show_shaped_run(cr, run, layout.label_x[k],
                                     layout.baseline[k]);
     }
@@ -759,6 +762,6 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
     const double lw = static_cast<double>(program_line_px());
     set_palette_source(cr, palette().ce_label_shadow);
     text_shape::show_shaped_run(cr, run, x + lw, baseline + lw);
-    set_palette_source(cr, hex(kWordInk));
+    set_palette_source(cr, hex(kBoneInk));
     text_shape::show_shaped_run(cr, run, x, baseline);
 }

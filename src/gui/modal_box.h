@@ -39,15 +39,15 @@
 //      ABOVE IT (the dock bar's six rows go to the box), its outermost cases
 //      or buttons FLUSH WITH THE RING'S OUTER EDGES;
 //   4. then THE BORDER UNDER ROW 8, on the window's foot.
-// THE PANEL AND THE CONTROLS ROW ARE THE BRASS AS DRAWN (architect
-// 2026-10-21, "the light brown should be brass": materials.h's METAL, the
-// FLAT region retired as a ground); THE FIELDS STAY FLAT ("the user
+// THE PANEL AND THE CONTROLS ROW ARE THE WOOD AS DRAWN (architect
+// 2026-10-22, "just make the rest wood": materials.h's WOOD; the brass
+// 2026-10-21 to 2026-10-22, the FLAT region before); THE FIELDS STAY FLAT ("the user
 // shouldn't be typing on a non-flat color") — a dialog editor's line, the
 // lists' ground; THE WORD BUTTONS ARE THE EBONY CASE (architect 2026-10-22,
 // "buttons in ebony — yes": the band's case on each button's own box, its
 // word in the chrome's one ink — materials.h's CASE and INKS; their flat
 // raised faces, "ebony eventually, flat fine for now", 2026-10-21 to
-// 2026-10-22); a prompt's question stands on the face, the brass
+// 2026-10-22); a prompt's question stands on the face, the wood
 // (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the border, the
 // controls row, the foot), and it lands 6 W below the main window's canvas

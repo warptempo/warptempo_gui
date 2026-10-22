@@ -6,7 +6,6 @@
 #include "device_config.h"      // device_config_path — the override folder beside it
 #include "display_transform.h"
 #include "modal_box.h"          // the render player's controls row
-#include "onscreen_keyboard.h"  // the band's height (the lifted border)
 #include "paint_handler.h"      // program_case_rects, word_and_key_case_rects
 #include "palette_file.h"       // program_palette_words' type
 #include "platform.h"           // GuiPlatform::bundled_tile_names / _bytes
@@ -81,24 +80,16 @@ Key key_of(const AppState& app) {
 // bake alone.
 struct Geometry {
     int w = 0, h = 0;
-    // Wood: above the panel [band_y, panel_top) and below it [panel_bottom,
-    // h), window-wide (the program frame's columns beside the panel went
-    // 2026-10-21; the caption's rows [0, band_y) are its Face's sample alone
-    // since 2026-10-22, materials.h's TONE RULE).
+    // Wood: its Face's sample above the panel [0, panel_top) and below it
+    // [panel_bottom, h), window-wide (materials.h's TONE RULE); its tile
+    // the band's top to the window's last row, window-wide (bake_wood).
     int panel_top = 0, panel_bottom = 0;
-    // ...and THE BORDER UNDER ROW 8 LIFTED ONTO THE ON-SCREEN KEYBOARD'S
-    // BAND under a dialog editor (modal_box.h's modal_border_rect), whose
-    // rows stand inside the panel: the walnut there too.
-    int lifted_border_y = 0, lifted_border_h = 0;
-    // Metal: THE WHOLE CLIENT (2026-10-21, materials.h's METAL) — its Face
-    // measured over the panel alone, as it shipped: the tab strip's top to
-    // the canvas's top, the canvas's foot to the panel's bottom, and the
-    // canvas's two side margins between.
-    int metal_top = 0;
-    GuiRect canvas{};
+    // Metal: THE MARKER LANE'S ROWS, window-wide (materials.h's METAL,
+    // 2026-10-22) — its tile and its Face's sample.
+    int lane_y = 0, lane_h = 0;
     // The void's rows (the band).
     int band_y = 0, band_h = 0;
-    // The inactive tab's body rows.
+    // The inactive tab's body rows (the wood's, 2026-10-22).
     int tab_body_y0 = 0, tab_body_y1 = 0;
     // THE CASES (program_case_rects: every case's outer rect, both states of
     // the `h` view) and the case's line and glyph seat — the rows the
@@ -119,13 +110,11 @@ Geometry geometry_of(const AppState& app) {
     g.w = app.width;
     g.h = app.height;
     const GuiRect strip = top_tab_strip_area(app);
-    g.metal_top = strip.y;
     g.panel_top = strip.y + strip.h;
     g.panel_bottom = bottom_row_area(app).y;
-    const GuiRect border = bottom_border_area(app);
-    g.lifted_border_y = border.y - onscreen_keyboard::surface_height_px();
-    g.lifted_border_h = border.h;
-    g.canvas = waveform_area(app);
+    const GuiRect lane = top_marker_row_area(app);
+    g.lane_y = lane.y;
+    g.lane_h = lane.h;
     const GuiRect band = top_icon_row_area(app);
     g.band_y = band.y;
     g.band_h = band.h;
@@ -167,9 +156,9 @@ struct State {
     bool     baked = false;
     Key      key;
     std::array<uint32_t, kGuiMaterialCount> faces{};
-    // THE TILES (materials.h's BAKE RULE): the wood's and the metal's
-    // grounds, the void, the inactive tab's body and THE CASE PATCHES, one
-    // per seat at rest and one pressed.
+    // THE TILES (materials.h's BAKE RULE): the wood's ground and the
+    // brass's lane, the void, the inactive tab's body (the wood's) and THE CASE
+    // PATCHES, one per seat at rest and one pressed.
     std::vector<Tile> wood, metal, void_tiles, tab_body;
     std::vector<Tile> case_rest, case_down;
     // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
@@ -298,15 +287,17 @@ double case_ramp_ratio(int i, uint32_t ebony) {
                                         static_cast<double>(kCaseStops - 1);
     return luma_ratio(case_tone(ebony, b), ebony);
 }
-// The inactive tab body's luma ratio at stop k (materials.h's METAL):
+// The inactive tab body's luma ratio at stop k (materials.h's WOOD):
 // kTabBodies' Default row, each row's HLS lightness over the Default Face's,
-// taken onto `brass`.
-double tab_body_ratio(int k, uint32_t brass) {
+// taken onto the material's Face `face` (the wood's since 2026-10-22, the
+// brass's until then — on a Face darker than HLS L .5 the ratio is the
+// lightness ratio itself, the same on either).
+double tab_body_ratio(int k, uint32_t face) {
     using namespace cool_edit_derive;
     const TabBody& d = tab_body(kDefaultFace);
     const double a = hls_of(d.rows[static_cast<std::size_t>(k)]).l /
                      hls_of(kDefaultFace).l;
-    return luma_ratio(tone(brass, a, 0.0), brass);
+    return luma_ratio(tone(face, a, 0.0), face);
 }
 
 // One pixel row's channels times `f`, rounded and clamped, opaque.
@@ -549,6 +540,8 @@ struct Source {
     int         cw = 0, ch = 0;   // a cover's size (its name's)
     std::filesystem::path local;   // the override file's path; empty: the bundle's
 };
+// A STRIP MATERIAL (materials.h's kGuiMaterialCoverDivisor) is matched
+// against THE ROWS ITS TILE NEEDS for `h`, not the window's.
 std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
     const std::size_t i = static_cast<std::size_t>(m);
     const Catalog::Cover* best = nullptr;
@@ -563,12 +556,22 @@ std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
     return std::nullopt;
 }
 
+// A STRIP MATERIAL'S PLACE (materials.h's STRIP RULE): the client rows
+// [y, y + h) its tile holds, taken from its source's CENTER rows; the
+// window's height over `divisor` the strip's.
+struct StripRows {
+    int y = 0, h = 0, divisor = 1;
+};
+
 // THE RAW REGIONS of one material for the client w x h (client rects in,
 // every one inside the client; the sRGB surfaces out): its source read by
 // name (the one file), a cover's center crop at the identity, a master under
-// the cover rule.
+// the cover rule — or, for a STRIP material (`strip` non-null), the strip
+// rule: a cover's center columns and the center rows of its height, a
+// master scaled to the window's width alone, its center rows.
 std::expected<std::vector<Surface>, std::string> source_regions(
-    const Source& src, int w, int h, const std::vector<GuiRect>& rects) {
+    const Source& src, int w, int h, const std::vector<GuiRect>& rects,
+    const StripRows* strip = nullptr) {
     const auto bytes = tile_bytes(src.file, src.local);
     if (!bytes) return std::unexpected("tiles: " + bytes.error());
     const std::string label = tile_label(src.file, src.local);
@@ -583,7 +586,20 @@ std::expected<std::vector<Surface>, std::string> source_regions(
                                    std::to_string(src.cw) + "x" +
                                    std::to_string(src.ch));
         ox = (src.cw - w) / 2;
-        oy = (src.ch - h) / 2;
+        oy = strip ? (src.ch - strip->h) / 2 - strip->y : (src.ch - h) / 2;
+    } else if (strip) {
+        // THE STRIP RULE (materials.h): one factor, the window's width over
+        // the master's; the master too short for the strip at that factor
+        // is the master's hard fail, never a stretch.
+        k = static_cast<double>(w) / info->w;
+        const int sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
+        const int sh = static_cast<int>(std::nearbyint(info->h * k));
+        if (sh < h / strip->divisor || sh < strip->h)
+            return std::unexpected("tiles: " + label + ": too short for a 1/" +
+                                   std::to_string(strip->divisor) + " strip at " +
+                                   std::to_string(w) + "x" + std::to_string(h));
+        ox = (sw - w) / 2;
+        oy = (sh - strip->h) / 2 - strip->y;
     } else {
         // THE COVER RULE (materials.h): one factor, the overhang cropped
         // evenly (the tool's own arithmetic, tools/tiles/render_covers.py).
@@ -611,7 +627,9 @@ std::expected<std::vector<Surface>, std::string> source_regions(
 struct Baked {
     std::string                             error;   // empty: success
     uint32_t                                face = 0;
-    std::vector<std::pair<GuiRect, Surface>> grounds, extra, rest, down;
+    // grounds: a material's ground tiles; extra: the wood's void; body: the
+    // wood's inactive tab body; rest / down: the ebony's patches.
+    std::vector<std::pair<GuiRect, Surface>> grounds, extra, body, rest, down;
     double                                  ms = 0.0;   // read, decode, derive
 };
 
@@ -651,52 +669,10 @@ Surface cut(cairo_surface_t* band, int bx, int by, const GuiRect& r) {
     return Surface(out);
 }
 
-// THE WOOD: above the panel from the band's top and below it, window-wide,
-// and THE VOID, the band's rows of the upper wood times kWoodVoidLuma. The
-// rows above the panel are DECODED FROM THE WINDOW'S TOP, the caption's
-// with them, for THE FACE's sample (materials.h's TONE RULE: the caption
-// left the wood 2026-10-22, and its rows stay in the mean so no wood tone
-// moved), and the upper ground tile is CUT from the band's top, the
-// caption's rows dropped with the decode.
-void bake_wood(const Source& src, const Geometry& g, Baked& out) {
-    const std::vector<GuiRect> rects = nonempty({
-        band_of(g, 0, g.panel_top), band_of(g, g.panel_bottom, g.h),
-        band_of(g, std::max(g.lifted_border_y, 0),
-                std::max(g.lifted_border_y + g.lifted_border_h, 0))});
-    auto raw = source_regions(src, g.w, g.h, rects);
-    if (!raw) { out.error = raw.error(); return; }
-    // THE FACE over the two bands alone (the lifted border's rows are a copy
-    // for one painter, not the wood's sample).
-    out.face = mean_of(*raw, 2);
-    const GuiRect& top = rects.empty() ? GuiRect{} : rects.front();
-    const bool top_decoded = top.y == 0 && top.h == g.panel_top;
-    if (top_decoded && g.band_h > 0 && g.band_y >= 0 &&
-        g.band_y + g.band_h <= top.h)
-        out.extra.emplace_back(
-            band_of(g, g.band_y, g.band_y + g.band_h),
-            scaled_rows(raw->front().get(), 0, g.band_y, g.band_h,
-                        [](int) { return kWoodVoidLuma; }));
-    for (std::size_t i = 0; i < rects.size(); ++i) {
-        if (i == 0 && top_decoded) {
-            // The upper ground from the band's top (the caption's rows the
-            // sample's alone).
-            const GuiRect ground =
-                band_of(g, std::clamp(g.band_y, 0, top.h), top.h);
-            if (ground.h > 0)
-                out.grounds.emplace_back(
-                    ground, cut(raw->front().get(), 0, 0, ground));
-            continue;
-        }
-        out.grounds.emplace_back(rects[i], std::move((*raw)[i]));
-    }
-}
-
-// THE MEAN of `surface` (client rect `at`) over the parts of `rects` inside
-// it, each channel's rounded sum.
-uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
-                   const std::vector<GuiRect>& rects) {
-    double sum[3] = {0.0, 0.0, 0.0};
-    double n = 0.0;
+// THE SUMS of `surface` (client rect `at`) over the parts of `rects` inside
+// it, each channel's, added into `sum` and the pixel count into `n`.
+void accumulate(cairo_surface_t* surface, const GuiRect& at,
+                const std::vector<GuiRect>& rects, double (&sum)[3], double& n) {
     cairo_surface_flush(surface);
     const unsigned char* data = cairo_image_surface_get_data(surface);
     const int stride = cairo_image_surface_get_stride(surface);
@@ -713,66 +689,93 @@ uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
         }
         if (x1 > x0 && y1 > y0) n += static_cast<double>(x1 - x0) * (y1 - y0);
     }
+}
+// THE MEAN of the sums, each channel's rounded quotient (0 where no pixel).
+uint32_t mean_word(const double (&sum)[3], double n) {
     uint32_t out = 0;
     if (n <= 0.0) return out;
     for (int c = 0; c < 3; ++c)
         out |= static_cast<uint32_t>(std::nearbyint(sum[c] / n)) << (16 - 8 * c);
     return out;
 }
+// THE MEAN of `surface` (client rect `at`) over the parts of `rects` inside
+// it.
+uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
+                   const std::vector<GuiRect>& rects) {
+    double sum[3] = {0.0, 0.0, 0.0};
+    double n = 0.0;
+    accumulate(surface, at, rects, sum, n);
+    return mean_word(sum, n);
+}
 
-// THE METAL: ONE TILE, THE WHOLE CLIENT (materials.h's METAL, 2026-10-21:
-// the cards, the tooltip, the modal family and the keyboard's band stand
-// anywhere); ITS FACE the mean over the panel's rects as
-// it shipped (the strip's top to the canvas's top, its foot to the panel's
-// bottom, the two margins between), so no tone a painter derives from it
-// moved; and THE INACTIVE TAB'S BODY, its rows of the tile, each W row's
-// stop its luma ratio.
+// THE WOOD (materials.h's WOOD, 2026-10-22: every ground but the marker
+// lane's accent): ONE TILE, THE BAND'S TOP TO THE WINDOW'S LAST ROW,
+// window-wide (the cards, the tooltip, the modal family and the keyboard's
+// band stand anywhere below the caption); THE VOID, the band's rows times
+// kWoodVoidLuma; THE INACTIVE TAB'S BODY, its rows window-wide, each W
+// row's stop its luma ratio (tab_body_ratio). The caption's rows are
+// DECODED as a region of their own for THE FACE's sample alone — the rows
+// above the panel and below it, window-wide, exactly the pixels it was
+// measured over before the wood took the panel (materials.h's TONE RULE),
+// so no wood tone moved. The canvas interior is the GPU's, its rows of the
+// tile never blitted.
+void bake_wood(const Source& src, const Geometry& g, Baked& out) {
+    // The caption's rows (the sample's alone) and the tile's, each decoded
+    // only where it has rows; the tile's index last.
+    const int band_y = std::clamp(g.band_y, 0, g.h);
+    const std::vector<GuiRect> rects = nonempty(
+        {band_of(g, 0, band_y), band_of(g, band_y, g.h)});
+    if (rects.empty() || rects.back().y != band_y) return;
+    auto raw = source_regions(src, g.w, g.h, rects);
+    if (!raw) { out.error = raw.error(); return; }
+    if (raw->size() != rects.size()) return;
+    {
+        const std::vector<GuiRect> sample = nonempty(
+            {band_of(g, 0, g.panel_top), band_of(g, g.panel_bottom, g.h)});
+        double sum[3] = {0.0, 0.0, 0.0};
+        double n = 0.0;
+        for (std::size_t i = 0; i < rects.size(); ++i)
+            if ((*raw)[i]) accumulate((*raw)[i].get(), rects[i], sample, sum, n);
+        out.face = mean_word(sum, n);
+    }
+    const std::size_t ti = rects.size() - 1;
+    const GuiRect& at = rects[ti];
+    if (!(*raw)[ti]) return;
+    cairo_surface_t* tile = (*raw)[ti].get();
+    if (g.band_h > 0 && g.band_y >= at.y && g.band_y + g.band_h <= at.y + at.h)
+        out.extra.emplace_back(
+            band_of(g, g.band_y, g.band_y + g.band_h),
+            scaled_rows(tile, at.y, g.band_y, g.band_h,
+                        [](int) { return kWoodVoidLuma; }));
+    const int body_h = g.tab_body_y1 - g.tab_body_y0;
+    if (body_h > 0 && g.tab_body_y0 >= at.y && g.tab_body_y1 <= at.y + at.h) {
+        constexpr int kStops = 15;
+        const uint32_t wood = out.face;
+        out.body.emplace_back(
+            band_of(g, g.tab_body_y0, g.tab_body_y1),
+            scaled_rows(tile, at.y, g.tab_body_y0, body_h, [&](int y) {
+                return tab_body_ratio(stop_of(y, body_h, kStops), wood);
+            }));
+    }
+    out.grounds.emplace_back(at, std::move((*raw)[ti]));
+}
+
+// THE METAL, THE ACCENT (materials.h's METAL and STRIP RULE, 2026-10-22):
+// ONE TILE, THE MARKER LANE'S ROWS window-wide, the strip's center rows; ITS
+// FACE THE MEAN OF THOSE PIXELS, the strip's rows the bake reads (the whole
+// client's panel rects 2026-10-21 to 2026-10-22) — read by the ruler's flat
+// ground, the view bar's frame and the disabled cue's fades alone. (The whole-client tile, and the
+// inactive tab's body under the luma ratio, 2026-10-21 to 2026-10-22.)
 void bake_metal(const Source& src, const Geometry& g, Baked& out) {
-    const GuiRect& c = g.canvas;
-    const int c_top = std::clamp(c.y, g.metal_top, g.panel_bottom);
-    const int c_bot = std::clamp(c.y + c.h, c_top, g.panel_bottom);
-    const std::vector<GuiRect> panel = nonempty({
-        band_of(g, g.metal_top, c_top), band_of(g, c_bot, g.panel_bottom),
-        GuiRect{0, c_top, std::clamp(c.x, 0, g.w), c_bot - c_top},
-        GuiRect{std::clamp(c.x + c.w, 0, g.w), c_top,
-                g.w - std::clamp(c.x + c.w, 0, g.w), c_bot - c_top}});
-    const GuiRect tile{0, 0, g.w, g.h};
-    auto raw = source_regions(src, g.w, g.h, {tile});
+    const GuiRect lane = band_of(g, std::clamp(g.lane_y, 0, g.h),
+                                 std::clamp(g.lane_y + g.lane_h, 0, g.h));
+    if (lane.h <= 0 || lane.w <= 0) return;
+    const StripRows strip{lane.y, lane.h, kGuiMaterialCoverDivisor[static_cast<std::size_t>(GuiMaterial::Metal)]};
+    auto raw = source_regions(src, g.w, g.h, {lane}, &strip);
     if (!raw) { out.error = raw.error(); return; }
     if (raw->empty() || !(*raw)[0]) return;
-    out.face = mean_over((*raw)[0].get(), tile, panel);
-    const int body_h = g.tab_body_y1 - g.tab_body_y0;
-    if (body_h > 0 && tile.x <= 0 && tile.x + tile.w >= g.w &&
-        tile.y <= g.tab_body_y0 && g.tab_body_y1 <= tile.y + tile.h) {
-        constexpr int kStops = 15;
-        const uint32_t brass = out.face;
-        // The body's rows, window-wide, out of the tile.
-        Surface rows = [&] {
-            cairo_surface_t* band =
-                cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g.w, body_h);
-            cairo_surface_t* from = (*raw)[0].get();
-            cairo_surface_flush(from);
-            cairo_surface_flush(band);
-            const unsigned char* sdata = cairo_image_surface_get_data(from);
-            const int sstride = cairo_image_surface_get_stride(from);
-            unsigned char* ddata = cairo_image_surface_get_data(band);
-            const int dstride = cairo_image_surface_get_stride(band);
-            for (int y = 0; y < body_h; ++y)
-                std::memcpy(ddata + static_cast<std::size_t>(y) * dstride,
-                            sdata + static_cast<std::size_t>(
-                                        g.tab_body_y0 + y - tile.y) * sstride +
-                                static_cast<std::size_t>(-tile.x) * 4,
-                            static_cast<std::size_t>(g.w) * 4);
-            cairo_surface_mark_dirty(band);
-            return Surface(band);
-        }();
-        scale_in_place(rows.get(), [&](int y) {
-            return tab_body_ratio(stop_of(y, body_h, kStops), brass);
-        });
-        out.extra.emplace_back(band_of(g, g.tab_body_y0, g.tab_body_y1),
-                               std::move(rows));
-    }
-    out.grounds.emplace_back(tile, std::move((*raw)[0]));
+    out.face = mean_over((*raw)[0].get(), lane, {lane});
+    out.grounds.emplace_back(lane, std::move((*raw)[0]));
 }
 
 // THE SEATS MERGED INTO TILES (materials.h's CASE PATCHES): seats sharing
@@ -901,7 +904,7 @@ void bake_one(GuiMaterial m, const Source& src, const Geometry& g, Baked& out) {
         case GuiMaterial::Case:  bake_case(src, g, out);  break;
     }
     if (out.error.empty())
-        for (auto* set : {&out.grounds, &out.extra, &out.rest, &out.down})
+        for (auto* set : {&out.grounds, &out.extra, &out.body, &out.rest, &out.down})
             for (auto& [rect, s] : *set) convert(s.get());
     out.ms = std::chrono::duration<double, std::milli>(
                  std::chrono::steady_clock::now() - t0)
@@ -986,7 +989,10 @@ std::optional<std::string> bake(const Geometry& g) {
     const Catalog catalog = catalog_of(files->names);
     std::array<Source, kGuiMaterialCount> sources;
     for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
-        const auto src = source_of(catalog, static_cast<GuiMaterial>(m), g.w, g.h);
+        // A strip material matched against its tile's rows (source_of).
+        const bool strip = kGuiMaterialCoverDivisor[m] > 1;
+        const auto src = source_of(catalog, static_cast<GuiMaterial>(m), g.w,
+                                   strip ? g.lane_h : g.h);
         if (!src)
             return "tiles: " + std::string(kGuiMaterialNames[m]) + ": no cover reaches " +
                    std::to_string(g.w) + "x" + std::to_string(g.h) + " and no master";
@@ -1022,8 +1028,8 @@ std::optional<std::string> bake(const Geometry& g) {
     Baked& ebony = baked[static_cast<std::size_t>(GuiMaterial::Case)];
     take(wood.grounds, s.wood);
     take(wood.extra, s.void_tiles);
+    take(wood.body, s.tab_body);
     take(metal.grounds, s.metal);
-    take(metal.extra, s.tab_body);
     take(ebony.rest, s.case_rest);
     take(ebony.down, s.case_down);
     for (std::size_t m = 0; m < kGuiMaterialCount; ++m) s.faces[m] = baked[m].face;
@@ -1093,7 +1099,8 @@ std::optional<std::string> check() {
     if (!files) return "tiles: " + files.error();
     // EACH FILE'S HEADER, read off its first bytes alone (a JPEG's frame
     // header can follow an ICC or EXIF segment, hence the 64 KiB): a PNG or
-    // a JPEG, and a cover the size its name says.
+    // a JPEG, and a cover the size its name says, any height (a strip's
+    // against its lane is the match's, source_of).
     constexpr std::size_t kHeaderBytes = 64 * 1024;
     for (const std::string& file : files->names) {
         const std::filesystem::path local = files->local_path(file);
@@ -1341,9 +1348,12 @@ void paint_tab_body(cairo_t* cr, const GuiRect& body) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_rectangle(cr, body.x, body.y, body.w, body.h);
+    // The wood's flat mean where no baked row holds it (the panel's face
+    // before a bake).
     const Tile* t = s.baked ? tile_under_path(cr, s.tab_body) : nullptr;
-    if (t) set_tile_source(cr, *t);
-    else   set_palette_source(cr, palette().face);
+    if (t)            set_tile_source(cr, *t);
+    else if (s.baked) set_palette_source(cr, hex(s.faces[static_cast<std::size_t>(GuiMaterial::Wood)]));
+    else              set_palette_source(cr, palette().face);
     cairo_fill(cr);
     cairo_restore(cr);
 }
