@@ -8,7 +8,7 @@
 #include <vector>
 
 // Session-only clipboard for the W-mode phase reset propagate feature
-// (Ctrl+P copy / Ctrl+Alt+P paste). A copy captures a sequence of named
+// (Ctrl+Return copy / Ctrl+Shift+Return paste). A copy captures a sequence of named
 // warp blocks and the fractional positions of any phase resets that fall
 // inside them. Paste walks a destination anchor's named-block sequence
 // in lockstep with the clipboard, materializing phase resets at the
@@ -54,7 +54,7 @@ using PhaseResetClipboard = PropagateClipboard<ClipboardBlock>;
 
 // ---------------------------------------------------------------------------
 // THE PROPAGATE'S TWO WARP-MARKER ACCESSORS. They live in this header beside
-// the clipboard the PHASE RESET propagate (Ctrl+P / Ctrl+Alt+P) owns;
+// the clipboard the PHASE RESET propagate (Ctrl+Return / Ctrl+Shift+Return) owns;
 // nothing re-spells either accessor.
 
 // Single accessor that returns a marker's label string regardless of

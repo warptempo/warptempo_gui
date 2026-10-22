@@ -31,14 +31,17 @@ struct GuiActiveViews;
 std::string format_domain_timestamp(double source_frame, const AppState& app,
                                     const GuiAudio& audio);
 
-// THE PROPAGATE CHORDS' CHEAP REFUSALS, each ladder in its arm's own order —
-// ONE DECISION for the act and its face (architect 2026-09-24, the truthful
-// menus): the Ctrl+P / Ctrl+Alt+P arms (handle_mode_keys,
-// input_key_dispatch.cpp) switch on these to card, and the pigeon's face in
-// the phase-reset view greys on anything but None (redesign_button_enabled's
-// Jump to Defining Marker arm, 2026-10-21; the Edit menu's rows,
-// dropdown_item_enabled, until then). Pure: they read the AppState and write
-// nothing.
+// THE PROPAGATE CHORDS' CHEAP REFUSALS, each ladder in its arm's own order:
+// the Ctrl+Return / Ctrl+Shift+Return arms (handle_mode_keys,
+// input_key_dispatch.cpp; Ctrl+P / Ctrl+Alt+P until 2026-10-21) switch on
+// these to card, and NO FACE READS THEM since 2026-10-21 — the pair's seat
+// is Open Text Editor's, which greys for its plain act alone (the Edit
+// menu's rows greyed on them from 2026-09-24, the truthful menus, and the
+// pigeon's seat in the phase-reset view for the evening of 2026-10-21).
+// THE FIRST RUNG IS THE WARP COLUMN: both act on a warp-marker selection,
+// so in the phase-reset column both refuse there (architect 2026-10-21: the
+// P-column question is open and the pair is not widened). Pure: they read
+// the AppState and write nothing.
 //
 // THE COPY'S LAST RUNG, NothingToCopy, is phase_reset_copy_captures below,
 // asked BEFORE the clipboard is touched: until 2026-09-24 the arm ran
@@ -58,9 +61,8 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
 // reset falls inside its section (a block with no placements is a real
 // capture: its paste clears the matched destination block), so "captures
 // anything" is "the clipboard would come out non-empty", exactly the test the
-// arm used to make after the fact. Memoized on the warp store's generation
-// and the run's extent (AppState::CopyCapturesCache), because the pigeon's
-// face asks it every tick in the phase-reset view.
+// arm used to make after the fact. Asked at the press alone (its per-tick
+// memo retired with the last face, 2026-10-21).
 bool phase_reset_copy_captures(const AppState& app);
 
 // The paste's ladder (its arm says why).
@@ -112,7 +114,7 @@ struct PhaseResetPropagate {
           playback_lifecycle(playback_lifecycle_),
           notifications(notifications_), selection(selection_) {}
 
-    // Ctrl+P copy. Caller has already verified W-mode + a CONTIGUOUS run of
+    // Ctrl+Return copy. Caller has already verified W-mode + a CONTIGUOUS run of
     // warp markers selected (the paste walks labeled blocks in strict lockstep,
     // so a gap would misalign the two label sequences — the copy gate mirrors
     // the `m` sweep's contiguity requirement). Section-based (architect

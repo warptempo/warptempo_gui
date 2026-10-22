@@ -166,19 +166,19 @@ std::string closed_list_advance(const std::string& typed,
 // playhead, trim and the read_only bit itself, read-only-legal since
 // 2026-08-07 — owe no read-only gate here either.
 //
-// THE OPENER ITSELF IS REFUSED UNDER EITHER LOCK, one level up: bare `;` is
-// off the read-only allowlist and dies at the keyboard gate, which names the
-// press in its own voice ("; is not available on a read-only tab"), the
-// iteration gate refusing everything that list refuses, and the band's
-// Settings button — the chord's pointer spelling — greys under both. From
-// 2026-09-04 until 2026-10-21 the Settings popup's rows opened this editor on
-// a locked tab regardless, each prefilling its key, the field free text (a
-// self-unlock typed as `tab_X_read_only=false` among what it admitted); the
-// popup retired that evening for this one editor, and with it that road: a
-// locked ACTIVE tab now reaches the device keys only after an unlock (bare
-// `o`, or the lamp's off edge) or from the other tab. THE LOCK ARMS BELOW ARE
-// KEPT AS THE KEYS' OWN RULE (the engine-key arm's, and the iteration lock's
-// three), though no open reaches them under a lock since.
+// THE OPENER IS LIVE UNDER EITHER LOCK, ONE LEVEL UP TOO (2026-10-21, the
+// planner's ruling by the 2026-09-04 rule): bare `;` is on the read-only
+// allowlist (read_only_key_blocked's is_settings_editor), which the
+// iteration gate inherits, and the band's Settings button — the chord's
+// pointer spelling — stays lit under both. From 2026-09-04 until 2026-10-21
+// the Settings popup's rows opened this editor on a locked tab, each
+// prefilling its key, the field free text (a self-unlock typed as
+// `tab_X_read_only=false` among what it admitted), while `;` and the button
+// were refused under either lock; the popup retired that evening for this
+// one editor, which for the hours until this admission left a locked ACTIVE
+// tab no road to the device keys at all. THE LOCK ARMS BELOW ARE THE KEYS'
+// OWN RULE and are reached again: the engine-key arm's, and the iteration
+// lock's three.
 //
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
@@ -383,8 +383,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // never authored on. The lock governs the KEYS and not the surface,
         // and the editor's field is free text, so without this arm the editor
         // would be a second road onto the state the ruling exists to delete
-        // (the Settings dropdown opened it under the lock until 2026-10-21;
-        // `;` is refused there since, the open's account); it is the sibling
+        // (`;` opens it under the lock, the open's account); it is the sibling
         // of the tab_X_read_only refusal below, which answers bare `o` the
         // same way.
         //
@@ -521,10 +520,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // did not raise on a locked ACTIVE tab, so the arm was reached only by
         // typing `tab_X_read_only=false` from an unlocked tab about the other
         // one. The Settings dropdown raised the editor on a locked tab from
-        // then until it retired, 2026-10-21, so a self-unlock could be typed
-        // there; bare `;` cannot open the editor on a locked tab at all,
-        // being off that allowlist one level up, so the arm is the remote
-        // route again. This key is band, not authored content,
+        // then until it retired, 2026-10-21, and bare `;` does since (the
+        // open's account), so a self-unlock can be typed here — the
+        // `tab_X_read_only=false` of the locked active tab — beside the
+        // remote route. This key is band, not authored content,
         // navigation-class on the read-only allowlist's own reading, and the
         // ordinary unlock is bare `o` or the icon row's toggle.
         if (gv.b == band.read_only) { unchanged(); return true; }
@@ -541,8 +540,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // `gv.b` term is the whole of the direction test. The refused field
         // plus card, this surface's shape, on the gate's own sentence.
         // Without this arm the editor — the lock governing the keys and not
-        // the surface (the Settings dropdown opened it under a lit lamp until
-        // 2026-10-21) —
+        // the surface (`;` opens it under a lit lamp) —
         // would be a second road onto the state the padlock refuses.
         if (gv.b && active && app.iteration_mode_enabled) {
             text_editor::refuse(app.settings_editor);
@@ -738,10 +736,10 @@ void GuiSettingsEditor::commit() {
     // under a lit lamp, because the lock governs the KEYS and not the surface.
     // The sentence forks at the one composer (authoring_lock_card,
     // notifications.h) because this site knows its act and needs no chord in
-    // it. (The editor OPENED under the lock through the Settings dropdown's
-    // rows until the popup retired, 2026-10-21; `;` is dropped at the
-    // keyboard gate under either lock, so no open reaches this arm under one
-    // since — kept as the keys' own rule, the open's account.)
+    // it. (The editor opens under either lock — `;` and the Settings
+    // button since 2026-10-21, the Settings dropdown's rows until then — so
+    // this arm is where a locked tab's engine key refuses, the open's
+    // account.)
     if (authoring_locked(app)) {
         const char* card = authoring_lock_card(app);
         text_editor::refuse(app.settings_editor);

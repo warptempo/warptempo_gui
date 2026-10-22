@@ -373,18 +373,20 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // bytes and the bitmaps) — two tones, no dark copy. The product builds the
 // same thing mechanically, for every glyph
 // (svg_icon::embossed_copy), AND ADDS A THIRD TONE OF ITS OWN, not Cool
-// Edit's (architect 2026-10-15 evening): THE INSET RIM, 505050
-// (kCeDisabledInset), on the silhouette's pixels the light copy does not
+// Edit's (architect 2026-10-15 evening): THE INSET RIM (kCeDisabledInset,
+// 505050 then, black since 2026-10-21), on the silhouette's pixels the light copy does not
 // reach — a one-unit band inside the silhouette along its top-left edges,
 // so the shadow line falls down and to the right as the pressed case goes;
 // inside the silhouette because a dark copy peeking out up-left grew the
 // glyph. THE TONES ARE THE CASE'S SINCE 2026-10-21 (architect, "r1": the
-// constant 808080 read as a light grey blob on the ebony): Cool Edit's
-// measured bytes taken onto the live case by their ratios — the silhouette
-// at the case ramp's mean lightness times 0.502 / 0.809, the rim at the
-// silhouette's times 0.625, the ebony's hue and saturation, the light copy
-// F8F8F8 unchanged (materials::disabled_glyph_tones; the ratios'
-// derivation at cool_edit_paint.h's kCeDisabledShadow). The silhouette the
+// constant 808080 read as a light grey blob on the ebony), and HIS OWN
+// NUMBERS since his pick v2 the same night: the silhouette at the case
+// ramp's mean lightness times 0.84 on the ebony's hue and saturation
+// (2A1E1C on the shipped ebony; Cool Edit's 0.502 / 0.809 = 0.620 the rule
+// it departs from), the rim black 000000 (the silhouette's times 0.625
+// until then), the light copy F8F8F8 unchanged
+// (materials::disabled_glyph_tones; the record at cool_edit_paint.h's
+// kCeDisabledShadow). The silhouette the
 // live raster's ALPHA MASK (the body grey where
 // the light copy overlaps it, the rim where it does not), the
 // light copy THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down

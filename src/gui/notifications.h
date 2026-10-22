@@ -165,7 +165,7 @@
 //     answer, while a paste that paired blocks lands even byte-equal.
 //   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
 //     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+Shift+J)
-//     and "Copied the selected markers' phase resets" (Ctrl+P); a refused
+//     and "Copied the selected markers' phase resets" (Ctrl+Return); a refused
 //     system-clipboard write cards through card_clipboard_refusal ("The
 //     clipboard did not take the copy" / "…the cut" — the editors' Ctrl+X,
 //     the one editor clipboard chord that cards, and only there); and the

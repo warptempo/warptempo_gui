@@ -569,10 +569,13 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods);
 // and the engine settings — AND NOTHING ELSE (architect 2026-08-07,
 // superseding the old "blocks persistent mutation" standard); the definition
 // carries the ruling, and it is the model's ONE authoritative home.
-// Authoring-mutation chords (Delete, undo/redo, the propagate commands, `;`,
+// Authoring-mutation chords (Delete, undo/redo, the propagate commands,
 // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
 // renders and the Shift+0 trim reset are ADMITTED — a save writes the state
-// the tab already holds, a render reads it, and trim is band.
+// the tab already holds, a render reads it, and trim is band — and so,
+// since 2026-10-21, is `;`, the settings editor: the lock governs the keys,
+// not the editor (architect 2026-09-04), its engine-key commits refusing
+// inside it.
 // One entry is
 // STATE-DEPENDENT: the horizontal arrows are admitted as navigation
 // only while playhead_in_marker_lane is false, since in the marker lane the
@@ -2604,14 +2607,15 @@ private:
     // selection like every other marker verb.
     void run_iter_tie_toggle();
 
-    // P / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
-    // clipboard ops, `i` iteration mode, `k` ADD TO
+    // The phase-reset clipboard pair and the I / K / L letter-key handlers:
+    // Ctrl+Return copy and Ctrl+Shift+Return paste (Ctrl+P / Ctrl+Alt+P
+    // until 2026-10-21), `i` iteration mode, `k` ADD TO
     // SELECTION (the sticky ctrl, 2026-08-18) and `l`, the render player's
     // opener. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
-    // The two phase-reset pastes' shared refusal ladder, carded (true =
-    // refused); the decision is phase_reset_paste_refusal.
+    // The phase-reset paste's refusal ladder, carded (true = refused); the
+    // decision is phase_reset_paste_refusal.
     bool card_phase_reset_paste_refusal();
 
     // Tab-key family: Ctrl+Tab switches A/B tabs; Ctrl+Shift+Tab is the

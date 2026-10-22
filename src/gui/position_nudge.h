@@ -40,7 +40,7 @@ struct GuiTargetRender;
 // here, every verb site stating only its own class plus a pointer:
 //   * GROUP-CAPABLE where the members are INDEPENDENT of one another or the
 //     selection's SPAN is merely READ: the value edits (Ctrl+D's disable toggle,
-//     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, the
+//     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+Return (the phase-reset copy), the
 //     zoom framing, and the undo/redo + paste
 //     restores (which DEFINE a group selection). (The trim region toggle READ
 //     a span until 2026-08-18 — the trim-scratch region's — and the toggle

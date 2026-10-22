@@ -526,7 +526,8 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // Del, Return, PgUp, PgDown — kdenlive's spellings, not the longhand this
 // table wrote until 2026-09-01. The two pairs that share a name share it
 // deliberately — Return / KpEnter are one "Return" to the hand, since both
-// keysyms open the flag editor and Qt's separate "Enter" for the keypad would
+// keysyms carry the same three acts (the editor's open, and under Ctrl the
+// phase-reset copy and paste) and Qt's separate "Enter" for the keypad would
 // name a second key the product does not distinguish — and IsoLeftTab IS the
 // shifted Tab keysym. NO USER TEXT KEEPS THE SPLIT: the distinction lives
 // in no user-facing sentence now (the interface's own words are its
@@ -699,22 +700,19 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     // THE ALT VOCABULARY, WHOLE (re-derived 2026-10-21 off the `ca` and
-    // `cas` arms, the only ones that read alt): ALT IS THE FOUR KEYBOARD
+    // `cas` arms, the only ones that read alt): ALT IS THE THREE KEYBOARD
     // Ctrl+Alt CHORDS, NOTHING ELSE — Ctrl+Alt+R / Ctrl+Alt+Shift+R (the
-    // render pair), Ctrl+Alt+P (the phase reset propagate's paste) and
-    // Ctrl+Alt+O (Revert). (The menu titles' Alt+F, Alt+E and Alt+S,
-    // 2026-10-10, and Ctrl+Alt+Shift+P, the state paste, went 2026-10-21.)
-    // No Alt-alone chord binds (the static_asserts below pin Alt+Tab's
-    // family and the three former titles' letters), and alt's POINTER
-    // vocabulary is empty: no alt-modified press or wheel binds anything.
-    // THE Ctrl+Alt SHAPE IS THE INVARIANT rather than the number: alt with
-    // Ctrl marks a HEAVIER SIBLING of a plain chord — a write that replays or
-    // emits (a render, a paste of captured state onto a run of markers; the
-    // copy sits on bare Ctrl+P), or the reopen that DISCARDS (Revert is Open's
-    // own letter with alt added); Alt alone is Windows' menu access and
-    // nothing else. (A pull-down row's letter, bare or with Alt, is the OPEN
-    // MENU's world, answered at its own gate like the routers' keys below,
-    // and is not this inventory's.)
+    // render pair) and Ctrl+Alt+O (Revert). (The menu titles' Alt+F, Alt+E
+    // and Alt+S, 2026-10-10, and Ctrl+Alt+Shift+P, the state paste, went
+    // 2026-10-21; Ctrl+Alt+P, the phase reset propagate's paste, left the
+    // same evening for Ctrl+Shift+Return.) No Alt-alone chord binds (the
+    // static_asserts below pin Alt+Tab's family and the three former titles'
+    // letters), and alt's POINTER vocabulary is empty: no alt-modified press
+    // or wheel binds anything. THE Ctrl+Alt SHAPE IS THE INVARIANT rather
+    // than the number: alt with Ctrl marks a HEAVIER SIBLING of a plain chord
+    // — a write that emits (a render), or the reopen that DISCARDS (Revert is
+    // Open's own letter with alt added); Alt alone is Windows' menu access
+    // and nothing else.
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the mode toggles (`i`
         // iteration, `k` add to selection; `c`, the centring, has its own
@@ -755,15 +753,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Ctrl+H), whose own arm in input_handler.cpp carries the mode test.
         case GuiKeys::V:
             return bare && history_view;
-        // THE PIGEON'S PAIR, ONE LETTER, BOUND IN BOTH MARKERS VIEWS: in the
-        // warp view CTRL+J goes to where the focused value came from
-        // (architect 2026-09-29, Jump to Defining Marker's own chord) and
-        // CTRL+SHIFT+J copies that value (architect 2026-10-14, Copy
-        // Resolved Value); in the phase-reset view they are Copy Phase
-        // Resets and Paste Phase Resets (architect 2026-10-21, "copy/paste
-        // is send/receive, and same with jump"; on_key routes them to Ctrl+P
-        // and Ctrl+Alt+P there, jump_seat_chord, app_state.h). Bare `j` and
-        // Shift+J bind nothing.
+        // THE PIGEON'S PAIR, ONE LETTER, ONE MEANING IN EVERY VIEW: CTRL+J
+        // goes to where the focused value came from (architect 2026-09-29,
+        // Jump to Defining Marker's own chord) and CTRL+SHIFT+J copies that
+        // value (architect 2026-10-14, Copy Resolved Value). (In the
+        // phase-reset view the pair was Copy / Paste Phase Resets for the
+        // evening of 2026-10-21, retired the same evening for Ctrl+Return /
+        // Ctrl+Shift+Return, below — architect: "pigeon stays ctrl+j /
+        // +shift".) Bare `j` and Shift+J bind nothing.
         case GuiKeys::J: return cl || cs;
         // Drop on the live column / drop a phase reset from the warp column / save,
         // and CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
@@ -774,10 +771,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::S: return bare || sh || cl || cs;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
-        // The two phase-reset propagate chords, the copy and the paste (the
-        // state paste's Ctrl+Alt+Shift+P removed 2026-10-21; the W/P flip's
-        // bare `p` was deleted whole with its view lamp 2026-09-15).
-        case GuiKeys::P: return cl || ca;
+        // (THE LETTER P BINDS NOTHING since 2026-10-21: Ctrl+P and Ctrl+Alt+P,
+        // the phase-reset propagate's copy and paste, moved onto Return's
+        // ctrl forms that evening, below — architect: "we can give ctrl+enter
+        // as copy and ctrl+shift+enter as paste, on the open text editor
+        // icon"; the state paste's Ctrl+Alt+Shift+P was removed the same day,
+        // and the W/P flip's bare `p` was deleted whole with its view lamp
+        // 2026-09-15.)
         // (THE LETTER M BINDS NOTHING since 2026-09-23: its Ctrl and Ctrl+Alt
         // chords were the magnification level propagate's copy and paste, and
         // Ctrl+Alt+Shift+M Generate Magnification Level Markers, all deleted
@@ -859,8 +859,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // 2026-09-01 and retired that evening when bare Esc took the whole
         // stack, one act wanting one chord.
         case GuiKeys::Escape: return bare;
-        // Open the flag editor on the focused marker.
-        case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
+        // THE RETURN KEY'S THREE ACTS (architect 2026-10-21, the Open Text
+        // Editor seat's): bare opens the addressed cell's editor on the
+        // focused marker, CTRL copies the phase resets of the selected run
+        // of warp markers and CTRL+SHIFT pastes them onto the one selected
+        // warp marker (is_phase_reset_copy_key / is_phase_reset_paste_key
+        // below). Shift+Return and every alt spelling bind nothing.
+        case GuiKeys::Return: case GuiKeys::KpEnter: return bare || cl || cs;
         case GuiKeys::Delete: return bare;
         // The marker walk (bare forward, shift back; its landing camera is
         // the landing owner's, Viewport::land_subject), the A/B tab switch
@@ -1060,7 +1065,7 @@ static_assert(!chord_is_bound(GuiKeys::Tab,
               "no Alt spelling of Tab or IsoLeftTab binds in either mode, "
               "with or without Shift or Ctrl: each is an unbound no-op");
 // NO ALT-ALONE LETTER BINDS (2026-10-21: the menu titles' Alt+F, Alt+E and
-// Alt+S left with the menu row), nor the state paste's Ctrl+Alt+Shift+P.
+// Alt+S left with the menu row).
 static_assert(!chord_is_bound(GuiKeys::F,
                               GuiInputState{false, false, true}, false) &&
                   !chord_is_bound(GuiKeys::E,
@@ -1069,13 +1074,44 @@ static_assert(!chord_is_bound(GuiKeys::F,
                                   GuiInputState{false, false, true}, false) &&
                   !chord_is_bound(GuiKeys::E, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::D,
-                                  GuiInputState{false, false, true}, false) &&
-                  !chord_is_bound(GuiKeys::P,
-                                  GuiInputState{true, true, true}, false) &&
-                  chord_is_bound(GuiKeys::P,
-                                 GuiInputState{true, false, true}, false),
-              "no Alt-alone letter binds; Ctrl+Alt+P is the propagate's paste "
-              "and Ctrl+Alt+Shift+P binds nothing");
+                                  GuiInputState{false, false, true}, false),
+              "no Alt-alone letter binds");
+// THE LETTER P BINDS NOTHING (2026-10-21): the propagate's former Ctrl+P and
+// Ctrl+Alt+P moved onto Return's ctrl forms, and the state paste's
+// Ctrl+Alt+Shift+P went the same day — every decoration of `p` is unbound,
+// in both modes.
+consteval bool letter_p_binds_nothing() {
+    for (int bits = 0; bits < 8; ++bits) {
+        const GuiInputState mods{(bits & 1) != 0, (bits & 2) != 0,
+                                 (bits & 4) != 0};
+        if (chord_is_bound(GuiKeys::P, mods, false) ||
+            chord_is_bound(GuiKeys::P, mods, true))
+            return false;
+    }
+    return true;
+}
+static_assert(letter_p_binds_nothing(),
+              "Ctrl+P, Ctrl+Alt+P and Ctrl+Alt+Shift+P are retired: the "
+              "propagate pair is Ctrl+Return / Ctrl+Shift+Return");
+// RETURN'S THREE ACTS (architect 2026-10-21): bare the editor's open, Ctrl the
+// phase-reset copy, Ctrl+Shift the paste, on both keysyms; Shift alone and
+// every alt spelling bind nothing.
+static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Return,
+                                 GuiInputState{true, false, false}, false) &&
+                  chord_is_bound(GuiKeys::Return,
+                                 GuiInputState{true, true, false}, false) &&
+                  chord_is_bound(GuiKeys::KpEnter,
+                                 GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Return,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Return,
+                                  GuiInputState{true, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::Return,
+                                  GuiInputState{false, false, true}, false),
+              "Return binds bare (open the editor), Ctrl (copy phase resets) "
+              "and Ctrl+Shift (paste phase resets); Shift+Return and the alt "
+              "spellings bind nothing");
 // THE PUBLISH CHORD (architect 2026-10-10) binds in both modes; its Alt
 // spelling does not.
 static_assert(chord_is_bound(GuiKeys::S,
@@ -1356,6 +1392,41 @@ inline bool is_copy_value_key(GuiKey key, GuiInputState mods) {
 }
 inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::J && mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// THE PHASE-RESET PROPAGATE PAIR (architect 2026-10-21 ~22:45: "we can give
+// ctrl+enter as copy and ctrl+shift+enter as paste, on the open text editor
+// icon, which has no modifiers. pigeon stays ctrl+j / +shift"): CTRL+RETURN
+// COPIES the phase resets of the selected run of warp markers into the
+// session clipboard and CTRL+SHIFT+RETURN PASTES them onto the one selected
+// warp marker, behind the paste's confirmation. RETURN'S CTRL FORMS, so the
+// Open Text Editor seat — bare Return's button — carries them: its ctrl press
+// (the S Pen's barrel button on the glass) is the copy and its ctrl+shift
+// press (the barrel held through the long press) the paste
+// (redesign_button_ctrl_admits / redesign_button_ctrl_shift_admits,
+// app_state.h). KpEnter is the same key, as it is for the bare open. They
+// were Ctrl+P and Ctrl+Alt+P from 2026-07-23 until that evening, and for
+// the hours between the pigeon's Ctrl+J pair in the phase-reset view
+// (closed_questions.md); the letter binds nothing now.
+//
+// EXACT — ctrl-exact and ctrl+shift-exact, no alt — and ONE-SHOT (a copy
+// repeats onto itself and a paste raises a prompt). Their acts are the
+// propagate's own arms (handle_mode_keys, input_key_dispatch.cpp) with
+// their ladders and cards unchanged: both act from the WARP column alone
+// (phase_reset_copy_refusal / phase_reset_paste_refusal, phase_reset_
+// propagate.h, the first rung). TWO READERS: the dispatch arms and the
+// iteration lock's allowlist (iteration_lock_key_blocked, which admits the
+// COPY alone — clipboard-only, nothing for the undo domain). The read-only
+// allowlist (read_only_key_blocked) and the `h` view's name neither, so both
+// chords drop on a locked tab — a copy arms a paste that writes, and the
+// pair travels together — and card in the view.
+inline bool is_phase_reset_copy_key(GuiKey key, GuiInputState mods) {
+    return (key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
+           mods.ctrl && !mods.shift && !mods.alt;
+}
+inline bool is_phase_reset_paste_key(GuiKey key, GuiInputState mods) {
+    return (key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
+           mods.ctrl && mods.shift && !mods.alt;
 }
 
 // True for the chord that toggles THE TOOLTIP LAMP (architect 2026-09-29,

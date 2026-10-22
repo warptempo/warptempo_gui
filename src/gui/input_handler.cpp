@@ -663,23 +663,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE PIGEON'S PAIR IN THE PHASE-RESET VIEW (architect 2026-10-21;
-    // jump_seat_act's head, app_state.h): Ctrl+J and Ctrl+Shift+J are Copy
-    // Phase Resets and Paste Phase Resets there, and they are dispatched AS
-    // THE PROPAGATE'S OWN CHORDS, Ctrl+P and Ctrl+Alt+P — re-entering here so
-    // the `h` view's allowlist, the authoring locks and the arm below meet
-    // exactly the chord they always met. Placed under every modal, editor
-    // and gesture gate, which answer the two spellings alike, and over the
-    // first gate that tells them apart.
-    {
-        GuiKey         routed_key  = key;
-        GuiInputState  routed_mods = mods;
-        if (jump_seat_chord(app, routed_key, routed_mods)) {
-            on_key(routed_key, routed_mods);
-            return;
-        }
-    }
-
     // THE `h` HISTORY MODE — its own keys, then its allowlist. Placed HERE,
     // directly under the drag-modal gate and directly over the read-only one,
     // and the position carries two facts rather than being a convenience.
@@ -812,9 +795,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
-    // CLIPBOARD COPY Ctrl+P, ctrl-exact (it reads a selection into a session
-    // clipboard and pushes nothing, so the undo domain this lock protects has
-    // no interest in it; the TWO ALT-BEARING PASTES stay refused). That
+    // CLIPBOARD COPY Ctrl+Return, ctrl-exact (it reads a selection into a
+    // session clipboard and pushes nothing, so the undo domain this lock
+    // protects has no interest in it; the PASTE, Ctrl+Shift+Return, stays
+    // refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. BOTH LISTS ARE ASKED, the two locks composing on a locked tab
@@ -902,12 +886,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              which act the chord is, so the gate asks the
     //                              mode bit the dispatch below asks. INSIDE the
     //                              view the chord is the LOAD and stays blocked
+    //   - ; (no mods)            → the settings editor (2026-10-21): the lock
+    //                              governs the keys, not the editor — its
+    //                              engine-key commits refuse inside it, the
+    //                              device keys and the band commit
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
-    // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
-    // commits are authored content), `i`, `'` in the `h` view, the
-    // phase-reset propagate's copy/paste (the Ctrl+P three), and undo/redo
-    // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
+    // status-toggle chords, Delete, `i`, `'` in the `h` view, the
+    // phase-reset propagate's copy/paste (Ctrl+Return / Ctrl+Shift+Return),
+    // and undo/redo (Ctrl+Z / Ctrl+Shift+Z) all drop here. (`;`, THE SETTINGS
+    // EDITOR, IS ADMITTED since 2026-10-21 — the lock governs the keys, not
+    // the editor, the 2026-09-04 rule: its engine-key commits refuse inside
+    // it.) This gate is the ONLY read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
     // POINTER path too has gone, the trim band's gate having been deleted with
     // the reclassification. The surviving deeper checks each cover a
@@ -1345,8 +1335,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE VALUE PAIR (architect 2026-08-29) — IN THE WARP VIEW (the phase-reset
-    // view's pair is routed above, jump_seat_chord) — CTRL+SHIFT+J copies the FOCUSED
+    // THE VALUE PAIR (architect 2026-08-29) — CTRL+SHIFT+J copies the FOCUSED
     // marker's resolved value to the system clipboard (since 2026-10-14),
     // CTRL+J jumps to the marker that value came from on the OTHER A/B tab
     // (since 2026-09-29). They took the place of the retired resolved readout,
@@ -1493,7 +1482,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (open-selected, like every open route — the first keystroke replaces
     // it). Read-only already dropped Return at the allowlist gate above (every
     // one of these is an authoring surface — the old click-to-edit refused
-    // read-only too). Modifier-strict: only the plain, unmodified press binds.
+    // read-only too). Modifier-strict: only the plain, unmodified press opens
+    // an editor; Return's ctrl forms are the phase-reset propagate pair
+    // (architect 2026-10-21, is_phase_reset_copy_key / is_phase_reset_paste_
+    // key, gui_input.h), falling past this arm to handle_mode_keys below.
     if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
         !ctrl && !shift && !alt) {
         selection.repair_last_selected();
@@ -1601,9 +1593,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // P / I / K / L letter keys (the Ctrl+P-family phase-reset clipboard
-    // ops, `i` iteration mode, `k` add-to-selection, and `l`, the render
-    // player's opener).
+    // The phase-reset clipboard pair on Return's ctrl forms (Ctrl+Return /
+    // Ctrl+Shift+Return, below the bare Return arm above, which claims the
+    // plain press alone), and the I / K / L letter keys (`i` iteration mode,
+    // `k` add-to-selection, and `l`, the render player's opener).
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the
@@ -2106,9 +2099,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // left the opener again on 2026-09-04, the lock now governing the keys at
     // their own commit arms rather than the surface, and the stop stayed
     // where it is: the two openers share one owner rather than one of them
-    // keeping a private copy. This key never met the refusal either way — `;`
-    // is off the read-only allowlist and drops far above, which is still the
-    // typed road's whole defense.
+    // keeping a private copy. THE KEY REACHES THE OPENER ON A LOCKED TAB AND
+    // UNDER GRID ITERATIONS since 2026-10-21 (read_only_key_blocked's
+    // is_settings_editor, which the iteration gate inherits): the lock
+    // governs the keys, not the editor (the 2026-09-04 rule), and the one
+    // editor is the only road to the device keys since the Settings popup
+    // retired, so the commit arms' own lock refusals are the typed road's
+    // defense (settings_editor.cpp).
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
         settings_editor.open();
         return;

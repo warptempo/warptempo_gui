@@ -306,9 +306,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // which is why the relocation needed no second body anywhere. The shift
     // admission IconPaste carried for Ctrl+Alt+Shift+P went too; the trim
     // scissors' deletion above is the same shape. SINCE 2026-10-21 the Edit
-    // menu is gone with the menu row and the pair rides Jump to Defining
-    // Marker's seat in the phase-reset view (jump_seat_chord); the state
-    // paste is removed.)
+    // menu is gone with the menu row and the pair is CTRL+RETURN /
+    // CTRL+SHIFT+RETURN, the Open Text Editor row's ctrl and ctrl+shift
+    // presses below (it rode Jump to Defining Marker's seat in the
+    // phase-reset view for that evening's first landing); the state paste
+    // is removed.)
     // (THE BPM AND ITERATION ROWS SPENT 2026-08-27 TO 2026-09-04 OUT OF THIS
     // TABLE, with their buttons, and it was the propagate relocation's shape
     // exactly: the Series relocation gave bare `m` and bare `i` a MENU ROW
@@ -384,10 +386,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false, false},   // bare o
     // SETTINGS (architect 2026-09-29), between the padlock and the
     // tooltip lamp since 2026-10-01: bare
-    // `;`, the settings prompt, through on_key like every row, so the
-    // read-only gate, the iteration gate and the `h` view refuse the lift
-    // exactly as they refuse the key — and the face greys on all three first
-    // (redesign_button_enabled). Momentary, no radio, no modifier, no repeat.
+    // `;`, the settings prompt, through on_key like every row, so the `h`
+    // view refuses the lift exactly as it refuses the key, the face greying
+    // there first (redesign_button_enabled); a locked tab and grid
+    // iterations admit both since 2026-10-21 (the lock governs the keys, not
+    // the editor — read_only_key_blocked). Momentary, no radio, no modifier,
+    // no repeat.
     {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false, false}, // bare ;
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's
     // last since 2026-10-01, behind Settings: the bare BACKSLASH, a TOGGLE with a lamp (AppState::
@@ -611,9 +615,25 @@ constexpr ToolbarChord kToolbarChords[] = {
     // keypad's Enter is the same arm's second keysym and is NOT a second row:
     // a row spells the chord the dispatch synthesizes, and Return is the
     // spelling every reader accepts (the walk's IsoLeftTab precedent). NOT A
-    // RADIO AND NO LAMP (an act whose editor session is the state), it does
-    // NOT repeat (an opener), and it ADMITS NO MODIFIER, so a modified press
-    // is refused at the band gate and the long press reaches nothing.
+    // RADIO AND NO LAMP (an act whose editor session is the state), and it
+    // does NOT repeat (an opener).
+    //
+    // IT ADMITS CTRL AND THE PAIR since 2026-10-21 (architect: "we can give
+    // ctrl+enter as copy and ctrl+shift+enter as paste, on the open text
+    // editor icon … glass has pen button as ctrl";
+    // redesign_button_ctrl_admits / redesign_button_ctrl_shift_admits): the
+    // row stays bare Return, and the lift spells the button's own key under
+    // the modifiers THE PRESS CARRIED — read at the press and stamped on the
+    // arm, never re-read at the lift (arm_redesign_press) — so a CTRL press
+    // dispatches CTRL+RETURN, COPY PHASE RESETS, and a CTRL+SHIFT press
+    // CTRL+SHIFT+RETURN, PASTE PHASE RESETS, through the propagate's own arms
+    // (handle_mode_keys) with their gates and cards. ON THE GLASS the ctrl is
+    // the S Pen's barrel button (pen_report_in_plane, platform_android.cpp):
+    // a tap with it held is the copy, and held through the long press the
+    // hold's shift composes with the carried ctrl (the pair admitted) into the
+    // paste. A SHIFT press alone is refused at the arm (Shift+Return binds
+    // nothing), and a long press with no barrel is the plain open — shift
+    // alone is not admitted, so the hold reaches nothing.
     {RedesignButton::IconOpenTextEditor,
      GuiKeys::Return, false, false, false, false},                             // bare Return
     // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH
@@ -847,7 +867,8 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // Up / Down step ladder's Ctrl rung (the two skip buttons, whose ctrl-click
 // was Ctrl+Home / Ctrl+End, left the row 2026-10-12), the WALK's Ctrl+Tab and
 // PREVIOUS MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl,
-// 2026-09-29) — which is why
+// 2026-09-29) and OPEN TEXT EDITOR's Ctrl+Return, Copy Phase Resets
+// (2026-10-21) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row is refused exactly as it always was. The walk is kToolbarChords in the
@@ -856,8 +877,9 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 //
 // CTRL+SHIFT TOGETHER BIND ONLY WHERE redesign_button_ctrl_shift_admits SAYS
 // SO (app_state.h) — THE WALK, whose ctrl-shift press is its own key under
-// both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26).
-// On every other button the pair spells no roster chord — strict modifier
+// both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26),
+// and OPEN TEXT EDITOR, whose ctrl-shift press is Ctrl+Shift+Return, Paste
+// Phase Resets (architect 2026-10-21). On every other button the pair spells no roster chord — strict modifier
 // validation, and Ctrl+Shift+Up is unbound on the keyboard too — so it dies
 // here and the lift's chord build never sees it there. The gate asks the
 // roster, never a named button.
@@ -1394,10 +1416,12 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   (Ctrl+Alt+R, which left the allowlist with its shifted twin when the act
 //   moved onto Ctrl+S — so the button wears its ordinary Render face over this
 //   partition's dead one, and the walk says so with nothing hand-listed);
-//   copy phase (Ctrl+P), paste
-//   phase (Ctrl+Alt+P), the BPM
+//   the BPM
 //   opener (Ctrl+B), iteration mode (bare `i`), listen
-//   (bare `l`); the FOUR MARKER VERBS since
+//   (bare `l`); OPEN TEXT EDITOR (bare Return, its ctrl presses the
+//   phase-reset copy and paste since 2026-10-21 — which had their own two
+//   buttons here as Ctrl+P / Ctrl+Alt+P until the 2026-08-20 relocation);
+//   the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
 //   this walk asks about a chord, never about a lane) — ADD TO SELECTION,
@@ -6121,10 +6145,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the FOUR keyboard Ctrl+Alt
-        // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P and, since
-        // 2026-09-13, Revert's Ctrl+Alt+O; re-derived by grep of
-        // chord_is_bound 2026-10-21, Ctrl+Alt+Shift+P gone)
+        // proceeds. ALT survives ONLY in the THREE keyboard Ctrl+Alt
+        // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R and, since 2026-09-13,
+        // Revert's Ctrl+Alt+O; re-derived by grep of chord_is_bound
+        // 2026-10-21, Ctrl+Alt+Shift+P gone and Ctrl+Alt+P moved onto
+        // Ctrl+Shift+Return)
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
@@ -8043,7 +8068,8 @@ void GuiInputHandler::finish_chrome_press_release(
         //
         // AND IT REACHES NO CTRL-ADMITTING BUTTON THAT ADMITS NO SHIFT, by
         // construction rather than by an exclusion: such a button's own
-        // predicate answers false (Previous Marker today; the two skips were of them until their buttons left the row
+        // predicate answers false (Previous Marker today, and Open Text
+        // Editor without a carried ctrl; the two skips were of them until their buttons left the row
         // 2026-10-12), so a held press is the ordinary press. The ctrl road on
         // glass is the S Pen's side button held on the button, a real ctrl
         // bit carried by the press like a held Ctrl key, never this hold.
@@ -8057,7 +8083,12 @@ void GuiInputHandler::finish_chrome_press_release(
         // carries ctrl, the hold adds shift, and the lift dispatches
         // Ctrl+Shift+Tab, the paired march — the pen's road to it, the tab
         // row's long press being the fingertip's. Without the pen's button the
-        // same hold is Shift+Tab, the previous marker, as before. (Up / Down admit
+        // same hold is Shift+Tab, the previous marker, as before. AND ON OPEN
+        // TEXT EDITOR (architect 2026-10-21, "glass has pen button as ctrl"):
+        // the barrel held through a long press dispatches Ctrl+Shift+Return,
+        // Paste Phase Resets, the barrel's tap Ctrl+Return, the copy, and the
+        // same hold with no barrel is the plain open, shift alone being no
+        // admission there. (Up / Down admit
         // both modifiers but not the pair, and they repeat, so the term below
         // excludes them twice over.)
         //
@@ -8098,7 +8129,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // reaches this build only on a button that admits the pair (the gate,
         // the re-ask above and the hold's own term), so the chord it spells
         // is that button's key under both modifiers — the walk's
-        // Ctrl+Shift+Tab.
+        // Ctrl+Shift+Tab, Open Text Editor's Ctrl+Shift+Return (the paste; the
+        // S Pen's barrel held through the long press on the glass).
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl ||
                       (arm.ctrl && redesign_button_ctrl_admits(tc.id));

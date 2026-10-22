@@ -199,31 +199,13 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
     return PhaseResetCopyRefusal::None;
 }
 
-// MEMOIZED AT THE OWNER, so the face, the Edit anchor's per-tick verdict and
-// the act read one answer and the walk runs once per store or selection change
-// (the key and why it is exact are at AppState::CopyCapturesCache).
+// Asked at the press alone (the memo that served the per-tick faces retired
+// with the last of them, 2026-10-21 — AppState's note where it stood).
 bool phase_reset_copy_captures(const AppState& app) {
     const auto& mv = app.warpmarkers.markers();
-    const std::set<int>& sel = app.selected_markers;
-    const auto walk = [&] {
-        for (int i : sel)
-            if (warp_marker_propagates(mv, i)) return true;
-        return false;
-    };
-    if (sel.empty()) return false;
-    const int first = *sel.begin();
-    const int last  = *sel.rbegin();
-    if (last - first + 1 != static_cast<int>(sel.size())) return walk();
-    AppState::CopyCapturesCache& c = app.copy_captures_cache;
-    const long long gen = app.warpmarkers.generation();
-    if (c.valid && c.markers_gen == gen && c.first == first && c.last == last)
-        return c.captures;
-    c.captures    = walk();
-    c.valid       = true;
-    c.markers_gen = gen;
-    c.first       = first;
-    c.last        = last;
-    return c.captures;
+    for (int i : app.selected_markers)
+        if (warp_marker_propagates(mv, i)) return true;
+    return false;
 }
 
 PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {
@@ -236,23 +218,12 @@ PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {
     return PhaseResetPasteRefusal::None;
 }
 
-// THE PIGEON'S FACE IN THE PHASE-RESET VIEW (the declaration, app_state.h):
-// each chord's authoring-lock gate (the one handle_mode_keys meets at on_key's
-// lock gate) and then its own ladder.
-bool phase_reset_paste_actionable(const AppState& a) {
-    GuiInputState paste{};
-    paste.ctrl = true;
-    paste.alt  = true;
-    return !authoring_lock_drops_chord(a, GuiKeys::P, paste) &&
-           phase_reset_paste_refusal(a) == PhaseResetPasteRefusal::None;
-}
-bool phase_reset_propagate_pair_actionable(const AppState& a) {
-    GuiInputState copy{};
-    copy.ctrl = true;
-    return (!authoring_lock_drops_chord(a, GuiKeys::P, copy) &&
-            phase_reset_copy_refusal(a) == PhaseResetCopyRefusal::None) ||
-           phase_reset_paste_actionable(a);
-}
+// (THE PIGEON'S FACE IN THE PHASE-RESET VIEW — phase_reset_propagate_pair_
+// actionable and phase_reset_paste_actionable, each chord's authoring-lock
+// gate and then its ladder — stood for the evening of 2026-10-21 and went
+// with that seat's view-dependent acts. The pair's seat is Open Text
+// Editor's since, which greys for its plain act alone, so no face asks the
+// ladders.)
 
 void PhaseResetPropagate::copy_from_selection() {
     const auto& mv = app.warpmarkers.markers();
@@ -354,7 +325,7 @@ void PhaseResetPropagate::copy_from_selection() {
 
 void PhaseResetPropagate::open_paste_confirmation() {
     // THE THREE GUARDS ARE SILENT AND STAY SILENT (re-verified 2026-08-30
-    // under the strictness ruling): the first two are the Ctrl+Alt+P dispatch
+    // under the strictness ruling): the first two are the Ctrl+Shift+Return dispatch
     // arm's own gates, spelled there term for term and CARDED there, so a
     // card here would be the second for one press; the third is a belt
     // against a stale index the selection layer cannot produce. An error arm
@@ -378,7 +349,8 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, so a bare Enter answers
     // Yes (architect 2026-09-16, "align — paste should open on the equivalent
     // of OK"): this confirmation is the deliberate second step of an explicit
-    // act — the Ctrl+Alt+P chord or the Edit row — exactly as the load
+    // act — Ctrl+Shift+Return, by key or by the Open Text Editor seat's
+    // ctrl+shift press — exactly as the load
     // confirmation's and Revert's are, so it takes their default
     // (PromptInitialFocus, app_state.h, where the three-way Save / Discard /
     // Cancel prompts keep the last button for not being confirmations of an

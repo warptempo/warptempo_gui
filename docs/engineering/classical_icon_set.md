@@ -43,7 +43,13 @@ and walnut. The drawings are judged on the NEAR-BLACK EBONY button they will sit
 the act strips on ebony #291D1B), but since draft 19 (architect 2026-10-21 ~21:10, "let's try without the near-black
 lines — everything already rendered fine") the prompt's head says only that the icons are shown at 48 x 48: its two
 ebony sentences of draft 14 (the near-black button, no object black as a whole) were removed as the suspect for the
-checker pattern on two of about ten sheets. Since draft 19 Phase Reset's clapperboard is metal — its clapper sticks and
+checker pattern on two of about ten sheets. Since draft 22 (architect 2026-10-21 ~22:45, "remove all the framing you
+did today") the head and the materials are the pre-session wording plus the agreed materials (brass, steel, bone,
+walnut, the marbled Viennese portfolio), every "no X" framing clause the session added removed on his word — they
+"didn't change the output"; the checkerboard sheets are kept, their two greys 11 levels apart, inside the cut's 20, so
+the slicer cuts them cleanly (proven on 20261021223831). Since draft 22 the pocket watches have no chain ("that makes
+the icons smaller"), Toggle Tooltips is one bold question mark alone and Toggle Inherit one bold ditto mark alone (the
+copyist's "the same again"), both light bone-colored. Since draft 19 Phase Reset's clapperboard is metal — its clapper sticks and
 rim, the stripes metal and bone, never black and white ("the clapper should be changed to bronze to stand
 out"), brass since draft 20 ("keep the clapper as brass") — while Wav Row's black record stays by his word ("the wavrow shows only on mid-level bg, so dark record is
 fine"). Since draft 16 (architect 2026-10-21 ~19:50, the tan folders "a bit too bright and tan … kind of modern")

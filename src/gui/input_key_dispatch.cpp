@@ -103,17 +103,25 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // keyboard chord was the only save route the lock ever stopped.
 // WHAT STAYS BLOCKED, the authoring vocabulary, dropped here at the gate rather
 // than admitted for a deeper owner refusal: the marker drop / status-toggle /
-// position-nudge / Delete chords, the flag and BPM editors' openers,
-// `;` (the settings editor, whose engine-key commits ARE authored content), `i`,
-// undo/redo (Ctrl+Z / Ctrl+Shift+Z), every propagate command (the COPY,
-// Ctrl+P, explicitly — a copy is non-mutating, but it arms a paste that is
-// not, and the pair travels together; the PASTE, Ctrl+Alt+P, structurally,
-// its modifier combination matching no allowlist predicate) — and `'` IN THE `h` VIEW,
+// position-nudge / Delete chords, the flag and BPM editors' openers, `i`,
+// undo/redo (Ctrl+Z / Ctrl+Shift+Z), both propagate commands (the COPY,
+// Ctrl+Return, explicitly — a copy is non-mutating, but it arms a paste that
+// is not, and the pair travels together; the PASTE, Ctrl+Shift+Return, with
+// it; Ctrl+P and Ctrl+Alt+P until 2026-10-21) — and `'` IN THE `h` VIEW,
 // where it is the load-in-place and replaces the whole authored state. THAT
 // ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
 // the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
 // it there and the entry below is the product's second state-dependent
 // admission beside the horizontal arrows' lane term.
+// `;`, THE SETTINGS EDITOR, IS ADMITTED (2026-10-21, the planner's ruling by
+// the architect's 2026-09-04 rule — THE LOCK GOVERNS THE KEYS, NOT THE
+// EDITOR): the editor authors the device keys and the band as well as the
+// engine settings, and its engine-key commit refuses under the lock inside
+// it (settings_editor.cpp), so dropping the opener here would leave a locked
+// tab no road to the device keys at all — the Settings popup's rows were that
+// road from 2026-09-04 until the popup retired the same day, and the key was
+// dropped here until then. THE FACE FOLLOWS: the Settings button left
+// redesign_button_enabled's read-only arm and iteration_lock_greys with it.
 // The deeper owner refusals — do_undo / do_redo's per-entry target-tab check
 // (undo.cpp), and the pointer AUTHORING refusals (input_pointer.cpp: the marker
 // drag arm, the flag editor's double-click open, the empty-lane marker drop) —
@@ -145,8 +153,10 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // one: the button is greyed by the same arm, and a greyed button's shift press
 // is consumed with its plain one.
 // THE MIRROR IS NOT AN EQUIVALENCE, and one direction has a member: the
-// propagate copy/paste pair is BLOCKED here with no face left to grey (its two
-// buttons left with the 2026-08-20 relocation). The other direction — a
+// propagate copy/paste pair is BLOCKED here with no face of its own to grey
+// (its two buttons left with the 2026-08-20 relocation; since 2026-10-21 it
+// rides the Open Text Editor seat's ctrl presses, a face that greys on the
+// lock for its plain act). The other direction — a
 // button lit on a locked tab whose chord drops here — is EMPTY. THE MIRROR IS
 // HAND-LISTED at
 // redesign_button_enabled (app_state.h) rather than derived by walking the
@@ -426,6 +436,15 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // lit exactly as it leaves both chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
+    // BARE `;`, THE SETTINGS EDITOR (2026-10-21, the header's ruling): the
+    // opener authors nothing, and the editor's own commit arms carry the lock
+    // per key. Bare-exact, the dispatch arm's own spelling. THE ITERATION
+    // LOCK INHERITS THE ADMISSION (iteration_lock_key_blocked falls through
+    // to this list), its three typed refusals inside the editor (the column,
+    // the audio view's `S`, the active tab's lock) and the engine-key arm
+    // answering per key.
+    const bool is_settings_editor =
+        (key == GuiKeys::Semicolon && !ctrl && !shift && !alt);
     // THE TOOLTIP LAMP, bare backslash (architect 2026-09-29): a chrome
     // posture — whether the resting pointer raises hints — authoring nothing
     // the lock protects, so it is admitted on a locked tab and under the
@@ -464,11 +483,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
-    // Delete, `;`, `i`'s ON edge, `[` (the value drag lamp, 2026-10-11: on a locked
+    // Delete, `i`'s ON edge, `[` (the value drag lamp, 2026-10-11: on a locked
     // tab both flag drags refuse, so the lamp would arm nothing — Toggle
     // Value Drag greys with the verbs) and the phase-reset propagate's
-    // copy/paste chords (the Ctrl+P three) are likewise
-    // absent (blocked here); `'` LEFT that list on 2026-09-01 for a
+    // copy/paste chords (Ctrl+Return / Ctrl+Shift+Return) are likewise
+    // absent (blocked here); `;` LEFT that list on 2026-10-21 (is_settings_
+    // editor above); `'` LEFT it on 2026-09-01 for a
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
     // 2026-08-07 — see is_trim_maximize above.
@@ -488,6 +508,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_play_renders ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
+             is_settings_editor ||
              is_tooltip_lamp || is_iteration_off_edge);
 }
 
@@ -579,8 +600,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //
 // EVERY OTHER AUTHORING CHORD this mode has to hold back is already off the
 // list above — the vertical arrows on any modifier, bare Return, bare `/`,
-// Delete, Ctrl+D, Ctrl+N, bare `s` and Shift+S, `;`, the three propagate
-// PASTES, and Ctrl+Z / Ctrl+Shift+Z — so the base answers for all of them and
+// Delete, Ctrl+D, Ctrl+N, bare `s` and Shift+S, the propagate PASTE
+// (Ctrl+Shift+Return), and Ctrl+Z / Ctrl+Shift+Z — so the base answers for
+// all of them and
 // this delta subtracts its own members alone. BARE `h` IS THE ONE AUTHORING
 // ROAD THIS GATE DOES NOT ANSWER, and it is refused a dispatch earlier
 // instead: the history vocabulary is claimed above this gate
@@ -618,7 +640,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     every other chord and the wrong one for the two the user pressed to ask
 //     about history. The arm refuses first, ahead of its own two terms, and
 //     history_step_actionable greys both buttons on the same fact.
-//   * THE CLIPBOARD COPY — Ctrl+P (the phase-reset placements) — which is
+//   * THE CLIPBOARD COPY — Ctrl+Return (the phase-reset placements; Ctrl+P
+//     until 2026-10-21) — which is
 //     CLIPBOARD-ONLY: it reads a selection into a session clipboard and
 //     writes no store, no
 //     undo entry and no dirty bit, so the whole reason this lock exists says
@@ -627,13 +650,15 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     different question — it protects one tab's authored content and eats
 //     the propagate family whole — and this is the one place the two locks
 //     part company in the admitting direction rather than the refusing one.
-//     THE PASTE STAYS REFUSED by the base — Ctrl+Alt+P — rewriting a store
-//     and pushing, which is exactly what the lock holds back. Ctrl-exact, no
-//     shift and no alt, the dispatch arm's own spelling — so the alt-bearing
-//     chord cannot reach this admission by widening it. THE PIGEON'S COPY IN
-//     THE PHASE-RESET VIEW comes with it and needs no edit of its own: its
-//     Ctrl+J is this chord there (on_key's jump_seat_chord), so the button
-//     is the key.
+//     THE PASTE STAYS REFUSED by the base — Ctrl+Shift+Return — rewriting a
+//     store and pushing, which is exactly what the lock holds back.
+//     Ctrl-exact through the shared predicate (is_phase_reset_copy_key), the
+//     dispatch arm's own spelling — so the shift-bearing paste cannot reach
+//     this admission by widening it. THE OPEN TEXT EDITOR SEAT'S CTRL PRESS
+//     is this chord and needs no edit of its own — the button is the key —
+//     BUT THE SEAT'S FACE greys under the lamp on the payload axis for its
+//     plain act (iteration_lock_greys), and a greyed seat consumes every
+//     press, so there the copy is the keyboard's alone.
 //   * CTRL+SHIFT+N — THE TIE (architect 2026-09-19), and it belongs here for
 //     the lock's own reason rather than as an exception to it: a tie says
 //     which markers are ONE AXIS of the sweep, which is BRACKET state and
@@ -699,9 +724,10 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // does and their FACE is the icon row's disabled face; their hint names the
 // act, so this gate's card is the only thing that SPEAKS the reason (the
 // account is at their arm in redesign_button_enabled). The propagate pair's
-// surface is the pigeon's seat in the phase-reset view since 2026-10-21
-// (jump_seat_act), which greys on this same list (the pair's ladders ask
-// authoring_lock_drops_chord; the Edit menu's rows did from 2026-09-24).
+// surface is the Open Text Editor seat's ctrl presses since 2026-10-21, and
+// that face greys for its plain act alone (the Edit menu's rows greyed on
+// the pair's ladders from 2026-09-24, and the pigeon's seat in the
+// phase-reset view for the evening of 2026-10-21).
 bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
                                 GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -735,10 +761,10 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // admitted for its own card: the lamp is permanently lit under the mode
     // (~01:45), so the arm cards that it is (delta (b)).
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) return false;
-    // The clipboard copy, ctrl-exact as its dispatch arm is — which is
-    // what keeps the ALT-bearing paste out of this admission.
-    if (key == GuiKeys::P && ctrl && !shift && !alt)
-        return false;
+    // The clipboard copy, ctrl-exact through the predicate its dispatch arm
+    // reads — which is what keeps the shift-bearing paste out of this
+    // admission.
+    if (is_phase_reset_copy_key(key, mods)) return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
     // one (the arrows' lane term): the same chords mean two different acts and
     // the gate has to ask the same question the dispatch asks.
@@ -761,10 +787,10 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
 // THE AUTHORING LOCK'S VERDICT, card-free — either lock's list dropping the
 // chord drops it; the two can stand together since 2026-10-13
 // (authoring_locked, app_state.h).
-// THREE READERS: on_key's gate (authoring_lock_refuses_chord, which adds the
-// card), the flag-cell wheel's silent refusal (input_pointer.cpp) and the
-// propagate pair's ladders, the pigeon's face in the phase-reset view
-// (phase_reset_propagate.cpp; the Edit menu's rows until 2026-10-21).
+// TWO READERS: on_key's gate (authoring_lock_refuses_chord, which adds the
+// card) and the flag-cell wheel's silent refusal (input_pointer.cpp). (The
+// propagate pair's faces were a third, the Edit menu's rows and then the
+// pigeon's seat in the phase-reset view, until 2026-10-21.)
 bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
                                 GuiInputState mods) {
     return (active_view_state(app).read_only &&
@@ -6829,7 +6855,8 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
 // (THE DROPDOWN ITEMS' ONE ENABLED VERDICT, dropdown_item_enabled — the
 // truthful menus, 2026-09-24 — RETIRED 2026-10-21 with the Settings popup.)
 
-// P / I / K / L letter-key handlers. See the declaration for the chord list.
+// The phase-reset clipboard pair and the I / K / L letter-key handlers. See
+// the declaration for the chord list.
 // THE CLIPBOARD CHORDS' SHARED SENTENCES (architect 2026-08-30, the
 // strictness ruling). TWO CHORDS — the phase-reset propagate's copy and its
 // paste (the state paste beside them removed 2026-10-21): where two chords
@@ -6863,9 +6890,8 @@ constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
 
 // THE PASTE'S LADDER, CARDED — phase_reset_paste_refusal
-// (phase_reset_propagate.h) is the decision, read by the arm below and by
-// the pigeon's face in the phase-reset view (redesign_button_enabled's Jump
-// to Defining Marker arm); this is its sentences. True = refused and carded.
+// (phase_reset_propagate.h) is the decision, read by the arm below alone;
+// this is its sentences. True = refused and carded.
 bool GuiInputHandler::card_phase_reset_paste_refusal() {
     const char* sentence = nullptr;
     switch (phase_reset_paste_refusal(app)) {
@@ -6890,8 +6916,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // Ctrl+P: copy phase reset placements from the selected warp markers
-    // into the session clipboard. Section-based (architect 2026-07-23):
+    // CTRL+RETURN: copy phase reset placements from the selected warp markers
+    // into the session clipboard (architect 2026-10-21 ~22:45, "we can give
+    // ctrl+enter as copy and ctrl+shift+enter as paste, on the open text
+    // editor icon": Return's ctrl form, so the Open Text Editor seat's ctrl
+    // press — the S Pen's barrel button on the glass — is this chord; it was
+    // Ctrl+P from 2026-07-23, and the pigeon's Ctrl+J in the phase-reset view
+    // for the evening of 2026-10-21). Section-based (architect 2026-07-23):
     // each selected marker contributes the block it owns — its time to the next
     // EFFECTIVELY-ENABLED marker's time, or to the song end when none follows
     // (a disabled marker never reaches the warp map, so it bounds no section;
@@ -6910,11 +6941,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // CARD since 2026-08-30 (architect, the strictness ruling), each naming
     // the gate it failed: the 2026-07-23 "gesture refusals are silent by
     // convention" ruling was withdrawn for this family with the rest.
-    if (key == GuiKeys::P && ctrl && !shift && !alt) {
-        // THE LADDER IS phase_reset_copy_refusal (phase_reset_propagate.h),
-        // the one decision the pigeon's face greys on in the phase-reset
-        // view (2026-10-21; the Edit menu's Copy row, 2026-09-24 until then).
-        // Each rung cards in its own sentence. The contiguity rung is the
+    if (is_phase_reset_copy_key(key, mods)) {
+        // THE LADDER IS phase_reset_copy_refusal (phase_reset_propagate.h);
+        // no face greys on it since 2026-10-21 (the Open Text Editor seat
+        // greys for its plain act alone), so every refusal is this arm's
+        // card. Its first rung is the WARP COLUMN, unchanged (architect
+        // 2026-10-21: the P-column question is open). Each rung cards in its
+        // own sentence. The contiguity rung is the
         // `m` sweep's own test. THE LAST RUNG IS ASKED BEFORE THE CLIPBOARD
         // IS TOUCHED (2026-09-24): a run holding no labeled, enabled marker
         // captures nothing, and until that day the copy ran anyway and then
@@ -6952,15 +6985,18 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // THE COPY SAYS SO: a clipboard write paints nothing (the reasoning
         // is at the value copy's own card, copy_focused_marker_value). The card is
         // the ARM'S: the propagate's COPY body carries no sentence of its own
-        // (unlike the paste beside it). THE PIGEON INHERITS IT: in the
-        // phase-reset view its Ctrl+J is this chord (jump_seat_chord).
+        // (unlike the paste beside it). THE SEAT INHERITS IT: the Open Text
+        // Editor button's ctrl press is this chord.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Copied the selected markers' phase resets");
         return true;
     }
 
-    // Ctrl+Alt+P: paste clipboard phase resets onto the destination
-    // anchored at the single selected warp marker. W-mode only; the three
+    // CTRL+SHIFT+RETURN: paste clipboard phase resets onto the destination
+    // anchored at the single selected warp marker (architect 2026-10-21, the
+    // copy's ruling above: Return's ctrl+shift form, the Open Text Editor
+    // seat's ctrl+shift press — on the glass the barrel button held through
+    // the long press; Ctrl+Alt+P from 2026-07-23 until then). W-mode only; the three
     // gates — the P view, an empty clipboard, and a selection that is not
     // exactly one marker — EACH SAY SO ON A CARD since 2026-08-30 (the
     // strictness ruling; the sentences are the family's shared literals, so
@@ -6971,7 +7007,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // yet" state the user can see on screen, not a fault worth a terminal
     // line — the card is the whole answer.
     // Opens a confirmation prompt before any mutation.
-    if (key == GuiKeys::P && ctrl && !shift && alt) {
+    if (is_phase_reset_paste_key(key, mods)) {
         if (card_phase_reset_paste_refusal()) return true;
         phase_reset_propagate.open_paste_confirmation();
         return true;

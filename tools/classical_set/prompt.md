@@ -8,19 +8,17 @@ music, the staff, notes, rests, clefs, bar lines, a metronome, a tuning fork, a 
 seal, a pocket watch, a marbled music portfolio, a post horn, an opera house — or a plain brass or polished-steel
 symbol in the same manner. Nothing from classical antiquity (no laurel wreaths, no marble busts or columns, no lyres).
 Draw every object FRONT-ON (head on). Bold, simple shapes with few elements and thick strokes: the icons will be shown
-at 48 x 48 pixels so each must read at a glance at that size. EVERY ICON IS ONE SOLID, CLOSED OBJECT (or two touching):
+at 48 x 48 pixels on a grey-blue button, so each must read at a glance at that size, with STRONG CONTRAST against a
+mid-grey ground. EVERY ICON IS ONE SOLID, CLOSED OBJECT (or two touching):
 NO staff lines, bar lines, sound waves, dots, flakes or any thin line floating loose on the background — a staff may
 appear only drawn ON a sheet of score paper that is itself an object with an outline. Nothing thin, nothing detached.
 EVERY ICON IS OPAQUE: no see-through glass, lens or window showing the background through it — whatever stands behind a
 lens is drawn on the object itself.
 
-THE MATERIALS ARE THOSE OF MOZART'S OWN FORTEPIANO (Anton Walter, Vienna, about 1782) AND HIS ROOM: OLD BRASS — the
-instrument's lock plate and hinges, warm, hand-polished, a deep old brass, NOT gilt, NOT gold, NOT mirror-bright (NO
-GOLD ANYWHERE IN THE SET); POLISHED STEEL — its strings and tuning pins, a cool pale grey metal, not silver; BONE — its
-white keys, a warm off-white, not ivory; WALNUT — its case, a plain honey-brown wood; and for its papers THE VIENNESE
-PORTFOLIO — a stiff pasteboard music portfolio covered in BOLD MARBLED PAPER, a coarse two-tone swirl of burgundy and
-deep blue, with a mid-brown calf spine and calf corners and two cloth ties, as a copyist of 1780 kept his parts (NO tan
-leather, NO smooth pale hide, NO strap, NO snap, NO flap — nothing like a modern wallet or briefcase); and beside them
+THE MATERIALS ARE THOSE OF MOZART'S OWN FORTEPIANO (Anton Walter, Vienna, about 1782) AND HIS ROOM: OLD BRASS (its lock
+plate and hinges, warm, hand-polished), POLISHED STEEL (its strings and tuning pins), BONE (its white keys), WALNUT (its
+case), and for its papers THE VIENNESE PORTFOLIO — a stiff pasteboard music portfolio covered in bold marbled paper, a
+coarse two-tone swirl of burgundy and deep blue, with a mid-brown calf spine and corners and two cloth ties; beside them
 burgundy, parchment and a little deep blue — never neon, never orange or lime. ALL ARROWS ARE ONE SHAPE: a thick, chunky
 BRASS arrow with a dark outline and a gloss highlight — the same arrow, only turned, for left, right, up and down, and
 the same arrow beside a pennant flag, a watch or a podium where the list says so; the render player's two arrows the
@@ -44,14 +42,14 @@ black text so I can identify it. Nothing else on the sheet.
     beside it — the desk on a SQUAT, solid base, no thin stand or leg showing, nothing below it fading
 4. Save Pull — fetch the newer checkpoint down: the same score on the same squat podium desk with THE BRASS ARROW pointing
     down beside it
-5. Revert — back to the viewed checkpoint: the antique brass-cased pocket watch with A BRASS UNDO ARROW
+5. Revert — back to the viewed checkpoint: the antique brass-cased pocket watch, no chain, with A BRASS UNDO ARROW
+    curving back round it
 6. Load in Place — load the walked version into the editor, a big act that must be unmistakable: ONE bold CHECK MARK
     (a tick), polished steel with the dark outline, nothing else
 7. Render — perform the warp (the "record" act): a red wax seal pressed onto the score
 8. Cancel — stop the running render: a conductor's raised palm
 9. Play Renders — audition the rendered files: a gramophone with its brass horn
-10. Folder — a folder in a file list: THE VIENNESE PORTFOLIO closed, seen front-on, its two cloth ties tied in a bow — the
-    marbled boards, the calf spine and corners, nothing else
+10. Folder — a folder in a file list: THE VIENNESE PORTFOLIO closed, its two cloth ties tied in a bow
 11. Wav Row — an audio file in a file list: a black gramophone record (a flat disc) with a round parchment center label
 12. Delete Folder — throw a render folder away: crumpled score pages in a waste basket
 13. Close — close the player: ONE bold X (a cross), polished steel with the dark outline, nothing else
@@ -62,7 +60,7 @@ black text so I can identify it. Nothing else on the sheet.
 17. Phase Reset — a synchronization instant, an exact snap to the source at one moment: a film clapperboard MADE OF
     BRASS — the whole board, its slate and its hinged clapper sticks, one bright polished brass object with the gloss
     and dark outline of the set's arrows, so it stands out as a brass thing at a glance; the clapper's stripes brass
-    and bone, never black and white; nothing black on it, no picture frame around it
+    and bone — NOT a picture frame around it
 18. Full Zoom Out — show the whole piece: a magnifying glass — a brass-rimmed lens with a turned wooden handle — held
     over a sheet of score paper, with a bold BRASS MINUS SIGN seen through the lens on the paper; the paper fills the whole
     lens, so nothing of the background shows through the glass (the same glass and paper as no. 19)
@@ -76,8 +74,9 @@ black text so I can identify it. Nothing else on the sheet.
     sheet of score paper
 23. Toggle Disabled — mute a marker (it stays but has no effect): a SIMPLE brass post horn — one plain curl of tube and a
     bell, no valves, no inner machinery — with a mute stopped in its bell
-24. Toggle Inherit — the marker takes its value from the one before, "as before": the one-bar REPEAT SIGN (the
-    simile mark: a thick slash with a dot each side) drawn large on a sheet of score paper
+24. Toggle Inherit — this marker takes its value from the one before it: ONE bold DITTO MARK alone — the copyist's
+    "the same again" sign, two short strokes like a closing double quotation mark (”) — light bone-colored with the
+    dark outline, large, nothing else
 25. Flatten — sweep the sweep's variants away, back to one plain value everywhere: a besom broom (birch twigs bound
     on a wooden handle), alone
 26. Toggle Follow — the view follows the playhead during playback: a page-turner's hand turning a score page
@@ -92,46 +91,43 @@ black text so I can identify it. Nothing else on the sheet.
     drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the right (the music getting
     faster across the page), the LOWER staff's notes open wider and wider toward the right (the music slowing); the notes
     drawn ON the sheet, never floating; the sheet itself a plain rectangle, never pinched, curved or waisted
-32. Read-Only — editing locked: ONE closed BRASS padlock alone, large, filling the cell, nothing else — no case, no
-    portfolio, no chain, nothing under it
+32. Read-Only — editing locked: ONE closed BRASS padlock alone, large, nothing else
 33. Undo — ONE curved BRASS UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
     (its Redo twin is not drawn — the slicer mirrors this one)
-34. Toggle History View — show the checkpoint history: the antique brass-cased pocket watch alone, open on its chain, no arrow
-35. Older — the previous checkpoint: the antique brass-cased pocket watch with THE BRASS ARROW pointing left beside it, at
-    the LEFT
-36. Newer — the next checkpoint: the SAME pocket watch with THE BRASS ARROW pointing right beside it, at the RIGHT
+34. Toggle History View — show the checkpoint history: the antique brass-cased pocket watch alone, NO chain, no arrow
+35. Older — the previous checkpoint: the antique brass-cased pocket watch (no chain) with THE BRASS ARROW pointing left
+    beside it, at the LEFT
+36. Newer — the next checkpoint: the SAME pocket watch (no chain) with THE BRASS ARROW pointing right beside it, at the
+    RIGHT
 37. Background Sound — a soothing sound (rain) played in the background while one works: an OPEN UMBRELLA seen front-on,
     held upright, ONE closed object — a canopy of burgundy silk with bone-colored tips at its rib ends, a turned walnut
-    handle below and a brass ferrule at its top; no rain, no drops, nothing detached, nothing below the handle fading
-38. Left — nudge left by a hair: ONE bold BRASS ARROW pointing LEFT (the set's arrow shape), nothing else (its Right twin is
-    not drawn — the slicer mirrors this one)
-39. Up — speed up the tempo (accelerando): ONE bold BRASS ARROW pointing UP, the same arrow as no. 38 turned, nothing else
-40. Down — slow the tempo (ritardando): ONE bold BRASS ARROW pointing DOWN, the same arrow as no. 38 turned, drawn in full,
-    nothing else
+    handle below and a brass ferrule at its top, nothing else
+38. Left — nudge left by a hair: ONE bold BRASS ARROW pointing LEFT, nothing else (its Right twin is not drawn — the
+    slicer mirrors this one)
+39. Up — speed up the tempo (accelerando): ONE bold BRASS ARROW pointing UP, nothing else
+40. Down — slow the tempo (ritardando): ONE bold BRASS ARROW pointing DOWN, nothing else
 41. Previous Marker — walk to the previous marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at
     the LEFT, THE BRASS ARROW at the right pointing LEFT, its head touching the flag
 42. Next Marker — walk to the next marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at the
     RIGHT, THE BRASS ARROW at the left pointing RIGHT, its head touching the flag
-43. Switch Tab — switch between the two tabs: a closed NOTEBOOK bound in the same bold marbled boards as the portfolio
-    of no. 10, with its calf spine, standing UPRIGHT and seen front-on, filling the cell, with TWO INDEX TABS standing
-    out from its fore-edge, one above the other, the front tab brass and the other burgundy — BOTH TABS FULLY SOLID AND
-    OPAQUE, drawn in the same full color and gloss as the notebook, NEITHER faded, greyed, translucent or dimmed; never a
-    flat folder lying down, no plain white sheet, nothing else
+43. Switch Tab — switch between the two tabs: a closed notebook bound in the marbled boards of no. 10 with its calf
+    spine, standing upright, with TWO INDEX TABS on its fore-edge, the front tab brass and the other burgundy, both tabs
+    fully solid, never faded — no plain white sheet
 THE RENDER PLAYER'S GLYPHS ARE POLISHED STEEL, ONE FAMILY: the four drawn transport glyphs (44–47; Player Next is the
 mirrored fifth), its two arrows (48–49), the check mark (6) and the X (13) — polished steel, a cool pale grey metal with
 the dark outline and the same gloss, every one the SAME shade, so they stand apart from the brass of the editor's acts.
-Not silver-white, not green, not red, not blue.
+Not green, not red, not blue.
 44. Play — a bold polished-steel triangle pointing right
 45. Pause — two bold polished-steel bars
 46. Player Previous — skip to the previous render: a bold polished-steel double-arrow left with a bar (its Player Next twin is not
     drawn — the slicer mirrors this one)
 47. Repeat One — repeat the one render: a circular polished-steel arrow, nothing inside it
-48. Player Up — move the highlight up one row in the list of renders: ONE bold POLISHED-STEEL ARROW pointing UP (the set's
-    arrow shape in steel, as the check mark of no. 6 and the X of no. 13 stand alone), nothing else
-49. Player Down — move the highlight down one row: ONE bold POLISHED-STEEL ARROW pointing DOWN, the same arrow as no. 48
-    turned, drawn in full, nothing else
+48. Player Up — move the highlight up one row in the list of renders: ONE bold POLISHED-STEEL ARROW pointing UP,
+    nothing else
+49. Player Down — move the highlight down one row: ONE bold POLISHED-STEEL ARROW pointing DOWN, nothing else
 50. Settings — a tuning key and a tuning fork crossed
-51. Toggle Tooltips — show help: an open programme booklet with a question mark
+51. Toggle Tooltips — show help: ONE bold QUESTION MARK alone, light bone-colored with the dark outline, large, nothing
+    else
 52. Card Normal — the notification card's information glyph: a bold blue "i" on a round parchment medallion
 53. BPM Iterations — render the tempo sweep over a run: a wooden pyramid metronome, its pendulum mid-swing on the front face
 54. Card Critical — the notification card's error glyph: a bold red "!" on the same round parchment medallion (the

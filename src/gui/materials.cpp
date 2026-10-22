@@ -273,7 +273,8 @@ void rebuild_flats() {
         hex(beveled(case_tone(ebony, kCaseShadowLast), ebony)),
         hex(beveled(case_tone(ebony, kCaseCorner), ebony))};
     // THE DISABLED GLYPH'S TONES (materials.h): the live ramp's mean HLS
-    // lightness over its twenty flat stops, the ratios onto it.
+    // lightness over its twenty flat stops, his ratio onto it for the
+    // silhouette, the rim black.
     constexpr int kCaseStopCount =
         static_cast<int>(cool_edit_derive::kCaseRamp.size());
     double mean_l = 0.0;
@@ -286,7 +287,7 @@ void rebuild_flats() {
     const double sil_l = mean_l * kCeDisabledShadowRatio;
     s.disabled = materials::DisabledGlyphTones{
         cool_edit_derive::tone(ebony, 0.0, sil_l), kCeDisabledLight,
-        cool_edit_derive::tone(ebony, 0.0, sil_l * kCeDisabledInsetRatio)};
+        kCeDisabledInset};
 }
 
 // THE FACE'S RATIO of a tone to its Face, Rec. 601 luma (the luminance rule).

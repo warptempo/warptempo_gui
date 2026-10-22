@@ -53,6 +53,11 @@ DRAFT 20 (architect 2026-10-21 ~21:25, "I think we should undo the bronze conver
 reverts the metal word to brass and the materials line to draft 15's plain old brass (draft 16's door-knob darkening
 gone too): A REFINEMENT AGAIN, NO ACT REDRAWN — Phase Reset stays 19, its object changed there and the metal word does
 not matter.
+DRAFT 22 (architect 2026-10-21 ~22:45, "remove all the framing you did today") returns the prompt's head and materials
+to the pre-session wording plus the agreed materials (brass, steel, bone, walnut, the marbled Viennese portfolio), every
+"no X" clause the session added stripped; the pocket watches lose their chain ("that makes the icons smaller"), a
+refinement, no act redrawn for it; Toggle Tooltips becomes one bold question mark alone and Toggle Inherit one bold ditto
+mark alone, both light bone-colored — two new objects, so both are REDRAWN at 22.
 EVERY TILE IS ONE SIZE, TILE_PX, on every page (architect 2026-10-20 ~13:50, "a uniform size, about the size of the
 flags, and use more pages as needed": the families are compared against each other, so a tile must not shrink with the
 family's width; a wide family flows onto more pages instead).
@@ -120,13 +125,15 @@ ISOLATED = ("single", "Isolated acts", [
 # Draft 17 (2026-10-21 ~20:25) Switch Tab's marbled notebook with its two solid tabs, a different object from draft 16's.
 # Draft 18 (2026-10-21 ~20:45) the bronze metal word, a refinement, no act redrawn for it; draft 19 (2026-10-21 ~21:10)
 # Phase Reset's bronze clapperboard, a redraw of the black-and-white one (Wav Row's black record kept by his word);
-# draft 20 (2026-10-21 ~21:25) brass again, the clapperboard with it, a refinement, no act redrawn for it.
+# draft 20 (2026-10-21 ~21:25) brass again, the clapperboard with it, a refinement, no act redrawn for it; draft 22
+# (2026-10-21 ~22:45) Toggle Tooltips' bare question mark (the programme booklet retired) and Toggle Inherit's ditto mark
+# (the repeat-one bar sign retired), new objects — the chainless watches a refinement, no act redrawn for them.
 REDRAWN = {"Left": 15, "Right": 15, "Up": 15, "Down": 15, "ValueDrag": 10, "JumpToDefiningMarker": 8,
            "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "RepeatOne": 7,
            "Revert": 12, "Center": 13, "FullZoomOut": 13, "Older": 14, "Newer": 15, "Redo": 15,
            "BackgroundSound": 14, "PlayerUp": 15, "PlayerDown": 15,
            "FolderRow": 16, "Save": 16, "ReadOnly": 16, "SwitchTab": 17,
-           "PhaseReset": 19}
+           "PhaseReset": 19, "Tooltips": 22, "Inherit": 22}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "OpenTextEditor": "TextEditor",

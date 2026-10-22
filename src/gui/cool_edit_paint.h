@@ -111,40 +111,55 @@ inline constexpr uint32_t kCeRingOuter = 0x000000;
 // pressed case goes. Inside, never a dark copy peeking out up-left, which
 // grew the glyph. The tone his pick off a 70 / 60 / 50 / 40 / 30 / 20 / 10 /
 // 00 series judged on the glass the same evening.
-// THE THREE ARE CASE-RELATIVE ON THE EBONY (architect 2026-10-21, "r1", his
+// THE TONES ARE CASE-RELATIVE ON THE EBONY (architect 2026-10-21, "r1", his
 // pick off three 1:1 mocks: the constant silhouette read as a light grey
-// blob on the dark case): the bytes above are the MEASUREMENT, on Cool Edit's
-// Default case, and what the product paints is their RATIO taken onto the
-// live case — THE SILHOUETTE's HLS lightness the live case ramp's mean
-// lightness times kCeDisabledShadowRatio (808080's L over the Default ramp's
-// mean, 0.502 / 0.809), THE RIM's the silhouette's times kCeDisabledInsetRatio
-// (505050's L over 808080's, 0.625), both on the ebony Face's hue and
-// saturation; THE LIGHT COPY STAYS F8F8F8, Cool Edit's. Recomputed at every
-// bake (materials::disabled_glyph_tones; about 1F1615 and 130D0C on the
-// shipped ebony). The constant 808080 / 505050 on a dark case retired the
-// same day.
+// blob on the dark case), AND SINCE HIS PICK v2 THE SAME NIGHT (~23:05, on
+// four renders of the real painter composited into his tablet capture) THEY
+// ARE HIS OWN NUMBERS, NOT COOL EDIT'S RATIOS: THE SILHOUETTE's HLS lightness
+// is the live case ramp's mean lightness times kCeDisabledShadowRatio, 0.84
+// — a measured constant of his own, his pick 2A1E1C on the shipped ebony
+// (L .137 over the ramp mean .163) — on the ebony Face's hue and saturation,
+// recomputed at every bake (materials::disabled_glyph_tones); THE RIM IS
+// BLACK, kCeDisabledInset, a constant (on a dark case a tone darker than the
+// silhouette has nowhere to go but black); THE LIGHT COPY STAYS F8F8F8, Cool
+// Edit's. THE RULE IT DEPARTS FROM, recorded: Cool Edit's own ratio, 808080's
+// L over the Default case ramp's mean (0.502 / 0.809 = 0.620), with the rim
+// at the silhouette's times 505050's L over 808080's (0.625) — the glass
+// round's rule, which put the silhouette at 1F1615 and the rim at 130D0C on
+// the ebony, the rim invisible ("I don't see it so it may be gone"). The
+// constant 808080 / 505050 on a dark case retired earlier the same day.
+// kCeDisabledShadow stays Cool Edit's measured byte, the record and the
+// state's pre-bake default; the static_assert pins the departure.
 inline constexpr uint32_t kCeDisabledShadow = 0x808080;
 inline constexpr uint32_t kCeDisabledLight  = 0xF8F8F8;
-inline constexpr uint32_t kCeDisabledInset  = 0x505050;
-// The Default case ramp's mean HLS lightness, over its twenty measured rows.
+// THE RIM (architect 2026-10-21, his pick v2): black, constant. 505050, his
+// pick off the 2026-10-15 series on Cool Edit's light case, until then.
+inline constexpr uint32_t kCeDisabledInset  = 0x000000;
+// The Default case ramp's mean HLS lightness, over its twenty measured rows —
+// Cool Edit's own ratio's denominator, kept for the assert's record.
 constexpr double ce_default_case_ramp_mean_l() {
     double sum = 0.0;
     for (const cool_edit_derive::CaseTone& t : cool_edit_derive::kCaseRamp)
         sum += cool_edit_derive::hls_of(t.default_byte).l;
     return sum / static_cast<double>(cool_edit_derive::kCaseRamp.size());
 }
-inline constexpr double kCeDisabledShadowRatio =
-    cool_edit_derive::hls_of(kCeDisabledShadow).l / ce_default_case_ramp_mean_l();
-inline constexpr double kCeDisabledInsetRatio =
-    cool_edit_derive::hls_of(kCeDisabledInset).l /
-    cool_edit_derive::hls_of(kCeDisabledShadow).l;
+// THE SILHOUETTE'S RATIO TO THE LIVE CASE RAMP'S MEAN LIGHTNESS — HIS PICK
+// (architect 2026-10-21 ~23:05): 2A1E1C's L .137 over the shipped ebony
+// ramp's mean .163. The lifted silhouettes 3B2A27 … 855E58 and the
+// ramp-mean 332523 were mocked and not taken (closed_questions.md).
+inline constexpr double kCeDisabledShadowRatio = 0.84;
 static_assert(ce_default_case_ramp_mean_l() > 0.804 &&
                   ce_default_case_ramp_mean_l() < 0.814 &&
-                  kCeDisabledShadowRatio > 0.615 && kCeDisabledShadowRatio < 0.625 &&
-                  kCeDisabledInsetRatio > 0.624 && kCeDisabledInsetRatio < 0.626,
-              "the disabled emboss's ratios: 808080 (L 0.502) over the "
-              "Default case ramp's mean L 0.809, 0.620; 505050 over 808080, "
-              "0.625");
+                  cool_edit_derive::hls_of(kCeDisabledShadow).l /
+                          ce_default_case_ramp_mean_l() > 0.615 &&
+                  cool_edit_derive::hls_of(kCeDisabledShadow).l /
+                          ce_default_case_ramp_mean_l() < 0.625 &&
+                  kCeDisabledShadowRatio == 0.84 &&
+                  kCeDisabledInset == 0x000000,
+              "the disabled emboss: his pick 0.84 of the case ramp's mean L "
+              "(2A1E1C on the shipped ebony) departing from Cool Edit's "
+              "0.620 (808080's L 0.502 over the Default ramp's mean 0.809), "
+              "the rim black 000000 (Cool Edit-relative 0.625 retired)");
 
 // -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
@@ -192,9 +207,10 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 //              icons::draw_cased_disabled — Cool Edit's own disabled art,
 //              its silhouette over a kCeDisabledLight copy of the drawing
 //              one icon unit right and down, with the product's rim inside
-//              the silhouette's top-left edges, the silhouette and rim the
-//              case's tones by kCeDisabledShadowRatio / kCeDisabledInsetRatio
-//              since 2026-10-21, icons.h's THE DISABLED GLYPH).
+//              the silhouette's top-left edges — the silhouette the case
+//              ramp's mean lightness times kCeDisabledShadowRatio and the
+//              rim black since 2026-10-21,
+//              icons.h's THE DISABLED GLYPH).
 //   HOT      — none: Cool Edit's toolbar has no hover face (program_spec.h's
 //              case_hot_face).
 // Answers the glyph's shift in device px (one line when down).

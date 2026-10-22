@@ -2414,11 +2414,14 @@ enum class RedesignButton {
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
     // bare `;`, the bare settings prompt, wearing Settings. The
     // button IS the key, so it greys exactly where
-    // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
-    // allowlist), grid iterations (the iteration lock's gate inherits that
-    // refusal; iteration_lock_greys names it) and the `h` view (off that
-    // mode's allowlist, through the derived partition) — and a dialog editor
-    // already standing is the veil's, the press never reaching it. It is the
+    // `;` refuses — the `h` view (off that mode's allowlist, through the
+    // derived partition) and nowhere else: A LOCKED TAB AND GRID ITERATIONS
+    // ADMIT IT since 2026-10-21 (read_only_key_blocked's is_settings_editor,
+    // which the iteration gate inherits — the lock governs the keys, not the
+    // editor, the 2026-09-04 rule, and this editor is the device keys' one
+    // road; it greyed under both locks from 2026-09-29 until then) — and a
+    // dialog editor already standing is the veil's, the press never reaching
+    // it. It is the
     // typed road's pointer spelling (the menu row's Settings anchor, whose
     // rows each prefilled one key, went with the row 2026-10-21, and the
     // popup that hung from this case after it the same evening — the editor
@@ -2774,7 +2777,38 @@ enum class RedesignButton {
     // where Return is that editor's commit (its arm in redesign_button_enabled
     // says why each); the `h` view refuses Return at its allowlist, so the
     // derived partition greys it and the view does not paint it. NO LAMP (an
-    // act), NO REPEAT (an opener), NO MODIFIER ADMITTED.
+    // act), NO REPEAT (an opener).
+    //
+    // ITS CTRL PRESSES ARE THE PHASE-RESET PROPAGATE PAIR (architect
+    // 2026-10-21 ~22:45: "we can give ctrl+enter as copy and ctrl+shift+enter
+    // as paste, on the open text editor icon, which has no modifiers. pigeon
+    // stays ctrl+j / +shift" — and "glass has pen button as ctrl"): a press
+    // WITH CTRL dispatches CTRL+RETURN, COPY PHASE RESETS, and a press with
+    // CTRL AND SHIFT dispatches CTRL+SHIFT+RETURN, PASTE PHASE RESETS — the
+    // button's own key under those modifiers, the roster's grammar, so no
+    // translation. On the laptop the held Ctrl and Ctrl+Shift; ON THE GLASS
+    // the S Pen's barrel button (the Ctrl bit, platform_android.cpp's
+    // pen_report_in_plane) with a tap is the copy, and held through the long
+    // press — the hold's shift composing with a carried ctrl where the pair
+    // is admitted — the paste. THE PRESS READS THE MODIFIERS AT THE PRESS
+    // and the act runs at the lift (the timing doctrine's ICONS ARE UP,
+    // input_handler.h; arm_redesign_press, input_pointer.cpp): the arm
+    // stamps the carried ctrl and shift and the lift dispatches from the
+    // stamp, never re-reading them, the hold's shift measured at the lift
+    // against the press's clock. SHIFT ALONE IS NOT
+    // ADMITTED (Shift+Return binds nothing): a shift-click is the consumed
+    // nothing, and a long press without the barrel is the plain open. THE
+    // ADMISSIONS are redesign_button_ctrl_admits and
+    // redesign_button_ctrl_shift_admits. THE FACE GREYS FOR THE PLAIN ACT
+    // ALONE (one face cannot show three states), and a greyed seat consumes
+    // every press, the modified ones with it; on a lit seat the modifier
+    // acts refuse with their own cards (the propagate's ladders, the warp
+    // column their first rung). THE TOOLTIP NAMES THE PLAIN ACT ALONE and
+    // carries no modifier line (the one recorded exception at
+    // redesign_button_modifier_hint_agrees): a tooltip names one act, and the
+    // modifier acts are the keyboard's words in HELP.md. (The pair rode the
+    // pigeon's Ctrl+J by view for the evening of 2026-10-21, and Ctrl+P /
+    // Ctrl+Alt+P before that.)
     IconOpenTextEditor,
     // ADD TO SELECTION — the verb group's SEVENTH and last member since
     // 2026-10-09, Open Text Editor standing immediately ahead of it (every
@@ -5296,33 +5330,13 @@ struct AppState {
     };
     mutable ValueSourceMarkerCache value_source_marker_cache;
 
-    // MEMOIZED COPY CAPTURE — the answer phase_reset_copy_captures last gave
-    // (architect 2026-09-24): the pigeon's
-    // face in the phase-reset view asks the copy's ladder on every tick
-    // (redesign_button_enabled; the Edit anchor's verdict until 2026-10-21),
-    // and the ladder's last rung walks the selection
-    // through warp_marker_propagates, whose effective_disabled scans the
-    // store per label reference — O(n²) at worst, a cost ruled for discrete
-    // commands and not for a tick. The key is the function's OWN inputs: the
-    // warp store's one generation (the ValueSourceMarkerCache's argument
-    // above: the A/B tabs share this store, so no view or tab axis can change
-    // the answer without it) and the selection, keyed as its FIRST and LAST
-    // members — which identify a CONTIGUOUS set exactly, and only a
-    // contiguous set is memoized (the copy ladder asks this only past its
-    // NotOneRun rung; any other set is answered directly, unmemoized). The
-    // selection carries no change stamp of its own, and its writers are too
-    // many to thread one through; two ints are the cheapest exact key.
-    // Mutable and written by phase_reset_copy_captures alone; invalidated by
-    // the key compare, so no mutator calls anything. Session-only, never
-    // serialized.
-    struct CopyCapturesCache {
-        bool      valid       = false;
-        long long markers_gen = -1;
-        int       first       = -1;
-        int       last        = -1;
-        bool      captures    = false;
-    };
-    mutable CopyCapturesCache copy_captures_cache;
+    // (THE MEMOIZED COPY CAPTURE — CopyCapturesCache, the answer
+    // phase_reset_copy_captures last gave, keyed on the warp store's
+    // generation and the run's two ends — stood 2026-09-24 to 2026-10-21 for
+    // the per-tick faces that asked the copy's ladder, the Edit menu's Copy
+    // row and then the pigeon's seat in the phase-reset view. With no face
+    // left asking, the ladder runs at the press alone and the walk is a
+    // discrete command's cost.)
 
     // The warp_frame_map the LAST COMMITTED frame's target-view item pixels
     // (flags; the live trim/selected-stem passes read it directly per frame)
@@ -7089,7 +7103,9 @@ struct AppState {
     // list), 2026-08-08.
     //   DEAD — Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), RENDER (Ctrl+Alt+R, which
     //   left the allowlist with its shifted twin on 2026-08-08 when the
-    //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
+    //   checkpoint act moved onto Ctrl+S), copy and paste (Ctrl+P / Ctrl+Alt+P
+    //   then; Ctrl+Return / Ctrl+Shift+Return, the Open Text Editor seat's
+    //   ctrl presses, since 2026-10-21),
     //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
     //   the SETTINGS button (bare `;`; the menu row's Settings anchor until
     //   2026-10-21).
@@ -8079,7 +8095,7 @@ struct AppState {
     };
     PendingArchivalCommand pending_archival;
 
-    // Phase reset propagate (W-mode Ctrl+P / Ctrl+Alt+P). Single-slot
+    // Phase reset propagate (W-mode Ctrl+Return / Ctrl+Shift+Return). Single-slot
     // session-only clipboard cleared on app exit.
     PhaseResetClipboard phase_reset_clipboard;
     // The destination warp-marker index captured when the PHASE RESET paste's
@@ -11680,11 +11696,11 @@ inline const ViewState& active_view_state(const AppState& a) {
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
 // reachable) and
-// THE CLIPBOARD COPY, Ctrl+P, which is the exception: it reads a run into a
+// THE CLIPBOARD COPY, Ctrl+Return, which is the exception: it reads a run into a
 // session clipboard and pushes nothing, so the undo domain this lock protects
 // has no interest in it, while the read-only lock eats the propagate family
-// whole for its own reason — one tab's authored content. The two PASTES stay
-// refused by both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
+// whole for its own reason — one tab's authored content. The PASTE,
+// Ctrl+Shift+Return, stays refused by both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
 // A FIFTH ADDITION until 2026-09-10, when the architect ruled its own
 // swap-the-mode exit out; it falls to the base list, which refuses it, same
 // as any other authoring chord.) WHAT
@@ -11871,12 +11887,11 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // is not this predicate's: bare `i` refuses while BPM iterations
         // stands, at that button's own arm.)
         case RedesignButton::IconBpm:
-        // THE SETTINGS BUTTON (architect 2026-09-29): bare `;` is off the
-        // read-only allowlist, and the iteration gate refuses everything that
-        // list refuses, so the key cards the lock's sentence under a lit lamp
-        // and the face greys — its read-only half is the tab's bare bit, at
-        // its enabled arm.
-        case RedesignButton::IconSettings:
+        // (THE SETTINGS BUTTON WAS A MEMBER from 2026-09-29 until 2026-10-21,
+        // bare `;` being off the read-only allowlist the iteration gate
+        // inherits; the allowlist admits it since — the lock governs the
+        // keys, not the editor — so the button is lit under the lamp and the
+        // editor's own arms refuse the locked keys.)
         // THE VIEW PAIRS' FOUR (architect 2026-09-10): bare 1/2/3/4 run the
         // audio-view and column switches, so the delta blocks all four
         // unconditionally
@@ -12476,7 +12491,7 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete
 //     is a delete in every column;
-//   * THE CLIPBOARD COPY, Ctrl+P, past its three gates;
+//   * THE CLIPBOARD COPY, Ctrl+Return, past its three gates;
 //   * THE PROPAGATE PASTE — the phase family's confirmed placement paste
 //     (PhaseResetPropagate::paste_apply), past its own last refusal (its
 //     state paste beside it until its removal, 2026-10-21);
@@ -13820,10 +13835,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     one owner, iteration_lock_greys (above), which the arms alone read since
 //     2026-09-12 (the HINTS were its second reader until the refusal-reason
 //     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-10-09, the
-//     three shapes are these. SEVEN ARMS BELOW COMPOSE BOTH HALVES, TEN
-//     BUTTONS (Open Text Editor's arm joined 2026-10-09): Drop marker; Delete
+//     three shapes are these. SIX ARMS BELOW COMPOSE BOTH HALVES, NINE
+//     BUTTONS (Open Text Editor's arm joined 2026-10-09; Settings' left
+//     2026-10-21, `;` admitted by both locks): Drop marker; Delete
 //     and Disable, sharing one arm; Open Text Editor; BPM Iterations;
-//     Settings; the LEFT / RIGHT pair, which composes them around one lane
+//     the LEFT / RIGHT pair, which composes them around one lane
 //     term; and the UP / DOWN pair, whose iteration half is admitted on a
 //     BOUND AXIS, where the cells are the mode's own authoring surface — Open
 //     Text Editor's is too.
@@ -13847,11 +13863,13 @@ inline bool playback_launch_playable(const AppState& a,
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops.
 //     THIS COUNTS THE BUTTONS WHOSE ARM READS THE BIT AS ITS FIRST TERM, not
-//     the lock's whole button set (that one is SEVENTEEN and is enumerated at
-//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-10-11,
-//     it is NINE — bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `[`,
-//     Ctrl+B, bare `;` and bare `i` — bare `[` joining with the Toggle Value
-//     Drag button that day, bare Return back with the Open Text Editor
+//     the lock's whole button set (that one is SIXTEEN and is enumerated at
+//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-10-21,
+//     it is EIGHT — bare `s`, Delete, Ctrl+D, Ctrl+N, bare
+//     Return, bare `[`, Ctrl+B and bare `i` — bare `;` LEAVING that day with
+//     its admission (the lock governs the keys, not the settings editor;
+//     read_only_key_blocked), bare `[` joining with the Toggle Value
+//     Drag button 2026-10-11, bare Return back with the Open Text Editor
 //     button 2026-10-09 (it had left with the Edit Flag button 2026-09-29, the
 //     day bare `;` joined with the Settings button), and BARE `/` having gone
 //     with the measures feature whole on 2026-09-16, which took the measure
@@ -13873,10 +13891,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     under a key that still works. IT IS HAND-LISTED RATHER THAN
 //     DERIVED, and
 //     the reason is that the allowlist alone is not the truth: some of its
-//     answers do not survive the walk (below), and Ctrl+P and Ctrl+Alt+P
-//     made the point: they left this list with
-//     their BUTTONS (the Edit-menu relocation) though the lock still eats the
-//     chords — blocked, with no face to grey. (BARE `m` AND BARE `i` MADE THE
+//     answers do not survive the walk (below), and the propagate pair
+//     made the point: Ctrl+P and Ctrl+Alt+P left this list with
+//     their BUTTONS (the Edit-menu relocation) though the lock still ate the
+//     chords — blocked, with no face to grey — and as Ctrl+Return /
+//     Ctrl+Shift+Return since 2026-10-21 they ride the Open Text Editor seat,
+//     whose face greys on the lock for its plain act. (BARE `m` AND BARE `i` MADE THE
 //     POINT TWICE, leaving this list with their buttons at the 2026-08-27
 //     Series relocation and coming back with them on 2026-09-04: the gate's
 //     answer never moved either time, only whether a face existed to wear it.) The mirror is a membership, never an equivalence, in both
@@ -14068,62 +14088,6 @@ inline bool jump_to_value_source_actionable(const AppState& a,
         return false;
     return value_source_marker(a, total_frames) >= 0;
 }
-// THE PIGEON'S SEAT — ONE BUTTON, TWO ACT PAIRS BY VIEW (architect
-// 2026-10-21: "ctrl+j applies in warp — it's free in phase … pigeon works in
-// all cases — copy/paste is send/receive, and same with jump"; the Edit menu,
-// the propagate pair's pointer home since 2026-08-20, went with the menu row
-// the same day). Jump to Defining Marker's seat on row 8
-// (RedesignButton::IconJumpToDefiningMarker, its glyph the classical set's
-// pigeon) carries ONE CHORD PAIR, Ctrl+J and its shift twin Ctrl+Shift+J, and
-// THE MARKERS VIEW DECIDES THE ACT: in the WARP view the pair is Jump to
-// Defining Marker / Copy Resolved Value, as since 2026-10-14; in the
-// PHASE-RESET view it is COPY PHASE RESETS / PASTE PHASE RESETS. MODELED AS
-// ONE SEAT AND ONE CHORD, THE KEY ROUTED BY VIEW: the roster keeps one
-// enumerator and one kToolbarChords row (button-is-its-chord holds — the
-// lift dispatches Ctrl+J or Ctrl+Shift+J as ever), and on_key, past the
-// modal and gesture gates and ahead of the `h` view's and the locks', turns
-// the pair into the propagate's own chords in the phase-reset view
-// (jump_seat_chord below: Ctrl+J to Ctrl+P, Ctrl+Shift+J to Ctrl+Alt+P), so
-// every gate and every card the propagate pair answers with is theirs
-// verbatim — the keys Ctrl+P and Ctrl+Alt+P keep their own spelling in
-// every view. The tooltip names the view's act and the face greys by it
-// (redesign_button_tooltip's stateful overload, redesign_button_enabled):
-// both read jump_seat_act. NOTE THE PAIR'S OWN COLUMN GATE: the copy and the
-// paste act on a WARP-marker selection (phase_reset_copy_refusal /
-// phase_reset_paste_refusal, their first rung the W column), so in the
-// phase-reset view both refuse at that rung and the seat greys there.
-enum class JumpSeatAct : uint8_t {
-    JumpToDefiningMarker, CopyValue, CopyPhaseResets, PastePhaseResets,
-};
-inline JumpSeatAct jump_seat_act(const AppState& a, bool shifted) {
-    if (a.active_markers_view == 'P')
-        return shifted ? JumpSeatAct::PastePhaseResets
-                       : JumpSeatAct::CopyPhaseResets;
-    return shifted ? JumpSeatAct::CopyValue
-                   : JumpSeatAct::JumpToDefiningMarker;
-}
-// THE SEAT'S KEY IN THE VIEW: in the phase-reset view Ctrl+J becomes Ctrl+P
-// and Ctrl+Shift+J Ctrl+Alt+P, every other bit of `mods` (the repeat bit,
-// the codepoint) kept; true when it rewrote them. One reader, on_key.
-inline bool jump_seat_chord(const AppState& a, GuiKey& key,
-                            GuiInputState& mods) {
-    if (a.active_markers_view != 'P') return false;
-    const bool shifted = is_copy_value_key(key, mods);
-    if (!shifted && !is_jump_to_value_source_key(key, mods)) return false;
-    key        = GuiKeys::P;
-    mods.ctrl  = true;
-    mods.shift = false;
-    mods.alt   = shifted;
-    return true;
-}
-// THE PROPAGATE PAIR'S FACE IN THE PHASE-RESET VIEW (the seat's face there,
-// the twin rule's OR): the copy's chord past the authoring lock and its
-// ladder, or the paste's past the lock and its ladder — Ctrl+P's and
-// Ctrl+Alt+P's own gates in their own order (phase_reset_propagate.cpp,
-// beside the ladders).
-bool phase_reset_propagate_pair_actionable(const AppState& a);
-// The paste's half alone (the tooltip's shift line).
-bool phase_reset_paste_actionable(const AppState& a);
 
 // THE TARGET PREVIEW'S READINESS, forwarded (target_render.cpp): exactly
 // GuiTargetRender::preview_ready, reachable from this inline body although
@@ -14565,9 +14529,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // THE MIRROR IS A MEMBERSHIP AND NOT AN EQUIVALENCE, which is why no
         // count is stated here.
-        // The PROPAGATE PAIR (Ctrl+P, Ctrl+Alt+P) is still blocked by the gate
-        // and is no longer here, its two buttons having left with the Edit-menu
-        // relocation: blocked, with no face left to grey. THE BPM OPENER AND
+        // The PROPAGATE PAIR (Ctrl+Return, Ctrl+Shift+Return since 2026-10-21;
+        // Ctrl+P, Ctrl+Alt+P before) is still blocked by the gate and is no
+        // longer here as its own, its two buttons having left with the
+        // Edit-menu relocation: the pair rides the Open Text Editor seat's
+        // ctrl presses, whose face greys on the lock for its plain act. THE BPM OPENER AND
         // GRID ITERATION MODE (bare `m`, bare `i`) left the same way on
         // 2026-08-27 with the Series-menu relocation — blocked by the gate
         // with no face to grey, their menu ITEMS never greying by the command
@@ -14596,14 +14562,15 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS SEVENTEEN, AND THIS IS THE ONE
-        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-10-11, when
-        // TOGGLE VALUE DRAG joined; the succession is in git history; every
+        // THE READ-ONLY LOCK'S BUTTON SET IS SIXTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-10-21, when
+        // SETTINGS left; the succession is in git history; every
         // other site states its own class and points here). In five groups,
         // by HOW each asks:
-        //   * THESE NINE, whose arms are below (Toggle Value Drag's beside
-        //     Add to Selection's) — the bit their first term.
-        //     Eight read the ACTIVE TAB's bit; GRID ITERATIONS reads it too,
+        //   * THESE EIGHT, whose arms are below (Toggle Value Drag's beside
+        //     Add to Selection's) — the bit their first term (SETTINGS left
+        //     them 2026-10-21, `;` admitted by the lock).
+        //     Seven read the ACTIVE TAB's bit; GRID ITERATIONS reads it too,
         //     with the lamp dark alone (its own arm's reason).
         //   * THE FOUR HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
         //     block below: Up/Down outright, and Left/Right only while a
@@ -14709,6 +14676,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // (history_mode_hides_button). The bound cell's kind refusal past the
         // gate (iter_bound_step_kind_refusal, a belt with no producer today)
         // stays the key's card behind a lit face.
+        // THE FACE IS THE PLAIN ACT'S ALONE (2026-10-21): the ctrl presses —
+        // Copy and Paste Phase Resets, Ctrl+Return / Ctrl+Shift+Return — are
+        // not ORed in (one face cannot show three states, and the twin rule
+        // is not composed here); on a lit face they refuse with their own
+        // cards, and a greyed face consumes them with the plain press.
         case RedesignButton::IconOpenTextEditor:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
@@ -14747,18 +14719,22 @@ inline bool redesign_button_enabled(const AppState& a,
                    !iteration_lock_greys(a, b) &&
                    bpm_sweep_open_actionable(a, audio);
         // THE SETTINGS BUTTON (architect 2026-09-29) IS BARE `;` AND GREYS
-        // EXACTLY WHERE THE KEY REFUSES: `;` is off read_only_key_blocked's
-        // allowlist (a locked tab cards "; is not available on a read-only
-        // tab"), the iteration gate inherits that refusal (the membership
-        // predicate names it), and the `h` view consumes it through the
-        // derived partition at the head of this body. The opener itself
-        // (GuiSettingsEditor::open) refuses nothing past those gates — an
-        // editor already standing is the veil's, whose press never reaches
-        // this button. (The menu row's Settings anchor, whose rows opened on a
-        // locked tab, went 2026-10-21; its popup hangs from this case.)
+        // EXACTLY WHERE THE KEY REFUSES, which is the `h` view alone, through
+        // the derived partition at the head of this body. A LOCKED TAB AND
+        // GRID ITERATIONS LEAVE IT LIT since 2026-10-21 (the planner's ruling
+        // by the architect's 2026-09-04 rule, THE LOCK GOVERNS THE KEYS, NOT
+        // THE EDITOR): `;` is on read_only_key_blocked's allowlist, which the
+        // iteration gate inherits, because the editor authors the device keys
+        // and the band as well as the engine settings, and since the Settings
+        // popup retired the same day it is a locked tab's one road to them —
+        // the engine-key commit and the iteration lock's three typed keys
+        // refuse inside it (settings_editor.cpp). It greyed under both locks
+        // from 2026-09-29 until then, the popup's rows being the locked tab's
+        // road. The opener itself (GuiSettingsEditor::open) refuses nothing —
+        // an editor already standing is the veil's, whose press never reaches
+        // this button.
         case RedesignButton::IconSettings:
-            return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b);
+            return true;
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
         // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
         // asks neither separately — the rule against a face restating an
@@ -15211,12 +15187,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlists name both chords — a tab switch, a select, a land, two
         // `c`s and a clipboard write author nothing), and the `h` view greys
         // it through the derived partition, whose allowlist names neither.
-        // IN THE PHASE-RESET VIEW THE SEAT IS COPY / PASTE PHASE RESETS
-        // (architect 2026-10-21, jump_seat_act): the same twin rule over
-        // that pair's own gates (phase_reset_propagate_pair_actionable).
+        // ONE PAIR IN EVERY VIEW: the phase-reset view's Copy / Paste Phase
+        // Resets rode this seat for the evening of 2026-10-21 and left for
+        // the Open Text Editor seat's ctrl presses the same evening.
         case RedesignButton::IconJumpToDefiningMarker:
-            if (jump_seat_act(a, false) == JumpSeatAct::CopyPhaseResets)
-                return phase_reset_propagate_pair_actionable(a);
             if (!jump_to_value_source_actionable(a, audio, total_frames) &&
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return false;
@@ -16101,24 +16075,35 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // consumed no-op it is everywhere else, and the lift's CHORD BUILD, which
 // moves the carried bit into the dispatched chord (the hold-repeat's arm and
 // fire build the same chord).
+// OPEN TEXT EDITOR JOINED 2026-10-21 (architect: "we can give ctrl+enter as
+// copy and ctrl+shift+enter as paste, on the open text editor icon"): its
+// ctrl press dispatches Ctrl+Return, Copy Phase Resets — the S Pen's barrel
+// button with a tap on the glass — and its ctrl-shift press (below)
+// Ctrl+Shift+Return, the paste.
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportWalkPrevious ||
            b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
-           b == RedesignButton::TransportDown;
+           b == RedesignButton::TransportDown ||
+           b == RedesignButton::IconOpenTextEditor;
 }
-// THE CTRL+SHIFT-ADMITTING BUTTON — THE WALK (architect 2026-09-26), whose
+// THE CTRL+SHIFT-ADMITTING BUTTONS — THE WALK (architect 2026-09-26), whose
 // ctrl-shift press is its own key under both modifiers, Ctrl+Shift+Tab, the
-// paired march. Everywhere else ctrl+shift together spell no
+// paired march, and since 2026-10-21 OPEN TEXT EDITOR, whose ctrl-shift press
+// is Ctrl+Shift+Return, Paste Phase Resets (on the glass the barrel button
+// held through the long press, the hold's shift composing with the carried
+// ctrl). Everywhere else ctrl+shift together spell no
 // roster chord (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home
 // and the rest are unbound on the keyboard too), so the band claims' modifier
 // gate refuses the pair on every other button and the lift's chord build
 // never sees it there. A button in this set admits CTRL alone as well (the
 // assert below) — the pair is the ctrl admission with a shift beside it —
 // and the walk admits SHIFT alone too (Shift+Tab), though the set's rule does
-// not ask that of a member.
+// not ask that of a member: Open Text Editor does not (Shift+Return binds
+// nothing).
 inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
-    return b == RedesignButton::TransportWalk;
+    return b == RedesignButton::TransportWalk ||
+           b == RedesignButton::IconOpenTextEditor;
 }
 // THE SHIFT A PRESS CARRIES, ASKED IN ONE PLACE: alone it is the shift
 // admission, and beside a carried ctrl it is the PAIR's — so beside a
@@ -16194,6 +16179,12 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
     "Jump to Defining Marker (Ctrl+J) admits Shift alone, reaching "
     "Ctrl+Shift+J, Copy Resolved Value: its row carries the ctrl, so a ctrl "
     "press is refused at the band gate");
+static_assert(redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
+                  redesign_button_ctrl_shift_admits(RedesignButton::IconOpenTextEditor) &&
+                  !redesign_button_shift_admits(RedesignButton::IconOpenTextEditor),
+    "Open Text Editor (Return) admits Ctrl, reaching Ctrl+Return, Copy Phase "
+    "Resets, and the pair, reaching Ctrl+Shift+Return, Paste Phase Resets; "
+    "Shift alone binds nothing (architect 2026-10-21)");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button. It sits with the roster (rather than with the chord table in
@@ -16210,7 +16201,9 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
 // admit a modified press — the shift-admitting set, and since 2026-08-24 the
 // ctrl-admitting one. That is not a coincidence to be maintained: it is asserted
 // against both predicates below, so the hint cannot advertise a modified press
-// that does nothing (or stay silent about one that does).
+// that does nothing (or stay silent about one that does) — OPEN TEXT EDITOR
+// the one recorded exception since 2026-10-21, its ctrl presses the
+// keyboard's words alone (the assert's own note).
 //
 // A TOOLTIP NAMES THE ACT THE PRESS WILL RUN IN THE CURRENT STATE (architect
 // 2026-09-01, the truthful-tooltips ruling — "tooltips never lie: they update
@@ -16595,8 +16588,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // verb group's sixth, ONE LINE: the act's name and its chord as every
         // row writes them, bare Return by Qt's own name (this table's
         // convention above; the keypad's Enter is the same arm's second keysym
-        // and is not named separately). It admits no modifier, so there is no
-        // second line to bind. The name holds on either axis — a bound cell's
+        // and is not named separately). IT ADMITS CTRL AND THE PAIR since
+        // 2026-10-21 (Copy / Paste Phase Resets) AND STILL CARRIES NO SECOND
+        // LINE (2026-10-21, the ruling's landing): a tooltip names one act,
+        // and the modifier acts are the keyboard's words
+        // in HELP.md (the exception is recorded at
+        // redesign_button_modifier_hint_agrees). The name holds on either axis — a bound cell's
         // editor is a text editor as the payload's is — so the overload has no
         // fork for it.
         case RedesignButton::IconOpenTextEditor:
@@ -17022,18 +17019,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // focus — payload_eligible_marker, the copy's one gate and the
         // face's twin term. (The empty-payload refusal past the gate stays
         // behind the line, as it stays behind the lit face.)
-        // IN THE PHASE-RESET VIEW THE SEAT NAMES THE PROPAGATE PAIR
-        // (architect 2026-10-21, jump_seat_act): its own chord's spelling,
-        // Ctrl+J, the shift line naming the paste, dropped in the `h` view
-        // and where the paste would refuse (phase_reset_paste_refusal, the
-        // act's own ladder).
         case RedesignButton::IconJumpToDefiningMarker:
-            if (jump_seat_act(a, false) == JumpSeatAct::CopyPhaseResets) {
-                if (a.history_mode.active || !phase_reset_paste_actionable(a))
-                    return {"Copy Phase Resets (Ctrl+J)", nullptr};
-                return {"Copy Phase Resets (Ctrl+J)",
-                        "Press Shift to paste phase resets."};
-            }
             if (a.history_mode.active ||
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return {redesign_button_tooltip(b).line1, nullptr};
@@ -17270,6 +17256,13 @@ inline RedesignTooltipText redesign_button_tooltip(
 // their count, so the walk is expressible and the witnesses are structural —
 // every button is on both sides of the equivalence. (The render player's own
 // copy at player_button_shift_admits was already exhaustive over its six.)
+//
+// ONE RECORDED EXCEPTION, OPEN TEXT EDITOR (2026-10-21): it admits ctrl and
+// the pair — Ctrl+Return and Ctrl+Shift+Return, the phase-reset propagate's
+// copy and paste (architect: "on the open text editor icon") — and its
+// tooltip stays the plain act's name with no line, a tooltip naming one act
+// and the modifier acts being the keyboard's words (HELP.md). The walk pins
+// the exception both ways: that button must admit and must carry no line.
 constexpr bool redesign_button_modifier_hint_agrees() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
@@ -17277,6 +17270,10 @@ constexpr bool redesign_button_modifier_hint_agrees() {
         const bool admits = redesign_button_shift_admits(b) ||
                             redesign_button_ctrl_admits(b) ||
                             redesign_button_ctrl_shift_admits(b);
+        if (b == RedesignButton::IconOpenTextEditor) {
+            if (line2 || !admits) return false;
+            continue;
+        }
         if (line2 != admits) return false;
     }
     return true;

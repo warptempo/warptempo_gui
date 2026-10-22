@@ -394,12 +394,12 @@ struct CaseLines {
     GuiColor highlight, shadow_first, shadow_last, corner;
 };
 CaseLines case_lines();
-// THE DISABLED GLYPH'S TONES (architect 2026-10-21, "r1"; the rule at
-// cool_edit_paint.h's kCeDisabledShadow): Cool Edit's emboss taken onto the
-// live case — the silhouette at the case ramp's mean HLS lightness times
-// kCeDisabledShadowRatio, the rim at the silhouette's times
-// kCeDisabledInsetRatio, both on the ebony Face's hue and saturation, the
-// light copy Cool Edit's F8F8F8 — rebuilt with the flat strokes at every
+// THE DISABLED GLYPH'S TONES (architect 2026-10-21, "r1" and his pick v2;
+// the rule at cool_edit_paint.h's kCeDisabledShadow): Cool Edit's emboss
+// taken onto the live case — the silhouette at the case ramp's mean HLS
+// lightness times kCeDisabledShadowRatio (0.84, his pick) on the ebony
+// Face's hue and saturation, the rim black (kCeDisabledInset), the light
+// copy Cool Edit's F8F8F8 — rebuilt with the flat strokes at every
 // bake. 0xRRGGBB. Read by every disabled glyph (icons::draw_disabled) and
 // the caption buttons' dead Marlett cell, each cache keyed on the tones.
 struct DisabledGlyphTones {

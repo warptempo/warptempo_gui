@@ -122,11 +122,10 @@ struct GuiInputHandler;
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
 //    the device keys and the band — commit on a locked tab. The opener
 //    refuses no lock; the account is at GuiSettingsEditor::open. (Its road
-//    onto a locked tab, the Settings popup's rows, retired 2026-10-21:
-//    bare `;` is off the read-only allowlist, which the iteration gate
-//    inherits, and the Settings button, its chord, greys under either lock,
-//    so the editor does not open under a lock since; the commit arms' lock
-//    refusals stay as the keys' own rule.)
+//    onto a locked tab is bare `;` and the Settings button since 2026-10-21,
+//    both on the read-only allowlist the iteration gate inherits — the
+//    Settings popup's rows were that road until they retired the same day —
+//    so the commit arms' lock refusals are where a locked key refuses.)
 //
 // NO CHOICE EDITOR (architect 2026-10-14, ~12:25: "we can remove dropdowns
 // for chrome/caption and leave the autocomplete as the only help. dropdowns
@@ -173,9 +172,8 @@ struct GuiSettingsEditor {
     // read-only lock says its own at the engine-key commit arm (it stood at
     // open() from 2026-08-30 until 2026-09-04, when the lock moved to the
     // keys). (The Settings dropdown's item clicks were the road onto a
-    // locked tab's editor until the popup retired, 2026-10-21; bare `;` is
-    // off the read-only allowlist and dies at the keyboard gate, whose own
-    // card says the same words.)
+    // locked tab's editor until the popup retired, 2026-10-21; bare `;` and
+    // the Settings button are since, admitted by the lock.)
     GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this editor by reference, so the
