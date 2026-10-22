@@ -231,14 +231,10 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
     // gating means a press with the pointer off the window silently no-ops, as
     // a real left-button press would not be delivered to this surface either.
     // Any modifier state rides along to the synthesized button, exactly as it
-    // would for a physical left-button device (see kLeftClickKey's comment) —
-    // BUT ALT ALONE: Alt+E is the Edit menu's access key (architect
-    // 2026-10-10, Windows' &Edit) and is delivered as that key; an
-    // alt-modified press binds nothing on the pointer side, so the button
-    // gave nothing up.
-    const GuiInputState held = current_mods();
-    const bool edit_access_key = held.alt && !held.ctrl && !held.shift;
-    if (key == kLeftClickKey && !edit_access_key &&
+    // would for a physical left-button device (see kLeftClickKey's comment;
+    // Alt alone was delivered as a key 2026-10-10 to 2026-10-21, the Edit
+    // title's access key, which went with the menu row).
+    if (key == kLeftClickKey &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
         if (!synth_left_held_ && pointer_focused_) {
             // The synthesized button is a button: this press is a context event

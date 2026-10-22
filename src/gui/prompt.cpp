@@ -274,7 +274,7 @@ void GuiPrompt::cancel_paste_confirmation() {
 
 // Route a close gesture through the prompt when history is dirty;
 // otherwise proceed immediately. Centralizes the decision so Ctrl+Q, the
-// WM-close callback, the Open project picker's open act and File → Revert
+// WM-close callback, the Open project picker's open act and Revert
 // share identical behaviour; what differs between them is the target, seated
 // here for proceed — and, for Revert alone, the question a dirty session is
 // asked.

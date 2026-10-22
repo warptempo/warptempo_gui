@@ -106,7 +106,7 @@
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
 //   * THE MODES: the picker's "Choose a project first" and its opener's
 //     "Close the editor first"; kCheckpointPublishing (below — bare `h`, the
-//     publish chord, the save owner, the picker, File → Revert); "History
+//     publish chord, the save owner, the picker, Revert); "History
 //     is unavailable[: <reason>]" (the press that asks for git where the
 //     bootstrap does not answer — bare `h` at open_history_mode_fresh since
 //     2026-10-19 and the publish chord, Ctrl+Shift+S, at run_publish_chord —
@@ -127,7 +127,7 @@
 //     refusals (`Load in place refused: …`, `Revert refused: …`, the
 //     duplicate-label grammar's `Revert refused: label '<l>' is already
 //     defined at another marker`); the Open project picker's three refusals
-//     and File → Revert's three, the same words for the same reasons.
+//     and Revert's three, the same words for the same reasons.
 //   * THE RENDER ROAD: "Target render failed" (a cancelled preview says
 //     nothing); the archival road's "Render failed: <reason>" (GuiFailure's
 //     display clause through lowercase_initial) and a sweep's "Rendered N of
@@ -290,7 +290,7 @@
 //     NOW — the two state strings.
 //
 // THE WORDS ON A CARD (the product's text rules are stated once at
-// paint_handler.cpp's menu-row block; a card is a DESCRIPTION, sentence case):
+// paint_handler.cpp's text-rules block; a card is a DESCRIPTION, sentence case):
 //   * ONE CLAUSE PER CARD, a statement, not a paragraph: no sentence-final
 //     period, no second sentence, no instruction clause after the reason, no
 //     number said twice. A PROMPT, by contrast, is always a QUESTION.
@@ -632,7 +632,7 @@ inline constexpr const char* kHistoryViewMovesNoMarkersCard =
 
 // AN APPENDED REASON IS LOWERCASE (architect 2026-09-01, the capitalization
 // sweep; the rule is stated once in this header's card section, over the one
-// statement of the product's text rules at paint_handler.cpp's menu-row
+// statement of the product's text rules at paint_handler.cpp's text-rules
 // block). A sentence composed as "<Act> refused: <reason>" is ONE sentence, so
 // its tail does not start a second one; a producer whose string is ever used
 // WHOLE is a sentence in its own right and capitalizes at that producer.
@@ -663,7 +663,7 @@ inline constexpr const char* kHistoryViewMovesNoMarkersCard =
 // THE TERMINAL'S CASES (architect approval 2026-08-02, the terminal
 // capitalization pass — text-only, otherwise byte-identical; stderr / stdout
 // prose follows the product's one set of text rules, paint_handler.cpp's
-// menu-row block): the first prose word after the program-name prefix
+// text-rules block): the first prose word after the program-name prefix
 // capitalizes (`warptempo_gui:` / `warptempo_cli:` and routing tags such as
 // `icons:` keep their spelling); a new sentence after ". " capitalizes; text
 // after ":" or ";" stays lowercase; a message headed by an identifier, key
@@ -904,7 +904,7 @@ bool notification_visible(const AppState& a, uint64_t id);
 // and a press on the stale rect falls through to whatever the NEXT paint will
 // put there, which is what the user is about to see. A card under ANY LIST
 // POPUP'S PUBLISHED BOX yields to it (2026-10-08,
-// floater_above_cards_at, app_state.h: the menu row's drop-down, the one
+// floater_above_cards_at, app_state.h: the Settings drop-down, the one
 // pointer-owning surface that paints above the cards since the settings
 // choice editor's list went, 2026-10-14), so every reader agrees on the
 // z-order in one place too.

@@ -75,11 +75,10 @@ namespace GuiKeys {
 // up), except while a text editor is open, when it stays a normal letter.
 // Rebinding the emulation to a different key is exactly this one edit. Any
 // modifier state (shift/ctrl/alt) rides along to the synthesized button,
-// exactly as it would for a physical BTN_LEFT device — EXCEPT ALT ALONE
-// (architect 2026-10-10): Alt+E is the Edit menu's access key and reaches
-// on_key as a key (GuiInputCore::key_event), the alt-modified press binding
-// nothing on the pointer side. So bare `e` can be no pull-down row's
-// letter (dropdown_access_keys_valid, app_state.h).
+// exactly as it would for a physical BTN_LEFT device (Alt alone reached
+// on_key as the Edit title's access key 2026-10-10 to 2026-10-21, until the
+// menu row went). So bare `e` can be no pull-down row's letter
+// (dropdown_access_keys_valid, app_state.h).
 constexpr GuiKey kLeftClickKey = GuiKeys::E;
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
@@ -670,9 +669,9 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 5..9;
-// Backspace, and every letter the ladder never tests (A, T, W, X, Y — E
-// left the class 2026-10-10 for Alt+E, the Edit title's access key, its bare
-// form staying the mouse; Y
+// Backspace, and every letter the ladder never tests (A, E, T, W, X, Y — E
+// left the class 2026-10-10 for Alt+E, the Edit title's access key, and came
+// BACK 2026-10-21 with the menu row's removal; Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
 // on 2026-09-14 with that lamp's deletion; V left it on 2026-09-01, the
 // `h` view's revert act moving onto it off Ctrl+H; X left it on 2026-09-10
@@ -698,17 +697,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool cs    =  ctrl && !alt &&  shift;   // Ctrl+Shift
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
-    const bool al    = !ctrl &&  alt && !shift;   // Alt alone
-    // THE ALT VOCABULARY, WHOLE (re-derived 2026-10-10 off the `al`, `ca`
-    // and `cas` arms, the only ones that read alt): ALT IS THE FIVE KEYBOARD
-    // Ctrl+Alt CHORDS AND THE THREE MENU TITLES' ACCESS KEYS, NOTHING ELSE —
-    // Ctrl+Alt+R / Ctrl+Alt+Shift+R (the render pair), Ctrl+Alt+P /
-    // Ctrl+Alt+Shift+P (the phase reset propagate's two pastes) and
-    // Ctrl+Alt+O (File → Revert); and Alt+F, Alt+E, Alt+S (architect
-    // 2026-10-10, Windows' &File, &Edit, &Settings: the titles' press,
-    // on_key's access-key arm; the letters' owner dropdown_title_access_key,
-    // app_state.h). No other Alt-alone chord binds (the static_asserts below
-    // pin Alt+Tab's family and the access keys' three), and alt's POINTER
+    // THE ALT VOCABULARY, WHOLE (re-derived 2026-10-21 off the `ca` and
+    // `cas` arms, the only ones that read alt): ALT IS THE FOUR KEYBOARD
+    // Ctrl+Alt CHORDS, NOTHING ELSE — Ctrl+Alt+R / Ctrl+Alt+Shift+R (the
+    // render pair), Ctrl+Alt+P (the phase reset propagate's paste) and
+    // Ctrl+Alt+O (Revert). (The menu titles' Alt+F, Alt+E and Alt+S,
+    // 2026-10-10, and Ctrl+Alt+Shift+P, the state paste, went 2026-10-21.)
+    // No Alt-alone chord binds (the static_asserts below pin Alt+Tab's
+    // family and the three former titles' letters), and alt's POINTER
     // vocabulary is empty: no alt-modified press or wheel binds anything.
     // THE Ctrl+Alt SHAPE IS THE INVARIANT rather than the number: alt with
     // Ctrl marks a HEAVIER SIBLING of a plain chord — a write that replays or
@@ -746,13 +742,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the shifted form being the plain act's twin, `s`'s shape
         // on a ctrl chord rather than a bare one. The ctrl spelling is what
         // guards an authoring verb against a stray bare press, exactly as
-        // Ctrl+D and Ctrl+N do.
-        // AND Alt+F, the File title's access key (2026-10-10).
-        case GuiKeys::F: return bare || cl || cs || al;
-        // Alt+E, the Edit title's access key (2026-10-10) — the one E
-        // spelling that reaches on_key (bare `e` is the left mouse button,
-        // kLeftClickKey).
-        case GuiKeys::E: return al;
+        // Ctrl+D and Ctrl+N do. (Alt+F, the File title's access key, and
+        // Alt+E, the Edit title's, 2026-10-10 to 2026-10-21, left with the
+        // menu row.)
+        case GuiKeys::F: return bare || cl || cs;
         // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
         // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
         case GuiKeys::B: return cl;
@@ -761,24 +754,29 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Ctrl+H), whose own arm in input_handler.cpp carries the mode test.
         case GuiKeys::V:
             return bare && history_view;
-        // THE VALUE PAIR, ONE LETTER: CTRL+J goes to where the focused value
-        // came from (architect 2026-09-29, Jump to Defining Marker's own
-        // chord), and CTRL+SHIFT+J copies that value (architect 2026-10-14,
-        // Copy Resolved Value — the Jump button's shift twin). Bare `j` and
+        // THE PIGEON'S PAIR, ONE LETTER, BOUND IN BOTH MARKERS VIEWS: in the
+        // warp view CTRL+J goes to where the focused value came from
+        // (architect 2026-09-29, Jump to Defining Marker's own chord) and
+        // CTRL+SHIFT+J copies that value (architect 2026-10-14, Copy
+        // Resolved Value); in the phase-reset view they are Copy Phase
+        // Resets and Paste Phase Resets (architect 2026-10-21, "copy/paste
+        // is send/receive, and same with jump"; on_key routes them to Ctrl+P
+        // and Ctrl+Alt+P there, jump_seat_chord, app_state.h). Bare `j` and
         // Shift+J bind nothing.
         case GuiKeys::J: return cl || cs;
         // Drop on the live column / drop a phase reset from the warp column / save,
-        // Alt+S, the Settings title's access key (2026-10-10), and
-        // CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
+        // and CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
         // 2026-10-10, is_publish_key; it dropped a magnification level marker
         // from 2026-09-15 until that column's deletion 2026-09-23 and was
-        // unbound between).
-        case GuiKeys::S: return bare || sh || cl || cs || al;
+        // unbound between). (Alt+S, the Settings title's access key,
+        // 2026-10-10 to 2026-10-21, left with the menu row.)
+        case GuiKeys::S: return bare || sh || cl || cs;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
-        // The three phase-reset propagate chords (the W/P flip's bare `p` was
-        // deleted whole with its view lamp 2026-09-15).
-        case GuiKeys::P: return cl || ca || cas;
+        // The two phase-reset propagate chords, the copy and the paste (the
+        // state paste's Ctrl+Alt+Shift+P removed 2026-10-21; the W/P flip's
+        // bare `p` was deleted whole with its view lamp 2026-09-15).
+        case GuiKeys::P: return cl || ca;
         // (THE LETTER M BINDS NOTHING since 2026-09-23: its Ctrl and Ctrl+Alt
         // chords were the magnification level propagate's copy and paste, and
         // Ctrl+Alt+Shift+M Generate Magnification Level Markers, all deleted
@@ -1026,7 +1024,7 @@ static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
               "`l` binds bare only — the render player — and none of the "
               "seven modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
-// Ctrl+Alt File → Revert — and no shifted spelling of any of them. (Open
+// Ctrl+Alt Revert — and no shifted spelling of any of them. (Open
 // Project's icon-row button reaches Revert by a shift press, the button's
 // lift turning it into this alt — the icon road's twin, never a keyboard
 // spelling; architect 2026-10-07, at finish_chrome_press_release.)
@@ -1060,31 +1058,23 @@ static_assert(!chord_is_bound(GuiKeys::Tab,
                                   GuiInputState{true, false, true}, false),
               "no Alt spelling of Tab or IsoLeftTab binds in either mode, "
               "with or without Shift or Ctrl: each is an unbound no-op");
-// THE MENU TITLES' ACCESS KEYS (architect 2026-10-10): Alt+F, Alt+E and
-// Alt+S bind in both modes (File stays live in the `h` view; the other two
-// refuse there on their dead anchors' faces), Alt alone and nothing else —
-// no Ctrl+Alt or Alt+Shift spelling of the three letters joins, and no other
-// Alt-alone letter binds.
-static_assert(chord_is_bound(GuiKeys::F,
-                             GuiInputState{false, false, true}, false) &&
-                  chord_is_bound(GuiKeys::E,
-                                 GuiInputState{false, false, true}, false) &&
-                  chord_is_bound(GuiKeys::S,
-                                 GuiInputState{false, false, true}, false) &&
-                  chord_is_bound(GuiKeys::F,
-                                 GuiInputState{false, false, true}, true) &&
-                  !chord_is_bound(GuiKeys::E, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::F,
-                                  GuiInputState{true, false, true}, false) &&
+// NO ALT-ALONE LETTER BINDS (2026-10-21: the menu titles' Alt+F, Alt+E and
+// Alt+S left with the menu row), nor the state paste's Ctrl+Alt+Shift+P.
+static_assert(!chord_is_bound(GuiKeys::F,
+                              GuiInputState{false, false, true}, false) &&
                   !chord_is_bound(GuiKeys::E,
-                                  GuiInputState{true, false, true}, false) &&
+                                  GuiInputState{false, false, true}, false) &&
                   !chord_is_bound(GuiKeys::S,
-                                  GuiInputState{false, true, true}, false) &&
+                                  GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::E, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::D,
-                                  GuiInputState{false, false, true}, false),
-              "Alt+F / Alt+E / Alt+S are the menu titles' access keys, Alt "
-              "alone; their Ctrl+Alt and Alt+Shift spellings and every other "
-              "Alt-alone letter stay unbound");
+                                  GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::P,
+                                  GuiInputState{true, true, true}, false) &&
+                  chord_is_bound(GuiKeys::P,
+                                 GuiInputState{true, false, true}, false),
+              "no Alt-alone letter binds; Ctrl+Alt+P is the propagate's paste "
+              "and Ctrl+Alt+Shift+P binds nothing");
 // THE PUBLISH CHORD (architect 2026-10-10) binds in both modes; its Alt
 // spelling does not.
 static_assert(chord_is_bound(GuiKeys::S,
@@ -1208,8 +1198,8 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chord that opens the OPEN PROJECT prompt (architect
-// 2026-08-28): CTRL+O exactly — no shift, no alt. Open was the File menu's one
-// act with no key of its own; the convention for it is too strong to spell it
+// 2026-08-28): CTRL+O exactly — no shift, no alt. Open was the retired File menu's
+// one act with no key of its own; the convention for it is too strong to spell it
 // anywhere else, and Ctrl+O was the strict rule's consumed no-op until this
 // date. IT IS NOT bare `o`, which stays the active tab's read-only toggle: the
 // two are NEIGHBOURS ON ONE LETTER, NOT TWO HALVES OF ONE ACT, so neither
@@ -1225,7 +1215,7 @@ inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
 }
 
-// True for the chord that runs FILE → REVERT (architect 2026-09-13): CTRL+ALT+O
+// True for the chord that runs REVERT (architect 2026-09-13): CTRL+ALT+O
 // exactly — no shift. The act reopens the CURRENT project from disk, discarding
 // unsaved changes and the undo history, so it sits on Open's letter with alt
 // added: the same act on the session as a whole, aimed at the project already
@@ -1236,10 +1226,10 @@ inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
 // admits it: the act writes nothing and discards only what was never saved)
 // and the `h` view's allowlist (history_mode_key_blocked, which admits it
 // beside Ctrl+O). The act is GuiInputHandler::revert_project, whose body
-// carries its own refusals; the File menu's Revert row dispatches this chord
-// through on_key like every other command row, which is also the tablet's
-// road to it. Not repeat-eligible, so a held chord reverts once. SINCE
-// 2026-10-07 THE ICON ROW'S OPEN PROJECT BUTTON IS A THIRD ROAD, its shifted
+// carries its own refusals; the Open Project button's shifted press is the
+// tablet's road to it (the File menu's Revert row, its first road, retired
+// with the menu row 2026-10-21). Not repeat-eligible, so a held chord reverts once. SINCE
+// 2026-10-07 THE ICON ROW'S OPEN PROJECT BUTTON IS A ROAD, its shifted
 // press (architect): the button's lift turns its shift into this chord's alt
 // (finish_chrome_press_release), so the spelling here stays shift-free — the
 // icon's twin is the icon road's, and Ctrl+Shift+O binds nothing.

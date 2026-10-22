@@ -4,6 +4,7 @@
 #include "palette_file.h"      // GuiPaletteWords, palette_role_index, the
                                // default palette (the checks)
 #include "cool_edit_derive.h"  // the tones the chrome wears
+#include "materials.h"         // the selection pair's constants
 
 #include <array>
 #include <cstddef>
@@ -21,8 +22,8 @@
 // TONE RULE; render.cpp's panel_face hands it in as the words' `face`) — or
 // the waveform's ink, by Cool Edit's own arithmetic (cool_edit_derive.h,
 // whose head has the measurements and the proofs), re-derived at every
-// install of the palette (render.cpp's install family), so a new ink (the
-// Settings Waveform row's commit) moves the selection fill live. THE CAPTION
+// install of the palette (render.cpp's install family) — but the selection
+// pair, a constant since 2026-10-21. THE CAPTION
 // HAS NO ROLE since 2026-10-21: it is the walnut (theme_file.h's head; its
 // six roles were a scheme's 2026-10-05..10-21).
 //
@@ -48,22 +49,18 @@
 //                                          (cool_edit_derive::field_text: the
 //                                          field's ground is dark at every
 //                                          Face)
-//   selected_fill                        = the waveform's ink (architect
-//                                          2026-10-10)
-//   selected_text                        = the program text's OTHER member
-//                                          (cool_edit_derive::selected_text:
-//                                          dark where the Face keeps the
-//                                          light text, light where it swaps;
-//                                          architect 2026-10-16, "the
-//                                          selection should be opposite of
-//                                          the regular face")
-//                                          (the caption's Title and Title
-//                                          Text as the pair lived one
-//                                          landing, 7e0b8d4e, 2026-10-21, and
-//                                          were reverted the same night: the
-//                                          wood in the flag editor's selected
-//                                          substring read as odd;
-//                                          closed_questions.md)
+//   selected_fill                        = THE CONSTANT kSelectionFill,
+//                                          9C7B3A, brass-like (materials.h;
+//                                          architect 2026-10-21)
+//   selected_text                        = THE CONSTANT kSelectionText, the
+//                                          near-white (architect 2026-10-21:
+//                                          "the selection text white or
+//                                          near-white"); the waveform's ink
+//                                          under the program text's other
+//                                          member (2026-10-10 / 10-16) and
+//                                          the caption's pair (7e0b8d4e, one
+//                                          landing) before it, retired
+//                                          (closed_questions.md)
 //   card_ground                          = the Face
 //   card_frame                           = the `dark` tone (Cool Edit's box
 //                                          outline and the label's shadow)
@@ -75,7 +72,8 @@
 namespace chrome_derive {
 
 enum class Source {
-    Face, Hilight, Mid, Dark, Black, Text, FieldText, Ink, SelectedText,
+    Face, Hilight, Mid, Dark, Black, Text, FieldText, SelectionFill,
+    SelectionText,
 };
 struct ChromeRole {
     const char* role;
@@ -88,8 +86,8 @@ inline constexpr ChromeRole kChromeRoles[] = {
     {"light_3d",                  Source::Face},
     {"shadow",                    Source::Mid},
     {"dk_shadow",                 Source::Black},
-    {"selected_fill",             Source::Ink},
-    {"selected_text",             Source::SelectedText},
+    {"selected_fill",             Source::SelectionFill},
+    {"selected_text",             Source::SelectionText},
     {"field_ground",              Source::Mid},
     {"field_text",                Source::FieldText},
     {"clock_ground",              Source::Face},
@@ -143,8 +141,8 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
             case Source::Black:      v = 0x000000u;                             break;
             case Source::Text:       v = program_text(face);                    break;
             case Source::FieldText:  v = field_text(face);                      break;
-            case Source::Ink:        v = ink;                                   break;
-            case Source::SelectedText: v = selected_text(face);                 break;
+            case Source::SelectionFill: v = kSelectionFill;                     break;
+            case Source::SelectionText: v = kSelectionText;                     break;
         }
         w[kChromeRoleIndex[i]] = v & 0xFFFFFFu;
     }
@@ -166,14 +164,14 @@ static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
 static_assert(kDefaultCheck[theme_role_index("label")] == 0xEFEFEF);
 static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x404750);
 static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xEFEFEF);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x4BF3A7);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x0F1621);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x9C7B3A);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x626C7B);
 static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xEFEFEF);
 static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x2A2F35);
 // A LIGHT FACE SWAPS THE TEXT AND NOT THE FIELD'S (Arctic Freeze's C0C0C0,
 // METRICS_PRESETS_1010.md §3a): the label dark, the field text light — and
-// the selected text the light member, the program text's other (2026-10-16).
+// the selection pair the constants whatever the Face (2026-10-21).
 static_assert([] {
     GuiPaletteWords p = default_palette_words();
     p[palette_role_index("face")] = 0xC0C0C0;
@@ -182,7 +180,7 @@ static_assert([] {
            w[theme_role_index("card_text")] == 0x311919 &&
            w[theme_role_index("field_text")] == 0xF6F6F6 &&
            w[theme_role_index("field_ground")] == 0x7F7F7F &&
-           w[theme_role_index("selected_text")] == 0xF6F6F6;
+           w[theme_role_index("selected_text")] == 0xF0F0F0;
 }());
 } // namespace chrome_derive
 

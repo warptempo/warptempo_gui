@@ -1982,8 +1982,8 @@ struct TrimBarPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
-// (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
+// button the kdenlive rows carry, in painted order (row 1's three menu
+// anchors, File, Edit and Settings, went with the menu row 2026-10-21):
 // THE TAB STRIP'S TWO TABS (TabA and TabB, 2026-10-18, painted by
 // paint_tab_strip rather than a table of the painter's), row 4's TWENTY-TWO
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
@@ -2019,20 +2019,10 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). ROW 1'S THREE MENU
-// ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped against kDropdownMenus and the chord table (43 chord rows + 3
-// anchors = 46 = kRedesignButtonCount, re-counted 2026-10-19; the count's
-// own statement is at kRedesignButtonCount below);
-// the count was TWO, File and
-// Settings, from 2026-08-13, when File took the slot the Quit button held
-// (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
-// 2026-08-15, ITERATIONS a fourth from 2026-08-27 until its own deletion on
-// 2026-09-04, and HELP a fourth from 2026-09-03 until its deletion on
-// 2026-09-09): each press TOGGLES ITS OWN
-// DROPDOWN — which the keyboard reaches only by the titles' Alt access keys
-// (2026-10-10, dropdown_title_access_key), never as a roster chord — and all
-// three are spelled at the menu claim rather than in the chord table.
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (43 chord
+// rows = 43 = kRedesignButtonCount, the count's own statement below): row
+// 1's menu anchors — File, Edit and Settings, the roster's non-chord
+// entries, each press toggling its own dropdown — went with the menu row.
 //
 // The enum ORDER is painted order but for the bottom row, whose painted order
 // is the painter's tables' (above), and redesign_button_index depends on the
@@ -2042,84 +2032,12 @@ struct TrimBarPressSeed {
 // two of them (as row 1's Settings and Navigation were, 2026-08-03) renumbers
 // the stash harmlessly.
 enum class RedesignButton {
-    // Row 1, the menu row: the three anchors, flush left (the right-floating
-    // view bar's three absolute view selectors stood behind them from
-    // 2026-08-02 until 2026-10-01 and are the icon row's VIEW PAIRS now, the
-    // row's last entries below).
-    //
-    // SETTINGS PAINTS LAST IN THE LEFT FLOAT (architect 2026-08-03, moving it
-    // behind the NAVIGATION anchor that then sat between it and File). The float
-    // is adjacent with no gap and its layout is a shaped-run walk, so the move
-    // is an ORDER change and nothing else — no width, no padding, no anchor
-    // expression follows it. This enum and the painter's kMenuButtons table are
-    // the two places that carry the order, and they move together.
-    //
-    // THE NAVIGATION ANCHOR IS DELETED (architect 2026-08-15): its menu carried
-    // SEVEN command rows and every one of them had grown a button — the four
-    // zoom/framing rows since the 2026-08-12 relayout put the zoom group in the
-    // icon row, the three marker/tab steppers since the bottom row's MARKER-WALK
-    // GROUP landed the same day this ruling did — so the menu had become a
-    // slower path to seven commands that all have buttons ("we should go ahead
-    // and remove the navigation dropdown altogether"). Its removal cost the row
-    // nothing structurally: the anchors were never a pair or a triple anywhere,
-    // they are walked from kDropdownMenus.
-    //
-    // FILE HOLDS THE SLOT THE QUIT BUTTON HELD (architect 2026-08-13, with the
-    // act-at-release conversion): row 1 paints no held face at all, so a Quit
-    // button that acts at the LIFT gave no feedback while it was down and read
-    // as broken — "we can create a File entry and move Quit into File's
-    // dropdown; that's the standard way and kdenlive does it that way too". So
-    // the Quit BUTTON is retired (it existed from 2026-07-31) and File is a
-    // THIRD DROPDOWN ANCHOR whose one item is Quit; the CHORD Ctrl+Q is
-    // untouched everywhere. Nothing else moved: File takes exactly Quit's slot,
-    // so the painted order was File, Navigation, Settings and the roster's total
-    // was unchanged — the split moved, 43 chords + 2 anchors becoming 42 + 3.
-    // (The painted order was File, Settings from the Navigation anchor's
-    // deletion on 2026-08-15 until 2026-08-20, and the split was back to two
-    // anchors for those five days.)
-    //
-    // THE EDIT MENU IS THE THIRD ANCHOR SINCE 2026-08-20 (architect), painted
-    // between File and Settings — the standard order, kdenlive's own. It is a
-    // COMMAND MENU carrying the THREE propagate commands (Ctrl+P, Ctrl+Alt+P,
-    // Ctrl+Alt+Shift+P), and it is a RELOCATION rather than
-    // an addition: IconCopy and IconPaste were deleted from the icon row in the
-    // same ruling, so the commands have exactly ONE pointer home and the
-    // no-second-road doctrine is SATISFIED rather than amended. The anchor
-    // count is three again for the first time since 2026-08-15, and nothing in
-    // the dropdown machinery counts menus — kDropdownMenus grew one row.
-    //
-    // (THE ITERATIONS MENU WAS THE FOURTH ANCHOR FROM 2026-08-27 TO
-    // 2026-09-04, painted between Edit and Settings; it read "Series" until
-    // the 2026-08-31 rebrand and its enumerator kept that spelling throughout.
-    // It was a COMMAND MENU of TWO ROWS — "BPM Iterations" (bare `m`) and
-    // "Grid Iterations" (bare `i`) — and the architect DELETED IT whole once
-    // the icon row had room again, sending both commands back to that row as
-    // a group of two buttons. So the relocation ran in reverse: the MENU is
-    // the second road now and the BUTTONS are the one pointer home, which is
-    // the no-second-road doctrine satisfied from the other side, exactly as
-    // the Navigation menu's own 2026-08-15 deletion was. The buttons are
-    // IconBpm and IconIter below and the naming record is at their entries.)
-    //
-    // THE ORDER RULE IS THE ROW'S OWN: File and Edit lead as the standard
-    // pair, the application's own menus follow them, and SETTINGS PAINTS LAST
-    // — the architect's 2026-08-03 ruling, which he restated on 2026-09-03 as
-    // two clauses (Settings last OF THE APPLICATION'S OWN MENUS, and HELP after
-    // it as the shell's last menu, kdenlive's own order) for the Help anchor
-    // that stood 2026-09-03..09. With Help gone the rule is the first clause
-    // again and Settings is the row's LAST ANCHOR; a new APPLICATION menu
-    // still lands between Edit and Settings, and nothing paints to the right
-    // of Settings.
-    //
-    // (THE HELP MENU WAS THE ROW'S FOURTH ANCHOR FROM 2026-09-03 TO 2026-09-09,
-    // painted after Settings. Its one row was **AV Sync Stats**, an ordinary
-    // command row that was its chord, Shift+L, dispatching through on_key.
-    // The architect DELETED IT with the top strip relayout on the Iterations
-    // anchor's own precedent: a command with an icon-row road does not also
-    // live in the menu row, and the panel had two — the chord and the Play
-    // renders button's shift-click or long press — until the panel itself
-    // was deleted on 2026-09-30. kHelpPopupItems, DropdownMenu::Help and every
-    // arm that named the anchor went with it.)
-    File, Edit, Settings,
+    // (ROW 1, THE MENU ROW — the File, Edit and Settings anchors, flush left,
+    // each a dropdown's title, Settings painting last — IS REMOVED, architect
+    // 2026-10-21: "I'd like to see v1 without the file/edit... row". Its
+    // three enumerators went with it; the anchors' succession — Navigation,
+    // Iterations and Help before them, File in the Quit button's slot — is
+    // git history. DropdownMenu's head says where each menu's rows went.)
     // THE TAB STRIP'S TWO TABS (architect 2026-10-18, reversing the tab row's
     // deletion of 2026-10-01: Cool Edit's Organizer tab strip under the band,
     // top lane 4 — render.h's tab strip block, cool_edit_paint.h's
@@ -2211,21 +2129,23 @@ enum class RedesignButton {
     // shift twin ("just to keep those two together", no drop-down), STANDING
     // IN SAVE'S GROUP, first, then Save, with NO SEPARATOR BETWEEN THEM
     // (architect 2026-10-07: "separator in the drop-down, no separator in the
-    // toolbar" — the File menu parts Open and Revert from the rows after them,
-    // the toolbar does not part Open from Save;
+    // toolbar" — the File menu parted Open and Revert from the rows after
+    // them until its retirement (2026-10-21), the toolbar does not part Open
+    // from Save;
     // redesign_button_opens_icon_group). ITS CHORD IS CTRL+O and
     // its act is that key's exactly, the project picker
     // (GuiInputHandler::open_project_picker, the one owner whose body carries
-    // every gate; the File menu's Open Project row is the same chord). ITS
-    // SHIFT TWIN IS FILE → REVERT (architect 2026-10-07): the shift-click and
+    // every gate; the File menu's Open Project row, the same chord, went with the
+    // menu row 2026-10-21). ITS
+    // SHIFT TWIN IS REVERT (architect 2026-10-07): the shift-click and
     // the long press dispatch Ctrl+Alt+O, the one translated twin on the
     // roster (the lift's chord build, finish_chrome_press_release, states the
     // exception; the key keeps its unshifted spelling, is_revert_project_key).
     // It wears document-open, the drawing Load in Place already wears
-    // (icons.h, repeated by position). OPEN AND REVERT ARE THE TWO COMMANDS
-    // WITH BOTH A MENU ROW AND AN ICON-ROW ROAD, the architect's ruling
-    // against the no-second-road doctrine's default (recorded at
-    // DropdownMenu). Its face is the plain act's (redesign_button_enabled's
+    // (icons.h, repeated by position). OPEN AND REVERT KEEP THIS ONE POINTER
+    // ROAD since the menu row's removal (2026-10-21; until then the two
+    // commands with both a menu row and an icon-row road, the architect's
+    // ruling against the no-second-road doctrine's default). Its face is the plain act's (redesign_button_enabled's
     // arm). No lamp: an act, not a mode.
     //
     // SAVE STANDS BEHIND IT WITHOUT A SEPARATOR, AND BEFORE ONE (architect
@@ -2425,7 +2345,7 @@ enum class RedesignButton {
     // CLEARS every warp marker's deviation terms (`1.23+0.01-0.02` reads
     // `1.22`), the shifted one COLLAPSES them to their single sum
     // (`1.23-0.01`, and `1.23+0.00` where they cancel). It is the roster's
-    // pointer home for both — no Edit-menu row and no bottom-row button, one
+    // pointer home for both — no menu row and no bottom-row button, one
     // command and one pointer road.
     //
     // ITS FACE READS THE ACT'S OWN PREDICATE (tempo_flatten_actionable),
@@ -2497,10 +2417,11 @@ enum class RedesignButton {
     // allowlist), grid iterations (the iteration lock's gate inherits that
     // refusal; iteration_lock_greys names it) and the `h` view (off that
     // mode's allowlist, through the derived partition) — and a dialog editor
-    // already standing is the veil's, the press never reaching it. It is not
-    // the menu row's Settings ANCHOR (RedesignButton::Settings), whose rows
-    // each prefill one key and open on a locked tab; this is the typed road's
-    // pointer spelling. An act, not a mode: no lamp.
+    // already standing is the veil's, the press never reaching it. It is the
+    // typed road's pointer spelling (the menu row's Settings anchor, whose
+    // rows each prefilled one key, went with the row 2026-10-21; the popup
+    // hangs from this case while it survives, dropdown_anchor_button). An
+    // act, not a mode: no lamp.
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
     // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
@@ -3045,19 +2966,16 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-19):
-// THREE in row 1 (the menu anchors), TWO in the tab strip's, TWENTY-FOUR in
-// row 4's enum block and SEVENTEEN in the bottom row's — 46. PAINTED, the
-// split is 3 + 2 + 22 + 19:
-// HistoryOlder and HistoryNewer, enumerated in row 4's block, paint in row 8
-// (kTransportHistoryStandIns). Of
-// those, FORTY-THREE carry a chord in kToolbarChords
-// and THREE are the dropdown anchors (File, Edit and Settings), which is the
-// split the chord table's own static_assert checks. The count's succession
-// (every addition and deletion since the 2026-08-12 grand relayout) is in git
-// history; adding or deleting a button restates these numbers and nothing
-// else here.
-inline constexpr int kRedesignButtonCount = 46;
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-21): TWO
+// in the tab strip's, TWENTY-FOUR in row 4's enum block and SEVENTEEN in the
+// bottom row's — 43 (the menu row's three anchors left 2026-10-21). PAINTED,
+// the split is 2 + 22 + 19: HistoryOlder and HistoryNewer, enumerated in row
+// 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
+// chord in kToolbarChords, which the chord table's own static_assert checks.
+// The count's succession (every addition and deletion since the 2026-08-12
+// grand relayout) is in git history; adding or deleting a button restates
+// these numbers and nothing else here.
+inline constexpr int kRedesignButtonCount = 43;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3348,89 +3266,56 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     }
 }
 
-// THE MENU ROW'S DROPDOWNS — WHICH ONE IS UP. There is ONE popup state in the
-// product (AppState::dropdown below), and this names its content; `None` IS the
+// THE DROPDOWN — WHICH ONE IS UP. There is ONE popup state in the product
+// (AppState::dropdown below), and this names its content; `None` IS the
 // closed state, which is what makes "two dropdowns are never open together"
-// structural rather than an invariant to maintain: opening one is writing this
-// field, and a field holds one value. FILE joined 2026-08-13 with the Quit
-// button's retirement, and cost the shape nothing for exactly that reason —
-// and NAVIGATION (2026-08-02) left the same way on 2026-08-15, deleted whole
-// once every one of its seven rows had a button of its own. That the count has
-// been two, three, two and three again without a single route changing is the
-// shape's own proof: nothing here counts menus. EDIT joined 2026-08-20 with the
-// propagate relocation and cost the shape nothing either, SERIES joined
-// 2026-08-27 with the BPM/iteration relocation and LEFT 2026-09-04 when the
-// architect sent both commands back to the icon row, and HELP joined
-// 2026-09-03 with the AV sync panel and LEFT 2026-09-09 with the top strip
-// relayout, the panel keeping its chord and its button until its own deletion
-// on 2026-09-30 — a value gained or
-// lost in a field that holds one, which is the whole of what a menu costs
-// here either way.
-// THE NO-SECOND-ROAD DOCTRINE decided every one of those departures: A
-// DROPDOWN IS A POINTER HOME FOR AN EXISTING ROAD, NEVER A SECOND ONE, so a
-// command with an icon-row road is not also a menu row. Which road survives
-// is the architect's call and never "keep both": Navigation's seven rows went
-// when the roster carried all seven (2026-08-15), the propagate commands
-// arrived in Edit as the icon row's copy / paste buttons left it
-// (2026-08-20), and the Iterations and Help anchors went for their buttons
-// (2026-09-04, 2026-09-09). THE ONE RULED EXCEPTION IS FILE'S OPEN PROJECT
-// AND REVERT (architect 2026-10-07): the icon row's first button is Open
-// Project, its shift twin Revert, and both rows stay in File — Windows' own
-// File → Open beside the toolbar's Open, the period convention the chrome is
-// taken from (RedesignButton::OpenProject). The menu row is File / Edit /
-// Settings, SETTINGS PAINTING LAST (architect 2026-08-03; the enum order is
-// the painted order, RedesignButton's own rule).
-enum class DropdownMenu { None, File, Edit, Settings };
+// structural rather than an invariant to maintain: opening one is writing
+// this field, and a field holds one value. THE MENU ROW IS REMOVED
+// (architect 2026-10-21: "I'd like to see v1 without the file/edit... row"),
+// and with it the FILE and EDIT menus, their titles and the titles' Alt
+// access keys: File's Open Project (Ctrl+O), Revert (Ctrl+Alt+O) and Quit
+// (Ctrl+Q) keep their chords and the band's Open Project button with its
+// Revert twin; Edit's Copy Phase Resets and Paste Phase Resets are THE
+// PIGEON'S ACTS IN THE PHASE-RESET VIEW (Jump to Defining Marker's seat,
+// jump_seat_act), and Paste Phase Reset State is removed (closed_questions.md).
+// SETTINGS IS THE ONE MENU LEFT, its popup surviving until the settings
+// editor's Tab completion over the keys replaces it; NO ROAD OPENS IT
+// (its title and Alt+S went with the row, and the band's Settings button and
+// `;` open the typed editor as they always did), toggle_dropdown kept with
+// its geometry for that one landing. (The menus' succession — Navigation,
+// File, Edit, Series, Help — and the no-second-road doctrine that decided
+// every departure are git history.)
+enum class DropdownMenu { None, Settings };
 
-// EVERY MENU-ROW MENU, in one place, so the routes that must walk them all —
-// the press claim's anchor test and the hover switch — walk this instead of
-// naming a pair (or a triple). `None` is deliberately absent:
-// it is the closed state, not a menu.
+// EVERY MENU, in one place, so the routes that must walk them all walk this
+// instead of naming one. `None` is deliberately absent: it is the closed
+// state, not a menu.
 inline constexpr DropdownMenu kDropdownMenus[] = {
-    DropdownMenu::File, DropdownMenu::Edit, DropdownMenu::Settings,
+    DropdownMenu::Settings,
 };
 
-// WHICH BUTTON A MENU HANGS FROM. The dropdown is flush under the button that
-// emits it (architect 2026-08-02), so the painter and the open edge's damage
-// both need the anchor, and they must read ONE expression or the damaged band
-// and the painted box could start on different rows of pixels.
-inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
-    switch (m) {
-        case DropdownMenu::File:     return RedesignButton::File;
-        case DropdownMenu::Edit:     return RedesignButton::Edit;
-        case DropdownMenu::Settings:
-        case DropdownMenu::None:     break;
-    }
-    return RedesignButton::Settings;
+// WHICH BUTTON A MENU HANGS FROM: the band's Settings button since the menu
+// row's removal (2026-10-21; the row's Settings title until then), the
+// painter and the open edge's damage reading ONE expression so the damaged
+// band and the painted box start on the same row (dropdown_hang_y).
+inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu /*m*/) {
+    return RedesignButton::IconSettings;
 }
 
-// THE MENU ROW'S ACCESS KEYS (architect 2026-10-10: "accelerators are not
+// THE POPUP ROWS' ACCESS KEYS (architect 2026-10-10: "accelerators are not
 // used on the tablet, but they are part of the aesthetic and therefore
-// important") — Windows' underlined letter on every menu title and every
-// pull-down row, ALWAYS SHOWN (Windows 2000 hides them until Alt is held; a
-// recorded departure, win2000_deviations.md's product section: the tablet
-// has no Alt to reveal them). THE LETTER IS DATA ON EACH ROW: a BYTE INDEX
-// into the row's plain label (`access`), so the label stays the plain word
-// wherever else it is read and Windows' `&` spelling never enters a string;
-// the painter underlines that glyph (paint_access_underline,
-// paint_handler.cpp) and the keyboard reads the same index through
-// access_key_of. THE TITLES are Windows' own: Alt+F, Alt+E and Alt+S —
-// the title words are the painter's (kMenuButtons, paint_handler.cpp, whose
-// static_assert ties each word's marked letter to the key below); the rows'
-// letters are the planner's pick under Windows' habit (the first letter
-// where free in its menu, else a distinctive later one), unique within each
-// menu (dropdown_access_keys_valid's static_assert).
-//
-// THE KEYS (the act's road at GuiInputHandler::dropdown_key_blocked and
-// on_key's access-key arm): with no menu open, Alt + a title's letter is
-// that title's press — toggle_dropdown, the one open road, refusing a dead
-// anchor on its painted face as the press does; while a menu is open, a
-// row's letter, bare or with Alt, is that row's release
-// (activate_dropdown_item), a greyed row's letter consumed doing nothing as
-// its press is, and another title's Alt+letter switches menus. THE OPEN
-// MENU'S ROWS ANSWER FIRST, Windows' own precedence (user32's menu loop
-// matches a key in the deepest open menu): Edit's Paste Phase Reset State
-// (S) answers Alt+S before the Settings title does.
+// important") — Windows' underlined letter on every pull-down row, ALWAYS
+// SHOWN (Windows 2000 hides them until Alt is held; a recorded departure,
+// win2000_deviations.md's product section: the tablet has no Alt to reveal
+// them). THE LETTER IS DATA ON EACH ROW: a BYTE INDEX into the row's plain
+// label (`access`), so the label stays the plain word wherever else it is
+// read and Windows' `&` spelling never enters a string; the painter
+// underlines that glyph (paint_access_underline, paint_handler.cpp) and the
+// keyboard reads the same index through access_key_of. While the menu is
+// open a row's letter, bare or with Alt, is that row's release
+// (activate_dropdown_item, GuiInputHandler::dropdown_key_blocked), a greyed
+// row's letter consumed doing nothing as its press is. (The titles' Alt+F,
+// Alt+E and Alt+S, 2026-10-10 to 2026-10-21, went with the menu row.)
 //
 // AN ASCII LETTER'S KEY: the letter folded to the lowercase keysym every
 // GuiKeys letter is (gui_input.h), the platform case-folding alike.
@@ -3438,36 +3323,10 @@ inline constexpr GuiKey access_key_of(const char* label, int access) {
     const char c = label[access];
     return static_cast<GuiKey>(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
 }
-inline constexpr GuiKey dropdown_title_access_key(DropdownMenu m) {
-    switch (m) {
-        case DropdownMenu::File:     return GuiKeys::F;
-        case DropdownMenu::Edit:     return GuiKeys::E;
-        case DropdownMenu::Settings: return GuiKeys::S;
-        case DropdownMenu::None:     break;
-    }
-    return 0;
-}
-// The menu whose title answers `key` under Alt, or None.
-inline constexpr DropdownMenu dropdown_menu_for_access_key(GuiKey key) {
-    for (const DropdownMenu m : kDropdownMenus)
-        if (dropdown_title_access_key(m) == key) return m;
-    return DropdownMenu::None;
-}
-
-// IS THIS BUTTON A MENU ANCHOR? DERIVED from the menu list above through the
-// anchor owner, never a second list — so a menu added here is an anchor
-// everywhere at once (the press claim, the history partition). The COLLAPSE walk asked it too until 2026-08-13, then asked
-// `redesign_button_in_icon_row` instead; both are gone with that rule
-// (2026-08-14), and a menu cannot vanish because nothing hides a button in
-// these rows at all any more.
-inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
-    for (const DropdownMenu m : kDropdownMenus)
-        if (dropdown_anchor_button(m) == b) return true;
-    return false;
-}
 
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
-// what the menu row's Settings button drops down. Each row pairs the HUMAN
+// what the Settings popup drops down (the menu row's Settings title until
+// 2026-10-21). Each row pairs the HUMAN
 // LABEL (Title Case since 2026-09-03, kdenlive's own menu spelling and, since
 // that evening, an INSTANCE of the two-class rule rather than an exception to
 // one — an item is a control's name; the capitalization block,
@@ -3605,7 +3464,7 @@ struct SettingsPopupItem {
 // Settings row does.
 //
 // THE ACCESS KEYS (architect 2026-10-10; the rule at
-// dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
+// access_key_of): &Title, &Notes, &URL, Co&ver, &GUI Scale,
 // Projects &Repository, Projects &Path, &Waveform (2026-10-21; &Chrome and
 // C&aption 2026-10-14..10-21), &Bevel Light, Bevel &Dark, Text &Shadow
 // (2026-10-21) and True
@@ -3630,322 +3489,21 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
 
-// THE COMMAND MENU'S ITEMS — the row type a menu of COMMANDS uses (the settings
-// menu is the other kind, a list of keys to edit). It carries the row's LABEL,
-// the accelerator column's text, the chord the release dispatches through
-// on_key, and where a category parts.
-//
-// IT HAS TWO INSTANCES — the FILE table below (2026-08-13) and the EDIT one
-// beside it (2026-08-20) — and its count has moved with the menu row: it was
-// two from 2026-08-02 until 2026-08-15 (NAVIGATION was the other, and the
-// first — this row type is its shape, which File then landed on with no edit to
-// the painter or the release at all), one for five days, two again, three
-// from 2026-08-27 with SERIES (renamed ITERATIONS 2026-08-31), four from
-// 2026-09-03 with HELP until Iterations' deletion on 2026-09-04, three until
-// Help left with the top strip relayout on 2026-09-09, and two since. That
-// the type survived its lone-instance stretch unchanged is what made the Edit
-// menu a TABLE and nothing else, and Iterations a second one for the eight days
-// that menu stood (2026-08-27 to 2026-09-04). What it names is the
-// KIND of menu, which is
-// what the release body forks on; the kind is still two-valued, however many
-// tables the command kind holds.
-//
-// EDIT'S ROWS ARE THIS TYPE'S FIRST ALT-BEARING ITEMS (`alt` has been in the
-// struct since the type was written, and finish_dropdown_release has always
-// composed the chord from all three bits, so nothing here needed changing —
-// but no item had ever set it before, which is worth knowing if an alt row ever
-// misbehaves).
-// WHAT A COMMAND ROW DISPATCHES: ITS KEY. Every row IS ITS CHORD, dispatched
-// through on_key so every keyboard gate applies (the rule is stated at
-// kFilePopupItems and at the release body, finish_dropdown_release), which is
-// why the item carries no act of its own: the chord is the whole of what the
-// release needs. Open Project's row called its opener directly for the one day
-// its chord was deferred (2026-08-27..28) and the AV Sync Stats row for the
-// hours before Shift+L (2026-09-03); each became an ordinary chord row the
-// day its act took a key, because an act that has a chord has no business
-// forking the release.
-struct CommandPopupItem {
-    const char* label;
-    int         access;   // the access key's byte in `label`
-    const char* hotkey;   // the accelerator column's text, right-aligned
-    GuiKey      key;
-    bool        ctrl;
-    bool        shift;
-    bool        alt;
-    bool        separator_before;
-};
+// (THE COMMAND MENUS — File's three rows, Open Project / Revert / Quit, and
+// Edit's three, Copy Phase Resets / Paste Phase Resets / Paste Phase Reset
+// State, each row its chord dispatched through on_key with an accelerator
+// column — WENT WITH THE MENU ROW, architect 2026-10-21. The chords stand:
+// Ctrl+O, Ctrl+Alt+O and Ctrl+Q, Ctrl+P and Ctrl+Alt+P; Ctrl+Alt+Shift+P
+// went with its act. The deleted Iterations, Help and Navigation menus'
+// records are git history.)
 
-// THE FILE DROPDOWN'S ITEMS — THREE ROWS, in two categories over one
-// separator: **Open Project** first
-// (architect 2026-08-27, the project model's one pointer home on both
-// platforms; the label is the architect's own (2026-08-28): "we would call it
-// open project instead of open file", and the row raises the Open project
-// picker — the folder overlay's list of projects in the keyboard's band over a
-// Cancel-alone row), **Revert** right
-// after it (architect 2026-09-13, Ctrl+Alt+O: reopen the CURRENT project to its
-// last saved state, discarding unsaved changes and the undo history —
-// GuiInputHandler::revert_project; on the tablet this row dispatches the
-// chord through on_key with no key pressed, and since 2026-10-07 the icon
-// row's Open Project button's shifted press and long press are its second
-// glass road), then
-// **Quit** (architect 2026-08-13, the
-// standard home for it and where kdenlive keeps it — and the answer to the
-// act-at-release conversion that day: row 1 paints two faces and nothing on a
-// press, so a Quit BUTTON acting at the lift read as broken, where a menu
-// item's own pressed face is the feedback; row 1 took no third face for it).
-// Save and Render stay the
-// icon row's, and the menu is deliberately minimal. OPEN PROJECT AND REVERT
-// ARE ALSO THE ICON ROW'S FIRST BUTTON since 2026-10-07 (its plain and its
-// shifted press, RedesignButton::OpenProject), the doctrine's one ruled
-// exception (DropdownMenu). The separator parts the
-// two categories, the two acts on the project from an exit, exactly as
-// kdenlive's own File menu does.
-//
-// ALL THREE ARE THEIR CHORDS, dispatched through on_key so the keyboard
-// route's own gates and body serve the row with nothing restated: QUIT IS
-// Ctrl+Q — the drag-modal hatch, the dirty prompt and the WM-close ordering are
-// all the key's — and OPEN IS Ctrl+O since 2026-08-28, when the architect gave
-// the project picker the one spelling the convention allows (bare `o` is the
-// read-only toggle; the two are neighbours on one letter, not partners). Open's
-// row called the opener directly until that date because no key bound it.
-// REVERT IS Ctrl+Alt+O from its landing (2026-09-13), an ordinary chord row
-// like Open's.
-// EVERY ROW RUNS IN THE `h` HISTORY VIEW (architect 2026-08-29, "admit
-// both"): Ctrl+Q always did, Ctrl+O joined the mode's allowlist that day
-// and Ctrl+Alt+O beside it at its landing, 2026-09-13. The menu has no
-// dead row in there.
-//
-// IT DISPLAYS ITS HOTKEY, by explicit architect design and against nothing: the
-// no-gesture-hints-in-UI preference is about hint PROSE inside labels, and the
-// architect ordered kdenlive's accelerator column on the command menus (its own
-// crop, dropdown_full_hotkeys.png, is the anatomy). EVERY ROW ALSO WEARS ITS
-// ACCESS KEY, Windows' underlined letter, the rule's other ruled exception
-// (architect 2026-10-10, dropdown_title_access_key). The Navigation menu the
-// column was authored for is deleted, and the column's metrics and its layout
-// term survive on the command tables that remain — this one and Edit's three
-// rows (Help's one stood 2026-09-03..09) — so nothing about it is
-// producer-less. The crop's spelling
-// convention is "modifiers spelled out with `+`", which "Ctrl+Q", "Ctrl+O" and
-// "Ctrl+Alt+O" all are; the convention's OTHER half — a bare letter written UPPERCASE — had
-// its only rows in the deleted ITERATIONS table ("M", "I", whose spelling the
-// two icon-row tooltips carry now) and is the PRODUCT'S spelling since
-// 2026-09-01, stated once at spell_chord's head (gui_input.h) and followed by
-// the tooltips too, so this column no longer contrasts with anything. NO ROW
-// IN THIS TABLE CARRIES A NULL HOTKEY, though the painter still reads the
-// field per row (a null hotkey paints no accelerator on that row alone).
-//
-// AN ITEM GREYS WHEN ITS COMMAND WOULD REFUSE, on the command's CHEAP
-// refusals (architect 2026-09-24, the truthful menus): each row's face reads
-// the act's own predicate through the one item verdict, dropdown_item_enabled
-// (declared with the anchor verdict further down, the per-item term lists at
-// its definition beside the acts), so face and act are one decision — the
-// 2026-08-30 truthful-buttons ruling ("Any time a button would be a no-op,
-// grey it") carried one surface further out. The EXPENSIVE refusals are not
-// mirrored and keep their cards (Revert's and the picker's folder checks,
-// which touch the filesystem). A greyed row paints the disabled inks, takes no
-// hover or press face, and a press on it is CONSUMED SILENTLY WITH THE MENU
-// LEFT OPEN; the keyboard chords still card their refusals. An anchor greys
-// when every row under it does (menu_anchor_live).
-// (RECORD: "AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE" stood from
-// 2026-08-15 to 2026-09-24, resting on the roster's buttons-never-grey rule
-// that the truthful-buttons ruling had overturned; its one earlier exception,
-// the Navigation menu's "Walk both tabs" row greyed in the `h` view
-// 2026-08-08..15, was the deleted dropdown_item_enabled's first reader, and
-// the predicate returns under that name.)
-// THE SEPARATOR BEFORE QUIT IS THE MENUS' CONVENTION AND THE ARCHITECT'S
-// WORD (2026-10-07: "separator in the drop-down, no separator in the
-// toolbar"): Open Project and Revert, then a line, then the rows after them
-// — while the icon row stands Open Project and Save together in one group
-// with none between (redesign_button_opens_icon_group). The deliberate
-// asymmetry is that ruling.
-//
-// THE ACCESS KEYS (architect 2026-10-10; the rule at
-// dropdown_title_access_key): &Open Project, &Revert, &Quit.
-inline constexpr CommandPopupItem kFilePopupItems[] = {
-    {"Open Project", 0, "Ctrl+O", GuiKeys::O, true,  false, false, false},
-    {"Revert",       0, "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
-    {"Quit",         0, "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
-};
-inline constexpr int kFilePopupItemCount =
-    static_cast<int>(std::size(kFilePopupItems));
+// The published-rect array's size: the one menu's row count.
+inline constexpr int kDropdownMaxItemCount = kSettingsPopupItemCount;
 
-// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE PROPAGATE COMMANDS:
-// THREE ROWS IN ONE CATEGORY, with no separator: the PHASE RESET family's
-// copy, then paste, then the variant paste. THE ITEM IS ITS CHORD on all
-// three. (The magnification level category's copy and paste led the menu over
-// a separator from 2026-09-15, with Generate Magnification Level Markers
-// ahead of them 2026-09-22..23; all three went with the magnification level
-// markers column, architect 2026-09-23.)
-//
-// THIS MENU IS THE THREE COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
-// deleted from the icon row in the same ruling, so nothing here duplicates a
-// button: the no-second-road doctrine is SATISFIED rather than amended, which
-// is the zoom group's history run in reverse (there, four BUTTONS took the
-// Navigation menu's rows and the menu went; here the menu takes the buttons'
-// commands and the buttons go). The architect's reason for the direction is
-// FREQUENCY — all three are used a handful of times per session at most, which
-// is what a menu is for and what a permanent icon slot is not — and the BPM
-// opener's survival at similar frequency is his stated aesthetic choice,
-// recorded at the roster enum rather than argued from here.
-//
-// IconCopy and IconPaste carried Ctrl+P and Ctrl+Alt+P before this (the
-// shifted paste-state chord riding IconPaste's shift admission, which left
-// with it), so the relocation removed no pointer road from the family.
-//
-// EVERY ROW DISPLAYS ITS HOTKEY, the accelerator column File's one row has
-// carried alone since 2026-08-15 — the column has SIX producers today
-// (re-derived 2026-09-27: File's three rows and this menu's three), and its
-// metrics and layout term are unchanged throughout every move of that number.
-// The spelling convention is the crop's: modifiers spelled out with `+`, and a
-// non-letter key written as itself.
-//
-// EACH ROW GREYS ON ITS CHORD'S CHEAP REFUSALS (architect 2026-09-24; the
-// rule is stated in full at kFilePopupItems): the column not W, the selection
-// the act needs (one contiguous run holding a labeled, enabled marker for the
-// copy; exactly one marker for the pastes), an empty clipboard, and the head
-// gates that drop the chords — the `h` view, the read-only and iteration
-// locks, the folder overlay, the load. The chords still
-// card every one of those refusals (2026-08-30, the strictness ruling).
-// (RECORD: "AN ITEM NEVER GREYS" stood here until 2026-09-24.)
-//
-// THE ACCESS KEYS (architect 2026-10-10; the rule at
-// dropdown_title_access_key): &Copy Phase Resets, &Paste Phase Resets and
-// Paste Phase Reset &State, the S of State.
-inline constexpr CommandPopupItem kEditPopupItems[] = {
-    {"Copy Phase Resets",       0,  "Ctrl+P",           GuiKeys::P,
-     true,  false, false, false},
-    {"Paste Phase Resets",      0,  "Ctrl+Alt+P",       GuiKeys::P,
-     true,  false, true,  false},
-    {"Paste Phase Reset State", 18, "Ctrl+Alt+Shift+P", GuiKeys::P,
-     true,  true,  true,  false},
-};
-inline constexpr int kEditPopupItemCount =
-    static_cast<int>(std::size(kEditPopupItems));
-
-// (THE ITERATIONS DROPDOWN'S ITEMS ARE DELETED — architect 2026-09-04. From
-// 2026-08-27 kSeriesPopupItems held TWO rows in one category with no
-// separator: "BPM Iterations" `M` (the BPM sweep's editor) and "Grid
-// Iterations" `I` (the iteration-mode toggle). The architect deleted the menu
-// whole once the icon row had room again and both commands went back to that
-// row as a group of two buttons — IconBpm and IconIter, the roster's own
-// entries — so the NO-SECOND-ROAD DOCTRINE is satisfied from the other side,
-// the Navigation menu's own 2026-08-15 shape: not one command was removed,
-// and each keeps its key and gains back the button it had until 2026-08-27.
-//
-// THE VOCABULARY SURVIVES THE MENU AND ITS OWNER MOVES TO THE TOOLTIPS
-// (redesign_button_tooltip, below): "BPM Iterations" and "Grid Iterations" are
-// the architect's SECOND naming (2026-08-31, rebranding his own 2026-08-27
-// "Series" over rows "BPM" and "Iterations"), chosen so the two rows say the
-// SAME NOUN and the qualifier says only which axis is swept — BPM values, or
-// the Cartesian GRID of the markers' inline brackets ("grid is the catchiest;
-// matrix is a bit pretentious"; "brackets", "value" and "settings" were all
-// vetoed). ONE VOCABULARY RUNS THROUGH the surfaces the two commands own — the
-// render button's iteration-mode hint, the two batches' counted nouns and
-// every card that NAMES a mode — while the marker's own payload keeps its word
-// ("iteration bracket", "iteration ranges").
-//
-// THE ACCELERATORS WERE THIS PRODUCT'S FIRST BARE-LETTER MENU ROWS, written
-// UPPERCASE — "M" and "I" — from the crop (dropdown_full_hotkeys.png). That
-// was one sampled surface against the tooltip table's lowercase until
-// 2026-09-01, when the whole product took kdenlive's spelling (the one
-// convention at spell_chord's head, gui_input.h) and these rows stopped being
-// the exception; the two tooltips carry the same capitals now.
-//
-// THE ITERATION ROW SHOWED NO STATE, which was the popup's own standing ruling
-// rather than an omission and is the one thing the deletion settles for good:
-// this product's menus carry NO ICONS, NO CHECKBOXES AND NO SUBMENU ARROWS
-// (paint_dropdown, paint_handler.cpp), so the one row in the product that
-// could have worn a check never did — and the mode is a LAMP now, which is the
-// state cue a roster button has and a menu row does not.)
-
-// (THE HELP DROPDOWN'S ITEMS ARE DELETED — architect 2026-09-09, the top
-// strip relayout. From 2026-09-03 kHelpPopupItems held ONE ROW, "AV Sync
-// Stats", Title Case, which was its chord like every other command row —
-// Shift+L, dispatched through on_key, bare `l`'s shifted twin — after a few
-// chord-less hours calling its opener directly. The anchor went on the Iterations
-// menu's own precedent: a command with an icon-row road does not also live
-// in the menu row, and the panel kept both of its other roads — the chord and
-// the Play renders button's shift-click or long press — until the panel was
-// deleted whole on 2026-09-30. NOT ONE ACT WAS REMOVED by the menu's
-// deletion; the menu row is File / Edit / Settings, Settings its last
-// anchor again, and the accelerator column's producers are File's three rows
-// and Edit's three.)
-
-// (THE NAVIGATION DROPDOWN'S ITEMS ARE DELETED — architect 2026-08-15. From
-// 2026-08-02 kNavigationPopupItems held SEVEN rows in two categories over one
-// separator: "Zoom in" `=`, "Zoom out" `-`, "Overview" `0` and "Center on focus"
-// `C`, then "Next marker" Tab, "Previous marker" Shift+Tab and "Walk both tabs"
-// Ctrl+Shift+Tab. Every row WAS an existing keyboard command dispatched through
-// on_key exactly as a redesigned button dispatches its chord, which is the model
-// the File menu inherited whole and which survives here.
-//
-// WHY IT WENT, and it is a duplication argument rather than a design reversal:
-// the four zoom/framing rows had been duplicated by the icon row's ZOOM GROUP
-// since the 2026-08-12 relayout — a duplication the architect ACCEPTED at the
-// time, superseding his own 2026-08-02 no-duplicate-commands ruling for those
-// four so the glass rig had a pointer home for them — and the three
-// marker/tab steppers were duplicated by the bottom row's MARKER-WALK GROUP on
-// 2026-08-15. With that the menu was a slower path to seven commands that all
-// had buttons, and the accepted duplication had nothing left to buy: "we should
-// go ahead and remove the navigation dropdown altogether". NOT ONE COMMAND WAS
-// REMOVED — all seven keep both their key and a button, which is what makes this
-// a path deletion.
-//
-// WHAT WENT WITH IT: the Navigation ANCHOR and its roster entry, the menu
-// enumerator, dropdown_item_enabled and its four readers (the menu's "Walk both
-// tabs" row inside the `h` view was that predicate's ONE producer — the full
-// record, and the argument that would bring it back, are at kFilePopupItems
-// above), and the two sampled disabled inks it drew with — the predicate and
-// the inks both returned 2026-09-24 with the truthful menus. WHAT DID NOT: the
-// accelerator column, which File's "Ctrl+Q" alone carried for a time and
-// whose producers are table-driven and have since widened (paint_handler.cpp's
-// paint site carries the current reach); the command
-// menu KIND and this row type; and the `h`-view lockout's menu scope, whose
-// reason is re-derived at toggle_dropdown.)
-
-// The published-rect array's size: the widest menu decides it, so a menu that
-// grows a row grows the array with no second edit. (No menu is left out of
-// the expression on the assumption it will always be the shortest — the rule
-// is "the widest menu decides it", not "the menus that happen to be long".)
-inline constexpr int kDropdownMaxItemCount =
-    std::max({kFilePopupItemCount, kEditPopupItemCount,
-              kSettingsPopupItemCount});
-
-// IS THIS A COMMAND MENU? The two kinds of menu differ in what a row DOES — a
-// settings key to prefill, a chord to dispatch — and this names the second kind
-// once, for the row lookup below and for the release's dispatch fork. It is a
-// PREDICATE over the menu rather than a comparison at each site, which is what
-// let the second command menu join it in one line: the kind is the fact the
-// release forks on, and Edit landed on it 2026-08-20 exactly as anticipated.
-// The Series menu was a term here 2026-08-27..2026-09-04 and the Help menu
-// 2026-09-03..09; each removal cost one clause, which is the same thing said
-// the other way round.
-inline constexpr bool dropdown_is_command_menu(DropdownMenu m) {
-    return m == DropdownMenu::File || m == DropdownMenu::Edit;
-}
-// THE COMMAND ROW ITSELF — the ONE place that maps a command menu to its table,
-// read by the shared view below and by the release body that dispatches the
-// chord. Callers ask dropdown_is_command_menu first; a non-command menu answers
-// with the File table's row, which no caller reaches. It forked between two
-// tables until 2026-08-15, the fork went with the Navigation menu, it came
-// BACK on 2026-08-20 with the Edit menu — the parameter that was kept
-// deliberately unread through that stretch is read again — and it forked FOUR
-// ways from 2026-08-27 to 2026-09-04, when the Series arm left with its menu,
-// and three ways from 2026-09-03 to 2026-09-09, when the Help arm left with
-// its own. No call site changed on any of those days, which is what keeping
-// the parameter bought.
-inline constexpr const CommandPopupItem& command_popup_item(DropdownMenu m,
-                                                            int i) {
-    if (m == DropdownMenu::Edit)
-        return kEditPopupItems[static_cast<size_t>(i)];
-    return kFilePopupItems[static_cast<size_t>(i)];
-}
-
-// THE PAINTER'S AND THE GEOMETRY'S VIEW OF AN ITEM — what the menus share,
-// which is exactly the row's TEXT and where the categories part. The ACTION is
-// deliberately not in here: the two kinds differ in kind (a settings key to
-// prefill, a chord to dispatch), each stays typed in its own table, and the
-// release body switches on the menu once. One shared view, two typed actions.
+// THE PAINTER'S AND THE GEOMETRY'S VIEW OF AN ITEM — the row's TEXT and where
+// the categories part (the accelerator column's `hotkey`, the command menus'
+// alone, stays in the shape and answers nullptr: the painter's optional
+// column has no producer since 2026-10-21).
 struct DropdownRow {
     const char* label;
     int         access;   // the access key's byte in `label`
@@ -3953,25 +3511,15 @@ struct DropdownRow {
     bool        separator_before;
 };
 inline constexpr int dropdown_item_count(DropdownMenu m) {
-    switch (m) {
-        case DropdownMenu::File:     return kFilePopupItemCount;
-        case DropdownMenu::Edit:     return kEditPopupItemCount;
-        case DropdownMenu::Settings: return kSettingsPopupItemCount;
-        case DropdownMenu::None:     break;
-    }
-    return 0;
+    return m == DropdownMenu::Settings ? kSettingsPopupItemCount : 0;
 }
-inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
-    if (dropdown_is_command_menu(m)) {
-        const CommandPopupItem& it = command_popup_item(m, i);
-        return {it.label, it.access, it.hotkey, it.separator_before};
-    }
+inline constexpr DropdownRow dropdown_row(DropdownMenu /*m*/, int i) {
     const SettingsPopupItem& it = kSettingsPopupItems[static_cast<size_t>(i)];
     return {it.label, it.access, nullptr, it.separator_before};
 }
 
-// THE ROW A KEY NAMES IN AN OPEN MENU (the access keys' rule at
-// dropdown_title_access_key), or -1: the row whose marked letter is `key`.
+// THE ROW A KEY NAMES IN AN OPEN MENU (the access keys' rule above), or -1:
+// the row whose marked letter is `key`.
 inline constexpr int dropdown_item_for_access_key(DropdownMenu m, GuiKey key) {
     for (int i = 0; i < dropdown_item_count(m); ++i) {
         const DropdownRow row = dropdown_row(m, i);
@@ -3996,19 +3544,11 @@ inline constexpr bool dropdown_access_keys_valid(DropdownMenu m) {
     }
     return true;
 }
-static_assert(dropdown_access_keys_valid(DropdownMenu::File) &&
-                  dropdown_access_keys_valid(DropdownMenu::Edit) &&
-                  dropdown_access_keys_valid(DropdownMenu::Settings),
+static_assert(dropdown_access_keys_valid(DropdownMenu::Settings),
               "each pull-down row marks one letter of its own label, unique "
               "in its menu and never bare `e` (the left mouse button)");
-static_assert(dropdown_menu_for_access_key(GuiKeys::F) == DropdownMenu::File &&
-                  dropdown_menu_for_access_key(GuiKeys::E) ==
-                      DropdownMenu::Edit &&
-                  dropdown_menu_for_access_key(GuiKeys::S) ==
-                      DropdownMenu::Settings,
-              "the titles' access keys are Windows' own: Alt+F, Alt+E, Alt+S");
 
-// IS THIS ROW CHECKED — the one menu row with a state, Settings' "True
+// IS THIS ROW CHECKED — the one pull-down row with a state, Settings' "True
 // Colors" (architect 2026-10-08), answers the live bit
 // (display_transform::true_colors); every other row of every menu answers
 // false. The dropdown painter draws Windows' menu check mark on a true
@@ -4346,7 +3886,7 @@ enum class DialogTrigger {
     // confirm_load_in_place / cancel_load_in_place, input_key_dispatch.cpp),
     // which the prompt reaches through its input-handler back-pointer.
     LOAD_IN_PLACE_CONFIRM,
-    // FILE → REVERT'S CONFIRMATION (architect 2026-09-13): "Discard unsaved
+    // REVERT'S CONFIRMATION (architect 2026-09-13): "Discard unsaved
     // changes and reload?", OK / Cancel, raised only over a DIRTY session by
     // GuiPrompt::request_close on the Revert target (a clean session reverts
     // with no question). OK completes the close as a reopen of the project
@@ -4384,7 +3924,7 @@ enum class DialogTrigger {
 //
 // THE DIALOG BUTTONS CARRY WINDOWS' UNDERLINED ACCESS KEYS (architect
 // 2026-10-10 ~16:05, "agree to make it windows strict"), exactly as the menu
-// row got them the same day (dropdown_title_access_key, whose rule this
+// row got them the same day (access_key_of, whose rule this
 // follows): the letter is a BYTE INDEX into the plain word, underlined by the
 // painter and always shown; OK and Cancel carry NONE, being Enter and Esc as
 // in Windows. With a BUTTON focused — every prompt, a prompt having no field
@@ -4498,7 +4038,7 @@ enum class DialogTrigger {
 //                 question is a confirmation of the act just asked for.
 //   FirstButton — THE CONFIRMATIONS: the LOAD CONFIRMATION on both its
 //                 subjects (the player's render entry and the `h` view's walk
-//                 member), since 2026-09-13 File → Revert's (architect:
+//                 member), since 2026-09-13 Revert's (architect:
 //                 "revert should be just the same as load … both should use
 //                 the same default, OK") and, since 2026-09-16, THE
 //                 PHASE RESET PASTE CONFIRMATION (architect: "align — paste
@@ -5089,8 +4629,8 @@ struct GuiAuditionSequence {
 // damages the lanes that read the viewport, the zoom or the cursor
 // (Viewport::invalidate_waveform_area's rect, viewport.h, where the lanes
 // above it are inventoried) and OWES the rows above them — the caption, the
-// menu row, the program frame's top row, the toolbar band and the tab strip
-// (2026-10-18) — a check
+// program frame's top row, the toolbar band and the tab strip (2026-10-18)
+// — a check
 // instead of a repaint: each fingerprint is the WHOLE of what the paint of
 // those rows reads, so rows whose painted fingerprint equals the live one
 // would repaint exactly the pixels they already show, and rows whose
@@ -5125,14 +4665,8 @@ struct GuiCaptionFingerprint {
     std::array<bool, kCaptionButtonCount> pushed{};
     bool operator==(const GuiCaptionFingerprint&) const = default;
 };
-// The menu row (paint_menu_row): its row and each title's two faces, bit i
-// the i-th title — enabled, and the open title's sunken box.
-struct GuiMenuRowFingerprint {
-    GuiRect  row{0, 0, 0, 0};
-    uint32_t enabled = 0;
-    uint32_t open    = 0;
-    bool operator==(const GuiMenuRowFingerprint&) const = default;
-};
+// (The menu row's fingerprint, its row and its titles' two faces, went with
+// the row, 2026-10-21.)
 // The toolbar band (paint_icon_row): its lane, the `h` view (the stand-ins
 // and the hide), and each STANDING member in the walk's order with its pane,
 // its four face terms and its glyph index (redesign_button_glyph, which with
@@ -5165,7 +4699,6 @@ struct GuiTabStripFingerprint {
 struct GuiUpperRowsFingerprint {
     GuiChromeGlobalsFingerprint globals;
     GuiCaptionFingerprint       caption;
-    GuiMenuRowFingerprint       menu;
     GuiIconRowFingerprint       band;
     GuiTabStripFingerprint      strip;
     bool operator==(const GuiUpperRowsFingerprint&) const = default;
@@ -5680,7 +5213,7 @@ struct AppState {
     // else writes it. FIVE READERS, re-derived by grep: THE CAPTION (its
     // title, "<name> - Warptempo", paint_caption_row, 2026-10-05), the OPEN
     // PROJECT PICKER (its "already open" no-op and the row its band opens on),
-    // FILE → REVERT (GuiInputHandler::revert_project, which reopens this name), and
+    // REVERT (GuiInputHandler::revert_project, which reopens this name), and
     // the two media pushes, where it is the head unit's ALBUM — the console's
     // dim top line: the RENDER PLAYER's, the folder riding ARTIST below it
     // beside the bare name of the playing or highlighted item as the title
@@ -5690,7 +5223,7 @@ struct AppState {
 
     // THE REOPEN REQUEST: the project NAME to reopen, set once the folder has
     // passed validity and the strict sidecar dry-run by its TWO writers — the
-    // Open project picker's open act (the chosen project) and File → Revert
+    // Open project picker's open act (the chosen project) and Revert
     // (the project already open, GuiInputHandler::revert_project) — and read
     // by gui_main's loop after run() returns — a non-empty
     // name with no exit requested is a reopen, and the loop builds the next
@@ -5874,8 +5407,8 @@ struct AppState {
     //
     // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN. The bit
     // lives on this AppState, which run_project constructs fresh for each
-    // project and which gui_main's loop constructs again at a REOPEN (File →
-    // Open project, Ctrl+O, the picker), so opening another piece starts every
+    // project and which gui_main's loop constructs again at a REOPEN (the Open
+    // Project button, Ctrl+O, the picker), so opening another piece starts every
     // lamp dark exactly as launching does. Inside one open project there is no
     // source load for the lamp to survive: GuiFileLoader::load_file has a
     // single caller, that fresh state's own first load, and the only loads
@@ -6040,9 +5573,10 @@ struct AppState {
     mutable ValueSourceMarkerCache value_source_marker_cache;
 
     // MEMOIZED COPY CAPTURE — the answer phase_reset_copy_captures last gave
-    // (architect 2026-09-24): the Edit
-    // anchor's verdict (menu_anchor_live) asks every Edit row on every tick,
-    // menu open or not, and the Copy row's last rung walks the selection
+    // (architect 2026-09-24): the pigeon's
+    // face in the phase-reset view asks the copy's ladder on every tick
+    // (redesign_button_enabled; the Edit anchor's verdict until 2026-10-21),
+    // and the ladder's last rung walks the selection
     // through warp_marker_propagates, whose effective_disabled scans the
     // store per label reference — O(n²) at worst, a cost ruled for discrete
     // commands and not for a tick. The key is the function's OWN inputs: the
@@ -6370,8 +5904,8 @@ struct AppState {
     // redesign_button_glyph_swapped.
     // THE THREE BITS ARE ALSO THE CLAIM (architect 2026-09-24, strictly
     // as-painted: "the live painted face should correspond to reality, and
-    // reality to the face"): the roster's press, lift, hold-repeat fire and
-    // menu-row slide read these stashed bits and never the live predicates, so input agrees with what is on screen; the comparator is
+    // reality to the face"): the roster's press, lift, and hold-repeat fire
+    // read these stashed bits and never the live predicates, so input agrees with what is on screen; the comparator is
     // what keeps them true, and a face painted live whose act has since become
     // refused dispatches and its act answers for itself.
     struct RedesignButtonFace {
@@ -7718,11 +7252,11 @@ struct AppState {
     };
     RedesignTooltip redesign_tooltip;
 
-    // THE MENU ROW'S DROPDOWN — ONE popup state for EVERY menu (Settings
-    // since 2026-07-31, File since 2026-08-13, Edit since 2026-08-20;
-    // Navigation was a third from
+    // THE DROPDOWN — ONE popup state for EVERY menu (Settings since
+    // 2026-07-31, the one left since the menu row's removal, 2026-10-21;
+    // File 2026-08-13 and Edit 2026-08-20 until then, Navigation from
     // 2026-08-02 until its deletion 2026-08-15, and not one of those arrivals
-    // or that departure needed a line in here — which is the shape's whole
+    // or departures needed a line in here — which is the shape's whole
     // point),
     // hanging under whichever button
     // emits it. `menu` is the whole modality AND the whole "never two at once"
@@ -7785,8 +7319,8 @@ struct AppState {
     // drops claim and arm together).
     // NOTHING HERE MEANS ANYTHING WHILE THE POPUP IS CLOSED (architect
     // 2026-10-01): the struct's reset is the whole closed state. A menu opens
-    // on a CLICK, switches on a hover over the other anchor while one is up,
-    // and closes on its own routes — the popup's, Esc's and the dismissals',
+    // on a CLICK (the hover switch to another anchor went with the menu row,
+    // 2026-10-21) and closes on its own routes — the popup's, Esc's and the dismissals',
     // all through close_dropdown; a cold anchor answers a click alone and a
     // hover never opens a menu. (The menu row's "closed but armed" mode —
     // `menu_row_armed`, its hover-open from a closed row, its band exit, its
@@ -7904,9 +7438,8 @@ struct AppState {
     //
     // WHAT IT REFUSES, and where: every state-mutating route is a consumed no-op
     // while it stands, through TWO gates and no scattered ifs — history_mode_-
-    // key_blocked (the keyboard allowlist, which the redesigned buttons and the
-    // File menu's one item pass through too, since both dispatch as chords
-    // via on_key) and handle_history_mode_press (the pointer allowlist). Each
+    // key_blocked (the keyboard allowlist, which the redesigned buttons pass
+    // through too, since they dispatch as chords via on_key) and handle_history_mode_press (the pointer allowlist). Each
     // states its own admitted set at its definition. THE SETTINGS DROPDOWN is
     // shut out structurally instead, at toggle_dropdown: its eight items all open
     // the settings editor, a modal this view has no place for, and refusing the
@@ -7940,9 +7473,8 @@ struct AppState {
     //   left the allowlist with its shifted twin on 2026-08-08 when the
     //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
     //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
-    //   the SETTINGS anchor — the one anchor left in this column since
-    //   2026-08-08, and the one entry here that is not a chord's refusal but the
-    //   toggle_dropdown lockout's.
+    //   the SETTINGS button (the menu row's Settings anchor until 2026-10-21;
+    //   its popup's road shut by the toggle_dropdown lockout).
     //   LIT — the view pairs' four (bare 1/2/3/4), the
     //   COMMIT-FACED SAVE (Ctrl+Shift+S since 2026-10-10, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
@@ -7950,9 +7482,9 @@ struct AppState {
     //   history button
     //   (bare `h`, the mode's OWN vocabulary, which the derivation
     //   asks about
-    //   first), the walk's two arrows (bare `,` / `.`, the same), the
-    //   FILE anchor since 2026-08-13, whose one item is the Ctrl+Q this list
-    //   used to name as the Quit BUTTON's (that button is retired; the chord is
+    //   first), the walk's two arrows (bare `,` / `.`, the same), and
+    //   Ctrl+Q, a chord with no button (the Quit button retired, then the
+    //   FILE anchor that carried it 2026-08-13 to 2026-10-21; the chord is
     //   admitted exactly as it was). (The NAVIGATION anchor was lit here too
     //   from 2026-08-08 — its menu worked in here, and its one dead row greyed
     //   at the ITEM rather than through this partition, which knows only about
@@ -8613,8 +8145,8 @@ struct AppState {
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
     // allowing free-form typing there; the preview doesn't use a text field
-    // and it works fine". ONE CONTENT: the OPEN PROJECT PICKER (File → Open
-    // project, Ctrl+O; the valid project folders as rows, the open act a
+    // and it works fine". ONE CONTENT: the OPEN PROJECT PICKER (the Open
+    // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop). A SECOND stood for one day — the `h`
     // view's history picker, retired 2026-08-29 as overengineered, that view's
     // `'` raising its load confirmation on the viewed member with no list at
@@ -8629,9 +8161,8 @@ struct AppState {
     // stays on the right", and the one button sits flush right). The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — the render player's arm is RETIRED
-    // (2026-09-03: the File anchor is dead under the panel, so its row is
-    // unreachable, and the player's router consumes Ctrl+O; the record is at
-    // the opener) — and
+    // (2026-09-03: the player's router consumes Ctrl+O and the Open
+    // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
     // GuiInputHandler::close_picker (Esc, Cancel, Ctrl+Q's road, the same-
     // project no-op and the reopen's own tail all pass through it), which
@@ -9441,7 +8972,7 @@ struct AppState {
 };
 
 // EVERY LIST POPUP'S PUBLISHED BOX UNDER A POINT (2026-10-08, ON SCREEN IS AS
-// PAINTED): the menu row's drop-down (AppState::Dropdown's rect while it is
+// PAINTED): the Settings drop-down (AppState::Dropdown's rect while it is
 // open) — the one list popup since 2026-10-14, the settings choice editor's
 // list (2026-10-07..14) gone with its editor. It paints ABOVE the
 // notification cards (paint_notifications runs before paint_dropdown), so a
@@ -9466,8 +8997,8 @@ inline bool floater_above_cards_at(const AppState& a, int x, int y) {
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
 // Every site that asks reads this one answer, and THIS IS THE INVENTORY —
-// EIGHTEEN READERS, re-derived by grep 2026-09-25 (it read THIRTEEN from
-// 2026-09-03 and had gone stale by four, the fifth arriving that day); no
+// SIXTEEN READERS since 2026-10-21 (eighteen re-derived by grep 2026-09-25 (it read THIRTEEN from
+// 2026-09-03 and had gone stale by four, the fifth arriving that day)); no
 // other file states a count of its own. `::` marks a read through
 // folder_overlay::stands (the panel's own name for it, forwarding to this),
 // the rest read this directly:
@@ -9486,10 +9017,9 @@ inline bool floater_above_cards_at(const AppState& a, int x, int y) {
 //     tooltip owner survives while a dialog surface is live and the stash
 //     that armed it stands (input_pointer.cpp)
 //   wheel_context — the wheel context (input_handler.cpp)
-//   dropdown_item_enabled — every item greys but Quit
-//     (input_key_dispatch.cpp)
 //   GuiCarTransport::admits — the car transport refuses (car_transport.cpp)
-//   menu_anchor_live — the mode partition: Edit and Settings dead (below)
+// (dropdown_item_enabled's File-menu greying and menu_anchor_live's Edit and
+// Settings partition left this list with the menu row, 2026-10-21.)
 //   redesign_button_enabled — the roster's greying arm (below)
 // (The on-screen keyboard's standing predicate carried
 // its negation as a third term until 2026-08-28, when the picker stopped
@@ -10178,29 +9708,24 @@ GuiRect top_caption_row_area(const AppState& a);
 // main.cpp; read by the press claim (claim_window_frame_press) and the cursor
 // zone map (pointer_cursor_kind). Hit tests are not guards (CLAUDE.md).
 unsigned window_frame_edges_at(const AppState& a, int x, int y);
-GuiRect top_menu_row_area(const AppState& a);
-// THE ROW A DROPDOWN HANGS FROM — THE MENU BAR'S CONTENT'S FOOT for the menu
-// row's three, the row under the content's last (menu_row_content_rect's
-// end), which is the lane's foot since the row ends at its content
-// (2026-10-10): a Windows pull-down drops from the menu bar's bottom row and
-// covers what stands under it, so while a menu is down its box stands on the
-// program frame's top row and covers it (render.h's program_frame_rect). At
-// the tablet's 300 % the box's top row is 114, the frame's first (the
-// caption 54, the head row 3, the content 57). The ONE expression the
-// painter's box and the open edge's damage
-// both read (paint_dropdown, toggle_dropdown), so the damaged band and the
-// painted box start on the same row; the box's published rect, its hit rect
-// and the close edge's damage are that box.
-inline int dropdown_hang_y(const AppState& a, DropdownMenu /*m*/) {
-    const GuiRect content = menu_row_content_rect(top_menu_row_area(a));
-    return content.y + content.h;
+// THE ROW A DROPDOWN HANGS FROM — ITS ANCHOR'S FOOT, as painted (the band's
+// Settings case since the menu row's removal, 2026-10-21; the menu bar's
+// content's foot, over the program frame's top row, until then). The ONE
+// expression the painter's box and the open edge's damage both read
+// (paint_dropdown, toggle_dropdown), so the damaged band and the painted box
+// start on the same row; the box's published rect, its hit rect and the
+// close edge's damage are that box.
+inline int dropdown_hang_y(const AppState& a, DropdownMenu m) {
+    const GuiRect& r = a.redesign_buttons[static_cast<std::size_t>(
+        dropdown_anchor_button(m))].rect;
+    return r.y + r.h;
 }
 GuiRect top_icon_row_area(const AppState& a);
 // THE VIEWPORT'S LANES' TOP ROW — the tab strip's foot (the toolbar band's
 // from 2026-10-13 until the strip, 2026-10-18), the first row of the column's
 // air. Every lane from here through the waveform's
 // bottom a viewport step repaints UNCONDITIONALLY; the rows above it (the
-// caption, the menu row, the band, the tab strip) repaint only when the fingerprint of their
+// caption, the program frame's top row, the band, the tab strip) repaint only when the fingerprint of their
 // complete painted inputs differs from the one the paint buffer last painted
 // (GuiPaintHandler::upper_rows_fingerprint, settled by
 // settle_owed_lane_damage) — the band's Full Zoom Out reads the zoom level, so
@@ -13366,9 +12891,9 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete
 //     is a delete in every column;
 //   * THE CLIPBOARD COPY, Ctrl+P, past its three gates;
-//   * THE TWO PROPAGATE PASTES — the phase family's confirmed placement
-//     paste and its state paste (PhaseResetPropagate::paste_apply,
-//     ::paste_state_apply), each past its own last refusal;
+//   * THE PROPAGATE PASTE — the phase family's confirmed placement paste
+//     (PhaseResetPropagate::paste_apply), past its own last refusal (its
+//     state paste beside it until its removal, 2026-10-21);
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -14430,14 +13955,11 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // the buttons the view refuses, false for the ones that still work in it.
 // DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
 // beside the chord table it walks) asks history_mode_key_blocked about each
-// button's own chord and hand-answers the THREE ANCHORS, which have none —
-// Settings dead on the toggle_dropdown lockout, EDIT dead beside it since
-// 2026-08-20 (every one of its propagate rows — FIVE, re-derived 2026-09-19
-// off kEditPopupItems — is a chord the mode drops, so its menu would open
-// onto nothing), File live since 2026-08-13, its
-// menu opening in the view — and IT CARRIES THE AUTHORITATIVE PARTITION
-// INVENTORY. (It hand-answered a fourth, Navigation, live from 2026-08-08 until
-// that anchor's deletion 2026-08-15.) Read
+// button's own chord, every roster button carrying one since the menu row's
+// three chordless anchors went (2026-10-21; it hand-answered them until then
+// — Settings and Edit dead, File live — and a fourth, Navigation, from
+// 2026-08-08 until that anchor's deletion 2026-08-15) — and IT CARRIES THE
+// AUTHORITATIVE PARTITION INVENTORY. Read
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //
@@ -14473,60 +13995,16 @@ bool history_view_hides_button(RedesignButton b);
 // hover or press face), by the pointer's three item roads (the hover walk,
 // the item press, the release's derive — a greyed row is never lit, and a
 // press on one is CONSUMED SILENTLY WITH THE MENU LEFT OPEN, kdenlive's own
-// answer), by the per-tick comparator's dropdown block (main.cpp) and by the
-// anchor verdict below. Each item greys on its command's CHEAP refusals only,
-// each read off the act's own predicate so face and act are one decision;
-// the EXPENSIVE ones (Revert's resolve_project and source_load_dry_run, the
-// picker's commit-time checks on the chosen folder) are not mirrored and keep
-// their cards. The per-item term lists are at the definition
-// (input_key_dispatch.cpp, beside the acts). The keyboard chords are
-// unchanged: they still card their refusals.
+// answer) and by the per-tick comparator's dropdown block (main.cpp). Each
+// item greys on its command's CHEAP refusals only, read off the act's own
+// predicate so face and act are one decision; the term list is at the
+// definition (input_key_dispatch.cpp, beside the acts).
 bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
                            DropdownMenu menu, int item);
 
-// THE MENU ANCHOR'S ONE VERDICT — row 1's File, Edit and Settings — read by
-// the anchor's face (redesign_button_enabled's head, which publish_button_face
-// stamps and main.cpp's per-tick comparator replays) and by nothing on the
-// input side: THE CLAIMS READ THE PAINTED FACE (architect 2026-09-24, strictly
-// as-painted), RedesignButtonFace::enabled, at the OPEN (toggle_dropdown's
-// guard, the one body every open route converges on: the press and the
-// hover switch) and at the veils' live-anchor exemption
-// (press_on_live_menu_anchor, input_pointer.cpp). A button that is not an
-// anchor answers false; no caller asks one. TWO CLAUSES:
-//
-//   * THE MODE PARTITION (the `h` history view and the folder overlay's two
-//     contents — the render player and the Open project picker): EDIT AND
-//     SETTINGS ARE DEAD, FILE IS NOT. Settings because
-//     its rows reach the settings editor by a direct call that meets no mode
-//     gate; Edit because every row is a chord the view's allowlist and the
-//     overlay's routers drop (architect 2026-08-04, 2026-08-20, and for the
-//     overlay 2026-09-03 evening: "leave File open, because Quit should still
-//     be enabled — everything else like what we do with history").
-//   * AN ANCHOR GREYS WHEN EVERY ITEM UNDER IT GREYS (architect 2026-09-24),
-//     through dropdown_item_enabled — so during a load Edit and Settings grey
-//     and File stays live through Quit, and a menu that would open onto
-//     nothing but greyed rows does not open. Edit therefore greys whenever
-//     no propagate command can act (no selection, for one).
-//
-// (The mode partition's first clause is the INTERFACE half of the greying rule
-// recorded at redesign_button_enabled's head: the player and the picker grey
-// what they leave dead, a modal does not.)
-//
-// It replaces menu_anchor_dead_in_mode (2026-09-02 .. 2026-09-24), which
-// carried the first clause alone; the two clauses are one verdict now.
-inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
-                             RedesignButton b) {
-    DropdownMenu menu = DropdownMenu::None;
-    for (const DropdownMenu m : kDropdownMenus)
-        if (dropdown_anchor_button(m) == b) menu = m;
-    if (menu == DropdownMenu::None) return false;
-    if (menu != DropdownMenu::File &&
-        (folder_overlay_stands(a) || a.history_mode.active))
-        return false;
-    for (int i = 0; i < dropdown_item_count(menu); ++i)
-        if (dropdown_item_enabled(a, audio, menu, i)) return true;
-    return false;
-}
+// (THE MENU ANCHOR'S VERDICT — menu_anchor_live, the menu row's File, Edit
+// and Settings titles' face, live while any row under it was — went with the
+// row, 2026-10-21.)
 
 // (THE MODE-COLLAPSING ROSTER'S PREDICATE — redesign_button_collapsed, which
 // answered "does the icon row's walk SKIP this button" — IS DELETED, architect
@@ -14893,9 +14371,6 @@ inline bool playback_launch_playable(const AppState& a,
 //     derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-//   * Row 1's three anchors answer true HERE: row 1 keeps its two faces by
-//     ruling. Their entries exist so the vector is total over the roster and
-//     the comparator needs no membership test.
 // MODAL gates are deliberately absent WITH ONE RULED EXCEPTION: a prompt or
 // a dialog editor swallows the PRESS at the pointer path's own veil, and a
 // modal that greyed the chrome under it would be a fourth face nobody asked
@@ -14904,13 +14379,12 @@ inline bool playback_launch_playable(const AppState& a,
 // not a face state this predicate answers). THE FOLDER OVERLAY IS THE
 // EXCEPTION (architect 2026-08-28: "everything else greys as in the `h`
 // view"): while the band stands — under the render player or the picker —
-// EVERY roster button is dead BUT THE FILE ANCHOR,
-// which the menu row keeps lit above the band (architect 2026-09-03 evening;
-// the anchors answer at the head of the body from menu_anchor_live, whose
-// mode clause kills the other two, and the view pairs are dead with the rest).
+// EVERY roster button is dead but the render player's own closer (the
+// view pairs with the rest; the File anchor, lit above the band from
+// 2026-09-03 evening, went with the menu row 2026-10-21, Quit keeping Ctrl+Q
+// and the caption's Close).
 // THE LOAD IS THE SAME SHAPE (architect 2026-09-24): with no piece to
-// dispatch on every button greys but the File anchor, whose Quit row stays
-// live.
+// dispatch on every button greys (Ctrl+Q stays live).
 // All three are MODES like
 // the `h` view rather than questions like a prompt, and the whole chrome is
 // what they take away; each veil already makes the chrome inert, and the
@@ -15020,6 +14494,63 @@ inline bool jump_to_value_source_actionable(const AppState& a,
         return false;
     return value_source_marker(a, total_frames) >= 0;
 }
+// THE PIGEON'S SEAT — ONE BUTTON, TWO ACT PAIRS BY VIEW (architect
+// 2026-10-21: "ctrl+j applies in warp — it's free in phase … pigeon works in
+// all cases — copy/paste is send/receive, and same with jump"; the Edit menu,
+// the propagate pair's pointer home since 2026-08-20, went with the menu row
+// the same day). Jump to Defining Marker's seat on row 8
+// (RedesignButton::IconJumpToDefiningMarker, its glyph the classical set's
+// pigeon) carries ONE CHORD PAIR, Ctrl+J and its shift twin Ctrl+Shift+J, and
+// THE MARKERS VIEW DECIDES THE ACT: in the WARP view the pair is Jump to
+// Defining Marker / Copy Resolved Value, as since 2026-10-14; in the
+// PHASE-RESET view it is COPY PHASE RESETS / PASTE PHASE RESETS. MODELED AS
+// ONE SEAT AND ONE CHORD, THE KEY ROUTED BY VIEW: the roster keeps one
+// enumerator and one kToolbarChords row (button-is-its-chord holds — the
+// lift dispatches Ctrl+J or Ctrl+Shift+J as ever), and on_key, past the
+// modal and gesture gates and ahead of the `h` view's and the locks', turns
+// the pair into the propagate's own chords in the phase-reset view
+// (jump_seat_chord below: Ctrl+J to Ctrl+P, Ctrl+Shift+J to Ctrl+Alt+P), so
+// every gate and every card the propagate pair answers with is theirs
+// verbatim — the keys Ctrl+P and Ctrl+Alt+P keep their own spelling in
+// every view. The tooltip names the view's act and the face greys by it
+// (redesign_button_tooltip's stateful overload, redesign_button_enabled):
+// both read jump_seat_act. NOTE THE PAIR'S OWN COLUMN GATE: the copy and the
+// paste act on a WARP-marker selection (phase_reset_copy_refusal /
+// phase_reset_paste_refusal, their first rung the W column), so in the
+// phase-reset view both refuse at that rung and the seat greys there.
+enum class JumpSeatAct : uint8_t {
+    JumpToDefiningMarker, CopyValue, CopyPhaseResets, PastePhaseResets,
+};
+inline JumpSeatAct jump_seat_act(const AppState& a, bool shifted) {
+    if (a.active_markers_view == 'P')
+        return shifted ? JumpSeatAct::PastePhaseResets
+                       : JumpSeatAct::CopyPhaseResets;
+    return shifted ? JumpSeatAct::CopyValue
+                   : JumpSeatAct::JumpToDefiningMarker;
+}
+// THE SEAT'S KEY IN THE VIEW: in the phase-reset view Ctrl+J becomes Ctrl+P
+// and Ctrl+Shift+J Ctrl+Alt+P, every other bit of `mods` (the repeat bit,
+// the codepoint) kept; true when it rewrote them. One reader, on_key.
+inline bool jump_seat_chord(const AppState& a, GuiKey& key,
+                            GuiInputState& mods) {
+    if (a.active_markers_view != 'P') return false;
+    const bool shifted = is_copy_value_key(key, mods);
+    if (!shifted && !is_jump_to_value_source_key(key, mods)) return false;
+    key        = GuiKeys::P;
+    mods.ctrl  = true;
+    mods.shift = false;
+    mods.alt   = shifted;
+    return true;
+}
+// THE PROPAGATE PAIR'S FACE IN THE PHASE-RESET VIEW (the seat's face there,
+// the twin rule's OR): the copy's chord past the authoring lock and its
+// ladder, or the paste's past the lock and its ladder — Ctrl+P's and
+// Ctrl+Alt+P's own gates in their own order (phase_reset_propagate.cpp,
+// beside the ladders).
+bool phase_reset_propagate_pair_actionable(const AppState& a);
+// The paste's half alone (the tooltip's shift line).
+bool phase_reset_paste_actionable(const AppState& a);
+
 // THE TARGET PREVIEW'S READINESS, forwarded (target_render.cpp): exactly
 // GuiTargetRender::preview_ready, reachable from this inline body although
 // the class is only forward-declared here. The contract is at the member.
@@ -15139,22 +14670,15 @@ inline bool redesign_button_enabled(const AppState& a,
     // by definition they steal focus and control"). THE RENDER PLAYER AND THE
     // PROJECT PICKER are INTERFACE: they stand in the modal box (modal_box.h)
     // but they are not modal, so every button they leave dead wears the grey
-    // face (the folder-overlay arm below, and menu_anchor_live's mode
-    // partition for Edit and Settings): on screen is as painted, the roster's
-    // truthful rule. THE PROMPTS, THE DIALOG EDITORS AND THE PROGRESS MODAL
-    // are MODAL: they take focus and control by definition, so what they cover
-    // — the menu row and the toolbar — is dead behind their veil WITHOUT
+    // face (the folder-overlay arm below): on screen is as painted, the
+    // roster's truthful rule. THE PROMPTS, THE DIALOG EDITORS AND THE PROGRESS
+    // MODAL are MODAL: they take focus and control by definition, so what
+    // they cover — the toolbar — is dead behind their veil WITHOUT
     // greying, and this body has no arm for them. This is the one record of the
     // rule.
     //
-    // THE THREE MENU ANCHORS ANSWER FIRST, IN EVERY STATE, FROM THEIR ONE
-    // VERDICT (menu_anchor_live, above: the mode partition, then "an anchor
-    // greys when every item under it greys" — architect 2026-09-24). Ranked
-    // ahead of the load and the overlay below because both of those grey
-    // everything else while File stays live through Quit, and the verdict
-    // already says so from the items.
-    if (redesign_button_is_menu_anchor(b))
-        return menu_anchor_live(a, audio, b);
+    // (THE THREE MENU ANCHORS answered first here, from menu_anchor_live,
+    // until the menu row's removal, 2026-10-21.)
     // THE LOAD GREYS THE ROSTER (architect 2026-09-24): while there is no
     // piece to dispatch on — a load in flight, or the blank window before the
     // startup load — every chord but Ctrl+Q drops at on_key's own head gate,
@@ -15166,8 +14690,8 @@ inline bool redesign_button_enabled(const AppState& a,
     // under the loading sign while keys drop", ruled out the same day). The
     // magnification lamp's own gain-derivation grey outlasts this one.
     if (no_audio_to_dispatch_on(a, total_frames)) return false;
-    // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER BUT THE FILE ANCHOR,
-    // whichever content owns it (architect 2026-08-28, the ruled exception
+    // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER (the menu row's File anchor
+    // excepted until the row's removal, 2026-10-21), whichever content owns it (architect 2026-08-28, the ruled exception
     // recorded above the signature: "everything else greys as in the `h`
     // view"). Under the PLAYER and the PICKER the pointer rule is the veil
     // (every press outside the overlay band and the modal row is consumed —
@@ -15176,26 +14700,13 @@ inline bool redesign_button_enabled(const AppState& a,
     // a band standing over any state greys everything that partition would
     // have lit.
     //
-    // THE MENU ROW STANDS ABOVE THE BAND AND TAKES THE `h` VIEW'S OWN
-    // PARTITION (architect 2026-09-03 evening; the band started at the tab
-    // row's first pixel then, at the ICON ROW'S FOOT from 2026-09-09 and at
-    // the view bar's top row since 2026-10-14, the modal family's box, so the
-    // menu row — its three anchors — and
-    // the icon row are the roster lanes on screen while a content stands,
-    // and "everything
-    // else like what we do with history: all the commands in File are
-    // available in history mode. Leave that for the player, the picker and
-    // the AV stats"). The anchors answered above, from the ANCHOR OWNER
-    // (menu_anchor_live), which File alone survives; every other button on
-    // the row and off it — the view pairs' four included — is dead. The
-    // anchors' OPEN
-    // reads that same owner at toggle_dropdown's guard, and the veil consumes
-    // every press but a live anchor's (press_on_live_menu_anchor,
-    // input_pointer.cpp). (The band killed File too for the hours between the
-    // gap's close and this ruling; it covered row 1 whole earlier that day and
-    // this face had no viewer; on 2026-09-02 the band stopped at row 1's foot
-    // and File alone stayed lit under it, which is the shape this ruling
-    // restores.)
+    // THE BAND STANDS UNDER THE ROSTER'S LANES (the view bar's top row
+    // since 2026-10-14, the modal family's box), so the toolbar band and the
+    // tab strip are the roster lanes on screen while a content stands, every
+    // button on them dead (architect 2026-09-03 evening, "everything else
+    // like what we do with history"; the menu row's File title, live
+    // through Quit above the band, went with the row 2026-10-21), the view
+    // pairs' four included, and the veil consumes every press on them.
     // THE PLAYER'S OWN OPENER IS THE ONE EXCEPTION (architect 2026-10-13, low
     // priority: "we should allow the media player button in media player, so
     // the user can quickly toggle it on/off by pressing the same button twice"):
@@ -15281,20 +14792,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // (The history view above is the one thing that greys them, and it is
         // scoped to that mode: leave the view and these rows answer true again
         // on the very next frame, no latched state anywhere.)
-        //
-        // (THE THREE MENU ANCHORS stood in this arm as never-grey — "an
-        // anchor is a popup toggle and has nothing to refuse" — until
-        // 2026-09-24, when the truthful menus gave them a verdict of their
-        // own; they answer at the head of this body from menu_anchor_live and
-        // never reach this switch. They are listed here for -Wswitch alone.)
-        case RedesignButton::File:
-        case RedesignButton::Edit:
-        case RedesignButton::Settings:
-            return true;
-        // OPEN PROJECT (architect 2026-10-07) MIRRORS THE FILE MENU'S OPEN
-        // PROJECT ROW, the same chord's face (dropdown_item_enabled: dead under
-        // the folder overlay and with no audio, live otherwise), and both
-        // read the opener's gates (open_project_picker): A LOAD greys it at
+        // OPEN PROJECT (architect 2026-10-07; the File menu's Open Project
+        // row, the same chord's other face, went with the menu row
+        // 2026-10-21): dead under the folder overlay and with no audio, live
+        // otherwise, the opener's gates (open_project_picker): A LOAD greys it at
         // the head of this body (the opener's own `app.loading` return, and
         // on_key's head gate before it); A STANDING PICKER greys it there too
         // (folder_overlay_stands — the picker's veil consumes the press, and
@@ -15679,8 +15180,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // derived partition at the head of this body. The opener itself
         // (GuiSettingsEditor::open) refuses nothing past those gates — an
         // editor already standing is the veil's, whose press never reaches
-        // this button. It is NOT the menu row's Settings anchor, whose rows
-        // open on a locked tab; that anchor answers at the head of this body.
+        // this button. (The menu row's Settings anchor, whose rows opened on a
+        // locked tab, went 2026-10-21; its popup hangs from this case.)
         case RedesignButton::IconSettings:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b);
@@ -16136,7 +15637,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlists name both chords — a tab switch, a select, a land, two
         // `c`s and a clipboard write author nothing), and the `h` view greys
         // it through the derived partition, whose allowlist names neither.
+        // IN THE PHASE-RESET VIEW THE SEAT IS COPY / PASTE PHASE RESETS
+        // (architect 2026-10-21, jump_seat_act): the same twin rule over
+        // that pair's own gates (phase_reset_propagate_pair_actionable).
         case RedesignButton::IconJumpToDefiningMarker:
+            if (jump_seat_act(a, false) == JumpSeatAct::CopyPhaseResets)
+                return phase_reset_propagate_pair_actionable(a);
             if (!jump_to_value_source_actionable(a, audio, total_frames) &&
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return false;
@@ -16570,9 +16076,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
-        case RedesignButton::File:
-        case RedesignButton::Edit:
-        case RedesignButton::Settings:
         // OPEN PROJECT (2026-10-07): an act that completes, no lamp.
         case RedesignButton::OpenProject:
         case RedesignButton::Save:
@@ -16842,10 +16345,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // keyboardless glass rig the shifted half of each pair (the hold's contract is
 // at that reader, the arm's stamp at AppState::ChromePress::press_ms).
 // (ICONPASTE LEFT THIS SET ON 2026-08-20 WITH ITS BUTTON. It admitted shift
-// for Ctrl+Alt+Shift+P, the paste-state chord, which the EDIT MENU now carries
-// as a row of its own — a menu item names its command outright, so the shifted
-// twin needs no admission to be reachable and the long-press half has nothing
-// left to serve either.)
+// for Ctrl+Alt+Shift+P, the paste-state chord, which the Edit menu carried
+// as a row of its own until both went, 2026-10-21.)
 // (THE DROP JOINED 2026-08-28, with Shift+S: every shift-enabled gesture whose
 // BARE form has a button admits that button's shift press and its long press,
 // and says so on its second line — the architect's rule, stated here because
@@ -16936,7 +16437,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // neither road replaces the other: this predicate is
 // about the modified press on a button, and says nothing about which chords
 // may also own a button.)
-// (OPEN PROJECT JOINED 2026-10-07 with FILE → REVERT (architect): the
+// (OPEN PROJECT JOINED 2026-10-07 with REVERT (architect): the
 // shift-click and the long press reopen the current project from disk, the
 // act's own unsaved-work question guarding it, which is why a twin may carry
 // it. IT IS THE ONE TWIN THAT TRANSLATES: the button's row is Ctrl+O and its
@@ -17121,26 +16622,12 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
     "press is refused at the band gate");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
-// button that has one. It sits with the roster (rather than with the chord
-// table in input_pointer.cpp) because BOTH the painter and the pointer read it,
-// and because membership is the interesting part: a null `line1` means "this
-// button has no tooltip", and the buttons that carry none are the WHOLE MENU
-// ROW — stated as the row rather than as a count, so a button added to row 1
-// inherits the exclusion instead of falsifying a number. The switch's null arms
-// are exactly redesign_button_is_menu_anchor's true arms, row 1 holding the
-// anchors alone — the same NAMES, and the count is deliberately not restated
-// here.
-//
-// THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
-// names (architect 2026-07-31): row 1's buttons are word labels that already
-// say what they do — "File" and "Settings" open menus that name
-// themselves — so a hint repeating the label would be noise. Stating it as
-// the ROW's property is what let Navigation inherit the exclusion in 2026-08-02
-// and File in 2026-08-13, neither needing to be remembered, and it is why
-// Navigation's deletion on 2026-08-15 cost this table nothing but one arm. Every button on
-// rows 3 and 4 and the bottom row
-// has one; its icon or
-// single letter is not self-describing.
+// button. It sits with the roster (rather than with the chord table in
+// input_pointer.cpp) because BOTH the painter and the pointer read it. EVERY
+// ROSTER BUTTON CARRIES ONE since the menu row's removal (2026-10-21): its
+// icon or label is not self-describing. (The menu row carried none by rule,
+// architect 2026-07-31 — its word labels already said what they did — and
+// its anchors were the switch's null arms until they went.)
 //
 // THE TOOLTIPS OWN THE VOCABULARY: the names here are the product's names for
 // its acts, and no manual restates them.
@@ -17232,13 +16719,10 @@ struct RedesignTooltipText {
 };
 inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     switch (b) {
-        // Row 1 — the menu row: no tooltips, per the rule above.
-        case RedesignButton::File:
-        case RedesignButton::Edit:
-        case RedesignButton::Settings:   return {nullptr, nullptr};
+        // (Row 1, the menu row, carried no tooltips; it went 2026-10-21.)
         // OPEN PROJECT (architect 2026-10-07): the act's name and its chord
         // as every row writes them; its second line names the shift twin,
-        // Revert, by the File menu row's own word.
+        // Revert, by the retired File menu row's own word.
         case RedesignButton::OpenProject:
             return {"Open Project (Ctrl+O)", "Press Shift to revert."};
         // SAVE (architect 2026-10-11): its second line names the shift twin,
@@ -17360,8 +16844,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Toggle Tooltips (\\)", nullptr};
         // SETTINGS (architect 2026-09-29), one line: bare `;` opens the
         // settings prompt and admits no modifier. The accelerator names the
-        // cap, the table's punctuation rule. The name is the menu anchor's
-        // own word, the act being that menu's bare prompt.
+        // cap, the table's punctuation rule. The name is the retired menu
+        // anchor's own word (2026-10-21), the act being that menu's bare
+        // prompt.
         case RedesignButton::IconSettings:
             return {"Settings (;)", nullptr};
         // THE HISTORY VIEW'S TOGGLE, one line: the key toggles and there is
@@ -17963,7 +17448,18 @@ inline RedesignTooltipText redesign_button_tooltip(
         // focus — payload_eligible_marker, the copy's one gate and the
         // face's twin term. (The empty-payload refusal past the gate stays
         // behind the line, as it stays behind the lit face.)
+        // IN THE PHASE-RESET VIEW THE SEAT NAMES THE PROPAGATE PAIR
+        // (architect 2026-10-21, jump_seat_act): its own chord's spelling,
+        // Ctrl+J, the shift line naming the paste, dropped in the `h` view
+        // and where the paste would refuse (phase_reset_paste_refusal, the
+        // act's own ladder).
         case RedesignButton::IconJumpToDefiningMarker:
+            if (jump_seat_act(a, false) == JumpSeatAct::CopyPhaseResets) {
+                if (a.history_mode.active || !phase_reset_paste_actionable(a))
+                    return {"Copy Phase Resets (Ctrl+J)", nullptr};
+                return {"Copy Phase Resets (Ctrl+J)",
+                        "Press Shift to paste phase resets."};
+            }
             if (a.history_mode.active ||
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return {redesign_button_tooltip(b).line1, nullptr};
@@ -18223,9 +17719,8 @@ static_assert(redesign_button_modifier_hint_agrees(),
 //
 // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON IS IN THE ZONE UNDER
 // IT: a HINT under an open menu would break the two-floating-surfaces rule,
-// which this term is what makes structural. Row 1 needs no exemption: it
-// holds the anchors alone, and an ANCHOR's open frame is the painter's own
-// open condition (paint_menu_row), not this term.
+// which this term is what makes structural. (The menu row's anchors, whose
+// open frame was their painter's own condition, went 2026-10-21.)
 inline bool redesign_button_hover_zone(const AppState& a,
                                        RedesignButton /*b*/) {
     return !a.dropdown.open();
@@ -18390,13 +17885,13 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 //     freezes that basis until its release (displayed_basis_frozen below), and
 //     a drag's playhead tow writes through Viewport::translate_playhead_to, so
 //     no synchronous plate render moves the flag off the pointer mid-drag.
-//   * CHROME: every claim — roster press, lift and hold-repeat, menu anchors,
+//   * CHROME: every claim — roster press, lift and hold-repeat,
 //     dropdown rows, the render player's row — reads the FACE the painter
 //     published (AppState::RedesignButtonFace, Dropdown::item_enabled,
 //     ModalDialogButton::enabled), the per-tick comparators carry reality onto
 //     it, and a face painted live dispatches, its act's own body answering. No
-//     input road reads redesign_button_enabled, dropdown_item_enabled,
-//     menu_anchor_live or render_player_button_enabled as a claim gate.
+//     input road reads redesign_button_enabled, dropdown_item_enabled or
+//     render_player_button_enabled as a claim gate.
 // WHAT IS NOT IN IT: the KEYBOARD, which has no painted face — a key acts on
 // live state and its gate answers with its own card (its thread swept every
 // chord with a painted twin against the twin's face predicate the same day);

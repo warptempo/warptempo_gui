@@ -932,7 +932,7 @@ void GuiSettingsEditor::commit() {
 // disables the GitHub recheck). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE
 // NEXT LAUNCH, the open project staying open — the picker lists the folders
 // under the live struct's path and gui_main's reopen resolves the chosen name
-// under that same live value (main.cpp), so File → Open project already
+// under that same live value (main.cpp), so Open Project already
 // works against the new folder, while the open project's own paths are
 // absolute and untouched. The card says where the change applies, because
 // nothing on screen changes at the commit. `last_project` still names a

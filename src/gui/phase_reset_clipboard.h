@@ -19,9 +19,9 @@
 // PLACEMENT, the part that carries this column's own meaning.
 
 // `anchor_source_frame`, `source_start_frame` and `source_end_frame` carry
-// absolute source-domain geometry so paste_state_apply can apply a
-// boundary-aware count using the same guard window on both clipboard and
-// destination sides.
+// absolute source-domain geometry (the state paste's boundary-aware count,
+// on the same guard window on both clipboard and destination sides, was its
+// reader until that paste's removal, 2026-10-21).
 //
 // WHAT IS CAPTURED AND SCALED IS THE ANCHOR, NOT THE RESET (architect
 // 2026-09-11): a reset's anchor is the musical point it was AIMED at — its own
@@ -41,15 +41,10 @@ struct ClipboardPlacement {
     double  fractional_position = 0.0;
     // The anchor this placement was captured by, in capture-time source frames
     // (fractional — an anchor is an intermediate, never an authored position).
-    // Held rather than recomputed because it is what the COPY decided
-    // membership by: paste_state_apply re-buckets the flat placement list
-    // against its own windows and must bucket by the same quantity the capture
-    // did, or the two acts disagree about which block a reset belongs to.
-    // (THE CAPTURED RESET'S OWN FRAME WAS A FIELD HERE until 2026-09-12 and is
-    // deleted with the anchor ruling: paste_state_apply's bucketing was its one
-    // reader, and nothing else in the family ever wanted the frame a placement
-    // came from — a paste materializes new resets from the fraction, and the
-    // state paste pairs them in order.)
+    // Held as what the COPY decided membership by (the state paste re-bucketed
+    // the flat list by it until its removal, 2026-10-21). (THE CAPTURED
+    // RESET'S OWN FRAME WAS A FIELD HERE until 2026-09-12 and is deleted with
+    // the anchor ruling: a paste materializes new resets from the fraction.)
     double  anchor_source_frame = 0.0;
     bool    disabled            = false;
 };
@@ -59,8 +54,8 @@ using PhaseResetClipboard = PropagateClipboard<ClipboardBlock>;
 
 // ---------------------------------------------------------------------------
 // THE PROPAGATE'S TWO WARP-MARKER ACCESSORS. They live in this header beside
-// the clipboard the PHASE RESET propagate (Ctrl+P / Ctrl+Alt+P /
-// Ctrl+Alt+Shift+P) owns; nothing re-spells either accessor.
+// the clipboard the PHASE RESET propagate (Ctrl+P / Ctrl+Alt+P) owns;
+// nothing re-spells either accessor.
 
 // Single accessor that returns a marker's label string regardless of
 // whether it's a definition or a reference. Empty when the marker is

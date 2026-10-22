@@ -28,8 +28,8 @@ enum class LandingKind { Walk, Restore };
 
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
 // LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
-// now, and the rows above it — the caption, the menu row, the program
-// frame's top row, the toolbar band, the tab strip — are OWED to every paint target a check
+// now, and the rows above it — the caption, the program frame's top
+// row, the toolbar band, the tab strip — are OWED to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
 // fingerprint has moved past what the target shows or a floating surface
@@ -502,9 +502,9 @@ struct Viewport {
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
-    // ABOVE IT DRAW NONE OF THOSE: the caption, the menu row, the program
-    // frame's top row, the toolbar band and the tab strip paint the window's
-    // state, the project's name, the menus and the roster's faces. Some of those FACES
+    // ABOVE IT DRAW NONE OF THOSE: the caption, the program frame's top
+    // row, the toolbar band and the tab strip paint the window's state, the
+    // project's name and the roster's faces. Some of those FACES
     // are predicates over the view (Full Zoom Out greys where the view
     // already frames what it would), and many more move with the acts that
     // reach this rect beside a viewport change (Undo / Redo and Save after
@@ -611,10 +611,10 @@ struct Viewport {
     // a modal button's hint is composed by the row's own paint
     // (paint_modal_dialog publishes it on the stash) and its box hangs OFF
     // the modal's controls row, past this rect — above it where the row
-    // stands on the border under row 8 (bottom lane 2, over bottom lane 1 and
-    // the program frame's bottom row on the window's foot, too few rows for
-    // the box, which flips above its button; the lane rested on the window's
-    // foot itself until the program frame's row, 2026-10-10, and the border,
+    // stands on the border under row 8 (bottom lane 1, over bottom lane 0 on
+    // the window's foot, too few rows for the box, which flips above its
+    // button; the lane rested on the window's foot itself until the program
+    // frame's bottom row, 2026-10-10 to 2026-10-21, and the border,
     // 2026-10-14, came under it), below it over the keyboard's band where
     // a dialog editor's stack stands on the keyboard (modal_box.h) — so a
     // row repaint alone would recompose
@@ -774,7 +774,7 @@ struct Viewport {
     // Viewport act moves the band, so none damages it.)
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
-    // tooltip and the menu row's dropdown): both hang outside the strip that
+    // tooltip and the Settings dropdown): both hang outside the strip that
     // owns them — the dropdown below the top strip, the tooltip under the
     // pointer or above the bottom row — so invalidate_top_strip alone would
     // leave their overhang stale. Hide edges damage the strip AND the

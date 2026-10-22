@@ -24,6 +24,35 @@ polished steel for silver, bone for ivory, tan calf for dark leather, judged on 
 so no act is hidden for it alone. Its redrawn acts: Older (the arrow clear of the watch, lit from above) and Newer (no
 longer drawn: slice_sheets.py turns Older's arrow, so a Newer of any earlier sheet is a different drawing), Left and
 Right (the starling's iridescent plumage), and Background Sound, the new act at cell 37 (the umbrella).
+DRAFT 15 (architect 2026-10-21 evening: "return to the plain left/right/up/down arrows, but we just [draw] left and mirror
+it for right … then we give older/newer their pair back and also we create an up/down for the media player so it doesn't
+have to reuse the main page's. we mirror left/right but never up/down since the latter can have diff shading"): Left, Up
+and Down are plain brass arrows again, all three drawn and Right the slicer's mirrored Left, judged together as the
+Arrows family; Newer is drawn again beside Older; the render player gets its own steel Player Up / Player Down, drawn,
+in the Transport keys; Redo is the slicer's mirrored Undo again (a different drawing from draft 14's drawn Redo); Up One
+Level leaves the sheet (the act keeps its folder drawing, the UpAFolder -> FolderRow link), so the Folders family no
+longer carries it — a member no new sheet draws would blank every new block under the all-or-nothing rule.
+DRAFT 16 (architect 2026-10-21 ~19:50: the folders "look a bit too bright and tan … kind of modern"; the tan calf was
+period-inspired, not accurate) gives the folder family a period object, THE VIENNESE PORTFOLIO — a stiff pasteboard music
+portfolio in bold two-tone marbled paper (burgundy and deep blue) with a mid-brown calf spine and corners and two cloth
+ties, as a 1780 copyist kept his parts: Folder the portfolio closed and Save the score slipped into it, both redrawn;
+Read-Only a bare brass padlock, no case ("padlock should be just a padlock no case"); Switch Tab the two index tabs
+alone, both solid and unfaded ("switch tab should be just the two tabs — make sure they are not faded out"). Its brass is
+a dull, dark antique brass, an old door knob's, darker than a trumpet's: A REFINEMENT, NOT A REDRAW, so no other act is
+hidden for it.
+DRAFT 17 (architect 2026-10-21 ~20:25: "the notebook with tabs was better. the marbled looks interesting and could work
+for the tabs") redraws Switch Tab as a closed notebook standing upright in the portfolio's marbled boards with a calf
+spine, two index tabs on its fore-edge, the front brass and the other burgundy, both solid and unfaded.
+DRAFT 18 (architect 2026-10-21 ~20:45, "go bronze everywhere") changes only the prompt's metal word, brass to bronze: A
+REFINEMENT, NOT A REDRAW, so no act is hidden for it (these tools keep saying brass for the look).
+DRAFT 19 (architect 2026-10-21 ~21:10) redraws Phase Reset as a bronze clapperboard — the clapper sticks and rim bronze,
+the stripes bronze and bone, never black and white ("the clapper should be changed to bronze to stand out") — and removes
+the prompt head's two ebony sentences (the near-black button, no object black as a whole: "let's try without the
+near-black lines"), the suspect for the checker pattern on two of about ten sheets; the pages still judge on ebony.
+DRAFT 20 (architect 2026-10-21 ~21:25, "I think we should undo the bronze conversion, but keep the clapper as brass")
+reverts the metal word to brass and the materials line to draft 15's plain old brass (draft 16's door-knob darkening
+gone too): A REFINEMENT AGAIN, NO ACT REDRAWN — Phase Reset stays 19, its object changed there and the metal word does
+not matter.
 EVERY TILE IS ONE SIZE, TILE_PX, on every page (architect 2026-10-20 ~13:50, "a uniform size, about the size of the
 flags, and use more pages as needed": the families are compared against each other, so a tile must not shrink with the
 family's width; a wide family flows onto more pages instead).
@@ -47,41 +76,57 @@ DIM = (0xA8, 0xB0, 0xBC)
 
 # Groups (architect 2026-10-19 ~22:50): an icon with an object besides the arrow goes with its object; a group is
 # all or nothing — a sheet whose group has ANY hidden member shows no block for that group; hidden is omitted, never shown.
-# Up, Down and ValueDrag moved from Arrows to Paper and books 2026-10-20: the prompt draws them as a sheet of score paper
-# whose notes crowd or open across the page, no arrow and no hand (tools/classical_set/prompt.md, cells 31, 40, 41).
-# The starlings (Left, Right) are judged apart from the pigeon and the flags since 2026-10-20, and Drop Marker joined the
-# flag group from Paper and books: the flag is the marker, so the acts that carry it are judged together.
+# ValueDrag is in Paper and books since 2026-10-20: the prompt draws it as a sheet of score paper, no arrow and no hand
+# (tools/classical_set/prompt.md, cell 31). Switch Tab left Paper and books for the isolated acts 2026-10-21: since draft 16
+# it is two index tabs alone, no paper object, and under the all-or-nothing rule one bad tab drawing would blank the
+# whole Paper page.
+# Drop Marker joined the flag group from Paper and books 2026-10-20: the flag is the marker, so the acts that carry it are
+# judged together. Since draft 15 (architect 2026-10-21 evening) Up and Down are plain brass arrows again, judged with Left
+# and Right as the Arrows family (Right the slicer's mirrored Left), the starlings and Up / Down's score sheets retired.
 FAMILIES = [
-    ("starlings", "Starlings", ["Left", "Right"]),
+    ("arrows", "Arrows", ["Left", "Right", "Up", "Down"]),
     ("flags", "Flags", ["DropMarker", "PreviousMarker", "NextMarker", "JumpToDefiningMarker"]),
-    ("undo", "Undo and Redo", ["Undo", "Redo"]),
-    ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),   # Newer the slicer's turned Older since draft 14
+    ("undo", "Undo and Redo", ["Undo", "Redo"]),   # Redo the slicer's mirrored Undo since draft 15
+    ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),   # Newer drawn again since draft 15 (draft 14's the turned Older)
     ("transport", "Transport keys", ["Play", "Pause", "PlayerPrevious", "PlayerNext", "RepeatOne",
-                                     "LoadInPlace", "Close"]),
-    ("folder", "Folders, read-only and save", ["FolderRow", "UpAFolder", "ReadOnly", "Save"]),
+                                     "PlayerUp", "PlayerDown", "LoadInPlace", "Close"]),
+    ("folder", "Folders, read-only and save", ["FolderRow", "ReadOnly", "Save"]),   # Up One Level off the sheet since draft 15
     ("hands", "Hands", ["Cancel", "AddToSelection", "Follow", "TransportPlay", "TransportStop"]),   # the conductor's figures: the cuffs must match
     ("paper", "Paper and books", ["OpenProject", "Source", "Target", "WavRow", "OpenTextEditor",
-                                  "DeleteMarkers", "Inherit", "SwitchTab", "Tooltips", "Render", "SaveCommit",
-                                  "SavePull", "Up", "Down", "ValueDrag"]),
+                                  "DeleteMarkers", "Inherit", "Tooltips", "Render", "SaveCommit",
+                                  "SavePull", "ValueDrag"]),
     ("zoom", "Magnifying glasses", ["FullZoomOut", "Center"]),
     ("cards", "Card medallions", ["CardNormal", "CardCritical"]),
 ]
 ISOLATED = ("single", "Isolated acts", [
     "BpmIterations", "Warp", "PhaseReset", "WaveformMagnification", "Settings", "PlayRenders", "DeleteFolder",
-    "Disabled", "Flatten", "GridIterations", "BackgroundSound"])
+    "Disabled", "Flatten", "GridIterations", "BackgroundSound", "SwitchTab"])
 # The act's current drawing and the draft that first asked for it (tools/classical_set/prompt.md's git history; drafts 7
 # and 8 lived in tmp/ before a51f45d0 — tmp/classical_set/NOTES.md): the starlings (7; the ball out in 10, no speckles
-# 79bf5052), the score sheets (9; Value Drag's two staves 10), the pigeon and the flag-and-arrow pairs (7; spelled by
+# 79bf5052; retired in 15), Up / Down's score sheets (9; retired in 15), Value Drag's two staves (10), the pigeon and the flag-and-arrow pairs (7; spelled by
 # position in 8), the record (8), the bare lens and the gold minus (7), Repeat One without its note (7). The 10-19
 # batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50, gemini-new5 draft 10, gemini-new6
 # draft 11 and gemini-new7 draft 12 (Revert's gold undo arrow beside the watch, his edit of ~14:30); draft 13 (~15:40) the
 # magnifying glasses over a sheet of score paper, the minus and the single note seen through the lens on the paper — an
 # empty lens shows the sheet's background, which the cut cannot remove, so every icon is opaque; draft 14 (2026-10-21) the
 # fortepiano's materials (no act redrawn for them), Older's arrow clear of the watch and Newer derived from it, the
-# starlings' iridescent plumage, and the umbrella of Background Sound, the new act at cell 37 where Newer was drawn.
-REDRAWN = {"Left": 14, "Right": 14, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpToDefiningMarker": 8,
+# starlings' iridescent plumage, and the umbrella of Background Sound, the new act at cell 37 where Newer was drawn;
+# draft 15 (2026-10-21 evening) the plain brass arrows (Left drawn and Right its mirror, Up and Down drawn), Redo the
+# mirrored Undo again (a different drawing from draft 14's drawn Redo), Newer drawn again (not turned), and the render
+# player's own steel Player Up / Player Down, new acts. Older stays 14 (the same drawing asked) and Value Drag 10 (the same
+# two-staff sheet; its wording lost only a cross-reference); draft 16 (2026-10-21 ~19:50) the Viennese portfolio of Folder
+# and Save (marbled pasteboard for the tan calf case), Read-Only's bare padlock (the case gone) and Switch Tab's two index
+# tabs alone (the notebook gone), a different object each — the darker antique brass a refinement, no act redrawn for it.
+# Draft 17 (2026-10-21 ~20:25) Switch Tab's marbled notebook with its two solid tabs, a different object from draft 16's.
+# Draft 18 (2026-10-21 ~20:45) the bronze metal word, a refinement, no act redrawn for it; draft 19 (2026-10-21 ~21:10)
+# Phase Reset's bronze clapperboard, a redraw of the black-and-white one (Wav Row's black record kept by his word);
+# draft 20 (2026-10-21 ~21:25) brass again, the clapperboard with it, a refinement, no act redrawn for it.
+REDRAWN = {"Left": 15, "Right": 15, "Up": 15, "Down": 15, "ValueDrag": 10, "JumpToDefiningMarker": 8,
            "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "RepeatOne": 7,
-           "Revert": 12, "Center": 13, "FullZoomOut": 13, "Older": 14, "Newer": 14, "BackgroundSound": 14}
+           "Revert": 12, "Center": 13, "FullZoomOut": 13, "Older": 14, "Newer": 15, "Redo": 15,
+           "BackgroundSound": 14, "PlayerUp": 15, "PlayerDown": 15,
+           "FolderRow": 16, "Save": 16, "ReadOnly": 16, "SwitchTab": 17,
+           "PhaseReset": 19}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "OpenTextEditor": "TextEditor",

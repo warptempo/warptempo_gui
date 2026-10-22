@@ -229,8 +229,8 @@ inline constexpr KeyDef kSymbols2Row2[] = {
 // focus ring: a BARE Tab, no modifier, on the same synthesize_key road as
 // every other key here. IT IS NOT THE OPEN PROJECT PICKER'S GLASS ROAD
 // (2026-08-28): that picker is field-less and stands in this band, so the
-// keyboard does not paint there at all and the gesture is File → Open
-// project, tap the project's row. What the key serves is every prompt a
+// keyboard does not paint there at all and the gesture is the Open
+// Project button, tap the project's row. What the key serves is every prompt a
 // finger can raise — the settings editor's value recall and the ring walk on
 // the dialogs that publish buttons.
 inline constexpr KeyDef kBottomRow[] = {
@@ -464,12 +464,13 @@ inline int pad_px()         { return scaled_px(kPadPx); }
 // key's right edge as far in from the other side on both devices. That
 // leftover is the pad: the band's top and bottom take the same number, so
 // the first key row starts it below the band's top and the last ends it
-// above the program frame's bottom row. The walk's horizontal arithmetic is
-// unchanged; this is its own leftover read back. (The band's width is the
-// program lanes' since 2026-10-14, inside the frame's two columns — 2298
-// device px at 2304 x 1440 and 300 %, 1918 at the laptop's 1920 and 138 % —
-// and the leftover is the same 14 and 6: pad_px and key_gap_px are authored
-// lengths, and only the key pitch reads the width.)
+// above the window's foot. The walk's horizontal arithmetic is unchanged;
+// this is its own leftover read back. (The band's width is the program
+// lanes' — the window's since 2026-10-21, 2304 device px at 300 % and 1920
+// at the laptop's 138 % (2298 and 1918 inside the frame's columns
+// 2026-10-14 to 2026-10-21) — and the leftover is the same 14 and 6: pad_px
+// and key_gap_px are authored lengths, and only the key pitch reads the
+// width.)
 inline int edge_pad_px() {
     return static_cast<int>(std::nearbyint(pad_px() + key_gap_px() * 0.5));
 }
@@ -513,8 +514,7 @@ inline int surface_height_px() {
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that
 // could raise one (the flag editor's double-click; the roster is dead under
-// both but the FILE anchor above the band, whose
-// three rows open no editor); and the touch region begin refuses under
+// both); and the touch region begin refuses under
 // both.
 // So the second term is false whenever the overlay stands, and this
 // predicate cannot answer true over the band without a producer this record
@@ -530,13 +530,14 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 
 // -- The keyboard's placement (architect 2026-10-14) -------------------------
 //
-// THE KEYBOARD STANDS INSIDE THE PROGRAM'S FRAME (architect 2026-10-14, on
+// THE KEYBOARD STANDS ACROSS THE PROGRAM'S LANES (architect 2026-10-14, on
 // the mock tmp/modal_arc/mock_modal_settings_osk_v2.png): its band runs
-// across the program lanes — one frame line in from each side, inside the
-// frame's two columns, the band's width the lanes' (bottom_row_area's x and
-// width) — and stands DIRECTLY ON THE PROGRAM FRAME'S BOTTOM ROW, which stays
-// the window's lowest line; it carries its edge pad on all four sides
-// (edge_pad_px) and NO LINE OF ITS OWN. Under a dialog editor the modal
+// across the program lanes — the band's width the lanes' (bottom_row_area's
+// x and width, the window's since 2026-10-21, when the program frame's
+// columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT;
+// it carries its edge pad on all four sides (edge_pad_px) and NO LINE OF ITS
+// OWN. ITS GROUND IS THE BRASS AS DRAWN, its keys the flat raised faces
+// (architect 2026-10-21; paint_onscreen_keyboard, materials.h's METAL). Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit,
 // the foot, the controls row and the border under row 8, all lifted onto the
 // band); under the flag editor, the one editor with no dialog, it stands
@@ -549,15 +550,14 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // directly on the keyboard with one pad between — ARE RETIRED, "we should
 // stop doing that". The dialog's surface is the modal family's box and
 // controls row; its band, its pad and its line went with the overlay.)
-//   ALONE (the flag editor): at 300 % on 2304 x 1440 the band 1034–1436
-//     (14 + 375 + 14) across x 3..2300, its first key row's top 1048, the
-//     frame's line 1437–1439 under it; at the laptop's 138 % on 1920 x 1080
-//     the band 895–1078 (6 + 172 + 6) across x 1..1918 over the frame's line
-//     1079. Row 8 is under it and unreachable: the keyboard's press claim
+//   ALONE (the flag editor): at 300 % on 2304 x 1440 the band 1037–1439
+//     (14 + 375 + 14) across x 0..2303, its first key row's top 1051; at the
+//     laptop's 138 % on 1920 x 1080 the band 896–1079 (6 + 172 + 6) across x
+//     0..1919. Row 8 is under it and unreachable: the keyboard's press claim
 //     takes the band (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; at 300 % the border 1016–1033, the
-//     controls row 920–1015, the foot 905–919, the box 294–904).
+//     arithmetic at modal_box.h's head; at 300 % the border 1019–1036, the
+//     controls row 923–1018, the foot 908–922, the box 234–907).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press, a cursor
 // zone or the touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),
@@ -568,17 +568,17 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // standing_rect).
 
 // THE KEYBOARD'S BAND: the program lanes' x and width (bottom_row_area's,
-// inside the frame's columns), standing on the program frame's bottom row,
-// its height surface_height_px. It OVERLAYS what stands there: nothing in the
+// the window's), standing on the window's foot, its height
+// surface_height_px. It OVERLAYS what stands there: nothing in the
 // vertical stack moved to make room, and the waveform simply is not painted
 // where this paints. The one zero rect is the degenerate one: a window with
 // no width, or a height that scales to nothing.
 inline GuiRect surface_rect(const AppState& a) {
-    const GuiRect lane  = bottom_row_area(a);
-    const GuiRect frame = bottom_program_frame_area(a);
-    const int     h     = surface_height_px();
+    const GuiRect lane   = bottom_row_area(a);
+    const GuiRect border = bottom_border_area(a);
+    const int     h      = surface_height_px();
     if (lane.w <= 0 || h <= 0) return GuiRect{0, 0, 0, 0};
-    return GuiRect{lane.x, frame.y - h, lane.w, h};
+    return GuiRect{lane.x, border.y + border.h - h, lane.w, h};
 }
 
 // THE HEIGHT THE MODAL'S STACK STANDS ON (modal_box.h's `keyboard_h`): the
@@ -765,9 +765,9 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // panel's ceiling first moved above the waveform 2026-09-02), so every
 // waveform pass is clipped out whole while it stands, and the LANES it also
 // covers (the view bar, the ruler, the marker lane, the canvas's frame, the
-// column's foot and row 8; the menu row, the icon row and the column's air
-// stand above the box, File lit and the other two anchors and every icon
-// greyed under the folder overlay) are not spared this way — their painters
+// column's foot and row 8; the icon row, the tab strip and the column's air
+// stand above the box, every icon greyed under the folder overlay but the
+// ones it leaves live) are not spared this way — their painters
 // run and the panel covers them, because they publish the roster's hit rects
 // (the record is at the paint-order block, paint_handler.cpp).
 inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {

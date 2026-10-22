@@ -116,17 +116,9 @@ struct AtScopeExit {
 
 } // namespace
 
-// IS THIS KEY A MENU TITLE'S ACCESS KEY (architect 2026-10-10 ~17:20)? Alt
-// alone with the File, Edit or Settings letter (dropdown_title_access_key,
-// app_state.h) — the one predicate on_key's two overlay routers (the render
-// player's, the project picker's) ask before taking a key and its
-// access-key arm asks again, so the keys follow the tap wherever a title's
-// tap opens its menu.
-bool GuiInputHandler::menu_title_access_key(GuiKey key,
-                                            GuiInputState mods) const {
-    if (!mods.alt || mods.ctrl || mods.shift) return false;
-    return dropdown_menu_for_access_key(key) != DropdownMenu::None;
-}
+// (THE MENU TITLES' ACCESS KEYS — Alt+F, Alt+E and Alt+S, the File, Edit
+// and Settings titles' press from 2026-10-10 — went with the menu row,
+// 2026-10-21; menu_title_access_key with them.)
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The dispatch's own repeat scope, first statement so it covers the whole
@@ -234,7 +226,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
         // what makes it safe is that the focused button is the ESCAPE SENTINEL
         // — on every prompt but the FOUR CONFIRMATIONS (the load's two
-        // raisers, File → Revert's and the phase reset paste's), which ask for
+        // raisers, Revert's and the phase reset paste's), which ask for
         // their OK — or Yes — deliberately, each
         // being the second step of an explicit
         // act (PromptState's PromptInitialFocus) — plus the
@@ -320,23 +312,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE RENDER PLAYER IS KEYBOARD-MODAL (2026-08-28), ranked under the
     // prompt (its load confirmation is a prompt and outranks it) and the
-    // dropdown — which since 2026-09-03 evening CAN be open over the band,
-    // the File anchor being live above it, so this rank is load-bearing and
-    // not merely tidy: while File's menu is up its own gate above admits Esc
-    // and Ctrl+Q and swallows the rest, so Esc puts the MENU away before it
-    // could reach this router and close the player. Above everything else:
+    // dropdown (which could stand over the band while the menu row's File
+    // anchor was live above it, 2026-09-03 to 2026-10-21). Above everything else:
     // while the mode stands ITS ROUTER IS THE WHOLE VOCABULARY (the contract
     // at route_render_player_key), and only Ctrl+S and Ctrl+Q fall through to
     // the ordinary dispatch — Ctrl+S to the save, which touches no transport,
     // and Ctrl+Q with the player already closed, so the quit road runs on the
-    // ordinary state. THE FILE MENU'S THREE ROWS AGREE WITH THAT SET, which
-    // is why it needs no more of them: Quit rides the Ctrl+Q fall-through,
-    // and Open Project and Revert dispatch Ctrl+O and Ctrl+Alt+O, which the
-    // catch-all consumes in silence — two rows of three doing nothing, which
-    // is not the "opens onto nothing" the anchor's own gate kills a menu for.
-    // (Ctrl+O fell through for the one day of 2026-09-02, when the rows had
-    // to agree with their chords; the silence rule makes that unnecessary
-    // now.) No editor and no
+    // ordinary state; Ctrl+O and Ctrl+Alt+O the catch-all consumes in
+    // silence. No editor and no
     // gesture of any OTHER surface can stand under it (its opener refuses
     // under every editor; the veil arms none), so the gates below never
     // contend with it — its own two arms are this block's business, below.
@@ -353,15 +336,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // to the ordinary close road; that road closes the player first
     // (GuiPrompt::request_close), and the close drops both arms with the
     // overlay and the scrub state — the force-end every other gesture takes.
-    //
-    // THE MENU TITLES' ACCESS KEYS PASS THIS BLOCK AND THE PICKER'S
-    // BELOW (architect 2026-10-10 ~17:20: wherever a title's tap
-    // opens its menu, its Alt+letter does): menu_title_access_key skips the
-    // router, and the key meets the access-key arm further down — the same
-    // road as everywhere, toggle_dropdown, whose guard is the anchor's painted
-    // face, so under these overlays File opens and Edit and Settings refuse
-    // exactly as a tap on them does (menu_anchor_live). The open menu's own
-    // letters never get here: the dropdown gate above answers them first.
     if (app.render_player.active) {
         if (any_pointer_gesture_active(app)) {
             // THE DRAG GATE'S QUESTION ASKED EARLIER SAYS THE DRAG GATE'S
@@ -373,8 +347,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                      kKeysDuringDrag);
                 return;
             }
-        } else if (!menu_title_access_key(key, mods) &&
-                   route_render_player_key(key, mods)) {
+        } else if (route_render_player_key(key, mods)) {
             return;
         }
     }
@@ -386,10 +359,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road), Ctrl+S consumed by the router as the
     // save, and Ctrl+Shift+S (the publish chord, 2026-10-10) as a consumed
-    // nothing — the pull's question must not open over a picker. The File menu above the band reads
-    // the same way it does under the player: Quit falls through, Open Project
-    // is the silent no-op — and here that
-    // last one is the picker answering about itself. The gesture clause is the player's
+    // nothing — the pull's question must not open over a picker. The gesture clause is the player's
     // own: the overlay's row press arm is a member of
     // any_pointer_gesture_active under every owner, and while it stands
     // every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
@@ -402,8 +372,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                      kKeysDuringDrag);
                 return;
             }
-        } else if (!menu_title_access_key(key, mods) &&
-                   route_picker_key(key, mods)) {
+        } else if (route_picker_key(key, mods)) {
             return;
         }
     }
@@ -726,24 +695,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE MENU TITLES' ACCESS KEYS (architect 2026-10-10; the rule and the
-    // letters at dropdown_title_access_key, app_state.h): Alt+F, Alt+E and
-    // Alt+S are the File, Edit and Settings titles' PRESS — toggle_dropdown,
-    // the one open road, which refuses a dead anchor on its painted face as
-    // the press does (menu_anchor_live: in the `h` view and under the folder
-    // overlay only File is live). AT THE PRESS, as
-    // every hotkey (the timing doctrine, input_handler.h). RANKED HERE,
-    // under the prompt, the open menu's own gate (where a row's letter and
-    // the titles' switch are dropdown_key_blocked's), the load, the editors (a
-    // field types or swallows; never a menu) and the gestures, and over the
-    // render player's and the picker's routers, which
-    // let these keys by (menu_title_access_key — the keys follow the tap,
-    // 2026-10-10 ~17:20), and above the `h` view's allowlist and the
-    // authoring locks, neither of which governs a menu's open. Alt alone:
-    // every Ctrl+Alt chord is untouched.
-    if (menu_title_access_key(key, mods)) {
-        toggle_dropdown(dropdown_menu_for_access_key(key));
-        return;
+    // THE PIGEON'S PAIR IN THE PHASE-RESET VIEW (architect 2026-10-21;
+    // jump_seat_act's head, app_state.h): Ctrl+J and Ctrl+Shift+J are Copy
+    // Phase Resets and Paste Phase Resets there, and they are dispatched AS
+    // THE PROPAGATE'S OWN CHORDS, Ctrl+P and Ctrl+Alt+P — re-entering here so
+    // the `h` view's allowlist, the authoring locks and the arm below meet
+    // exactly the chord they always met. Placed under every modal, editor
+    // and gesture gate, which answer the two spellings alike, and over the
+    // first gate that tells them apart.
+    {
+        GuiKey         routed_key  = key;
+        GuiInputState  routed_mods = mods;
+        if (jump_seat_chord(app, routed_key, routed_mods)) {
+            on_key(routed_key, routed_mods);
+            return;
+        }
     }
 
     // THE `h` HISTORY MODE — its own keys, then its allowlist. Placed HERE,
@@ -1337,9 +1303,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // CTRL+O — THE OPEN PROJECT PROMPT (architect 2026-08-28). Open was the
-    // File menu's one act whose chord was merely DEFERRED rather than refused,
-    // and this is the one spelling the convention allows it: bare `o` is the
+    // CTRL+O — THE OPEN PROJECT PROMPT (architect 2026-08-28). This is the
+    // one spelling the convention allows it: bare `o` is the
     // read-only toggle, and the two are neighbours on a letter rather than two
     // halves of one act. It is a
     // HOTKEY and so acts at the PRESS; ctrl-exact through the shared predicate
@@ -1350,7 +1315,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // standing prompt, the player's and the picker's own routers, an open
     // dropdown, loading-or-absent audio, the editor text drag, any
     // keyboard-modal editor) or inside the opener's own body, which is the
-    // road the File menu's row takes and carries the gates for both. Nothing
+    // road the band's Open Project button takes and carries the gates for
+    // both. Nothing
     // is restated here. THE `h` VIEW IS NOT ONE OF THOSE STATES since
     // 2026-08-29 (architect, "admit both"): its allowlist ADMITS this chord
     // beside Ctrl+Q, so the press reaches this line in the view and the picker
@@ -1363,7 +1329,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // CTRL+ALT+O — FILE → REVERT (architect 2026-09-13): reopen the CURRENT
+    // CTRL+ALT+O — REVERT (architect 2026-09-13): reopen the CURRENT
     // project from disk, discarding unsaved changes and the undo history. It
     // sits beside Open and Quit for the same reason they sit together — the
     // acts on the session as a whole — and the placement is otherwise free on
@@ -1426,7 +1392,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE VALUE PAIR (architect 2026-08-29) — CTRL+SHIFT+J copies the FOCUSED
+    // THE VALUE PAIR (architect 2026-08-29) — IN THE WARP VIEW (the phase-reset
+    // view's pair is routed above, jump_seat_chord) — CTRL+SHIFT+J copies the FOCUSED
     // marker's resolved value to the system clipboard (since 2026-10-14),
     // CTRL+J jumps to the marker that value came from on the OTHER A/B tab
     // (since 2026-09-29). They took the place of the retired resolved readout,
@@ -3398,8 +3365,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // (The toolbar row's band left with its lane, 2026-08-12 — the
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
+            // (The menu row's band left with its lane, 2026-10-21.)
             top_caption_row_area(app),
-            top_menu_row_area(app),  top_icon_row_area(app),
+            top_program_frame_area(app), top_icon_row_area(app),
             // THE TAB STRIP (2026-10-18), Cool Edit's Organizer tabs under
             // the band: chrome, its two tabs buttons and its ground inert.
             top_tab_strip_area(app),
@@ -3436,13 +3404,12 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // there falls to the no-context 0 as on the frame's columns beside the
     // waveform (a running touch gesture navigates on across them, its
     // surface decided at its start, apply_touch_nav_update).
-    // THE TOP STRIP LESS THE PROGRAM'S FRAME (2026-10-10, inert ground —
-    // paint_program_frame publishes nothing): the frame's top row spans the
-    // client inside the strip and its two columns stand outside every
-    // program lane's inset (strip_row_rect), so the strip's surface is the
-    // rows under the frame's top row across the program lanes' columns, read
-    // off the trim lane's rect; a wheel on the frame falls to the no-context
-    // 0, as on the frame's bottom row and on its columns beside the waveform.
+    // THE TOP STRIP LESS THE PROGRAM'S FRAME'S TOP ROW (inert ground —
+    // paint_program_frame publishes nothing; its columns and bottom row went
+    // 2026-10-21): the row spans the window inside the strip, so the strip's
+    // surface is the rows under it across the program lanes' columns, read
+    // off the trim lane's rect; a wheel on the row falls to the no-context 0,
+    // as on the canvas frame's columns beside the waveform.
     const GuiRect area  = onscreen_keyboard::waveform_paint_area(app, gui);
     const GuiRect top   = top_strip_area(app);
     const GuiRect frame = top_program_frame_area(app);

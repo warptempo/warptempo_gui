@@ -112,7 +112,7 @@ struct TrimRange {
 // "we follow Cool Edit's theming"; chrome_derive.h's head, the per-role
 // table). The chrome's roles and their order are the role table
 // (kGuiThemeRoles, theme_file.h). THE CAPTION HAS NO COLOR OF ITS OWN: it is
-// the walnut as drawn under the old-brass title (THE CAPTION, below;
+// the walnut as drawn under the ink's title (THE CAPTION, below;
 // materials.h's WOOD and INKS) — the caption's six roles, the `caption`
 // device key and its 42 built-in schemes left 2026-10-21.
 // The palette's roles are kGuiPaletteRoles and the compiled built-in
@@ -134,8 +134,8 @@ struct TrimRange {
 // disabled glyph's two tones, the view bar's black field, the ruler's ticks and digits and their black shadow;
 // the case's ramps and the time field's digits derived from the Face,
 // ce_case_* and ce_field_text, until 2026-10-21) — or THE FORTEPIANO
-// CHROME'S CONSTANTS AND MATERIALS (materials.h: the words' old brass and
-// shadow, the near-white, the time fields' amber on black, and the baked
+// CHROME'S CONSTANTS AND MATERIALS (materials.h: the words' one ink and
+// shadow, the flags' near-white, the time fields' black ground, and the baked
 // covers of the walnut, the brass and the ebony through set_surface_source)
 // — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the icon drawings' colours,
@@ -214,10 +214,10 @@ struct TrimRange {
 //                 (EDGE_RAISED);
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field
 //                 (EDGE_SUNKEN);
-//   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — the open
-//                 menu title and THE
-//                 PROGRAM'S FRAME round the program (Cool Edit's frame
-//                 window, program_frame_rect, 2026-10-10);
+//   (SUNKEN OUTER, ONE line, Shadow / Hilight — the open menu title and
+//                 the program's frame's ring — went 2026-10-21 with both,
+//                 the frame's top row alone a flat Shadow line since,
+//                 program_frame_rect);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
 //                 a menu separator.
 // (The toolbar band, row 8 and their cases and time fields, the view bar,
@@ -233,7 +233,7 @@ struct TrimRange {
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
-//   ground        every chrome surface: the menu row and the chrome's lanes
+//   ground        every chrome surface: the chrome's lanes
 //                 under the band, the caption's buttons, the on-screen
 //                 keyboard's band (inside the program frame since 2026-10-14;
 //                 the dialog's taskbar ground beside it 2026-10-10 to
@@ -275,8 +275,8 @@ struct TrimRange {
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
 //   (THE CAPTION wears no role since 2026-10-21: the walnut as drawn under
-//                 the old-brass title, its three buttons the ebony under
-//                 near-white glyphs, materials.h — its six roles, a
+//                 the ink's title, its three buttons the ebony under the
+//                 ink's glyphs, materials.h — its six roles, a
 //                 scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21); the sizing frame round a
 //                 restored laptop window is the quartet and the ground
@@ -441,7 +441,7 @@ struct GuiPalette {
     GuiColor ce_field_dark;
     GuiColor ce_field_light;
     // (The program's time fields' digits, the never-swapping light text
-    // `ce_field_text` 2026-10-10..10-21, are the fortepiano chrome's amber
+    // `ce_field_text` 2026-10-10..10-21, are the fortepiano chrome's ink
     // since, materials.h's kTimeFieldDigits.)
     // the panel label's ink and its (+1, +1) shadow, swapped to the engraved
     // pair past the label threshold (2026-10-10; cool_edit_derive.h's
@@ -496,7 +496,7 @@ const GuiPalette& palette();
 //   ListRowLit       text and the selection's; the folder overlay's and
 //                    the project picker's row names (paint_folder_overlay)
 // (The caption's pair, CaptionActive and CaptionInactive, 2026-10-09..10-21,
-// left with the caption's roles: the title is the old brass on the walnut,
+// left with the caption's roles: the title is the ink on the walnut,
 // materials.h's INKS.)
 enum class GuiSurface {
     ListRow,
@@ -1124,8 +1124,9 @@ constexpr int kMinWindowHeightPx = 480;
 // and DrawFrameControl box on the ReactOS captures (tmp/reactos*.png):
 //   THE LANE is caption_height_px whole (18 Windows px under win2000): the
 //     caption's ground across the whole lane, under the icon and the buttons
-//     too — THE WALNUT AS DRAWN with its top light line, the menu row's slab
-//     (materials.h's WOOD, 2026-10-21), ACTIVE AND INACTIVE ALIKE (the
+//     too — THE WALNUT AS DRAWN with its top light line (materials.h's
+//     WOOD, 2026-10-21; the menu row under it one slab with it until that
+//     day's later ruling removed the row), ACTIVE AND INACTIVE ALIKE (the
 //     window's activation moves no pixel of it), nothing else inside the
 //     lane (the 42 built-in captions' start-to-end colours, Windows' active
 //     and inactive pairs through a smooth 24-bit ramp, 2026-10-05..10-21,
@@ -1139,8 +1140,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     caption_title_x_px (20, two px past win2000's icon) and its cap band
 //     centred in the lane (redesign_baseline) — cut before the buttons with
 //     Windows' "..." (paint_caption_row owns the words and the cut) — on the
-//     walnut in the old brass over the words' drop shadow (materials.h's
-//     INKS, 2026-10-21), the same with the window unfocused;
+//     walnut in the chrome's one ink over the words' drop shadow
+//     (materials.h's INKS, 2026-10-21), the same with the window unfocused;
 //   THE THREE BUTTONS, flush right: each caption_button_w_px x
 //     caption_button_h_px with caption_button_y_px of caption above it,
 //     caption_button_gap_px between Minimise and Maximise,
@@ -1152,7 +1153,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     family, the SOFT edges; the reference's white outer line and 3DLight
 //     inner one agree) ON THE EBONY (materials.h's
 //     CASE, the CaptionButton region, 2026-10-21), its glyph Marlett's
-//     character in near-white (kNearWhite; the label until then)
+//     character in the chrome's one ink (kWordInk, 2026-10-21; the label
+//     until then), a dead box's glyph Cool Edit's glyph emboss
 //     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
 //     Restore authored cells — ReactOS's 7-wide Minimise and Restore — and
 //     Close the smooth outline of Marlett's staircase, the cell on its unit
@@ -1190,83 +1192,15 @@ int  window_frame_px();
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px, bool focused);
 
-// Authored pixel geometry of the MENU ROW — the top strip's lane 1, directly
-// under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). ITS
-// TWO TERMS ARE THE LIVE CHROME SPEC'S (chrome_spec.h's menu_row_*
-// fields; architect 2026-10-07, each vocabulary's own), each its own
-// rounded part: A HEAD ROW of plain ground and THE CONTENT — the anchors'
-// box and the labels' box both, where the anchors and their labels stand, the
-// label seated in it by the vocabulary's rule (paint_menu_row: the cap band
-// centred under win2000). THE ROW ENDS AT ITS CONTENT, with no line of its
-// own under it (architect 2026-10-10 ~08:10: Cool Edit's plain menu bar has
-// none; the line under it is the PROGRAM'S FRAME's top row, program_frame_rect
-// below).
-//   WIN2000: head 1 + content 19 = 20. THE CONTENT IS 19 WINDOWS
-//   PX (architect 2026-10-02; it was the kdenlive File item's 30 laptop px
-//   until the unit's change), since 2026-10-06 read as EXPLORER'S MENU
-//   BAND's button — the 13-row cell + comctl32's DEFPAD_CY 6 (toolbar.c,
-//   TOOLBAR_MeasureButton; the band's record at paint_handler.cpp's head of
-//   the menu row) — the cap's top on row 5 of the content since 2026-10-09,
-//   the plain menu bar's seat his WordPad captures of the real OS show, the
-//   cap band centred (paint_menu_row; ReactOS's band seat, row 6, departed
-//   from, win2000_deviations.md). THE HEAD ROW
-//   above it, directly under the caption (architect 2026-10-05, Windows 95
-//   screenshots measured at 100 % agreeing on a 20-px menu band; the row's
-//   place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19): the
-//   content's 19 is kept exactly — the number this row's rulings and the
-//   architect's live judgments were made against — and the extra row is
-//   added beside it rather than folded into it, so EVERY LABEL STAYS AT
-//   ITS PLACE IN THE CONTENT (the painter seats on the CONTENT rows, never
-//   the lane's, below).
-// UNDER THE LANE STANDS THE PROGRAM'S FRAME's top row, one Shadow line across
-// the client, and then the program's band (program_frame_rect, below; Cool
-// Edit's capture: the menu bar's last row, then the 808080 row, then the
-// band's dark line).
-//
-// THE ANCHOR IS THE LANE, NOT THE CONTENT (architect 2026-09-09: "make the
-// height of the top row based on the thirty pixels of File/Edit ... this way
-// the dropdown will touch the first row, as it does in kdenlive"; the number
-// Windows' menu bar's since 2026-10-02, the face row added 2026-10-05): each
-// anchor's rectangle fills the LANE top to bottom and IS the anchor's
-// published hit rect (paint_menu_row; the open anchor's sunken box stands
-// round the content rows alone, as ReactOS's does round its 19-row item),
-// and the anchor's foot is the lane's foot. THE DROPDOWN AND ITS DAMAGE BAND
-// HANG FROM THE CONTENT'S FOOT, which is the lane's (dropdown_hang_y, which
-// paint_dropdown and toggle_dropdown both read, owns the seat): a Windows
-// pull-down drops from the menu bar's bottom row and covers what stands
-// under it, so the popup covers the program frame's top row while it stands.
-//
-// FLUSH UNDER THE CAPTION (the window's top edge until the caption's arrival,
-// 2026-10-05), WITH NO AIR ABOVE THE ANCHORS beyond the head row (architect
-// 2026-10-01, on the glass: "Let's remove the six pixel padding up at the
-// top. We'll just let the text be pretty close. I think that's going to seem
-// more symmetric — because right now, relative to the curved top, both the
-// clock and the File dropdown look too far down").
-//
-// Every term sizes on gui_scale_factor() like every other lane in the tree,
-// rounded with std::nearbyint through scaled_px and floored like every other
-// lane metric, EACH ITS OWN ROUNDED PART (the composite rule): win2000's
-// content 57 device rows at the tablet's 300 %, 26 at the laptop's 138 %,
-// its head row 3 and 1 — lane totals of 60 and 27 (72 at 360 %). TWO
-// ACCESSORS FOR TWO READERS, deliberately: the
-// lane table and the anchor/hit-rect geometry read the LANE
-// (menu_row_h_px), the label's seat, the open box and the dropdown's seat
-// read the CONTENT alone (menu_row_content_rect, paint_menu_row,
-// dropdown_hang_y).
-inline int menu_row_content_h_px() {
-    return scaled_px(live_chrome_spec().menu_row_content_px, 5);
-}
-inline int menu_row_head_h_px() {
-    return scaled_px(live_chrome_spec().menu_row_head_px, 1);
-}
-inline int menu_row_h_px() {
-    return menu_row_head_h_px() + menu_row_content_h_px();
-}
-// The content's rows in the menu lane `lane`: under the head row.
-inline GuiRect menu_row_content_rect(const GuiRect& lane) {
-    return GuiRect{lane.x, lane.y + menu_row_head_h_px(), lane.w,
-                   menu_row_content_h_px()};
-}
+// (THE MENU ROW — the top strip's lane 1 under the caption from 2026-08 to
+// 2026-10-21, Windows' plain menu bar carrying File, Edit and Settings, a
+// face row over its 19-W content — IS REMOVED, architect 2026-10-21: "I'd
+// like to see v1 without the file/edit... row … keep the line above the top
+// icon row". Its lane, its painter, its three pull-downs' titles and their
+// Alt access keys went with it; the line that stood under it, the program
+// frame's top row, stands directly under the caption (program_frame_rect,
+// below). Its record is git history.)
+
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
 // commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign
 // since 2026-07-31, dissolved into the ICON ROW as its first group of four
@@ -1303,69 +1237,41 @@ inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
 }
 
-// THE PROGRAM'S FRAME — COOL EDIT'S FRAME WINDOW ROUND THE PROGRAM (architect
-// 2026-10-10 ~08:10, "Yes, okay to implement", on the planner's mocks
-// tmp/mocks/ring/; his ruling on the etched pair the menu row wore under it
-// that morning: "the separator between the first row and the icon row is
-// wrong in our rendition. It's not a window separator. That separator, I
-// think, is part of the Cool Edit chrome"). THE LAW, his captures of Cool
-// Edit Pro 2.1 — Wine with no theme, 1920 x 1080 maximized, and a Windows
-// 95/98 hardware GIF agreeing: the plain menu bar ends at its content with
-// NO LINE UNDER IT (WordPad's etched pair is its REBAR's band border, and
-// Cool Edit has a plain menu bar); the row under it is 808080 (Shadow), then
-// Cool Edit's dark band line; 808080 runs on down the window's first column
-// and FFFFFF (Hilight) down its last; FFFFFF crosses the row directly under
-// Cool Edit's lowest panel, and Windows' status bar (the ground) stands
-// BELOW that row, outside it. So Cool Edit's frame window draws ONE SUNKEN
-// LINE — BDR_SUNKENOUTER, Shadow on the top and left, Hilight on the bottom
-// and right — in the SYSTEM colors round the whole program: THE CHROME'S
-// Shadow and Hilight roles, Cool Edit's tones off the live palette's Face
-// since 2026-10-10 (chrome_derive.h: the Shadow row reads as its own shade
-// above the band's darker line), never the panel's own painter constants;
-// the
-// two two-tone corners MITRED (paint_relief_sunken_outer over
-// paint_relief_frame, the program's diagonal rule at cool_edit_paint.h's
-// head).
-// THE GEOMETRY (main.cpp's lane table; one geometry for paint and hit): the
-// ring's TOP ROW is a top lane of its own between the menu row and the band,
-// its BOTTOM ROW a bottom lane of its own, and its two COLUMNS stand on the
-// client's first and last line — every program lane (the band, the canvas
-// column's lanes and its foot, the dock bar and row 8, and the border under
-// row 8 since 2026-10-14) inset one line on each side inside them
-// (strip_row_rect). The ring spans the client, inside the restored laptop's
-// sizing frame. The pair's two lines became the ring's top and bottom rows,
-// so the well kept its height that day (the border under row 8 took 18 of
-// its rows at 300 % on 2026-10-14, the tab strip 63 on 2026-10-18: 879).
-// At 300 % the menu row ends at row 114, the ring's top row is 114–116, the
-// band starts at 117, the ring's columns are 0–2 and 2301–2303 and its
-// bottom row the window's last three rows, 1437–1439, under the border's
-// 1419–1436.
-// WHAT STANDS OVER THE PROGRAM STANDS INSIDE THE RING (architect
-// 2026-10-14): every modal — the render player, the picker, a prompt, a
-// dialog editor — is the modal family's box and controls row (modal_box.h),
-// in the program lanes' columns from the view bar's top row down, the border
-// under row 8 and the ring's bottom row left in view; the on-screen
-// keyboard's band stands on the ring's bottom row across the program lanes
+// THE PROGRAM'S FRAME — COOL EDIT'S FRAME WINDOW ROUND THE PROGRAM, REDUCED
+// TO ITS TOP ROW (architect 2026-10-21: "every row grows 1 W px each side,
+// meaning the line under file/edit also grows (by losing the furthest pixel
+// on each side)"; the ring 2026-10-10, "Yes, okay to implement", on the
+// planner's mocks tmp/mocks/ring/, read off his captures of Cool Edit Pro
+// 2.1 — the plain menu bar ending at its content with no line under it, the
+// row under it 808080, then Cool Edit's dark band line). WHAT STANDS: ONE
+// SHADOW LINE ACROSS THE WHOLE WINDOW DIRECTLY UNDER THE CAPTION — its top
+// lane of its own (main.cpp's lane table, top lane 1), the Shadow's flat
+// stroke on the walnut (paint_program_frame) — with Cool Edit's stack under
+// it, the band's dark groove and light line. NO COLUMNS, NO BOTTOM ROW, NO
+// MITRED ENDS: every program lane under it spans the window (strip_row_rect),
+// each one W wider each side than it stood inside the ring's columns, and
+// the border under row 8 is the window's lowest lane. At 300 % the caption
+// ends at row 53, the top row is 54–56 and the band starts at 57. (The
+// ring's columns on the client's first and last line and its Hilight bottom
+// row under the border stood 2026-10-10 to 2026-10-21.)
+// WHAT STANDS OVER THE PROGRAM (architect 2026-10-14): every modal — the
+// render player, the picker, a prompt, a dialog editor — is the modal
+// family's box and controls row (modal_box.h), in the lanes' columns from
+// the view bar's top row down, the border under row 8 left in view; the
+// on-screen keyboard's band stands on the window's foot across the lanes
 // (onscreen_keyboard.h's placement block), a dialog editor's stack on it.
-// (The dialog and the keyboard were overlays laid over the ring at the
-// window's foot, its whole width under one Hilight line — "they're
-// analogous to the taskbar, basically, but they sit on top of the design" —
-// from 2026-10-10 until then.) The ring's painter is paint_program_frame,
-// beside the menu row's painter.
 inline int program_frame_line_px() {
     return relief_line_px();
 }
-// The ring's two lanes and the ring itself, client coordinates (main.cpp,
-// beside the other lane accessors): the canonical ring, from the top lane's
-// row to the bottom lane's, the client's whole width.
+// The top row's lane and the frame (main.cpp, beside the other lane
+// accessors): the frame IS its top row since 2026-10-21.
 GuiRect top_program_frame_area(const AppState& a);
-GuiRect bottom_program_frame_area(const AppState& a);
 GuiRect program_frame_rect(const AppState& a);
 
 // THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 3,
 // directly under the program frame's top row (architect 2026-10-09: the
 // program is Cool Edit from the toolbar down, the same under every chrome;
-// the frame 2026-10-10, program_frame_rect above; program_spec.h's
+// the frame's top row 2026-10-10, program_frame_rect above; program_spec.h's
 // head, where every length below is authored and its source named). The
 // roster's twenty-four view/mode/action buttons stand in it — the
 // kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
@@ -1520,8 +1426,8 @@ inline int scrub_handle_box_px() {
 // recess, 20 W, then the page's top light line, one line — 21 W, 63 device
 // rows at 300 %, 29 at 138 % (28 + 1), 76 at 360 % (72 + 4) and 84 at
 // 400 % (80 + 4), each part its own rounding. It stands above gap 1 with
-// the band (main.cpp's kTopFlexGapLane), a program lane one frame line in
-// from each side, so the page edge is the lane's first column. Its painter
+// the band (main.cpp's kTopFlexGapLane), a program lane the window's width
+// (2026-10-21), so the page edge is the window's first column. Its painter
 // is paint_ce_tab_strip (cool_edit_paint.h), its tabs two roster buttons,
 // TabA and TabB (app_state.h); its ground — the recess, the gaps, the page
 // line — is chrome, inert to every surface (on_button_press's strip claim).
@@ -1702,24 +1608,23 @@ inline int cue_triangle_reach_right_px() {
     return ((2 * rows + 1) * cue_unit_px() + 2) / 2;
 }
 static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9u and 11u above
-// THE COLUMN'S AIR LANE (top lane 5, main.cpp; defined there beside the
+// THE COLUMN'S AIR LANE (top lane 4, main.cpp; defined there beside the
 // other lane accessors).
 GuiRect top_column_air_area(const AppState& a);
 // THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
 // third part; program_spec.h's column_margin_px and column_foot_px, METRICS
-// §4.1): the canvas's TOP FRAME ROW is a lane of its own, top lane 9, one
+// §4.1): the canvas's TOP FRAME ROW is a lane of its own, top lane 8, one
 // line (canvas_top_frame_h_px), directly under the marker lane; the COLUMN'S
 // FOOT is a bottom lane of its own, the bottom frame row and 5 W of face
 // (column_foot_h_px), between the canvas and the dock bar. Across, the column
-// stands column_margin_w_px of face in from each of the program frame's
-// columns (program_frame_rect, 2026-10-10), then its one-line frame column,
-// then its interior — THE WAVEFORM AREA — its width floored to the grid step
-// and the floor's leftover (under 16 device px) split between the two
-// margins, the odd pixel to the right (main.cpp's waveform_area owns the
-// split; column_inner_x_px is the side before it, inside the program
-// frame's line). 15 + 3 = 18 device rows of foot at 300 %, 7 + 1 = 8 at
-// 138 %, 18 + 4 = 22 at 360 %; the side inside the frame's line 18 + 3 = 21
-// device px at 300 %, 8 + 1 = 9 at 138 %, 22 + 4 = 26 at 360 %.
+// stands column_margin_w_px of face in from each side of the window (inside
+// the program frame's columns 2026-10-10 to 2026-10-21), then its one-line
+// frame column, then its interior — THE WAVEFORM AREA — its width floored to
+// the grid step and the floor's leftover (under 16 device px) split between
+// the two margins, the odd pixel to the right (main.cpp's waveform_area owns
+// the split; column_inner_x_px is the side before it). 15 + 3 = 18 device
+// rows of foot at 300 %, 7 + 1 = 8 at 138 %, 18 + 4 = 22 at 360 %; the side
+// 18 + 3 = 21 device px at 300 %, 8 + 1 = 9 at 138 %, 22 + 4 = 26 at 360 %.
 inline int canvas_top_frame_h_px() {
     return program_line_px();
 }
@@ -1785,9 +1690,10 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them):
 // each group a bar, 5 W of face, its cases or the time field, 4 W of face
 // and a bar, adjacent groups sharing one, the first and the last against
-// the program frame's line, each bar running from the dock bar's mid row
-// through the border's light row (architect 2026-10-21, program_spec.h's
-// row-8 bar fields); the time field's
+// the window's edges, each bar running from the dock bar's mid row through
+// the border's light row, every two-tone corner the bars leave mitred
+// (architect 2026-10-21, program_spec.h's row-8 bar fields); the time
+// field's
 // pads 5 W each side, the dialog field's own then (program_spec.h's
 // field_pad_px, 2026-10-10; that field went 2026-10-14).
 // Every modal — the render player, the project picker, a prompt, a dialog
@@ -1806,11 +1712,11 @@ inline int dock_bar_h_px() {
 }
 // THE BORDER UNDER ROW 8 (architect 2026-10-14; program_spec.h's
 // bottom_border_face_px, where the ruling and its source stand): bottom lane
-// 1, between row 8 and the program frame's bottom row, the dock bar's six
-// rows again — a light row, three W of face, a mid row, a dark row —
-// painted by the dock bar's painter (paint_ce_dock_bar) inside the frame's
-// columns: 18 device rows at 300 %, 7 at 138 %, 23 at 360 %. Inert ground
-// for input, as the frame's bottom row under it is.
+// 0 on the window's foot since 2026-10-21 (over the program frame's bottom
+// row until then), the dock bar's six rows again — a light row, three W of
+// face, a mid row, a dark row, the last the window's lowest line — painted
+// by the dock bar's painter (paint_ce_dock_bar) across the window: 18 device
+// rows at 300 %, 7 at 138 %, 23 at 360 %. Inert ground for input.
 inline int bottom_border_h_px() {
     return 3 * program_line_px() +
            scaled_px(kProgramSpec.bottom_border_face_px);
@@ -1847,16 +1753,15 @@ inline int bottom_row_h_px() {
 // THE WHOLE STACK IN WINDOWS PX — every lane a vocabulary lays above and
 // below the well, and the frame's two sides where the vocabulary's frame
 // stands on the maximised window (2026-10-08, window_frame_maximized; none
-// under win2000): the chrome's caption and the menu row's
-// two terms, then THE PROGRAM'S (program_spec.h, the same under every
-// chrome since 2026-10-09): its frame's top row 1 (program_frame_rect,
-// 2026-10-10), the band 33, the tab strip 21 (2026-10-18), the canvas
-// column's 43 above the canvas (the
-// air 5, the view bar 8, the ruler 12, the marker lane 17, the canvas's top
-// frame row 1), the column's foot 6 under it (the bottom frame row and 5 W
-// of face), the dock bar and row 8 38, the border under row 8 6
-// (2026-10-14) and the frame's bottom row 1. At 300 % every term is a whole
-// multiple of 3 device px.
+// under win2000): the chrome's caption, then THE PROGRAM'S (program_spec.h,
+// the same under every chrome since 2026-10-09): its frame's top row 1
+// (program_frame_rect), the band 33, the tab strip 21 (2026-10-18), the
+// canvas column's 43 above the canvas (the air 5, the view bar 8, the ruler
+// 12, the marker lane 17, the canvas's top frame row 1), the column's foot 6
+// under it (the bottom frame row and 5 W of face), the dock bar and row 8
+// 38 and the border under row 8 6 (2026-10-14). (The menu row's 20 and the
+// frame's bottom row's 1 left the stack 2026-10-21.) At 300 % every term is
+// a whole multiple of 3 device px.
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
@@ -1864,9 +1769,8 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
         : 0;
     const int row8 = program_dock_bar_authored_h(kProgramSpec) +
                      program_row8_authored_h(kProgramSpec);
-    const int program_frame = 2 * kReliefLinePx;
-    return frame + s.caption_height_px + s.menu_row_head_px +
-           s.menu_row_content_px + program_frame +
+    const int program_frame = kReliefLinePx;   // its top row alone
+    return frame + s.caption_height_px + program_frame +
            program_band_authored_h(kProgramSpec) +
            program_tab_strip_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
@@ -1874,11 +1778,11 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
            program_bottom_border_authored_h(kProgramSpec);
 }
 // THE STACK (2026-10-09, the canvas column Cool Edit's, its canvas framed;
-// the program's frame 2026-10-10; the border under row 8 2026-10-14; the tab
-// strip 2026-10-18): WIN2000 136 above and 51 below, 187 — the tablet's well
-// at 300 % 879 rows (293 W) of the surface's 1440 (a vocabulary's well its
-// own lanes' leftover, main.cpp's rule).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 187);
+// the border under row 8 2026-10-14; the tab strip 2026-10-18; the menu row
+// and the frame's columns and bottom row gone 2026-10-21): 116 above and 50
+// below, 166 — the tablet's well at 300 % 942 rows (314 W) of the surface's
+// 1440 (a vocabulary's well its own lanes' leftover, main.cpp's rule).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 166);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2225,8 +2129,8 @@ inline int tooltip_hover_slop_px() {
 // whole with the hover faces it softened, and the stored hover bits that only
 // those faces read went after them (the roster's, the dialog buttons' and
 // the folder overlay band's). The pointer walks stay for what still reads
-// them: the tooltips, the menu row's hover switch (a rect test of its own)
-// and the armed presses' inside bits. The record is in git history.)
+// them: the tooltips and the armed presses' inside bits (the menu row's
+// hover switch went with the row, 2026-10-21). The record is in git history.)
 
 // THE DROPDOWNS' VERTICAL metrics — one set for every menu, out here for the
 // same reason the tooltip's height is: the popup's OPEN EDGE must damage the box
@@ -2280,9 +2184,10 @@ inline int popup_item_margin_y_px() {
 
 // THE DROPDOWN'S HORIZONTAL PADS, authored in POPUP-BOX coordinates — from
 // the box's own outer edges, which is how a menu with an accelerator column is
-// easiest to state. EVERY MENU ROW PULL-DOWN TAKES THEM (architect
-// 2026-08-03): the pull-downs differ in one derived term (whether an
-// accelerator column exists) rather than in their padding.
+// easiest to state. EVERY PULL-DOWN TAKES THEM (architect 2026-08-03;
+// the Settings popup alone since the menu row's retirement, 2026-10-21): a
+// pull-down differs in one derived term (whether an accelerator column
+// exists) rather than in its padding.
 //
 //  - THE LABEL PAD AND THE RIGHT PAD ARE ONE NUMBER, 22 WINDOWS PX (architect
 //    2026-10-02, the mirror rule): from the popup's left edge to the label's
@@ -2293,7 +2198,7 @@ inline int popup_item_margin_y_px() {
 //    their space as plain padding. It is the right margin the kdenlive crop
 //    measured (30 laptop px, re-authored at the unit's change); the crop's
 //    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror. THEY ARE THE MENU ROW'S PULL-DOWNS' ALONE (the settings
+//    mirror. THEY ARE THE PULL-DOWNS' ALONE, the Settings popup's since 2026-10-21 (the settings
 //    editor's choice list, 2026-10-07 to 2026-10-14, took the drop-down
 //    inset of 7 W on both sides and went with its editor).
 //  - THE COLUMN GAP is the guaranteed minimum separation between the widest
@@ -2482,9 +2387,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //                         2026-10-06 to 2026-10-14; the modal family's box
 //                         wears the canvas column's ring since,
 //                         paint_relief_frame, modal_box.h).
-//   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
-//                         BDR_SUNKENOUTER, Shadow / Hilight): the open menu
-//                         title and the program's frame (paint_program_frame).
+//   (paint_relief_sunken_outer — SUNKEN OUTER, ONE ring, DrawEdge's
+//   BDR_SUNKENOUTER — went 2026-10-21 with its two wearers, the open menu
+//   title and the program's frame's ring.)
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
 //                         default-button frame and the list's focus frame
@@ -2507,7 +2412,6 @@ void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
-void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
 // One cell rect in `c` — the face fill every relief caller lays first — A

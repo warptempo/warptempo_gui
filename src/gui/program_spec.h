@@ -3,7 +3,8 @@
 
 // THE PROGRAM SPEC (architect 2026-10-09 ~06:55, "chrome means chrome, the
 // program is Cool Edit"; the go ~09:40): THE CHROME is the OS part — the
-// caption, the menu row, the window frame, the pull-downs, the cards, the
+// caption (the menu row under it until 2026-10-21), the window frame, the
+// pull-downs, the cards, the
 // prompts, the project picker's and the Settings dialogs with their fields
 // and buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
 // 2.1'S EDIT VIEW FROM THE TOOLBAR DOWN, THE SAME UNDER EVERY CHROME
@@ -32,13 +33,15 @@
 // row 8 stood for the morning of 2026-10-09; git history.)
 //
 // THE PROGRAM'S LANES (2026-10-09): THE TOOLBAR BAND (the top strip's lane
-// 3, under the program frame's top row), THE TAB STRIP under it (lane 4,
-// 2026-10-18: Cool Edit's Organizer tabs, the two tabs' own lane, its
-// fields below) and ROW 8 under its DOCK BAR (the
-// bottom strip's lane 2) over COOL EDIT'S BORDER UNDER ROW 8 (bottom lane 1,
-// 2026-10-14, the program frame's bottom row under it on the window's foot),
-// the
-// roster's; and, from the band down to the well, the CANVAS COLUMN'S THREE
+// 2, under the program frame's top row, which stands directly under the
+// caption since the menu row's removal, 2026-10-21), THE TAB STRIP under it
+// (lane 3, 2026-10-18: Cool Edit's Organizer tabs, the two tabs' own lane,
+// its fields below) and ROW 8 under its DOCK BAR (the bottom strip's lane 1)
+// over COOL EDIT'S BORDER UNDER ROW 8 (bottom lane 0, 2026-10-14, on the
+// window's foot since the program frame's bottom row went, 2026-10-21), the
+// roster's; EVERY PROGRAM LANE SPANS THE WINDOW since 2026-10-21 (architect:
+// "every row grows 1 W px each side" — the program frame's columns, inside
+// which they stood one line in from each side since 2026-10-10, are gone); and, from the band down to the well, the CANVAS COLUMN'S THREE
 // in ORDER R (architect 2026-10-09 ~09:40, the mock of record
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; its generator mock_ce_s3.py,
 // NOTES.md's sets 2 and 3): THE COLUMN'S AIR (5 W of face under the band's
@@ -118,14 +121,13 @@ struct ProgramSpec {
     // tmp/Screenshot_2026-10-14_11-20-10.png): THE DOCK BAR'S OWN SIX ROWS —
     // a light row, this much face, a mid row and a dark row, its left column
     // light and its right column mid — painted by the dock bar's own painter
-    // (paint_ce_dock_bar) on a bottom lane of its own between row 8 and the
-    // program frame's bottom row, which stays the window's lowest line ("the
-    // window's own 1-W frame line stays the lowest line … the Cool Edit
-    // border goes above it"). It runs inside the frame's two columns like
-    // every program lane ("the border must not cross the furthest-right and
-    // furthest-left pixel columns"), NO FACE ROW between its dark row and
-    // the frame's line ("an added spacing gap that doesn't need to exist"),
-    // and its six W come out of the waveform, the canvas being the flex.
+    // (paint_ce_dock_bar) on a bottom lane of its own under row 8, ON THE
+    // WINDOW'S FOOT since 2026-10-21 (architect: the program frame's columns
+    // and bottom row removed — "every row grows 1 W px each side"; the
+    // frame's 1-W line stood under it, the window's lowest, from 2026-10-14,
+    // the border inside the frame's two columns), its dark row the window's
+    // lowest line, the window's width like every program lane; its six W
+    // came out of the waveform, the canvas being the flex.
     int  bottom_border_face_px;
     // ROW 8 (METRICS §5.1 at one button row: Cool Edit's 55 rows hold two
     // rows of 23 cases; the product's one row of the same 23): the face
@@ -141,12 +143,16 @@ struct ProgramSpec {
     // ROW THROUGH THE BORDER'S LIGHT ROW, so the vertical bars MERGE INTO
     // THE HORIZONTAL LINES: its columns continue through the dock bar's two
     // lower lines above the row and the border's top line below it, no top
-    // or bottom row of its own and no ridge where they meet
-    // (cool_edit_paint.h's paint_ce_row8_bar). BARS STAND against the frame
-    // column at the row's left, before the clock's group; after the clock's
-    // group; before the first right-anchored group; after each group,
-    // ADJACENT GROUPS SHARING ONE BAR (no gap between groups); and after
-    // Play against the frame column at the row's right. THE PADS ARE THE
+    // or bottom row of its own and no ridge where they meet, EVERY TWO-TONE
+    // CORNER THEY LEAVE MITRED — the area between two bars a sunken two-line
+    // ring, the last bar's mid and dark columns the right edge of the dock
+    // bar, row 8 and the border (architect 2026-10-21, "the top uses
+    // diagonal mitres"; paint_row8_joins, paint_handler.cpp, the rule).
+    // BARS STAND against the window's left edge, before the clock's group;
+    // after the clock's group; before the first right-anchored group; after
+    // each group, ADJACENT GROUPS SHARING ONE BAR (no gap between groups);
+    // and after Play against the window's right edge (the program frame's
+    // columns, until 2026-10-21). THE PADS ARE THE
     // BAND'S ASYMMETRIC PUSH-IN (his word): `row8_bar_to_case_px` of face
     // after a bar, `row8_case_to_bar_px` before one — Cool Edit's measured
     // 5-before / 4-after, the bar's bevel making 4 W before it read as much
@@ -218,15 +224,15 @@ struct ProgramSpec {
     // line; the product's 20 W hold the active tab's 18 and two rows of air
     // over it (his mocks, the recess "taken whole" at the tabs' own heights).
     // THE TABS IN IT, in W from the lane's top and left (the page edge is the
-    // lane's first column, the program frame's inner neighbour): AN INACTIVE
+    // lane's first column, the window's since 2026-10-21): AN INACTIVE
     // TAB 16 W tall from row `tab_inactive_top_px`, its footprint
     // `tab_lead_px` in from the page edge (Cool Edit's Files at x 7 against
     // the page's x 6), the footprints `tab_gap_px` apart; THE ACTIVE TAB
     // grows `tab_growth_px` each side (its right growth the drop shadow's
     // column) and `tab_inactive_top_px − tab_active_top_px` up over its own
     // footprint, so the gap beside it closes to one W and with the first tab
-    // active its light column stands flush on the page edge, against the
-    // frame line; the tab line under the unlit tabs runs `tab_line_reach_px`
+    // active its light column stands flush on the page edge, the window's
+    // edge; the tab line under the unlit tabs runs `tab_line_reach_px`
     // past each end of their footprints. EVERY ONE OF THESE IS ITS OWN
     // ROUNDED PART THROUGH scaled_px, like every chrome length (architect
     // 2026-10-18 ~19:55: "if the gap is supposed to be two Windows pixels,

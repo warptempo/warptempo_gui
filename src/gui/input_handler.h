@@ -579,7 +579,8 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods);
 // same press authors — the lane decides (the horizontal pair binds bare
 // only since 2026-09-21, so no modifier enters the decision).
 // A free function over the AppState since 2026-09-24 (it read nothing else),
-// so the Edit menu's item faces can ask it (dropdown_item_enabled).
+// so a face can ask it (the Edit menu's item faces did until 2026-10-21;
+// authoring_lock_drops_chord's readers since).
 bool read_only_key_blocked(const AppState& app, GuiKey key, GuiInputState mods);
 
 // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
@@ -1435,8 +1436,9 @@ struct GuiInputHandler {
     // that the motion applies in the mode the user is already holding.
     void sync_nav_drag_mode(GuiInputState mods);
 
-    // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-two and row 8's nineteen
+    // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the tab
+    // strip's two, the icon row's twenty-two and row 8's nineteen (row 1's
+    // three menu anchors until 2026-10-21)
     // (the painter's tables in paint_handler.cpp own each membership; the
     // counts re-derived from them 2026-10-19):
     //   THE ICON ROW, 15 + 2 + 1 + 4 = 22 — the left walk's fifteen
@@ -1518,16 +1520,13 @@ struct GuiInputHandler {
     void arm_pen_hot_latch();
     void clear_pen_hot_latch();
 
-    // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
-    // popup state the menus share (AppState::Dropdown). toggle_ is the whole
-    // action of EVERY non-chord button — the three of kDropdownMenus, File,
-    // Edit and Settings (re-greped 2026-09-09): it closes the
-    // named menu if it is the open one and otherwise opens it, so pressing the
-    // other button SWITCHES menus and "never two at once" is structural rather
-    // than a rule. Its ONE refusal is the `h` history view's, and it is
-    // MENU-SCOPED since 2026-08-08: Settings does not open in there, File
-    // does (the scope was re-derived rather than inherited when the Navigation
-    // menu was deleted 2026-08-15 — the reasoning is at the definition). close_ is what every dismissal route calls — an outside
+    // THE DROPDOWN — two state writers and one hover, over the ONE popup
+    // state (AppState::Dropdown; the Settings popup, the one menu left since
+    // the menu row's removal, 2026-10-21, with NO OPENING ROAD until the
+    // settings editor's Tab completion retires it — toggle_dropdown's
+    // definition). toggle_ closes the named menu if it is the open one and
+    // otherwise opens it, refusing on its anchor's painted face (the `h`
+    // view greys it). close_ is what every dismissal route calls — an outside
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. toggle_ does NOT record the press claim that
@@ -1554,17 +1553,11 @@ struct GuiInputHandler {
     void close_dropdown();
     void recompute_dropdown_hover(GuiInputState mods);
 
-    // THE MENU ROW'S POINTER VOCABULARY, the whole of it: a menu OPENS ON A
-    // CLICK (the anchor press, toggle_dropdown), SWITCHES on a hover over the
-    // other anchor while one is up (on_motion's open-dropdown branch, refused
-    // under a held primary button), and CLOSES on its own routes — the
-    // popup's, Esc's and the dismissals' through close_dropdown. A COLD ROW
-    // ANSWERS A CLICK ALONE: with no menu up a hover opens nothing. (The row's
-    // "closed but armed" mode — a hover-open from a closed row once a menu had
-    // been opened, its band exit, its disarms on every press and key, and the
-    // pointer-leave hook's titlebar exception — was deleted whole 2026-10-01,
-    // architect: its one producer, a non-menu row-1 button's hover close, went
-    // with the view bar, and the mode had been unreachable since.)
+    // THE POPUP'S POINTER VOCABULARY: it CLOSES on its own routes — the
+    // popup's, Esc's and the dismissals' through close_dropdown — and a
+    // press on a row arms that row for the lift. (The menu row's opening
+    // click, its hover switch between titles and its "closed but armed" mode
+    // went with the row, 2026-10-21 and 2026-10-01.)
     // Which item is at (x, y), or -1 — the painter's published boxes. PURE
     // GEOMETRY: whether the row is live is its painted enabled bit
     // (AppState::Dropdown::item_enabled), asked by each caller on its own
@@ -1683,15 +1676,9 @@ struct GuiInputHandler {
     // hit, apply the button's shift / enabled refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
-    // being a consumed nothing). The three buttons
-    // outside it are row 1's anchors — File, Edit and
-    // Settings (re-greped 2026-09-09 against kDropdownMenus) — whose action is a
-    // dropdown
-    // toggle — the recorded press-time exception, stated at their claim (row 1
-    // had a chord button, Quit, inside it until 2026-08-13, when its act became
-    // the File menu's one item; one of the anchors was Navigation until its
-    // menu was deleted 2026-08-15, and one was Iterations until its own
-    // deletion on 2026-09-04).
+    // being a consumed nothing). Every roster button is chord-bearing since
+    // the menu row's three anchors — the press-time exception, each a
+    // dropdown toggle — left with the row, 2026-10-21.
     // take_chrome_press consumes the arm whole (armed or not) at the top of
     // on_button_release, damaging the un-pressed face — and, for the
     // notification card's arm (2026-10-01), resuming the held card's clock.
@@ -1756,11 +1743,6 @@ struct GuiInputHandler {
     // run under an open popup.
     bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
 
-    // A menu title's Alt+letter (architect 2026-10-10 ~17:20), which the three
-    // overlay routers let by to the access-key arm: the tap's open, wherever
-    // the tap opens its menu. The definition holds the rule.
-    bool menu_title_access_key(GuiKey key, GuiInputState mods) const;
-
     // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss
     // hook's clear: a pointer that has
     // left the window is on no button, and since the act moved to the release
@@ -1822,10 +1804,10 @@ struct GuiInputHandler {
     // window only, a frame that stands on the maximised window (a spec's
     // window_frame_maximized: the laptop maximised, the tablet always) taking
     // its press as a consumed nothing, its hover the arrow. THE CAPTION'S
-    // ranks where the File menu's Quit is reachable — below the prompt's
-    // veil, the open dropdown's close and every dialog editor's swallow, but
-    // admitted through the render player's and the picker's veils as their
-    // live menu anchors are: on a CAPTION BUTTON whose painted face is enabled
+    // ranks below the prompt's veil, the open dropdown's close and every
+    // dialog editor's swallow, but admitted through the render player's, the
+    // picker's and the progress modal's veils (the menu row's live File
+    // anchor beside it until 2026-10-21): on a CAPTION BUTTON whose painted face is enabled
     // it ARMS the button
     // (AppState::ChromePress's Caption kind) for the lift; elsewhere on the
     // caption, where the window can be restored, a second press inside the
@@ -1886,7 +1868,7 @@ struct GuiInputHandler {
     // every standing keyboard-modal editor abandoned without committing, each
     // through its own exit-no-commit body. ONE CALLER, GuiPrompt::request_close
     // — the one close road, which the keyboard's Ctrl+Q, the compositor's WM
-    // close and File → Open project's commit all reach — so no road restates
+    // close and Open Project's commit all reach — so no road restates
     // the step and none can forget it. At most one editor can stand at a time
     // (each opener refuses under the others), so the chain runs exactly one
     // body; every one of them is is_active-guarded, which makes the whole call
@@ -2842,11 +2824,11 @@ private:
     // the open act), and route_picker_key below is its whole
     // plastic vocabulary. ONE CONTENT:
     //
-    //   THE OPEN PROJECT PICKER — File → Open project and Ctrl+O, one chord
+    //   THE OPEN PROJECT PICKER — Open Project and Ctrl+O, one chord
     //   (is_open_project_key, gui_input.h; on_key's arm dispatches it at the
     //   press, the read-only allowlist admits it because the picker authors
-    //   nothing, and the File menu's row is that same chord dispatched
-    //   through on_key at the lift like Quit's). It REOPENS IN PLACE:
+    //   nothing, and the band's Open Project button is that same chord
+    //   dispatched through on_key at its lift). It REOPENS IN PLACE:
     //   gui_main's loop rebuilds the object set around the chosen source (the
     //   contract is at main.cpp).
     //     open_project_picker: the opener. Refuses without touching
@@ -2857,21 +2839,17 @@ private:
     //       being its own answer, a second picker being what is already on
     //       screen (the reasoning is at the arms, 2026-08-30). THE RENDER
     //       PLAYER HAS NO ARM AT ALL since 2026-09-03: its own router consumes
-    //       Ctrl+O in silence, and the File menu's Open Project row IS that
-    //       chord (the row dispatches it through on_key), so no road reaches
-    //       this body from in there even with the anchor live above the band
-    //       since that evening — and the picker's router answers the same
-    //       way. ("Close the render player first"
-    //       stood from 2026-08-30 and a close-then-open body replaced it for
-    //       the one day the File anchor stayed lit under the panel; both are
-    //       retired.) It
+    //       Ctrl+O in silence, and the band's Open Project button greys under
+    //       it, so no road reaches this body from in there — and the
+    //       picker's router answers the same way. ("Close the render player
+    //       first" stood from 2026-08-30 and a close-then-open body replaced
+    //       it for one day; both are retired.) It
     //       stops playback through the
     //       shared modal stop only once the picker is definitely opening,
     //       mints the session and builds the list. IT IS ADMITTED IN THE `h`
     //       HISTORY VIEW since 2026-08-29 (architect, "admit both"), on both
     //       roads: history_mode_key_blocked admits Ctrl+O beside Ctrl+Q, and
-    //       this body's own refusal is deleted, so the File menu has no dead
-    //       row in the view. The picker stands OVER the mode (its router runs
+    //       this body's own refusal is deleted. The picker stands OVER the mode (its router runs
     //       ahead of the mode's gate in on_key and its veil consumes the
     //       view's presses); a Cancel leaves the view untouched, this view
     //       owning no navigation state; an open tears it down as Ctrl+Q's
@@ -2963,7 +2941,7 @@ private:
     void open_project_picker();
     void build_project_picker_rows();
     void open_project_commit(int index);
-    // FILE → REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
+    // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
     // history. NOT A PICKER ACT and it never meets open_project_commit's
     // same-project no-op: it seats the open project's own name in
@@ -2980,8 +2958,8 @@ private:
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
     // `h` view (the three allowlists admit is_revert_project_key); unreachable
-    // under the two list owners, whose routers consume the chord and the
-    // File menu's Revert row with it. THE ICON ROW'S OPEN PROJECT BUTTON
+    // under the two list owners, whose routers consume the chord. THE ICON
+    // ROW'S OPEN PROJECT BUTTON
     // reaches it too, by its shifted press (architect 2026-10-07: the lift
     // dispatches this chord, finish_chrome_press_release), its face the plain
     // act's, so these refusals card from that road as from the key.
@@ -3029,10 +3007,9 @@ private:
     //   2026-10-14, and went with the choice editor.)
     //   NOTHING ELSE LIGHTS BY HOVER: a flag has no hover face (render.h's
     //   flag block); the folder overlay's rows, the project picker's among
-    //   them, none (folder_overlay.h); the menu row, the caption buttons and
-    //   the dialogs' push buttons none (render.h's palette block: no hover
-    //   face on a button; the hot candidate's menu-anchor term in
-    //   recompute_redesign_button_hover; update_modal_dialog_hover's head);
+    //   them, none (folder_overlay.h); the caption buttons and the dialogs'
+    //   push buttons none (render.h's palette block: no hover face on a
+    //   button; update_modal_dialog_hover's head);
     //   and a
     //   notification card's hover banks its clock and paints nothing
     //   (GuiNotifications::set_hover).
@@ -4116,18 +4093,14 @@ private:
     //
     // THE PLAYER'S ONE POINTER RULE IS THE VEIL: while the player stands every
     // press outside the folder overlay's band and the modal row is CONSUMED —
-    // the marker lane's flags, the waveform, the two dead
-    // menu anchors, all of it — and the roster's buttons are
+    // the marker lane's flags, the waveform, all of it — and the roster's
+    // buttons are
     // dead through redesign_button_enabled's first arm (their faces grey,
     // their press claims refuse) EXCEPT PLAY RENDERS (architect 2026-10-13,
     // "so the user can quickly toggle it on/off by pressing the same button
-    // twice"): it stays lit and its lift, bare `l`, is the player's close. THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
-    // above the band (architect 2026-09-03 evening — the `h` view's partition
-    // extended to both overlay contents): its press reaches the menu-row
-    // claim through press_on_live_menu_anchor, and its OPEN MENU then owns
-    // every press outright, the dropdown's claim ranking above this veil and
-    // above the band (so a press on a row while the menu stands dismisses the
-    // menu rather than opening the row, and arms no modal button). The wheel scrolls the overlay one row per detent over
+    // twice"): it stays lit and its lift, bare `l`, is the player's close. THE ONE EXEMPTION IS THE CAPTION
+    // (the menu row's live File anchor beside it, 2026-09-03 to
+    // 2026-10-21). The wheel scrolls the overlay one row per detent over
     // the band and is consumed everywhere else; the cursor is the Arrow; the
     // tooltip dwell is the modal buttons' own. A MODIFIED PRESS IS CONSUMED
     // WITH ONE ADMISSION (2026-08-28): a SHIFT press on the modal row's two
@@ -4170,9 +4143,7 @@ private:
     // save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
-    // neither gesture restates the step). THE MENU TITLES' ACCESS KEYS (Alt+F,
-    // Alt+E, Alt+S) never reach this router: on_key lets them by to the
-    // tap's own open (menu_title_access_key, architect 2026-10-10). EVERY OTHER
+    // neither gesture restates the step). EVERY OTHER
     // CHORD IS CONSUMED (strict modifier validation's no-op). THE KEYBOARD IS
     // THE CLOSE ROAD ON PLASTIC AND THE CLOSE BUTTON IS THE ROAD ON GLASS
     // (architect: "ctrl+q should still work on laptop, tablet requires cancel
@@ -4473,7 +4444,7 @@ private:
     //     (cycle_history_diff_flag_focus) because the march composes it too.
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
-    //     stands. The redesigned buttons and the File menu's one item reach it
+    //     stands. The redesigned buttons reach it
     //     through their synthesized chords, so it covers them too — and since
     //     2026-08-04 it also DECIDES THEIR FACES (history_mode_disables_button,
     //     app_state.h). It is a FREE function beside this class, with

@@ -15,7 +15,7 @@
 // GuiInputHandler::history_load_in_place in the `h` view, and answered back
 // through the input-handler back-pointer below). Two entry points are exposed:
 // request_close (called by Ctrl+Q, the WM-close callback, the Open
-// prompt's commit and File → Revert — the ONE close road, which is why the render player's
+// prompt's commit and Revert — the ONE close road, which is why the render player's
 // close and the modal editors' abandon both live inside it) and
 // activate_response (called by the keyboard
 // handler when a prompt is active). The other two former lambdas (open_unsaved,
@@ -33,7 +33,7 @@
 // its Save-failed rung and its painted-before-answering rule are IDENTICAL for
 // those two — only the act the answer completes differs, which is why the
 // target is an enum on the request and not a second prompt.
-// REVERT is File → Revert's (Ctrl+Alt+O): it COMPLETES AS A REOPEN, naming the
+// REVERT is Revert's (Ctrl+Alt+O): it COMPLETES AS A REOPEN, naming the
 // project already open, and differs in the QUESTION alone — a revert never
 // saves, so a dirty session is asked "Discard unsaved changes and reload?"
 // with OK / Cancel (REVERT_CONFIRM) instead of Save / Discard / Cancel, and a
@@ -94,7 +94,7 @@ struct GuiPrompt {
     // what keeps the compositor's close — arriving with no key, so it can run
     // no keyboard arm of its own — from raising the unsaved-work prompt over
     // a mode or an editor that is still up. Ctrl+Q, the WM-close callback,
-    // the Open project picker's open act and File → Revert share the road;
+    // the Open project picker's open act and Revert share the road;
     // what differs is the target.
     //
     // THE REVERT TARGET ASKS A DIFFERENT QUESTION AND NOTHING ELSE: every step

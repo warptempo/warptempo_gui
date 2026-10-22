@@ -22,9 +22,10 @@
 // A MODAL TAKES THE AREA FROM THE VIEW BAR'S TOP ROW DOWN: the top strip
 // above it — the tab strip among it — and THE COLUMN'S 5 W AIR under the
 // strip stay as the main window
-// paints them; the border under row 8 and the program frame's bottom row stay
-// visible under it. Across, it runs inside the program frame's two columns,
-// as every program lane does. Top to bottom:
+// paints them; the border under row 8 stays visible under it, the window's
+// lowest lane. Across, it runs the window's width, as every program lane
+// does since 2026-10-21 (inside the program frame's two columns until
+// then). Top to bottom:
 //   1. ONE SUNKEN BOX wearing THE CANVAS COLUMN'S RING — exactly
 //      paint_canvas_column_frame's: one program line, `ce_dark` top and left,
 //      `ce_hilight` right and bottom, mitred — standing in the canvas
@@ -37,33 +38,38 @@
 //      5 W of air) on the face, NO BARS (row 8's, 2026-10-21) and NO DOCK BAR
 //      ABOVE IT (the dock bar's six rows go to the box), its outermost cases
 //      or buttons FLUSH WITH THE RING'S OUTER EDGES;
-//   4. then THE BORDER UNDER ROW 8 and the program frame's bottom row.
-// SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the frame's line, the
-// border, the controls row, the foot), and it lands 6 W below the main
-// window's canvas bottom: the mock's picture, intended. At the tablet's
-// 2304 x 1440 and 300 %: the ring's top row 294–296 (the view bar's, under
-// the tab strip's 63 rows since 2026-10-18) and bottom row
-// 1305–1307, its columns 21–23 and 2280–2282, the interior x 24..2279 and
-// y 297..1304 (the main canvas's own rows end at 1286, its bottom frame row
-// 1287–1289); the foot 1308–1322; the controls row 1323–1418, its case rows
-// 1335–1403, its first case's columns 21–89 and its last 2214–2282; the
-// border 1419–1436 and the frame's line 1437–1439.
+//   4. then THE BORDER UNDER ROW 8, on the window's foot.
+// THE PANEL AND THE CONTROLS ROW ARE THE BRASS AS DRAWN (architect
+// 2026-10-21, "the light brown should be brass": materials.h's METAL, the
+// FLAT region retired as a ground); THE FIELDS STAY FLAT ("the user
+// shouldn't be typing on a non-flat color") — a dialog editor's line, the
+// lists' ground — and the word buttons keep their flat raised faces ("ebony
+// eventually, flat fine for now"); a prompt's question stands on the face,
+// the brass (paint_modal_box).
+// SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the border, the
+// controls row, the foot), and it lands 6 W below the main window's canvas
+// bottom: the mock's picture, intended. At the tablet's 2304 x 1440 and
+// 300 %: the ring's top row 234–236 (the view bar's, under the tab strip's
+// rows 156–218 and the column's air), its bottom row 1308–1310, its columns
+// 21–23 and 2280–2282, the interior x 24..2279 and y 237..1307 (the main
+// canvas's own rows end at 1289, its bottom frame row 1290–1292); the foot
+// 1311–1325; the controls row 1326–1421, its case rows 1338–1406, its first
+// case's columns 21–89 and its last 2214–2282; the border 1422–1439.
 //
-// THE ON-SCREEN KEYBOARD STANDS INSIDE THE FRAME, UNDER THE STACK (architect
-// 2026-10-14, mock_modal_settings_osk_v2.png): when a dialog editor stands on
-// the glass, the keyboard's band (onscreen_keyboard::surface_rect — its edge
-// pad on all four sides, inside the frame's two columns, no line of its own)
-// stands directly on the program frame's bottom row, and items 1 to 4 —
-// THE BORDER UNDER ROW 8 WITH THEM — stand on the keyboard's band, the box
-// shortened to fit. Every rect below takes `keyboard_h`, the band's height
+// THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
+// mock_modal_settings_osk_v2.png): when a dialog editor stands on the glass,
+// the keyboard's band (onscreen_keyboard::surface_rect — its edge pad on all
+// four sides, the lanes' width, no line of its own) stands directly on the
+// window's foot, and items 1 to 4 — THE BORDER UNDER ROW 8 WITH THEM — stand
+// on the keyboard's band, the box shortened to fit. Every rect below takes
+// `keyboard_h`, the band's height
 // when the keyboard stands under the stack and 0 otherwise
 // (onscreen_keyboard::modal_keyboard_h_px, whose header reads this one; the
 // folder overlay never stands with the keyboard, the record at
-// onscreen_keyboard::stands, and passes 0). At 300 %: the frame's line
-// 1437–1439, the keyboard's band 1034–1436 (its first key row's top 1048),
-// the border 1016–1033, the controls row 920–1015 (its case rows 932–1000),
-// the foot 905–919 and the ring's bottom row 902–904, the interior y
-// 297..901.
+// onscreen_keyboard::stands, and passes 0). At 300 %: the keyboard's band
+// 1037–1439 (its first key row's top 1051), the border 1019–1036, the
+// controls row 923–1018 (its case rows 935–1003), the foot 908–922 and the
+// ring's bottom row 905–907, the interior y 237..904.
 //
 // THE INTERIOR'S GROUND SAYS WHAT THE SURFACE IS (ModalBoxGround): THE FIELD
 // GROUND, the list's dark field pair, where you pick or type — the render
@@ -112,19 +118,17 @@ inline bool modal_box_stands(const AppState& a) {
 }
 
 // THE BORDER UNDER ROW 8 AS THE MODAL STANDS IT (item 4): the lane itself
-// (bottom_border_area) on the frame's bottom row, or, with the keyboard under
-// the stack, the same six rows lifted onto the keyboard's band.
+// (bottom_border_area) on the window's foot, or, with the keyboard under the
+// stack, the same six rows lifted onto the keyboard's band.
 inline GuiRect modal_border_rect(const AppState& a, int keyboard_h) {
     const GuiRect border = bottom_border_area(a);
     if (keyboard_h <= 0) return border;
-    const GuiRect frame = bottom_program_frame_area(a);
-    return GuiRect{border.x, frame.y - keyboard_h - border.h, border.w,
-                   border.h};
+    return GuiRect{border.x, border.y - keyboard_h, border.w, border.h};
 }
 
 // THE CONTROLS ROW (item 3): row 8's content height standing on the border
-// under row 8, across the lane one frame line in from each side (the program
-// lanes' own x and width, bottom_row_area's). Without the keyboard its rows
+// under row 8, across the lane (the program lanes' own x and width,
+// bottom_row_area's, the window's since 2026-10-21). Without the keyboard its rows
 // are row 8's content band's; its seats are the box's outer columns
 // (modal_box_rect's x and right edge), never row 8's pads.
 inline GuiRect modal_controls_row_rect(const AppState& a, int keyboard_h) {

@@ -30,7 +30,7 @@
 //     bake.
 //   THE CAPTION IS THE WALNUT (materials.h's WOOD; render.h's caption
 //     block): the title bar is the wood cover as drawn, active and inactive
-//     alike, under the old-brass title. The caption's six colors and the
+//     alike, under the ink's title. The caption's six colors and the
 //     second kind of preset that set them — the `caption` device key, its
 //     Settings Caption row, the product's flat `default` (9B4B2C, the
 //     morning of 2026-10-21) and the 42 Windows and Plus! schemes generated

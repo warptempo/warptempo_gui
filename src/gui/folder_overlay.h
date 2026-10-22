@@ -31,22 +31,17 @@
 // column's own ring and columns, the main window's 5 W foot under it, and
 // under that the CONTROLS ROW on row 8's content rows (the modal dialog's,
 // paint_modal_dialog) — so EVERY LANE FROM THE VIEW BAR TO ROW 8 is under
-// it, and THE MENU ROW, THE ICON ROW, THE TAB STRIP (2026-10-18, its two
-// tabs dead and grey under the band, redesign_button_enabled's head) AND THE
-// COLUMN'S AIR UNDER IT STAND ABOVE IT, as the main window paints them, the
-// menu and icon rows
-// CARRYING THE `h` VIEW'S OWN PARTITION
-// (architect 2026-09-03 evening: "leave File open, because Quit should still
-// be enabled — everything else like what we do with history ... Leave that
-// for the player, the picker and the AV stats"). So FILE IS LIVE above the
-// band on every content — its press exempted from the two veils at
-// press_on_live_menu_anchor, its menu opening onto Quit (Open Project and
-// Revert grey there since 2026-09-24, the overlay's routers consuming their
-// chords) — while Edit and Settings grey through
-// menu_anchor_live and refuse on that painted face, and every icon-row
-// button — the view pairs' four included — greys through
-// redesign_button_enabled's first arm (the render player's Play Renders
-// button excepted, its own closer, 2026-10-13). The waveform's own
+// it, and THE ICON ROW, THE TAB STRIP (2026-10-18, its two tabs dead and
+// grey under the band, redesign_button_enabled's head) AND THE COLUMN'S AIR
+// UNDER IT STAND ABOVE IT, as the main window paints them, the icon row
+// CARRYING THE `h` VIEW'S OWN PARTITION (architect 2026-09-03 evening: "leave
+// File open, because Quit should still be enabled — everything else like what
+// we do with history ... Leave that for the player, the picker and the AV
+// stats"; the File menu that ruling kept live retired with the menu row
+// 2026-10-21, Quit the caption's Close and Ctrl+Q): every icon-row button —
+// the view pairs' four included — greys through redesign_button_enabled's
+// first arm (the render player's Play Renders button excepted, its own
+// closer, 2026-10-13). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces

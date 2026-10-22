@@ -845,7 +845,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // "BPM" is an acronym and so capitalizes everywhere (architect
     // 2026-08-02), while "iterations" falls mid-sentence in both surfaces and
     // so is lowercase by the sentence-case rule itself (the product's text
-    // rules are stated once at paint_handler.cpp's menu-row block).
+    // rules are stated once at paint_handler.cpp's text-rules block).
     char buf[128];
     std::snprintf(buf, sizeof(buf),
                   "Rendering %d of %d %s...",
@@ -972,7 +972,7 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome,
 // bpm= field and promoted into the source .settings on the cell's
 // load-in-place.
 // DATA, NOT DISPLAY, and so verbatim by the text rules' own data clause (the
-// one statement is at paint_handler.cpp's menu-row block): no paint site reads
+// one statement is at paint_handler.cpp's text-rules block): no paint site reads
 // this string — it is a sidecar value that also feeds the render fingerprint
 // (render_cache.cpp's EngineField::Bpm arm), so its " bpm " stays lowercase
 // where the display label capitalizes the acronym, and capitalizing it would

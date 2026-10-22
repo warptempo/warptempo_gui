@@ -2,8 +2,10 @@
 
 #include "app_state.h"          // the lane accessors the bake's geometry reads
 #include "cool_edit_derive.h"   // the tone rule, kTabBodies' Default row
+#include "cool_edit_paint.h"    // the disabled emboss's measured tones and ratios
 #include "display_transform.h"
 #include "modal_box.h"          // the render player's controls row
+#include "onscreen_keyboard.h"  // the band's height (the lifted border)
 #include "paint_handler.h"      // program_case_rects, caption_button_rects
 #include "palette_file.h"       // program_palette_words' type
 #include "platform.h"           // GuiPlatform::bundled_tile_names / _bytes
@@ -77,12 +79,20 @@ Key key_of(const AppState& app) {
 // bake alone.
 struct Geometry {
     int w = 0, h = 0;
-    // Wood: above the panel [0, panel_top), below it [panel_bottom, h), the
-    // frame's columns beside it (frame_lw wide).
-    int panel_top = 0, panel_bottom = 0, frame_lw = 0;
-    // Metal: from the tab strip's top to the canvas's top, the canvas's foot
-    // to the panel's bottom, and the canvas's two side margins between.
-    int metal_top = 0;
+    // Wood: above the panel [0, panel_top) and below it [panel_bottom, h),
+    // window-wide (the program frame's columns beside the panel went
+    // 2026-10-21).
+    int panel_top = 0, panel_bottom = 0;
+    // ...and THE BORDER UNDER ROW 8 LIFTED ONTO THE ON-SCREEN KEYBOARD'S
+    // BAND under a dialog editor (modal_box.h's modal_border_rect), whose
+    // rows stand inside the panel: the walnut there too.
+    int lifted_border_y = 0, lifted_border_h = 0;
+    // Metal: THE WHOLE CLIENT AND THE SIZING FRAME'S BAND ROUND IT (`frame`
+    // wide each side, window_frame_px; 2026-10-21, materials.h's METAL) —
+    // its Face measured over the panel alone, as it shipped: the tab strip's
+    // top to the canvas's top, the canvas's foot to the panel's bottom, and
+    // the canvas's two side margins between.
+    int metal_top = 0, frame = 0;
     GuiRect canvas{};
     // The void's rows (the band).
     int band_y = 0, band_h = 0;
@@ -105,7 +115,10 @@ Geometry geometry_of(const AppState& app) {
     g.metal_top = strip.y;
     g.panel_top = strip.y + strip.h;
     g.panel_bottom = bottom_row_area(app).y;
-    g.frame_lw = program_frame_line_px();
+    const GuiRect border = bottom_border_area(app);
+    g.lifted_border_y = border.y - onscreen_keyboard::surface_height_px();
+    g.lifted_border_h = border.h;
+    g.frame = window_frame_px();
     g.canvas = waveform_area(app);
     const GuiRect band = top_icon_row_area(app);
     g.band_y = band.y;
@@ -171,6 +184,10 @@ struct State {
     int                    bevel_dark  = 100;
     int                    text_shadow = 2;
     GuiMaterialRegion      region = GuiMaterialRegion::Flat;
+    // THE ORIGIN SCOPE (GuiMaterialOriginScope): the client's origin in the
+    // context's coordinates, (0, 0) but under the sizing frame's painter,
+    // whose context is the surface's, the client inset by the frame.
+    int                    origin_dx = 0, origin_dy = 0;
     // THE TONE TABLE (set_tone_face): a flat word and its key.
     std::vector<std::pair<uint32_t, int>> tones;
     int                                   recess_key = kFaceKey;
@@ -178,6 +195,8 @@ struct State {
     // at a bevel change).
     std::vector<uint32_t> wood_flat, metal_flat, caption_flat;
     materials::CaseLines  case_lines{};
+    materials::DisabledGlyphTones disabled{kCeDisabledShadow, kCeDisabledLight,
+                                           kCeDisabledInset};
 };
 
 State& state() {
@@ -253,6 +272,21 @@ void rebuild_flats() {
         hex(beveled(case_tone(ebony, kCaseShadowFirst), ebony)),
         hex(beveled(case_tone(ebony, kCaseShadowLast), ebony)),
         hex(beveled(case_tone(ebony, kCaseCorner), ebony))};
+    // THE DISABLED GLYPH'S TONES (materials.h): the live ramp's mean HLS
+    // lightness over its twenty flat stops, the ratios onto it.
+    constexpr int kCaseStopCount =
+        static_cast<int>(cool_edit_derive::kCaseRamp.size());
+    double mean_l = 0.0;
+    for (int i = 0; i < kCaseStopCount; ++i) {
+        const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
+                                            static_cast<double>(kCaseStopCount - 1);
+        mean_l += cool_edit_derive::hls_of(case_tone(ebony, b)).l;
+    }
+    mean_l /= kCaseStopCount;
+    const double sil_l = mean_l * kCeDisabledShadowRatio;
+    s.disabled = materials::DisabledGlyphTones{
+        cool_edit_derive::tone(ebony, 0.0, sil_l), kCeDisabledLight,
+        cool_edit_derive::tone(ebony, 0.0, sil_l * kCeDisabledInsetRatio)};
 }
 
 // THE FACE'S RATIO of a tone to its Face, Rec. 601 luma (the luminance rule).
@@ -339,11 +373,12 @@ void scale_in_place(cairo_surface_t* s, const auto& ratio_of_row) {
 }
 
 // THE MEAN of a set of surfaces' pixels, each channel's rounded sum.
-uint32_t mean_of(const std::vector<Surface>& surfaces) {
+uint32_t mean_of(const std::vector<Surface>& surfaces,
+                 std::size_t first_n = static_cast<std::size_t>(-1)) {
     double sum[3] = {0.0, 0.0, 0.0};
     double n = 0.0;
-    for (const Surface& sp : surfaces) {
-        cairo_surface_t* s = sp.get();
+    for (std::size_t i = 0; i < surfaces.size() && i < first_n; ++i) {
+        cairo_surface_t* s = surfaces[i].get();
         cairo_surface_flush(s);
         const int w = cairo_image_surface_get_width(s);
         const int h = cairo_image_surface_get_height(s);
@@ -460,15 +495,21 @@ std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
 
 // THE RAW REGIONS of one material for the client w x h (client rects in,
 // the sRGB surfaces out): its source read by name (the one file), a cover's
-// center crop at the identity, a master under the cover rule.
+// center crop at the identity, a master under the cover rule. With `clamped`
+// a rect may run past the client (the sizing frame's band, the metal's): it
+// is cut to the pixels the source holds round the client — a cover's
+// overhang, a master's scaled overhang — and written back cut, a rect the
+// source holds none of answering an empty rect and a null surface.
 std::expected<std::vector<Surface>, std::string> source_regions(
-    const Source& src, int w, int h, const std::vector<GuiRect>& rects) {
+    const Source& src, int w, int h, const std::vector<GuiRect>& rects,
+    std::vector<GuiRect>* clamped = nullptr) {
     const auto bytes = GuiPlatform::bundled_tile_bytes(src.file);
     if (!bytes) return std::unexpected("tiles: " + bytes.error());
     const auto info = svg_icon::raster_info(*bytes);
     if (!info) return std::unexpected("tiles: " + src.file + ": " + info.error());
     double k = 1.0;
     int ox = 0, oy = 0;
+    int sw = w, sh = h;   // the source's pixels in its own frame
     if (src.cover) {
         if (static_cast<int>(info->w) != src.cw ||
             static_cast<int>(info->h) != src.ch)
@@ -477,24 +518,42 @@ std::expected<std::vector<Surface>, std::string> source_regions(
                                    std::to_string(src.ch));
         ox = (src.cw - w) / 2;
         oy = (src.ch - h) / 2;
+        sw = src.cw;
+        sh = src.ch;
     } else {
         // THE COVER RULE (materials.h): one factor, the overhang cropped
         // evenly (the tool's own arithmetic, tools/tiles/render_covers.py).
         k = std::max(static_cast<double>(w) / info->w,
                      static_cast<double>(h) / info->h);
-        const int sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
-        const int sh = std::max(h, static_cast<int>(std::nearbyint(info->h * k)));
+        sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
+        sh = std::max(h, static_cast<int>(std::nearbyint(info->h * k)));
         ox = (sw - w) / 2;
         oy = (sh - h) / 2;
     }
+    std::vector<GuiRect> cut = rects;
+    if (clamped) {
+        for (GuiRect& r : cut) {
+            const int x0 = std::max(r.x, -ox), y0 = std::max(r.y, -oy);
+            const int x1 = std::min(r.x + r.w, sw - ox);
+            const int y1 = std::min(r.y + r.h, sh - oy);
+            r = (x1 > x0 && y1 > y0) ? GuiRect{x0, y0, x1 - x0, y1 - y0}
+                                     : GuiRect{0, 0, 0, 0};
+        }
+        *clamped = cut;
+    }
     std::vector<svg_icon::RasterRegion> regions;
-    for (const GuiRect& r : rects)
-        regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
+    for (const GuiRect& r : cut)
+        if (r.w > 0 && r.h > 0)
+            regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
     auto out = svg_icon::raster_regions(*bytes, *info, k, regions);
     if (!out) return std::unexpected("tiles: " + src.file + ": " + out.error());
     std::vector<Surface> owned;
-    owned.reserve(out->size());
-    for (cairo_surface_t* s : *out) owned.emplace_back(s);
+    owned.reserve(cut.size());
+    std::size_t next = 0;
+    for (const GuiRect& r : cut) {
+        if (r.w > 0 && r.h > 0) owned.emplace_back((*out)[next++]);
+        else                    owned.emplace_back(nullptr);
+    }
     return owned;
 }
 
@@ -525,17 +584,18 @@ GuiRect band_of(const Geometry& g, int y0, int y1) {
     return GuiRect{0, y0, g.w, std::max(0, y1 - y0)};
 }
 
-// THE WOOD: above and below the panel, the frame's columns beside it, and
-// THE VOID, the band's rows of the upper wood times kWoodVoidLuma.
+// THE WOOD: above and below the panel, window-wide, and THE VOID, the band's
+// rows of the upper wood times kWoodVoidLuma.
 void bake_wood(const Source& src, const Geometry& g, Baked& out) {
     const std::vector<GuiRect> rects = nonempty({
         band_of(g, 0, g.panel_top), band_of(g, g.panel_bottom, g.h),
-        GuiRect{0, g.panel_top, g.frame_lw, g.panel_bottom - g.panel_top},
-        GuiRect{g.w - g.frame_lw, g.panel_top, g.frame_lw,
-                g.panel_bottom - g.panel_top}});
+        band_of(g, std::max(g.lifted_border_y, 0),
+                std::max(g.lifted_border_y + g.lifted_border_h, 0))});
     auto raw = source_regions(src, g.w, g.h, rects);
     if (!raw) { out.error = raw.error(); return; }
-    out.face = mean_of(*raw);
+    // THE FACE over the two bands alone (the lifted border's rows are a copy
+    // for one painter, not the wood's sample).
+    out.face = mean_of(*raw, 2);
     const GuiRect& top = rects.empty() ? GuiRect{} : rects.front();
     if (top.y == 0 && g.band_h > 0 && g.band_y >= 0 &&
         g.band_y + g.band_h <= top.h)
@@ -547,35 +607,93 @@ void bake_wood(const Source& src, const Geometry& g, Baked& out) {
         out.grounds.emplace_back(rects[i], std::move((*raw)[i]));
 }
 
-// THE METAL: the strip's top to the canvas's top, its foot to the panel's
-// bottom, the two margins between; and THE INACTIVE TAB'S BODY, its rows of
-// the upper metal, each W row's stop its luma ratio.
+// THE MEAN of `surface` (client rect `at`) over the parts of `rects` inside
+// it, each channel's rounded sum.
+uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
+                   const std::vector<GuiRect>& rects) {
+    double sum[3] = {0.0, 0.0, 0.0};
+    double n = 0.0;
+    cairo_surface_flush(surface);
+    const unsigned char* data = cairo_image_surface_get_data(surface);
+    const int stride = cairo_image_surface_get_stride(surface);
+    for (const GuiRect& r : rects) {
+        const int x0 = std::max(r.x, at.x), y0 = std::max(r.y, at.y);
+        const int x1 = std::min(r.x + r.w, at.x + at.w);
+        const int y1 = std::min(r.y + r.h, at.y + at.h);
+        for (int y = y0; y < y1; ++y) {
+            const auto* row = reinterpret_cast<const uint32_t*>(
+                data + static_cast<std::size_t>(y - at.y) * stride);
+            for (int x = x0; x < x1; ++x)
+                for (int c = 0; c < 3; ++c)
+                    sum[c] += static_cast<double>(channel(row[x - at.x], c));
+        }
+        if (x1 > x0 && y1 > y0) n += static_cast<double>(x1 - x0) * (y1 - y0);
+    }
+    uint32_t out = 0;
+    if (n <= 0.0) return out;
+    for (int c = 0; c < 3; ++c)
+        out |= static_cast<uint32_t>(std::nearbyint(sum[c] / n)) << (16 - 8 * c);
+    return out;
+}
+
+// THE METAL: ONE TILE, THE WHOLE CLIENT AND THE SIZING FRAME'S BAND ROUND IT
+// as far as the source holds pixels there (materials.h's METAL, 2026-10-21:
+// the cards, the tooltip, the modal family, the keyboard's band and the
+// sizing frame stand anywhere); ITS FACE the mean over the panel's rects as
+// it shipped (the strip's top to the canvas's top, its foot to the panel's
+// bottom, the two margins between), so no tone a painter derives from it
+// moved; and THE INACTIVE TAB'S BODY, its rows of the tile, each W row's
+// stop its luma ratio.
 void bake_metal(const Source& src, const Geometry& g, Baked& out) {
     const GuiRect& c = g.canvas;
     const int c_top = std::clamp(c.y, g.metal_top, g.panel_bottom);
     const int c_bot = std::clamp(c.y + c.h, c_top, g.panel_bottom);
-    const std::vector<GuiRect> rects = nonempty({
+    const std::vector<GuiRect> panel = nonempty({
         band_of(g, g.metal_top, c_top), band_of(g, c_bot, g.panel_bottom),
         GuiRect{0, c_top, std::clamp(c.x, 0, g.w), c_bot - c_top},
         GuiRect{std::clamp(c.x + c.w, 0, g.w), c_top,
                 g.w - std::clamp(c.x + c.w, 0, g.w), c_bot - c_top}});
-    auto raw = source_regions(src, g.w, g.h, rects);
+    std::vector<GuiRect> cut;
+    auto raw = source_regions(
+        src, g.w, g.h,
+        {GuiRect{-g.frame, -g.frame, g.w + 2 * g.frame, g.h + 2 * g.frame}},
+        &cut);
     if (!raw) { out.error = raw.error(); return; }
-    out.face = mean_of(*raw);
+    if (cut.empty() || !(*raw)[0]) return;
+    const GuiRect tile = cut[0];
+    out.face = mean_over((*raw)[0].get(), tile, panel);
     const int body_h = g.tab_body_y1 - g.tab_body_y0;
-    if (!rects.empty() && body_h > 0 && rects.front().y <= g.tab_body_y0 &&
-        g.tab_body_y1 <= rects.front().y + rects.front().h) {
+    if (body_h > 0 && tile.x <= 0 && tile.x + tile.w >= g.w &&
+        tile.y <= g.tab_body_y0 && g.tab_body_y1 <= tile.y + tile.h) {
         constexpr int kStops = 15;
         const uint32_t brass = out.face;
-        out.extra.emplace_back(
-            band_of(g, g.tab_body_y0, g.tab_body_y1),
-            scaled_rows(raw->front().get(), rects.front().y, g.tab_body_y0,
-                        body_h, [&](int y) {
-                            return tab_body_ratio(stop_of(y, body_h, kStops), brass);
-                        }));
+        // The body's rows, window-wide, out of the tile.
+        Surface rows = [&] {
+            cairo_surface_t* band =
+                cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g.w, body_h);
+            cairo_surface_t* from = (*raw)[0].get();
+            cairo_surface_flush(from);
+            cairo_surface_flush(band);
+            const unsigned char* sdata = cairo_image_surface_get_data(from);
+            const int sstride = cairo_image_surface_get_stride(from);
+            unsigned char* ddata = cairo_image_surface_get_data(band);
+            const int dstride = cairo_image_surface_get_stride(band);
+            for (int y = 0; y < body_h; ++y)
+                std::memcpy(ddata + static_cast<std::size_t>(y) * dstride,
+                            sdata + static_cast<std::size_t>(
+                                        g.tab_body_y0 + y - tile.y) * sstride +
+                                static_cast<std::size_t>(-tile.x) * 4,
+                            static_cast<std::size_t>(g.w) * 4);
+            cairo_surface_mark_dirty(band);
+            return Surface(band);
+        }();
+        scale_in_place(rows.get(), [&](int y) {
+            return tab_body_ratio(stop_of(y, body_h, kStops), brass);
+        });
+        out.extra.emplace_back(band_of(g, g.tab_body_y0, g.tab_body_y1),
+                               std::move(rows));
     }
-    for (std::size_t i = 0; i < rects.size(); ++i)
-        out.grounds.emplace_back(rects[i], std::move((*raw)[i]));
+    out.grounds.emplace_back(tile, std::move((*raw)[0]));
 }
 
 // A NEW SURFACE, `r` (client rect) cut out of `band`, whose first pixel is
@@ -686,17 +804,22 @@ bool contains(const GuiRect& outer, double x0, double y0, double x1, double y1) 
            y1 <= outer.y + outer.h;
 }
 
-// THE CLIENT the painters paint (State::client_w / client_h).
+// THE PIXELS THE PAINTERS PAINT, in client coordinates: the client (State::
+// client_w / client_h), widened by the origin scope's offset on every side
+// under the sizing frame's painter, whose band lies round the client.
 GuiRect client_rect() {
     const State& s = state();
-    return GuiRect{0, 0, s.client_w, s.client_h};
+    return GuiRect{-s.origin_dx, -s.origin_dy, s.client_w + 2 * s.origin_dx,
+                   s.client_h + 2 * s.origin_dy};
 }
 
-// `t` as the source, its origin at its rect's corner.
+// `t` as the source, its origin at its rect's corner (in the context's
+// coordinates, the origin scope's offset added).
 void set_tile_source(cairo_t* cr, const Tile& t) {
+    const State& s = state();
     cairo_matrix_t at;
-    cairo_matrix_init_translate(&at, -static_cast<double>(t.rect.x),
-                                -static_cast<double>(t.rect.y));
+    cairo_matrix_init_translate(&at, -static_cast<double>(t.rect.x + s.origin_dx),
+                                -static_cast<double>(t.rect.y + s.origin_dy));
     cairo_pattern_set_matrix(t.pattern.get(), &at);
     cairo_set_source(cr, t.pattern.get());
 }
@@ -713,6 +836,12 @@ void set_tile_source(cairo_t* cr, const Tile& t) {
 const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
     double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
     cairo_fill_extents(cr, &x0, &y0, &x1, &y1);
+    // Into client coordinates (the origin scope's offset).
+    const State& s = state();
+    x0 -= s.origin_dx;
+    x1 -= s.origin_dx;
+    y0 -= s.origin_dy;
+    y1 -= s.origin_dy;
     const GuiRect c = client_rect();
     x0 = std::max(std::floor(x0), static_cast<double>(c.x));
     y0 = std::max(std::floor(y0), static_cast<double>(c.y));
@@ -1069,6 +1198,7 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
 }
 
 CaseLines case_lines() { return state().case_lines; }
+DisabledGlyphTones disabled_glyph_tones() { return state().disabled; }
 
 void paint_case_ramp(cairo_t* cr, int x, int y, int g, bool down) {
     if (g <= 0) return;
@@ -1131,3 +1261,14 @@ GuiMaterialScope::GuiMaterialScope(GuiMaterialRegion region)
 }
 
 GuiMaterialScope::~GuiMaterialScope() { state().region = previous_; }
+
+GuiMaterialOriginScope::GuiMaterialOriginScope(int dx, int dy)
+    : previous_dx_(state().origin_dx), previous_dy_(state().origin_dy) {
+    state().origin_dx = dx;
+    state().origin_dy = dy;
+}
+
+GuiMaterialOriginScope::~GuiMaterialOriginScope() {
+    state().origin_dx = previous_dx_;
+    state().origin_dy = previous_dy_;
+}

@@ -11,9 +11,10 @@
 // `caption` key's default, stood 2026-10-08..10-21 and left with the
 // captions).
 //
-// THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
-// means chrome, the program is Cool Edit"): the chrome is the caption, the
-// menu row, the window frame, the pull-downs, the cards, the prompts and the
+// THE CHROME ENDS AT THE CAPTION (architect 2026-10-09 ~06:55, "chrome
+// means chrome, the program is Cool Edit"; the menu row under it removed
+// 2026-10-21): the chrome is the caption, the window frame, the pull-downs,
+// the cards, the prompts and the
 // dialogs with their fields and buttons, the scrub and the well's frame (the
 // canvas until the program's later parts take it); THE TOOLBAR BAND, ROW 8
 // AND THE CANVAS COLUMN'S LANES — the view bar, the ruler, the cues — ARE
@@ -67,19 +68,9 @@ struct ChromeSpec {
     // THE TITLE'S ROOM ENDS this far short of Minimise's box (paint_caption_
     // row's cut).
     int                caption_title_trail_px;
-    // THE MENU ROW, lane 1, in Windows px (render.h's menu-row block and
-    // paint_menu_row): the face row above the content and the content (the
-    // anchors' button height, the label's cell centred in it); each anchor's
-    // pads left and right of its label and the band's lead before the first
-    // anchor. THE ROW HAS NO FOOT (2026-10-10): the line under it is the
-    // program's frame, Cool Edit's (render.h's program_frame_rect) — the
-    // field that carried win2000's etched pair that morning left with the
-    // pair.
-    int                menu_row_head_px;
-    int                menu_row_content_px;
-    double             menu_label_pad_left_px;
-    double             menu_label_pad_right_px;
-    double             menu_band_lead_px;
+    // (THE MENU ROW'S FIELDS — its face row and 19-W content, the anchors'
+    // 9 / 7 label pads and the 2-W lead, Explorer's menu band and the plain
+    // menu bar's seat — left the spec 2026-10-21 with the row.)
     // (THE RULER LANE'S FIELDS left the spec 2026-10-09: the ruler is the
     // program's, Cool Edit's under every chrome, program_spec.h.)
     // (THE SCROLL BAR'S THICKNESS, scroll_bar_px — Windows' SM_CXVSCROLL 16,
@@ -128,26 +119,12 @@ struct ChromeSpec {
 // Windows' SM_CYCAPTION 18 with its DFC_CAPTION buttons 16 x 14 two px down
 // and in, Minimise and Maximise touching, two px before Close, the small
 // icon at (2, 1), the title's pen two px past it (render.h's caption
-// block); THE MENU ROW two sources, the captures beating ReactOS
-// (win2000_deviations.md's two menu-row lines): FROM EXPLORER'S MENU BAND as
-// ReactOS draws it (browseui's CMenuBand, measured on tmp/reactos-hover.png)
-// the 19-row content under one face row, the label 9 px in and 7 after and
-// the rebar's 2-px lead (paint_handler.cpp's kMenuLabel* record); FROM THE
-// PLAIN WINDOW'S MENU BAR (menu.c) as his WordPad captures of the real OS
-// show it, the label's seat — the cap's top on row 5 of the 19, the cap band
-// centred (architect 2026-10-09 ~17:40, paint_menu_row) — and NO LINE UNDER
-// IT: Cool Edit's plain menu bar ends at its content, and the Shadow row
-// under it is its frame window's sunken line round the program (architect
-// 2026-10-10 ~08:10; the law and his words at render.h's program_frame_rect;
-// WordPad's etched pair under its menu bar is its rebar's band border, the
-// wrong family for a plain menu bar, and stood here that morning). No pair
-// stands ABOVE the menu row either: ReactOS's Explorer rebar draws one at
-// its top (tmp/reactos.png rows 32–33), Explorer's and not the plain
-// window's, and a capture beats ReactOS (win2000_deviations.md); THE PUSH
+// block); (THE MENU ROW, Explorer's menu band and the plain menu bar's
+// seat, 2026-10-02 to 2026-10-21, left with the row; git history); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
-// one px inside the frame, hanging from the menu bar's bottom row over the
-// program frame's top row (dropdown_hang_y); THE ICONS Adwaita 3.22's drawings
+// one px inside the frame, hanging from its anchor's foot (dropdown_hang_y);
+// THE ICONS Adwaita 3.22's drawings
 // (icons.h's head; architect 2026-10-14). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
@@ -163,11 +140,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .caption_button_gap_px        = 0,
     .caption_close_gap_px         = 2,
     .caption_title_trail_px       = 2,
-    .menu_row_head_px             = 1,
-    .menu_row_content_px          = 19,
-    .menu_label_pad_left_px       = 9.0,
-    .menu_label_pad_right_px      = 7.0,
-    .menu_band_lead_px            = 2.0,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,

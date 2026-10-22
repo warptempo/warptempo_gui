@@ -62,8 +62,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well);
     // the right
-    // edge keeps the panel's margin just inside the program frame's one-line
-    // sunken edge. It is anchored on the trim lane and not on the icon row,
+    // edge keeps the panel's margin from the window's edge. It is anchored on the trim lane and not on the icon row,
     // so whatever stands between the band's cases and the trim lane — the
     // tab strip (2026-10-18) and the canvas column's air — the card meets the bar the same way at every
     // scale. No chrome spec field: no vocabulary needs another anchor (the
@@ -108,7 +107,7 @@ bool notification_visible(const AppState& a, uint64_t id) {
 
 uint64_t notification_card_at(const AppState& a, int x, int y) {
     // A CARD UNDER A LIST POPUP IS HIDDEN THERE (floater_above_cards_at,
-    // app_state.h: the menu row's drop-down, painting above the cards — the
+    // app_state.h: the Settings drop-down, painting above the cards — the
     // settings choice editor's list beside it until 2026-10-14), so the
     // press, the hover and the cursor reach the surface on top.
     if (floater_above_cards_at(a, x, y)) return 0;

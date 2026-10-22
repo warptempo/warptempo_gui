@@ -186,7 +186,7 @@ struct GuiPlaybackLifecycle {
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
     // 2026-08-28) and the PULL confirmation (run_history_pull_press,
     // OK / Cancel); the TWO
-    // prompt opens (prompt.cpp: unsaved, and File → Revert's confirmation —
+    // prompt opens (prompt.cpp: unsaved, and Revert's confirmation —
     // the error notice's was a third until that prompt kind retired whole on
     // 2026-08-30); THE RENDER PLAYER's open
     // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,

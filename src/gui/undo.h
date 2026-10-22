@@ -241,9 +241,9 @@ struct Undo {
     // entry's three view tags (tab, audio view, landing column) from the
     // live view. The caller calls it only on a
     // press that pushed (its own push condition), so it can never touch an
-    // older entry beneath. ITS CALLERS, re-grepped 2026-10-14: the two
-    // phase-reset pastes (paste_apply / paste_state_apply,
-    // phase_reset_propagate.cpp), W-column acts that land in the SAME audio
+    // older entry beneath. ITS CALLER, re-grepped 2026-10-21: the
+    // phase-reset paste (paste_apply, phase_reset_propagate.cpp; the state
+    // paste beside it until its removal that day), a W-column act that land in the SAME audio
     // view's P column through land_paste_in_phase_reset_view (architect
     // 2026-10-14, the symmetry with Shift+S: S+W lands in S+P, T+W in T+P;
     // they crossed into T+P until then) — so of the three tags only the

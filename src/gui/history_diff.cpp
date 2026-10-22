@@ -702,7 +702,7 @@ std::string clone_name(const std::string& repo_root) {
 // the push composes stderr's "Push refused: "), and an appended reason does not
 // start a second sentence — the rule is stated once in notifications.h's card
 // section, over the product's one statement of the text rules at
-// paint_handler.cpp's menu-row block.
+// paint_handler.cpp's text-rules block.
 // AND EACH IS TWO CLAUSES (GuiFailure, failure.h): the clone's FULL path on
 // the diagnostic for stderr, its folder name on the display for the card
 // (clone_name above), the setting's own spelling and the remote's URL on

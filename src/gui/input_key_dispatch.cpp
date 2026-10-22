@@ -107,9 +107,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // `;` (the settings editor, whose engine-key commits ARE authored content), `i`,
 // undo/redo (Ctrl+Z / Ctrl+Shift+Z), every propagate command (the COPY,
 // Ctrl+P, explicitly — a copy is non-mutating, but it arms a paste that is
-// not, and the pair travels together; the two PASTES, Ctrl+Alt+P and
-// Ctrl+Alt+Shift+P, structurally, their modifier combinations matching no
-// allowlist predicate) — and `'` IN THE `h` VIEW,
+// not, and the pair travels together; the PASTE, Ctrl+Alt+P, structurally,
+// its modifier combination matching no allowlist predicate) — and `'` IN THE `h` VIEW,
 // where it is the load-in-place and replaces the whole authored state. THAT
 // ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
 // the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
@@ -179,7 +178,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // to protect. Ctrl-exact, through the shared predicate the dispatch arm
     // reads, so the key and this gate cannot drift.
     const bool is_open_project = is_open_project_key(key, mods);
-    // FILE → REVERT, Ctrl+Alt+O (architect 2026-09-13), admitted on Open's own
+    // REVERT, Ctrl+Alt+O (architect 2026-09-13), admitted on Open's own
     // standard: the act reopens this project from disk, discarding the
     // session rather than writing into it, so there is no marker and no engine
     // setting on disk for the lock to protect. Ctrl+alt-exact through the
@@ -628,13 +627,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     different question — it protects one tab's authored content and eats
 //     the propagate family whole — and this is the one place the two locks
 //     part company in the admitting direction rather than the refusing one.
-//     EVERY PASTE STAYS REFUSED by the base — Ctrl+Alt+P and
-//     Ctrl+Alt+Shift+P — each rewriting a store and pushing, which is exactly
-//     what the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
-//     arm's own spelling — so the alt-bearing chords cannot reach this
-//     admission by widening it. THE EDIT MENU'S COPY ROW comes back with
-//     it and needed no edit of its own: it synthesizes its chord through
-//     on_key, so the row is the key.
+//     THE PASTE STAYS REFUSED by the base — Ctrl+Alt+P — rewriting a store
+//     and pushing, which is exactly what the lock holds back. Ctrl-exact, no
+//     shift and no alt, the dispatch arm's own spelling — so the alt-bearing
+//     chord cannot reach this admission by widening it. THE PIGEON'S COPY IN
+//     THE PHASE-RESET VIEW comes with it and needs no edit of its own: its
+//     Ctrl+J is this chord there (on_key's jump_seat_chord), so the button
+//     is the key.
 //   * CTRL+SHIFT+N — THE TIE (architect 2026-09-19), and it belongs here for
 //     the lock's own reason rather than as an exception to it: a tie says
 //     which markers are ONE AXIS of the sweep, which is BRACKET state and
@@ -699,9 +698,10 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // PRESS dies at arm_redesign_press's disabled line as a standing overlay's
 // does and their FACE is the icon row's disabled face; their hint names the
 // act, so this gate's card is the only thing that SPEAKS the reason (the
-// account is at their arm in redesign_button_enabled). Every propagate PASTE's surface is a MENU ROW,
-// which greys on this same list since 2026-09-24 (dropdown_item_enabled asks
-// authoring_lock_drops_chord).
+// account is at their arm in redesign_button_enabled). The propagate pair's
+// surface is the pigeon's seat in the phase-reset view since 2026-10-21
+// (jump_seat_act), which greys on this same list (the pair's ladders ask
+// authoring_lock_drops_chord; the Edit menu's rows did from 2026-09-24).
 bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
                                 GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -736,7 +736,7 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // (~01:45), so the arm cards that it is (delta (b)).
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) return false;
     // The clipboard copy, ctrl-exact as its dispatch arm is — which is
-    // what keeps the two ALT-bearing pastes out of this admission.
+    // what keeps the ALT-bearing paste out of this admission.
     if (key == GuiKeys::P && ctrl && !shift && !alt)
         return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
@@ -763,7 +763,8 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
 // (authoring_locked, app_state.h).
 // THREE READERS: on_key's gate (authoring_lock_refuses_chord, which adds the
 // card), the flag-cell wheel's silent refusal (input_pointer.cpp) and the
-// Edit menu's rows (dropdown_item_enabled, below).
+// propagate pair's ladders, the pigeon's face in the phase-reset view
+// (phase_reset_propagate.cpp; the Edit menu's rows until 2026-10-21).
 bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
                                 GuiInputState mods) {
     return (active_view_state(app).read_only &&
@@ -969,13 +970,11 @@ void GuiInputHandler::run_iter_tie_toggle() {
 // closes the popup itself and then takes the close-window route, which ends the
 // process rather than the view; the WM close is the same), and there is no
 // pointer closer at all. THE PREFETCH ARRIVAL IS THE EXCEPTION — it runs off a
-// poll, not a key, so the FILE menu, which opens inside the view (2026-08-13,
-// on the architect's 2026-08-08 ruling that first opened the deleted Navigation
-// menu in here), may be up when a failed scan ends the visit. A standing menu is
-// LEFT STANDING there, deliberately: it is row 1's own surface, its item is a
-// live command in the editor exactly as it was in the view, and nothing
-// about it named the mode. Closing it would be a second dismissal riding an
-// event the user did not cause.
+// poll, not a key, and a standing menu is LEFT STANDING there, deliberately:
+// closing it would be a second dismissal riding an event the user did not
+// cause. (The File menu, which opened inside the view from 2026-08-13, was the
+// case; since the menu row's removal, 2026-10-21, no menu opens in the view,
+// the Settings popup refused there at toggle_dropdown.)
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
     // (THE EXIT'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
@@ -1529,7 +1528,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //     too: its plan is parked whole on AppState (pending_history_pull — the
 //     clone, the directory, the base name and both commits), so its answers
 //     need nothing the close takes, and the pull re-reads the refs at the act.
-// The FILE MENU's standing-menu decision is above, and unchanged.
+// The standing-menu decision is above, and unchanged.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
@@ -2493,19 +2492,17 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // argument's premise is gone, while the tab-band argument, which was never about
 // markers, stands untouched.
 //
-// THE REDESIGNED BUTTONS AND THE COMMAND MENU'S ITEMS PASS THROUGH HERE
-// UNCHANGED, which is why they need no rule of their own: both synthesize a
-// chord and call on_key (finish_chrome_press_release and
-// finish_dropdown_release, each at its own lift),
-// so Save, Undo, Redo, Render and the view pairs drop at this gate exactly as
-// their keys do. AND A MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
-// merely in principle: a command menu OPENS inside the view (the architect
-// narrowed toggle_dropdown's lockout to the Settings anchor, whose items reach
-// the settings editor by a direct call and so have no gate of their own), and
-// this predicate is what admits File's Ctrl+Q — and, since 2026-08-29, its
-// Ctrl+O — in there. THE FILE MENU HAS NO DEAD ROW IN THE VIEW as of that day
-// (architect, "admit both"): Open project rides this admission, Revert beside
-// it since 2026-09-13, and Quit always did.
+// THE REDESIGNED BUTTONS PASS THROUGH HERE UNCHANGED, which is why they need
+// no rule of their own: they synthesize a chord and call on_key
+// (finish_chrome_press_release, at the lift; the command menus' items did the
+// same through finish_dropdown_release until the menu row's removal,
+// 2026-10-21), so Save, Undo, Redo, Render and the view pairs drop at this gate exactly as
+// their keys do. (A command menu OPENED inside the view from 2026-08-08 —
+// toggle_dropdown's lockout narrowed to the Settings popup, whose items reach
+// the settings editor by a direct call — and this predicate admitted the File
+// menu's Ctrl+Q, Ctrl+O since 2026-08-29 (architect, "admit both") and
+// Ctrl+Alt+O since 2026-09-13, until the menu row's removal, 2026-10-21; the
+// three chords stay admitted.)
 // (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
 // the same way, refusing nothing else on it — its remaining four were claimed
 // one line above as the mode's own vocabulary — while the row whose chord means
@@ -2516,14 +2513,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // AND SINCE 2026-08-04 THIS GATE IS ALSO READ BY THE FACES: a button whose chord
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
-// clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the three anchors alone, which have no chord to ask about: Settings
-// and Edit since 2026-08-20 both dead on the toggle_dropdown lockout (Help
-// was too, 2026-09-03..09), File live
-// since 2026-08-13 — Navigation was live from 2026-08-08 until its
-// 2026-08-15 deletion, and Iterations dead from 2026-08-27 until its own on
-// 2026-09-04, which put its two commands back on chord-bearing buttons the
-// walk answers for), never
+// clicks silently. The partition is DERIVED from this function (the menu
+// row's anchors, which had no chord to ask about, were hand-answered until
+// the row's removal, 2026-10-21), never
 // hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.
@@ -2648,26 +2640,23 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // this gate in on_key, its veil consumes the view's presses, and its band
     // — the modal family's box since 2026-10-14 (modal_box.h) — starts at the
     // view bar's top row and runs to row 8, covering the canvas column's
-    // lanes (the diff lane with them) and the waveform, with only the menu
-    // row, the toolbar band and the column's air standing above it, dead but
-    // for File — so a Cancel or an
-    // Esc leaves the view exactly as it stood, this view owning no navigation
+    // lanes (the diff lane with them) and the waveform, with only the
+    // toolbar band, the tab strip and the column's air standing above it,
+    // dead — so a Cancel or an Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
-    // consumed no-op, which left the File menu's Open row dead in here.
+    // consumed no-op.
     //
     // IT IS THE SHARED PREDICATE'S SHAPE and not a second spelling of it
     // (is_open_project_key, gui_input.h — ctrl-exact, so Ctrl+Shift+O stays
     // the strict rule's consumed no-op here as everywhere), which is also what
     // keeps this admission and the read-only allowlist's answering the same
-    // question the same way. THE FILE ANCHOR'S FACE READS THIS LINE by the
-    // derived partition: with Quit, Open and Revert all admitted, every row of
-    // that menu is live in the view.
+    // question the same way. The Open Project button's face reads this line
+    // by the derived partition.
     const bool is_open_project = is_open_project_key(key, mods);
-    // FILE → REVERT IS ADMITTED BESIDE IT (Ctrl+Alt+O, architect 2026-09-13,
+    // REVERT IS ADMITTED BESIDE IT (Ctrl+Alt+O, architect 2026-09-13,
     // the planner's default): the same act on the session as a whole aimed at
     // the project already open, so Open's reasoning is its reasoning — a
-    // reopen tears this view down as Ctrl+Q's exit does — and the File menu
-    // keeps no dead row in the view.
+    // reopen tears this view down as Ctrl+Q's exit does.
     const bool is_revert_project = is_revert_project_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
     // bare-exact, read off its own arm in on_key: the four absolute selectors
@@ -3959,14 +3948,12 @@ void GuiInputHandler::run_history_revert() {
     close_history_mode();
 }
 
-// THE OPEN DROPDOWN'S keyboard gate — ONE gate for EVERY menu, because there is
-// one popup state and a dropdown is a dropdown (the Navigation menu joined
-// 2026-08-02, the File one 2026-08-13 and the Edit one 2026-08-20, each needing
-// nothing here, and the
-// Navigation menu's 2026-08-15 deletion needed nothing either: the popup's bare
-// Esc is ONE bare-Esc binding through all of it, never two). Returns true when the press is SWALLOWED (the
-// popup consumed it, or it was inert, or an access key ran a row or a title —
-// a row's command dispatching through on_key with the popup already closed);
+// THE OPEN DROPDOWN'S keyboard gate — ONE gate for the one popup (Settings',
+// the last menu since the menu row's removal, 2026-10-21; the File, Edit and
+// Navigation menus needed nothing here in their time: the popup's bare Esc is
+// ONE bare-Esc binding through all of it, never two). Returns true when the
+// press is SWALLOWED (the popup consumed it, or it was inert, or an access
+// key ran a row);
 // false only for Ctrl+Q, which closes the popup and then lets on_key run the
 // close route.
 //
@@ -3987,15 +3974,13 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
         return false;   // fall through to the close route
     }
     // THE ACCESS KEYS (architect 2026-10-10; the letters and the rule at
-    // dropdown_title_access_key, app_state.h): A ROW'S LETTER, BARE OR WITH
-    // ALT, RUNS THAT ROW exactly as its release does (activate_dropdown_item,
-    // the release's own body, at the painted row's center x), its painted
+    // kSettingsPopupItems, app_state.h): A ROW'S LETTER, BARE OR WITH ALT,
+    // RUNS THAT ROW exactly as its release does (activate_dropdown_item, the
+    // release's own body, at the painted row's center x), its painted
     // enabled bit asked first — a greyed row's letter is consumed doing
-    // nothing, as a press on it is. The open menu's rows answer before the
-    // titles (Windows' precedence); then A TITLE'S Alt+LETTER is that title's
-    // press, toggle_dropdown — another menu switches, the open menu's own
-    // title closes it, a dead anchor refuses on its painted face. Ctrl and
-    // Shift spell none of them, so every Ctrl+Alt chord keeps its swallow.
+    // nothing, as a press on it is. (The titles' Alt+letter, a menu switch,
+    // went with the menu row, 2026-10-21.) Ctrl and Shift spell none of
+    // them, so every Ctrl+Alt chord keeps its swallow.
     if (!mods.ctrl && !mods.shift) {
         const int item =
             dropdown_item_for_access_key(app.dropdown.menu, key);
@@ -4003,13 +3988,6 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
             const std::size_t at = static_cast<std::size_t>(item);
             if (app.dropdown.item_enabled[at]) activate_dropdown_item(item);
             return true;
-        }
-        if (mods.alt) {
-            const DropdownMenu m = dropdown_menu_for_access_key(key);
-            if (m != DropdownMenu::None) {
-                toggle_dropdown(m);
-                return true;
-            }
         }
     }
     // Every other chord is inert while the popup is up — AND SILENT, a BOUND
@@ -5047,7 +5025,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // counted noun, and "render" before that.) It falls mid-sentence in both
     // surfaces and so is lowercase by the sentence-case rule itself, no
     // exception to anything (the product's text rules are stated once at
-    // paint_handler.cpp's menu-row block); the BPM batch's twin label
+    // paint_handler.cpp's text-rules block); the BPM batch's twin label
     // capitalizes its acronym and lowercases its noun for the same reason.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully
@@ -6447,8 +6425,7 @@ void GuiInputHandler::open_project_picker() {
     // question is what the press has to deal with — while an editor is
     // pointer-transparent in the kinds the top-strip flag editor takes
     // (FlagPayload and IterBound, text_editor::Kind, text_editor.h), so
-    // the File menu's Open project row is reachable under it and owes a
-    // sentence. The KEY road never reaches either arm: Ctrl+O under any
+    // the Open Project button is reachable under it and owes a sentence. The KEY road never reaches either arm: Ctrl+O under any
     // editor dies at on_key's editor gate, which says these very words with
     // the chord named, and under a prompt at the prompt's own claim above it.
     if (app.prompt.active) return;
@@ -6458,8 +6435,8 @@ void GuiInputHandler::open_project_picker() {
         return;
     }
     // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
-    // "admit both": the File menu's rows are all live in the view now,
-    // and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
+    // "admit both": the File menu's rows were all live in the view (the menu
+    // row retired 2026-10-21), and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
     // premise was that "a reopen would tear the view down from under itself",
     // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
     // everything — Ctrl+Q, which is admitted, ends the view the same way. The
@@ -6467,8 +6444,8 @@ void GuiInputHandler::open_project_picker() {
     // on_key, its veil consumes the view's presses, and its band — the modal
     // family's box since 2026-10-14 — starts at the view bar's top row and
     // covers the canvas column's lanes — the diff lane with them — and the
-    // waveform, the menu row, the toolbar band and the column's air alone
-    // above it with File live on the menu row), a Cancel or Esc leaves
+    // waveform, the toolbar band, the tab strip and the column's air alone
+    // above it), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything
@@ -6489,8 +6466,9 @@ void GuiInputHandler::open_project_picker() {
     // Open project over one asks for what is already on screen — the settings
     // editor's own already-open silence, and a one-dimensional refusal at the
     // state it refuses on. Its key road answers earlier (route_picker_key
-    // consumes Ctrl+O in its catch-all); what reaches here is the File menu's
-    // row, which the panel makes unreachable in the same way — so this arm is
+    // consumes Ctrl+O in its catch-all); what reached here was the File menu's
+    // row (retired 2026-10-21), which the panel made unreachable in the same
+    // way, and the Open Project button greys under the panel — so this arm is
     // the opener's own shape (the gate lives with the act it refuses) rather
     // than a road anything takes today.
     if (picker_active()) return;
@@ -6654,7 +6632,7 @@ void GuiInputHandler::open_project_commit(int index) {
     prompt.request_close(GuiCloseTarget::Reopen);
 }
 
-// FILE → REVERT (the contract is at the declaration, input_handler.h). THE
+// REVERT (the contract is at the declaration, input_handler.h). THE
 // PICKER'S SAME-PROJECT NO-OP IS NOT ON THIS ROAD: that arm lives inside
 // open_project_commit, and this act never passes through the picker — it seats
 // the open project's own name for gui_main's loop and asks the close road with
@@ -6828,12 +6806,13 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
     // which takes the picker down at its head (GuiPrompt::request_close) —
     // the same step the compositor's close takes, stated once there rather
-    // than here, so the two roads cannot drift. It is the File menu's Quit
-    // row too, that anchor being live above the band again since 2026-09-03
-    // evening. THE SET STAYS ONE: Ctrl+O — the Open Project row's chord, which
-    // is this very picker — is consumed by the catch-all below, the mode
-    // answering about itself in silence; Ctrl+Alt+O, the Revert row's chord,
-    // dies there the same way, exactly as Open's does.
+    // than here, so the two roads cannot drift. (The File menu's
+    // Quit row was its pointer road above the band from 2026-09-03 evening
+    // until the menu row's removal, 2026-10-21; the caption's Close is the
+    // glass's.) THE SET STAYS ONE: Ctrl+O — Open Project's chord, which is
+    // this very picker — is consumed by the catch-all below, the mode
+    // answering about itself in silence; Ctrl+Alt+O, Revert's chord, dies
+    // there the same way, exactly as Open's does.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
@@ -6844,9 +6823,7 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // button means the key was not one of the ring's.
     if (route_modal_dialog_focus_key(key, mods)) return true;
 
-    // EVERY OTHER MODIFIED CHORD (the menu titles' Alt access keys never
-    // arrive: on_key lets them by, menu_title_access_key, architect
-    // 2026-10-10): CONSUMED, AND SILENTLY (architect
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
     // 2026-08-30, the unbound-keys ruling — "bound keys either show an effect
     // or a card, so an unbound key is identified by its silence"), the
     // player's own arm one mode over and for its reason: the router is the
@@ -6912,78 +6889,21 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
 
 // THE DROPDOWN ITEMS' ONE ENABLED VERDICT (architect 2026-09-24, the truthful
 // menus; the contract is at the declaration, app_state.h). Each row greys on
-// its command's CHEAP refusals, read off the act's own predicates; the
-// EXPENSIVE ones (filesystem I/O) are not mirrored and keep their cards. The
-// term lists, per row:
-//
-//   FILE
-//   * Open Project (Ctrl+O): the two head gates every chord row but Quit
-//     can meet on its way to its arm while a menu is open — the folder
-//     overlay (the player's and the picker's routers
-//     consume the chord in silence) and the load (on_key's no-audio gate) —
-//     which also cover the opener's own terms (the picker already standing
-//     is the overlay, a load in flight the load). The chosen folder's
-//     resolve and dry run are the commit's, not mirrored.
-//   * Revert (Ctrl+Alt+O): the two head gates and a checkpoint publishing
-//     (revert_project's first refusal). resolve_project and
-//     source_load_dry_run are not mirrored.
-//   * Quit (Ctrl+Q): never grey. Ctrl+Q passes every head gate (the overlay
-//     routers, the load and the editor gate all admit it), and the quit
-//     itself refuses nothing cheap.
-//
-//   EDIT (all three need the chord to reach handle_mode_keys)
-//   * the two head gates; the `h` view's allowlist (history_mode_key_blocked
-//     on a chord the mode does not own); the authoring lock
-//     (authoring_lock_drops_chord — read-only drops all three, the iteration
-//     lock the two pastes); then the arm's own ladder:
-//     Copy Phase Resets — phase_reset_copy_refusal (not W, no selection, not
-//     one contiguous run, nothing to capture); the two pastes —
-//     phase_reset_paste_refusal (not W, clipboard empty, not exactly one
-//     selected).
-//
-//   SETTINGS: the load alone — the editor's opener refuses nothing cheap.
-//
-// A STANDING MODAL IS NOT A TERM (on_key's prompt and editor gates): no menu
-// can be open under one — a prompt or a dialog editor veils the anchor press,
-// and toggle_dropdown's open ENDS the pointer-transparent flag editor — so a
-// modal term could only ever grey an ANCHOR, and falsely: pressing Edit with
-// a flag edit standing ends the edit and opens onto live rows. (File's
-// anchor is live through Quit whatever it answers.)
+// its command's CHEAP refusals; the one menu left (Settings, since the menu
+// row's File and Edit went 2026-10-21) greys on the load alone — the
+// editor's opener refuses nothing cheap.
 bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
                            DropdownMenu menu, int item) {
     if (item < 0 || item >= dropdown_item_count(menu)) return false;
-    const bool no_audio = no_audio_to_dispatch_on(a, audio.total_frames());
-    if (!dropdown_is_command_menu(menu)) return !no_audio;
-    const CommandPopupItem& it = command_popup_item(menu, item);
-    GuiInputState chord{};
-    chord.ctrl  = it.ctrl;
-    chord.shift = it.shift;
-    chord.alt   = it.alt;
-    if (it.key == GuiKeys::Q && chord.ctrl && !chord.shift && !chord.alt)
-        return true;
-    if (folder_overlay_stands(a) || no_audio)
-        return false;
-    if (is_open_project_key(it.key, chord)) return true;
-    if (is_revert_project_key(it.key, chord))
-        return !a.history_checkpoint_in_flight;
-    if (a.history_mode.active && !history_mode_owns_key(it.key, chord) &&
-        history_mode_key_blocked(it.key, chord, a))
-        return false;
-    if (authoring_lock_drops_chord(a, it.key, chord)) return false;
-    if (it.key == GuiKeys::P && chord.ctrl && !chord.alt && !chord.shift)
-        return phase_reset_copy_refusal(a) == PhaseResetCopyRefusal::None;
-    if (it.key == GuiKeys::P && chord.ctrl && chord.alt)
-        return phase_reset_paste_refusal(a) == PhaseResetPasteRefusal::None;
-    // A row this list does not name answers live — the face it had before
-    // the ruling — rather than greying on a refusal nobody has written.
-    return true;
+    return !no_audio_to_dispatch_on(a, audio.total_frames());
 }
 
 // P / I / K / L letter-key handlers. See the declaration for the chord list.
 // THE CLIPBOARD CHORDS' SHARED SENTENCES (architect 2026-08-30, the
-// strictness ruling). THREE CHORDS — the phase-reset propagate's copy and its
-// two pastes: where two chords refuse on the same fact they say the same
-// words and the literal lives once.
+// strictness ruling). TWO CHORDS — the phase-reset propagate's copy and its
+// paste (the state paste beside them removed 2026-10-21): where two chords
+// refuse on the same fact they say the same words and the literal lives
+// once.
 //
 // kSelectOneRun's readers, re-greped 2026-09-23: the PHASE copy's contiguity
 // arm and the BPM sweep's below — the same test on the same set for the same
@@ -6991,9 +6911,9 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
 // sentence.
 constexpr const char* kSelectOneRun =
     "Select one consecutive run of markers";
-// The two pastes' empty-clipboard answer.
+// The paste's empty-clipboard answer.
 constexpr const char* kNothingCopiedYet = "Nothing has been copied yet";
-// The pastes' anchor gate, two readers — the paste is anchored on a selected
+// The paste's anchor gate — the paste is anchored on a selected
 // warp marker.
 constexpr const char* kSelectOneAnchor =
     "Select exactly one marker to paste onto";
@@ -7011,10 +6931,10 @@ constexpr const char* kPastePhaseOntoWarp =
 constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
 
-// THE TWO PASTES' SHARED LADDER, CARDED — phase_reset_paste_refusal
-// (phase_reset_propagate.h) is the decision, read by both arms below and by
-// the Edit menu's two paste rows (2026-09-24); this is its sentences. True =
-// refused and carded.
+// THE PASTE'S LADDER, CARDED — phase_reset_paste_refusal
+// (phase_reset_propagate.h) is the decision, read by the arm below and by
+// the pigeon's face in the phase-reset view (redesign_button_enabled's Jump
+// to Defining Marker arm); this is its sentences. True = refused and carded.
 bool GuiInputHandler::card_phase_reset_paste_refusal() {
     const char* sentence = nullptr;
     switch (phase_reset_paste_refusal(app)) {
@@ -7055,13 +6975,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (extent == count). Unlabeled markers inside the run still contribute no
     // block, and the paste's destination walk skips unlabeled markers
     // identically, so the two label sequences stay aligned regardless.
-    // W-mode only. EVERY REFUSAL IN THE THREE CLIPBOARD CHORDS SAYS SO ON A
+    // W-mode only. EVERY REFUSAL IN THE TWO CLIPBOARD CHORDS SAYS SO ON A
     // CARD since 2026-08-30 (architect, the strictness ruling), each naming
     // the gate it failed: the 2026-07-23 "gesture refusals are silent by
     // convention" ruling was withdrawn for this family with the rest.
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
         // THE LADDER IS phase_reset_copy_refusal (phase_reset_propagate.h),
-        // the one decision the Edit menu's Copy row greys on (2026-09-24).
+        // the one decision the pigeon's face greys on in the phase-reset
+        // view (2026-10-21; the Edit menu's Copy row, 2026-09-24 until then).
         // Each rung cards in its own sentence. The contiguity rung is the
         // `m` sweep's own test. THE LAST RUNG IS ASKED BEFORE THE CLIPBOARD
         // IS TOUCHED (2026-09-24): a run holding no labeled, enabled marker
@@ -7100,8 +7021,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // THE COPY SAYS SO: a clipboard write paints nothing (the reasoning
         // is at the value copy's own card, copy_focused_marker_value). The card is
         // the ARM'S: the propagate's COPY body carries no sentence of its own
-        // (unlike the pastes beside it). THE MENU ROW INHERITS IT: Edit ->
-        // Copy Phase Resets dispatches this chord.
+        // (unlike the paste beside it). THE PIGEON INHERITS IT: in the
+        // phase-reset view its Ctrl+J is this chord (jump_seat_chord).
         notifications.notify(AppState::NotificationClass::Normal,
                              "Copied the selected markers' phase resets");
         return true;
@@ -7125,22 +7046,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // Ctrl+Alt+Shift+P: propagate the enabled/disabled *state* of
-    // clipboard placements onto the matching destination region's
-    // phase resets, in order. Positions are not modified. W-mode only; its
-    // three gates are its Ctrl+Alt+P sibling's term for term and CARD in that
-    // sibling's own sentences since 2026-08-30, where the rationale is
-    // stated. Unlike Ctrl+Alt+P, no confirmation prompt — applies
-    // directly. Divergence/mismatch is reported as a notification card
-    // rather than a modal dialog.
-    if (key == GuiKeys::P && ctrl && shift && alt) {
-        // THE THREE GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
-        // its sentences (2026-08-30): it is the same family, and a silent arm
-        // beside two that speak would be drift.
-        if (card_phase_reset_paste_refusal()) return true;
-        phase_reset_propagate.paste_state_apply();
-        return true;
-    }
+    // (CTRL+ALT+SHIFT+P, PASTE PHASE RESET STATE — the clipboard's
+    // placements' enabled/disabled state propagated onto the matching
+    // destination resets with no prompt — IS REMOVED, architect 2026-10-21,
+    // with the Edit menu that was its one pointer home; the chord binds
+    // nothing.)
 
     // `i` (no modifiers) toggles grid iterations, IN EITHER COLUMN since
     // 2026-09-09 (the arm below carries the ruling; the P-column card it used
@@ -7649,11 +7559,11 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // transport is touched); Ctrl+Q falls through to the ordinary quit road,
     // which takes the player down at its head (GuiPrompt::request_close) — the
     // same step the compositor's close takes, stated once there rather than
-    // here, so the two roads cannot drift. IT IS ALSO THE FILE MENU'S QUIT
-    // ROW, the anchor being live above the band again since 2026-09-03
-    // evening, and on the TABLET it is the player's first quit road of any
-    // kind — there is no keyboard there and the row is now reachable.
-    // THE SET STAYS TWO: Ctrl+O and Ctrl+Alt+O are the two File rows this
+    // here, so the two roads cannot drift. (The File menu's
+    // Quit row was its pointer road above the band from 2026-09-03 evening
+    // until the menu row's removal, 2026-10-21; on the TABLET the caption's
+    // Close is the quit road.)
+    // THE SET STAYS TWO: Ctrl+O and Ctrl+Alt+O are the two chords this
     // router answers with the catch-all's silence — chords
     // bound outside the mode and meaning nothing inside it, the unbound-keys
     // ruling. (Both were fall-throughs for the one day of 2026-09-02, when
@@ -7708,9 +7618,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // EVERY OTHER MODIFIED CHORD (the menu titles' Alt access keys never
-    // arrive: on_key lets them by, menu_title_access_key, architect
-    // 2026-10-10): CONSUMED, AND SILENTLY (architect
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
     // 2026-08-30, the unbound-keys ruling) — the mode's router IS the whole
     // vocabulary while it stands, so a chord that means something outside it
     // means nothing in here, and a press that does nothing is answered by the
@@ -8151,7 +8059,7 @@ void GuiInputHandler::render_player_load_in_place() {
     // prompt's, so Esc's own answer is derived rather than declared; `o` is
     // OK's letter.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
-    // raised from its TWO subjects (architect 2026-08-28), and File → Revert's
+    // raised from its TWO subjects (architect 2026-08-28), and Revert's
     // confirmation (architect 2026-09-13) and the phase reset paste's
     // confirmation (architect 2026-09-16) take the same default: a bare ENTER
     // here answers OK, because the prompt is already the deliberate second

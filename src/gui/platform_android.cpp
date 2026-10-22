@@ -2359,7 +2359,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // 2026-09-27: every pen hover effect acts only within the plane,
             // pen_report_in_plane): it takes the EXIT's arm whole — a
             // standing hover ENDS through the core's leave (the roster's
-            // outline, the menu row's fill and mode, the tooltip's wait and
+            // outline, the tooltip's wait and
             // a standing tooltip box all go — the leave hook's own list,
             // main.cpp; end_pen_hover) and the Ctrl bit drops — and no
             // enter or motion is delivered. Back within the plane (at or
@@ -2393,8 +2393,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // AN EDGE ABOVE THE GUI'S PLANE was not sampled (the pen is out
             // of reach there) and is no pointer, so it takes the hover arm's
             // own above-plane answer whole: a standing hover ENDS
-            // (end_pen_hover — the outline, the menu row's fill and mode and
-            // the tooltip all go) and the bit drops. It leaves the retained
+            // (end_pen_hover — the outline and the tooltip all go) and the bit drops. It leaves the retained
             // anchor alone: released high up and pressed again before
             // re-entering the plane, the anchor stands.
             if (pen_present && !pen_in_plane) {
@@ -3040,7 +3039,7 @@ namespace {
 // and walked that folder for the one .wav with a .warpmarkers sibling; the
 // project model retired both halves — the app opens the device config's
 // `last_project`, or the first valid project in name order, through the one
-// portable owner (startup_source, project_model.h), and File → Open project is the
+// portable owner (startup_source, project_model.h), and Open Project is the
 // picker. What this backend still owns of the convention is WHERE the projects
 // are: the template's projects_path, device_config_defaults above.)
 
@@ -3258,7 +3257,7 @@ void android_main(android_app* app) {
     // function returns — so an exit at this line would cut MainActivity's
     // own onDestroy (the session's release, focus's abandon) short; the
     // process ends once that has run. WHAT THE USER SEES: the caption's X,
-    // File → Quit and BACK are one route (the close prompt, then
+    // Quit and BACK are one route (the close prompt, then
     // GuiCloseTarget::Exit, then GuiPlatform::request_exit), so each of them
     // now ends the process, and a relaunch is always cold. The project
     // picker's reopen is a run stop inside gui_main, not a destroy, and stays

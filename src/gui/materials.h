@@ -43,12 +43,16 @@ struct AppState;
 //
 // THE COVER RULE (his "zoom to fit so there is no empty space on the screen,
 // exactly"): each master is scaled by ONE factor s = max(W / w, H / h) over
-// the CLIENT window W x H — the whole window, the caption to the frame's
-// bottom row — and CENTERED on it, the overhang cropped evenly both sides; no
+// the CLIENT window W x H — the whole window, the caption to the border's
+// last row — and CENTERED on it, the overhang cropped evenly both sides; no
 // tiling, no mirror, no repeat, no seam, ever (the tablet: 1440 / 3072, the
 // master 2580 x 1440, 138 px cut each side). A MATERIAL PIXEL ON SCREEN AT
 // (x, y) IS THE COVER'S PIXEL AT (x, y), whatever paints it: the three are
-// covers of the one window geometry. THE COVER MATCH (the planner's ruling
+// covers of the one window geometry (the restored laptop's sizing frame
+// round the client takes the source's own pixels beyond it where the source
+// holds any — a cover's overhang round its center crop, a master's scaled
+// overhang — the material's flat mean where none, 2026-10-21). THE COVER
+// MATCH (the planner's ruling
 // 2026-10-21, after the laptop's maximized 1920 x 1047 — labwc's panel
 // takes 33 rows — matched no cover and fell to the masters): for a client
 // W x H the bake takes THE SMALLEST BUNDLED COVER w x h WITH w >= W AND
@@ -91,12 +95,17 @@ struct AppState;
 // A MATERIAL IS EVER DRAWN ON ARE BAKED, as tiles of the window (the masters
 // and covers never stay resident):
 //   WOOD    the rows above the brass panel (the caption to the tab strip's
-//           foot) and below it (the dock bar to the frame's bottom row),
-//           window-wide, and the program frame's two columns beside the
-//           panel; and THE VOID's copy of the band's rows (below);
-//   METAL   the tab strip's rows to the canvas's top and the canvas's foot to
-//           the dock bar, window-wide, and the canvas's two side margins
-//           between (the canvas interior is the GPU's and never brass); and
+//           foot) and below it (the dock bar to the border's last row),
+//           window-wide (the program frame's two columns beside the panel
+//           went 2026-10-21); the rows THE BORDER UNDER ROW 8 stands on
+//           when a dialog editor's stack lifts it onto the on-screen
+//           keyboard's band (modal_box.h); and THE VOID's copy of the band's
+//           rows (below);
+//   METAL   ONE TILE, THE WHOLE CLIENT AND THE SIZING FRAME'S BAND ROUND IT
+//           as far as the source holds pixels there (2026-10-21: the cards,
+//           the tooltip, the modal family, the keyboard's band, the Settings
+//           popup and the sizing frame stand anywhere on it — the brass
+//           panel from the tab strip's top to the dock bar until then); and
 //           THE INACTIVE TAB'S BODY rows (below);
 //   CASE    THE CASE PATCHES (2026-10-21, a window-wide band per seat row
 //           until then) — ONE g x g PATCH PER SEAT, at rest and pressed (one
@@ -115,60 +124,85 @@ struct AppState;
 // pixels are copied straight out of it (svg_icon::raster_regions); the
 // window's conversion is the transform's word through its table-driven
 // encode (display_transform.h's p3_word_from_srgb_fast).
-// RESIDENT at 300 % on 2304 x 1440 8.7 MB (the wood 4.7, the brass 2.5, the
-// ebony 1.5 — about fifty seats' patches; 2.7 as the seat rows' bands), on
-// the laptop's maximized 1920 x 1047 at 138 % 3.0 MB (ARGB32, measured
-// 2026-10-21; materials::resident_bytes, which the trace line prints at
-// every bake).
+// RESIDENT at 300 % on 2304 x 1440 about 19.5 MB (the brass's one tile 13.3
+// and its tab body 0.4, the wood 4.3 with its void, the ebony 1.5 — about
+// fifty seats' patches), on the laptop's maximized 1920 x 1047 at 138 %
+// about 10 MB (the brass 8.1 with the frame's band rows the cover holds)
+// (ARGB32, computed off the geometry 2026-10-21 when the brass grew to the
+// window; 8.7 and 3.0 MB measured that morning; materials::resident_bytes,
+// which the trace line prints at every bake, is the measure).
 //
 // THE REGIONS — WHICH MATERIAL A SURFACE IS (GuiMaterialRegion, a scope the
 // painter names):
-//   WOOD   the caption and the menu row, ONE SLAB (no line under the caption,
-//          its top light line kept, active and inactive alike — THE CAPTION
-//          IS THE WOOD, architect 2026-10-21, "ok to delete other captions":
-//          the 42 built-in captions, the product's flat `default` and the
-//          `caption` key left the same day, palette_file.h's head); under
-//          the menu row Cool Edit's stack as its painters
-//          have it (the program frame's dark line, the pane's dark groove, its
-//          light line, the pane); the band's panes; the tab strip's ground;
-//          the dock bar, row 8 and the border under it; the frame's own
-//          columns and bottom row, THE COVER AS DRAWN (the frame of record).
-//          THE VOID — the band's recess between the panes — is the wood UNDER
-//          THE LUMINANCE RULE AT kWoodVoidLuma (his one exception to "the
-//          wood as drawn"); every other wood Face pixel is the cover itself.
-//   METAL  ONE PANEL from the column's air to the dock bar inside the frame's
-//          columns (the air, the view bar's, the ruler's and the marker
-//          lane's grounds, the cue labels' face boxes with them, the canvas's
-//          side margins and its rings, the divider's face row in the margins,
-//          the foot) and THE TWO TABS' BODIES, the strip's ground staying
-//          wood: the lit tab the brass as drawn, the inactive tab's body the
-//          brass under Cool Edit's measured 15-row gradient as a LUMA RATIO
-//          (kTabBodies' Default row, each row's HLS lightness over the
-//          Default Face's taken onto the brass Face — the frame's lighter
-//          inactive tab). The divider's face row inside the canvas is the
-//          GPU's flat Face.
+//   WOOD   the caption (no line under it, its top light line kept, active
+//          and inactive alike — THE CAPTION IS THE WOOD, architect
+//          2026-10-21, "ok to delete other captions": the 42 built-in
+//          captions, the product's flat `default` and the `caption` key left
+//          the same day, palette_file.h's head; the menu row under it one
+//          slab with it until that day's later ruling removed the row); under
+//          it Cool Edit's stack as its painters have it (the program frame's
+//          dark top row, window-wide, the pane's dark groove, its light line,
+//          the pane); the band's panes; the tab strip's ground; the dock bar,
+//          row 8 and the border under it, THE COVER AS DRAWN (the frame of
+//          record). THE VOID — the band's recess between the panes — is the
+//          wood UNDER THE LUMINANCE RULE AT kWoodVoidLuma (his one exception
+//          to "the wood as drawn"); every other wood Face pixel is the cover
+//          itself.
+//   METAL  ONE PANEL from the column's air to the dock bar, window-wide (the
+//          air, the view bar's, the ruler's and the marker lane's grounds,
+//          the cue labels' face boxes with them, the canvas's side margins
+//          and its rings, the divider's face row in the margins, the foot)
+//          and THE TWO TABS' BODIES, the strip's ground staying wood: the lit
+//          tab the brass as drawn, the inactive tab's body the brass under
+//          Cool Edit's measured 15-row gradient as a LUMA RATIO (kTabBodies'
+//          Default row, each row's HLS lightness over the Default Face's
+//          taken onto the brass Face — the frame's lighter inactive tab). The
+//          divider's face row inside the canvas is the GPU's flat Face. AND
+//          SINCE 2026-10-21 THE FAMILY THAT WAS FLAT (architect: "the light
+//          brown should be brass, but the dark brown should stay a flat
+//          surface — the user shouldn't be typing on a non-flat color";
+//          "dropdowns should be brass"): THE CARDS AND THE TOOLTIP, THE
+//          MODAL FAMILY'S BOX MARGINS, ITS RING, A PROMPT'S FACE INTERIOR AND
+//          ITS CONTROLS ROW (modal_box.h: the dialog editors, the prompts,
+//          the render player, the project picker, the progress modal), THE
+//          ON-SCREEN KEYBOARD'S BAND, THE LAPTOP'S SIZING FRAME and THE
+//          SETTINGS POPUP — each the brass as drawn at its own place, its
+//          relief the brass Face's tones.
 //   CASE   EVERY CASE (the band's, row 8's, the render player's) and THE
 //          THREE CAPTION BUTTONS. The case's 20 ramp rows are the ebony UNDER
 //          THE LUMINANCE RULE off its own Face with Cool Edit's case span,
 //          kCaseRampTop at the top row to kCaseRampBottom at the bottom (HLS
 //          lightness added, the saturation kept), its lines flat strokes off
 //          that Face (kCaseHighlight, the shadow's two ends kCaseShadowFirst /
-//          kCaseShadowLast and the corner kCaseCorner), the black outline and
-//          the pressed and checked rings Cool Edit's constants; pressed, the
-//          ramp one line down as before. Each seat's patch is the case cover
-//          at its own place (the frame's: every seat differs, no hash). The
-//          caption buttons the same ebony at kCaptionButtonFace, their light
-//          lines the case's highlight and their dark its shadow's first tone,
-//          their Marlett glyphs kNearWhite.
-//   FLAT   EVERYTHING ELSE THAT IS CHROME — the pull-downs, the cards and the
-//          tooltip, the modal family's box and its controls row (the render
-//          player's ground), the on-screen keyboard, the dialog fields, the
-//          laptop's sizing frame: today's painters, flat, their roles derived
-//          by chrome_derive.h's rules FROM THE METAL'S FACE (the text's swaps
-//          following it) — the scope's default.
+//          kCaseShadowLast and the corner kCaseCorner), the black outline Cool
+//          Edit's constant. THE PRESSED AND CHECKED FACE (architect
+//          2026-10-21, "the top and left should be darker than the case";
+//          Cool Edit's constant 808080 / F8F8F8 rings, measured on a light
+//          grey case, read as a raised white frame on the ebony): the outer
+//          ring black on the top and left and THE CASE'S HIGHLIGHT on the
+//          bottom and right, the inner ring THE CASE'S LAST SHADOW TONE on
+//          the top and left and nothing on the bottom and right, the ramp one
+//          line down to the outer ring there (paint_ce_case). Each seat's
+//          patch is the case cover at its own place (the frame's: every seat
+//          differs, no hash). The caption buttons the same ebony at
+//          kCaptionButtonFace, their light lines the case's highlight and
+//          their dark its shadow's first tone, their Marlett glyphs the ink
+//          (THE INKS, below), a dead one's Cool Edit's glyph emboss. THE
+//          EMBOSS'S TONES ARE THE CASE'S (architect 2026-10-21, "r1"):
+//          the silhouette and the rim Cool Edit's measured ratios taken
+//          onto this ramp's mean lightness, the light copy F8F8F8
+//          (disabled_glyph_tones, below).
+//   FLAT   NO GROUND SINCE 2026-10-21 (the family above went to the brass).
+//          The scope's default still: what stays flat is named by its painter
+//          — EVERY FIELD (a dialog editor's line, the lists' ground where you
+//          pick, the time fields: the chrome's field pair), THE WORD BUTTONS
+//          AND THE KEYBOARD'S KEYS ("ebony eventually, flat fine for now"),
+//          every case's own lines and rings — their roles derived by
+//          chrome_derive.h's rules FROM THE METAL'S FACE (the text's swaps
+//          following it).
 // UNTOUCHED: the well and everything the palette draws (the canvas, the view
 // bar's black field and span, the cues' triangles and dots, the playhead),
-// every glyph, the cases' black outline and constant rings.
+// every glyph, the cases' black outline.
 //
 // THE TONE RULE (architect 2026-10-21): EACH MATERIAL'S FACE IS ITS BAKED
 // COVER'S MEAN COLOR, measured at the bake (materials::face) — the wood's
@@ -202,19 +236,28 @@ struct AppState;
 // tones were a multiplicative shortcut that clips, FFD688; the HLS tone
 // differing a little from them is the mock's inaccuracy.)
 //
-// THE INKS (constants, but the shadow's offset a key): THE WORDS ON THE WOOD —
-// the caption's title and the menu row's File / Edit / Settings, their
-// access-key underlines with them — in kWordInk (old brass, his ink B) over a
-// kWordShadow drop shadow (+d, +d) DEVICE PX, d the `text_shadow` key
-// (materials::text_shadow_px; the settled mock's 2 at 300 %); THE TAB LABELS
-// kNearWhite over the same shadow; THE RULER'S DIGITS AND TICKS and THE
-// MARKER LANE'S RESTING LABELS kNearWhite (a disabled cue's label fading from
-// it toward the metal's Face; the triangles, the yellow head, the dots, the
-// selected label's chrome text unchanged); THE CLOCK — row 8's and the render
-// player's two fields — kTimeFieldDigits on kTimeFieldGround, their rings the
-// region's tones, geometry and pads unchanged. A disabled word's emboss and
-// a disabled glyph's are as before, the word's light copy the material's own
-// light tone (materials::flat).
+// THE INKS (constants, but the shadow's offset a key): ONE INK, kWordInk
+// (architect 2026-10-21, v1 of five: "they should be lower contrast; only
+// flags should be very high contrast"), ON EVERY WORD AND DIGIT ON THE CHROME
+// BUT THE FLAGS — the caption's title, the tab labels, the ruler's digits
+// and ticks, row 8's clock and the render player's two fields (on
+// kTimeFieldGround, their rings the region's tones, geometry and pads
+// unchanged), row 8's state line and the caption buttons' glyphs; THE WORDS
+// that wore a drop shadow keep it — kWordShadow at (+d, +d) DEVICE PX, d the
+// `text_shadow` key (materials::text_shadow_px; the settled mock's 2 at
+// 300 %), on the title and the tab labels — and the ruler's digits and the
+// state line their own (+1, +1) shadows. THE MARKER LANE'S RESTING LABELS
+// stay kNearWhite, THE ONE HIGH-CONTRAST TEXT (a disabled cue's label fading
+// from it toward the metal's Face; the triangles, the yellow head, the dots,
+// the selected label's chrome text unchanged). (The old brass C9A961 on the
+// title and the menu row's words, the near-white on the tab labels, the
+// ruler, the caption glyphs, and the amber F0B030 on the clock, retired the
+// same day.) THE SELECTION PAIR is the constant kSelectionFill under
+// kSelectionText (chrome_derive.h's rows). The cards', the tooltip's and the
+// dialogs' words keep the chrome's text roles. A disabled word's emboss is
+// as before, its light copy the material's own light tone (materials::flat);
+// a disabled glyph is Cool Edit's emboss, the caption's Marlett cell
+// included.
 
 enum class GuiMaterial { Wood, Metal, Case };
 inline constexpr int kGuiMaterialCount = 3;
@@ -240,15 +283,30 @@ inline constexpr double kCaseShadowFirst   = -0.08;
 inline constexpr double kCaseShadowLast    = -0.10;
 inline constexpr double kCaseCorner        = -0.10;
 inline constexpr double kCaptionButtonFace = 0.03;
-// THE WORDS' INK AND SHADOW (old brass, his ink B; the gold D9B45A not
-// taken), the near-white of the tab labels, the lanes' digits and labels and
-// the caption buttons' glyphs.
-inline constexpr uint32_t kWordInk    = 0xC9A961;
+// THE INK (architect 2026-10-21, v1 his pick of five: "they should be lower
+// contrast; only flags should be very high contrast"): ONE COLOR on every
+// word and digit on the chrome but the flags — the caption's title, the tab
+// labels, the ruler's digits and ticks, row 8's clock and the render
+// player's two fields, the state line and the caption buttons' glyphs —
+// over the words' shadow where a word wore it (the old brass C9A961, "too
+// golden", retired). THE FLAG LABELS' NEAR-WHITE is the one high-contrast
+// text, and the selection's text.
+inline constexpr uint32_t kWordInk    = 0xE6D5A8;
 inline constexpr uint32_t kWordShadow = 0x140C06;
 inline constexpr uint32_t kNearWhite  = 0xF0F0F0;
-// THE TIME FIELDS' GROUND AND DIGITS: amber on black.
+// THE TIME FIELDS' GROUND (black) AND DIGITS (the ink; the amber F0B030
+// until 2026-10-21).
 inline constexpr uint32_t kTimeFieldGround = 0x000000;
-inline constexpr uint32_t kTimeFieldDigits = 0xF0B030;
+inline constexpr uint32_t kTimeFieldDigits = kWordInk;
+// THE SELECTION PAIR (architect 2026-10-21, "brass-like … the selection text
+// white or near-white"): a constant fill and the near-white text everywhere
+// the chrome's selected pair paints — the flag editor's selected substring,
+// the lit popup rows, the lists' selected rows, the dialog editors'
+// selections (chrome_derive.h's selected_fill / selected_text rows; the
+// waveform's ink under the program text's other member, 2026-10-16..10-21,
+// retired).
+inline constexpr uint32_t kSelectionFill = 0x9C7B3A;
+inline constexpr uint32_t kSelectionText = kNearWhite;
 
 namespace materials {
 
@@ -325,9 +383,9 @@ bool set_source(cairo_t* cr, GuiColor c);
 // itself): an ink that must wear a material's tone without its cover — a
 // disabled word's emboss copies.
 GuiColor flat(GuiColor c);
-// ONE RECT OF A MATERIAL AS DRAWN, split over its tiles (the frame's
-// columns, the canvas column's face): each part the cover, a part no tile
-// holds the material's flat mean.
+// ONE RECT OF A MATERIAL AS DRAWN, split over its tiles (the canvas
+// column's face; client coordinates, the client's pixels alone): each part
+// the cover, a part no tile holds the material's flat mean.
 void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m);
 
 // THE CASE'S LINES (the head's CASE), flat strokes off the ebony Face under
@@ -336,6 +394,19 @@ struct CaseLines {
     GuiColor highlight, shadow_first, shadow_last, corner;
 };
 CaseLines case_lines();
+// THE DISABLED GLYPH'S TONES (architect 2026-10-21, "r1"; the rule at
+// cool_edit_paint.h's kCeDisabledShadow): Cool Edit's emboss taken onto the
+// live case — the silhouette at the case ramp's mean HLS lightness times
+// kCeDisabledShadowRatio, the rim at the silhouette's times
+// kCeDisabledInsetRatio, both on the ebony Face's hue and saturation, the
+// light copy Cool Edit's F8F8F8 — rebuilt with the flat strokes at every
+// bake. 0xRRGGBB. Read by every disabled glyph (icons::draw_disabled) and
+// the caption buttons' dead Marlett cell, each cache keyed on the tones.
+struct DisabledGlyphTones {
+    uint32_t shadow, light, inset;
+    bool operator==(const DisabledGlyphTones&) const = default;
+};
+DisabledGlyphTones disabled_glyph_tones();
 // THE CASE'S RAMP on the g x g glyph seat at (x, y): the case patch baked for
 // that seat (`down` the pressed one, one line further in), a copy at the
 // same rectangle; a seat no patch was baked for (a size change waiting on
@@ -361,4 +432,22 @@ public:
 
 private:
     GuiMaterialRegion previous_;
+};
+
+// THE ORIGIN SCOPE (2026-10-21): the client's origin at (dx, dy) in the
+// context's coordinates while it stands — the sizing frame's painter, whose
+// context is the surface's with the client inset by the frame
+// (paint_window_sizing_frame, render.cpp) — so the metal's one tile, baked
+// over the client and the frame's band round it, lands at its own place and
+// the band's pixels are the cover's. The previous origin back at its end.
+// Main thread only.
+class GuiMaterialOriginScope {
+public:
+    GuiMaterialOriginScope(int dx, int dy);
+    ~GuiMaterialOriginScope();
+    GuiMaterialOriginScope(const GuiMaterialOriginScope&)            = delete;
+    GuiMaterialOriginScope& operator=(const GuiMaterialOriginScope&) = delete;
+
+private:
+    int previous_dx_, previous_dy_;
 };

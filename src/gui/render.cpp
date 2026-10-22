@@ -481,10 +481,6 @@ void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r) {
                       palette().light_3d);
 }
 
-void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r) {
-    paint_relief_frame(cr, r, palette().shadow, palette().hilight);
-}
-
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
                         int phase_y, GuiColor lit, GuiColor ground) {
     if (r.w <= 0 || r.h <= 0) return;
@@ -606,6 +602,12 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px, bool /*focused*/) {
     if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
     const int f = frame_px;
+    // THE BRASS AS DRAWN (architect 2026-10-21, materials.h's METAL — the
+    // FLAT family retired as a ground): the ground the metal's cover at its
+    // own place round the client, the relief its tones, the context's origin
+    // the surface's (the client inset by the frame).
+    const GuiMaterialScope       metal(GuiMaterialRegion::Metal);
+    const GuiMaterialOriginScope origin(f, f);
     // The ground across the band, then the window's raised edge on its outer
     // two lines.
     paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, palette().ground);
@@ -2805,7 +2807,7 @@ void fill_program_palette(const GuiPaletteWords& w) {
 // moves.
 void fill_chrome_palette() {
     // THE CHROME OFF THE PANEL'S FACE, the metal's once baked (materials.h's
-    // FLAT region: the chrome's roles from the brass's Face).
+    // FLAT scope: the chrome's roles from the brass's Face).
     GuiPaletteWords words = g_program_words;
     words[palette_role_index("face")] = panel_face(g_program_words);
     const GuiThemeWords w = live_chrome_words(words);

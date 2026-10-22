@@ -222,7 +222,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // for the other tab's lock. The
     // held KEY's own wall is silent at the dispatch arm (input_handler.cpp).
     // OPEN PROJECT (architect 2026-10-07), the row's first button, a group
-    // of its own: Ctrl+O, the project picker, the File menu row's own chord.
+    // of its own: Ctrl+O, the project picker (the retired File menu's row's
+    // chord until 2026-10-21).
     // It admits SHIFT — Revert, the one translated twin (the lift's chord
     // build below) — and nothing else; a one-shot act, no radio, no repeat.
     {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
@@ -310,9 +311,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the pointer as MENU ITEMS now. Their chords did not die with the rows —
     // a menu item dispatches through on_key exactly as a button's chord does,
     // which is why the relocation needed no second body anywhere. The shift
-    // admission IconPaste carried for Ctrl+Alt+Shift+P went too, that chord
-    // being a menu row of its own now; the trim scissors' deletion above is the
-    // same shape.)
+    // admission IconPaste carried for Ctrl+Alt+Shift+P went too; the trim
+    // scissors' deletion above is the same shape. SINCE 2026-10-21 the Edit
+    // menu is gone with the menu row and the pair rides Jump to Defining
+    // Marker's seat in the phase-reset view (jump_seat_chord); the state
+    // paste is removed.)
     // (THE BPM AND ITERATION ROWS SPENT 2026-08-27 TO 2026-09-04 OUT OF THIS
     // TABLE, with their buttons, and it was the propagate relocation's shape
     // exactly: the Series relocation gave bare `m` and bare `i` a MENU ROW
@@ -776,29 +779,20 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — the
-// table's length plus the three anchors is kRedesignButtonCount, and the
-// static_assert below is the check, so no number is restated here
-// (kRedesignButtonCount carries the split; the count's succession is in git
-// history). It is keyed by id and every
-// reader matches by id or by published rect, so the row order it is kept in
-// is for the reader alone; a button moving BETWEEN ROWS moves no count, and
-// an anchor carries no chord, so it moves the roster and not this table —
-// the table's length plus THE THREE ANCHORS IS the roster. The check is not
+// every RedesignButton carries a chord here since the menu row's three
+// anchors left (2026-10-21) — the table's length is kRedesignButtonCount, and
+// the static_assert below is the check, so no number is restated here (the
+// count's succession is in git history). It is keyed by id and every reader
+// matches by id or by published rect, so the row order it is kept in is for
+// the reader alone; a button moving BETWEEN ROWS moves no count. The check is not
 // bookkeeping — history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
 // live face in the `h` view while its press claimed nothing. This makes that
-// drift a build error instead. (The addend has walked the anchor count: + 2
-// until 2026-08-13, when the Quit button became the File menu's one item — the
-// roster's total did not move, the split did — then + 3 with Edit
-// 2026-08-20, + 4 with Iterations 2026-08-27, + 5 with Help 2026-09-03,
-// back to + 4 on 2026-09-04, when the Iterations anchor was deleted and its
-// two commands became chord rows here, and + 3 since 2026-09-09, when the
-// Help anchor was deleted with no chord row moving.)
-static_assert(std::size(kToolbarChords) + 3 ==
+// drift a build error instead. (An addend walked the menu anchors' count, +
+// 2 to + 5, from 2026-08-13 until they left with the menu row, 2026-10-21.)
+static_assert(std::size(kToolbarChords) ==
                   static_cast<std::size_t>(kRedesignButtonCount),
-              "kToolbarChords must cover every RedesignButton except the "
-              "File, Edit and Settings anchors");
+              "kToolbarChords must cover every RedesignButton");
 
 // (THE MODAL-TRAP REACH-THROUGH IS RETIRED — architect 2026-08-13, "we can
 // drop the Save reach through". From 2026-08-11 a plain left press on a roster
@@ -811,7 +805,7 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // nothing — and the modal itself now answers that, every one of the four
 // editor dialogs publishing real OK and CANCEL buttons the veil admits, with
 // Cancel dispatching the session's own Esc. Quit's button had already left the
-// roster with the File menu, so the membership had derived down to SAVE alone;
+// roster, so the membership had derived down to SAVE alone;
 // the whole mechanism goes rather than surviving for one convenience chord.
 // SO THE VEIL IS EXCEPTIONLESS AGAIN: while a dialog editor stands, EVERY
 // press outside the modal is consumed, and the roster hovers nothing. THE
@@ -843,31 +837,9 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
         app.redesign_buttons[redesign_button_index(id)].rect, x, y);
 }
 
-// IS THIS PRESS ON A MENU ANCHOR THE STANDING MODE LEAVES LIVE? THE ONE
-// EXEMPTION the folder overlay's two veils carry (architect 2026-09-03
-// evening: "leave File open, because Quit should still be enabled —
-// everything else like what we do with history ... Leave that for the player,
-// the picker and the AV stats" — the AV Sync Stats panel, deleted
-// 2026-09-30). While a content stands, the menu row shows
-// above the band and File alone answers on it, so its press has to reach the
-// menu-row claim at the foot of on_button_press instead of dying in the veil
-// — and this predicate, ONE OWNER read by both veils, is where that is
-// said. It walks kDropdownMenus like every other anchor road here and asks
-// each anchor's PAINTED face (RedesignButtonFace::enabled, which
-// publish_button_face stamps from menu_anchor_live) — the claim reads what is
-// on screen (architect 2026-09-24, strictly as-painted), the per-tick
-// comparator keeping it true — so the exemption cannot part from the FACE or
-// from toggle_dropdown's guard, which reads the same bit: what is lit is
-// pressable and what is grey is veiled, one enumeration behind both.
-bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
-    for (const DropdownMenu m : kDropdownMenus) {
-        const RedesignButton b = dropdown_anchor_button(m);
-        if (!app.redesign_buttons[static_cast<size_t>(
-                 redesign_button_index(b))].enabled) continue;
-        if (redesign_button_hit(app, b, x, y)) return true;
-    }
-    return false;
-}
+// (press_on_live_menu_anchor — the folder overlay's two veils' one
+// exemption, the menu row's live File anchor above the band, 2026-09-03 —
+// went with the menu row, 2026-10-21.)
 
 // THE FOUR BAND CLAIMS' ONE MODIFIER GATE — "does this modified press spell a
 // roster chord at all", asked before the arm so a press that spells nothing
@@ -917,7 +889,7 @@ bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
 
 // Does the roster button at this index paint a pressed interior? Every case
 // row does (the struct's note), so the answer is "it has a chord row and is
-// no tab": false for the three anchors and the tab strip's two tabs
+// no tab": false for the tab strip's two tabs
 // (redesign_button_is_tab, 2026-10-18). The damage gate for the arm's
 // writers (a face that is never painted owes no erase).
 bool roster_index_click_face(int index) {
@@ -953,10 +925,9 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 
 // THE TOP STRIP'S TWO PLACEMENT LANES — the RULER and the MARKER lane — the
 // band owner (a point is in the lanes iff it is in either lane's RECT, BOTH
-// AXES: since 2026-10-10 every program lane stands one frame line in from
-// each side, strip_row_rect, and the program frame's two columns beside it
-// are inert ground — paint_program_frame publishes nothing — so a lane's
-// membership is its rect's x bounds as well as its y bounds, the canvas
+// AXES: a lane's membership is its rect's x bounds as well as its y bounds —
+// the window's width since 2026-10-21, when the program frame's inert
+// columns beside every program lane went (strip_row_rect) — the canvas
 // column's inner margins, inside the rect, keeping their recorded answer in
 // on_button_press's ruler band). THEY LEFT THE NAVIGATION SURFACE ON BOTH DEVICES (architect
 // 2026-09-25: "out of both — we want symmetry as much as possible; the
@@ -973,8 +944,8 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // carve themselves out (point_on_placement_lanes below, and the band walks'
 // own flag claims), and the TRIM BAR is a disjoint y-band that never answers
 // true here (it has its own claim and its own cue). Deliberately NOT the
-// flexible GAP 1 band above the menu row — that ground is the row's own
-// chrome, not surface, and stays inert.
+// flexible gap band (main.cpp's lane 4, under the tab strip) — that ground
+// is chrome, not surface, and stays inert.
 bool point_in_placement_lanes(const AppState& app, int x, int y) {
     return rect_contains(top_ruler_row_area(app), x, y) ||
            rect_contains(top_marker_row_area(app), x, y);
@@ -1026,8 +997,8 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 //
 // The waveform BAND is THE CANVAS'S INTERIOR, waveform_area exactly
 // (2026-10-09, the canvas framed): the column's margins either side — the
-// panel's face, the frame's columns and the grid floor's leftover split
-// between them — are the program's panel, not waveform, and answer nothing, as
+// panel's face, the canvas frame's columns and the grid floor's leftover
+// split between them — are the program's panel, not waveform, and answer nothing, as
 // the frame rows above and below do (the right gutter counted as waveform
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.
@@ -1266,7 +1237,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // still work. It is the mode-scoped exception to the icon row's never-grey rule
 // and to rows 1 and 3 having no disabled face.
 //
-// IT IS DERIVED, NOT LISTED. Each roster button but three IS a chord
+// IT IS DERIVED, NOT LISTED. Each roster button IS a chord
 // (finish_chrome_press_release synthesizes it and calls on_key at the lift),
 // so "the view
 // consumes this button's act" is exactly "the view's keyboard gate consumes this
@@ -1274,22 +1245,11 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // cannot drift from the allowlist: admit a chord there and its button lights on
 // the next frame with nothing to remember here.
 //
-// THE ANCHORS ARE THE HAND-ANSWERED ENTRIES, AND TWO OF THE THREE ARE DEAD
-// (re-derived 2026-09-09, when the Help anchor was deleted; it was four of
-// five from 2026-09-03, one dead of two until 2026-08-20, two of three until
-// 2026-08-27, and one of three from 2026-08-08). The anchors are the
-// roster's only NON-chord actions, so there is no chord to ask the gate
-// about and each has to be answered — through the ONE owner the face is
-// painted from (toggle_dropdown claiming on that painted face),
-// menu_anchor_live (app_state.h), which is where the
-// per-menu reasoning lives, and which redesign_button_enabled asks at its
-// head, AHEAD of this partition (2026-09-24), so this walk is never asked
-// about an anchor. In short:
-// SETTINGS is dead because its rows reach a modal by a DIRECT call the view
-// has no place for; EDIT because every one of its rows is a chord the view's
-// allowlist drops (ITERATIONS and HELP answered the same way while they
-// stood); FILE (2026-08-13) is LIVE — its three rows are Ctrl+O, Ctrl+Alt+O
-// and Ctrl+Q, all admitted, so its menu works in there.
+// (THE MENU ANCHORS WERE THE HAND-ANSWERED ENTRIES — the roster's only
+// non-chord actions, answered through menu_anchor_live ahead of this walk:
+// Settings and Edit dead, File live — until the menu row's removal,
+// 2026-10-21. Every roster button is a chord since, and the walk answers
+// the whole roster.)
 // (NAVIGATION was a third entry, LIVE from 2026-08-08 — the architect ruled its
 // menu open in the view, the toggle stopped refusing it, and every one of its
 // seven rows was a chord that met the mode's own gates through on_key, so
@@ -1359,10 +1319,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05, re-derived 2026-08-13 when the Quit button
-// left the roster for the File menu — its LIVE entry is now the FILE ANCHOR's,
-// hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
-// on is unchanged; the hand entries were three until the Navigation anchor left
-// with its menu on 2026-08-15):
+// left the roster for the File menu, and since 2026-10-21 with no hand
+// entries at all, the menu row's anchors gone; the Ctrl+Q admission is
+// unchanged):
 //   LIVE — the icon row's view pairs, ViewSource/ViewTarget/ViewWarp/ViewPhase (bare 1/2/3/4, the admitted
 //   view selectors), Save (its lift Ctrl+Shift+S in this mode since
 //   2026-10-10, Ctrl+S before — save_button_publishes — the
@@ -1434,20 +1393,11 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   truthful-buttons ruling ("Any time a button would be a no-op, grey it")
 //   deleted that lift, so the chord's refusal on an empty subject and the
 //   button's grey are one decision, this walk's.
-//   and THE FILE ANCHOR since 2026-08-13 — THE ONE LIVE ENTRY THAT IS NOT A
-//   CHORD'S ADMISSION, which is why it is spelled in the body rather than
-//   derived: an anchor has no chord to ask about, so the anchor arms
-//   answer ONE criterion by hand — an anchor is dead iff every row of its menu
-//   is dead — and File is the one that answers it the other way. ITS MENU IS
-//   THREE ROWS NOW AND ALL THREE ARE LIVE IN THE VIEW (architect 2026-08-29,
-//   "admit both"): Ctrl+Q always was, Ctrl+O joined the mode's allowlist that
-//   day, and Revert's Ctrl+Alt+O beside it at its 2026-09-13 landing. Open was
-//   a consumed nothing from its 2026-08-28 landing until that ruling, the state
-//   this arm's own criterion would have greyed the anchor for had an anchor
-//   been derivable at all. (THE NAVIGATION ANCHOR was the
-//   other live one, from 2026-08-08 on that same reasoning, and it left
-//   the roster with its menu on 2026-08-15 — so the LIVE hand entries went from
-//   two to one and the hand entries in total from three to two.)
+//   (THE FILE ANCHOR was the one hand-answered LIVE entry from 2026-08-13 —
+//   its three rows Ctrl+O, Ctrl+Alt+O and Ctrl+Q all admitted, architect
+//   2026-08-29, "admit both" — until the menu row's removal, 2026-10-21; the
+//   three chords stay admitted. THE NAVIGATION ANCHOR was the other, from
+//   2026-08-08 until its menu's deletion 2026-08-15.)
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); RENDER since 2026-08-08
 //   (Ctrl+Alt+R, which left the allowlist with its shifted twin when the act
 //   moved onto Ctrl+S — so the button wears its ordinary Render face over this
@@ -1461,12 +1411,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   this walk asks about a chord, never about a lane) — ADD TO SELECTION,
 //   their row's sixth, is NOT here: bare `k` is on the view's allowlist
 //   since 2026-09-17, the lamp producing the view's own multi-selection, so
-//   it answers LIVE; the icon row's SETTINGS BUTTON (bare `;`, since
-//   2026-09-29 — off the mode's allowlist, as the typed road always was); and the
-//   SETTINGS anchor
-//   — the only anchor here
-//   since 2026-08-08, when NAVIGATION moved to the LIVE column above with its
-//   menu (FILE has never been in this column: it landed live, 2026-08-13).
+//   it answers LIVE; and the icon row's SETTINGS BUTTON (bare `;`,
+//   since 2026-09-29 — off the mode's allowlist, as the typed road always
+//   was). (The menu row's SETTINGS and EDIT anchors were hand-answered dead
+//   here until the row's removal, 2026-10-21.)
 //   (THE TRIM SCISSORS were here on their own chord until their button was deleted on
 //   2026-08-18; the key is still consumed in the view and there is simply no
 //   button left to grey.)
@@ -1535,16 +1483,8 @@ static bool save_button_publishes(RedesignButton id, bool history_view) {
 
 static bool history_mode_refuses_button_chord(const AppState* state,
                                               RedesignButton b) {
-    // THE THREE ANCHORS ARE NOT THIS PARTITION'S (2026-09-24): their one
-    // verdict, menu_anchor_live (app_state.h), answers them at the head of
-    // redesign_button_enabled, ahead of the `h` test that reaches this walk —
-    // its mode clause is the partition this arm used to carry (Edit and
-    // Settings dead in the view, File live), and the item clause joined it.
-    // The arm stays so an anchor, which carries no chord for the walk below
-    // to ask about, is never answered by that walk's LIVE default; it names
-    // no set — and so no anchor is ever hidden either: the menu row is not a
-    // toolbar, and a dead anchor greys as it always did.
-    if (redesign_button_is_menu_anchor(b)) return false;
+    // (THE THREE MENU ANCHORS, which carried no chord for this walk, answered
+    // false here until the menu row went, 2026-10-21.)
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -1560,8 +1500,8 @@ static bool history_mode_refuses_button_chord(const AppState* state,
                    ? history_mode_key_blocked(tc.key, chord, *state)
                    : history_mode_key_blocked_in_every_state(tc.key, chord);
     }
-    // Not in the table and not an anchor: nothing to consume. Unreachable today
-    // (the table plus the three anchors is the whole roster) and stated rather
+    // Not in the table: nothing to consume. Unreachable today (the table is
+    // the whole roster since 2026-10-21, its static_assert) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
     return false;
@@ -2346,9 +2286,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // (top_trim_row_area) and derived once because THREE modifier arms below need
     // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
     // bound-set clicks). The presses gate on the top strip first and so does this,
-    // and like them it tests the lane's RECT, both axes (2026-10-10: the program
-    // frame's columns beside the inset lane are inert ground and wear no trim
-    // cue — point_in_placement_lanes' head).
+    // and like them it tests the lane's RECT, both axes (the lane spans the
+    // window since 2026-10-21 — point_in_placement_lanes' head).
     const GuiRect trim_bar_row = top_trim_row_area(app);
     const bool in_trim_bar = inside_top && rect_contains(trim_bar_row, x, y);
     // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES, which is why the
@@ -5517,10 +5456,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // both hosts.)
     //
     // AND NO ARM CAN BE STANDING WHEN THE POPUP OPENS, which is why the
-    // dismissal owes no clear of its own: every producer of an open popup is a
-    // LEFT PRESS (the anchor press's toggle_dropdown at the menu-row claim
-    // below, and the hover switch under that same held button — there is no
-    // keyboard opener), a press exists only after the previous one came up,
+    // dismissal owes no clear of its own. SINCE THE MENU ROW'S REMOVAL
+    // (2026-10-21) THE POPUP HAS NO OPENER AT ALL — toggle_dropdown has no
+    // caller until the Settings popup is given a road of its own — and every
+    // producer it had was a LEFT PRESS (the anchor press's toggle_dropdown at
+    // the menu-row claim, and the hover switch under that same held button —
+    // there was no keyboard opener): a press exists only after the previous
+    // one came up,
     // and both arms a dismissal could strand are consumed at their own release
     // whatever it lands on (take_modal_dialog_release, take_chrome_press). The
     // anchor press moreover arms NOTHING — it toggles instead of calling
@@ -5542,19 +5484,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // reverse direction is closed by the keyboard gate: while the popup is open,
     // `;` is swallowed, so the editor cannot open under it either.)
     //
-    // THE FOLDER OVERLAY'S BAND IS UNDER IT LIKE EVERY OTHER BAND: a FILE menu
-    // can stand over the band since 2026-09-03 evening, and a press on a row
-    // while it does closes the menu rather than opening the row — this claim is
-    // what that press meets, and the band's own claim below no longer carries a
-    // popup line of its own. What still reaches those veils is the LIVE ANCHOR
-    // alone (menu_row_press_admitted, below), the menu row standing above the
-    // band. THE PANEL STILL CANNOT RISE UNDER A POPUP, which is the other
-    // direction and unchanged: every opener the two contents
-    // have — bare `l`, bare `'`, Ctrl+O, the Play renders button's press and
-    // the File menu's Open project row — either
-    // arrives through on_key, whose popup gate admits Esc and Ctrl+Q and
-    // swallows the rest, or is a menu row whose own release CLOSES the popup
-    // BEFORE it acts. (This claim stood BELOW the mode veils for the evening
+    // THE FOLDER OVERLAY'S BAND IS UNDER IT LIKE EVERY OTHER BAND: the band's
+    // own claim below carries no popup line of its own (a File menu could
+    // stand over the band from 2026-09-03 evening until the menu row's
+    // removal, 2026-10-21). THE PANEL CANNOT RISE UNDER A POPUP: every opener
+    // the two contents have — bare `l`, bare `'`, Ctrl+O and the Play renders
+    // button's press — arrives through on_key, whose popup gate admits Esc and
+    // Ctrl+Q and swallows the rest. (This claim stood BELOW the mode veils for the evening
     // of 2026-09-03 alone, and below the editor gates from the redesign until
     // then; on 2026-09-02, with the panel's ceiling at row 1's foot, it stood
     // above the veils and no popup could reach the band at all for the hours
@@ -5571,16 +5507,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // or dismiss) and nothing acts.
         if (button != GuiMouseButton::Left) return;
         const AppState::Dropdown& pop = app.dropdown;
-        // WALKED, NOT NAMED (the anchor membership is derived from the menu
-        // list — app_state.h — so a menu added later needs no edit here).
-        bool on_menu_button = false;
-        for (const DropdownMenu m : kDropdownMenus) {
-            if (redesign_button_hit(app, dropdown_anchor_button(m), x, y)) {
-                on_menu_button = true;
-                break;
-            }
-        }
-        if (!on_menu_button) {
+        // (A press on the menu row's emitting title fell through to the
+        // title's own toggle below until the row went, 2026-10-21; every
+        // press now answers here.)
+        {
             const int hit = dropdown_item_at(x, y);
             // A MODIFIED press inside the popup closes it and does nothing else:
             // no item carries a modified binding, and leaving the popup open
@@ -5653,31 +5583,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // and is consumed there.
     if (claim_folder_overlay_press(x, y, button, mods)) return;
 
-    // THE ONE THING THE TWO VEILS BELOW LET THROUGH (architect 2026-09-03
-    // evening): the LIVE MENU ANCHOR — File. The menu row stands above the
-    // band with File lit and the other two anchors dead, so its press must
-    // reach the menu-row claim at the foot of this function, which sits BELOW
-    // these veils, and this one local is what carries it past them. ONE OWNER
-    // (press_on_live_menu_anchor, near the head of this file — the same
-    // enumeration the FACE and toggle_dropdown's guard read), so the exemption
-    // cannot part from the face. What the exempted press meets on the way down
-    // is inert — no editor can stand under the band, and the modal-row arm it
-    // passes hits no button at row 1's height.
-    //
-    // IT IS THE ANCHOR HALF ALONE. It carried `app.dropdown.open() ||` until
-    // 2026-09-03, when the OPEN POPUP was ranked above these veils and above
-    // the band claim (the rank's own site above): an open menu no longer needs
-    // the veils to let its presses through, because it has already answered
-    // every press before they run. That blanket term was the stranded-arm
-    // defect — with it, ANY coordinate was exempt while a menu stood, so a
-    // press on the overlay's modal row armed a button under a popup that
-    // should have swallowed the press whole.
-    //
-    const bool menu_row_press_admitted = press_on_live_menu_anchor(app, x, y);
-    // AND THE CAPTION (architect 2026-10-05): the window's title bar is
-    // reachable wherever the File menu's Quit is, so the two veils let it
-    // through beside the live anchor; the claim stands under the dialog
-    // editors' swallow below (claim_caption_press).
+    // THE ONE THING THE VEILS BELOW LET THROUGH: THE CAPTION (architect
+    // 2026-10-05): the window's title bar — its Close the glass's quit — so
+    // the veils let it through; the claim stands under the dialog editors'
+    // swallow below (claim_caption_press). (The menu row's live File anchor
+    // was the other exemption, 2026-09-03 to 2026-10-21, gone with the row.)
     const bool caption_press_admitted =
         rect_contains(top_caption_row_area(app), x, y);
     // THE BUTTON ROWS' CLAIM — the icon row's and row 8's — ONE BODY for
@@ -5693,12 +5603,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // else: while the mode stands the pointer has FOUR targets, the folder
     // overlay's rows (claimed above), the play-scrub (every press on it arms
     // the thumb drag, the seek at the lift), the modal row's buttons
-    // (the arm every dialog button takes) and, since 2026-09-03 evening, the
-    // FILE ANCHOR above the band (the exemption above), and EVERY OTHER PRESS
-    // IS CONSUMED — the flags, the waveform, the two dead anchors,
-    // the dead roster. (File was a target under the panel on
-    // 2026-09-02 too, when it stopped at row 1's foot; it was consumed here
-    // for the hours between the gap's close and that evening's ruling.)
+    // (the arm every dialog button takes) and the caption above (the
+    // exemption above), and EVERY OTHER PRESS IS CONSUMED — the flags, the
+    // waveform, the dead roster. (The menu row's File anchor was a target
+    // 2026-09-03 to 2026-10-21.)
     // The whole rule is stated at render_player_active (input_handler.h).
     // THE ONE ROW THAT ADMITS SHIFT (2026-08-28): the player's two skips
     // carry a shifted twin — the item folder's ends — so a SHIFT press reaches
@@ -5707,8 +5615,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // shift press on a button with no twin is a consumed nothing, never the
     // plain act); ctrl and alt spell nothing on any modal row and stay
     // consumed by the veil below.
-    if (app.render_player.active && !menu_row_press_admitted &&
-        !caption_press_admitted) {
+    if (app.render_player.active && !caption_press_admitted) {
         if (button != GuiMouseButton::Left) return;
         // THE PLAY RENDERS BUTTON TOGGLES THE PLAYER OFF (architect
         // 2026-10-13: "so the user can quickly toggle it on/off by pressing
@@ -5730,13 +5637,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE PICKER'S VEIL (2026-08-28), the player's shape one mode over: while
     // a picker stands the pointer has THREE targets, the overlay's rows
     // (claimed above), the modal row's one Cancel button (the arm every
-    // dialog button takes) and the live File anchor above the band (the
-    // exemption above), and EVERY OTHER PRESS IS CONSUMED. A ROW CLICK IS
+    // dialog button takes) and the caption (the exemption above), and EVERY
+    // OTHER PRESS IS CONSUMED. A ROW CLICK IS
     // THE OPEN ACT, which is why the row carries no OK beside that Cancel. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
-    if (app.picker.active && !menu_row_press_admitted &&
-        !caption_press_admitted) {
+    if (app.picker.active && !caption_press_admitted) {
         if (button != GuiMouseButton::Left) return;
         if (!mods.ctrl && !mods.shift && !mods.alt &&
             modal_dialog_stash_current()) {
@@ -5750,9 +5656,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // of its own, the controls row's Cancel (the arm every dialog button
     // takes, its act at the lift), and the CAPTION above it (the window's
     // verbs, as under the two list owners); EVERY OTHER PRESS IS CONSUMED —
-    // the box, the lanes, the roster and the menu row's anchors alike, the
-    // prompt's own veil (no File anchor is admitted: a menu over a running
-    // batch has nothing the batch would let it do). Ranked with the two list
+    // the box, the lanes and the roster alike, the prompt's own veil. Ranked with the two list
     // owners' veils, none of which can stand beside it; the cards, the
     // keyboard, the sizing frame and a prompt over it answer above.
     if (app.batch_progress.active && !caption_press_admitted) {
@@ -5772,8 +5676,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // way out of an accidentally opened settings editor. THE MODAL ANSWERS
     // THAT ITSELF now: all three editor dialogs publish real OK and CANCEL
     // buttons, the claim below admits a press on them, and Cancel dispatches
-    // the session's own Esc. With Quit's button gone to the File menu the
-    // membership had already derived down to Save, and a convenience chord is
+    // the session's own Esc. With Quit's button gone the membership had
+    // already derived down to Save, and a convenience chord is
     // not worth an exception to the veil. SO THE VEIL HAS NO EXCEPTION: while
     // a dialog editor stands every press outside the modal is consumed — the
     // notification cards' claim at the head of this function is hit ABOVE
@@ -5976,16 +5880,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // roster admits it on, CTRL+SHIFT only on the one the roster admits the
     // pair on), a SHIFT press binding only where the roster admits one, and
     // any press in the band that is not on a button
-    // a consumed nothing. Each band differs ONLY in its rect
-    // and (row 1) in the dropdown toggle of its THREE non-chord buttons — the
-    // menu anchors File, Edit and Settings (re-greped
-    // 2026-09-09 against kDropdownMenus) — so the press is ONE arm body,
+    // a consumed nothing. Each band differs ONLY in its rect (row 1's dropdown
+    // toggle of its three non-chord menu anchors went with the menu row,
+    // 2026-10-21) — so the press is ONE arm body,
     // arm_redesign_press, driven
     // by the table's per-button flags — and the act one release body,
     // finish_chrome_press_release, in on_button_release.
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
-    // paint_menu_row / paint_icon_row /
+    // paint_icon_row / paint_tab_strip /
     // paint_bottom_row_buttons_and_clock; every roster member publishes a real
     // rect on every frame since 2026-08-18, the bottom row's cluster swap —
     // whose unpainted four stashed a zero rect that contains no point, and
@@ -6001,117 +5904,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // press-state machinery (AppState::ChromePress). Nothing here reads
     // keyboard state, so the bare-`e` mouse key reaches them as an ordinary
     // left press through the platform translation.
-    {
-        const GuiRect menu_row = top_menu_row_area(app);
-        if (rect_contains(menu_row, x, y)) {
-            if (chrome_band_modifiers_refused(app, x, y, mods)) return;
-            if (button == GuiMouseButton::Left) {
-                // THE MENU ANCHORS ARE THE ROSTER'S NON-CHORD BUTTONS —
-                // membership is kDropdownMenus (app_state.h) and this file's
-                // ONE enumeration of it is the band-claim block above; nothing
-                // is re-listed here. Each anchor's action is a POPUP TOGGLE,
-                // which no roster chord performs (the titles' Alt access keys
-                // reach the same toggle_dropdown, 2026-10-10), so they take the
-                // walk below rather than a row in the chord table. Their
-                // ITEMS lead to
-                // routes the keyboard already has — the bare `;` still opens
-                // the settings editor DIRECTLY, and every File and Edit row
-                // carries its own accelerator — so a
-                // dropdown is a pointer affordance for an existing road, never a
-                // second one (the Help menu's one row was that road's
-                // exception for a few hours of 2026-09-03, and the menu itself
-                // went on 2026-09-09; the record is at CommandPopupItem). (A THIRD
-                // anchor, Navigation, was spelled here from
-                // 2026-08-02 until 2026-08-15, and its deletion is what makes
-                // that principle load-bearing rather than decorative: every one
-                // of its items was a key you could press instead, and once every
-                // one of those keys had a BUTTON too the menu was a third road
-                // to the same place and went. THE EDIT MENU OF 2026-08-20 IS
-                // THAT RUN IN REVERSE and satisfies the same doctrine: its five
-                // propagate rows would have been a second road beside IconCopy
-                // and IconPaste, so those two BUTTONS were deleted with the
-                // menu's arrival rather than left standing beside it — the
-                // architect choosing which road survives, never keeping both.)
-                // Shift-exact is refused like every
-                // other non-admitting button.
-                //
-                // THE ANCHORS ARE WALKED rather than spelled one by one — the
-                // same shape on_motion's anchor walk takes, over the one
-                // menu list (app_state.h), so
-                // dropdown_anchor_button stays the one place that knows which
-                // button emits which menu — and the walk is what gives the CLAIM
-                // below exactly ONE site instead of one per branch. It is also
-                // what made File a one-row addition here and the Navigation
-                // menu's deletion a one-row removal there: the walk's length
-                // moved twice and this body did not change either time.
-                DropdownMenu anchored = DropdownMenu::None;
-                if (!mods.shift) {
-                    for (const DropdownMenu m : kDropdownMenus) {
-                        if (!redesign_button_hit(app, dropdown_anchor_button(m),
-                                                 x, y)) continue;
-                        anchored = m;
-                        break;
-                    }
-                }
-                if (anchored != DropdownMenu::None) {
-                    // THE ANCHORS ACT AT THE PRESS — the chrome roster's ONE
-                    // recorded exception to act-at-release (architect ruling
-                    // 2026-08-13; everything else armed below and at the
-                    // sibling bands). Deliberate, for three reasons that are
-                    // the menus' own: (1) a menu OPENS ON PRESS on every
-                    // desktop, because the press-drag-into-the-box-release
-                    // gesture (the claim below) needs the box up while the
-                    // button is still down — an anchor that opened at the lift
-                    // could never carry it; (2) DISMISSAL IS A PRESS ACT in
-                    // this product, and the toggle's close half is a
-                    // dismissal — moving it to the lift would split the
-                    // toggle's two halves across two edges; (3) an
-                    // arm-then-toggle-at-lift would re-open the menu the
-                    // press-anywhere-closes rule had just put away whenever
-                    // the press landed on the open menu's own anchor — the
-                    // open-on-press-close-on-release oscillation. The toggle
-                    // is not a command dispatch, so nothing about
-                    // button-is-its-chord is at stake.
-                    toggle_dropdown(anchored);
-                    // AN ANCHOR PRESS THAT OPENS A MENU CLAIMS THE HELD BUTTON
-                    // FOR THE POPUP (architect 2026-08-03): press the button,
-                    // hold, drag down into the menu that came up and release on
-                    // an item, and that item fires — the desktop menu bar's one
-                    // continuous gesture. This ONE assignment is the whole
-                    // feature. Everything past it is the item press's own
-                    // machinery, reused unchanged: the arm FOLLOWS THE POINTER
-                    // from here (recompute_dropdown_hover, whose live-press test
-                    // is the platform's button state AND this bit), the
-                    // separator / the chrome / the box's outside / this very
-                    // button arm nothing because none of them is an item, and
-                    // the release derives the acted-on item from its own
-                    // coordinates under the claim rather than reading the
-                    // recorded arm (finish_dropdown_release).
-                    //
-                    // ITS VALUE IS THE TOGGLE'S OUTCOME READ BACK, never
-                    // predicted: the toggle's other half CLOSES the menu whose
-                    // anchor was pressed, and a press that put a menu AWAY claims
-                    // nothing — there is no popup left for a gesture to belong
-                    // to, and the release that follows must find the claim false.
-                    // A SWITCH (this anchor pressed while the OTHER menu stood)
-                    // is an open like any other and claims like one.
-                    //
-                    // THE CLAIM IS THIS PRESS SITE'S TO RECORD, NOT
-                    // toggle_dropdown'S, and the reason is that owner's other
-                    // caller: the hover switch carries NO held button at all, so
-                    // a claim written inside the toggle would be a lie on that
-                    // route. Its open path also RESETS
-                    // the popup struct, which is exactly what makes a mid-hold
-                    // hover switch onto the other anchor drop claim and arm
-                    // together — the recorded rule, kept.
-                    app.dropdown.press_began_on_item = app.dropdown.open();
-                } else {
-                    arm_redesign_press(x, y, mods);
-                }
-            }
-            return;
-        }
-    }
+    // (THE MENU ROW'S CLAIM — its titles the roster's non-chord buttons, each
+    // a popup toggle acting at the PRESS, the press-drag-into-the-box gesture
+    // claiming the held button — went with the row, 2026-10-21.)
     // (THE ICON ROW'S BODY IS claim_button_row_press, above the veils: the
     // render player's veil reaches it too.)
     if (rect_contains(top_icon_row_area(app), x, y)) {
@@ -6249,7 +6044,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // acts normally (arm a nav press, arm a marker press, place the
         // playhead, ...). Placed ahead of every claim below so the close really
         // is unconditional. A DISMISSAL is press-time by standing rule
-        // product-wide — the menu row's any-press end, press-anywhere-closes,
+        // product-wide — the popup's any-press end, press-anywhere-closes,
         // this close, the veil.
         // Consequence: a double-click on the open editor's own marker is
         // close-then-reopen — the first press closes, selects and arms, its
@@ -6540,10 +6335,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the FIVE keyboard Ctrl+Alt
-        // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P,
-        // Ctrl+Alt+Shift+P and, since 2026-09-13, File → Revert's Ctrl+Alt+O;
-        // re-derived by grep of chord_is_bound 2026-09-23)
+        // proceeds. ALT survives ONLY in the FOUR keyboard Ctrl+Alt
+        // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P and, since
+        // 2026-09-13, Revert's Ctrl+Alt+O; re-derived by grep of
+        // chord_is_bound 2026-10-21, Ctrl+Alt+Shift+P gone)
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
@@ -6866,8 +6661,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // inter-lane gaps, the program frame's top row and its two
                 // columns beside every inset lane (2026-10-10, inert ground),
                 // and any press in the FLEXIBLE GAP 1 band,
-                // which since 2026-09-03 opens ABOVE the menu row (the
-                // centering rule's remainder, main.cpp's vertical rule: inside
+                // (the centering rule's remainder, main.cpp's vertical rule: inside
                 // top_strip_area but in no lane, so it falls to exactly this
                 // return with no code of its own, and the cursor map's plain
                 // top-strip fall-through answers Arrow over it the same way —
@@ -7881,9 +7675,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // editor raises no veil: it is not a dialog and its roster presses were
     // never blocked.
     // THE FOLDER OVERLAY'S TWO OWNERS ARE DELIBERATELY NOT TERMS HERE
-    // (2026-09-03 evening): the menu row stands above the band with the FILE
-    // ANCHOR LIVE, its press exempted from both veils; under them the hint is
-    // refused by the no-wait rule (tooltip_dwell_suppressed) alone.
+    // (2026-09-03 evening): under them the hint is refused by the no-wait
+    // rule (tooltip_dwell_suppressed) alone (the menu row's live File anchor,
+    // exempted from both veils, stood above the band until 2026-10-21).
     const bool modal_veil =
         app.prompt.active || modal_dialog_editor_active();
     int  hovered_tip = -1;
@@ -7906,17 +7700,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                                    redesign_button_hover_zone(app, id);
         // THE HOT CANDIDATE (stored by no write while the program's case has
         // no hot face, below): the toolbar button under the pointer on the
-        // same gates — never a menu anchor, the menu row having no hot face
-        // (paint_menu_row) — and NO keyboard-modal term:
+        // same gates — and NO keyboard-modal term:
         // that refusal is the tooltip's dwell, while a button the flag editor
         // leaves pressable lights as it presses. The rects are disjoint, so
         // the first is the only one, and the tooltip's break below cannot
         // pass it by.
-        if (under_pointer && hot < 0 && !redesign_button_is_menu_anchor(id))
-            hot = i;
+        if (under_pointer && hot < 0) hot = i;
         // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only
-        // whether the button HAS a tooltip — a null line 1 — and that is the
-        // menu-row exclusion the state-free table owns; the stateful overload
+        // whether the button HAS a tooltip — a null line 1 (the menu row's
+        // exclusion until 2026-10-21; every roster button has one since); the
+        // stateful overload
         // (whose every arm returns a non-null line 1) is the painter's, which
         // reads the words at paint time.
         if (under_pointer && !modal_owns_the_keyboard &&
@@ -8665,12 +8458,12 @@ void GuiInputHandler::finish_chrome_press_release(
         // OPEN PROJECT'S TWIN TRANSLATES (architect 2026-10-07), the roster's
         // one exception to "a modified press spells its button's own key
         // under those modifiers": its shifted press — a carried Shift or the
-        // long press, exactly as on every shift-admitting button — runs FILE →
+        // long press, exactly as on every shift-admitting button — runs
         // REVERT, whose chord is Ctrl+Alt+O with no shift (is_revert_project_key,
         // gui_input.h, unchanged; Ctrl+Shift+O binds nothing). So the shift
         // becomes alt here and the keyboard's spelling stays as it is: the
         // icon's twin is the icon road's. The act's own prompt guards it and
-        // its refusals card at revert_project, the menu row's road.
+        // its refusals card at revert_project.
         if (tc.id == RedesignButton::OpenProject && chord.shift) {
             chord.shift = false;
             chord.alt   = true;
@@ -8941,48 +8734,12 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // exactly what its release runs; the callers ask the row's painted enabled
 // bit first).
 void GuiInputHandler::activate_dropdown_item(int armed) {
-    const DropdownMenu menu = app.dropdown.menu;
     app.dropdown.pressed_item = -1;
     // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
-    // runs, so a modal it opens never overlaps the menu even for a frame, and a
-    // COMMAND it dispatches is not swallowed by the popup's own keyboard gate.
-    // The two KINDS of menu differ in kind and each stays with its own table:
-    // a COMMAND menu (File since 2026-08-13, and Navigation from 2026-08-02
-    // until its 2026-08-15 deletion) dispatches a chord, the SETTINGS one opens
-    // the editor prefilled.
-    if (dropdown_is_command_menu(menu)) {
-        // THE ITEM IS ITS KEY, dispatched through on_key exactly as a redesigned
-        // button dispatches its chord: every gate the keyboard route passes
-        // (loading/blank, the modal gates, the read-only allowlist, the arm's own
-        // refusals) applies identically. An item whose command would refuse
-        // cheaply never gets here — it is greyed and the derive above dropped
-        // it (2026-09-24) — and an expensive refusal cards from the act. No
-        // stop, no modal, nothing restated here.
-        // ALL THREE OF THE FILE MENU'S ROWS RIDE THIS BODY WHOLE (Revert, on
-        // Ctrl+Alt+O, since 2026-09-13, reaching its one act the way Open does):
-        // Ctrl+Q reaches on_key's own close route — the drag-modal hatch, the
-        // dirty prompt, the WM-close ordering — with no second body anywhere,
-        // which is the whole reason the Quit BUTTON could be retired for a menu
-        // item without moving the act, and Ctrl+O reaches the Open project
-        // prompt's one opener, whose own guards answer the states the keyboard
-        // route does not.
-        // THAT IS ALSO HOW THE `h` HISTORY VIEW ANSWERS THIS MENU (the ruling
-        // is 2026-08-08's, made for the Navigation menu's seven rows): per item,
-        // at the mode's own two gates — its allowlist carries Ctrl+Q, and
-        // carried the zoom and framing rows, with history_mode_owns_key claiming
-        // the rest — and the one Navigation row that would have meant something
-        // else in there greyed above and never reached this dispatch at all.
-        // That menu is deleted; since 2026-09-24 every row greys on its own
-        // command's cheap refusals, the `h` view's allowlist among them.
-        const CommandPopupItem& it = command_popup_item(menu, armed);
-        close_dropdown();
-        GuiInputState chord{};
-        chord.ctrl  = it.ctrl;
-        chord.shift = it.shift;
-        chord.alt   = it.alt;
-        on_key(it.key, chord);
-        return;
-    }
+    // runs, so a modal it opens never overlaps the menu even for a frame.
+    // (THE COMMAND MENUS' ARM — a File or Edit row dispatching its chord
+    // through on_key — went with those menus, 2026-10-21; the Settings menu,
+    // the one left, opens the editor prefilled.)
     // SETTINGS: the editor's open is its own ordinary route, prefilled through
     // the one recall serializer.
     // IT OPENS ON A LOCKED TAB SINCE 2026-09-04, and this site says nothing
@@ -9016,8 +8773,8 @@ void GuiInputHandler::activate_dropdown_item(int armed) {
 // rect from the last paint is exactly the region to erase, which is why the
 // close reads it BEFORE zeroing the state.
 //
-// A CLOSED MENU LEAVES NOTHING BEHIND (architect 2026-10-01): the row kept
-// no "closed but armed" mode after its one producer — a non-menu row-1
+// A CLOSED MENU LEAVES NOTHING BEHIND (architect 2026-10-01): the menu row
+// kept no "closed but armed" mode after its one producer — a non-menu row-1
 // button's hover close — went with the view bar, and the mode was deleted
 // whole, so every close is the struct reset and a cold row answers a click
 // alone.
@@ -9504,103 +9261,16 @@ void GuiInputHandler::close_dropdown() {
 }
 
 void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
-    // THE SETTINGS MENU AND THE `h` HISTORY MODE ARE NEVER UP TOGETHER, and this
-    // is the half of that rule the mode cannot enforce from its own gates: the
-    // mode refuses to OPEN while a popup stands (the entry sits below on_key's
-    // dropdown gate), and this line refuses THAT menu while the MODE stands. The
-    // guard belongs here for the same reason the flag-editor teardown below
-    // does — this is the ONE route every open passes, the anchor click and
-    // the hover switch alike.
-    //
-    // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS, and that bypass is
-    // exactly what the SETTINGS half is scoped to. Every other route out of row 1
-    // dispatches a synthesized chord through on_key and so meets the mode's
-    // keyboard allowlist; the anchors do not, and a Settings item opens the
-    // settings editor by a DIRECT call (finish_dropdown_release), reaching no
-    // gate at all. Refusing the menu is one line where covering that path per
-    // item would be several.
-    //
-    // A COMMAND MENU NEEDS NO SUCH COVER AND IS LIVE IN THE VIEW (File by
-    // construction when it landed 2026-08-13, on the architect's 2026-08-08
-    // ruling for the Navigation menu): it has no direct call to shut — its one
-    // row is
-    // a CHORD, dispatched through on_key exactly as a redesigned button's is, so
-    // the mode answers PER ITEM at the same two gates a key meets, and File's
-    // Ctrl+Q is on the allowlist. (Navigation's seven rows were answered the
-    // same way — the allowlist admitted zoom in / out / full zoom out,
-    // history_mode_owns_key claimed center-on-focus and the two marker steps as
-    // re-expressions over the diff flags — with the one row whose chord then
-    // meant something ELSE in here, "Walk both tabs", greying at the item
-    // instead (the chord marches the pair in the view too since 2026-08-18),
-    // which is the only thing a chord dispatch cannot answer for: the command
-    // runs, it is simply not the one the label names.)
-    //
-    // THE SCOPE IS RE-DERIVED RATHER THAN INHERITED (2026-08-15, with the
-    // Navigation menu's deletion): the lockout was NARROWED to Settings alone on
-    // 2026-08-08 for the express purpose of letting Navigation open in the view,
-    // and that reason is gone — so the question "should this refuse a menu again"
-    // is asked fresh, and the answer is NO. The scope's live half is FILE, whose
-    // Ctrl+Q the mode admits, and shutting the whole row would refuse a menu
-    // whose only item WORKS in there — the face promising less than the key
-    // delivers, the read-only band ruling's own criterion. The narrowing survives
-    // on its own merits rather than on the menu that occasioned it: what it names
-    // is the ONE menu with a pointer bypass, and Settings is still that menu.
-    //
-    // THE GUARD STAYS ABOVE THE CLOSE BELOW, and that matters rather than being
-    // trivially safe: with File open in the mode, a hover switch onto
-    // the dead Settings anchor arrives here, and returning from ABOVE the close is
-    // what makes it a nothing — it neither puts File away nor opens
-    // Settings, so the pointer crossing a dead anchor leaves the standing menu
-    // exactly as it was.
-    //
-    // THE EDIT MENU JOINED THE LOCKOUT ON 2026-08-20, and the scope re-derived
-    // above admits it on its own terms rather than by widening back to the
-    // whole row: Edit is a COMMAND menu, so it has no direct call to shut —
-    // but unlike File, whose Ctrl+Q the mode ADMITS, every one of Edit's three
-    // rows is a chord the mode's allowlist drops. The per-item answer that
-    // makes a command menu safe in here is "the command runs and its own gate
-    // refuses", and when that is the answer for EVERY row the menu is a box
-    // that opens onto nothing. Refusing it is the same criterion the narrowing
-    // used, read the other way: the face must not promise more than the keys
-    // deliver. Its anchor greys beside this (menu_anchor_live, the face's read).
-    //
-    // (THE SERIES MENU JOINED THE LOCKOUT ON 2026-08-27 on that same
-    // criterion and left it with its own deletion on 2026-09-04: both of its
-    // rows — the BPM opener (bare `m` then, Ctrl+B since 2026-09-15) and
-    // bare `i` — were chords the mode's allowlist drops,
-    // and they still are. What changed is where the face lives: the two
-    // commands are icon-row BUTTONS again, so the DERIVED walk below greys
-    // them with nothing hand-listed, which is what a chord-bearing button buys
-    // that an anchor cannot.)
-    //
-    // (THE HELP MENU JOINED THE LOCKOUT ON 2026-09-03 as the COMMAND menu
-    // case Edit is refused under, with nothing re-argued — its single row an
-    // ordinary chord row, Shift+L, a chord the view's allowlist refuses in
-    // the mode's own sentence, so the one row was a box that opened onto
-    // nothing; chord-less for its first hours it was the SETTINGS case — and
-    // LEFT IT WITH ITS OWN DELETION on 2026-09-09, the top strip relayout;
-    // the panel itself was deleted on 2026-09-30.)
-    //
-    // THE GUARD READS THE ANCHOR'S PAINTED FACE (architect 2026-09-24,
-    // strictly as-painted): RedesignButtonFace::enabled, which
-    // publish_button_face stamps from the shared owner (menu_anchor_live,
-    // app_state.h) at redesign_button_enabled's head and the per-tick
-    // comparator keeps true — so which menus open and which anchors look
-    // live cannot drift apart, the open agreeing with the screen. Since
-    // 2026-09-24 it carries a second clause beside the mode partition: an
-    // anchor whose every item greys is dead too (during a load, Edit and
-    // Settings), so no menu opens onto nothing but greyed rows. THE FOLDER OVERLAY IS IN THAT OWNER TOO and takes the same
-    // partition (2026-09-03 evening: the menu row stands above the band with
-    // File LIVE and the other anchors dead — two since the Help menu's
-    // 2026-09-09 deletion — the architect's ruling at the
-    // owner) — and here it is load-bearing rather than defensive, because the
-    // HOVER SWITCH is live under the band: File's menu can be up over the
-    // player, and crossing onto the dead Edit anchor arrives at this guard,
-    // which returns from ABOVE the close so File stays exactly as it was.
-    // (Every anchor was dead under the band for the hours between the gap's
-    // close and that ruling, when no route reached this term at all; it was
-    // File-exempt like this on 2026-09-02, when the panel stopped at row 1's
-    // foot.)
+    // THE ONE OPEN ROAD — WITH NO CALLER SINCE 2026-10-21: the menu row's
+    // title press, its hover switch and the titles' Alt access keys went with
+    // the row, and the Settings popup it opens survives until the settings
+    // editor's Tab completion over the keys retires it (DropdownMenu's head,
+    // app_state.h). Its guard reads the anchor's painted face (architect
+    // 2026-09-24, strictly as-painted) — the band's Settings case since the
+    // row went, grey in the `h` view and under the folder overlay, so the
+    // Settings menu and the `h` mode are never up together, the rule this
+    // guard has carried since 2026-08-08; the long record of the menus'
+    // lockout scopes is git history.
     if (!app.redesign_buttons[static_cast<size_t>(
              redesign_button_index(dropdown_anchor_button(menu)))].enabled)
         return;
@@ -9662,9 +9332,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
     // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
-    // popup hangs past the strip. The settings menu (its rows and
-    // separators) is taller than the top strip's lanes below the menu lane
-    // at every scale, so without the band its overhang would never paint.
+    // popup hangs past the strip.
     //
     // The HEIGHT is derivable without painting (dropdown_h_px — item count
     // times item height, plus the separator blocks and the borders), so the
@@ -9672,9 +9340,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
     //
-    // THE TOP EDGE IS THE MENU BAR'S CONTENT'S FOOT, which is the lane's,
-    // over the program frame's top row (2026-10-10, dropdown_hang_y's rule:
-    // the pull-down covers what stands under the menu bar), the same
+    // THE TOP EDGE IS THE ANCHOR'S FOOT (dropdown_hang_y's rule), the same
     // expression paint_dropdown places the box at — so the damaged band and
     // the painted box start on the same row of pixels; a band anchored
     // anywhere else would leave a strip of the popup unpainted at one end.
@@ -9694,8 +9360,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE TOOLTIP STAYS DOWN for as long as the popup is up:
     // redesign_button_hover_zone refuses every roster button while a menu is
     // open, so the roster walk (recompute_redesign_button_hover) can never
-    // start a wait. The anchor's open frame is the painter's own open
-    // condition (paint_menu_row), which the strip's damage repaints.
+    // start a wait.
     viewport.invalidate_top_strip();
 }
 
@@ -10245,9 +9910,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     //
     // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hover_zone,
     // app_state.h), so the walk in its branch below finds no hint owner while
-    // the menu stays up. The ANCHOR of the open menu wears its open frame
-    // through the paint condition (paint_menu_row), which is what makes a
-    // switch visible on the frame it happens.
+    // the menu stays up.
     //
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
     // so no gesture can be live under it (its own press consumed everything).
@@ -10256,46 +9919,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // WHOLE roster (redesign_button_hover_zone refuses every button then —
         // the pointer belongs to the popup).
         recompute_redesign_button_hover();
-        // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
-        // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide
-        // onto the next button without pressing, and that button's menu is what
-        // is up. The switch goes through toggle_dropdown, the same owner the
-        // CLICK uses, so the close-then-open, the anchor expression and the open
-        // edge's damage are one route with nothing restated here; a menu that is
-        // not the open one makes that toggle's same-menu test false, which is
-        // exactly the switch. The button it switches ONTO wears the
-        // painter's own anchor condition (paint_menu_row).
-        //
-        // The walk covers every menu that HAS an anchor instead of naming
-        // them, so the anchor owner stays the one place that knows which button
-        // emits which menu. Hovering the OPEN menu's own anchor is skipped
-        // outright — no re-open, no close, no damage. Row 1 holds the anchors
-        // alone, so every row-1 button the pointer meets here is one.
-        //
-        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON — this switch is row
-        // 1's ONE HOVER ACT (the armed hover-open from a closed row was deleted
-        // 2026-10-01, see input_handler.h's menu-row block), and a held button
-        // is not a resting hover, on two producers: the TOUCH resolution burst's pre-press entry motion (with a menu OPEN
-        // and the other anchor tapped, that motion reached this walk, switched
-        // menus, and the burst's press then found its own menu already open and
-        // toggle-closed it — the tap closed the popup instead of switching to
-        // it; guarded, the switch is the PRESS's own toggle_dropdown), and the
-        // MOUSE's own latent case, which this guard fixes too: press-hold an
-        // item (or the anchor press's drag-into-the-box claim) and slide across
-        // the OTHER anchor — the switch fired mid-press, and toggle_dropdown's
-        // close wipes the whole Dropdown struct, destroying the popup's live
-        // press claim (pressed_item / press_began_on_item) out from under the
-        // held button, so the coming release acted on a menu the press never
-        // touched. The ordinary unheld hover-switch is unchanged.
-        if (!mods.primary_button_held) {
-            for (const DropdownMenu m : kDropdownMenus) {
-                if (m == app.dropdown.menu) continue;
-                if (!redesign_button_hit(app, dropdown_anchor_button(m),
-                                         mouse_x, mouse_y)) continue;
-                toggle_dropdown(m);
-                break;
-            }
-        }
+        // (THE HOVER SWITCH ONTO ANOTHER MENU'S TITLE — the menu bar's
+        // standing behaviour, refused under a held button — went with the
+        // menu row, 2026-10-21: one menu is left.)
         // The popup's own item hover AND its armed item, beside row 1's — the
         // two are the whole hover answer while a menu is up, and they cannot
         // collide, since the box starts below the row. AFTER
@@ -10345,8 +9971,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // THE RENDER PLAYER'S MOTION (2026-08-28): a standing scrub drag moves
     // the marker, and otherwise the modal buttons' walk and the roster walk
-    // run (no roster hint under the player — the no-wait rule — though THE
-    // FILE ANCHOR stays live above the band, 2026-09-03 evening) — nothing
+    // run (no roster hint under the player — the no-wait rule) — nothing
     // below this branch does.
     if (app.render_player.active) {
         if (app.render_player.scrub.armed) {
@@ -10868,8 +10493,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // The redesigned rows' hover is the ONLY hover left: the marker hover
         // popup and its whole recompute machinery died with the marker-text lane
         // (row 5), so the no-gesture tail has nothing else to resolve. With no
-        // menu up a hover opens nothing (a cold anchor answers a click alone,
-        // input_handler.h's menu-row block).
+        // menu up a hover opens nothing.
         recompute_redesign_button_hover();
         return;
     }

@@ -144,7 +144,7 @@ std::string format_settings_text(
 // AppState and the live struct it points at, even though they are not in the
 // `.settings` schema: the settings editor is their authoring surface — the
 // Settings dropdown's device rows prefill through this very call — so a
-// recall that answered nothing for them would break the menu rows and the Tab
+// recall that answered nothing for them would break those rows and the Tab
 // completion together. What they recall is byte-identical to what the device
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)

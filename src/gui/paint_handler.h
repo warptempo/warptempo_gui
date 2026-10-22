@@ -104,7 +104,7 @@ inline int icon_row_pad_x() {
 // field 2026-08-12 to 2026-10-14, the bottom-strip prefixes from row 7
 // before; the `h` view's commit-title editor's "Commit:" beside them
 // 2026-08-07 to 2026-10-10.)
-// The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
+// The OPEN PROJECT prompt's label (Open Project, 2026-08-27) — ONE WAY TO SHOW
 // (The Open project prompt's `Open: <projects_path>/` label and the `h`
 // view's `Load: ` label stood here until 2026-08-28, when both prompts lost
 // their text fields and became the field-less picker over the folder overlay
@@ -868,46 +868,43 @@ private:
     // PUBLISHES the head's hit as painted (AppState::playhead_head_hit, the
     // head drag's target, 2026-10-09).
     void paint_ruler_row(cairo_t* cr);
-    // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
-    // flat sampled ground, the three menu anchors flush left and nothing
-    // flush right), the ICON ROW (top lane 3, row 4: the
+    // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
+    // 2026-10-21) — the ICON ROW (top lane 2, row 4: the
     // twenty-six view/mode/action buttons, no border of its own since
     // 2026-10-01, twenty-two standing outside the `h` view and thirteen
     // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the border
-    // under row 8 and the program frame's bottom row on the window's foot,
-    // 2026-10-14: the clock cell and the STATE
+    // under row 8 on the window's foot: the clock cell and the STATE
     // CELL left, then the marker verbs, the step and walk (Down, Up, Previous
     // Marker, Next Marker) and the nudge and play (Switch Tab, Center, Left,
     // Right and Play / Stop, the last case; architect 2026-10-18) flush right
     // in their groups, declared below; in the `h` view Older / Newer stand in
     // the Left / Right seats, 2026-10-11).
-    // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
+    // Both PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
     // doctrine) — and every one stashes the ENABLED and SELECTED bits it
     // painted beside them, through the one publisher (publish_button_face),
     // for main.cpp's staleness comparator.
     //
-    // All three are called from on_redraw OUTSIDE the loading / total>0
+    // Both are called from on_redraw OUTSIDE the loading / total>0
     // branches, each gated on its OWN exposure — they are the passes with no
     // dependence on the loaded audio, so a button is visible exactly whenever it
     // is clickable (their press claims sit above the pointer path's loading
     // guard). The exposure gate matters: each shapes labels through HarfBuzz,
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
     // after them touches their lanes, the flag cache being transparent there.
-    void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
-    // THE TAB STRIP (top lane 4, architect 2026-10-18; cool_edit_paint.h's
+    // THE TAB STRIP (top lane 3, architect 2026-10-18; cool_edit_paint.h's
     // paint_ce_tab_strip owns the picture): the two tabs, TabA and TabB,
     // PUBLISHED like the rows above (publish_button_face, the painted box
     // each tab's press target), the lit one the active tab; called beside
     // them on its own exposure.
     void paint_tab_strip(cairo_t* cr);
     // THE PROGRAM'S FRAME (2026-10-10; the law and the geometry at render.h's
-    // program_frame_rect): THE RING (program_frame_rect, one sunken line in
-    // the chrome's Shadow and Hilight, mitred), painted with the rows on
+    // program_frame_rect): ITS TOP ROW ALONE since 2026-10-21, one Shadow
+    // line across the window under the caption, painted with the rows on
     // every frame class. It publishes nothing: the frame is inert ground for
     // input. (THE BOTTOM OVERLAYS' painter, paint_bottom_overlays — the
     // taskbar line and the dialog's ground, 2026-10-10 to 2026-10-14 — is
@@ -917,7 +914,7 @@ private:
     // record at render.h's caption block): the walnut, active and inactive
     // alike (materials.h's WOOD), the app's icon, the title — "<piece> -
     // Warptempo", or "Warptempo" where no piece is open — in the bold face
-    // in the old brass (materials.h's INKS) cut with "..." before the
+    // in the ink (materials.h's INKS, kWordInk) cut with "..." before the
     // buttons, and the three caption buttons, whose rects and enabled bits it
     // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
     // gate) for the press claim (claim_caption_press, input_pointer.cpp).

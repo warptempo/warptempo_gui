@@ -39,18 +39,25 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
     // Cool Edit's constants, materials.h's CASE).
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
     if (down) {
-        // THE OUTER RING, black on the top row and left column and F8F8F8
-        // on the bottom row and right column, MITRED at its top-right and
-        // bottom-left corner blocks (the head's diagonal rule: a two-tone
-        // ring, as the chrome's sunken edges are, accepted 2026-10-09); 808080
-        // inside the black, square (one tone, its partner the face); the
-        // ramp on the seat one line further in, the ebony's pressed patch
-        // (materials::paint_case_ramp).
-        paint_relief_frame(cr, r, hex(kCeRingOuter), hex(kCeRingLight));
+        // THE PRESSED AND CHECKED FACE ON THE EBONY (architect 2026-10-21,
+        // "the top and left should be darker than the case"; Cool Edit's
+        // constant F8F8F8 / 808080 rings, measured on a light grey case,
+        // read as a raised white frame on the ebony): THE OUTER RING black on
+        // the top row and left column and THE CASE'S HIGHLIGHT on the bottom
+        // row and right column, MITRED at its top-right and bottom-left
+        // corner blocks (the head's diagonal rule); THE INNER RING the case's
+        // LAST SHADOW TONE on the top row and left column, square (one tone,
+        // its partner the face), and nothing on the bottom and right, the
+        // ramp running on to the outer ring there; the ramp on the seat one
+        // line further in, the ebony's pressed patch
+        // (materials::paint_case_ramp). Every tone a flat stroke off the
+        // ebony's Face (materials::case_lines).
+        const materials::CaseLines lines = materials::case_lines();
+        paint_relief_frame(cr, r, hex(kCeRingOuter), lines.highlight);
         paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw + g, lw},
-                       hex(kCeRingMid));
+                       lines.shadow_last);
         paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw, lw + g},
-                       hex(kCeRingMid));
+                       lines.shadow_last);
         materials::paint_case_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, g, true);
         cairo_restore(cr);
         return lw;
@@ -147,22 +154,6 @@ void paint_ce_dock_bar(cairo_t* cr, const GuiRect& bar) {
     paint_relief_frame(cr, GuiRect{bar.x, bar.y, bar.w, mid_y + lw - bar.y},
                        p.ce_hilight, p.ce_mid);
     cell(cr, bar.x, mid_y + lw, bar.w, lw, p.ce_dark);
-    cairo_restore(cr);
-}
-
-void paint_ce_row8_bar(cairo_t* cr, int x, int y, int h) {
-    if (h <= 0) return;
-    const int lw = program_line_px();
-    const int face = scaled_px(kProgramSpec.row8_bar_face_px);
-    const GuiPalette& p = palette();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // Four square columns the run's height (the declaration): the light, the
-    // face (the scope's cover as drawn), the mid and the dark.
-    cell(cr, x, y, lw, h, p.ce_hilight);
-    cell(cr, x + lw, y, face, h, p.face);
-    cell(cr, x + lw + face, y, lw, h, p.ce_mid);
-    cell(cr, x + 2 * lw + face, y, lw, h, p.ce_dark);
     cairo_restore(cr);
 }
 
@@ -375,10 +366,11 @@ void paint_ce_tab_strip(
         if (run_covers(t.x - 1))
             foot_bottom_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
     }
-    // THE LABELS NEAR-WHITE over the words' drop shadow at (+d, +d) device
-    // px, d the `text_shadow` key (materials.h's INKS, 2026-10-21; the
-    // program text and Cool Edit's measured ink until then), lit or not; a
-    // dead tab's embossed in the brass's tones.
+    // THE LABELS IN THE CHROME'S ONE INK over the words' drop shadow at
+    // (+d, +d) device px, d the `text_shadow` key (materials.h's INKS,
+    // architect 2026-10-21: kWordInk, the near-white earlier that day, the
+    // program text and Cool Edit's measured ink before), lit or not; a dead
+    // tab's embossed in the brass's tones.
     const double d = static_cast<double>(materials::text_shadow_px());
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
@@ -390,7 +382,7 @@ void paint_ce_tab_strip(
         set_palette_source(cr, hex(kWordShadow));
         text_shape::show_shaped_run(cr, run, layout.label_x[k] + d,
                                     layout.baseline[k] + d);
-        set_palette_source(cr, hex(kNearWhite));
+        set_palette_source(cr, hex(kWordInk));
         text_shape::show_shaped_run(cr, run, layout.label_x[k],
                                     layout.baseline[k]);
     }
@@ -739,6 +731,6 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
     const double lw = static_cast<double>(program_line_px());
     set_palette_source(cr, palette().ce_label_shadow);
     text_shape::show_shaped_run(cr, run, x + lw, baseline + lw);
-    set_palette_source(cr, palette().ce_label);
+    set_palette_source(cr, hex(kWordInk));
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
