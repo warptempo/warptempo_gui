@@ -2129,13 +2129,9 @@ enum class RedesignButton {
     // OPEN PROJECT LEADS THE ROW (architect 2026-10-07: "the first icon
     // should be the open folder icon, to open a project"), Windows' own
     // standard-toolbar order — Open before Save — ONE BUTTON, the act and its
-    // shift twin ("just to keep those two together", no drop-down), STANDING
-    // IN SAVE'S GROUP, first, then Save, with NO SEPARATOR BETWEEN THEM
-    // (architect 2026-10-07: "separator in the drop-down, no separator in the
-    // toolbar" — the File menu parted Open and Revert from the rows after
-    // them until its retirement (2026-10-21), the toolbar does not part Open
-    // from Save;
-    // redesign_button_opens_icon_group). ITS CHORD IS CTRL+O and
+    // shift twin ("just to keep those two together", no drop-down), at the
+    // head of the band's first run (redesign_button_opens_icon_run, its
+    // leader). ITS CHORD IS CTRL+O and
     // its act is that key's exactly, the project picker
     // (GuiInputHandler::open_project_picker, the one owner whose body carries
     // every gate; the File menu's Open Project row, the same chord, went with the
@@ -2151,11 +2147,14 @@ enum class RedesignButton {
     // ruling against the no-second-road doctrine's default). Its face is the plain act's (redesign_button_enabled's
     // arm). No lamp: an act, not a mode.
     //
-    // SAVE STANDS BEHIND IT WITHOUT A SEPARATOR, AND BEFORE ONE (architect
-    // 2026-09-29, after his accidental Save presses at the tablet's 200 %):
-    // UNDO opens a group of its own with Redo and Render behind it, so a
-    // separator stands between Save and Undo
-    // (redesign_button_opens_icon_group).
+    // SAVE, UNDO, REDO AND RENDER STAND BEHIND IT IN THE SAME RUN, the five
+    // cases abutting with nothing between them (architect 2026-10-22, the
+    // simple layout: "push all icons together … add a spacing after render",
+    // the run gap after Render the run's end; redesign_button_opens_icon_run).
+    // UNDO STILL LEADS A GROUP of its own with Redo and Render
+    // (redesign_button_opens_icon_group), but a group paints nothing: it is
+    // the unit the `h` view's stand-ins replace (kIconRowHistoryStandIns), so
+    // Save stays outside the swap.
     OpenProject, Save, Undo, Redo,
     Render,
     // (THE EDIT FLAG BUTTON — IconMarkerEditFlag, bare Return on a button,
@@ -2389,13 +2388,11 @@ enum class RedesignButton {
     // lock's arm until then, when the key and the face agreed on `l` by both
     // being blocked.
     //
-    // IT IS NO LONGER THE ROW'S LAST GROUP: the HISTORY OPENER left it on
-    // 2026-08-18 to lead a separator-led group of its own again, which is what
-    // the architect asked for when its four companions came back up from the
-    // bottom row ("place a separator before the history button, and place
-    // cumulative/etc after the history button"). The two that stay keep his
-    // order and their separator, and IconListen still leads them
-    // (redesign_button_opens_icon_group, unmoved by either departure).
+    // IT IS NOT THE BAND'S LAST GROUP: the HISTORY OPENER stands right of it
+    // in the band's right run (kIconRowHistoryOpener). IconListen leads the
+    // render-entry group (redesign_button_opens_icon_group) and its run, the
+    // band's third, the run gap of wood before it
+    // (redesign_button_opens_icon_run).
     IconListen,
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
     // TABS, where it was a per-tab slot, for a roster button that reports THE

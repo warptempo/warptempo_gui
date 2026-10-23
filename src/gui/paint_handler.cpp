@@ -482,9 +482,10 @@ AppState::RedesignButtonFace& publish_button_face(
 
 // ROW 4 — THE ICON ROW: THE TOOLBAR BAND (architect 2026-10-09, the program
 // is Cool Edit; the simple layout 2026-10-22, program_spec.h's head). Its
-// metrics — the case and its glyph seat, the strip pad, the run gap and the
-// band's two insets — live in program_spec.h and render.h's program block,
-// where the lane table and row 8 read them too; this row spells none of
+// metrics — the case and its glyph seat, the strip pad and the run gap —
+// live in program_spec.h and render.h's program block, where the lane table
+// and row 8 read them too; its ends are the program ring's outer columns
+// (render.h's program_ring_columns, 2026-10-23); this row spells none of
 // them.
 //
 // THE VERTICAL STORY: the strip pad, the case (icon_case_top_offset_px), the
@@ -497,7 +498,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // abutting inside a run and run_gap_px of wood between two
 // (redesign_button_opens_icon_run, app_state.h, the runs' leaders); the
 // right five — the history opener and the two view pairs — ONE RUN ending
-// the band's right inset short of its right edge. No pane, groove, recess
+// at the program ring's right edge, the left walk starting at its left
+// column (icon_row_seats). No pane, groove, recess
 // or line (Cool Edit's panes and grooved recess stood 2026-10-09 to
 // 2026-10-22).
 
@@ -508,9 +510,10 @@ AppState::RedesignButtonFace& publish_button_face(
 // WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
 // IconRowLead column — First / Gap / Separator — of which only Separator ever
 // meant anything to the walk, First and Gap taking the same branch. The row's
-// GROUP BOUNDARIES moved to redesign_button_opens_icon_group (app_state.h)
-// when the collapse rule became a whole-group question and needed to ask them
-// too; one source now answers both the dividers and the collapses.
+// GROUP BOUNDARIES are redesign_button_opens_icon_group's (app_state.h), the
+// unit of the `h` view's stand-in swap, and its RUN BOUNDARIES — the run gap
+// of wood, the band's one spacing since the simple layout (2026-10-22) —
+// redesign_button_opens_icon_run's.
 //
 // EVERY BUTTON IN THIS ROW IS AN ICON BUTTON since 2026-08-11. The struct
 // carried a `glyph` string too — a shaped sans LETTER centered on both axes,
@@ -532,20 +535,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     // in the toolbar case now (Save's SaveCommit swap and Render's Cancel
     // swap ride redesign_button_icon below; Render serves BOTH plain
     // render and the iteration sweep by the architect's same-day ruling, the
-    // tooltip alone forking). The old labels are the tooltips. SINCE
-    // 2026-09-29 THE FOUR ARE TWO GROUPS (architect, after his accidental
-    // Save presses at the tablet's 200 %): Save (with Open Project before it
-    // since 2026-10-07), then a separator, then Undo leading Redo and Render
-    // (redesign_button_opens_icon_group) — one separator slot onto the walk
-    // where a 2px gap stood.
+    // tooltip alone forking). The old labels are the tooltips.
     //
     // OPEN PROJECT LEADS THEM ALL (architect 2026-10-07), ONE BUTTON — "just
     // to keep those two together", the button and its shift twin, Revert:
-    // no drop-down — STANDING IN SAVE'S GROUP, first, then Save, NO
-    // SEPARATOR BETWEEN THEM ("separator in the drop-down, no separator in
-    // the toolbar": the File menu's line parts Open and Revert from Quit,
-    // the toolbar's Open and Save touch; redesign_button_opens_icon_group),
-    // then Undo's group behind its separator as before. It wears
+    // no drop-down — and THE FIVE ARE THE BAND'S FIRST RUN (the simple
+    // layout, 2026-10-22: Open, Save, Undo, Redo and Render abutting, the run
+    // gap after Render; redesign_button_opens_icon_run). Undo still leads a
+    // GROUP with Redo and Render (redesign_button_opens_icon_group), the unit
+    // the `h` view's stand-ins replace, which paints nothing. It wears
     // OpenProject, the set's document-open (icons.h).
     {RedesignButton::OpenProject, icons::Icon::OpenProject},
     {RedesignButton::Save,       icons::Icon::Save},
@@ -595,11 +593,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // and one 2px gap
     // off the walk, no separator moving; FULL ZOOM OUT leads the group. What
     // the group collects is the VIEWPORT CLASS — Full Zoom Out, the
-    // magnification lamp and FOLLOW — all in one separator-led run. THIS TABLE IS THE
-    // ROW'S PAINTED ORDER — the walk
+    // magnification lamp and FOLLOW — at the head of the band's second run.
+    // THIS TABLE IS THE ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
-    // plus the group's leader in redesign_button_opens_icon_group
-    // (app_state.h) and the roster enum's own order, which the three keep in
+    // plus the group's and the run's leaders in
+    // redesign_button_opens_icon_group and redesign_button_opens_icon_run
+    // (app_state.h) and the roster enum's own order, which they keep in
     // step. No count, no gap and no width follows a swap.
     // FULL ZOOM OUT (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): bare `0`,
@@ -807,8 +806,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // drop road, 2026-10-18; Phase Reset the camera's phase snapshot, 2026-10-15).
 // THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), the four abutting behind the history opener in
-// the band's one right run, Phase Reset's case ending the band's right inset
-// short of its edge (paint_icon_row; the two panes with their groove
+// the band's one right run, Phase Reset's case ending at the program ring's
+// right edge (icon_row_seats; the two panes with their groove
 // 2026-10-14 to 2026-10-22). THE BAND'S FACES, and EACH
 // PAIR A RADIO: its lit member is its axis's current value
 // (redesign_button_selected reads one axis per button) and a press on it is
@@ -1614,13 +1613,16 @@ static void icon_row_walk(bool history,
 // composite of its rounded parts (render.h's program block); THE CASE the
 // strip pad under the band's top (icon_case_top_offset_px). THE RIGHT RUN IS
 // RESOLVED FIRST, because it decides where every run to its left may paint
-// (the overflow rule at kIconRowViewPairs): its last case ends the band's
-// right inset short of the band's right edge, and THE LEFT RUNS' LIMIT
+// (the overflow rule at kIconRowViewPairs): its last case ends AT THE
+// PROGRAM RING'S RIGHT EDGE (one past its outer right column; render.h's
+// program_ring_columns, architect 2026-10-23), and THE LEFT RUNS' LIMIT
 // stands one run gap left of its first case — they paint under a clip
 // ending there and publish only the columns they painted, so a window too
 // narrow for the band covers them and never the right run. THE LEFT WALK
-// starts the band's left inset in, each run's cases abutting from its x,
-// the next run a run gap after its last case.
+// starts AT THE RING'S OUTER LEFT COLUMN, each run's cases abutting from
+// its x, the next run a run gap after its last case. The band is flush with
+// the ring at both ends, no inset of its own (program_spec.h's strip-ends
+// block).
 struct IconRowSeats {
     int btn_w = 0, btn_h = 0, gap = 0, btn_y = 0;
     int left_x = 0;      // the left walk's first case
@@ -1629,15 +1631,15 @@ struct IconRowSeats {
     int case_x(int run_x, int i) const { return run_x + i * btn_w; }
     int next_run_x(int run_x, int n) const { return run_x + n * btn_w + gap; }
 };
-static IconRowSeats icon_row_seats(const GuiRect& lane) {
+static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
+    const ProgramRingColumns ring = program_ring_columns(app);
     IconRowSeats s;
     s.btn_w = icon_case_w_px();
     s.btn_h = icon_case_h_px();
     s.gap   = program_run_gap_px();
     s.btn_y = lane.y + icon_case_top_offset_px();
-    s.left_x = lane.x + scaled_px(kProgramSpec.band_inset_left_px);
-    const int right_end =
-        lane.x + lane.w - scaled_px(kProgramSpec.band_inset_right_px);
+    s.left_x = ring.x;
+    const int right_end = ring.end;
     s.right_x =
         right_end - static_cast<int>(std::size(kIconRowRightRun)) * s.btn_w;
     s.left_limit = s.right_x - s.gap;
@@ -1682,23 +1684,24 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // overflow rule — a width, never a state.
     //
     // THE WIDTH MATH, RE-DERIVED for the simple layout (2026-10-22; the case
-    // Cool Edit's own 23 round its 20-W seat): in Windows px, the band's 7-W
-    // left inset, then the runs, each 23n with 15 between two; the right run
-    // 5 · 23 = 115 and the band's 6-W right inset. Outside the `h` view the
-    // LEFT WALK is fifteen members in three runs,
+    // Cool Edit's own 23 round its 20-W seat; the ends the ring's since
+    // 2026-10-23): in Windows px, from the program ring's outer left column,
+    // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
+    // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
+    // fifteen members in three runs,
     //   15·23 + 2·15 = 375,
     // and inside it seven in three (Open, Save, Revert, Load in Place | Full
     // Zoom Out, the lamp | Enable Tooltips), 7·23 + 2·15 = 191; with one run
     // gap of wood before the right run the band holds every run at
-    //   7 + 375 + 15 + 115 + 6 = 518
-    // Windows px outside the view (334 inside it) — the tablet's 768 at
-    // 300 % with 250 W of wood between the left runs and the right run. IN
-    // DEVICE PX, off the painted walk (each case its rounded parts, the gap
-    // and the insets their own scaled_px): at the tablet's 300 % (cases 69)
-    // the left runs on x 21..1145, the right run 1941..2285; at the laptop's
-    // 138 % (cases 31, the gap 21, the insets 10 and 8) the left runs on x
-    // 10..516, the right run 1757..1911. A roster move restates these
-    // numbers.
+    //   375 + 15 + 115 = 505
+    // Windows px outside the view (321 inside it) — the ring's 754 W on the
+    // tablet at 300 % with 249 W of wood between the left runs and the right
+    // run. IN DEVICE PX, off the painted walk (each case its rounded parts,
+    // the gap its own scaled_px, the ends program_ring_columns'): at the
+    // tablet's 300 % (cases 69, the ring 21 .. 2283) the left runs on x
+    // 21..1145, the right run 1938..2282; at the laptop's 138 % (cases 31,
+    // the gap 21, the ring 15 .. 1905) the left runs on x 15..521, the right
+    // run 1750..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -1763,7 +1766,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE BAND'S SEATS the one layout the materials' case patches read too
     // (icon_row_seats, above, where the right run's place and the left
     // runs' limit are stated).
-    const IconRowSeats seats = icon_row_seats(lane);
+    const IconRowSeats seats = icon_row_seats(app, lane);
     const int btn_w    = seats.btn_w;
     const int btn_h    = seats.btn_h;
     const int glyph_px = icon_glyph_px();
@@ -2084,7 +2087,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
 // THE ROW AUTHORS NO METRIC OF ITS OWN (program_spec.h owns every one): the
 // cases and glyphs are the band's, the strip pad the band's, the run gap
-// and the row's two insets the program's (2026-10-22; the bars and their
+// and the row's two leads in from the program ring's outer columns the
+// program's (2026-10-22, from the ring 2026-10-23; the bars and their
 // pads 2026-10-21, Cool Edit's grippers and end bars before). The render
 // player's modal row in this lane takes the same case at the same seat
 // (modal_controls_seats) and stands its items its own eight W apart on the
@@ -2418,10 +2422,12 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // SEAT where a row's content starts and the RIGHT SEAT where its
 // right-aligned cluster ends; CASES_RIGHT is where the row's last case ends;
 // THE CASE the strip pad under the row's top (icon_case_top_offset_px, the
-// band's own seat). ROW 8'S (the simple layout, 2026-10-22): the left seat
-// the clock field's left edge and the right seat and the cases' end the
-// row's right inset short of the window's edge (program_spec.h's
-// row8_inset_* fields, where the frame of record's places are recorded).
+// band's own seat). ROW 8'S (the simple layout, 2026-10-22; read from the
+// ring 2026-10-23): the left seat the clock field's left edge, 4 W right of
+// the program ring's outer left column, and the right seat and the cases'
+// end 3 W left of the ring's right edge (render.h's program_ring_columns;
+// program_spec.h's row8_ring_inset_* fields, where the frame of record's
+// places are recorded) — 33 and 2274 at 300 %, 21 and 1901 at 138 %.
 // Every BUTTON on row 8 is THE PROGRAM'S CASE (render.h's program block),
 // the faces paint_roster_case's.
 struct BottomRowSeats {
@@ -2432,11 +2438,13 @@ struct BottomRowSeats {
     int case_w      = 0;   // the program's case, both rows' every button
     int case_h      = 0;
 };
-static BottomRowSeats bottom_row_seats(const GuiRect& lane) {
+static BottomRowSeats bottom_row_seats(const AppState& app,
+                                       const GuiRect& lane) {
+    const ProgramRingColumns ring = program_ring_columns(app);
     const int right =
-        lane.x + lane.w - scaled_px(kProgramSpec.row8_inset_right_px);
+        ring.end - scaled_px(kProgramSpec.row8_ring_inset_right_px);
     return BottomRowSeats{
-        lane.x + scaled_px(kProgramSpec.row8_inset_left_px), right, right,
+        ring.x + scaled_px(kProgramSpec.row8_ring_inset_left_px), right, right,
         lane.y + icon_case_top_offset_px(), icon_case_w_px(), icon_case_h_px()};
 }
 
@@ -2444,7 +2452,8 @@ static BottomRowSeats bottom_row_seats(const GuiRect& lane) {
 // modal_box.h): every modal's controls stand on the controls row at row 8's
 // case seat, their OUTERMOST CASES AND BUTTONS FLUSH WITH THE BOX'S RING'S
 // OUTER EDGES — the left seat, the right seat and the cases' end all the
-// ring's outer columns, no row-8 inset. At 300 %: the first column 21, one
+// ring's outer columns (modal_box_rect's, render.h's program_ring_columns),
+// none of row 8's leads in from them. At 300 %: the first column 21, one
 // past the last 2283. `keyboard_h` the stack's lift (modal_box.h's head).
 static BottomRowSeats modal_controls_seats(const AppState& app,
                                            int keyboard_h) {
@@ -2495,7 +2504,8 @@ static bool row8_hides(bool history, const TransportRowDef& seat) {
     return history &&
            history_view_hides_button(transport_row_seated(seat, history).id);
 }
-static Row8Block row8_block(bool history, const GuiRect& lane) {
+static Row8Block row8_block(const AppState& app, bool history,
+                            const GuiRect& lane) {
     const Row8Lengths l = row8_lengths();
     Row8Block b;
     int block_w = 0;
@@ -2509,7 +2519,7 @@ static Row8Block row8_block(bool history, const GuiRect& lane) {
         }
     }
     if (groups > 1) block_w += (groups - 1) * l.gap;
-    b.x = bottom_row_seats(lane).cases_right - block_w;
+    b.x = bottom_row_seats(app, lane).cases_right - block_w;
     return b;
 }
 // THE BLOCK'S ONE WALK, left to right from its left edge: per standing
@@ -2542,8 +2552,8 @@ static void row8_block_walk(bool history, const Row8Block& b,
 }
 
 // THE CLOCK (2026-10-22, the simple layout): the time field at the row's
-// left seat (row8_inset_left_px — where the bars put it, the frame of
-// record's x), its cell and its two pads (time_field_w_px), the field's own
+// left seat (bottom_row_seats: row8_ring_inset_left_px in from the ring's
+// outer left column, the frame of record's x), its cell and its two pads (time_field_w_px), the field's own
 // rect its ring (paint_ce_time_field's clock ring). One layout for the
 // row's painter and the materials' seats.
 struct Row8Clock {
@@ -2551,10 +2561,10 @@ struct Row8Clock {
     double cell_w = 0.0;    // the digits' specimen (time_field_metrics)
 };
 static int time_field_w_px(double cell_w);
-static Row8Clock row8_clock(const GuiRect& lane) {
+static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
     Row8Clock c;
     c.cell_w  = time_field_metrics(gui_font(GuiFace::Body)).time_w;
-    c.field_x = bottom_row_seats(lane).left_x;
+    c.field_x = bottom_row_seats(app, lane).left_x;
     c.field_w = time_field_w_px(c.cell_w);
     return c;
 }
@@ -2584,7 +2594,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     // The row's seats (bottom_row_seats): the band's case at the strip pad
     // under the lane's top.
-    const BottomRowSeats seats = bottom_row_seats(lane);
+    const BottomRowSeats seats = bottom_row_seats(app, lane);
     const int btn_w     = seats.case_w;
     const int btn_h     = seats.case_h;
     const int glyph_px  = icon_glyph_px();
@@ -2637,7 +2647,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-10-22): THE CLOCK in its ringed field at the row's left seat,
     // THE ACTIVE TAB'S NAME on the wood after it and THE STATE LINE after
     // the name (the block at the clock below) — then THE RIGHT BLOCK, packed
-    // against the row's right inset: the MARKER-VERB GROUP (its eight counted
+    // against the row's right seat (bottom_row_seats, 3 W in from the program
+    // ring's right edge): the MARKER-VERB GROUP (its eight counted
     // off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑, Previous Marker
     // and Next Marker, kTransportStepWalkGroup) and the NUDGE-AND-PLAY GROUP
     // with Play / Stop last (Switch Tab, Center, ← → Play,
@@ -2658,11 +2669,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE NUMBERS (Windows px, re-derived 2026-10-22 for the simple layout;
     // the case 23, the verbs eight, the step-and-walk group four and the
     // nudge-and-play group five): the block is 17 cases and two run gaps,
-    // 17·23 + 2·15 = 421 W, its last case ending the row's 10-W right inset
-    // short of the window's edge — on the tablet's 768 at 300 % the block
+    // 17·23 + 2·15 = 421 W, its last case ending 3 W short of the program
+    // ring's right edge (bottom_row_seats; the ring 7 W in from each window
+    // edge on the tablet, 2026-10-23) — on the tablet's 768 at 300 % the block
     // on W 337..757 (device x 1011..2273: the verbs 1011..1562, the walk
     // 1608..1883, the nudge 1929..2273, Play 2205..2273); the clock's field
-    // from W 11 (x 33) — the ~50.5-W cell (4.45 em of Liberation Sans
+    // 4 W right of the ring's left column, from W 11 (x 33) — the ~50.5-W cell (4.45 em of Liberation Sans
     // advances, seven digits, the colon and the point, at its 11.357-W em,
     // 152 px ceiled at 300 %) and its two 5-W pads, a 182-px field, x
     // 33..214 — then the name's first ink 5 W past it (x 230), the state
@@ -2708,7 +2720,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // published out of the measure so the line cannot guess it — so the
     // line widens by construction when the `h` view hides members; the
     // block's painting (after the clock) starts from it too.
-    const Row8Block block = row8_block(history, lane);
+    const Row8Block block = row8_block(app, history, lane);
     const int right_block_x = block.x;
     for (const TransportStandIn& s : kTransportHistoryStandIns)
         (void)publish_button_face(cr, app, audio, playback, target_render,
@@ -2731,7 +2743,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // left the clock, "like the media player cells"), so it is ONE WIDTH
         // AT EVERY TIME, the run starting at its left edge (kTimeShape's
         // block).
-        const Row8Clock clock = row8_clock(lane);
+        const Row8Clock clock = row8_clock(app, lane);
         const double cell_w  = clock.cell_w;
         const int    field_x = clock.field_x;
         const int    field_w = clock.field_w;
@@ -5497,7 +5509,7 @@ std::vector<GuiRect> program_case_rects(const AppState& app) {
     // which stands in both.
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w > 0 && lane.h > 0) {
-        const IconRowSeats seats = icon_row_seats(lane);
+        const IconRowSeats seats = icon_row_seats(app, lane);
         for (const bool history : {false, true}) {
             std::vector<std::vector<IconRowDef>> runs;
             std::vector<RedesignButton>          absent;
@@ -5520,11 +5532,11 @@ std::vector<GuiRect> program_case_rects(const AppState& app) {
     // ROW 8'S RIGHT BLOCK, in both states.
     const GuiRect row8 = bottom_row_area(app);
     if (row8.w > 0 && row8.h > 0) {
-        const BottomRowSeats seats = bottom_row_seats(row8);
+        const BottomRowSeats seats = bottom_row_seats(app, row8);
         const Row8Lengths lengths = row8_lengths();
         for (const bool history : {false, true})
             row8_block_walk(
-                history, row8_block(history, row8), lengths,
+                history, row8_block(app, history, row8), lengths,
                 [&](const TransportRowDef&, int bx) {
                     add(bx, seats.case_y, seats.case_w, seats.case_h);
                 },
@@ -7285,8 +7297,9 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     // canvas, whose hole this painter's lines cross before on_redraw clears
     // it, the list draws them.
     const WaveformDivider d = waveform_divider(area.h);
-    const int ring_x = area.x - lw;
-    const int ring_w = area.w + 2 * lw;
+    const ProgramRingColumns ring = program_ring_columns(app);
+    const int ring_x = ring.x;
+    const int ring_w = ring.end - ring.x;
     const int upper_end = area.y + d.y + d.line;        // past its light line
     const int lower_top = area.y + d.y + d.line + d.face;
     paint_relief_frame(cr, GuiRect{ring_x, top.y, ring_w, upper_end - top.y},

@@ -121,25 +121,26 @@ inline bool modal_box_stands(const AppState& a) {
 // THE CONTROLS ROW (item 2): row 8's own rows — the lane itself
 // (bottom_row_area) on the window's foot, or, with the keyboard under the
 // stack, the same rows lifted onto the keyboard's band. Its seats are the
-// box's outer columns (modal_box_rect's x and right edge), never row 8's
-// insets.
+// box's outer columns (modal_box_rect's x and right edge, the ring's outer
+// columns), never row 8's leads in from them.
 inline GuiRect modal_controls_row_rect(const AppState& a, int keyboard_h) {
     const GuiRect lane = bottom_row_area(a);
     if (lane.w <= 0 || lane.h <= 0) return GuiRect{0, 0, 0, 0};
     return GuiRect{lane.x, lane.y - std::max(0, keyboard_h), lane.w, lane.h};
 }
 
-// THE BOX (item 1), the ring's outer rect: the canvas column's columns
-// across, the view bar's top row down to the controls row's top (the ring's
-// last row the row above it). A zero rect on a degenerate stack.
+// THE BOX (item 1), the ring's outer rect: the program ring's outer
+// columns across (render.h's program_ring_columns), the view bar's top row
+// down to the controls row's top (the ring's last row the row above it). A
+// zero rect on a degenerate stack.
 inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
-    const GuiRect area  = waveform_area(a);
+    const ProgramRingColumns ring = program_ring_columns(a);
     const GuiRect trim  = top_trim_row_area(a);
     const GuiRect row   = modal_controls_row_rect(a, keyboard_h);
     const int     lw    = program_line_px();
     const int     y1    = row.y;
-    const GuiRect box{area.x - lw, trim.y, area.w + 2 * lw, y1 - trim.y};
-    if (area.w <= 0 || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
+    const GuiRect box{ring.x, trim.y, ring.end - ring.x, y1 - trim.y};
+    if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return box;
 }
 

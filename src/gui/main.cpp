@@ -763,6 +763,12 @@ GuiRect top_marker_row_area(const AppState& a) {
 // THE CANVAS'S TOP FRAME ROW (top lane 5) and ITS BOTTOM FRAME ROW (bottom
 // lane 1), 2026-10-09 — render.h's canvas-frame accessors; their one painter
 // is paint_canvas_column_frame (paint_handler.cpp).
+ProgramRingColumns program_ring_columns(const AppState& a) {
+    const GuiRect area = waveform_area(a);
+    const int     lw   = program_line_px();
+    return ProgramRingColumns{area.x - lw, area.x + area.w + lw};
+}
+
 GuiRect top_canvas_frame_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopCanvasFrameLane);
 }

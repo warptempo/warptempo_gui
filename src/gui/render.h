@@ -1663,6 +1663,21 @@ inline int column_inner_x_px() {
 // The two lanes (main.cpp, beside the other lane accessors).
 GuiRect top_canvas_frame_area(const AppState& a);
 GuiRect bottom_canvas_frame_area(const AppState& a);
+// THE PROGRAM RING'S OUTER COLUMNS (2026-10-23, the one owner): its dark
+// left column, one line left of the canvas interior, and one past its light
+// right column, one line right of it — waveform_area's x and width, so the
+// grid floor's leftover decides them and no inset does: 21 and 2283 on the
+// tablet's 2304 at 300 %, 15 and 1905 on the laptop's 1920 at 138 %. EVERY
+// STRIP AND BOX STANDING ON THEM READS THEM HERE (architect 2026-10-23,
+// "yes" to tying both strips' ends to the ring): the column's frame
+// (paint_canvas_column_frame), the modal family's box and its controls row
+// (modal_box_rect, modal_controls_seats), the band's ends (icon_row_seats)
+// and row 8's (bottom_row_seats), so they coincide at every scale.
+struct ProgramRingColumns {
+    int x   = 0;   // the ring's outer left column
+    int end = 0;   // one past its outer right column
+};
+ProgramRingColumns program_ring_columns(const AppState& a);
 
 // (THE TRIM LANE AS WINDOWS' MINIATURIZED SCROLL BAR — its 16-W track,
 // caps and thumb — THE RULER'S HEIGHT DERIVED FROM ITS SMALL FACE with the
