@@ -3131,166 +3131,43 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // bottom one — but nothing needs to ASK it any more: the icon row's painter
 // walks its own table, and the bottom row's walks its two.)
 
-// THE ICON ROW'S GROUP BOUNDARIES — true for the button that OPENS each
-// group, which is this row's whole grouping vocabulary: eight Windows px of
-// bare ground ahead of a leader, the members of a group touching (architect
-// 2026-10-02, the Windows case; the etched separator that stood in that gap
-// retired the same day — the groups' history below still says
-// "separator" for the gap of its day). The row's first group opens on Open
-// Project (since 2026-10-07, Save behind it in the same group; on Save
-// before it) and takes no gap, the painter's walk suppressing the gap ahead
-// of its first member rather than this predicate carrying a third state.
+// THE BAND'S GROUPS — true for the button that OPENS each group of the
+// roster's order. SINCE THE SIMPLE LAYOUT (2026-10-22) A GROUP PAINTS
+// NOTHING: the band's picture is its RUNS, the cases abutting inside a run
+// and run_gap_px of wood between two (redesign_button_opens_icon_run below
+// and program_spec.h's run_gap_px, the spacing's owners). What a group still
+// is, is THE UNIT OF THE `h` VIEW'S STAND-IN SWAP: icon_row_walk
+// (paint_handler.cpp), this predicate's one reader, swaps a group named by
+// its leader in kIconRowHistoryStandIns for the stand-in members and skips
+// the rest of the replaced group up to the next leader here — so the leader
+// after a replaced group is what ends the replacement. The view's hide is
+// per member (history_view_hides_button) and asks no group.
 //
-// IT LIVES HERE, BESIDE THE ROSTER, rather than as a column in the painter's
-// table: it was hoisted for the collapse rule (which asked whole groups) and
-// KEPT when that rule was deleted on 2026-08-14, because the dividers are a
-// fact about the roster's order and this is where the order is stated. ONE
-// reader now — paint_icon_row's two layout walks (the left groups' and the
-// flush-right view pairs').
-//
-// THE EIGHT GROUPS, in painted order: OPEN PROJECT AND SAVE (Open first, its
-// Revert twin with it, then Save, no separator between — architect
-// 2026-10-07: "separator in the drop-down, no separator in the toolbar"),
-// then UNDO, REDO and RENDER (members joining and leaving and no boundary
-// moving), THE
-// VIEWPORT-CLASS GROUP (Full zoom out leading, the
-// magnification lamp and FOLLOW), THE ITERATION
-// GROUP (the BPM opener, the grid-iterations lamp and, since 2026-09-19,
-// FLATTEN), the render-entry group (listen, the read-only toggle and, since
-// 2026-09-29, SETTINGS and ENABLE TOOLTIPS, help after settings since
-// 2026-10-01 — the load-in-place left it on
-// 2026-09-01) and THE
-// HISTORY GROUP — the opener, its three companions and that
-// load-in-place at the tail (the four standing only in the `h` view since
-// 2026-10-05, Revert and Load in Place in Undo's greyed group's slots, Older
-// and Newer in row 8's since 2026-10-11; the opener alone right-anchored
-// one groove left of the view pairs since 2026-10-06) — and, FLUSH AT THE
-// ROW'S RIGHT EDGE, THE VIEW PAIRS, two groups: Source leading Target, then
-// Warp leading Phase Reset.
-//
-// EIGHT SINCE 2026-10-14, UP FROM SEVEN (architect): the view group became
-// two radio pairs, each in a pane of its own, Warp a leader.
-//
-// SEVEN SINCE 2026-10-07 (architect): Open Project joined the row in
-// Save's group, first, no separator between them — a member joining, no
-// boundary moving.
-//
-// SEVEN FROM 2026-10-01, UP FROM SIX: the row-1 view bar's three acts came
-// down as the view group, its own separator-led group at the row's right
-// end (paint_icon_row places it and states the overflow rule).
-//
-// SIX FROM 2026-09-29, UP FROM FIVE (architect, after his accidental Save
-// presses at the tablet's 200 %): UNDO OPENS A GROUP, so a separator stands
-// between Save and Undo and the toolbar four are two groups. The same day
-// CENTER left the viewport-class group for the bottom row's walk group (a
-// member leaving, no boundary moving) and SETTINGS joined the render-entry
-// group's tail (a member joining, no boundary moving).
-//
-// FIVE FROM 2026-09-15, DOWN FROM SIX, when the architect deleted THE TWO
-// VIEW LAMPS' whole category (buttons, group slot, separator) rather than
-// leaving a hollowed group behind: IconAudioView stopped opening a group and
-// nothing takes its place, so the leader count fell by one and no other
-// group's membership moved (bare `t`/`p` and the lamps bought the group
-// nothing the four view selectors do not already answer). The paragraphs
-// below are the group's history up to that deletion, kept for the record.
-//
-// SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
-// no other boundary: the architect deleted the menu-row dropdown and put
-// IconBpm and IconIter back in the icon row behind a separator of their own,
-// just ahead of the render-entry group, so IconBpm leads and IconListen still
-// opens the group behind it. That is the 2026-08-27 relocation's own leader
-// edit read backwards — IconBpm had led the MASS-MARKER group until that day,
-// when it left the roster and Follow, the survivor, fell into the zoom group.
-//
-// FIVE FOR THE HOURS BETWEEN THE SECOND OF 2026-09-04'S ROW RULINGS AND THE
-// FOURTH, which deleted ONE LEADER: IconMarkerColumn stopped opening a
-// group, so the two view lamps the radio-pair collapse had left as a group of
-// one each are one group of two, which is what they read as: one lamp per view
-// axis, side by side. No box was added or taken away; exactly one separator
-// went.
-//
-// (THE RADIO-PAIR COLLAPSE EARLIER THAT DAY COST NO BOUNDARY, and the
-// arithmetic is worth keeping beside the ruling that undid half of it: the two
-// view groups were PAIRS and became single buttons, and a group of one is a
-// group — the trim group's own precedent, alone from 2026-08-18 until it
-// merged into the zoom group. Six leaders, six groups, three fewer boxes; the
-// separator between the two lamps is the one the ruling above took out.)
-//
-// SIX SINCE 2026-08-27, DOWN FROM EIGHT, and the two boundaries that went are
-// the architect's own ruling that Follow and the Show trim region button JOIN
-// THE ZOOM GROUP — the viewport-class acts collected in one place. Each
-// dissolution is spelled as a DELETED LEADER and nothing else: the zoom
-// buttons stopped opening a group (so the one-member trim group and the zoom
-// buttons
-// merged behind the Show trim region button, which was already a leader and
-// stayed one until its own deletion on 2026-09-22 passed the lead to Full zoom
-// out), and IconBpm stopped opening one — its own button and IconIter's
-// leaving the roster entirely with the SERIES relocation, so Follow, the
-// survivor, falls into the group on its left. The row lost two boxes and two
-// separators with that; the WIDTH arithmetic has ONE owner and it is the
-// painter's centering comment (paint_handler.cpp), which re-derives the number
-// from this predicate and the roster after every move.
-//
-// EIGHT WITH THE WALK RADIOS (later on 2026-08-18): they landed INSIDE the
-// history group, between the opener and the cumulative toggle, so the row
-// gained
-// two boxes and two 2px gaps and no boundary moved — a group's leader is the
-// only thing this predicate names.
-//
-// EIGHT ACROSS THE 2026-08-18 RELAYOUT, and the two edits here are what kept it
-// there rather than arithmetic that happened to cancel: the SINGLE-MARKER VERBS
-// left the row for the bottom one, so IconMarkerDrop stopped opening a group,
-// and the HISTORY OPENER left the render-entry group to lead one again, so
-// IconHistory started. The scissors' deletion cost no boundary — they were the
-// trim group's SECOND member, and a group survives losing one.
-//
-// SIX ACROSS THE 2026-09-01 LOAD-IN-PLACE MOVE, with nothing edited here at
-// all: the button left the render-entry group for the history group's TAIL,
-// and neither group lost its leader — IconListen still opens the first (a
-// group survives losing one, the scissors' precedent again) and IconHistory
-// the second, which the tail joins from behind. That is the whole of what
-// this predicate can feel: it names LEADERS, so a member changing groups is
-// the roster enum's and the painter's table's business, and those two plus
-// this one are the three sites a reorder keeps in step.
-//
-// THE HISTORY STAND-INS NAME NO LEADER (architect 2026-10-05): in the `h`
-// view a stand-in group paints in place of an authoring group and takes THAT
-// group's leader's gap (kIconRowHistoryStandIns, paint_handler.cpp, keys each
-// stand-in by the leader it replaces), so the companions are absent here. The
-// iteration group, which takes no stand-in, is hidden whole in the view
-// (architect 2026-10-19: the row has eight groups outside it and seven
-// inside; paint_icon_row owns the count). The history opener leads a group
-// of one since then.
+// THE GROUPS, in the left walk's order: OPEN PROJECT AND SAVE, then UNDO,
+// REDO AND RENDER (the group the history stand-ins replace, Revert and Load
+// in Place), then the zoom group (Full Zoom Out, the magnification lamp,
+// Follow), the iteration group (the BPM opener, grid iterations, Flatten)
+// and the render-entry group (Play Renders .. Enable Tooltips). The right
+// run's leaders — the history opener and the view pairs' Source and Warp —
+// are named for the roster's order alone: the right run is not walked
+// (kIconRowHistoryOpener), so nothing asks them here.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         // OPEN PROJECT LEADS SAVE'S GROUP, THE ROW'S FIRST (architect
-        // 2026-10-07: "separator in the drop-down, no separator in the
-        // toolbar"), so Save is no leader: Open, then Save, touching.
+        // 2026-10-07), so Save is no leader.
         case RedesignButton::OpenProject:
-        // UNDO LEADS REDO AND RENDER (architect 2026-09-29): the separator
-        // in front of it keeps a finger aimed at Undo off Save at the
-        // tablet's 200 %.
+        // UNDO LEADS REDO AND RENDER (architect 2026-09-29): the group the
+        // `h` view's stand-ins replace (kIconRowHistoryStandIns), so Save
+        // stays outside the swap.
         case RedesignButton::Undo:
-        // THE ZOOM GROUP'S LEADER: Full zoom out, since the stepped zoom
-        // buttons in front of it were removed 2026-09-25 (the lead moved onto
-        // it and no separator). Follow, the mass-marker group's lone
-        // survivor, closes this group: the architect put it here rather than
-        // behind a divider of its own.
+        // FULL ZOOM OUT LEADS THE ZOOM GROUP, and so ends Undo's group's
+        // replacement in the `h` view.
         case RedesignButton::IconZoomFitBest:
-        // THE ITERATION GROUP'S LEADER SINCE 2026-09-04, and it is the same
-        // button that led the mass-marker group from 2026-08-20 until the
-        // Series relocation deleted it: the BPM opener (Ctrl+B since
-        // 2026-09-15, bare `m` before it) opens the group again, with
-        // bare `i` behind it and, since 2026-09-19, FLATTEN behind that. The
-        // group grew by one that day and no boundary moved — a member joining
-        // a group is the roster enum's and the painter's table's business, and
-        // this predicate names leaders alone.
+        // THE BPM OPENER LEADS THE ITERATION GROUP (since 2026-09-04).
         case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
+        // THE RIGHT RUN'S LEADERS (the head: never walked, never asked).
         case RedesignButton::IconHistory:
-        // THE VIEW PAIRS' LEADERS (architect 2026-10-14): Source opens the
-        // Source / Target pane and Warp the Warp / Phase pane, each pane's
-        // groove standing on its left.
         case RedesignButton::ViewSource:
         case RedesignButton::ViewWarp:
             return true;

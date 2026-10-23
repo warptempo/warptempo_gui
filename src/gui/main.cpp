@@ -575,9 +575,7 @@ GuiRect waveform_area(const AppState& a) {
     // ceiling (architect 2026-10-05), so the top of the vocabulary lands on
     // this floor. (The hosts run far below it: the laptop is 138 % on 1080,
     // where the eight lanes take 209, and the tablet 300 % on its 1440-tall
-    // surface, where they take 465.) The guard
-    // they take 495.) The guard
-    // does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // surface, where they take 465.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.

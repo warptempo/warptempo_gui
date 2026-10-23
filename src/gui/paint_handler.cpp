@@ -2489,7 +2489,6 @@ static Row8Lengths row8_lengths() {
 // the row's cases_right.
 struct Row8Block {
     int x = 0;                               // the block's left edge
-    bool any = false;                        // some group stands
     int standing[kRow8GroupCount] = {};
 };
 static bool row8_hides(bool history, const TransportRowDef& seat) {
@@ -2505,7 +2504,6 @@ static Row8Block row8_block(bool history, const GuiRect& lane) {
         for (const TransportRowDef& def : kRow8Groups[gi])
             if (!row8_hides(history, def)) ++b.standing[gi];
         if (b.standing[gi] > 0) {
-            b.any = true;
             block_w += b.standing[gi] * l.btn_w;
             ++groups;
         }
@@ -5326,11 +5324,16 @@ constexpr double kModalBtnMinWidthPx  = 75.0;
 // below). PAINTED FOR ONE AND MOVING NOTHING: between two buttons the
 // row's 6-W gap absorbs it, and at the row's ends — every owner's cluster
 // flush with the box's ring since 2026-10-14 (modal_controls_seats; the
-// render player's right pair since 2026-10-05) — it paints in the face
+// render player's right pair since 2026-10-05) — it paints in the wood
 // beyond the ring's outer edge, so the buttons never move. One relief line
-// (relief_line_px), so it fits at every scale by construction: the vertical
-// margin is (32 − 23) / 2 Windows px (the controls row's content round the
-// spec's push button) against its 1.
+// (relief_line_px). VERTICALLY IT STANDS INSIDE THE CONTROLS ROW BY
+// CONSTRUCTION (2026-10-22): the row is the strip, pad + case + pad
+// (render.h's strip_h_px), the cases and the word buttons on the case's rows
+// (23 W on 23 W), and the pad's floor of one W (is_strip_pad,
+// device_config.h; strip_pad_px floored at one device px) is the frame's
+// room above and below — the row being the rect the player and the picker
+// publish and a focus move damages, the frame never lands on the box's ring
+// outside it.
 constexpr double kModalFocusFramePx   = 1.0;
 // THE PLAYER ROW'S GROUP SPACE — between its items (transport → scrub,
 // scrub → clock, clock → the lamp): 8 Windows px, the roster's group gap it
@@ -6755,13 +6758,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
 
     // THE MODAL'S SURFACE IS THE BOX: a prompt's, the progress modal's and a
-    // dialog editor's the modal family's whole area (modal_area_rect, 2026-10-14 — the box, its
-    // margins and foot, the controls row and, on the keyboard, the lifted
-    // border; the taskbar overlay's line and ground 2026-10-10 to
-    // 2026-10-14), and the player's and the picker's the controls row
-    // (modal_controls_row_rect; the list above it is the folder overlay's own
-    // rect) — because that is the rectangle the modal owns and the rectangle
-    // its damage must erase.
+    // dialog editor's the modal family's whole area (modal_area_rect — the
+    // panel, the box and the wood margins beside it, and the controls row
+    // under it, lifted onto the keyboard's band when the keyboard stands),
+    // and the player's and the picker's the controls row
+    // (modal_controls_row_rect, the strip: pad + case + pad, the focus frame
+    // inside it by the pad's 1-W floor, kModalFocusFramePx; the list above it
+    // is the folder overlay's own rect) — because that is the rectangle the
+    // modal owns and the rectangle its damage must erase.
     // THE SESSION IS STAMPED HERE, one write for both branches at the moment
     // the geometry becomes readable: it is the id of the surface these rects
     // belong to, and every input site that reads them compares it against the

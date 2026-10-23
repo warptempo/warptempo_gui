@@ -1359,11 +1359,15 @@ inline int icon_case_h_px() {
 // pick), the live value pushed at launch and at the settings editor's OK
 // (GuiInputHandler::apply_strip_pad) — the band's and row 8's air above and
 // below the case, one number for both strips: 39 device px at 300 % and the
-// pad's 13, 18 at 138 %.
+// pad's 13, 18 at 138 %. FLOORED AT ONE DEVICE PX, the focus frame's line
+// (relief_line_px): the key's 1-W floor (is_strip_pad, device_config.h,
+// where the reason stands) keeps a modal button's focus frame inside its
+// controls row, and this floor keeps it there at a scale that would round
+// one W to nothing.
 void set_strip_pad_w(int w);
 int  strip_pad_w();
 inline int strip_pad_px() {
-    return scaled_px(strip_pad_w());
+    return scaled_px(strip_pad_w(), 1);
 }
 // THE CASE'S TOP, AS AN OFFSET FROM THE BAND'S OWN TOP — and from row 8's
 // and the modal controls row's: the strip pad, the one expression every

@@ -91,7 +91,7 @@
 //                            settles the values, which become constants
 //   strip_pad=<W>            THE STRIP PAD (architect 2026-10-22, the simple
 //                            layout), a TUNING PHASE: an integer in Windows
-//                            px [0, 40], the band's and row 8's air above and
+//                            px [1, 40], the band's and row 8's air above and
 //                            below their cases (render.h's strip_pad_px; the
 //                            mocks ran 8 .. 15, 13 the pick); a Settings row,
 //                            applied LIVE at OK (the lanes relaid and the
@@ -389,14 +389,21 @@ inline constexpr const char* kBevelGrammarReason =
     "must be an integer in [0, 400] in canonical spelling";
 
 // THE STRIP PAD'S RANGE — the one owner, the reader's and the settings
-// editor's (the scale's shape): an integer in Windows px, [0, 40] — 0 the
-// cases touching the program ring and the window's foot, 40 well past the
-// mocks' 15 (a tuning range, the head's list).
+// editor's (the scale's shape): an integer in Windows px, [1, 40] — 40 well
+// past the mocks' 15 (a tuning range, the head's list). THE FLOOR IS ONE W
+// (2026-10-22): a modal controls row's focused button wears a focus frame
+// one program line OUTSIDE its case (paint_modal_dialog's button walk,
+// kModalFocusFramePx), and that line must stand INSIDE the strip — the
+// controls row is the rect the player and the picker publish and a focus
+// move damages (ModalDialogGeometry::box), so at a pad of 0 the frame's top
+// line would paint on the box's ring outside it and go stale. A pad of at
+// least one line (strip_pad_px floors at one device px) holds the frame
+// inside the row by construction, at either end of a lifted row too.
 inline constexpr bool is_strip_pad(int64_t v) {
-    return v >= 0 && v <= 40;
+    return v >= 1 && v <= 40;
 }
 inline constexpr const char* kStripPadGrammarReason =
-    "must be an integer in [0, 40] in canonical spelling";
+    "must be an integer in [1, 40] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
