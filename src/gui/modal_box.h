@@ -120,9 +120,9 @@ inline bool modal_box_stands(const AppState& a) {
 
 // THE CONTROLS ROW (item 2): row 8's own rows — the lane itself
 // (bottom_row_area) on the window's foot, or, with the keyboard under the
-// stack, the same rows lifted onto the keyboard's band. Its seats are the
-// box's outer columns (modal_box_rect's x and right edge, the ring's outer
-// columns), never row 8's leads in from them.
+// stack, the same rows lifted onto the keyboard's band. Its seats are row
+// 8's (paint_handler.cpp's bottom_row_seats, the one owner): the ring's
+// outer columns, the box's x and right edge (modal_box_rect's).
 inline GuiRect modal_controls_row_rect(const AppState& a, int keyboard_h) {
     const GuiRect lane = bottom_row_area(a);
     if (lane.w <= 0 || lane.h <= 0) return GuiRect{0, 0, 0, 0};

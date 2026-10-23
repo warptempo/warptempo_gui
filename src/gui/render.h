@@ -1672,7 +1672,9 @@ GuiRect bottom_canvas_frame_area(const AppState& a);
 // "yes" to tying both strips' ends to the ring): the column's frame
 // (paint_canvas_column_frame), the modal family's box and its controls row
 // (modal_box_rect, modal_controls_seats), the band's ends (icon_row_seats)
-// and row 8's (bottom_row_seats), so they coincide at every scale.
+// and row 8's (bottom_row_seats, the controls row's seats too), so they
+// coincide at every scale; both strips and the controls row stand flush with
+// them at both ends, no inset.
 struct ProgramRingColumns {
     int x   = 0;   // the ring's outer left column
     int end = 0;   // one past its outer right column

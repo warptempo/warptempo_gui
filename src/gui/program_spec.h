@@ -98,17 +98,14 @@ struct ProgramSpec {
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring; render.h's program_ring_columns the one owner), so the
     // strips and the ring coincide at every scale whatever the grid floor's
-    // leftover. THE BAND IS FLUSH WITH THE RING at both ends — its first
-    // case's left edge the ring's left column, its right run's last case
-    // ending one past the ring's right column — so it carries no field.
-    // ROW 8 STANDS IN FROM THE RING by these two W: the clock field's left
-    // edge 4 W right of the ring's left column and the block's last case 3 W
-    // left of the ring's right edge — the frame of record's places
-    // (layout4_pad13, the bars' 6 + 5 and 4 + 6 less the ring's 7 W from
-    // each window edge on the tablet), 33 and 2274 device px at 300 %. The
-    // 1-W asymmetry is that record's, kept as it stands.
-    int  row8_ring_inset_left_px;
-    int  row8_ring_inset_right_px;
+    // leftover. BOTH STRIPS ARE FLUSH WITH THE RING at both ends (architect
+    // 2026-10-23, "shouldn't row 8 take the same rule as top strip?" — yes):
+    // the band's first case and row 8's clock field start on the ring's
+    // outer left column, the band's right run and row 8's block end one past
+    // its outer right column — the modals' controls row's seat
+    // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
+    // row 8 and the controls row), so neither strip nor the controls row
+    // carries a field here.
     // THE DARK TIME FIELD (METRICS §5.4: 72 x 17, its TL line, its ground,
     // its BR line): its height. Every time field takes the shape — row 8's
     // clock and the render player's position and length — and EVERY TIME
@@ -265,8 +262,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_outer_px      = 1,
     .case_hot_face      = false,
     .run_gap_px         = 15,
-    .row8_ring_inset_left_px  = 4,
-    .row8_ring_inset_right_px = 3,
     .field_h_px         = 17.0,
     .field_pad_px       = 5.0,
     .tab_name_air_px    = 5.0,
@@ -336,15 +331,6 @@ static_assert(program_strip_authored_h(kProgramSpec, 13) == 49);
 // ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
 // the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
 static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);
-// ROW 8'S ENDS FROM THE RING (2026-10-23): the bars' old ends — a 6-W bar
-// and its 5-W pad on the left, the 4-W pad and a 6-W bar on the right — less
-// the ring's place on the tablet, the column's 6-W margin and the grid
-// floor's half leftover (3 device px, one W at 300 %) from each window edge
-// (row8_ring_inset_*'s field).
-static_assert(kProgramSpec.row8_ring_inset_left_px ==
-              (6 + 5) - (kProgramSpec.column_margin_px + 1));
-static_assert(kProgramSpec.row8_ring_inset_right_px ==
-              (4 + 6) - (kProgramSpec.column_margin_px + 1));
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);

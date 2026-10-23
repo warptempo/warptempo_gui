@@ -2087,9 +2087,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
 // THE ROW AUTHORS NO METRIC OF ITS OWN (program_spec.h owns every one): the
 // cases and glyphs are the band's, the strip pad the band's, the run gap
-// and the row's two leads in from the program ring's outer columns the
-// program's (2026-10-22, from the ring 2026-10-23; the bars and their
-// pads 2026-10-21, Cool Edit's grippers and end bars before). The render
+// the program's (2026-10-22; the bars and their pads 2026-10-21, Cool
+// Edit's grippers and end bars before), and the row's ends the program
+// ring's outer columns, flush like the band's (bottom_row_seats,
+// 2026-10-23). The render
 // player's modal row in this lane takes the same case at the same seat
 // (modal_controls_seats) and stands its items its own eight W apart on the
 // row's wood (paint_modal_dialog's player branch).
@@ -2418,18 +2419,22 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
     return m;
 }
 
-// THE BOTTOM ROW'S SEATS — row 8's, and the modal controls row's: the LEFT
-// SEAT where a row's content starts and the RIGHT SEAT where its
-// right-aligned cluster ends; CASES_RIGHT is where the row's last case ends;
-// THE CASE the strip pad under the row's top (icon_case_top_offset_px, the
-// band's own seat). ROW 8'S (the simple layout, 2026-10-22; read from the
-// ring 2026-10-23): the left seat the clock field's left edge, 4 W right of
-// the program ring's outer left column, and the right seat and the cases'
-// end 3 W left of the ring's right edge (render.h's program_ring_columns;
-// program_spec.h's row8_ring_inset_* fields, where the frame of record's
-// places are recorded) — 33 and 2274 at 300 %, 21 and 1901 at 138 %.
-// Every BUTTON on row 8 is THE PROGRAM'S CASE (render.h's program block),
-// the faces paint_roster_case's.
+// THE BOTTOM ROW'S SEATS — row 8's and the modal controls row's, ONE OWNER
+// (architect 2026-10-23, "shouldn't row 8 take the same rule as top
+// strip?" — yes): the LEFT SEAT where a row's content starts and the RIGHT
+// SEAT where its right-aligned cluster ends; CASES_RIGHT is where the row's
+// last case ends; THE CASE the strip pad under the row's top
+// (icon_case_top_offset_px, the band's own seat). ALL THREE ARE THE PROGRAM
+// RING'S OUTER COLUMNS (render.h's program_ring_columns): the left seat its
+// outer left column, the right seat and the cases' end one past its outer
+// right column — the band's ends (icon_row_seats) and the modal box's
+// (modal_box_rect), so both strips and the controls row stand flush with
+// the ring at every scale; 21 and 2283 at 300 %, 15 and 1905 at 138 %. The
+// two rows differ only in `row`: row 8's lane (bottom_row_area), or the
+// controls row's, the same rows lifted onto the keyboard's band
+// (modal_controls_row_rect; modal_controls_seats below reads this). Every
+// BUTTON on either row is THE PROGRAM'S CASE (render.h's program block), the
+// faces paint_roster_case's.
 struct BottomRowSeats {
     int left_x      = 0;   // the row's first column
     int right_x     = 0;   // one past the row's right-aligned cluster
@@ -2439,30 +2444,21 @@ struct BottomRowSeats {
     int case_h      = 0;
 };
 static BottomRowSeats bottom_row_seats(const AppState& app,
-                                       const GuiRect& lane) {
+                                       const GuiRect& row) {
     const ProgramRingColumns ring = program_ring_columns(app);
-    const int right =
-        ring.end - scaled_px(kProgramSpec.row8_ring_inset_right_px);
-    return BottomRowSeats{
-        ring.x + scaled_px(kProgramSpec.row8_ring_inset_left_px), right, right,
-        lane.y + icon_case_top_offset_px(), icon_case_w_px(), icon_case_h_px()};
+    return BottomRowSeats{ring.x, ring.end, ring.end,
+                          row.y + icon_case_top_offset_px(), icon_case_w_px(),
+                          icon_case_h_px()};
 }
 
 // THE MODAL FAMILY'S CONTROLS ROW'S SEATS (architect 2026-10-14,
 // modal_box.h): every modal's controls stand on the controls row at row 8's
 // case seat, their OUTERMOST CASES AND BUTTONS FLUSH WITH THE BOX'S RING'S
-// OUTER EDGES — the left seat, the right seat and the cases' end all the
-// ring's outer columns (modal_box_rect's, render.h's program_ring_columns),
-// none of row 8's leads in from them. At 300 %: the first column 21, one
-// past the last 2283. `keyboard_h` the stack's lift (modal_box.h's head).
+// OUTER EDGES — row 8's own seats (bottom_row_seats, the one owner) on the
+// controls row's rows, `keyboard_h` the stack's lift (modal_box.h's head).
 static BottomRowSeats modal_controls_seats(const AppState& app,
                                            int keyboard_h) {
-    const GuiRect row = modal_controls_row_rect(app, keyboard_h);
-    const GuiRect box = modal_box_rect(app, keyboard_h);
-    const int x0 = box.w > 0 ? box.x : row.x;
-    const int x1 = box.w > 0 ? box.x + box.w : row.x + row.w;
-    return BottomRowSeats{x0, x1, x1, row.y + icon_case_top_offset_px(),
-                          icon_case_w_px(), icon_case_h_px()};
+    return bottom_row_seats(app, modal_controls_row_rect(app, keyboard_h));
 }
 
 // ROW 8'S RIGHT BLOCK (2026-10-21: lifted out of
@@ -2552,9 +2548,10 @@ static void row8_block_walk(bool history, const Row8Block& b,
 }
 
 // THE CLOCK (2026-10-22, the simple layout): the time field at the row's
-// left seat (bottom_row_seats: row8_ring_inset_left_px in from the ring's
-// outer left column, the frame of record's x), its cell and its two pads (time_field_w_px), the field's own
-// rect its ring (paint_ce_time_field's clock ring). One layout for the
+// left seat (bottom_row_seats: the program ring's outer left column, the
+// field's ring standing on it), its cell and its two pads
+// (time_field_w_px), the field's own rect its ring (paint_ce_time_field's
+// clock ring). One layout for the
 // row's painter and the materials' seats.
 struct Row8Clock {
     int field_x = 0, field_w = 0;
@@ -2647,7 +2644,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-10-22): THE CLOCK in its ringed field at the row's left seat,
     // THE ACTIVE TAB'S NAME on the wood after it and THE STATE LINE after
     // the name (the block at the clock below) — then THE RIGHT BLOCK, packed
-    // against the row's right seat (bottom_row_seats, 3 W in from the program
+    // against the row's right seat (bottom_row_seats, flush with the program
     // ring's right edge): the MARKER-VERB GROUP (its eight counted
     // off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑, Previous Marker
     // and Next Marker, kTransportStepWalkGroup) and the NUDGE-AND-PLAY GROUP
@@ -2666,24 +2663,27 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (Windows px, re-derived 2026-10-22 for the simple layout;
-    // the case 23, the verbs eight, the step-and-walk group four and the
-    // nudge-and-play group five): the block is 17 cases and two run gaps,
-    // 17·23 + 2·15 = 421 W, its last case ending 3 W short of the program
-    // ring's right edge (bottom_row_seats; the ring 7 W in from each window
-    // edge on the tablet, 2026-10-23) — on the tablet's 768 at 300 % the block
-    // on W 337..757 (device x 1011..2273: the verbs 1011..1562, the walk
-    // 1608..1883, the nudge 1929..2273, Play 2205..2273); the clock's field
-    // 4 W right of the ring's left column, from W 11 (x 33) — the ~50.5-W cell (4.45 em of Liberation Sans
-    // advances, seven digits, the colon and the point, at its 11.357-W em,
-    // 152 px ceiled at 300 %) and its two 5-W pads, a 182-px field, x
-    // 33..214 — then the name's first ink 5 W past it (x 230), the state
-    // line's 5 W past the name's advance, clipped one run gap short of the
-    // block (W 322, x 966). IN THE `h` VIEW (the hide, 2026-10-07; Play,
+    // THE NUMBERS (Windows px, re-derived 2026-10-23 for the row flush with
+    // the ring; the case 23, the verbs eight, the step-and-walk group four
+    // and the nudge-and-play group five): the block is 17 cases and two run
+    // gaps, 17·23 + 2·15 = 421 W, its last case ending one past the program
+    // ring's outer right column (bottom_row_seats; the ring 7 W in from each
+    // window edge on the tablet) — on the tablet's 768 at 300 % the block on
+    // W 340..760 (device x 1020..2282: the verbs 1020..1571, the walk
+    // 1617..1892, the nudge 1938..2282, Play 2214..2282); the clock's field
+    // on the ring's outer left column, from W 7 (x 21) — the ~50.5-W cell
+    // (4.45 em of Liberation Sans advances, seven digits, the colon and the
+    // point, at its 11.357-W em, 152 px ceiled at 300 %) and its two 5-W
+    // pads, a 182-px field, x 21..202 — then the name's first ink 5 W past
+    // it (x 218), the state line's 5 W past the name's advance, clipped one
+    // run gap short of the block (W 325, x 975). On the laptop's 1920 at
+    // 138 % (cases 31, the gap 21) the clock's field from the ring's x 15 and
+    // the block on x 1336..1904, Play 1874..1904 — the band's right run's
+    // columns above it. IN THE `h` VIEW (the hide, 2026-10-07; Play,
     // Open Text Editor and Toggle Value Drag hidden there with the verbs,
     // Down and Up with them) the block is 1 verb + the walk pair + Switch
     // Tab, Center and Older / Newer in the nudge pair's seats, Play not
-    // standing, 7·23 + 2·15 = 191 W, from W 567. THE ROW CARRIES NO
+    // standing, 7·23 + 2·15 = 191 W, from W 570. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
     // STATE LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so

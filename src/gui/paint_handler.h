@@ -89,7 +89,7 @@ std::vector<GuiRect> word_and_key_case_rects(const AppState& app);
 // lead-out, the icon row's pad from 2026-08-14 — left with its last reader,
 // row 8's seats, 2026-10-22: the strips' ends and the modal controls row's
 // are the program ring's outer columns, render.h's program_ring_columns,
-// row 8's two leads in from them program_spec.h's.)
+// both strips flush with them since 2026-10-23.)
 
 // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14): the Settings editor's
 // "Setting:" ("pointless that far away. just remove it") and the BPM editor's
@@ -916,8 +916,8 @@ private:
     // ring at the left, the active tab's name and THE STATE LINE on the wood
     // past it (architect 2026-10-03: the `h` walk line or the render's
     // progress line at the normal face, clipped short of the right block),
-    // then the right block packed against the row's right lead in from the
-    // program ring's right edge (bottom_row_seats) — the
+    // then the right block packed against the program ring's right edge
+    // (bottom_row_seats) — the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp),
     // the step and walk and the nudge and play with Play / Stop its last
     // case (2026-10-18) — each group a plain run, the run gap between two
