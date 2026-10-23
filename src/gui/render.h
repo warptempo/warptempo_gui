@@ -304,8 +304,8 @@ struct TrimRange {
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09); and THE
-//                 PANEL'S `face` (2026-10-09: the program's band, dock bar,
-//                 row 8 and the canvas column's lanes — Cool Edit's — every
+//                 PANEL'S `face` (2026-10-09: the program's band, row 8
+//                 and the canvas column's lanes — Cool Edit's — every
 //                 other panel tone derived from it, the COOL EDIT BLOCK,
 //                 cool_edit_derive.h).
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
@@ -424,8 +424,8 @@ struct GuiPalette {
     GuiColor playhead_stem;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
-    // Cool Edit's Face, the ground of the toolbar band, the dock bar and row
-    // 8 under every chrome — THE WOOD'S FACE, the walnut cover's mean, since
+    // Cool Edit's Face, the ground of the toolbar band and row 8 under
+    // every chrome — THE WOOD'S FACE, the walnut cover's mean, since
     // 2026-10-22, the brass's 2026-10-21 to 2026-10-22 (materials.h; the
     // palette's own `face` until the first bake,
     // construction state), whatever the preset: every panel tone and every
@@ -438,7 +438,6 @@ struct GuiPalette {
     // install of the program's words; no file names them; read by the
     // program's painters alone (cool_edit_paint.h, the canvas column's lanes
     // in render.cpp and paint_handler.cpp).
-    GuiColor ce_recess;
     GuiColor ce_mid;
     GuiColor ce_dark;
     GuiColor ce_hilight;
@@ -456,18 +455,8 @@ struct GuiPalette {
     // the view bar's span bevels, off the waveform's ink (2026-10-09)
     GuiColor ce_span_hilight;
     GuiColor ce_span_shadow;
-    // THE TAB STRIP'S EDGES (2026-10-18; cool_edit_derive.h's tones): an
-    // inactive tab's light top row and left column and its dark right
-    // column, the page line's run under the inactive tabs, and the active
-    // tab's drop shadow.
-    GuiColor ce_tab_light;
-    GuiColor ce_tab_dark;
-    GuiColor ce_tab_line;
-    GuiColor ce_page_dark;
-    // (THE TAB STRIP'S BODY AND LABELS — the inactive tab's measured 15-row
-    // body and its label's ink, kTabBodies' row of the preset's Face, and the
-    // active label in the program text, `ce_text`, 2026-10-18..10-21 — are
-    // the wood's body and kBoneInk since, materials.h's WOOD and INKS;
+    // (THE BAND'S RECESS AND THE TAB STRIP'S FOUR EDGE TONES left 2026-10-22
+    // with the band's void and the strip, the simple layout;
     // THE BUTTON CASE's twenty-four members, its ramp, highlight, shadow ends
     // and corner off the Face 2026-10-10..10-21, the ebony's, materials.h's
     // CASE.)
@@ -579,10 +568,10 @@ void install_true_colors(bool on);
 // THE CANVAS COLUMN IS COOL EDIT'S, THE SAME UNDER EVERY CHROME (architect
 // 2026-10-09, the program is Cool Edit; the mock of record
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; program_spec.h owns every
-// length): the column's 5 W of face under the tab strip, THE VIEW BAR, THE RULER
-// FLIPPED and THE MARKER LANE OF CUES, THE CANVAS under them in its frame
-// (row 6's canvas paragraph), the view bar, the ruler and the canvas 6 W in
-// from each side on the panel's face. Its colors are
+// length): THE VIEW BAR, THE RULER FLIPPED and THE MARKER LANE OF CUES
+// directly under the band, THE CANVAS under them in its frame (row 6's
+// canvas paragraph), all four inside the program ring 6 W in from each side
+// on the wood (the simple layout, 2026-10-22). Its colors are
 // the panel's Face-derived tones (the COOL EDIT BLOCK), the waveform's ink,
 // the cues' two colors, the invalid color and the playhead's color
 // (the palette), and the painter constants Cool Edit draws whatever its
@@ -1300,29 +1289,28 @@ inline int relief_line_px() {
 // read off his captures of Cool Edit Pro 2.1; REDUCED TO ITS TOP ROW
 // 2026-10-21, "every row grows 1 W px each side", one Shadow line across
 // the window directly under the caption — IS REMOVED, architect 2026-10-22,
-// under the Windows-style caption (the caption block): the band's own top
-// rows, its dark outline and its light line, stand directly under the
-// caption, and the canvas took the row. Every program lane spans the window
-// (strip_row_rect) and the border under row 8 is the window's lowest lane.)
-// WHAT STANDS OVER THE PROGRAM (architect 2026-10-14): every modal — the
-// render player, the picker, a prompt, a dialog editor — is the modal
-// family's box and controls row (modal_box.h), in the lanes' columns from
-// the view bar's top row down, the border under row 8 left in view; the
-// on-screen keyboard's band stands on the window's foot across the lanes
-// (onscreen_keyboard.h's placement block), a dialog editor's stack on it.
+// under the Windows-style caption (the caption block): the band stands
+// directly under the caption, and the canvas took the row. Every program
+// lane spans the window (strip_row_rect) and row 8 is the window's lowest
+// lane.)
+// WHAT STANDS OVER THE PROGRAM (architect 2026-10-14; the simple layout
+// 2026-10-22): every modal — the render player, the picker, a prompt, a
+// dialog editor — is the modal family's box and controls row (modal_box.h),
+// the box wearing the program ring from the view bar's top row to the ring's
+// bottom row and the controls row on row 8's rows; the on-screen keyboard's
+// band stands on the window's foot across the lanes (onscreen_keyboard.h's
+// placement block), a dialog editor's controls row on it.
 
 // THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 1,
-// directly under the caption since 2026-10-22 (architect 2026-10-09: the
-// program is Cool Edit from the toolbar down, the same under every chrome;
-// program_spec.h's head, where every length below is authored and its
-// source named). The
+// directly under the caption (architect 2026-10-09: the program is Cool
+// Edit from the toolbar down, the same under every chrome; program_spec.h's
+// head, where every length below is authored and its source named). The
 // roster's twenty-four view/mode/action buttons stand in it — the
 // kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
-// stand-in tables are the
-// count's one authority (paint_handler.cpp); icons::kIconCount is a
-// different number, the GLYPH set, which the row does not exhaust. THE CASE
-// IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader takes the accessors
-// below, so the three rows cannot drift apart.
+// stand-in tables are the count's one authority (paint_handler.cpp);
+// icons::kIconCount is a different number, the GLYPH set, which the row does
+// not exhaust. THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
+// takes the accessors below, so the three rows cannot drift apart.
 //
 // THE CASE (Cool Edit's §1.3 whole, its own 20-W seat since 2026-10-09
 // ~10:25): one highlight line, the glyph, one shadow line, one black line —
@@ -1334,12 +1322,12 @@ inline int relief_line_px() {
 // corner, one line further right and down while pressed or checked
 // (cool_edit_paint.h's faces).
 //
-// THE BAND (Cool Edit's §1.1): the dark outline, the panes' top light line,
-// three W of face, the case, two W of face, the panes' bottom mid line, the
-// dark outline, the light line — 33 W, the lane whole, UNDER EVERY CHROME.
-// Its panes and grooves are paint_icon_row's walk (cool_edit_paint.h draws
-// them). The hit target is the case; the lines, the faces, the grooves and
-// the recess are inert ground for input.
+// THE BAND (architect 2026-10-22, the simple layout): THE STRIP PAD, the
+// case, THE STRIP PAD on the plain wood, no line of its own — 49 W at the
+// pad's 13, 147 device rows at 300 %. Its runs are paint_icon_row's walk
+// (icon_row_seats: the cases abutting inside a run, run_gap_px of wood
+// between runs). The hit target is the case; the wood between is inert
+// ground for input.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because more
 // than one file reads the case: icons.cpp's seat (draw_cased) and
@@ -1365,25 +1353,36 @@ inline int icon_case_w_px() {
 inline int icon_case_h_px() {
     return icon_case_w_px();
 }
-// THE CASE'S TOP, AS AN OFFSET FROM THE BAND'S OWN TOP — the head's two
-// lines and the face above the case: the one expression every reader of the
-// case's seat in the band takes (paint_icon_row, hit rects, tooltips).
+// THE STRIP PAD (architect 2026-10-22, the simple layout; "a number still
+// under tuning gets a device key and a Settings row"): THE `strip_pad`
+// DEVICE KEY's W (device_config.h; the mocks ran 8 .. 15, layout4_pad13 the
+// pick), the live value pushed at launch and at the settings editor's OK
+// (GuiInputHandler::apply_strip_pad) — the band's and row 8's air above and
+// below the case, one number for both strips: 39 device px at 300 % and the
+// pad's 13, 18 at 138 %.
+void set_strip_pad_w(int w);
+int  strip_pad_w();
+inline int strip_pad_px() {
+    return scaled_px(strip_pad_w());
+}
+// THE CASE'S TOP, AS AN OFFSET FROM THE BAND'S OWN TOP — and from row 8's
+// and the modal controls row's: the strip pad, the one expression every
+// reader of a strip's case seat takes (paint_icon_row, the row-8 and
+// controls-row seats, hit rects, tooltips).
 inline int icon_case_top_offset_px() {
-    return kProgramSpec.band_head_lines * program_line_px() +
-           scaled_px(kProgramSpec.band_air_above_px);
+    return strip_pad_px();
+}
+// THE STRIP — the band's lane and row 8's: the pad, the case, the pad.
+inline int strip_h_px() {
+    return strip_pad_px() + icon_case_h_px() + strip_pad_px();
 }
 inline int icon_row_h_px() {
-    return icon_case_top_offset_px() + icon_case_h_px() +
-           scaled_px(kProgramSpec.band_air_below_px) +
-           kProgramSpec.band_foot_lines * program_line_px();
+    return strip_h_px();
 }
-// A PANE'S FACE between its light left column and its first case, and
-// between its last case and its mid right column (Cool Edit's §1.2).
-inline int program_pane_lead_px() {
-    return scaled_px(kProgramSpec.pane_lead_px);
-}
-inline int program_pane_trail_px() {
-    return scaled_px(kProgramSpec.pane_trail_px);
+// THE WOOD BETWEEN TWO RUNS (program_spec.h's run_gap_px): 45 device px at
+// 300 %, 21 at 138 %.
+inline int program_run_gap_px() {
+    return scaled_px(kProgramSpec.run_gap_px);
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -1463,40 +1462,23 @@ inline int scrub_handle_box_px() {
     return scaled_px(live_chrome_spec().scrub_handle_box_px, 2);
 }
 
-// THE TAB STRIP — COOL EDIT'S ORGANIZER TABS, top lane 2, between the
-// toolbar band and the column's air (architect 2026-10-18; program_spec.h's
-// tab fields, where the law and the mocks of record are named): the dock's
-// recess, 20 W, then the page's top light line, one line — 21 W, 63 device
-// rows at 300 %, 29 at 138 % (28 + 1), 76 at 360 % (72 + 4) and 84 at
-// 400 % (80 + 4), each part its own rounding. It stands above gap 1 with
-// the band (main.cpp's kTopFlexGapLane), a program lane the window's width
-// (2026-10-21), so the page edge is the window's first column. Its painter
-// is paint_ce_tab_strip (cool_edit_paint.h), its tabs two roster buttons,
-// TabA and TabB (app_state.h); its ground — the recess, the gaps, the page
-// line — is chrome, inert to every surface (on_button_press's strip claim).
-inline int tab_strip_recess_h_px() {
-    return scaled_px(kProgramSpec.tab_recess_px);
-}
-inline int tab_strip_h_px() {
-    return tab_strip_recess_h_px() + program_line_px();
-}
-// The strip's lane (main.cpp, beside the other lane accessors).
-GuiRect top_tab_strip_area(const AppState& a);
+// (THE TAB STRIP — Cool Edit's Organizer tabs, "Tab A" and "Tab B", a 21-W
+// lane under the band 2026-10-18 to 2026-10-22 — IS REMOVED, architect
+// 2026-10-22, the simple layout: the active tab's name stands in row 8 right
+// of the clock, paint_bottom_row_buttons_and_clock.)
 
-// THE CANVAS COLUMN'S LANES — THE COLUMN'S AIR, the TRIM lane (the view
-// bar), the RULER lane, the MARKER lane and THE CANVAS'S TOP FRAME ROW,
-// stacked in that order under the tab strip (main.cpp's lane table), the
-// frame row's bottom edge the waveform's top with no gap: THE PROGRAM'S,
-// COOL EDIT'S, THE SAME UNDER
-// EVERY CHROME (architect 2026-10-09; program_spec.h owns every length and
-// its source; the colors at the palette block's canvas-column paragraph).
-// Each lane is a composite of its rounded parts (scaled_px's rule): a line
-// is one quantum (program_line_px), a run of face or ground its own
-// scaled_px, the cue's triangle its quanta.
-//   THE AIR    5 W of face (column_air_h_px): 15 device rows at 300 %, 7 at
-//              138 %, 18 at 360 %.
+// THE CANVAS COLUMN'S LANES — the TRIM lane (the view bar), the RULER lane,
+// the MARKER lane and THE CANVAS'S TOP FRAME ROW, stacked in that order
+// directly under the band (main.cpp's lane table; the column's 5-W air above
+// the view bar went 2026-10-22, the simple layout), the frame row's bottom
+// edge the waveform's top with no gap: THE PROGRAM'S, COOL EDIT'S, THE SAME
+// UNDER EVERY CHROME (architect 2026-10-09; program_spec.h owns every length
+// and its source; the colors at the palette block's canvas-column
+// paragraph). Each lane is a composite of its rounded parts (scaled_px's
+// rule): a line is one quantum (program_line_px), a run of face or ground
+// its own scaled_px, the cue's triangle its quanta.
 //   THE TRIM   the view bar, a line, the 6-W field, a line (trim_lane_h_px):
-//              24 / 10 / 30.
+//              24 device rows at 300 %, 10 at 138 %, 30 at 360 %.
 //   THE RULER  11 W of ground and its bottom line (ruler_lane_h_px): 36 / 16
 //              / 44.
 //   THE MARKER 12 W above the cue's triangle and its five quanta
@@ -1507,9 +1489,6 @@ GuiRect top_tab_strip_area(const AppState& a);
 // row taller, 38 against 37, the laptop's well one row shorter.)
 //   THE FRAME  the canvas's dark top frame row, one line
 //              (canvas_top_frame_h_px, below): 3 / 1 / 4.
-inline int column_air_h_px() {
-    return scaled_px(kProgramSpec.column_air_px);
-}
 inline int view_bar_field_h_px() {
     return scaled_px(kProgramSpec.view_bar_field_px);
 }
@@ -1651,31 +1630,25 @@ inline int cue_triangle_reach_right_px() {
     return ((2 * rows + 1) * cue_unit_px() + 2) / 2;
 }
 static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9u and 11u above
-// THE COLUMN'S AIR LANE (top lane 3, main.cpp; defined there beside the
-// other lane accessors).
-GuiRect top_column_air_area(const AppState& a);
 // THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
-// third part; program_spec.h's column_margin_px and column_foot_px, METRICS
-// §4.1): the canvas's TOP FRAME ROW is a lane of its own, top lane 7, one
-// line (canvas_top_frame_h_px), directly under the marker lane; the COLUMN'S
-// FOOT is a bottom lane of its own, the bottom frame row and 5 W of face
-// (column_foot_h_px), between the canvas and the dock bar. Across, the column
-// stands column_margin_w_px of face in from each side of the window (inside
-// the program frame's columns 2026-10-10 to 2026-10-21), then its one-line
-// frame column, then its interior — THE WAVEFORM AREA — its width floored to
-// the grid step and the floor's leftover (under 16 device px) split between
-// the two margins, the odd pixel to the right (main.cpp's waveform_area owns
-// the split; column_inner_x_px is the side before it). 15 + 3 = 18 device
-// rows of foot at 300 %, 7 + 1 = 8 at 138 %, 18 + 4 = 22 at 360 %; the side
-// 18 + 3 = 21 device px at 300 %, 8 + 1 = 9 at 138 %, 22 + 4 = 26 at 360 %.
+// third part; program_spec.h's column_margin_px, METRICS §4.1): the
+// canvas's TOP FRAME ROW is a lane of its own, top lane 5, one line
+// (canvas_top_frame_h_px), directly under the marker lane; its BOTTOM FRAME
+// ROW — THE PROGRAM RING'S LAST ROW — a bottom lane of its own, one line
+// (canvas_bottom_frame_h_px), between the canvas and row 8 (the column's 5-W
+// foot under it went 2026-10-22, the simple layout). Across, the column
+// stands column_margin_w_px of wood in from each side of the window, then
+// its one-line frame column, then its interior — THE WAVEFORM AREA — its
+// width floored to the grid step and the floor's leftover (under 16 device
+// px) split between the two margins, the odd pixel to the right (main.cpp's
+// waveform_area owns the split; column_inner_x_px is the side before it):
+// the side 18 + 3 = 21 device px at 300 %, 8 + 1 = 9 at 138 %, 22 + 4 = 26
+// at 360 %.
 inline int canvas_top_frame_h_px() {
     return program_line_px();
 }
-inline int column_foot_face_h_px() {
-    return scaled_px(kProgramSpec.column_foot_px);
-}
-inline int column_foot_h_px() {
-    return program_line_px() + column_foot_face_h_px();
+inline int canvas_bottom_frame_h_px() {
+    return program_line_px();
 }
 inline int column_margin_w_px() {
     return scaled_px(kProgramSpec.column_margin_px);
@@ -1685,7 +1658,7 @@ inline int column_inner_x_px() {
 }
 // The two lanes (main.cpp, beside the other lane accessors).
 GuiRect top_canvas_frame_area(const AppState& a);
-GuiRect bottom_column_foot_area(const AppState& a);
+GuiRect bottom_canvas_frame_area(const AppState& a);
 
 // (THE TRIM LANE AS WINDOWS' MINIATURIZED SCROLL BAR — its 16-W track,
 // caps and thumb — THE RULER'S HEIGHT DERIVED FROM ITS SMALL FACE with the
@@ -1693,88 +1666,29 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // FROM THE 17-W FLAG BOX stood 2026-10-02 to 2026-10-09; git history.)
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
-// lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
-// strip's ONLY lane since the relayout's commit B): the clock in its time
-// field and the state line on the ground beside it at the left pad
-// (architect 2026-10-02 / 2026-10-03 / 2026-10-05),
-// and the MARKER-VERB GROUP, the step and walk (Down, Up, Previous Marker,
-// Next Marker) and the nudge and play (Switch Tab, Center, Left, Right and
-// Play / Stop, the last case; architect 2026-10-18) flush right, each a group
-// between bars, adjacent groups sharing one (program_spec.h's row-8 bar
-// fields, 2026-10-21; Cool Edit's grippered groups from 2026-10-09; eight
-// Windows px of bare ground between them from 2026-09-29;
-// kMarkerVerbGroup in
-// paint_handler.cpp owns that group's membership, which does not bear
-// restating here), all one line ON THE WINDOW'S FOOT — which it holds again
-// since
-// 2026-08-29's evening fold, a STATUS BAR having stood under it for that one
-// day — with the
-// flexible blank
-// gap 2 between this row and the waveform above
-// it. (The STATUS CHAIN — the critical chip + section C — right-aligned on
-// this lane from the unification until 2026-08-13, when the architect moved it
-// into the tab row, where it was deleted whole on 2026-08-29 for the bar; the
-// height below is unaffected through all three moves, its derivation being the
-// BUTTON's.) The SUCCESSION: the status line landed as row 7 (2026-08-01, the
-// two-lane bottom strip collapsing to one — its crops keep that name), was
-// renumbered row 9 when the transport row (row 8, 2026-08-11, the touch arc's
-// first surface) stacked above it, and both lanes merged into this one a day
-// later — the buttons grown to the icon row's boxes for glass, the status
-// strings moved beside them, every interactive surface one contiguous cluster
-// against the waveform.
+// lane rows 8 and 9 merged into (architect-ruled 2026-08-12): the clock in
+// its ringed time field, the active tab's name and the state line on the
+// wood beside it at the left (architect 2026-10-02 / 2026-10-03 /
+// 2026-10-05; the name 2026-10-22), and the MARKER-VERB GROUP, the step and
+// walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
+// (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
+// 2026-10-18) packed right, each a plain run of cases, run_gap_px of wood
+// between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
+// membership), all one lane ON THE WINDOW'S FOOT.
 //
-// THE ROW IS COOL EDIT'S ROW 8 UNDER ITS DOCK BAR (architect 2026-10-09,
-// the program is Cool Edit; program_spec.h): THE DOCK BAR on the well's side
-// — a light row, three W of face, a mid row, a dark row (Cool Edit's
-// y = 915..920), 6 W — then THE ROW's content, four W of face, the program's
-// case (the band's own, read from its accessors above so the rows cannot
-// drift apart) and five W of face: 32 W, the lane 38 under every chrome.
-// Its groups — the bars, the dark time field — are
-// paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them):
-// each group a bar, 5 W of face, its cases or the time field, 4 W of face
-// and a bar, adjacent groups sharing one, the first and the last against
-// the window's edges, each bar running from the dock bar's mid row through
-// the border's light row, every two-tone corner the bars leave mitred
-// (architect 2026-10-21, program_spec.h's row-8 bar fields); the time
-// field's
-// pads 5 W each side, the dialog field's own then (program_spec.h's
-// field_pad_px, 2026-10-10; that field went 2026-10-14).
+// THE ROW IS THE STRIP (architect 2026-10-22, the simple layout): THE STRIP
+// PAD, the program's case (the band's own, read from its accessors above so
+// the rows cannot drift apart), THE STRIP PAD — strip_h_px, the band's own
+// height, 147 device rows at 300 % and the pad's 13 — on the plain wood, no
+// line, no bar and no border (Cool Edit's dock bar over it, its grippered
+// and then barred groups and the border under it stood 2026-10-09 to
+// 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
 // Every modal — the render player, the project picker, a prompt, a dialog
-// editor — stands its controls on the content band below the dock bar's
-// rows, on the row's face — THE MODAL FAMILY'S CONTROLS ROW, the family's
-// box covering the dock bar above it (modal_box.h, architect 2026-10-14) —
-// or, under a dialog editor on the glass, on the same row lifted onto the
-// on-screen keyboard's band, which then covers this lane (the taskbar
-// dialog laid over the content band, the border and the frame's bottom row,
-// 2026-10-10 to 2026-10-14, is retired).
-// bottom_row_content_h_px() is the band the buttons and text sit on;
-// bottom_row_h_px() is the lane the strip stack allocates. Each term its own
-// rounded part.
-inline int dock_bar_h_px() {
-    return 3 * program_line_px() + scaled_px(kProgramSpec.dock_bar_face_px);
-}
-// THE BORDER UNDER ROW 8 (architect 2026-10-14; program_spec.h's
-// bottom_border_face_px, where the ruling and its source stand): bottom lane
-// 0 on the window's foot since 2026-10-21 (over the program frame's bottom
-// row until then), the dock bar's six rows again — a light row, three W of
-// face, a mid row, a dark row, the last the window's lowest line — painted
-// by the dock bar's painter (paint_ce_dock_bar) across the window: 18 device
-// rows at 300 %, 7 at 138 %, 23 at 360 %. Inert ground for input.
-inline int bottom_border_h_px() {
-    return 3 * program_line_px() +
-           scaled_px(kProgramSpec.bottom_border_face_px);
-}
-// The lane (main.cpp, beside the other lane accessors).
-GuiRect bottom_border_area(const AppState& a);
-inline int row8_air_above_px() {
-    return scaled_px(kProgramSpec.row8_air_above_px);
-}
-inline int bottom_row_content_h_px() {
-    return row8_air_above_px() + icon_case_h_px() +
-           scaled_px(kProgramSpec.row8_air_below_px);
-}
+// editor — stands its controls on these rows, THE MODAL FAMILY'S CONTROLS
+// ROW (modal_box.h), or, under a dialog editor on the glass, on the same
+// rows lifted onto the on-screen keyboard's band.
 inline int bottom_row_h_px() {
-    return dock_bar_h_px() + bottom_row_content_h_px();
+    return strip_h_px();
 }
 
 // (THE STATUS BAR'S GEOMETRY IS DELETED — architect 2026-08-29, the evening of
@@ -1797,36 +1711,29 @@ inline int bottom_row_h_px() {
 // below the well, and the frame's two sides where the vocabulary's frame
 // stands on the maximised window (2026-10-08, window_frame_maximized; none
 // under win2000): the chrome's caption, then THE PROGRAM'S (program_spec.h,
-// the same under every chrome since 2026-10-09): the band 33, the tab strip
-// 21 (2026-10-18), the
-// canvas column's 43 above the canvas (the air 5, the view bar 8, the ruler
-// 12, the marker lane 17, the canvas's top frame row 1), the column's foot 6
-// under it (the bottom frame row and 5 W of face), the dock bar and row 8
-// 38 and the border under row 8 6 (2026-10-14). (The menu row's 20 and the
-// frame's bottom row's 1 left the stack 2026-10-21, the frame's top row's 1
-// on 2026-10-22.) At 300 % every term is
-// a whole multiple of 3 device px.
-constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
+// the same under every chrome since 2026-10-09; the simple layout
+// 2026-10-22): the band (the pad, the case, the pad), the canvas column's 38
+// above the canvas (the view bar 8, the ruler 12, the marker lane 17, the
+// canvas's top frame row 1), the canvas's bottom frame row 1 under it and
+// row 8 (the pad, the case, the pad). `pad` the strip pad's W
+// (strip_pad_px). At 300 % every term is a whole multiple of 3 device px.
+constexpr int chrome_stack_authored_h(const ChromeSpec& s, int pad) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
                2 * kReliefLinePx)
         : 0;
-    const int row8 = program_dock_bar_authored_h(kProgramSpec) +
-                     program_row8_authored_h(kProgramSpec);
     return frame + s.caption_height_px +
-           program_band_authored_h(kProgramSpec) +
-           program_tab_strip_authored_h(kProgramSpec) +
+           program_strip_authored_h(kProgramSpec, pad) +
            program_column_authored_h(kProgramSpec) +
-           program_column_foot_authored_h(kProgramSpec) + row8 +
-           program_bottom_border_authored_h(kProgramSpec);
+           program_canvas_bottom_authored_h(kProgramSpec) +
+           program_strip_authored_h(kProgramSpec, pad);
 }
-// THE STACK (2026-10-09, the canvas column Cool Edit's, its canvas framed;
-// the border under row 8 2026-10-14; the tab strip 2026-10-18; the menu row
-// and the frame's columns and bottom row gone 2026-10-21; its top row
-// 2026-10-22): 115 above and 50 below, 165 — the tablet's well at 300 % 945
-// rows (315 W) of the surface's 1440 (a vocabulary's well its own lanes'
-// leftover, main.cpp's rule).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 165);
+// THE STACK AT THE FRAME OF RECORD'S PAD, 13 W (2026-10-22): 105 above (the
+// caption 18, the band 49, the column 38) and 50 below (the ring's last row
+// 1, row 8 49), 155 — the tablet's well at 300 % 975 rows (325 W) of the
+// surface's 1440, layout4_pad13's (a vocabulary's well its own lanes'
+// leftover, main.cpp's rule); every W of pad takes 4 W from it.
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000, 13) == 155);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect

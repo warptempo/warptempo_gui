@@ -74,7 +74,8 @@ struct GuiInputHandler;
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // and since 2026-10-21 true_colors (the popup's command row made a key) and
-// the two tuning keys bevel_light and bevel_dark (text_shadow, editable
+// the two tuning keys bevel_light and bevel_dark, and since 2026-10-22 the
+// tuning key strip_pad (the simple layout's pad) (text_shadow, editable
 // 2026-10-21..10-22, left with its key, the shadow one scaled px; icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,
 // editable 2026-10-07..10-10, and theme,
@@ -155,7 +156,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "bevel_light", "bevel_dark",
+    "bevel_light", "bevel_dark", "strip_pad",
 };
 
 struct GuiSettingsEditor {
@@ -240,7 +241,8 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `bevel_light=` and `bevel_dark=` — in one
+    // `waveform=`, `true_colors=`, `bevel_light=`, `bevel_dark=` and
+    // `strip_pad=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or

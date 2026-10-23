@@ -3315,11 +3315,10 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // (The program frame's top row's band left with its lane,
             // 2026-10-22.)
             top_caption_row_area(app), top_icon_row_area(app),
-            // THE TAB STRIP (2026-10-18), Cool Edit's Organizer tabs under
-            // the band: chrome, its two tabs buttons and its ground inert.
-            top_tab_strip_area(app),
-            // GAP 1's band, the ONE non-lane member (between the tab strip
-            // and the column's air, window ground): it sits inside the
+            // (The tab strip's band, 2026-10-18 to 2026-10-22, left with the
+            // strip.)
+            // GAP 1's band, the ONE non-lane member (between the band and
+            // the view bar, window ground): it sits inside the
             // top-strip area below, which
             // pans, so without this entry a wheel over that ground would
             // scroll the song — exactly the fault row 1's ruling named. Not
@@ -4106,6 +4105,17 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     paint_handler.on_resize(app.width, app.height);
     // THE MATERIALS AT THE NEW SCALE, AT ONCE (materials.h's BAKE RULE: one
     // act, one bake — the settle gate is a frame drag's alone).
+    materials::ensure(app);
+}
+
+void GuiInputHandler::apply_strip_pad(int w) {
+    // The apply shape is at the declaration (input_handler.h): the lanes'
+    // heights read the pad, so the window relays out as at a scale change,
+    // and the case patches move with the strips' rows (materials.h's BAKE
+    // RULE: the pad is in the bake's key, one act one bake).
+    set_strip_pad_w(w);
+    viewport.invalidate_all();
+    paint_handler.on_resize(app.width, app.height);
     materials::ensure(app);
 }
 

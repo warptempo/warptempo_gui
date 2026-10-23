@@ -960,7 +960,8 @@ void GuiSettingsEditor::commit() {
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it; `bevel_light` and `bevel_dark` (2026-10-21, the
 // fortepiano chrome's tuning phase; `text_shadow` beside them until
-// 2026-10-22) the same, their arm last.
+// 2026-10-22) the same, their arm next; `strip_pad` (2026-10-22, the simple
+// layout's pad) the same, its arm last.
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key.) The commit is the OK's or Enter's (the choice rows' list
@@ -1078,6 +1079,29 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                              app.device_config->bevel_dark);
         viewport.refresh_flag_cache();
         viewport.invalidate_all();
+        (void)persist();
+        applied();
+        return true;
+    }
+
+    // THE STRIP PAD (architect 2026-10-22, the simple layout; a number
+    // under tuning gets a key and a Settings row): the scale's canonical
+    // integer spelling under the range's one owner (is_strip_pad,
+    // device_config.h), APPLIED LIVE AT THE COMMIT through the scale's own
+    // apply shape (GuiInputHandler::apply_strip_pad — the lanes relaid, the
+    // materials baked again, the whole window), so NO CARD: the layout on
+    // screen is the answer.
+    if (key == "strip_pad") {
+        int64_t v = 0;
+        if (!parse_authored_frame(value, v) || !is_strip_pad(v)) {
+            reject(kStripPadGrammarReason);
+            return true;
+        }
+        if (static_cast<int>(v) == app.device_config->strip_pad) {
+            unchanged(); return true;
+        }
+        app.device_config->strip_pad = static_cast<int>(v);
+        input->apply_strip_pad(static_cast<int>(v));
         (void)persist();
         applied();
         return true;

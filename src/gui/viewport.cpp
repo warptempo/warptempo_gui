@@ -182,22 +182,17 @@ void Viewport::invalidate_status_cell_area() {
 // its surface is gone from the state but not yet from the screen), the
 // damage is the lane UNITED WITH THE MODAL FAMILY'S WHOLE AREA without the
 // keyboard (modal_area_rect at keyboard height 0 — the view bar's top row to
-// row 8's content foot, which contains the stack's lifted form over a
+// the window's foot, which contains the stack's lifted form over a
 // standing keyboard too), so a close erases the box and brings the lanes,
 // the canvas and row 8 back. A dialog editor's close takes the keyboard with
 // it, and the slot's hide edge damages that band (onscreen_keyboard::
 // slot_damage_rect, reconcile_slot_standing's). Under the render player and
-// the picker the controls row is the lane's own content band, and their
+// the picker the controls row is the lane's own rows, and their
 // list's damage is the folder overlay's. (The taskbar dialog, 2026-10-10 to
 // 2026-10-14, took the lane united with its overlay to the window's foot.)
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
-    // The border under the row with it: row 8's bars run through its light
-    // row while the row stands (2026-10-21, paint_bottom_border), so a
-    // closer that gives the row back gives the bars' last rows back too.
-    const GuiRect b = bottom_border_area(app);
-    gui.invalidate_region(b.x, b.y, b.w, b.h);
     const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
     if (modal_box_dialog_stands(app) ||
         painted == AppState::ModalDialogOwner::Prompt ||

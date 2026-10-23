@@ -222,7 +222,7 @@ enum class Icon {
     SwitchTab,           // Switch Tab (Ctrl+Tab) in both tabs — the set's
                          // preferences-system-windows (architect
                          // 2026-10-18: "use the original, not the
-                         // modified" — the tab strip names the tab; the
+                         // modified" — row 8's tab name names the tab; the
                          // tab-B copy with the other window in front
                          // stood 2026-10-12 to 2026-10-18)
     Settings,            // Settings (bare `;`) — the set's

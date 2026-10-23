@@ -62,10 +62,11 @@ GuiRect notification_stack_bound(const AppState& a) {
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well);
     // the right
-    // edge keeps the panel's margin from the window's edge. It is anchored on the trim lane and not on the icon row,
-    // so whatever stands between the band's cases and the trim lane — the
-    // tab strip (2026-10-18) and the canvas column's air — the card meets the bar the same way at every
-    // scale. No chrome spec field: no vocabulary needs another anchor (the
+    // edge keeps the panel's margin from the window's edge. It is anchored on
+    // the trim lane and not on the icon row, so whatever stands between the
+    // band's cases and the trim lane — the strip pad since 2026-10-22, the
+    // tab strip and the canvas column's air before — the card meets the bar
+    // the same way at every scale. No chrome spec field: no vocabulary needs another anchor (the
     // note among ChromeSpec's fields).
     // The card's INTERNAL pad is a different number and a different concept —
     // notification_pad_px(), the chrome inside the box rather than the box's

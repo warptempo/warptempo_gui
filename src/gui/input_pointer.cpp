@@ -105,8 +105,7 @@ struct ToolbarChord {
     // selected radio reads press, release exactly as a toggle does, its
     // pressed face held under the tip. THE ICON ROW'S TWO VIEW
     // PAIRS (architect 2026-10-14: Source / Target and Warp / Phase Reset,
-    // each member its own absolute chord) and THE TAB STRIP'S TWO TABS
-    // (architect 2026-10-18, both Ctrl+Tab) are the flag's users; follow,
+    // each member its own absolute chord) are the flag's users; follow,
     // iteration, read-only and history are TOGGLES and press through in both
     // directions, which is why this is a flag and not `selected` alone. The
     // consume is GENERIC — keyed on the flag plus the lamp, with no id list
@@ -118,19 +117,16 @@ struct ToolbarChord {
     // own handler already makes a press on the axis's current value a no-op, so dispatching
     // would be harmless rather than wrong. The flag keeps the lift on the lit
     // button a plain consumed nothing, the radio's own reading, rather than
-    // leaning on the act's idempotence. THE TWO TABS NEED IT OUTRIGHT
-    // (2026-10-18): their chord, Ctrl+Tab, TOGGLES, so the lit tab's lift
-    // dispatched would switch AWAY from the tab pressed — the flag is what
-    // makes the lit tab swallow its press, plain, shifted or held. (It once kept the CLAIM too, for a
+    // leaning on the act's idempotence. (The tab strip's two tabs, both
+    // Ctrl+Tab, a toggle, needed it outright 2026-10-18 to 2026-10-22, when
+    // the strip went.) (It once kept the CLAIM too, for a
     // face the bitmap crops could not show — a pressed interior over a lit
     // button; the faces are painted now and compose the two,
     // paint_roster_case.)
     bool           radio;
     // (EVERY CASE ROW PAINTS A PRESSED INTERIOR — the icon row's and the
-    // bottom row's click face — and THE TAB STRIP'S TWO TABS PAINT NONE
-    // (2026-10-18: Cool Edit's Organizer tabs show no pressed face), which
-    // is a membership, redesign_button_is_tab, rather than a column here;
-    // row 1's anchors carry no chord row at all. The face
+    // bottom row's click face; row 1's anchors carry no chord row at all.
+    // The face
     // tracks the pointer through the arm's `inside` bit — the paint reads
     // redesign_button_pressed_face, app_state.h.)
     // REPEATS: a held press on this button synthesizes its own chord over and
@@ -175,7 +171,7 @@ struct ToolbarChord {
 };
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
-// in the redesign — the icon row, the tab strip and the bottom row — in one
+// in the redesign — the icon row and the bottom row — in one
 // table. The flags above
 // are the
 // only axes the rows differ on, so they share one press body and one release
@@ -227,23 +223,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false},   // Ctrl+Alt+R (+Shift)
-    // THE TAB STRIP (architect 2026-10-18, lane 2 under the band, Cool
-    // Edit's Organizer tabs): BOTH TABS CARRY THE SAME CHORD, Ctrl+Tab,
-    // Switch Tab's — "it's ctrl+tab, so long press or shift press does
-    // history walk" — and both are RADIOS: with two tabs the toggle IS the
-    // direct select, and the flag makes the LIT tab's lift a consumed
-    // nothing (plain, shifted or held) where the chord would switch away.
-    // THEY ADMIT SHIFT (redesign_button_shift_admits): the other tab's
-    // shift-click and its glass long press OR the shift into the row's ctrl
-    // and dispatch Ctrl+Shift+Tab, the paired march, the press's own road
-    // as Switch Tab's — a modified press spells its button's own key under
-    // those modifiers. A ctrl press on a tab is refused at the band gate
-    // (the chord already carries its ctrl). They dispatch in every state,
-    // the `h` view included (Ctrl+Tab on its allowlist), and do not repeat:
-    // the long press is the shift. (The Breeze tab row's two rows of
-    // 2026-08 to 2026-10-01 carried the same chord and flags; git history.)
-    {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true},    // Ctrl+Tab
-    {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true},    // Ctrl+Tab
     // (THE EDIT FLAG BUTTON — bare Return on a button, the flag editor's third
     // road — stood in the bottom row's verb group from 2026-08-27 and in the
     // icon row for the evening of 2026-09-29, when the architect DELETED it:
@@ -405,8 +384,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // dispatches on both edges because the icon row's band claim sits ABOVE the
     // mode's pointer gate (the rows' presses are covered by the KEYBOARD gate
     // instead, which admits `h` through handle_history_mode_key one line before
-    // the allowlist). It stands right-anchored, one groove left of the
-    // view pairs, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
+    // the allowlist). It stands right-anchored, the view pairs' run's first
+    // case, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false},     // bare h
     // THE HISTORY COMPANIONS — the icon row's last group behind the opener
     // again since 2026-08-18 (they were this row's from 2026-08-04, the bottom
@@ -902,14 +881,12 @@ bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
 }
 
 // Does the roster button at this index paint a pressed interior? Every case
-// row does (the struct's note), so the answer is "it has a chord row and is
-// no tab": false for the tab strip's two tabs
-// (redesign_button_is_tab, 2026-10-18). The damage gate for the arm's
-// writers (a face that is never painted owes no erase).
+// row does (the struct's note), so the answer is "it has a chord row" (the
+// tab strip's two tabs, which painted none, left 2026-10-22). The damage
+// gate for the arm's writers (a face that is never painted owes no erase).
 bool roster_index_click_face(int index) {
     for (const ToolbarChord& tc : kToolbarChords) {
-        if (redesign_button_index(tc.id) == index)
-            return !redesign_button_is_tab(tc.id);
+        if (redesign_button_index(tc.id) == index) return true;
     }
     return false;
 }
@@ -958,7 +935,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // carve themselves out (point_on_placement_lanes below, and the band walks'
 // own flag claims), and the TRIM BAR is a disjoint y-band that never answers
 // true here (it has its own claim and its own cue). Deliberately NOT the
-// flexible gap band (above main.cpp's lane 3, under the tab strip) — that ground
+// flexible gap band (above main.cpp's lane 2, under the band) — that ground
 // is chrome, not surface, and stays inert.
 bool point_in_placement_lanes(const AppState& app, int x, int y) {
     return rect_contains(top_ruler_row_area(app), x, y) ||
@@ -5781,7 +5758,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // finish_chrome_press_release, in on_button_release.
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
-    // paint_icon_row / paint_tab_strip /
+    // paint_icon_row /
     // paint_bottom_row_buttons_and_clock; every roster member publishes a real
     // rect on every frame since 2026-08-18, the bottom row's cluster swap —
     // whose unpainted four stashed a zero rect that contains no point, and
@@ -5806,27 +5783,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         claim_button_row_press();
         return;
     }
-    // THE TAB STRIP (architect 2026-10-18, lane 2 under the band): the same
-    // body — its two tabs are roster buttons, each resolving against the
-    // rect the strip's painter published (paint_tab_strip: the lit tab's
-    // grown box, the other's footprint), the lit one's press swallowed at
-    // the lift (the radio column). EVERYTHING ELSE IN THE LANE IS CHROME,
-    // INERT TO EVERY SURFACE — the recess, the gaps, the page line — as the
-    // program frame's columns and the stereo divider are (2026-10-16): a
-    // press there claims nothing and is consumed here. Under the render
-    // player and the picker the veils above consume the press first (the
-    // tabs grey there, redesign_button_enabled's head); under a prompt, a
-    // dialog editor or the progress modal the modal gates above swallow it.
-    if (rect_contains(top_tab_strip_area(app), x, y)) {
-        claim_button_row_press();
-        return;
-    }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is bottom lane 1 (bottom_row_area,
-    // over the border under row 8 as lane 0, the window's lowest line since
-    // 2026-10-14; no program frame stands under it, the frame's columns and
-    // bottom row having gone 2026-10-21 and its top row 2026-10-22), and
+    // on the block's own terms: the band is bottom lane 0 (bottom_row_area,
+    // on the window's foot since the simple layout, 2026-10-22), and
     // everything else is the shape above — below the modal gates (a prompt,
     // a dialog editor or the progress modal swallows the press; the
     // pointer-transparent flag editor does not, and its KEYBOARD modality
@@ -5837,11 +5797,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // beside it, the lane's pointer-inert span (the status chain that shared
     // that ground until 2026-08-13 took no clicks either, and took none away
     // with it) — and the STATE CELL right of the clock since 2026-08-29 is that
-    // same inert ground, a text cell with no rect of its own to test. BELOW
-    // THE LANE stands only the border under row 8 (2026-10-14), inert ground
-    // falling through to the tail's consumed nothing, and ABOVE it lies GAP
-    // 2's blank window ground — outside every band here and falling through
-    // the same way, as window ground by the vertical rule (main.cpp).
+    // same inert ground, a text cell with no rect of its own to test, as is
+    // the active tab's name beside the clock (2026-10-22). ABOVE it stand
+    // the canvas's bottom frame row (inert chrome, the program ring's) and
+    // GAP 2's blank window ground — outside every band here and falling
+    // through to the tail's consumed nothing, the ground as window ground by
+    // the vertical rule (main.cpp).
     // (THE BODY IS claim_button_row_press, above the veils.)
     if (rect_contains(bottom_row_area(app), x, y)) {
         claim_button_row_press();

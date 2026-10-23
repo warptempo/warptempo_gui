@@ -111,8 +111,8 @@
 // its CueM (the red of the default scheme, F34B58) and `range` its RngM (the
 // blue, 4B82F3) — METRICS §4.2 — `playhead_stem` its Curs (the yellow, §4.3),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color": the
-// ground of the program's panel — the toolbar band, the dock bar, row 8 and
-// the canvas column's lanes — whose every other tone derives from it,
+// ground of the program's panel — the toolbar band, row 8 and the canvas
+// column's lanes — whose every other tone derives from it,
 // cool_edit_derive.h; a material's mean in its place on every surface since
 // 2026-10-21 — the wood's since 2026-10-22 — the head; a scheme recording none — Classic Cool, for which
 // Cool Edit follows the Windows 3D face — takes THE DEFAULT PRESET'S FACE,

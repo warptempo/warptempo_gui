@@ -1,7 +1,7 @@
 #include "materials.h"
 
 #include "app_state.h"          // the lane accessors the bake's geometry reads
-#include "cool_edit_derive.h"   // the tone rule, kTabBodies' Default row
+#include "cool_edit_derive.h"   // the tone rule
 #include "cool_edit_paint.h"    // the disabled emboss's measured tones and ratios
 #include "device_config.h"      // device_config_path — the override folder beside it
 #include "display_transform.h"
@@ -62,17 +62,18 @@ Tile make_tile(const GuiRect& r, Surface s) {
     return t;
 }
 
-// THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale and
-// the conversion — every lane, every seat and so every tile's rect is a
-// function of them (program_case_rects' declaration), so a frame compares
-// these four and never lays anything out.
+// THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale, the
+// strip pad (2026-10-22: it moves the band's and row 8's case seats, the
+// patches' rows) and the conversion — every lane, every seat and so every
+// tile's rect is a function of them (program_case_rects' declaration), so a
+// frame compares these five and never lays anything out.
 struct Key {
-    int  w = 0, h = 0, scale = 0;
+    int  w = 0, h = 0, scale = 0, pad = 0;
     bool converted = false;
     bool operator==(const Key&) const = default;
 };
 Key key_of(const AppState& app) {
-    return Key{app.width, app.height, gui_scale_percent(),
+    return Key{app.width, app.height, gui_scale_percent(), strip_pad_w(),
                display_transform::active()};
 }
 
@@ -80,17 +81,15 @@ Key key_of(const AppState& app) {
 // bake alone.
 struct Geometry {
     int w = 0, h = 0;
-    // Wood: its Face's sample above the panel [0, panel_top) and below it
-    // [panel_bottom, h), window-wide (materials.h's TONE RULE); its tile
-    // the band's top to the window's last row, window-wide (bake_wood).
+    // Wood: its Face's sample above the canvas column [0, panel_top) and
+    // below it [panel_bottom, h), window-wide (materials.h's TONE RULE); its
+    // tile the band's top to the window's last row, window-wide (bake_wood).
     int panel_top = 0, panel_bottom = 0;
     // Metal: THE MARKER LANE'S ROWS, window-wide (materials.h's METAL,
     // 2026-10-22) — its tile and its Face's sample.
     int lane_y = 0, lane_h = 0;
-    // The void's rows (the band).
-    int band_y = 0, band_h = 0;
-    // The inactive tab's body rows (the wood's, 2026-10-22).
-    int tab_body_y0 = 0, tab_body_y1 = 0;
+    // The band's top row: the wood tile's first.
+    int band_y = 0;
     // THE CASES (program_case_rects: every case's outer rect, both states of
     // the `h` view) and the case's line and glyph seat — the rows the
     // ebony's Face is sampled from (bake_case).
@@ -109,18 +108,13 @@ Geometry geometry_of(const AppState& app) {
     Geometry g;
     g.w = app.width;
     g.h = app.height;
-    const GuiRect strip = top_tab_strip_area(app);
-    g.panel_top = strip.y + strip.h;
+    g.panel_top = top_trim_row_area(app).y;
     g.panel_bottom = bottom_row_area(app).y;
     const GuiRect lane = top_marker_row_area(app);
     g.lane_y = lane.y;
     g.lane_h = lane.h;
-    const GuiRect band = top_icon_row_area(app);
-    g.band_y = band.y;
-    g.band_h = band.h;
+    g.band_y = top_icon_row_area(app).y;
     g.lw = program_line_px();
-    g.tab_body_y0 = strip.y + scaled_px(kProgramSpec.tab_inactive_top_px) + g.lw;
-    g.tab_body_y1 = strip.y + tab_strip_recess_h_px();
     g.g = icon_case_w_px() - 3 * g.lw;
     g.cases = program_case_rects(app);
     g.word_and_key_cases = word_and_key_case_rects(app);
@@ -157,9 +151,9 @@ struct State {
     Key      key;
     std::array<uint32_t, kGuiMaterialCount> faces{};
     // THE TILES (materials.h's BAKE RULE): the wood's ground and the
-    // brass's lane, the void, the inactive tab's body (the wood's) and THE CASE
-    // PATCHES, one per seat at rest and one pressed.
-    std::vector<Tile> wood, metal, void_tiles, tab_body;
+    // brass's lane, and THE CASE PATCHES, one per seat at rest and one
+    // pressed.
+    std::vector<Tile> wood, metal;
     std::vector<Tile> case_rest, case_down;
     // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
     // change waits on the gate the tiles are the last bake's, and none is
@@ -186,7 +180,6 @@ struct State {
     GuiMaterialRegion      region = GuiMaterialRegion::Flat;
     // THE TONE TABLE (set_tone_face): a flat word and its key.
     std::vector<std::pair<uint32_t, int>> tones;
-    int                                   recess_key = kFaceKey;
     // Each region's flat strokes, by the table's order (rebuilt with it and
     // at a bevel change).
     std::vector<uint32_t> wood_flat, metal_flat;
@@ -292,19 +285,6 @@ double case_ramp_ratio(int i, uint32_t ebony) {
                                         static_cast<double>(kCaseStops - 1);
     return luma_ratio(case_tone(ebony, b), ebony);
 }
-// The inactive tab body's luma ratio at stop k (materials.h's WOOD):
-// kTabBodies' Default row, each row's HLS lightness over the Default Face's,
-// taken onto the material's Face `face` (the wood's since 2026-10-22, the
-// brass's until then — on a Face darker than HLS L .5 the ratio is the
-// lightness ratio itself, the same on either).
-double tab_body_ratio(int k, uint32_t face) {
-    using namespace cool_edit_derive;
-    const TabBody& d = tab_body(kDefaultFace);
-    const double a = hls_of(d.rows[static_cast<std::size_t>(k)]).l /
-                     hls_of(kDefaultFace).l;
-    return luma_ratio(tone(face, a, 0.0), face);
-}
-
 // One pixel row's channels times `f`, rounded and clamped, opaque.
 void scale_row(const uint32_t* src, uint32_t* dst, int w, double f) {
     for (int x = 0; x < w; ++x) {
@@ -318,29 +298,7 @@ void scale_row(const uint32_t* src, uint32_t* dst, int w, double f) {
     }
 }
 
-// A NEW SURFACE of `src`'s rows [y0, y0 + h) (client rows; `src_y` the
-// source tile's first row), each row's pixels times its luma ratio — sRGB,
-// converted for the window later.
-Surface scaled_rows(cairo_surface_t* src, int src_y, int y0, int h,
-                    const auto& ratio_of_row) {
-    const int w = cairo_image_surface_get_width(src);
-    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-    cairo_surface_flush(src);
-    cairo_surface_flush(out);
-    const unsigned char* sdata = cairo_image_surface_get_data(src);
-    const int sstride = cairo_image_surface_get_stride(src);
-    unsigned char* ddata = cairo_image_surface_get_data(out);
-    const int dstride = cairo_image_surface_get_stride(out);
-    for (int y = 0; y < h; ++y)
-        scale_row(reinterpret_cast<const uint32_t*>(
-                      sdata + static_cast<std::size_t>(y0 + y - src_y) * sstride),
-                  reinterpret_cast<uint32_t*>(ddata + static_cast<std::size_t>(y) * dstride),
-                  w, ratio_of_row(y));
-    cairo_surface_mark_dirty(out);
-    return Surface(out);
-}
-
-// THE SAME IN PLACE: each of `s`'s rows times its luma ratio.
+// IN PLACE: each of `s`'s rows times its luma ratio (the case ramp's).
 void scale_in_place(cairo_surface_t* s, const auto& ratio_of_row) {
     cairo_surface_flush(s);
     const int w = cairo_image_surface_get_width(s);
@@ -632,9 +590,8 @@ std::expected<std::vector<Surface>, std::string> source_regions(
 struct Baked {
     std::string                             error;   // empty: success
     uint32_t                                face = 0;
-    // grounds: a material's ground tiles; extra: the wood's void; body: the
-    // wood's inactive tab body; rest / down: the ebony's patches.
-    std::vector<std::pair<GuiRect, Surface>> grounds, extra, body, rest, down;
+    // grounds: a material's ground tiles; rest / down: the ebony's patches.
+    std::vector<std::pair<GuiRect, Surface>> grounds, rest, down;
     double                                  ms = 0.0;   // read, decode, derive
 };
 
@@ -716,14 +673,10 @@ uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
 // THE WOOD (materials.h's WOOD, 2026-10-22: every ground but the marker
 // lane's accent): ONE TILE, THE BAND'S TOP TO THE WINDOW'S LAST ROW,
 // window-wide (the cards, the tooltip, the modal family and the keyboard's
-// band stand anywhere below the caption); THE VOID, the band's rows times
-// kWoodVoidLuma; THE INACTIVE TAB'S BODY, its rows window-wide, each W
-// row's stop its luma ratio (tab_body_ratio). The caption's rows are
-// DECODED as a region of their own for THE FACE's sample alone — the rows
-// above the panel and below it, window-wide, exactly the pixels it was
-// measured over before the wood took the panel (materials.h's TONE RULE),
-// so no wood tone moved. The canvas interior is the GPU's, its rows of the
-// tile never blitted.
+// band stand anywhere below the caption). The caption's rows are DECODED as
+// a region of their own for THE FACE's sample alone — the rows above the
+// canvas column and below it, window-wide (materials.h's TONE RULE). The
+// canvas interior is the GPU's, its rows of the tile never blitted.
 void bake_wood(const Source& src, const Geometry& g, Baked& out) {
     // The caption's rows (the sample's alone) and the tile's, each decoded
     // only where it has rows; the tile's index last.
@@ -746,22 +699,6 @@ void bake_wood(const Source& src, const Geometry& g, Baked& out) {
     const std::size_t ti = rects.size() - 1;
     const GuiRect& at = rects[ti];
     if (!(*raw)[ti]) return;
-    cairo_surface_t* tile = (*raw)[ti].get();
-    if (g.band_h > 0 && g.band_y >= at.y && g.band_y + g.band_h <= at.y + at.h)
-        out.extra.emplace_back(
-            band_of(g, g.band_y, g.band_y + g.band_h),
-            scaled_rows(tile, at.y, g.band_y, g.band_h,
-                        [](int) { return kWoodVoidLuma; }));
-    const int body_h = g.tab_body_y1 - g.tab_body_y0;
-    if (body_h > 0 && g.tab_body_y0 >= at.y && g.tab_body_y1 <= at.y + at.h) {
-        constexpr int kStops = 15;
-        const uint32_t wood = out.face;
-        out.body.emplace_back(
-            band_of(g, g.tab_body_y0, g.tab_body_y1),
-            scaled_rows(tile, at.y, g.tab_body_y0, body_h, [&](int y) {
-                return tab_body_ratio(stop_of(y, body_h, kStops), wood);
-            }));
-    }
     out.grounds.emplace_back(at, std::move((*raw)[ti]));
 }
 
@@ -931,7 +868,7 @@ void bake_one(GuiMaterial m, const Source& src, const Geometry& g, Baked& out) {
         case GuiMaterial::Case:  bake_case(src, g, out);  break;
     }
     if (out.error.empty())
-        for (auto* set : {&out.grounds, &out.extra, &out.body, &out.rest, &out.down})
+        for (auto* set : {&out.grounds, &out.rest, &out.down})
             for (auto& [rect, s] : *set) convert(s.get());
     out.ms = std::chrono::duration<double, std::milli>(
                  std::chrono::steady_clock::now() - t0)
@@ -1060,8 +997,6 @@ std::optional<std::string> bake(const Geometry& g) {
     State& s = state();
     s.wood.clear();
     s.metal.clear();
-    s.void_tiles.clear();
-    s.tab_body.clear();
     s.case_rest.clear();
     s.case_down.clear();
     const auto take = [](std::vector<std::pair<GuiRect, Surface>>& from,
@@ -1072,8 +1007,6 @@ std::optional<std::string> bake(const Geometry& g) {
     Baked& metal = baked[static_cast<std::size_t>(GuiMaterial::Metal)];
     Baked& ebony = baked[static_cast<std::size_t>(GuiMaterial::Case)];
     take(wood.grounds, s.wood);
-    take(wood.extra, s.void_tiles);
-    take(wood.body, s.tab_body);
     take(metal.grounds, s.metal);
     take(ebony.rest, s.case_rest);
     take(ebony.down, s.case_down);
@@ -1261,14 +1194,15 @@ void set_tone_face(uint32_t chrome_face) {
     // a relief or a ground puts down — the text, the label and the cue's
     // shadow are ink and stay flat. A word two tones share (a dark Face can
     // round two near tones to one byte triple) answers the first.
+    // THE TONES THAT STILL PAINT (2026-10-22, the simple layout: the band's
+    // recess, the grippers' pair and the tab strip's four left with their
+    // painters): the ruler's `mid` ground, the program ring's and the
+    // clock's ring's `dark` and `hilight`, the render player's field lines.
     static constexpr std::string_view kSurfaceTones[] = {
-        "recess", "mid", "gripper_dark", "dark", "tab_dark", "field_dark",
-        "page_dark", "hilight", "gripper_light", "field_light", "tab_light",
-        "tab_line"};
+        "mid", "dark", "field_dark", "hilight", "field_light"};
     State& s = state();
     s.tones.clear();
     s.tones.emplace_back(chrome_face & 0xFFFFFFu, kFaceKey);
-    s.recess_key = kFaceKey;
     for (std::size_t i = 0; i < std::size(cool_edit_derive::kTones); ++i) {
         const cool_edit_derive::Tone& t = cool_edit_derive::kTones[i];
         if (t.source != cool_edit_derive::ToneSource::Face) continue;
@@ -1280,8 +1214,6 @@ void set_tone_face(uint32_t chrome_face) {
             std::any_of(s.tones.begin(), s.tones.end(),
                         [&](const auto& e) { return e.first == w; });
         if (!taken) s.tones.emplace_back(w, static_cast<int>(i));
-        if (std::string_view(t.name) == "recess")
-            s.recess_key = static_cast<int>(i);
     }
     if (s.baked) rebuild_flats();
 }
@@ -1313,13 +1245,10 @@ bool set_source(cairo_t* cr, GuiColor c) {
     if (row < 0) return false;
     const int key = s.tones[static_cast<std::size_t>(row)].second;
     const std::vector<uint32_t>& flats = *flats_of_region();
-    // THE FACE, and the band's void: the tile under the path, else the flat.
+    // THE FACE: the tile under the path, else the flat.
     const std::vector<Tile>* tiles = nullptr;
-    if (key == kFaceKey) {
+    if (key == kFaceKey)
         tiles = s.region == GuiMaterialRegion::Wood ? &s.wood : &s.metal;
-    } else if (key == s.recess_key && s.region == GuiMaterialRegion::Wood) {
-        tiles = &s.void_tiles;
-    }
     if (tiles) {
         if (const Tile* t = tile_under_path(cr, *tiles)) {
             // THE BRASS AT ITS PHASE, every reader of its tile together —
@@ -1406,27 +1335,10 @@ void paint_case_ramp(cairo_t* cr, int x, int y, int w, int h, bool down) {
     cairo_restore(cr);
 }
 
-void paint_tab_body(cairo_t* cr, const GuiRect& body) {
-    if (body.w <= 0 || body.h <= 0) return;
-    State& s = state();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_rectangle(cr, body.x, body.y, body.w, body.h);
-    // The wood's flat mean where no baked row holds it (the panel's face
-    // before a bake).
-    const Tile* t = s.baked ? tile_under_path(cr, s.tab_body) : nullptr;
-    if (t)            set_tile_source(cr, *t);
-    else if (s.baked) set_palette_source(cr, hex(s.faces[static_cast<std::size_t>(GuiMaterial::Wood)]));
-    else              set_palette_source(cr, palette().face);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-
 std::size_t resident_bytes() {
     const State& s = state();
     std::size_t n = 0;
-    for (const auto* set : {&s.wood, &s.metal, &s.void_tiles, &s.tab_body,
-                            &s.case_rest, &s.case_down})
+    for (const auto* set : {&s.wood, &s.metal, &s.case_rest, &s.case_down})
         n += bytes_of(*set);
     return n;
 }

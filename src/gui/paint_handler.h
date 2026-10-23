@@ -48,12 +48,13 @@ struct GuiTargetRender;
 // THE PROGRAM'S CASES, ONE LIST FOR THE MATERIALS' BAKE (2026-10-21,
 // materials.h's CASE PATCHES): every case — its outer rect — the band, row 8
 // and the render player lay out at this window geometry, IN BOTH STATES OF
-// THE `h` VIEW (its hide and stand-ins move the band's left panes and row
+// THE `h` VIEW (its hide and stand-ins move the band's left runs and row
 // 8's block), each row's own layout function the painter reads too
 // (paint_handler.cpp: icon_row_seats and icon_row_walk, row8_block and
 // row8_block_walk, player_row_layout), so the bake seats a patch wherever a
-// case can stand and never where none does. A function of the client size
-// and the scale alone (the faces compiled in), which is the bake's key.
+// case can stand and never where none does. A function of the client size,
+// the scale and the strip pad alone (the faces compiled in), which is the
+// bake's key.
 std::vector<GuiRect> program_case_rects(const AppState& app);
 // THE WORD BUTTONS AND THE KEYS, THE EBONY'S OTHER PATCHES (architect
 // 2026-10-22, "buttons in ebony — yes"; materials.h's CASE PATCHES): every
@@ -66,8 +67,9 @@ std::vector<GuiRect> program_case_rects(const AppState& app);
 // (GuiPlatform::wants_onscreen_keyboard), on the row lifted onto the
 // keyboard's band; and there every page's keys (onscreen_keyboard::
 // for_each_key, the walk the painter and the hit test read). Each rect
-// its own w x h, none twice. A function of the client size and the scale
-// alone (the faces and the tables compiled in), the bake's key; never the
+// its own w x h, none twice. A function of the client size, the scale and
+// the strip pad alone (the faces and the tables compiled in), the bake's
+// key; never the
 // ebony Face's sample (bake_case).
 std::vector<GuiRect> word_and_key_case_rects(const AppState& app);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
@@ -83,33 +85,10 @@ std::vector<GuiRect> word_and_key_case_rects(const AppState& app);
 // render.cpp can reach it without pulling paint_handler.h into the
 // lower-layer include graph.
 
-// THE MODAL ROW'S PAD — the bottom row's 8px lead-in and lead-out for the
-// modal that displaces its tenants and the render player's transport (since
-// 2026-10-09 the band and row 8 themselves walk from Cool Edit's edge
-// columns and row 8's bars, program_spec.h; the name is the icon row's, whose
-// pad it was from 2026-08-14, architect: "make sure bottom row is same
-// height and metrics (padding, etc.) as main icon row"). It lives in this header rather than in
-// the painter's file because that unification gave it a reader outside the row
-// — one source, so a retune of the icon row carries to the other by
-// construction. (The one-day STATUS BAR read it too, at both ends and for the
-// air between its two cells, and took no number of its own with it when it
-// folded back into row 8 on 2026-08-29.)
-//
-// TWO SEPARATELY-MEASURED PADS DIED INTO THIS ONE. bottom_row_pad_x, the
-// modal's own accessor, went at the 2026-08-14 ruling: it was a
-// separately-measured 13 — the status chain's number, which the modal
-// inherited when it landed on this row — while the row's own buttons already
-// walked from this 8. status_chain_pad_x, that 13 itself (measured off
-// row_7_text.png: fitting the crop's own string offscreen at the row's 16px
-// size put the pen at x = 13), went on 2026-08-29 with the chain it aligned:
-// the row that took the chain's surviving strings — row 8, through its own
-// state cell — reads this 8 like every other redesigned row, so the product
-// has one lane pad and no second number. EIGHT WINDOWS PX since the unit's
-// change (architect 2026-10-02: the laptop pixel's 8 kept as the Windows
-// number, 24 device px at 300 % and 11 at 138 %).
-inline int icon_row_pad_x() {
-    return scaled_px(8.0);
-}
+// (THE MODAL ROW'S PAD — icon_row_pad_x, the bottom row's 8-W lead-in and
+// lead-out, the icon row's pad from 2026-08-14 — left with its last reader,
+// row 8's seats, 2026-10-22: the strips' ends are program_spec.h's insets
+// and the modal controls row's the box's ring.)
 
 // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14): the Settings editor's
 // "Setting:" ("pointless that far away. just remove it") and the BPM editor's
@@ -910,12 +889,8 @@ private:
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
     // after them touches their lanes, the flag cache being transparent there.
     void paint_icon_row(cairo_t* cr);
-    // THE TAB STRIP (top lane 2, architect 2026-10-18; cool_edit_paint.h's
-    // paint_ce_tab_strip owns the picture): the two tabs, TabA and TabB,
-    // PUBLISHED like the rows above (publish_button_face, the painted box
-    // each tab's press target), the lit one the active tab; called beside
-    // them on its own exposure.
-    void paint_tab_strip(cairo_t* cr);
+    // (THE TAB STRIP's painter, paint_tab_strip, 2026-10-18, is retired with
+    // the strip, 2026-10-22.)
     // (THE PROGRAM'S FRAME's painter, paint_program_frame — its top row
     // alone, one Shadow line under the caption, from 2026-10-21 — is retired
     // with the row, 2026-10-22; THE BOTTOM OVERLAYS' painter,
@@ -937,16 +912,15 @@ private:
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
     // 2026-10-09): the clock in its dark time field (2026-10-05) in a
-    // group of its own between two bars at the left, with THE STATE LINE on
-    // the face its own air past that group's closing bar (architect
-    // 2026-10-03: the `h` walk line or the render's progress line at the
-    // normal face, clipped short of the right block), then the right block
-    // packed against the lane's edge — the MARKER-VERB GROUP (its membership
-    // is kMarkerVerbGroup's, in the .cpp), the step and walk and the nudge
-    // and play with Play / Stop its last case (2026-10-18) — each group
-    // between bars, adjacent groups sharing one, the last against the frame's
-    // line (2026-10-21, program_spec.h's row-8 bar fields; Cool Edit's
-    // grippers and end bars 2026-10-09 to 2026-10-21; eight Windows px of
+    // ring at the left, the active tab's name and THE STATE LINE on the wood
+    // past it (architect 2026-10-03: the `h` walk line or the render's
+    // progress line at the normal face, clipped short of the right block),
+    // then the right block packed against the row's right inset — the
+    // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp),
+    // the step and walk and the nudge and play with Play / Stop its last
+    // case (2026-10-18) — each group a plain run, the run gap between two
+    // (the simple layout, 2026-10-22; the bars of 2026-10-21, Cool Edit's
+    // grippers and end bars 2026-10-09 to 2026-10-21, eight Windows px of
     // bare ground between groups 2026-09-29 to 2026-10-09) — painted onto
     // the lane
     // paint_bottom_strip has
@@ -1009,8 +983,7 @@ private:
                                         const GuiRect& area);
     // The LIVE trim pass: paints EVERY trim pixel per frame — the view bar
     // whole (its lines, its black field and the span; no playhead, architect
-    // 2026-10-09 ~14:30) and the column's air above it — in ONE pass, entirely inside
-    // those two lanes. Its slot is in THE AUTHORITATIVE PAINT-ORDER BLOCK IN
+    // 2026-10-09 ~14:30) — in ONE pass, entirely inside its lane. Its slot is in THE AUTHORITATIVE PAINT-ORDER BLOCK IN
     // on_redraw; this states only this pass's own place in it. Invoked
     // whenever the exposed rect intersects the top strip OR the waveform area
     // — render_background erases every exposed top-strip pixel, so a

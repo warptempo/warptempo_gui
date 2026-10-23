@@ -140,8 +140,7 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // the line's origin is pulled back by this bearing — a placement off the
 // origin would read wider by whatever bearing the line's first glyph
 // carries. Every other layout wants a reserved CELL, which is `width_px`'s
-// job — the tab strip's labels among them (2026-10-18 ~20:20, their pads on
-// the cell). (A two-edged InkExtents stood here 2026-08-30 .. 31 for the
+// job. (A two-edged InkExtents stood here 2026-08-30 .. 31 for the
 // state cell then butted against the monospace clock; only the left edge
 // has a reader.)
 double ink_left_px(const ShapedRun& run);

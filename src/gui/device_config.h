@@ -89,6 +89,16 @@
 //                            (the solid tones recomputed, never a bake), both
 //                            templates writing 100; the keys leave when he
 //                            settles the values, which become constants
+//   strip_pad=<W>            THE STRIP PAD (architect 2026-10-22, the simple
+//                            layout), a TUNING PHASE: an integer in Windows
+//                            px [0, 40], the band's and row 8's air above and
+//                            below their cases (render.h's strip_pad_px; the
+//                            mocks ran 8 .. 15, 13 the pick); a Settings row,
+//                            applied LIVE at OK (the lanes relaid and the
+//                            materials baked again, the apply shape
+//                            GuiInputHandler::apply_strip_pad), both
+//                            templates writing 13; the key leaves when he
+//                            settles the value, which becomes a constant
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
@@ -363,6 +373,9 @@ struct DeviceConfig {
     // 100 the templates' and the construction state's.
     int         bevel_light = 100;
     int         bevel_dark  = 100;
+    // THE STRIP PAD (2026-10-22, the head's list): required; 13 the
+    // templates' and the construction state's.
+    int         strip_pad   = 13;
 };
 
 // THE BEVEL KEYS' RANGE — the one owner, the reader's and the settings
@@ -374,6 +387,16 @@ inline constexpr bool is_bevel_percent(int64_t v) {
 }
 inline constexpr const char* kBevelGrammarReason =
     "must be an integer in [0, 400] in canonical spelling";
+
+// THE STRIP PAD'S RANGE — the one owner, the reader's and the settings
+// editor's (the scale's shape): an integer in Windows px, [0, 40] — 0 the
+// cases touching the program ring and the window's foot, 40 well past the
+// mocks' 15 (a tuning range, the head's list).
+inline constexpr bool is_strip_pad(int64_t v) {
+    return v >= 0 && v <= 40;
+}
+inline constexpr const char* kStripPadGrammarReason =
+    "must be an integer in [0, 40] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -407,26 +430,27 @@ inline constexpr const char* kDefaultProjectsRepo =
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
 // pixel the lanes above the waveform — the caption 18 W, the program's band
-// 33, the tab strip 21 and its canvas column's 43 — and below it — the
-// column's foot 6, the dock bar 6, row 8's 32 and the border under row 8 6
-// — stand 115 + 50 = 165 W under windows-2000 (re-derived 2026-10-22 with
-// the frame's top row's retirement, main.cpp's stack record), 460 device
-// rows above the waveform and 200 below at 400 %, 660 in all, leaving the
-// tablet's 1440 rows 780 of waveform; they pass 1440 near 870 %, past which the waveform is the zero
+// 49 (the strip pad's 13 twice and the case) and its canvas column's 38 —
+// and below it — the canvas's bottom frame row 1 and row 8's 49 — stand 105
+// + 50 = 155 W under windows-2000 (re-derived 2026-10-22 for the simple
+// layout, main.cpp's stack record), 420 device rows above the waveform and
+// 200 below at 400 %, 620 in all, leaving the tablet's 1440 rows 820 of
+// waveform; they pass 1440 near 930 %, past which the waveform is the zero
 // height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 560
-// Windows px of window at 100 % (422 in the `h` view) the icon row — Cool
-// Edit's band since 2026-10-09, its twenty standing members in eight
-// panes round the program's 23-W case (fourteen in the view, its history
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 518
+// Windows px of window at 100 % (334 in the `h` view) the icon row — the
+// toolbar band, its twenty standing members in three left runs and one
+// right run of the program's 23-W case (twelve in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
-// view pairs two panes since 2026-10-14) — no longer fits, and its
-// flush-right view pairs cover the panes to their left (the overflow rule at
+// runs the simple layout's, 2026-10-22) — no longer fits, and its
+// right-anchored run covers the runs to its left (the overflow rule at
 // kIconRowViewPairs, paint_handler.cpp). The tablet's 2304-px panel holds
-// the row whole in both states up to about 410 % — 1218 + 456 device px at
-// 300 % outside the view (the arithmetic is at paint_icon_row,
-// paint_handler.cpp, its one statement, re-derived 2026-10-17) — and past
+// the row whole in both states up to about 440 % — the left runs on device
+// x 21..1145 and the right run on 1941..2285 at 300 % outside the view (the
+// arithmetic is at paint_icon_row, paint_handler.cpp, its one statement,
+// re-derived 2026-10-22) — and past
 // that ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
@@ -667,7 +691,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
 // `true_colors=`, `bevel_light=` and `bevel_dark=` (`text_shadow=` beside
-// them until 2026-10-22) (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// them until 2026-10-22), and since 2026-10-22 `strip_pad=`, whose arm hands
+// the live apply to GuiInputHandler::apply_strip_pad
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
 // 2026-10-07..10-10; the color picker's preset menu wrote the two color
@@ -686,8 +712,9 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=cool-edit-default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on`, `bevel_light=100` and
-// `bevel_dark=100` (the struct's own values) and no role line
+// required since 2026-10-14), `true_colors=on`, `bevel_light=100`,
+// `bevel_dark=100` and `strip_pad=13` (the struct's own values) and no role
+// line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and
 // a blank

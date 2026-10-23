@@ -289,8 +289,8 @@ double gui_face_em_px(GuiFace face);
 //   whatever its sign (gui_sign_lift_px, text_shape's offset).
 //   THE PIPE SITS ON THE DIGITS' BAND (GuiFaceSet::pipe_lift; architect
 //   2026-10-09 ~21:20, "the pipe should be even", row 8's clock setting it
-//   between the timestamp and the tab letter until the tab strip took the
-//   letter, 2026-10-18; every pipe the body sets keeps it, the state line's
+//   between the timestamp and the tab letter until the letter left the
+//   clock, 2026-10-18; every pipe the body sets keeps it, the state line's
 //   segment separator among them): "|" (U+007C) takes the "0"'s
 //   ink centre, so its overhang above and below the digits beside it is the
 //   same - a bar on the hyphen's axis would hang low. Liberation Sans draws

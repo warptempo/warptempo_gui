@@ -1998,9 +1998,9 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order (row 1's three menu
-// anchors, File, Edit and Settings, went with the menu row 2026-10-21):
-// THE TAB STRIP'S TWO TABS (TabA and TabB, 2026-10-18, painted by
-// paint_tab_strip rather than a table of the painter's), row 4's TWENTY-TWO
+// anchors, File, Edit and Settings, went with the menu row 2026-10-21, the
+// tab strip's two tabs, TabA and TabB, with the strip 2026-10-22): row 4's
+// TWENTY-TWO
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
 // the deleted toolbar row's four behind it since the 2026-08-12 relayout;
 // the HISTORY OPENER and ITS THREE
@@ -2009,8 +2009,9 @@ struct TrimBarPressSeed {
 // slots, and only in the `h` view, since 2026-10-05
 // (kIconRowHistoryStandIns, paint_handler.cpp), the walk's OLDER / NEWER
 // row 8's since 2026-10-11 though the enum keeps them here — and THE VIEW
-// PAIRS' FOUR close the row flush right since 2026-10-01, two radio panes
-// since 2026-10-14), then the
+// PAIRS' FOUR close the row flush right since 2026-10-01, two radio pairs
+// since 2026-10-14, one right run behind the history opener since
+// 2026-10-22), then the
 // bottom row's SEVENTEEN (re-counted 2026-10-12, when Go to Start and
 // Go to End left; nineteen with Older / Newer, which stand in the Left / Right
 // seats in the `h` view, kTransportHistoryStandIns) —
@@ -2027,15 +2028,14 @@ struct TrimBarPressSeed {
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
-// else — the painter's label/icon/layout table (paint_handler.cpp; the tabs'
-// two labels kTabStripLabels) and the
+// else — the painter's label/icon/layout table (paint_handler.cpp) and the
 // press claim's chord table (input_pointer.cpp). Adding a button is one row
 // here plus one row in each of those two tables.
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (43 chord
-// rows = 43 = kRedesignButtonCount, the count's own statement below): row
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (41 chord
+// rows = 41 = kRedesignButtonCount, the count's own statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
 //
@@ -2054,28 +2054,15 @@ enum class RedesignButton {
     // Iterations and Help before them, File in the Quit button's slot — is
     // git history; the Settings popup that outlived it retired the same
     // evening for the one settings editor.)
-    // THE TAB STRIP'S TWO TABS (architect 2026-10-18, reversing the tab row's
-    // deletion of 2026-10-01: Cool Edit's Organizer tab strip under the band,
-    // top lane 2 — render.h's tab strip block, cool_edit_paint.h's
-    // paint_ce_tab_strip), "Tab A" and "Tab B", the LIT one the active tab
-    // (redesign_button_selected: active_tab_view). BOTH CARRY SWITCH TAB'S
-    // CHORD, Ctrl+Tab (his words: "it's ctrl+tab, so long press or shift
-    // press does history walk"): with two tabs the toggle IS the direct
-    // select, and the radio flag (input_pointer.cpp's chord rows) makes the
-    // LIT TAB SWALLOW ITS PRESS — plain, shifted or held, a consumed nothing
-    // at the lift, never greyed (the view pairs' radio rule of 2026-10-14) —
-    // so only the OTHER tab switches. THEY ADMIT SHIFT and nothing else, as
-    // Switch Tab does (redesign_button_shift_admits): the other tab's
-    // shift-click and its glass long press dispatch Ctrl+Shift+Tab, the
-    // paired march, a round trip that ends on the tab it started from. They
-    // act in every state the roster is live in — the `h` view included,
-    // Ctrl+Tab on its allowlist — and GREY ONLY UNDER THE RENDER PLAYER AND
-    // THE PROJECT PICKER (interface, not modal: redesign_button_enabled's
-    // head, architect 2026-10-14), the label embossed, the tab's body and
-    // edges unchanged (architect 2026-10-18 ~19:05). The record of the
-    // Breeze tab row they replace (2026-08 to 2026-10-01, its hover fades
-    // and spills not returning) is in git history.
-    TabA, TabB,
+    // (THE TAB STRIP'S TWO TABS — TabA and TabB, "Tab A" and "Tab B", both
+    // Ctrl+Tab radios on Cool Edit's Organizer strip under the band,
+    // 2026-10-18 — LEFT WITH THE STRIP, architect 2026-10-22, the simple
+    // layout: the active tab's name stands in row 8 right of the clock, and
+    // the switch is Ctrl+Tab, Switch Tab and the walk's ctrl-click. Their
+    // record is git history.)
+    // THE BACKGROUND SOUND UMBRELLA (planner B's pending act, 2026-10-22):
+    // when its enumerator lands it seats AFTER ENABLE TOOLTIPS, the last of
+    // the band's third run (kIconRowButtons).
     // Row 4, the icon row, in painted order: OPEN PROJECT alone at its head
     // (architect 2026-10-07, below), then the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP from the
@@ -3000,10 +2987,10 @@ enum class RedesignButton {
     // nothing else: the shift-click
     // and the long press OR the shift into the row's ctrl and dispatch
     // CTRL+SHIFT+TAB, the paired march (so the tab switch has three pointer
-    // roads since the tab strip's arrival on 2026-10-18: the walk's
-    // ctrl-click, this button and the strip's other tab). Not a radio: the
-    // chord toggles the tab, so there is no lit half — the tab strip's lit
-    // tab says which tab is active (TabA / TabB). It NEVER GREYS: Ctrl+Tab acts in
+    // roads: the walk's ctrl-click and this button). Not a radio: the
+    // chord toggles the tab, so there is no lit half — the active tab's name
+    // in row 8 says which tab is active (2026-10-22; the tab strip's lit tab
+    // 2026-10-18 to then). It NEVER GREYS: Ctrl+Tab acts in
     // every state the roster is live in (its and the walk's arm in
     // redesign_button_enabled). In the `h` view
     // Ctrl+Tab is on the mode's allowlist and the march is its own
@@ -3017,16 +3004,17 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-21): TWO
-// in the tab strip's, TWENTY-FOUR in row 4's enum block and SEVENTEEN in the
-// bottom row's — 43 (the menu row's three anchors left 2026-10-21). PAINTED,
-// the split is 2 + 22 + 19: HistoryOlder and HistoryNewer, enumerated in row
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-22):
+// TWENTY-FOUR in row 4's enum block and SEVENTEEN in the bottom row's — 41
+// (the menu row's three anchors left 2026-10-21, the tab strip's two
+// 2026-10-22). PAINTED, the split is 22 + 19: HistoryOlder and HistoryNewer,
+// enumerated in row
 // 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 43;
+inline constexpr int kRedesignButtonCount = 41;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3118,14 +3106,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
     }
 }
 
-// WHICH BUTTONS ARE THE TAB STRIP'S — the two tabs (architect 2026-10-18).
-// ONE consumer, re-grepped: roster_index_click_face (input_pointer.cpp), the
-// arm's damage gate, because a tab paints NO PRESSED FACE — Cool Edit's
-// Organizer tabs show none, and the strip's painter draws the lit and the
-// unlit tab alone (paint_ce_tab_strip).
-inline constexpr bool redesign_button_is_tab(RedesignButton b) {
-    return b == RedesignButton::TabA || b == RedesignButton::TabB;
-}
+// (redesign_button_is_tab — the tab strip's two tabs, which painted no
+// pressed face — left with the strip, 2026-10-22.)
 
 // (redesign_button_is_history_companion IS DELETED — architect 2026-08-30,
 // the truthful-buttons ruling. It named the four history companions for ONE
@@ -3315,6 +3297,26 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         default:
             return false;
     }
+}
+
+// THE BAND'S RUNS (architect 2026-10-22, the simple layout, on layout3 /
+// layout4: "push all icons together … add a spacing after render, and after
+// flatten"): the left members stand in THREE PLAIN RUNS, the cases abutting
+// and run_gap_px of wood between two (program_spec.h), each opened by its
+// LEADER here — Open Project (Open .. Render: the two old groups of Open /
+// Save and Undo / Redo / Render merged), Full Zoom Out (Full Zoom Out ..
+// Flatten: the zoom and iteration groups merged) and Play Renders (Play
+// Renders .. Enable Tooltips, the render-entry group as it stood). THE
+// GROUPS ABOVE STAY THE UNIT of the `h` view's stand-in swap and hide
+// (icon_row_walk, paint_handler.cpp); a run is the picture's unit alone, so
+// a group swapped or hidden whole leaves its run standing on the members
+// that do. The right five — the history opener and the two view pairs — are
+// one run of their own, right-anchored (kIconRowHistoryOpener), not walked
+// here.
+inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
+    return b == RedesignButton::OpenProject ||
+           b == RedesignButton::IconZoomFitBest ||
+           b == RedesignButton::IconListen;
 }
 
 // (THE DROPDOWN — the one popup state, `DropdownMenu` and AppState::Dropdown,
@@ -4408,8 +4410,8 @@ struct GuiAuditionSequence {
 // ROW 8'S CLOCK CELL (2026-10-13, ON SCREEN IS AS PAINTED). A viewport step
 // damages the lanes that read the viewport, the zoom or the cursor
 // (Viewport::invalidate_waveform_area's rect, viewport.h, where the lanes
-// above it are inventoried) and OWES the rows above them — the caption, the
-// toolbar band and the tab strip (2026-10-18) — a check
+// above it are inventoried) and OWES the rows above them — the caption and
+// the toolbar band — a check
 // instead of a repaint: each fingerprint is the WHOLE of what the paint of
 // those rows reads, so rows whose painted fingerprint equals the live one
 // would repaint exactly the pixels they already show, and rows whose
@@ -4448,12 +4450,12 @@ struct GuiCaptionFingerprint {
 // (The menu row's fingerprint, its row and its titles' two faces, went with
 // the row, 2026-10-21.)
 // The toolbar band (paint_icon_row): its lane, the `h` view (the stand-ins
-// and the hide), and each STANDING member in the walk's order with its pane,
+// and the hide), and each STANDING member in the walk's order with its run,
 // its four face terms and its glyph index (redesign_button_glyph, which with
 // the id names the drawing redesign_button_icon picks).
 struct GuiIconRowMember {
     RedesignButton id{};
-    int  pane     = 0;
+    int  run      = 0;
     bool enabled  = false;
     bool selected = false;
     bool pressed  = false;
@@ -4467,20 +4469,12 @@ struct GuiIconRowFingerprint {
     std::array<GuiIconRowMember, kRedesignButtonCount> members{};
     bool operator==(const GuiIconRowFingerprint&) const = default;
 };
-// The tab strip (paint_tab_strip, 2026-10-18): its lane, the lit tab (which
-// moves the geometry) and each tab's enabled bit (the embossed label); the
-// labels are compiled and a tab paints no pressed face.
-struct GuiTabStripFingerprint {
-    GuiRect lane{0, 0, 0, 0};
-    int     lit = 0;
-    std::array<bool, 2> enabled{};
-    bool operator==(const GuiTabStripFingerprint&) const = default;
-};
+// (The tab strip's fingerprint, its lane, lit tab and two enabled bits,
+// left with the strip, 2026-10-22.)
 struct GuiUpperRowsFingerprint {
     GuiChromeGlobalsFingerprint globals;
     GuiCaptionFingerprint       caption;
     GuiIconRowFingerprint       band;
-    GuiTabStripFingerprint      strip;
     bool operator==(const GuiUpperRowsFingerprint&) const = default;
 };
 // Row 8's clock cell (paint_bottom_row_buttons_and_clock): the cell as
@@ -9345,11 +9339,11 @@ GuiRect top_caption_row_area(const AppState& a);
 // zone map (pointer_cursor_kind). Hit tests are not guards (CLAUDE.md).
 unsigned window_frame_edges_at(const AppState& a, int x, int y);
 GuiRect top_icon_row_area(const AppState& a);
-// THE VIEWPORT'S LANES' TOP ROW — the tab strip's foot (the toolbar band's
-// from 2026-10-13 until the strip, 2026-10-18), the first row of the column's
-// air. Every lane from here through the waveform's
+// THE VIEWPORT'S LANES' TOP ROW — the toolbar band's foot (the simple
+// layout, 2026-10-22; the tab strip's 2026-10-18 to then), the view bar's
+// top row. Every lane from here through the waveform's
 // bottom a viewport step repaints UNCONDITIONALLY; the rows above it (the
-// caption, the band, the tab strip) repaint only when the fingerprint of their
+// caption and the band) repaint only when the fingerprint of their
 // complete painted inputs differs from the one the paint buffer last painted
 // (GuiPaintHandler::upper_rows_fingerprint, settled by
 // settle_owed_lane_damage) — the band's Full Zoom Out reads the zoom level, so
@@ -9357,7 +9351,7 @@ GuiRect top_icon_row_area(const AppState& a);
 // changes. The inventory is at Viewport::invalidate_waveform_area
 // (viewport.h), whose rect starts here.
 int viewport_lanes_top_y(const AppState& a);
-// GAP 1's band — the flexible band BETWEEN THE TAB STRIP AND THE COLUMN'S AIR (the
+// GAP 1's band — the flexible band BETWEEN THE BAND AND THE VIEW BAR (the
 // vertical rule, main.cpp), window ground. ONE reader: the wheel-inert band
 // list (the band lies inside top_strip_area, which is a pan surface, so it
 // needs a band of its own to stay inert). Gap 2 (above the bottom row) has no
@@ -9384,26 +9378,20 @@ GuiRect top_ruler_row_area(const AppState& a);
 // arc's merged trim-bar + ruler input band — lived between these accessors for
 // one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
 GuiRect top_marker_row_area(const AppState& a);
-// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the lane
-// including its dock bar, and the content band under the dock bar — bottom
-// lane 2, over the border under row 8 (bottom lane 1, 2026-10-14,
-// bottom_border_area in render.h) and the program frame's bottom row on the
-// window's foot, one frame line in from each side, whatever stands over it
-// (2026-10-14: the modal family's box and controls row, modal_box.h, and the
-// on-screen keyboard's band inside the frame, onscreen_keyboard.h's
-// placement block). (It was row 7's single
-// status lane from 2026-08-01, one of two lanes while the transport row
-// stood, 2026-08-11..12, the strip's whole surface at the unification, the strip's
-// one lane resting on the WINDOW'S FOOT from commit B, one of two for the one
-// day the STATUS BAR took that foot on 2026-08-29, the strip's one lane
-// again from that evening's fold, which put the bar's STATE TEXT in this
-// row's own cell beside the clock, and one of two from the column's foot,
-// 2026-10-09; each flexible gap is strip geometry, not a lane.)
+// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): bottom lane 0
+// on the window's foot, the strip pad, the case and the strip pad (the
+// simple layout, 2026-10-22; Cool Edit's dock bar over its content band and
+// the border under it 2026-10-09 to then), whatever stands over it (the
+// modal family's box and controls row, modal_box.h, and the on-screen
+// keyboard's band, onscreen_keyboard.h's placement block). (It was row 7's
+// single status lane from 2026-08-01, one of two lanes while the transport
+// row stood, 2026-08-11..12, the strip's whole surface at the unification,
+// the strip's one lane resting on the WINDOW'S FOOT from commit B, one of
+// two for the one day the STATUS BAR took that foot on 2026-08-29, the
+// strip's one lane again from that evening's fold, which put the bar's STATE
+// TEXT in this row's own cell beside the clock; each flexible gap is strip
+// geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
-GuiRect bottom_row_content_area(const AppState& a);
-// (The border under row 8 is declared in render.h beside its height,
-// bottom_border_area, 2026-10-14; the program frame's lanes and ring, there
-// 2026-10-10 to 2026-10-22, are retired.)
 
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
@@ -14260,8 +14248,8 @@ inline bool redesign_button_enabled(const AppState& a,
     // have lit.
     //
     // THE BAND STANDS UNDER THE ROSTER'S LANES (the view bar's top row
-    // since 2026-10-14, the modal family's box), so the toolbar band and the
-    // tab strip are the roster lanes on screen while a content stands, every
+    // since 2026-10-14, the modal family's box), so the toolbar band is the
+    // roster lane on screen while a content stands, every
     // button on them dead (architect 2026-09-03 evening, "everything else
     // like what we do with history"; the menu row's File title, live
     // through Quit above the band, went with the row 2026-10-21), the view
@@ -14387,22 +14375,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // SWITCH TAB JOINS IT (architect 2026-09-29): its plain press IS
         // Ctrl+Tab, so it never greys, its shifted press (the march) under a
         // lit grid iterations reaching the key's own card.
-        //
-        // AND THE TAB STRIP'S TWO TABS (architect 2026-10-18), Ctrl+Tab both:
-        // the other tab's press switches in every state the roster is live
-        // in, and THE LIT TAB IS NEVER GREYED — its press is the radio's
-        // consumed nothing at the lift (the view pairs' rule, 2026-10-14), a
-        // swallow and not a refusal, so its face stays live. They grey only
-        // where the head gates above grey every button: the load, and the
-        // render player and the project picker standing (folder_overlay_-
-        // stands, the interface rule at this body's head) — the strip stands
-        // above the modal box, which begins at the view bar's top row, so the
-        // grey shows; under a prompt, a dialog editor or the progress modal
-        // they are dead behind the veil and not greyed, as the band is.
         case RedesignButton::TransportWalk:
         case RedesignButton::TransportSwitchTab:
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
             return true;
         // PREVIOUS MARKER (architect 2026-09-29) UNDER THE TWIN RULE: its
         // plain press is Shift+Tab and its ctrl press Ctrl+Shift+Tab, the
@@ -15589,11 +15563,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::ViewTarget: return a.active_audio_view   == 'T';
         case RedesignButton::ViewWarp:   return a.active_markers_view == 'W';
         case RedesignButton::ViewPhase:  return a.active_markers_view == 'P';
-        // THE TAB STRIP'S LIT TAB IS THE ACTIVE TAB (architect 2026-10-18):
-        // exactly one is ever lit, however the tab was reached — Ctrl+Tab, the
-        // march's round trip, a restore or a press on the other tab.
-        case RedesignButton::TabA:       return a.active_tab_view     == 'A';
-        case RedesignButton::TabB:       return a.active_tab_view     == 'B';
         // FOLLOW'S LAMP (architect 2026-09-23): the same toggle pattern,
         // reading the live bit bare `f` flips. It reports the lamp, not
         // whether the play in flight is paging — a pan during a play suspends
@@ -15839,8 +15808,9 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
             return transport_session_live(a);
         // (SWITCH TAB WEARS ONE GLYPH IN BOTH TABS since 2026-10-18 —
         // SwitchTab, 3.22's preferences-system-windows as extracted,
-        // architect: "use the original, not the modified": the tab strip
-        // says which tab is active, so the glyph no longer does. Its swap to
+        // architect: "use the original, not the modified": the active tab's
+        // name says which tab is active (row 8's, since 2026-10-22; the tab
+        // strip's lit tab until then), so the glyph no longer does. Its swap to
         // TabDetachB on tab B stood 2026-10-12 to 2026-10-18.)
         // (THE READ-ONLY TOGGLE WEARS ONE GLYPH, ReadOnly, in both states
         // since 2026-10-21 — the lock is the lamp's lit / sunken face alone,
@@ -16042,8 +16012,6 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportSwitchTab ||
-           b == RedesignButton::TabA ||
-           b == RedesignButton::TabB ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
@@ -16682,15 +16650,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::TransportSwitchTab:
             return {"Switch Tab (Ctrl+Tab)",
                     "Press Shift to walk both tabs."};
-        // THE TAB STRIP'S TWO TABS (architect 2026-10-18): Switch Tab's act
-        // and chord, so Switch Tab's words on both — the act's name, not the
-        // tab's ("Tab A" is the label the strip already paints) — and its
-        // shift line, the paired march. The overload drops that line on the
-        // LIT tab, whose press is swallowed, and under a lit grid iterations.
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
-            return {"Switch Tab (Ctrl+Tab)",
-                    "Press Shift to walk both tabs."};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps the direction alone (one word, which the
@@ -17181,18 +17140,6 @@ inline RedesignTooltipText redesign_button_tooltip(
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportSwitchTab:
             if (a.iteration_mode_enabled)
-                return {redesign_button_tooltip(b).line1, nullptr};
-            break;
-        // THE TAB STRIP'S TABS (2026-10-18): the march's line drops under a
-        // lit grid iterations as Switch Tab's does, and on THE LIT TAB, whose
-        // every press the radio swallows at the lift — read off the PAINTED
-        // selected bit (strictly as-painted, 2026-09-24), the bit the lift's
-        // swallow reads.
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
-            if (a.iteration_mode_enabled ||
-                a.redesign_buttons[static_cast<std::size_t>(
-                    redesign_button_index(b))].selected)
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on

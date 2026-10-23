@@ -28,8 +28,8 @@ enum class LandingKind { Walk, Restore };
 
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
 // LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
-// now, and the rows above it — the caption, the toolbar band, the tab
-// strip — are OWED to every paint target a check
+// now, and the rows above it — the caption and the toolbar band — are OWED
+// to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
 // fingerprint has moved past what the target shows or a floating surface
@@ -39,10 +39,9 @@ enum class LandingKind { Walk, Restore };
 // the lane inventory), the viewport routes' top-strip damage, and the
 // waveform cache's four (the async publish, the synchronous rebuild, the
 // deferred basis repair and the flag cache's stage, waveform_cache.cpp).
-// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the tab strip's
-// foot (the band's until 2026-10-18) — the strip ends there and the
-// column's air and the folder overlay's
-// band begin there — so the two halves paint exactly the pixels the one rect
+// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the band's foot
+// (the tab strip's 2026-10-18 to 2026-10-22) — the band ends there and the
+// view bar and the modal family's box begin there — so the two halves paint exactly the pixels the one rect
 // did (the floating surfaces, which do cross it, take the whole rect).
 void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1);
 
@@ -492,18 +491,18 @@ struct Viewport {
     // Invalidation.
     //
     // THE VIEWPORT'S LANES (2026-10-13, ON SCREEN IS AS PAINTED): the rect
-    // runs, at the window's whole width, from the tab strip's foot (the
-    // toolbar band's until 2026-10-18; viewport_lanes_top_y, app_state.h)
-    // through the waveform's bottom, and
+    // runs, at the window's whole width, from the toolbar band's foot
+    // (viewport_lanes_top_y, app_state.h; the tab strip's 2026-10-18 to
+    // 2026-10-22) through the waveform's bottom, and
     // holds every lane that DRAWS the viewport, the zoom or the cursor — the
-    // column's air and the view bar (paint_trim: the trim window is the
+    // view bar (paint_trim: the trim window is the
     // span), the ruler (its ticks and digits, the cursor's head), the marker
     // lane (the cues and their labels), the canvas's top frame row, and the
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
-    // ABOVE IT DRAW NONE OF THOSE: the caption, the toolbar band and the
-    // tab strip paint the window's state, the
+    // ABOVE IT DRAW NONE OF THOSE: the caption and the toolbar band paint
+    // the window's state, the
     // project's name and the roster's faces. Some of those FACES
     // are predicates over the view (Full Zoom Out greys where the view
     // already frames what it would), and many more move with the acts that
@@ -534,9 +533,9 @@ struct Viewport {
     // THE RECT IS THE BOTTOM ROW'S LANE WHOLE, not a span of it, and
     // deliberately: the cell is the row's STATE LINE on the ground since
     // 2026-10-03 (paint_bottom_row_buttons_and_clock), whose span only the
-    // painter knows — it starts a group space after the clock's field and is
-    // clipped one group space short of the right block, both measured at
-    // paint — so a shorter
+    // painter knows — it starts the state air past the active tab's name
+    // after the clock's field and is clipped one run gap short of the right
+    // block, both measured at paint — so a shorter
     // new string must erase a longer old one and there is no published box to
     // erase inside. The lane is the bottom row's band across the window,
     // cheaper than the arithmetic a fitted rect would need, and neither string
@@ -544,9 +543,11 @@ struct Viewport {
     // changer, the clock, is this row's too, with its own cell owner below —
     // and this rect covers that one as a superset).
     //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-27 —
+    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-10-22 —
     // membership is "this route changes what the LANE shows", which is the
-    // progress line's writers, nine sites:
+    // progress line's writers and the tab switch, ten sites:
+    //   * GuiActiveViews' tab switch (2026-10-22): the active tab's name
+    //     beside the clock, and the state line's x after it;
     //   * input_render_dispatch's THREE (the promote, the BATCH'S OWN WRITE at
     //     each cell's dispatch — which took the park's retraction's place in
     //     this list on 2026-09-11, a sweep's line being state — and
@@ -571,9 +572,7 @@ struct Viewport {
     // spells both.
     void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
-    // onto the row 2026-08-13, and the row yields to it whole) AND THE
-    // BORDER UNDER IT (2026-10-21: row 8's bars run through the border's
-    // light row while the row stands, paint_bottom_border), WITH THE
+    // onto the row 2026-08-13, and the row yields to it whole), WITH THE
     // MODAL FAMILY'S WHOLE AREA while a prompt, a dialog editor or the
     // progress modal stands or was last painted (2026-10-14, modal_box.h — the box over the canvas
     // column and its controls row; the taskbar dialog's overlay to the
@@ -611,11 +610,8 @@ struct Viewport {
     // a modal button's hint is composed by the row's own paint
     // (paint_modal_dialog publishes it on the stash) and its box hangs OFF
     // the modal's controls row, past this rect — above it where the row
-    // stands on the border under row 8 (bottom lane 1, over bottom lane 0 on
-    // the window's foot, too few rows for the box, which flips above its
-    // button; the lane rested on the window's foot itself until the program
-    // frame's bottom row, 2026-10-10 to 2026-10-21, and the border,
-    // 2026-10-14, came under it), below it over the keyboard's band where
+    // stands on the window's foot (too few rows under it for the box, which
+    // flips above its button), below it over the keyboard's band where
     // a dialog editor's stack stands on the keyboard (modal_box.h) — so a
     // row repaint alone would recompose
     // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's

@@ -1436,11 +1436,11 @@ struct GuiInputHandler {
     // that the motion applies in the mode the user is already holding.
     void sync_nav_drag_mode(GuiInputState mods);
 
-    // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the tab
-    // strip's two, the icon row's twenty-two and row 8's nineteen (row 1's
-    // three menu anchors until 2026-10-21)
+    // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
+    // row's twenty-two and row 8's nineteen (row 1's three menu anchors until
+    // 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-19):
+    // counts re-derived from them 2026-10-22):
     //   THE ICON ROW, 15 + 2 + 1 + 4 = 22 — the left walk's fifteen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
     //   Full Zoom Out, Waveform Magnification and Follow;
@@ -1448,8 +1448,8 @@ struct GuiInputHandler {
     //   Tooltips), the history view's two stand-ins (Revert and Load in
     //   Place in Undo's slots — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
-    //   flush right in two panes (kIconRowViewPairs, Source / Target and
-    //   Warp / Phase Reset since 2026-10-14) — 20
+    //   flush right behind it in one run (kIconRowViewPairs, Source /
+    //   Target and Warp / Phase Reset since 2026-10-14) — 20
     //   standing outside the `h` view (the two stand-ins publishing empty
     //   rects) and 12 inside it (the stand-ins in, Undo's group out, and the
     //   view's hide leaving Open Project and Save's group whole, Full Zoom
@@ -3719,6 +3719,15 @@ private:
     // set_gui_scale_percent, not through here). It is the ONE such applier since
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
+
+    // THE STRIP PAD'S ONE LIVE ACT (architect 2026-10-22, the simple layout;
+    // render.h's strip_pad_px): the settings editor's `strip_pad=` commit
+    // pushes the W to the renderer (set_strip_pad_w) and runs the scale's
+    // relayout — full-window invalidate, the resize-path geometry-and-cache
+    // rebuild, the materials baked again at once (their case patches sit on
+    // the strips' rows). The commit gates the no-op and writes the config;
+    // this applies.
+    void apply_strip_pad(int w);
 
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the

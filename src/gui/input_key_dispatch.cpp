@@ -2652,8 +2652,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // — the modal family's box since 2026-10-14 (modal_box.h) — starts at the
     // view bar's top row and runs to row 8, covering the canvas column's
     // lanes (the diff lane with them) and the waveform, with only the
-    // toolbar band, the tab strip and the column's air standing above it,
-    // dead — so a Cancel or an Esc leaves the view exactly as it stood, this view owning no navigation
+    // toolbar band standing above it, dead — so a Cancel or an Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
     // consumed no-op.
     //
@@ -6409,8 +6408,7 @@ void GuiInputHandler::open_project_picker() {
     // on_key, its veil consumes the view's presses, and its band — the modal
     // family's box since 2026-10-14 — starts at the view bar's top row and
     // covers the canvas column's lanes — the diff lane with them — and the
-    // waveform, the toolbar band, the tab strip and the column's air alone
-    // above it), a Cancel or Esc leaves
+    // waveform, the toolbar band alone above it), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything

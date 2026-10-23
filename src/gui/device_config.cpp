@@ -56,7 +56,8 @@ namespace {
 // and `bevel_dark` APPENDED after `role`, where the tuning phases' keys have
 // always stood, each required like every key and each leaving when he
 // settles its value (`text_shadow` beside them left 2026-10-22, the words'
-// shadow one scaled Windows px, materials.h's INKS).
+// shadow one scaled Windows px, materials.h's INKS). `strip_pad` (architect
+// 2026-10-22, the simple layout's pad) APPENDED after them, the same kind.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -67,6 +68,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "role",
     "bevel_light",
     "bevel_dark",
+    "strip_pad",
 };
 } // namespace
 
@@ -137,6 +139,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_gui_scale_percent(cfg.bevel_light);
         } else if (k == "bevel_dark") {
             s += format_gui_scale_percent(cfg.bevel_dark);
+        } else if (k == "strip_pad") {
+            s += format_gui_scale_percent(cfg.strip_pad);
         }
         s += '\n';
     }
@@ -262,6 +266,16 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             (key == "bevel_light" ? out.bevel_light : out.bevel_dark) =
                 static_cast<int>(v);
+            return {};
+        }
+        // THE STRIP PAD (2026-10-22): the scale's canonical integer spelling,
+        // the range its one owner's (is_strip_pad, device_config.h).
+        if (key == "strip_pad") {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) || !is_strip_pad(v)) {
+                return bad_value(ln, key, value, kStripPadGrammarReason);
+            }
+            out.strip_pad = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

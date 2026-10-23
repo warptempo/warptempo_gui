@@ -27,13 +27,11 @@
 // row) — painted in THE MODAL FAMILY'S BOX (architect 2026-10-14,
 // modal_box.h, the one owner of the shape: "overlays/modals can take over the
 // area from the trim bar on down, with just the bottom new border
-// remaining"): from THE VIEW BAR'S TOP ROW down, one sunken box in the canvas
-// column's own ring and columns, the main window's 5 W foot under it, and
-// under that the CONTROLS ROW on row 8's content rows (the modal dialog's,
-// paint_modal_dialog) — so EVERY LANE FROM THE VIEW BAR TO ROW 8 is under
-// it, and THE ICON ROW, THE TAB STRIP (2026-10-18, its two tabs dead and
-// grey under the band, redesign_button_enabled's head) AND THE COLUMN'S AIR
-// UNDER IT STAND ABOVE IT, as the main window paints them, the icon row
+// remaining"; the simple layout 2026-10-22): from THE VIEW BAR'S TOP ROW
+// down, one sunken box wearing the program ring, and under it the CONTROLS
+// ROW on row 8's rows (the modal dialog's, paint_modal_dialog) — so EVERY
+// LANE FROM THE VIEW BAR TO ROW 8 is under it, and THE ICON ROW STANDS ABOVE
+// IT, as the main window paints it, the icon row
 // CARRYING THE `h` VIEW'S OWN PARTITION (architect 2026-09-03 evening: "leave
 // File open, because Quit should still be enabled — everything else like what
 // we do with history ... Leave that for the player, the picker and the AV
@@ -224,8 +222,8 @@ inline int content_height_px(const AppState& a) {
 }
 
 // THE BAND: THE MODAL FAMILY'S PANEL (architect 2026-10-14, modal_box.h —
-// the box in the canvas column's ring, its face margins and the foot under
-// it, from the view bar's top row to the controls row's top), a FIXED height
+// the box wearing the program ring and its wood margins, from the view
+// bar's top row to the controls row's top), a FIXED height
 // whatever the listing's length (2026-08-28, the ruling above). Like the
 // keyboard's own accessor it does not ask whether the panel stands.
 //

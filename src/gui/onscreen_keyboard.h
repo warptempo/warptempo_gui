@@ -541,11 +541,12 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // 2026-10-21 to 2026-10-22), ITS KEYS THE EBONY CASE (architect 2026-10-22,
 // "buttons in ebony — yes"; the flat raised faces until then) —
 // paint_onscreen_keyboard, materials.h's WOOD and CASE. Under a dialog editor the modal
-// family's stack stands on it (modal_box.h's head: the box shortened to fit,
-// the foot, the controls row and the border under row 8, all lifted onto the
-// band); under the flag editor, the one editor with no dialog, it stands
-// alone over row 8, the border under it and the canvas's lower part, which
-// keep their geometry and are covered.
+// family's stack stands on it (modal_box.h's head: the box shortened to fit
+// and the controls row lifted onto the band, the space between the row's
+// cases and the first key row the strip pad plus this band's edge pad,
+// 2026-10-22); under the flag editor, the one editor with no dialog, it
+// stands alone over row 8 and the canvas's lower part, which keep their
+// geometry and are covered.
 // (THE TASKBARS, 2026-10-10 to 2026-10-14 — architect, "they're analogous to
 // the taskbar … they sit on top of the design": the keyboard and the dialog
 // laid over the window's foot at its whole width, over the frame's columns
@@ -559,8 +560,8 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 //     0..1919. Row 8 is under it and unreachable: the keyboard's press claim
 //     takes the band (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; at 300 % the border 1019–1036, the
-//     controls row 923–1018, the foot 908–922, the box 234–907).
+//     arithmetic at modal_box.h's head; at 300 % and the strip pad's 13 W
+//     the controls row 890–1036, its cases 929–997, the box 201–889).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press, a cursor
 // zone or the touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),
@@ -571,17 +572,17 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // standing_rect).
 
 // THE KEYBOARD'S BAND: the program lanes' x and width (bottom_row_area's,
-// the window's), standing on the window's foot, its height
+// the window's), standing on the window's foot (row 8's lane's foot), its
+// height
 // surface_height_px. It OVERLAYS what stands there: nothing in the
 // vertical stack moved to make room, and the waveform simply is not painted
 // where this paints. The one zero rect is the degenerate one: a window with
 // no width, or a height that scales to nothing.
 inline GuiRect surface_rect(const AppState& a) {
     const GuiRect lane   = bottom_row_area(a);
-    const GuiRect border = bottom_border_area(a);
     const int     h      = surface_height_px();
     if (lane.w <= 0 || h <= 0) return GuiRect{0, 0, 0, 0};
-    return GuiRect{lane.x, border.y + border.h - h, lane.w, h};
+    return GuiRect{lane.x, lane.y + lane.h - h, lane.w, h};
 }
 
 // THE HEIGHT THE MODAL'S STACK STANDS ON (modal_box.h's `keyboard_h`): the
@@ -607,10 +608,10 @@ inline GuiRect standing_rect(const AppState& a, const GuiPlatform& gui) {
 }
 
 // THE SLOT'S DAMAGE RECT, the slot AT ITS TALLEST: the whole area the modal
-// family takes — the folder overlay's box, its margins and foot, and the
+// family takes — the folder overlay's box, its margins, and the
 // controls row under them (modal_area_rect, modal_box.h, 2026-10-14), which
 // contains the stack's lifted form too (a dialog editor's on the keyboard,
-// from the box's top to the lifted border) — united with the keyboard's band,
+// from the box's top to the lifted controls row) — united with the keyboard's band,
 // so one rect contains every tenant's pixels in every form.
 // THE SHOW/HIDE COMPARATOR TAKES IT (reconcile_slot_standing, below): those
 // two edges damage a band whose tenant is arriving or has already gone, so
@@ -767,9 +768,8 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // starts ABOVE the waveform (the view bar's top row since 2026-10-14; the
 // panel's ceiling first moved above the waveform 2026-09-02), so every
 // waveform pass is clipped out whole while it stands, and the LANES it also
-// covers (the view bar, the ruler, the marker lane, the canvas's frame, the
-// column's foot and row 8; the icon row, the tab strip and the column's air
-// stand above the box, every icon greyed under the folder overlay but the
+// covers (the view bar, the ruler, the marker lane, the canvas's frame and
+// row 8; the icon row stands above the box, every icon greyed under the folder overlay but the
 // ones it leaves live) are not spared this way — their painters
 // run and the panel covers them, because they publish the roster's hit rects
 // (the record is at the paint-order block, paint_handler.cpp).
