@@ -199,6 +199,14 @@ enum class Icon {
                          // the set's media-playback-pause
     PlayerNext,          // the render player's Next — the set's
                          // media-skip-forward
+    // THE RENDER PLAYER'S HIGHLIGHT PAIR, ITS OWN (architect 2026-10-22):
+    // the classical set draws the player's family in polished steel and row
+    // 8's arrows in brass, so the pair no longer wears row 8's Down / Up.
+    // PNGs of the drop road alone, no Adwaita drawing beside them.
+    PlayerDown,          // Highlight Next (the render player's down arrow)
+                         // — the classical set's steel Player Down
+    PlayerUp,            // Highlight Previous (the render player's up
+                         // arrow) — the classical set's steel Player Up
     Cancel,              // Render's mid-render Cancel face — the set's
                          // process-stop
     Down,                // Row 8's down arrow (bare Down) — the set's go-down
@@ -263,7 +271,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 58;
+inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.png` if that file is there, else
@@ -286,7 +294,7 @@ inline constexpr const char* kIconNames[] = {
     "LoadInPlace", "HistoryView", "AddToSelection",
     "Older", "Newer", "Left", "Right", "Revert", "TransportPlay",
     "TransportStop", "PlayerPrevious", "Play", "Pause", "PlayerNext",
-    "Cancel", "Down", "Up",
+    "PlayerDown", "PlayerUp", "Cancel", "Down", "Up",
     "ReadOnly", "PreviousMarker", "NextMarker",
     "SwitchTab", "Settings", "FolderRow", "WavRow", "RepeatOne",
     "UpAFolder", "CardNormal", "CardCritical", "Close", "Tooltips",

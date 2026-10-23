@@ -6292,12 +6292,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // pair of buttons — DOWN THEN UP, the order of row 8's own pair
         // (TransportDown, TransportUp) — that move the highlight one row and
         // nothing else (GuiRenderPlayer::move_highlight), so a file is picked
-        // silently and then loaded in place or played. They wear Down and
-        // Up, row 8's own arrows.
+        // silently and then loaded in place or played. They wear THEIR OWN
+        // PAIR, PlayerDown and PlayerUp (architect 2026-10-22): the player's
+        // family is the classical set's steel, row 8's Down / Up its brass.
         glyph_button(AppState::PlayerButtonAct::HighlightDown,
-                     icons::Icon::Down);
+                     icons::Icon::PlayerDown);
         glyph_button(AppState::PlayerButtonAct::HighlightUp,
-                     icons::Icon::Up);
+                     icons::Icon::PlayerUp);
         // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,

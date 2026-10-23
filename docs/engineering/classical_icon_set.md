@@ -74,9 +74,9 @@ player no longer wears the main page's). UP ONE LEVEL IS OFF THE SHEET: the act 
 `UpAFolder.svg -> FolderRow.svg` link stands), since a steel up arrow beside the player's new steel Up would be the
 identical-arrows pair that link was made to remove. Older and Newer are BOTH DRAWN again (cells 35–36), Background Sound
 (`BackgroundSound`, the umbrella) at cell 37; Older and Newer are worn by the `h` view alone. Previous / Next Marker stay
-drawn (Next Marker is not round like the watch, so it is not derived). The new acts' enumerators (`BackgroundSound`,
-`PlayerUp`, `PlayerDown`) come with the chrome's own feature: until they exist their sliced PNGs wait in `tmp/`, never
-as an orphan file in `assets/icons/`. Under draft 14 (the `--draft14` list below) Redo was drawn for its lighting and
+drawn (Next Marker is not round like the watch, so it is not derived). A new act's enumerator comes with its own feature: until it
+exists its sliced PNG waits in `tmp/`, never as an orphan file in `assets/icons/` — `PlayerUp` and `PlayerDown` joined
+`icons::Icon` 2026-10-22, worn by the render player's highlight pair; `BackgroundSound` still waits. Under draft 14 (the `--draft14` list below) Redo was drawn for its lighting and
 Newer was not drawn but DERIVED FROM OLDER — the watch cannot be mirrored (its digits would read backwards), so the
 slicer turns the arrow alone, the prompt asking Older's arrow CLEAR of the watch and lit straight from above. Words learned the hard way: never say "mirror image" (Gemini copies the drawing
 instead of mirroring it — say "the SAME object turned to face right"); a fade-out must be forbidden explicitly (NO
