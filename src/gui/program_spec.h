@@ -34,12 +34,14 @@
 // tmp/theme_next/out/layout4/layout4_pad13.png, the modals
 // tmp/theme_next/out/screens/, both at 300 %): ONE SUNKEN RING round the
 // canvas column and one round row 8's clock are the program's only strokes
-// on the wood. THE PROGRAM'S LANES, top to bottom: THE TOOLBAR BAND directly
-// under the caption — THE STRIP PAD, the case, THE STRIP PAD (the
-// `strip_pad` device key, W, under tuning: render.h's strip_pad_px), its
-// cases in plain runs on the wood, the runs `run_gap_px` apart; then THE
-// CANVAS COLUMN inside THE PROGRAM RING — THE VIEW BAR (the trim bar: the
-// ring's dark top row, the black field, the brass's light line: 8), THE
+// on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
+// stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
+// bottom: THE TOOLBAR BAND directly under the caption — THE STRIP PAD, the
+// key, THE STRIP PAD (the `strip_pad` device key, W, under tuning: render.h's
+// strip_pad_px; the keys' legends in the bottom pad), its keys in plain runs
+// on the ground, the runs `run_gap_px` apart; then THE CANVAS COLUMN inside
+// THE PROGRAM RING — THE VIEW BAR (the trim bar: the ring's dark top row,
+// the black field, the light line: 8), THE
 // RULER FLIPPED (11 rows of ground under the view bar's light line, its
 // ticks standing on its bottom row, then its own light bottom line: 12) and
 // THE MARKER LANE of Cool Edit's cues (17) — the ruler and the lane THE
@@ -54,7 +56,7 @@
 // Edit's stereo divider between them (stereo_divider_face_px) — and its
 // light bottom frame row (1), the ring's last row; then ROW 8, THE STRIP
 // PAD, the case, THE STRIP PAD, on the window's foot. THE COLUMN STANDS 6 W
-// IN FROM EACH SIDE of the window's client area on the wood
+// IN FROM EACH SIDE of the window's client area on the ground
 // (column_margin_px): the view bar, the ruler, the marker lane and the
 // canvas share the ring's two columns — dark on the left, light on the
 // right. (The band's head and foot lines and its panes, the tab strip under
@@ -88,8 +90,8 @@ struct ProgramSpec {
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
     // THE STRIPS' RUNS (architect 2026-10-22, the simple layout): the band's
-    // and row 8's cases stand in PLAIN RUNS on the wood, the cases abutting
-    // inside a run and THIS MUCH PLAIN WOOD BETWEEN TWO RUNS — row 8's group
+    // and row 8's keys stand in PLAIN RUNS on the ground, the keys abutting
+    // inside a run and THIS MUCH PLAIN GROUND BETWEEN TWO RUNS — row 8's group
     // gap as the bars left it (a 6-W bar between a 5-W and a 4-W pad), the
     // band's between its three left runs (layout4: "add a spacing after
     // render, and after flatten").
@@ -148,10 +150,11 @@ struct ProgramSpec {
     // -- THE CANVAS COLUMN (METRICS §3, §4; NOTES.md sets 2 and 3) ----------
     // THE COLUMN'S SIDE MARGIN (METRICS §4.1, Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
-    // and FX1 = WW − 7): this much wood from each side of the window's client
-    // area to the program ring's column, the column one line, then the
+    // and FX1 = WW − 7): this much ground from each side of the window's
+    // client area to the program ring's column, the column's slot one line
+    // (its line one device px on the slot's outer edge, 2026-10-23), then the
     // column's interior — the view bar's field, the ruler's ground, the
-    // marker lane's brass and the canvas.
+    // marker lane's brighter strip and the canvas.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // mock set 3, "grid 4 per half channel"; METRICS §4.4's GrdL): each

@@ -4119,6 +4119,16 @@ void GuiInputHandler::apply_strip_pad(int w) {
     materials::ensure(app);
 }
 
+void GuiInputHandler::apply_led_glow(int px) {
+    // The apply shape is at the declaration (input_handler.h): the glow is
+    // in the bake's key, so a changed value bakes once (the bake rule's one
+    // Settings-OK exception, materials.h) and the window repaints.
+    materials::set_led_glow(px);
+    materials::ensure(app);
+    viewport.refresh_flag_cache();
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::apply_true_colors(bool on) {
     // The apply shape is at install_true_colors' declaration (render.h).
     const WaveformPlateInks before = waveform_plate_inks();

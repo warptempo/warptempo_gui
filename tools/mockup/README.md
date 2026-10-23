@@ -10,7 +10,7 @@ Display-P3 iCCP, as his own screenshots do — are P3 bytes; with `true_colors=o
 authored sRGB bytes under the same tag. So:
 
 - A SCREENCAP WITH TRUE COLORS ON IS RIGHT AS IT IS. Keep its tag. This is the road for judging materials live
-  through the `tiles/` override folder (`assets/tiles/README.md`): no config toggling at all.
+  through the `tiles/` override folder (`src/gui/materials.h`'s IMAGE ROAD): no config toggling at all.
 - A SCREENCAP WITH TRUE COLORS OFF IS RIGHT ONLY WITH ITS TAG STRIPPED. Tagged, the Gallery reads its sRGB bytes as
   P3: oversaturated, redder — his "bright orange" of 2026-10-22 ~15:55 and his "wrong in every region" of 2026-10-21.
   Untagged, its bytes are the authored hex, so a value read off it in GIMP or a browser round-trips (that is what

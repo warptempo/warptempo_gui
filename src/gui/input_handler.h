@@ -3729,6 +3729,14 @@ private:
     // this applies.
     void apply_strip_pad(int w);
 
+    // THE LED GLOW'S ONE LIVE ACT (architect 2026-10-23; materials.h's
+    // set_led_glow): the settings editor's `led_glow=` commit pushes the
+    // device px to the materials and bakes at once (the glow is in the bake's
+    // key: the lit keys' patches carry it), the flag cache refreshed and the
+    // whole window invalidated. The commit gates the no-op and writes the
+    // config; this applies.
+    void apply_led_glow(int px);
+
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to

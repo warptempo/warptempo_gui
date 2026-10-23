@@ -9,7 +9,7 @@
 #include "palette_file.h"   // kGuiPaletteRoles
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "chrome_derive.h"  // live_chrome_words (the chrome off the wood's Face)
+#include "chrome_derive.h"  // live_chrome_words (the chrome off the ground's mean)
 #include "materials.h"      // the surface chokepoint's materials
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -283,13 +283,10 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     sink.begin(/*aliased=*/true);
     const GuiPalette& pal = palette();
-    // THE WOOD'S TONES END TO END (architect 2026-10-22, the seam ruled out:
-    // render.h's waveform_divider): each row the wood's flat stroke of its
-    // tone, materials::flat under the wood's scope — the strokes the frame
-    // columns' share takes in the margins (paint_canvas_column_frame), so no
-    // seam stands where the divider meets them; the face row the wood's
-    // flat mean, the canvas interior never a tile.
-    const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+    // THE RING TONES END TO END (render.h's waveform_divider): the light
+    // line and the dark one the two ring tones, the face row the ground's
+    // flat mean — the strokes the frame columns' share takes in the margins
+    // (paint_canvas_column_frame), so no seam stands where they meet.
     const WaveformDivider div = waveform_divider(area.h);
     const auto divider_row = [&](int y, int h, GuiColor color) {
         const int top = std::max(area.y, area.y + y);
@@ -298,9 +295,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
         const GuiRect r{area.x, top, area.w, bot - top};
         sink.rects(std::span<const GuiRect>(&r, 1), color);
     };
-    divider_row(div.y, div.line, materials::flat(pal.ce_hilight));
-    divider_row(div.y + div.line, div.face, materials::flat(pal.face));
-    divider_row(div.y + div.line + div.face, div.line, materials::flat(pal.ce_dark));
+    divider_row(div.y, div.line, pal.ce_hilight);
+    divider_row(div.y + div.line, div.face, pal.face);
+    divider_row(div.y + div.line + div.face, div.line, pal.ce_dark);
     sink.end();
 }
 
@@ -420,6 +417,11 @@ void paint_square_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // the other, exactly the two tones' blend with no ground in it (two abutting
 // antialiased fills would let the ground through their shared seam). The
 // anti-aliasing is the renderer's, not a colour (the palette head).
+namespace {
+void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
+                       GuiColor bottom_right, int lw);
+} // namespace
+
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right) {
     const int lw = relief_line_px();
@@ -428,6 +430,28 @@ void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
         paint_square_ring(cr, r, top_left, bottom_right);
         return;
     }
+    paint_mitred_ring(cr, r, top_left, bottom_right, lw);
+}
+
+// THE HAIRLINE RING (render.h's line rule, 2026-10-23): the same mitred
+// ring, its lines ONE DEVICE PX.
+void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
+                          GuiColor bottom_right) {
+    const int lw = hairline_px();
+    if (r.w <= 0 || r.h <= 0) return;
+    if (r.w < 2 * lw || r.h < 2 * lw) {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        paint_cell_rect(cr, r, top_left);
+        cairo_restore(cr);
+        return;
+    }
+    paint_mitred_ring(cr, r, top_left, bottom_right, lw);
+}
+
+namespace {
+void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
+                       GuiColor bottom_right, int lw) {
     const double x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h;
     cairo_save(cr);
     cairo_new_path(cr);
@@ -453,6 +477,7 @@ void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
     cairo_fill(cr);
     cairo_restore(cr);
 }
+} // namespace
 
 namespace {
 // THE TWO-LINE EDGE (DrawEdge): the outer ring on the rect, the inner ring on
@@ -473,93 +498,20 @@ void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r) {
                       palette().light_3d);
 }
 
-// THE WINDOWS PARTS' EDGES (2026-10-22; the rule at kWindowsStandard,
-// render.h's caption block): DrawEdge's SOFT raised and sunken and PLAIN
-// raised families (render.h's relief head), in Windows 2000's Standard
-// quartet.
-void paint_windows_soft_raised(cairo_t* cr, const GuiRect& r) {
-    const GuiWindowsScheme& w = kWindowsStandard;
-    paint_relief_edge(cr, r, hex(w.hilight), hex(w.dk_shadow),
-                      hex(w.light_3d), hex(w.shadow));
-}
-
-void paint_windows_soft_sunken(cairo_t* cr, const GuiRect& r) {
-    const GuiWindowsScheme& w = kWindowsStandard;
-    paint_relief_edge(cr, r, hex(w.dk_shadow), hex(w.hilight),
-                      hex(w.shadow), hex(w.light_3d));
-}
-
-void paint_windows_plain_raised(cairo_t* cr, const GuiRect& r) {
-    const GuiWindowsScheme& w = kWindowsStandard;
-    paint_relief_edge(cr, r, hex(w.light_3d), hex(w.dk_shadow),
-                      hex(w.hilight), hex(w.shadow));
-}
+// (THE WINDOWS PARTS' EDGES — paint_windows_soft_raised, _soft_sunken and
+// _plain_raised in Windows 2000's Standard quartet, the caption buttons' and
+// the sizing frame's, 2026-10-22 to 2026-10-23 — left with those parts: the
+// hi-fi skin's caption and border are render.h's caption block.)
 
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
     paint_square_ring(cr, r, c, c);
 }
 
-// THE SCRUB'S THUMB (the rule and its measurement at render.h's scrub
-// block). In device px from the box's top-left: ring k (k = 0 the
-// silhouette, 1 the soft edge's inner line, 2 the face) is the pentagon
-//     (k lw, k lw) (w - k lw, k lw) (w - k lw, h - p) (w / 2, h - k lw)
-//     (k lw, h - p)
-// — its verticals ending where the point begins, h - p, its tip k lines up
-// the axis, the playhead head's construction. Each line (ring k less ring
-// k + 1) is two regions: the LIGHT one on the top, the left and the left
-// diagonal and the DARK one on the right and the right diagonal, mitred
-// along the 45-degree diagonal at the top-right corner and meeting on the
-// axis at the tip. The five regions and the face are ONE PARTITION filled
-// ADDED into a cleared group (so shared antialiased edges sum to whole
-// pixels and no colour bleeds through a seam), then the group laid over the
-// row once.
+// THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): a key at rest,
+// no LED, on its box.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     if (box.w <= 0 || box.h <= 0) return;
-    const GuiPalette& pal = palette();
-    const double x  = box.x;
-    const double y  = box.y;
-    const double w  = box.w;
-    const double h  = box.h;
-    const double lw = relief_line_px();
-    const double p  = std::min(static_cast<double>(scrub_thumb_point_px()),
-                               h - 2.0 * lw);
-    const double mid = w / 2.0;
-    const auto poly = [&](std::initializer_list<std::pair<double, double>> pts) {
-        cairo_new_path(cr);
-        bool first = true;
-        for (const auto& [px, py] : pts) {
-            if (first) cairo_move_to(cr, x + px, y + py);
-            else       cairo_line_to(cr, x + px, y + py);
-            first = false;
-        }
-        cairo_close_path(cr);
-    };
-    // One line, ring k less ring k + 1, its light half then its dark half.
-    const auto line = [&](double k, GuiColor light, GuiColor dark) {
-        const double o = k * lw, i = (k + 1.0) * lw;
-        poly({{o, o}, {w - o, o}, {w - i, i}, {i, i}, {i, h - p},
-              {mid, h - i}, {mid, h - o}, {o, h - p}});
-        set_palette_source(cr, light);
-        cairo_fill(cr);
-        poly({{w - o, o}, {w - o, h - p}, {mid, h - o}, {mid, h - i},
-              {w - i, h - p}, {w - i, i}});
-        set_palette_source(cr, dark);
-        cairo_fill(cr);
-    };
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    cairo_push_group(cr);
-    cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
-    line(0.0, pal.hilight, pal.dk_shadow);
-    line(1.0, pal.light_3d, pal.shadow);
-    const double f = 2.0 * lw;
-    poly({{f, f}, {w - f, f}, {w - f, h - p}, {mid, h - f}, {f, h - p}});
-    set_palette_source(cr, pal.ground);
-    cairo_fill(cr);
-    cairo_pop_group_to_source(cr);
-    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-    cairo_paint(cr);
-    cairo_restore(cr);
+    paint_key(cr, box, false, GuiKeyLed::None);
 }
 
 // -- THE SIZING FRAME (architect 2026-10-05; the rule at the declaration) ----
@@ -575,17 +527,28 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px, bool /*focused*/) {
     if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
     const int f = frame_px;
-    // THE WINDOWS RULE (architect 2026-10-22, the declaration): the flat
-    // ButtonFace across the band, then the window's raised edge on its outer
-    // two lines, every tone Windows 2000's Standard scheme — no material, no
-    // palette role, each tone laid flat.
+    // THE HI-FI SKIN'S BORDER (architect 2026-10-23; the declaration): the
+    // band CLEARED to transparency — its grab zones stand, invisible — and
+    // ONE DEVICE PX of the ring's light tone round the client on the band's
+    // innermost pixels, above the caption's first row too.
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+    cairo_rectangle(cr, 0, 0, surface_w, f);
+    cairo_rectangle(cr, 0, surface_h - f, surface_w, f);
+    cairo_rectangle(cr, 0, f, f, surface_h - 2 * f);
+    cairo_rectangle(cr, surface_w - f, f, f, surface_h - 2 * f);
+    cairo_fill(cr);
+    cairo_restore(cr);
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    const GuiColor face = hex(kWindowsStandard.face);
-    paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, face);
-    paint_cell_rect(cr, GuiRect{0, surface_h - f, surface_w, f}, face);
-    paint_cell_rect(cr, GuiRect{0, f, f, surface_h - 2 * f}, face);
-    paint_cell_rect(cr, GuiRect{surface_w - f, f, f, surface_h - 2 * f}, face);
-    paint_windows_plain_raised(cr, GuiRect{0, 0, surface_w, surface_h});
+    const GuiColor light = hex(materials::ring_light());
+    const int px = hairline_px();
+    const GuiRect ring{f - px, f - px, surface_w - 2 * (f - px),
+                       surface_h - 2 * (f - px)};
+    paint_ink_rect(cr, GuiRect{ring.x, ring.y, ring.w, px}, light);
+    paint_ink_rect(cr, GuiRect{ring.x, ring.y + ring.h - px, ring.w, px}, light);
+    paint_ink_rect(cr, GuiRect{ring.x, ring.y, px, ring.h}, light);
+    paint_ink_rect(cr, GuiRect{ring.x + ring.w - px, ring.y, px, ring.h}, light);
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
@@ -1324,50 +1287,36 @@ void render_trim_flags(cairo_t* cr,
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
-    // THE BAR (METRICS §3, §4.1): the black field inside THE WOOD'S RING
-    // (architect 2026-10-22, "B": "the wood bevel should run along the
-    // entire length of the left/right frames — the times and other lanes
-    // are below the bevel metaphorically"; "the ruler, the timestamp ruler
-    // and the marker lane should not have a bevel on top of the wood's
-    // bevel. The wood sits on top of the other two … implement the basic
-    // plain rule for the wood bevel here"): ONE PLAIN SUNKEN RING in the
-    // wood's flat strokes round the whole column, from this bar's top row to
-    // the canvas's foot — this bar's top line and left column the wood's
-    // DARK stroke, its right column the wood's LIGHT, the top-right corner
-    // the ordinary mitre (paint_relief_frame, cool_edit_paint.h's diagonal
-    // rule), and the two side columns running UNBROKEN down through its foot
-    // row into the ruler's and the marker lane's columns (paint_ruler_row)
-    // and on into the canvas ring's own. The foot line between the columns
-    // stays the BRASS'S FLAT LIGHT under the caller's Metal scope (the
-    // ruler's top line, the lane below standing straight on it), as he saw
-    // it on B and picked. (Cool Edit's own view bar ring — the brass's mid
-    // on the top and left, its light on the right and foot, both corners
-    // mitred — stood 2026-10-21 to 2026-10-22: a column that changed color
-    // halfway, the brass glued onto the wood.)
+    // THE BAR (METRICS §3, §4.1; the hi-fi skin 2026-10-23): ITS FIELD BLACK
+    // (kCeViewBarField) under THE PROGRAM RING in the two ring tones, every
+    // line ONE DEVICE PX on its one-W slot's outer edge (render.h's line
+    // rule, hairline_px), the slot's other rows the black field — this bar's
+    // top line and left column the DARK tone, its right column the LIGHT,
+    // the side columns running UNBROKEN down through the ruler's and the
+    // marker lane's columns (paint_ruler_row) into the canvas ring's own
+    // (paint_canvas_column_frame) — and ITS FOOT LINE, the ruler's light line
+    // over, the light tone on its slot's LAST row, against the ruler. (The
+    // wood's ring and the brass's foot line of 2026-10-22, three px a line at
+    // 300 %, are git history.)
     const GuiPalette& pal = palette();
     const int lw = program_line_px();
+    const int px = hairline_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{lane_x, lane_y, lane_w, lane_h},
-                    hex(kCeViewBarField));
     {
-        // The ring's rect runs one line past the lane's foot, so its own
-        // bottom line and bottom-left mitre fall below the clip and the side
-        // columns reach the lane's last row whole.
-        cairo_save(cr);
-        cairo_rectangle(cr, lane_x - lw, lane_y, lane_w + 2 * lw, lane_h - lw);
-        cairo_rectangle(cr, lane_x - lw, lane_y + lane_h - lw, lw, lw);
-        cairo_rectangle(cr, lane_x + lane_w, lane_y + lane_h - lw, lw, lw);
-        cairo_clip(cr);
-        const GuiMaterialScope wood(GuiMaterialRegion::Wood);
-        paint_relief_frame(cr,
-                           GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw,
-                                   lane_h + lw},
-                           pal.ce_dark, pal.ce_hilight);
-        cairo_restore(cr);
+        const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+        paint_cell_rect(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw, lane_h},
+                        hex(kCeViewBarField));
+        paint_cell_rect(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw, px},
+                        pal.ce_dark);
+        paint_cell_rect(cr, GuiRect{lane_x - lw, lane_y, px, lane_h}, pal.ce_dark);
+        paint_cell_rect(cr, GuiRect{lane_x + lane_w + lw - px, lane_y + px, px,
+                                    lane_h - px},
+                        pal.ce_hilight);
+        paint_cell_rect(cr, GuiRect{lane_x - lw + px, lane_y + lane_h - px,
+                                    lane_w + 2 * lw - 2 * px, px},
+                        pal.ce_hilight);
     }
-    paint_cell_rect(cr, GuiRect{lane_x, lane_y + lane_h - lw, lane_w, lw},
-                    pal.ce_hilight);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
@@ -1844,10 +1793,10 @@ struct CueSegment {
 // editor's riding cells; the editor's FIELD text does not.
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
                            double x, double baseline, GuiColor ink,
-                           GuiColor shadow) {
-    const double q = static_cast<double>(cue_unit_px());
-    set_palette_source(cr, shadow);
-    text_shape::show_shaped_run(cr, run, x + q, baseline + q);
+                           GuiColor /*shadow*/) {
+    // NO SHADOW in the hi-fi skin (architect 2026-10-23, the frame of record
+    // pv_39b: the 22-px bone on the brushed lane alone; the triangle keeps
+    // its own shadow, paint_ce_cue_triangle).
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
@@ -1998,10 +1947,11 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
         // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
         // changing color.
-        // THE BOX IS THE BRASS AS DRAWN (materials.h's METAL, 2026-10-21):
-        // the lane's own cover at its own place.
+        // THE BOX IS THE LANE'S BRUSHED GROUND AS DRAWN (materials.h's
+        // MARKER, 2026-10-23): the strip's own pixels at their place and
+        // phase, so the box masks earlier text exactly.
         {
-            const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+            const GuiMaterialScope marker(GuiMaterialRegion::Marker);
             for (const auto& sp : spans)
                 paint_cell_rect(cr,
                                 GuiRect{sp.first, lane.y, sp.second - sp.first,
@@ -2751,17 +2701,15 @@ namespace {
 // THE PROGRAM'S ELEVEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's first shared half (the
 // chrome's members, derived from the same Face, are the other's; the
-// generation is each member's own bump) — with THE PANEL'S FACE THE WOOD'S
-// once the materials are baked (materials.h's TONE RULE: every chrome tone
-// derives from the material it stands on, the chrome's roles from the
-// wood's Face since 2026-10-22, the brass's 2026-10-21 to 2026-10-22 — the
-// brass's own strokes are materials::set_source's Metal flats off its own
-// Face; the preset's `face` before the first bake, construction state no
-// frame paints).
-uint32_t panel_face(const GuiPaletteWords& w) {
-    static constexpr std::size_t kFace = palette_role_index("face");
-    static_assert(kFace < kGuiPaletteRoleCount);
-    return materials::baked() ? materials::face(GuiMaterial::Wood) : w[kFace];
+// generation is each member's own bump) — with THE PANEL'S FACE THE
+// GROUND'S MEAN (materials.h's TONE RULE, 2026-10-23: the ring tones and
+// the chrome's roles off it; its estimate before the first bake,
+// construction state no frame paints).
+uint32_t panel_face(const GuiPaletteWords&) {
+    // THE GROUND'S MEAN (materials.h's TONE RULE, 2026-10-23), its estimate
+    // before the first bake; the preset's own `face` is read by the
+    // static_asserts alone.
+    return materials::face(GuiMaterial::Ground);
 }
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
@@ -2777,21 +2725,29 @@ void fill_program_palette(const GuiPaletteWords& w) {
         if (t.member != nullptr)
             g_palette.*(t.member) =
                 hex(cool_edit_derive::tone_of(t, face, w[kInk]));
-    materials::set_tone_face(face);
+    // THE HI-FI SKIN'S TONES OVER THE COOL EDIT BLOCK (materials.h's TONE
+    // RULE, 2026-10-23): every ring, line and edge the two ring tones off
+    // the ground's mean — the program ring, the clock's ring, the divider,
+    // the fields' rings — and the ruler's ground the flat kRulerGround.
+    g_palette.ce_hilight     = hex(ring_light_of(face));
+    g_palette.ce_dark        = hex(ring_dark_of(face));
+    g_palette.ce_field_light = hex(ring_light_of(face));
+    g_palette.ce_field_dark  = hex(ring_dark_of(face));
+    g_palette.ce_mid         = hex(kRulerGround);
+    // THE ACCENT (materials.h's accent_of_ink, architect 2026-10-23): the
+    // live preset's ink's hue under the LED's own lightness and saturation,
+    // the lit lamps' one tone, their glow patches rebuilt with it.
+    materials::set_accent(accent_of_ink(w[kInk]));
     // The panel label's pair, swapping past its own threshold (2026-10-10).
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
     // The disabled cue's faded triangles, shadow and label (2026-10-10): the
-    // label from the bone (materials.h's INKS, 2026-10-21), ALL FOUR MIXED
-    // TOWARD THE BRASS FACE, the material the cues stand on (architect
-    // 2026-10-22, truthful to the surface: the marker lane is the brass's
-    // accent — materials.h's METAL, the brass's fourth place; the panel's
-    // face, the wood's, before the bake).
+    // label from the bone, ALL FOUR MIXED TOWARD THE MARKER LANE'S MEAN, the
+    // ground the cues stand on (architect 2026-10-22, truthful to the
+    // surface).
     {
         using namespace cool_edit_derive;
-        const uint32_t face = materials::baked()
-                                  ? materials::face(GuiMaterial::Metal)
-                                  : panel_face(w);
+        const uint32_t face = materials::face(GuiMaterial::Marker);
         static constexpr std::size_t kCue = palette_role_index("cue");
         static constexpr std::size_t kInvalid =
             palette_role_index("invalid_label");
@@ -2808,14 +2764,11 @@ void fill_program_palette(const GuiPaletteWords& w) {
     g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
 }
 // THE CHROME'S MEMBERS off the live words (live_chrome_words,
-// chrome_derive.h: every role a tone of the panel's face — the wood's since
-// 2026-10-22, the metal's 2026-10-21 to 2026-10-22 — but the selection
-// pair, a constant) — the install
-// family's other shared half, run after the program's whenever either
-// moves.
+// chrome_derive.h: the hi-fi skin's constants and the ring tones off the
+// ground's mean, 2026-10-23) — the install family's other shared half, run
+// after the program's whenever either moves.
 void fill_chrome_palette() {
-    // THE CHROME OFF THE PANEL'S FACE, the wood's once baked (materials.h's
-    // FLAT scope: the chrome's roles from the wood's Face, 2026-10-22).
+    // THE CHROME OFF THE GROUND'S MEAN (materials.h's TONE RULE).
     GuiPaletteWords words = g_program_words;
     words[palette_role_index("face")] = panel_face(g_program_words);
     const GuiThemeWords w = live_chrome_words(words);
@@ -2856,12 +2809,10 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline) {
     // Windows' DSS_DISABLED (render.h's declaration): the Hilight copy one
     // line right and down, the Shadow copy over it.
-    // On a material the two copies are its own tones (materials::flat,
-    // materials.h's INKS), flat.
     const double off = static_cast<double>(relief_line_px());
-    set_palette_source(cr, materials::flat(palette().hilight));
+    set_palette_source(cr, palette().hilight);
     text_shape::show_shaped_run(cr, run, x + off, baseline + off);
-    set_palette_source(cr, materials::flat(palette().shadow));
+    set_palette_source(cr, palette().shadow);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 
@@ -3356,7 +3307,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // only by what is typed.
     //
     // Each segment wears its resting look — its box in the panel face (the
-    // brass as drawn over the canvas's columns, the wood past them), the text
+    // lane's brushed strip over the canvas's columns, the panel's ground past
+    // them), the text
     // in the bone, an invalid marker's
     // dim red or the
     // faded inert label — and none takes
@@ -3428,21 +3380,21 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int x0 = cursor_x + gap;
             const int w  = pad_l + seg_w + pad_r;
             // The face box over the gap and the segment, as the resting
-            // label's one box covers its gaps — the brass as drawn
-            // (paint_cues' box, materials.h's METAL) over the canvas's
-            // columns, THE WOOD past them (the run is not clipped, so a ride
-            // near the right edge reaches the margin, which is the wood's
-            // since 2026-10-22, materials.h's REGIONS).
+            // label's one box covers its gaps — the lane's brushed ground as
+            // drawn (paint_cues' box, materials.h's MARKER) over the canvas's
+            // columns, THE PANEL'S GROUND past them (the run is not clipped,
+            // so a ride near the right edge reaches the margin, materials.h's
+            // REGIONS).
             const int fx = std::max(cursor_x, face_x0);
             const int fx1 = x0 + w;
             const int brass1 = std::clamp(canvas_cols.x + canvas_cols.w, fx, std::max(fx, fx1));
             if (brass1 > fx) {
-                const GuiMaterialScope metal(GuiMaterialRegion::Metal);
+                const GuiMaterialScope marker(GuiMaterialRegion::Marker);
                 paint_cell_rect(cr, GuiRect{fx, lane.y, brass1 - fx, fill_h},
                                 pal.face);
             }
             if (fx1 > brass1) {
-                const GuiMaterialScope wood(GuiMaterialRegion::Wood);
+                const GuiMaterialScope ground(GuiMaterialRegion::Ground);
                 paint_cell_rect(cr, GuiRect{brass1, lane.y, fx1 - brass1, fill_h},
                                 pal.face);
             }

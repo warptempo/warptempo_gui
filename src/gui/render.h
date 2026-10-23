@@ -97,25 +97,22 @@ struct TrimRange {
 // -- Palette ---------------------------------------------------------------
 //
 // THE GUI'S COLORS ARE ROLES AND NOTHING ELSE (architect 2026-10-04; the
-// split 2026-10-07; the chrome's inheritance 2026-10-10; the materials
-// 2026-10-21): THE PALETTE holds every color the PROGRAM draws in the well
-// or on a thing that enters it (the waveform's canvas, ink and outline, the
-// canvas's grid and center line, the cues' two colors and the invalid
+// split 2026-10-07; the chrome's inheritance 2026-10-10; the hi-fi panel
+// skin 2026-10-23): THE PALETTE holds every color the PROGRAM draws in the
+// well or on a thing that enters it (the waveform's canvas, ink and outline,
+// the canvas's grid and center line, the cues' two colors and the invalid
 // color, the playhead and the scanner, and Cool Edit's panel face as its
 // record; palette_file.h's head owns the rule that parts program from
-// chrome) — the WAVEFORM PRESET, the one choice of color left; THE PANEL'S
-// FACE is the wood's mean once the materials are baked (materials.h's TONE
-// RULE), and THE CHROME'S ROLES — the chrome and its relief, the time
-// fields' own pair, the cards' three, the selected and field pairs — ARE
-// INHERITED FROM IT, every one a tone of that Face (but the selection pair,
-// a constant since 2026-10-21) by Cool Edit's own arithmetic (architect 2026-10-10:
-// "we follow Cool Edit's theming"; chrome_derive.h's head, the per-role
-// table). The chrome's roles and their order are the role table
-// (kGuiThemeRoles, theme_file.h). THE CAPTION WEARS NO ROLE: its ground is
-// the flat ebony constant under the ink's title, its buttons Windows 2000's
-// Standard scheme (THE CAPTION, below, 2026-10-22; the walnut as drawn
-// 2026-10-21 to 2026-10-22) — the caption's six roles, the `caption`
-// device key and its 42 built-in schemes left 2026-10-21.
+// chrome) — the WAVEFORM PRESET, the one choice of color left, its ink's hue
+// also THE ACCENT of the lit LEDs (materials.h's accent_of_ink); THE PANEL'S
+// FACE is the brushed ground's mean (materials.h's TONE RULE), and THE
+// CHROME'S ROLES are the skin's constants and the two ring tones off that
+// mean (chrome_derive.h's head, the per-role table; Cool Edit's tones off
+// the Face 2026-10-10 to 2026-10-23). The chrome's roles and their order are
+// the role table (kGuiThemeRoles, theme_file.h). THE CAPTION WEARS NO ROLE:
+// its one flat ground and its inks are the caption block's constants (THE
+// CAPTION, below) — the caption's six roles, the `caption` device key and
+// its 42 built-in schemes left 2026-10-21.
 // The palette's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
 // active palette is the device config's `waveform` — a built-in's key,
@@ -124,55 +121,42 @@ struct TrimRange {
 // `chrome` until 2026-10-21), the first-run default Cool Edit's "Default"
 // (2026-10-16). There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
-// (2026-10-08). The app computes no color but COOL EDIT'S: the program's
-// panel tones derived from the panel's Face (cool_edit_derive.h, the COOL
-// EDIT BLOCK) and, through the same tones, the chrome's roles
-// (chrome_derive.h).
+// (2026-10-08). The app computes no color but THE SKIN'S RULES: the ring
+// tones and the accent (materials.h) and Cool Edit's tones off the Face for
+// what the program still derives (cool_edit_derive.h, the COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
-// PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
-// not follow its preset — the case's black outline and down rings, the
-// disabled glyph's two tones, the view bar's black field, the ruler's ticks and digits and their black shadow;
-// the case's ramps and the time field's digits derived from the Face,
-// ce_case_* and ce_field_text, until 2026-10-21) — or THE FORTEPIANO
-// CHROME'S CONSTANTS AND MATERIALS (materials.h: the words' and the flags'
-// one bone ink, the words' shadow, the time fields' ground and digits, and the baked
-// covers of the walnut, the brass and the ebony through set_surface_source)
-// — or THE CAPTION'S AND THE WINDOWS PARTS' CONSTANTS (2026-10-22, the
-// caption block: the caption's flat ground and inactive ink, and Windows
-// 2000's Standard scheme on its three buttons and the sizing frame)
+// PAINTER CONSTANTS (cool_edit_paint.h: the view bar's black field, the
+// ruler's ticks and digits and their black shadow, the disabled glyph's
+// tones) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
+// the bone, legend and dim inks, the ruler's and the fields' grounds, the
+// selection pair, the key's face, edges and LED, the accent, and the baked
+// brushed grounds through set_surface_source) — or THE CAPTION'S CONSTANTS
+// (the caption block: its ground and its inks)
 // — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the icon drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
 // one place an antialiased, translucent picture is copied whole, no glyph
 // ever wearing a role (the bound monochrome set that wore its surface's
-// text role left 2026-10-09, icons.h's head). A DISABLED icon is Cool
-// Edit's emboss of that picture's mask in its two constant tones under every
-// chrome (icons::draw_disabled, the program case's dead glyph, architect
-// 2026-10-15), no role entering.
+// text role left 2026-10-09, icons.h's head); NO KEY DRAWS ONE since
+// 2026-10-23. A DISABLED icon is Cool Edit's emboss of that picture's mask
+// in its constant tones (icons::draw_disabled, architect 2026-10-15), no
+// role entering.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
-// role — AND COOL EDIT'S: the chrome's text is Cool Edit's program text off
-// the Face, light on a dark Face and swapped dark past Cool Edit's own
-// threshold (cool_edit_derive.h's text tones; architect 2026-10-10:
-// "whatever luminous rules we previously had are superseded by the Cool Edit
-// follow"), the field's text never swapping on its dark ground.
-// STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
-// HOVER FACE ON ANY BUTTON: the program's cases have none under any chrome
-// (Cool Edit's toolbar has none, program_spec.h's case_hot_face, 2026-10-09)
-// and the chrome's buttons never had one; the menus' and lists' lit rows are
-// a selection, not a button face. Every colour is a solid fill of integer
-// cells — EXCEPT THE CHROME'S SURFACES ON A MATERIAL since 2026-10-21 (the
-// fortepiano chrome, materials.h: a baked cover copied 1:1, opaque, nothing
-// blended at paint time, every line its tone's own solid). (The color
+// role: the bone over the ground and the field, the legend ink under the
+// keys and in the tooltip, the bone over the selection's grey.
+// STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
+// HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
+// never had one; the lists' lit rows are a selection, not a button face.
+// Every colour is a solid fill of integer cells — EXCEPT THE CHROME'S
+// SURFACES ON A GROUND (materials.h: a baked tile copied 1:1, opaque,
+// nothing blended at paint time, every line its tone's own solid) and the
+// lit key's patch (its LED's glow composited at the bake). (The color
 // picker's hue ring and SV triangle, 2026-10-07..14, were the one place the
-// product painted colors that were not roles.) THE OTHER EXCEPTION IS THE
-// PROGRAM CASE'S SHADOW RAMP (2026-10-09, Cool Edit's measured rows
-// resampled to device rows, each row one solid colour; cool_edit_paint.h —
-// its face ramp the ebony's since 2026-10-21, materials.h). (THE CAPTION'S
-// GRADIENT, Windows 98 and 2000's smooth 24-bit title bar ramp, 2026-10-05
-// to 2026-10-21, left with the captions: the caption is a flat constant,
-// the walnut 2026-10-21 to 2026-10-22.)
+// product painted colors that were not roles; THE PROGRAM CASE'S SHADOW
+// RAMP, 2026-10-09 to 2026-10-23, and THE CAPTION'S GRADIENT, 2026-10-05 to
+// 2026-10-21, were the other exceptions.)
 // A DITHER'S CELL IS ONE DEVICE PX (architect 2026-10-06, the whole chrome
 // made scalable: "all colours used are period-authentic; dithering gets
 // translated into whatever it perceptually becomes"): a dither stays a
@@ -208,20 +192,17 @@ struct TrimRange {
 // side, and no other role draws a relief line. THE FAMILIES, lines given
 // outer then inner, top-left / bottom-right, each with its painter and its
 // wearers:
-//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow (EDGE_RAISED |
-//                 BF_SOFT) — a caption button at rest (Windows' DFC_CAPTION,
-//                 architect 2026-10-05; paint_windows_soft_raised in Windows
-//                 2000's Standard quartet, kWindowsStandard, the caption
-//                 block, 2026-10-22) and the scrub's pointed thumb in the
-//                 theme's (its own pentagon, paint_scrub_thumb, 2026-10-06);
-//   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a caption button
-//                 pressed (paint_windows_soft_sunken, the Standard quartet);
-//   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow (EDGE_RAISED) — the
-//                 restored window's sizing frame (paint_windows_plain_raised,
-//                 the Standard quartet);
-//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) — the
-//                 render player's scrub channel (paint_relief_plain_sunken,
-//                 the theme's quartet);
+//   (SOFT RAISED, SOFT SUNKEN and PLAIN RAISED — the caption buttons, the
+//                 scrub's pointed thumb and the restored window's sizing
+//                 frame, Windows 2000's Standard quartet — went 2026-10-23
+//                 with those parts: the hi-fi skin's caption, keys and
+//                 border, render.h's caption block and cool_edit_paint.h);
+//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) —
+//                 paint_relief_plain_sunken, no wearer since the scrub's
+//                 channel became two hairlines (2026-10-23);
+//   THE HAIRLINE RING (2026-10-23, paint_hairline_frame) — one device px a
+//                 side in the ring tones: the modal box, the cards and the
+//                 tooltip, the time fields, the canvas's wells;
 //   (SUNKEN OUTER, ONE line, Shadow / Hilight — the open menu title and
 //                 the program's frame's ring — went 2026-10-21 with both,
 //                 the frame's top row alone a flat Shadow line until it
@@ -279,14 +260,13 @@ struct TrimRange {
 //                 2026-10-10);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
-//   (THE CAPTION wears no role since 2026-10-21: its flat ebony ground
-//                 and its inactive pair the caption block's constants under
-//                 the ink's title, its three buttons Windows 2000's
-//                 Standard scheme, kWindowsStandard, 2026-10-22 — its six
-//                 roles, a scheme's start, gradient end and text, active
-//                 and inactive, 2026-10-05..10-21); THE SIZING FRAME round
-//                 a restored laptop window wears no role either: the same
-//                 Standard scheme (paint_window_sizing_frame, 2026-10-22);
+//   (THE CAPTION wears no role since 2026-10-21: its one flat ground, its
+//                 title's two inks and its glyphs the caption block's
+//                 constants, 2026-10-23 — its six roles, a scheme's start,
+//                 gradient end and text, active and inactive,
+//                 2026-10-05..10-21); THE WINDOW BORDER round a restored
+//                 laptop window wears the ring's light tone
+//                 (paint_window_sizing_frame, 2026-10-23);
 //   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; eleven
 //                 since 2026-10-11): the waveform's canvas, ink and outline
 //                 (ROW 6, below; the ink also the view bar's span, its
@@ -308,20 +288,14 @@ struct TrimRange {
 //                 and the canvas column's lanes — Cool Edit's — every
 //                 other panel tone derived from it, the COOL EDIT BLOCK,
 //                 cool_edit_derive.h).
-// THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
-// card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
-// second line: Windows' ink, no dims), and every notification card stand on
-// `card_ground` under `card_text` with a THIN LINE of `card_frame`, ONE
-// Windows px (relief_line_px) and no relief line, on ALL FOUR SIDES
-// (architect 2026-10-06; the cards take the tooltip's look, his word),
-// ReactOS's tooltip on tmp/reactos-tooltips.png ("Views": WS_BORDER all
-// round), Windows 2000's shape. ITS COLORS ARE COOL EDIT'S since 2026-10-10
-// (architect: "tooltips and cards take the Face, the derived text and a
-// dark border derived from the Cool Edit tones"): the panel's Face under
-// the program text, framed in the `dark` tone, Cool Edit's box outline
-// (chrome_derive.h) — Windows' cream InfoWindow under black retired. The line is painted as square cell rects on the face,
-// owning its corners whole — a flat line, not a bevel, so the relief's mitre
-// is not drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE
+// THE CARD FACE (architect 2026-10-04, the period's tooltip; the hi-fi skin
+// 2026-10-23): the tooltip, both of its lines, and every notification card
+// stand on `card_ground` — THE FIELD, kFieldGround — INSIDE A ONE-DEVICE-PX
+// SUNKEN RING in the ring tones, dark top and left, light bottom and right,
+// mitred (paint_popup_chrome, paint_hairline_frame), the cards' words the
+// bone (`card_text`) at the body size, THE TOOLTIP'S THE LEGEND — the legend
+// face in kLegendInk. (Windows 2000's one-W `card_frame` border, square, on
+// the Face, then the wood, 2026-10-04 to 2026-10-23.) THIS PARAGRAPH IS THE
 // RULE'S ONE STATEMENT.
 // THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
 // canvas, the same under every chrome): a ring of the panel's tones round
@@ -362,12 +336,12 @@ struct TrimRange {
 // no site calls cairo_set_source_rgb itself (re-grepped 2026-10-03: none
 // outside render.cpp's bodies): set_palette_source for the chrome's INK —
 // every word, glyph cell and mark, and every surface of the flat chrome —
-// set_surface_source for the chrome's SURFACES ON A MATERIAL (2026-10-21,
-// the fortepiano chrome, materials.h: under a painter's material scope a
-// chrome tone is that material — the Face its baked cover, any other tone its
-// flat stroke — and any other color, or any color outside a scope, flat
-// through set_palette_source), CALLED WITH THE FILL'S PATH ALREADY BUILT (the
-// cover's tile is the one under the path) — the cell fills and every relief
+// set_surface_source for the chrome's SURFACES ON A GROUND (2026-10-21; the
+// hi-fi skin's grounds 2026-10-23, materials.h: under a painter's Ground or
+// Marker scope the palette's `face` is that ground's baked tile, and any
+// other color, or any color outside a scope, flat through
+// set_palette_source), CALLED WITH THE FILL'S PATH ALREADY BUILT (the
+// tile is the one under the path) — the cell fills and every relief
 // line (paint_cell_rect, paint_relief_frame and their family) — and
 // set_waveform_source for the canvas's cairo fills, its ground and grid
 // (render_canvas) and its center lines (render_center_lines). Each converts
@@ -424,13 +398,11 @@ struct GuiPalette {
     GuiColor playhead_stem;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
-    // Cool Edit's Face, the ground of the toolbar band and row 8 under
-    // every chrome — THE WOOD'S FACE, the walnut cover's mean, since
-    // 2026-10-22, the brass's 2026-10-21 to 2026-10-22 (materials.h; the
-    // palette's own `face` until the first bake,
-    // construction state), whatever the preset: every panel tone and every
-    // chrome role derives from it, and painted as a surface it is the scope's
-    // material as drawn (set_surface_source).
+    // Cool Edit's Face, the ground of the toolbar band and row 8 — THE
+    // BRUSHED GROUND'S MEAN since 2026-10-23 (materials.h's TONE RULE; its
+    // estimate before the first bake), whatever the preset: the ring tones
+    // and the chrome's roles derive from it, and painted as a surface it is
+    // the scope's ground as drawn (set_surface_source).
     GuiColor face;
     // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
     // the panel's tones, each DERIVED from `face` — the view bar's span
@@ -444,8 +416,11 @@ struct GuiPalette {
     GuiColor ce_field_dark;
     GuiColor ce_field_light;
     // (The program's time fields' digits, the never-swapping light text
-    // `ce_field_text` 2026-10-10..10-21, are the fortepiano chrome's ink
-    // since, materials.h's kTimeFieldDigits.)
+    // `ce_field_text` 2026-10-10..10-21, are the hi-fi skin's bone since
+    // 2026-10-23, materials.h's kBoneInk.) IN THE HI-FI SKIN `ce_dark`,
+    // `ce_hilight` and the two field tones are the RING TONES off the
+    // ground's mean and `ce_mid` the ruler's flat kRulerGround
+    // (render.cpp's fill_program_palette, materials.h's TONE RULE).
     // the panel label's ink and its (+1, +1) shadow, swapped to the engraved
     // pair past the label threshold (2026-10-10; cool_edit_derive.h's
     // label_ink / label_shadow, not the tone table)
@@ -571,18 +546,20 @@ void install_true_colors(bool on);
 // length): THE VIEW BAR, THE RULER FLIPPED and THE MARKER LANE OF CUES
 // directly under the band, THE CANVAS under them in its frame (row 6's
 // canvas paragraph), all four inside the program ring 6 W in from each side
-// on the wood (the simple layout, 2026-10-22). Its colors are
-// the panel's Face-derived tones (the COOL EDIT BLOCK), the waveform's ink,
+// on the brushed ground (the simple layout, 2026-10-22; the hi-fi skin
+// 2026-10-23). Its colors are
+// the ring tones and the skin's constants, the waveform's ink,
 // the cues' two colors, the invalid color and the playhead's color
 // (the palette), and the painter constants Cool Edit draws whatever its
 // preset (cool_edit_paint.h).
 //
 // THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3, §4.1; render_trim_flags
 // owns the drawing, trim_lane_h_px the rows): a BLACK field 6 W tall
-// (kCeViewBarField) under THE WOOD'S RING's top line, between its dark LEFT
+// (kCeViewBarField) under THE PROGRAM RING's top line, between its dark LEFT
 // and light RIGHT columns (the canvas ring's own, carried up the whole
-// column, the top-right mitred; architect 2026-10-22, materials.h's WOOD),
-// the brass's flat `ce_hilight` line under the field (the ruler's top line);
+// column; architect 2026-10-22), the `ce_hilight` line under the field (the
+// ruler's top line) — every line ONE DEVICE PX on its slot's outer edge, the
+// slot's other rows the field (2026-10-23, hairline_px);
 // (Cool Edit's own sunken ring of `ce_mid` and `ce_hilight` 2026-10-09 to
 // 2026-10-22); and in the field THE SPAN, the trim window's columns as
 // a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
@@ -598,18 +575,20 @@ void install_true_colors(bool on);
 // arrow-button caps stood 2026-10-02 to 2026-10-09; git history.)
 //
 // THE RULER IS COOL EDIT'S, FLIPPED (METRICS §4.4; NOTES.md's "flipped
-// ruler"; paint_ruler_row): `ce_mid` ground under the view bar's light line,
-// its own `ce_hilight` line along its foot, between THE WOOD'S RING's dark
-// LEFT and light RIGHT columns, which run unbroken past the foot (2026-10-22;
-// the frame's own columns mitred into the foot 2026-10-09 to 2026-10-22);
-// THE TICKS kCeRulerTick (E0E0E0,
-// face-independent in every preset), one quantum wide, STANDING ON THE
+// ruler"; paint_ruler_row): the FLAT kRulerGround (`ce_mid`, 2026-10-23)
+// under the view bar's light line, its own `ce_hilight` line along its
+// foot, between THE PROGRAM RING's dark LEFT and light RIGHT columns, which
+// run unbroken past the foot — every line one device px (hairline_px);
+// THE TICKS kCeRulerTick (the bone,
+// face-independent in every preset), ONE DEVICE PX wide over a one-px
+// black shadow at (+1, +1) (2026-10-23), STANDING ON THE
 // GROUND'S BOTTOM ROW and rising into it, painted over the digits' shadow
-// where a major's top row meets it; THE DIGITS the base's SIX-ROW SMALL
-// DIGIT (GuiFace::Small; architect 2026-10-09 ~16:50 / ~21:00, Cool Edit's
-// cap-7 digits "very small" there anyway) on the ground's rows 1 .. 6 under
-// one row of air, "basically touching the trim bar", in the tick's ink over
-// a BLACK (+1, +1) shadow (kCeRulerShadow) — the ground 11 W where Cool
+// where a major's top row meets it; THE DIGITS the ruler face (GuiFace::Small,
+// 15 px at 300 % since 2026-10-23, "the timestamps are good"; the base's
+// six-row digit 2026-10-09 to 2026-10-23) standing on the authored baseline
+// row 7 under the air above, "basically touching the trim bar", in the
+// tick's ink over a BLACK one-device-px (+1, +1) shadow (kCeRulerShadow) —
+// the ground 11 W where Cool
 // Edit's is 17, the six rows the marker lane's (program_spec.h's ruler
 // fields).
 
@@ -1067,6 +1046,14 @@ inline int scaled_px(double authored, int floor_px) {
     const int v = scaled_px(authored);
     return v < floor_px ? floor_px : v;
 }
+// THE HI-FI SKIN'S DEVICE-PX LENGTHS (architect 2026-10-23, the amendment to
+// the skin's brief: "the sizes are authored at the tablet's 300 % … and
+// scale with gui_scale"): a length the frame of record measured in device
+// px at 300 % — the caption's, the clock field's, the type's — through the
+// scaled_px road, its W the device px over 3, rounded at the element.
+inline int skin_px(double device_px_at_300, int floor_px = 0) {
+    return scaled_px(device_px_at_300 / 3.0, floor_px);
+}
 
 // (THE MONOSPACE TEXT-BOX PADDING FAMILY IS GONE — row 7, 2026-08-01. It was
 // flag_pad_x_px / flag_pad_y_px, kChipOutlinePx, kTextBoxPadPx /
@@ -1113,131 +1100,75 @@ constexpr int kMinWindowHeightPx = 480;
 
 // THE CAPTION — the top strip's lane 0, at the window edge: THE WINDOW'S OWN
 // TITLE BAR, painted by the app on both devices (architect 2026-10-05; the
-// laptop asks labwc for client-side decorations, so labwc draws none, and the
-// tablet's full-screen window has none of its own). THE PERIOD'S CAPTION AT
-// THE WINDOWS PIXEL, every number the live chrome spec's (chrome_spec.h's
-// caption_* fields; architect 2026-10-07: each vocabulary's own), which
-// records the vocabulary's measured caption — Windows 2000's SM_CYCAPTION
-// and DrawFrameControl box on the ReactOS captures (tmp/reactos*.png):
-//   THE LANE is caption_height_px whole (18 Windows px under win2000): the
-//     caption's ground across the whole lane, under the icon and the buttons
-//     too — FLAT EBONY, kCaptionGround, while the window is active, and
-//     kCaptionGroundInactive while it is not (GuiPlatform::caption_active;
-//     the tablet's always active) — no texture, no gradient, no light line
-//     at its top and NO LINE UNDER IT: the band's own top rows stand
-//     directly on its last row (architect 2026-10-22 on the tablet mock
-//     tmp/theme_next/out/cap4_a3_flat_1C1412_ink_E6D5A8.png, the mock of
-//     record: "the caption and window frame follow the windows rule, no
-//     more texture on either"; the walnut as drawn with its top light line
-//     2026-10-21 to 2026-10-22, and the program frame's one Shadow line
-//     under it, a lane of its own, 2026-10-10 to 2026-10-22; the 42 built-in
-//     captions' start-to-end colours, Windows' active and inactive pairs
-//     through a smooth 24-bit ramp, 2026-10-05 to 2026-10-21, left with the
-//     `caption` key, palette_file.h's head);
-//   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
-//     (SM_CXSMICON; kCaptionIconPx) at the spec's (caption_icon_x_px,
-//     caption_icon_y_px) from the lane's top-left — (2, 1) under win2000 —
-//     the set's drawing (icons::draw);
-//   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: the live set's
-//     bold, the caption font being the body face in bold), its pen at
-//     caption_title_x_px (20, two px past win2000's icon) and its cap band
-//     centred in the lane (redesign_baseline) — cut before the buttons with
-//     Windows' "..." (paint_caption_row owns the words and the cut) — in the
-//     chrome's one ink over the words' drop shadow (materials.h's INKS,
-//     2026-10-21; architect 2026-10-22, "leave the ink as it is" at the
-//     caption's landing, the bone with every word later that day), the ink
-//     dulled to kCaptionInkInactive while the window is inactive, the shadow
-//     the same;
-//   THE THREE BUTTONS, flush right: each caption_button_w_px x
-//     caption_button_h_px with caption_button_y_px of caption above it,
-//     caption_button_gap_px between Minimise and Maximise,
-//     caption_close_gap_px before Close and caption_button_inset_px right
-//     of Close — win2000: 16 x 14 two px down, Minimise and Maximise
-//     touching, 2 before Close, 2 right of it — WINDOWS' CAPTION BUTTON BY
-//     THE WINDOWS RULES WHOLE (architect 2026-10-22, "marlett buttons follow
-//     win rules"; the ebony case under the ink's glyphs 2026-10-21 to
-//     2026-10-22): DrawFrameControl's DFC_CAPTION, EDGE_RAISED with BF_SOFT,
-//     and EDGE_SUNKEN with BF_SOFT while pressed (paint_windows_soft_raised
-//     / _sunken, below — the reference's white outer line and 3DLight inner
-//     one agree), on the flat ButtonFace, every tone Windows 2000's Standard
-//     scheme (kWindowsStandard), its glyph Marlett's character in black, a
-//     dead box's glyph Windows' DSS_DISABLED emboss — the Shadow silhouette
-//     over a Hilight copy one unit right and down (paint_handler.cpp's
-//     caption glyph block: Minimise, Maximise and Restore authored cells —
-//     ReactOS's 7-wide Minimise and Restore — and Close the smooth outline
-//     of Marlett's staircase, the cell on its unit grid at Windows' (3, 2)),
-//     sunken and shifted one px while pressed.
-// Every length is a composite of its rounded parts (scaled_px's rule): the
-// win2000 lane 54 device rows at the tablet's 300 %, 25 at the laptop's
-// 138 %.
-//
-// THE CAPTION'S GROUND AND ITS INACTIVE INK (architect 2026-10-22; 0xRRGGBB,
-// sRGB): the active ground the ebony 1C1412 of the mock of record; the
-// inactive pair the planner's pick, "a reasonable inactive color", tunable
-// later — the ground the ebony lifted and grayed, the ink dulled (Windows'
-// own rule: an inactive caption is lighter and duller). The active title's
-// ink and both titles' shadow are materials.h's kBoneInk and kWordShadow.
-// THE INACTIVE INK IS THE BONE DULLED BY THE RATIO THE PICK OF 2026-10-22
-// MORNING STOOD IN (architect 2026-10-22, the words' bone): 9E9480 under the
-// ink E6D5A8 is HLS lightness 143/255 over 199/255, 0.7186; the bone F0F0F0
-// (L 240/255) times it is 172.46/255, its hue and saturation the bone's
-// (grey), so ACACAC.
-inline constexpr uint32_t kCaptionGround         = 0x1C1412;
-inline constexpr uint32_t kCaptionGroundInactive = 0x2E2A28;
-inline constexpr uint32_t kCaptionInkInactive    = 0xACACAC;
-// THE WINDOWS PARTS' COLORS — WINDOWS 2000'S STANDARD SCHEME (its setup
-// hive's "Windows Standard", the scheme ReactOS 0.4.16 ships as its default):
-// ButtonFace, Hilight, 3DLight, Shadow and DkShadow, CONSTANTS, the one set
-// the Windows parts of the window wear — the caption's three buttons and
-// the restored laptop's sizing frame (paint_window_sizing_frame), their
-// faces flat, their edges the relief families' in these tones
-// (paint_windows_soft_raised and its siblings, below), never the palette's
-// and never a material. The Windows parts are Windows' own colors (architect
-// 2026-10-22: "the caption and window frame follow the windows rule, no
-// more texture on either; marlett buttons follow win rules").
-struct GuiWindowsScheme {
-    uint32_t face, hilight, light_3d, shadow, dk_shadow;
-};
-inline constexpr GuiWindowsScheme kWindowsStandard{
-    .face = 0xD4D0C8, .hilight = 0xFFFFFF, .light_3d = 0xD4D0C8,
-    .shadow = 0x808080, .dk_shadow = 0x404040};
-// The caption buttons' glyph ink (Windows' ButtonText).
-inline constexpr uint32_t kWindowsButtonText = 0x000000;
-inline constexpr int kCaptionIconPx = 16;
+// laptop asks labwc for client-side decorations, so labwc draws none, and
+// the tablet's full-screen window has none of its own). IN THE HI-FI SKIN
+// (architect 2026-10-23, Enlightenment's manner — tmp/enlightenment_intro2.jpg,
+// E17's default theme, "before they went flat with icons"; the frame of
+// record pv_39b, make_pivot3.build's caption and make_sheet2's quaver), EVERY
+// LENGTH AUTHORED IN DEVICE PX AT THE TABLET'S 300 % AND SCALED WITH
+// gui_scale, rounded at the element (skin_px; the architect's amendment the
+// same night: "the caption scales the same way"):
+//   THE LANE is kCaptionHeightAt300, 40 px at 300 % ("just about the right
+//     size … easier to hit"; 18 px at the laptop's 138 %): ONE FLAT TONE,
+//     kCaptionGround 141415 (the brushed caption's mean), active and
+//     inactive alike — the title alone says which — no gradient, NO TOP
+//     LINE; DIRECTLY UNDER IT A ONE-DEVICE-PX LIGHT LINE, the program ring's
+//     top row in the ring's light tone (paint_caption_row paints it on the
+//     band's first row; the band's own rows stand under that line);
+//   THE ICON, the quaver (paint_quaver, cool_edit_paint.h — the one seat a
+//     picked outline will replace), in a kCaptionIconAt300 = 34-px cell at x
+//     kCaptionIconXAt300 = 6, the bone;
+//   THE TITLE LEFT, after the icon: x = 6 + 34 + 10 (kCaptionTitleXAt300),
+//     Liberation Sans Bold at the title size (gui_font.h's table: 22 px at
+//     300 %), the bone kBoneInk, kCaptionInkInactive 8A8A8E (the bone
+//     dulled) while the window is inactive, its cap band centered on the
+//     lane's rows (redesign_baseline), cut before the buttons with "..."
+//     (paint_caption_row owns the words and the cut);
+//   THE THREE BUTTONS, PROCEDURAL GLYPHS at the right ("the glyphs on the
+//     caption, those are good"): chevron-down (minimize), chevron-up
+//     (maximize and restore alike), x (close), strokes kCaptionGlyphStrokeAt300
+//     = 2 px (floored at 1), each glyph reaching kCaptionGlyphRAt300 = 7 px
+//     from its center, the centers kCaptionButtonPitchAt300 = 30 px apart,
+//     the rightmost kCaptionButtonInsetAt300 = 8 + 13 = 21 px from the right
+//     edge (make_pivot3's loop); THE HIT CELLS the pitch wide and the lane
+//     tall round the centers. ENABLED the bone, DISABLED kDimInk 6A6A6E,
+//     PRESSED the glyph in kCaptionInkInactive — no cell face, no sunken box:
+//     a flat panel has none. (Windows 2000's caption — its Marlett
+//     footprints, the ButtonFace constants and the soft raised cell, the
+//     ebony ground — stood 2026-10-05 to 2026-10-23; git history.)
+inline constexpr double kCaptionHeightAt300       = 40.0;
+inline constexpr double kCaptionIconXAt300        = 6.0;
+inline constexpr double kCaptionIconAt300         = 34.0;
+inline constexpr double kCaptionTitleXAt300       = 6.0 + 34.0 + 10.0;
+inline constexpr double kCaptionGlyphRAt300       = 7.0;
+inline constexpr double kCaptionGlyphStrokeAt300  = 2.0;
+inline constexpr double kCaptionButtonPitchAt300  = 30.0;
+inline constexpr double kCaptionButtonInsetAt300  = 8.0 + 13.0;
+inline constexpr uint32_t kCaptionGround      = 0x141415;
+inline constexpr uint32_t kCaptionInkInactive = 0x8A8A8E;
 inline int caption_row_h_px() {
-    return scaled_px(live_chrome_spec().caption_height_px, 5);
+    return skin_px(kCaptionHeightAt300, 5);
 }
 
-// THE SIZING FRAME (architect 2026-10-05) — Windows 95's sizable window
-// border, 4 Windows px (SM_CXFRAME, kWindowFramePx), drawn round a RESTORED
-// laptop window and never round a maximised one (Windows hid it when
-// maximised; the tablet's window is always maximised): the window's raised
-// edge on its outer two lines (PLAIN RAISED, DrawEdge's EDGE_RAISED,
-// paint_windows_plain_raised) and the flat ButtonFace on the two inside
-// them, EVERY TONE WINDOWS 2000'S STANDARD SCHEME (kWindowsStandard, the
-// caption block; architect 2026-10-22, "the caption and window frame follow
-// the windows rule, no more texture on either" — the brass as drawn round
-// the client 2026-10-21 to 2026-10-22, the palette's ground and quartet
-// before), so no app act ever moves its pixels. Painted by the Wayland
-// backend on the surface's outer `frame_px` device px (the client area inside
-// it is the app's whole geometry, platform_wayland.cpp); its edges and
-// corners are the resize handles (window_frame_edges_at, app_state.h). THE
-// THICKNESS IS A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): two
-// relief lines and two Windows px of ground, window_frame_px — 5 device px at
-// the laptop's 138 % (1 + 1 + 3), 12 at 300 % (3 + 3 + 6). The relief
-// lines are the spec's window_frame_lines; a vocabulary whose spec sets
-// window_frame_maximized keeps the band on every window, the maximized
-// laptop's and the tablet's too (both platforms' frame_px_), the hit test
-// unchanged (window_frame_edges_at), its band answering a resize only while
-// the window is restored (claim_window_frame_press). `focused` is the
-// window's activation, which Windows 2000's frame does not show (its ground
-// and quartet stand the same either way); the platforms pass it for a
-// vocabulary whose frame follows the activation.
+// THE WINDOW BORDER — THE SIZING FRAME'S BAND (architect 2026-10-05; the
+// hi-fi skin 2026-10-23): round a RESTORED laptop window and never round a
+// maximised one (the tablet's window is always maximised), the band's
+// pixels CLEARED to transparency — its grab zones unchanged, invisible —
+// and ONE DEVICE PX of the ring's light tone (materials::ring_light) on the
+// band's innermost pixels, round the whole client rect, above the caption's
+// first row too (paint_window_sizing_frame). Painted by the Wayland backend
+// on the surface's outer `frame_px` device px (the client area inside it is
+// the app's whole geometry, platform_wayland.cpp; the surface ARGB, the GL
+// canvas's clear transparent, gl_canvas.cpp); its edges and corners are the
+// resize handles (window_frame_edges_at, app_state.h). THE BAND'S THICKNESS
+// is the composite it always was, window_frame_px — 5 device px at the
+// laptop's 138 %, 12 at 300 % — so the grab is the same. `focused` is the
+// window's activation, which the border does not show. (Windows 2000's
+// raised frame on the flat ButtonFace stood 2026-10-05 to 2026-10-23.)
 inline constexpr int kWindowFramePx = 4;
 int  window_frame_px();
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px, bool focused);
-
 // (THE MENU ROW — the top strip's lane 1 under the caption from 2026-08 to
 // 2026-10-21, Windows' plain menu bar carrying File, Edit and Settings, a
 // face row over its 19-W content — IS REMOVED, architect 2026-10-21: "I'd
@@ -1281,6 +1212,26 @@ inline constexpr int kReliefLinePx = 1;
 inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
 }
+// THE ONE-DEVICE-PX LINE RULE (architect 2026-10-23, the hi-fi skin:
+// "everything scales to the 1 pixel line … we scale the icon size by the
+// area, not the borders and the line"): the chokepoint beside scaled_px for
+// every chrome LINE the skin draws, ONE DEVICE PX at every gui_scale — the
+// program ring's columns and rows (their PLACES where the one-W ring stood:
+// each line on its slot's outer edge, the slot's other rows the ground the
+// line encloses), the clock's ring and the time fields' rings, the stereo
+// divider's three rows, the ruler's two light lines and its ticks with their
+// shadow, the keys' edges and outline, the modal box's ring, the cards' and
+// the tooltip's rings, the player's scrub lines, the line under the caption
+// and the laptop's window border — read at those sites and nowhere else.
+// Everything else keeps scaled_px: the keys, the LED, the lanes' heights,
+// the pads, the flags' triangles and the cue boxes.
+inline int hairline_px() { return 1; }
+// A MITRED RING of one-device-px lines (paint_relief_frame's construction
+// at hairline_px): `top_left` on the top row and left column, `bottom_right`
+// on the bottom row and right column, the two-tone corners split on the
+// diagonal.
+void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
+                          GuiColor bottom_right);
 
 // (THE PROGRAM'S FRAME — Cool Edit's frame window round the program, one
 // sunken line in the chrome's Shadow and Hilight, mitred, its top row a lane
@@ -1323,11 +1274,12 @@ inline int relief_line_px() {
 // (cool_edit_paint.h's faces).
 //
 // THE BAND (architect 2026-10-22, the simple layout): THE STRIP PAD, the
-// case, THE STRIP PAD on the plain wood, no line of its own — 49 W at the
-// pad's 13, 147 device rows at 300 %. Its runs are paint_icon_row's walk
-// (icon_row_seats: the cases abutting inside a run, run_gap_px of wood
-// between runs). The hit target is the case; the wood between is inert
-// ground for input.
+// case, THE STRIP PAD on the brushed ground — its first row the caption's
+// one-device-px light line, the keys' legends in its bottom pad
+// (2026-10-23) — 49 W at the pad's 13, 147 device rows at 300 %. Its runs
+// are paint_icon_row's walk (icon_row_seats: the keys abutting inside a
+// run, run_gap_px of ground between runs). The hit target is the key; the
+// ground between, the legends' included, is inert for input.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because more
 // than one file reads the case: icons.cpp's seat (draw_cased) and
@@ -1383,7 +1335,7 @@ inline int strip_h_px() {
 inline int icon_row_h_px() {
     return strip_h_px();
 }
-// THE WOOD BETWEEN TWO RUNS (program_spec.h's run_gap_px): 45 device px at
+// THE GROUND BETWEEN TWO RUNS (program_spec.h's run_gap_px): 45 device px at
 // 300 %, 21 at 138 %.
 inline int program_run_gap_px() {
     return scaled_px(kProgramSpec.run_gap_px);
@@ -1437,20 +1389,21 @@ inline int program_run_gap_px() {
 // NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
 // lines on the ground, the position is the thumb. The painter is
 // paint_modal_dialog's player branch; the press is claim_player_scrub_press.
-inline constexpr int    kScrubChannelLines = 4;
-inline constexpr double kScrubThumbWidthPx = 11.0;
-inline constexpr double kScrubThumbAbovePx = 8.0;
-inline constexpr double kScrubThumbBelowPx = 9.0;
-inline constexpr double kScrubThumbPointPx = 5.0;
-// The thumb's width floors at five device px — its two relief rings a side
-// and one column of face — its two overhangs and its point at one row each.
-inline int scrub_thumb_w_px()     { return scaled_px(kScrubThumbWidthPx, 5); }
-inline int scrub_thumb_above_px() { return scaled_px(kScrubThumbAbovePx, 1); }
-inline int scrub_thumb_below_px() { return scaled_px(kScrubThumbBelowPx, 1); }
-inline int scrub_thumb_point_px() { return scaled_px(kScrubThumbPointPx, 1); }
-// THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px), the
-// rule above: the pentagon's soft raised edge and its ground face, nothing
-// outside the pentagon painted.
+// THE HI-FI SKIN'S SCRUB (architect 2026-10-23, pv_41: "looks good … the
+// scrub fits"; the record above is the Windows thumb it replaced): THE
+// CHANNEL a ONE-DEVICE-PX light line over a one-device-px dark line, the
+// two ring tones, across the scrub's span (kScrubChannelLines hairlines);
+// THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx x kScrubThumbHeightPx W
+// (the mock's 10 x 25 device px at 300 % taken to the W grid), painted by
+// the key painter with no LED and no legend, centred on the channel.
+inline constexpr int    kScrubChannelLines  = 2;
+inline constexpr double kScrubThumbWidthPx  = 4.0;
+inline constexpr double kScrubThumbHeightPx = 8.0;
+// The thumb's width floors at three device px (its outline and one column
+// of face), its height at five.
+inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
+// THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px): a key,
+// at rest, no LED.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 //
 // THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: the chrome spec's
@@ -1540,10 +1493,13 @@ double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // selection band — the line box — stood three rows of field above it and
 // six below, and he asked for it even; the cap band's centring of 2026-10-09
 // ~21:45, "it should be centered vertically", retired with it). ONE RULE FOR
-// THE LABEL AND THE BAND: the line box, the recorded ascent plus descent
-// (10 + 2 W, gui_font_line_px) rounded once to whole rows, stands in the
-// lane by the box rule — the floor of the leftover above, the odd row below
-// — and THE BASELINE IS THE BOX'S TOP PLUS THE ASCENT, rounded once. The
+// THE LABEL AND THE BAND: the line box, THE FACE'S OWN LINE HEIGHT AT THE
+// CUES' SIZE (gui_font_line_px, 2026-10-23: 25 device rows at 300 %'s 22
+// px), stands in the lane by the box rule — the floor of the leftover above,
+// the odd row below — and THE BASELINE IS THE BOX'S TOP PLUS THE FACE'S OWN
+// ASCENT (20 at 300 %); at 300 % the box on rows 13 .. 37 of the lane's 51,
+// the baseline 33, the cap band (15.1 rows) centred on the lane. (The rows
+// below are the recorded Windows metrics' of 2026-10-09 to 2026-10-23.) The
 // resting label and the editor's text must share one baseline (the editor's
 // text sits at the label's seat), so the line box's centring wins and the
 // cap's own is not kept. Every label segment — the resting label, the bound
@@ -1570,45 +1526,11 @@ inline int cue_baseline_px() {
            static_cast<int>(std::nearbyint(
                gui_font_ascent_px(gui_font(GuiFace::Program))));
 }
-// THE RULER'S DIGITS ARE THE SMALL FACE'S SIX ROWS UNDER ONE W OF AIR
-// (program_spec.h's ruler fields) (gui_font.h: the set's small face is the
-// base's six-row digit, its cell all above the baseline).
-constexpr bool ruler_digit_rows_hold(const GuiFaceSet& set) {
-    const GuiFaceMetrics& m =
-        set.metrics[static_cast<std::size_t>(GuiFace::Small)];
-    return m.measure == GuiFaceMeasure::Digit && m.descent == 0 &&
-           m.ascent == m.height &&
-           kProgramSpec.ruler_baseline_px == 1 + m.height;
-}
-static_assert([] {
-    for (const GuiFaceSet* s : kGuiFaceSets)
-        if (!ruler_digit_rows_hold(*s)) return false;
-    return true;
-}());
-// THE CUE LABEL'S ROWS AT 100 % (cue_baseline_px's rule over the lane's
-// authored 17 and the program face's recorded line box, ascent 10 and
-// descent 2, and its cap 7 — the program face is measured by its cap,
-// gui_font.h's kGuiProgramFaceMetrics): the box on rows 2 .. 13,
-// the baseline the top of row 12, the cap on rows 5 .. 11. THE DESCENT ENDS
-// ABOVE THE LANE'S LAST ROW — the box's outline row: the baseline plus the
-// recorded descent plus two rows to spare for the glyphs that overshoot the
-// record stand within rows 12 .. 15. Measured 2026-10-09 off the files'
-// outlines through FreeType, the deepest glyphs a label can carry reach
-// 0.288 of the cap under the baseline in Tahoma ("y"; "g" 0.285, "(" 0.257,
-// "[" 0.181), 0.299 in FreeSans ("g", "y"; its brackets 0.291) — 2.0 / 2.1 W
-// at 100 %, rows 12 .. 14; at 300 % (cap 21) 6.0 / 6.3 device rows under
-// the baseline 37, ending on row 43 of the 51, four rows above the outline's
-// three (48 .. 50); at 360 % (cap 25.2) 7.3 / 7.5 under 46, ending on row 53
-// of the 63, the outline 59 .. 62.
-constexpr int kCueLabelBaselineAt100 =
-    (program_marker_lane_authored_h(kProgramSpec) -
-     (kGuiProgramFaceMetrics.ascent + kGuiProgramFaceMetrics.descent)) / 2 +
-    kGuiProgramFaceMetrics.ascent;
-static_assert(kGuiProgramFaceMetrics.measure == GuiFaceMeasure::Cap);
-static_assert(kCueLabelBaselineAt100 == 12);
-static_assert(kCueLabelBaselineAt100 - kGuiProgramFaceMetrics.height == 5);
-static_assert(kCueLabelBaselineAt100 + kGuiProgramFaceMetrics.descent + 2 <=
-              program_marker_lane_authored_h(kProgramSpec) - 1);
+// (THE RULER'S DIGIT ROWS AND THE CUE LABEL'S ROWS AT 100 %, asserted
+// against the recorded Windows metrics 2026-10-09 to 2026-10-23, went with
+// those metrics: the faces' vertical metrics are their own at the table's
+// sizes since 2026-10-23, gui_font.h's head, so the line box and the
+// baseline above are derived at the live scale alone.)
 // THE TRIANGLE'S PAINTED COLUMNS round its stem column `col` — the cue's and
 // the playhead head's one extent, read off the painter's own vertices
 // (paint_ce_cue_triangle, architect 2026-10-09 ~14:35, centred on the
@@ -1728,33 +1650,35 @@ inline int bottom_row_h_px() {
 // text surface names its face, gui_font(face), and reads its vertical
 // metrics off the recorded constants.)
 
-// THE WHOLE STACK IN WINDOWS PX — every lane a vocabulary lays above and
+// THE PROGRAM'S STACK IN WINDOWS PX — every lane the program lays above and
 // below the well, and the frame's two sides where the vocabulary's frame
 // stands on the maximised window (2026-10-08, window_frame_maximized; none
-// under win2000): the chrome's caption, then THE PROGRAM'S (program_spec.h,
-// the same under every chrome since 2026-10-09; the simple layout
-// 2026-10-22): the band (the pad, the case, the pad), the canvas column's 38
+// under win2000): THE PROGRAM'S (program_spec.h; the simple layout
+// 2026-10-22): the band (the pad, the key, the pad), the canvas column's 38
 // above the canvas (the view bar 8, the ruler 12, the marker lane 17, the
 // canvas's top frame row 1), the canvas's bottom frame row 1 under it and
-// row 8 (the pad, the case, the pad). `pad` the strip pad's W
-// (strip_pad_px). At 300 % every term is a whole multiple of 3 device px.
+// row 8 (the pad, the key, the pad). `pad` the strip pad's W
+// (strip_pad_px). THE CAPTION IS NOT IN IT since 2026-10-23: its height is
+// the skin's device px at 300 % (caption_row_h_px, 40 there).
 constexpr int chrome_stack_authored_h(const ChromeSpec& s, int pad) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
                2 * kReliefLinePx)
         : 0;
-    return frame + s.caption_height_px +
+    return frame +
            program_strip_authored_h(kProgramSpec, pad) +
            program_column_authored_h(kProgramSpec) +
            program_canvas_bottom_authored_h(kProgramSpec) +
            program_strip_authored_h(kProgramSpec, pad);
 }
-// THE STACK AT THE FRAME OF RECORD'S PAD, 13 W (2026-10-22): 105 above (the
-// caption 18, the band 49, the column 38) and 50 below (the ring's last row
-// 1, row 8 49), 155 — the tablet's well at 300 % 975 rows (325 W) of the
-// surface's 1440, layout4_pad13's (a vocabulary's well its own lanes'
-// leftover, main.cpp's rule); every W of pad takes 4 W from it.
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000, 13) == 155);
+// THE STACK AT THE FRAME OF RECORD'S PAD, 13 W: 87 above (the band 49, the
+// column 38) and 50 below (the ring's last row 1, row 8 49), 137 W, 411
+// device rows at 300 % — with the caption's 40 the tablet's well 989 rows of
+// the surface's 1440 (975 under Windows 2000's 54-row caption, 2026-10-22 to
+// 2026-10-23: the well took the 14 rows the caption gave up); on the
+// laptop's maximized 1920 x 1047 at 138 % the caption 18 rows (25 before),
+// the well 878 (871). Every W of pad takes 4 W from it.
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000, 13) == 137);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -1769,11 +1693,14 @@ static_assert(chrome_stack_authored_h(kChromeSpecWin2000, 13) == 155);
 // four lines, the thumb its rows above the channel, the channel and its rows
 // below — each part rounded on its own.
 inline int scrub_channel_h_px() {
-    return kScrubChannelLines * relief_line_px();
+    return kScrubChannelLines * hairline_px();
 }
 inline int scrub_thumb_h_px() {
-    return scrub_thumb_above_px() + scrub_channel_h_px() +
-           scrub_thumb_below_px();
+    return scaled_px(kScrubThumbHeightPx, 5);
+}
+// The thumb's rows above the channel: the thumb centred on it.
+inline int scrub_thumb_above_px() {
+    return (scrub_thumb_h_px() - scrub_channel_h_px()) / 2;
 }
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas's frame stands outside it
 // (row 6's canvas paragraph).
@@ -2276,20 +2203,15 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //                         helper below calls, and THE PROGRAM'S MITRE since
 //                         2026-10-09: every two-tone ring cool_edit_paint.cpp
 //                         draws and the view bar's span — its head).
-//   paint_windows_soft_raised / _soft_sunken / _plain_raised — SOFT RAISED,
-//                         SOFT SUNKEN and PLAIN RAISED IN WINDOWS 2000'S
-//                         STANDARD QUARTET (kWindowsStandard, the caption
-//                         block; 2026-10-22): a caption button at rest and
-//                         pressed (paint_caption_button_box), the restored
-//                         window's sizing frame (paint_window_sizing_frame).
-//                         (The scrub's pointed thumb draws its own soft
-//                         raised pentagon, paint_scrub_thumb.)
-//   paint_relief_plain_sunken — PLAIN SUNKEN: the scrub's channel (the
-//                         dialog editor's field and the choice combo wore it
-//                         until 2026-10-14, the folder overlay's list
-//                         2026-10-06 to 2026-10-14; the modal family's box
-//                         wears the canvas column's ring since,
-//                         paint_relief_frame, modal_box.h).
+//   (paint_windows_soft_raised / _soft_sunken / _plain_raised — Windows
+//                         2000's Standard quartet on the caption buttons and
+//                         the sizing frame, 2026-10-22 to 2026-10-23 — left
+//                         with them; the hi-fi skin's rings are one-device-px
+//                         hairlines, paint_hairline_frame above.)
+//   paint_relief_plain_sunken — PLAIN SUNKEN, no wearer since the hi-fi
+//                         skin's scrub (2026-10-23; the scrub's channel
+//                         until then, the dialog editor's field and the
+//                         choice combo until 2026-10-14).
 //   (paint_relief_sunken_outer — SUNKEN OUTER, ONE ring, DrawEdge's
 //   BDR_SUNKENOUTER — went 2026-10-21 with its two wearers, the open menu
 //   title and the program's frame's ring.)
@@ -2298,8 +2220,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //                         default-button frame and the list's focus frame
 //                         (the popup scroll bar's pressed arrow button until
 //                         2026-10-14).
-//   (The CARD FRAME — the tooltip's and the cards' — is no relief: its
-//   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
+//   (The CARD FRAME — the tooltip's and the cards' — is the hi-fi skin's
+//   one-device-px sunken ring in the ring tones since 2026-10-23, at
+//   paint_popup_chrome.)
 //   (paint_relief_etched_hline — an ETCHED line, the dropdown's separator —
 //   went 2026-10-21 with the Settings popup, its last wearer.)
 // (The one-line raised inner edge — the flat toolbars' hot face — and the
@@ -2311,9 +2234,6 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
-void paint_windows_soft_raised(cairo_t* cr, const GuiRect& r);
-void paint_windows_soft_sunken(cairo_t* cr, const GuiRect& r);
-void paint_windows_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 // One cell rect in `c` — the face fill every relief caller lays first — A
 // SURFACE: `c` through set_surface_source, so under a material scope a chrome
@@ -2391,13 +2311,12 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // after the plate and the center lines, on_redraw's paint order on both
 // roads), so the GL canvas draws them from its list exactly as the cairo
 // road fills them (canvas_sink.h's head); across the frame columns they are
-// the frame painter's. THEIR TONES ARE THE WOOD'S END TO END (architect
-// 2026-10-22: the divider is a seam, not a choice): inside the area the two
-// lines are the wood's flat strokes of `ce_hilight` and `ce_dark` and the
-// face row the wood's flat mean (materials::flat under the wood's scope),
-// the very strokes the frame painter puts on the frame columns and the
-// margins, so no seam can stand where they meet (the brass's flat tones
-// inside the area, the wood's outside, for one landing of 2026-10-22).
+// the frame painter's. THEIR TONES ARE ONE END TO END (architect
+// 2026-10-22: the divider is a seam, not a choice): the two lines the ring
+// tones `ce_hilight` and `ce_dark` and the face row the ground's flat mean,
+// inside the area and across the frame columns alike, so no seam can stand
+// where they meet. EACH ROW ONE DEVICE PX since 2026-10-23 (the line rule,
+// waveform_divider_px below; the scaled rows above are the record).
 // EVERY OTHER CANVAS PAINTER PAINTS NOTHING ON THEM: the
 // plate's bands, the grid and the center lines stand inside the two bands,
 // and every vertical line — the cues' and the cursor's dots, the lead-in
@@ -2418,10 +2337,13 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot
 // in the plate's worker — the worker reads no gui_scale): `y` its first row,
 // directly under channel 0's band.
+// THE HI-FI SKIN'S DIVIDER (architect 2026-10-23, the line rule): the three
+// rows ONE DEVICE PX each (hairline_px) — the upper well's light line, one
+// row of the ground, the lower well's dark line — so the divider is 3 rows
+// at every scale and the two channels' bands take the rest (the scaled
+// rows above are the record of 2026-10-16 to 2026-10-23).
 inline int waveform_divider_px() {
-    return program_line_px() +
-           scaled_px(kProgramSpec.stereo_divider_face_px, 1) +
-           program_line_px();
+    return 3 * hairline_px();
 }
 struct WaveformDivider {
     int y    = 0;   // the first row, area-local: the upper well's light line
@@ -2434,8 +2356,8 @@ inline int waveform_channel_band_h(int area_h, int divider_px) {
     return h > 0 ? h : 0;
 }
 inline WaveformDivider waveform_divider(int area_h) {
-    const int line = program_line_px();
-    const int face = scaled_px(kProgramSpec.stereo_divider_face_px, 1);
+    const int line = hairline_px();
+    const int face = hairline_px();
     return WaveformDivider{
         waveform_channel_band_h(area_h, line + face + line), line, face};
 }

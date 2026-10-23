@@ -644,55 +644,6 @@ GuiPlatform::bundled_icon_files() {
     return read_asset_dir("icons", {".svg", ".png"});
 }
 
-// THE MATERIALS, BY NAME (contract at platform_wayland.h's declaration,
-// 2026-10-21): the `tiles/` directory's `.png` and `.jpg` names, and one
-// asset read in one sized read — its first `limit` bytes or the whole file.
-// The error arms' producers are read_asset_dir's (an asset that will not
-// open or read whole; no manager, breach-only). A material missing from the
-// package is the check's missing file (materials.h).
-std::expected<std::vector<std::string>, std::string>
-GuiPlatform::bundled_tile_names() {
-    AAssetManager* mgr = (g_android_app && g_android_app->activity)
-                             ? g_android_app->activity->assetManager
-                             : nullptr;
-    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
-    AAssetDir* dir = AAssetManager_openDir(mgr, "tiles");
-    if (!dir)
-        return std::unexpected(std::string("could not list the APK's tiles/ assets"));
-    std::vector<std::string> out;
-    while (const char* entry = AAssetDir_getNextFileName(dir)) {
-        const std::string name = entry;
-        if (name.ends_with(".png") || name.ends_with(".jpg")) out.push_back(name);
-    }
-    AAssetDir_close(dir);
-    return out;
-}
-
-std::expected<std::string, std::string>
-GuiPlatform::bundled_tile_bytes(const std::string& name, std::size_t limit) {
-    AAssetManager* mgr = (g_android_app && g_android_app->activity)
-                             ? g_android_app->activity->assetManager
-                             : nullptr;
-    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
-    const std::string path = "tiles/" + name;
-    AAsset* asset = AAssetManager_open(mgr, path.c_str(), AASSET_MODE_STREAMING);
-    if (!asset)
-        return std::unexpected("could not open the APK asset '" + path + "'");
-    const off_t len = AAsset_getLength(asset);
-    std::string bytes(std::min(len > 0 ? static_cast<std::size_t>(len) : 0, limit),
-                      '\0');
-    std::size_t got = 0;
-    while (got < bytes.size()) {
-        const int n = AAsset_read(asset, bytes.data() + got, bytes.size() - got);
-        if (n <= 0) break;
-        got += static_cast<std::size_t>(n);
-    }
-    AAsset_close(asset);
-    if (got != bytes.size())
-        return std::unexpected("could not read the APK asset '" + path + "' whole");
-    return bytes;
-}
-
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     app_ = g_android_app;
     if (!app_) {

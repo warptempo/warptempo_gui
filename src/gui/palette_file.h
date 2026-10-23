@@ -22,16 +22,16 @@
 //     completes a typed prefix against the built-in names
 //     (GuiSettingsEditor::complete_closed_value) and whose commit installs
 //     the preset live (install_program_palette below). It sets THE
-//     WAVEFORM'S ROLES ALONE: no chrome surface reads its `face` once the
-//     materials are baked — the panel's Face is the wood's mean
-//     (render.cpp's panel_face, materials.h's TONE RULE) — so the role
-//     stands in the table and the generated rows as the record of Cool
-//     Edit's preset, read only as the construction state before the first
-//     bake.
-//   THE CAPTION IS A CONSTANT (render.h's caption block, 2026-10-22): the
-//     title bar is flat ebony, its inactive ground and ink constants too,
-//     under the ink's title (the walnut cover as drawn, active and inactive
-//     alike, 2026-10-21 to 2026-10-22). The caption's six colors and the
+//     WAVEFORM'S ROLES ALONE, and its ink's hue THE LIT LEDS' ACCENT
+//     (materials.h's accent_of_ink, 2026-10-23): no chrome surface reads its
+//     `face` — the panel's Face is the brushed ground's mean (render.cpp's
+//     panel_face, materials.h's TONE RULE) — so the role stands in the table
+//     and the generated rows as the record of Cool Edit's preset, read by
+//     the static_asserts alone.
+//   THE CAPTION IS A CONSTANT (render.h's caption block, 2026-10-23): one
+//     flat ground, active and inactive, the title's two inks constants too
+//     (the walnut, then the flat ebony, 2026-10-21 to 2026-10-23). The
+//     caption's six colors and the
 //     second kind of preset that set them — the `caption` device key, its
 //     Settings Caption row, the product's flat `default` (9B4B2C, the
 //     morning of 2026-10-21) and the 42 Windows and Plus! schemes generated
@@ -45,8 +45,8 @@
 // whole; a hand-edited file is adversarial territory.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the waveform, and THE
-// MATERIALS every chrome role — Cool Edit's tones off the wood's Face, the
-// selection pair a constant (chrome_derive.h). GuiPalette
+// MATERIALS every chrome role — the hi-fi skin's constants and the ring
+// tones off the ground's mean (chrome_derive.h, 2026-10-23). GuiPalette
 // (render.h) keeps every member; install_palette (render.h) fills the
 // program members off this file's table (kGuiPaletteRoles), the panel's
 // `face` member and THE COOL EDIT BLOCK off the panel's Face, and the chrome
@@ -114,7 +114,7 @@
 // ground of the program's panel — the toolbar band, row 8 and the canvas
 // column's lanes — whose every other tone derives from it,
 // cool_edit_derive.h; a material's mean in its place on every surface since
-// 2026-10-21 — the wood's since 2026-10-22 — the head; a scheme recording none — Classic Cool, for which
+// 2026-10-21 — the brushed ground's since 2026-10-23 — the head; a scheme recording none — Classic Cool, for which
 // Cool Edit follows the Windows 3D face — takes THE DEFAULT PRESET'S FACE,
 // 626C7B, read off Default's own row by the generator (architect 2026-10-16:
 // "make classic cool inherit from default again. default is the chrome so
@@ -192,9 +192,10 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED (chrome_derive.h's live_chrome_words: the
-// panel's Face the wood's once the materials are baked and the selection
-// pair a constant, so no chrome role moves with a preset; the waveform's
-// and the program's roles do, the view bar's ink-derived tones among them)
+// skin's constants and the ring tones off the ground's mean, so no chrome
+// role moves with a preset; the waveform's and the program's roles do, the
+// view bar's ink-derived tones among them, and the lit LEDs' accent,
+// materials::set_accent)
 // and palette_generation bumped. THE LIVE ROAD is the Settings Waveform
 // row's commit (GuiSettingsEditor's install_waveform_preset,
 // settings_editor.cpp, which calls this and then runs the apply shape once;

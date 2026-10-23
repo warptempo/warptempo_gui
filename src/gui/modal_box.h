@@ -31,17 +31,18 @@
 //      each side, the waveform area's x and width one line out), its top row
 //      the view bar's top row, its bottom row the ring's last row;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
-//      the 23-W case, the strip pad (render.h's strip_h_px) — on the wood,
+//      the 23-W case, the strip pad (render.h's strip_h_px) — on the ground,
 //      no line, bar or border, its outermost cases or buttons FLUSH WITH THE
 //      RING'S OUTER EDGES; on the window's foot.
-// THE PANEL AND THE CONTROLS ROW ARE THE WOOD AS DRAWN (architect
-// 2026-10-22, "just make the rest wood": materials.h's WOOD); THE FIELDS
-// STAY FLAT ("the user shouldn't be typing on a non-flat color") — a dialog
-// editor's line, the lists' ground; THE WORD BUTTONS ARE THE EBONY CASE
-// (architect 2026-10-22, "buttons in ebony — yes": the band's case on each
-// button's own box, its word in the chrome's one ink — materials.h's CASE
-// and INKS); a prompt's question stands on the face, the wood
-// (paint_modal_box).
+// IN THE HI-FI SKIN (architect 2026-10-23, pv_41): THE PANEL'S MARGINS AND
+// THE CONTROLS ROW are the brushed ground (materials.h's GROUND); THE BOX IS
+// ONE SUNKEN FLAT FIELD, kFieldGround, under a ONE-DEVICE-PX RING in the
+// ring tones on its outer edge (render.h's line rule) — every member's, a
+// prompt's question included ("the user shouldn't be typing on a non-flat
+// color"); EVERY BUTTON A SQUARE KEY with its legend under it, the word
+// buttons' words in capitals (paint_handler.cpp's modal_word_buttons and
+// paint_key_legend) (paint_modal_box). (The wood, the ebony word buttons and
+// a prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the main window's ring: the box IS the ring's rect. At the
 // tablet's 2304 x 1440, 300 % and the strip pad's 13 W: the ring's top row
@@ -154,7 +155,7 @@ inline GuiRect modal_box_interior_rect(const AppState& a, int keyboard_h) {
 }
 
 // THE PANEL: everything the modal takes ABOVE the controls row — the box
-// and the wood margins beside it — across the lane, from
+// and the ground margins beside it — across the lane, from
 // the view bar's top row to the controls row's top. The ground a member's
 // painter lays (paint_modal_box), the rect its content's damage erases and
 // the outer claim of a press on the box.

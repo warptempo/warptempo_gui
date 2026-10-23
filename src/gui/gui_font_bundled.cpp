@@ -3,8 +3,8 @@
 // THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: two
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become two FT faces, the set (gui_font.h's gui_live_face_set, the one
-// face) picks its four uses among them, and no site below the seam learns
+// become two FT faces, the pixel table (gui_font.h's kGuiFaceSizes) picks
+// its five uses among them, and no site below the seam learns
 // which device handed the bytes in.
 //
 // THE FACES (Liberation Sans and its Bold, TrueType, FT_New_Memory_Face) are
@@ -37,13 +37,13 @@
 // forced autohint's; the face's instructions are never run on this road),
 // and every x equals the unhinted outline's exactly. The face's blue zones
 // snap the "H" and the "x" to whole rows — the hinter's rounding of the ink,
-// which no seat reads (the recorded cap, or the derived one,
-// gui_font_cap_px, places every label).
-// The advances stay
+// which no seat reads (the unhinted "H" per em, gui_font_cap_px, places
+// every label). The advances stay
 // unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted) and both devices measure one set of widths. The vertical
-// metrics are the recorded constants anyway (gui_font.h), so the hinter
-// only decides how the ink sits on the pixel rows. ANTIALIASING AND SUBPIXEL
+// metrics are the file's own hhea per em, read at the install and rounded
+// at the size (gui_font.h, 2026-10-23), so the hinter only decides how the
+// ink sits on the pixel rows. ANTIALIASING AND SUBPIXEL
 // ORDER STAY AT CAIRO'S DEFAULTS on both devices: GRAY, no subpixel order (a
 // tablet ROTATES, so a subpixel order is not a face fact there). HINT
 // METRICS stay at cairo's default too, ON for the image surfaces both
@@ -77,15 +77,17 @@ struct OutlineFace {
     double               max_advance_em = 0.0;
 };
 
-// THE GLYPHS A USE'S EM AND CAP ARE MEASURED ON (gui_font.h's
-// GuiFaceMeasure): each file's outline ink height of each, per em, read once
-// at the install (outline_ink_em), in GuiFaceMeasure's order — the "H", the
-// "0", the "x". The em of a use is the set's recorded measure over its
-// file's entry for the measure's glyph (gui_face_em_px), and an x-height
-// use's cap band the em times its file's "H" (gui_font_cap_px), so the
-// install needs no knowledge of which set is named.
-constexpr std::size_t kMeasureCount = 3;
-double g_ink_em[kGuiFontFileCount][kMeasureCount] = {};
+// EACH FILE'S OWN METRICS (gui_font.h's head, 2026-10-23), per em, read
+// once at the install: the "H" ink height the cap band is measured on, and
+// the face's ascender, descender and line height (FreeType's, the file's
+// hhea) — the vertical metrics every seat reads.
+struct FileMetrics {
+    double cap_em     = 0.0;
+    double ascent_em  = 0.0;
+    double descent_em = 0.0;
+    double line_em    = 0.0;
+};
+FileMetrics g_metrics[kGuiFontFileCount];
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
@@ -99,13 +101,11 @@ GuiSignAxis           g_sign_axis[kGuiFontFileCount];
 bool                  g_sign_axis_ok[kGuiFontFileCount] = {};
 
 std::size_t face_index(GuiFace face) { return static_cast<std::size_t>(face); }
-std::size_t measure_index(GuiFaceMeasure m) {
-    return static_cast<std::size_t>(m);
-}
+std::size_t file_of(GuiFace face) { return kGuiFaceSizes[face_index(face)].file; }
 
-// The face a use is drawn from: the set's file for it.
+// The face a use is drawn from: the table's file for it.
 const OutlineFace& outline_of(GuiFace face) {
-    return g_outline[gui_live_face_set().file[face_index(face)]];
+    return g_outline[file_of(face)];
 }
 
 // Build one face from a copy of `bytes`. A failure leaves `out`
@@ -176,7 +176,7 @@ InkCentre outline_ink_centre(const OutlineFace& f, char32_t cp) {
 bool measure_sign_axis(const OutlineFace& f, GuiSignAxis& out) {
     const InkCentre hyphen = outline_ink_centre(f, U'-');
     const InkCentre digit =
-        outline_ink_centre(f, gui_measure_glyph(GuiFaceMeasure::Digit));
+        outline_ink_centre(f, U'0');
     if (hyphen.gid == 0 || digit.gid == 0) return false;
     for (std::size_t i = 0; i < kGuiSignCount; ++i) {
         const GuiLiftedSign& mark = kGuiLiftedSigns[i];
@@ -210,65 +210,45 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     bool ok = true;
-    // EVERY FILE BUILDS (gui_font.h's head), and each file's measure inks
-    // and sign axis are read off its outline.
-    constexpr GuiFaceMeasure kMeasures[kMeasureCount] = {
-        GuiFaceMeasure::Cap, GuiFaceMeasure::Digit, GuiFaceMeasure::XHeight};
+    // EVERY FILE BUILDS (gui_font.h's head), and each file's "H" ink, its
+    // own vertical metrics (FreeType's ascender, descender and height, the
+    // file's hhea, per em) and its sign axis are read off it; every file
+    // must carry the "H" and the seven glyphs its axis is measured on.
     for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
-        for (const GuiFaceMeasure m : kMeasures)
-            g_ink_em[i][measure_index(m)] =
-                outline_ink_em(g_outline[i], gui_measure_glyph(m));
-        g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
-    }
-    // THE EMS MATCH THE SET'S RECORDED METRICS VERTICALLY (gui_font.h),
-    // derived per call from these inks (gui_face_em_px), so the probe asks
-    // it of the set (kGuiFaceSets): each use's file must carry its
-    // measure's glyph — and, for an x-height measure, the "H" its cap band
-    // derives from (gui_font_cap_px) — and in a set that lifts its signs or
-    // its pipe the seven its axis is measured on.
-    for (const GuiFaceSet* set : kGuiFaceSets)
-        for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
-            const double* ink = g_ink_em[set->file[i]];
-            const GuiFaceMeasure m = set->metrics[i].measure;
-            if (ink[measure_index(m)] <= 0.0) ok = false;
-            if (m == GuiFaceMeasure::XHeight &&
-                ink[measure_index(GuiFaceMeasure::Cap)] <= 0.0)
-                ok = false;
-            if ((set->sign_lift || set->pipe_lift) &&
-                !g_sign_axis_ok[set->file[i]])
-                ok = false;
+        FileMetrics& m = g_metrics[i];
+        m.cap_em = outline_ink_em(g_outline[i], U'H');
+        if (const FT_Face ft = g_outline[i].ft) {
+            const double upem = static_cast<double>(ft->units_per_EM);
+            m.ascent_em  = static_cast<double>(ft->ascender) / upem;
+            m.descent_em = -static_cast<double>(ft->descender) / upem;
+            m.line_em    = static_cast<double>(ft->height) / upem;
         }
+        if (m.cap_em <= 0.0 || m.ascent_em <= 0.0) ok = false;
+        g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
+        if (!g_sign_axis_ok[i]) ok = false;
+    }
     for (const OutlineFace& f : g_outline)
         if (!outline_ft_backed(f)) ok = false;
     return ok;
 }
 
-double gui_face_em_px(GuiFace face) {
-    const GuiFaceSet& set = gui_live_face_set();
-    const std::size_t i = face_index(face);
-    const GuiFaceMetrics& m = set.metrics[i];
-    return static_cast<double>(m.height) /
-           g_ink_em[set.file[i]][measure_index(m.measure)];
+double gui_font_ascent_px(const GuiFont& f) {
+    return std::nearbyint(g_metrics[file_of(f.face)].ascent_em * gui_font_em_px(f));
+}
+double gui_font_descent_px(const GuiFont& f) {
+    return std::nearbyint(g_metrics[file_of(f.face)].descent_em * gui_font_em_px(f));
+}
+double gui_font_line_px(const GuiFont& f) {
+    return std::nearbyint(g_metrics[file_of(f.face)].line_em * gui_font_em_px(f));
 }
 
 double gui_font_cap_px(const GuiFont& f) {
-    const GuiFaceMetrics& m = gui_face_metrics(f.face);
-    if (m.measure != GuiFaceMeasure::XHeight)
-        return m.height * gui_font_scale(f);
-    const GuiFaceSet& set = gui_live_face_set();
-    return gui_face_em_px(f.face) *
-           g_ink_em[set.file[face_index(f.face)]]
-                   [measure_index(GuiFaceMeasure::Cap)] *
-           gui_font_scale(f);
+    return g_metrics[file_of(f.face)].cap_em * gui_font_em_px(f);
 }
 
 const GuiSignAxis& gui_sign_axis(GuiFace face) {
-    static const GuiSignAxis kLevel{};
-    const GuiFaceSet& set = gui_live_face_set();
-    return set.sign_lift || set.pipe_lift
-               ? g_sign_axis[set.file[face_index(face)]]
-               : kLevel;
+    return g_sign_axis[file_of(face)];
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
@@ -285,7 +265,7 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     Cached& c = cache[face_index(f.face)];
     if (c.percent == f.percent) return c.font;
     if (c.font != nullptr) cairo_scaled_font_destroy(c.font);
-    const double em = gui_face_em_px(f.face) * gui_font_scale(f);
+    const double em = gui_font_em_px(f);
     cairo_matrix_t font_matrix;
     cairo_matrix_t ctm;
     cairo_matrix_init_scale(&font_matrix, em, em);
@@ -297,6 +277,5 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
 }
 
 double gui_font_advance_bound_px(const GuiFont& f) {
-    return outline_of(f.face).max_advance_em * gui_face_em_px(f.face) *
-           gui_font_scale(f);
+    return outline_of(f.face).max_advance_em * gui_font_em_px(f);
 }

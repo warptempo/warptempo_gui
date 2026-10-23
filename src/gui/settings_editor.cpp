@@ -9,7 +9,7 @@
 #include "text_editor.h"
 #include "undo.h"
 #include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
-#include "materials.h"         // the tuning keys' live apply (set_bevel)
+#include "materials.h"
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -313,8 +313,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // file's reader runs, so "loadable iff it commits" still holds across the
     // move. (The other six editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
-    // 2026-10-21) and since 2026-10-21 true_colors, bevel_light and
-    // bevel_dark — take their one direct-set body in commit(),
+    // 2026-10-21), since 2026-10-21 true_colors, since 2026-10-22 strip_pad
+    // and since 2026-10-23 led_glow — take their one direct-set body in
+    // commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
@@ -958,10 +959,10 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it; `bevel_light` and `bevel_dark` (2026-10-21, the
-// fortepiano chrome's tuning phase; `text_shadow` beside them until
-// 2026-10-22) the same, their arm next; `strip_pad` (2026-10-22, the simple
-// layout's pad) the same, its arm last.
+// its arm after it; `led_glow` (2026-10-23, the hi-fi skin's lit LED) by
+// one bake, its arm next (`bevel_light` and `bevel_dark` stood there
+// 2026-10-21 to 2026-10-23); `strip_pad` (2026-10-22, the simple layout's
+// pad) the same, its arm last.
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key.) The commit is the OK's or Enter's (the choice rows' list
@@ -1059,26 +1060,23 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE FORTEPIANO CHROME'S TUNING KEYS (architect 2026-10-21; a number
-    // under tuning gets a key and a Settings row): the scale's canonical
-    // integer spelling under the range's one owner (is_bevel_percent,
-    // device_config.h), APPLIED LIVE AT THE COMMIT as the color keys are —
-    // the solid tones recomputed (materials::set_bevel), never a bake, and
-    // the window repainted — so NO CARD: the chrome on screen is the answer.
-    if (key == "bevel_light" || key == "bevel_dark") {
+    // THE LED GLOW (architect 2026-10-23, "agree to all"; a number under
+    // tuning gets a key and a Settings row): the scale's canonical integer
+    // spelling under the range's one owner (is_led_glow, device_config.h),
+    // APPLIED AT THE COMMIT BY ONE BAKE (GuiInputHandler::apply_led_glow —
+    // the bake rule's one Settings-OK exception, materials.h), so NO CARD:
+    // the lamps on screen are the answer.
+    if (key == "led_glow") {
         int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
-            reject(kBevelGrammarReason);
+        if (!parse_authored_frame(value, v) || !is_led_glow(v)) {
+            reject(kLedGlowGrammarReason);
             return true;
         }
-        int& live = key == "bevel_light" ? app.device_config->bevel_light
-                                         : app.device_config->bevel_dark;
-        if (static_cast<int>(v) == live) { unchanged(); return true; }
-        live = static_cast<int>(v);
-        materials::set_bevel(app.device_config->bevel_light,
-                             app.device_config->bevel_dark);
-        viewport.refresh_flag_cache();
-        viewport.invalidate_all();
+        if (static_cast<int>(v) == app.device_config->led_glow) {
+            unchanged(); return true;
+        }
+        app.device_config->led_glow = static_cast<int>(v);
+        input->apply_led_glow(static_cast<int>(v));
         (void)persist();
         applied();
         return true;
@@ -1152,12 +1150,12 @@ void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     // THE CLIENT ALONE (platform.h's damage pair): a preset moves no chrome
-    // role (the selection pair is a constant since 2026-10-21,
-    // chrome_derive.h; every other role a tone of the wood's Face), only
-    // the waveform's and the program's roles, which paint inside the client;
-    // the restored laptop's sizing frame outside it wears Windows' constants
-    // (render.h's caption block), which no preset moves. No icon moves
-    // (every glyph wears its drawing's own inks, icons.h's head).
+    // role (the skin's constants and the ring tones off the ground's mean,
+    // chrome_derive.h), only the waveform's and the program's roles and THE
+    // LIT LEDS' ACCENT (its patches rebuilt at the install,
+    // materials::set_accent, 2026-10-23), which paint inside the client; the
+    // restored laptop's border outside it wears the ring's light tone, which
+    // no preset moves.
     viewport.invalidate_all();
 }
 

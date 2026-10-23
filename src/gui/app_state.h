@@ -3726,10 +3726,9 @@ inline constexpr PromptAnswer kPromptOkCancel[] = {
 inline constexpr PromptAnswer kPromptDeleteCancel[] = {
     {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
-// walks it, and so does the materials' bake for the word buttons' ebony
-// patches (word_and_key_case_rects, paint_handler.h, 2026-10-22), which
-// seats a patch wherever a prompt's buttons can stand. A table a raise
-// passes must be listed here.
+// walks it (the materials' bake walked it too for the word buttons' ebony
+// patches, 2026-10-22 to 2026-10-23). A table a raise passes must be listed
+// here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
     kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
     kPromptOkCancel, kPromptDeleteCancel};
@@ -16557,6 +16556,63 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Right", nullptr};
     }
     return {nullptr, nullptr};
+}
+
+// THE ROSTER'S LEGEND COLUMN (architect 2026-10-23, the hi-fi skin: "there's
+// no icons in these consoles … just a little label underneath"; the table of
+// record tmp/theme_next/make_pivot1.py's LEGENDS, in the painter's roster
+// order): each button's act cut to a hi-fi legend in capitals, printed UNDER
+// its blank key (paint_handler.cpp's key_legend_seat, the one placement). The
+// tooltip stays the act's name (above). THE `h` VIEW'S FOUR STAND-INS, which
+// the record does not draw, take their acts' own words (REVERT, LOAD, OLDER,
+// NEWER). A button whose GLYPH swapped with its state (Save, Render, Play /
+// Stop) keeps its one legend: the legend names the key, the tooltip the act
+// of the moment.
+inline constexpr const char* redesign_button_legend(RedesignButton b) {
+    switch (b) {
+        case RedesignButton::OpenProject:               return "OPEN";
+        case RedesignButton::Save:                      return "SAVE";
+        case RedesignButton::Undo:                      return "UNDO";
+        case RedesignButton::Redo:                      return "REDO";
+        case RedesignButton::Render:                    return "RENDER";
+        case RedesignButton::IconZoomFitBest:           return "ZOOM 0";
+        case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
+        case RedesignButton::IconFollow:                return "FOLLOW";
+        case RedesignButton::IconBpm:                   return "BPM";
+        case RedesignButton::IconIter:                  return "GRID";
+        case RedesignButton::IconFlatten:               return "FLATTEN";
+        case RedesignButton::IconListen:                return "PLAY";
+        case RedesignButton::IconReadOnly:              return "LOCK";
+        case RedesignButton::IconSettings:              return "SETUP";
+        case RedesignButton::IconTooltips:              return "TIPS";
+        case RedesignButton::IconHistory:               return "HISTORY";
+        case RedesignButton::HistoryRevert:             return "REVERT";
+        case RedesignButton::HistoryOlder:              return "OLDER";
+        case RedesignButton::HistoryNewer:              return "NEWER";
+        case RedesignButton::IconLoadInPlace:           return "LOAD";
+        case RedesignButton::ViewSource:                return "SOURCE";
+        case RedesignButton::ViewTarget:                return "TARGET";
+        case RedesignButton::ViewWarp:                  return "WARP";
+        case RedesignButton::ViewPhase:                 return "PHASE";
+        case RedesignButton::TransportPlayStop:         return "PLAY";
+        case RedesignButton::IconMarkerDrop:            return "DROP";
+        case RedesignButton::IconMarkerDelete:          return "DELETE";
+        case RedesignButton::IconMarkerDisable:         return "DISABLE";
+        case RedesignButton::IconMarkerInherit:         return "INHERIT";
+        case RedesignButton::IconJumpToDefiningMarker:  return "JUMP";
+        case RedesignButton::IconOpenTextEditor:        return "EDIT";
+        case RedesignButton::IconAddToSelection:        return "ADD SEL";
+        case RedesignButton::IconValueDrag:             return "DRAG";
+        case RedesignButton::TransportWalkPrevious:     return "PREV";
+        case RedesignButton::TransportWalk:             return "NEXT";
+        case RedesignButton::IconZoomOriginal:          return "CENTER";
+        case RedesignButton::TransportSwitchTab:        return "TAB";
+        case RedesignButton::TransportDown:             return "DOWN";
+        case RedesignButton::TransportUp:               return "UP";
+        case RedesignButton::TransportLeft:             return "LEFT";
+        case RedesignButton::TransportRight:            return "RIGHT";
+    }
+    return "";
 }
 
 // THE TOOLBAR PAIR'S STATEFUL FACES — Save's and Render's, the two buttons

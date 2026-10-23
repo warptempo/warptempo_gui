@@ -159,8 +159,9 @@ cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
                                uint32_t light_rgb, uint32_t shadow_rgb,
                                uint32_t inset_rgb);
 
-// -- THE MATERIALS' ROAD (architect 2026-10-21, the fortepiano chrome;
-// materials.h) ----------------------------------------------------------------
+// -- THE MATERIALS' ROAD (architect 2026-10-21; since 2026-10-23 the hi-fi
+// skin's IMAGE ROAD, a `Ground` or `Marker` picture beside the config,
+// materials.h) --------------------------------------------------------------
 //
 // A MATERIAL is a raster file, PNG or JPEG, decoded by the icons' own detour
 // (parse_png's: the bytes wrapped in a one-<image> SVG as a base64 data URL,

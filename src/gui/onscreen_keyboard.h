@@ -406,9 +406,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // Windows px in Tahoma, 2 clear each side (measured 2026-10-06).
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
-// what says the arm is the key's ARMED FACE — the ebony case's CHECKED face,
-// Cool Edit's one down face (paint_roster_case, since 2026-10-22; Windows'
-// soft sunken face over the Hilight dither until then), which this key and
+// what says the arm is the key's ARMED FACE — the key DOWN (paint_key,
+// 2026-10-23; the ebony case's checked face 2026-10-22 to 2026-10-23,
+// Windows' soft sunken face over the Hilight dither before), which this key and
 // the symbol-mode key (while a symbol page stands) wear off their lamps — and
 // the letter caps themselves, every one of which turns capital while the arm
 // stands. The page key wears no lamp: its cap already says the page.
@@ -537,10 +537,10 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // x and width, the window's since 2026-10-21, when the program frame's
 // columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT;
 // it carries its edge pad on all four sides (edge_pad_px) and NO LINE OF ITS
-// OWN. ITS GROUND IS THE WOOD AS DRAWN (architect 2026-10-22; the brass
-// 2026-10-21 to 2026-10-22), ITS KEYS THE EBONY CASE (architect 2026-10-22,
-// "buttons in ebony — yes"; the flat raised faces until then) —
-// paint_onscreen_keyboard, materials.h's WOOD and CASE. Under a dialog editor the modal
+// OWN. ITS GROUND IS THE BRUSHED GROUND, ITS KEYS THE HI-FI SKIN'S KEYS WITH
+// NO LED, THE CAP PRINTED ON THE FACE (architect 2026-10-23; the wood and the
+// ebony case 2026-10-22 to 2026-10-23) — paint_onscreen_keyboard,
+// materials.h's GROUND and KEY. Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit
 // and the controls row lifted onto the band, the space between the row's
 // cases and the first key row the strip pad plus this band's edge pad,

@@ -44,11 +44,11 @@ struct GuiInputHandler;
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
 //      2026-10-21 ~23:40, "no, the unambiguous should stop at the =":
-//      `bevel_l` to `bevel_light=`; the key, `=` and value in one Tab lived
+//      `led_` to `led_glow=`; the key, `=` and value in one Tab lived
 //      one commit that evening, e7fc8d10, and from ~21:05 a prefix took the
 //      key alone). A prefix several keys start with stops at their longest
-//      common prefix (the path completer's rule; `bevel_` against
-//      `bevel_light` and `bevel_dark`); no match, an empty line or a prefix
+//      common prefix (the path completer's rule; `projects_` against
+//      `projects_repo` and `projects_path`); no match, an empty line or a prefix
 //      already at the common prefix advances nothing.
 //   2. THE KEY'S CURRENT VALUE. On `key=` with nothing after the `=` — the
 //      first Tab's stop — the next Tab fills THE VALUE THE KEY HOLDS (the
@@ -74,8 +74,9 @@ struct GuiInputHandler;
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // and since 2026-10-21 true_colors (the popup's command row made a key) and
-// the two tuning keys bevel_light and bevel_dark, and since 2026-10-22 the
-// tuning key strip_pad (the simple layout's pad) (text_shadow, editable
+// since 2026-10-22 the tuning key strip_pad (the simple layout's pad), and
+// since 2026-10-23 the tuning key led_glow (the hi-fi skin's lit LED) (the
+// two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable
 // 2026-10-21..10-22, left with its key, the shadow one scaled px; icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,
 // editable 2026-10-07..10-10, and theme,
@@ -156,7 +157,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "bevel_light", "bevel_dark", "strip_pad",
+    "strip_pad", "led_glow",
 };
 
 struct GuiSettingsEditor {
@@ -241,8 +242,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `bevel_light=`, `bevel_dark=` and
-    // `strip_pad=` — in one
+    // `waveform=`, `true_colors=`, `strip_pad=` and `led_glow=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
@@ -279,7 +279,7 @@ private:
     // ASCII), the buffer advancing at the line's end: a UNIQUE match
     // completes the key AND APPENDS ITS `=`, stopping there (architect
     // 2026-10-21 ~23:40; its value the next Tab's), an ambiguous prefix
-    // stops at the matches' longest common prefix (`bevel_` against `bevel_light` and `bevel_dark`), and no
+    // stops at the matches' longest common prefix (`projects_` against `projects_repo` and `projects_path`), and no
     // advance — no match, an empty line, a prefix already at the common
     // prefix — is a Tab that walks. Returns whether the buffer advanced.
     bool complete_key_name(const std::string& prefix);

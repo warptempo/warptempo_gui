@@ -175,10 +175,11 @@ set(WARPTEMPO_GUI_SOURCES
     # cross-built static one (android/deps/85_resvg.sh) on Android.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
-    # GUI-ONLY, for svg_icon.cpp's reason: THE FORTEPIANO CHROME'S MATERIALS
-    # (architect 2026-10-21, materials.h) — the walnut, the brass and the
-    # ebony read from the bundle, decoded and scaled through svg_icon's road,
-    # baked once per window geometry and painted as the chrome's surfaces.
+    # GUI-ONLY, for svg_icon.cpp's reason: THE HI-FI SKIN'S GROUNDS
+    # (architect 2026-10-23, materials.h) — the procedural brushed panel and
+    # marker strip, or a picture dropped beside the config decoded and scaled
+    # through svg_icon's road, baked once per window geometry and painted as
+    # the chrome's surfaces.
     src/gui/materials.cpp
     src/gui/render.cpp
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
@@ -708,14 +709,6 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # so the Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
-    # THE BUNDLED MATERIALS' SOURCE ON THE LAPTOP (architect 2026-10-21, the
-    # fortepiano chrome; materials.h's head): the repository's own
-    # assets/tiles/, read by name (GuiPlatform::bundled_tile_names / _bytes)
-    # — a dropped material needs no rebuild here; the APK packs the same files
-    # as assets. The tiles/ folder beside the device config, when it stands,
-    # wins over this one by name on both devices (materials.cpp's tile_files).
-    target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_BUNDLED_TILES_DIR="${CMAKE_SOURCE_DIR}/assets/tiles")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}

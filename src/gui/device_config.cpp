@@ -12,6 +12,7 @@
 #include <iterator>
 #include <fstream>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -52,12 +53,13 @@ namespace {
 // key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
 // the tuning keys keep the end where they leave from.
 //
-// THE FORTEPIANO CHROME'S TUNING KEYS (architect 2026-10-21): `bevel_light`
-// and `bevel_dark` APPENDED after `role`, where the tuning phases' keys have
-// always stood, each required like every key and each leaving when he
-// settles its value (`text_shadow` beside them left 2026-10-22, the words'
-// shadow one scaled Windows px, materials.h's INKS). `strip_pad` (architect
-// 2026-10-22, the simple layout's pad) APPENDED after them, the same kind.
+// THE TUNING KEYS stand after `role`, where the tuning phases' keys have
+// always stood, each leaving when he settles its value: `strip_pad`
+// (architect 2026-10-22, the simple layout's pad), required like every key,
+// and `led_glow` (2026-10-23, the hi-fi skin's lit LED), THE ONE OPTIONAL KEY
+// (device_config.h's list), written always. (`bevel_light` and `bevel_dark`
+// stood before `strip_pad` 2026-10-21 to 2026-10-23, `text_shadow` beside
+// them until 2026-10-22.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -66,10 +68,13 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform",
     "true_colors",
     "role",
-    "bevel_light",
-    "bevel_dark",
     "strip_pad",
+    "led_glow",
 };
+// THE REQUIRED KEYS: every key of the writer's order but the optional
+// `led_glow`, its last.
+constexpr std::span<const char* const> kDeviceConfigRequiredKeys(
+    kDeviceConfigKeys, std::size(kDeviceConfigKeys) - 1);
 } // namespace
 
 std::string format_gui_scale_percent(int percent) {
@@ -134,13 +139,11 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
                                                    : kDeviceRoleMirror;
-        } else if (k == "bevel_light") {
-            // The scale's canonical digits (format_gui_scale_percent).
-            s += format_gui_scale_percent(cfg.bevel_light);
-        } else if (k == "bevel_dark") {
-            s += format_gui_scale_percent(cfg.bevel_dark);
         } else if (k == "strip_pad") {
+            // The scale's canonical digits (format_gui_scale_percent).
             s += format_gui_scale_percent(cfg.strip_pad);
+        } else if (k == "led_glow") {
+            s += format_gui_scale_percent(cfg.led_glow);
         }
         s += '\n';
     }
@@ -256,16 +259,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             return {};
         }
-        // THE FORTEPIANO CHROME'S TUNING KEYS (2026-10-21): the scale's
-        // canonical integer spelling, the range its one owner's
-        // (is_bevel_percent, device_config.h).
-        if (key == "bevel_light" || key == "bevel_dark") {
+        // THE LED GLOW (2026-10-23): the scale's canonical integer spelling,
+        // the range its one owner's (is_led_glow, device_config.h); absent,
+        // the struct's default stands.
+        if (key == "led_glow") {
             int64_t v = 0;
-            if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
-                return bad_value(ln, key, value, kBevelGrammarReason);
+            if (!parse_authored_frame(value, v) || !is_led_glow(v)) {
+                return bad_value(ln, key, value, kLedGlowGrammarReason);
             }
-            (key == "bevel_light" ? out.bevel_light : out.bevel_dark) =
-                static_cast<int>(v);
+            out.led_glow = static_cast<int>(v);
             return {};
         }
         // THE STRIP PAD (2026-10-22): the scale's canonical integer spelling,
@@ -280,7 +282,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         }
         return warptempo_parse::prefix_line_error(
             ln, "unknown key '" + key + "'");
-    }, kDeviceConfigKeys);
+    }, kDeviceConfigRequiredKeys);
     if (!scan) return std::unexpected(std::move(scan.error()));
     return out;
 }

@@ -1,6 +1,6 @@
 #include "cool_edit_paint.h"
 
-#include "materials.h"   // the case's ebony, the inks
+#include "materials.h"   // the key's constants, the accent, the inks
 #include "text_shape.h"
 
 #include <algorithm>
@@ -14,105 +14,104 @@
 
 namespace {
 
-// Each channel's byte between a and b at t, rounded to its byte.
-GuiColor lerp_color(const GuiColor& a, const GuiColor& b, double t) {
-    const auto ch = [t](double ca, double cb) {
-        return std::nearbyint((ca + (cb - ca) * t) * 255.0) / 255.0;
-    };
-    return GuiColor{ch(a.r, b.r), ch(a.g, b.g), ch(a.b, b.b)};
+// The mean of two words, per channel, truncated (numpy's integer mean of
+// the mock's two rows, make_pivot1.push_buttons).
+uint32_t mean_word(uint32_t a, uint32_t b) {
+    uint32_t out = 0;
+    for (int s = 0; s <= 16; s += 8)
+        out |= ((((a >> s) & 0xFF) + ((b >> s) & 0xFF)) / 2) << s;
+    return out;
 }
 
 } // namespace
 
-int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
-    if (r.w <= 0 || r.h <= 0) return 0;
-    const int lw = program_line_px();
-    // THE GLYPH SEAT: the case less its lines on each axis — square on the
-    // band's, row 8's and the render player's cases (r.w == r.h), gw x gh on
-    // a word button or a key (the declaration).
-    const int gw = r.w - 3 * lw;
-    const int gh = r.h - 3 * lw;
+GuiRect key_led_rect(const GuiRect& r) {
+    const int left = scaled_px(2, 1);
+    const int up   = scaled_px(2, 1);
+    const int w    = scaled_px(2, 1);
+    const int h    = scaled_px(1, 1);
+    const int y1   = r.y + r.h - 1;   // the outline's bottom row
+    const GuiRect led{r.x + left, y1 - up - h + 1, w, h};
+    // Inside the outline and above the foot, or nothing.
+    if (led.x + led.w > r.x + r.w - 2 || led.y < r.y + 3 ||
+        led.y + led.h > r.y + r.h - 3)
+        return GuiRect{};
+    return led;
+}
+
+void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed,
+                     GuiKeyLed led) {
+    if (r.w <= 0 || r.h <= 0) return;
+    const int px = hairline_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE CASE'S OWN TONES ARE FLAT, never a scope's (the ebony's lines and
-    // Cool Edit's constants, materials.h's CASE).
+    // EVERY TONE OF THE KEY IS FLAT, never a ground's (materials.h's KEY).
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    if (down) {
-        // THE PRESSED AND CHECKED FACE ON THE EBONY (architect 2026-10-21,
-        // "the top and left should be darker than the case"; Cool Edit's
-        // constant F8F8F8 / 808080 rings, measured on a light gray case,
-        // read as a raised white frame on the ebony): THE OUTER RING black on
-        // the top row and left column and THE CASE'S HIGHLIGHT on the bottom
-        // row and right column, MITRED at its top-right and bottom-left
-        // corner blocks (the head's diagonal rule); THE INNER RING the case's
-        // LAST SHADOW TONE on the top row and left column, square (one tone,
-        // its partner the face), and nothing on the bottom and right, the
-        // ramp running on to the outer ring there; the ramp on the seat one
-        // line further in, the ebony's pressed patch
-        // (materials::paint_case_ramp). Every tone a flat stroke off the
-        // ebony's Face (materials::case_lines).
-        const materials::CaseLines lines = materials::case_lines();
-        paint_relief_frame(cr, r, hex(kCeRingOuter), lines.highlight);
-        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw + gw, lw},
-                       lines.shadow_last);
-        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw, lw + gh},
-                       lines.shadow_last);
-        materials::paint_case_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, gw, gh,
-                                   true);
-        cairo_restore(cr);
-        return lw;
-    }
-    materials::paint_case_ramp(cr, r.x + lw, r.y + lw, gw, gh, false);
-    // THE HIGHLIGHT / SHADOW RING inside the black line, MITRED at its
-    // top-right and bottom-left corner blocks (the head's diagonal rule):
-    // the highlight's square L, the shadow's first tone over it as the
-    // mitred L — Cool Edit's measured ADAEAF junction pixel is exactly the
-    // two tones' half-and-half, the diagonal at one capture px — then the
-    // shadow's ramp over the ring's straight runs, each step one device row
-    // down the right column (gh steps) or one device column along the bottom
-    // row (gw steps), the corner blocks left as the mitre drew them: the
-    // ebony's flat strokes (materials::case_lines). The two runs' cells are
-    // disjoint (the column's rows end where the bottom row's begins), so the
-    // order between them paints nothing differently; within a run, STEPS OF
-    // ONE BYTE TRIPLE ARE ONE FILL (2026-10-22, the same opaque aliased
-    // pixels: the ramp's two ends lie a few bytes apart, so a key's 200-odd
-    // columns are a handful of fills, not one each).
-    const materials::CaseLines lines = materials::case_lines();
-    paint_relief_frame(cr, GuiRect{r.x, r.y, r.w - lw, r.h - lw},
-                       lines.highlight, lines.shadow_first);
-    const auto shadow_ramp = [&](int n, const auto& cells) {
-        const auto tone = [&](int i) {
-            const double t = n > 1 ? static_cast<double>(i) / (n - 1) : 0.0;
-            return lerp_color(lines.shadow_first, lines.shadow_last, t);
-        };
-        int      i0 = 0;
-        GuiColor c0 = tone(0);
-        for (int i = 1; i <= n; ++i) {
-            const GuiColor c = i < n ? tone(i) : c0;
-            if (i < n && c.r == c0.r && c.g == c0.g && c.b == c0.b) continue;
-            paint_ink_rect(cr, cells(i0, i - i0), c0);
-            i0 = i;
-            c0 = c;
+    const uint32_t face = pressed ? kKeyFacePressed : kKeyFace;
+    paint_ink_rect(cr, r, hex(kKeyOutline));
+    const GuiRect in{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px};
+    if (in.w > 0 && in.h > 0) {
+        paint_ink_rect(cr, in, hex(face));
+        if (!pressed) {
+            // THE LIGHT TOP EDGE, the foot and the right column (the
+            // declaration's order), each one device px a row or column.
+            paint_ink_rect(cr, GuiRect{in.x, in.y, in.w, px}, hex(kKeyTopLight));
+            if (in.h > 2 * px)
+                paint_ink_rect(cr, GuiRect{in.x, in.y + px, in.w, px},
+                               hex(mean_word(kKeyTopLight, face)));
+            if (in.h > 4 * px)
+                paint_ink_rect(cr, GuiRect{in.x, in.y + in.h - 2 * px, in.w, 2 * px},
+                               hex(kKeyFoot));
+            paint_ink_rect(cr, GuiRect{in.x + in.w - px, in.y, px, in.h},
+                           hex(kKeyFoot));
         }
-    };
-    if (gh > 0)
-        shadow_ramp(gh, [&](int i, int n) {
-            return GuiRect{r.x + lw + gw, r.y + lw + i, lw, n};
-        });
-    if (gw > 0)
-        shadow_ramp(gw, [&](int i, int n) {
-            return GuiRect{r.x + lw + i, r.y + lw + gh, n, lw};
-        });
-    // The shadow's own corner (one tone, square), then the black line on
-    // the right and bottom (one tone, square).
-    paint_ink_rect(cr, GuiRect{r.x + lw + gw, r.y + lw + gh, lw, lw},
-                   lines.corner);
-    paint_ink_rect(cr, GuiRect{r.x + 2 * lw + gw, r.y, lw, r.h},
-                   hex(kCeCaseOuter));
-    paint_ink_rect(cr, GuiRect{r.x, r.y + 2 * lw + gh, r.w, lw},
-                   hex(kCeCaseOuter));
+    }
+    if (led != GuiKeyLed::None) {
+        const GuiRect l = key_led_rect(r);
+        if (l.w > 0 && l.h > 0)
+            paint_ink_rect(cr, l,
+                           hex(led == GuiKeyLed::Lit ? materials::accent_color()
+                                                     : kLedUnlit));
+    }
     cairo_restore(cr);
-    return 0;
+}
+
+void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led) {
+    if (led == GuiKeyLed::Lit && materials::paint_lit_key(cr, r, pressed)) return;
+    paint_key_plain(cr, r, pressed, led);
+}
+
+void paint_quaver(cairo_t* cr, double x, double y, double s, GuiColor ink) {
+    if (s <= 0.0) return;
+    const double h  = s * 40.0 / 34.0;
+    const double k  = s / 34.0;   // the mock's device-px nudges at its 34
+    const double hx = x + s * 0.35, hy = y + h * 0.72;
+    const double sx0 = hx + s * 0.20;
+    const double sx = sx0 - 0.3 * k;
+    const double top = hy - s * 0.62;
+    const double x1 = sx0 + s * 0.22, y1 = hy - s * 0.44;
+    const double x2 = sx0 + s * 0.26, y2 = hy - s * 0.22;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    set_palette_source(cr, ink);
+    cairo_save(cr);
+    cairo_translate(cr, hx, hy);
+    cairo_scale(cr, s * 0.22, s * 0.15);
+    cairo_new_path(cr);
+    cairo_arc(cr, 0.0, 0.0, 1.0, 0.0, 2.0 * 3.14159265358979323846);
+    cairo_restore(cr);
+    cairo_fill(cr);
+    cairo_set_line_width(cr, 1.6 * std::max(1.0, k));
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_move_to(cr, sx, hy);
+    cairo_line_to(cr, sx, top);
+    cairo_stroke(cr);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_move_to(cr, sx, top);
+    cairo_curve_to(cr, sx + (x1 - sx) * 0.9, top + (y1 - top) * 0.2, x1,
+                   y1 - 2.0 * k, x2, y2);
+    cairo_stroke(cr);
+    cairo_restore(cr);
 }
 
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,
@@ -120,12 +119,11 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,
     if (f.w <= 0 || f.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE GROUND BLACK (materials.h's kTimeFieldGround, 2026-10-21; Cool
-    // Edit's `mid` tone until then), ink: a constant, flat.
+    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+    // THE GROUND BLACK (kTimeFieldGround), then the one-device-px sunken
+    // ring, mitred (the head's rule).
     paint_ink_rect(cr, f, hex(kTimeFieldGround));
-    // The ring, MITRED (the head's rule), the caller's tones in the scope's
-    // material.
-    paint_relief_frame(cr, f, dark, light);
+    paint_hairline_frame(cr, f, dark, light);
     cairo_restore(cr);
 }
 
@@ -469,9 +467,6 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
 
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline) {
-    const double lw = static_cast<double>(program_line_px());
-    set_palette_source(cr, palette().ce_label_shadow);
-    text_shape::show_shaped_run(cr, run, x + lw, baseline + lw);
     set_palette_source(cr, hex(kBoneInk));
     text_shape::show_shaped_run(cr, run, x, baseline);
 }

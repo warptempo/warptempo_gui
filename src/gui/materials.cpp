@@ -1,26 +1,25 @@
 #include "materials.h"
 
 #include "app_state.h"          // the lane accessors the bake's geometry reads
-#include "cool_edit_derive.h"   // the tone rule
-#include "cool_edit_paint.h"    // the disabled emboss's measured tones and ratios
-#include "device_config.h"      // device_config_path — the override folder beside it
+#include "cool_edit_paint.h"    // the key painter the lit patches are baked from
+#include "device_config.h"      // device_config_path — the image road's folder beside it
 #include "display_transform.h"
-#include "modal_box.h"          // the render player's controls row
-#include "paint_handler.h"      // program_case_rects, word_and_key_case_rects
+#include "paint_handler.h"      // program_case_rects
 #include "palette_file.h"       // program_palette_words' type
-#include "platform.h"           // GuiPlatform::bundled_tile_names / _bytes
-#include "svg_icon.h"           // the materials' road: raster_info, raster_regions
+#include "svg_icon.h"           // the image road's decode: raster_info, raster_regions
 
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <expected>
 #include <filesystem>
 #include <memory>
+#include <random>
+#include <span>
 #include <string_view>
 #include <thread>
 #include <utility>
@@ -63,64 +62,51 @@ Tile make_tile(const GuiRect& r, Surface s) {
 }
 
 // THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale, the
-// strip pad (2026-10-22: it moves the band's and row 8's case seats, the
-// patches' rows) and the conversion — every lane, every seat and so every
-// tile's rect is a function of them (program_case_rects' declaration), so a
-// frame compares these five and never lays anything out.
+// strip pad (it moves the band's and row 8's key seats), the conversion and
+// the LED glow — every lane, every seat and so every tile's rect and every
+// lit patch is a function of them, so a frame compares these and never lays
+// anything out.
 struct Key {
-    int  w = 0, h = 0, scale = 0, pad = 0;
+    int  w = 0, h = 0, scale = 0, pad = 0, glow = 0;
     bool converted = false;
     bool operator==(const Key&) const = default;
 };
+
+// THE LED GLOW (materials.h's set_led_glow), device px; absent = 4.
+int g_led_glow = 4;
+
 Key key_of(const AppState& app) {
     return Key{app.width, app.height, gui_scale_percent(), strip_pad_w(),
-               display_transform::active()};
+               g_led_glow, display_transform::active()};
 }
 
 // THE WINDOW'S GEOMETRY A BAKE IS FOR — every tile's rect, laid out at the
 // bake alone.
 struct Geometry {
     int w = 0, h = 0;
-    // Wood: its Face's sample above the canvas column [0, panel_top) and
-    // below it [panel_bottom, h), window-wide (materials.h's TONE RULE); its
-    // tile the band's top to the window's last row, window-wide (bake_wood).
-    int panel_top = 0, panel_bottom = 0;
-    // Metal: THE MARKER LANE'S ROWS, window-wide (materials.h's METAL,
-    // 2026-10-22) — its tile and its Face's sample.
-    int lane_y = 0, lane_h = 0;
-    // The band's top row: the wood tile's first.
+    // The band's top row: the ground tile's first.
     int band_y = 0;
-    // THE CASES (program_case_rects: every case's outer rect, both states of
-    // the `h` view) and the case's line and glyph seat — the rows the
-    // ebony's Face is sampled from (bake_case).
-    std::vector<GuiRect> cases;
-    int lw = 0, g = 0;
-    // THE WORD BUTTONS AND THE KEYS (word_and_key_case_rects, 2026-10-22):
-    // their outer rects, each its own w x h — patches alone, never the
-    // Face's sample.
-    std::vector<GuiRect> word_and_key_cases;
-    // THE CAPTION'S ROW: the ebony's Face sample alone since 2026-10-22
-    // (bake_case).
-    int caption_y = 0, caption_h = 0;
+    // THE MARKER LANE'S ROWS, window-wide — its tile.
+    int lane_y = 0, lane_h = 0;
+    // THE KEY SIZES the lit patches are baked for (program_case_rects'
+    // distinct w x h).
+    std::vector<std::pair<int, int>> key_sizes;
 };
 
 Geometry geometry_of(const AppState& app) {
     Geometry g;
     g.w = app.width;
     g.h = app.height;
-    g.panel_top = top_trim_row_area(app).y;
-    g.panel_bottom = bottom_row_area(app).y;
+    g.band_y = top_icon_row_area(app).y;
     const GuiRect lane = top_marker_row_area(app);
     g.lane_y = lane.y;
     g.lane_h = lane.h;
-    g.band_y = top_icon_row_area(app).y;
-    g.lw = program_line_px();
-    g.g = icon_case_w_px() - 3 * g.lw;
-    g.cases = program_case_rects(app);
-    g.word_and_key_cases = word_and_key_case_rects(app);
-    const GuiRect caption = top_caption_row_area(app);
-    g.caption_y = caption.y;
-    g.caption_h = caption.h;
+    for (const GuiRect& r : program_case_rects(app)) {
+        const std::pair<int, int> s{r.w, r.h};
+        if (r.w > 0 && r.h > 0 &&
+            std::find(g.key_sizes.begin(), g.key_sizes.end(), s) == g.key_sizes.end())
+            g.key_sizes.push_back(s);
+    }
     return g;
 }
 
@@ -134,27 +120,29 @@ uint32_t word_of(GuiColor c) {
     return (byte(c.r) << 16) | (byte(c.g) << 8) | byte(c.b);
 }
 
-// Rec. 601 luma of a word (the mocks' luminance rule).
-double luma(uint32_t w) {
-    return 0.299 * channel(w, 0) + 0.587 * channel(w, 1) + 0.114 * channel(w, 2);
-}
-
-// A TONE KEY: the Face (-1), or kTones' row `i`.
-constexpr int kFaceKey = -1;
-
 // THE SETTLE GATE (materials.h's BAKE RULE): a size change of a baked
 // window bakes once no size change has arrived for this long.
 constexpr auto kBakeSettle = std::chrono::milliseconds(150);
 
+// ONE LIT KEY'S PATCH (materials.h's LIT KEYS): its size, rest or pressed.
+struct LitPatch {
+    int  w = 0, h = 0;
+    bool pressed = false;
+    Tile tile;
+};
+
 struct State {
     bool     baked = false;
     Key      key;
-    std::array<uint32_t, kGuiMaterialCount> faces{};
-    // THE TILES (materials.h's BAKE RULE): the wood's ground and the
-    // brass's lane, and THE CASE PATCHES, one per seat at rest and one
-    // pressed.
-    std::vector<Tile> wood, metal;
-    std::vector<Tile> case_rest, case_down;
+    std::array<uint32_t, kGuiMaterialCount> faces{kGroundMeanEstimate,
+                                                  kMarkerBase};
+    // THE TILES (materials.h's BAKE RULE): the ground's and the lane's.
+    std::vector<Tile> ground, marker;
+    // THE LIT KEYS' PATCHES, and the sizes they were baked for (kept so an
+    // accent change rebuilds them without a layout).
+    std::vector<LitPatch>             lit;
+    std::vector<std::pair<int, int>>  lit_sizes;
+    uint32_t                          accent = kLedLitRecord;
     // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
     // change waits on the gate the tiles are the last bake's, and none is
     // ever blitted outside this.
@@ -169,174 +157,18 @@ struct State {
     // frame's whole-client damage (take_bake_landed).
     bool landed   = false;
     std::chrono::steady_clock::time_point last_resize{};
-    int                    bevel_light = 100;
-    int                    bevel_dark  = 100;
-    // THE BRASS'S PHASE (materials.h's LOOP), device px, accumulated, and
+    // THE LANE'S PHASE (materials.h's LOOP), device px, accumulated, and
     // the displayed basis it last followed (follow_displayed_basis).
-    double                 metal_phase = 0.0;
+    double                 marker_phase = 0.0;
     bool                   phase_seen  = false;
     int64_t                phase_vp    = 0;
     double                 phase_spp   = 0.0;
     GuiMaterialRegion      region = GuiMaterialRegion::Flat;
-    // THE TONE TABLE (set_tone_face): a flat word and its key.
-    std::vector<std::pair<uint32_t, int>> tones;
-    // Each region's flat strokes, by the table's order (rebuilt with it and
-    // at a bevel change).
-    std::vector<uint32_t> wood_flat, metal_flat;
-    materials::CaseLines  case_lines{};
-    materials::DisabledGlyphTones disabled{kCeDisabledShadow, kCeDisabledLight,
-                                           kCeDisabledInset};
 };
 
 State& state() {
     static State s;
     return s;
-}
-
-// THE FACTORS OF A TONE on a Face (materials.h's TONE RULE and BEVEL KEYS):
-// per channel tone / Face, a lighter-than-Face tone's (its HLS L above the
-// Face's) pulled toward 1 by the light key, a darker one's by the dark key —
-// then the Face scaled by them, each channel rounded and clamped.
-uint32_t beveled(uint32_t tone, uint32_t face) {
-    using cool_edit_derive::hls_of;
-    const State& s = state();
-    const bool lighter = hls_of(tone).l > hls_of(face).l;
-    const double p = (lighter ? s.bevel_light : s.bevel_dark) / 100.0;
-    uint32_t out = 0;
-    for (int c = 0; c < 3; ++c) {
-        const double f0 = static_cast<double>(channel(tone, c)) /
-                          std::max<double>(channel(face, c), 1.0);
-        const double f = 1.0 + (f0 - 1.0) * p;
-        out |= static_cast<uint32_t>(std::clamp(
-                   std::nearbyint(static_cast<double>(channel(face, c)) * f),
-                   0.0, 255.0))
-               << (16 - 8 * c);
-    }
-    return out;
-}
-
-// The case's tone at HLS lightness offset `b` (saturation kept).
-uint32_t case_tone(uint32_t face, double b) {
-    return cool_edit_derive::tone(face, 1.0, b);
-}
-
-// EVERY FLAT STROKE, rebuilt off the Faces and the bevel keys.
-void rebuild_flats() {
-    State& s = state();
-    const auto row = [&](uint32_t face) {
-        std::vector<uint32_t> v;
-        for (const auto& [word, key] : s.tones) {
-            if (key == kFaceKey) { v.push_back(face); continue; }
-            v.push_back(beveled(cool_edit_derive::tone_of(
-                                    cool_edit_derive::kTones[static_cast<std::size_t>(key)],
-                                    face, 0),
-                                face));
-        }
-        return v;
-    };
-    const uint32_t wood = s.faces[static_cast<std::size_t>(GuiMaterial::Wood)];
-    const uint32_t metal = s.faces[static_cast<std::size_t>(GuiMaterial::Metal)];
-    const uint32_t ebony = s.faces[static_cast<std::size_t>(GuiMaterial::Case)];
-    s.wood_flat = row(wood);
-    s.metal_flat = row(metal);
-    s.case_lines = materials::CaseLines{
-        hex(beveled(case_tone(ebony, kCaseHighlight), ebony)),
-        hex(beveled(case_tone(ebony, kCaseShadowFirst), ebony)),
-        hex(beveled(case_tone(ebony, kCaseShadowLast), ebony)),
-        hex(beveled(case_tone(ebony, kCaseCorner), ebony))};
-    // THE DISABLED GLYPH'S TONES (materials.h): the live ramp's mean HLS
-    // lightness over its twenty flat stops, his ratio onto it for the
-    // silhouette, the rim black.
-    constexpr int kCaseStopCount =
-        static_cast<int>(cool_edit_derive::kCaseRamp.size());
-    double mean_l = 0.0;
-    for (int i = 0; i < kCaseStopCount; ++i) {
-        const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
-                                            static_cast<double>(kCaseStopCount - 1);
-        mean_l += cool_edit_derive::hls_of(case_tone(ebony, b)).l;
-    }
-    mean_l /= kCaseStopCount;
-    const double sil_l = mean_l * kCeDisabledShadowRatio;
-    s.disabled = materials::DisabledGlyphTones{
-        cool_edit_derive::tone(ebony, 0.0, sil_l), kCeDisabledLight,
-        kCeDisabledInset};
-}
-
-// THE FACE'S RATIO of a tone to its Face, Rec. 601 luma (the luminance rule).
-double luma_ratio(uint32_t tone, uint32_t face) {
-    return luma(tone) / std::max(luma(face), 1e-6);
-}
-
-// THE CASE RAMP'S STOP on the seat's device row `row` of `g`
-// (cool_edit_paint.h's FACE RAMP: stop i on [nearbyint(i·g/20),
-// nearbyint((i+1)·g/20))).
-constexpr int kCaseStops = static_cast<int>(cool_edit_derive::kCaseRamp.size());
-int stop_of(int row, int g, int stops) {
-    for (int i = 0; i < stops; ++i) {
-        const int y1 = static_cast<int>(
-            std::nearbyint(static_cast<double>(i + 1) * g / stops));
-        if (row < y1) return i;
-    }
-    return stops - 1;
-}
-// The ramp's luma ratio at stop i (materials.h's CASE).
-double case_ramp_ratio(int i, uint32_t ebony) {
-    const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
-                                        static_cast<double>(kCaseStops - 1);
-    return luma_ratio(case_tone(ebony, b), ebony);
-}
-// One pixel row's channels times `f`, rounded and clamped, opaque.
-void scale_row(const uint32_t* src, uint32_t* dst, int w, double f) {
-    for (int x = 0; x < w; ++x) {
-        uint32_t word = 0xFF000000u;
-        for (int c = 0; c < 3; ++c)
-            word |= static_cast<uint32_t>(std::clamp(
-                        std::nearbyint(static_cast<double>(channel(src[x], c)) * f),
-                        0.0, 255.0))
-                    << (16 - 8 * c);
-        dst[x] = word;
-    }
-}
-
-// IN PLACE: each of `s`'s rows times its luma ratio (the case ramp's).
-void scale_in_place(cairo_surface_t* s, const auto& ratio_of_row) {
-    cairo_surface_flush(s);
-    const int w = cairo_image_surface_get_width(s);
-    const int h = cairo_image_surface_get_height(s);
-    unsigned char* data = cairo_image_surface_get_data(s);
-    const int stride = cairo_image_surface_get_stride(s);
-    for (int y = 0; y < h; ++y) {
-        auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
-        scale_row(row, row, w, ratio_of_row(y));
-    }
-    cairo_surface_mark_dirty(s);
-}
-
-// THE MEAN of a set of surfaces' pixels, each channel's rounded sum.
-uint32_t mean_of(const std::vector<Surface>& surfaces,
-                 std::size_t first_n = static_cast<std::size_t>(-1)) {
-    double sum[3] = {0.0, 0.0, 0.0};
-    double n = 0.0;
-    for (std::size_t i = 0; i < surfaces.size() && i < first_n; ++i) {
-        cairo_surface_t* s = surfaces[i].get();
-        cairo_surface_flush(s);
-        const int w = cairo_image_surface_get_width(s);
-        const int h = cairo_image_surface_get_height(s);
-        const unsigned char* data = cairo_image_surface_get_data(s);
-        const int stride = cairo_image_surface_get_stride(s);
-        for (int y = 0; y < h; ++y) {
-            const auto* row = reinterpret_cast<const uint32_t*>(data + y * stride);
-            for (int x = 0; x < w; ++x)
-                for (int c = 0; c < 3; ++c)
-                    sum[c] += static_cast<double>(channel(row[x], c));
-        }
-        n += static_cast<double>(w) * h;
-    }
-    uint32_t out = 0;
-    if (n <= 0.0) return out;
-    for (int c = 0; c < 3; ++c)
-        out |= static_cast<uint32_t>(std::nearbyint(sum[c] / n)) << (16 - 8 * c);
-    return out;
 }
 
 // A BAKED SURFACE IN THE WINDOW'S BYTES (display_transform.h): converted in
@@ -365,207 +197,294 @@ void convert(cairo_surface_t* s) {
     cairo_surface_mark_dirty(s);
 }
 
-// -- THE CATALOG (materials.h's head: the drop folder by name) --------------
-
-// THE TILE FILES THE CATALOG READS (architect 2026-10-22, the tuning road;
-// materials.h's head): every name of the OVERRIDE FOLDER `tiles/` beside the
-// device config, then every bundle name none of them shadows. `local` holds
-// the override folder's names alone, each read from `folder`; every other
-// name is the bundle's (GuiPlatform::bundled_tile_bytes).
-struct TileFiles {
-    std::filesystem::path    folder;
-    std::vector<std::string> local;
-    std::vector<std::string> names;
-    // The override file's path for `name`, or an empty path: the bundle's.
-    std::filesystem::path local_path(const std::string& name) const {
-        return std::find(local.begin(), local.end(), name) != local.end()
-                   ? folder / name
-                   : std::filesystem::path{};
+// THE MEAN of a surface's pixels, each channel's rounded quotient.
+uint32_t mean_of(cairo_surface_t* s) {
+    cairo_surface_flush(s);
+    const int w = cairo_image_surface_get_width(s);
+    const int h = cairo_image_surface_get_height(s);
+    const unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    double sum[3] = {0.0, 0.0, 0.0};
+    for (int y = 0; y < h; ++y) {
+        const auto* row = reinterpret_cast<const uint32_t*>(data + y * stride);
+        for (int x = 0; x < w; ++x)
+            for (int c = 0; c < 3; ++c)
+                sum[c] += static_cast<double>(channel(row[x], c));
     }
+    const double n = static_cast<double>(w) * h;
+    if (n <= 0.0) return 0;
+    uint32_t out = 0;
+    for (int c = 0; c < 3; ++c)
+        out |= static_cast<uint32_t>(std::nearbyint(sum[c] / n)) << (16 - 8 * c);
+    return out;
+}
+
+// -- THE PROCEDURAL BRUSHED GROUND (materials.h's head; make_pivot1.brushed)
+
+// PIL's _gaussian_blur_radius: the extended box radius whose `passes`
+// passes stand for a Gaussian of `sigma`.
+double box_radius(double sigma, int passes) {
+    const double sigma2 = sigma * sigma / passes;
+    const double L = std::sqrt(12.0 * sigma2 + 1.0);
+    const double l = std::floor((L - 1.0) / 2.0);
+    double a = (2.0 * l + 1.0) * (l * (l + 1.0) - 3.0 * sigma2);
+    a /= 6.0 * (sigma2 - (l + 1.0) * (l + 1.0));
+    return l + a;
+}
+
+// PIL's extended box blur weights for a float radius: the whole window's
+// 24-bit weight and each of its two fractional edges'.
+struct BoxWeights {
+    int      r  = 0;
+    uint64_t ww = 0, fw = 0;
 };
+BoxWeights box_weights(double radius) {
+    BoxWeights b;
+    b.r  = static_cast<int>(radius);
+    b.ww = static_cast<uint64_t>(static_cast<double>(1u << 24) / (radius * 2.0 + 1.0));
+    b.fw = ((uint64_t{1} << 24) - static_cast<uint64_t>(b.r * 2 + 1) * b.ww) / 2;
+    return b;
+}
 
-// THE LISTING. NOTHING WHEN THE OVERRIDE FOLDER IS ABSENT (no file, no line,
-// no card); its files filtered as the bundle's are (`.png` and `.jpg`, a
-// symlink as the file it names). THE ERROR ARMS' PRODUCERS: the bundle's
-// (platform_wayland.h's declaration) and an override folder that stands but
-// will not list (IO), with the system's words.
-std::expected<TileFiles, std::string> tile_files() {
-    TileFiles f;
-    const std::filesystem::path config = device_config_path();
-    if (!config.empty()) {
-        const std::filesystem::path folder = config.parent_path() / "tiles";
-        std::error_code ec;
-        if (std::filesystem::exists(folder, ec)) {
-            f.folder = folder;
-            std::filesystem::directory_iterator it(folder, ec);
-            for (; !ec && it != std::filesystem::directory_iterator();
-                 it.increment(ec)) {
-                const std::string name = it->path().filename().string();
-                if (!name.ends_with(".png") && !name.ends_with(".jpg")) continue;
-                std::error_code tec;
-                if (it->is_regular_file(tec)) f.local.push_back(name);
-            }
+// ONE HORIZONTAL PASS over every row of the w x h byte field, in place
+// (PIL's ImagingLineBoxBlur: the edges replicated, each output rounded to
+// its byte).
+void blur_rows(std::vector<uint8_t>& f, int w, int h, const BoxWeights& b) {
+    std::vector<uint8_t> line(static_cast<std::size_t>(w));
+    const auto at = [&](int i) {
+        return static_cast<uint64_t>(line[static_cast<std::size_t>(std::clamp(i, 0, w - 1))]);
+    };
+    for (int y = 0; y < h; ++y) {
+        uint8_t* row = f.data() + static_cast<std::size_t>(y) * w;
+        std::memcpy(line.data(), row, static_cast<std::size_t>(w));
+        uint64_t acc = 0;
+        for (int k = -b.r; k <= b.r; ++k) acc += at(k);
+        for (int x = 0; x < w; ++x) {
+            const uint64_t v = acc * b.ww + (at(x - b.r - 1) + at(x + b.r + 1)) * b.fw;
+            row[x] = static_cast<uint8_t>(std::min<uint64_t>((v + (1u << 23)) >> 24, 255));
+            acc += at(x + b.r + 1) - at(x - b.r);
         }
-        if (ec)
-            return std::unexpected("could not read '" + folder.string() + "': " +
-                                   ec.message());
     }
-    const auto bundle = GuiPlatform::bundled_tile_names();
-    if (!bundle) return std::unexpected(bundle.error());
-    f.names = f.local;
-    for (const std::string& name : *bundle)
-        if (std::find(f.local.begin(), f.local.end(), name) == f.local.end())
-            f.names.push_back(name);
+}
+
+// ONE VERTICAL PASS, the same blur down every column, walked row by row
+// (a column's running sum per x) so the field is read in its own order.
+void blur_columns(std::vector<uint8_t>& f, int w, int h, const BoxWeights& b) {
+    const std::vector<uint8_t> in = f;
+    const auto row_of = [&](int y) {
+        return in.data() + static_cast<std::size_t>(std::clamp(y, 0, h - 1)) * w;
+    };
+    std::vector<uint64_t> acc(static_cast<std::size_t>(w), 0);
+    for (int k = -b.r; k <= b.r; ++k) {
+        const uint8_t* r = row_of(k);
+        for (int x = 0; x < w; ++x) acc[static_cast<std::size_t>(x)] += r[x];
+    }
+    for (int y = 0; y < h; ++y) {
+        const uint8_t* ea = row_of(y - b.r - 1);
+        const uint8_t* eb = row_of(y + b.r + 1);
+        const uint8_t* add = row_of(y + b.r + 1);
+        const uint8_t* sub = row_of(y - b.r);
+        uint8_t* out = f.data() + static_cast<std::size_t>(y) * w;
+        for (int x = 0; x < w; ++x) {
+            uint64_t& a = acc[static_cast<std::size_t>(x)];
+            const uint64_t v = a * b.ww + (static_cast<uint64_t>(ea[x]) + eb[x]) * b.fw;
+            out[x] = static_cast<uint8_t>(std::min<uint64_t>((v + (1u << 23)) >> 24, 255));
+            a += static_cast<uint64_t>(add[x]) - sub[x];
+        }
+    }
+}
+
+// NUMPY'S RandomState(seed).rand(...) AS BYTES (the legacy MT19937, its
+// integer seed init_genrand's, std::mt19937's own; each double off two
+// 32-bit draws), cast to float32, times 255 and truncated as numpy's
+// astype(uint8) does — rows [y0, y0 + h) of a field `w` wide.
+std::vector<uint8_t> noise_bytes(uint32_t seed, int w, int y0, int h) {
+    std::mt19937 rng(seed);
+    rng.discard(static_cast<unsigned long long>(y0) * static_cast<unsigned long long>(w) * 2);
+    std::vector<uint8_t> f(static_cast<std::size_t>(w) * static_cast<std::size_t>(h));
+    for (std::size_t i = 0; i < f.size(); ++i) {
+        const uint32_t a = static_cast<uint32_t>(rng()) >> 5;
+        const uint32_t b = static_cast<uint32_t>(rng()) >> 6;
+        const double d = (a * 67108864.0 + b) / 9007199254740992.0;
+        const float u = static_cast<float>(d) * 255.0f;
+        f[i] = static_cast<uint8_t>(u);
+    }
     return f;
 }
 
-// ONE TILE FILE'S BYTES, its first `limit` or the whole file, in one sized
-// read: the override file at `local` when there is one, the bundle's `name`
-// otherwise. The error arms' producers: a file that will not open or read
-// whole (IO), the bundle's own.
-std::expected<std::string, std::string> tile_bytes(
-    const std::string& name, const std::filesystem::path& local,
-    std::size_t limit = SIZE_MAX) {
-    if (local.empty()) return GuiPlatform::bundled_tile_bytes(name, limit);
+// THE BRUSHED FACE (make_pivot1.brushed) over rows [y0, y0 + rows) of a
+// field `w` x `field_h`, into a new opaque ARGB32 surface w x rows, sRGB:
+// the noise, PIL's GaussianBlur((9, 0.4)) — three passes along x, then
+// three down y — normalized to zero mean and unit deviation over the rows
+// drawn, times `strength` on `base`, under (1 − vgrad·y²) with y −1 .. 1
+// over the field's rows. The y passes reach three rows past the drawn ones,
+// so the rows drawn are the field's own (a margin is drawn and dropped).
+Surface brushed(uint32_t base, uint32_t seed, double strength, double vgrad,
+                int w, int field_h, int y0, int rows) {
+    if (w <= 0 || rows <= 0) return nullptr;
+    constexpr int kPasses = 3;
+    const int m0 = std::max(0, y0 - kPasses);
+    const int m1 = std::min(field_h, y0 + rows + kPasses);
+    const int fh = m1 - m0;
+    std::vector<uint8_t> f = noise_bytes(seed, w, m0, fh);
+    const BoxWeights bx = box_weights(box_radius(kBrushSigmaX, kPasses));
+    const BoxWeights by = box_weights(box_radius(kBrushSigmaY, kPasses));
+    for (int p = 0; p < kPasses; ++p) blur_rows(f, w, fh, bx);
+    for (int p = 0; p < kPasses; ++p) blur_columns(f, w, fh, by);
+    // The drawn rows' statistics (numpy's mean and population deviation of
+    // the field's bytes over 255).
+    const std::size_t first = static_cast<std::size_t>(y0 - m0) * w;
+    const std::size_t count = static_cast<std::size_t>(rows) * w;
+    double sum = 0.0, sum2 = 0.0;
+    for (std::size_t i = first; i < first + count; ++i) {
+        const double v = f[i] / 255.0;
+        sum += v;
+        sum2 += v * v;
+    }
+    const double mean = sum / static_cast<double>(count);
+    const double sd = std::sqrt(std::max(0.0, sum2 / static_cast<double>(count) - mean * mean));
+    const double k = strength / (sd + 1e-6);
+    cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, rows);
+    cairo_surface_flush(s);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    const double cb[3] = {static_cast<double>(channel(base, 0)),
+                          static_cast<double>(channel(base, 1)),
+                          static_cast<double>(channel(base, 2))};
+    for (int y = 0; y < rows; ++y) {
+        const int fy = y0 + y;
+        const double t = field_h > 1 ? -1.0 + 2.0 * fy / (field_h - 1) : 0.0;
+        const double g = 1.0 - vgrad * t * t;
+        const uint8_t* src = f.data() + first + static_cast<std::size_t>(y) * w;
+        auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+        for (int x = 0; x < w; ++x) {
+            const double n = 1.0 + (src[x] / 255.0 - mean) * k;
+            uint32_t word = 0xFF000000u;
+            for (int c = 0; c < 3; ++c)
+                word |= static_cast<uint32_t>(std::clamp(std::nearbyint(cb[c] * n * g), 0.0, 255.0))
+                        << (16 - 8 * c);
+            row[x] = word;
+        }
+    }
+    cairo_surface_mark_dirty(s);
+    return Surface(s);
+}
+
+// THE SEAMLESS STRIP (materials.h's LOOP (1)), in place: out(x) =
+// (1 − w)·A(x) + w·A((x + W/2) mod W), w = |2x/W − 1|, per channel,
+// rounded.
+void make_seamless(cairo_surface_t* s) {
+    cairo_surface_flush(s);
+    const int w = cairo_image_surface_get_width(s);
+    const int h = cairo_image_surface_get_height(s);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    if (w < 2) return;
+    std::vector<uint32_t> a(static_cast<std::size_t>(w));
+    for (int y = 0; y < h; ++y) {
+        auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+        std::memcpy(a.data(), row, static_cast<std::size_t>(w) * 4);
+        for (int x = 0; x < w; ++x) {
+            const double t = std::abs(2.0 * x / w - 1.0);
+            const uint32_t p = a[static_cast<std::size_t>(x)];
+            const uint32_t q = a[static_cast<std::size_t>((x + w / 2) % w)];
+            uint32_t word = 0xFF000000u;
+            for (int c = 0; c < 3; ++c)
+                word |= static_cast<uint32_t>(std::clamp(
+                            std::nearbyint((1.0 - t) * channel(p, c) + t * channel(q, c)),
+                            0.0, 255.0))
+                        << (16 - 8 * c);
+            row[x] = word;
+        }
+    }
+    cairo_surface_mark_dirty(s);
+}
+
+// The strip beside a copy of itself, twice its width (materials.h's LOOP
+// (3)).
+Surface doubled(cairo_surface_t* one) {
+    const int w = cairo_image_surface_get_width(one);
+    const int h = cairo_image_surface_get_height(one);
+    cairo_surface_t* two = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2 * w, h);
+    cairo_surface_flush(one);
+    cairo_surface_flush(two);
+    const unsigned char* sdata = cairo_image_surface_get_data(one);
+    const int sstride = cairo_image_surface_get_stride(one);
+    unsigned char* ddata = cairo_image_surface_get_data(two);
+    const int dstride = cairo_image_surface_get_stride(two);
+    const std::size_t row_bytes = static_cast<std::size_t>(w) * 4;
+    for (int y = 0; y < h; ++y) {
+        const unsigned char* srow = sdata + static_cast<std::size_t>(y) * sstride;
+        unsigned char* drow = ddata + static_cast<std::size_t>(y) * dstride;
+        std::memcpy(drow, srow, row_bytes);
+        std::memcpy(drow + row_bytes, srow, row_bytes);
+    }
+    cairo_surface_mark_dirty(two);
+    return Surface(two);
+}
+
+// -- THE IMAGE ROAD (materials.h's head) -----------------------------------
+
+// THE ROAD'S FILE FOR A ROLE: `<Name>.png`, else `<Name>.jpg`, in the
+// `tiles/` folder beside the device config; an empty path where neither
+// stands (or no folder, or no config).
+std::filesystem::path image_of(GuiMaterial m) {
+    const std::filesystem::path config = device_config_path();
+    if (config.empty()) return {};
+    const std::filesystem::path folder = config.parent_path() / "tiles";
+    const std::string stem(kGuiMaterialNames[static_cast<std::size_t>(m)]);
+    for (const char* ext : {".png", ".jpg"}) {
+        const std::filesystem::path p = folder / (stem + ext);
+        std::error_code ec;
+        if (std::filesystem::is_regular_file(p, ec)) return p;
+    }
+    return {};
+}
+
+// ONE FILE'S BYTES, its first `limit` or the whole file, in one sized read.
+// The error arms' producers: a file that will not open or read whole (IO).
+std::expected<std::string, std::string> file_bytes(
+    const std::filesystem::path& path, std::size_t limit = SIZE_MAX) {
     std::error_code ec;
-    const std::uintmax_t size = std::filesystem::file_size(local, ec);
+    const std::uintmax_t size = std::filesystem::file_size(path, ec);
     if (ec)
-        return std::unexpected("could not read '" + local.string() + "': " +
+        return std::unexpected("could not read '" + path.string() + "': " +
                                ec.message());
-    std::FILE* f = std::fopen(local.c_str(), "rb");
-    if (!f) return std::unexpected("could not open '" + local.string() + "'");
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) return std::unexpected("could not open '" + path.string() + "'");
     std::string bytes(
         static_cast<std::size_t>(std::min<std::uintmax_t>(size, limit)), '\0');
     const std::size_t got = std::fread(bytes.data(), 1, bytes.size(), f);
     std::fclose(f);
     if (got != bytes.size())
-        return std::unexpected("could not read '" + local.string() + "' whole");
+        return std::unexpected("could not read '" + path.string() + "' whole");
     return bytes;
 }
 
-// The name a tile file's error line carries: the override file's path, so
-// the line says which folder it came from, else the bundle's bare name.
-std::string tile_label(const std::string& name,
-                       const std::filesystem::path& local) {
-    return local.empty() ? name : local.string();
-}
-
-// A COVER'S NAME, `<Name>-<W>x<H>.png`: its W and H, or false.
-bool parse_cover(std::string_view file, std::string_view stem, int& w, int& h) {
-    if (file.size() <= stem.size() + 5 || !file.starts_with(stem) ||
-        file[stem.size()] != '-' || !file.ends_with(".png"))
-        return false;
-    const std::string_view mid =
-        file.substr(stem.size() + 1, file.size() - stem.size() - 5);
-    const std::size_t x = mid.find('x');
-    if (x == std::string_view::npos) return false;
-    const auto num = [](std::string_view t, int& v) {
-        const auto r = std::from_chars(t.data(), t.data() + t.size(), v);
-        return !t.empty() && r.ec == std::errc{} && r.ptr == t.data() + t.size() &&
-               v > 0;
-    };
-    return num(mid.substr(0, x), w) && num(mid.substr(x + 1), h);
-}
-
-struct Catalog {
-    struct Cover {
-        int         w = 0, h = 0;
-        std::string file;
-    };
-    // Each material's master (the PNG winning; empty: none) and covers.
-    std::array<std::string, kGuiMaterialCount>        master;
-    std::array<std::vector<Cover>, kGuiMaterialCount> covers;
-};
-
-Catalog catalog_of(const std::vector<std::string>& names) {
-    Catalog c;
-    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
-        const std::string stem(kGuiMaterialNames[m]);
-        bool png = false;
-        for (const std::string& f : names) {
-            int w = 0, h = 0;
-            if (f == stem + ".png") { c.master[m] = f; png = true; }
-            else if (f == stem + ".jpg" && !png) c.master[m] = f;
-            else if (parse_cover(f, stem, w, h))
-                c.covers[m].push_back(Catalog::Cover{w, h, f});
-        }
-    }
-    return c;
-}
-
-// ONE MATERIAL'S SOURCE FOR THE CLIENT w x h (materials.h's COVER RULE):
-// the smallest catalog cover reaching it in both dimensions (by area, the
-// exact size the smallest of all) — its center crop, no filtering — else
-// the master under the cover rule, else none.
-struct Source {
-    std::string file;
-    bool        cover = false;
-    int         cw = 0, ch = 0;   // a cover's size (its name's)
-    std::filesystem::path local;   // the override file's path; empty: the bundle's
-};
-// A STRIP MATERIAL (materials.h's kGuiMaterialCoverDivisor) is matched
-// against THE ROWS ITS TILE NEEDS for `h`, not the window's.
-std::optional<Source> source_of(const Catalog& c, GuiMaterial m, int w, int h) {
-    const std::size_t i = static_cast<std::size_t>(m);
-    const Catalog::Cover* best = nullptr;
-    for (const Catalog::Cover& cv : c.covers[i]) {
-        if (cv.w < w || cv.h < h) continue;
-        const long long area = static_cast<long long>(cv.w) * cv.h;
-        if (!best || area < static_cast<long long>(best->w) * best->h)
-            best = &cv;
-    }
-    if (best) return Source{best->file, true, best->w, best->h, {}};
-    if (!c.master[i].empty()) return Source{c.master[i], false, 0, 0, {}};
-    return std::nullopt;
-}
-
-// A STRIP MATERIAL'S PLACE (materials.h's STRIP RULE): the client rows
-// [y, y + h) its tile holds, taken from its source's CENTER rows; the
-// window's height over `divisor` the strip's.
-struct StripRows {
-    int y = 0, h = 0, divisor = 1;
-};
-
-// THE RAW REGIONS of one material for the client w x h (client rects in,
-// every one inside the client; the sRGB surfaces out): its source read by
-// name (the one file), a cover's center crop at the identity, a master under
-// the cover rule — or, for a STRIP material (`strip` non-null), the strip
-// rule: a cover's center columns and the center rows of its height, a
-// master scaled to the window's width alone, its center rows.
-std::expected<std::vector<Surface>, std::string> source_regions(
-    const Source& src, int w, int h, const std::vector<GuiRect>& rects,
-    const StripRows* strip = nullptr) {
-    const auto bytes = tile_bytes(src.file, src.local);
+// THE IMAGE'S REGION `r` (client rows) FOR THE CLIENT w x h: under the
+// COVER RULE (the ground), or, `strip`, the STRIP RULE (the lane: the image
+// scaled to the window's width, its center rows the lane's) — one decode.
+std::expected<Surface, std::string> image_region(
+    const std::filesystem::path& path, int w, int h, const GuiRect& r,
+    bool strip) {
+    const auto bytes = file_bytes(path);
     if (!bytes) return std::unexpected("tiles: " + bytes.error());
-    const std::string label = tile_label(src.file, src.local);
+    const std::string label = path.string();
     const auto info = svg_icon::raster_info(*bytes);
     if (!info) return std::unexpected("tiles: " + label + ": " + info.error());
     double k = 1.0;
     int ox = 0, oy = 0;
-    if (src.cover) {
-        if (static_cast<int>(info->w) != src.cw ||
-            static_cast<int>(info->h) != src.ch)
-            return std::unexpected("tiles: " + label + ": not " +
-                                   std::to_string(src.cw) + "x" +
-                                   std::to_string(src.ch));
-        ox = (src.cw - w) / 2;
-        oy = strip ? (src.ch - strip->h) / 2 - strip->y : (src.ch - h) / 2;
-    } else if (strip) {
-        // THE STRIP RULE (materials.h): one factor, the window's width over
-        // the master's; the master too short for the strip at that factor
-        // is the master's hard fail, never a stretch.
+    if (strip) {
         k = static_cast<double>(w) / info->w;
         const int sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
         const int sh = static_cast<int>(std::nearbyint(info->h * k));
-        if (sh < h / strip->divisor || sh < strip->h)
-            return std::unexpected("tiles: " + label + ": too short for a 1/" +
-                                   std::to_string(strip->divisor) + " strip at " +
-                                   std::to_string(w) + "x" + std::to_string(h));
+        if (sh < r.h)
+            return std::unexpected("tiles: " + label + ": too short for the " +
+                                   std::to_string(r.h) + "-row lane at " +
+                                   std::to_string(w) + " wide");
         ox = (sw - w) / 2;
-        oy = (sh - strip->h) / 2 - strip->y;
+        oy = (sh - r.h) / 2 - r.y;
     } else {
-        // THE COVER RULE (materials.h): one factor, the overhang cropped
-        // evenly (the tool's own arithmetic, tools/tiles/render_covers.py).
         k = std::max(static_cast<double>(w) / info->w,
                      static_cast<double>(h) / info->h);
         const int sw = std::max(w, static_cast<int>(std::nearbyint(info->w * k)));
@@ -573,316 +492,78 @@ std::expected<std::vector<Surface>, std::string> source_regions(
         ox = (sw - w) / 2;
         oy = (sh - h) / 2;
     }
-    std::vector<svg_icon::RasterRegion> regions;
-    for (const GuiRect& r : rects)
-        regions.push_back(svg_icon::RasterRegion{r.x + ox, r.y + oy, r.w, r.h});
-    auto out = svg_icon::raster_regions(*bytes, *info, k, regions);
+    const svg_icon::RasterRegion region{r.x + ox, r.y + oy, r.w, r.h};
+    auto out = svg_icon::raster_regions(*bytes, *info, k, std::span(&region, 1));
     if (!out) return std::unexpected("tiles: " + label + ": " + out.error());
-    std::vector<Surface> owned;
-    owned.reserve(out->size());
-    for (cairo_surface_t* s : *out) owned.emplace_back(s);
-    return owned;
+    if (out->empty() || !(*out)[0])
+        return std::unexpected("tiles: " + label + ": no pixels");
+    return Surface((*out)[0]);
 }
 
-// ONE MATERIAL'S BAKE, built on its own thread (materials.h's launch road):
-// the Face, the tiles in sRGB converted for the window, each beside its
-// rect. Nothing here touches State.
+// ONE GROUND'S BAKE, built on its own thread: the tile in sRGB, its mean,
+// then the window's bytes. Nothing here touches State.
 struct Baked {
-    std::string                             error;   // empty: success
-    uint32_t                                face = 0;
-    // grounds: a material's ground tiles; rest / down: the ebony's patches.
-    std::vector<std::pair<GuiRect, Surface>> grounds, rest, down;
-    double                                  ms = 0.0;   // read, decode, derive
+    std::string error;   // empty: success
+    GuiRect     rect{};
+    Surface     surface;
+    uint32_t    face = 0;
+    double      ms = 0.0;
+    bool        image = false;   // the image road's, not the procedural
 };
 
-// Whether `inner` lies whole inside `outer`.
-bool contains_rect(const GuiRect& outer, const GuiRect& inner) {
-    return inner.x >= outer.x && inner.y >= outer.y &&
-           inner.x + inner.w <= outer.x + outer.w &&
-           inner.y + inner.h <= outer.y + outer.h;
-}
-
-std::vector<GuiRect> nonempty(std::vector<GuiRect> v) {
-    v.erase(std::remove_if(v.begin(), v.end(),
-                           [](const GuiRect& r) { return r.w <= 0 || r.h <= 0; }),
-            v.end());
-    return v;
-}
-GuiRect band_of(const Geometry& g, int y0, int y1) {
-    return GuiRect{0, y0, g.w, std::max(0, y1 - y0)};
-}
-
-// A NEW SURFACE, `r` (client rect) cut out of `band`, whose first pixel is
-// client (bx, by).
-Surface cut(cairo_surface_t* band, int bx, int by, const GuiRect& r) {
-    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
-    cairo_surface_flush(band);
-    cairo_surface_flush(out);
-    const unsigned char* sdata = cairo_image_surface_get_data(band);
-    const int sstride = cairo_image_surface_get_stride(band);
-    unsigned char* ddata = cairo_image_surface_get_data(out);
-    const int dstride = cairo_image_surface_get_stride(out);
-    for (int y = 0; y < r.h; ++y)
-        std::memcpy(ddata + static_cast<std::size_t>(y) * dstride,
-                    sdata + static_cast<std::size_t>(r.y - by + y) * sstride +
-                        static_cast<std::size_t>(r.x - bx) * 4,
-                    static_cast<std::size_t>(r.w) * 4);
-    cairo_surface_mark_dirty(out);
-    return Surface(out);
-}
-
-// THE SUMS of `surface` (client rect `at`) over the parts of `rects` inside
-// it, each channel's, added into `sum` and the pixel count into `n`.
-void accumulate(cairo_surface_t* surface, const GuiRect& at,
-                const std::vector<GuiRect>& rects, double (&sum)[3], double& n) {
-    cairo_surface_flush(surface);
-    const unsigned char* data = cairo_image_surface_get_data(surface);
-    const int stride = cairo_image_surface_get_stride(surface);
-    for (const GuiRect& r : rects) {
-        const int x0 = std::max(r.x, at.x), y0 = std::max(r.y, at.y);
-        const int x1 = std::min(r.x + r.w, at.x + at.w);
-        const int y1 = std::min(r.y + r.h, at.y + at.h);
-        for (int y = y0; y < y1; ++y) {
-            const auto* row = reinterpret_cast<const uint32_t*>(
-                data + static_cast<std::size_t>(y - at.y) * stride);
-            for (int x = x0; x < x1; ++x)
-                for (int c = 0; c < 3; ++c)
-                    sum[c] += static_cast<double>(channel(row[x - at.x], c));
-        }
-        if (x1 > x0 && y1 > y0) n += static_cast<double>(x1 - x0) * (y1 - y0);
+void bake_ground(const Geometry& g, Baked& out) {
+    const int y0 = std::clamp(g.band_y, 0, g.h);
+    out.rect = GuiRect{0, y0, g.w, g.h - y0};
+    if (out.rect.w <= 0 || out.rect.h <= 0) return;
+    if (const std::filesystem::path p = image_of(GuiMaterial::Ground); !p.empty()) {
+        auto s = image_region(p, g.w, g.h, out.rect, false);
+        if (!s) { out.error = s.error(); return; }
+        out.surface = std::move(*s);
+        out.image = true;
+    } else {
+        out.surface = brushed(kGroundBase, kGroundSeed, kGroundStrength,
+                              kGroundVGrad, g.w, g.h, y0, out.rect.h);
     }
-}
-// THE MEAN of the sums, each channel's rounded quotient (0 where no pixel).
-uint32_t mean_word(const double (&sum)[3], double n) {
-    uint32_t out = 0;
-    if (n <= 0.0) return out;
-    for (int c = 0; c < 3; ++c)
-        out |= static_cast<uint32_t>(std::nearbyint(sum[c] / n)) << (16 - 8 * c);
-    return out;
-}
-// THE MEAN of `surface` (client rect `at`) over the parts of `rects` inside
-// it.
-uint32_t mean_over(cairo_surface_t* surface, const GuiRect& at,
-                   const std::vector<GuiRect>& rects) {
-    double sum[3] = {0.0, 0.0, 0.0};
-    double n = 0.0;
-    accumulate(surface, at, rects, sum, n);
-    return mean_word(sum, n);
+    out.face = mean_of(out.surface.get());
 }
 
-// THE WOOD (materials.h's WOOD, 2026-10-22: every ground but the marker
-// lane's accent): ONE TILE, THE BAND'S TOP TO THE WINDOW'S LAST ROW,
-// window-wide (the cards, the tooltip, the modal family and the keyboard's
-// band stand anywhere below the caption). The caption's rows are DECODED as
-// a region of their own for THE FACE's sample alone — the rows above the
-// canvas column and below it, window-wide (materials.h's TONE RULE). The
-// canvas interior is the GPU's, its rows of the tile never blitted.
-void bake_wood(const Source& src, const Geometry& g, Baked& out) {
-    // The caption's rows (the sample's alone) and the tile's, each decoded
-    // only where it has rows; the tile's index last.
-    const int band_y = std::clamp(g.band_y, 0, g.h);
-    const std::vector<GuiRect> rects = nonempty(
-        {band_of(g, 0, band_y), band_of(g, band_y, g.h)});
-    if (rects.empty() || rects.back().y != band_y) return;
-    auto raw = source_regions(src, g.w, g.h, rects);
-    if (!raw) { out.error = raw.error(); return; }
-    if (raw->size() != rects.size()) return;
-    {
-        const std::vector<GuiRect> sample = nonempty(
-            {band_of(g, 0, g.panel_top), band_of(g, g.panel_bottom, g.h)});
-        double sum[3] = {0.0, 0.0, 0.0};
-        double n = 0.0;
-        for (std::size_t i = 0; i < rects.size(); ++i)
-            if ((*raw)[i]) accumulate((*raw)[i].get(), rects[i], sample, sum, n);
-        out.face = mean_word(sum, n);
+void bake_marker(const Geometry& g, Baked& out) {
+    const int y0 = std::clamp(g.lane_y, 0, g.h);
+    const int y1 = std::clamp(g.lane_y + g.lane_h, 0, g.h);
+    out.rect = GuiRect{0, y0, g.w, y1 - y0};
+    if (out.rect.w <= 0 || out.rect.h <= 0) return;
+    Surface one;
+    if (const std::filesystem::path p = image_of(GuiMaterial::Marker); !p.empty()) {
+        auto s = image_region(p, g.w, g.h, out.rect, true);
+        if (!s) { out.error = s.error(); return; }
+        one = std::move(*s);
+        out.image = true;
+    } else {
+        one = brushed(kMarkerBase, kMarkerSeed, kGroundStrength, 0.0, g.w,
+                      g.h, y0, out.rect.h);
     }
-    const std::size_t ti = rects.size() - 1;
-    const GuiRect& at = rects[ti];
-    if (!(*raw)[ti]) return;
-    out.grounds.emplace_back(at, std::move((*raw)[ti]));
+    make_seamless(one.get());
+    out.face = mean_of(one.get());
+    out.surface = doubled(one.get());
 }
 
-// THE METAL, THE ACCENT (materials.h's METAL and STRIP RULE, 2026-10-22):
-// ONE TILE, THE MARKER LANE'S ROWS window-wide, the strip's center rows; ITS
-// FACE THE MEAN OF THOSE PIXELS, the strip's rows the bake reads (the whole
-// client's panel rects 2026-10-21 to 2026-10-22) — read by the ruler's flat
-// ground, the two foot lines and the disabled cue's fades alone. (The whole-client tile, and the
-// inactive tab's body under the luma ratio, 2026-10-21 to 2026-10-22.)
-// THE TILE IS BAKED TWICE ITS WIDTH, the lane's pixels and a copy of them
-// beside, so the phased blit (materials.h's LOOP) is ONE 1:1 EXTEND_NONE
-// NEAREST copy at any phase: its source window [W − p, 2W − p) lies inside
-// the doubled surface for every phase p in [0, W) — the two blits the wrap
-// needs, at +p and at p − W, as one copy (set_metal_tile_source).
-void bake_metal(const Source& src, const Geometry& g, Baked& out) {
-    const GuiRect lane = band_of(g, std::clamp(g.lane_y, 0, g.h),
-                                 std::clamp(g.lane_y + g.lane_h, 0, g.h));
-    if (lane.h <= 0 || lane.w <= 0) return;
-    const StripRows strip{lane.y, lane.h, kGuiMaterialCoverDivisor[static_cast<std::size_t>(GuiMaterial::Metal)]};
-    auto raw = source_regions(src, g.w, g.h, {lane}, &strip);
-    if (!raw) { out.error = raw.error(); return; }
-    if (raw->empty() || !(*raw)[0]) return;
-    cairo_surface_t* one = (*raw)[0].get();
-    out.face = mean_over(one, lane, {lane});
-    cairo_surface_t* two =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2 * lane.w, lane.h);
-    cairo_surface_flush(one);
-    cairo_surface_flush(two);
-    const unsigned char* sdata = cairo_image_surface_get_data(one);
-    const int sstride = cairo_image_surface_get_stride(one);
-    unsigned char* ddata = cairo_image_surface_get_data(two);
-    const int dstride = cairo_image_surface_get_stride(two);
-    const std::size_t row_bytes = static_cast<std::size_t>(lane.w) * 4;
-    for (int y = 0; y < lane.h; ++y) {
-        const unsigned char* srow = sdata + static_cast<std::size_t>(y) * sstride;
-        unsigned char* drow = ddata + static_cast<std::size_t>(y) * dstride;
-        std::memcpy(drow, srow, row_bytes);
-        std::memcpy(drow + row_bytes, srow, row_bytes);
-    }
-    cairo_surface_mark_dirty(two);
-    out.grounds.emplace_back(lane, Surface(two));
-}
-
-// THE SEATS MERGED INTO TILES (materials.h's CASE PATCHES): seats sharing
-// their rows (y and h) whose columns OVERLAP are one tile over the union of
-// their columns — the on-screen keyboard's letter page and symbol pages lay
-// different keys over the same rows, a word button's seat and a render
-// player case's can share rows and columns — so no pixel is baked twice; a
-// seat overlapping none (every band case, row 8's, the keys of a row all
-// pages share) stays its own patch. The ramp is a function of the seat's
-// row alone over its height, so a merged tile holds, at each seat it covers,
-// exactly the bytes that seat's own patch would.
-std::vector<GuiRect> merged_seats(std::vector<GuiRect> seats) {
-    std::sort(seats.begin(), seats.end(), [](const GuiRect& a, const GuiRect& b) {
-        if (a.y != b.y) return a.y < b.y;
-        if (a.h != b.h) return a.h < b.h;
-        return a.x < b.x;
-    });
-    std::vector<GuiRect> out;
-    for (const GuiRect& r : seats) {
-        if (!out.empty()) {
-            GuiRect& last = out.back();
-            if (last.y == r.y && last.h == r.h && r.x < last.x + last.w) {
-                last.w = std::max(last.x + last.w, r.x + r.w) - last.x;
-                continue;
-            }
-        }
-        out.push_back(r);
-    }
-    return out;
-}
-
-// THE EBONY: THE CASE PATCHES — per case its glyph seat, the case less its
-// lines on each axis (paint_ce_case: (w − 3·lw) x (h − 3·lw), square on the
-// program's cases), at rest, (lw, lw) in, and pressed, (2·lw, 2·lw) in,
-// merged where they overlap (merged_seats), each the cover at its own place
-// under the ramp over its own height. The Face is THE ROWS THE PROGRAM'S
-// CASES STAND ON — each seat row's g + lw rows, window-wide, decoded
-// together with the caption row — the ebony's sample since the landing, so
-// the patches move no tone a case derives from it (the caption row the
-// sample's alone since its buttons left the ebony, 2026-10-22, materials.h's
-// TONE RULE; the word buttons' and the keys' rows, ebony since 2026-10-22,
-// never join it). A patch inside a decoded row is CUT from it; any other —
-// a word button's, a key's — is decoded at its own rect; a patch past the
-// window's edge is not baked.
-void bake_case(const Source& src, const Geometry& g, Baked& out) {
-    std::vector<int> tops;
-    for (const GuiRect& c : g.cases)
-        if (std::find(tops.begin(), tops.end(), c.y) == tops.end())
-            tops.push_back(c.y);
-    std::vector<GuiRect> rows{band_of(g, g.caption_y, g.caption_y + g.caption_h)};
-    for (const int t : tops)
-        rows.push_back(band_of(g, t + g.lw, t + 2 * g.lw + g.g));
-    for (GuiRect& r : rows) {   // clipped to the client
-        const int y0 = std::max(r.y, 0);
-        const int y1 = std::min(r.y + r.h, g.h);
-        r = GuiRect{0, y0, g.w, std::max(0, y1 - y0)};
-    }
-    // The rows' indices as decoded (an empty row seats nothing).
-    std::vector<int> at(rows.size(), -1);
-    std::vector<GuiRect> regions;
-    for (std::size_t i = 0; i < rows.size(); ++i)
-        if (rows[i].w > 0 && rows[i].h > 0 && g.g > 0) {
-            at[i] = static_cast<int>(regions.size());
-            regions.push_back(rows[i]);
-        }
-    const std::size_t sample_n = regions.size();
-    // THE SEATS, at rest and pressed, merged.
-    std::vector<GuiRect> rest_seats, down_seats;
-    for (const std::vector<GuiRect>* set : {&g.cases, &g.word_and_key_cases})
-        for (const GuiRect& c : *set) {
-            const int gw = c.w - 3 * g.lw;
-            const int gh = c.h - 3 * g.lw;
-            if (gw <= 0 || gh <= 0) continue;
-            rest_seats.push_back(GuiRect{c.x + g.lw, c.y + g.lw, gw, gh});
-            down_seats.push_back(GuiRect{c.x + 2 * g.lw, c.y + 2 * g.lw, gw, gh});
-        }
-    // EACH PATCH'S SOURCE: the decoded row holding it, else its own region
-    // (inside the client), else none.
-    struct Patch {
-        GuiRect rect{};
-        bool    down = false;
-        int     row = -1;      // the decoded row's index in `rows`
-        int     region = -1;   // its own region's index
-    };
-    std::vector<Patch> patches;
-    const GuiRect client{0, 0, g.w, g.h};
-    for (const bool down : {false, true})
-        for (const GuiRect& r : merged_seats(down ? down_seats : rest_seats)) {
-            Patch p{r, down};
-            for (std::size_t i = 0; i < rows.size() && p.row < 0; ++i)
-                if (at[i] >= 0 && contains_rect(rows[i], r))
-                    p.row = static_cast<int>(i);
-            if (p.row < 0) {
-                if (!contains_rect(client, r)) continue;   // past the window's edge
-                p.region = static_cast<int>(regions.size());
-                regions.push_back(r);
-            }
-            patches.push_back(p);
-        }
-    auto raw = source_regions(src, g.w, g.h, regions);
-    if (!raw) { out.error = raw.error(); return; }
-    const uint32_t eb = out.face = mean_of(*raw, sample_n);
-    std::array<double, kCaseStops> ramp{};
-    for (int i = 0; i < kCaseStops; ++i)
-        ramp[static_cast<std::size_t>(i)] = case_ramp_ratio(i, eb);
-    for (Patch& p : patches) {
-        Surface s = p.row >= 0
-                        ? cut((*raw)[static_cast<std::size_t>(at[static_cast<std::size_t>(p.row)])].get(),
-                              0, rows[static_cast<std::size_t>(p.row)].y, p.rect)
-                        : std::move((*raw)[static_cast<std::size_t>(p.region)]);
-        const int h = p.rect.h;
-        scale_in_place(s.get(), [&](int y) {
-            return ramp[static_cast<std::size_t>(stop_of(y, h, kCaseStops))];
-        });
-        (p.down ? out.down : out.rest).emplace_back(p.rect, std::move(s));
-    }
-}
-
-// ONE MATERIAL'S WHOLE THREAD: the bake, then every tile in the window's
-// bytes; its own time.
-void bake_one(GuiMaterial m, const Source& src, const Geometry& g, Baked& out) {
+void bake_one(GuiMaterial m, const Geometry& g, Baked& out) {
     const auto t0 = std::chrono::steady_clock::now();
-    switch (m) {
-        case GuiMaterial::Wood:  bake_wood(src, g, out);  break;
-        case GuiMaterial::Metal: bake_metal(src, g, out); break;
-        case GuiMaterial::Case:  bake_case(src, g, out);  break;
-    }
-    if (out.error.empty())
-        for (auto* set : {&out.grounds, &out.rest, &out.down})
-            for (auto& [rect, s] : *set) convert(s.get());
+    if (m == GuiMaterial::Ground) bake_ground(g, out);
+    else                          bake_marker(g, out);
+    if (out.error.empty() && out.surface) convert(out.surface.get());
     out.ms = std::chrono::duration<double, std::milli>(
                  std::chrono::steady_clock::now() - t0)
                  .count();
 }
 
-// Whether `inner` lies whole inside `outer`.
+// Whether the rect [x0, x1) x [y0, y1) lies whole inside `outer`.
 bool contains(const GuiRect& outer, double x0, double y0, double x1, double y1) {
     return x0 >= outer.x && y0 >= outer.y && x1 <= outer.x + outer.w &&
            y1 <= outer.y + outer.h;
 }
 
-// THE PIXELS THE PAINTERS PAINT, in client coordinates: the client (State::
-// client_w / client_h).
+// THE PIXELS THE PAINTERS PAINT, in client coordinates.
 GuiRect client_rect() {
     const State& s = state();
     return GuiRect{0, 0, s.client_w, s.client_h};
@@ -897,12 +578,11 @@ void set_tile_source(cairo_t* cr, const Tile& t) {
     cairo_set_source(cr, t.pattern.get());
 }
 
-// THE BRASS'S TILE AT THE PHASE (materials.h's LOOP): client x shows the
-// lane's column (x − rect.x − p) mod W, p the phase's whole px in [0, W) and
-// W the tile's rect width, read out of the doubled surface (bake_metal) at
-// column x − rect.x − p + W — one 1:1 nearest copy, EXTEND_NONE, never a
-// repeat or a reflect (the BAKE RULE's cost table).
-void set_metal_tile_source(cairo_t* cr, const Tile& t, double phase) {
+// THE LANE'S TILE AT THE PHASE (materials.h's LOOP): client x shows the
+// strip's column (x − rect.x − p) mod W, p the phase's whole px in [0, W) and
+// W the tile's rect width, read out of the doubled surface at column x −
+// rect.x − p + W — one 1:1 nearest copy, EXTEND_NONE.
+void set_marker_tile_source(cairo_t* cr, const Tile& t, double phase) {
     const int64_t w = t.rect.w;
     int64_t p = w > 0 ? static_cast<int64_t>(std::llrint(phase)) % w : 0;
     if (p < 0) p += w;
@@ -916,14 +596,10 @@ void set_metal_tile_source(cairo_t* cr, const Tile& t, double phase) {
 }
 
 // THE TILE OF `tiles` holding the current path's extents WHERE THEY MEET
-// THE CLIENT, or null where they miss it. A path may run past the window's
-// edge in ordinary use (a cue label's face box near the right edge, a cue
-// panned partly offscreen; 2026-10-21): the paint context is clipped to the
-// client (both backends' paint walk), so only the part inside it is ever
-// filled, and that part is what a tile must hold. A stale tile's pixel
-// therefore never lands outside the client (the gate's guard): a tile of a
-// larger, older window holds the intersection and the clip cuts the rest; a
-// smaller, older one that misses part of it answers null, the flat mean.
+// THE CLIENT, or null where they miss it (the paint context is clipped to
+// the client, so only the part inside it is ever filled, and that part is
+// what a tile must hold; a stale tile's pixel never lands outside the
+// client).
 const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
     double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
     cairo_fill_extents(cr, &x0, &y0, &x1, &y1);
@@ -938,49 +614,82 @@ const Tile* tile_under_path(cairo_t* cr, const std::vector<Tile>& tiles) {
     return nullptr;
 }
 
-// THE GROUND TILES of a material: the ebony has none (its patches are
-// seats, paint_case_ramp's, and its caption-button faces left 2026-10-22),
-// so a rect of it is its flat mean.
 const std::vector<Tile>& tiles_of(GuiMaterial m) {
-    static const std::vector<Tile> kNone;
     State& s = state();
-    switch (m) {
-        case GuiMaterial::Wood:  return s.wood;
-        case GuiMaterial::Metal: return s.metal;
-        case GuiMaterial::Case:  return kNone;
-    }
-    return kNone;
+    return m == GuiMaterial::Ground ? s.ground : s.marker;
 }
 
-std::size_t bytes_of(const std::vector<Tile>& tiles) {
-    std::size_t n = 0;
-    for (const Tile& t : tiles)
-        if (t.surface)
-            n += static_cast<std::size_t>(cairo_image_surface_get_stride(t.surface.get())) *
-                 static_cast<std::size_t>(cairo_image_surface_get_height(t.surface.get()));
-    return n;
+std::size_t bytes_of_surface(cairo_surface_t* s) {
+    return s ? static_cast<std::size_t>(cairo_image_surface_get_stride(s)) *
+                   static_cast<std::size_t>(cairo_image_surface_get_height(s))
+             : 0;
 }
 
-// THE BAKE ITSELF (materials.h's BAKE RULE and LAUNCH ROAD) for geometry
-// `g`: the tile files' names, each material's source, the three materials on
-// three threads, then the tiles into State on this one.
+// THE LIT KEYS' PATCHES (materials.h's LIT KEYS and set_led_glow): for
+// every size, rest and pressed, the key painter's own lit key at the
+// origin, then THE GLOW composited over its pixels inside its outline — the
+// accent at alpha .35 at the LED rect's edge falling off as (1 − d / glow)²
+// to 0 at `glow` px out, d the pixel's distance from the rect — and the LED
+// painted over it again. In the window's bytes: the painter converts its own
+// colors (set_palette_source), the glow's accent converted here.
+void rebuild_lit_patches() {
+    State& s = state();
+    s.lit.clear();
+    const GuiColor accent = display_color(hex(s.accent));
+    const double ar = accent.r * 255.0, ag = accent.g * 255.0, ab = accent.b * 255.0;
+    constexpr double kGlowPeak = 0.35;
+    for (const auto& [w, h] : s.lit_sizes)
+        for (const bool pressed : {false, true}) {
+            cairo_surface_t* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+            cairo_t* cr = cairo_create(surf);
+            const GuiRect r{0, 0, w, h};
+            paint_key_plain(cr, r, pressed, GuiKeyLed::Lit);
+            cairo_destroy(cr);
+            const GuiRect led = key_led_rect(r);
+            if (g_led_glow > 0 && led.w > 0 && led.h > 0) {
+                cairo_surface_flush(surf);
+                unsigned char* data = cairo_image_surface_get_data(surf);
+                const int stride = cairo_image_surface_get_stride(surf);
+                const double glow = static_cast<double>(g_led_glow);
+                for (int y = 1; y < h - 1; ++y) {
+                    auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+                    for (int x = 1; x < w - 1; ++x) {
+                        // The pixel's centre's distance from the rect.
+                        const double px = x + 0.5, py = y + 0.5;
+                        const double dx = std::max({static_cast<double>(led.x) - px, 0.0,
+                                                    px - static_cast<double>(led.x + led.w)});
+                        const double dy = std::max({static_cast<double>(led.y) - py, 0.0,
+                                                    py - static_cast<double>(led.y + led.h)});
+                        const double d = std::sqrt(dx * dx + dy * dy);
+                        if (d <= 0.0 || d >= glow) continue;
+                        const double t = 1.0 - d / glow;
+                        const double a = kGlowPeak * t * t;
+                        const uint32_t p = row[x];
+                        const auto mix = [&](int c, double target) {
+                            return static_cast<uint32_t>(std::clamp(
+                                std::nearbyint((1.0 - a) * channel(p, c) + a * target),
+                                0.0, 255.0));
+                        };
+                        row[x] = 0xFF000000u | (mix(0, ar) << 16) | (mix(1, ag) << 8) |
+                                 mix(2, ab);
+                    }
+                }
+                cairo_surface_mark_dirty(surf);
+            }
+            LitPatch lp;
+            lp.w = w;
+            lp.h = h;
+            lp.pressed = pressed;
+            lp.tile = make_tile(GuiRect{0, 0, w, h}, Surface(surf));
+            s.lit.push_back(std::move(lp));
+        }
+}
+
+// THE BAKE ITSELF (materials.h's BAKE RULE) for geometry `g`: the two
+// grounds on two threads, then the tiles into State on this one, and the
+// lit patches.
 std::optional<std::string> bake(const Geometry& g) {
     const auto t0 = std::chrono::steady_clock::now();
-    const auto files = tile_files();
-    if (!files) return "tiles: " + files.error();
-    const Catalog catalog = catalog_of(files->names);
-    std::array<Source, kGuiMaterialCount> sources;
-    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
-        // A strip material matched against its tile's rows (source_of).
-        const bool strip = kGuiMaterialCoverDivisor[m] > 1;
-        const auto src = source_of(catalog, static_cast<GuiMaterial>(m), g.w,
-                                   strip ? g.lane_h : g.h);
-        if (!src)
-            return "tiles: " + std::string(kGuiMaterialNames[m]) + ": no cover reaches " +
-                   std::to_string(g.w) + "x" + std::to_string(g.h) + " and no master";
-        sources[m] = *src;
-        sources[m].local = files->local_path(src->file);
-    }
     // The transform's tables built here, before the threads read them.
     if (display_transform::active()) (void)display_transform::p3_word_from_srgb_fast(0);
     std::array<Baked, kGuiMaterialCount> baked;
@@ -988,43 +697,33 @@ std::optional<std::string> bake(const Geometry& g) {
         std::array<std::jthread, kGuiMaterialCount> threads;
         for (std::size_t m = 0; m < kGuiMaterialCount; ++m)
             threads[m] = std::jthread([&, m] {
-                bake_one(static_cast<GuiMaterial>(m), sources[m], g, baked[m]);
+                bake_one(static_cast<GuiMaterial>(m), g, baked[m]);
             });
     }   // joined
     for (const Baked& b : baked)
         if (!b.error.empty()) return b.error;
 
     State& s = state();
-    s.wood.clear();
-    s.metal.clear();
-    s.case_rest.clear();
-    s.case_down.clear();
-    const auto take = [](std::vector<std::pair<GuiRect, Surface>>& from,
-                         std::vector<Tile>& to) {
-        for (auto& [rect, surface] : from) to.push_back(make_tile(rect, std::move(surface)));
-    };
-    Baked& wood = baked[static_cast<std::size_t>(GuiMaterial::Wood)];
-    Baked& metal = baked[static_cast<std::size_t>(GuiMaterial::Metal)];
-    Baked& ebony = baked[static_cast<std::size_t>(GuiMaterial::Case)];
-    take(wood.grounds, s.wood);
-    take(metal.grounds, s.metal);
-    take(ebony.rest, s.case_rest);
-    take(ebony.down, s.case_down);
-    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) s.faces[m] = baked[m].face;
+    s.ground.clear();
+    s.marker.clear();
+    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
+        Baked& b = baked[m];
+        if (!b.surface) continue;
+        (m == 0 ? s.ground : s.marker).push_back(make_tile(b.rect, std::move(b.surface)));
+        s.faces[m] = b.face;
+    }
     s.baked = true;
-    rebuild_flats();
+    s.lit_sizes = g.key_sizes;
+    rebuild_lit_patches();
     // THE TRACE (materials::trace_enabled; paint_handler.cpp's on_redraw the
-    // other line): each material's file and thread time (its read, decode,
-    // derived tiles and conversion), the bake's wall time and the resident
-    // bytes.
+    // other line): each ground's thread time and source, the bake's wall
+    // time and the resident bytes.
     if (materials::trace_enabled())
         std::fprintf(stderr,
-                     "warptempo_gui: materials baked %dx%d: decode wood %.1f "
-                     "metal %.1f case %.1f ms (%s, %s, %s), wall %.1f ms, "
-                     "resident %zu bytes\n",
-                     g.w, g.h, wood.ms, metal.ms, ebony.ms,
-                     sources[0].file.c_str(), sources[1].file.c_str(),
-                     sources[2].file.c_str(),
+                     "warptempo_gui: materials baked %dx%d: ground %.1f ms (%s), "
+                     "marker %.1f ms (%s), wall %.1f ms, resident %zu bytes\n",
+                     g.w, g.h, baked[0].ms, baked[0].image ? "image" : "brushed",
+                     baked[1].ms, baked[1].image ? "image" : "brushed",
                      std::chrono::duration<double, std::milli>(
                          std::chrono::steady_clock::now() - t0)
                          .count(),
@@ -1033,10 +732,10 @@ std::optional<std::string> bake(const Geometry& g) {
 }
 
 // A BAKE NOW for the app's geometry, `k` its key: the hard fail on a
-// failure (the catalog changed under the running process), and the palette
-// installed again off the new Faces — always, since the tiles every cached
-// surface was painted from have moved even where the Faces have not, and
-// the install's generation is what rebuilds those surfaces (render.h's
+// failure (an image of the road's that will not decode), and the palette
+// installed again off the new mean — always, since the tiles every cached
+// surface was painted from have moved even where the mean has not, and the
+// install's generation is what rebuilds those surfaces (render.h's
 // palette_generation; the flag cache's label boxes among them) — and the
 // landing flagged for the pre-paint hook's whole-client damage
 // (take_bake_landed).
@@ -1073,34 +772,23 @@ bool trace_enabled() {
 }
 
 std::optional<std::string> check() {
-    const auto files = tile_files();
-    if (!files) return "tiles: " + files.error();
-    // EACH FILE'S HEADER, read off its first bytes alone (a JPEG's frame
-    // header can follow an ICC or EXIF segment, hence the 64 KiB): a PNG or
-    // a JPEG, and a cover the size its name says, any height (a strip's
-    // against its lane is the match's, source_of).
+    // EACH ROLE'S FILE'S HEADER, read off its first bytes alone (a JPEG's
+    // frame header can follow an ICC or EXIF segment, hence the 64 KiB): a
+    // PNG or a JPEG. Both extensions of a role are checked where both stand.
+    const std::filesystem::path config = device_config_path();
+    if (config.empty()) return std::nullopt;
+    const std::filesystem::path folder = config.parent_path() / "tiles";
     constexpr std::size_t kHeaderBytes = 64 * 1024;
-    for (const std::string& file : files->names) {
-        const std::filesystem::path local = files->local_path(file);
-        const auto head = tile_bytes(file, local, kHeaderBytes);
-        if (!head) return "tiles: " + head.error();
-        const auto info = svg_icon::raster_info(*head);
-        if (!info) return "tiles: " + tile_label(file, local) + ": " + info.error();
-        for (const char* name : kGuiMaterialNames) {
-            int w = 0, h = 0;
-            if (parse_cover(file, name, w, h) &&
-                (static_cast<int>(info->w) != w || static_cast<int>(info->h) != h))
-                return "tiles: " + tile_label(file, local) + ": not " +
-                       std::to_string(w) + "x" + std::to_string(h);
+    for (const char* stem : kGuiMaterialNames)
+        for (const char* ext : {".png", ".jpg"}) {
+            const std::filesystem::path p = folder / (std::string(stem) + ext);
+            std::error_code ec;
+            if (!std::filesystem::is_regular_file(p, ec)) continue;
+            const auto head = file_bytes(p, kHeaderBytes);
+            if (!head) return "tiles: " + head.error();
+            const auto info = svg_icon::raster_info(*head);
+            if (!info) return "tiles: " + p.string() + ": " + info.error();
         }
-    }
-    const Catalog catalog = catalog_of(files->names);
-    for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
-        const std::string stem(kGuiMaterialNames[m]);
-        if (catalog.master[m].empty() && catalog.covers[m].empty())
-            return "tiles: " + stem + ": missing (no " + stem + ".png, " + stem +
-                   ".jpg or " + stem + "-<W>x<H>.png)";
-    }
     return std::nullopt;
 }
 
@@ -1163,12 +851,18 @@ uint32_t face(GuiMaterial m) {
     return state().faces[static_cast<std::size_t>(m)];
 }
 
-void set_bevel(int light_percent, int dark_percent) {
+uint32_t ring_light() { return ring_light_of(face(GuiMaterial::Ground)); }
+uint32_t ring_dark() { return ring_dark_of(face(GuiMaterial::Ground)); }
+
+void set_accent(uint32_t accent) {
     State& s = state();
-    s.bevel_light = light_percent;
-    s.bevel_dark  = dark_percent;
-    if (s.baked) rebuild_flats();
+    if (s.accent == accent) return;
+    s.accent = accent;
+    if (s.baked) rebuild_lit_patches();
 }
+uint32_t accent_color() { return state().accent; }
+
+void set_led_glow(int px) { g_led_glow = std::max(0, px); }
 
 void follow_displayed_basis(int64_t vp_start, int64_t vp_end, int area_w) {
     State& s = state();
@@ -1177,97 +871,36 @@ void follow_displayed_basis(int64_t vp_start, int64_t vp_end, int area_w) {
         static_cast<double>(vp_end - vp_start) / static_cast<double>(area_w);
     // AT CONSTANT spp THE CONTENT'S TRAVEL; ACROSS A CHANGE OF spp NOTHING.
     if (s.phase_seen && spp == s.phase_spp)
-        s.metal_phase += static_cast<double>(s.phase_vp - vp_start) / spp;
+        s.marker_phase += static_cast<double>(s.phase_vp - vp_start) / spp;
     s.phase_seen = true;
     s.phase_vp   = vp_start;
     s.phase_spp  = spp;
     // Kept inside one period of the live tile, so the double never grows.
-    if (!s.metal.empty() && s.metal.front().rect.w > 0) {
-        const double w = static_cast<double>(s.metal.front().rect.w);
-        s.metal_phase = std::fmod(s.metal_phase, w);
-        if (s.metal_phase < 0.0) s.metal_phase += w;
+    if (!s.marker.empty() && s.marker.front().rect.w > 0) {
+        const double w = static_cast<double>(s.marker.front().rect.w);
+        s.marker_phase = std::fmod(s.marker_phase, w);
+        if (s.marker_phase < 0.0) s.marker_phase += w;
     }
 }
-
-void set_tone_face(uint32_t chrome_face) {
-    // THE SURFACE TONES (the declaration): the Face, then kTones' Face tones
-    // a relief or a ground puts down — the text, the label and the cue's
-    // shadow are ink and stay flat. A word two tones share (a dark Face can
-    // round two near tones to one byte triple) answers the first.
-    // THE TONES THAT STILL PAINT (2026-10-22, the simple layout: the band's
-    // recess, the grippers' pair and the tab strip's four left with their
-    // painters): the ruler's `mid` ground, the program ring's and the
-    // clock's ring's `dark` and `hilight`, the render player's field lines.
-    static constexpr std::string_view kSurfaceTones[] = {
-        "mid", "dark", "field_dark", "hilight", "field_light"};
-    State& s = state();
-    s.tones.clear();
-    s.tones.emplace_back(chrome_face & 0xFFFFFFu, kFaceKey);
-    for (std::size_t i = 0; i < std::size(cool_edit_derive::kTones); ++i) {
-        const cool_edit_derive::Tone& t = cool_edit_derive::kTones[i];
-        if (t.source != cool_edit_derive::ToneSource::Face) continue;
-        if (std::find(std::begin(kSurfaceTones), std::end(kSurfaceTones),
-                      std::string_view(t.name)) == std::end(kSurfaceTones))
-            continue;
-        const uint32_t w = cool_edit_derive::tone_of(t, chrome_face, 0);
-        const bool taken =
-            std::any_of(s.tones.begin(), s.tones.end(),
-                        [&](const auto& e) { return e.first == w; });
-        if (!taken) s.tones.emplace_back(w, static_cast<int>(i));
-    }
-    if (s.baked) rebuild_flats();
-}
-
-namespace {
-// The tone table's row of `c`, or -1.
-int tone_row(GuiColor c) {
-    const State& s = state();
-    const uint32_t w = word_of(c);
-    for (std::size_t i = 0; i < s.tones.size(); ++i)
-        if (s.tones[i].first == w) return static_cast<int>(i);
-    return -1;
-}
-const std::vector<uint32_t>* flats_of_region() {
-    State& s = state();
-    switch (s.region) {
-        case GuiMaterialRegion::Wood:          return &s.wood_flat;
-        case GuiMaterialRegion::Metal:         return &s.metal_flat;
-        case GuiMaterialRegion::Flat:          return nullptr;
-    }
-    return nullptr;
-}
-} // namespace
 
 bool set_source(cairo_t* cr, GuiColor c) {
     State& s = state();
     if (!s.baked || s.region == GuiMaterialRegion::Flat) return false;
-    const int row = tone_row(c);
-    if (row < 0) return false;
-    const int key = s.tones[static_cast<std::size_t>(row)].second;
-    const std::vector<uint32_t>& flats = *flats_of_region();
-    // THE FACE: the tile under the path, else the flat.
-    const std::vector<Tile>* tiles = nullptr;
-    if (key == kFaceKey)
-        tiles = s.region == GuiMaterialRegion::Wood ? &s.wood : &s.metal;
-    if (tiles) {
-        if (const Tile* t = tile_under_path(cr, *tiles)) {
-            // THE BRASS AT ITS PHASE, every reader of its tile together —
-            // the lane's ground and the cue labels' face boxes (the LOOP).
-            if (tiles == &s.metal) set_metal_tile_source(cr, *t, s.metal_phase);
-            else                   set_tile_source(cr, *t);
-            return true;
-        }
+    const GuiMaterial m = s.region == GuiMaterialRegion::Ground
+                              ? GuiMaterial::Ground
+                              : GuiMaterial::Marker;
+    // THE FACE ALONE IS A GROUND (the head's TONE RULE): the palette's
+    // `face`, the ground's mean.
+    if (word_of(c) != (word_of(palette().face))) return false;
+    if (const Tile* t = tile_under_path(cr, tiles_of(m))) {
+        // THE LANE AT ITS PHASE, every reader of its tile together — the
+        // lane's ground and the cue labels' face boxes (the LOOP).
+        if (m == GuiMaterial::Marker) set_marker_tile_source(cr, *t, s.marker_phase);
+        else                          set_tile_source(cr, *t);
+        return true;
     }
-    set_palette_source(cr, hex(flats[static_cast<std::size_t>(row)]));
+    set_palette_source(cr, hex(s.faces[static_cast<std::size_t>(m)]));
     return true;
-}
-
-GuiColor flat(GuiColor c) {
-    const State& s = state();
-    if (!s.baked || s.region == GuiMaterialRegion::Flat) return c;
-    const int row = tone_row(c);
-    if (row < 0) return c;
-    return hex((*flats_of_region())[static_cast<std::size_t>(row)]);
 }
 
 void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
@@ -1275,10 +908,9 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
     State& s = state();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The flat mean under the whole rect (the panel's face before a bake),
-    // then each tile's part over it, inside the client (the gate's guard).
-    set_palette_source(cr, s.baked ? hex(s.faces[static_cast<std::size_t>(m)])
-                                   : palette().face);
+    // The flat mean under the whole rect, then each tile's part over it,
+    // inside the client (the gate's guard).
+    set_palette_source(cr, hex(s.faces[static_cast<std::size_t>(m)]));
     cairo_rectangle(cr, r.x, r.y, r.w, r.h);
     cairo_fill(cr);
     if (s.baked) {
@@ -1290,7 +922,8 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
             const int x1 = std::min(cx1, t.rect.x + t.rect.w);
             const int y1 = std::min(cy1, t.rect.y + t.rect.h);
             if (x1 <= x0 || y1 <= y0) continue;
-            set_tile_source(cr, t);
+            if (m == GuiMaterial::Marker) set_marker_tile_source(cr, t, s.marker_phase);
+            else                          set_tile_source(cr, t);
             cairo_rectangle(cr, x0, y0, x1 - x0, y1 - y0);
             cairo_fill(cr);
         }
@@ -1298,48 +931,36 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
     cairo_restore(cr);
 }
 
-CaseLines case_lines() { return state().case_lines; }
-DisabledGlyphTones disabled_glyph_tones() { return state().disabled; }
-
-void paint_case_ramp(cairo_t* cr, int x, int y, int w, int h, bool down) {
-    if (w <= 0 || h <= 0) return;
-    State& s = state();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (contains(client_rect(), x, y, x + w, y + h)) {
-        // THE TILE ON THE SEAT'S ROWS holding its columns (a patch the seat's
-        // own, or a merged tile over it — bake_case's merged_seats).
-        for (const Tile& t : down ? s.case_down : s.case_rest) {
-            if (t.rect.y != y || t.rect.h != h || x < t.rect.x ||
-                x + w > t.rect.x + t.rect.w)
-                continue;
-            set_tile_source(cr, t);
-            cairo_rectangle(cr, x, y, w, h);
-            cairo_fill(cr);
-            cairo_restore(cr);
-            return;
-        }
-    }
-    // NO PATCH FOR THIS SEAT (the declaration): the ramp's flat stops.
-    const uint32_t eb = s.faces[static_cast<std::size_t>(GuiMaterial::Case)];
-    for (int i = 0; i < kCaseStops; ++i) {
-        const int y0 = static_cast<int>(std::nearbyint(static_cast<double>(i) * h / kCaseStops));
-        const int y1 = static_cast<int>(std::nearbyint(static_cast<double>(i + 1) * h / kCaseStops));
-        if (y1 <= y0) continue;
-        const double b = kCaseRampTop + (kCaseRampBottom - kCaseRampTop) * i /
-                                            static_cast<double>(kCaseStops - 1);
-        set_palette_source(cr, hex(case_tone(eb, b)));
-        cairo_rectangle(cr, x, y + y0, w, y1 - y0);
+bool paint_lit_key(cairo_t* cr, const GuiRect& r, bool pressed) {
+    const State& s = state();
+    if (!s.baked) return false;
+    for (const LitPatch& p : s.lit) {
+        if (p.w != r.w || p.h != r.h || p.pressed != pressed) continue;
+        cairo_save(cr);
+        cairo_matrix_t at;
+        cairo_matrix_init_translate(&at, -static_cast<double>(r.x),
+                                    -static_cast<double>(r.y));
+        cairo_pattern_set_matrix(p.tile.pattern.get(), &at);
+        cairo_set_source(cr, p.tile.pattern.get());
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_rectangle(cr, r.x, r.y, r.w, r.h);
         cairo_fill(cr);
+        cairo_restore(cr);
+        return true;
     }
-    cairo_restore(cr);
+    return false;
+}
+
+DisabledGlyphTones disabled_glyph_tones() {
+    return DisabledGlyphTones{kCeDisabledShadow, kCeDisabledLight, kCeDisabledInset};
 }
 
 std::size_t resident_bytes() {
     const State& s = state();
     std::size_t n = 0;
-    for (const auto* set : {&s.wood, &s.metal, &s.case_rest, &s.case_down})
-        n += bytes_of(*set);
+    for (const auto* set : {&s.ground, &s.marker})
+        for (const Tile& t : *set) n += bytes_of_surface(t.surface.get());
+    for (const LitPatch& p : s.lit) n += bytes_of_surface(p.tile.surface.get());
     return n;
 }
 

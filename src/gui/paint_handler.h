@@ -45,33 +45,17 @@ struct GuiTargetRender;
 //   - GuiPlayback& is non-const because on_resize calls
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
-// THE PROGRAM'S CASES, ONE LIST FOR THE MATERIALS' BAKE (2026-10-21,
-// materials.h's CASE PATCHES): every case — its outer rect — the band, row 8
-// and the render player lay out at this window geometry, IN BOTH STATES OF
-// THE `h` VIEW (its hide and stand-ins move the band's left runs and row
-// 8's block), each row's own layout function the painter reads too
-// (paint_handler.cpp: icon_row_seats and icon_row_walk, row8_block and
-// row8_block_walk, player_row_layout), so the bake seats a patch wherever a
-// case can stand and never where none does. A function of the client size,
-// the scale and the strip pad alone (the faces compiled in), which is the
-// bake's key.
+// THE PROGRAM'S KEYS, ONE LIST FOR THE MATERIALS' BAKE (2026-10-21; since
+// 2026-10-23 the sizes the LIT KEYS' patches are baked for, materials.h):
+// every key — its outer rect — the band, row 8 and the render player lay
+// out at this window geometry, IN BOTH STATES OF THE `h` VIEW (its hide and
+// stand-ins move the band's left runs and row 8's block), each row's own
+// layout function the painter reads too (paint_handler.cpp: icon_row_seats
+// and icon_row_walk, row8_block and row8_block_walk, player_row_layout). A
+// function of the client size, the scale and the strip pad alone, which is
+// in the bake's key. (word_and_key_case_rects, the word buttons' and the
+// keyboard's ebony patches, 2026-10-22 to 2026-10-23, is retired.)
 std::vector<GuiRect> program_case_rects(const AppState& app);
-// THE WORD BUTTONS AND THE KEYS, THE EBONY'S OTHER PATCHES (architect
-// 2026-10-22, "buttons in ebony — yes"; materials.h's CASE PATCHES): every
-// word button's outer rect the modal family's controls row can show — each
-// prompt answer table's cluster (kPromptAnswerTables, app_state.h), the
-// dialog editors' OK and Cancel, the picker's and the progress modal's
-// Cancel, flush right as the painter lays them (paint_handler.cpp's
-// modal_word_buttons, the one layout both read) — on the row standing on
-// the window's foot and, on a platform that paints the on-screen keyboard
-// (GuiPlatform::wants_onscreen_keyboard), on the row lifted onto the
-// keyboard's band; and there every page's keys (onscreen_keyboard::
-// for_each_key, the walk the painter and the hit test read). Each rect
-// its own w x h, none twice. A function of the client size, the scale and
-// the strip pad alone (the faces and the tables compiled in), the bake's
-// key; never the
-// ebony Face's sample (bake_case).
-std::vector<GuiRect> word_and_key_case_rects(const AppState& app);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
 // bake for their ebony patches 2026-10-21 to 2026-10-22, are the caption
 // painter's own again, paint_handler.cpp.)
@@ -898,13 +882,12 @@ private:
     // paint_bottom_overlays — the taskbar line and the dialog's ground,
     // 2026-10-10 to 2026-10-14 — with the taskbars.)
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
-    // record at render.h's caption block): the flat ebony ground, its
-    // inactive tone while the window is inactive (2026-10-22), the app's
-    // icon, the title — "<piece> - Warptempo", or "Warptempo" where no piece
-    // is open — in the bold face in the ink (materials.h's INKS, kBoneInk;
+    // record at render.h's caption block): the one flat ground (2026-10-23),
+    // the quaver, the title — "<piece> - Warptempo", or "Warptempo" where no
+    // piece is open — in the bold face in the bone (materials.h's INKS;
     // kCaptionInkInactive while inactive) cut with "..." before the buttons,
-    // and the three caption buttons in Windows 2000's Standard scheme
-    // (kWindowsStandard), whose rects and enabled bits it
+    // and the three caption buttons' procedural glyphs (render.h's caption
+    // block, 2026-10-23), whose hit cells and enabled bits it
     // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
     // gate) for the press claim (claim_caption_press, input_pointer.cpp).
     // Audio-independent like the rows above and called beside them, gated on

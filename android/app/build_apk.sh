@@ -148,25 +148,10 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
-# THE BUNDLED MATERIALS (architect 2026-10-21, the fortepiano chrome;
-# materials.h's head): THE TABLET'S THREE COVERS BY THE NAMES THE CATALOG
-# MATCHES at its 2304 x 1440 window -- Wood-2304x1440.png, Case-2304x1440.png
-# and the brass's quarter-height strip Metal-2304x360.png (materials.h's
-# STRIP RULE, 2026-10-22; kGuiMaterialCoverDivisor) -- copied into the
-# package's assets/tiles/, AND NOT THE MASTERS (the tablet's window is
-# always 2304 x 1440, and a cover bakes with no filtering) --
-# tools/tiles/render_covers.py renders them after a drop. The app reads them
-# in place at launch, by name (GuiPlatform::bundled_tile_names / _bytes,
-# platform_android.cpp); a cover missing from them fails the launch, naming
-# the file. A name missing here is a build defect and stops the script.
-TILE_DIR="$APPDIR/../../assets/tiles"
-TILE_FILES=("$TILE_DIR/Wood-2304x1440.png" "$TILE_DIR/Metal-2304x360.png" "$TILE_DIR/Case-2304x1440.png")
-for f in "${TILE_FILES[@]}"; do
-    [ -f "$f" ] || wt_die "missing $f (tools/tiles/render_covers.py)"
-done
-mkdir -p "$ASSETS/tiles"
-cp -fL "${TILE_FILES[@]}" "$ASSETS/tiles/"
-wt_say "assets: tiles, ${#TILE_FILES[@]} files"
+# (THE BUNDLED MATERIALS -- the fortepiano chrome's three covers under
+# assets/tiles/, 2026-10-21 to 2026-10-23 -- are no longer packed: the hi-fi
+# skin's ground is procedural, baked at launch (materials.h's head); a
+# `tiles/` folder beside the device config is the one image road.)
 
 # --- 2/3. configure + build ----------------------------------------------
 # WT_CANVAS is in the environment, so configure.sh reads the same canvas and

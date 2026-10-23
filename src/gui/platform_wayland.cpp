@@ -759,49 +759,6 @@ GuiPlatform::bundled_icon_files() {
         std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR), {".svg", ".png"});
 }
 
-// The materials: assets/tiles/, every `.png` and `.jpg` by name, and one
-// file read in one sized fread (contract at the declaration; materials.h).
-std::expected<std::vector<std::string>, std::string>
-GuiPlatform::bundled_tile_names() {
-    const std::filesystem::path folder(WARPTEMPO_BUNDLED_TILES_DIR);
-    std::vector<std::string> out;
-    std::error_code ec;
-    std::filesystem::directory_iterator it(folder, ec);
-    for (; !ec && it != std::filesystem::directory_iterator(); it.increment(ec)) {
-        const std::string name = it->path().filename().string();
-        if (!name.ends_with(".png") && !name.ends_with(".jpg")) continue;
-        std::error_code tec;
-        if (it->is_regular_file(tec)) out.push_back(name);
-    }
-    if (ec) {
-        return std::unexpected("could not read '" + folder.string() + "': " +
-                               ec.message());
-    }
-    return out;
-}
-
-std::expected<std::string, std::string>
-GuiPlatform::bundled_tile_bytes(const std::string& name, std::size_t limit) {
-    const std::filesystem::path path =
-        std::filesystem::path(WARPTEMPO_BUNDLED_TILES_DIR) / name;
-    std::error_code ec;
-    const std::uintmax_t size = std::filesystem::file_size(path, ec);
-    if (ec) {
-        return std::unexpected("could not read '" + path.string() + "': " +
-                               ec.message());
-    }
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-    if (!f) return std::unexpected("could not open '" + path.string() + "'");
-    std::string bytes(static_cast<std::size_t>(
-                          std::min<std::uintmax_t>(size, limit)),
-                      '\0');
-    const std::size_t got = std::fread(bytes.data(), 1, bytes.size(), f);
-    std::fclose(f);
-    if (got != bytes.size())
-        return std::unexpected("could not read '" + path.string() + "' whole");
-    return bytes;
-}
-
 bool GuiPlatform::init(int width, int height, const char* title) {
     // THE PRODUCT'S FACES, INSTALLED BEFORE ANYTHING ELSE (architect
     // 2026-10-02, gui_font.h): the bytes compiled into this executable

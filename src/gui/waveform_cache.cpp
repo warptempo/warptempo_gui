@@ -1,7 +1,7 @@
 #include "paint_handler.h"
 
 #include "canvas_sink.h"   // kGuiCanvasDrawList, the plate slot's road
-#include "materials.h"     // follow_displayed_basis, the brass's phase
+#include "materials.h"     // follow_displayed_basis, the marker lane's phase
 #include "render.h"
 #include "viewport.h"   // damage_window_top_rows
 #include "text_editor.h"
@@ -631,7 +631,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_vp_start     = wf_cache.pending_fp_vp_start;
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
-    // THE BRASS FOLLOWS THE BASIS JUST PUBLISHED (materials.h's LOOP), so the
+    // THE MARKER LANE'S GROUND FOLLOWS THE BASIS JUST PUBLISHED (materials.h's LOOP), so the
     // marker lane's ground and the cue boxes the flag rebuild below paints
     // stand at one phase over the cues this plate places.
     materials::follow_displayed_basis(wf_cache.fp_vp_start, wf_cache.fp_vp_end,
@@ -873,7 +873,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_vp_start     = in.vp_start;
     wf_cache.fp_vp_end       = in.vp_end;
     wf_cache.fp_area_w       = in.area_w;
-    // THE BRASS FOLLOWS THE BASIS JUST PUBLISHED (materials.h's LOOP; the
+    // THE MARKER LANE'S GROUND FOLLOWS THE BASIS JUST PUBLISHED (materials.h's LOOP; the
     // async swap's twin).
     materials::follow_displayed_basis(in.vp_start, in.vp_end, in.area_w);
     wf_cache.fp_area_h       = in.area_h;

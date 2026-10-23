@@ -421,7 +421,13 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     upload_seeded_  = true;
 
     glViewport(0, 0, surface_w, surface_h);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // THE CLEAR IS TRANSPARENT WHERE A SIZING BAND STANDS (the hi-fi skin's
+    // window border, 2026-10-23, render.h's caption block): the band's
+    // texels are cleared to alpha 0 (paint_window_sizing_frame) and discarded
+    // by the shader, so the clear is what the compositor shows there — the
+    // band invisible beyond its one light line. Without a band (the
+    // maximized laptop, the tablet) the clear stays opaque black, as before.
+    glClearColor(0.0f, 0.0f, 0.0f, frame_px > 0 ? 0.0f : 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (list && clip[2] > 0) {

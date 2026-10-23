@@ -164,16 +164,6 @@ public:
     // the road device_config_defaults takes.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
-    // THE BUNDLED MATERIALS' FILES, BY NAME (contract at platform_wayland.h,
-    // 2026-10-21): the APK's `tiles/` assets — the repository's
-    // `assets/tiles/<Name>-2304x1440.png`, which build_apk.sh's asset step
-    // packs — listed, and one read by name (AAssetManager is safe across
-    // threads, each call opening its own AAsset).
-    static std::expected<std::vector<std::string>, std::string>
-        bundled_tile_names();
-    static std::expected<std::string, std::string> bundled_tile_bytes(
-        const std::string& name, std::size_t limit = SIZE_MAX);
-
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no system titlebar, so this setter stores
     // nothing and paints nothing (the app's own CAPTION, top lane 0 since

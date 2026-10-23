@@ -1,103 +1,38 @@
 #pragma once
 
 #include "cool_edit_derive.h"   // the case ramp's Default bytes, the HLS rule
-#include "materials.h"   // the fortepiano chrome's inks (kBoneInk)
+#include "materials.h"   // the skin's inks and the key's constants
 #include "render.h"   // GuiRect, GuiColor, palette(), the program's accessors
 
 #include <array>
 #include <cairo/cairo.h>
 #include <cstdint>
 
-// THE PROGRAM'S PAINTERS — COOL EDIT PRO 2.1'S PANEL (architect 2026-10-09,
-// "chrome means chrome, the program is Cool Edit"; program_spec.h's head):
-// the button case in its faces, the dark time field, the shadowed panel
-// label and the cue's triangle (the band's lines and panes, the tab strip,
-// the dock bar and row 8's bars stood here 2026-10-09 to 2026-10-22, the
-// simple layout's strokes removed) — THE SAME UNDER EVERY
-// CHROME (the canvas column's lanes — the view bar, the ruler, the cues —
-// are painted by render_trim_flags, paint_ruler_row and the flag pass out of
-// these and the constants below). The lengths
-// are program_spec.h's (render.h's program accessors, each a rounded part);
-// the measurements are tmp/research/cool_edit/METRICS.md's, one capture px a
-// W, and the approved mock is tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png
-// (its generator mock_ce.py the construction these painters follow).
+// THE PROGRAM'S PAINTERS (architect 2026-10-09, "chrome means chrome, the
+// program is Cool Edit"; program_spec.h's head) IN THE HI-FI PANEL SKIN
+// (architect 2026-10-23; materials.h's head, the frames of record): THE KEY
+// — every case of the band, row 8, the render player, the dialogs' word
+// buttons and the on-screen keyboard — the time field, the panel label and
+// the cue's triangle (the canvas column's lanes — the view bar, the ruler,
+// the cues — are painted by render_trim_flags, paint_ruler_row and the flag
+// pass out of these and the constants below). The lengths are
+// program_spec.h's (render.h's program accessors, each a rounded part).
 //
-// THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` (the
-// wood's mean since 2026-10-22, the brass's 2026-10-21 to 2026-10-22) and
-// the tones Cool Edit derives from it
-// (cool_edit_derive.h, the COOL EDIT BLOCK of palette()) — the panel
-// label's swapping pair among them — and SINCE 2026-10-21 EVERY SURFACE TONE
-// IS A MATERIAL (architect, the fortepiano chrome; materials.h): the
-// painters below hand their tones to paint_cell_rect and paint_relief_frame,
-// whose surface chokepoint lays each on the caller's material scope — the
-// Face as the cover as drawn, every other tone the material's flat stroke —
-// the band, the canvas column's margins and the program ring, row 8 and its
-// clock's ring on the walnut, the marker lane
-// between the ring's columns, the ruler's ground and the two foot lines on
-// the brass, the wood's ring round the column (2026-10-22, materials.h's
-// REGIONS); THE BUTTON CASE is
-// the ebony's (its ramp the cover under Cool Edit's case span, its lines
-// flat, materials::paint_case_ramp and case_lines). THE CONSTANTS below are
-// what Cool Edit draws whatever its preset — the case's black outline and
-// the down face's outer black, the view bar's field — and the fortepiano
-// chrome's own inks (materials.h's INKS: the one bone ink kBoneInk on the
-// words and the flags, the time fields' own digits on their black ground),
-// flat, never a material.
+// THE COLORS: the skin's constants (materials.h: the key's face, edges and
+// LED, the inks, the fields) and the two ring tones off the ground's mean
+// (materials::ring_light / ring_dark, the palette's `ce_hilight` and
+// `ce_dark`); every line a ring or a key draws is ONE DEVICE PX
+// (hairline_px, render.h's line rule). (The ebony case with Cool Edit's
+// ramp, its rings and its glyph, 2026-10-09 to 2026-10-23, is git history.)
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as
-// an intention of a diagonal, so that when they're scaled they don't look
-// like a pixel that's been scaled up"; the chrome's mitre of 2026-10-06,
-// paint_relief_frame's head, render.cpp): THE CAPTURE'S SQUARE PIXEL CORNER
-// IS THE PERIOD'S LIMIT AND THE DIAGONAL THE ARTIST'S INTENT. Wherever a
-// light tone meets a dark one at a ring's corner, the corner block is split
-// along the 45-degree diagonal from the ring's outer corner to its inner one
-// through paint_relief_frame (the light square L, the dark mitred L over it,
-// antialiased by cairo): the case's highlight / shadow ring (Cool Edit's
-// ADAEAF junction pixel is the two tones' half-and-half, the diagonal at one
-// capture px) and the down face's black / highlight ring; the time field's
-// ring (row 8's clock's the program ring's tones); the view bar's span
-// (render_trim_flags); the program ring. A two-line staircase that is no ring
-// — the cue's and the playhead head's
-// 9-7-5-3-1 rows — is drawn as its diagonal (their painters say how). A
-// one-tone line stays square: the case's black outline, the down face's
-// inner shadow line. The dots
-// are cells (a dot is not a line). (Every
-// line square-joined as the capture's pixels show stood the morning of
-// 2026-10-09; git history.)
-// (NOT DRAWN 2026-10-09..10-21: the face's brushed grain, METRICS §1.4's ±5
-// 2-px texture over the ramp; the ebony's own grain rides the ramp since,
-// materials.h.)
+// an intention of a diagonal"; paint_relief_frame's head, render.cpp):
+// wherever a light tone meets a dark one at a ring's corner the corner block
+// is split along the 45-degree diagonal — the time field's ring, the view
+// bar's span, the program ring. A two-line staircase that is no ring — the
+// cue's and the playhead head's 9-7-5-3-1 rows — is drawn as its diagonal
+// (their painters say how). The dots are cells (a dot is not a line).
 
-// -- THE CASE'S CONSTANTS (METRICS §1.3–1.5; 0xRRGGBB, sRGB) -----------------
-
-// THE FACE RAMP (materials::paint_case_ramp, the ebony's): ONE STOP PER W
-// ROW OF THE 20-W GLYPH SEAT, never resampled (architect 2026-10-09 ~10:25,
-// the seat Cool Edit's own 20): stop i fills the seat's W row i, whose
-// device rows are [nearbyint(i·h/20), nearbyint((i+1)·h/20)) of the seat's
-// height h, so the rows tile the seat exactly at every scale, each stop a
-// band of the ebony cover under its luma ratio (materials.h's CASE,
-// 2026-10-21; a flat band of Cool Edit's per-row case tones until then). ON
-// A SEAT THAT IS NO SQUARE — a word button's or a key's (2026-10-22,
-// paint_ce_case) — the twenty stops tile its own height the same way and
-// run across its whole width. THE HIGHLIGHT
-// (materials::case_lines) on the top row and left column; THE SHADOW on the
-// right column and the bottom row, a ramp from its first to its last tone
-// across the glyph seat — down its height on the column, along its width on
-// the row — its first tone also the mitre's dark half at the
-// top-right and bottom-left; THE SHADOW'S OWN CORNER at the bottom-right
-// inside the black line — each a flat stroke off the ebony's Face. Where the highlight meets the shadow Cool Edit's measured
-// ADAEAF is the two tones' half-and-half — the mitre, drawn as the diagonal
-// (the head's rule), so no tone stands for it.
-// THE BLACK LINE on the right and bottom, 000000 on every captured Face.
-inline constexpr uint32_t kCeCaseOuter = 0x000000;
-// THE PRESSED AND CHECKED RINGS' OUTER BLACK (METRICS §1.5) on the top and
-// left. The rest of the rings is the ebony's since 2026-10-21 (architect,
-// "the top and left should be darker than the case"): the case's highlight
-// on the bottom and right of the outer ring, its last shadow tone on the
-// top and left inside it (paint_ce_case; Cool Edit's constant 808080 inner
-// and F8F8F8 light, measured on a light gray case, read as a raised white
-// frame on the ebony, closed_questions.md).
-inline constexpr uint32_t kCeRingOuter = 0x000000;
 // THE DISABLED GLYPH'S TWO TONES (architect 2026-10-15; icons.h's THE
 // DISABLED GLYPH), measured off Cool Edit Pro 2.1's own disabled art —
 // BITMAP 221's toolbar strips, each glyph's right 20x20 half drawn on the
@@ -114,55 +49,14 @@ inline constexpr uint32_t kCeRingOuter = 0x000000;
 // pressed case goes. Inside, never a dark copy peeking out up-left, which
 // grew the glyph. The tone his pick off a 70 / 60 / 50 / 40 / 30 / 20 / 10 /
 // 00 series judged on the glass the same evening.
-// THE TONES ARE CASE-RELATIVE ON THE EBONY (architect 2026-10-21, "r1", his
-// pick off three 1:1 mocks: the constant silhouette read as a light gray
-// blob on the dark case), AND SINCE HIS PICK v2 THE SAME NIGHT (~23:05, on
-// four renders of the real painter composited into his tablet capture) THEY
-// ARE HIS OWN NUMBERS, NOT COOL EDIT'S RATIOS: THE SILHOUETTE's HLS lightness
-// is the live case ramp's mean lightness times kCeDisabledShadowRatio, 0.84
-// — a measured constant of his own, his pick 2A1E1C on the shipped ebony
-// (L .137 over the ramp mean .163) — on the ebony Face's hue and saturation,
-// recomputed at every bake (materials::disabled_glyph_tones); THE RIM IS
-// BLACK, kCeDisabledInset, a constant (on a dark case a tone darker than the
-// silhouette has nowhere to go but black); THE LIGHT COPY STAYS F8F8F8, Cool
-// Edit's. THE RULE IT DEPARTS FROM, recorded: Cool Edit's own ratio, 808080's
-// L over the Default case ramp's mean (0.502 / 0.809 = 0.620), with the rim
-// at the silhouette's times 505050's L over 808080's (0.625) — the glass
-// round's rule, which put the silhouette at 1F1615 and the rim at 130D0C on
-// the ebony, the rim invisible ("I don't see it so it may be gone"). The
-// constant 808080 / 505050 on a dark case retired earlier the same day.
-// kCeDisabledShadow stays Cool Edit's measured byte, the record and the
-// state's pre-bake default; the static_assert pins the departure.
+// NO BAND CASE WEARS A GLYPH since 2026-10-23 (the keys are blank, their
+// legends printed under them), so these tones are the record of the
+// emboss icons::draw_disabled still draws for a caller that asks — Cool
+// Edit's measured bytes, the rim black (his pick on the ebony of
+// 2026-10-21; the case-relative silhouette of that skin is git history).
 inline constexpr uint32_t kCeDisabledShadow = 0x808080;
 inline constexpr uint32_t kCeDisabledLight  = 0xF8F8F8;
-// THE RIM (architect 2026-10-21, his pick v2): black, constant. 505050, his
-// pick off the 2026-10-15 series on Cool Edit's light case, until then.
 inline constexpr uint32_t kCeDisabledInset  = 0x000000;
-// The Default case ramp's mean HLS lightness, over its twenty measured rows —
-// Cool Edit's own ratio's denominator, kept for the assert's record.
-constexpr double ce_default_case_ramp_mean_l() {
-    double sum = 0.0;
-    for (const cool_edit_derive::CaseTone& t : cool_edit_derive::kCaseRamp)
-        sum += cool_edit_derive::hls_of(t.default_byte).l;
-    return sum / static_cast<double>(cool_edit_derive::kCaseRamp.size());
-}
-// THE SILHOUETTE'S RATIO TO THE LIVE CASE RAMP'S MEAN LIGHTNESS — HIS PICK
-// (architect 2026-10-21 ~23:05): 2A1E1C's L .137 over the shipped ebony
-// ramp's mean .163. The lifted silhouettes 3B2A27 … 855E58 and the
-// ramp-mean 332523 were mocked and not taken (closed_questions.md).
-inline constexpr double kCeDisabledShadowRatio = 0.84;
-static_assert(ce_default_case_ramp_mean_l() > 0.804 &&
-                  ce_default_case_ramp_mean_l() < 0.814 &&
-                  cool_edit_derive::hls_of(kCeDisabledShadow).l /
-                          ce_default_case_ramp_mean_l() > 0.615 &&
-                  cool_edit_derive::hls_of(kCeDisabledShadow).l /
-                          ce_default_case_ramp_mean_l() < 0.625 &&
-                  kCeDisabledShadowRatio == 0.84 &&
-                  kCeDisabledInset == 0x000000,
-              "the disabled emboss: his pick 0.84 of the case ramp's mean L "
-              "(2A1E1C on the shipped ebony) departing from Cool Edit's "
-              "0.620 (808080's L 0.502 over the Default ramp's mean 0.809), "
-              "the rim black 000000 (Cool Edit-relative 0.625 retired)");
 
 // -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
@@ -183,83 +77,84 @@ static_assert(ce_default_case_ramp_mean_l() > 0.804 &&
 // and its digits' cores the same ink over the same black shadow — the
 // ruler's ground is the dark `mid` at every Face, so Cool Edit keeps it
 // light where the panel's text and label swap. Not a Face tone left
-// undone: following Face here would depart from Cool Edit. ON THE BRASS THE
-// TICKS AND DIGITS ARE THE CHROME'S ONE INK, the bone kBoneInk (materials.h's
-// INKS, architect 2026-10-22; E6D5A8 2026-10-21 to 2026-10-22, the
-// near-white before that, Cool Edit's E0E0E0 before).
+// undone: following Face here would depart from Cool Edit. IN THE HI-FI SKIN
+// THE TICKS AND DIGITS ARE THE BONE kBoneInk over a ONE-DEVICE-PX black
+// shadow at (+1, +1) on the flat dark kRulerGround (architect 2026-10-23,
+// "the timestamps are good"; render.h's ruler block).
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
 inline constexpr uint32_t kCeRulerTick      = kBoneInk;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 
-// -- THE CASE ------------------------------------------------------------------
+// -- THE KEY (architect 2026-10-23; materials.h's KEY constants) ---------------
 
-// ONE BUTTON CASE on `r`, in its face: the band's, row 8's and the render
-// player's (icon_case_w_px square) and, SINCE 2026-10-22, THE WORD BUTTONS
-// AND THE ON-SCREEN KEYBOARD'S KEYS (architect: "buttons in ebony — yes";
-// the modal family's controls row and paint_onscreen_keyboard, which the
-// case wears on their own boxes, w x h). ONE CONSTRUCTION FOR EVERY BOX: the
-// glyph seat is the case less its lines on each axis, gw = r.w − 3 lines
-// across and gh = r.h − 3 lines down (gw = gh = the square seat on the
-// square cases, every expression there the square's), the lines' places
-// below read off it:
-//   REST     — the highlight on the top row and left column, the face ramp
-//              on the glyph seat, the shadow ramp on the right column and
-//              bottom row, the two mitred where they meet, the black line
-//              on the right and bottom; the glyph (or a word, a cap) at
-//              (+1, +1) lines.
-//   DOWN     — PRESSED (a live press) or CHECKED (`lamp`), the same face
-//              (Cool Edit draws them alike, the window group's checked cases
-//              and the zoom button's press on his captures): black on the
-//              top row and left column, the case's last shadow tone inside
-//              it, the ramp on the seat one line further in, the case's
-//              highlight on the bottom row and right column, mitred against
-//              the black (2026-10-21; Cool Edit's 808080 and F8F8F8 until
-//              then); the glyph at (+2, +2) — a word or a cap one line
-//              right and down of its rest place, the answer below.
-//   DISABLED — the face its state gives, the glyph EMBOSSED (the caller's
-//              icons::draw_cased_disabled — Cool Edit's own disabled art,
-//              its silhouette over a kCeDisabledLight copy of the drawing
-//              one icon unit right and down, with the product's rim inside
-//              the silhouette's top-left edges — the silhouette the case
-//              ramp's mean lightness times kCeDisabledShadowRatio and the
-//              rim black since 2026-10-21,
-//              icons.h's THE DISABLED GLYPH). A word or a cap on a case
-//              is never dead (a word button lives while its dialog
-//              stands; a key while its keyboard does).
-//   HOT      — none: Cool Edit's toolbar has no hover face (program_spec.h's
-//              case_hot_face).
-// Answers the glyph's shift in device px (one line when down).
-int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down);
+// THE LED's STATE on a key: none drawn (the scrub's thumb, the on-screen
+// keyboard's keys — a typing key carries no lamp), a dead lamp, or lit in
+// THE ACCENT (materials::accent_color).
+enum class GuiKeyLed { None, Unlit, Lit };
 
-// (THE TOOLBAR BAND'S GROUND, ITS PANES AND DARK COLUMNS, THE DOCK BAR AND
-// ROW 8'S BARS — paint_ce_band_ground, paint_ce_pane,
-// paint_ce_band_dark_column, paint_ce_dock_bar and ce_row8_bar_w_px,
-// 2026-10-09 to 2026-10-22 — ARE REMOVED with the strokes they drew,
-// architect 2026-10-22, the simple layout: the band and row 8 are the plain
-// wood, program_spec.h's head.)
+// THE LED'S RECT on the key `r` (the frame of record's 6 x 3 device px at
+// 300 %, make_pivot4.key): 2 x 1 W (scaled_px), its left edge 2 W right of
+// the key's left outline column and its bottom edge 2 W above the outline's
+// bottom row — rows y1 − 9 .. y1 − 7 and columns x0 + 6 .. x0 + 11 at 300 %
+// (x0, y1 the outline's left column and bottom row), the mock's own place.
+// Empty on a key too small to hold it.
+GuiRect key_led_rect(const GuiRect& r);
+
+// ONE KEY on `r`, w x h (the band's, row 8's and the render player's
+// icon_case_w_px square; a word button's or a keyboard key's own box) —
+// BLANK, NO GLYPH (architect 2026-10-23: "there's no icons in these
+// consoles … just a little label underneath"):
+//   REST     — the flat face kKeyFace; a ONE-DEVICE-PX black outline on all
+//              four sides (hairline_px); inside it the light top edge, row 1
+//              kKeyTopLight and row 2 the mean of it and the face; a foot of
+//              two rows kKeyFoot (the last two rows inside the outline) and
+//              a right column kKeyFoot (the last column inside it) — the key
+//              stands proud (make_pivot1.push_buttons' order: the top rows,
+//              the foot, the right column over both).
+//   PRESSED  — a live press arm (the glass's or the mouse's) or a keyboard
+//              key's armed state: the face kKeyFacePressed and the top rows,
+//              the foot and the right column painted as that face (the key
+//              is down, no edge left standing), the outline and the LED
+//              unchanged, nothing shifted.
+//   CHECKED  — THE LED LIT, the key otherwise as its press state gives.
+//   DISABLED — the key as its state gives; the caller dims the legend
+//              (kDimInk).
+//   HOT      — none.
+// THE LED (key_led_rect) per `led`. paint_key takes a lit key from the
+// bake's patch, its glow composited there (materials::paint_lit_key), and
+// paints it plain where no patch holds the size; paint_key_plain is the
+// painter itself, the bake's own road to a patch.
+void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
+void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
+
+// -- THE QUAVER (architect 2026-10-23; his pick of an outline pending) --------
+
+// THE QUAVER — the caption's icon and the lists' row glyph — the one seat
+// a picked outline will replace: make_sheet2.vec_mock()'s geometry (option
+// 2, the antialiased vector of the mock), in a cell s x h at (x, y), s =
+// `size_px` and h = s · 40 / 34 (the caption's 34 x 40 cell; the lists' 22
+// x 26 the same proportion): the head an axis-aligned ellipse, rx .22 s and
+// ry .15 s, centred at (.35 s, .72 h); the stem 1.6 device px wide (butt
+// caps) from the head's centre-right rising .62 s; the flag one cubic from
+// the stem's top toward (stem + .22 s, top + .18 s) and on to (stem + .26 s,
+// top + .40 s), 1.6 px, round caps — `ink` its one color.
+void paint_quaver(cairo_t* cr, double x, double y, double size_px,
+                  GuiColor ink);
 
 // -- THE TIME FIELD AND THE LABEL -------------------------------------------------
 
-// THE DARK TIME FIELD on `field` (METRICS §5.4): the `dark` line on its
-// top row and left column, BLACK inside (materials.h's kTimeFieldGround,
-// 2026-10-21; Cool Edit's `mid` tone until then), the `light` line on its
-// bottom row and right column, the ring mitred, the two the scope's
-// material's: ROW 8'S CLOCK the program ring's `ce_dark` / `ce_hilight` on
-// the wood (architect 2026-10-22, the simple layout — the clock's ring), the
-// render player's two fields the field's own `ce_field_dark` /
-// `ce_field_light`, flat.
-// Its digits are the caller's, in the clocks' own E6D5A8 (kTimeFieldDigits,
-// materials.h's INKS: the words' ink 2026-10-21, left on the clocks when the
-// words took the bone 2026-10-22; the amber F0B030 that morning, Cool Edit's
-// never-swapping light text, `ce_field_text`, before).
+// THE TIME FIELD on `field` (architect 2026-10-23, "symmetrical and much
+// tighter … white"): BLACK inside (kTimeFieldGround) under a ONE-DEVICE-PX
+// SUNKEN RING — `dark` on its top row and left column, `light` on its
+// bottom row and right column, mitred — the ring tones off the ground's mean
+// (the palette's `ce_dark` / `ce_hilight`). Its digits are the caller's, the
+// bone kBoneInk at the body's 22 px, centred on both axes (render.h's
+// time_field_* accessors own the 40-px height and the 12-px pads).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field, GuiColor dark,
                          GuiColor light);
-// A PANEL LABEL (METRICS §6) — row 8's state line, its one reader: `run`
-// in THE CHROME'S ONE INK, the bone kBoneInk (2026-10-22; architect 2026-10-21: the GitHub
-// message "in plain white on the same wooden surface — inconsistent"; the
-// palette's `ce_label` until then) with `ce_label_shadow` under it one line
-// right and down — the dark tone on a dark Face, past the label threshold
-// Cool Edit's hilight (2026-10-10, cool_edit_derive.h's label_shadow).
+// A PANEL LABEL — row 8's state line, its one reader: `run` in the bone
+// kBoneInk, no shadow (the frame of record draws none, 2026-10-23; the
+// panel label's shadow pair stood 2026-10-10 to 2026-10-23).
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline);
 

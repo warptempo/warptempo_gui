@@ -103,25 +103,10 @@ public:
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
 
-    // THE BUNDLED MATERIALS' FILES (architect 2026-10-21, the fortepiano
-    // chrome; materials.h's head) — the materials of assets/tiles/, one flat
-    // drop folder, READ BY NAME (2026-10-21: a launch read every file whole,
-    // 47 MB on the laptop twice over, the masters' bytes though a cover
-    // stood): bundled_tile_names lists every regular file of the folder
-    // whose name ends `.png` or `.jpg` (a symlink as the file it names),
-    // and bundled_tile_bytes reads ONE of them in one sized read — its first
-    // `limit` bytes, or the whole file under the default — the path compiled
-    // in (WARPTEMPO_BUNDLED_TILES_DIR, CMakeLists.txt), the APK's `tiles/`
-    // assets on the tablet. THE ERROR ARMS' PRODUCERS: a folder that will not
-    // list and a file that will not open or read whole (the repository moved
-    // under a built executable; IO), with the system's words. Read by
-    // materials.cpp alone — the launch's check (each file's header prefix)
-    // and every bake (the one file each material's source is), the bake's
-    // three threads at once: both are reentrant, each call its own handle.
-    static std::expected<std::vector<std::string>, std::string>
-        bundled_tile_names();
-    static std::expected<std::string, std::string> bundled_tile_bytes(
-        const std::string& name, std::size_t limit = SIZE_MAX);
+    // (THE BUNDLED MATERIALS — bundled_tile_names / bundled_tile_bytes, the
+    // fortepiano chrome's assets/tiles/ read by name, 2026-10-21 to
+    // 2026-10-23 — are retired with the bundle: the hi-fi skin's ground is
+    // procedural, materials.h's head.)
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
@@ -634,9 +619,8 @@ public:
     // knows whether the machine it runs on has keys; a preference would let
     // the laptop grow a surface with no reason to exist, and the glass has no
     // choice to offer. STATIC (2026-10-22): a fact of the backend compiled
-    // in, so the materials' bake, which holds no platform, asks it too —
-    // the keys' ebony patches are baked only where a keyboard is ever
-    // painted (word_and_key_case_rects, paint_handler.h).
+    // in (the materials' bake asked it for the keys' ebony patches,
+    // 2026-10-22 to 2026-10-23).
     static bool wants_onscreen_keyboard();
 
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD — the road

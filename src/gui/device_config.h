@@ -78,17 +78,14 @@
 //                            road; a harmless redundancy and a sanity
 //                            check ("the tablet should never pull [but to
 //                            recover], and the laptop should never push")
-//   bevel_light=<percent>  THE FORTEPIANO CHROME'S TWO BEVEL WEIGHTS
-//   bevel_dark=<percent>     (architect 2026-10-21), a TUNING PHASE: an integer
-//                            [0, 400], 100 Cool Edit's tone rule exactly;
-//                            every LIGHTER-than-Face tone's per-channel factor
-//                            f on a material becomes 1 + (f − 1)·p / 100 with
-//                            p the light key, every darker one's the same
-//                            with the dark key (materials.h's BEVEL KEYS);
-//                            each with a Settings row, applied live at OK
-//                            (the solid tones recomputed, never a bake), both
-//                            templates writing 100; the keys leave when he
-//                            settles the values, which become constants
+//   (bevel_light=<percent>, bevel_dark=<percent>, THE FORTEPIANO CHROME'S
+//                            two bevel weights, tuning keys with Settings
+//                            rows 2026-10-21 to 2026-10-23, RETIRED with that
+//                            chrome — the hi-fi skin's rings are the two ring
+//                            tones off the ground's mean, materials.h; an old
+//                            line is the ordinary unknown-key hard fail, the
+//                            planner editing both devices' configs at the
+//                            install)
 //   strip_pad=<W>            THE STRIP PAD (architect 2026-10-22, the simple
 //                            layout), a TUNING PHASE: an integer in Windows
 //                            px [1, 40], the band's and row 8's air above and
@@ -99,6 +96,17 @@
 //                            GuiInputHandler::apply_strip_pad), both
 //                            templates writing 13; the key leaves when he
 //                            settles the value, which becomes a constant
+//   led_glow=<px>            THE LIT LED'S GLOW (architect 2026-10-23, "agree
+//                            to all"), a TUNING PHASE: an integer in DEVICE
+//                            px [0, 32], the halo's reach past the LED's rect
+//                            baked into the lit key's patch (materials.h's
+//                            set_led_glow), 0 none. OPTIONAL — THE ONE KEY
+//                            NOT REQUIRED (the brief's ruling: an absent line
+//                            is 4, kDefaultLedGlowPx), the writer always
+//                            naming it; a Settings row "LED Glow", applied at
+//                            OK by ONE BAKE (GuiInputHandler::apply_led_glow,
+//                            the bake rule's one Settings-OK exception,
+//                            recorded at materials.h's BAKE RULE)
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
@@ -369,24 +377,22 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
-    // THE BEVEL WEIGHTS (2026-10-21, the head's list): required; 100 and
-    // 100 the templates' and the construction state's.
-    int         bevel_light = 100;
-    int         bevel_dark  = 100;
     // THE STRIP PAD (2026-10-22, the head's list): required; 13 the
     // templates' and the construction state's.
     int         strip_pad   = 13;
+    // THE LED GLOW (2026-10-23, the head's list): OPTIONAL, absent the
+    // default; device px.
+    int         led_glow    = 4;
 };
 
-// THE BEVEL KEYS' RANGE — the one owner, the reader's and the settings
-// editor's (the scale's shape): an integer percent in [0, 400] — 0 a flat
-// material, 100 the tone rule exactly, 400 four times its departure from the
-// Face (a tuning range, the head's list).
-inline constexpr bool is_bevel_percent(int64_t v) {
-    return v >= 0 && v <= 400;
+// THE LED GLOW'S DEFAULT AND RANGE — the one owner, the reader's and the
+// settings editor's: an integer in device px [0, 32], 0 none, absent 4.
+inline constexpr int kDefaultLedGlowPx = 4;
+inline constexpr bool is_led_glow(int64_t v) {
+    return v >= 0 && v <= 32;
 }
-inline constexpr const char* kBevelGrammarReason =
-    "must be an integer in [0, 400] in canonical spelling";
+inline constexpr const char* kLedGlowGrammarReason =
+    "must be an integer in [0, 32] in canonical spelling";
 
 // THE STRIP PAD'S RANGE — the one owner, the reader's and the settings
 // editor's (the scale's shape): an integer in Windows px, [1, 40] — 40 well
@@ -697,9 +703,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // the settings editor's ONE device-key body, which serves six keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
-// `true_colors=`, `bevel_light=` and `bevel_dark=` (`text_shadow=` beside
-// them until 2026-10-22), and since 2026-10-22 `strip_pad=`, whose arm hands
-// the live apply to GuiInputHandler::apply_strip_pad
+// `true_colors=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
+// 2026-10-23, `text_shadow=` until 2026-10-22), since 2026-10-22
+// `strip_pad=`, whose arm hands the live apply to
+// GuiInputHandler::apply_strip_pad, and since 2026-10-23 `led_glow=`, whose
+// arm hands its bake to GuiInputHandler::apply_led_glow
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
@@ -719,8 +727,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=cool-edit-default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on`, `bevel_light=100`,
-// `bevel_dark=100` and `strip_pad=13` (the struct's own values) and no role
+// required since 2026-10-14), `true_colors=on`, `strip_pad=13` and
+// `led_glow=4` (the struct's own values) and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

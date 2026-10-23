@@ -86,9 +86,10 @@
 // B ≈ 0, tinted by hue alone). The default-scheme constants they replace
 // missed the other Faces by 19–34. NOT FOLLOWING FACE (cool_edit_paint.h's
 // constants): the black outer line and the pressed and checked rings,
-// byte-identical on every captured Face (§4a, METRICS §1.5) — on the ebony
-// the rings' two light tones are the case's own since 2026-10-21
-// (paint_ce_case).
+// byte-identical on every captured Face (§4a, METRICS §1.5). (THE CASE'S
+// FITS BELOW ARE THE PROGRAM'S HISTORY since 2026-10-23: the hi-fi skin's
+// keys are flat constants, cool_edit_paint.h's paint_key; the fits stay as
+// the record their static_asserts prove.)
 //
 // THE TEXT TONES (2026-10-10; tmp/research/cool_edit/METRICS_PRESETS_1010.md,
 // eleven captures over nine Faces, §2–§3): Cool Edit's PROGRAM TEXT — the
@@ -524,7 +525,7 @@ constexpr uint32_t case_tone(const CaseTone& t, uint32_t face) {
     return tone(face, t.a, t.b, t.c);
 }
 // THE FACE RAMP — ONE STOP PER W ROW OF THE 20-W GLYPH SEAT, top to bottom
-// (cool_edit_paint.h's paint_ce_case), each row's worst miss over the twelve
+// (the program case's, 2026-10-09 to 2026-10-23; the record), each row's worst miss over the twelve
 // other captured Faces at its right.
 inline constexpr std::array<CaseTone, 20> kCaseRamp = {{
     {0.18050, 0.92600, 1.28000, 0xFEFEFE},   //  0   5.3

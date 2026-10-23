@@ -157,14 +157,15 @@ shopt -s nocaseglob
 #      waveform= line already stands), a waveform= line added with the default
 #      (waveform=cool-edit-default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
-#      tuning lines (bevel_light=100, bevel_dark=100 and strip_pad=13,
-#      TUNING_LINES below; the bevels 2026-10-21, the strip pad 2026-10-22;
-#      text_shadow= retired 2026-10-22) and the true_colors=on
+#      tuning line (strip_pad=13, TUNING_LINES below; the strip pad 2026-10-22;
+#      text_shadow= retired 2026-10-22, bevel_light= and bevel_dark= retired
+#      2026-10-23 with the hi-fi skin) and the true_colors=on
 #      line (TRUE_COLORS_LINE below; 2026-10-21) the same way, and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
 #      the thirteen colour keys that left 2026-10-04 when every colour became
 #      a role of a theme file (theme_level and the twelve program colour keys),
-#      and caption, which left 2026-10-21 with the built-in captions
+#      caption, which left 2026-10-21 with the built-in captions, and the
+#      two bevel keys, which left 2026-10-23 with the fortepiano chrome
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is kept.
 #   6. the audio, exactly as `warptempo_sync tt all`.
 #   7. the directories adb made are opened to the app (below), and the app started.
@@ -203,10 +204,11 @@ ROLE_LINE="role=author"
 # 2026-10-14; src/gui/palette_file.h's kGuiDefaultPaletteKey): added only where
 # the tablet's file has neither a waveform= line nor a chrome= line to rename.
 WAVEFORM_LINE="waveform=cool-edit-default"
-# THE TUNING KEYS AND THEIR FIRST-RUN VALUES (the bevels 2026-10-21, the
-# strip pad 2026-10-22; src/gui/device_config.h): each added only where the
-# tablet's file has no line.
-TUNING_LINES="bevel_light=100 bevel_dark=100 strip_pad=13"
+# THE TUNING KEY AND ITS FIRST-RUN VALUE (the strip pad 2026-10-22;
+# src/gui/device_config.h; the hi-fi skin's led_glow is optional, absent = 4,
+# so setup writes no line for it): added only where the tablet's file has no
+# line.
+TUNING_LINES="strip_pad=13"
 # THE sRGB -> DISPLAY-P3 SWITCH, a required key since 2026-10-21 (the Settings
 # menu's True Colors row made a key; src/gui/device_config.h), on on both
 # devices: added only where the tablet's file has no line.
@@ -216,15 +218,16 @@ TRUE_COLORS_LINE="true_colors=on"
 # migration; src/gui/device_config.h records each): sync_path, struck; the
 # thirteen colour keys that left 2026-10-04 when every colour became a role of a
 # theme file -- theme_level (the dropped dark level) and the twelve program
-# colour keys; and caption, which left 2026-10-21 with the built-in captions
+# colour keys; caption, which left 2026-10-21 with the built-in captions
 # (chrome, renamed waveform the same day, is renamed in place by step 5, not
-# removed).
+# removed); and bevel_light and bevel_dark, the fortepiano chrome's tuning
+# keys, which left 2026-10-23 with it.
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected
               invalid_face invalid_face_selected invalid_label
               playhead_head playhead_stem
-              caption)
+              caption bevel_light bevel_dark)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }

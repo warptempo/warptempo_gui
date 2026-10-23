@@ -28,10 +28,7 @@ The act drawings are read from `assets/icons/`; the others are standalone SVGs i
 each extracted from the adwaita-icon-theme 3.22.0 tarball at its 48 slot by `extract_style_tile.py` (the product's
 own extractor, `tools/icon_set_adwaita_322/extract.py`, its drop shadows removed by id). A replacement tile is a
 new row there, a new entry in `dark_outlines.py`'s `TILES`, and a look at the rebuilt sheet: twelve firm outlines,
-no interior line gone black, no shadow. THE STAR IS OLD BRASS (architect 2026-10-21, the set's materials below): Tango's
-glossy gold star is re-tinted in the treatment, never in its extracted file — `dark_outlines.py`'s `RECOLOR` maps its
-twelve yellows by one rule (`brass`: the hue toward brass, the saturation reduced, the lightness lowered), its white
-glints and black untouched, before the outline pass, so its outline inks from the brass.
+no interior line gone black, no shadow. THE STAR IS GOLD AS EXTRACTED (architect 2026-10-23: the metal is never darkened): Tango's glossy gold star (status/starred's 48 slot) enters the sheet untouched, the model for the brass arrows' color, its outline inked by the ordinary pass.
 
 ## (b) The prompt
 
