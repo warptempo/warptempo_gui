@@ -124,10 +124,10 @@ uint32_t word_of(GuiColor c) {
 // window bakes once no size change has arrived for this long.
 constexpr auto kBakeSettle = std::chrono::milliseconds(150);
 
-// ONE LIT KEY'S PATCH (materials.h's LIT KEYS): its size, rest or pressed.
+// ONE LIT KEY'S PATCH (materials.h's LIT KEYS): its size; a lit key is
+// always down (cool_edit_paint.h's paint_key), so one patch a size.
 struct LitPatch {
     int  w = 0, h = 0;
-    bool pressed = false;
     Tile tile;
 };
 
@@ -626,63 +626,67 @@ std::size_t bytes_of_surface(cairo_surface_t* s) {
 }
 
 // THE LIT KEYS' PATCHES (materials.h's LIT KEYS and set_led_glow): for
-// every size, rest and pressed, the key painter's own lit key at the
-// origin, then THE GLOW composited over its pixels inside its outline — the
-// accent at alpha .35 at the LED rect's edge falling off as (1 − d / glow)²
-// to 0 at `glow` px out, d the pixel's distance from the rect — and the LED
-// painted over it again. In the window's bytes: the painter converts its own
-// colors (set_palette_source), the glow's accent converted here.
+// every size the key painter's own lit key at the origin — DOWN, a lit key
+// being a key down (architect 2026-10-23; cool_edit_paint.h's paint_key):
+// the wall's one-device-px band inside the outline's top row and left
+// column, the LED one device px right and down — then THE GLOW composited
+// over the face inside the wall and the outline, round THE MOVED LED's rect
+// (key_led_rect with `down`) — the accent at alpha .35 at the rect's edge
+// falling off as (1 − d / glow)² to 0 at `glow` px out, d the pixel's
+// distance from the rect — the LED's own pixels left as painted. In the
+// window's bytes: the painter converts its own colors (set_palette_source),
+// the glow's accent converted here.
 void rebuild_lit_patches() {
     State& s = state();
     s.lit.clear();
     const GuiColor accent = display_color(hex(s.accent));
     const double ar = accent.r * 255.0, ag = accent.g * 255.0, ab = accent.b * 255.0;
     constexpr double kGlowPeak = 0.35;
-    for (const auto& [w, h] : s.lit_sizes)
-        for (const bool pressed : {false, true}) {
-            cairo_surface_t* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-            cairo_t* cr = cairo_create(surf);
-            const GuiRect r{0, 0, w, h};
-            paint_key_plain(cr, r, pressed, GuiKeyLed::Lit);
-            cairo_destroy(cr);
-            const GuiRect led = key_led_rect(r);
-            if (g_led_glow > 0 && led.w > 0 && led.h > 0) {
-                cairo_surface_flush(surf);
-                unsigned char* data = cairo_image_surface_get_data(surf);
-                const int stride = cairo_image_surface_get_stride(surf);
-                const double glow = static_cast<double>(g_led_glow);
-                for (int y = 1; y < h - 1; ++y) {
-                    auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
-                    for (int x = 1; x < w - 1; ++x) {
-                        // The pixel's centre's distance from the rect.
-                        const double px = x + 0.5, py = y + 0.5;
-                        const double dx = std::max({static_cast<double>(led.x) - px, 0.0,
-                                                    px - static_cast<double>(led.x + led.w)});
-                        const double dy = std::max({static_cast<double>(led.y) - py, 0.0,
-                                                    py - static_cast<double>(led.y + led.h)});
-                        const double d = std::sqrt(dx * dx + dy * dy);
-                        if (d <= 0.0 || d >= glow) continue;
-                        const double t = 1.0 - d / glow;
-                        const double a = kGlowPeak * t * t;
-                        const uint32_t p = row[x];
-                        const auto mix = [&](int c, double target) {
-                            return static_cast<uint32_t>(std::clamp(
-                                std::nearbyint((1.0 - a) * channel(p, c) + a * target),
-                                0.0, 255.0));
-                        };
-                        row[x] = 0xFF000000u | (mix(0, ar) << 16) | (mix(1, ag) << 8) |
-                                 mix(2, ab);
-                    }
+    // The face's first row and column: past the outline and the wall.
+    const int face0 = 2 * hairline_px();
+    for (const auto& [w, h] : s.lit_sizes) {
+        cairo_surface_t* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+        cairo_t* cr = cairo_create(surf);
+        const GuiRect r{0, 0, w, h};
+        paint_key_plain(cr, r, /*down=*/true, GuiKeyLed::Lit);
+        cairo_destroy(cr);
+        const GuiRect led = key_led_rect(r, /*down=*/true);
+        if (g_led_glow > 0 && led.w > 0 && led.h > 0) {
+            cairo_surface_flush(surf);
+            unsigned char* data = cairo_image_surface_get_data(surf);
+            const int stride = cairo_image_surface_get_stride(surf);
+            const double glow = static_cast<double>(g_led_glow);
+            for (int y = face0; y < h - 1; ++y) {
+                auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+                for (int x = face0; x < w - 1; ++x) {
+                    // The pixel's centre's distance from the rect.
+                    const double px = x + 0.5, py = y + 0.5;
+                    const double dx = std::max({static_cast<double>(led.x) - px, 0.0,
+                                                px - static_cast<double>(led.x + led.w)});
+                    const double dy = std::max({static_cast<double>(led.y) - py, 0.0,
+                                                py - static_cast<double>(led.y + led.h)});
+                    const double d = std::sqrt(dx * dx + dy * dy);
+                    if (d <= 0.0 || d >= glow) continue;
+                    const double t = 1.0 - d / glow;
+                    const double a = kGlowPeak * t * t;
+                    const uint32_t p = row[x];
+                    const auto mix = [&](int c, double target) {
+                        return static_cast<uint32_t>(std::clamp(
+                            std::nearbyint((1.0 - a) * channel(p, c) + a * target),
+                            0.0, 255.0));
+                    };
+                    row[x] = 0xFF000000u | (mix(0, ar) << 16) | (mix(1, ag) << 8) |
+                             mix(2, ab);
                 }
-                cairo_surface_mark_dirty(surf);
             }
-            LitPatch lp;
-            lp.w = w;
-            lp.h = h;
-            lp.pressed = pressed;
-            lp.tile = make_tile(GuiRect{0, 0, w, h}, Surface(surf));
-            s.lit.push_back(std::move(lp));
+            cairo_surface_mark_dirty(surf);
         }
+        LitPatch lp;
+        lp.w = w;
+        lp.h = h;
+        lp.tile = make_tile(GuiRect{0, 0, w, h}, Surface(surf));
+        s.lit.push_back(std::move(lp));
+    }
 }
 
 // THE BAKE ITSELF (materials.h's BAKE RULE) for geometry `g`: the two
@@ -931,11 +935,11 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
     cairo_restore(cr);
 }
 
-bool paint_lit_key(cairo_t* cr, const GuiRect& r, bool pressed) {
+bool paint_lit_key(cairo_t* cr, const GuiRect& r) {
     const State& s = state();
     if (!s.baked) return false;
     for (const LitPatch& p : s.lit) {
-        if (p.w != r.w || p.h != r.h || p.pressed != pressed) continue;
+        if (p.w != r.w || p.h != r.h) continue;
         cairo_save(cr);
         cairo_matrix_t at;
         cairo_matrix_init_translate(&at, -static_cast<double>(r.x),

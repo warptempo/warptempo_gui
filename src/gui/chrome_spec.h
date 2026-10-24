@@ -5,9 +5,9 @@
 // the chrome follows, read by the chokepoint that paints each element, never
 // a literal at the painter. The colors are the materials' and the
 // palette's (materials.h, palette_file.h), the chrome inheriting Cool Edit's
-// tones (chrome_derive.h), the caption's ground and the Windows parts'
-// colors constants (render.h's caption block, 2026-10-22; the caption the
-// walnut 2026-10-21 to 2026-10-22); the spec chooses shapes and seats. It names NO FACE: the face is the product's
+// tones (chrome_derive.h), the caption's ground and inks constants
+// (render.h's caption block, the hi-fi skin 2026-10-23); the spec chooses
+// shapes and seats. It names NO FACE: the face is the product's
 // one (gui_font.h's gui_live_face_set), and no color (its own scheme, the
 // `caption` key's default, stood 2026-10-08..10-21 and left with the
 // captions).

@@ -199,10 +199,11 @@ enum class Icon {
                          // the set's media-playback-pause
     PlayerNext,          // the render player's Next — the set's
                          // media-skip-forward
-    // THE RENDER PLAYER'S HIGHLIGHT PAIR, ITS OWN (architect 2026-10-22):
-    // the classical set draws the player's family in polished steel and row
-    // 8's arrows in brass, so the pair no longer wears row 8's Down / Up.
-    // PNGs of the drop road alone, no Adwaita drawing beside them.
+    // THE RENDER PLAYER'S HIGHLIGHT PAIR, ITS OWN (architect 2026-10-22,
+    // when the classical icon set drew the player's family in polished
+    // steel and row 8's arrows in another metal): the pair does not wear row
+    // 8's Down / Up. PNGs of the drop road alone, no Adwaita drawing beside
+    // them; no key wears a glyph in the hi-fi skin (2026-10-23).
     PlayerDown,          // Highlight Next (the render player's down arrow)
                          // — the classical set's steel Player Down
     PlayerUp,            // Highlight Previous (the render player's up
@@ -268,12 +269,16 @@ enum class Icon {
                          // "drop the arrows altogether"; the double arrow of
                          // 2026-10-11 retired); a changed file of the set,
                          // its README
-    AppIcon,             // the caption's icon — Warp's baton, a symlink to
-                         // Warp.png, the program icon outside the window too
-                         // (a build product of this file since 2026-10-19:
-                         // android/app/build_apk.sh's launcher step, and the
-                         // Linux icon a link to it, docs/INSTALL.md); the
-                         // caption no longer wears it (Quaver below)
+    AppIcon,             // the program icon outside the window — the
+                         // caption's quaver since 2026-10-23, a symlink to
+                         // Quaver.svg (architect: "the new note glyph on the
+                         // caption's color"; Warp's baton, AppIcon.png ->
+                         // Warp.png, 2026-10-18 to 2026-10-23): the Android
+                         // launcher icon a build product of this file
+                         // (android/app/build_apk.sh's launcher step); the
+                         // Linux icon packaging/warptempo_gui.svg, a link to
+                         // Quaver.svg (docs/INSTALL.md). No painter draws
+                         // it; the caption wears Quaver below
     Quaver,              // the caption's icon (architect 2026-10-23, his
                          // pick row 4 of the caption sheet): the quaver,
                          // Gemini Argon's one-path conversion of the
@@ -292,8 +297,9 @@ inline constexpr int kIconCount = 61;
 // is a missing file at the next launch, which fails it. THE REPEATS ARE
 // SYMLINKS (architect 2026-10-19: "repeats should use symlinks"), relative,
 // inside the folder, the canonical file the act that owns the drawing:
-// AppIcon.png -> Warp.png, BpmIterations.svg -> WavRow.svg, WavRow.svg ->
-// Quaver.svg (2026-10-23), CardCritical.svg -> Cancel.svg, UpAFolder.svg ->
+// AppIcon.svg -> Quaver.svg (2026-10-23; AppIcon.png -> Warp.png until
+// then), BpmIterations.svg -> WavRow.svg, WavRow.svg -> Quaver.svg
+// (2026-10-23), CardCritical.svg -> Cancel.svg, UpAFolder.svg ->
 // FolderRow.svg and TransportPlay.svg -> Play.svg (the folder's README lists
 // them). Both bundle roads dereference a link (the laptop's
 // read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy), so the
@@ -435,15 +441,13 @@ void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h);
 // reach — a one-unit band inside the silhouette along its top-left edges,
 // so the shadow line falls down and to the right as the pressed case goes;
 // inside the silhouette because a dark copy peeking out up-left grew the
-// glyph. THE TONES ARE THE CASE'S SINCE 2026-10-21 (architect, "r1": the
-// constant 808080 read as a light gray blob on the ebony), and HIS OWN
-// NUMBERS since his pick v2 the same night: the silhouette at the case
-// ramp's mean lightness times 0.84 on the ebony's hue and saturation
-// (2A1E1C on the shipped ebony; Cool Edit's 0.502 / 0.809 = 0.620 the rule
-// it departs from), the rim black 000000 (the silhouette's times 0.625
-// until then), the light copy F8F8F8 unchanged
-// (materials::disabled_glyph_tones; the record at cool_edit_paint.h's
-// kCeDisabledShadow). The silhouette the
+// glyph. THE TONES ARE CONSTANTS since the hi-fi skin (2026-10-23;
+// materials::disabled_glyph_tones, the record at cool_edit_paint.h's
+// kCeDisabledShadow): the silhouette Cool Edit's 808080, the light copy
+// F8F8F8, the rim black 000000 (his pick of 2026-10-21); the silhouette
+// derived from the case's ramp 2026-10-21 to 2026-10-23 is git history. No
+// band key wears a glyph in the skin, so this is the emboss for a caller
+// that asks. The silhouette the
 // live raster's ALPHA MASK (the body gray where
 // the light copy overlaps it, the rim where it does not), the
 // light copy THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
@@ -461,9 +465,9 @@ void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h);
 // (+1) — over the case its painter already put down, so the case's own
 // damage covers it and nothing reaches a neighbor. Every dead glyph takes it
 // — the band, row 8, the history groups, the render player's transport, the
-// dialogs' cases. A disabled WORD keeps the chrome's own rule
-// (show_embossed_run, render.h: the same Windows emboss in the chrome's
-// roles); cue text keeps its fade (cool_edit_derive.h).
+// dialogs' cases. A disabled WORD is a dead key's legend, dimmed (kDimInk,
+// paint_key_legend; Windows' word emboss, show_embossed_run, retired
+// 2026-10-23); cue text keeps its fade (cool_edit_derive.h).
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
 
@@ -471,7 +475,8 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
 // Windows px (icon_case_lead_px — the spec's seat, the head's PLACEMENT)
 // from `case_x`/`case_y`, the case's own top-left corner, plus
 // `button_shift_px`, the button's pressed/checked shift (paint_roster_case's
-// `ButtonBoxFace::shift`, one line right and down). Every roster
+// `ButtonBoxFace::shift`, one device px right and down since 2026-10-23).
+// Every roster
 // button's glyph goes through here or draw_cased_disabled, so the seat has
 // one owner.
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,

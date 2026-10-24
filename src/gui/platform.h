@@ -51,12 +51,13 @@
 // geometry, the window's band outside it — so no client damage ever reaches
 // the sizing frame (the restored laptop's, or a band a chrome keeps on the
 // maximized window on both devices, window_frame_maximized). The band
-// paints in Windows 2000's Standard scheme, constants (render.h's caption
-// block, 2026-10-22), which no act of the app moves, so every repaint of it
-// rides the backend's own full damage (a configure or a window adoption).
-// Both backends implement it alike. (invalidate_surface, the whole
-// surface's damage the pre-paint hook asked for after a materials bake
-// while the band wore the brass, 2026-10-21 to 2026-10-22, is retired.)
+// paints transparent under one device px of the ring's light tone
+// (render.h's sizing-frame block, the hi-fi skin 2026-10-23), which no act
+// of the app moves, so every repaint of it rides the backend's own full
+// damage (a configure or a window adoption). Both backends implement it
+// alike. (invalidate_surface, the whole surface's damage the pre-paint hook
+// asked for after a materials bake while the band wore a material,
+// 2026-10-21 to 2026-10-22, is retired.)
 //
 // THE CANVAS FRAME (2026-10-13, the GPU canvas; canvas_sink.h owns the rule):
 // set_canvas_frame(list) names the GUI's one process-wide draw list

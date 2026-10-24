@@ -26,7 +26,8 @@
 // ramp, its rings and its glyph, 2026-10-09 to 2026-10-23, is git history.)
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as
-// an intention of a diagonal"; paint_relief_frame's head, render.cpp):
+// an intention of a diagonal"; the mitre's head at paint_hairline_frame,
+// render.cpp):
 // wherever a light tone meets a dark one at a ring's corner the corner block
 // is split along the 45-degree diagonal — the time field's ring, the view
 // bar's span, the program ring. A two-line staircase that is no ring — the
@@ -93,51 +94,75 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 enum class GuiKeyLed { None, Unlit, Lit };
 
 // THE LED'S RECT on the key `r` (the frame of record's 6 x 3 device px at
-// 300 %, make_pivot4.key): 2 x 1 W (scaled_px), its left edge 2 W right of
-// the key's left outline column and its bottom edge 2 W above the outline's
-// bottom row — rows y1 − 9 .. y1 − 7 and columns x0 + 6 .. x0 + 11 at 300 %
-// (x0, y1 the outline's left column and bottom row), the mock's own place.
-// Empty on a key too small to hold it.
-GuiRect key_led_rect(const GuiRect& r);
+// 300 %, make_pivot4.key): 2 x 1 W (scaled_px — an area, never a line), its
+// left edge 2 W right of the key's left outline column and its bottom row 2
+// W above the outline's bottom row — rows y1 − 8 .. y1 − 6 and columns
+// x0 + 6 .. x0 + 11 at 300 %, rows y1 − 3 and columns x0 + 3 .. x0 + 5 at
+// the laptop's 138 % (x0, y1 the outline's left column and bottom row), the
+// mock's own place. `down` the key's down geometry (paint_key's PRESSED
+// row): THE LED RIDES WITH THE FACE, one device px right and down
+// (hairline_px; architect 2026-10-23, "the LED doesn't seem to be moving …
+// that's not realistic") — x0 + 7 .. x0 + 12 on rows y1 − 7 .. y1 − 5 at
+// 300 %, x0 + 4 .. x0 + 6 on row y1 − 2 at 138 %. Empty on a key too small
+// to hold it at rest. The one owner of the seat: the painter and the bake's
+// glow read it.
+GuiRect key_led_rect(const GuiRect& r, bool down);
 
 // ONE KEY on `r`, w x h (the band's, row 8's and the render player's
 // icon_case_w_px square; a word button's or a keyboard key's own box) —
 // BLANK, NO GLYPH (architect 2026-10-23: "there's no icons in these
-// consoles … just a little label underneath"):
+// consoles … just a little label underneath"). THE KEY'S EDGES ARE DEVICE
+// PX BY DESIGN, never inherited Windows px (architect 2026-10-23, checked
+// on the glass: "deliberately set in device pixels"; render.h's line rule,
+// hairline_px): the outline, the light rows, the foot's two rows, the right
+// column and the down key's wall are each one device px a row or column at
+// every gui_scale; the key's box and the LED are areas (scaled_px).
 //   REST     — the flat face kKeyFace; a ONE-DEVICE-PX black outline on all
-//              four sides (hairline_px); inside it the light top edge, row 1
-//              kKeyTopLight and row 2 the mean of it and the face; a foot of
-//              two rows kKeyFoot (the last two rows inside the outline) and
-//              a right column kKeyFoot (the last column inside it) — the key
-//              stands proud (make_pivot1.push_buttons' order: the top rows,
-//              the foot, the right column over both).
-//   PRESSED  — a live press arm (the glass's or the mouse's) or a keyboard
-//              key's armed state: the face kKeyFacePressed and the top rows,
-//              the foot and the right column painted as that face (the key
-//              is down, no edge left standing), the outline unchanged,
-//              nothing shifted — AND THE LED LIT whatever the checked state
-//              (architect 2026-10-23: "I would expect the little light to
-//              turn on when pressed"; "make the LEDs flash when pressed.
-//              Flash meaning turn on, as long as the button is held"): a
-//              key carrying a lamp (Unlit or Lit) is lit for as long as the
-//              press arm stands and returns to its state at the lift — the
-//              band's, row 8's, the render player's and the word buttons'
-//              keys alike, through paint_key (a lampless key, None — the
-//              scrub's thumb, the keyboard's keys — stays lampless). THE
-//              PRESSED-AND-LIT FACE IS THE BAKE'S: the lit patches hold
-//              every key size pressed and at rest (materials.cpp's
-//              rebuild_lit_patches), so a held key is still one blit, its
-//              glow included.
-//   CHECKED  — THE LED LIT, the key otherwise as its press state gives.
+//              four sides; inside it the light top edge, row 1 kKeyTopLight
+//              and row 2 the mean of it and the face; a foot of two rows
+//              kKeyFoot (the last two rows inside the outline) and a right
+//              column kKeyFoot (the last column inside it) — the key stands
+//              proud (make_pivot1.push_buttons' order: the top rows, the
+//              foot, the right column over both).
+//   PRESSED  — THE KEY DOWN, ONE DEVICE PX RIGHT AND DOWN (architect
+//              2026-10-23, the pressed sheet's reading F: "one display
+//              pixel, because I thought that's what we were doing"): inside
+//              the unchanged outline a ONE-DEVICE-PX band of kKeyFoot along
+//              the top row and the left column — the hole's wall the sunken
+//              cap no longer hides — and the face kKeyFacePressed filling
+//              the rest; the light rows, the foot and the right column gone;
+//              THE LED one device px right and down with the face
+//              (key_led_rect's `down`), and whatever the key carries on its
+//              face rides with it (the keyboard's caps; a printed legend
+//              stands on the ground under the key and does not move). A
+//              live press arm (the glass's or the mouse's) or a keyboard
+//              key's armed state is down, AND THE LED LIT whatever the
+//              checked state (architect 2026-10-23: "I would expect the
+//              little light to turn on when pressed"; "make the LEDs flash
+//              when pressed. Flash meaning turn on, as long as the button is
+//              held"): a key carrying a lamp (Unlit or Lit) is lit for as
+//              long as the press arm stands and returns to its state at the
+//              lift — the band's, row 8's, the render player's and the word
+//              buttons' keys alike (a lampless key, None — the scrub's
+//              thumb, the keyboard's keys — stays lampless).
+//   CHECKED  — THE SAME GEOMETRY: THE KEY DOWN WITH ITS LED LIT (architect
+//              2026-10-23: "once I memorize the position of the buttons, I
+//              should be able to scan with the corner of my vision … by
+//              seeing which ones are pushed in"), so a press on a checked
+//              key changes nothing visible (the lit radio member swallows
+//              anyway). A lit LED IS a key down: paint_key reads `led` Lit
+//              as down whatever `pressed` says.
 //   DISABLED — the key as its state gives; the caller dims the legend
 //              (kDimInk).
 //   HOT      — none.
-// THE LED (key_led_rect) per `led`. paint_key takes a lit key from the
-// bake's patch, its glow composited there (materials::paint_lit_key), and
-// paints it plain where no patch holds the size; paint_key_plain is the
-// painter itself, the bake's own road to a patch.
+// THE LED (key_led_rect) per `led`. paint_key takes a lit key — always down
+// — from the bake's patch, its glow composited there round the moved LED
+// (materials::paint_lit_key; materials.cpp's rebuild_lit_patches), so a
+// held or checked key is still one blit, and paints it plain where no patch
+// holds the size; paint_key_plain is the painter itself, `down` the
+// geometry, the bake's own road to a patch.
 void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
-void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
+void paint_key_plain(cairo_t* cr, const GuiRect& r, bool down, GuiKeyLed led);
 
 // (THE QUAVER'S PAINTER — paint_quaver, make_sheet2.vec_mock()'s vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is

@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture (architect 2026-10-12; the baton since
-     2026-10-18): the conductor's baton, the caption's icon and the glyph
-     Warp wears, assets/icons/AppIcon.png (a symlink to Warp.png, 256 x 256
-     since 2026-10-19), resized by ImageMagick's Lanczos filter (the GUI's
-     own filter family) and centered over WHITE, FLAT (architect 2026-10-17): #FFFFFF, one color
-     over the whole canvas, so the mask shows a white shape carrying the
-     drawing (Windows Storm's caption start #800080 from 2026-10-16 until
-     then, the Cool Edit case's 20 face-ramp bands under Midnight's Face
-     from 2026-10-12 before it). An
+     recents card). Its picture (architect 2026-10-23: "the new note glyph
+     on the caption's color"): THE QUAVER, the caption's own icon,
+     assets/icons/AppIcon.svg (a symlink to Quaver.svg, bone F0F0F0 on a
+     34 x 40 viewBox), rendered by resvg at the art's height and centered
+     over THE CAPTION'S GROUND, FLAT: #141415 (render.h's kCaptionGround),
+     one color over the whole canvas, so the mask shows the caption's dark
+     shape carrying the note (the conductor's baton, AppIcon.png ->
+     Warp.png, over white #FFFFFF from 2026-10-17 to 2026-10-23; Windows
+     Storm's caption start #800080 from 2026-10-16, the Cool Edit case's 20
+     face-ramp bands under Midnight's Face from 2026-10-12 before it). An
      ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
@@ -17,23 +18,23 @@
      copy of res/ (architect 2026-10-19: the icon follows a dropped drawing
      with no step; the Linux desktop icon is the same drawing bare, a link
      into the repository, docs/INSTALL.md):
-       ic_launcher_background.png  the full 108 dp canvas flat in #FFFFFF;
-       ic_launcher_foreground.png  the drawing rendered at the 52 dp art size,
+       ic_launcher_background.png  the full 108 dp canvas flat in #141415;
+       ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
+                                   the viewBox's (44.2 dp for the quaver),
                                    centred on a transparent canvas of the
                                    density's full 108 dp.
 
      THE 66 dp SAFE ZONE: an adaptive foreground's art should sit inside the
      mask's guaranteed-visible inner circle, Android's own 66 dp of the 108 dp
-     canvas. The 48-unit drawing at 52 dp square (13/12 dp a unit; architect
-     2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp series on the
-     glass: at 64 dp the art filled ~86 % of the launcher's visible tile and
-     nearly touched its corners). The 52 dp square's own corners
-     (half-diagonal 36.8 dp) lie outside the 33 dp radius of that circle,
-     but they are empty: the baton's farthest ink (its tip, toward the
-     upper right corner) lies 29.1 of its 48 units, 31.5 dp, from the
-     center, inside the circle with 1.5 dp to spare. The same 52 dp
-     at every density (the per-density PNG pixel size scales with the density
-     factor f alone):
+     canvas. The art 52 dp tall (architect 2026-10-16, his pick off a 60 /
+     56 / 52 / 48 / 44 / 40 dp series on the glass: at 64 dp the art filled
+     ~86 % of the launcher's visible tile and nearly touched its corners):
+     the quaver's 40-unit viewBox at 1.3 dp a unit, 44.2 x 52 dp. Its
+     farthest ink (the head's lower left) lies 16.5 units, 21.4 dp, from the
+     viewBox's center, inside the 33 dp circle with 11.6 dp to spare. The
+     same 52 dp at every density (the per-density PNG pixel size scales with
+     the density factor f alone; the quaver's width 45 / 67 / 89 / 133 /
+     177 px, resvg rounding up):
 
        density  f    canvas C=108f  art 52f  offset (C-52f)/2
        mdpi     1    108            52       28
@@ -44,9 +45,11 @@
 
      A BUILD PRODUCT, NEVER COMMITTED: this file is the one tracked file of
      res/, and build_apk.sh writes the PNGs beside it in the package tree
-     (byte-stable, -strip) from whatever drawing AppIcon.png names at the
-     build. The safe-zone figure above is the baton's; a new drawing's ink
-     is its own. -->
+     (byte-stable, -strip) from whatever drawing AppIcon names at the build
+     (a dropped AppIcon.png wins over AppIcon.svg, the drop road's rule,
+     resized into the 52 dp square by ImageMagick's Lanczos filter). The
+     safe-zone figure above is the quaver's; a new drawing's ink is its
+     own. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

@@ -373,29 +373,6 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     cairo_fill(cr);
 }
 
-namespace {
-// A ring with SQUARE JOINS: the top and left in `top_left`, then the bottom
-// and right in `bottom_right` over them, owning the top-right and bottom-left
-// corner blocks — the one-colour frames' ring (no mitre to draw between one
-// tone and itself) and the mitre's fallback on a ring narrower or shorter
-// than two lines, whose two sides overlap (a thumb at its five-device-px
-// floor).
-void paint_square_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                       GuiColor bottom_right) {
-    const int lw = relief_line_px();
-    if (r.w <= 0 || r.h <= 0) return;
-    const int lx = std::min(lw, r.w);
-    const int ly = std::min(lw, r.h);
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, ly}, top_left);
-    paint_cell_rect(cr, GuiRect{r.x, r.y, lx, r.h}, top_left);
-    paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - ly, r.w, ly}, bottom_right);
-    paint_cell_rect(cr, GuiRect{r.x + r.w - lx, r.y, lx, r.h}, bottom_right);
-    cairo_restore(cr);
-}
-} // namespace
-
 // THE MITRE (architect 2026-10-06, overruling the planner's reading that
 // Windows' DrawEdge joins its edges squarely, the dark side owning the corner,
 // at every DPI: "Buttons don't have corners like that in real life. A perfect
@@ -403,12 +380,11 @@ void paint_square_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // smooth straight corner, not a pixelated corner. ... Anything the original
 // designers would have drawn with a diagonal if they could, we should." — THE
 // CHROME IS SCALABLE). At the TOP-RIGHT and BOTTOM-LEFT corner blocks, where
-// the top-left tone meets the bottom-right tone, each relief_line_px() square
-// is split along its diagonal from the ring's outer corner to its inner
-// corner, the top-left tone on the half toward the top and left edges, the
-// bottom-right tone on the half toward the bottom and right; the two-line
-// edges' two rings nest, so their diagonals run on as one 45-degree line from
-// the outer corner to the innermost. The top-left and bottom-right corners
+// the top-left tone meets the bottom-right tone, each line's square (one
+// device px, render.h's line rule, since 2026-10-23) is split along its
+// diagonal from the ring's outer corner to its inner corner, the top-left
+// tone on the half toward the top and left edges, the bottom-right tone on
+// the half toward the bottom and right. The top-left and bottom-right corners
 // are one tone already and stay square. THE FILLS: the top-left tone is ONE
 // square L (the top row and the left column, both corner blocks whole),
 // unantialiased; the bottom-right tone ONE mitred L over it (the bottom row
@@ -421,17 +397,6 @@ namespace {
 void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                        GuiColor bottom_right, int lw);
 } // namespace
-
-void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                        GuiColor bottom_right) {
-    const int lw = relief_line_px();
-    if (r.w <= 0 || r.h <= 0) return;
-    if (r.w < 2 * lw || r.h < 2 * lw) {
-        paint_square_ring(cr, r, top_left, bottom_right);
-        return;
-    }
-    paint_mitred_ring(cr, r, top_left, bottom_right, lw);
-}
 
 // THE HAIRLINE RING (render.h's line rule, 2026-10-23): the same mitred
 // ring, its lines ONE DEVICE PX.
@@ -479,33 +444,16 @@ void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 }
 } // namespace
 
-namespace {
-// THE TWO-LINE EDGE (DrawEdge): the outer ring on the rect, the inner ring on
-// the rect inset one relief line.
-void paint_relief_edge(cairo_t* cr, const GuiRect& r, GuiColor outer_tl,
-                       GuiColor outer_br, GuiColor inner_tl,
-                       GuiColor inner_br) {
-    const int lw = relief_line_px();
-    paint_relief_frame(cr, r, outer_tl, outer_br);
-    paint_relief_frame(cr, GuiRect{r.x + lw, r.y + lw, r.w - 2 * lw,
-                                   r.h - 2 * lw},
-                       inner_tl, inner_br);
-}
-} // namespace
-
-void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r) {
-    paint_relief_edge(cr, r, palette().shadow, palette().hilight, palette().dk_shadow,
-                      palette().light_3d);
-}
+// (THE RELIEF FAMILY — paint_relief_frame, the two-line paint_relief_edge,
+// paint_relief_plain_sunken and paint_relief_line_frame, every line one
+// scaled Windows px (relief_line_px) — went 2026-10-23 with the hairline
+// sweep: render.h's line rule; the view bar's span, their last wearer,
+// takes paint_hairline_frame.)
 
 // (THE WINDOWS PARTS' EDGES — paint_windows_soft_raised, _soft_sunken and
 // _plain_raised in Windows 2000's Standard quartet, the caption buttons' and
 // the sizing frame's, 2026-10-22 to 2026-10-23 — left with those parts: the
 // hi-fi skin's caption and border are render.h's caption block.)
-
-void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
-    paint_square_ring(cr, r, c, c);
-}
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): a key at rest,
 // no LED, on its box.
@@ -517,10 +465,12 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
 // -- THE SIZING FRAME (architect 2026-10-05; the rule at the declaration) ----
 
 int window_frame_px() {
-    // The spec's relief lines round Windows' two W of face (the
-    // declaration): 2 + 2.
-    return live_chrome_spec().window_frame_lines * relief_line_px() +
-           scaled_px(kWindowFramePx - 2 * kReliefLinePx, 0);
+    // AN AREA, the grab band (the declaration): the spec's two one-W slots
+    // where Windows' relief lines stood, each its own rounded part, round
+    // Windows' two W of face — 2 + 2, the band's composite unchanged since
+    // its lines left it (2026-10-23).
+    return live_chrome_spec().window_frame_lines * scaled_px(1, 1) +
+           scaled_px(kWindowFramePx - 2, 0);
 }
 
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
@@ -1329,10 +1279,11 @@ void render_trim_flags(cairo_t* cr,
     // it; a side lying farther off than one quantum is held there, outside
     // the clip, so the rect stays in cairo's range at any zoom): the ink's
     // body, its top row and left column the light bevel, its bottom row and
-    // right column the dark one, the two MITRED at the top-right and
-    // bottom-left corner blocks (architect 2026-10-09 ~12:40, the diagonal
-    // rule reaching the program: cool_edit_paint.h's head;
-    // paint_relief_frame).
+    // right column the dark one, each ONE DEVICE PX (render.h's line rule,
+    // the sweep of 2026-10-23; one scaled W until then), the two MITRED at
+    // the top-right and bottom-left corner blocks (architect 2026-10-09
+    // ~12:40, the diagonal rule reaching the program: cool_edit_paint.h's
+    // head; paint_hairline_frame).
     const int span_lo = std::max(bc.col, -lw);
     const int span_hi = std::min(ec.col + 1, lane_w + lw);
     if (span_hi > span_lo && field_h > 0) {
@@ -1340,8 +1291,8 @@ void render_trim_flags(cairo_t* cr,
         const int sw = span_hi - span_lo;
         paint_cell_rect(cr, GuiRect{sx, field_y, sw, field_h},
                         pal.waveform_ink);
-        paint_relief_frame(cr, GuiRect{sx, field_y, sw, field_h},
-                           pal.ce_span_hilight, pal.ce_span_shadow);
+        paint_hairline_frame(cr, GuiRect{sx, field_y, sw, field_h},
+                             pal.ce_span_hilight, pal.ce_span_shadow);
         // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we
         // agreed no dots on the trim bar"; the mock of record draws none):
         // Cool Edit's period-2 cursor column over its span (METRICS §3) is
@@ -2805,17 +2756,6 @@ void install_true_colors(bool on) {
     ++g_palette_generation;
 }
 
-void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
-                       double x, double baseline) {
-    // Windows' DSS_DISABLED (render.h's declaration): the Hilight copy one
-    // line right and down, the Shadow copy over it.
-    const double off = static_cast<double>(relief_line_px());
-    set_palette_source(cr, palette().hilight);
-    text_shape::show_shaped_run(cr, run, x + off, baseline + off);
-    set_palette_source(cr, palette().shadow);
-    text_shape::show_shaped_run(cr, run, x, baseline);
-}
-
 // -- The flag editor's unrolled box ---------------------------------------
 
 // WHERE ONE SEGMENT'S BOX STANDS on the committed label, as an offset from
@@ -2942,13 +2882,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the right of this one ride the edge. There was no fixed-width grammar to
     // pin a bound field to in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
-    // The pad and the caret are both one quantum (2026-10-09, the cue's
-    // label: the fill 1 W past the text's end), so the borrow takes the whole
-    // pad: the viewport ends on the box's own right edge and the caret's
-    // column is the box's last fill column — visible ink, not a lost one, so
-    // the travel arithmetic below needs no floor of its own. The TEXT
-    // VIEWPORT is what widens by the borrowed column; the box never does.
-    const int caret_px = u;
+    // The pad is one quantum (2026-10-09, the cue's label: the fill 1 W past
+    // the text's end) and THE CARET ONE DEVICE PX (render.h's line rule, the
+    // sweep of 2026-10-23; one quantum until then, the borrow then taking
+    // the whole pad), so the borrow takes the caret's column out of the
+    // right pad: a caret at end-of-text stands in the pad's first column,
+    // inside the box — visible ink, not a lost one, so the travel
+    // arithmetic below needs no floor of its own. The TEXT VIEWPORT is what
+    // widens by the borrowed column; the box never does.
+    const int caret_px = std::min(hairline_px(), pad_r);
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
     // THE BOX IS ITS TWO PADS AND ITS RUN, AND NO WIDTH RULE BOUNDS IT — not
@@ -3043,9 +2985,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // WHERE THE BORROW IS SPENT, on every kind: the viewport reaches one column
     // INTO the right pad — the column the box above deliberately does not buy —
     // so a caret at end-of-text is inside the clip with the run standing
-    // exactly where the committed text stands. The pad being the caret's own
-    // quantum, the borrow takes the whole pad and the viewport ends on the
-    // box's right edge, the caret's column being the box's last fill column.
+    // exactly where the committed text stands. The caret one device px, the
+    // borrow takes that one column of the pad and the viewport ends the
+    // rest of the pad short of the box's right edge.
     const double view_x0 = static_cast<double>(bx + pad_l);
     const int view_pad_r = std::max(pad_r - caret_px, 0);
     const double view_x1 = static_cast<double>(bx + box_w - view_pad_r);

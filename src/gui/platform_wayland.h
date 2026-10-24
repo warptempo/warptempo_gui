@@ -272,10 +272,9 @@ public:
     //   all — true here; the caption's double click and the Maximise / Restore
     //   button act only where it holds.
     // caption_active: whether the caption wears its ACTIVE look — the
-    //   window's activation here (window_activated), the inactive ground and
-    //   ink on focus loss (Windows' inactive caption; render.h's caption
-    //   block, 2026-10-22 — the walnut caption, the same either way, read no
-    //   such bit 2026-10-21 to 2026-10-22).
+    //   window's activation here (window_activated), the title's dulled ink
+    //   on focus loss, the ground one tone either way (render.h's caption
+    //   block, the hi-fi skin 2026-10-23).
     bool window_maximized() const { return window_maximized_; }
     bool window_restorable() const { return true; }
     bool caption_active() const { return window_activated_; }

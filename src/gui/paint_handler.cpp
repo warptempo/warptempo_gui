@@ -310,10 +310,9 @@ namespace {
 // derivation recorded there. The crops and the full row-2 record are git
 // history.)
 
-// A BUTTON'S FACE ANSWER: how far the glyph or the word on it shifts, down
-// and right, in device px — the program's case's (paint_roster_case below,
-// one line when down) and the caption buttons' (paint_caption_button_box,
-// one relief line while pushed). (THE CHROME'S OWN BUTTON PAINTER,
+// A BUTTON'S FACE ANSWER: how far whatever stands on the key's face shifts,
+// down and right, in device px — the key's (paint_roster_case below: one
+// device px while down, cool_edit_paint.h's paint_key). (THE CHROME'S OWN BUTTON PAINTER,
 // paint_button_box — Windows' two-line faces in two families, a TOOLBAR
 // button's SOFT edges on the on-screen keyboard's keys and a PUSH button's
 // PLAIN ones on the dialogs' word buttons, raised at rest, sunken pressed
@@ -327,17 +326,19 @@ struct ButtonBoxFace {
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE HI-FI SKIN'S BLANK KEY
 // (architect 2026-10-23; paint_key, cool_edit_paint.h, where its states
-// stand). A PRESSED button (a live press) is the key down with its LED lit
-// for as long as the press stands (2026-10-23); a CHECKED one (the
-// roster's `selected`, `lamp`) its LED lit; a DISABLED button keeps the face
-// its state gives, a dead checked button still reading checked (the
-// roster's rule at paint_icon_row), its legend dimmed by the caller. NO HOT
-// FACE. Nothing shifts, so the answer's shift is 0 (the word buttons' words
-// stand under the key, the keyboard's caps keep their place).
+// stand). A PRESSED button (a live press) and a CHECKED one (the roster's
+// `selected`, `lamp`) are ONE GEOMETRY, the key DOWN one device px right
+// and down with its LED lit (2026-10-23) — a press lighting the LED for as
+// long as it stands; a DISABLED button keeps the face its state gives, a
+// dead checked button still down (the roster's rule at paint_icon_row),
+// its legend dimmed by the caller. NO HOT FACE. The answer's shift is the
+// face's one device px while down; no roster key carries anything on its
+// face (the legends, the word buttons' words among them, stand under the
+// key and do not move), so no caller reads it.
 ButtonBoxFace paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
                                 bool pressed) {
     paint_key(cr, r, pressed, lamp ? GuiKeyLed::Lit : GuiKeyLed::Unlit);
-    return ButtonBoxFace{0};
+    return ButtonBoxFace{(pressed || lamp) ? hairline_px() : 0};
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -985,10 +986,10 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // 1 + 2 + 13 + 2 + 1 — the black line, two rows of face, the 13-row cell,
 // two rows, the line — and two face columns stand between the left line and
 // the V, so the pad is 2 each way INSIDE the four-sided frame, whose line is
-// its own rounded part (relief_line_px): at the tablet's 300 %,
-// 3 + 6 + 39 + 6 + 3 = 57 for one line (the band 13 x 3 = 39), and at the
-// laptop's 138 %, 1 + 3 + 18 + 3 + 1 = 26 (the band 13 x 1.38 = 17.94,
-// rounded once). The gap is the laptop pixel's 4 re-authored at the unit's
+// ONE DEVICE PX since the hi-fi skin (hairline_px, 2026-10-23; one scaled W
+// until then) and whose band is the legend face's line box: at the tablet's
+// 300 %, 1 + 6 + band + 6 + 1 for one line, at the laptop's 138 %,
+// 1 + 3 + band + 3 + 1 (the band rounded once). The gap is the laptop pixel's 4 re-authored at the unit's
 // change. render.h carries only a BOUND on this for the
 // damage band.
 constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
@@ -1099,18 +1100,21 @@ namespace {
 // E, Undo's U): ONE W THICK, ONE W OF AIR UNDER THE BASELINE (the cell's
 // ascent + 1 — the F's last ink row 166, the line on 168), FROM THE MARKED
 // GLYPH'S PEN TO ITS ADVANCE LESS ONE W (LineTo stops one short: the F's
-// 6-px advance under a 5-px line, the U's 7 under 6). Both lengths are
-// scaled quanta (the off-waveform rule); the pens are the run's own, measured
+// 6-px advance under a 5-px line, the U's 7 under 6). IN THE HI-FI SKIN THE
+// LINE IS ONE DEVICE PX THICK, ONE DEVICE PX OF AIR UNDER THE BASELINE AND
+// STOPPING ONE DEVICE PX SHORT (render.h's line rule, the sweep of
+// 2026-10-23: "let's do a sweep for all of these Windows Pixel lines"; the
+// three were scaled W until then); the pens are the run's own, measured
 // through the shaping chokepoint (byte_offsets_px), never assumed. A run
-// painted in a color takes the line in that color; THE DISABLED EMBOSS takes
-// it in both copies, as DSS_DISABLED draws the whole text bitmap twice.
+// painted in a color takes the line in that color (a dead key's legend its
+// dim ink).
 GuiRect access_underline_rect(const text_shape::ShapedRun& run,
                               const char* label, int access, double x,
                               double baseline) {
     const std::size_t a = static_cast<std::size_t>(access);
     const std::vector<double> pen = text_shape::byte_offsets_px(
         run, std::char_traits<char>::length(label));
-    const int line = scaled_px(1, 1);
+    const int line = hairline_px();
     const int x0 = static_cast<int>(std::nearbyint(x + pen[a]));
     const int x1 = static_cast<int>(std::nearbyint(x + pen[a + 1])) - line;
     const int y  = static_cast<int>(std::nearbyint(baseline)) + line;
@@ -1287,10 +1291,17 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
 
     // THE THREE BUTTONS, published as painted (AppState::caption_buttons):
     // each cell on every paint, its enabled bit where this frame's clip
-    // covers it (the roster's gate). Maximise is disabled where the window
-    // cannot be restored (the tablet). Its glyph: the bone enabled, kDimInk
-    // disabled, kCaptionInkInactive while its Caption arm stands with the
-    // pointer inside it (pressed) — no cell face.
+    // covers it (the roster's gate — the hit test's, which claims no press
+    // on a dead button). Maximise is dead where the window cannot be
+    // restored (the tablet). EVERY GLYPH IN THE BONE, no cell face: PRESSED
+    // — its Caption arm standing with the pointer inside it — the glyph ONE
+    // DEVICE PX RIGHT AND DOWN in the same bone, the move the whole pressed
+    // look as on the keys (architect 2026-10-23: "the bone should stay");
+    // and NO DISABLED LOOK — a dead button wears the bone like its
+    // neighbors and simply does not respond (architect 2026-10-23: "we have
+    // no more disabled rule for the buttons, so … get rid of that for the
+    // caption also. It just wouldn't respond."). (The glyph in kDimInk dead
+    // and in kCaptionInkInactive pressed stood the night of 2026-10-23.)
     for (int i = 0; i < kCaptionButtonCount; ++i) {
         const GuiCaptionButton id = static_cast<GuiCaptionButton>(i);
         AppState::CaptionButtonFace& face =
@@ -1301,13 +1312,12 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
             face.enabled = caption_button_enabled(gui, id);
         // A box the clip does not reach is skipped (clip_meets).
         if (!clip_meets(cr, b)) continue;
-        const bool pushed = caption_button_pushed(app, i);
-        const GuiColor glyph_ink = !face.enabled ? hex(kDimInk)
-                                 : pushed        ? hex(kCaptionInkInactive)
-                                                 : hex(kBoneInk);
-        paint_caption_glyph(cr, id, static_cast<double>(b.x) + b.w * 0.5,
-                            static_cast<double>(row.y) + row.h * 0.5,
-                            glyph_ink);
+        const double ride = caption_button_pushed(app, i)
+                                ? static_cast<double>(hairline_px())
+                                : 0.0;
+        paint_caption_glyph(cr, id, static_cast<double>(b.x) + b.w * 0.5 + ride,
+                            static_cast<double>(row.y) + row.h * 0.5 + ride,
+                            hex(kBoneInk));
     }
 
     cairo_restore(cr);
@@ -6008,9 +6018,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_x0  = pl.clock_x0;
         const int clock_end = pl.clock_end;
 
-        // -- THE PLAY-SCRUB, SOUND RECORDER'S CHANNEL UNDER WINDOWS'
-        //    TRACKBAR THUMB (architect 2026-10-02, the thumb 2026-10-06; the
-        //    look and its owners at render.h's scrub block). The ITEM is
+        // -- THE PLAY-SCRUB, SOUND RECORDER'S CHANNEL UNDER THE KEY BLOCK
+        //    (architect 2026-10-02; the hi-fi skin's two hairlines and
+        //    key-shaped thumb 2026-10-23; the look and its owners at
+        //    render.h's scrub block). The ITEM is
         //    published (dlg.scrub) and it is the button box's own band, so a
         //    press anywhere on it is on the slider and the per-position damage
         //    covers the thumb's whole travel; the MAPPING owns the inset
@@ -6049,11 +6060,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                 palette().ce_dark);
             }
             if (rp.frames > 0) {
-                // THE THUMB — Windows' pointed trackbar thumb (render.h's
-                // scrub block), centred on the column, its point down toward
-                // the channel's bottom. No hover face: the grab band
-                // (scrub_handle_box_px) is the press's business and the
-                // cursor its cue.
+                // THE THUMB — the key-shaped block (render.h's scrub block:
+                // a key at rest, no LED, no legend, 8 x 16 W), centred on the
+                // column and on the channel. No hover face: its painted rect
+                // is the press's business (render_player_scrub_handle_hit)
+                // and the cursor its cue.
                 const int thumb_w = scrub_thumb_w_px();
                 const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
                                     thumb_h};
@@ -6197,7 +6208,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // starting at the text inset on every row.
             const int line_x0 = text_x0;
             const int line_w = std::max(0, text_w);
-            const int caret_px = scaled_px(1.0, 1);
+            // THE CARET ONE DEVICE PX WIDE (render.h's line rule, the
+            // sweep of 2026-10-23; one scaled W until then).
+            const int caret_px = hairline_px();
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, ed->pending);
             const std::vector<double> bx_off =
@@ -6371,9 +6384,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const GuiRect r{x, btn_y, plan[i].w, btn_h};
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
-        // player key alike; its LED lit for the row's one checked button
-        // (Repeat One, `lit`); DOWN for a LIVE PRESS — armed with the pointer
-        // inside it, or armed from the keyboard — nothing shifted. (Windows'
+        // player key alike; DOWN with its LED lit for the row's one checked
+        // button (Repeat One, `lit`) and for a LIVE PRESS — armed with the
+        // pointer inside it, or armed from the keyboard — one device px
+        // right and down, the legend under the key unmoved. (Windows'
         // push button 2026-10-02 to 2026-10-22, the ebony case 2026-10-22 to
         // 2026-10-23.) THE FOCUS IS NOT PAINTED (below): the two focus
         // strengths stay in the state (AppState::modal_dialog_focus_active),
@@ -6384,9 +6398,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE RENDER PLAYER'S ROW IS ROW 8'S CASES (architect 2026-10-05;
         // the program's since 2026-10-09): its nine boxes take the roster's
         // face through the one painter, paint_roster_case — the rest face,
-        // Cool Edit's down face pressed (the glyph one line right and down)
-        // and for Repeat One's lamp, NO HOT FACE (program_spec.h's
-        // case_hot_face) — and no separators.
+        // the key DOWN one device px right and down for a press and for
+        // Repeat One's lit lamp alike (2026-10-23), NO HOT FACE
+        // (program_spec.h's case_hot_face) — and no separators.
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
         // their dialog stands and publish enabled=true, and the player's are
@@ -6503,7 +6517,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // ground, NO LED (a typing key carries no lamp), its cap PRINTED ON ITS
 // FACE in the bone at the body size — the band painting NO LINE at its own
 // top edge (architect 2026-08-27, on glass). THE OTHER TWO FACES ARE THE
-// KEY DOWN, nothing shifted:
+// KEY DOWN, one device px right and down, the cap riding with the face
+// (2026-10-23):
 //   ARMED     — the CHECKED face, the band's checked case's. Worn by SHIFT
 //               while it is armed and by the SYMBOL-MODE key while a symbol
 //               page stands — the two lamps.
@@ -6603,10 +6618,14 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                  page != onscreen_keyboard::Page::Letters);
 
             // THE KEY (architect 2026-10-23; paint_key, cool_edit_paint.h):
-            // pressed or armed the key down, NO LED — a typing key carries no
-            // lamp; the cap printed ON its face, nothing shifted.
+            // pressed or armed (Shift, the symbol page's key — a checked key)
+            // the key down, NO LED — a typing key carries no lamp; the cap
+            // printed ON its face, so it RIDES WITH THE FACE, one device px
+            // right and down while the key is down.
             const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-            paint_key(cr, r, pressed || armed, GuiKeyLed::None);
+            const bool down = pressed || armed;
+            paint_key(cr, r, down, GuiKeyLed::None);
+            const double ride = down ? static_cast<double>(hairline_px()) : 0.0;
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
             // the function keys, Space and the page keys), or, where it
@@ -6624,9 +6643,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, cap);
             const double cap_x = std::nearbyint(
-                r.x + (r.w - run.width_px) * 0.5);
+                r.x + (r.w - run.width_px) * 0.5) + ride;
             const double baseline = redesign_baseline(
-                font, static_cast<double>(r.y), static_cast<double>(r.h));
+                font, static_cast<double>(r.y), static_cast<double>(r.h)) + ride;
             // THE CAP IN THE BONE at the body's size, no shadow
             // (materials.h's INKS, 2026-10-23).
             set_palette_source(cr, hex(kBoneInk));
@@ -6928,7 +6947,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // 2026-10-16; one ring round the waveform area 2026-10-09 to then): the
 // `ce_dark` top row and left column, the `ce_hilight` right column and
 // bottom row, MITRED at the top-right and bottom-left corner blocks where
-// the dark meets the light (paint_relief_frame, cool_edit_paint.h's diagonal
+// the dark meets the light (the mitre, cool_edit_paint.h's diagonal
 // rule), the face row between the two rings running through the frame
 // columns to the margins. It runs before render_canvas, which lays the canvas over the
 // interior this face covered; the view bar's and the ruler's own side

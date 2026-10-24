@@ -29,11 +29,12 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: the conductor's
-       baton, the caption's icon and Warp's glyph, assets/icons/AppIcon.png
-       (architect 2026-10-12; the baton since 2026-10-18; a symlink to
-       Warp.png since 2026-10-19), resized by a Lanczos filter over flat
-       white, the adaptive icon's background layer
+  <!-- android:icon is the launcher and recents icon: the caption's
+       quaver, assets/icons/AppIcon.svg (architect 2026-10-23: "the new note
+       glyph on the caption's color"; a symlink to Quaver.svg; the
+       conductor's baton, AppIcon.png -> Warp.png, 2026-10-18 to
+       2026-10-23), rendered by resvg over the caption's flat ground
+       #141415, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
        reason), both layers rendered at every build by build_apk.sh. The
        Linux desktop's launcher icon is the same drawing bare, a link into the

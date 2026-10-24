@@ -114,13 +114,15 @@ struct AppState;
 //   MARKER  ONE TILE, THE MARKER LANE'S ROWS, window-wide, its surface twice
 //           the window's width (the LOOP).
 //   LIT KEYS  ONE PATCH PER KEY SIZE the band, row 8 and the render player
-//           lay out (program_case_rects), at rest and pressed: the key as
-//           the key painter draws it with its LED lit and THE GLOW composited
+//           lay out (program_case_rects), DOWN — a lit key is a key down,
+//           pressed and checked one geometry (architect 2026-10-23;
+//           cool_edit_paint.h's paint_key): the key as the key painter draws
+//           it with its LED lit and THE GLOW composited round the moved LED
 //           (led_glow below) — so a lit key is one blit and nothing blends
 //           at paint time.
 // RESIDENT at 300 % on 2304 x 1440 about 13.9 MB (the ground's tile 12.9,
 // rows 40 .. 1440 window-wide; the lane's 0.94, 2304 x 51 doubled; the lit
-// keys' patches about 38 KB); on the laptop's maximized 1920 x 1047 at
+// keys' patches about 19 KB); on the laptop's maximized 1920 x 1047 at
 // 138 % about 8.2 MB (the arithmetic off the geometry, 2026-10-23;
 // materials::resident_bytes, which the trace line prints at every bake, is
 // the measure).
@@ -152,7 +154,8 @@ struct AppState;
 // the lists' rows, the cards, the prompts, the editors' text, the keyboard's
 // caps — and on the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends and the tooltip; THE DIM INK kDimInk
-// 6A6A6E, a disabled key's legend and a dead caption button's glyph. NO WORD
+// 6A6A6E, a disabled key's legend alone (a dead caption button wears the
+// bone since 2026-10-23, render.h's caption block). NO WORD
 // WEARS A SHADOW but the ruler's digits and ticks (one device px of black at
 // (+1, +1), render.h's ruler block): the frame of record draws none.
 
@@ -198,7 +201,10 @@ inline constexpr uint32_t kSelectionText = kBoneInk;
 // edge two rows deep (the light row, then the mean of it and the face), a
 // two-row foot and a one-column right edge in the dark — the key stands
 // proud — and the LED: unlit a dead lamp, lit THE ACCENT (accent_color).
-// PRESSED the face darker and the edges gone (the key is down).
+// DOWN — pressed or checked, one geometry since 2026-10-23 — the face
+// darker, the edges gone, a one-device-px wall of the foot tone inside the
+// outline's top row and left column and the LED one device px right and
+// down (cool_edit_paint.h's paint_key).
 inline constexpr uint32_t kKeyFace        = 0x3A3A3C;
 inline constexpr uint32_t kKeyFacePressed = 0x2C2C2E;
 inline constexpr uint32_t kKeyTopLight    = 0x767678;
@@ -320,10 +326,10 @@ bool set_source(cairo_t* cr, GuiColor c);
 void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m);
 
 // A LIT KEY'S BAKED PATCH (the head's LIT KEYS): the patch for a key of
-// `r`'s size, rest or pressed, blitted 1:1 at `r` — true; false where none
-// is baked (a key size the bake did not see, or a size change waiting on
-// the gate), the caller then painting the key with its plain lit LED.
-bool paint_lit_key(cairo_t* cr, const GuiRect& r, bool pressed);
+// `r`'s size, the key down, blitted 1:1 at `r` — true; false where none is
+// baked (a key size the bake did not see, or a size change waiting on the
+// gate), the caller then painting the key down with its plain lit LED.
+bool paint_lit_key(cairo_t* cr, const GuiRect& r);
 
 // THE DISABLED GLYPH'S TONES (icons::draw_disabled, which no band case calls
 // since 2026-10-23: the keys print no glyph): Cool Edit's measured emboss,

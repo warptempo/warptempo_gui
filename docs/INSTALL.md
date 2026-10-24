@@ -43,12 +43,12 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
 rustup-init   # then: rustup default stable
 ```
 
-The tablet side adds adb and the Android build's host tools, ImageMagick 7 among them (`magick`: the APK build renders the launcher icon from `assets/icons/AppIcon.png` at every build); its fonts — Liberation Sans and Liberation Sans Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
+The tablet side adds adb and the Android build's host tools, resvg and ImageMagick 7 among them (`resvg` and `magick`: the APK build renders the launcher icon from `assets/icons/AppIcon.svg`, the caption's quaver, at every build); its fonts — Liberation Sans and Liberation Sans Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
-sudo pacman -S --needed android-tools meson ninja zip unzip imagemagick
+sudo pacman -S --needed android-tools meson ninja zip unzip imagemagick resvg
 rustup target add aarch64-linux-android   # the APK's resvg
-pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip imagemagick
+pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip imagemagick resvg
 # every line shows a version; "was not found" names a package still to install
 rustup target list --installed
 # lists aarch64-linux-android
@@ -66,12 +66,13 @@ cmake --build build -j$(nproc)
 
 Leave `CMAKE_BUILD_TYPE` unset: the flags `-O3 -march=native -ffp-contract=off` are always on, and asserts stay live. A debug build goes in its own folder (`cmake -B build-debug -S . -DCMAKE_BUILD_TYPE=Debug`), never over `build/`. `-march=native` makes the binary fit this CPU alone, so build on the machine that runs it; `-ffp-contract=off` is what keeps a rebuilt binary rendering byte for byte what the last one did. What can still move the bytes, by a least significant bit here and there, is an upgrade of glibc or FFTW underneath: after one, re-render anything you mean to compare against. The CLI is opt-in; on a headless host with none of the GUI's packages, configure with `-DWARPTEMPO_BUILD_GUI=OFF -DWARPTEMPO_BUILD_CLI=ON`.
 
-There is no `make install`. The binary is self-contained; to put it on `$PATH` and register it with the application launcher (the `.desktop` names the project's own icon, `warptempo_gui`: the caption's icon, `assets/icons/AppIcon.png`, the glyph the Warp button wears (the conductor's baton), a 256-px PNG bare on transparency). Both the `$PATH` entry and the icon are SYMLINKS into this repository, made once, so every rebuild is already the installed program and every icon dropped into `assets/icons/` is already the installed icon (it follows each drop; your launcher may cache the old picture until it restarts); never copy the binary or the icon over them. Delete the scalable SVG an earlier install put at `~/.local/share/icons/hicolor/scalable/apps/warptempo_gui.svg`, which would shadow the PNG; the copied PNG an install before 2026-10-19 put at the 256x256 path is replaced by the link below:
+There is no `make install`. The binary is self-contained; to put it on `$PATH` and register it with the application launcher (the `.desktop` names the project's own icon, `warptempo_gui`: the caption's icon, the quaver, `packaging/warptempo_gui.svg` — a link to `assets/icons/Quaver.svg` — a scalable drawing bare on transparency). Both the `$PATH` entry and the icon are SYMLINKS into this repository, made once, so every rebuild is already the installed program and a new `Quaver.svg` dropped into `assets/icons/` is already the installed icon (it follows each drop; your launcher may cache the old picture until it restarts); never copy the binary or the icon over them. The recipe's `rm` deletes the 256x256 PNG link an earlier install put at `~/.local/share/icons/hicolor/256x256/apps/warptempo_gui.png` (it named `AppIcon.png`, the conductor's baton, gone since 2026-10-23 — a dangling link that would otherwise be picked over the SVG at large sizes):
 
 ```bash
 mkdir -p ~/.local/bin && ln -sfn "$PWD/build/warptempo_gui" ~/.local/bin/warptempo_gui
 install -Dm644 packaging/warptempo_gui.desktop ~/.local/share/applications/warptempo_gui.desktop
-mkdir -p ~/.local/share/icons/hicolor/256x256/apps && ln -sfn "$PWD/assets/icons/AppIcon.png" ~/.local/share/icons/hicolor/256x256/apps/warptempo_gui.png
+rm -f ~/.local/share/icons/hicolor/256x256/apps/warptempo_gui.png
+mkdir -p ~/.local/share/icons/hicolor/scalable/apps && ln -sfn "$PWD/packaging/warptempo_gui.svg" ~/.local/share/icons/hicolor/scalable/apps/warptempo_gui.svg
 update-desktop-database ~/.local/share/applications
 ```
 

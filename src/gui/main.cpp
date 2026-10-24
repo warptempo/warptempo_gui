@@ -234,7 +234,7 @@ namespace {
 // in every stack (the rule above). Every lane is its own composite of
 // rounded parts (scaled_px's rule), so the device rows below are read off
 // the lane accessors, never off a Windows total times the factor — in
-// particular a program line is one quantum, relief_line_px(), not a share of
+// particular a program line's slot is one quantum, program_line_px(), not a share of
 // scaled_px of a total, so a lane can differ from a naive total at a
 // fractional gui_scale. THE PROGRAM'S TOP STACK IS 87 WINDOWS PX, 50 BELOW
 // (render.h's chrome_stack_authored_h): the band 49 (13 + 23 + 13), the
@@ -2067,12 +2067,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
     // render.h's palette block — the folder overlay's inactive highlight, the
     // edge's other reader from 2026-09-02, retired with it) BUT THE CAPTION
-    // (architect 2026-10-05; its flat ground and the title's ink since
-    // 2026-10-22, render.h's caption block): it wears its inactive tones
-    // while the window has lost the focus, so the edge damages its lane (on
-    // the tablet the caption is always active, GuiPlatform::caption_active,
-    // and the damage repaints the same pixels). (The walnut caption of
-    // 2026-10-21 to 2026-10-22 was the same either way and took no damage.)
+    // (architect 2026-10-05; the title's ink, render.h's caption block — the
+    // ground one tone either way in the hi-fi skin, 2026-10-23): it wears
+    // its inactive ink while the window has lost the focus, so the edge
+    // damages its lane (on the tablet the caption is always active,
+    // GuiPlatform::caption_active, and the damage repaints the same pixels).
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
         viewport.invalidate_rect(top_caption_row_area(app));

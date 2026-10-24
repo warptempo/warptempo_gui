@@ -19,7 +19,7 @@
 #
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
-#   0. debug keystore (keytool)         5. the launcher icon rendered (magick)
+#   0. debug keystore (keytool)         5. the launcher icon rendered (resvg + magick)
 #   1. assets (the font files and the      into a staged res/; aapt2 compile
 #      icons)                                 + link (manifest + res + assets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
@@ -96,8 +96,11 @@ else
         -dname "CN=Android Debug,O=Android,C=US"
 fi
 
-# ImageMagick 7's magick renders the launcher icon at every build (step 5);
-# checked here, before any work, so a host without it stops at once.
+# resvg rasterises the launcher icon's drawing and ImageMagick 7's magick
+# frames it at every build (step 5); both checked here, before any work, so a
+# host without one stops at once.
+command -v resvg >/dev/null \
+    || wt_die "resvg not found: the launcher icon is rendered at every build -- install resvg (Arch: resvg)"
 command -v magick >/dev/null \
     || wt_die "magick not found: the launcher icon is rendered at every build -- install ImageMagick 7 (Arch: imagemagick)"
 
@@ -135,7 +138,7 @@ done
 # assets/icons/ copied into the package's assets/icons/, which aapt2 link's -A
 # packs (deflated) as the APK's `icons/` asset directory -- a dropped PNG rides
 # the next build with no other step. A REPEAT IS A SYMLINK in the repository
-# (icons.h's kIconNames: AppIcon.png -> Warp.png and four more); cp -L copies
+# (icons.h's kIconNames: AppIcon.svg -> Quaver.svg and four more); cp -L copies
 # the file it names, so the APK holds regular files alone. The app reads them
 # in place at launch, never copying them out (icons.h's load_set;
 # GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is a
@@ -199,41 +202,55 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # PNG layers per density, RENDERED HERE AT EVERY BUILD (architect 2026-10-19:
 # the icon must follow a drop with no step -- the one-shot generator and its
 # committed PNGs retired) into a staged copy of res/ under the package tree,
-# which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.png, Warp's glyph
-# through its symlink (icons.h's kIconNames; the conductor's baton since
-# 2026-10-18), read through the link. THE FRAMINGS (architect 2026-10-12, "two
-# framings is normal": Android's adaptive mask demands a full-bleed square,
-# Linux desktops take any shape -- the Linux icon is the bare drawing, a link
-# into the repository, docs/INSTALL.md): the FOREGROUND the drawing resized by
-# ImageMagick's Lanczos filter (the GUI's own filter family, svg_icon.cpp) to
-# the 52 dp art square (architect 2026-10-16, his pick off a 60 / 56 / 52 /
-# 48 / 44 / 40 dp series on the glass: the 64 dp art filled ~86 % of the
-# launcher's visible tile and nearly touched its corners), centered on the
-# transparent 108 dp canvas; the BACKGROUND that canvas WHITE, FLAT
-# (architect 2026-10-17: #FFFFFF, one color over the whole square, which the
-# launcher's mask cuts to its shape; Windows Storm's caption start #800080
-# from 2026-10-16 until then, the Cool Edit case's 20 face-ramp bands under
-# Midnight's Face from 2026-10-12 before it). Per density f, the 52 dp art
-# A = 52f px on the 108 dp canvas C = 108f px (ic_launcher.xml's head holds
-# the table and the safe-zone arithmetic). Byte-stable: -strip drops the
-# date chunks. Every GUI pixel is painted by cairo, the roster's icons
+# which aapt2 compiles. THE DRAWING is AppIcon's file in assets/icons/ by the
+# drop road's rule (icons.h's kIconNames: `AppIcon.png` if one is dropped,
+# else `AppIcon.svg`), read through its link: THE QUAVER since 2026-10-23,
+# AppIcon.svg -> Quaver.svg, the caption's own icon (architect 2026-10-23:
+# "the new note glyph on the caption's color"; the conductor's baton,
+# AppIcon.png -> Warp.png, 2026-10-18 to 2026-10-23). THE FRAMINGS (architect
+# 2026-10-12, "two framings is normal": Android's adaptive mask demands a
+# full-bleed square, Linux desktops take any shape -- the Linux icon is the
+# bare drawing, packaging/warptempo_gui.svg, a link into the repository,
+# docs/INSTALL.md): the FOREGROUND the drawing fitted to the 52 dp art square
+# (architect 2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp
+# series on the glass: the 64 dp art filled ~86 % of the launcher's visible
+# tile and nearly touched its corners) -- an SVG rendered by RESVG, the
+# product's own renderer (svg_icon.cpp), at the art's height, its width the
+# viewBox's (the quaver's 34 x 40: 45 / 67 / 89 / 133 / 177 px wide, resvg
+# rounding up), never rasterised small and upscaled (magick's own delegate
+# renders the SVG at its 34 x 40 user size and blurs at -resize); a dropped
+# PNG resized by ImageMagick's Lanczos filter (the GUI's own filter family)
+# into the square -- centered on the transparent 108 dp canvas; the
+# BACKGROUND that canvas FLAT IN THE CAPTION'S GROUND #141415 (architect
+# 2026-10-23; render.h's kCaptionGround), one color over the whole square,
+# which the launcher's mask cuts to its shape (#FFFFFF from 2026-10-17,
+# Windows Storm's caption start #800080 from 2026-10-16, the Cool Edit
+# case's 20 face-ramp bands under Midnight's Face from 2026-10-12 before
+# it). Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
+# px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
+# Byte-stable: -strip drops the date chunks. Every GUI pixel is painted by cairo, the roster's icons
 # included (assets/icons/'s SVGs rasterised by resvg, its PNGs decoded by
 # resvg and scaled by an area filter, svg_icon.cpp; each copied by cairo); the
 # app declares no @string, no style, no res/values. aapt2 compile turns the
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.png"
-[ -f "$APP_ICON" ] || wt_die "missing $APP_ICON (the launcher icon's drawing, a link to Warp.png)"
+[ -f "$APP_ICON" ] || APP_ICON="$ICON_DIR/AppIcon.svg"
+[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to Quaver.svg)"
+LAUNCHER_GROUND="#141415"   # render.h's kCaptionGround
 RES_STAGE="$PKGDIR/res"
 cp -r "$APPDIR/res" "$RES_STAGE"
 for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432; do
     IFS=: read -r density art canvas <<< "$row"
     dir="$RES_STAGE/mipmap-$density"
     mkdir -p "$dir"
-    magick "$APP_ICON" -filter Lanczos -resize "${art}x${art}" \
+    case "$APP_ICON" in
+        *.svg) resvg -h "$art" "$APP_ICON" -c ;;
+        *)     magick "$APP_ICON" -filter Lanczos -resize "${art}x${art}" png32:- ;;
+    esac | magick - \
         -background none -gravity center -extent "${canvas}x${canvas}" -strip \
         -define png:compression-level=9 -define png:compression-filter=5 \
         "PNG32:$dir/ic_launcher_foreground.png"
-    magick -size "${canvas}x${canvas}" "xc:#FFFFFF" -strip \
+    magick -size "${canvas}x${canvas}" "xc:$LAUNCHER_GROUND" -strip \
         -define png:compression-level=9 -define png:compression-filter=5 \
         "PNG32:$dir/ic_launcher_background.png"
     wt_say "launcher icon: mipmap-$density, art ${art} px on ${canvas} px"

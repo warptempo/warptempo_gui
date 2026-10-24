@@ -4307,10 +4307,11 @@ struct GuiChromeGlobalsFingerprint {
     uint64_t palette_generation = 0;
     bool operator==(const GuiChromeGlobalsFingerprint&) const = default;
 };
-// The caption (paint_caption_row): its row, the activation (its ground's
-// tone and the title's ink, 2026-10-22 — the walnut caption, the same
-// either way, kept none 2026-10-21 to 2026-10-22), the title, the Maximize
-// glyph's state, and each box's face — the enabled bit and the pushed face.
+// The caption (paint_caption_row): its row, the activation (the title's
+// ink; the ground one tone either way, the hi-fi skin 2026-10-23), the
+// title, the Maximize glyph's state, and each box's face — the enabled bit
+// (which paints nothing since 2026-10-23: a dead button wears the bone, a
+// repaint on its flip the same pixels) and the pushed face.
 struct GuiCaptionFingerprint {
     GuiRect     row{0, 0, 0, 0};
     bool        active    = false;

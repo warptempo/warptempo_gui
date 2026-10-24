@@ -18,10 +18,10 @@ files"). EVERY `.png` HERE IS THE ARCHITECT'S OWN (below, "The architect's own f
 A DRAWING SEVERAL ACTS WEAR IS ONE FILE AND SYMLINKS (architect 2026-10-19: "repeats should use symlinks"), relative,
 inside this folder, the real file the act that owns the drawing:
 
-- `AppIcon.png` -> `Warp.png` (the program icon outside the window — the caption wears `Quaver.svg` since
-  2026-10-23: the Android launcher
-  icon rendered from it at every APK build, `android/app/build_apk.sh`; the Linux icon a link to it,
-  `docs/INSTALL.md`);
+- `AppIcon.svg` -> `Quaver.svg` (2026-10-23, architect "the new note glyph on the caption's color": the program
+  icon outside the window is the caption's quaver — the Android launcher icon rendered from it at every APK build
+  over the caption's ground, `android/app/build_apk.sh`; the Linux icon `packaging/warptempo_gui.svg`, a link to
+  `Quaver.svg`, `docs/INSTALL.md`; `AppIcon.png` -> `Warp.png`, the conductor's baton, 2026-10-18 to 2026-10-23);
 - `BpmIterations.svg` -> `WavRow.svg` (the BPM Iterations button keeps the note — the quaver since 2026-10-23,
   `audio-x-generic` until then; no band key wears a glyph in the hi-fi skin);
 - `WavRow.svg` -> `Quaver.svg` (2026-10-23: the wav rows wear the caption's quaver, architect "use the logo in the

@@ -25,21 +25,23 @@ uint32_t mean_word(uint32_t a, uint32_t b) {
 
 } // namespace
 
-GuiRect key_led_rect(const GuiRect& r) {
+GuiRect key_led_rect(const GuiRect& r, bool down) {
     const int left = scaled_px(2, 1);
     const int up   = scaled_px(2, 1);
     const int w    = scaled_px(2, 1);
     const int h    = scaled_px(1, 1);
     const int y1   = r.y + r.h - 1;   // the outline's bottom row
     const GuiRect led{r.x + left, y1 - up - h + 1, w, h};
-    // Inside the outline and above the foot, or nothing.
+    // Inside the outline and above the foot at rest, or nothing.
     if (led.x + led.w > r.x + r.w - 2 || led.y < r.y + 3 ||
         led.y + led.h > r.y + r.h - 3)
         return GuiRect{};
-    return led;
+    // THE LED RIDES WITH THE FACE (the declaration's PRESSED row).
+    const int ride = down ? hairline_px() : 0;
+    return GuiRect{led.x + ride, led.y + ride, led.w, led.h};
 }
 
-void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed,
+void paint_key_plain(cairo_t* cr, const GuiRect& r, bool down,
                      GuiKeyLed led) {
     if (r.w <= 0 || r.h <= 0) return;
     const int px = hairline_px();
@@ -47,12 +49,18 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed,
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // EVERY TONE OF THE KEY IS FLAT, never a ground's (materials.h's KEY).
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    const uint32_t face = pressed ? kKeyFacePressed : kKeyFace;
+    const uint32_t face = down ? kKeyFacePressed : kKeyFace;
     paint_ink_rect(cr, r, hex(kKeyOutline));
     const GuiRect in{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px};
     if (in.w > 0 && in.h > 0) {
         paint_ink_rect(cr, in, hex(face));
-        if (!pressed) {
+        if (down) {
+            // THE HOLE'S WALL: one device px of the foot tone along the top
+            // row and the left column inside the outline, the face filling
+            // the rest (the declaration's PRESSED row).
+            paint_ink_rect(cr, GuiRect{in.x, in.y, in.w, px}, hex(kKeyFoot));
+            paint_ink_rect(cr, GuiRect{in.x, in.y, px, in.h}, hex(kKeyFoot));
+        } else {
             // THE LIGHT TOP EDGE, the foot and the right column (the
             // declaration's order), each one device px a row or column.
             paint_ink_rect(cr, GuiRect{in.x, in.y, in.w, px}, hex(kKeyTopLight));
@@ -67,7 +75,7 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed,
         }
     }
     if (led != GuiKeyLed::None) {
-        const GuiRect l = key_led_rect(r);
+        const GuiRect l = key_led_rect(r, down);
         if (l.w > 0 && l.h > 0)
             paint_ink_rect(cr, l,
                            hex(led == GuiKeyLed::Lit ? materials::accent_color()
@@ -77,10 +85,12 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed,
 }
 
 void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led) {
-    // THE LED LIGHTS WHILE PRESSED (the declaration's PRESSED row).
+    // THE LED LIGHTS WHILE PRESSED (the declaration's PRESSED row), and a
+    // lit LED is a key down: pressed and checked are one geometry.
     if (pressed && led == GuiKeyLed::Unlit) led = GuiKeyLed::Lit;
-    if (led == GuiKeyLed::Lit && materials::paint_lit_key(cr, r, pressed)) return;
-    paint_key_plain(cr, r, pressed, led);
+    const bool down = pressed || led == GuiKeyLed::Lit;
+    if (led == GuiKeyLed::Lit && materials::paint_lit_key(cr, r)) return;
+    paint_key_plain(cr, r, down, led);
 }
 
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,

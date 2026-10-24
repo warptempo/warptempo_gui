@@ -156,7 +156,7 @@ is the close-up: one act across every sheet.
 
 Copy the picked `<Act>.png` into `assets/icons/` and build; `<Act>.png` wins over `<Act>.svg`, which stays as the
 fallback until the seat is called settled. A drawing several acts wear is ONE file and symlinks
-(`ln -s Warp.png AppIcon.png`). Nothing else: no table, no README row, no code change (`src/gui/icons.h`'s head).
+(`ln -s Quaver.svg AppIcon.svg`). Nothing else: no table, no README row, no code change (`src/gui/icons.h`'s head).
 Nothing in `tools/classical_set/` writes there.
 
 ## (f) Dependencies and the runs

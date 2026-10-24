@@ -125,10 +125,12 @@
 // `palette` 2026-10-10; `icons` and `font` stood 2026-10-09 to 2026-10-12;
 // `scheme` (`caption` since 2026-10-13) gone and `palette` (`chrome` since
 // 2026-10-13) renamed `waveform` in its place 2026-10-21;
-// the three tuning keys of the fortepiano chrome APPENDED after `role`
-// 2026-10-21, a tuning phase's keys at the end as the 2026-09 phases'
-// stood, `text_shadow` gone 2026-10-22; `true_colors` placed after `waveform` 2026-10-21, the two display
-// keys together, the tuning keys keeping the end);
+// three tuning keys APPENDED after `role` 2026-10-21, a tuning phase's
+// keys at the end as the 2026-09 phases' stood (`text_shadow` gone
+// 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
+// appended 2026-10-22 and `led_glow` 2026-10-23, the tuning keys keeping
+// the end; `true_colors` placed after `waveform` 2026-10-21, the two display
+// keys together);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //

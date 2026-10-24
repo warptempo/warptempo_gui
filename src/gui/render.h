@@ -181,13 +181,14 @@ struct TrimRange {
 // From 2026-10-02 until this ruling the bytes went to the P3 layer
 // unconverted, a hex then being a P3 triple.
 //
-// THE GRAMMAR IS WINDOWS 95's DrawEdge, AT THE WINDOWS PIXEL (architect
-// 2026-10-02): every raised or sunken edge is TWO lines a side, each one
-// Windows px (relief_line_px, below), the outer pair first and the inner pair
-// inset one line, each pair's two tones MITRED where they meet (architect
-// 2026-10-06, overruling Windows' square join: the top-right and bottom-left
-// corner blocks split along the 45-degree diagonal, the rule and its words at
-// paint_relief_frame, render.cpp). RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
+// THE GRAMMAR WAS WINDOWS 95's DrawEdge, AT THE WINDOWS PIXEL (architect
+// 2026-10-02: every raised or sunken edge TWO lines a side, each one
+// Windows px), and IS ONE LINE AT ONE DEVICE PX since the hi-fi skin and its
+// sweep (2026-10-23; hairline_px, below), each ring's two tones MITRED where
+// they meet (architect 2026-10-06, overruling Windows' square join: the
+// top-right and bottom-left corner blocks split along the 45-degree
+// diagonal, the rule and its words at the mitre, paint_hairline_frame,
+// render.cpp). RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
 // edge below takes its quartet by Windows 95's scheme of how many lines a
 // side, and no other role draws a relief line. THE FAMILIES, lines given
 // outer then inner, top-left / bottom-right, each with its painter and its
@@ -197,12 +198,13 @@ struct TrimRange {
 //                 frame, Windows 2000's Standard quartet — went 2026-10-23
 //                 with those parts: the hi-fi skin's caption, keys and
 //                 border, render.h's caption block and cool_edit_paint.h);
-//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) —
-//                 paint_relief_plain_sunken, no wearer since the scrub's
-//                 channel became two hairlines (2026-10-23);
+//   (PLAIN SUNKEN, Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) —
+//                 paint_relief_plain_sunken, the scrub's channel's until it
+//                 became two hairlines — went 2026-10-23 with the sweep);
 //   THE HAIRLINE RING (2026-10-23, paint_hairline_frame) — one device px a
 //                 side in the ring tones: the modal box, the cards and the
-//                 tooltip, the time fields, the canvas's wells;
+//                 tooltip, the time fields, the canvas's wells, the view
+//                 bar's span;
 //   (SUNKEN OUTER, ONE line, Shadow / Hilight — the open menu title and
 //                 the program's frame's ring — went 2026-10-21 with both,
 //                 the frame's top row alone a flat Shadow line until it
@@ -212,8 +214,8 @@ struct TrimRange {
 // (The toolbar band, row 8 and their cases and time fields, the view bar,
 // the ruler and the marker lane are the PROGRAM'S since 2026-10-09 — Cool
 // Edit's, cool_edit_paint.h — and wear none of these families; THE MITRE
-// reaches them, architect 2026-10-09 ~12:40, through paint_relief_frame:
-// cool_edit_paint.h's head.)
+// reaches them, architect 2026-10-09 ~12:40, through paint_hairline_frame
+// since 2026-10-23: cool_edit_paint.h's head.)
 // THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
 // four sides (THE CARD FACE, below).
 //
@@ -305,19 +307,16 @@ struct TrimRange {
 // (paint_canvas_column_frame, paint_handler.cpp; the chrome's sunken well
 // stood until 2026-10-09).
 //
-// THE DISABLED EMBOSS — EVERY DISABLED WORD (architect 2026-10-03, Windows'
-// DrawState DSS_DISABLED): the word in the theme's HILIGHT one Windows px
-// right and down, then the same word in Shadow at its place over it (the
-// light copy is Hilight by Windows' own rule, architect 2026-10-04, the
-// separate light-copy role leaving with the dark level), show_embossed_run
-// (below). A disabled GLYPH is the same emboss in Cool Edit's own constant
-// tones, of the glyph's mask (architect 2026-10-15, icons::draw_disabled);
-// nothing else dims — the dims of the kdenlive design (the disabled
-// mix, the accelerator column's and the tooltip line's) retired with the
-// luminance rule the same day. (A CUE'S LABEL IS THE ONE EXCEPTION: an inert
-// cue label is the faded tone, not the emboss — the marker-lane paragraph.)
-// A disabled glyph is the program's case's, Cool
-// Edit's emboss under every chrome (icons::draw_disabled, 2026-10-15).
+// THE DISABLED FACES (the hi-fi skin, 2026-10-23): a dead key DIMS ITS
+// PRINTED LEGEND (kDimInk, paint_key_legend), its key the face its state
+// gives; a dead caption button wears the bone and does not respond (the
+// caption block); a disabled GLYPH, where one is drawn, is Cool Edit's
+// emboss in its constant tones, of the glyph's mask (architect 2026-10-15,
+// icons::draw_disabled); a CUE'S inert label is the faded tone (the
+// marker-lane paragraph). Nothing else dims. (Windows' word emboss —
+// DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
+// under its Shadow copy, show_embossed_run, 2026-10-03 — retired with no
+// disabled word left, 2026-10-23.)
 //
 // WHAT WAS HERE BEFORE, in one sentence, because the file's shape is its
 // residue: from 2026-10-03 to 2026-10-04 the chrome was a row of a generated
@@ -342,7 +341,7 @@ struct TrimRange {
 // other color, or any color outside a scope, flat through
 // set_palette_source), CALLED WITH THE FILL'S PATH ALREADY BUILT (the
 // tile is the one under the path) — the cell fills and every relief
-// line (paint_cell_rect, paint_relief_frame and their family) — and
+// line (paint_cell_rect, paint_hairline_frame and their family) — and
 // set_waveform_source for the canvas's cairo fills, its ground and grid
 // (render_canvas) and its center lines (render_center_lines). Each converts
 // the authored sRGB color for the window (display_color, the painter's
@@ -565,7 +564,8 @@ void install_true_colors(bool on);
 // a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
 // its body `waveform_ink`, its bottom row and right column `ce_span_shadow`
 // (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h), the two mitred
-// where they meet (paint_relief_frame, 2026-10-09 ~12:40). NO PLAYHEAD IN
+// where they meet, every line one device px since 2026-10-23
+// (paint_hairline_frame; the mitre 2026-10-09 ~12:40). NO PLAYHEAD IN
 // THE BAR (architect 2026-10-09 ~14:30, "I thought we agreed no dots on the
 // trim bar"; the mock of record draws none): Cool Edit's period-2 cursor
 // column over its span (METRICS §3) is not drawn, so the bar is the black
@@ -1141,9 +1141,16 @@ constexpr int kMinWindowHeightPx = 480;
 //     = 30 px apart,
 //     the rightmost kCaptionButtonInsetAt300 = 8 + 13 = 21 px from the right
 //     edge (make_pivot3's loop); THE HIT CELLS the pitch wide and the lane
-//     tall round the centers. ENABLED the bone, DISABLED kDimInk 6A6A6E,
-//     PRESSED the glyph in kCaptionInkInactive — no cell face, no sunken box:
-//     a flat panel has none. (Windows 2000's caption — its Marlett
+//     tall round the centers. EVERY GLYPH THE BONE, no cell face, no
+//     sunken box — a flat panel has none: PRESSED the glyph ONE DEVICE PX
+//     RIGHT AND DOWN, still the bone (architect 2026-10-23: "the bone should
+//     stay"; the move is the whole pressed look, as on the keys); NO
+//     DISABLED LOOK — a dead button (Maximize on the tablet) wears the bone
+//     like its neighbors and simply does not respond, its enabled bit
+//     published for the hit test alone (architect 2026-10-23: "we have no
+//     more disabled rule for the buttons … It just wouldn't respond"; the
+//     glyph in kDimInk dead and in kCaptionInkInactive pressed stood the
+//     night of 2026-10-23). (Windows 2000's caption — its Marlett
 //     footprints, the ButtonFace constants and the soft raised cell, the
 //     ebony ground — stood 2026-10-05 to 2026-10-23; git history.)
 inline constexpr double kCaptionHeightAt300       = 40.0;
@@ -1212,17 +1219,12 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // dark field, its height and its pad program_spec.h's own, the pad 5 W
 // since 2026-10-10, equal to this field's then.)
 
-// THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised or
-// sunken edge in the chrome (architect 2026-10-02: Windows' DrawEdge draws
-// one-pixel lines, two to an edge; the grammar is at the palette head): 3
-// device px at the tablet's 300 % (its scale since 2026-10-06), 4 at 360 %,
-// 1 at the laptop's 138 %, floored at 1 so it never vanishes at 50 %. The
-// relief helpers (paint_relief_plain_sunken, the paint_windows_ family and
-// paint_relief_line_frame) paint every line at it.
-inline constexpr int kReliefLinePx = 1;
-inline int relief_line_px() {
-    return scaled_px(kReliefLinePx, 1);
-}
+// (THE RELIEF LINE — relief_line_px, ONE WINDOWS PX, scaled: 3 device px
+// at 300 %, 1 at 138 %, the width of every line of Windows' DrawEdge
+// grammar from 2026-10-02 — RETIRED 2026-10-23 with the hairline sweep,
+// architect: "let's do a sweep for all of these Windows Pixel lines";
+// every chrome line is hairline_px below, and the places that kept its
+// one-W width as a SLOT read program_line_px or window_frame_px, areas.)
 // THE ONE-DEVICE-PX LINE RULE (architect 2026-10-23, the hi-fi skin:
 // "everything scales to the 1 pixel line … we scale the icon size by the
 // area, not the borders and the line"): the chokepoint beside scaled_px for
@@ -1231,13 +1233,24 @@ inline int relief_line_px() {
 // each line on its slot's outer edge, the slot's other rows the ground the
 // line encloses), the clock's ring and the time fields' rings, the stereo
 // divider's three rows, the ruler's two light lines and its ticks with their
-// shadow, the keys' edges and outline, the modal box's ring, the cards' and
+// shadow, the keys' edges and outline and the down key's wall and ride
+// (cool_edit_paint.h's paint_key), the modal box's ring, the cards' and
 // the tooltip's rings, the player's scrub lines, the line under the caption
-// and the laptop's window border — read at those sites and nowhere else.
-// Everything else keeps scaled_px: the keys, the LED, the lanes' heights,
-// the pads, the flags' triangles and the cue boxes.
+// and the laptop's window border — and, since the sweep of 2026-10-23
+// (architect: "let's do a sweep for all of these Windows Pixel lines. I
+// guess we should get rid of most of them"), the view bar's span's bevel
+// (render_trim_flags), the access key's underline and its air under the
+// baseline (access_underline_rect, paint_handler.cpp), the dialog editors'
+// and the flag editor's carets (paint_modal_dialog, render.cpp's flag
+// editor) and the caption buttons' pressed ride (paint_caption_row) — read
+// at those sites and nowhere else. Everything else keeps scaled_px, AREAS:
+// the keys, the LED, the lanes' heights, the line SLOTS the ring's lines
+// stand in (program_line_px), the sizing frame's grab band
+// (window_frame_px), the pads and gaps (the lists' row gap, the dialog
+// text's pad, the keyboard's pad and key gap), the flags' triangles and the
+// cue boxes.
 inline int hairline_px() { return 1; }
-// A MITRED RING of one-device-px lines (paint_relief_frame's construction
+// A MITRED RING of one-device-px lines (the mitre's construction, render.cpp,
 // at hairline_px): `top_left` on the top row and left column, `bottom_right`
 // on the bottom row and right column, the two-tone corners split on the
 // diagonal.
@@ -1277,12 +1290,14 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // THE CASE (Cool Edit's §1.3 whole, its own 20-W seat since 2026-10-09
 // ~10:25): one highlight line, the glyph, one shadow line, one black line —
 // 23 W square, the buttons abutting at that pitch; A COMPOSITE OF ITS
-// ROUNDED PARTS (scaled_px's rule), each line one relief line and the glyph
+// ROUNDED PARTS (scaled_px's rule), each old line's slot one W and the glyph
 // scaled_px(20): 69 device px at 300 %, 84 at 360 % (the glyph 72, the
-// lines 4 each), 31 at the laptop's 138 %. The glyph rasterizes at
-// icon_glyph_px (icons::draw_cased) at the case's first line in from its
-// corner, one line further right and down while pressed or checked
-// (cool_edit_paint.h's faces).
+// slots 4 each), 31 at the laptop's 138 % — AN AREA since the hi-fi skin,
+// THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one device
+// px and whose down face rides one device px right and down, 2026-10-23).
+// A glyph, where one is drawn (icons::draw_cased; no band key wears one in
+// the skin), rasterizes at icon_glyph_px at the case's first slot in from
+// its corner.
 //
 // THE BAND (architect 2026-10-22, the simple layout): THE STRIP PAD, the
 // case, THE STRIP PAD on the brushed ground — its first row the caption's
@@ -1298,8 +1313,15 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // OVERLAY'S LIST ICON ARE NOT THE CASE: each keeps Windows' small 16-px icon
 // on a constant of its own (notifications.h's kNotificationGlyph*,
 // folder_overlay.h's kRowIcon*).
+// THE PROGRAM RING'S SLOT (2026-10-23): ONE W, its own rounded part
+// (floored at 1) — AN AREA, the place the old one-W line stood, kept so the
+// lanes' and the canvas column's geometry did not move when the skin took
+// its lines to one device px; the ring's line is hairline_px on the slot's
+// outer edge, the slot's other rows or columns the ground it encloses
+// (render_trim_flags, paint_ruler_row, paint_canvas_column_frame,
+// modal_box_rect).
 inline int program_line_px() {
-    return relief_line_px();
+    return scaled_px(1, 1);
 }
 inline int icon_glyph_px() {
     return scaled_px(kProgramSpec.glyph_px);
@@ -1352,8 +1374,8 @@ inline int program_run_gap_px() {
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
-// its box is the relief at relief_line_px, below, and no corner in the
-// chrome is rounded.
+// its box is the key's (cool_edit_paint.h's paint_key), and no corner in
+// the chrome is rounded.
 
 // -- THE PLAY-SCRUB (architect 2026-10-02; the thumb 2026-10-06) -------------
 //
@@ -1478,7 +1500,7 @@ inline int ruler_lane_h_px() {
 // triangles and the label's leads; the stem's dots on the canvas are one
 // device px, waveform_line_px's rule, 2026-10-09).
 inline int cue_unit_px() {
-    return program_line_px();
+    return scaled_px(1, 1);
 }
 inline int cue_triangle_h_px() {
     return kProgramSpec.cue_triangle_rows * cue_unit_px();
@@ -1678,8 +1700,7 @@ inline int bottom_row_h_px() {
 // the skin's device px at 300 % (caption_row_h_px, 40 there).
 constexpr int chrome_stack_authored_h(const ChromeSpec& s, int pad) {
     const int frame = s.window_frame_maximized
-        ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
-               2 * kReliefLinePx)
+        ? 2 * (s.window_frame_lines + kWindowFramePx - 2)
         : 0;
     return frame +
            program_strip_authored_h(kProgramSpec, pad) +
@@ -1737,12 +1758,13 @@ inline int scrub_thumb_above_px() {
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
 // an erosion at distance 1 (render_waveform's inner_interior, render.cpp, the width riding the
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
-// (render_canvas, render_center_lines). EVERYTHING OFF THE CANVAS — and THE
-// STEREO DIVIDER, chrome standing on it (architect 2026-10-16, "scaled";
-// waveform_divider) — keeps THE PROGRAM'S QUANTUM u =
-// scaled_px(1, 1) (program_line_px, cue_unit_px): the cues' triangles and the
-// playhead's head (paint_ce_cue_triangle) and the ruler's ticks
-// (paint_ruler_row, fill_waveform_line's `t`).
+// (render_canvas, render_center_lines). EVERYTHING OFF THE CANVAS keeps THE
+// PROGRAM'S QUANTUM u = scaled_px(1, 1) (cue_unit_px) for its AREAS — the
+// cues' triangles and the playhead's head (paint_ce_cue_triangle) — while
+// its LINES, THE STEREO DIVIDER (chrome standing on the canvas,
+// waveform_divider; "scaled" 2026-10-16) and the ruler's ticks
+// (paint_ruler_row, fill_waveform_line's `t`) among them, are one device px
+// since the hi-fi skin (hairline_px, 2026-10-23).
 // (From 2026-09-27, "scale all, including the ruler ticks and the playhead
 // head", until this ruling every canvas line was one Windows px, scaled.)
 inline int waveform_line_px() {
@@ -2204,53 +2226,13 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area);
 void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
 void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 
-// THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
-// edge grammar (architect 2026-10-02; the grammar and the family table at the
-// palette head). Every line is relief_line_px() wide and is an integer rect
-// of cells, never a stroke. A RING is drawn ON the rect's outermost cells:
-// its top and left in `top_left`, its bottom and right in `bottom_right`,
-// the two MITRED at the top-right and bottom-left corner blocks (architect
-// 2026-10-06; the rule at paint_relief_frame, render.cpp: each block split
-// along its 45-degree diagonal, antialiased; the top-left and bottom-right
-// corners square); a TWO-LINE EDGE is its outer ring on the rect and its
-// inner ring on the rect inset one line (Windows' DrawEdge), the two rings'
-// diagonals one line.
-//   paint_relief_frame  — one ring, any two colours (the one owner every
-//                         helper below calls, and THE PROGRAM'S MITRE since
-//                         2026-10-09: every two-tone ring cool_edit_paint.cpp
-//                         draws and the view bar's span — its head).
-//   (paint_windows_soft_raised / _soft_sunken / _plain_raised — Windows
-//                         2000's Standard quartet on the caption buttons and
-//                         the sizing frame, 2026-10-22 to 2026-10-23 — left
-//                         with them; the hi-fi skin's rings are one-device-px
-//                         hairlines, paint_hairline_frame above.)
-//   paint_relief_plain_sunken — PLAIN SUNKEN, no wearer since the hi-fi
-//                         skin's scrub (2026-10-23; the scrub's channel
-//                         until then, the dialog editor's field and the
-//                         choice combo until 2026-10-14).
-//   (paint_relief_sunken_outer — SUNKEN OUTER, ONE ring, DrawEdge's
-//   BDR_SUNKENOUTER — went 2026-10-21 with its two wearers, the open menu
-//   title and the program's frame's ring.)
-//   paint_relief_line_frame — one colour all round, square (no mitre
-//                         between one tone and itself); no caller since the
-//                         dialog's default-button frame and the list's
-//                         focus frame retired (2026-10-23; the popup scroll
-//                         bar's pressed arrow button until 2026-10-14).
-//   (The CARD FRAME — the tooltip's and the cards' — is the hi-fi skin's
-//   one-device-px sunken ring in the ring tones since 2026-10-23, at
-//   paint_popup_chrome.)
-//   (paint_relief_etched_hline — an ETCHED line, the dropdown's separator —
-//   went 2026-10-21 with the Settings popup, its last wearer.)
-// (The one-line raised inner edge — the flat toolbars' hot face — and the
-// vertical etched line — their group separators — went with the program's
-// band, 2026-10-09: Cool Edit's band is cool_edit_paint.h's.)
-// (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin
-// design, are retired, architect 2026-10-02: every caller names its family.)
-// None of them fills the face: a caller fills first and frames after.
-void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                        GuiColor bottom_right);
-void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
-void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
+// (THE RELIEF HELPERS — paint_relief_frame, paint_relief_plain_sunken and
+// paint_relief_line_frame, the chrome's one painter family for the
+// Windows-95 edge grammar from 2026-10-02, every line one scaled Windows px
+// — RETIRED 2026-10-23 with the hairline sweep (the line rule at
+// hairline_px): every ring the chrome draws is paint_hairline_frame's, the
+// same mitre at one device px, the view bar's span the family's last
+// wearer.)
 // One cell rect in `c` — the face fill every relief caller lays first — A
 // SURFACE: `c` through set_surface_source, so under a material scope a chrome
 // tone lands as its material (materials.h) and any other color flat.
@@ -2288,14 +2270,11 @@ struct DirectPixelTarget {
     cairo_surface_t* surface = nullptr;
 };
 bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
-// THE DISABLED EMBOSS, THE WORD HALF (architect 2026-10-03, Windows' DrawState
-// DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
-// Hilight one Windows px (relief_line_px) right and down, then in its
-// Shadow at (x, baseline) over it — every disabled word in the product goes
-// through here (a disabled glyph is icons::draw_disabled's). The
-// run carries its own font (text_shape.h).
-void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
-                       double x, double baseline);
+// (THE DISABLED EMBOSS, THE WORD HALF — show_embossed_run, Windows'
+// DrawState DSS_DISABLED: the word in Hilight one Windows px right and down
+// under its Shadow copy, 2026-10-03 — RETIRED 2026-10-23 with no caller
+// left: a disabled key dims its legend (kDimInk, paint_key_legend), a dead
+// caption button wears the bone, and no other word is disabled.)
 
 
 // THE WAVEFORM AREA IS THE CANVAS: the plate blit, the canvas's lines, the
@@ -3072,12 +3051,12 @@ struct TrimBarHit {
 // every chrome: the black field across the waveform's columns in its sunken
 // ring (the top line and the left column, the bottom line and the right
 // column, mitred), then THE SPAN — the trim window's columns, the begin
-// column through the end column inclusive, a raised one-quantum bevel block
-// of the ink in the field's rows, sliding off an edge like any content
+// column through the end column inclusive, a raised bevel block of the ink
+// in the field's rows (its bevel one device px since 2026-10-23), sliding off an edge like any content
 // (architect 2026-10-05: an out-of-view bound reads as the window running
 // on); no playhead (the canvas-column paragraph above, 2026-10-09 ~14:30).
 // All pixel-bound integer fills but the ring's and the span's mitred corner
-// blocks, antialiased (paint_relief_frame, 2026-10-09). The lane band is
+// blocks, antialiased (paint_hairline_frame, 2026-10-09). The lane band is
 // the `trim_bar` PARAMETER — the caller passes top_trim_row_area(app), and
 // the band painted in is published as TrimBarHit::lane, the y-gate both
 // trim hits read, so paint and hit take the band as one value;
