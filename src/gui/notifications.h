@@ -784,17 +784,18 @@ int notification_pad_px();
 
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
 // 2026-10-24, the mock of record's rule): the inside height pad + cap + pad,
-// and the ratio the caption's (21 of its 40-px lane) and the list rows'
+// and the ratio the retired caption's (21 of its 40-px lane) and the list rows'
 // (27 of their 51-px row) — the one proportion every boxed glyph keeps to
 // its line. Its box is that ink's 40 / 27, rounded at the box
 // (icons::icon_box_live_px: the ink is already live px, derived from the
 // live pad and cap).
 inline constexpr double kNotificationGlyphRatio = 0.525;
 
-// THE GAP FROM THE GLYPH'S BOX TO THE TEXT'S PEN is the caption's title gap,
-// kCaptionTitleGapAt300 (render.h: 10 px at 300 %, skin_px) — the same
-// seat, a boxed glyph then a sentence, so one number (architect 2026-10-24,
-// the mock of record).
+// THE GAP FROM THE GLYPH'S BOX TO THE TEXT'S PEN is the logo lane's brand
+// gap, kLogoBrandGapAt300 (render.h: 10 px at 300 %, skin_px; the retired
+// caption's title gap, which it was until the caption went the same day) —
+// the same seat, a boxed glyph then words, so one number (architect
+// 2026-10-24, the mock of record).
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
 // own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline

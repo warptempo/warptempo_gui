@@ -23,8 +23,8 @@
 // SKIN'S: every chrome role a constant of the skin or one of the two ring
 // tones off the PANEL'S FACE, the brushed ground's mean (materials.h's TONE
 // RULE; the per-role mapping is chrome_derive.h's, the one owner),
-// re-derived at every install. THE CAPTION HAS NO ROLE: its one flat ground
-// and its inks are constants (render.h's caption block, 2026-10-23); its six roles — the active and inactive
+// re-derived at every install. THE CAPTION HAS NO ROLE: the app paints none
+// since 2026-10-24 (render.h's caption note); its six roles — the active and inactive
 // title's start, gradient end and text, a scheme's keys — were removed
 // 2026-10-21 with the 42 built-in captions and the `caption` key
 // (palette_file.h's head).

@@ -28,7 +28,7 @@ enum class LandingKind { Walk, Restore };
 
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
 // LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
-// now, and the rows above it — the caption and the toolbar band — are OWED
+// now, and the rows above it — the toolbar band and its logo lane — are OWED
 // to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
@@ -501,9 +501,10 @@ struct Viewport {
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
-    // ABOVE IT DRAW NONE OF THOSE: the caption and the toolbar band paint
-    // the window's state, the
-    // project's name and the roster's faces. Some of those FACES
+    // ABOVE IT DRAW NONE OF THOSE: the toolbar band and its logo lane paint
+    // the legend's battery and clock and the roster's faces (the app's
+    // caption painted the window's state and the project's name too, until
+    // 2026-10-24). Some of those FACES
     // are predicates over the view (Full Zoom Out greys where the view
     // already frames what it would), and many more move with the acts that
     // reach this rect beside a viewport change (Undo / Redo and Save after

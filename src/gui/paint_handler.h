@@ -64,8 +64,8 @@ std::vector<GuiRect> program_case_rects(const AppState& app);
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
-// bake for their ebony patches 2026-10-21 to 2026-10-22, are the caption
-// painter's own again, paint_handler.cpp.)
+// bake for their ebony patches 2026-10-21 to 2026-10-22, went with the
+// caption, 2026-10-24.)
 
 // -- Constants used by paint code ----------------------------------------
 //
@@ -893,18 +893,9 @@ private:
     // with the row, 2026-10-22; THE BOTTOM OVERLAYS' painter,
     // paint_bottom_overlays — the taskbar line and the dialog's ground,
     // 2026-10-10 to 2026-10-14 — with the taskbars.)
-    // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
-    // record at render.h's caption block): the one flat ground (2026-10-23),
-    // the quaver, the title — "<piece> - Warptempo", or "Warptempo" where no
-    // piece is open — in the bold face in the bone (materials.h's INKS;
-    // kCaptionInkInactive while inactive) cut with "..." before the buttons,
-    // and the three caption buttons' procedural glyphs (render.h's caption
-    // block, 2026-10-23), whose hit cells and enabled bits it
-    // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
-    // gate) for the press claim (claim_caption_press, input_pointer.cpp).
-    // Audio-independent like the rows above and called beside them, gated on
-    // its own exposure.
-    void paint_caption_row(cairo_t* cr);
+    // (THE CAPTION'S PAINTER, paint_caption_row — the window's own title
+    // bar at the top lane 0, 2026-10-05 to 2026-10-24 — is removed with the
+    // lane: labwc draws the laptop's title bar, the tablet has none.)
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
     // 2026-10-09): the clock in its dark time field (2026-10-05) in a

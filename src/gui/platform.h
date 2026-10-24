@@ -47,15 +47,12 @@
 // the set, so a reopen costs one AAudio stream start (its one transient), the
 // accepted price.
 //
-// THE DAMAGE CALL: invalidate_region takes a CLIENT rect — the GUI's whole
-// geometry, the window's band outside it — so no client damage ever reaches
-// the sizing frame (the restored laptop's, or a band a chrome keeps on the
-// maximized window on both devices, window_frame_maximized). The band
-// paints transparent under one device px of the ring's light tone
-// (render.h's sizing-frame block, the hi-fi skin 2026-10-23), which no act
-// of the app moves, so every repaint of it rides the backend's own full
-// damage (a configure or a window adoption). Both backends implement it
-// alike. (invalidate_surface, the whole surface's damage the pre-paint hook
+// THE DAMAGE CALL: invalidate_region takes a rect of the GUI's whole
+// geometry, which is the surface's on both backends since 2026-10-24 (the
+// app paints no window frame: labwc draws the laptop's borders; the app's
+// own sizing frame, a band outside the GUI's geometry, stood 2026-10-05 to
+// then). Both backends implement it alike. (invalidate_surface, the whole
+// surface's damage the pre-paint hook
 // asked for after a materials bake while the band wore a material,
 // 2026-10-21 to 2026-10-22, is retired.)
 //

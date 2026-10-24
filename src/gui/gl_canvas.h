@@ -56,16 +56,16 @@ public:
     void ensure_texture(int w, int h);
     // THE FRAME (the definition): the upload walk of `damage` out of `back`
     // into the texture, less the canvas clip; the clear; the list's draw
-    // under the scissor; the texture's draw over it. `frame_px` the window's
-    // frame (the GUI's client px plus it are surface px); `list` the GUI's
-    // canvas frame, null before the first; `surface_w` x `surface_h` the
+    // under the scissor; the texture's draw over it. `list` the GUI's
+    // canvas frame (its px the surface's: the app paints no window frame
+    // since 2026-10-24), null before the first; `surface_w` x `surface_h` the
     // surface's size, the viewport — the platform hands its BACKBUFFER'S
     // size, which is the whole surface's (each present's comment says why
     // not EGL's own answer). FALSE, with no GL call made, when there
     // is no texture yet or the backbuffer has no data: the platform then
     // swaps nothing and keeps its damage. The platform swaps on true.
     bool present_frame(cairo_surface_t* back, std::span<const GuiGlRect> damage,
-                       int frame_px, const GuiCanvasDrawList* list,
+                       const GuiCanvasDrawList* list,
                        int surface_w, int surface_h);
     // THE CONTEXT'S END (the platform's exit): every name forgotten, the
     // context's destruction having freed the objects themselves — no GL call
@@ -74,7 +74,7 @@ public:
     void forget();
 
 private:
-    void upload_list(const GuiCanvasDrawList& list, int frame_px);
+    void upload_list(const GuiCanvasDrawList& list);
 
     GuiGlCanvasHost host_{};
     // The texture triangle's program and its one uniform, and THE BACKBUFFER'S

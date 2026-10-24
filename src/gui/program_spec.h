@@ -3,7 +3,8 @@
 
 // THE PROGRAM SPEC (architect 2026-10-09 ~06:55, "chrome means chrome, the
 // program is Cool Edit"; the go ~09:40): THE CHROME is the OS part — the
-// caption (the menu row under it until 2026-10-21), the window frame, the
+// caption and the window frame (labwc's since 2026-10-24; the menu row
+// under the caption until 2026-10-21), the
 // pull-downs, the cards, the
 // prompts, the project picker's and the Settings dialogs with their fields
 // and buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
@@ -36,8 +37,8 @@
 // canvas column and one round row 8's clock are the program's only strokes
 // on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
 // stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
-// bottom: THE TOOLBAR BAND at the window's top on the tablet and directly
-// under the laptop's caption — THE LOGO LANE (its upper pad since
+// bottom: THE TOOLBAR BAND at the window's top on both devices (under the
+// laptop's caption until 2026-10-24) — THE LOGO LANE (its upper pad since
 // 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,
 // settled 2026-10-23: strip_pad_px's field below; the keys' legends in the
 // bottom pad), its keys in plain runs
@@ -294,7 +295,7 @@ constexpr int program_strip_authored_h(const ProgramSpec& p) {
 }
 // THE BAND'S AUTHORED PART (architect 2026-10-24): the case and the strip
 // pad under it. Its upper pad is THE LOGO LANE, authored in device px at
-// 300 % like the caption (render.h's logo lane block, logo_lane_h_px), so
+// 300 % like the skin's other lengths (render.h's logo lane block, logo_lane_h_px), so
 // it is not a Windows-px term here (the band was row 8's strip 2026-10-22
 // to 2026-10-24).
 constexpr int program_band_authored_h(const ProgramSpec& p) {

@@ -40,8 +40,7 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // for member and signature for signature, and there is NO ANDROID-ONLY MEMBER:
 // where the two machines differ, both sides declare the member and each
 // answers its own way (the on-screen keyboard's pair, device_config_defaults,
-// the car's pair, the pen's pair, the caption predicate and battery_status are
-// of that shape).
+// the car's pair, the pen's pair and battery_status are of that shape).
 // THE PROOF IS A DIFF, never a carried count: strip `//` comments and blank
 // lines from each header's `public:` section and the two come out line for
 // line equal but for the pen pair's two inline bodies — re-derive it at every
@@ -55,12 +54,15 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST GREW ON 2026-10-24, twice: by window_has_own_caption (the caption
-// lane's one predicate — the tablet none, the laptop its interim caption
-// until labwc decorates it; platform_wayland.h's declaration) and by
-// battery_status (the logo lane's battery + clock legend: sysfs on the
-// laptop, the sliver's broadcast here — gui_battery.h carries the type). It
-// last shrank on 2026-10-08 (the theme files' member, below) and grew on
+// LAST SHRANK ON 2026-10-24 (architect: the laptop's window to labwc's
+// server-side decorations), by the window's own chrome set whole —
+// window_maximized, window_restorable, caption_active, begin_window_move,
+// begin_window_resize, minimize_window, toggle_window_maximized and the
+// window_has_own_caption predicate that had grown it that morning — the app
+// painting no caption and no sizing frame on either device. It last grew the
+// same day by battery_status (the logo lane's battery + clock legend: sysfs
+// on the laptop, the sliver's broadcast here — gui_battery.h carries the
+// type). It shrank on 2026-10-08 (the theme files' member, below) and grew on
 // 2026-10-06, twice: by bundled_icon_files (the icons' SVG and PNG
 // files the build ships, read in place at launch: the repository's
 // assets/icons/ on the laptop, the APK's assets here — icons.h's
@@ -173,9 +175,8 @@ public:
         bundled_icon_files();
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no system titlebar, so this setter stores
-    // nothing and paints nothing (the app's own CAPTION, top lane 0 since
-    // 2026-10-05, composes its title itself from the open piece's name,
-    // paint_caption_row). It stays on the API because the GUI calls it from its
+    // nothing and paints nothing (the app paints no caption on either device
+    // since 2026-10-24). It stays on the API because the GUI calls it from its
     // load path unconditionally (contract and composition rule at
     // platform_wayland.h, which owns it).
     // THE DIRTY INDICATOR IS THE SAVE BUTTON'S GREY (architect 2026-10-05,
@@ -260,33 +261,10 @@ public:
     // launched activity is focused, so the flag flips before any frame paints.
     bool window_activated() const { return window_activated_; }
 
-    // -- THE WINDOW'S OWN CHROME (architect 2026-10-05) ----------------------
-    // The seam's set (contracts at platform_wayland.h's block), answered for
-    // the tablet's full-screen window: it is ALWAYS MAXIMISED and cannot be
-    // restored (the caption's Maximise / Restore shows Restore, greyed, and
-    // its double tap does nothing), it has no sizing frame and no drag
-    // (a chrome whose spec sets window_frame_maximized would stand its frame
-    // round it, painted and inert, frame_px_) — the move and resize verbs and
-    // the maximise toggle do
-    // nothing, and the
-    // caption never calls them where window_restorable() is false. MINIMISE
-    // SENDS THE TASK TO THE BACKGROUND (Activity.moveTaskToBack(true) over
-    // JNI, the Home button's own road): the window goes, the process and its
-    // project stay, and returning brings the window back through the
-    // ordinary window-loss and window-adoption cycle.
-    bool window_maximized() const { return true; }
-    bool window_restorable() const { return false; }
-    // The caption is always ACTIVE here (platform_wayland.h's caption_active):
-    // the tablet's one full-screen window is the one in front.
-    bool caption_active() const { return true; }
-    // NO CAPTION OF THE APP'S OWN HERE (architect 2026-10-24: "remove the
-    // caption and the line under it completely, give that height to the
-    // waveform"): the tablet's full-screen window has no window to title and
-    // Android's own navigation minimizes, so the caption lane is 0 rows and
-    // nothing of it is painted or hit. The deliberate asymmetry — the
-    // laptop's interim caption until labwc decorates its window — and the
-    // predicate's readers are at platform_wayland.h's declaration.
-    static constexpr bool window_has_own_caption() { return false; }
+    // NO WINDOW CHROME OF ITS OWN (architect 2026-10-24; platform_wayland.h's
+    // block): the tablet's full-screen window has no caption, no sizing frame
+    // and no window verb on the seam; Android's own navigation minimizes and
+    // Back is the close road.
 
     // THE PAINT TARGETS (2026-10-13; the Wayland twin's contract): ONE — the
     // persistent backbuffer every frame paints into.
@@ -298,10 +276,6 @@ public:
     // every upload unless a floater stands — until the next call names
     // another; the cpu build stores it and reads nothing.
     void set_canvas_frame(const GuiCanvasDrawList* frame);
-    void begin_window_move() {}
-    void begin_window_resize(unsigned /*edges*/) {}
-    void minimize_window();
-    void toggle_window_maximized() {}
 
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
@@ -666,27 +640,11 @@ private:
     // Android, and with both system bars hidden (MainActivity.java's head)
     // nothing sits over any of it, so this backend reads no content rect and
     // subtracts no system inset — the GUI's coordinates are the surface's and
-    // the panel's, the Wayland build's shape exactly, LESS THE FRAME below.
+    // the panel's, the Wayland build's shape exactly.
     int  width_  = 0;
     int  height_ = 0;
-    // THE WINDOW'S FRAME IN DEVICE PX (architect 2026-10-08 ~17:45, a frame
-    // kept "on the tablet too" where the chrome's window manager keeps it):
-    // the Wayland backend's frame_px_ on this always-maximised window — 0
-    // unless the live chrome keeps its frame while maximised (the spec's
-    // window_frame_maximized; false under windows-2000), then render.h's
-    // window_frame_px(), taken at each adoption. THE CLIENT AREA is the surface inset by it on every side and
-    // IT IS THE GUI'S WHOLE GEOMETRY, as on the laptop: the size on_resize
-    // carries and width() / height() answer, the origin of every touch and
-    // pen position handed to the core (the surface position less the
-    // frame), of every damage rect the GUI declares, and of the on_redraw
-    // context (translated by the frame) — the band painted here
-    // (paint_window_sizing_frame), the backbuffer and the post staying the
-    // surface's.
-    int  frame_px_ = 0;
-    int  client_w() const { return width_  - 2 * frame_px_; }
-    int  client_h() const { return height_ - 2 * frame_px_; }
-    // One rect of SURFACE damage, coalesced (invalidate_region's body, the
-    // GUI's client rect offset by the frame; the adoption's whole surface).
+    // One rect of SURFACE damage, coalesced (invalidate_region's body; the
+    // adoption's whole surface).
     void invalidate_surface_rect(int x, int y, int w, int h);
     bool should_exit_ = false;
     // The run-stop request, cleared at the head of every run() (platform.h).
@@ -781,17 +739,16 @@ private:
     // method ids, looked up once. Null when the attach or the lookup failed,
     // and every push then drops with the line already logged. Spelled as
     // `struct` pointers so no JNI header reaches this file.
-    // FOUR IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
-    // independent of the others: the car's mediaState (2026-08-28), the
+    // THREE IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
+    // independent of the others: the car's mediaState (2026-08-28) and the
     // clipboard's pair (2026-09-03) — clipboard_road_open() is the one
-    // predicate both clipboard roads ask — and Activity's own moveTaskToBack,
-    // the caption's Minimise (2026-10-05).
+    // predicate both clipboard roads ask. (Activity's own moveTaskToBack, the
+    // caption's Minimise, 2026-10-05 to 2026-10-24, went with the caption.)
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
     struct _jmethodID* media_state_method_   = nullptr;
     struct _jmethodID* clipboard_set_method_ = nullptr;
     struct _jmethodID* clipboard_get_method_ = nullptr;
-    struct _jmethodID* move_task_to_back_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The tick: a periodic timerfd (bionic has them), exactly the Wayland

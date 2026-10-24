@@ -809,9 +809,9 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     // wayland.xml as wl_seat, so a compositor without it is not a compositor —
     // which makes either absence a broken environment rather than a degraded
     // one, and the program's answer to a broken environment is to fail at
-    // startup rather than run with labwc's title bar over the app's own
-    // caption (the decoration manager is where the client-side mode is asked
-    // for, since 2026-10-05) or with a dead clipboard: an
+    // startup rather than run undecorated (the decoration manager is where
+    // labwc's server-side decorations are asked for, 2026-10-24) or with a
+    // dead clipboard: an
     // environment precondition, guarding the launch and not the data (the data
     // device manager's v2 floor rides it, an older one left unbound). The
     // pointer-capture warning below is advisory: one line, a defined degrade.
@@ -850,9 +850,6 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     width_  = width;
     height_ = height;
-    // The restored size starts as the request (its rule at the configure).
-    restored_w_ = width;
-    restored_h_ = height;
     input_.set_surface_width(width_);
 
     // THE CORE'S CODEPOINT REFILL, the one probe pointing DOWNWARD across the
@@ -878,9 +875,12 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     xdg_toplevel_add_listener(xdg_toplevel_, &s_toplevel_listener, this);
     set_title(title ? title : "warptempo_gui");
     xdg_toplevel_set_app_id(xdg_toplevel_, "warptempo_gui");
-    // THE WINDOW STARTS MAXIMISED (architect 2026-10-05), asked before the
-    // first commit so the first configure carries it: no sizing frame, the
-    // caption across the screen's top (window_maximized, the header).
+    // THE WINDOW STARTS MAXIMISED (architect 2026-10-05; kept 2026-10-24
+    // under labwc's decorations: the program wants the whole screen, and
+    // labwc's own title bar restores and re-maximises it from there), asked
+    // before the first commit so the first configure carries the screen's
+    // size. The app tracks no maximised state: the window's size is all it
+    // reads (the configure).
     xdg_toplevel_set_maximized(xdg_toplevel_);
     // Ask the compositor to refuse sizing the surface below the
     // 640x480 floor. The geometry helpers also clamp internally, so the
@@ -888,19 +888,22 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     xdg_toplevel_set_min_size(xdg_toplevel_,
                               kMinWindowWidthPx, kMinWindowHeightPx);
 
-    // CLIENT-SIDE DECORATIONS (architect 2026-10-05): the app paints its own
-    // Windows 95 caption (top lane 0, paint_caption_row) and, restored, its
-    // own sizing frame (paint_window_sizing_frame, in paint_one_frame below),
-    // so it asks labwc to draw none — no second title bar over the app's.
-    // Unconditional: the decoration manager is a REQUIRED global (the gate
-    // above returns false without it), so the mode is always ASKED for; the
-    // compositor's answer (the decoration's configure) is not listened to, the
-    // app's chrome standing either way.
+    // SERVER-SIDE DECORATIONS (architect 2026-10-24: "release it to the
+    // window manager as we had in the beginning of this project before we
+    // introduced the client-side decoration"): LABWC DRAWS THE TITLE BAR AND
+    // THE BORDERS and owns move, resize, maximize, minimize and close; the
+    // app paints NO WINDOW CHROME and draws the program from the surface's
+    // first row (the logo lane, render.h). The client-side caption and
+    // sizing frame the app painted 2026-10-05 to 2026-10-24 are removed
+    // whole. Unconditional: the decoration manager is a REQUIRED global (the
+    // gate above returns false without it), so the mode is always ASKED for;
+    // the compositor's answer (the decoration's configure) is not listened
+    // to — labwc honors the mode.
     xdg_toplevel_decoration_ = zxdg_decoration_manager_v1_get_toplevel_decoration(
         xdg_decoration_manager_, xdg_toplevel_);
     zxdg_toplevel_decoration_v1_set_mode(
         xdg_toplevel_decoration_,
-        ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
+        ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
 #if WARPTEMPO_CANVAS_GL
     // THE GL CANVAS'S EGL OBJECTS, made HERE: after the wl_surface and its
@@ -1074,10 +1077,9 @@ void GuiPlatform::redeliver_geometry() {
     // init()'s requested size until then, and firing it here would hand the
     // first object set a size the compositor has not yet granted, only for
     // the configure to fire again. After it, the geometry is the window's
-    // real one and a reopened set is owed exactly this fire — the CLIENT
-    // area's, the frame being outside the app (frame_px_, the header).
+    // real one and a reopened set is owed exactly this fire.
     if (!has_initial_configure_) return;
-    if (on_resize_) on_resize_(client_w(), client_h());
+    if (on_resize_) on_resize_(width_, height_);
 }
 
 void GuiPlatform::request_exit() {
@@ -1437,18 +1439,12 @@ bool GuiPlatform::present() {
     EGLDisplay dpy  = egl_display_;
     EGLSurface surf = egl_surface_;
     if (!surf || !back_) return false;
-    // THE SIZING FRAME (the design record's §6 hazard; frame_px_, the
-    // header): the backbuffer is the WHOLE SURFACE, frame included, and the
-    // GUI's list is in client px, so the frame is handed over and the owner
-    // offsets the list's clip and records by it, exactly as Android's
-    // present hands its own frame_px_. The restored laptop window is this
-    // hazard's one instance; maximised the frame is 0.
     // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size the
     // frame was painted at and the texture follows), never eglQuerySurface's
     // answer: Mesa moves EGL_WIDTH / EGL_HEIGHT at wl_egl_window_resize only
     // while it holds no back buffer, and at the first configure it holds the
     // one eglMakeCurrent made at the init size. Android's present the same.
-    if (!gl_canvas_.present_frame(back_, damage_, frame_px_, canvas_frame_,
+    if (!gl_canvas_.present_frame(back_, damage_, canvas_frame_,
                                   back_w_, back_h_))
         return false;
     if (!eglSwapBuffers(dpy, surf)) {
@@ -1591,10 +1587,10 @@ int cursor_kind_index(GuiCursorKind kind) {
 }
 
 // THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
-// cursor art: TWELVE KINDS over fifteen distinct standard freedesktop names,
-// all present in Breeze (eight kinds over ten names until 2026-10-05, when
-// the sizing frame's four rows landed, two of them reusing the value drag's
-// and the trim bridge's names; eight names over seven kinds until 2026-09-10,
+// cursor art: EIGHT KINDS over ten standard freedesktop names, all present
+// in Breeze (twelve kinds over fifteen names 2026-10-05 to 2026-10-24, the
+// app's own sizing frame's four rows, gone with that frame; eight names over
+// seven kinds until 2026-09-10,
 // when the VALUE DRAG's `ns-resize` / `size_ver` row landed — the count is
 // re-derived from the table below at every retell, never carried). (`crosshair` LEFT THE TABLE with the Scrub kind,
 // 2026-08-13 — the waveform's two halves became one surface and the lower
@@ -1637,8 +1633,7 @@ int cursor_kind_index(GuiCursorKind kind) {
 //
 // `alt_name` is a row-level option in this table: a second spelling to
 // try before the per-kind degrade, for a shape the freedesktop world names two
-// ways. SIX ROWS carry one — the four sizing-frame kinds (2026-10-05, at
-// their rows), the I-beam (`text`, then the older `xterm` —
+// ways. TWO ROWS carry one — the I-beam (`text`, then the older `xterm` —
 // Breeze ships the second as a symlink to the first, and a theme carrying only
 // the legacy name still gets its cue) and, since 2026-09-10, the VALUE DRAG's
 // vertical resize (`ns-resize`, then the older `size_ver`). Null everywhere
@@ -1671,14 +1666,6 @@ constexpr CursorKindName kCursorKindNames[] = {
     // `sb_v_double_arrow`, as a symlink of the same image, so these two
     // lookups reach every theme that has the shape.
     {GuiCursorKind::ValueDrag,      "ns-resize", "size_ver"},
-    // THE SIZING FRAME'S FOUR (architect 2026-10-05): the freedesktop
-    // double arrows a window manager shows on a window's edges and corners,
-    // each with its X11 spelling second — the restored window's frame
-    // (window_frame_edges_at, app_state.h).
-    {GuiCursorKind::WindowSizeNS,   "ns-resize",   "size_ver"},
-    {GuiCursorKind::WindowSizeWE,   "ew-resize",   "size_hor"},
-    {GuiCursorKind::WindowSizeNWSE, "nwse-resize", "size_fdiag"},
-    {GuiCursorKind::WindowSizeNESW, "nesw-resize", "size_bdiag"},
 };
 static_assert(static_cast<int>(std::size(kCursorKindNames)) ==
                   kGuiCursorKindCount,
@@ -1881,31 +1868,17 @@ void GuiPlatform::paint_one_frame() {
 
 #if WARPTEMPO_CANVAS_GL
     // THE PAINT LOOP MUST NOT DECLARE DAMAGE (the cpu arm's rule below, the
-    // vector being damage_ itself here), and THE SIZING FRAME AND THE CLIENT
-    // AREA are walked as there: each surface rect paints the frame's band
-    // and hands the app the rect's part inside the client area, translated
-    // by the frame. The as-painted records' target is the one backbuffer
-    // (painting_target() 0).
+    // vector being damage_ itself here): each rect is handed to the app on
+    // a context clipped to it, the surface being the app's whole geometry
+    // (labwc draws the window's frame, 2026-10-24). The as-painted records'
+    // target is the one backbuffer (painting_target() 0).
     {
-        const int f = frame_px_;
         cairo_t* cr = cairo_create(back_);
         for (const DamageRect& d : damage_) {
             cairo_save(cr);
             cairo_rectangle(cr, d.x, d.y, d.w, d.h);
             cairo_clip(cr);
-            if (f > 0)
-                paint_window_sizing_frame(cr, width_, height_, f,
-                                          window_activated_);
-            const int cx0 = std::max(d.x, f);
-            const int cy0 = std::max(d.y, f);
-            const int cx1 = std::min(d.x + d.w, width_ - f);
-            const int cy1 = std::min(d.y + d.h, height_ - f);
-            if (on_redraw_ && cx1 > cx0 && cy1 > cy0) {
-                cairo_rectangle(cr, cx0, cy0, cx1 - cx0, cy1 - cy0);
-                cairo_clip(cr);
-                cairo_translate(cr, f, f);
-                on_redraw_(cr, cx0 - f, cy0 - f, cx1 - cx0, cy1 - cy0);
-            }
+            if (on_redraw_) on_redraw_(cr, d.x, d.y, d.w, d.h);
             cairo_restore(cr);
         }
         cairo_destroy(cr);
@@ -1949,34 +1922,17 @@ void GuiPlatform::paint_one_frame() {
     // the pre-paint hook (in_pre_paint_ above, the supported route — it runs
     // before buffer acquisition precisely so it may add to damage_) or from
     // ordinary event/tick code after the frame, never from inside a paint
-    // pass.
-    // THE SIZING FRAME AND THE CLIENT AREA (frame_px_, the header): each
-    // surface rect paints the frame's band (a no-op wherever the rect misses
-    // it, the clip cutting it) and hands the app the rect's part inside the
-    // client area, in client coordinates, on a context translated by the
-    // frame and clipped to that part — so the app paints its own geometry
-    // and never a frame pixel. Maximised, the frame is 0 and both are the
-    // surface's.
+    // pass. Each rect is handed to the app on a context clipped to it, the
+    // surface being the app's whole geometry (labwc draws the window's
+    // frame since 2026-10-24; the app's own sizing frame, 2026-10-05 to
+    // then, painted a band here outside its client area).
     painting_target_ = static_cast<int>(buf - shm_buffers_);
-    const int f = frame_px_;
     cairo_t* cr = cairo_create(buf->surface);
     for (const DamageRect& d : buf->pending) {
         cairo_save(cr);
         cairo_rectangle(cr, d.x, d.y, d.w, d.h);
         cairo_clip(cr);
-        if (f > 0)
-            paint_window_sizing_frame(cr, width_, height_, f,
-                                      window_activated_);
-        const int cx0 = std::max(d.x, f);
-        const int cy0 = std::max(d.y, f);
-        const int cx1 = std::min(d.x + d.w, width_ - f);
-        const int cy1 = std::min(d.y + d.h, height_ - f);
-        if (on_redraw_ && cx1 > cx0 && cy1 > cy0) {
-            cairo_rectangle(cr, cx0, cy0, cx1 - cx0, cy1 - cy0);
-            cairo_clip(cr);
-            cairo_translate(cr, f, f);
-            on_redraw_(cr, cx0 - f, cy0 - f, cx1 - cx0, cy1 - cy0);
-        }
+        if (on_redraw_) on_redraw_(cr, d.x, d.y, d.w, d.h);
         cairo_restore(cr);
     }
     cairo_destroy(cr);
@@ -2013,13 +1969,6 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     // Never called from inside the paint loop (the hazard and the supported
     // pre-paint route are stated at that loop, paint_one_frame).
 
-    // The app declares CLIENT-area rects; the lists hold surface rects, the
-    // frame added back (frame_px_, the header).
-    invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
-}
-
-void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
-    if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the
     // global damage signal and every per-buffer pending list use the same
     // containment coalescing. Under the gl canvas the global list is the one
@@ -2470,35 +2419,13 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         }
 #endif
     };
-    // THE MAXIMISED STATE AND THE FRAME IT DECIDES land with the size
-    // (frame_px_, the header): no frame while maximised, else Windows 95's
-    // four px — standing while maximised too under a chrome whose spec sets
-    // window_frame_maximized (render.h's sizing-frame block). THE
-    // RESTORED SIZE (architect 2026-10-05: a Restore must look
-    // like a restore) is remembered here, its one owner, as the WHOLE
-    // SURFACE, frame included, like init()'s request: it starts as that
-    // request (1400 x 800), every SIZED configure while not maximised
-    // updates it (his resizes, and the compositor's own restore size), and
-    // an UNSIZED configure (0 x 0 — the compositor leaving the size to the
-    // client, as an unmaximise may) while not maximised takes it. A sized
-    // configure always wins; an unsized one while maximised keeps the
-    // current size.
-    const bool maximized_changed = pending_maximized_ != window_maximized_;
-    window_maximized_ = pending_maximized_;
-    const int frame =
-        (window_maximized_ && !live_chrome_spec().window_frame_maximized)
-            ? 0
-            : window_frame_px();
-    int want_w = pending_w_, want_h = pending_h_;
-    if (!window_maximized_) {
-        if (want_w > 0 && want_h > 0) {
-            restored_w_ = want_w;
-            restored_h_ = want_h;
-        } else {
-            want_w = restored_w_;
-            want_h = restored_h_;
-        }
-    }
+    // THE SIZE IS THE COMPOSITOR'S (labwc's server-side decorations,
+    // 2026-10-24: it owns maximise, restore and resize, and its configure
+    // carries the size each leaves the surface): a sized configure takes it,
+    // an unsized one (0 x 0, the size left to the client) keeps the current
+    // size. (The app's own restored-size memory and sizing frame, 2026-10-05
+    // to 2026-10-24, went with its caption.)
+    const int want_w = pending_w_, want_h = pending_h_;
 
     if (first) {
         has_initial_configure_ = true;
@@ -2508,37 +2435,26 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
             height_ = want_h;
             resize_surface_buffers();
         }
-        frame_px_ = frame;
-        input_.set_surface_width(client_w());
+        input_.set_surface_width(width_);
         queue_full_surface_damage();
-        if (on_resize_) on_resize_(client_w(), client_h());
+        if (on_resize_) on_resize_(width_, height_);
         paint_one_frame();
         return;
     }
 
-    // Subsequent configure: act on any pending dimension change — of the
-    // surface, or of the client area inside a frame that came or went.
-    const bool size_changed =
-        want_w > 0 && want_h > 0 &&
-        (want_w != width_ || want_h != height_);
-    if (size_changed) {
+    // Subsequent configure: act on any pending dimension change.
+    if (want_w > 0 && want_h > 0 &&
+        (want_w != width_ || want_h != height_)) {
         width_  = want_w;
         height_ = want_h;
         resize_surface_buffers();
-    }
-    if (size_changed || frame != frame_px_) {
-        frame_px_ = frame;
-        input_.set_surface_width(client_w());
+        input_.set_surface_width(width_);
         queue_full_surface_damage();
-        if (on_resize_) on_resize_(client_w(), client_h());
-    } else if (maximized_changed || damage_.empty()) {
-        // No size change — still schedule a paint so the compositor's
-        // reconfigure (an activation or maximize state change: the caption's
-        // active or inactive look, the Maximise / Restore glyph) gets
-        // honored. (Windows 2000's
-        // sizing frame does not follow the activation, so a flip needs no
-        // full damage of its own; a later vocabulary whose frame does adds
-        // that arm here.)
+        if (on_resize_) on_resize_(width_, height_);
+    } else if (damage_.empty()) {
+        // No size change and nothing pending — still schedule a paint so
+        // the compositor's reconfigure (an activation or maximize state
+        // change) gets honored.
         queue_full_surface_damage();
     }
 
@@ -2549,9 +2465,6 @@ void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height,
                                         struct wl_array* states) {
     pending_w_ = width;
     pending_h_ = height;
-    // MAXIMIZED, off the same complete state array (the walk below), into the
-    // pending half the surface configure applies with the size.
-    pending_maximized_ = false;
 
     // WINDOW ACTIVATION, read off this configure's state array. The protocol
     // sends the COMPLETE state set every time, so "activated" is simply whether
@@ -2566,8 +2479,7 @@ void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height,
         const uint32_t* v = static_cast<const uint32_t*>(states->data);
         const size_t    n = states->size / sizeof(uint32_t);
         for (size_t i = 0; i < n; ++i) {
-            if (v[i] == XDG_TOPLEVEL_STATE_ACTIVATED) activated = true;
-            if (v[i] == XDG_TOPLEVEL_STATE_MAXIMIZED) pending_maximized_ = true;
+            if (v[i] == XDG_TOPLEVEL_STATE_ACTIVATED) { activated = true; break; }
         }
     }
     // EDGE ONLY. Every resize and every maximize re-delivers the same states, so
@@ -2962,10 +2874,11 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
 
     // The position as a fractional DOUBLE: which pixel it names is the core's
     // one containment owner to say, never a decode here. Every position the
-    // core receives is CLIENT-relative — the surface's less the sizing frame
-    // (frame_px_, the header) — here, at motion and at touch alike.
-    input_.pointer_enter(wl_fixed_to_double(surface_x) - frame_px_,
-                         wl_fixed_to_double(surface_y) - frame_px_);
+    // core receives is the surface's, which is the app's whole geometry
+    // (labwc draws the window's frame, 2026-10-24) — here, at motion and at
+    // touch alike.
+    input_.pointer_enter(wl_fixed_to_double(surface_x),
+                         wl_fixed_to_double(surface_y));
 }
 
 void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
@@ -2976,8 +2889,8 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
 
 void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
                                     int32_t surface_x, int32_t surface_y) {
-    input_.pointer_motion(wl_fixed_to_double(surface_x) - frame_px_,
-                          wl_fixed_to_double(surface_y) - frame_px_);
+    input_.pointer_motion(wl_fixed_to_double(surface_x),
+                          wl_fixed_to_double(surface_y));
 }
 
 void GuiPlatform::on_pointer_button(uint32_t serial, uint32_t /*time*/,
@@ -2993,18 +2906,7 @@ void GuiPlatform::on_pointer_button(uint32_t serial, uint32_t /*time*/,
     last_input_serial_ = serial;
     GuiMouseButton mb;
     if (!translate_pointer_button(button, mb)) return;
-    const bool pressed = state == WL_POINTER_BUTTON_STATE_PRESSED;
-    // THE RELEASE A COMPOSITOR GRAB SWALLOWED (compositor_grab_, the
-    // header): the first button event after a move or resize began is that
-    // press's release when the compositor delivers it; a PRESS instead means
-    // the lift went to the compositor alone, so the core is told of it first
-    // and the press arrives on a button the core knows to be up.
-    if (compositor_grab_) {
-        compositor_grab_ = false;
-        if (pressed && mb == GuiMouseButton::Left)
-            input_.pointer_button(GuiMouseButton::Left, false);
-    }
-    input_.pointer_button(mb, pressed);
+    input_.pointer_button(mb, state == WL_POINTER_BUTTON_STATE_PRESSED);
 }
 
 void GuiPlatform::on_pointer_axis(uint32_t /*time*/,
@@ -3048,8 +2950,7 @@ void GuiPlatform::on_touch_down(uint32_t serial, uint32_t /*time*/,
     // on a button is that button's act, and a copy under it must ride the
     // touch event's own serial.
     last_input_serial_ = serial;
-    input_.touch_down(id, wl_fixed_to_double(fx) - frame_px_,
-                      wl_fixed_to_double(fy) - frame_px_);
+    input_.touch_down(id, wl_fixed_to_double(fx), wl_fixed_to_double(fy));
 }
 
 void GuiPlatform::on_touch_up(uint32_t serial, int32_t id) {
@@ -3059,8 +2960,7 @@ void GuiPlatform::on_touch_up(uint32_t serial, int32_t id) {
 
 void GuiPlatform::on_touch_motion(uint32_t /*time*/, int32_t id,
                                   int32_t fx, int32_t fy) {
-    input_.touch_motion(id, wl_fixed_to_double(fx) - frame_px_,
-                        wl_fixed_to_double(fy) - frame_px_);
+    input_.touch_motion(id, wl_fixed_to_double(fx), wl_fixed_to_double(fy));
 }
 
 void GuiPlatform::destroy_relative_pointer() {
@@ -3173,12 +3073,10 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // this: a stem column is a place the gesture NAMED.
             const double restore_x = input_.capture_restore_x();
             const double restore_y = input_.capture_restore_y();
-            // The hint is a SURFACE position: the client-relative restore
-            // plus the sizing frame (frame_px_, the header).
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
-                wl_fixed_from_double(restore_x + frame_px_),
-                wl_fixed_from_double(restore_y + frame_px_));
+                wl_fixed_from_double(restore_x),
+                wl_fixed_from_double(restore_y));
             if (wl_surface_) wl_surface_commit(wl_surface_);
             // THE TRACKED POSITION FOLLOWS THE HINT — the fix for a click
             // dispatched at the capture's unbounded VIRTUAL TRAVEL. Button
@@ -3251,13 +3149,10 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // (The separately accepted staleness — a compositor that revokes
             // the lock without applying the hint — is untouched: that path
             // passes apply_restore_hint = false and never reaches here.)
-            // In the core's client coordinates (frame_px_, the header).
-            const double max_x = client_w() > 0
-                                     ? static_cast<double>(client_w() - 1)
-                                     : 0.0;
-            const double max_y = client_h() > 0
-                                     ? static_cast<double>(client_h() - 1)
-                                     : 0.0;
+            const double max_x = width_  > 0 ? static_cast<double>(width_  - 1)
+                                             : 0.0;
+            const double max_y = height_ > 0 ? static_cast<double>(height_ - 1)
+                                             : 0.0;
             const double tracked_x = std::clamp(restore_x, 0.0, max_x);
             const double tracked_y = std::clamp(restore_y, 0.0, max_y);
             input_.apply_capture_restore(tracked_x, tracked_y);
@@ -3632,45 +3527,12 @@ void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void(
 // Getters
 // ---------------------------------------------------------------------------
 
-// The CLIENT area's (frame_px_, the header): the app's geometry.
-int GuiPlatform::width()  const { return client_w(); }
-int GuiPlatform::height() const { return client_h(); }
+// The surface's: the app's whole geometry (no window frame of its own since
+// 2026-10-24).
+int GuiPlatform::width()  const { return width_; }
+int GuiPlatform::height() const { return height_; }
 // The selected output's current mode width (the contract at the header).
 int GuiPlatform::display_width_px() const { return output_width_px_; }
-
-// -- The window's own chrome (architect 2026-10-05; contracts at the header) --
-
-static_assert(static_cast<unsigned>(XDG_TOPLEVEL_RESIZE_EDGE_TOP) ==
-                  kGuiWindowEdgeTop &&
-              static_cast<unsigned>(XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM) ==
-                  kGuiWindowEdgeBottom &&
-              static_cast<unsigned>(XDG_TOPLEVEL_RESIZE_EDGE_LEFT) ==
-                  kGuiWindowEdgeLeft &&
-              static_cast<unsigned>(XDG_TOPLEVEL_RESIZE_EDGE_RIGHT) ==
-                  kGuiWindowEdgeRight,
-              "GuiWindowEdge spells xdg_toplevel's resize edges");
-
-void GuiPlatform::begin_window_move() {
-    if (!xdg_toplevel_ || !wl_seat_) return;
-    xdg_toplevel_move(xdg_toplevel_, wl_seat_, last_input_serial_);
-    compositor_grab_ = true;
-}
-
-void GuiPlatform::begin_window_resize(unsigned edges) {
-    if (!xdg_toplevel_ || !wl_seat_ || edges == 0) return;
-    xdg_toplevel_resize(xdg_toplevel_, wl_seat_, last_input_serial_, edges);
-    compositor_grab_ = true;
-}
-
-void GuiPlatform::minimize_window() {
-    if (xdg_toplevel_) xdg_toplevel_set_minimized(xdg_toplevel_);
-}
-
-void GuiPlatform::toggle_window_maximized() {
-    if (!xdg_toplevel_) return;
-    if (window_maximized_) xdg_toplevel_unset_maximized(xdg_toplevel_);
-    else                   xdg_toplevel_set_maximized(xdg_toplevel_);
-}
 
 // ---------------------------------------------------------------------------
 // The input core's doors, forwarded

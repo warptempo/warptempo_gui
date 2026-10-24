@@ -28,9 +28,10 @@
 //     panel_face, materials.h's TONE RULE) — so the role stands in the table
 //     and the generated rows as the record of Cool Edit's preset, read by
 //     the static_asserts alone.
-//   THE CAPTION IS A CONSTANT (render.h's caption block, 2026-10-23): one
-//     flat ground, active and inactive, the title's two inks constants too
-//     (the walnut, then the flat ebony, 2026-10-21 to 2026-10-23). The
+//   THE CAPTION IS labwc's (render.h's caption note, 2026-10-24): the
+//     app paints none (one flat ground and two title inks as constants
+//     2026-10-23 to 2026-10-24; the walnut, then the flat ebony,
+//     2026-10-21 to 2026-10-23). The
 //     caption's six colors and the
 //     second kind of preset that set them — the `caption` device key, its
 //     Settings Caption row, the product's flat `default` (9B4B2C, the

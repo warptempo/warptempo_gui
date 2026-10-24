@@ -21,8 +21,9 @@
 //
 // A MODAL TAKES THE AREA FROM THE VIEW BAR'S TOP ROW DOWN (the simple
 // layout, architect 2026-10-22, on the mocks tmp/theme_next/out/screens/,
-// "Yes, this all looks good"): the caption and the toolbar band above it
-// stay as the main window paints them. Across, it runs the window's width,
+// "Yes, this all looks good"): the toolbar band above it (the app's
+// caption over it too, until 2026-10-24) stays as the main window paints
+// it. Across, it runs the window's width,
 // as every program lane does. Top to bottom:
 //   1. ONE SUNKEN BOX WEARING THE PROGRAM RING — it stands where the ring
 //      stands: one program line, `ce_dark` top and left, `ce_hilight` right

@@ -23,8 +23,8 @@
 // road) — BODY 22 Regular (the clocks, the state line, the lists, the cards,
 // the prompts, the editors, the logo lane's battery + clock legend, and THE
 // TOOLTIP since 2026-10-23: "the tooltips font size should be the same as
-// the flags"), TITLE 24 Bold (the logo lane's brand "Warptempo" and the
-// laptop's interim caption title; architect 2026-10-24, "the caption size
+// the flags"), TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
+// 2026-10-24, the laptop's caption title beside it that morning; architect 2026-10-24, "the caption size
 // 24", off the logo mocks tmp/theme_next/caption1/ — 22 from 2026-10-23
 // until then), RULER 16 Regular (the ruler's digits alone; architect
 // 2026-10-24, "R16" off 14 / 15 / 16 / 17 on zz_type_sheet_22 — "we took
@@ -91,7 +91,7 @@ inline constexpr std::size_t kGuiFaceCount = 6;
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps
-    "LiberationSans-Bold.ttf",    // 1: the brand and the caption's title
+    "LiberationSans-Bold.ttf",    // 1: the brand
 };
 
 // THE PIXEL TABLE (the head; architect 2026-10-23 and the amendment): per
@@ -103,7 +103,7 @@ struct GuiFaceSize {
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body
-    {1, 24.0},   // Bold: the brand and the laptop's caption title
+    {1, 24.0},   // Bold: the brand
     {0, 16.0},   // Small: the ruler's digits
     {0, 22.0},   // Program: the cues' labels and the flag editor
     {0, 14.0},   // Legend: the keys' legends

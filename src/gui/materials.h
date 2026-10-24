@@ -109,8 +109,8 @@ struct AppState;
 // 1:1 COPY FROM A BAKE AT THE SAME RECTANGLE; every line, ring, key and word
 // a solid fill. THE BAKED TILES:
 //   GROUND  ONE TILE, THE BAND'S TOP TO THE WINDOW'S LAST ROW, window-wide
-//           (the caption above it is one flat tone, render.h's caption
-//           block): the band, the canvas column's margins, row 8, the
+//           (the whole surface since the app's caption above it went,
+//           2026-10-24, render.h's caption note): the band, the canvas column's margins, row 8, the
 //           keyboard's band and every modal's controls row stand on it.
 //   MARKER  ONE TILE, THE MARKER LANE'S ROWS, window-wide, its surface twice
 //           the window's width (the LOOP).
@@ -134,7 +134,7 @@ struct AppState;
 // between their keys, the canvas column's side margins, the keyboard's
 // band, the modal family's controls row; MARKER the marker lane's ground
 // between the program ring's columns and the cue labels' face boxes on it;
-// FLAT everything else — the caption, the ruler's flat ground, the view bar's
+// FLAT everything else — the ruler's flat ground, the view bar's
 // field, the fields, the modal box, the cards and the tooltip, every key.
 // UNTOUCHED: the well and everything the palette draws (the canvas, the view
 // bar's span, the cues' triangles and dots, the playhead).
@@ -151,15 +151,14 @@ struct AppState;
 // PAINT-TIME ALPHA.
 //
 // THE INKS (constants all; 0xRRGGBB, sRGB): THE BONE kBoneInk F0F0F0 on
-// every word and digit the chrome prints at the body size — the caption's
-// title, the flag labels, the clocks' digits, the tab name, the state line,
+// every word and digit the chrome prints at the body size — the logo
+// lane's brand and legend, the flag labels, the clocks' digits, the tab name, the state line,
 // the lists' rows, the cards, the prompts, the editors' text, the tooltip
 // (the bone since 2026-10-23 night, like the flags, paint_shift_tooltip) —
 // and on the keyboard's caps in their keys face (24 px at 300 %, 2026-10-24)
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
-// 6A6A6E, a disabled key's legend alone (a dead caption button wears the
-// bone since 2026-10-23, render.h's caption block). NO WORD
+// 6A6A6E, a disabled key's legend alone. NO WORD
 // WEARS A SHADOW but the ruler's digits and ticks (one device px of black at
 // (+1, +1), render.h's ruler block): the frame of record draws none.
 

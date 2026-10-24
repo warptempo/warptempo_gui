@@ -109,10 +109,10 @@ struct TrimRange {
 // CHROME'S ROLES are the skin's constants and the two ring tones off that
 // mean (chrome_derive.h's head, the per-role table; Cool Edit's tones off
 // the Face 2026-10-10 to 2026-10-23). The chrome's roles and their order are
-// the role table (kGuiThemeRoles, theme_file.h). THE CAPTION WEARS NO ROLE:
-// its one flat ground and its inks are the caption block's constants (THE
-// CAPTION, below) — the caption's six roles, the `caption` device key and
-// its 42 built-in schemes left 2026-10-21.
+// the role table (kGuiThemeRoles, theme_file.h). THE APP PAINTS NO CAPTION
+// since 2026-10-24 (THE CAPTION's note, below): its six roles, the
+// `caption` device key and its 42 built-in schemes left 2026-10-21, its
+// flat skin constants with the caption itself.
 // The palette's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
 // active palette is the device config's `waveform` — a built-in's key,
@@ -131,9 +131,7 @@ struct TrimRange {
 // tones) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
 // the bone, legend and dim inks, the ruler's and the fields' grounds, the
 // selection pair, the key's face, edges and LED, the accent, and the baked
-// brushed grounds through set_surface_source) — or THE CAPTION'S CONSTANTS
-// (the caption block: its ground and its inks)
-// — or THE ICON SET'S
+// brushed grounds through set_surface_source) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the icon drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
@@ -196,8 +194,9 @@ struct TrimRange {
 //   (SOFT RAISED, SOFT SUNKEN and PLAIN RAISED — the caption buttons, the
 //                 scrub's pointed thumb and the restored window's sizing
 //                 frame, Windows 2000's Standard quartet — went 2026-10-23
-//                 with those parts: the hi-fi skin's caption, keys and
-//                 border, render.h's caption block and cool_edit_paint.h);
+//                 with those parts: the hi-fi skin's keys,
+//                 cool_edit_paint.h; its caption and border went in turn
+//                 2026-10-24, labwc's);
 //   (PLAIN SUNKEN, Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) —
 //                 paint_relief_plain_sunken, the scrub's channel's until it
 //                 became two hairlines — went 2026-10-23 with the sweep);
@@ -223,7 +222,7 @@ struct TrimRange {
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
 //   ground        every chrome surface: the chrome's lanes
-//                 under the band, the caption's buttons, the on-screen
+//                 under the band, the on-screen
 //                 keyboard's band (inside the program frame since 2026-10-14;
 //                 the dialog's taskbar ground beside it 2026-10-10 to
 //                 2026-10-14) — every chrome button face, a
@@ -263,13 +262,11 @@ struct TrimRange {
 //                 2026-10-10);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
-//   (THE CAPTION wears no role since 2026-10-21: its one flat ground, its
-//                 title's two inks and its glyphs the caption block's
-//                 constants, 2026-10-23 — its six roles, a scheme's start,
-//                 gradient end and text, active and inactive,
-//                 2026-10-05..10-21); THE WINDOW BORDER round a restored
-//                 laptop window wears the ring's light tone
-//                 (paint_window_sizing_frame, 2026-10-23);
+//   (THE CAPTION and THE WINDOW BORDER are labwc's since 2026-10-24, the
+//                 app painting no window chrome — the caption's six roles,
+//                 a scheme's start, gradient end and text, active and
+//                 inactive, 2026-10-05..10-21, then the skin's flat
+//                 constants and the border's ring-light line until then);
 //   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; eleven
 //                 since 2026-10-11): the waveform's canvas, ink and outline
 //                 (ROW 6, below; the ink also the view bar's span, its
@@ -312,8 +309,7 @@ struct TrimRange {
 //
 // THE DISABLED FACES (the hi-fi skin, 2026-10-23): a dead key DIMS ITS
 // PRINTED LEGEND (kDimInk, paint_key_legend), its key the face its state
-// gives; a dead caption button wears the bone and does not respond (the
-// caption block); a disabled GLYPH, where one is drawn, is Cool Edit's
+// gives; a disabled GLYPH, where one is drawn, is Cool Edit's
 // emboss in its constant tones, of the glyph's mask (architect 2026-10-15,
 // icons::draw_disabled); a CUE'S inert label is the faded tone (the
 // marker-lane paragraph). Nothing else dims. (Windows' word emboss —
@@ -466,8 +462,8 @@ const GuiPalette& palette();
 //   ListRowLit       text and the selection's; the folder overlay's and
 //                    the project picker's row names (paint_folder_overlay)
 // (The caption's pair, CaptionActive and CaptionInactive, 2026-10-09..10-21,
-// left with the caption's roles: the title is the ink on the caption's
-// constant ground, materials.h's INKS and the caption block.)
+// left with the caption's roles; the caption itself went 2026-10-24, the
+// caption note.)
 enum class GuiSurface {
     ListRow,
     ListRowLit,
@@ -1009,7 +1005,7 @@ int    gui_scale_percent();
 double gui_scale_factor();
 
 // A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
-// asks for its text — the body, the caption's bold or the ruler's small face
+// asks for its text — the body, the brand's bold or the ruler's small face
 // at the current gui_scale.
 inline GuiFont gui_font(GuiFace face) {
     return GuiFont{face, gui_scale_percent()};
@@ -1054,7 +1050,7 @@ inline int scaled_px(double authored, int floor_px) {
 // THE HI-FI SKIN'S DEVICE-PX LENGTHS (architect 2026-10-23, the amendment to
 // the skin's brief: "the sizes are authored at the tablet's 300 % … and
 // scale with gui_scale"): a length the frame of record measured in device
-// px at 300 % — the caption's, the clock field's, the type's — through the
+// px at 300 % — the logo lane's, the clock field's, the type's — through the
 // scaled_px road, its W the device px over 3, rounded at the element.
 inline int skin_px(double device_px_at_300, int floor_px = 0) {
     return scaled_px(device_px_at_300 / 3.0, floor_px);
@@ -1103,79 +1099,18 @@ constexpr double kRowGapPx = 0.0;
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
 
-// THE CAPTION — the top strip's lane 0, at the window edge: THE WINDOW'S OWN
-// TITLE BAR, THE LAPTOP'S INTERIM CAPTION UNTIL THE LABWC ROUND, 0 ROWS ON
-// ANDROID (architect 2026-10-24: "remove the caption and the line under it
-// completely" on the tablet, "the laptop's window to labwc, a later round";
-// GuiPlatform::window_has_own_caption, the seam's one predicate, where the
-// asymmetry is recorded — the logo lane under it on both devices, below).
-// Painted by the app on the laptop (architect 2026-10-05; the laptop asks
-// labwc for client-side decorations, so labwc draws none). IN THE HI-FI SKIN
-// (architect 2026-10-23, Enlightenment's manner — tmp/enlightenment_intro2.jpg,
-// E17's default theme, "before they went flat with icons"; the frame of
-// record pv_39b, make_pivot3.build's caption and make_sheet2's quaver), EVERY
-// LENGTH AUTHORED IN DEVICE PX AT THE TABLET'S 300 % AND SCALED WITH
-// gui_scale, rounded at the element (skin_px; the architect's amendment the
-// same night: "the caption scales the same way"):
-//   THE LANE is kCaptionHeightAt300, 40 px at 300 % ("just about the right
-//     size … easier to hit"; 18 px at the laptop's 138 %): ONE FLAT TONE,
-//     kCaptionGround 141415 (the brushed caption's mean), active and
-//     inactive alike — the title alone says which — no gradient, NO TOP
-//     LINE; DIRECTLY UNDER IT A ONE-DEVICE-PX LIGHT LINE, the program ring's
-//     top row in the ring's light tone (paint_caption_row paints it on the
-//     band's first row; the band's own rows stand under that line);
-//   THE ICON, the quaver — his pick, row 4 of the caption sheet
-//     (2026-10-23): assets/icons/Quaver.svg, a BOXED GLYPH drawn through the
-//     icon road (icons.h's THE BOXED GLYPHS; icons::draw_boxed), ITS INK
-//     kCaptionIconInkAt300 = 21 px tall, so its 34 x 40 box is
-//     icons::icon_box_px(21) tall (31 at 300 %), the box's rows centered on
-//     the lane, its left edge kCaptionIconXAt300 = 6 — in the file's own
-//     bone, active and inactive alike (the title alone says which);
-//   THE TITLE LEFT, after the icon: x = 6 + the box's width + 10
-//     (kCaptionTitleGapAt300),
-//     Liberation Sans Bold at the title size (gui_font.h's table: 24 px at
-//     300 % since 2026-10-24, the brand's), the bone kBoneInk, kCaptionInkInactive 8A8A8E (the bone
-//     dulled) while the window is inactive, its cap band centered on the
-//     lane's rows (redesign_baseline), cut before the buttons with "..."
-//     (paint_caption_row owns the words and the cut);
-//   THE THREE BUTTONS, PROCEDURAL GLYPHS at the right ("the glyphs on the
-//     caption, those are good"): chevron-down (minimize), chevron-up
-//     (maximize and restore alike), x (close), AT THE NOTE'S WEIGHT
-//     (architect 2026-10-23, the caption sheet's row 4): strokes
-//     kCaptionGlyphStrokeAt300 = 2.3 px, the quaver's stem (skin_px, floored
-//     at 1 — 2 device px at 300 %, the sheet's own round(2.3 · 21 / 27); 1
-//     at 138 %; a stroke that SCALES, the glyph being artwork and not a
-//     chrome line — hairline_px's rule, 2026-10-23), each glyph reaching kCaptionGlyphRAt300 = 6 px from its center
-//     (the note's head height × .75 at the 21-px note; 7 px until then), the
-//     chevrons' rise .6 r and fall .4 r, the centers kCaptionButtonPitchAt300
-//     = 30 px apart,
-//     the rightmost kCaptionButtonInsetAt300 = 8 + 13 = 21 px from the right
-//     edge (make_pivot3's loop); THE HIT CELLS the pitch wide and the lane
-//     tall round the centers. EVERY GLYPH THE BONE, no cell face, no
-//     sunken box — a flat panel has none: PRESSED the glyph ONE DEVICE PX
-//     RIGHT AND DOWN, still the bone (architect 2026-10-23: "the bone should
-//     stay"; the move is the whole pressed look, as on the keys); NO
-//     DISABLED LOOK — a dead button (Maximize on the tablet) wears the bone
-//     like its neighbors and simply does not respond, its enabled bit
-//     published for the hit test alone (architect 2026-10-23: "we have no
-//     more disabled rule for the buttons … It just wouldn't respond"; the
-//     glyph in kDimInk dead and in kCaptionInkInactive pressed stood the
-//     night of 2026-10-23). (Windows 2000's caption — its Marlett
-//     footprints, the ButtonFace constants and the soft raised cell, the
-//     ebony ground — stood 2026-10-05 to 2026-10-23; git history.)
-inline constexpr double kCaptionHeightAt300       = 40.0;
-inline constexpr double kCaptionIconXAt300        = 6.0;
-inline constexpr double kCaptionIconInkAt300      = 21.0;
-inline constexpr double kCaptionTitleGapAt300     = 10.0;
-inline constexpr double kCaptionGlyphRAt300       = 6.0;
-inline constexpr double kCaptionGlyphStrokeAt300  = 2.3;
-inline constexpr double kCaptionButtonPitchAt300  = 30.0;
-inline constexpr double kCaptionButtonInsetAt300  = 8.0 + 13.0;
-inline constexpr uint32_t kCaptionGround      = 0x141415;
-inline constexpr uint32_t kCaptionInkInactive = 0x8A8A8E;
-inline int caption_row_h_px() {
-    return skin_px(kCaptionHeightAt300, 5);
-}
+// (THE CAPTION — the window's own title bar, the top strip's lane 0 from
+// 2026-10-05: Windows 2000's caption until 2026-10-23, then the hi-fi skin's
+// flat 40-px lane at 300 % with the quaver, "<piece> - Warptempo" and three
+// procedural glyphs, 0 rows on the tablet from 2026-10-24's morning — IS
+// REMOVED 2026-10-24 with its lane, its painter, its buttons and its light
+// line, architect: "release it to the window manager as we had in the
+// beginning of this project before we introduced the client-side
+// decoration". THE APP PAINTS NO WINDOW CHROME: labwc decorates the laptop's
+// window (server-side decorations, platform_wayland.cpp's init), the
+// tablet's full-screen window has none, and the program starts at the
+// surface's first row with the logo lane below. Its two lengths the logo
+// lane and the cards read are the logo lane's own below. Git history.)
 
 // THE LOGO LANE — THE BAND'S UPPER PAD (architect 2026-10-24, the go "Okay
 // to proceed with the build"; the frame of record
@@ -1187,17 +1122,17 @@ inline int caption_row_h_px() {
 // THAT PAD ALONE GROWS — kLogoLaneAt300, 72 px at 300 % through skin_px
 // (his pick P72 off zz_logo_P38 .. P84 by 2; 48 at 200 %, 36 at 150 %, 33
 // at 138 %), the band's three other pads the strip pad (strip_pad_px). It
-// stands directly under the caption on the laptop and at the window's top
-// on the tablet. THE LANE'S GROUND IS THE BAKE'S, nothing else on it — no
-// line (the laptop's caption line on its first row is the caption's,
-// paint_icon_row), no caption tone — and it is INERT CHROME like the
+// stands AT THE SURFACE'S TOP ON BOTH DEVICES since 2026-10-24 (under the
+// app's own caption on the laptop that morning; labwc's title bar stands
+// above the surface since). THE LANE'S GROUND IS THE BAKE'S, nothing else
+// on it — no line, no caption tone — and it is INERT CHROME like the
 // strips' pads: no hit, no tooltip, no gesture (the band's ground falls
 // through to nothing, input_pointer.cpp). paint_handler.cpp's
 // paint_logo_lane paints it, every length below skin_px, rounded at the
 // element:
 //   ON THE LEFT, THE QUAVER: Icon::Quaver through the boxed-glyph road
 //     (icons::draw_boxed), its ink kLogoQuaverInkAt300 = 21 px tall (the
-//     caption's own, kCaptionIconInkAt300: the box icon_box_px(21), 31 at
+//     retired caption's icon's: the box icon_box_px(21), 31 at
 //     300 %), ITS FIRST INK COLUMN ON THE PROGRAM RING'S OUTER LEFT COLUMN
 //     (program_ring_columns — the first key's outline column: "the glyph
 //     flush with the icons"), measured off the raster's alpha at that size
@@ -1209,7 +1144,9 @@ inline int caption_row_h_px() {
 //     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the bone
 //     kBoneInk, its first ink kLogoBrandGapAt300 = 10 px after the quaver's
 //     last ink column (text_shape::ink_left_px), its cap band centered on
-//     the lane (redesign_baseline).
+//     the lane (redesign_baseline). (The gap is the retired caption's
+//     title gap; the cards' glyph-to-text gap reads it too, a boxed glyph
+//     then words, notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
 //     (22 Regular), the bone, its cap band centered on the lane, LAID RIGHT
@@ -1239,10 +1176,17 @@ inline int caption_row_h_px() {
 //       over the cell's unit box (x over its width, y over its rows),
 //       kLogoBolt.
 //     * THE BATTERY (discharging, or the plug state unknown), UPRIGHT, THE
-//       NUB UP, solid: a kLogoBatteryWAt300 x kLogoBatteryHAt300 = 14 x 17
-//       box CENTERED IN THE CELL (its rows centered on the cap's center —
-//       16 above the baseline to 0 at 300 % — its spare column on the left,
-//       the mock's right-aligned 14 in the 15), the nub a rectangle x .37 ..
+//       NUB UP, solid: a kLogoBatteryWAt300 x kLogoBatteryHAt300 = 12 x 15
+//       box CENTERED IN THE CELL (architect 2026-10-24, his pick T15 off
+//       zz_battery_sheet_41: "the battery needs to go down a little bit, but
+//       make sure that it occupies the same width as the bolt still" — the
+//       denser drawing read larger than the bolt; the drawing of record
+//       tmp/theme_next/caption1/make_legend5.py's battery(15); the 14 x 17
+//       box of his T1-17 stood 38c1102a alone): its rows centered on the
+//       cap's center — 15 above the baseline to 1 above at 300 %, the cap's
+//       own rows — its columns the cell's spare halved, the odd column on
+//       the right (the record's floor: 1 left, 2 right at 300 %); the cell,
+//       the bolt and the legend's layout unchanged. The nub a rectangle x .37 ..
 //       .63 of the box's width, y 0 to .14 of its height plus one device px,
 //       the body a rounded rectangle x .18 .. .82, y .14 to the foot,
 //       corner radius kLogoBatteryRadiusAt300 = 1.2 px (skin_px, floor 1).
@@ -1250,12 +1194,12 @@ inline int caption_row_h_px() {
 //   "nothing" as the discharging glyph were judged on the same sheets and
 //   not taken, docs/engineering/closed_questions.md.)
 inline constexpr double kLogoLaneAt300           = 72.0;
-inline constexpr double kLogoQuaverInkAt300      = kCaptionIconInkAt300;
+inline constexpr double kLogoQuaverInkAt300      = 21.0;
 inline constexpr double kLogoBrandGapAt300       = 10.0;
 inline constexpr double kLogoGlyphCellHAt300     = 19.0;
 inline constexpr double kLogoGlyphCellWAt300     = 15.0;
-inline constexpr double kLogoBatteryWAt300       = 14.0;
-inline constexpr double kLogoBatteryHAt300       = 17.0;
+inline constexpr double kLogoBatteryWAt300       = 12.0;
+inline constexpr double kLogoBatteryHAt300       = 15.0;
 inline constexpr double kLogoBatteryRadiusAt300  = 1.2;
 inline constexpr const char* kLogoBrand = "Warptempo";
 struct GuiUnitPoint {
@@ -1272,33 +1216,20 @@ inline int logo_lane_h_px() {
     return skin_px(kLogoLaneAt300, 1);
 }
 
-// THE WINDOW BORDER — THE SIZING FRAME'S BAND (architect 2026-10-05; the
-// hi-fi skin 2026-10-23): round a RESTORED laptop window and never round a
-// maximised one (the tablet's window is always maximised), the band's
-// pixels CLEARED to transparency — its grab zones unchanged, invisible —
-// and ONE DEVICE PX of the ring's light tone (materials::ring_light) on the
-// band's innermost pixels, round the whole client rect, above the caption's
-// first row too (paint_window_sizing_frame). Painted by the Wayland backend
-// on the surface's outer `frame_px` device px (the client area inside it is
-// the app's whole geometry, platform_wayland.cpp; the surface ARGB, the GL
-// canvas's clear transparent, gl_canvas.cpp); its edges and corners are the
-// resize handles (window_frame_edges_at, app_state.h). THE BAND'S THICKNESS
-// is the composite it always was, window_frame_px — 5 device px at the
-// laptop's 138 %, 12 at 300 % — so the grab is the same. `focused` is the
-// window's activation, which the border does not show. (Windows 2000's
-// raised frame on the flat ButtonFace stood 2026-10-05 to 2026-10-23.)
-inline constexpr int kWindowFramePx = 4;
-int  window_frame_px();
-void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
-                               int frame_px, bool focused);
+// (THE WINDOW BORDER — THE SIZING FRAME'S BAND round a restored laptop
+// window, window_frame_px / paint_window_sizing_frame, Windows 95's raised
+// frame from 2026-10-05 and the hi-fi skin's transparent band under one
+// device px of the ring's light tone from 2026-10-23 — IS REMOVED 2026-10-24
+// with the caption: labwc draws the borders and owns the resize. Git
+// history.)
 // (THE MENU ROW — the top strip's lane 1 under the caption from 2026-08 to
 // 2026-10-21, Windows' plain menu bar carrying File, Edit and Settings, a
 // face row over its 19-W content — IS REMOVED, architect 2026-10-21: "I'd
 // like to see v1 without the file/edit... row … keep the line above the top
 // icon row". Its lane, its painter, its three pull-downs' titles and their
 // Alt access keys went with it; the line that stood under it, the program
-// frame's top row, stood directly under the caption until 2026-10-22 (the
-// caption block). Its record is git history.)
+// frame's top row, stood directly under the caption until 2026-10-22.
+// Its record is git history.)
 
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
 // commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign
@@ -1330,7 +1261,7 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // grammar from 2026-10-02 — RETIRED 2026-10-23 with the hairline sweep,
 // architect: "let's do a sweep for all of these Windows Pixel lines";
 // every chrome line is hairline_px below, and the places that kept its
-// one-W width as a SLOT read program_line_px or window_frame_px, areas.)
+// one-W width as a SLOT read program_line_px, an area.)
 // THE ONE-DEVICE-PX LINE RULE (architect 2026-10-23, the hi-fi skin:
 // "everything scales to the 1 pixel line … we scale the icon size by the
 // area, not the borders and the line"): the chokepoint beside scaled_px for
@@ -1341,24 +1272,24 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // divider's three rows, the ruler's two light lines and its ticks with their
 // shadow, the keys' edges and outline and the down key's wall and ride
 // (cool_edit_paint.h's paint_key), the modal box's ring, the cards' and
-// the tooltip's rings, the player's scrub lines, the line under the caption
-// and the laptop's window border — and, since the sweep of 2026-10-23
+// the tooltip's rings and the player's scrub lines (the line under the
+// caption and the laptop's window border too, until both went 2026-10-24)
+// — and, since the sweep of 2026-10-23
 // (architect: "let's do a sweep for all of these Windows Pixel lines. I
 // guess we should get rid of most of them"), the view bar's span's bevel
 // (render_trim_flags), the access key's underline and its air under the
 // baseline (access_underline_rect, paint_handler.cpp), the dialog editors'
 // and the flag editor's carets (paint_modal_dialog, render.cpp's flag
-// editor) and the caption buttons' pressed ride (paint_caption_row) — read
+// editor) — read
 // at those sites and nowhere else. Everything else keeps scaled_px, AREAS:
 // the keys, the LED, the lanes' heights, the line SLOTS the ring's lines
-// stand in (program_line_px), the sizing frame's grab band
-// (window_frame_px), the pads and gaps (the lists' row gap, the dialog
+// stand in (program_line_px), the pads and gaps (the lists' row gap, the dialog
 // text's pad, the keyboard's pad and key gap), the flags' triangles and the
 // cue boxes. ARTWORK IS AN AREA IN THIS SENSE (2026-10-23): a drawing's
 // stroke weight is part of the drawing, so it scales with the drawing — the
-// icons, the faces' strokes, the quaver and the caption buttons' three
-// procedural glyphs (kCaptionGlyphStrokeAt300, matched to the quaver's stem
-// on his glass round), never a chrome line.
+// icons, the faces' strokes, the quaver and the logo lane's bolt and
+// battery (the retired caption buttons' procedural glyphs too, matched to
+// the quaver's stem), never a chrome line.
 inline int hairline_px() { return 1; }
 // A MITRED RING of one-device-px lines (the mitre's construction, render.cpp,
 // at hairline_px): `top_left` on the top row and left column, `bottom_right`
@@ -1373,9 +1304,9 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // under row 8 and every program lane one line in from each side, 2026-10-10,
 // read off his captures of Cool Edit Pro 2.1; REDUCED TO ITS TOP ROW
 // 2026-10-21, "every row grows 1 W px each side", one Shadow line across
-// the window directly under the caption — IS REMOVED, architect 2026-10-22,
-// under the Windows-style caption (the caption block): the band stands
-// directly under the caption, and the canvas took the row. Every program
+// the window directly under the caption — IS REMOVED, architect 2026-10-22:
+// the band stood directly under the caption (at the surface's top since
+// 2026-10-24), and the canvas took the row. Every program
 // lane spans the window (strip_row_rect) and row 8 is the window's lowest
 // lane.)
 // WHAT STANDS OVER THE PROGRAM (architect 2026-10-14; the simple layout
@@ -1386,8 +1317,8 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // band stands on the window's foot across the lanes (onscreen_keyboard.h's
 // placement block), a dialog editor's controls row on it.
 
-// THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 1,
-// directly under the caption (architect 2026-10-09: the program is Cool
+// THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 0,
+// at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
 // Edit from the toolbar down, the same under every chrome; program_spec.h's
 // head, where every length below is authored and its source named). The
 // roster's twenty-four view/mode/action buttons stand in it — the
@@ -1411,10 +1342,10 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // (icon_case_lead_px), is kept below and drawn by no one today.
 //
 // THE BAND (architect 2026-10-22, the simple layout; its upper pad the
-// logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, the caption
-// block's neighbor above), the case, THE STRIP PAD on the brushed ground —
-// on the laptop its first row the caption's one-device-px light line, the
-// keys' legends in its bottom pad (2026-10-23) — 72 + 69 + 39 = 180 device
+// logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, its block
+// above), the case, THE STRIP PAD on the brushed ground — no line on its
+// first row (the laptop's caption line went with the caption, 2026-10-24),
+// the keys' legends in its bottom pad (2026-10-23) — 72 + 69 + 39 = 180 device
 // rows at 300 % (147 under the strip pad above the case, 2026-10-22 to
 // 2026-10-24). Its runs
 // are paint_icon_row's walk (icon_row_seats: the keys abutting inside a
@@ -1804,23 +1735,18 @@ inline int bottom_row_h_px() {
 // metrics off the recorded constants.)
 
 // THE PROGRAM'S STACK IN WINDOWS PX — every lane the program lays above and
-// below the well, and the frame's two sides where the vocabulary's frame
-// stands on the maximised window (2026-10-08, window_frame_maximized; none
-// under win2000): THE PROGRAM'S (program_spec.h; the simple layout
+// below the well (the frame's two sides where a vocabulary's frame stood on
+// the maximised window, window_frame_maximized, left 2026-10-24 with the
+// app's sizing frame): THE PROGRAM'S (program_spec.h; the simple layout
 // 2026-10-22): the band under its logo lane (the key, the pad), the canvas
 // column's 38 above the canvas (the view bar 8, the ruler 12, the marker
 // lane 17, the canvas's top frame row 1), the canvas's bottom frame row 1
 // under it and row 8 (the pad, the key, the pad), the strip pad
-// program_spec.h's constant (strip_pad_px). NEITHER THE CAPTION NOR THE
-// LOGO LANE IS IN IT: their heights are the skin's device px at 300 %
-// (caption_row_h_px, 40 there on the laptop and 0 rows on the tablet since
-// 2026-10-24; logo_lane_h_px, 72 there).
-constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
-    const int frame = s.window_frame_maximized
-        ? 2 * (s.window_frame_lines + kWindowFramePx - 2)
-        : 0;
-    return frame +
-           program_band_authored_h(kProgramSpec) +
+// program_spec.h's constant (strip_pad_px). THE LOGO LANE IS NOT IN IT: its
+// height is the skin's device px at 300 % (logo_lane_h_px, 72 there; the
+// app's caption, 40 there, stood over it on the laptop until 2026-10-24).
+constexpr int chrome_stack_authored_h() {
+    return program_band_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
            program_canvas_bottom_authored_h(kProgramSpec) +
            program_strip_authored_h(kProgramSpec);
@@ -1831,8 +1757,8 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
 // tablet's well 996 rows of the surface's 1440 (2026-10-24: the caption's
 // 40 rows in, the pad's 33 more out, net 7; 989 under the 40-row caption
 // over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's lane table the
-// record of each scale.
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 124);
+// record of each scale, the laptop's among them.
+static_assert(chrome_stack_authored_h() == 124);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2355,8 +2281,8 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 // tone lands as its material (materials.h) and any other color flat.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // One cell rect of INK in `c`, flat whatever the scope (set_palette_source):
-// a glyph's or a word's own cells — the caption buttons' Marlett cells, an
-// access key's underline, the cases' constant outline and rings — which no
+// a glyph's or a word's own cells — an access key's underline, the cases'
+// constant outline and rings — which no
 // material ever wears, even in a tone's bytes.
 void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 
@@ -2369,9 +2295,10 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // its words are cairo's. Taken only where such a write can be cairo's
 // result: the target an ARGB32 image surface with no group open on it, no
 // device offset and unit device scale; the operator OVER; the matrix a pure
-// integral translation (both platforms hand on_redraw a context translated
-// by the integral frame width, platform_wayland.cpp / platform_android.cpp's
-// paint loops; the flag cache's by its band's origin row, upward, since
+// integral translation (both platforms hand on_redraw an untranslated
+// context since 2026-10-24, when the app's window frame went — translated
+// by its integral width until then, platform_wayland.cpp /
+// platform_android.cpp's paint loops; the flag cache's by its band's origin row, upward, since
 // 2026-10-13, FlagCache's head, paint_handler.h); the clip a list of
 // integral rectangles (cairo_copy_clip_rectangle_list, in user space, so the
 // translation carries them to device pixels; each is intersected with the
@@ -2390,8 +2317,8 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // (THE DISABLED EMBOSS, THE WORD HALF — show_embossed_run, Windows'
 // DrawState DSS_DISABLED: the word in Hilight one Windows px right and down
 // under its Shadow copy, 2026-10-03 — RETIRED 2026-10-23 with no caller
-// left: a disabled key dims its legend (kDimInk, paint_key_legend), a dead
-// caption button wears the bone, and no other word is disabled.)
+// left: a disabled key dims its legend (kDimInk, paint_key_legend), and no
+// other word is disabled.)
 
 
 // THE WAVEFORM AREA IS THE CANVAS: the plate blit, the canvas's lines, the

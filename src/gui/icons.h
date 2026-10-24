@@ -43,10 +43,10 @@
 // it as its own viewport; a PNG's longer side read as the same 48 units)
 // fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20), Cool
 // Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60 device
-// px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the caption's
-// icon, the list rows, the cards — Windows' small icon). The window-frame
-// glyphs Windows drew in the button text — the caption's — are not drawings
-// of the set (paint_handler.cpp's caption glyph block).
+// px at 300 %, 72 at 360); elsewhere its site's own seat (the logo lane's
+// quaver, the list rows, the cards). The window-frame glyphs Windows drew
+// in the button text — the caption's, the app's own until 2026-10-24 — were
+// never drawings of the set.
 //
 // THE PLACEMENT IS FIXED: in the program's case the cell sits at the case's
 // highlight line from its corner (icon_case_lead_px, render.h — Cool Edit's
@@ -57,7 +57,7 @@
 // CELL is never moved for its ink (Windows never did: 12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset); the DRAWING inside
 // it is body-centered (THE GLYPHS BODY-CENTERED, below). The sites with no
-// case — the list rows, the cards, the caption's icon, the player's row —
+// case — the list rows, the cards, the logo lane's quaver, the player's row —
 // keep their own placements and draw the same cell.
 //
 // NO CURSOR IS AN ICON: every cursor the product shows is a NAMED
@@ -287,8 +287,10 @@ enum class Icon {
                          // (android/app/build_apk.sh's launcher step); the
                          // Linux icon packaging/warptempo_gui.svg, a link to
                          // Quaver.svg (docs/INSTALL.md). No painter draws
-                         // it; the caption wears Quaver below
-    Quaver,              // the caption's icon (architect 2026-10-23, his
+                         // it; the logo lane wears Quaver below
+    Quaver,              // the logo lane's quaver (the caption's icon from
+                         // 2026-10-23 until the caption went 2026-10-24;
+                         // architect 2026-10-23, his
                          // pick row 4 of the caption sheet): the quaver,
                          // Gemini Argon's one-path conversion of the
                          // planner's bitmap at his prompt, a BOXED DRAWING
@@ -379,7 +381,7 @@ static_assert(std::size(kIconNames) == kIconCount);
 // above, so load_set takes the file's zero and measures nothing. ONE RULE
 // FOR EVERY BOXED SEAT: the box is the ink's 40 / 27, ROUNDED AT THE BOX.
 // A seat whose ink is authored in device px at 300 % takes icon_box_px —
-// the caption's 21-px ink (skin_px(21 · 40 / 27), the box 31 tall and 26
+// the logo lane's 21-px ink (skin_px(21 · 40 / 27), the box 31 tall and 26
 // wide at 300 %) and the list rows' 27-px ink, .525 of the 51-px row
 // (skin_px(40), the box 40 tall and 34 wide); a seat whose ink is already
 // live device px, derived from live lengths, takes icon_box_live_px — the

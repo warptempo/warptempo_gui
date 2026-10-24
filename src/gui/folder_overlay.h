@@ -256,7 +256,8 @@ inline GuiRect surface_rect(const AppState& a) {
 // row and an etched pair under it, the render player's alone, 2026-10-10 to
 // 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no
 // icon, the dividing line sits awkwardly". If it is ever wanted back, the one
-// road that breaks no pattern is the folder name in the caption's title. The
+// road that broke no pattern was the folder name in the caption's title (no
+// caption of the app's own since 2026-10-24). The
 // car's MediaSession artist line keeps its own folder name, the playing
 // item's, GuiRenderPlayer's.)
 inline GuiRect content_rect(const AppState& a) {

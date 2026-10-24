@@ -3328,7 +3328,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // (The menu row's band left with its lane, 2026-10-21.)
             // (The program frame's top row's band left with its lane,
             // 2026-10-22.)
-            top_caption_row_area(app), top_icon_row_area(app),
+            // (The caption's band left with its lane, 2026-10-24.)
+            top_icon_row_area(app),
             // (The tab strip's band, 2026-10-18 to 2026-10-22, left with the
             // strip.)
             // GAP 1's band, the ONE non-lane member (between the band and

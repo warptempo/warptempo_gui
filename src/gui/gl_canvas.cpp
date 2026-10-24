@@ -152,7 +152,8 @@ constexpr const char* kListFragmentShader =
 
 // One list record as the instance attributes read it: the rect (location
 // 0), {kind, period, origin, phase} (location 1), {word, word2} (location 2),
-// every coordinate in surface px (the GUI's client px plus the frame).
+// every coordinate in surface px (the GUI's own px: the app paints no window
+// frame on either platform since 2026-10-24, so the two are one).
 struct CanvasInstance {
     GLint  rect[4];
     GLint  param[4];
@@ -357,7 +358,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // road's bytes by the sink's construction.
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
-                                int frame_px, const GuiCanvasDrawList* list,
+                                const GuiCanvasDrawList* list,
                                 int surface_w, int surface_h) {
     if (!texture_) return false;
     const int stride_px = cairo_image_surface_get_stride(back) / 4;
@@ -365,15 +366,15 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         cairo_image_surface_get_data(back));
     if (!src) return false;
 
-    // THE FRAME'S CANVAS in surface px (the GUI's client rect plus the
-    // frame, frame_px): an empty clip — no list yet, or a paint area
+    // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
+    // 2026-10-24): an empty clip — no list yet, or a paint area
     // the folder overlay emptied — leaves nothing out of any upload and
     // draws no list.
     int  clip[4] = {0, 0, 0, 0};
     bool floater = false;
     if (list && list->clip.w > 0 && list->clip.h > 0) {
-        clip[0] = list->clip.x + frame_px;
-        clip[1] = list->clip.y + frame_px;
+        clip[0] = list->clip.x;
+        clip[1] = list->clip.y;
         clip[2] = list->clip.w;
         clip[3] = list->clip.h;
         floater = list->floater;
@@ -421,18 +422,15 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     upload_seeded_  = true;
 
     glViewport(0, 0, surface_w, surface_h);
-    // THE CLEAR IS TRANSPARENT WHERE A SIZING BAND STANDS (the hi-fi skin's
-    // window border, 2026-10-23, render.h's caption block): the band's
-    // texels are cleared to alpha 0 (paint_window_sizing_frame) and discarded
-    // by the shader, so the clear is what the compositor shows there — the
-    // band invisible beyond its one light line. Without a band (the
-    // maximized laptop, the tablet) the clear stays opaque black, as before.
-    glClearColor(0.0f, 0.0f, 0.0f, frame_px > 0 ? 0.0f : 1.0f);
+    // THE CLEAR IS OPAQUE BLACK. (The restored laptop window's invisible
+    // sizing band cleared to transparency, 2026-10-23 to 2026-10-24, went
+    // with the app's sizing frame: labwc draws the borders since then.)
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (list && clip[2] > 0) {
         if (!list_uploaded_ || list->generation != list_generation_)
-            upload_list(*list, frame_px);
+            upload_list(*list);
         if (list_instances_ > 0) {
             glEnable(GL_SCISSOR_TEST);
             glScissor(clip[0], texture_h_ - (clip[1] + clip[3]),
@@ -484,8 +482,8 @@ void GuiGlCanvas::forget() {
 }
 
 // THE LIST'S UPLOAD (2026-10-13; present_frame's draw): every record one
-// instance in list order, its coordinates moved by the frame into surface px (a
-// rect, a run's origin, a plate's row 0 alike), the instance buffer rewritten
+// instance in list order, its coordinates the surface's px as the GUI wrote
+// them (a rect, a run's origin, a plate's row 0 alike), the instance buffer rewritten
 // whole — asked only when the list's generation moved, so at every rebuild of
 // the records (the scanner's and the cursor's among them; the buffer is small).
 // A plate record's `period` is re-pointed at its rows of THE PLATE'S BOUNDS
@@ -509,11 +507,10 @@ void GuiGlCanvas::forget() {
 // (GuiPlateColumns::revision, render.h; GuiListCanvasSink::plate). A list
 // with no plate record leaves the texture and its key as they are: nothing
 // samples it, and its texels still answer the key.
-void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
+void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
     static std::vector<CanvasInstance>      instances;
     static std::vector<GLshort>             texels;
     static std::vector<std::pair<int, int>> spans;
-    const int f = frame_px;
     spans.clear();
     int max_w = 1;
     for (const GuiCanvasPrimitive& p : list.prims) {
@@ -541,8 +538,8 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
     int row = 0;
     for (const GuiCanvasPrimitive& p : list.prims) {
         CanvasInstance in{};
-        in.rect[0]  = p.r.x + f;
-        in.rect[1]  = p.r.y + f;
+        in.rect[0]  = p.r.x;
+        in.rect[1]  = p.r.y;
         in.rect[2]  = p.r.w;
         in.rect[3]  = p.r.h;
         in.param[0] = static_cast<GLint>(p.kind);
@@ -553,12 +550,8 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
         in.words[1] = p.word2;
         switch (p.kind) {
         case GuiCanvasKind::Rect:
-            break;
         case GuiCanvasKind::DotsColumn:
-            in.param[2] = p.origin + f;
-            break;
         case GuiCanvasKind::DotsRow:
-            in.param[2] = p.origin + f;
             break;
         case GuiCanvasKind::Plate:
             if (pack) {
@@ -576,7 +569,6 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
                 }
             }
             in.param[1] = row;
-            in.param[2] = p.origin + f;
             row += 2;
             break;
         }

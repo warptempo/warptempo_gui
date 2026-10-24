@@ -47,8 +47,8 @@
 //                            one of 42 built-in Windows and Plus! schemes or
 //                            the product's own `default` — stood before it
 //                            2026-10-08..10-21 and left with the captions:
-//                            the caption's colors are constants, render.h's
-//                            caption block; an old
+//                            the app paints no caption since 2026-10-24,
+//                            render.h's caption note; an old
 //                            `caption=` line is the ordinary unknown-key
 //                            hard fail.)
 //   true_colors=<on|off>     THE sRGB -> DISPLAY-P3 CONVERSION'S SWITCH
@@ -421,13 +421,13 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
-// pixel the lanes above the waveform — the caption 18 W, the program's band
-// 49 (the strip pad's 13 twice and the case) and its canvas column's 38 —
-// and below it — the canvas's bottom frame row 1 and row 8's 49 — stand 105
-// + 50 = 155 W under windows-2000 (re-derived 2026-10-22 for the simple
-// layout, main.cpp's stack record), 420 device rows above the waveform and
-// 200 below at 400 %, 620 in all, leaving the tablet's 1440 rows 820 of
-// waveform; they pass 1440 near 930 %, past which the waveform is the zero
+// pixel the lanes above the waveform — the program's band, its logo lane
+// 72 device px at 300 % over the case and the strip pad, and its canvas
+// column's 38 W — and below it — the canvas's bottom frame row 1 and row
+// 8's 49 — stand 392 device rows above the waveform and 200 below at
+// 400 %, 592 in all, leaving the tablet's 1440 rows 848 of waveform
+// (re-derived 2026-10-24 with the caption gone, main.cpp's stack record);
+// they pass 1440 near 975 %, past which the waveform is the zero
 // height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //

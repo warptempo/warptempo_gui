@@ -1707,46 +1707,14 @@ struct GuiInputHandler {
                                      int x, int y);
     void update_notification_hover(int x, int y);
     void clear_notification_hover();
-    // THE CAPTION AND THE SIZING FRAME'S POINTER HALVES (architect
-    // 2026-10-05; the geometry at render.h's caption block, the window states
-    // and verbs at the platform seam, platform_wayland.h's chrome block). Each
-    // CLAIM takes a LEFT press with no modifier (any other press there is a
-    // consumed nothing). THE FRAME'S ranks above every veil, the on-screen
-    // keyboard's neighbour (a restored window resizes "always"): it hands the
-    // press to the compositor's resize at the frame's edges — on a RESTORED
-    // window only, a frame that stands on the maximised window (a spec's
-    // window_frame_maximized: the laptop maximised, the tablet always) taking
-    // its press as a consumed nothing, its hover the arrow. THE CAPTION'S
-    // ranks below the prompt's veil and every
-    // dialog editor's swallow, but admitted through the render player's, the
-    // picker's and the progress modal's veils (the menu row's live File
-    // anchor beside it until 2026-10-21): on a CAPTION BUTTON whose painted face is enabled
-    // it ARMS the button
-    // (AppState::ChromePress's Caption kind) for the lift; elsewhere on the
-    // caption, where the window can be restored, a second press inside the
-    // double-click window toggles maximised (DoubleClickSurface::Caption)
-    // and the first starts the compositor's move — on a restored window only,
-    // a maximised Windows 95 window not moving by its caption. THE LIFT is
-    // finish_caption_release: on the
-    // armed button itself (its published rect, re-hit at the lift) and under
-    // no prompt or dialog editor raised mid-hold, Minimise minimises, Maximise
-    // toggles maximised and Close runs the window's close road
-    // (on_window_close); anywhere else it does nothing (taken in
-    // on_button_release above the veils, the press having passed two of
-    // them). Acting at the lift is
-    // the roster's timing (the doctrine block at on_key); touch and the S Pen
-    // reach both halves through the touch translation's press and lift.
-    bool claim_window_frame_press(GuiMouseButton button, int x, int y,
-                                  GuiInputState mods);
-    bool claim_caption_press(GuiMouseButton button, int x, int y,
-                             GuiInputState mods,
-                             const DoubleClickCandidate& dc_at_press);
-    void finish_caption_release(const AppState::ChromePress& arm, int x,
-                                int y);
+    // (THE CAPTION AND THE SIZING FRAME'S POINTER HALVES —
+    // claim_window_frame_press, claim_caption_press and
+    // finish_caption_release, 2026-10-05 — went 2026-10-24 with the app's
+    // caption and frame: labwc decorates the window and owns its acts.)
     // THE WINDOW'S CLOSE ROAD — the compositor's close request (labwc's
-    // keybinding, the taskbar) through main.cpp's set_on_close, and the
-    // caption's Close button (architect 2026-10-05, "the existing quit act"):
-    // ONE BODY, so the two cannot drift. It ends any live pointer gesture,
+    // title-bar close button, its keybinding, the taskbar; the tablet's
+    // Back) through main.cpp's set_on_close (the app's own caption's Close
+    // button reached it too, 2026-10-05 to 2026-10-24). It ends any live pointer gesture,
     // drops the tooltip and the open menu, and runs the close owner
     // (GuiPrompt::request_close with the exit target), which raises the
     // unsaved-work prompt when the project is dirty and exits otherwise. The
@@ -1866,7 +1834,7 @@ struct GuiInputHandler {
     // No-op when nothing is live. Definition beside
     // on_button_release in input_pointer.cpp (same bodies, same order). FOUR
     // CALLERS: the Ctrl+Q hatch in on_key, the window's close road
-    // (on_window_close — the compositor's close and the caption's Close) and
+    // (on_window_close — the compositor's close) and
     // main.cpp's resize callback (close ends the gestures before raising the
     // prompt, so none is
     // left live under it; resize ends them before the geometry rebuild, whose
@@ -2922,7 +2890,7 @@ private:
     //   2026-10-14, and went with the choice editor.)
     //   NOTHING ELSE LIGHTS BY HOVER: a flag has no hover face (render.h's
     //   flag block); the folder overlay's rows, the project picker's among
-    //   them, none (folder_overlay.h); the caption buttons and the dialogs'
+    //   them, none (folder_overlay.h); the dialogs'
     //   push buttons none (render.h's palette block: no hover face on a
     //   button; update_modal_dialog_hover's head);
     //   and a

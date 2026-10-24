@@ -478,8 +478,8 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // `rect` under a clip whose extents miss it lays down no pixel, so a painter
 // may skip it — the same pixels by construction, the cost of cairo walking a
 // fully clipped path saved (the toolbar band's and row 8's cases with their
-// legends, key_legend_layout's extent, the
-// caption's boxes, row 8's clock group and state line, under the narrow
+// legends, key_legend_layout's extent, row 8's clock group and state line,
+// under the narrow
 // damage a frame most often carries). Never a gate on a PUBLICATION: the
 // faces, rects and records a painter stashes are written whether or not
 // their pixels are drawn.
@@ -1106,7 +1106,7 @@ constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 // ONE SEAT FOR EVERY CHROME LABEL (architect 2026-10-22: the tooltip and the
 // cards came back to it — the line box centered in their interior read low
 // under descenders and the one-W lift on it overshot). THE BOX SEATS: the
-// caption's title, the row-8 clock (in its time field) and the
+// logo lane's brand, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
 // is at paint_bottom_row_buttons_and_clock), the tooltip's and the
 // notification card's first lines (a further line one line height lower),
@@ -1199,207 +1199,19 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        access_underline_rect(run, label, access, x, baseline),
                        ink);
 }
-// -- THE CAPTION (architect 2026-10-05; the hi-fi skin 2026-10-23) ------------
-//
-// THE CAPTION BUTTONS' GLYPHS (render.h's caption block, make_pivot3.build's
-// loop): PROCEDURAL STROKES, kCaptionGlyphStrokeAt300 wide (skin_px, floored
-// at one device px), butt-capped and antialiased, each reaching r =
-// kCaptionGlyphRAt300 from the cell's centre (cx, cy): CLOSE the two
-// diagonals of the 2r square; MAXIMIZE (and RESTORE, one glyph — the frame of
-// record draws no second) a chevron up, (cx − r, cy + .6r) → (cx, cy − .4r)
-// → (cx + r, cy + .6r); MINIMIZE a chevron down, (cx − r, cy − .4r) → (cx, cy
-// + .6r) → (cx + r, cy − .4r). (Marlett's footprints, Windows 2000's
-// DFC_CAPTION box and its DSS_DISABLED emboss stood 2026-10-05 to
-// 2026-10-23; git history.)
-void paint_caption_glyph(cairo_t* cr, GuiCaptionButton id, double cx,
-                         double cy, GuiColor ink) {
-    const double r = static_cast<double>(skin_px(kCaptionGlyphRAt300, 1));
-    const double w = static_cast<double>(skin_px(kCaptionGlyphStrokeAt300, 1));
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    cairo_set_line_width(cr, w);
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
-    cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
-    set_palette_source(cr, ink);
-    cairo_new_path(cr);
-    switch (id) {
-    case GuiCaptionButton::Close:
-        cairo_move_to(cr, cx - r, cy - r);
-        cairo_line_to(cr, cx + r, cy + r);
-        cairo_move_to(cr, cx - r, cy + r);
-        cairo_line_to(cr, cx + r, cy - r);
-        break;
-    case GuiCaptionButton::Maximize:
-        cairo_move_to(cr, cx - r, cy + 0.6 * r);
-        cairo_line_to(cr, cx, cy - 0.4 * r);
-        cairo_line_to(cr, cx + r, cy + 0.6 * r);
-        break;
-    case GuiCaptionButton::Minimize:
-        cairo_move_to(cr, cx - r, cy - 0.4 * r);
-        cairo_line_to(cr, cx, cy + 0.6 * r);
-        cairo_line_to(cr, cx + r, cy - 0.4 * r);
-        break;
-    }
-    cairo_stroke(cr);
-    cairo_restore(cr);
-}
 } // namespace
 
-// The three buttons' HIT CELLS in a caption lane, left to right (render.h's
-// caption block): each kCaptionButtonPitchAt300 wide and the lane tall,
-// centred on its glyph's centre — Close's kCaptionButtonInsetAt300 from the
-// lane's right edge, each other one pitch left of the next — every length
-// skin_px, rounded at the element. Read by the caption's painter alone.
-static std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
-        const GuiRect& lane) {
-    const int pitch = skin_px(kCaptionButtonPitchAt300, 3);
-    const int inset = skin_px(kCaptionButtonInsetAt300, 1);
-    const int close_cx = lane.x + lane.w - inset;
-    std::array<GuiRect, kCaptionButtonCount> out{};
-    for (int i = 0; i < kCaptionButtonCount; ++i) {
-        const int cx = close_cx - (kCaptionButtonCount - 1 - i) * pitch;
-        out[static_cast<std::size_t>(i)] =
-            GuiRect{cx - pitch / 2, lane.y, pitch, lane.h};
-    }
-    return out;
-}
-
-// THE CAPTION'S TITLE, ITS BOXES' ENABLED BIT AND THEIR PUSHED FACE — each
-// spelled once, read by the painter and by the caption's as-painted
-// fingerprint (GuiPaintHandler::upper_rows_fingerprint, the one owner of the
-// caption and band fingerprints; the menu row's went with the row,
-// 2026-10-21), so the two cannot disagree.
-static std::string caption_title(const AppState& app) {
-    return app.project_name.empty() ? std::string("Warptempo")
-                                    : app.project_name + " - Warptempo";
-}
-static bool caption_button_enabled(const GuiPlatform& gui,
-                                   GuiCaptionButton id) {
-    return id != GuiCaptionButton::Maximize || gui.window_restorable();
-}
-static bool caption_button_pushed(const AppState& app, int i) {
-    return app.chrome_press.kind == AppState::ChromePress::Kind::Caption &&
-           app.chrome_press.index == i && app.chrome_press.inside;
-}
-
-void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
-    // THE CAPTION (top lane 0; the record at render.h's caption block, every
-    // length its skin_px constants). Four passes on the lane: the ground,
-    // the icon, the title and the buttons. NONE ON THE TABLET (2026-10-24,
-    // GuiPlatform::window_has_own_caption: its lane is 0 rows and nothing of
-    // it is painted).
-    if (!GuiPlatform::window_has_own_caption()) return;
-    const GuiRect row = top_caption_row_area(app);
-    if (row.w <= 0 || row.h <= 0) return;
-    cairo_save(cr);
-
-    // THE GROUND: ONE FLAT kCaptionGround, active and inactive alike, across
-    // the whole lane, no line (the light line under it is the band's first
-    // row, paint_icon_row).
-    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    const bool active = gui.caption_active();
-    const std::array<GuiRect, kCaptionButtonCount> rects =
-        caption_button_rects(row);
-    paint_cell_rect(cr, row, hex(kCaptionGround));
-    const GuiColor ink = hex(active ? kBoneInk : kCaptionInkInactive);
-
-    // THE ICON: the quaver, Quaver.svg through the icon road (render.h's
-    // caption block; icons.h's THE BOXED GLYPHS): its box icon_box_px of the
-    // 21-px ink, the box's rows centered on the lane (rounded down), its left
-    // edge at kCaptionIconXAt300, in the file's own bone.
-    const int icon_x = row.x + skin_px(kCaptionIconXAt300);
-    const int icon_h = icons::icon_box_px(kCaptionIconInkAt300);
-    const int icon_w = icons::icon_box_w_px(icon_h);
-    icons::draw_boxed(cr, icons::Icon::Quaver, icon_x,
-                      row.y + (row.h - icon_h) / 2, icon_h);
-
-    // THE TITLE, Windows' "Document - Program" convention (architect
-    // 2026-10-05): the open piece's name (AppState::project_name, the
-    // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. THE BOLD FACE (gui_font.h: Liberation Sans Bold at the
-    // title size) through the shaping chokepoint, its cap band centred in the
-    // lane, the pen kCaptionTitleGapAt300 past the icon's box, the bone (the
-    // dulled ink while the window is inactive), no shadow. THE ROOM runs to
-    // Minimise's cell:
-    // TOO LONG FOR IT the title is CUT AT A CODEPOINT and ends in "...", the
-    // longest prefix whose own run and the ellipsis's fit; a room too narrow
-    // for even the ellipsis paints no title.
-    const GuiFont font = gui_font(GuiFace::Bold);
-    const std::string title = caption_title(app);
-    const int title_x = icon_x + icon_w + skin_px(kCaptionTitleGapAt300);
-    const double room = static_cast<double>(
-        rects[static_cast<size_t>(GuiCaptionButton::Minimize)].x - title_x);
-    const double baseline = redesign_baseline(
-        font, static_cast<double>(row.y), static_cast<double>(row.h));
-    // One title run at the room's pen, the ellipsis after it when cut.
-    const auto show_title = [&](const text_shape::ShapedRun& head,
-                                const text_shape::ShapedRun* tail) {
-        const double x = title_x;
-        set_palette_source(cr, ink);
-        text_shape::show_shaped_run(cr, head, x, baseline);
-        if (tail)
-            text_shape::show_shaped_run(cr, *tail, x + head.width_px, baseline);
-    };
-    text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
-    if (run.width_px <= room) {
-        show_title(run, nullptr);
-    } else {
-        const text_shape::ShapedRun ellipsis =
-            text_shape::shape_text_run(font, "...");
-        size_t cut = title.size();
-        while (cut > 0) {
-            // Back one codepoint: past any continuation bytes to a lead byte.
-            do { --cut; } while (cut > 0 &&
-                                 (static_cast<unsigned char>(title[cut]) &
-                                  0xC0) == 0x80);
-            run = text_shape::shape_text_run(
-                font, std::string_view(title).substr(0, cut));
-            if (run.width_px + ellipsis.width_px <= room) break;
-        }
-        if (ellipsis.width_px <= room) show_title(run, &ellipsis);
-    }
-
-    // THE THREE BUTTONS, published as painted (AppState::caption_buttons):
-    // each cell on every paint, its enabled bit where this frame's clip
-    // covers it (the roster's gate — the hit test's, which claims no press
-    // on a dead button). Maximise is dead where the window cannot be
-    // restored (the tablet). EVERY GLYPH IN THE BONE, no cell face: PRESSED
-    // — its Caption arm standing with the pointer inside it — the glyph TWO
-    // DEVICE PX RIGHT AND DOWN in the same bone, THE KEYS' HELD DEPTH (a
-    // caption button has no checked state, so a press takes the held
-    // depth: a press is a press, architect 2026-10-23; key_depth,
-    // cool_edit_paint.h), the move the whole pressed look as on the keys
-    // (architect 2026-10-23: "the bone should stay");
-    // and NO DISABLED LOOK — a dead button wears the bone like its
-    // neighbors and simply does not respond (architect 2026-10-23: "we have
-    // no more disabled rule for the buttons, so … get rid of that for the
-    // caption also. It just wouldn't respond."). (The glyph in kDimInk dead
-    // and in kCaptionInkInactive pressed stood the night of 2026-10-23.)
-    for (int i = 0; i < kCaptionButtonCount; ++i) {
-        const GuiCaptionButton id = static_cast<GuiCaptionButton>(i);
-        AppState::CaptionButtonFace& face =
-            app.caption_buttons[static_cast<size_t>(i)];
-        const GuiRect& b = rects[static_cast<size_t>(i)];
-        face.rect = b;
-        if (clip_covers_drawable(cr, app, b))
-            face.enabled = caption_button_enabled(gui, id);
-        // A box the clip does not reach is skipped (clip_meets).
-        if (!clip_meets(cr, b)) continue;
-        const double ride = static_cast<double>(
-            key_depth(caption_button_pushed(app, i), false) * hairline_px());
-        paint_caption_glyph(cr, id, static_cast<double>(b.x) + b.w * 0.5 + ride,
-                            static_cast<double>(row.y) + row.h * 0.5 + ride,
-                            hex(kBoneInk));
-    }
-
-    cairo_restore(cr);
-}
+// (THE CAPTION'S PAINTER — paint_caption_row, the window's own title bar
+// at the top lane 0 from 2026-10-05: the quaver, "<piece> - Warptempo" and
+// the three procedural glyphs, the hi-fi skin's flat lane 2026-10-23 — is
+// REMOVED 2026-10-24 with the lane, architect: "release it to the window
+// manager as we had in the beginning of this project". labwc draws the
+// laptop's title bar; the tablet has none. Git history.)
 
 // (THE PROGRAM'S FRAME'S PAINTER — paint_program_frame, Cool Edit's frame
 // window round the program from 2026-10-10, its top row alone, one Shadow
 // line under the caption, from 2026-10-21 — is retired with the row,
-// architect 2026-10-22: the band stands directly under the Windows-style
-// caption, render.h's caption block.)
+// architect 2026-10-22: the band stood directly under the caption.)
 
 // (THE BOTTOM OVERLAYS' PAINTER — paint_bottom_overlays, the taskbar line in
 // the chrome's Hilight across the window's whole width over the keyboard and
@@ -1753,11 +1565,12 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
                           cy + kLogoBolt[i].y * ch);
         cairo_close_path(cr);
     } else {
-        // THE BATTERY: its box centered in the cell (the spare column on the
-        // left, the rows centered on the cap's center), the nub up.
+        // THE BATTERY: its box centered in the cell (the spare columns
+        // halved, the odd one on the right — the drawing of record's floor;
+        // the rows centered on the cap's center), the nub up.
         const int bw = skin_px(kLogoBatteryWAt300, 1);
         const int bh = skin_px(kLogoBatteryHAt300, 1);
-        const double bx = static_cast<double>(l.cell.x + (l.cell.w - bw + 1) / 2);
+        const double bx = static_cast<double>(l.cell.x + (l.cell.w - bw) / 2);
         const double by = static_cast<double>(l.cap_center - (bh - 1) / 2);
         const double w = static_cast<double>(bw);
         const double h = static_cast<double>(bh);
@@ -1786,7 +1599,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
-    // THE ICON ROW (top lane 1, directly under the caption; row 4 of the
+    // THE ICON ROW (top lane 0, at the window's top; row 4 of the
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the plain wood, the left members in
@@ -1884,12 +1697,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE IS THE BRUSHED GROUND (materials.h's GROUND, 2026-10-23): the
-    // band's ground the panel as drawn under every run and between them;
-    // ON THE LAPTOP ITS FIRST ROW THE CAPTION'S LINE — one device px of the
-    // ring's light tone directly under the caption, the program ring's top
-    // row (render.h's caption block) — and on the tablet, which has no
-    // caption (2026-10-24, GuiPlatform::window_has_own_caption), NO LINE:
-    // the logo lane's ground is the bake's alone. Its upper pad THE LOGO
+    // band's ground the panel as drawn under every run and between them,
+    // NO LINE on either device: the logo lane's ground is the bake's alone
+    // (the laptop's caption line on its first row went with the caption,
+    // 2026-10-24; labwc's title bar stands above the surface). Its upper pad THE LOGO
     // LANE (paint_logo_lane, below the ground); its keys blank
     // (paint_roster_case), their legends under them in the bottom pad.
     cairo_save(cr);
@@ -1898,9 +1709,6 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         paint_cell_rect(cr, lane, palette().face);
-        if (GuiPlatform::window_has_own_caption())
-            paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, hairline_px()},
-                            palette().ce_hilight);
         cairo_restore(cr);
     }
     paint_logo_lane(cr, lane);
@@ -3371,7 +3179,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
 // between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
 // the planner's i or X, a BOXED GLYPH (icons.h), its ink .525 of the first
-// line's inside height (kNotificationGlyphRatio) — then the caption's title
+// line's inside height (kNotificationGlyphRatio) — then the logo lane's brand
 // gap, then THE SENTENCE (the layout block in the body). (The Adwaita glyph
 // in Windows' small box 2026-08-30 to 2026-10-23 and the glyphless card of
 // that night, git history.)
@@ -3427,7 +3235,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int gap      = scaled_px(kNotificationGapPx, 1);
     // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the mock of record
     // make_cards1.py's card): ring, ONE PAD of plain field (notifications.h,
-    // every side), the class glyph's box, the caption's title gap, the
+    // every side), the class glyph's box, the logo lane's brand gap, the
     // text's pen; the wrap's room ends one pad short of the right ring. The
     // first line's INSIDE rows are pad + cap + pad; the glyph's ink is
     // kNotificationGlyphRatio of them, its box the ink's 40 / 27 rounded
@@ -3440,7 +3248,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int glyph_h  = icons::icon_box_live_px(
         kNotificationGlyphRatio * static_cast<double>(inside_h));
     const int glyph_w  = icons::icon_box_w_px(glyph_h);
-    const int glyph_gap = skin_px(kCaptionTitleGapAt300);
+    const int glyph_gap = skin_px(kLogoBrandGapAt300);
     const int lead_w   = ring + pad + glyph_w + glyph_gap;
     const int tail_w   = pad + ring;
     const int chrome_w = lead_w + tail_w;
@@ -7286,14 +7094,6 @@ static bool floating_surface_stands(const AppState& app) {
 //   * the GROUND (render_background): the palette and the window's
 //     geometry — the globals, with the scale every length and the one face
 //     read;
-//   * THE CAPTION (paint_caption_row): its row; the activation
-//     (gui.caption_active: the ground's tone and the title's ink,
-//     2026-10-22); the
-//     title (caption_title, its shaping and ellipsis a function of it, the
-//     face and the room); per box the enabled bit (caption_button_enabled,
-//     the stash a covering clip refreshes), the pushed face
-//     (caption_button_pushed) and the Maximize glyph's state
-//     (gui.window_maximized); the AppIcon and the glyph cells are compiled;
 //   * THE LOGO LANE (paint_logo_lane, the band's upper pad since
 //     2026-10-24): the legend the tick composed (AppState::logo_legend);
 //     the quaver, the brand, the ring's columns and the lane's rect are the
@@ -7316,17 +7116,6 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
     GuiUpperRowsFingerprint fp;
     fp.globals = GuiChromeGlobalsFingerprint{
         app.width, app.height, gui_scale_percent(), palette_generation()};
-
-    fp.caption.row       = top_caption_row_area(app);
-    fp.caption.active    = gui.caption_active();
-    fp.caption.maximized = gui.window_maximized();
-    fp.caption.title     = caption_title(app);
-    for (int i = 0; i < kCaptionButtonCount; ++i) {
-        const std::size_t k = static_cast<std::size_t>(i);
-        fp.caption.enabled[k] =
-            caption_button_enabled(gui, static_cast<GuiCaptionButton>(i));
-        fp.caption.pushed[k] = caption_button_pushed(app, i);
-    }
 
     fp.logo = app.logo_legend;
 
@@ -7764,13 +7553,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     keyboard under a dialog editor's stack — empties the area (nothing
     //     is cleared or skipped under it); the column's face and its two
     //     wells' rings above skip the area (its hole, a clip);
-    //     every other pass keeps to its own lane (the caption, the band
-    //     and row 8;
+    //     every other pass keeps to its own lane (the band and row 8;
     //     paint_trim, the ruler and the flag blit in the top strip; the flag
     //     editor's field in the marker lane). Nothing writes the backbuffer
     //     between frames (the
-    //     platform paints only through this pass, its sizing frame outside
-    //     the client area).
+    //     platform paints only through this pass).
     //   * UNKNOWN — the frame clears as before — when a floating surface
     //     stands now or stood in the last painted frame, when the area
     //     differs from the last painted frame's (the keyboard or the modal
@@ -7861,13 +7648,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // system property debug.warptempo.trace=1, its stderr logcat.
         static const bool trace = materials::trace_enabled();
         const auto trace_t0 = std::chrono::steady_clock::now();
-        // THE CAPTION (top lane 0, 2026-10-05) joins them on the same terms:
-        // audio-independent, its buttons claimed above every veil the File
-        // anchor passes, so it paints on every frame class its lane is
-        // exposed on.
-        if (rects_intersect(exposed, top_caption_row_area(app))) {
-            paint_caption_row(cr);
-        }
         if (rects_intersect(exposed, top_icon_row_area(app))) {
             paint_icon_row(cr);
         }
@@ -7952,7 +7732,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      (render_center_lines), so the grid never stands without them,
         //      then THE STEREO DIVIDER'S ROWS (render_waveform_divider,
         //      2026-10-16).
-        //   3. the caption, the toolbar band and the unified bottom row (its
+        //   3. the toolbar band and the unified bottom row (its
         //      chrome, buttons, clock, the tab's name AND state cell in one
         //      painter),
         //      each on its own
@@ -7987,8 +7767,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      covers the waveform area's lower part (the keyboard) or
         //      EVERYTHING FROM THE VIEW BAR'S TOP ROW TO ROW 8'S TOP (the
         //      overlay, the modal family's box since 2026-10-14, modal_box.h
-        //      — so of steps 3 through 11 only the caption's and the icon
-        //      row's lanes, the band greyed but for what it leaves live, and
+        //      — so of steps 3 through 11 only the icon row's lane, the
+        //      band greyed but for what it leaves live, and
         //      row 8's rows under the controls stay in view) and so follows
         //      every pass above.
         //      Which is why the WAVEFORM passes do

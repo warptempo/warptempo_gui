@@ -5,8 +5,8 @@
 // the chrome follows, read by the chokepoint that paints each element, never
 // a literal at the painter. The colors are the materials' and the
 // palette's (materials.h, palette_file.h), the chrome inheriting Cool Edit's
-// tones (chrome_derive.h), the caption's ground and inks constants
-// (render.h's caption block, the hi-fi skin 2026-10-23); the spec chooses
+// tones (chrome_derive.h); the app paints no caption since 2026-10-24
+// (render.h's caption note); the spec chooses
 // shapes and seats. It names NO FACE: the face is the product's
 // one (gui_font.h's gui_live_face_set), and no color (its own scheme, the
 // `caption` key's default, stood 2026-10-08..10-21 and left with the
@@ -43,32 +43,16 @@
 // history).
 // The one instance is kChromeSpecWin2000 below, read through
 // live_chrome_spec(). What the chrome never varies is a plain constant at its
-// owner, not a field here: the caption icon's 16-px size (kCaptionIconPx),
-// the card frame's four sides (paint_popup_chrome), the keyboard's Backspace
+// owner, not a field here: the card frame's four sides (paint_popup_chrome), the keyboard's Backspace
 // word (onscreen_keyboard.h's cap_word).
 
 struct ChromeSpec {
     // (THE VOCABULARY'S FACE SET left the spec 2026-10-09: the face is the
     // product's one, gui_font.h.)
-    // THE CAPTION, the top strip's lane 0, in Windows px (render.h's caption
-    // block, where every element's rule stands): the lane's height; the
-    // icon's seat (its size is the small icon's, kCaptionIconPx); the
-    // title's pen x, the left edge of its room; the three buttons' box, its
-    // top inside the lane, the inset of Close's right edge from the lane's,
-    // the gap between Minimise and Maximise, and the gap before Close.
-    int                caption_height_px;
-    int                caption_icon_x_px;
-    int                caption_icon_y_px;
-    int                caption_title_x_px;
-    int                caption_button_w_px;
-    int                caption_button_h_px;
-    int                caption_button_y_px;
-    int                caption_button_inset_px;
-    int                caption_button_gap_px;
-    int                caption_close_gap_px;
-    // THE TITLE'S ROOM ENDS this far short of Minimise's box (paint_caption_
-    // row's cut).
-    int                caption_title_trail_px;
+    // (THE CAPTION'S FIELDS — Windows 2000's SM_CYCAPTION 18, its
+    // DFC_CAPTION buttons and the small icon's seat — left the spec
+    // 2026-10-24 with the app's caption: labwc draws the laptop's title bar,
+    // the tablet has none; the hi-fi caption of 2026-10-23 read none of them.)
     // (THE MENU ROW'S FIELDS — its face row and 19-W content, the anchors'
     // 9 / 7 label pads and the 2-W lead, Explorer's menu band and the plain
     // menu bar's seat — left the spec 2026-10-21 with the row.)
@@ -100,23 +84,14 @@ struct ChromeSpec {
     // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY
     // VOCABULARY, read off the live lane table at the trim lane's first row —
     // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
-    // THE WINDOW'S FRAME (render.h's sizing-frame block, window_frame_px):
-    // the relief lines of its composite — Windows' two-line raised edge
-    // under win2000 — round the 2-W face; and whether it stands while the
-    // window is maximized too: Windows hides its sizing frame then, so the
-    // field is false; a vocabulary whose window manager keeps its frame on
-    // every window would set it, and both platforms then keep the band
-    // outside the app's geometry on the maximized window and the tablet's
-    // (platform_wayland.h's frame_px_, platform_android.h's).
-    int                window_frame_lines;
-    bool               window_frame_maximized;
+    // (THE WINDOW'S FRAME — its relief lines and whether it stood on a
+    // maximized window — left the spec 2026-10-24 with the app's sizing
+    // frame: labwc draws the laptop's borders.)
 };
 
-// WIN2000 (architect 2026-10-06), off the ReactOS captures: THE CAPTION
-// Windows' SM_CYCAPTION 18 with its DFC_CAPTION buttons 16 x 14 two px down
-// and in, Minimise and Maximise touching, two px before Close, the small
-// icon at (2, 1), the title's pen two px past it (render.h's caption
-// block); (THE MENU ROW, Explorer's menu band and the plain menu bar's
+// WIN2000 (architect 2026-10-06), off the ReactOS captures: (THE CAPTION,
+// Windows' SM_CYCAPTION 18 with its DFC_CAPTION buttons, until 2026-10-24;
+// THE MENU ROW, Explorer's menu band and the plain menu bar's
 // seat, 2026-10-02 to 2026-10-21, left with the row; git history); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png) (THE DROPDOWN, Windows' popup menu, until
@@ -126,24 +101,11 @@ struct ChromeSpec {
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
-    .caption_height_px            = 18,
-    .caption_icon_x_px            = 2,
-    .caption_icon_y_px            = 1,
-    .caption_title_x_px           = 20,
-    .caption_button_w_px          = 16,
-    .caption_button_h_px          = 14,
-    .caption_button_y_px          = 2,
-    .caption_button_inset_px      = 2,
-    .caption_button_gap_px        = 0,
-    .caption_close_gap_px         = 2,
-    .caption_title_trail_px       = 2,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
     .scrub_handle_box_px          = 14.0,
-    .window_frame_lines           = 2,
-    .window_frame_maximized       = false,
 };
 
 // THE LIVE SPEC — the one instance the process paints, Windows 2000's.

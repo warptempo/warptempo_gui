@@ -600,7 +600,7 @@ public class MainActivity extends NativeActivity {
         // there (the font install answered false and the launch aborted, his
         // "the window flashes and goes away") would meet it. Ending the
         // process here makes every launch cold, whichever road destroyed the
-        // activity — Quit, the caption's X and BACK (one route, through the
+        // activity — Quit and BACK (one route, through the
         // native request_exit), a fatal startup refusal, or the system's own
         // destroy; the whole rule is at android_main's tail
         // (src/gui/platform_android.cpp). IT IS HERE AND NOT AT THAT TAIL

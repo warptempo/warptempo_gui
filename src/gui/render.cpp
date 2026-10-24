@@ -452,53 +452,15 @@ void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 
 // (THE WINDOWS PARTS' EDGES — paint_windows_soft_raised, _soft_sunken and
 // _plain_raised in Windows 2000's Standard quartet, the caption buttons' and
-// the sizing frame's, 2026-10-22 to 2026-10-23 — left with those parts: the
-// hi-fi skin's caption and border are render.h's caption block.)
+// the sizing frame's, 2026-10-22 to 2026-10-23 — left with those parts; the
+// hi-fi skin's caption and border that replaced them went 2026-10-24,
+// render.h's caption note.)
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): a key at rest,
 // no LED, on its box.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     if (box.w <= 0 || box.h <= 0) return;
     paint_key(cr, box, false, GuiKeyLed::None);
-}
-
-// -- THE SIZING FRAME (architect 2026-10-05; the rule at the declaration) ----
-
-int window_frame_px() {
-    // AN AREA, the grab band (the declaration): the spec's two one-W slots
-    // where Windows' relief lines stood, each its own rounded part, round
-    // Windows' two W of face — 2 + 2, the band's composite unchanged since
-    // its lines left it (2026-10-23).
-    return live_chrome_spec().window_frame_lines * scaled_px(1, 1) +
-           scaled_px(kWindowFramePx - 2, 0);
-}
-
-void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
-                               int frame_px, bool /*focused*/) {
-    if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
-    const int f = frame_px;
-    // THE HI-FI SKIN'S BORDER (architect 2026-10-23; the declaration): the
-    // band CLEARED to transparency — its grab zones stand, invisible — and
-    // ONE DEVICE PX of the ring's light tone round the client on the band's
-    // innermost pixels, above the caption's first row too.
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
-    cairo_rectangle(cr, 0, 0, surface_w, f);
-    cairo_rectangle(cr, 0, surface_h - f, surface_w, f);
-    cairo_rectangle(cr, 0, f, f, surface_h - 2 * f);
-    cairo_rectangle(cr, surface_w - f, f, f, surface_h - 2 * f);
-    cairo_fill(cr);
-    cairo_restore(cr);
-    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    const GuiColor light = hex(materials::ring_light());
-    const int px = hairline_px();
-    const GuiRect ring{f - px, f - px, surface_w - 2 * (f - px),
-                       surface_h - 2 * (f - px)};
-    paint_ink_rect(cr, GuiRect{ring.x, ring.y, ring.w, px}, light);
-    paint_ink_rect(cr, GuiRect{ring.x, ring.y + ring.h - px, ring.w, px}, light);
-    paint_ink_rect(cr, GuiRect{ring.x, ring.y, px, ring.h}, light);
-    paint_ink_rect(cr, GuiRect{ring.x + ring.w - px, ring.y, px, ring.h}, light);
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
