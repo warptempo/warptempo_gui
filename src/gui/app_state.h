@@ -3,6 +3,7 @@
 #include "device_config.h"
 #include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lead-in's one quantity
 #include "engine_settings.h"
+#include "gui_battery.h"
 #include "gui_input.h"
 #include "history_diff.h"
 #include "playback.h"
@@ -4348,10 +4349,14 @@ struct GuiIconRowFingerprint {
 };
 // (The tab strip's fingerprint, its lane, lit tab and two enabled bits,
 // left with the strip, 2026-10-22.)
+// The logo lane (paint_logo_lane, the band's upper pad since 2026-10-24):
+// the legend the tick composed (AppState::logo_legend) — the quaver and the
+// brand are constants, the lane's rect the band's.
 struct GuiUpperRowsFingerprint {
     GuiChromeGlobalsFingerprint globals;
     GuiCaptionFingerprint       caption;
     GuiIconRowFingerprint       band;
+    GuiLogoLegend               logo;
     bool operator==(const GuiUpperRowsFingerprint&) const = default;
 };
 // Row 8's clock cell (paint_bottom_row_buttons_and_clock): the cell as
@@ -6421,6 +6426,20 @@ struct AppState {
     // painted then, so the painter publishes no cell and the owner widens to
     // the lane, which is the modal's own surface.
     GuiRect clock_cell_rect{0, 0, 0, 0};
+
+    // THE LOGO LANE'S LEGEND (architect 2026-10-24; render.h's logo lane
+    // block): what the legend shows — STATE THE TICK WROTE, never a paint
+    // derivation (refresh_logo_legend, main.cpp, its one writer: at the
+    // project set's construction and on every tick, recomposing only when
+    // the wall-clock minute or the host's battery answer moved, the two
+    // `_minute` / `_battery` fields its memory) — and the legend's rect AS
+    // PAINTED (paint_logo_lane, its one publisher, zero before the lane's
+    // first paint), which with the new legend's own layout is the rect the
+    // tick damages when the legend changes, and nothing else of the lane.
+    GuiLogoLegend logo_legend{};
+    GuiRect       logo_legend_rect{0, 0, 0, 0};
+    int64_t       logo_legend_minute = -1;
+    GuiBattery    logo_legend_battery{};
 
     // THE AS-PAINTED RECORDS OF THE ROWS ABOVE THE VIEWPORT'S LANES AND OF THE
     // CLOCK CELL, one per paint target, with what each target is owed

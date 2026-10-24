@@ -1,15 +1,19 @@
 package com.warptempo.gui;
 
 import android.app.NativeActivity;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -27,8 +31,8 @@ import java.nio.charset.StandardCharsets;
  * The product's ONE Java class: a NativeActivity subclass. Its body is the
  * FULL-SCREEN WINDOW (both system bars hidden, the block below), the
  * MediaSession that hands the head unit's buttons down to the render player
- * and its state back up (the block at the end of this comment) and the system
- * clipboard.
+ * and its state back up (the block at the end of this comment), the system
+ * clipboard, and the battery broadcast the logo lane's legend reads.
  *
  * <p>FULL SCREEN, ALWAYS: NO STATUS BAR AND NO TASKBAR (architect 2026-10-01:
  * "change the shim so that it's always going to be full screen with no
@@ -56,15 +60,18 @@ import java.nio.charset.StandardCharsets;
  * why it stays where it is now that its edge-to-edge reason is inert).
  *
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
- * top-level class (the MediaSession.Callback below is an INNER class of this
- * one and is not a second class in that sense: it is its framework's own
- * listener shape and can be nothing else). TWO HAVE LANDED: the car's
- * MediaSession (the block at the end of this comment) and, on 2026-09-03, THE
- * SYSTEM CLIPBOARD -- clipboardSet / clipboardGet, ClipboardManager being a
- * Java object with no NDK surface, so copy and paste reach every other app on
- * the tablet over the same JNI road the session opened. A THIRD, 2026-10-07,
+ * top-level class (the MediaSession.Callback and the battery receiver below
+ * are INNER classes of this one and are not second classes in that sense:
+ * each is its framework's own listener shape and can be nothing else). THREE
+ * HAVE LANDED: the car's MediaSession (the block at the end of this comment),
+ * on 2026-09-03 THE SYSTEM CLIPBOARD -- clipboardSet / clipboardGet,
+ * ClipboardManager being a Java object with no NDK surface, so copy and paste
+ * reach every other app on the tablet over the same JNI road the session
+ * opened -- and on 2026-10-24 THE BATTERY, the sticky ACTION_BATTERY_CHANGED
+ * broadcast handed down through nativeBatteryState for the logo lane's legend
+ * (the block at batteryReceiver). A FOURTH, 2026-10-07,
  * is no new method: onDestroy's last act ENDS THE PROCESS, so every launch is
- * cold (the reason at that act). A FOURTH, 2026-10-14, is no new method
+ * cold (the reason at that act). A FIFTH, 2026-10-14, is no new method
  * either: onCreate's request for UNBUFFERED touch and stylus dispatch (the
  * reason at the call). One need is still
  * known and unbuilt: the SAF picker's onActivityResult, which is
@@ -154,8 +161,9 @@ public class MainActivity extends NativeActivity {
     // THE LIBRARY MUST BE REGISTERED FOR NAME-BASED JNI RESOLUTION: the
     // NativeActivity dlopens libwarptempo_gui.so for android_main, but that
     // load does not make its Java_* exports findable for a `native` method
-    // declared here. This initialiser is what does, and this class's one
-    // native method below (nativeMediaCommand) is why it exists.
+    // declared here. This initialiser is what does, and this class's two
+    // native methods below (nativeMediaCommand, nativeBatteryState) are why it
+    // exists.
     static {
         System.loadLibrary("warptempo_gui");
     }
@@ -291,6 +299,17 @@ public class MainActivity extends NativeActivity {
         synchronized (this) {
             createSessionLocked();
         }
+
+        // THE BATTERY, for the logo lane's legend: the registration answers
+        // the sticky ACTION_BATTERY_CHANGED intent at once, so the native
+        // side's cold answer (level and plug unknown) is replaced within the
+        // activity's first moments, and the receiver keeps it current (the
+        // block at batteryReceiver). No permission is needed, and no export
+        // flag: the action is a protected system broadcast, which a
+        // context-registered receiver may take without one.
+        final Intent sticky = registerReceiver(batteryReceiver,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (sticky != null) pushBattery(sticky);
 
         // AUDIO FOCUS: the request carries the attributes the AAudio stream
         // opens with (USAGE_MEDIA / CONTENT_TYPE_MUSIC, playback_aaudio.cpp),
@@ -520,8 +539,47 @@ public class MainActivity extends NativeActivity {
     // (the session stands for the app's life, the step-aside apart), so this is
     // the abandon a running app always reaches -- which is also why it was
     // already written to cover a process ending with something still sounding.
+    // THE BATTERY, THE SECOND JNI ROAD DOWN (architect 2026-10-24): one call
+    // per ACTION_BATTERY_CHANGED, the car's road (nativeMediaCommand) rather
+    // than a native read up into Java at each refresh, because the broadcast
+    // IS the change (the reasoning is at GuiPlatform::battery_status,
+    // src/gui/platform_android.h). The native side stores the reading in one
+    // atomic word, so the call is safe before the native loop's init and after
+    // its shutdown and needs no lock here. `percent` is 0..100, or -1 for a
+    // level the intent did not carry (a missing or negative EXTRA_LEVEL, or no
+    // usable EXTRA_SCALE); `plugged` is EXTRA_PLUGGED as carried -- 0 on
+    // battery, any positive power source plugged, -1 for a missing extra,
+    // which the legend shows as the battery (gui_battery.h's GuiLogoGlyph).
+    private static native void nativeBatteryState(boolean present, int percent,
+                                                  int plugged);
+
+    private void pushBattery(Intent intent) {
+        final boolean present =
+                intent.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true);
+        final int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        final int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        final int percent = (level >= 0 && scale > 0) ? level * 100 / scale : -1;
+        final int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+        nativeBatteryState(present, percent, plugged);
+    }
+
+    // THE RECEIVER keeps the reading current for the activity's life:
+    // registered in onCreate (whose registration also answers the sticky
+    // intent) and unregistered in onDestroy. onReceive runs on the UI thread.
+    private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null) pushBattery(intent);
+        }
+    };
+
+    // THE BATTERY RECEIVER IS UNREGISTERED FIRST (2026-10-24): its pushes touch
+    // one native atomic and nothing the session's lock guards, so its place
+    // ahead of super is free, and unregistering a receiver registered in
+    // onCreate is the pairing the framework expects.
     @Override
     protected void onDestroy() {
+        unregisterReceiver(batteryReceiver);
         super.onDestroy();
         synchronized (this) {
             released = true;

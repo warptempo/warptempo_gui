@@ -1104,9 +1104,13 @@ constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
 
 // THE CAPTION — the top strip's lane 0, at the window edge: THE WINDOW'S OWN
-// TITLE BAR, painted by the app on both devices (architect 2026-10-05; the
-// laptop asks labwc for client-side decorations, so labwc draws none, and
-// the tablet's full-screen window has none of its own). IN THE HI-FI SKIN
+// TITLE BAR, THE LAPTOP'S INTERIM CAPTION UNTIL THE LABWC ROUND, 0 ROWS ON
+// ANDROID (architect 2026-10-24: "remove the caption and the line under it
+// completely" on the tablet, "the laptop's window to labwc, a later round";
+// GuiPlatform::window_has_own_caption, the seam's one predicate, where the
+// asymmetry is recorded — the logo lane under it on both devices, below).
+// Painted by the app on the laptop (architect 2026-10-05; the laptop asks
+// labwc for client-side decorations, so labwc draws none). IN THE HI-FI SKIN
 // (architect 2026-10-23, Enlightenment's manner — tmp/enlightenment_intro2.jpg,
 // E17's default theme, "before they went flat with icons"; the frame of
 // record pv_39b, make_pivot3.build's caption and make_sheet2's quaver), EVERY
@@ -1129,8 +1133,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     bone, active and inactive alike (the title alone says which);
 //   THE TITLE LEFT, after the icon: x = 6 + the box's width + 10
 //     (kCaptionTitleGapAt300),
-//     Liberation Sans Bold at the title size (gui_font.h's table: 22 px at
-//     300 %), the bone kBoneInk, kCaptionInkInactive 8A8A8E (the bone
+//     Liberation Sans Bold at the title size (gui_font.h's table: 24 px at
+//     300 % since 2026-10-24, the brand's), the bone kBoneInk, kCaptionInkInactive 8A8A8E (the bone
 //     dulled) while the window is inactive, its cap band centered on the
 //     lane's rows (redesign_baseline), cut before the buttons with "..."
 //     (paint_caption_row owns the words and the cut);
@@ -1171,6 +1175,101 @@ inline constexpr uint32_t kCaptionGround      = 0x141415;
 inline constexpr uint32_t kCaptionInkInactive = 0x8A8A8E;
 inline int caption_row_h_px() {
     return skin_px(kCaptionHeightAt300, 5);
+}
+
+// THE LOGO LANE — THE BAND'S UPPER PAD (architect 2026-10-24, the go "Okay
+// to proceed with the build"; the frame of record
+// tmp/theme_next/caption1/zz_logo_P72.png, make_caption8.py; the legend's
+// glyphs make_legend3.py's bolt() and battery(), his picks B1-19 and T1-17
+// off zz_bolt_sheet_34 / zz_battery_sheet_37 / zz_pair_sheet_40): with the
+// tablet's caption gone ("give that height to the waveform, so the buttons
+// run from the top with equal padding"), THE LOGO GOES INTO THE TOP PAD AND
+// THAT PAD ALONE GROWS — kLogoLaneAt300, 72 px at 300 % through skin_px
+// (his pick P72 off zz_logo_P38 .. P84 by 2; 48 at 200 %, 36 at 150 %, 33
+// at 138 %), the band's three other pads the strip pad (strip_pad_px). It
+// stands directly under the caption on the laptop and at the window's top
+// on the tablet. THE LANE'S GROUND IS THE BAKE'S, nothing else on it — no
+// line (the laptop's caption line on its first row is the caption's,
+// paint_icon_row), no caption tone — and it is INERT CHROME like the
+// strips' pads: no hit, no tooltip, no gesture (the band's ground falls
+// through to nothing, input_pointer.cpp). paint_handler.cpp's
+// paint_logo_lane paints it, every length below skin_px, rounded at the
+// element:
+//   ON THE LEFT, THE QUAVER: Icon::Quaver through the boxed-glyph road
+//     (icons::draw_boxed), its ink kLogoQuaverInkAt300 = 21 px tall (the
+//     caption's own, kCaptionIconInkAt300: the box icon_box_px(21), 31 at
+//     300 %), ITS FIRST INK COLUMN ON THE PROGRAM RING'S OUTER LEFT COLUMN
+//     (program_ring_columns — the first key's outline column: "the glyph
+//     flush with the icons"), measured off the raster's alpha at that size
+//     (icons::boxed_ink, alpha >= 128, once per size — the mocks' measure,
+//     never the file's box), ITS INK ROWS CENTERED ON THE LANE (the spare
+//     rounded half to even, the mock's rint). THEN THE BRAND, "Warptempo"
+//     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
+//     equipment … just had a stylized brand name") — in Liberation Sans
+//     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the bone
+//     kBoneInk, its first ink kLogoBrandGapAt300 = 10 px after the quaver's
+//     last ink column (text_shape::ink_left_px), its cap band centered on
+//     the lane (redesign_baseline).
+//   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
+//     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
+//     (22 Regular), the bone, its cap band centered on the lane, LAID RIGHT
+//     TO LEFT FROM THE PROGRAM RING'S OUTER RIGHT COLUMN (the last key's
+//     outline column: "the clock flush with the right edge of the
+//     buttons"): the clock run "| 2:12 PM" with its LAST INK on that column;
+//     one space advance of the face; THE GLYPH CELL; one space advance; the
+//     percent run "92%" with its last ink there, so "100%" grows leftward,
+//     away from the clock. FLUSH IS THE INK, the chokepoint's own measure
+//     (text_shape::ink_left_px / ink_right_px: cairo's glyph extents of the
+//     run as painted), the space advance measured from the clock run's first
+//     ink to the cell and from the cell to the percent run's last ink; the
+//     cell's edge rounded to a whole column.
+//   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
+//     "the glyph always there taking up space so that the clock doesn't
+//     move"): kLogoGlyphCellHAt300 = 19 rows tall and kLogoGlyphCellWAt300 =
+//     15 wide (rint(12 · 19 / 15), the bolt's proportion), its rows
+//     CENTERED ON THE CAP'S CENTER — the body face's cap rows at the
+//     legend's baseline (gui_font_cap_px, rounded: 15 rows at 300 %, its
+//     center 8 rows above the baseline), so the 19-row cell spans 17 rows
+//     above the baseline to 1 below, two past the cap top and two past the
+//     baseline; derived from the live face's cap, never a constant. THE TWO
+//     DRAWINGS are ARTWORK and scale as artwork (hairline_px's stated
+//     exception), filled in the bone with cairo's own antialiasing:
+//     * THE BOLT (charging — any power source attached, 100 % included, and
+//       a host with no battery; GuiLogoGlyph's rule): one filled polygon
+//       over the cell's unit box (x over its width, y over its rows),
+//       kLogoBolt.
+//     * THE BATTERY (discharging, or the plug state unknown), UPRIGHT, THE
+//       NUB UP, solid: a kLogoBatteryWAt300 x kLogoBatteryHAt300 = 14 x 17
+//       box CENTERED IN THE CELL (its rows centered on the cap's center —
+//       16 above the baseline to 0 at 300 % — its spare column on the left,
+//       the mock's right-aligned 14 in the 15), the nub a rectangle x .37 ..
+//       .63 of the box's width, y 0 to .14 of its height plus one device px,
+//       the body a rounded rectangle x .18 .. .82, y .14 to the foot,
+//       corner radius kLogoBatteryRadiusAt300 = 1.2 px (skin_px, floor 1).
+//   (Liberation's own arrows ↑ / ↓ as the glyphs, a drawn pipe and
+//   "nothing" as the discharging glyph were judged on the same sheets and
+//   not taken, docs/engineering/closed_questions.md.)
+inline constexpr double kLogoLaneAt300           = 72.0;
+inline constexpr double kLogoQuaverInkAt300      = kCaptionIconInkAt300;
+inline constexpr double kLogoBrandGapAt300       = 10.0;
+inline constexpr double kLogoGlyphCellHAt300     = 19.0;
+inline constexpr double kLogoGlyphCellWAt300     = 15.0;
+inline constexpr double kLogoBatteryWAt300       = 14.0;
+inline constexpr double kLogoBatteryHAt300       = 17.0;
+inline constexpr double kLogoBatteryRadiusAt300  = 1.2;
+inline constexpr const char* kLogoBrand = "Warptempo";
+struct GuiUnitPoint {
+    double x = 0.0, y = 0.0;
+};
+inline constexpr GuiUnitPoint kLogoBolt[6] = {
+    {0.82, 0.0}, {0.0, 0.62}, {0.47, 0.62},
+    {0.24, 1.0}, {1.0, 0.38}, {0.53, 0.38},
+};
+inline constexpr double kLogoBatteryNubX0 = 0.37, kLogoBatteryNubX1 = 0.63;
+inline constexpr double kLogoBatteryBodyX0 = 0.18, kLogoBatteryBodyX1 = 0.82;
+inline constexpr double kLogoBatteryNubH = 0.14;
+inline int logo_lane_h_px() {
+    return skin_px(kLogoLaneAt300, 1);
 }
 
 // THE WINDOW BORDER — THE SIZING FRAME'S BAND (architect 2026-10-05; the
@@ -1311,10 +1410,13 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // would take, icon_glyph_px at the case's first slot in from its corner
 // (icon_case_lead_px), is kept below and drawn by no one today.
 //
-// THE BAND (architect 2026-10-22, the simple layout): THE STRIP PAD, the
-// case, THE STRIP PAD on the brushed ground — its first row the caption's
-// one-device-px light line, the keys' legends in its bottom pad
-// (2026-10-23) — 49 W at the pad's 13, 147 device rows at 300 %. Its runs
+// THE BAND (architect 2026-10-22, the simple layout; its upper pad the
+// logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, the caption
+// block's neighbor above), the case, THE STRIP PAD on the brushed ground —
+// on the laptop its first row the caption's one-device-px light line, the
+// keys' legends in its bottom pad (2026-10-23) — 72 + 69 + 39 = 180 device
+// rows at 300 % (147 under the strip pad above the case, 2026-10-22 to
+// 2026-10-24). Its runs
 // are paint_icon_row's walk (icon_row_seats: the keys abutting inside a
 // run, run_gap_px of ground between runs). The hit target is the key; the
 // ground between, the legends' included, is inert for input.
@@ -1359,19 +1461,25 @@ inline int icon_case_h_px() {
 inline int strip_pad_px() {
     return scaled_px(kProgramSpec.strip_pad_px, 1);
 }
-// THE CASE'S TOP, AS AN OFFSET FROM THE BAND'S OWN TOP — and from row 8's
-// and the modal controls row's: the strip pad, the one expression every
-// reader of a strip's case seat takes (paint_icon_row, the row-8 and
-// controls-row seats, hit rects, tooltips).
+// THE CASE'S TOP, AS AN OFFSET FROM ROW 8's TOP and the modal controls
+// row's: the strip pad, the one expression every reader of those strips'
+// case seat takes (the row-8 and controls-row seats, hit rects, tooltips).
 inline int icon_case_top_offset_px() {
     return strip_pad_px();
 }
-// THE STRIP — the band's lane and row 8's: the pad, the case, the pad.
+// THE BAND'S CASE TOP, AS AN OFFSET FROM THE BAND'S OWN TOP: the logo lane
+// (2026-10-24; the strip pad until then), read by the band's seats alone
+// (icon_row_seats, paint_handler.cpp, which every band reader takes).
+inline int band_case_top_offset_px() {
+    return logo_lane_h_px();
+}
+// THE STRIP — row 8's: the pad, the case, the pad.
 inline int strip_h_px() {
     return strip_pad_px() + icon_case_h_px() + strip_pad_px();
 }
+// THE BAND: the logo lane, the case, the strip pad (2026-10-24).
 inline int icon_row_h_px() {
-    return strip_h_px();
+    return logo_lane_h_px() + icon_case_h_px() + strip_pad_px();
 }
 // THE GROUND BETWEEN TWO RUNS (program_spec.h's run_gap_px): 45 device px at
 // 300 %, 21 at 138 %.
@@ -1665,8 +1773,9 @@ ProgramRingColumns program_ring_columns(const AppState& a);
 //
 // THE ROW IS THE STRIP (architect 2026-10-22, the simple layout): THE STRIP
 // PAD, the program's case (the band's own, read from its accessors above so
-// the rows cannot drift apart), THE STRIP PAD — strip_h_px, the band's own
-// height, 147 device rows at 300 % and the pad's 13 — on the plain wood, no
+// the rows cannot drift apart), THE STRIP PAD — strip_h_px, 147 device rows
+// at 300 % and the pad's 13 (the band's own height until 2026-10-24, when
+// its upper pad became the logo lane) — on the plain wood, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
@@ -1698,30 +1807,32 @@ inline int bottom_row_h_px() {
 // below the well, and the frame's two sides where the vocabulary's frame
 // stands on the maximised window (2026-10-08, window_frame_maximized; none
 // under win2000): THE PROGRAM'S (program_spec.h; the simple layout
-// 2026-10-22): the band (the pad, the key, the pad), the canvas column's 38
-// above the canvas (the view bar 8, the ruler 12, the marker lane 17, the
-// canvas's top frame row 1), the canvas's bottom frame row 1 under it and
-// row 8 (the pad, the key, the pad), the strip pad program_spec.h's
-// constant (strip_pad_px). THE CAPTION IS NOT IN IT since 2026-10-23: its height is
-// the skin's device px at 300 % (caption_row_h_px, 40 there).
+// 2026-10-22): the band under its logo lane (the key, the pad), the canvas
+// column's 38 above the canvas (the view bar 8, the ruler 12, the marker
+// lane 17, the canvas's top frame row 1), the canvas's bottom frame row 1
+// under it and row 8 (the pad, the key, the pad), the strip pad
+// program_spec.h's constant (strip_pad_px). NEITHER THE CAPTION NOR THE
+// LOGO LANE IS IN IT: their heights are the skin's device px at 300 %
+// (caption_row_h_px, 40 there on the laptop and 0 rows on the tablet since
+// 2026-10-24; logo_lane_h_px, 72 there).
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines + kWindowFramePx - 2)
         : 0;
     return frame +
-           program_strip_authored_h(kProgramSpec) +
+           program_band_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
            program_canvas_bottom_authored_h(kProgramSpec) +
            program_strip_authored_h(kProgramSpec);
 }
-// THE STACK AT THE STRIP PAD'S 13 W: 87 above (the band 49, the
-// column 38) and 50 below (the ring's last row 1, row 8 49), 137 W, 411
-// device rows at 300 % — with the caption's 40 the tablet's well 989 rows of
-// the surface's 1440 (975 under Windows 2000's 54-row caption, 2026-10-22 to
-// 2026-10-23: the well took the 14 rows the caption gave up); on the
-// laptop's maximized 1920 x 1047 at 138 % the caption 18 rows (25 before),
-// the well 878 (871).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 137);
+// THE STACK AT THE STRIP PAD'S 13 W: 74 above (the band's case and pad 36,
+// the column 38) and 50 below (the ring's last row 1, row 8 49), 124 W, 372
+// device rows at 300 % — with the logo lane's 72 and no caption the
+// tablet's well 996 rows of the surface's 1440 (2026-10-24: the caption's
+// 40 rows in, the pad's 33 more out, net 7; 989 under the 40-row caption
+// over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's lane table the
+// record of each scale.
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 124);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2325,14 +2436,12 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // one run per well (waveform_well_rows), its dots keeping the rows they
 // stand on, counted from the canvas's first row as ever (Cool Edit's own
 // dotted cursor keeps its phase across its divider on the capture: rows
-// 517, then 525). At 300 % on the tablet the canvas keeps its 945 rows,
-// 345-1289 (main.cpp's lane table, re-derived 2026-10-22 for the caption's
-// lost line): the upper well's band 468 rows (345-812), the divider 813-821
-// (the light line 813-815, the face 816-818, the dark line 819-821) and the
-// lower well's band 468 rows (822-1289), no spare row (945 less the
-// divider's 9 is even); on the laptop's maximized 1920 x 1047 at 138 % the
-// divider is three rows of one device px and the two bands 412 each of the
-// 828, the canvas's spare last row its 828th.
+// 517, then 525). At 300 % on the tablet the canvas is 996 rows, 294-1289
+// (main.cpp's lane table, re-derived 2026-10-24 for the logo lane): the
+// upper well's band 496 rows (294-789), the divider 790-792 (the light
+// line, the ground row, the dark line, one device px each) and the lower
+// well's band 496 rows (793-1288), the canvas's spare last row 1289 (996
+// less the divider's 3 is odd).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot

@@ -21,9 +21,12 @@
 // SCALED WITH gui_scale and rounded at the element (the amendment the same
 // night: size_px = nearbyint(authored · gui_scale / 300), the scaled_px
 // road) — BODY 22 Regular (the clocks, the state line, the lists, the cards,
-// the prompts, the editors, and THE TOOLTIP since 2026-10-23: "the tooltips
-// font size should be the same as the flags"), TITLE 22 Bold (the caption's
-// title alone), RULER 16 Regular (the ruler's digits alone; architect
+// the prompts, the editors, the logo lane's battery + clock legend, and THE
+// TOOLTIP since 2026-10-23: "the tooltips font size should be the same as
+// the flags"), TITLE 24 Bold (the logo lane's brand "Warptempo" and the
+// laptop's interim caption title; architect 2026-10-24, "the caption size
+// 24", off the logo mocks tmp/theme_next/caption1/ — 22 from 2026-10-23
+// until then), RULER 16 Regular (the ruler's digits alone; architect
 // 2026-10-24, "R16" off 14 / 15 / 16 / 17 on zz_type_sheet_22 — "we took
 // them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
 // 2026-10-23 to 2026-10-24, the skin's first night 15), the CUES' 22
@@ -72,7 +75,7 @@
 #include <iterator>
 #include <string_view>
 
-// THE USES (the head's table): the body, the caption's bold, the ruler's
+// THE USES (the head's table): the body, the brand's bold, the ruler's
 // digits (`Small`), the cues' labels (`Program`), the keys' legends and the
 // on-screen keyboard's caps (`Keys`).
 enum class GuiFace { Body, Bold, Small, Program, Legend, Keys };
@@ -88,7 +91,7 @@ inline constexpr std::size_t kGuiFaceCount = 6;
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps
-    "LiberationSans-Bold.ttf",    // 1: the caption's title
+    "LiberationSans-Bold.ttf",    // 1: the brand and the caption's title
 };
 
 // THE PIXEL TABLE (the head; architect 2026-10-23 and the amendment): per
@@ -100,7 +103,7 @@ struct GuiFaceSize {
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body
-    {1, 22.0},   // Bold: the caption's title
+    {1, 24.0},   // Bold: the brand and the laptop's caption title
     {0, 16.0},   // Small: the ruler's digits
     {0, 22.0},   // Program: the cues' labels and the flag editor
     {0, 14.0},   // Legend: the keys' legends

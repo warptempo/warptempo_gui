@@ -137,16 +137,25 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // positioned glyphs on its own scaled font, so it is the ink show_shaped_run
 // puts down — the chokepoint's one-run property, said of ink.
 //
-// ITS ONE CONSUMER is row 8's STATE LINE (architect 2026-10-08): its first
-// ink stands one field pad past the clock's field, the same air the field
+// ITS CONSUMERS: row 8's STATE LINE (architect 2026-10-08): its first ink
+// stands one field pad past the clock's field, the same air the field
 // stands in from the lane's edge (paint_bottom_row_buttons_and_clock), so
 // the line's origin is pulled back by this bearing — a placement off the
 // origin would read wider by whatever bearing the line's first glyph
-// carries. Every other layout wants a reserved CELL, which is `width_px`'s
-// job. (A two-edged InkExtents stood here 2026-08-30 .. 31 for the
-// state cell then butted against the monospace clock; only the left edge
-// has a reader.)
+// carries; and THE LOGO LANE (architect 2026-10-24, render.h's logo lane
+// block): the brand's first ink a gap past the quaver's last, and the
+// legend's runs and its glyph cell spaced off each other's ink. Every other
+// layout wants a reserved CELL, which is `width_px`'s job.
 double ink_left_px(const ShapedRun& run);
+// A RUN'S LAST INK, in pixels from the run's pen origin to the right edge of
+// its last lit pixel, measured the same way (the run's own positioned glyphs
+// through cairo_scaled_font_glyph_extents: x_bearing + width); an empty run
+// answers 0. ITS ONE CONSUMER is THE LOGO LANE'S LEGEND (architect
+// 2026-10-24, "the clock flush with the right edge of the buttons"): the
+// clock run's last ink on the program ring's outer right column and the
+// percent run's last ink one space advance short of the glyph cell
+// (paint_handler.cpp's logo_legend_layout).
+double ink_right_px(const ShapedRun& run);
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels
 // from the run's origin, one per byte BOUNDARY of the shaped string — index 0

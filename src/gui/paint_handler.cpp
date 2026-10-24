@@ -613,8 +613,9 @@ AppState::RedesignButtonFace& publish_button_face(
 // (render.h's program_ring_columns, 2026-10-23); this row spells none of
 // them.
 //
-// THE VERTICAL STORY: the strip pad, the case (icon_case_top_offset_px), the
-// strip pad — row 8's own, the one strip.
+// THE VERTICAL STORY: the logo lane (render.h's logo lane block, the band's
+// upper pad since 2026-10-24), the case (band_case_top_offset_px), the
+// strip pad — row 8's lower pad; row 8 the strip pad over its case.
 //
 // THE HORIZONTAL WALK (architect 2026-10-22, layout4: "push all icons
 // together … add a spacing after render, and after flatten"): the roster's
@@ -1284,7 +1285,10 @@ static bool caption_button_pushed(const AppState& app, int i) {
 void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE CAPTION (top lane 0; the record at render.h's caption block, every
     // length its skin_px constants). Four passes on the lane: the ground,
-    // the icon, the title and the buttons.
+    // the icon, the title and the buttons. NONE ON THE TABLET (2026-10-24,
+    // GuiPlatform::window_has_own_caption: its lane is 0 rows and nothing of
+    // it is painted).
+    if (!GuiPlatform::window_has_own_caption()) return;
     const GuiRect row = top_caption_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
     cairo_save(cr);
@@ -1588,7 +1592,8 @@ static void icon_row_walk(bool history,
 // and the materials' case patches, program_case_rects below, read ONE
 // layout; the simple layout's runs 2026-10-22): the case's lengths, each a
 // composite of its rounded parts (render.h's program block); THE CASE the
-// strip pad under the band's top (icon_case_top_offset_px). THE RIGHT RUN IS
+// logo lane under the band's top (band_case_top_offset_px, 2026-10-24; the
+// strip pad until then). THE RIGHT RUN IS
 // RESOLVED FIRST, because it decides where every run to its left may paint
 // (the overflow rule at kIconRowViewPairs): its last case ends AT THE
 // PROGRAM RING'S RIGHT EDGE (one past its outer right column; render.h's
@@ -1614,13 +1619,170 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
     s.btn_w = icon_case_w_px();
     s.btn_h = icon_case_h_px();
     s.gap   = program_run_gap_px();
-    s.btn_y = lane.y + icon_case_top_offset_px();
+    s.btn_y = lane.y + band_case_top_offset_px();
     s.left_x = ring.x;
     const int right_end = ring.end;
     s.right_x =
         right_end - static_cast<int>(std::size(kIconRowRightRun)) * s.btn_w;
     s.left_limit = s.right_x - s.gap;
     return s;
+}
+
+// THE LOGO LANE'S LAYOUT (render.h's logo lane block, every rule there) —
+// ONE FUNCTION for the painter and for the tick's damage
+// (logo_legend_extent), so the two cannot disagree: the lane is the band's
+// first logo_lane_h_px rows; the legend's runs on the body face's baseline
+// with the cap band centered on the lane; the clock run's last ink on the
+// program ring's outer right column; the glyph cell one space advance left
+// of the clock run's first ink, its right edge rounded to a whole column,
+// its rows centered on the cap's center (the cap rounded to whole rows); the
+// percent run's last ink one space advance left of the cell; the extent the
+// lane's rows from the first ink column through the ring's right column.
+namespace {
+struct LogoLegendLayout {
+    GuiRect lane{0, 0, 0, 0};
+    text_shape::SharedRun clock, percent;   // percent null when empty
+    double clock_x = 0.0, percent_x = 0.0, baseline = 0.0;
+    GuiRect cell{0, 0, 0, 0};
+    int cap_center = 0;   // the cap's center row
+    GuiRect extent{0, 0, 0, 0};
+};
+GuiRect logo_lane_rect(const AppState& app) {
+    const GuiRect band = top_icon_row_area(app);
+    return GuiRect{band.x, band.y, band.w, std::min(band.h, logo_lane_h_px())};
+}
+LogoLegendLayout logo_legend_layout(const AppState& app,
+                                    const GuiLogoLegend& legend) {
+    LogoLegendLayout l;
+    l.lane = logo_lane_rect(app);
+    const ProgramRingColumns ring = program_ring_columns(app);
+    const GuiFont body = gui_font(GuiFace::Body);
+    l.baseline = redesign_baseline(body, static_cast<double>(l.lane.y),
+                                   static_cast<double>(l.lane.h));
+    const double space = text_shape::memoized_run(body, " ")->width_px;
+    l.clock = text_shape::memoized_run(body, legend.clock);
+    l.clock_x = static_cast<double>(ring.end) - text_shape::ink_right_px(*l.clock);
+    const int cell_w = skin_px(kLogoGlyphCellWAt300, 1);
+    const int cell_h = skin_px(kLogoGlyphCellHAt300, 1);
+    const int cell_right = static_cast<int>(std::nearbyint(
+        l.clock_x + text_shape::ink_left_px(*l.clock) - space));
+    const int cap_rows = std::max(
+        1, static_cast<int>(std::nearbyint(gui_font_cap_px(body))));
+    const int base_row = static_cast<int>(std::nearbyint(l.baseline));
+    l.cap_center = base_row - (cap_rows + 1) / 2;
+    l.cell = GuiRect{cell_right - cell_w, l.cap_center - (cell_h - 1) / 2,
+                     cell_w, cell_h};
+    int first = l.cell.x;
+    if (!legend.percent.empty()) {
+        l.percent = text_shape::memoized_run(body, legend.percent);
+        l.percent_x = static_cast<double>(l.cell.x) - space -
+                      text_shape::ink_right_px(*l.percent);
+        first = std::min(first, static_cast<int>(std::floor(
+            l.percent_x + text_shape::ink_left_px(*l.percent))));
+    }
+    l.extent = GuiRect{first, l.lane.y, std::max(0, ring.end - first),
+                       l.lane.h};
+    return l;
+}
+} // namespace
+
+GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend) {
+    return logo_legend_layout(app, legend).extent;
+}
+
+void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
+    // THE LOGO LANE (render.h's logo lane block, every length skin_px):
+    // the quaver, the brand, the legend and its glyph, on the band's ground
+    // paint_icon_row already put down — nothing else on the lane.
+    const GuiRect lane{band.x, band.y, band.w,
+                       std::min(band.h, logo_lane_h_px())};
+    if (lane.w <= 0 || lane.h <= 0) return;
+    const ProgramRingColumns ring = program_ring_columns(app);
+    const GuiColor bone = hex(kBoneInk);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+
+    // THE QUAVER: its first ink column on the ring's outer left column and
+    // its ink rows centered on the lane, both off the raster's own alpha
+    // (icons::boxed_ink), in the file's own bone.
+    const int box_h = icons::icon_box_px(kLogoQuaverInkAt300);
+    const icons::BoxedInk ink = icons::boxed_ink(icons::Icon::Quaver, box_h);
+    const int box_x = ring.x - ink.left;
+    const int box_y =
+        lane.y +
+        static_cast<int>(std::nearbyint((lane.h - (ink.bottom - ink.top)) * 0.5)) -
+        ink.top;
+    icons::draw_boxed(cr, icons::Icon::Quaver, box_x, box_y, box_h);
+
+    // THE BRAND, a constant: its first ink the gap past the quaver's last
+    // ink column, its cap band centered on the lane, the bone.
+    {
+        const GuiFont bold = gui_font(GuiFace::Bold);
+        const text_shape::SharedRun brand =
+            text_shape::memoized_run(bold, kLogoBrand);
+        const double x = static_cast<double>(box_x + ink.right +
+                                             skin_px(kLogoBrandGapAt300)) -
+                         text_shape::ink_left_px(*brand);
+        set_palette_source(cr, bone);
+        text_shape::show_shaped_run(
+            cr, *brand, x,
+            redesign_baseline(bold, static_cast<double>(lane.y),
+                              static_cast<double>(lane.h)));
+    }
+
+    // THE LEGEND (logo_legend_layout): the clock run, the glyph in its cell,
+    // the percent run — published as painted for the tick's damage.
+    const LogoLegendLayout l = logo_legend_layout(app, app.logo_legend);
+    app.logo_legend_rect = l.extent;
+    set_palette_source(cr, bone);
+    text_shape::show_shaped_run(cr, *l.clock, l.clock_x, l.baseline);
+    if (l.percent)
+        text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
+
+    // THE GLYPH, artwork filled in the bone with cairo's own antialiasing.
+    cairo_new_path(cr);
+    const double cx = static_cast<double>(l.cell.x);
+    const double cy = static_cast<double>(l.cell.y);
+    const double cw = static_cast<double>(l.cell.w);
+    const double ch = static_cast<double>(l.cell.h);
+    if (app.logo_legend.glyph == GuiLogoGlyph::Bolt) {
+        // THE BOLT: kLogoBolt over the cell's unit box.
+        cairo_move_to(cr, cx + kLogoBolt[0].x * cw, cy + kLogoBolt[0].y * ch);
+        for (std::size_t i = 1; i < std::size(kLogoBolt); ++i)
+            cairo_line_to(cr, cx + kLogoBolt[i].x * cw,
+                          cy + kLogoBolt[i].y * ch);
+        cairo_close_path(cr);
+    } else {
+        // THE BATTERY: its box centered in the cell (the spare column on the
+        // left, the rows centered on the cap's center), the nub up.
+        const int bw = skin_px(kLogoBatteryWAt300, 1);
+        const int bh = skin_px(kLogoBatteryHAt300, 1);
+        const double bx = static_cast<double>(l.cell.x + (l.cell.w - bw + 1) / 2);
+        const double by = static_cast<double>(l.cap_center - (bh - 1) / 2);
+        const double w = static_cast<double>(bw);
+        const double h = static_cast<double>(bh);
+        const double nub = kLogoBatteryNubH * h;
+        cairo_rectangle(cr, bx + kLogoBatteryNubX0 * w, by,
+                        (kLogoBatteryNubX1 - kLogoBatteryNubX0) * w,
+                        nub + static_cast<double>(hairline_px()));
+        const double x0 = bx + kLogoBatteryBodyX0 * w;
+        const double x1 = bx + kLogoBatteryBodyX1 * w;
+        const double y0 = by + nub;
+        const double y1 = by + h;
+        const double r = static_cast<double>(skin_px(kLogoBatteryRadiusAt300, 1));
+        constexpr double kPi = 3.14159265358979323846;
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, x1 - r, y0 + r, r, -kPi / 2, 0.0);
+        cairo_arc(cr, x1 - r, y1 - r, r, 0.0, kPi / 2);
+        cairo_arc(cr, x0 + r, y1 - r, r, kPi / 2, kPi);
+        cairo_arc(cr, x0 + r, y0 + r, r, kPi, 3 * kPi / 2);
+        cairo_close_path(cr);
+    }
+    set_palette_source(cr, bone);
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+    cairo_fill(cr);
+
+    cairo_restore(cr);
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
@@ -1723,20 +1885,25 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
     // THE LANE IS THE BRUSHED GROUND (materials.h's GROUND, 2026-10-23): the
     // band's ground the panel as drawn under every run and between them;
-    // ITS FIRST ROW THE CAPTION'S LINE — one device px of the ring's light
-    // tone directly under the caption, the program ring's top row
-    // (render.h's caption block); its keys blank (paint_roster_case), their
-    // legends under them in the bottom pad.
+    // ON THE LAPTOP ITS FIRST ROW THE CAPTION'S LINE — one device px of the
+    // ring's light tone directly under the caption, the program ring's top
+    // row (render.h's caption block) — and on the tablet, which has no
+    // caption (2026-10-24, GuiPlatform::window_has_own_caption), NO LINE:
+    // the logo lane's ground is the bake's alone. Its upper pad THE LOGO
+    // LANE (paint_logo_lane, below the ground); its keys blank
+    // (paint_roster_case), their legends under them in the bottom pad.
     cairo_save(cr);
     const GuiMaterialScope ground(GuiMaterialRegion::Ground);
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         paint_cell_rect(cr, lane, palette().face);
-        paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, hairline_px()},
-                        palette().ce_hilight);
+        if (GuiPlatform::window_has_own_caption())
+            paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, hairline_px()},
+                            palette().ce_hilight);
         cairo_restore(cr);
     }
+    paint_logo_lane(cr, lane);
 
     // THE KEY AND ITS LEGEND (2026-10-23): the blank key a composite of its
     // rounded parts (render.h's program block), its legend under it in the
@@ -7127,6 +7294,10 @@ static bool floating_surface_stands(const AppState& app) {
 //     the stash a covering clip refreshes), the pushed face
 //     (caption_button_pushed) and the Maximize glyph's state
 //     (gui.window_maximized); the AppIcon and the glyph cells are compiled;
+//   * THE LOGO LANE (paint_logo_lane, the band's upper pad since
+//     2026-10-24): the legend the tick composed (AppState::logo_legend);
+//     the quaver, the brand, the ring's columns and the lane's rect are the
+//     globals' and the band's;
 //   * THE TOOLBAR BAND (paint_icon_row): its lane (the strip pad among the
 //     lane's inputs, its rect moving with it); the `h` view; the standing
 //     members in the walk's order and their runs (icon_row_walk, the right
@@ -7156,6 +7327,8 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
             caption_button_enabled(gui, static_cast<GuiCaptionButton>(i));
         fp.caption.pushed[k] = caption_button_pushed(app, i);
     }
+
+    fp.logo = app.logo_legend;
 
     fp.band.lane    = top_icon_row_area(app);
     fp.band.history = app.history_mode.active;

@@ -36,9 +36,11 @@
 // canvas column and one round row 8's clock are the program's only strokes
 // on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
 // stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
-// bottom: THE TOOLBAR BAND directly under the caption — THE STRIP PAD, the
-// key, THE STRIP PAD (13 W, settled 2026-10-23: strip_pad_px's field below;
-// the keys' legends in the bottom pad), its keys in plain runs
+// bottom: THE TOOLBAR BAND at the window's top on the tablet and directly
+// under the laptop's caption — THE LOGO LANE (its upper pad since
+// 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,
+// settled 2026-10-23: strip_pad_px's field below; the keys' legends in the
+// bottom pad), its keys in plain runs
 // on the ground, the runs `run_gap_px` apart; then THE CANVAS COLUMN inside
 // THE PROGRAM RING — THE VIEW BAR (the trim bar: the ring's dark top row,
 // the black field, the light line: 8), THE
@@ -285,10 +287,18 @@ inline constexpr ProgramSpec kProgramSpec = {
 constexpr int program_case_authored_px(const ProgramSpec& p) {
     return p.case_light_px + p.glyph_px + p.case_shadow_px + p.case_outer_px;
 }
-// THE BAND AND ROW 8 (2026-10-22, the simple layout): the strip pad, the
-// case, the strip pad (strip_pad_px's field, 13 since 2026-10-23).
+// ROW 8 (2026-10-22, the simple layout): the strip pad, the case, the
+// strip pad (strip_pad_px's field, 13 since 2026-10-23).
 constexpr int program_strip_authored_h(const ProgramSpec& p) {
     return p.strip_pad_px + program_case_authored_px(p) + p.strip_pad_px;
+}
+// THE BAND'S AUTHORED PART (architect 2026-10-24): the case and the strip
+// pad under it. Its upper pad is THE LOGO LANE, authored in device px at
+// 300 % like the caption (render.h's logo lane block, logo_lane_h_px), so
+// it is not a Windows-px term here (the band was row 8's strip 2026-10-22
+// to 2026-10-24).
+constexpr int program_band_authored_h(const ProgramSpec& p) {
+    return program_case_authored_px(p) + p.strip_pad_px;
 }
 // The canvas column's lanes above the canvas (the head): the view bar a
 // line, its field and a line; the ruler its ground and its bottom line; the
@@ -317,8 +327,10 @@ constexpr int program_stereo_divider_authored_h(const ProgramSpec& p) {
     return 1 + p.stereo_divider_face_px + 1;
 }
 static_assert(program_case_authored_px(kProgramSpec) == 23);
-// THE FRAME OF RECORD'S STRIPS (layout4_pad13): 13 + 23 + 13.
+// THE FRAME OF RECORD'S STRIPS (layout4_pad13): 13 + 23 + 13; the band's
+// authored part under its logo lane 23 + 13.
 static_assert(program_strip_authored_h(kProgramSpec) == 49);
+static_assert(program_band_authored_h(kProgramSpec) == 36);
 // ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
 // the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
 static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);

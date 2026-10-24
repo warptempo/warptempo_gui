@@ -1,5 +1,6 @@
 #pragma once
 #include "device_config.h"
+#include "gui_battery.h"
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
@@ -278,6 +279,20 @@ public:
     bool window_maximized() const { return window_maximized_; }
     bool window_restorable() const { return true; }
     bool caption_active() const { return window_activated_; }
+
+    // WHETHER THE WINDOW WEARS THE APP'S OWN CAPTION — the seam's one
+    // caption predicate (architect 2026-10-24), read by the lane table
+    // (main.cpp's top_lane_height: the caption lane its height or 0 rows),
+    // the caption's painter (paint_caption_row), its hit test
+    // (caption_button_at, claim_caption_press) and the band's first row (the
+    // caption's line under it, paint_icon_row). A DELIBERATE ASYMMETRY: TRUE
+    // HERE, the laptop's interim caption — a window on labwc needs its verbs
+    // (minimize, maximize, close, the drag) and the app draws them until the
+    // caption becomes the OS's job, labwc's server-side decorations, in a
+    // later round ("the laptop's window to labwc, a later round"); FALSE on
+    // the tablet, which has no window to title (platform_android.h). Under it
+    // stands the logo lane on both devices (render.h's logo lane block).
+    static constexpr bool window_has_own_caption() { return true; }
 
     // THE PAINT TARGETS (2026-10-13): the buffers this backend paints into
     // and, inside the paint loop (paint_one_frame), the one this frame
@@ -686,6 +701,29 @@ public:
     // sets the session active or inactive, and requests / abandons audio
     // focus (MainActivity.mediaState).
     void publish_media_state(const GuiMediaState& state);
+
+    // -- THE HOST'S BATTERY (architect 2026-10-24) ---------------------------
+    //
+    // What the host knows of its battery NOW, for the logo lane's battery +
+    // clock legend (gui_battery.h owns the type and the composer). CALLED ON
+    // EVERY TICK from the loop thread — main.cpp's tick is the legend's one
+    // refresh site (refresh_logo_legend), composing only when the wall-clock
+    // minute or this answer changed and damaging the legend's rect only when
+    // the composed legend did — so each backend answers cheaply, its own way.
+    //
+    // ON THIS BACKEND IT IS sysfs, READ AT MOST ONCE PER WALL-CLOCK MINUTE —
+    // the laptop's battery refreshes with the legend's clock (architect
+    // 2026-10-01), and the cache answers every tick between. The first BAT*
+    // under /sys/class/power_supply by name gives the percentage
+    // (`capacity`); the plug state is the AC adapter's `online` flag (AC*: 1
+    // plugged, 0 unplugged) and, when no AC* node exists, the battery's own
+    // `status` (Charging, Full and Not charging are plugged, Discharging
+    // unplugged). Anything else, or a node that cannot be read, is Unknown —
+    // the battery glyph (gui_battery.h's GuiLogoGlyph), and nothing more (no
+    // retry, no log); no BAT* at all is has_battery false, the bolt alone.
+    // Android's answer is the sliver's last ACTION_BATTERY_CHANGED broadcast
+    // (its declaration).
+    GuiBattery battery_status();
 
 private:
     // libwayland's listener tables are C structs of function pointers, so
@@ -1103,6 +1141,10 @@ private:
     CloseCallback        on_close_;
     // Stored and never fired on this backend (see set_on_media_command).
     std::function<void(GuiMediaCommand)> on_media_command_;
+    // battery_status's cache: the last sysfs reading and the wall-clock
+    // minute it was taken in (-1 before the first read).
+    GuiBattery battery_        {};
+    int64_t    battery_minute_ = -1;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop

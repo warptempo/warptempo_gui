@@ -1,5 +1,6 @@
 #pragma once
 #include "device_config.h"
+#include "gui_battery.h"
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
@@ -39,7 +40,8 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // for member and signature for signature, and there is NO ANDROID-ONLY MEMBER:
 // where the two machines differ, both sides declare the member and each
 // answers its own way (the on-screen keyboard's pair, device_config_defaults,
-// the car's pair and the pen's pair are of that shape).
+// the car's pair, the pen's pair, the caption predicate and battery_status are
+// of that shape).
 // THE PROOF IS A DIFF, never a carried count: strip `//` comments and blank
 // lines from each header's `public:` section and the two come out line for
 // line equal but for the pen pair's two inline bodies — re-derive it at every
@@ -53,7 +55,12 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST SHRANK ON 2026-10-08 (the theme files' member, below) and LAST GREW ON
+// LAST GREW ON 2026-10-24, twice: by window_has_own_caption (the caption
+// lane's one predicate — the tablet none, the laptop its interim caption
+// until labwc decorates it; platform_wayland.h's declaration) and by
+// battery_status (the logo lane's battery + clock legend: sysfs on the
+// laptop, the sliver's broadcast here — gui_battery.h carries the type). It
+// last shrank on 2026-10-08 (the theme files' member, below) and grew on
 // 2026-10-06, twice: by bundled_icon_files (the icons' SVG and PNG
 // files the build ships, read in place at launch: the repository's
 // assets/icons/ on the laptop, the APK's assets here — icons.h's
@@ -272,6 +279,14 @@ public:
     // The caption is always ACTIVE here (platform_wayland.h's caption_active):
     // the tablet's one full-screen window is the one in front.
     bool caption_active() const { return true; }
+    // NO CAPTION OF THE APP'S OWN HERE (architect 2026-10-24: "remove the
+    // caption and the line under it completely, give that height to the
+    // waveform"): the tablet's full-screen window has no window to title and
+    // Android's own navigation minimizes, so the caption lane is 0 rows and
+    // nothing of it is painted or hit. The deliberate asymmetry — the
+    // laptop's interim caption until labwc decorates its window — and the
+    // predicate's readers are at platform_wayland.h's declaration.
+    static constexpr bool window_has_own_caption() { return false; }
 
     // THE PAINT TARGETS (2026-10-13; the Wayland twin's contract): ONE — the
     // persistent backbuffer every frame paints into.
@@ -545,6 +560,23 @@ public:
     // setActive(false) is reached only by the activity's onDestroy.
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
     void publish_media_state(const GuiMediaState& state);
+
+    // THE HOST'S BATTERY (architect 2026-10-24; the seam's contract — called
+    // on every tick, answered cheaply — is at platform_wayland.h's
+    // declaration). ON THIS BACKEND IT IS THE SLIVER'S LAST BROADCAST:
+    // MainActivity registers for the sticky ACTION_BATTERY_CHANGED (no
+    // permission; the registration hands back the sticky intent at once and
+    // the receiver keeps it current) and pushes each one down through
+    // nativeBatteryState — ONE JAVA->NATIVE CALL PER CHANGE, the car's road
+    // (nativeMediaCommand) rather than a native->Java read at each refresh,
+    // because the broadcast IS the change: the legend follows it within a
+    // tick, with no binder call on the loop's thread. The push stores one
+    // atomic word and needs no wake, the tick reading it on its own cadence
+    // (the word and its packing are at g_battery_word, platform_android.cpp).
+    // Before the first push it answers a battery whose level and plug state
+    // are unknown — the honest cold answer, which the registration's sticky
+    // intent replaces within the activity's first moments.
+    GuiBattery battery_status();
 
 private:
     // The glue's callback tables are C function pointers taking `android_app*`,

@@ -43,7 +43,7 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
 rustup-init   # then: rustup default stable
 ```
 
-The tablet side adds adb and the Android build's host tools, resvg and ImageMagick 7 among them (`resvg` and `magick`: the APK build renders the launcher icon from `assets/icons/AppIcon.svg`, the caption's quaver, at every build); its fonts — Liberation Sans and Liberation Sans Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
+The tablet side adds adb and the Android build's host tools, resvg and ImageMagick 7 among them (`resvg` and `magick`: the APK build renders the launcher icon from `assets/icons/AppIcon.svg`, the logo strip's quaver, at every build); its fonts — Liberation Sans and Liberation Sans Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
 sudo pacman -S --needed android-tools meson ninja zip unzip imagemagick resvg

@@ -56,6 +56,13 @@ struct GuiTargetRender;
 // constant since 2026-10-23), which are in the bake's key. (word_and_key_case_rects, the word buttons' and the
 // keyboard's ebony patches, 2026-10-22 to 2026-10-23, is retired.)
 std::vector<GuiRect> program_case_rects(const AppState& app);
+// THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
+// logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
+// layout): the lane's rows from the legend's first ink column through the
+// program ring's outer right column. The tick's damage for a changed legend
+// (main.cpp's refresh_logo_legend) is this rect united with the one the
+// painter last published (AppState::logo_legend_rect).
+GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
 // bake for their ebony patches 2026-10-21 to 2026-10-22, are the caption
 // painter's own again, paint_handler.cpp.)
@@ -874,6 +881,11 @@ private:
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
     // after them touches their lanes, the flag cache being transparent there.
     void paint_icon_row(cairo_t* cr);
+    // THE LOGO LANE (architect 2026-10-24; render.h's logo lane block): the
+    // band's upper pad — the quaver, the brand and the battery + clock
+    // legend with its glyph — painted by paint_icon_row over the band's
+    // ground; publishes the legend's rect (AppState::logo_legend_rect).
+    void paint_logo_lane(cairo_t* cr, const GuiRect& band);
     // (THE TAB STRIP's painter, paint_tab_strip, 2026-10-18, is retired with
     // the strip, 2026-10-22.)
     // (THE PROGRAM'S FRAME's painter, paint_program_frame — its top row

@@ -70,6 +70,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <ctime>
 #include <filesystem>
 #include <string>
 #include <utility>
@@ -146,10 +147,13 @@ namespace {
 // program's, program_spec.h):
 // THE CAPTION (caption_row_h_px(), the window's own title bar, 40 device px
 // at 300 % scaled with gui_scale since 2026-10-23 — Windows' 18-px
-// SM_CYCAPTION until then — at the window top on both devices, render.h's
-// caption block), the ICON ROW (icon_row_h_px(), directly under the caption: THE
-// TOOLBAR BAND, the strip pad, the 23-W key, the strip pad on the brushed
-// ground — render.h's program block), then FLEXIBLE GAP 1, then THE CENTERED
+// SM_CYCAPTION until then — at the window top: THE LAPTOP'S INTERIM CAPTION,
+// 0 ROWS ON THE TABLET since 2026-10-24, GuiPlatform::window_has_own_caption;
+// render.h's caption block), the ICON ROW (icon_row_h_px(), directly under
+// the caption: THE TOOLBAR BAND, THE LOGO LANE — the band's upper pad, 72
+// device px at 300 % since 2026-10-24, render.h's logo lane block — the
+// 23-W key, the strip pad on the brushed ground — render.h's program block),
+// then FLEXIBLE GAP 1, then THE CENTERED
 // BLOCK's four, THE PROGRAM'S CANVAS COLUMN inside the program ring
 // (architect 2026-10-09, the program is Cool Edit; program_spec.h, render.h's
 // canvas column lanes): the TRIM lane (trim_lane_h_px(), Cool Edit's view
@@ -235,15 +239,18 @@ namespace {
 // the lane accessors, never off a Windows total times the factor — in
 // particular a program line's slot is one quantum, program_line_px(), not a share of
 // scaled_px of a total, so a lane can differ from a naive total at a
-// fractional gui_scale. THE PROGRAM'S TOP STACK IS 87 WINDOWS PX, 50 BELOW
-// (render.h's chrome_stack_authored_h): the band 49 (13 + 23 + 13), the
-// canvas column 38 above the canvas (the view bar 8, the ruler 12, the
-// marker lane 17, the canvas's top frame row 1); the canvas's bottom frame
-// row 1 under it and row 8 49 — AND OVER IT THE CAPTION, 40 DEVICE PX AT
-// 300 % SCALED WITH gui_scale (the hi-fi skin, 2026-10-23: caption_row_h_px,
-// skin_px; Windows 2000's 18 W until then). THE WELL — THE CANVAS'S
-// INTERIOR — AT THE BASE'S 300 % IS 989 DEVICE ROWS (975 under the 54-row
-// caption of 2026-10-22; the rule at centered_leftover_h below), AND ITS
+// fractional gui_scale. THE PROGRAM'S TOP STACK IS 74 WINDOWS PX, 50 BELOW
+// (render.h's chrome_stack_authored_h): the band's case and pad 36 (23 +
+// 13), the canvas column 38 above the canvas (the view bar 8, the ruler 12,
+// the marker lane 17, the canvas's top frame row 1); the canvas's bottom
+// frame row 1 under it and row 8 49 — AND OVER IT THE LOGO LANE, the band's
+// upper pad, 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px),
+// and on the laptop THE CAPTION over that, 40 DEVICE PX AT 300 % (the hi-fi
+// skin, 2026-10-23: caption_row_h_px, skin_px; Windows 2000's 18 W until
+// then), BOTH SCALED WITH gui_scale. THE WELL — THE CANVAS'S INTERIOR — AT
+// THE BASE'S 300 % IS 996 DEVICE ROWS (989 under the 40-row caption over the
+// strip pad, 2026-10-23 to 2026-10-24; the rule at centered_leftover_h
+// below), AND ITS
 // WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
 // (waveform_area: the margin and the canvas's frame column, 21 px, and half
 // the flooring's leftover, 3). Per scale the canvas column above the canvas
@@ -254,37 +261,39 @@ namespace {
 // (40 + 4) + 63 (43 + 20) + 4 = 141 at 360 % and 32 + 48 + 68 + 4 = 152 at
 // 400 % (each line slot keeps its scaled height; the line painted in it is
 // one device px, render.h's hairline_px).
-//   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 18 caption + 67 band (18 + 31 + 18) + 10 trim + 16 ruler + 22
-//   marker + 1 frame = 134 above, of which 85 is the caption and the band
+//   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame; its
+//   interim caption across the top): the lanes are 18 caption + 82 band
+//   (the logo lane 33, the case 31, the pad 18) + 10 trim + 16 ruler + 22
+//   marker + 1 frame = 149 above, of which 100 is the caption and the band
 //   above the gap and 49 the block above the waveform, and 68 below (the
-//   bottom frame row 1 and row 8's 18 + 31 + 18); leftover 878: the
-//   waveform 878, both gaps 0 — 18 / 67 / 0 / 49 / 878 / 0 / 68; the
+//   bottom frame row 1 and row 8's 18 + 31 + 18); leftover 863: the
+//   waveform 863, both gaps 0 — 18 / 82 / 0 / 49 / 863 / 0 / 68; the
 //   waveform 1888 wide, 16 px in (8 + 1 and half the flooring's 14).
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
-//   MainActivity.java's head — the caption across its top; the architect's
-//   tablet value since 2026-10-06): the lanes are 40 caption + 147 band (39
-//   + 69 + 39, rows 40–186, the cases 79–147) + 24 trim + 36 ruler + 51
-//   marker + 3 frame = 301 above (187 the caption and the band, 114 the
+//   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
+//   tablet value since 2026-10-06): the lanes are 0 caption + 180 band (72
+//   + 69 + 39, rows 0–179, the logo lane 0–71, the cases 72–140) + 24 trim
+//   + 36 ruler + 51 marker + 3 frame = 294 above (180 the band, 114 the
 //   block) and 150 below (the bottom frame row 1290–1292 and row 8 on
-//   1293–1439, its cases 1332–1400), leftover 989: the waveform 989 on rows
-//   301–1289, both gaps 0 — 40 / 147 / 0 / 114 / 989 / 0 / 150; the waveform
-//   2256 wide, 24 px in.
+//   1293–1439, its cases 1332–1400), leftover 996: the waveform 996 on rows
+//   294–1289 (its two wells 496 rows each round the divider's 3, the spare
+//   row its last, render.h's waveform_divider), both gaps 0 — 0 / 180 / 0 /
+//   114 / 996 / 0 / 150; the waveform 2256 wide, 24 px in.
 //   2304x1440 AT gui_scale 360 (same surface; every relief line 4 here, so
-//   the case is 84 where it is 69 at 300, the pad 47): the lanes are 48
-//   caption + 178 band (47 + 84 + 47) + 30 trim + 44 ruler + 63 marker + 4
-//   frame = 367 above (226 and 141) and 182 below (4 + 178), leftover 891:
-//   the waveform 891, both gaps 0 — 48 / 178 / 0 / 141 / 891 / 0 / 182; the
-//   waveform 2240 wide, 32 px in.
-//   2304x1440 AT gui_scale 400 (same surface): the lanes are 53 caption +
-//   196 band (52 + 92 + 52) + 32 trim + 48 ruler + 68 marker + 4 frame = 401
-//   above (249 and 152) and 200 below (4 + 196), leftover 839: the waveform
-//   839, both gaps 0 — 53 / 196 / 0 / 152 / 839 / 0 / 200; the waveform 2240
+//   the case is 84 where it is 69 at 300, the pad 47, the logo lane 86):
+//   the lanes are 0 caption + 217 band (86 + 84 + 47) + 30 trim + 44 ruler
+//   + 63 marker + 4 frame = 358 above (217 and 141) and 182 below (4 +
+//   178), leftover 900: the waveform 900, both gaps 0 — 0 / 217 / 0 / 141 /
+//   900 / 0 / 182; the waveform 2240 wide, 32 px in.
+//   2304x1440 AT gui_scale 400 (same surface): the lanes are 0 caption +
+//   240 band (96 + 92 + 52) + 32 trim + 48 ruler + 68 marker + 4 frame = 392
+//   above (240 and 152) and 200 below (4 + 196), leftover 848: the waveform
+//   848, both gaps 0 — 0 / 240 / 0 / 152 / 848 / 0 / 200; the waveform 2240
 //   wide, 32 px in.
-//   1024x600 AT 138 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 398 -> the waveform 398, both gaps 0
-//   — 18 / 67 / 0 / 49 / 398 / 0 / 68.
+//   1024x600 AT 138 %, A SHORT WINDOW ON THE LAPTOP (kept as a worked case;
+//   no host runs this geometry): leftover 383 -> the waveform 383, both
+//   gaps 0 — 18 / 82 / 0 / 49 / 383 / 0 / 68.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -350,18 +359,20 @@ namespace {
 // declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
-// and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
-// px whole (render.h's caption block: the title bar's ground, its icon, its
-// title and its three buttons inside it), the ICON lane THE TOOLBAR BAND,
-// the strip pad, the case, the strip pad (render.h's program block,
-// icon_row_h_px), the canvas column's four lanes Cool Edit's view bar,
+// and the lane owns every pixel it paints. The CAPTION lane is its height
+// whole (render.h's caption block: the title bar's ground, its icon, its
+// title and its three buttons inside it; 0 rows on the tablet since
+// 2026-10-24), the ICON lane THE TOOLBAR BAND, the logo lane, the case, the
+// strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
+// canvas column's four lanes Cool Edit's view bar,
 // ruler, marker lane and canvas's top frame row, 8 + 12 + 17 + 1 (render.h's
 // canvas column lanes), the canvas's BOTTOM FRAME ROW one line
 // (canvas_bottom_frame_h_px), and the UNIFIED BOTTOM ROW the strip again
 // (bottom_row_h_px; the simple layout, 2026-10-22).
 constexpr int kTopLaneCount    = 6;
 constexpr int kBottomLaneCount = 2;
-// THE FIRST PROGRAM LANE, the band, directly under the caption (2026-10-22).
+// THE FIRST PROGRAM LANE, the band, directly under the caption (2026-10-22;
+// at the window's top on the tablet, whose caption lane is 0 rows, 2026-10-24).
 constexpr int kTopProgramLane      = 1;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
 // flexible band (strip_row_rect below): THE TRIM LANE, lane 2 since the
@@ -379,8 +390,14 @@ constexpr int kTopCanvasFrameLane = 5;
 static_assert(kTopFlexGapLane == kTopTrimLane);
 int top_lane_height(int lane) {
     switch (lane) {
-        case 0: return caption_row_h_px();       // the caption (title bar)
-        case kTopProgramLane: return icon_row_h_px();   // the toolbar band
+        // THE CAPTION (title bar): the laptop's interim caption, 0 rows on
+        // the tablet (architect 2026-10-24; the asymmetry at
+        // GuiPlatform::window_has_own_caption).
+        case 0:
+            return GuiPlatform::window_has_own_caption() ? caption_row_h_px()
+                                                         : 0;
+        // THE TOOLBAR BAND: the logo lane, the case, the strip pad.
+        case kTopProgramLane: return icon_row_h_px();
         // THE CANVAS COLUMN'S THREE (architect 2026-10-09, the program is
         // Cool Edit; program_spec.h owns every length, render.h's canvas
         // column lanes the accessors): the view bar (the trim lane), the
@@ -434,10 +451,10 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300 and the strip pad's 13 W the lanes leave 1440 − 301 − 150 =
-// 989 device rows (the hi-fi skin's 40-row caption, 2026-10-23; 975 under the
-// simple layout's 54-row caption, 2026-10-22). A COLOR moves no lane: the 989
-// rows hold under every waveform preset. May
+// gui_scale 300 and the strip pad's 13 W the lanes leave 1440 − 294 − 150 =
+// 996 device rows (no caption and the 72-row logo lane, 2026-10-24; 989
+// under the hi-fi skin's 40-row caption, 2026-10-23). A COLOR moves no lane:
+// the 996 rows hold under every waveform preset. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -696,8 +713,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is THE CAPTION (architect 2026-10-05, the window's own title bar:
 // the app's icon, the title and the three caption buttons, painted by
-// paint_caption_row on both devices), at the window's top. Lane 1 is the
-// ICON row (the twenty-four
+// paint_caption_row), at the window's top — the laptop's interim caption, 0
+// rows on the tablet (2026-10-24, GuiPlatform::window_has_own_caption).
+// Lane 1 is the ICON row, the logo lane over its keys (the twenty-four
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
 // count's authority; twenty stand outside the `h` view and twelve
@@ -1350,6 +1368,36 @@ struct GuiProjectOutcome {
     int         exit_status = 0;
     std::string reopen;
 };
+
+// THE LOGO LANE'S LEGEND, ITS ONE WRITER (architect 2026-10-24; render.h's
+// logo lane block, gui_battery.h's composer): called once as the project
+// set is built and then ON EVERY TICK, ahead of the tick's early returns —
+// the legend is the wall clock's and the host's, never the project's, so no
+// mode or load can hold it back. It recomposes only when the wall-clock
+// minute or the host's battery answer moved (time() / 60 turns over with
+// the local clock's minute, every real zone a whole number of minutes off
+// UTC), and DAMAGES THE LEGEND'S RECT ALONE, only when the composed legend
+// changed — the rect the painter last published united with the new
+// legend's own layout (logo_legend_extent), so a percent growing leftward
+// ("99%" to "100%") repaints its new columns too. The quaver and the brand
+// never change and are never damaged here.
+void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
+    const std::time_t now    = std::time(nullptr);
+    const int64_t     minute = static_cast<int64_t>(now) / 60;
+    const GuiBattery  battery = gui.battery_status();
+    if (minute == app.logo_legend_minute &&
+        battery == app.logo_legend_battery)
+        return;
+    app.logo_legend_minute  = minute;
+    app.logo_legend_battery = battery;
+    const GuiLogoLegend legend = compose_logo_legend(battery, now);
+    if (legend == app.logo_legend) return;
+    app.logo_legend = legend;
+    GuiRect r = logo_legend_extent(app, legend);
+    const GuiRect& was = app.logo_legend_rect;
+    if (was.w > 0 && was.h > 0) r = union_rect(r, was);
+    if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
+}
 
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
@@ -2177,6 +2225,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // the audio thread's cursor and mirrors it into the main-thread playhead,
     // invalidating just the columns and timestamp that changed. Also
     // detects natural end-of-playback via the session word's playing bit.
+    // THE LOGO LANE'S LEGEND before the first paint (refresh_logo_legend).
+    refresh_logo_legend(app, gui);
     gui.set_on_tick([&]() {
         // THE NOTIFICATION CARDS' CLOCK, THE TICK'S FIRST TENANT — the one
         // thing this body does on EVERY tick, ahead of all four of its early
@@ -2212,6 +2262,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // block below).
         if (materials::settle_due())
             gui.invalidate_region(0, 0, app.width, app.height);
+
+        // THE LOGO LANE'S LEGEND, ON EVERY TICK for the same reason: the
+        // wall clock and the battery move whatever the project is doing
+        // (refresh_logo_legend, its rule and its damage).
+        refresh_logo_legend(app, gui);
 
         // Startup file load, deferred out of pre-run() so the window maps and
         // paints first (the compositor's initial configure / first frame only

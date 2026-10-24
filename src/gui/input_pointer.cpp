@@ -4993,8 +4993,11 @@ void GuiInputHandler::finish_notification_release(
 // (window_frame_edges_at); the window acts are the platform's verbs.
 
 namespace {
-// The caption button under (x, y) as painted, or -1.
+// The caption button under (x, y) as painted, or -1 — always -1 where the
+// window wears no caption of the app's own (the tablet, 2026-10-24,
+// GuiPlatform::window_has_own_caption: no caption, no cell).
 int caption_button_at(const AppState& app, int x, int y) {
+    if (!GuiPlatform::window_has_own_caption()) return -1;
     for (int i = 0; i < kCaptionButtonCount; ++i)
         if (rect_contains(app.caption_buttons[static_cast<size_t>(i)].rect, x,
                           y))
@@ -5020,6 +5023,8 @@ bool GuiInputHandler::claim_window_frame_press(GuiMouseButton button, int x,
 bool GuiInputHandler::claim_caption_press(
         GuiMouseButton button, int x, int y, GuiInputState mods,
         const DoubleClickCandidate& dc_at_press) {
+    // NO CAPTION, NO CLAIM (the tablet, 2026-10-24: its lane is 0 rows).
+    if (!GuiPlatform::window_has_own_caption()) return false;
     if (!rect_contains(top_caption_row_area(app), x, y)) return false;
     // Consumed from here, whatever the button and the modifiers: the
     // window's own chrome binds the bare left press alone.

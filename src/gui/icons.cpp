@@ -4,11 +4,14 @@
 #include "materials.h"   // the disabled glyph's three tones (disabled_glyph_tones)
 #include "svg_icon.h"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace icons {
@@ -34,6 +37,8 @@ using Surface = std::unique_ptr<cairo_surface_t, SurfaceDeleter>;
 
 struct Faces {
     Surface live;
+    // The live raster's ink box (boxed_ink), measured at its first ask.
+    std::optional<BoxedInk> ink;
     Surface disabled;
     // The tones `disabled` was embossed in: the case's, so a bake that moves
     // them rebuilds the copy at its next ask.
@@ -124,11 +129,50 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
     paint_raster(cr, faces_for(icon, px).live.get(), x, y);
 }
 
+// THE RASTER CELL'S LEFT EDGE AGAINST THE BOX'S (draw_boxed's declaration):
+// half the cell's spare width left of the box, rounded once — the one
+// offset draw_boxed copies at and boxed_ink measures from.
+static int boxed_cell_dx(int box_h) {
+    const double spare = box_h * (1.0 - kGlyphBoxW / kGlyphBoxH);
+    return static_cast<int>(std::nearbyint(-spare * 0.5));
+}
+
 void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h) {
     if (box_h <= 0) return;
-    const double spare = box_h * (1.0 - kGlyphBoxW / kGlyphBoxH);
-    draw(cr, icon, static_cast<double>(box_x) - spare * 0.5,
+    draw(cr, icon, static_cast<double>(box_x + boxed_cell_dx(box_h)),
          static_cast<double>(box_y), static_cast<double>(box_h));
+}
+
+BoxedInk boxed_ink(Icon icon, int box_h) {
+    if (box_h <= 0) return BoxedInk{};
+    Faces& f = faces_for(icon, box_h);
+    if (!f.ink) {
+        // THE ALPHA WALK over the live ARGB32 raster (premultiplied; the
+        // window's conversion keeps alpha, svg_icon.h's convert_to_display):
+        // the bounds of every pixel whose alpha is >= 128.
+        cairo_surface_t* s = f.live.get();
+        cairo_surface_flush(s);
+        const unsigned char* data = cairo_image_surface_get_data(s);
+        const int w = cairo_image_surface_get_width(s);
+        const int h = cairo_image_surface_get_height(s);
+        const int stride = cairo_image_surface_get_stride(s);
+        int l = w, t = h, r = -1, b = -1;
+        for (int y = 0; y < h; ++y) {
+            const uint32_t* row =
+                reinterpret_cast<const uint32_t*>(data + y * stride);
+            for (int x = 0; x < w; ++x) {
+                if ((row[x] >> 24) < 128) continue;
+                l = std::min(l, x);
+                r = std::max(r, x);
+                t = std::min(t, y);
+                b = std::max(b, y);
+            }
+        }
+        const int dx = boxed_cell_dx(box_h);
+        f.ink = r < 0 ? BoxedInk{}
+                      : BoxedInk{l + dx, t, r + 1 + dx, b + 1};
+    }
+    return *f.ink;
 }
 
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,

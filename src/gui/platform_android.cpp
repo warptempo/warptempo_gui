@@ -34,6 +34,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <initializer_list>
 #include <cassert>
 #include <cerrno>
@@ -502,6 +503,48 @@ Java_com_warptempo_gui_MainActivity_nativeMediaCommand(JNIEnv* /*env*/,
     cmd.kind        = static_cast<GuiMediaCommand::Kind>(kind);
     cmd.position_ms = static_cast<int64_t>(position_ms);
     AndroidCallbacks::media_command(cmd);
+}
+
+// THE HOST'S BATTERY, the sliver's last ACTION_BATTERY_CHANGED broadcast
+// (architect 2026-10-24; the road's reasoning is at battery_status's
+// declaration). ONE ATOMIC WORD, written by the JNI entry below on the UI
+// thread and read by battery_status on the loop's thread, so neither side
+// takes a lock and no wake is owed — the tick reads it on its own cadence.
+// THE PACKING: bit 16 has_battery, bits 8-9 GuiBattery::Plugged's value,
+// bits 0-7 the percentage plus one (0 = the level is unknown). PROCESS-WIDE,
+// unlike the media sink: it is a reading, not a queue, so it outlives every
+// project and a push before init() or after shutdown() is simply the newest
+// reading. The initial word is a battery whose level and plug state are
+// unknown (the declaration's cold answer).
+namespace {
+constexpr uint32_t pack_battery(const GuiBattery& b) {
+    return (b.has_battery ? 1u << 16 : 0u) |
+           (static_cast<uint32_t>(b.plugged) << 8) |
+           static_cast<uint32_t>(b.percent + 1);
+}
+std::atomic<uint32_t> g_battery_word{
+    pack_battery(GuiBattery{true, -1, GuiBattery::Plugged::Unknown})};
+} // namespace
+
+// THE JNI ENTRY for the battery (name-based resolution, as the car's):
+// MainActivity's `private static native void nativeBatteryState(boolean
+// present, int percent, int plugged)`. `percent` is 0..100 or -1 for a level
+// the broadcast did not carry; `plugged` is EXTRA_PLUGGED as the broadcast
+// carried it — 0 unplugged, any positive source plugged (AC, USB, wireless,
+// dock), and -1 for an extra that was missing: Unknown.
+extern "C" JNIEXPORT void JNICALL
+Java_com_warptempo_gui_MainActivity_nativeBatteryState(JNIEnv* /*env*/,
+                                                        jclass /*clazz*/,
+                                                        jboolean present,
+                                                        jint percent,
+                                                        jint plugged) {
+    GuiBattery b;
+    b.has_battery = present == JNI_TRUE;
+    b.percent     = percent < 0 ? -1 : (percent > 100 ? 100 : percent);
+    b.plugged     = plugged < 0  ? GuiBattery::Plugged::Unknown
+                  : plugged == 0 ? GuiBattery::Plugged::Unplugged
+                                 : GuiBattery::Plugged::Plugged;
+    g_battery_word.store(pack_battery(b), std::memory_order_relaxed);
 }
 
 // ---------------------------------------------------------------------------
@@ -2695,6 +2738,17 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
     // character against the live lamp.
     if (pressed) key_codepoints_[stable_code] = codepoint;
     input_.key_event(key, stable_code, pressed, codepoint);
+}
+
+// THE HOST'S BATTERY (the declaration's contract): the atomic word the JNI
+// entry (beside nativeMediaCommand's) last stored, unpacked.
+GuiBattery GuiPlatform::battery_status() {
+    const uint32_t w = g_battery_word.load(std::memory_order_relaxed);
+    GuiBattery b;
+    b.has_battery = ((w >> 16) & 1u) != 0;
+    b.plugged     = static_cast<GuiBattery::Plugged>((w >> 8) & 0x3u);
+    b.percent     = static_cast<int>(w & 0xFFu) - 1;
+    return b;
 }
 
 // ---------------------------------------------------------------------------

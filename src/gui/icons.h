@@ -448,6 +448,21 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // width left of the box's edge.
 void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h);
 
+// A BOXED GLYPH'S INK at `box_h` (architect 2026-10-24, the logo lane's
+// quaver: "the glyph flush with the icons"): its lit columns and rows
+// MEASURED OFF THE LIVE RASTER draw_boxed copies — a pixel is ink at alpha
+// >= 128 — in device px from the box's top-left as draw_boxed places it,
+// `left` / `top` the first ink column and row, `right` / `bottom` one past
+// the last; never estimated from the file's box (the drawing's antialiasing
+// and its fit to the raster decide where its ink lands). Measured once per
+// (glyph, size), beside the raster in its cache (drop_rasters empties
+// both). A raster with no ink answers four zeros. Its one reader is the
+// logo lane's painter (paint_handler.cpp's paint_logo_lane).
+struct BoxedInk {
+    int left = 0, top = 0, right = 0, bottom = 0;
+};
+BoxedInk boxed_ink(Icon icon, int box_h);
+
 // THE DISABLED GLYPH — a dead button's face: COOL EDIT'S OWN (architect
 // 2026-10-15). Cool Edit Pro 2.1 ships a disabled bitmap beside every
 // toolbar glyph (BITMAP 221's strips, enabled | disabled), and that art is
