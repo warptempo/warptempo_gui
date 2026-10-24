@@ -934,11 +934,13 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // the band's one right run, Phase Reset's case ending at the program ring's
 // right edge (icon_row_seats; the two panes with their groove
 // 2026-10-14 to 2026-10-22). THE BAND'S FACES, and EACH
-// PAIR A RADIO: its lit member is its axis's current value
-// (redesign_button_selected reads one axis per button) and a press on it is
-// the consumed nothing at its lift (the `radio` column, kToolbarChords) — it
-// stays down, never greyed — the hold showing the pressed face over the lit
-// one (paint_roster_case: Cool Edit's one down face for both).
+// PAIR A RADIO THAT POPS: its lit member is its axis's current value
+// (redesign_button_selected reads one axis per button) and a press on it
+// SELECTS THE PAIR'S OTHER MEMBER at its lift (architect 2026-10-23 night,
+// "building a suction on the other one is the right way to go"; the consumed
+// nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
+// on_key) — never greyed for it — the hold showing the pressed face over the
+// lit one (paint_roster_case: Cool Edit's one down face for both).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -3002,9 +3004,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     cairo_save(cr);
     // THE TOOLTIP WEARS THE BODY FACE (architect 2026-10-23, "the tooltips
     // font size should be the same as the flags"): GuiFace::Body, 22 px at
-    // 300 %, the flags' and the cards' size, in the legend ink kLegendInk on
-    // the field; the box grows with the face's own line (its pads are the
-    // chrome spec's, below) — 39 device rows at 300 % for one line (the
+    // 300 %, the flags' and the cards' size, IN THE BONE kBoneInk like the
+    // flags and every word (architect 2026-10-23 night; the legend ink
+    // kLegendInk its first night, now the keys' print alone) on the field;
+    // the box grows with the face's own line (its pads are the chrome
+    // spec's, below) — 39 device rows at 300 % for one line (the
     // line 25, the hairline and the 2-W pad twice). The legend face, 14 px,
     // is the keys' print alone (it was the tooltip's the first night of the
     // skin).
@@ -3071,7 +3075,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // tooltip — the one rule every chrome label takes (architect 2026-10-22:
     // the line box centered there read low under descenders, and the one-W
     // lift on it overshot); the hint line stands one band and the gap lower.
-    set_palette_source(cr, hex(kLegendInk));
+    set_palette_source(cr, hex(kBoneInk));
     const double base1 =
         redesign_baseline(font, static_cast<double>(y + pad_y),
                           std::nearbyint(band1));
@@ -5895,10 +5899,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int btn_y = seats.case_y;
 
     // THE TEXT IN THE BOX — a prompt's question, an editor's line — 12 PX
-    // FROM THE RING ON BOTH AXES at 300 % (modal_box.h's THE TEXT INSIDE THE
-    // BOX, 2026-10-23): the pen at the text room's x, the wrap its width,
-    // the first row's baseline modal_box_text_baseline0 (the "l"'s ink top
-    // the pad under the ring), each further row one list row pitch below.
+    // OF PLAIN FIELD INSIDE THE RING ON BOTH AXES at 300 % (modal_box.h's
+    // THE TEXT INSIDE THE BOX, 2026-10-23): the pen at the text room's x,
+    // the wrap its width, the first row's baseline modal_box_text_baseline0
+    // (the "l"'s ink top the pad under the ring's own px), each further row
+    // one list row pitch below.
     // The rows keep the list's band (row_h) for the published geometry, the
     // first row's band placed so redesign_baseline lands on that baseline.
     const GuiRect box_rect   = boxed ? modal_box_rect(app, kb_h)

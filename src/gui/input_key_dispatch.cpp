@@ -698,7 +698,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
 // 2026-09-10 — THE VIEW PAIRS' FOUR SELECTORS (two radio pairs since
-// 2026-10-14: bare 1 / 2 the audio view, bare 3 / 4 the column switch), THE
+// 2026-10-14: bare 1 / 2 the audio view, bare 3 / 4 the column switch, a
+// press on the lit member selecting the other since 2026-10-23 night), THE
 // PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
 // TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
@@ -735,7 +736,8 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool alt   = mods.alt;
     // DELTA (a), ahead of every admission: the view selectors (bare 1/2/3/4,
     // two radio pairs since 2026-10-14 — 1 / 2 the audio view, 3 / 4 the
-    // column switch; bare `t`/`p`, the two individual axis toggles, were
+    // column switch, every press moving its axis since the pop of 2026-10-23
+    // night, the key for the standing value selecting the other; bare `t`/`p`, the two individual axis toggles, were
     // deleted whole with their view lamps on 2026-09-15, so the selectors are
     // the only road now), BARE `o` ON A WRITABLE TAB (the lock direction alone, the
     // header; on a locked tab it falls through to the base, which admits the

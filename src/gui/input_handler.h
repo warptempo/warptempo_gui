@@ -1606,11 +1606,11 @@ struct GuiInputHandler {
     // finish_chrome_press_release is the release half: re-hit the armed
     // target at the release's own coordinates and re-ask the press-time
     // gates — the modal veil FIRST, for every kind alike, then the roster's own
-    // shift admission under the CARRIED shift, then the enabled bit and the
-    // radio rule ON THE PAINTED FACE (architect 2026-09-24, strictly
-    // as-painted; never the live predicates — the radio's consume is this
-    // half's alone since 2026-10-07 evening, the `radio` column of
-    // kToolbarChords) — then run the act: the painted
+    // shift admission under the CARRIED shift, then the enabled bit ON THE
+    // PAINTED FACE (architect 2026-09-24, strictly as-painted; never the live
+    // predicates; a view pair's lit member dispatches like any button since
+    // its pop, 2026-10-23 night, kToolbarChords' NO RADIO COLUMN) — then run
+    // the act: the painted
     // Cancel glyph's cancel act, else the chord through on_key, a face
     // painted live dispatching and its act answering for itself. A lift
     // anywhere else, or a

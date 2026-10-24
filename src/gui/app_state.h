@@ -2524,9 +2524,13 @@ enum class RedesignButton {
     // markers view alone, 3 and 4 the reverse, so no button shares a chord
     // (the 2026-09-04 collapse of the S/T and W/P pairs into single lamps, two
     // buttons over ONE toggle chord, is reversed by this). EACH PAIR IS A
-    // RADIO: its lit member is that axis's current value and a press on it is
-    // the consumed nothing at its lift — it stays down, no release, no
-    // re-press, not greyed (the `radio` column, kToolbarChords). LIVE in the
+    // RADIO THAT POPS: its lit member is that axis's current value, and a
+    // press on it SELECTS THE PAIR'S OTHER MEMBER (architect 2026-10-23
+    // night, "pushing a button in, I would expect always to cause it to pop
+    // out"; the consumed nothing of 2026-10-14 reversed) — its bare digit's
+    // own resolution in GuiInputHandler::on_key, so the key and the button
+    // are one rule; never greyed for it, the hold showing the pressed face
+    // over the lit one. LIVE in the
     // `h` view (the four are on the mode's allowlist) and on a locked tab
     // (navigation); DEAD under the grid iterations lamp
     // (iteration_lock_greys).
@@ -2640,9 +2644,8 @@ enum class RedesignButton {
     //     BUTTONS OVER ONE CHORD, which is what this collapse removes: with one
     //     button there is no wrong half to press, so the `radio` flag and the
     //     pair's `redesign_button_selected` lamp are DELETED rather than kept.
-    //     The generic radio consume is untouched — the icon row's two view
-    //     pairs use it (architect 2026-10-14), each member its own absolute
-    //     chord, so no pair is two buttons over one chord.
+    //     (The generic radio consume the icon row's two view pairs kept from
+    //     2026-10-14 went with their pop, 2026-10-23 night.)
     //
     // THE FOUR ARROWS REPEAT WHILE HELD (architect 2026-08-16), the row's one
     // hold gesture: the first fire a hold beat after the press, then the
@@ -6442,8 +6445,7 @@ struct AppState {
     // ACTS AT THE LIFT with slide-away cancel — the model the dropdown items
     // had (2026-07-31..10-21) and the modal dialog buttons took first — and a press-time
     // refusal (the modifier admissions, a painted-dead face) arms nothing
-    // and paints nothing (the lit radio's consume is a LIFT refusal since
-    // 2026-10-07 evening: its press arms and paints). WHAT STAYS AT THE PRESS, by
+    // and paints nothing. WHAT STAYS AT THE PRESS, by
     // ruling: (1) the dropdown ANCHORS' toggle, while there were anchors
     // (until 2026-10-21); (2) EVERY DISMISSAL —
     // the flag editor's outside-press close, the veil's consumption (the open
@@ -11778,11 +11780,11 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // editor's own arms refuse the locked keys.)
         // THE VIEW PAIRS' FOUR (architect 2026-09-10): bare 1/2/3/4 run the
         // audio-view and column switches, so the delta blocks all four
-        // unconditionally
-        // — iteration_lock_key_blocked's first test is a flat chord list
-        // and not a "would this press move the column" question, which is why
-        // a pair's lit member refuses under a lit lamp too. WHAT MEMBERSHIP BUYS THEM
-        // IS THE DEAD PRESS — arm_redesign_press consumes a disabled button
+        // unconditionally — iteration_lock_key_blocked's first test is a flat
+        // chord list, and since the pop of 2026-10-23 night every press of
+        // the four moves its axis (a lit member's selecting the pair's other),
+        // so the lit member refuses under a lit lamp as its partner does.
+        // WHAT MEMBERSHIP BUYS THEM IS THE DEAD PRESS — arm_redesign_press consumes a disabled button
         // silently, the road a standing overlay's greys already take, and the
         // KEY carries the sentence — and the icon row's disabled face.
         case RedesignButton::ViewSource:
@@ -15402,11 +15404,10 @@ inline bool redesign_button_enabled(const AppState& a,
 // pair into one button (its record is in the momentary arm below).
 // Each reads
 // THE SAME live fact its chord flips, so a lit button and the state it reports
-// can never drift. Three readers: the painter (which stashes what it painted),
-// the lift's RADIO refusal (a radio button already selected is a consumed
-// nothing at its lift, its press arming as any button's — the account is at
-// the flag's declaration, input_pointer.cpp), and main.cpp's staleness
-// comparator.
+// can never drift. Two readers: the painter (which stashes what it painted)
+// and main.cpp's staleness comparator. (The lift's radio refusal, a lit view
+// pair member's press a consumed nothing, was a third until the pop of
+// 2026-10-23 night, kToolbarChords' NO RADIO COLUMN.)
 //
 // MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen,
 // Load-in-place —
@@ -16124,8 +16125,8 @@ static_assert(redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
 // the lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
 // which read "Show trim region" (the since-deleted button's) over a lit lamp
 // whose press HIDES it, the lie
-// the ruling retired; a RADIO's unlit half still names its own act, a press
-// on the lit half being the consumed nothing the lamp shows.
+// the ruling retired; a RADIO's halves each name their own value, lit or
+// not, a press on the lit half popping it to the other (2026-10-23 night).
 //
 // THE ACCELERATOR'S SPELLING IS THE PRODUCT'S ONE CONVENTION, stated once at
 // the speller (spell_chord's head, gui_input.h) and followed here: kdenlive's,
@@ -16342,8 +16343,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Load in Place (')", nullptr};
         // THE VIEW PAIRS (architect 2026-10-14): each hint is its axis value's
         // name and its bare digit, the acts' own names in Title Case. A
-        // pair's lit member keeps its name too — the press there is the
-        // consumed nothing the lamp shows.
+        // pair's lit member keeps its name too — the button names the value
+        // its lamp shows, and a press there pops it, selecting the pair's
+        // other member (2026-10-23 night).
         case RedesignButton::ViewSource: return {"Source (1)", nullptr};
         case RedesignButton::ViewTarget: return {"Target (2)", nullptr};
         case RedesignButton::ViewWarp:   return {"Warp (3)", nullptr};

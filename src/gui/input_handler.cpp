@@ -1060,21 +1060,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and the icon row's two view pairs. handle_active_audio_view_toggle is
     // the body `t` called; it stays.)
 
-    // BARE 1 / 2 / 3 / 4 ARE ABSOLUTE SELECTORS, ONE AXIS EACH (architect
+    // BARE 1 / 2 / 3 / 4 ARE THE SELECTORS, ONE AXIS EACH (architect
     // 2026-10-14, the icon row's two radio pairs): `1` is Source and `2`
     // Target (the audio view, the markers view untouched), `3` is Warp and
     // `4` Phase Reset (the markers view, the audio view untouched); the view
     // is the product of the two, both columns pairing with both audio views.
-    // Each names a VALUE rather than flipping its axis, so pressing the key
-    // for the value already standing is a consumed no-op, and the icon row's
-    // pairs synthesize the four keys in the same order.
+    // Each names a VALUE, and THE KEY FOR THE VALUE ALREADY STANDING SELECTS
+    // ITS AXIS'S OTHER VALUE (architect 2026-10-23 night, "pushing a button
+    // in, I would expect always to cause it to pop out, because that's the
+    // basic mechanism of the button; building a suction on the other one is
+    // the right way to go": bare 3 under Warp selects Phase Reset; the
+    // consumed no-op of 2026-10-14 reversed), so every press moves its axis.
+    // The icon row's pairs synthesize the four keys in the same order, the
+    // lit member's press popping through this same arm — the buttons and the
+    // keys one rule by construction.
     //
     // COMPOSED, NEVER RE-SPELLED: each axis is applied by its own chokepoint —
     // switch_active_audio_view_to for S/T and
-    // GuiActiveViews::select_active_markers_view for the column — the S/T
-    // chokepoint's own same-view no-op deciding that axis, and the column's
-    // entry run only when the column differs. Every invariant those two own
-    // therefore arrives by construction: the target-view entry validation and
+    // GuiActiveViews::select_active_markers_view for the column — the press
+    // handing each the value it resolves (the named one, or its axis's other
+    // when the named one stands), so the S/T chokepoint's same-view no-op and
+    // the column's differs-test are guards a press never meets since
+    // 2026-10-23, kept as each body's own spelling. Every invariant those two
+    // own therefore arrives by construction: the target-view entry validation and
     // its error notice, the domain translation of viewport / playhead / zoom,
     // the flag editor teardown and the iter wipe, the selection clear, the
     // coincidence auto-select (the column entry's; the audio switch runs none,
@@ -1086,9 +1094,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
         !ctrl && !shift && !alt) {
         if (key == GuiKeys::Digit1 || key == GuiKeys::Digit2) {
-            switch_active_audio_view_to(key == GuiKeys::Digit1 ? 'S' : 'T');
+            const char named = (key == GuiKeys::Digit1) ? 'S' : 'T';
+            const char other = (named == 'S') ? 'T' : 'S';
+            switch_active_audio_view_to(
+                app.active_audio_view == named ? other : named);
         } else {
-            const char want_markers = (key == GuiKeys::Digit3) ? 'W' : 'P';
+            const char named = (key == GuiKeys::Digit3) ? 'W' : 'P';
+            const char other = (named == 'W') ? 'P' : 'W';
+            const char want_markers =
+                app.active_markers_view == named ? other : named;
             if (app.active_markers_view != want_markers)
                 active_views.select_active_markers_view(want_markers);
         }

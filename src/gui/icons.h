@@ -52,7 +52,8 @@
 // highlight line from its corner (icon_case_lead_px, render.h — Cool Edit's
 // (+1, +1), its 20-px bitmap's seat in its 23-W case, the product's 20-W
 // seat in the same 23, architect 2026-10-09), filling the seat
-// (icon_glyph_px), plus the pressed/checked shift (draw_cased below). The
+// (icon_glyph_px), plus the key's down ride (no band key draws a glyph
+// since the hi-fi skin, 2026-10-23, so no cased seat is drawn today). The
 // CELL is never moved for its ink (Windows never did: 12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset); the DRAWING inside
 // it is body-centered (THE GLYPHS BODY-CENTERED, below). The sites with no
@@ -470,23 +471,5 @@ void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h);
 // 2026-10-23); cue text keeps its fade (cool_edit_derive.h).
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
-
-// THE CASED GLYPH, a toolbar button's: the cell at the case's fixed lead
-// Windows px (icon_case_lead_px — the spec's seat, the head's PLACEMENT)
-// from `case_x`/`case_y`, the case's own top-left corner, plus
-// `button_shift_px`, the button's pressed/checked shift (the key's down
-// ride, its depth in device px right and down since 2026-10-23,
-// cool_edit_paint.h's paint_key; no roster key draws a glyph since that
-// day).
-// Every roster
-// button's glyph goes through here or draw_cased_disabled, so the seat has
-// one owner.
-void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
-                double size_px, int button_shift_px);
-
-// draw_cased's DEAD-BUTTON sibling: the same seat and shift, the glyph's
-// disabled face (draw_disabled).
-void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
-                         double size_px, int button_shift_px);
 
 } // namespace icons

@@ -167,18 +167,4 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
     paint_raster(cr, f.disabled.get(), x, y);
 }
 
-void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
-                double size_px, int button_shift_px) {
-    const double x = case_x + icon_case_lead_px() + button_shift_px;
-    const double y = case_y + icon_case_lead_px() + button_shift_px;
-    draw(cr, icon, x, y, size_px);
-}
-
-void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
-                         double size_px, int button_shift_px) {
-    const double x = case_x + icon_case_lead_px() + button_shift_px;
-    const double y = case_y + icon_case_lead_px() + button_shift_px;
-    draw_disabled(cr, icon, x, y, size_px);
-}
-
 } // namespace icons

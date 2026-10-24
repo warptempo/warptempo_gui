@@ -811,9 +811,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the magnification lamp; `0` already means "the whole song" to the
         // camera, and its shifted form says it to the trim).
         case GuiKeys::Digit0: return bare || sh;
-        // The four absolute selectors, one axis each: bare 1 is Source, bare 2
+        // The four selectors, one axis each: bare 1 is Source, bare 2
         // Target, bare 3 Warp, bare 4 Phase Reset (architect 2026-10-14, the
-        // icon row's two radio pairs), and 5..9 bind nothing.
+        // icon row's two radio pairs; the key for the value standing selects
+        // its axis's other since 2026-10-23 night, on_key's arm), and 5..9
+        // bind nothing.
         case GuiKeys::Digit1: case GuiKeys::Digit2:
         case GuiKeys::Digit3: case GuiKeys::Digit4:
             return bare;

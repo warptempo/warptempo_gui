@@ -83,47 +83,16 @@ struct ToolbarChord {
     // MODIFIER LINE must appear exactly where a modified press does something —
     // a static_assert beside that table enforces it. One fact, two readers.)
     //
-    // RADIO: this button reports a state it can only ever turn ON, so a LIFT
-    // on it while it is already selected is a CONSUMED NOTHING — AT THE LIFT
-    // ALONE since 2026-10-07 evening: the press ARMS like every enabled
-    // button's (arm_redesign_press), the hold paints the pressed face over
-    // the lit one (Cool Edit's one down face for both, paint_roster_case),
-    // and only the lift's act is the nothing (finish_chrome_press_release).
-    // THE CLAIM'S OWN CONSUME IS GONE for the pen's sake (architect
-    // 2026-10-07 ~22:15, on the tablet: "it blinks: goes dark for a moment,
-    // goes back to white", at the down and again at the lift — "a
-    // radio-button issue — the toggles don't do that"): the blink was the
-    // flat toolbar's hot face of that day, dropped by the pen's HOVER_EXIT
-    // before the tip's down and by the touch translation's leave at the lift
-    // and lit again around each drop, with no arm holding it off. THE ROSTER
-    // HAS NO HOT FACE SINCE 2026-10-09 (Cool Edit's toolbar has none,
-    // program_spec.h's case_hot_face), so no leave has a roster face to
-    // darken — the pen's hover end (GuiPointerLeaveReason::PenHoverEnd,
-    // input_core.h) keeps the open pull-down's lit row, the one hover-lit
-    // face a leave touches, and the pen latch holds that row after a lift —
-    // and the arm stays because it is the toggles' own reading: armed, the
-    // selected radio reads press, release exactly as a toggle does, its
-    // pressed face held under the tip. THE ICON ROW'S TWO VIEW
-    // PAIRS (architect 2026-10-14: Source / Target and Warp / Phase Reset,
-    // each member its own absolute chord) are the flag's users; follow,
-    // iteration, read-only and history are TOGGLES and press through in both
-    // directions, which is why this is a flag and not `selected` alone. The
-    // consume is GENERIC — keyed on the flag plus the lamp, with no id list
-    // anywhere — so a pair's lit member, pressed again, stays down: no release,
-    // no re-press, not greyed.
-    //
-    // THE VIEW PAIRS' FOUR ARE RADIOS for the LIFT'S SILENCE: their chords
-    // are ABSOLUTE selectors, each of one axis, which are IDEMPOTENT — on_key's
-    // own handler already makes a press on the axis's current value a no-op, so dispatching
-    // would be harmless rather than wrong. The flag keeps the lift on the lit
-    // button a plain consumed nothing, the radio's own reading, rather than
-    // leaning on the act's idempotence. (The tab strip's two tabs, both
-    // Ctrl+Tab, a toggle, needed it outright 2026-10-18 to 2026-10-22, when
-    // the strip went.) (It once kept the CLAIM too, for a
-    // face the bitmap crops could not show — a pressed interior over a lit
-    // button; the faces are painted now and compose the two,
+    // (NO RADIO COLUMN since 2026-10-23 night: a lift on a view pair's LIT
+    // member was a consumed nothing from 2026-10-07 evening, and the
+    // architect reversed it — "pushing a button in, I would expect always to
+    // cause it to pop out … building a suction on the other one is the right
+    // way to go". The lift dispatches the member's own bare digit like every
+    // roster button, and the selector's arm in GuiInputHandler::on_key
+    // resolves a press on the standing value to its axis's other value, so
+    // the button and its key are one rule with no flag here. The hold paints
+    // the pressed face over the lit one, Cool Edit's one down face for both,
     // paint_roster_case.)
-    bool           radio;
     // (EVERY CASE ROW PAINTS A PRESSED INTERIOR — the icon row's and the
     // bottom row's click face; row 1's anchors carry no chord row at all.
     // The face
@@ -159,7 +128,7 @@ struct ToolbarChord {
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
     // suppresses the lift's own act. Defaulted, so the rows that do not repeat
-    // need no eighth column. SIX ROWS CARRY IT since 2026-09-23, re-counted
+    // need no sixth column. SIX ROWS CARRY IT since 2026-09-23, re-counted
     // off the table when the two hold-column nudges left it: the four arrows
     // and UNDO / REDO (architect
     // 2026-09-13, "like the Left/Right nudge") — stepping through history is
@@ -214,15 +183,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // of its own: Ctrl+O, the project picker (the retired File menu's row's
     // chord until 2026-10-21).
     // It admits SHIFT — Revert, the one translated twin (the lift's chord
-    // build below) — and nothing else; a one-shot act, no radio, no repeat.
-    {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
+    // build below) — and nothing else; a one-shot act, no repeat.
+    {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
     // SAVE admits SHIFT since 2026-10-11 (architect): its shift-click and
     // long press are Ctrl+Shift+S, the publish chord (run_publish_chord) —
     // the row's own key under both modifiers, no translation.
-    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
-    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
-    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
-    {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false},   // Ctrl+Alt+R (+Shift)
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
+    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false,  true},   // Ctrl+Z
+    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false,  true},   // Ctrl+Shift+Z
+    {RedesignButton::Render,     GuiKeys::R,   true,  false, true},   // Ctrl+Alt+R (+Shift)
     // (THE EDIT FLAG BUTTON — bare Return on a button, the flag editor's third
     // road — stood in the bottom row's verb group from 2026-08-27 and in the
     // icon row for the evening of 2026-09-29, when the architect DELETED it:
@@ -247,7 +216,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // painter's kIconRowButtons, with each group's leader at
     // redesign_button_opens_icon_group (app_state.h).
     // FULL ZOOM OUT (2026-08-12, the grand relayout): a momentary
-    // navigation chord, the command's pointer home, no radio, click face like
+    // navigation chord, the command's pointer home, click face like
     // the rest of the row. It stays LIVE in the `h` view — `0` is on the
     // mode's allowlist — which the derived partition answers with nothing
     // hand-listed. (CENTER, bare `c`, stood beside it as the zoom pair until
@@ -259,7 +228,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (redesign_button_shift_admits), since 2026-09-22, its
     // shift-click or long press dispatching Shift+0, RESET TRIM. It does not
     // repeat: the `repeats` column is unset.
-    {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false}, // bare 0
+    {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false}, // bare 0
     // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
     // backtick since 2026-09-23 (bare `]` for its first hours, then bare
     // `[`), a TOGGLE with
@@ -267,7 +236,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // under the read-only lock (a display posture on that allowlist), and
     // DEAD in the `h` view, whose allowlist does not name it.
     {RedesignButton::IconWaveformMagnification,
-     GuiKeys::Grave, false, false, false, false},                            // bare `
+     GuiKeys::Grave, false, false, false},                            // bare `
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain varies over source time, the continuous
@@ -276,7 +245,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (AppState::follow), behind the magnification lamp. Live on a locked tab
     // and under the grid-iterations lock (navigation), DEAD in the `h` view,
     // whose allowlist does not name it.
-    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false},   // bare f
+    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false},   // bare f
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave the propagate commands the
     // new EDIT MENU as their one pointer home, so Ctrl+P and Ctrl+Alt+P reach
@@ -314,8 +283,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // consumed by the `h` view, which greys them through the derived
     // partition below with nothing hand-listed, the answer the ITERATIONS
     // ANCHOR needed a hand-named arm for while it was a menu.
-    {RedesignButton::IconBpm,  GuiKeys::B,   true,  false, false, false},     // Ctrl+B
-    {RedesignButton::IconIter, GuiKeys::I,   false, false, false, false},     // bare i
+    {RedesignButton::IconBpm,  GuiKeys::B,   true,  false, false},     // Ctrl+B
+    {RedesignButton::IconIter, GuiKeys::I,   false, false, false},     // bare i
     // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
     // row's marker verbs the same day it landed there: CTRL+F, which clears
     // EVERY warp marker's tempo deviation terms. ITS SEAT IS A
@@ -346,7 +315,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
     // flatten repeats onto itself, so the keys are one-shot at
     // repeat_eligible and this row carries no `repeats`.
-    {RedesignButton::IconFlatten, GuiKeys::F,   true,  false, false, false},  // Ctrl+F
+    {RedesignButton::IconFlatten, GuiKeys::F,   true,  false, false},  // Ctrl+F
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
     // 2026-09-01, the LOAD IN PLACE having moved to the history group below
@@ -355,30 +324,30 @@ constexpr ToolbarChord kToolbarChords[] = {
     // `h` view still opens the same player from the keyboard, which is why
     // listen stays lit in every state this row is live in but a running
     // render, which the open refuses (redesign_button_enabled).
-    {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false},   // bare l
+    {RedesignButton::IconListen, GuiKeys::L,   false, false, false},   // bare l
     // THE READ-ONLY TOGGLE (2026-08-14, the padlock's move off the tabs): bare
     // `o` toggles the ACTIVE tab's read-only bit. A TOGGLE like
     // iteration — its selected face reads the live bit its own chord flips —
     // and NOT a radio: it presses through in both directions. The button is
     // its chord with no exception now, which is exactly why the padlock moved
     // here (the roster record is at RedesignButton::IconReadOnly).
-    {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false, false},   // bare o
+    {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false},   // bare o
     // SETTINGS (architect 2026-09-29), between the padlock and the
     // tooltip lamp since 2026-10-01: bare
     // `;`, the settings prompt, through on_key like every row, so the `h`
     // view refuses the lift exactly as it refuses the key, the face greying
     // there first (redesign_button_enabled); a locked tab and grid
     // iterations admit both since 2026-10-21 (the lock governs the keys, not
-    // the editor — read_only_key_blocked). Momentary, no radio, no modifier,
-    // no repeat.
-    {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false, false}, // bare ;
+    // the editor — read_only_key_blocked). Momentary, no modifier, no
+    // repeat.
+    {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false}, // bare ;
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's
     // last since 2026-10-01, behind Settings: the bare BACKSLASH, a TOGGLE with a lamp (AppState::
     // show_tooltips) and NOT a radio — it presses through both ways. Live on a
     // locked tab, under the grid-iterations lock and in the `h` view (all
     // three allowlists admit it, so the derived partition leaves it lit).
     // No modifier, no repeat.
-    {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false, false}, // bare backslash
+    {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false}, // bare backslash
     // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
     // iteration — its chord opens the mode and closes it, and the button
     // dispatches on both edges because the icon row's band claim sits ABOVE the
@@ -386,7 +355,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // instead, which admits `h` through handle_history_mode_key one line before
     // the allowlist). It stands right-anchored, the view pairs' run's first
     // case, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
-    {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false},     // bare h
+    {RedesignButton::IconHistory, GuiKeys::H, false, false, false},     // bare h
     // THE HISTORY COMPANIONS — the icon row's last group behind the opener
     // again since 2026-08-18 (they were this row's from 2026-08-04, the bottom
     // row's swapped cluster from 2026-08-14, and back here with the architect's
@@ -418,7 +387,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // OUTSIDE the view the button is dead like its three
     // neighbours (2026-08-18) and there is no click to consume at all.
     {RedesignButton::HistoryRevert,
-     GuiKeys::V,      false, false, false, false},                             // bare v
+     GuiKeys::V,      false, false, false},                             // bare v
     // THE WALK'S TWO STEPS (2026-08-05): bare `,` steps OLDER and bare `.`
     // NEWER, through the same dispatch and therefore through
     // handle_history_mode_key's own arm — walls clamped as consumed no-ops
@@ -438,9 +407,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // standing principle above: a held repeat outranks the long-press shift).
     // A deliberate asymmetry with the arrows.
     {RedesignButton::HistoryOlder,
-     GuiKeys::Comma,  false, false, false, false},                             // bare ,
+     GuiKeys::Comma,  false, false, false},                             // bare ,
     {RedesignButton::HistoryNewer,
-     GuiKeys::Period, false, false, false, false},                             // bare .
+     GuiKeys::Period, false, false, false},                             // bare .
     // THE LOAD IN PLACE, the group's last since 2026-09-01 (architect: "move
     // the button to the history section"). The ROW IS UNCHANGED — it
     // synthesizes bare `'`, exactly as it did from the render-entry group —
@@ -453,7 +422,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // vocabulary — `'` is an ALLOWLIST admission, so a locked tab's click is
     // refused below the mode gate exactly as the key is, Revert's own shape.
     {RedesignButton::IconLoadInPlace,
-     GuiKeys::Apostrophe, false, false, false, false},  // bare '
+     GuiKeys::Apostrophe, false, false, false},  // bare '
     // THE VIEW PAIRS, the icon row's last, flush at its right edge (architect
     // 2026-10-14): Source and Target on bare 1 / 2 (the audio view, the
     // markers view untouched), Warp and Phase Reset on bare 3 / 4 (the markers
@@ -462,13 +431,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the selectors own arrives by construction through on_key's own handler —
     // each key's one axis, the refused target entry, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
-    // swallow. There is no second route to
-    // keep in step. RADIOS, with the row's click face (the flag's
-    // justification is at the struct's `radio` column).
-    {RedesignButton::ViewSource, GuiKeys::Digit1, false, false, false, true}, // bare 1
-    {RedesignButton::ViewTarget, GuiKeys::Digit2, false, false, false, true}, // bare 2
-    {RedesignButton::ViewWarp,   GuiKeys::Digit3, false, false, false, true}, // bare 3
-    {RedesignButton::ViewPhase,  GuiKeys::Digit4, false, false, false, true}, // bare 4
+    // swallow, and THE POP (2026-10-23 night): a press on the lit member
+    // selects its pair's other member, the key's own resolution. There is no
+    // second route to keep in step. The row's click face, no flag.
+    {RedesignButton::ViewSource, GuiKeys::Digit1, false, false, false}, // bare 1
+    {RedesignButton::ViewTarget, GuiKeys::Digit2, false, false, false}, // bare 2
+    {RedesignButton::ViewWarp,   GuiKeys::Digit3, false, false, false}, // bare 3
+    {RedesignButton::ViewPhase,  GuiKeys::Digit4, false, false, false}, // bare 4
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
@@ -491,8 +460,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (architect, at his live look at the row), so BUTTON-IS-ITS-CHORD HOLDS
     // EXACTLY here: the lift dispatches bare Space, Space toggles, and the
     // button's GLYPH and TOOLTIP swap on the live audition bit. There is no
-    // wrong half to press, which is why this row carries neither a `radio` flag
-    // nor a lamp.
+    // wrong half to press, which is why this row carries no lamp.
     //
     // TWO SUPERSEDED SHAPES, both from earlier that same day. (1) THE ENABLED
     // SPLIT of the morning's whole-row honesty ruling — Play dead while an
@@ -506,8 +474,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // rows killed the wrong-direction press at the claim and again at the lift.
     // THE COLLAPSE REMOVES THE PROBLEM RATHER THAN SOLVING IT AGAIN: two
     // buttons over one chord was the whole difficulty, and one button has no
-    // wrong half. The flag is deleted from these rows and the GENERIC radio
-    // consume is untouched — the view pairs' four use it.
+    // wrong half. (The generic radio consume the view pairs kept went with
+    // their pop, 2026-10-23 night, the column with it.)
     // bare Space, toggle_playback and playback_launch_playable are untouched
     // by construction, as they were under the radio.
     //
@@ -538,7 +506,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (Home / End have no button since 2026-10-12; their keys are
     // input_key_dispatch.cpp's.)
     {RedesignButton::TransportPlayStop,
-     GuiKeys::Space,  false, false, false, false},                             // bare Space
+     GuiKeys::Space,  false, false, false},                             // bare Space
     // THE SINGLE-MARKER VERBS (2026-08-12), the right block's first group
     // since the architect moved them down here on 2026-08-18: drop, delete,
     // disable toggle and inherit/collapse (FLATTEN stood among them for the
@@ -554,10 +522,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // too (2026-08-15). Both are the BUTTONS'
     // gates rather than the row's, so they are what makes this row's
     // otherwise-unconditional face policy have an exception at all.
-    {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false, false}, // bare s
-    {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false}, // Delete
-    {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false}, // Ctrl+D
-    {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false}, // Ctrl+N
+    {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false}, // bare s
+    {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false}, // Delete
+    {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false}, // Ctrl+D
+    {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false}, // Ctrl+N
     // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's FIFTH:
     // CTRL+J, the jump to the marker the focused value came from on the other
     // A/B tab (jump_to_value_source). Its row carries the ctrl as Ctrl+D's and
@@ -576,7 +544,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // enabled arm), while the `h` view consumes both chords and greys it
     // through the derived partition.
     {RedesignButton::IconJumpToDefiningMarker,
-     GuiKeys::J,      true,  false, false, false},                             // Ctrl+J (+Shift: Ctrl+Shift+J)
+     GuiKeys::J,      true,  false, false},                             // Ctrl+J (+Shift: Ctrl+Shift+J)
     // OPEN TEXT EDITOR (architect 2026-10-09: "resurrect the Open Text Editor
     // button. It should go between jump to defining marker and toggle add to
     // selection and the shortcut of course is enter"), the verb group's SIXTH:
@@ -614,7 +582,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // nothing), and a long press with no barrel is the plain open — shift
     // alone is not admitted, so the hold reaches nothing.
     {RedesignButton::IconOpenTextEditor,
-     GuiKeys::Return, false, false, false, false},                             // bare Return
+     GuiKeys::Return, false, false, false},                             // bare Return
     // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH
     // since 2026-10-09, behind Open Text Editor (the group's count has
     // moved around it with every arrival and departure; the succession is in
@@ -636,7 +604,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The face needs no arm for either fact — the walk below asks each gate
     // about this row's chord.
     {RedesignButton::IconAddToSelection,
-     GuiKeys::K,      false, false, false, false},                             // bare k
+     GuiKeys::K,      false, false, false},                             // bare k
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40), the verb group's
     // EIGHTH and last, immediately right of Add to Selection: BARE `[`, which
     // was free, the one-shot lamp that arms the flag's value drag, permanently
@@ -653,7 +621,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ~02:05, value_drag_armed), the key carding why. NOT A RADIO, NO REPEAT
     // (a toggle repeats onto itself), NO MODIFIER ADMITTED.
     {RedesignButton::IconValueDrag,
-     GuiKeys::BracketLeft, false, false, false, false},                        // bare [
+     GuiKeys::BracketLeft, false, false, false},                        // bare [
     // THE MARKER-WALK GROUP'S OLD FOUR (architect 2026-08-15; four rows since
     // 2026-09-29): PREVIOUS MARKER, NEXT MARKER (the walk), CENTER and SWITCH
     // TAB, kept together here for the reader though row 8 paints them in two
@@ -675,7 +643,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // press stays Shift+Tab (it admits no shift for the hold to reach). It
     // does not repeat, as the walk does not.
     {RedesignButton::TransportWalkPrevious,
-     GuiKeys::Tab,    false, true,  false, false},                             // Shift+Tab
+     GuiKeys::Tab,    false, true,  false},                             // Shift+Tab
     // The declined double-click
     // rule's mechanical reason is recorded at the roster entry (every
     // double-click surface in this product acts on its FIRST click too).
@@ -712,15 +680,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // least-movement walk's own row, an Alt Tab row from 2026-09-22, was
     // deleted 2026-09-23.)
     {RedesignButton::TransportWalk,
-     GuiKeys::Tab,    false, false, false, false},                             // bare Tab
+     GuiKeys::Tab,    false, false, false},                             // bare Tab
     // CENTER (bare `c`), moved here from the icon row's zoom group on
     // 2026-09-29 (architect) with its row unchanged: a momentary navigation
-    // chord, no radio, no repeat. LIVE in the `h` view, `c` being that mode's
+    // chord, no repeat. LIVE in the `h` view, `c` being that mode's
     // own vocabulary. IT ADMITS NO MODIFIER (2026-10-14: no modified `c`
     // binds in the main window), so a modified press is refused at the band
     // gate and the long press reaches nothing.
     {RedesignButton::IconZoomOriginal,
-     GuiKeys::C,      false, false, false, false},                             // bare c
+     GuiKeys::C,      false, false, false},                             // bare c
     // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the one-shot other-tab
     // act, its row carrying the ctrl — but NOT A RADIO:
     // the chord toggles, so every press switches. It ADMITS SHIFT
@@ -730,7 +698,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // modifier validation — the button's chord already carries its ctrl). It
     // does not repeat: its long press is its shift.
     {RedesignButton::TransportSwitchTab,
-     GuiKeys::Tab,    true,  false, false, false},                             // Ctrl+Tab
+     GuiKeys::Tab,    true,  false, false},                             // Ctrl+Tab
     // (THE HOLD-COLUMN NUDGES' ROWS — Ctrl+Left and Ctrl+Right, 2026-09-22 —
     // ARE DELETED with their buttons and their chords, architect 2026-09-23:
     // the held column is a posture an explicit centring arms, read by the
@@ -761,13 +729,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // Setting a column here instead would make the modified form the
     // button's ONLY act.
     {RedesignButton::TransportDown,
-     GuiKeys::Down,   false, false, false, false, true},                       // bare Down
+     GuiKeys::Down,   false, false, false, true},                       // bare Down
     {RedesignButton::TransportUp,
-     GuiKeys::Up,     false, false, false, false, true},                       // bare Up
+     GuiKeys::Up,     false, false, false, true},                       // bare Up
     {RedesignButton::TransportLeft,
-     GuiKeys::Left,   false, false, false, false, true},                       // bare Left
+     GuiKeys::Left,   false, false, false, true},                       // bare Left
     {RedesignButton::TransportRight,
-     GuiKeys::Right,  false, false, false, false, true},                       // bare Right
+     GuiKeys::Right,  false, false, false, true},                       // bare Right
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
@@ -7728,9 +7696,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // refusal is still a consumed nothing, which is what the band claims want).
 //
 // THE PRESS DISPATCHES NOTHING. It applies the refusals that were always
-// press-time — the shift admission and the disabled consume (the radio's
-// consume is the LIFT's alone since 2026-10-07 evening, the `radio` column) —
-// and then ARMS: the index, the PRESS-TIME SHIFT (the release deliberately
+// press-time — the shift admission and the disabled consume — and then
+// ARMS: the index, the PRESS-TIME SHIFT (the release deliberately
 // does not re-read modifiers, the modal release's own rule — the
 // shift-admitting buttons must see the shift held at the press), and the
 // feint's inside bit. The lift runs the act through
@@ -7809,10 +7776,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
             app.redesign_buttons[static_cast<size_t>(
                 redesign_button_index(tc.id))];
         if (!face.enabled) return true;
-        // A RADIO ALREADY SELECTED ARMS LIKE ANY OTHER BUTTON (2026-10-07
-        // evening): its consume is the lift's (the `radio` column says why the
-        // claim's went — the pen's blink), and it repeats nothing (no view
-        // group row carries `repeats`).
+        // A VIEW PAIR'S LIT MEMBER ARMS LIKE ANY OTHER BUTTON, and its lift
+        // dispatches like any other since 2026-10-23 night (the pop: its key
+        // selects the pair's other member); it repeats nothing (no view pair
+        // row carries `repeats`).
         // THE ARM. The pressed face paints from it on the very next frame
         // (redesign_button_pressed_face — Roster kind, inside true, and the
         // row's click_face column deciding whether a pressed interior exists
@@ -8004,29 +7971,26 @@ void GuiInputHandler::finish_chrome_press_release(
         // (The editor veil is re-asked once for every kind at the top of this
         // body — the roster's own copy lived here until the walk tab was found
         // to be missing it.)
-        // The press-time refusals the lift re-asks — the shift admission
-        // under the CARRIED shift, the pair's under the carried pair (one
-        // constant question, redesign_button_shift_admits_with), then the
-        // enabled bit and
-        // the radio rule ON THE PAINTED FACE, never the live predicates
-        // (architect 2026-09-24, strictly as-painted: the lift asks what the
-        // screen shows). THE RADIO RULE IS NO RE-ASK BUT THE CONSUME ITSELF
-        // since 2026-10-07 evening: the press on a lit radio armed and held
-        // the pressed face, and this lift is where it becomes the consumed
-        // nothing (the `radio` column's account). The press arms and damages the strip, so by the lift
-        // the painted bits are at most one frame old, and the per-tick
-        // comparator carries any drift under the hold onto the face. A face
-        // painted grey is a consumed nothing; a face painted live dispatches,
-        // and where its act has become refused inside that frame the act's
-        // own body answers — carding where its key would card, silent only
-        // where its silence is ruled — rather than the lift consuming a press
-        // the screen advertised.
+        // The press-time refusals the lift re-asks — the shift admission under
+        // the CARRIED shift, the pair's under the carried pair (one constant
+        // question, redesign_button_shift_admits_with), then the enabled bit ON
+        // THE PAINTED FACE, never the live predicates (architect 2026-09-24,
+        // strictly as-painted: the lift asks what the screen shows). (A lift on
+        // a view pair's lit member was the consumed nothing here from
+        // 2026-10-07 evening until its pop, 2026-10-23 night; it dispatches its
+        // key now, ToolbarChord's NO RADIO COLUMN.) The press arms and damages
+        // the strip, so by the lift the painted bits are at most one frame old,
+        // and the per-tick comparator carries any drift under the hold onto the
+        // face. A face painted grey is a consumed nothing; a face painted live
+        // dispatches, and where its act has become refused inside that frame
+        // the act's own body answers — carding where its key would card, silent
+        // only where its silence is ruled — rather than the lift consuming a
+        // press the screen advertised.
         const AppState::RedesignButtonFace& face =
             app.redesign_buttons[static_cast<size_t>(arm.index)];
         if (arm.shift &&
             !redesign_button_shift_admits_with(tc.id, arm.ctrl)) return;
         if (!face.enabled) return;
-        if (tc.radio && face.selected) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
         // 2026-08-11) — THE ROSTER'S ONE RULED EXCEPTION TO "THE BUTTON IS ITS
         // CHORD": while the face is PAINTED as Cancel (its stashed

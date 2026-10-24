@@ -298,9 +298,10 @@ struct TrimRange {
 // mitred (paint_popup_chrome, paint_hairline_frame), the cards' words the
 // bone (`card_text`) at the body size, THE TOOLTIP'S the body face too
 // (since 2026-10-23, "the same as the flags"; the legend face its first
-// night) in the legend ink kLegendInk. (Windows 2000's one-W `card_frame` border, square, on
-// the Face, then the wood, 2026-10-04 to 2026-10-23.) THIS PARAGRAPH IS THE
-// RULE'S ONE STATEMENT.
+// night) in the bone kBoneInk like the cards' words (2026-10-23 night; the
+// legend ink kLegendInk until then). (Windows 2000's one-W `card_frame`
+// border, square, on the Face, then the wood, 2026-10-04 to 2026-10-23.)
+// THIS PARAGRAPH IS THE RULE'S ONE STATEMENT.
 // THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
 // canvas, the same under every chrome): a ring of the panel's tones round
 // each channel's well — dark top and left, light right and bottom, mitred —
@@ -1218,11 +1219,11 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // editor's line stands in the modal family's box, its text at the box's own
 // pad (modal_box.h's modal_box_text_pad_px: the field's two lines and 5-W
 // pad read as one 7-W number until 2026-10-23, one device px and 1 W that
-// morning, 12 px from the ring at 300 % since that night, the clock fields'
-// pad). THE TIME FIELDS were never this field:
-// row 8's clock and the render player's position and length are Cool Edit's
-// dark field, its height and its pad program_spec.h's own, the pad 5 W
-// since 2026-10-10, equal to this field's then.)
+// morning, 12 px of plain field inside the ring at 300 % since that night).
+// THE TIME FIELDS were never this field: row 8's clock and the render
+// player's position and length are Cool Edit's dark field, its height and
+// its pad program_spec.h's own, the pad 5 W since 2026-10-10, equal to this
+// field's then.)
 
 // (THE RELIEF LINE — relief_line_px, ONE WINDOWS PX, scaled: 3 device px
 // at 300 %, 1 at 138 %, the width of every line of Windows' DrawEdge
@@ -1305,9 +1306,9 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one device
 // px and whose down face rides one device px right and down checked, two
 // held, 2026-10-23).
-// A glyph, where one is drawn (icons::draw_cased; no band key wears one in
-// the skin), rasterizes at icon_glyph_px at the case's first slot in from
-// its corner.
+// No band key wears a glyph in the skin (2026-10-23): the seat a glyph
+// would take, icon_glyph_px at the case's first slot in from its corner
+// (icon_case_lead_px), is kept below and drawn by no one today.
 //
 // THE BAND (architect 2026-10-22, the simple layout): THE STRIP PAD, the
 // case, THE STRIP PAD on the brushed ground — its first row the caption's
@@ -1317,9 +1318,8 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // run, run_gap_px of ground between runs). The hit target is the key; the
 // ground between, the legends' included, is inert for input.
 //
-// THESE NUMBERS LIVE HERE rather than beside the row's walk because more
-// than one file reads the case: icons.cpp's seat (draw_cased) and
-// paint_handler.cpp's three rows. THE CARD AND THE FOLDER OVERLAY'S LIST
+// THESE NUMBERS LIVE HERE rather than beside the row's walk because the
+// case is not one row's: paint_handler.cpp's three rows read it. THE CARD AND THE FOLDER OVERLAY'S LIST
 // ROWS ARE NOT THE CASE: a card draws no glyph since 2026-10-23, its height
 // still the composite of its old glyph box (notifications.h's
 // kNotificationGlyph*), and a list row's boxed glyph stands at the painter's

@@ -53,9 +53,9 @@
 // RING IS THE ONLY MARGIN, below; the main canvas's own rows 301–1289); the
 // controls row 1293–1439, its case rows 1332–1400, its first case's columns
 // 21–89 and its last 2214–2282. A DIALOG'S TEXT (THE TEXT INSIDE THE BOX,
-// below) 12 px from the ring on both axes: its pen on column 33, its
-// ascender line on row 199, its first baseline at y 215 (the "l" 15.9 px
-// tall), its wrap ending one past column 2270.
+// below) 12 px of plain field inside the ring on both axes: its pen on
+// column 34, its ascender line on row 200, its first baseline at y 216 (the
+// "l" 15.9 px tall), its wrap ending one past column 2269.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // mock_modal_settings_osk_v2.png; the spacing 2026-10-22): when a dialog
@@ -200,17 +200,18 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // 2026-10-23, on his capture at 300 %, tmp/theme_next/pressed1/pk_cap_05.png:
 // the ink 5 px right of the ring and 18 under it — "it looks odd because the
 // horizontal padding is very small, but the vertical padding is large"; his
-// pick S3, the clock fields' pad): THE INK 12 PX FROM THE RING ON BOTH AXES
-// at 300 %, scaled with gui_scale through skin_px (kModalBoxTextPadAt300,
-// the clock fields' kTimeFieldPadAt300 the same number by the same road, the
-// ring counted in it as the time field counts its own): THE PEN on the ring's
-// left column plus the pad, THE WRAP the same pad short of the ring's right
-// column, and THE FIRST ROW'S ASCENDER LINE — the face's own "l" ink top,
-// gui_font_ascender_ink_px, never the line box's top: the air he sees is the
-// ink's — on the ring's top row plus the pad (modal_box_text_baseline0), each
-// further row one list row pitch below (the row and its 1-W gap). 12 px at
-// 300 %, 6 at 138 %, 14 at 360 %. THE LISTS (the project picker, the render
-// player) KEEP THEIR ROWS ("the player's rows look good"): the folder
+// pick S3, the clock fields' pad; "okay to go up to 12" the same night):
+// TWELVE PX OF PLAIN FIELD BETWEEN THE RING AND THE INK ON BOTH AXES at
+// 300 %, the pad an AREA scaled with gui_scale through skin_px
+// (kModalBoxTextPadAt300: 12 at 300 %, 8 at 200 %, 6 at 150 %, 14 at
+// 360 %), the ring's one device px (hairline_px) standing outside it: THE
+// PEN on the ring's left column plus its px plus the pad, THE WRAP the same
+// short of the ring's right column, and THE FIRST ROW'S ASCENDER LINE — the
+// face's own "l" ink top, gui_font_ascender_ink_px, never the line box's
+// top: the air he sees is the ink's — on the ring's top row plus its px
+// plus the pad (modal_box_text_baseline0), each further row one list row
+// pitch below (the row and its 1-W gap). THE LISTS (the project picker, the
+// render player) KEEP THEIR ROWS ("the player's rows look good"): the folder
 // overlay's row box, 17 W, at the content's one px under the ring, the cap
 // centred on each row's band (redesign_baseline). (The 7-W inset of
 // 2026-10-14 — Windows' edit-control inset, mock_modal_settings_osk_v2.png's
@@ -221,19 +222,22 @@ inline constexpr double kModalBoxTextPadAt300 = 12.0;
 inline int modal_box_text_pad_px() {
     return skin_px(kModalBoxTextPadAt300, 1);
 }
-// THE TEXT'S ROOM in the box `box` (modal_box_rect): x the pen's column, w
-// the soft wrap's width (the box less the pad on each side), zero on a box
-// too narrow to hold it; y and h the interior's rows, the text's clip.
+// THE TEXT'S ROOM in the box `box` (modal_box_rect): x the pen's column
+// (the ring's px and the pad in from its left column), w the soft wrap's
+// width (the box less the ring and the pad on each side), zero on a box too
+// narrow to hold it; y and h the interior's rows, the text's clip.
 inline GuiRect modal_box_text_room(const GuiRect& box) {
     const int pad = modal_box_text_pad_px();
     const int lw  = hairline_px();
-    if (box.w <= 2 * pad || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
-    return GuiRect{box.x + pad, box.y + lw, box.w - 2 * pad, box.h - 2 * lw};
+    if (box.w <= 2 * (lw + pad) || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
+    return GuiRect{box.x + lw + pad, box.y + lw, box.w - 2 * (lw + pad),
+                   box.h - 2 * lw};
 }
-// THE FIRST ROW'S BASELINE in the box `box`: the ring's top row plus the pad
-// is the ascender line, the baseline the ascender's own height under it,
-// rounded at the element.
+// THE FIRST ROW'S BASELINE in the box `box`: the ring's top row plus its px
+// plus the pad is the ascender line, the baseline the ascender's own height
+// under it, rounded at the element.
 inline double modal_box_text_baseline0(const GuiFont& font, const GuiRect& box) {
-    return static_cast<double>(box.y + modal_box_text_pad_px()) +
+    return static_cast<double>(box.y + hairline_px() +
+                               modal_box_text_pad_px()) +
            std::nearbyint(gui_font_ascender_ink_px(font));
 }
