@@ -96,7 +96,7 @@
 // THE FACES ARE WINDOWS' LIST VIEW (architect 2026-10-02, the ladder at the
 // painter; the field 2026-10-06): the box's interior is THE FIELD GROUND, the
 // field pair, "like a file explorer, not popping out like a rising bevel" —
-// a surface you pick from (ModalBoxGround::Field, modal_box.h) — inside the
+// a surface you pick from (the modal box's one flat field, modal_box.h) — inside the
 // canvas column's sunken ring since 2026-10-14 (the plain sunken two-line
 // edge round the keyboard slot's band before it). IT COVERS BOTH CONTENTS,
 // this one widget being every
@@ -142,8 +142,9 @@ namespace folder_overlay {
 // -- The geometry ------------------------------------------------------------
 //
 // THE ROW IS WINDOWS' LIST ROW (the ruling above): the panel owns its row
-// height, its pad, its row gap and its icon-to-name gap; the glyph and its
-// lead are its own (kRowIconPx, kRowIconInsetPx below).
+// height, its pad and its row gap; the row's boxed glyph and its name stand
+// at the painter's own constants (paint_handler.cpp's kListGlyphInkAt300,
+// kListGlyphXAt300, kListNameXAt300, 2026-10-23).
 
 // THE PANEL'S OUTER INSET, its ONE authored margin — the margin between the
 // band's edge and the rows, at the top, the bottom and both sides.
@@ -152,9 +153,6 @@ namespace folder_overlay {
 // Windows px since the unit's change (the laptop pixel's 2 re-authored,
 // architect 2026-10-02), and it scales like every other authored length.
 inline constexpr double kPanelPadPx = 1.0;
-// The gap between a row's icon and its name, authored, the row's own: 6
-// Windows px (the laptop pixel's 8 re-authored, architect 2026-10-02).
-inline constexpr double kRowIconGapPx = 6.0;
 // The gap between two rows, the panel's own since the roster's buttons began
 // to touch (architect 2026-10-02): 1 Windows px, the laptop pixel's 2-px
 // button gap re-authored.
@@ -162,8 +160,8 @@ inline constexpr double kRowGapPx = 1.0;
 
 // THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
-// first hours), the panel's row gap, Windows' small 16-px icon (kRowIconPx
-// below). A folder row wears
+// first hours), the panel's row gap, the row's boxed glyph (the painter's,
+// 2026-10-23; Windows' small 16-px icon until then). A folder row wears
 // icons::Icon::FolderRow and a wav row icons::Icon::WavRow. (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
 // which wore the folder glyph because it named a folder, with the player's
@@ -182,22 +180,9 @@ inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
 // ring's columns and the first row one px under its top row. (kPanelPadPx's
 // 1 W inside the interior's 1-W slot stood 2026-10-14 to 2026-10-23.)
 inline int row_inset_px()         { return modal_box_content_pad_px(); }
-// THE ROW'S GLYPH IS WINDOWS' SMALL ICON, 16 Windows px (2026-10-06): it
-// read the toolbar case's glyph until the toolbars took Windows' large
-// case, whose 24-px seat would overrun
-// the 17-px row (report_TC's catch), so the list keeps its own — as the
-// program's case's 20-W seat (2026-10-09, program_spec.h) would too.
-inline constexpr double kRowIconPx = 16.0;
-// THE GLYPH'S LEFT PAD INSIDE THE ROW: Windows' small toolbar case's 3-px
-// lead (the glyph at (3, 3) in Windows' case; architect 2026-10-02: until
-// then the case's (22 − 16) / 2 centring inset, which the 17-px row would
-// have shrunk to nothing), its own constant since 2026-10-06 like the glyph.
-// The glyph is CENTRED in the row's height (the painter), and this is not
-// the modal word buttons' text pad, which belongs to a different surface.
-inline constexpr double kRowIconInsetPx = 3.0;
-inline int row_icon_px()          { return scaled_px(kRowIconPx); }
-inline int row_icon_gap_px()      { return scaled_px(kRowIconGapPx); }
-inline int row_icon_inset_px()    { return scaled_px(kRowIconInsetPx); }
+// (THE ROW'S GLYPH AT WINDOWS' SMALL 16-W ICON, its 3-W lead and its 6-W
+// gap to the name stood 2026-10-02 to 2026-10-23; the boxed glyph's
+// geometry is the painter's since, paint_handler.cpp's kListGlyph*.)
 
 // (THE BAND OWNS NO LINE OF ITS OWN — its one edge is the modal family's
 // ring, modal_box.h.)
@@ -261,8 +246,8 @@ inline GuiRect surface_rect(const AppState& a) {
 }
 
 // The rows' band: THE BOX'S INTERIOR, inside the canvas column's ring
-// (modal_box_interior_rect; the list's ground the field, ModalBoxGround::
-// Field). Every geometry below reads this and not the surface — the rows,
+// (modal_box_interior_rect; the list's ground the box's flat field). Every
+// geometry below reads this and not the surface — the rows,
 // the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
 // row_at's containment — so a row can never paint over the ring or be
 // pressed through it. THE FIRST ROW STANDS AT THE BOX'S TOP, one device px

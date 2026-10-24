@@ -474,8 +474,9 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
 // THE CASED GLYPH, a toolbar button's: the cell at the case's fixed lead
 // Windows px (icon_case_lead_px — the spec's seat, the head's PLACEMENT)
 // from `case_x`/`case_y`, the case's own top-left corner, plus
-// `button_shift_px`, the button's pressed/checked shift (paint_roster_case's
-// `ButtonBoxFace::shift`, one device px right and down since 2026-10-23).
+// `button_shift_px`, the button's pressed/checked shift (the key's down
+// ride, one device px right and down since 2026-10-23, cool_edit_paint.h's
+// paint_key; no roster key draws a glyph since that day).
 // Every roster
 // button's glyph goes through here or draw_cased_disabled, so the seat has
 // one owner.

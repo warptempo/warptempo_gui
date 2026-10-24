@@ -606,18 +606,19 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // SOLID COLORS (the palette composites nothing at paint time; each a
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
 // of the program's words so a new Face, `cue` or `invalid_label` moves
-// them live; render.cpp's fill_program_palette). THE FACE HERE IS THE BRASS'S
-// since 2026-10-22 (architect: truthful to the surface — the cues stand on
-// the marker lane, the brass's accent; materials.h's METAL, the Metal Face's
-// fourth reader), the panel's Face, the wood's, everywhere else:
+// them live; render.cpp's fill_program_palette). THE FACE HERE IS THE MARKER
+// LANE'S since 2026-10-22 (architect: truthful to the surface — the cues
+// stand on the marker lane): materials::face(GuiMaterial::Marker), the
+// brighter brushed strip's mean in the hi-fi skin (2026-10-23; the brass's
+// 2026-10-22 to 2026-10-23), never the panel's GROUND Face:
 //   the TRIANGLE   the live triangle's color (the `cue` red, or the invalid
 //                  color of an invalid cue or a history REMOVED flag,
 //                  2026-10-11) 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;
 //   the LABEL      the resting label's ink (Cool Edit's cue-label ink
 //                  `hilight`, re-verified on three captures 2026-10-10; the
-//                  bone F0F0F0 since 2026-10-21 (the near-white on the
-//                  brass that day), materials.h) 65 % toward the Face — "blended further … a faded, opaque sort of
+//                  bone F0F0F0 since 2026-10-21, kBoneInk) 65 % toward
+//                  the Face — "blended further … a faded, opaque sort of
 //                  look", the text legible least of the three.
 // A selected inert segment keeps the selected label color (the chrome's
 // `label`) so its selection still shows; a disabled cue has no dots.

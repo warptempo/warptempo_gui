@@ -216,8 +216,9 @@ struct TrimRange {
 // Edit's, cool_edit_paint.h — and wear none of these families; THE MITRE
 // reaches them, architect 2026-10-09 ~12:40, through paint_hairline_frame
 // since 2026-10-23: cool_edit_paint.h's head.)
-// THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
-// four sides (THE CARD FACE, below).
+// THE CARDS' AND THE TOOLTIP'S RING is the one-device-px sunken ring in the
+// ring tones (THE CARD FACE, below); the `card_frame` role is painted by
+// nothing since 2026-10-23 (its one flat line, 2026-10-04 to 2026-10-23).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
@@ -1135,7 +1136,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     (architect 2026-10-23, the caption sheet's row 4): strokes
 //     kCaptionGlyphStrokeAt300 = 2.3 px, the quaver's stem (skin_px, floored
 //     at 1 — 2 device px at 300 %, the sheet's own round(2.3 · 21 / 27); 1
-//     at 138 %), each glyph reaching kCaptionGlyphRAt300 = 6 px from its center
+//     at 138 %; a stroke that SCALES, the glyph being artwork and not a
+//     chrome line — hairline_px's rule, 2026-10-23), each glyph reaching kCaptionGlyphRAt300 = 6 px from its center
 //     (the note's head height × .75 at the 21-px note; 7 px until then), the
 //     chevrons' rise .6 r and fall .4 r, the centers kCaptionButtonPitchAt300
 //     = 30 px apart,
@@ -1248,7 +1250,11 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // stand in (program_line_px), the sizing frame's grab band
 // (window_frame_px), the pads and gaps (the lists' row gap, the dialog
 // text's pad, the keyboard's pad and key gap), the flags' triangles and the
-// cue boxes.
+// cue boxes. ARTWORK IS AN AREA IN THIS SENSE (2026-10-23): a drawing's
+// stroke weight is part of the drawing, so it scales with the drawing — the
+// icons, the faces' strokes, the quaver and the caption buttons' three
+// procedural glyphs (kCaptionGlyphStrokeAt300, matched to the quaver's stem
+// on his glass round), never a chrome line.
 inline int hairline_px() { return 1; }
 // A MITRED RING of one-device-px lines (the mitre's construction, render.cpp,
 // at hairline_px): `top_left` on the top row and left column, `bottom_right`
@@ -1309,10 +1315,11 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because more
 // than one file reads the case: icons.cpp's seat (draw_cased) and
-// paint_handler.cpp's three rows. THE CARD'S GLYPH BOX AND THE FOLDER
-// OVERLAY'S LIST ICON ARE NOT THE CASE: each keeps Windows' small 16-px icon
-// on a constant of its own (notifications.h's kNotificationGlyph*,
-// folder_overlay.h's kRowIcon*).
+// paint_handler.cpp's three rows. THE CARD AND THE FOLDER OVERLAY'S LIST
+// ROWS ARE NOT THE CASE: a card draws no glyph since 2026-10-23, its height
+// still the composite of its old glyph box (notifications.h's
+// kNotificationGlyph*), and a list row's boxed glyph stands at the painter's
+// own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).
 // THE PROGRAM RING'S SLOT (2026-10-23): ONE W, its own rounded part
 // (floored at 1) — AN AREA, the place the old one-W line stood, kept so the
 // lanes' and the canvas column's geometry did not move when the skin took

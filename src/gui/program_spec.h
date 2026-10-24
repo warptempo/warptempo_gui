@@ -108,37 +108,13 @@ struct ProgramSpec {
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
-    // THE DARK TIME FIELD (METRICS §5.4: 72 x 17, its TL line, its ground,
-    // its BR line): its height. Every time field takes the shape — row 8's
-    // clock and the render player's position and length — and EVERY TIME
-    // FIELD IS ITS RESERVED CELL PLUS THE PAD ON EACH SIDE, no least width
-    // (architect 2026-10-10, on the tablet: "the row eight clock has a 85
-    // Windows pixel floor — let's remove that floor … the media player's
-    // fields look good"; the 85-W floor round row 8's clock, Cool Edit's mock
-    // of 2026-10-09, removed 2026-10-10). THE PAD from its outer edge to the
-    // reserved cell on each side,
-    // `field_pad_px`, IS 5 W, the dialog field's own pad then
-    // (kModalFieldPadXPx, which went with that field 2026-10-14, the dialog
-    // editors' line standing in the modal family's box since)
-    // — the time field in line with the text box (architect 2026-10-09
-    // evening, "bring the timestamp in line with the text box used for the
-    // regular text boxes"; 2026-10-10: "let's add back one pixel on the left
-    // and one on the right side for that input box, which will also change
-    // the media player's padding"). The constant stays the program's own,
-    // this header owning the program's lengths, read at every time field
-    // (paint_handler.cpp's time_field_pad_px). WHY 5 AND NOT 4: the time
-    // field's own 4 W of 2026-10-09 evening ("the other ones are Windows
-    // chrome whereas this one is a Cool Edit chrome") landed while the 85-W
-    // floor still stood round row 8's clock, so he saw no change there;
-    // removing the floor on 2026-10-10 then took the clock from the floor's
-    // width straight to its cell plus 4 W — a larger step than the one W he
-    // asked for — and the pad went back to 5 to undo that half of it. Its
-    // history in one clause: Cool Edit's Begin / End / Length field's 8 W
-    // (its ink 10 and 12 W in) on 2026-10-09, the dialog field's 5 W that
-    // evening, the time field's own 4 W at the session's close, 5 W again
-    // since 2026-10-10.
-    double field_h_px;
-    double field_pad_px;
+    // (THE DARK TIME FIELD'S 17-W HEIGHT AND 5-W PAD — Cool Edit's
+    // METRICS §5.4 field, then the dialog field's pad, 2026-10-09 to
+    // 2026-10-23 — left this spec with the hi-fi skin: the field's 40 and
+    // 12 px at 300 % are paint_handler.cpp's kTimeFieldHeightAt300 /
+    // kTimeFieldPadAt300, authored at the tablet's scale. Every time field is
+    // still its reserved cell plus the pad each side, no least width —
+    // architect 2026-10-10, the 85-W floor round row 8's clock removed.)
     // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes, "Tab
     // A" / "Tab B" stands on the plain wood right of the clock): its first
     // ink this far past the clock ring's light column. THE STATE LINE'S AIR:
@@ -265,8 +241,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_outer_px      = 1,
     .case_hot_face      = false,
     .run_gap_px         = 15,
-    .field_h_px         = 17.0,
-    .field_pad_px       = 5.0,
     .tab_name_air_px    = 5.0,
     .state_air_px       = 5.0,
     .column_margin_px      = 6,

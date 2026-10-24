@@ -157,8 +157,8 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
 SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
     // The contract, the premise identity rests on and the clear's harmlessness
     // are at the declaration. The key is the font's two fields' bytes, then
-    // the text's: the two lanes' faces differ in the first, so the Small
-    // face's timestamps and the Program face's labels never collide.
+    // the text's: the uses' faces differ in the first, so the ruler's
+    // timestamps, the cue labels and the keys' legends never collide.
     constexpr std::size_t kMemoCap = 4096;
     static std::unordered_map<std::string, SharedRun> memo;
     std::string key;

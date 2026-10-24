@@ -95,12 +95,15 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 using SharedRun = std::shared_ptr<const ShapedRun>;
 
 // THE LABEL RUNS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
-// pixels), ONE BOUNDED MAP FOR TWO LANES: THE CUE LABELS on the Program face
+// pixels), ONE BOUNDED MAP FOR THREE USES: THE CUE LABELS on the Program face
 // (render.cpp: the cue passes and the cell measurer, measure_iter_cells — the
 // tablet's profile of a pinch put 3.5 % of all CPU on shaping the visible
 // labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small
 // face (paint_handler.cpp's paint_ruler_row, whose majors re-shaped the same
-// strings at every repaint a pan's damage reached the ruler). A run is a pure
+// strings at every repaint a pan's damage reached the ruler), and since
+// 2026-10-23 THE KEYS' LEGENDS on the Legend face (paint_handler.cpp's
+// key_legend_layout, laid out once for a strip's repaint gate and again for
+// its paint, a fixed vocabulary of a few dozen words). A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
 // and a GuiFont is its face and percent alone — so a run is looked up here by
@@ -111,7 +114,7 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // fresh shape would. THE ANSWER IS A HANDLE (SharedRun), so a hit hands out
 // the run without copying its glyph vector — into a cue layout and again into
 // each segment, hundreds of labels a rebuild. Keyed in this file because the
-// premise is the chokepoint's own and both lanes already shape through it.
+// premise is the chokepoint's own and every use already shapes through it.
 // THE BOUNDING CLEAR (4096 entries, all at once) IS HARMLESS TO A HOLDER: it
 // drops the memo's references alone, and a run a caller still holds lives on
 // by ownership until its last handle goes. GUI THREAD ONLY, as the scaled

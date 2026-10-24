@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -310,18 +311,14 @@ namespace {
 // derivation recorded there. The crops and the full row-2 record are git
 // history.)
 
-// A BUTTON'S FACE ANSWER: how far whatever stands on the key's face shifts,
-// down and right, in device px — the key's (paint_roster_case below: one
-// device px while down, cool_edit_paint.h's paint_key). (THE CHROME'S OWN BUTTON PAINTER,
-// paint_button_box — Windows' two-line faces in two families, a TOOLBAR
-// button's SOFT edges on the on-screen keyboard's keys and a PUSH button's
-// PLAIN ones on the dialogs' word buttons, raised at rest, sunken pressed
-// and sunken over the Hilight dither checked — stood from 2026-10-02 until
-// its last two wearers became the ebony case, 2026-10-22: architect,
-// "buttons in ebony — yes".)
-struct ButtonBoxFace {
-    int      shift;   // the glyph's down-and-right offset, device px
-};
+// (THE CHROME'S OWN BUTTON PAINTER, paint_button_box — Windows' two-line
+// faces in two families, a TOOLBAR button's SOFT edges on the on-screen
+// keyboard's keys and a PUSH button's PLAIN ones on the dialogs' word
+// buttons, raised at rest, sunken pressed and sunken over the Hilight dither
+// checked — stood from 2026-10-02 until its last two wearers became the
+// ebony case, 2026-10-22: architect, "buttons in ebony — yes". Its face
+// answer, ButtonBoxFace and the glyph's shift it carried, went 2026-10-23:
+// no roster key carries anything on its face.)
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE HI-FI SKIN'S BLANK KEY
@@ -331,14 +328,14 @@ struct ButtonBoxFace {
 // and down with its LED lit (2026-10-23) — a press lighting the LED for as
 // long as it stands; a DISABLED button keeps the face its state gives, a
 // dead checked button still down (the roster's rule at paint_icon_row),
-// its legend dimmed by the caller. NO HOT FACE. The answer's shift is the
-// face's one device px while down; no roster key carries anything on its
-// face (the legends, the word buttons' words among them, stand under the
-// key and do not move), so no caller reads it.
-ButtonBoxFace paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
-                                bool pressed) {
+// its legend dimmed by the caller. NO HOT FACE. It answers nothing: no
+// roster key carries anything on its face (the legends, the word buttons'
+// words among them, stand under the key and do not move); the on-screen
+// keyboard's caps, which do ride the face, are paint_key's own caller and
+// read the ride there.
+void paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
+                       bool pressed) {
     paint_key(cr, r, pressed, lamp ? GuiKeyLed::Lit : GuiKeyLed::Unlit);
-    return ButtonBoxFace{(pressed || lamp) ? hairline_px() : 0};
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -384,7 +381,54 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act) {
     return "";
 }
 
-// A KEY'S LEGEND under it (key_legend_seat), in the legend ink kLegendInk
+// THE KEY'S LEGEND, LAID OUT ONCE (2026-10-23) — the one owner of where a
+// key's legend stands and of the pixels the key and its legend paint
+// together, read by the painter (paint_key_legend), by the strips' repaint
+// gates (clip_meets on `extent`) and by the as-painted publications
+// (publish_button_face's and the modal row's coverage tests), so a coverage
+// test and the paint cannot part. THE EXTENT IS THE KEY UNITED WITH THE
+// LEGEND'S LINE BOX — the run's advance across, the face's ascent above the
+// baseline to its descent below (or the access underline's foot, when it
+// reaches lower), each edge rounded outward to whole px — because the
+// legend stands OUTSIDE the key, in the strip's bottom pad and overhanging
+// the key's sides when wider: a damage rect confined to the pad (a tooltip
+// closing over a bottom-row legend) has the strip's ground erased under it,
+// and a gate on the key alone would skip the legend and leave it erased.
+// The run is the shaping memo's (text_shape::memoized_run), so the gate's
+// layout and the paint's are one shaping.
+struct KeyLegendLayout {
+    text_shape::SharedRun run;      // null for an empty word
+    KeyLegendSeat         seat;
+    GuiRect               extent;   // the key united with the legend's box
+};
+KeyLegendLayout key_legend_layout(const GuiRect& key, std::string_view word,
+                                  int access = -1) {
+    KeyLegendLayout out;
+    out.extent = key;
+    if (word.empty()) return out;
+    const GuiFont font = gui_font(GuiFace::Legend);
+    out.run  = text_shape::memoized_run(font, word);
+    out.seat = key_legend_seat(key, out.run->width_px);
+    const double base = out.seat.baseline;
+    const int lx1 = static_cast<int>(std::floor(out.seat.x));
+    const int lx2 =
+        static_cast<int>(std::ceil(out.seat.x + out.run->width_px));
+    const int ly1 = static_cast<int>(std::floor(base - gui_font_ascent_px(font)));
+    int ly2 = static_cast<int>(std::ceil(base + gui_font_descent_px(font)));
+    // THE ACCESS UNDERLINE'S FOOT (access_underline_rect: one line, one
+    // line under the rounded baseline).
+    if (access >= 0)
+        ly2 = std::max(ly2, static_cast<int>(std::nearbyint(base)) +
+                                2 * hairline_px());
+    const int x1 = std::min(key.x, lx1);
+    const int y1 = std::min(key.y, ly1);
+    const int x2 = std::max(key.x + key.w, lx2);
+    const int y2 = std::max(key.y + key.h, ly2);
+    out.extent = GuiRect{x1, y1, x2 - x1, y2 - y1};
+    return out;
+}
+
+// A KEY'S LEGEND under it (key_legend_layout), in the legend ink kLegendInk
 // or, `enabled` false, the dim kDimInk; `access` the access key's byte in
 // `word` to underline (-1 none: the Windows-strict dialog rules unchanged,
 // only the drawing).
@@ -394,12 +438,11 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
 void paint_key_legend(cairo_t* cr, const GuiRect& key, std::string_view word,
                       bool enabled, int access = -1) {
     if (word.empty()) return;
-    const GuiFont font = gui_font(GuiFace::Legend);
+    const KeyLegendLayout layout = key_legend_layout(key, word, access);
     const std::string text(word);
-    const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
-    const KeyLegendSeat seat = key_legend_seat(key, run.width_px);
-    show_access_run(cr, run, access >= 0 ? text.c_str() : nullptr, access,
-                    seat.x, seat.baseline, hex(enabled ? kLegendInk : kDimInk));
+    show_access_run(cr, *layout.run, access >= 0 ? text.c_str() : nullptr,
+                    access, layout.seat.x, layout.seat.baseline,
+                    hex(enabled ? kLegendInk : kDimInk));
 }
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
@@ -431,7 +474,8 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // WHETHER THE CLIP REACHES A RECT AT ALL (2026-10-13): a drawing bounded by
 // `rect` under a clip whose extents miss it lays down no pixel, so a painter
 // may skip it — the same pixels by construction, the cost of cairo walking a
-// fully clipped path saved (the toolbar band's and row 8's cases, the
+// fully clipped path saved (the toolbar band's and row 8's cases with their
+// legends, key_legend_layout's extent, the
 // caption's boxes, row 8's clock group and state line, under the narrow
 // damage a frame most often carries). Never a gate on a PUBLICATION: the
 // faces, rects and records a painter stashes are written whether or not
@@ -523,21 +567,39 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // truthful-buttons ruling, with a GuiTargetRender beside them for the target
 // preview's readiness (the painter's own member since that day). `cr` stays
 // because the clip test is the survivor of every move.
+//
+// THE COVERAGE IS WHAT THE BUTTON PAINTS, THE RECT WHAT IT ANSWERS
+// (2026-10-23): `painted` — the key united with its legend
+// (key_legend_layout's extent), cut by whatever clip the row paints under —
+// is the rect the clip must cover, because the legend under the key wears
+// the enabled bit (dimmed when dead) and a refresh over a clip that missed
+// it would stamp a bit its pixels never took; `rect`, the key alone, is what
+// the face publishes for the press, the hover and the tooltip (a legend is
+// print on the ground, never a target). The empty rects take the overload
+// below, which covers what it publishes.
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
     const GuiTargetRender& target_render,
-    RedesignButton id, const GuiRect& rect) {
+    RedesignButton id, const GuiRect& rect, const GuiRect& painted) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
-    if (clip_covers_drawable(cr, app, rect)) {
+    if (clip_covers_drawable(cr, app, painted)) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                                 playback, target_render, id);
         face.selected = redesign_button_selected(app, id);
         face.glyph = redesign_button_glyph(app, id);
     }
     return face;
+}
+AppState::RedesignButtonFace& publish_button_face(
+    cairo_t* cr, AppState& app,
+    const GuiAudio& audio, const GuiPlayback& playback,
+    const GuiTargetRender& target_render,
+    RedesignButton id, const GuiRect& rect) {
+    return publish_button_face(cr, app, audio, playback, target_render, id,
+                               rect, rect);
 }
 
 // ROW 4 — THE ICON ROW: THE TOOLBAR BAND (architect 2026-10-09, the program
@@ -1670,15 +1732,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         cairo_restore(cr);
     }
 
-    // (NO FONT IS SELECTED HERE, and that is the row's own fact since
-    // 2026-08-11: this lane paints geometry and icons only. A text face was
-    // named here for the four view radios' shaped LETTER faces,
-    // which the architect replaced with glyphs that day.)
-    // THE CASE AND ITS GLYPH, each a composite of its rounded parts
-    // (render.h's program block): the glyph at the case's (+1, +1) lines —
-    // THE BAND'S SEATS the one layout the materials' case patches read too
-    // (icon_row_seats, above, where the right run's place and the left
-    // runs' limit are stated).
+    // THE KEY AND ITS LEGEND (2026-10-23): the blank key a composite of its
+    // rounded parts (render.h's program block), its legend under it in the
+    // bottom pad (key_legend_layout, which names the legend's face; this row
+    // selects none of its own) — THE BAND'S SEATS the one layout the
+    // materials' key patches read too (icon_row_seats, above, where the
+    // right run's place and the left runs' limit are stated).
     const IconRowSeats seats = icon_row_seats(app, lane);
     const int btn_w    = seats.btn_w;
     const int btn_h    = seats.btn_h;
@@ -1689,10 +1748,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the face and the glyph at the member's full box — the clip, when
     // the overflow rule has set one, cuts the pixels and the published rect
     // says exactly which survived.
+    // THE PAINTED EXTENT (key_legend_layout: the key and its legend) is
+    // what the publication's coverage test and the repaint gate read, cut
+    // by `clip_x2` — the left runs' limit, the column the overflow clip
+    // ends at (the right run paints whole: INT_MAX).
     const auto paint_member = [&](const IconRowDef& def, int bx,
-                                  const GuiRect& published) {
+                                  const GuiRect& published, int clip_x2) {
+        const GuiRect key{bx, btn_y, btn_w, btn_h};
+        const char* legend = redesign_button_legend(def.id);
+        const GuiRect extent = key_legend_layout(key, legend).extent;
+        const int painted_x2 = std::min(extent.x + extent.w, clip_x2);
+        const GuiRect painted{extent.x, extent.y,
+                              std::max(0, painted_x2 - extent.x), extent.h};
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id, published);
+            cr, app, audio, playback, target_render, def.id, published,
+            painted);
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
         // 2026-08-04) and, since 2026-08-15, the per-tab READ-ONLY LOCK. Both
@@ -1745,56 +1815,37 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
-        // THE FACE IS THE GLYPH'S ALONE (architect 2026-10-02, the AB set):
-        // its disabled face, Cool Edit's emboss (icons::draw_disabled,
-        // architect 2026-10-15), its case the face its state gives
+        // THE DEAD FACE IS THE LEGEND'S ALONE (architect 2026-10-02, the AB
+        // set; the hi-fi skin 2026-10-23): dimmed (kDimInk,
+        // paint_key_legend), the key the face its state gives
         // (paint_roster_case). A dead CHECKED button (the grid-iterations
-        // lamp on a locked tab, say) stays checked: the mode cannot change that
-        // state, so hiding it would be a lie, and the greyed glyph says
-        // "true, but not yours right now".
+        // lamp on a locked tab, say) stays down with its LED lit: the mode
+        // cannot change that state, so hiding it would be a lie, and the
+        // dimmed legend says "true, but not yours right now".
         // The press face is gated on the live bit rather than trusted: the
         // claim never records a press on a disabled button, but a button can
         // go dead UNDER a held press with no pointer event to refresh it.
         // A case the clip does not reach is skipped, its face published
-        // above (clip_meets).
-        if (!clip_meets(cr, GuiRect{bx, btn_y, btn_w, btn_h})) return;
+        // above (clip_meets) — THE CASE AND ITS LEGEND (2026-10-23): the
+        // gate reads the painted extent, so a damage confined to the bottom
+        // pad, which the ground erases, still reprints the legend.
+        if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
-        const ButtonBoxFace box = paint_roster_case(
-            cr, GuiRect{bx, btn_y, btn_w, btn_h}, face.selected, pressed);
+        paint_roster_case(cr, key, face.selected, pressed);
 
-        // THE GLYPH at the case's (+1, +1) lines, in the drawing's own
-        // colours — or,
-        // dead, its disabled face.
-        //
-        // EVERY BUTTON TAKES THIS ARM since 2026-08-11, when the four view
-        // radios' shaped LETTER faces, the only other kind, took glyphs. The
-        // row paints no text at all, which is why nothing here selects a font.
-        //
-        // THE GLYPH IS THE STATE RESOLVER'S, not the table's
-        // (redesign_button_icon, above): this row hosts the TOOLBAR PAIR since
-        // the 2026-08-12 relayout dissolved row 2 into it, and their stateful
-        // faces are glyph swaps now that the labels are gone — Save wears
-        // SaveCommit in the history view and while a checkpoint publishes,
-        // Render wears Cancel mid-render. It goes through the resolver
-        // for EVERY button because the table icon is what the resolver returns
-        // when a button has no override, so there is no membership to keep.
-        // (This is the site the relayout dropped: it took the table icon
-        // directly, which left the resolver caller-less and both ruled faces
-        // unpainted for a day — fixed 2026-08-13. THE BOTTOM ROW'S OWN DRAW
-        // TAKES THE SAME CALL since 2026-08-15: its superseded claim was that
-        // "none of the transport eight has a stateful glyph, the play/stop
-        // pair being TWO buttons over one chord rather than one button with
-        // two faces", and the architect made it one button with two faces
-        // that day.)
-        // THE HI-FI SKIN (architect 2026-10-23): THE KEY IS BLANK — no glyph
-        // (the resolver's stateful glyph above is the record's; the icon set
-        // stays loaded for a later drop) — and THE LEGEND stands UNDER it,
-        // the roster's legend column (redesign_button_legend), dimmed when
-        // the button is dead (paint_key_legend's one seat).
-        (void)box;
-        paint_key_legend(cr, GuiRect{bx, btn_y, btn_w, btn_h},
-                         redesign_button_legend(def.id), face.enabled);
+        // THE HI-FI SKIN (architect 2026-10-23): THE KEY IS BLANK — nothing
+        // stands on its face; the icon set stays loaded for a later drop —
+        // and THE LEGEND stands UNDER it, the roster's legend column
+        // (redesign_button_legend), dimmed when the button is dead
+        // (paint_key_legend's one seat). A button whose act swaps with its
+        // state (Save in the history view and mid-checkpoint, Render
+        // mid-render, Play / Stop) keeps its one legend; the swap is the
+        // tooltip's and the stashed glyph bit's (redesign_button_glyph,
+        // still published so the tooltip's drift is caught). (The state
+        // resolver's glyph on the key, redesign_button_icon, stood
+        // 2026-08-13 to 2026-10-23; git history.)
+        paint_key_legend(cr, key, legend, face.enabled);
     };
 
     // THE LEFT RUNS, IN TWO PASSES: the walk (icon_row_walk, above) lays
@@ -1827,7 +1878,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             const int bx = seats.case_x(x, i);
             const int shown_w = std::clamp(left_limit - bx, 0, btn_w);
             paint_member(run[static_cast<std::size_t>(i)], bx,
-                         GuiRect{bx, btn_y, shown_w, btn_h});
+                         GuiRect{bx, btn_y, shown_w, btn_h}, left_limit);
         }
         x = seats.next_run_x(x, n);
     }
@@ -1841,7 +1892,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // so the hide does not reach this run.
     for (std::size_t i = 0; i < std::size(kIconRowRightRun); ++i) {
         const int bx = seats.case_x(seats.right_x, static_cast<int>(i));
-        paint_member(kIconRowRightRun[i], bx, GuiRect{bx, btn_y, btn_w, btn_h});
+        paint_member(kIconRowRightRun[i], bx, GuiRect{bx, btn_y, btn_w, btn_h},
+                     std::numeric_limits<int>::max());
     }
 
     cairo_restore(cr);
@@ -2205,8 +2257,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // "DD:DD.DDD" (kTimeShape) — shaped through the one chokepoint at the
 // live size, so nothing is trusted to the face. The field is that cell plus
 // THE PAD either side — 12 DEVICE PX at 300 % (time_field_pad_px; architect
-// 2026-10-23, "symmetrical and much tighter"; the 5 W of 2026-10-10 to
-// 2026-10-23 is program_spec.h's field_pad_px's record) — its width ceiled,
+// 2026-10-23, "symmetrical and much tighter"; 5 W from 2026-10-10 until
+// then) — its width ceiled,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields.
 // At 300 % the cell is 4.448 em of the body's 22 px, about 98 device px,
 // the field about 122.
@@ -2261,18 +2313,13 @@ static std::string clock_time_text(const AppState& app,
     return format_timestamp(seconds);
 }
 
-// THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
-// at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S PAD, 5 W
-// (15 device px at 300 %, 7 at 138 % — 6.9 rounded — and 18 at 360 %;
-// program_spec.h's field_pad_px, architect 2026-10-10 — the dialog field's
-// own 5 then, kModalFieldPadXPx, which went with that field 2026-10-14),
-// one constant at every time field.
-// THE HI-FI SKIN'S FIELD (architect 2026-10-23, "symmetrical and much
+// THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once, one
+// constant at every time field — THE HI-FI SKIN'S FIELD (architect 2026-10-23, "symmetrical and much
 // tighter"; make_pivot3's clock_tight): 40 DEVICE PX TALL AND 12 PX OF PAD
 // EACH SIDE OF THE DIGITS' CELL, both authored at 300 % and scaled with
 // gui_scale (skin_px; the amendment of the same night) — 18 and 6 at 138 %.
-// (program_spec.h's field_h_px and field_pad_px, 17 and 5 W, are the record
-// of 2026-10-09 to 2026-10-23.)
+// (17 W tall with a 5-W pad, scaled_px, 2026-10-09 to 2026-10-23: Cool
+// Edit's field, then the dialog field's pad; git history.)
 constexpr double kTimeFieldHeightAt300 = 40.0;
 constexpr double kTimeFieldPadAt300    = 12.0;
 static int time_field_h_px() {
@@ -2510,24 +2557,26 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // the sticky-ctrl mode that closes the marker-verb group: it wears the
     // checked face while the mode stands, which is the roster's standing rule
     // for a mode. A checked button a mode greys keeps its checked face and
-    // greys its glyph, the band's own composition.
+    // dims its legend, the band's own composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
+        const GuiRect key{x, btn_y, btn_w, btn_h};
+        const char* legend = redesign_button_legend(def.id);
+        // THE PAINTED EXTENT, the key and its legend (key_legend_layout,
+        // 2026-10-23): the publication's coverage and the gate below.
+        const GuiRect painted = key_legend_layout(key, legend).extent;
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render,
-            def.id,
-            GuiRect{x, btn_y, btn_w, btn_h});
+            cr, app, audio, playback, target_render, def.id, key, painted);
 
         // A case the clip does not reach is skipped, its face published
-        // above (clip_meets).
-        if (!clip_meets(cr, GuiRect{x, btn_y, btn_w, btn_h})) return;
+        // above (clip_meets) — the case AND its legend, the band's gate: a
+        // damage confined to the bottom pad still reprints the legend.
+        if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
-        (void)paint_roster_case(cr, GuiRect{x, btn_y, btn_w, btn_h},
-                                face.selected, pressed);
+        paint_roster_case(cr, key, face.selected, pressed);
         // THE KEY IS BLANK, ITS LEGEND UNDER IT (the band's rule, 2026-10-23:
         // redesign_button_legend through the one seat, dimmed when dead).
-        paint_key_legend(cr, GuiRect{x, btn_y, btn_w, btn_h},
-                         redesign_button_legend(def.id), face.enabled);
+        paint_key_legend(cr, key, legend, face.enabled);
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
@@ -3030,8 +3079,10 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
 namespace {
 
-// THE CARD'S LINE SPACING: the body face's OWN cell (its recorded ascent
-// plus descent, 13 Windows px) at the live scale, so a wrapped card's rows
+// THE CARD'S LINE SPACING: the body face's OWN line height (the file's
+// ascender, descender and line gap at the live size, gui_font_line_px;
+// gui_font.h's head, 2026-10-23 — the recorded 13-W Windows cell retired
+// with the skin's type table), rounded to whole px, so a wrapped card's rows
 // sit exactly as the face intends them to. Read ONCE per paint and handed
 // down — it is the only thing that turns a line count into a card height.
 int notification_line_h_px(const GuiFont& font) {
@@ -3130,12 +3181,11 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
 // THE LOOK (architect 2026-10-02, the Windows-95 chrome; its colours
-// 2026-10-04): THE CARD FACE — the tooltip's own look, `card_ground` with a
-// thin `card_frame` line on all four sides (architect 2026-10-06, his word:
-// the cards take the tooltip's look), its words `card_text` (render.h's
-// palette block) —
-// square, NO DROP SHADOW, through the one popup box painter
-// (paint_popup_chrome's Info face, the tooltip's own);
+// 2026-10-04; the hi-fi skin 2026-10-23): THE CARD FACE — the tooltip's own
+// look (architect 2026-10-06, his word: the cards take the tooltip's look),
+// `card_ground` inside the one-device-px sunken ring, its words `card_text`
+// (render.h's palette block, THE CARD FACE) — square, NO DROP SHADOW,
+// through the one popup box painter (paint_popup_chrome, the tooltip's own);
 // a row of the icon row's own height holding THE SENTENCE alone, one pad
 // (notification_pad_px) in from each side — NO CLASS GLYPH since 2026-10-23
 // (architect: "they show the old card insignia, the 18th century stamp";
@@ -3150,14 +3200,13 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // notification_card_max_w_px] — the authored ceiling since 2026-08-31, scaled
 // like every other length, with the window itself as a safety under it.
 //
-// THE TEXT GROWS DOWNWARD UNDER THE GLYPH (architect 2026-08-30). The
+// THE TEXT GROWS DOWNWARD (architect 2026-08-30). The
 // width rule is unchanged — the WHOLE sentence's shaped width sets it, inside
 // the same clamp — so a sentence that fits its room is one line exactly as it
 // was; a longer one wraps through notification_text_lines above to at most
 // kNotificationMaxLines, the last of which clips at the run's right edge (no
 // ellipsis — the folder overlay rows' precedent). THE CARD GROWS, NOTHING
-// REFLOWS: the glyph box keeps the one-line card's placement,
-// the first line keeps the one-line card's baseline, each further line sits
+// REFLOWS: the first line keeps the one-line card's baseline, each further line sits
 // one face line-height lower, and the air under the last line is the first
 // line's own by construction — the one pad still rules every edge. The
 // stack's `y` then advances by each card's OWN height.
@@ -3595,21 +3644,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // gone.)
 
     // THE TICKS STAND ON THE GROUND'S BOTTOM ROW (METRICS §4.4, the mock's
-    // flipped ruler): each one quantum wide in kCeRulerTick, rising the
-    // major's four W or the minor's two into the ground from its foot — its
-    // rows 7 .. 10 and 9 .. 10 of 0 .. 10.
+    // flipped ruler): each ONE DEVICE PX wide in kCeRulerTick (hairline_px,
+    // render.h's line rule, 2026-10-23), rising the major's four W or the
+    // minor's two into the ground from its foot — its rows 7 .. 10 and
+    // 9 .. 10 of 0 .. 10, the lengths areas (scaled_px).
     const int ground_bottom = lane.y + ground_h;   // one past the ground's rows
     const int major_top = ground_bottom - scaled_px(kProgramSpec.ruler_major_tick_px);
     const int minor_top = ground_bottom - scaled_px(kProgramSpec.ruler_minor_tick_px);
 
-    // THE DIGITS: THE SMALL FACE (gui_font.h: every set's small face is the
-    // base's six-row digit, WordPad's ruler digit, its cell all above the
-    // baseline; architect 2026-10-09 ~16:50, Cool Edit's cap-7 digits read
-    // "very small" anyway), their BASELINE THE TOP OF THE GROUND'S ROW 7 —
-    // the digits on rows 1 .. 6 under row 0's air, "basically touching the
-    // trim bar", the black (+1, +1) shadow ending on row 7, a major tick's
-    // top row — an authored row of the lane, neither solver asked
-    // (redesign_baseline's block).
+    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: 15 px
+    // at 300 %, scaled with gui_scale, 2026-10-23; the six-row Windows digit
+    // before it), their BASELINE THE TOP OF THE GROUND'S ROW 7 — the digits
+    // standing above it under row 0's air, "basically touching the trim
+    // bar" (architect 2026-10-09 ~21:00), the black one-device-px (+1, +1)
+    // shadow under them reaching row 7, a major tick's top row — an authored
+    // row of the lane, neither solver asked (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =
         static_cast<double>(lane.y + scaled_px(kProgramSpec.ruler_baseline_px));
@@ -3739,9 +3788,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // shadow's last row 7, and the next major stands a whole step —
             // at least eight minimum minor pitches — away.
             if (major) paint_major_label(col, step_ms);
-            // One quantum wide (program_line_px; render.h's waveform_line_px
-            // inventory), left edge on the tick's own column, clipped at the
-            // right edge, in kCeRulerTick, standing on the ground's bottom row.
+            // ONE DEVICE PX wide (`t`, hairline_px: render.h's line rule,
+            // 2026-10-23), on the tick's own column, clipped at the right
+            // edge, in kCeRulerTick, standing on the ground's bottom row.
             // THE TICK'S SHADOW (2026-10-23): one device px of black at
             // (+1, +1), under it, the walk's clip cutting its last row.
             if (tick_on_lane) {
@@ -5003,8 +5052,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // cases or buttons flush with the box's ring's outer edges
 // (modal_controls_seats). CONTENT PER KIND:
 //   A PROMPT — its question on the box's FIRST ROW at the list's row metrics,
-//   the box's interior THE FACE (a surface you only read, ModalBoxGround::
-//   Face; mock_modal_progress_v2.png's shape), the chrome's text color, and
+//   on the box's one flat field (modal_box.h's head;
+//   mock_modal_progress_v2.png's shape), the chrome's text color, and
 //   the answer buttons FLUSH RIGHT on the controls row in painted order, the
 //   last one's right edge the ring's outer edge. Each button wears its
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
@@ -5021,10 +5070,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   below and the whole supersession is at PromptState.
 //   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
-//   first row on the face, and Cancel alone flush right on the controls row,
+//   first row on the field, and Cancel alone flush right on the controls row,
 //   no access letter, raised with passive focus on it.
 //   AN EDITOR — THE BOX IS ITS EDIT CONTROL (mock_modal_settings_osk_v2.png):
-//   the whole pending line on the theme's FIELD pair (ModalBoxGround::Field),
+//   the whole pending line on the box's flat field in the field's text,
 //   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
 //   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
 //   (the Settings and BPM editors share one shape);
@@ -5052,10 +5101,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // painted by the roster's key painter (paint_roster_case) — at rest, down
 // under a live press, its LED lit for the row's one checked button — and its
 // legend printed under it (paint_key_legend: a word button's word in
-// capitals with its access key underlined, a player key its own legend);
-// the keyboard's FOCUS the Windows default-button frame, one line outside
-// the box in the ring's light tone. No hover face. (Windows' push buttons
-// 2026-10-02 to 2026-10-22, the ebony case 2026-10-22 to 2026-10-23.)
+// capitals with its access key underlined, a player key its own legend).
+// THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
+// architect 2026-10-23). No hover face. (Windows' push buttons 2026-10-02 to
+// 2026-10-22, the ebony case 2026-10-22 to 2026-10-23.)
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
 // lift"), which is what makes the click face real: a press ARMS the button
@@ -5067,14 +5116,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // at the field's declaration).
 //
 // METRICS. The seats are the controls row's (modal_controls_seats: the box's
-// ring's outer columns, no row-8 pad, no tail); the rest are the surviving
-// sampled constants, sampled in laptop px and each re-authored in Windows px
-// at the block below:
-//   kModalButtonGapPx 6 W — modal_popup.png's inter-button gap, 8 laptop px
-//                          (Save ends x=504, Do Not Save begins x=513;
-//                          identically 619..626): 8 device px at 138 %
-//                          (6 · 1.38 = 8.28 → 8), 18 at 300 %.
-// The text in the box stands at the box's own inset (modal_box.h's
+// ring's outer columns, no row-8 pad, no tail): every key the program's case
+// at the case's seat, the keys abutting (modal_word_buttons, the player's
+// player_row_layout). (The 6-W inter-button gap, modal_popup.png's 8 laptop
+// px, stood until 2026-10-23.) The text in the box stands at the box's own inset (modal_box.h's
 // modal_box_text_inset_px) on the list's rows (folder_overlay.h's row box).
 // (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
 // at 29 W, kModalFieldHeightPx 23 W tall with its text kModalFieldPadXPx 5 W
@@ -5099,47 +5144,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 
 namespace {
 
-// IN WINDOWS PX since the unit's change (architect 2026-10-02): every number
-// in this block re-authored from the laptop pixel to the device size it had
-// on the tablet — the gap 8 as 6, the field 31 as 23, its pad 7 as 5, its
-// width 520 as 378 and its 40-px floor as 29, the button box 32 as 23, its
-// pads 9 and 10 as 7 and 7.
-// THE GAP, 6 W, IS ALSO WINDOWS' OWN: 4 dialog units between related
-// controls and between command buttons, at MS Sans Serif 8's 1.5-px
-// horizontal unit — and since 2026-10-08 the editor row's ONE GAP (label →
-// field → OK → Cancel; the rule at paint_modal_dialog's editor arm).
-constexpr double kModalButtonGapPx    = 6.0;
-// (THE FIELD'S HEIGHT AND PAD, kModalFieldHeightPx 23 and kModalFieldPadXPx
-// 5, render.h's from 2026-10-08, went with the editor's one-row field
-// 2026-10-14, the line standing in the modal family's box. The time fields,
-// which took them 2026-10-08 to 2026-10-09, are Cool Edit's dark field with
-// program_spec.h's own height and pad.)
-// THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
-// since the 2026-08-12 relayout dissolved that row (these buttons read row
-// 2's constants until then; the architect's original mix — "the size should
-// be the size of the save, undo, redo, render... the behavior/colors should
-// be the icon buttons'" — is unchanged, only the numbers' home moved). The
-// 32 IS row 2's derivation frozen: its 44px content minus its two 6px
-// vertical button margins, the box the crop's own buttons measure exactly;
-// the 9/10 pads are its label paddings (the row-2 crop provenance is git
-// history). It fits the bottom row's 32-Windows-px content band with room
-// either side.
-// THE BOX'S HEIGHT AND THE TWO LABEL PADS ARE THE CHROME SPEC'S SINCE
-// 2026-10-07 (push_button_box_px, push_button_pad_left_px / _right_px):
-// win2000 the 23 and 7 / 7 below. The minimum width is Windows' 75.
-// A WORD BUTTON IS WINDOWS' STANDARD PUSH BUTTON, 75 x 23 Windows px
-// (architect 2026-10-02: the dialog unit's 50 x 14 at MS Sans Serif 8 pt),
-// the 23 the box above — which today's laptop-pixel 32 re-authored already
-// was — and the 75 a MINIMUM WIDTH: a label whose pads and run need more
-// widens its button, as a Windows button sized to its text does, and the
-// label is CENTRED in its button as Windows centres a push button's text.
-// Every word button the product draws fits 75 (re-greped 2026-10-19: OK,
-// Cancel, Yes, Save, Discard, Retry, Delete — Discard the
-// widest at about 56 with its pads at the 13-px face), so the row reads as
-// Windows' row of equal buttons. A glyph button is not this box: the render
-// player's nine are row 8's case, the program's (architect 2026-10-05,
-// bottom_row_seats; render.h's program block).
-constexpr double kModalBtnMinWidthPx  = 75.0;
+// (THE WORD BUTTONS' WINDOWS METRICS — the 6-W button gap, Windows' 75 x
+// 23-W push button sized to its label between the spec's pads, the editor's
+// one-row field's 23-W height and 5-W pad — stood 2026-10-02 to 2026-10-23;
+// every word button is the program's square key since, modal_word_buttons
+// below. Git history holds their derivations.)
 // (THE FOCUS FRAME — kModalFocusFramePx, one relief line outside the
 // keyboard-focused button, Windows' default-button frame, 2026-10-02 to
 // 2026-10-23 — is not painted, architect 2026-10-23: the button walk's NO
@@ -5152,8 +5161,7 @@ constexpr double kPlayerGroupGapPx    = 8.0;
 
 // THE TWO WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel,
 // and the field-less owners' Cancel alone (the picker's, the progress
-// modal's) — the painter's plans and the bake's walk read these
-// (word_and_key_case_rects).
+// modal's) — the painter's plans read these.
 constexpr std::string_view kModalOkLabel     = "OK";
 constexpr std::string_view kModalCancelLabel = "Cancel";
 
@@ -5165,24 +5173,18 @@ constexpr std::string_view kModalCancelLabel = "Cancel";
 // seat) — the keys ABUTTING as the player's and the band's do, THE CLUSTER
 // FLUSH RIGHT, its last key's right edge the row's right seat (the box's
 // ring's outer edge); wider than the row it starts at the row's left seat.
-// `label_w` is each legend's run, ceiled (a legend never widens its key).
+// A legend never widens its key, so the layout reads the words' count alone.
 // (Windows' push button — the label's run between the spec's pads, floored
 // at 75 W, the button gap between — 2026-10-02 to 2026-10-23.)
 struct ModalWordButtons {
     std::vector<GuiRect> rect;
-    std::vector<int>     label_w;   // each legend's run, ceiled
 };
 ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
-                                    const GuiFont& font,
                                     std::span<const std::string_view> labels) {
     ModalWordButtons out;
     const int w = seats.case_w;
-    for (std::size_t i = 0; i < labels.size(); ++i) {
-        const double run =
-            text_shape::shape_text_run(font, labels[i]).width_px;
-        out.label_w.push_back(static_cast<int>(std::ceil(run)));
+    for (std::size_t i = 0; i < labels.size(); ++i)
         out.rect.push_back(GuiRect{0, seats.case_y, w, seats.case_h});
-    }
     const int total = w * static_cast<int>(labels.size());
     int x = std::max(seats.left_x, seats.cases_right - total);
     for (GuiRect& r : out.rect) {
@@ -5345,7 +5347,7 @@ std::vector<GuiRect> program_case_rects(const AppState& app) {
 // THE MODAL FAMILY'S BOX'S PAINTER (defined with the folder overlay's
 // painter below, its other caller).
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            ModalBoxGround ground, int keyboard_h);
+                            int keyboard_h);
 
 namespace {
 
@@ -5475,15 +5477,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // editor on the glass, the same row lifted onto the on-screen keyboard's
     // band (`kb_h`, onscreen_keyboard::modal_keyboard_h_px), its face the
     // family's painter's. A PROMPT AND A DIALOG EDITOR (`boxed`) ALSO TAKE
-    // THE BOX: this body paints it (paint_modal_box) — the face for a prompt's
-    // question, the field for an editor's line — where the render player's
+    // THE BOX: this body paints it (paint_modal_box) — one flat field for a
+    // prompt's question and an editor's line alike — where the render player's
     // and the picker's list is the folder overlay's painter's. (THE TASKBAR
     // DIALOG, the prompts' and the editors' surface from 2026-10-10 until
     // that day — the chrome's ground laid over row 8, the border and the
     // frame's bottom row under one Hilight line, its controls centered in it
     // or standing on the keyboard — is retired: "we should stop doing that".)
-    // THE PROGRESS MODAL TAKES THE BOX TOO, on the face (2026-10-14): its
-    // sentence is read, never picked or typed.
+    // THE PROGRESS MODAL TAKES THE BOX TOO (2026-10-14), on the same field.
     const bool    boxed   = prompt_up || progress_up || ed != nullptr;
     const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app, gui);
     const GuiRect lane    = bottom_row_area(app);
@@ -5506,11 +5507,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     // THE BOX, for a prompt and a dialog editor (the surface block above):
     // laid first, the controls after it on the row it leaves.
-    if (boxed)
-        paint_modal_box(cr, app,
-                        (prompt_up || progress_up) ? ModalBoxGround::Face
-                                                   : ModalBoxGround::Field,
-                        kb_h);
+    if (boxed) paint_modal_box(cr, app, kb_h);
 
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
@@ -5570,7 +5567,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
         int         w            = 0;
-        int         label_w      = 0;   // a word button's run, ceiled
         // WHERE IT PAINTS. The single left-flushed cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
@@ -5807,11 +5803,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else {
         std::vector<std::string_view> labels;
         for (const DialogButtonPlan& b : plan) labels.push_back(b.label);
-        const ModalWordButtons words = modal_word_buttons(seats, font, labels);
+        const ModalWordButtons words = modal_word_buttons(seats, labels);
         for (std::size_t i = 0; i < plan.size(); ++i) {
-            plan[i].x       = words.rect[i].x;
-            plan[i].w       = words.rect[i].w;
-            plan[i].label_w = words.label_w[i];
+            plan[i].x = words.rect[i].x;
+            plan[i].w = words.rect[i].w;
         }
     }
 
@@ -6403,11 +6398,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (program_spec.h's case_hot_face) — and no separators.
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
-        // their dialog stands and publish enabled=true, and the player's are
-        // all glyph buttons: the glyph's disabled face (icons::draw_disabled,
-        // Cool Edit's emboss), the case the face its state gives, the
-        // roster's rule (architect 2026-10-02 and 2026-10-09). The press face is gated on
-        // the bit rather than trusted — a button can go dead UNDER a hold.
+        // their dialog stands and publish enabled=true: the player's legend
+        // dimmed (kDimInk, paint_key_legend, 2026-10-23), the key the face
+        // its state gives, the roster's rule (architect 2026-10-02 and
+        // 2026-10-09). The press face is gated on the bit rather than
+        // trusted — a button can go dead UNDER a hold.
         const bool enabled = plan[i].enabled;
         const bool armed   = enabled &&
                              static_cast<int>(i) == app.modal_dialog_pressed;
@@ -6431,15 +6426,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // stands. The icon set's glyphs are not drawn (their enumerators stay
         // on the plan for a later drop).
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-        (void)paint_roster_case(cr, r, plan[i].lit, pressed);
+        paint_roster_case(cr, r, plan[i].lit, pressed);
+        std::string legend;
+        int legend_access = -1;
         if (plan[i].glyph) {
-            paint_key_legend(cr, r, render_player_button_legend(plan[i].player_act),
-                             enabled);
+            legend = render_player_button_legend(plan[i].player_act);
+            paint_key_legend(cr, r, legend, enabled);
         } else {
-            std::string upper = plan[i].label;
-            for (char& ch : upper)
+            legend = plan[i].label;
+            for (char& ch : legend)
                 if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
-            paint_key_legend(cr, r, upper, true, plan[i].access);
+            legend_access = plan[i].access;
+            paint_key_legend(cr, r, legend, true, legend_access);
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
@@ -6462,8 +6460,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // with no such paint to keep it is false — nothing painted, nothing
         // clickable — which the comparator sees as drift and repaints within
         // a tick. Every other owner's buttons publish a constant true and
-        // need no gate.
-        if (player_up && !clip_covers_drawable(cr, app, r)) {
+        // need no gate. THE COVERAGE IS THE KEY AND ITS LEGEND
+        // (key_legend_layout's extent, 2026-10-23): the legend wears the bit
+        // (dimmed when dead), so a clip that missed it must keep the bit.
+        if (player_up &&
+            !clip_covers_drawable(
+                cr, app, key_legend_layout(r, legend, legend_access).extent)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
                                prev_enabled[i].first == out.player_act;
@@ -6705,21 +6707,20 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // -- THE MODAL FAMILY'S BOX (architect 2026-10-14) -------------------------
 //
 // The shape and every rect are modal_box.h's: THE PANEL in the program's
-// face (the box's margins), THE BOX'S RING — exactly
-// paint_canvas_column_frame's, one program line, `ce_dark` top and left,
-// `ce_hilight` right and bottom, mitred — and the interior in the ground the
-// member names (ModalBoxGround: the field where you pick or type, the face
-// where you only read). The controls row under the panel stands on row 8's
-// own rows, whose wood paint_bottom_strip lays (the row standing down under
+// ground (the box's margins), THE BOX'S RING — one device px in the ring
+// tones on the box's outer edge, `ce_dark` top and left, `ce_hilight` right
+// and bottom, mitred — and the interior ONE FLAT FIELD, kFieldGround, for
+// every member (modal_box.h's head). The controls row under the panel stands
+// on row 8's own rows, whose ground paint_bottom_strip lays (the row standing down under
 // the modal, modal_owns_bottom_row) — UNLESS THE STACK STANDS ON THE
 // ON-SCREEN KEYBOARD (`keyboard_h` > 0, a dialog editor on the glass,
-// modal_box.h's head): then this lays the lifted controls row's wood
+// modal_box.h's head): then this lays the lifted controls row's ground
 // directly on the keyboard's band. The render player and the
 // picker never stand with the keyboard and pass 0 (paint_folder_overlay);
 // the prompts and the dialog editors pass the live lift
 // (paint_modal_dialog). Publishes nothing.
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            ModalBoxGround ground, int keyboard_h) {
+                            int keyboard_h) {
     const GuiRect panel = modal_panel_rect(app, keyboard_h);
     if (panel.w <= 0 || panel.h <= 0) return;
     const GuiRect box = modal_box_rect(app, keyboard_h);
@@ -6737,7 +6738,6 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
         paint_cell_rect(cr, panel, p.face);
         if (box.w > 0 && box.h > 0) {
             const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-            (void)ground;
             paint_cell_rect(cr, box, hex(kFieldGround));
             paint_hairline_frame(cr, box, p.ce_dark, p.ce_hilight);
         }
@@ -6769,9 +6769,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // explorer, not popping out like a rising bevel"): the theme's FIELD GROUND
 // inside THE MODAL FAMILY'S BOX since 2026-10-14 (paint_modal_box, the canvas
 // column's ring; the plain sunken two-line edge round the band before it),
-// the names and the text-class glyph paths in the
-// FIELD TEXT, each row 17 Windows px with Windows' small 16-px icon
-// (folder_overlay.h's row box), and the faces Windows' list:
+// the names in the FIELD TEXT, each row 17 Windows px with its BOXED GLYPH
+// (the walk's glyph block below; folder_overlay.h's row box), and the faces
+// Windows' list:
 //   a RESTING row         -> NO FILL AT ALL: the field shows through
 //   the HIGHLIGHT         -> a FLAT FILL in the theme's SELECTED PAIR, the
 //                            selection, which is also the list's keyboard
@@ -6792,9 +6792,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // and the TRANSPORT'S ITEM, which its row does not mark (architect
 // 2026-10-23; the wav glyph swapped for Play until then).
 //
-// STATE-AXIS: the face is decided ONCE per row from the highlight, the press
-// arm and the ring, and the glyph from the row's kind and the
-// item's path; there is no second list of what a row looks like anywhere.
+// STATE-AXIS: the face is decided ONCE per row from the highlight and the
+// press arm, and the glyph from the row's kind alone; there is no second
+// list of what a row looks like anywhere.
 // THE LIST ROWS' BOXED GLYPH AND NAME (architect 2026-10-23; the walk's
 // glyph block below): the glyph's ink height, its box's x and the name's x
 // past the modal box's outer left edge, device px at 300 % (skin_px).
@@ -6809,16 +6809,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     if (!rects_intersect(exposed, surf)) return;
 
     const AppState::FolderOverlay& ov = app.folder_overlay;
-    const AppState::RenderPlayer&  rp = app.render_player;
 
     cairo_save(cr);
     // THE MODAL FAMILY'S BOX (modal_box.h, architect 2026-10-14): the panel's
-    // face, the canvas column's ring and THE FIELD GROUND inside it — the
-    // list is a surface you pick from (ModalBoxGround::Field); then
+    // ground, the ring and THE FLAT FIELD inside it; then
     // EVERYTHING ELSE UNDER THE CONTENT RECT'S CLIP, because a scrolled
     // listing's first and last rows straddle the content's edges and must not
     // paint into the ring or the controls row below.
-    paint_modal_box(cr, app, ModalBoxGround::Field, /*keyboard_h=*/0);
+    paint_modal_box(cr, app, /*keyboard_h=*/0);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h's content_rect, the box's interior), so
     // paint and hit agree about every pixel at any scroll offset. The surface
@@ -6840,9 +6838,6 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // stays valid for the whole walk.
     const GuiFont font = gui_font(GuiFace::Body);
 
-    const int    glyph  = folder_overlay::row_icon_px();
-    const int    gap    = folder_overlay::row_icon_gap_px();
-    const int    inset  = folder_overlay::row_icon_inset_px();
     // THE HIGHLIGHT IS THE THEME'S SELECTED PAIR, focused or not (the block
     // above).
     const GuiPalette& pal = palette();
@@ -6890,10 +6885,6 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // the icon set's glyphs at Windows' small 16-px seat 2026-08-28
             // to 2026-10-23, Play swapped in on the item's row, are git
             // history.)
-            (void)glyph;
-            (void)gap;
-            (void)inset;
-            (void)rp;
             const int x0 = modal_box_rect(app, 0).x;
             const int gh = icons::icon_box_px(kListGlyphInkAt300);
             icons::draw_boxed(cr,

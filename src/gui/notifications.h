@@ -7,23 +7,20 @@
 // A small card stacked top-right from the icon row (the live chrome
 // vocabulary's card seat, notification_stack_bound), newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
-// the one sans, a class glyph at the left naming the class
-// (icons::Icon::CardNormal / CardCritical), and ONE PAD around both
-// (notification_pad_px below — the card's chrome reads one number on all
-// five of its distances, the text's right air adding the glyph's own inset
-// so it matches the air the eye sees left of the text, 2026-10-01), ON THE
-// CARD FACE — the tooltip's look, the theme's `card_ground` under
-// `card_text` with a thin `card_frame` line, one Windows px, on all four
-// sides (architect 2026-10-04, the sides 2026-10-06; render.h's palette
-// block, THE CARD FACE): the
+// the one sans, NO CLASS GLYPH since 2026-10-23 (architect: "they show the
+// old card insignia"; the CardNormal / CardCritical glyph at the left
+// 2026-08-29 to 2026-10-23), and ONE PAD round the sentence
+// (notification_pad_px below), ON THE CARD FACE — the tooltip's look, the
+// theme's `card_ground` under `card_text` inside the one-device-px sunken
+// ring (architect 2026-10-04, the sides 2026-10-06, the ring 2026-10-23;
+// render.h's palette block, THE CARD FACE): the
 // tooltip's own box (paint_popup_chrome), square, with no drop shadow
 // (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for
-// one line WRAPS DOWNWARD UNDER THE GLYPH (architect 2026-08-30): the card
-// grows taller, the glyph stays at the first line's height, and nothing
-// reflows beside it. Two classes and nothing else — no remaining-time bar, no
+// one line WRAPS DOWNWARD (architect 2026-08-30): the card grows taller and
+// nothing reflows. Two classes and nothing else — no remaining-time bar, no
 // actions, no title/body split, no sound (the architect is "not a big fan of
 // notifications": minimal, and the inventory below is closed).
 //
@@ -771,6 +768,8 @@ inline constexpr int kNotificationMaxLines = 3;
 // above and below the box (kNotificationAirPx), so a one-line card is
 // 3 + 22 + 3 = 28: every length the card had while it read Windows' small
 // toolbar band, each a composite of its rounded parts (scaled_px's rule).
+// THE GLYPH IS NOT DRAWN since 2026-10-23 (no class glyph, the head); its
+// box stays the one-line card's height composite.
 inline constexpr int kNotificationGlyphPx     = 16;
 inline constexpr int kNotificationGlyphLeadPx = 3;
 inline constexpr int kNotificationAirPx       = 3;

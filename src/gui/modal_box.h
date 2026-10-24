@@ -46,11 +46,11 @@
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the main window's ring: the box IS the ring's rect. At the
 // tablet's 2304 x 1440, 300 % and the strip pad's 13 W: the ring's top slot
-// 201–203 (the view bar's, directly under the band's rows 54–200), its
-// bottom slot 1290–1292, its column slots 21–23 and 2280–2282, the
-// one-device-px ring on the slots' outer edges (rows 201 and 1292, columns
-// 21 and 2282), the interior x 22..2281 and y 202..1291 (THE RING IS THE
-// ONLY MARGIN, below; the main canvas's own rows 315–1289); the
+// 187–189 (the view bar's, directly under the band's rows 40–186 below the
+// 40-row caption), its bottom slot 1290–1292, its column slots 21–23 and
+// 2280–2282, the one-device-px ring on the slots' outer edges (rows 187 and
+// 1292, columns 21 and 2282), the interior x 22..2281 and y 188..1291 (THE
+// RING IS THE ONLY MARGIN, below; the main canvas's own rows 301–1289); the
 // controls row 1293–1439, its case rows 1332–1400, its first case's columns
 // 21–89 and its last 2214–2282.
 //
@@ -73,12 +73,12 @@
 // starts on 1051), where the dock bar's border under the row made it 15 +
 // 18 + 14 = 47 until then. THE ROWS: the keyboard's band 1037–1439 (its
 // first key row's top 1051), the controls row 890–1036 (its case rows
-// 929–997), the ring's bottom slot 887–889, the interior y 202..888.
+// 929–997), the ring's bottom slot 887–889, the interior y 188..888.
 //
-// THE INTERIOR'S GROUND SAYS WHAT THE SURFACE IS (ModalBoxGround): THE FIELD
-// GROUND, the list's dark field pair, where you pick or type — the render
-// player's and the picker's lists, a dialog editor's line; THE FACE where you
-// only read — a prompt's question, the progress modal's sentence.
+// THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (the hi-fi skin, above):
+// the lists, a dialog editor's line, a prompt's question and the progress
+// modal's sentence alike. (The Field / Face choice by what the surface is,
+// ModalBoxGround, 2026-10-14 to 2026-10-23, is git history.)
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
@@ -89,14 +89,6 @@
 #include "render.h"
 
 #include <algorithm>
-
-// THE INTERIOR'S GROUND (the head): which of the two the member's surface is.
-enum class ModalBoxGround { Field, Face };
-
-inline GuiColor modal_box_ground_color(ModalBoxGround g) {
-    return g == ModalBoxGround::Field ? palette().field_ground
-                                      : palette().face;
-}
 
 // THE BOX'S DIALOG MEMBERS STAND (architect 2026-10-14): A PROMPT — over any
 // surface, the render player's and the picker's lists included, its question

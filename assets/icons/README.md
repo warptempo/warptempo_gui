@@ -140,6 +140,10 @@ extracted, in both tabs — "use the original, not the modified".)
 
 ## The deliberate seats
 
+Since 2026-10-23 no toolbar key wears its drawing: the keys are blank, each act's name printed under its key, and the
+act files below stay loaded for a later drop (the drawings on screen are the caption's quaver and the list rows'
+`WavRow` and `FolderRow`). The seats record which drawing each act's file holds.
+
 The architect's (2026-10-14): Source wears `accessories-dictionary` (the primary source), Target `input-tablet` (the
 authoring surface); since 2026-10-18 Warp the baton (the architect's own, above; its earlier glyphs there and in git
 history), and since 2026-10-15 Phase Reset `camera-photo` (the phase
