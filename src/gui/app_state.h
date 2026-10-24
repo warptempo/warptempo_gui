@@ -2793,10 +2793,11 @@ enum class RedesignButton {
     // ALONE (one face cannot show three states), and a greyed seat consumes
     // every press, the modified ones with it; on a lit seat the modifier
     // acts refuse with their own cards (the propagate's ladders, the warp
-    // column their first rung). THE TOOLTIP NAMES THE PLAIN ACT ALONE and
-    // carries no modifier line (the one recorded exception at
-    // redesign_button_modifier_hint_agrees): a tooltip names one act, and the
-    // modifier acts are the keyboard's words in HELP.md. (The pair rode the
+    // column their first rung). THE TOOLTIP NAMES THE PLAIN ACT AND ONE
+    // MODIFIER LINE NAMING BOTH PRESSES since 2026-10-24 (architect: "update
+    // 'open text editor' tooltip to include copy/paste phase"; the
+    // constant table's row, which says why, and the overload's drop in the
+    // phase-reset column; no line from 2026-10-21 until then). (The pair rode the
     // pigeon's Ctrl+J by view for the evening of 2026-10-21, and Ctrl+P /
     // Ctrl+Alt+P before that.)
     IconOpenTextEditor,
@@ -16003,7 +16004,8 @@ static_assert(redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
                   !redesign_button_shift_admits(RedesignButton::IconOpenTextEditor),
     "Open Text Editor (Return) admits Ctrl, reaching Ctrl+Return, Copy Phase "
     "Resets, and the pair, reaching Ctrl+Shift+Return, Paste Phase Resets; "
-    "Shift alone binds nothing (architect 2026-10-21)");
+    "Shift alone binds nothing (architect 2026-10-21); its one tooltip line "
+    "names both presses (2026-10-24)");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button. It sits with the roster (rather than with the chord table in
@@ -16020,9 +16022,8 @@ static_assert(redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
 // admit a modified press — the shift-admitting set, and since 2026-08-24 the
 // ctrl-admitting one. That is not a coincidence to be maintained: it is asserted
 // against both predicates below, so the hint cannot advertise a modified press
-// that does nothing (or stay silent about one that does) — OPEN TEXT EDITOR
-// the one recorded exception since 2026-10-21, its ctrl presses the
-// keyboard's words alone (the assert's own note).
+// that does nothing (or stay silent about one that does) — with no exception
+// since 2026-10-24, when Open Text Editor's ctrl presses took their line.
 //
 // A TOOLTIP NAMES THE ACT THE PRESS WILL RUN IN THE CURRENT STATE (architect
 // 2026-09-01, the truthful-tooltips ruling — "tooltips never lie: they update
@@ -16405,19 +16406,23 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Jump to Defining Marker (Ctrl+J)",
                     "Press Shift to copy the resolved value."};
         // OPEN TEXT EDITOR (architect 2026-10-09, his name for the act), the
-        // verb group's sixth, ONE LINE: the act's name and its chord as every
-        // row writes them, bare Return by Qt's own name (this table's
-        // convention above; the keypad's Enter is the same arm's second keysym
-        // and is not named separately). IT ADMITS CTRL AND THE PAIR since
-        // 2026-10-21 (Copy / Paste Phase Resets) AND STILL CARRIES NO SECOND
-        // LINE (2026-10-21, the ruling's landing): a tooltip names one act,
-        // and the modifier acts are the keyboard's words
-        // in HELP.md (the exception is recorded at
-        // redesign_button_modifier_hint_agrees). The name holds on either axis — a bound cell's
-        // editor is a text editor as the payload's is — so the overload has no
-        // fork for it.
+        // verb group's sixth: the act's name and its chord as every row
+        // writes them, bare Return by Qt's own name (this table's convention
+        // above; the keypad's Enter is the same arm's second keysym and is
+        // not named separately). IT ADMITS CTRL AND THE PAIR since 2026-10-21
+        // (Copy / Paste Phase Resets, Ctrl+Return / Ctrl+Shift+Return) AND
+        // ITS SECOND LINE NAMES BOTH since 2026-10-24 (architect: "update
+        // 'open text editor' tooltip to include copy/paste phase"; the
+        // one-line form of 2026-10-21, the modifier acts left to HELP.md, is
+        // retired): ONE LINE FOR TWO MODIFIERS, Jump to Defining Marker's
+        // sentence form naming the modifier and not a key, the pair's two
+        // presses on the one seat. The name holds on either axis — a bound
+        // cell's editor is a text editor as the payload's is — and the
+        // overload drops the line in the phase-reset column, where both
+        // presses refuse at their first rung.
         case RedesignButton::IconOpenTextEditor:
-            return {"Open Text Editor (Return)", nullptr};
+            return {"Open Text Editor (Return)",
+                    "Press Ctrl to copy phase resets, Ctrl+Shift to paste them."};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH
         // since 2026-10-09 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
@@ -16524,7 +16529,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // the record does not draw, take their acts' own words (REVERT, LOAD, OLDER,
 // NEWER). A button whose GLYPH swapped with its state (Save, Render, Play /
 // Stop) keeps its one legend: the legend names the key, the tooltip the act
-// of the moment.
+// of the moment. PLAY RENDERS READS PLAYER since 2026-10-24 (architect: "the
+// media player could be called the player instead of play"; PLAY until
+// then, the record's word), so the transport's PLAY names one key; PLAYER
+// fits its key at 300 / 200 / 150 % (54 of 69, 35 of 46, 27 of 34 device px).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -16538,7 +16546,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconBpm:                   return "BPM";
         case RedesignButton::IconIter:                  return "GRID";
         case RedesignButton::IconFlatten:               return "FLATTEN";
-        case RedesignButton::IconListen:                return "PLAY";
+        case RedesignButton::IconListen:                return "PLAYER";
         case RedesignButton::IconReadOnly:              return "LOCK";
         case RedesignButton::IconSettings:              return "SETUP";
         case RedesignButton::IconTooltips:              return "TIPS";
@@ -16892,6 +16900,19 @@ inline RedesignTooltipText redesign_button_tooltip(
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
+        // OPEN TEXT EDITOR'S CTRL LINE (Copy / Paste Phase Resets, architect
+        // 2026-10-24) DROPS IN THE PHASE-RESET COLUMN, where both presses
+        // refuse at their first rung (NotWarpColumn, phase_reset_copy_refusal
+        // / phase_reset_paste_refusal — "phase clipboard only in warp",
+        // 2026-10-21); the column is the ladders' own read, restated nowhere
+        // else here. The deeper rungs (the selection, the clipboard) stay
+        // behind the line, each press's card answering, as the copy's empty
+        // payload stays behind Jump's. The `h` view hides the button
+        // (history_mode_hides_button), so no hover asks this there.
+        case RedesignButton::IconOpenTextEditor:
+            if (a.active_markers_view != 'W')
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         // DROP MARKER: in the P column the shifted press refuses as already
         // crossed (phase_reset_drop_crossing_actionable, the shift act's own
         // head), so its line drops — the one thing this arm does. (IN T+W IT
@@ -17097,6 +17118,8 @@ inline RedesignTooltipText redesign_button_tooltip(
 // chord (on a mirror outside it the line is renamed Pull, the twin's name by
 // the role, never added), and since 2026-10-14 JUMP TO DEFINING MARKER's
 // copy line where the copy would refuse —
+// and since 2026-10-24 OPEN TEXT EDITOR's copy-and-paste line in the
+// phase-reset column, where both presses refuse at their first rung —
 // the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,
@@ -17113,12 +17136,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // every button is on both sides of the equivalence. (The render player's own
 // copy at player_button_shift_admits was already exhaustive over its six.)
 //
-// ONE RECORDED EXCEPTION, OPEN TEXT EDITOR (2026-10-21): it admits ctrl and
-// the pair — Ctrl+Return and Ctrl+Shift+Return, the phase-reset propagate's
-// copy and paste (architect: "on the open text editor icon") — and its
-// tooltip stays the plain act's name with no line, a tooltip naming one act
-// and the modifier acts being the keyboard's words (HELP.md). The walk pins
-// the exception both ways: that button must admit and must carry no line.
+// NO EXCEPTION since 2026-10-24: Open Text Editor, which admits ctrl and the
+// pair (Ctrl+Return and Ctrl+Shift+Return, the phase-reset propagate's copy
+// and paste) and carried no line from 2026-10-21, names both in its one line
+// (architect 2026-10-24), so the walk holds it to the rule like every other.
 constexpr bool redesign_button_modifier_hint_agrees() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
@@ -17126,10 +17147,6 @@ constexpr bool redesign_button_modifier_hint_agrees() {
         const bool admits = redesign_button_shift_admits(b) ||
                             redesign_button_ctrl_admits(b) ||
                             redesign_button_ctrl_shift_admits(b);
-        if (b == RedesignButton::IconOpenTextEditor) {
-            if (line2 || !admits) return false;
-            continue;
-        }
         if (line2 != admits) return false;
     }
     return true;

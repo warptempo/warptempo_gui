@@ -1220,6 +1220,12 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // the prompts and the dialog editors stand in the modal family's box,
 // paint_modal_box.)
 
+// THE `h` VIEW'S ONE SEPARATOR, ` | `: between the walk line's segments
+// (history_walk_line below) and, since 2026-10-24, after the active tab's name
+// where that line is what row 8's state cell shows
+// (paint_bottom_row_buttons_and_clock) — one token, one spelling.
+static constexpr const char* kSegmentSeparator = " | ";
+
 // -- history_walk_line ----------------------------------------------------
 //
 // THE `h` HISTORY MODE'S ONE LINE, composed for ROW 8'S STATE CELL — the
@@ -1267,7 +1273,6 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // CACHES IT (GuiHistoryDiff::delta_at) — the composition itself writes
 // nothing.
 static std::string history_walk_line(AppState& app) {
-    static constexpr const char* kSegmentSeparator = " | ";
     const std::size_t count = app.history_mode.session.commit_count();
     // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing at
     // all: a blank cell beside a blank lane says only that the cell has stopped
@@ -2692,8 +2697,21 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // Never greyed: it is no button (Ctrl+Tab, Switch Tab and the walk's
         // ctrl-click switch the tab). A tab switch damages the lane
         // (GuiActiveViews' switch, the state cell's owner).
-        const text_shape::ShapedRun name_run = text_shape::shape_text_run(
-            font, app.active_tab_view == 'B' ? "Tab B" : "Tab A");
+        // IN THE `h` VIEW THE NAME'S RUN ENDS IN THE WALK LINE'S OWN
+        // SEPARATOR, "Tab A | " (architect 2026-10-24: the name ran into the
+        // line's position, `Tab A 007/114 | GitHub: ...`; kSegmentSeparator,
+        // the one spelling), the state air then measured past that run's
+        // advance as everywhere. The pipe is the `h` view's alone: outside
+        // it the state cell carries the ordinary progress text and the name
+        // stands bare. The walk line is never empty while the view stands
+        // (its position reads `0/0` at worst), so the seam is unconditional
+        // there; the view's two edges repaint the whole window
+        // (open_history_mode_fresh / close_history_mode).
+        std::string name_text = app.active_tab_view == 'B' ? "Tab B" : "Tab A";
+        if (app.history_mode.active)
+            name_text += kSegmentSeparator;
+        const text_shape::ShapedRun name_run =
+            text_shape::shape_text_run(font, name_text);
         const int name_x =
             field_x + field_w + scaled_px(kProgramSpec.tab_name_air_px);
         const double name_origin =
