@@ -163,10 +163,19 @@ struct ProgramSpec {
     // whole divider is program_stereo_divider_authored_h below; render.h's
     // waveform_divider owns its rows.
     int  stereo_divider_face_px;
-    // THE VIEW BAR'S FIELD between its two lines (METRICS §3: Cool Edit's
-    // 10; architect 2026-10-09, mock set 1's axis, 6): the trim lane is a
-    // line, this field and a line.
-    int  view_bar_field_px;
+    // THE VIEW BAR'S FIELD between its two lines, IN DEVICE PX AT 300 %
+    // (architect 2026-10-24, his pick T15 off a one-step series 18 .. 12 on
+    // the live lane — "I think 15 works well … looking at the Cool Edit
+    // original there is a similar relationship where the timestamp numbers
+    // fit just about inside the view lane"; the mock of record
+    // zz_trim_47d_T15): the trim lane is a line, this field and a line. THE
+    // RULING IS THE 300 % NUMBER, read on the hi-fi skin's road
+    // (render.h's view_bar_field_h_px through skin_px, floor 1: 15 at 300 %,
+    // 10 at 200 %, 8 at 150 %); the spec owns it because the authored sums
+    // below read it, as 15 / 3 = 5 W exactly (the static_assert there). The
+    // field was 18 px at 300 % 2026-10-09 to 2026-10-24 (mock set 1's axis,
+    // under Cool Edit's own 30, METRICS §3).
+    int  view_bar_field_at300;
     // THE RULER'S GROUND, its rows 0 .. 10 under the view bar's light line
     // (architect 2026-10-09 ~16:50 / ~21:00: Cool Edit's 17 rows, METRICS
     // §4.4, shrunk to 1 + 6 + 4 — "the timestamps should basically be
@@ -264,7 +273,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .column_margin_px      = 6,
     .grid_divisions        = 4,
     .stereo_divider_face_px = 1,
-    .view_bar_field_px     = 6,
+    .view_bar_field_at300  = 15,
     .ruler_ground_px       = 11,
     .ruler_minor_tick_px   = 2,
     .ruler_major_tick_px   = 4,
@@ -302,12 +311,12 @@ constexpr int program_band_authored_h(const ProgramSpec& p) {
     return program_case_authored_px(p) + p.strip_pad_px;
 }
 // The canvas column's lanes above the canvas (the head): the view bar a
-// line, its field and a line; the ruler its ground and its bottom line; the
+// line, its field (authored at 300 %, its W the device px over 3) and a line; the ruler its ground and its bottom line; the
 // marker lane its rows above the triangle and the triangle's quanta (one W
 // each at 100 %); the canvas's top frame row one line. Below the canvas, its
 // bottom frame row, one line, the program ring's last row.
 constexpr int program_view_bar_authored_h(const ProgramSpec& p) {
-    return 1 + p.view_bar_field_px + 1;
+    return 1 + p.view_bar_field_at300 / 3 + 1;
 }
 constexpr int program_ruler_authored_h(const ProgramSpec& p) {
     return p.ruler_ground_px + 1;
@@ -335,10 +344,13 @@ static_assert(program_band_authored_h(kProgramSpec) == 36);
 // ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
 // the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
 static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);
-static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
+// THE VIEW BAR'S FIELD IS A WHOLE W (2026-10-24): its 300 % number divides
+// by 3, so the W sum is exact and skin_px rounds it as scaled_px rounds 5 W.
+static_assert(kProgramSpec.view_bar_field_at300 % 3 == 0);
+static_assert(program_view_bar_authored_h(kProgramSpec) == 7);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
-static_assert(program_column_authored_h(kProgramSpec) == 38);
+static_assert(program_column_authored_h(kProgramSpec) == 37);
 static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
 // THE RULER'S ROWS (2026-10-09 ~21:00): the six the ruler gave are the six
 // the marker lane took, so the column and every stack keep their totals.

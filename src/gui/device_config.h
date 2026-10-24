@@ -423,12 +423,12 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
 // pixel the lanes above the waveform — the program's band, its logo lane
 // 72 device px at 300 % over the case and the strip pad, and its canvas
-// column's 38 W — and below it — the canvas's bottom frame row 1 and row
-// 8's 49 — stand 392 device rows above the waveform and 200 below at
-// 400 %, 592 in all, leaving the tablet's 1440 rows 848 of waveform
-// (re-derived 2026-10-24 with the caption gone, main.cpp's stack record);
-// they pass 1440 near 975 %, past which the waveform is the zero
-// height waveform_area's floor answers (the arithmetic and the guard at
+// column's 37 W — and below it — the canvas's bottom frame row 1 and row
+// 8's 49 — stand 388 device rows above the waveform and 200 below at
+// 400 %, 588 in all, leaving the tablet's 1440 rows 852 of waveform
+// (re-derived 2026-10-24 with the caption gone and the 15-px trim field,
+// main.cpp's stack record); they pass 1440 near 980 %, past which the
+// waveform is the zero height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 518

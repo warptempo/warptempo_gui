@@ -156,8 +156,8 @@ namespace {
 // BLOCK's four, THE PROGRAM'S CANVAS COLUMN inside the program ring
 // (architect 2026-10-09, the program is Cool Edit; program_spec.h, render.h's
 // canvas column lanes): the TRIM lane (trim_lane_h_px(), Cool Edit's view
-// bar, 8 W — the ring's dark top line, the black field and the span, the
-// light line), the RULER lane (ruler_lane_h_px(), Cool Edit's
+// bar, 21 device px at 300 % — the ring's dark top line, the black field
+// (15 px at 300 % since 2026-10-24) and the span, the light line), the RULER lane (ruler_lane_h_px(), Cool Edit's
 // flipped ruler at the product's rows, 11 W of ground and its line — one W
 // of air, the six-row timestamps, the ticks and the PLAYHEAD'S HEAD on its
 // bottom rows — and a PLACEMENT LANE: a motionless click places the playhead
@@ -237,37 +237,40 @@ namespace {
 // the lane accessors, never off a Windows total times the factor — in
 // particular a program line's slot is one quantum, program_line_px(), not a share of
 // scaled_px of a total, so a lane can differ from a naive total at a
-// fractional gui_scale. THE PROGRAM'S TOP STACK IS 74 WINDOWS PX, 50 BELOW
+// fractional gui_scale. THE PROGRAM'S TOP STACK IS 73 WINDOWS PX, 50 BELOW
 // (render.h's chrome_stack_authored_h): the band's case and pad 36 (23 +
-// 13), the canvas column 38 above the canvas (the view bar 8, the ruler 12,
+// 13), the canvas column 37 above the canvas (the view bar 7, its field the
+// 15 device px at 300 % over 3 since 2026-10-24, the ruler 12,
 // the marker lane 17, the canvas's top frame row 1); the canvas's bottom
 // frame row 1 under it and row 8 49 — AND OVER IT THE LOGO LANE, the band's
 // upper pad, 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px),
 // SCALED WITH gui_scale (the laptop's caption, 40 device px at 300 %, stood
 // over it until the same day). THE WELL — THE CANVAS'S INTERIOR — AT
-// THE BASE'S 300 % IS 996 DEVICE ROWS (989 under the 40-row caption over the
-// strip pad, 2026-10-23 to 2026-10-24; the rule at centered_leftover_h
+// THE BASE'S 300 % IS 999 DEVICE ROWS (996 under the 18-px trim field, 989
+// under the 40-row caption over the strip pad, 2026-10-23 to 2026-10-24;
+// the rule at centered_leftover_h
 // below), AND ITS
 // WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
 // (waveform_area: the margin and the canvas's frame column, 21 px, and half
 // the flooring's leftover, 3). Per scale the canvas column above the canvas
 // is the view bar (line + field + line) + the ruler (ground + line) + the
 // marker lane (rows above the triangle + its five quanta) + the frame row:
-// 24 (3 + 18 + 3) + 36 (33 + 3) + 51 (36 + 15) + 3 = 114 at 300 %, 10 (1 +
-// 8 + 1) + 16 (15 + 1) + 22 (17 + 5) + 1 = 49 at 138 %, 30 (4 + 22 + 4) + 44
-// (40 + 4) + 63 (43 + 20) + 4 = 141 at 360 % and 32 + 48 + 68 + 4 = 152 at
-// 400 % (each line slot keeps its scaled height; the line painted in it is
+// 21 (3 + 15 + 3) + 36 (33 + 3) + 51 (36 + 15) + 3 = 111 at 300 %, 14 (2 +
+// 10 + 2) + 24 + 34 + 2 = 74 at 200 %, 12 (2 + 8 + 2) at 150 %, 9 (1 + 7 +
+// 1) + 16 (15 + 1) + 22 (17 + 5) + 1 = 48 at 138 %, 26 (4 + 18 + 4) + 44
+// (40 + 4) + 63 (43 + 20) + 4 = 137 at 360 % and 28 + 48 + 68 + 4 = 148 at
+// 400 % (the trim field skin_px's 15 px at 300 %; each line slot keeps its scaled height; the line painted in it is
 // one device px, render.h's hairline_px).
 //   1920 x H AT 200 %, THE LAPTOP (its inspection scale since 2026-10-23;
 //   maximised under labwc, H the 1080 rows less labwc's title bar, which
 //   stands outside the surface — the theme's to say, never the app's): the
 //   lanes are 120 band (the logo lane 48, the case 46, the pad 26, rows
-//   0–119, the cases 48–93) + 16 trim + 24 ruler + 34 marker + 2 frame =
-//   196 above (120 the band, 76 the block) and 100 below (the bottom frame
-//   row 2 and row 8's 26 + 46 + 26), leftover H − 296: the waveform H − 296
-//   (its two wells (H − 296 − 3) / 2 rows each, floored, round the
+//   0–119, the cases 48–93) + 14 trim + 24 ruler + 34 marker + 2 frame =
+//   194 above (120 the band, 74 the block) and 100 below (the bottom frame
+//   row 2 and row 8's 26 + 46 + 26), leftover H − 294: the waveform H − 294
+//   (its two wells (H − 294 − 3) / 2 rows each, floored, round the
 //   divider's 3, the spare row the canvas's last), both gaps 0 — 120 / 0 /
-//   76 / H − 296 / 0 / 100; the waveform 1888 wide, 16 px in (the margin
+//   74 / H − 294 / 0 / 100; the waveform 1888 wide, 16 px in (the margin
 //   and the frame column, 14, and half the flooring's 4). (At 138 % under the caption,
 //   2026-10-23 to 2026-10-24: 18 caption + 82 band + 49 above, 68 below, the
 //   waveform 863 of a 1080-row surface.)
@@ -275,27 +278,27 @@ namespace {
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
 //   tablet value since 2026-10-06): the lanes are 180 band (72
-//   + 69 + 39, rows 0–179, the logo lane 0–71, the cases 72–140) + 24 trim
-//   + 36 ruler + 51 marker + 3 frame = 294 above (180 the band, 114 the
+//   + 69 + 39, rows 0–179, the logo lane 0–71, the cases 72–140) + 21 trim
+//   + 36 ruler + 51 marker + 3 frame = 291 above (180 the band, 111 the
 //   block) and 150 below (the bottom frame row 1290–1292 and row 8 on
-//   1293–1439, its cases 1332–1400), leftover 996: the waveform 996 on rows
-//   294–1289 (its two wells 496 rows each round the divider's 3, the spare
-//   row its last, render.h's waveform_divider), both gaps 0 — 180 / 0 /
-//   114 / 996 / 0 / 150; the waveform 2256 wide, 24 px in.
+//   1293–1439, its cases 1332–1400), leftover 999: the waveform 999 on rows
+//   291–1289 (its two wells 498 rows each round the divider's 3, no spare
+//   row, render.h's waveform_divider), both gaps 0 — 180 / 0 /
+//   111 / 999 / 0 / 150; the waveform 2256 wide, 24 px in.
 //   2304x1440 AT gui_scale 360 (same surface; every relief line 4 here, so
 //   the case is 84 where it is 69 at 300, the pad 47, the logo lane 86):
-//   the lanes are 217 band (86 + 84 + 47) + 30 trim + 44 ruler
-//   + 63 marker + 4 frame = 358 above (217 and 141) and 182 below (4 +
-//   178), leftover 900: the waveform 900, both gaps 0 — 217 / 0 / 141 /
-//   900 / 0 / 182; the waveform 2240 wide, 32 px in.
+//   the lanes are 217 band (86 + 84 + 47) + 26 trim + 44 ruler
+//   + 63 marker + 4 frame = 354 above (217 and 137) and 182 below (4 +
+//   178), leftover 904: the waveform 904, both gaps 0 — 217 / 0 / 137 /
+//   904 / 0 / 182; the waveform 2240 wide, 32 px in.
 //   2304x1440 AT gui_scale 400 (same surface): the lanes are
-//   240 band (96 + 92 + 52) + 32 trim + 48 ruler + 68 marker + 4 frame = 392
-//   above (240 and 152) and 200 below (4 + 196), leftover 848: the waveform
-//   848, both gaps 0 — 240 / 0 / 152 / 848 / 0 / 200; the waveform 2240
+//   240 band (96 + 92 + 52) + 28 trim + 48 ruler + 68 marker + 4 frame = 388
+//   above (240 and 148) and 200 below (4 + 196), leftover 852: the waveform
+//   852, both gaps 0 — 240 / 0 / 148 / 852 / 0 / 200; the waveform 2240
 //   wide, 32 px in.
 //   1024x600 AT 200 %, A SHORT WINDOW ON THE LAPTOP (kept as a worked case;
-//   no host runs this geometry): leftover 304 -> the waveform 304, both
-//   gaps 0 — 120 / 0 / 76 / 304 / 0 / 100.
+//   no host runs this geometry): leftover 306 -> the waveform 306, both
+//   gaps 0 — 120 / 0 / 74 / 306 / 0 / 100.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -365,7 +368,8 @@ namespace {
 // BAND, the logo lane, the case, the
 // strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
 // canvas column's four lanes Cool Edit's view bar,
-// ruler, marker lane and canvas's top frame row, 8 + 12 + 17 + 1 (render.h's
+// ruler, marker lane and canvas's top frame row, 7 + 12 + 17 + 1 W (the view
+// bar's field 15 device px at 300 %, 2026-10-24; render.h's
 // canvas column lanes), the canvas's BOTTOM FRAME ROW one line
 // (canvas_bottom_frame_h_px), and the UNIFIED BOTTOM ROW the strip again
 // (bottom_row_h_px; the simple layout, 2026-10-22).
@@ -446,10 +450,10 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300 and the strip pad's 13 W the lanes leave 1440 − 294 − 150 =
-// 996 device rows (no caption and the 72-row logo lane, 2026-10-24; 989
-// under the hi-fi skin's 40-row caption, 2026-10-23). A COLOR moves no lane:
-// the 996 rows hold under every waveform preset. May
+// gui_scale 300 and the strip pad's 13 W the lanes leave 1440 − 291 − 150 =
+// 999 device rows (no caption, the 72-row logo lane and the 15-px trim
+// field, 2026-10-24; 989 under the hi-fi skin's 40-row caption,
+// 2026-10-23). A COLOR moves no lane: the 999 rows hold under every waveform preset. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -577,20 +581,20 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the program's lanes are 124 Windows px at
-    // the strip pad's 13, the top strip's 74 plus the bottom strip's 50, and
+    // the vocabulary reaches it: the program's lanes are 123 Windows px at
+    // the strip pad's 13, the top strip's 73 plus the bottom strip's 50, and
     // the logo lane 72 device px at 300 % scaled (lane by lane through
     // scaled_px and each lane from its rounded parts, which is not one
     // multiply of the sum; re-derived 2026-10-24 with the caption gone). At
-    // 350 % they take 527 device px (212 band + 29 trim + 42 ruler + 62
-    // marker + 4 frame = 349 above, and 4 frame + 174 row), leaving a
-    // 1080-tall window 553; at 400 %, 592 (392 + 200), leaving the tablet's
-    // 1440 rows 848 (the stack record at the lane table above); and they
-    // pass 1440 near 975 %, short of the 1000 % ceiling (architect
+    // 350 % they take 524 device px (212 band + 26 trim + 42 ruler + 62
+    // marker + 4 frame = 346 above, and 4 frame + 174 row), leaving a
+    // 1080-tall window 556; at 400 %, 588 (388 + 200), leaving the tablet's
+    // 1440 rows 852 (the stack record at the lane table above); and they
+    // pass 1440 near 980 %, short of the 1000 % ceiling (architect
     // 2026-10-05), so the top of the vocabulary lands on this floor. (The
     // hosts run far below it: the laptop at 200 %, where the lanes take
-    // 296, and the tablet 300 % on its 1440-tall surface, where they take
-    // 444.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // 294, and the tablet 300 % on its 1440-tall surface, where they take
+    // 441.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.

@@ -52,7 +52,7 @@
 // column slots 21–23 and 2280–2282, the one-device-px ring on the slots'
 // outer edges (rows 180 and 1292, columns 21 and 2282), the interior x
 // 22..2281 and y 181..1291 (THE RING IS THE ONLY MARGIN, below; the main
-// canvas's own rows 294–1289); the
+// canvas's own rows 291–1289 since the 15-px trim field, 2026-10-24); the
 // controls row 1293–1439, its case rows 1332–1400, its first case's columns
 // 21–89 and its last 2214–2282. A DIALOG'S TEXT (THE TEXT INSIDE THE BOX,
 // below) 12 px of plain field inside the ring on both axes: its pen on

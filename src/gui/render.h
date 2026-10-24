@@ -552,8 +552,8 @@ void install_true_colors(bool on);
 // preset (cool_edit_paint.h).
 //
 // THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3, §4.1; render_trim_flags
-// owns the drawing, trim_lane_h_px the rows): a BLACK field 6 W tall
-// (kCeViewBarField) under THE PROGRAM RING's top line, between its dark LEFT
+// owns the drawing, trim_lane_h_px the rows): a BLACK field 15 px tall at
+// 300 % (kCeViewBarField; view_bar_field_h_px, 2026-10-24) under THE PROGRAM RING's top line, between its dark LEFT
 // and light RIGHT columns (the canvas ring's own, carried up the whole
 // column; architect 2026-10-22), the `ce_hilight` line under the field (the
 // ruler's top line) — every line ONE DEVICE PX on its slot's outer edge, the
@@ -1517,8 +1517,9 @@ inline int scrub_handle_box_px() {
 // paragraph). Each lane is a composite of its rounded parts (scaled_px's
 // rule): a line is one quantum (program_line_px), a run of face or ground
 // its own scaled_px, the cue's triangle its quanta.
-//   THE TRIM   the view bar, a line, the 6-W field, a line (trim_lane_h_px):
-//              24 device rows at 300 %, 10 at 138 %, 30 at 360 %.
+//   THE TRIM   the view bar, a line, the field, a line (trim_lane_h_px):
+//              21 device rows at 300 % (3 + 15 + 3), 14 at 200 % (2 + 10 +
+//              2), 12 at 150 % (2 + 8 + 2), 9 at 138 %, 26 at 360 %.
 //   THE RULER  11 W of ground and its bottom line (ruler_lane_h_px): 36 / 16
 //              / 44.
 //   THE MARKER 12 W above the cue's triangle and its five quanta
@@ -1529,8 +1530,12 @@ inline int scrub_handle_box_px() {
 // row taller, 38 against 37, the laptop's well one row shorter.)
 //   THE FRAME  the canvas's dark top frame row, one line
 //              (canvas_top_frame_h_px, below): 3 / 1 / 4.
+// THE VIEW BAR'S FIELD, 15 DEVICE PX AT 300 % on the skin's road (architect
+// 2026-10-24, his pick T15: program_spec.h's view_bar_field_at300 the owner
+// of the ruling; 18 px at 300 % through scaled_px of 6 W 2026-10-09 to
+// 2026-10-24): 10 at 200 %, 8 at 150 % (7.5 rounded to even), floor 1.
 inline int view_bar_field_h_px() {
-    return scaled_px(kProgramSpec.view_bar_field_px);
+    return skin_px(kProgramSpec.view_bar_field_at300, 1);
 }
 inline int trim_lane_h_px() {
     return program_line_px() + view_bar_field_h_px() + program_line_px();
@@ -1739,8 +1744,9 @@ inline int bottom_row_h_px() {
 // the maximised window, window_frame_maximized, left 2026-10-24 with the
 // app's sizing frame): THE PROGRAM'S (program_spec.h; the simple layout
 // 2026-10-22): the band under its logo lane (the key, the pad), the canvas
-// column's 38 above the canvas (the view bar 8, the ruler 12, the marker
-// lane 17, the canvas's top frame row 1), the canvas's bottom frame row 1
+// column's 37 above the canvas (the view bar 7 — its field the 15 px at
+// 300 % over 3, program_spec.h — the ruler 12, the marker lane 17, the
+// canvas's top frame row 1), the canvas's bottom frame row 1
 // under it and row 8 (the pad, the key, the pad), the strip pad
 // program_spec.h's constant (strip_pad_px). THE LOGO LANE IS NOT IN IT: its
 // height is the skin's device px at 300 % (logo_lane_h_px, 72 there; the
@@ -1751,14 +1757,14 @@ constexpr int chrome_stack_authored_h() {
            program_canvas_bottom_authored_h(kProgramSpec) +
            program_strip_authored_h(kProgramSpec);
 }
-// THE STACK AT THE STRIP PAD'S 13 W: 74 above (the band's case and pad 36,
-// the column 38) and 50 below (the ring's last row 1, row 8 49), 124 W, 372
+// THE STACK AT THE STRIP PAD'S 13 W: 73 above (the band's case and pad 36,
+// the column 37) and 50 below (the ring's last row 1, row 8 49), 123 W, 369
 // device rows at 300 % — with the logo lane's 72 and no caption the
-// tablet's well 996 rows of the surface's 1440 (2026-10-24: the caption's
-// 40 rows in, the pad's 33 more out, net 7; 989 under the 40-row caption
-// over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's lane table the
-// record of each scale, the laptop's among them.
-static_assert(chrome_stack_authored_h() == 124);
+// tablet's well 999 rows of the surface's 1440 (2026-10-24: the trim
+// field's 15 px gave it 3 rows; 996 under the 18-px field, 989 under the
+// 40-row caption over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's
+// lane table the record of each scale, the laptop's among them.
+static_assert(chrome_stack_authored_h() == 123);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -1982,8 +1988,9 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 
 // THE VIEW BAR'S GRABS (architect 2026-10-09: the trim bar's hit geometry
 // "stays what it is, re-read off the new painted rects"): the begin and end
-// GRABS are the span's two END ZONES, each this many W wide — the bar's own
-// height, 8 W, square on the lane as Windows' caps were — standing on the
+// GRABS are the span's two END ZONES, each this many device px wide — the
+// bar's own height, 21 at 300 % since 2026-10-24 (trim_lane_h_px), square on
+// the lane as Windows' caps were — standing on the
 // bound's column inside the span (the begin's left edge on the begin column,
 // the end's right edge on the end column), and the BRIDGE the span's body
 // between them (render_trim_flags publishes all three; trim_endcap_rect and
@@ -2363,12 +2370,12 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // one run per well (waveform_well_rows), its dots keeping the rows they
 // stand on, counted from the canvas's first row as ever (Cool Edit's own
 // dotted cursor keeps its phase across its divider on the capture: rows
-// 517, then 525). At 300 % on the tablet the canvas is 996 rows, 294-1289
-// (main.cpp's lane table, re-derived 2026-10-24 for the logo lane): the
-// upper well's band 496 rows (294-789), the divider 790-792 (the light
-// line, the ground row, the dark line, one device px each) and the lower
-// well's band 496 rows (793-1288), the canvas's spare last row 1289 (996
-// less the divider's 3 is odd).
+// 517, then 525). At 300 % on the tablet the canvas is 999 rows, 291-1289
+// (main.cpp's lane table, re-derived 2026-10-24 for the logo lane and the
+// 15-px trim field): the upper well's band 498 rows (291-788), the divider
+// 789-791 (the light line, the ground row, the dark line, one device px
+// each) and the lower well's band 498 rows (792-1289), no spare row (999
+// less the divider's 3 is even).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot
