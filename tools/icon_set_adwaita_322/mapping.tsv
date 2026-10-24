@@ -10,7 +10,6 @@ Disabled	audio-volume-muted	audio-volume.svg	421	335	256	256	-
 Down	go-down	navigation-icons.svg	186	50	48	48	-
 DropMarker	list-add	list-add-remove.svg	296	50	48	48	-
 Flatten	edit-clear-all	edit-clear-all.svg	296	50	48	48	-
-FolderRow	folder	folders.svg	296	50	48	48	-
 Follow	start-here	start-here.svg	296	50	48	48	-
 FullZoomOut	view-restore	view-fullscreen-restore.svg	696.00012	50.000008	48	48	-
 GridIterations	x-office-spreadsheet	paper-sheets.svg	1500	354	48	48	-
@@ -50,4 +49,3 @@ Undo	edit-undo	edit-undo-redo.svg	16	300	48	48	-
 Up	go-up	navigation-icons.svg	366	50	48	48	-
 ValueDrag	format-text-direction-rtl	format-text-direction-rtl.svg	296	50	48	48	-
 WaveformMagnification	audio-volume-high	audio-volume.svg	296	50	48	48	-
-WavRow	audio-x-generic	audio-x-generic.svg	296.062	49.9963	48	48	-

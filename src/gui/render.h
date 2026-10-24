@@ -233,7 +233,7 @@ struct TrimRange {
 //                 light copy of THE DISABLED EMBOSS (below), a disabled cue
 //                 label's included (the taskbar overlays' one top line,
 //                 2026-10-10 to 2026-10-14, is retired); DkShadow also the
-//                 dialog focus frame;
+//                 dialog focus frame until it retired (2026-10-23);
 //   selected pair the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
@@ -1115,10 +1115,15 @@ constexpr int kMinWindowHeightPx = 480;
 //     LINE; DIRECTLY UNDER IT A ONE-DEVICE-PX LIGHT LINE, the program ring's
 //     top row in the ring's light tone (paint_caption_row paints it on the
 //     band's first row; the band's own rows stand under that line);
-//   THE ICON, the quaver (paint_quaver, cool_edit_paint.h — the one seat a
-//     picked outline will replace), in a kCaptionIconAt300 = 34-px cell at x
-//     kCaptionIconXAt300 = 6, the bone;
-//   THE TITLE LEFT, after the icon: x = 6 + 34 + 10 (kCaptionTitleXAt300),
+//   THE ICON, the quaver — his pick, row 4 of the caption sheet
+//     (2026-10-23): assets/icons/Quaver.svg, a BOXED GLYPH drawn through the
+//     icon road (icons.h's THE BOXED GLYPHS; icons::draw_boxed), ITS INK
+//     kCaptionIconInkAt300 = 21 px tall, so its 34 x 40 box is
+//     icons::icon_box_px(21) tall (31 at 300 %), the box's rows centered on
+//     the lane, its left edge kCaptionIconXAt300 = 6 — in the file's own
+//     bone, active and inactive alike (the title alone says which);
+//   THE TITLE LEFT, after the icon: x = 6 + the box's width + 10
+//     (kCaptionTitleGapAt300),
 //     Liberation Sans Bold at the title size (gui_font.h's table: 22 px at
 //     300 %), the bone kBoneInk, kCaptionInkInactive 8A8A8E (the bone
 //     dulled) while the window is inactive, its cap band centered on the
@@ -1126,9 +1131,14 @@ constexpr int kMinWindowHeightPx = 480;
 //     (paint_caption_row owns the words and the cut);
 //   THE THREE BUTTONS, PROCEDURAL GLYPHS at the right ("the glyphs on the
 //     caption, those are good"): chevron-down (minimize), chevron-up
-//     (maximize and restore alike), x (close), strokes kCaptionGlyphStrokeAt300
-//     = 2 px (floored at 1), each glyph reaching kCaptionGlyphRAt300 = 7 px
-//     from its center, the centers kCaptionButtonPitchAt300 = 30 px apart,
+//     (maximize and restore alike), x (close), AT THE NOTE'S WEIGHT
+//     (architect 2026-10-23, the caption sheet's row 4): strokes
+//     kCaptionGlyphStrokeAt300 = 2.3 px, the quaver's stem (skin_px, floored
+//     at 1 — 2 device px at 300 %, the sheet's own round(2.3 · 21 / 27); 1
+//     at 138 %), each glyph reaching kCaptionGlyphRAt300 = 6 px from its center
+//     (the note's head height × .75 at the 21-px note; 7 px until then), the
+//     chevrons' rise .6 r and fall .4 r, the centers kCaptionButtonPitchAt300
+//     = 30 px apart,
 //     the rightmost kCaptionButtonInsetAt300 = 8 + 13 = 21 px from the right
 //     edge (make_pivot3's loop); THE HIT CELLS the pitch wide and the lane
 //     tall round the centers. ENABLED the bone, DISABLED kDimInk 6A6A6E,
@@ -1138,10 +1148,10 @@ constexpr int kMinWindowHeightPx = 480;
 //     ebony ground — stood 2026-10-05 to 2026-10-23; git history.)
 inline constexpr double kCaptionHeightAt300       = 40.0;
 inline constexpr double kCaptionIconXAt300        = 6.0;
-inline constexpr double kCaptionIconAt300         = 34.0;
-inline constexpr double kCaptionTitleXAt300       = 6.0 + 34.0 + 10.0;
-inline constexpr double kCaptionGlyphRAt300       = 7.0;
-inline constexpr double kCaptionGlyphStrokeAt300  = 2.0;
+inline constexpr double kCaptionIconInkAt300      = 21.0;
+inline constexpr double kCaptionTitleGapAt300     = 10.0;
+inline constexpr double kCaptionGlyphRAt300       = 6.0;
+inline constexpr double kCaptionGlyphStrokeAt300  = 2.3;
 inline constexpr double kCaptionButtonPitchAt300  = 30.0;
 inline constexpr double kCaptionButtonInsetAt300  = 8.0 + 13.0;
 inline constexpr uint32_t kCaptionGround      = 0x141415;
@@ -1195,8 +1205,9 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
 // re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
 // editor's line stands in the modal family's box, its text at the box's own
-// inset (modal_box.h's modal_box_text_inset_px, the field's two lines and
-// 5-W pad read as one 7-W number). THE TIME FIELDS were never this field:
+// inset (modal_box.h's modal_box_text_inset_px: the field's two lines and
+// 5-W pad read as one 7-W number until 2026-10-23, one device px and 1 W
+// since — THE RING IS THE ONLY MARGIN). THE TIME FIELDS were never this field:
 // row 8's clock and the render player's position and length are Cool Edit's
 // dark field, its height and its pad program_spec.h's own, the pad 5 W
 // since 2026-10-10, equal to this field's then.)
@@ -1311,11 +1322,10 @@ inline int icon_case_h_px() {
 // pick), the live value pushed at launch and at the settings editor's OK
 // (GuiInputHandler::apply_strip_pad) — the band's and row 8's air above and
 // below the case, one number for both strips: 39 device px at 300 % and the
-// pad's 13, 18 at 138 %. FLOORED AT ONE DEVICE PX, the focus frame's line
-// (relief_line_px): the key's 1-W floor (is_strip_pad, device_config.h,
-// where the reason stands) keeps a modal button's focus frame inside its
-// controls row, and this floor keeps it there at a scale that would round
-// one W to nothing.
+// pad's 13, 18 at 138 %. FLOORED AT ONE DEVICE PX: the key's 1-W floor
+// (is_strip_pad, device_config.h, where the reason stands — the legends'
+// row since 2026-10-23, the retired focus frame's room before), and this
+// floor keeps a row there at a scale that would round one W to nothing.
 void set_strip_pad_w(int w);
 int  strip_pad_w();
 inline int strip_pad_px() {
@@ -1393,12 +1403,17 @@ inline int program_run_gap_px() {
 // scrub fits"; the record above is the Windows thumb it replaced): THE
 // CHANNEL a ONE-DEVICE-PX light line over a one-device-px dark line, the
 // two ring tones, across the scrub's span (kScrubChannelLines hairlines);
-// THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx x kScrubThumbHeightPx W
-// (the mock's 10 x 25 device px at 300 % taken to the W grid), painted by
-// the key painter with no LED and no legend, centred on the channel.
+// THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx x kScrubThumbHeightPx W,
+// 8 x 16 since 2026-10-23 (architect, on the installed player: "too tiny.
+// The trough is okay at 1 pixel, but the thumb itself should be larger"; his
+// pick, row 2 of tmp/theme_next/pivot1/out/zz_thumb_sheet_12.png off 4 x 8 /
+// 8 x 16 / 12 x 20 / 15 x 23 — the frame of record's 4 x 8 until then),
+// painted by the key painter with no LED and no legend, centred on the
+// channel; ITS HIT ZONE ITS PAINTED RECT (render_player_scrub_handle_hit:
+// on screen is as painted).
 inline constexpr int    kScrubChannelLines  = 2;
-inline constexpr double kScrubThumbWidthPx  = 4.0;
-inline constexpr double kScrubThumbHeightPx = 8.0;
+inline constexpr double kScrubThumbWidthPx  = 8.0;
+inline constexpr double kScrubThumbHeightPx = 16.0;
 // The thumb's width floors at three device px (its outline and one column
 // of face), its height at five.
 inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
@@ -1406,15 +1421,16 @@ inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
 // at rest, no LED.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 //
-// THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: the chrome spec's
+// THE HANDLE'S BOX IS THE MAPPING'S INSET: the chrome spec's
 // scrub_handle_box_px (chrome_spec.h, where its source stands: 14 Windows px
 // under win2000, the painted thumb's 11 widened to it), and this accessor
 // the ONE owner of
 // that length for its readers — the MAPPING insets the track by half of it at
 // each end (the thumb's centre is the frame's position;
-// render_player_scrub_x_of, app_state.h) and the press router takes it as THE
-// THUMB'S GRAB BAND. Floored at 2 so the half-box inset is never zero and the
-// band never degenerates.
+// render_player_scrub_x_of, app_state.h), so the 8-W thumb never hangs off
+// the channel. THE GRAB BAND IS THE PAINTED THUMB since 2026-10-23
+// (render_player_scrub_handle_hit; this box was the band until then).
+// Floored at 2 so the half-box inset is never zero.
 inline int scrub_handle_box_px() {
     return scaled_px(live_chrome_spec().scrub_handle_box_px, 2);
 }
@@ -2216,10 +2232,10 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 //   BDR_SUNKENOUTER — went 2026-10-21 with its two wearers, the open menu
 //   title and the program's frame's ring.)
 //   paint_relief_line_frame — one colour all round, square (no mitre
-//                         between one tone and itself): the dialog's
-//                         default-button frame and the list's focus frame
-//                         (the popup scroll bar's pressed arrow button until
-//                         2026-10-14).
+//                         between one tone and itself); no caller since the
+//                         dialog's default-button frame and the list's
+//                         focus frame retired (2026-10-23; the popup scroll
+//                         bar's pressed arrow button until 2026-10-14).
 //   (The CARD FRAME — the tooltip's and the cards' — is the hi-fi skin's
 //   one-device-px sunken ring in the ring tones since 2026-10-23, at
 //   paint_popup_chrome.)

@@ -397,14 +397,11 @@ inline constexpr const char* kLedGlowGrammarReason =
 // THE STRIP PAD'S RANGE — the one owner, the reader's and the settings
 // editor's (the scale's shape): an integer in Windows px, [1, 40] — 40 well
 // past the mocks' 15 (a tuning range, the head's list). THE FLOOR IS ONE W
-// (2026-10-22): a modal controls row's focused button wears a focus frame
-// one program line OUTSIDE its case (paint_modal_dialog's button walk,
-// kModalFocusFramePx), and that line must stand INSIDE the strip — the
-// controls row is the rect the player and the picker publish and a focus
-// move damages (ModalDialogGeometry::box), so at a pad of 0 the frame's top
-// line would paint on the box's ring outside it and go stale. A pad of at
-// least one line (strip_pad_px floors at one device px) holds the frame
-// inside the row by construction, at either end of a lifted row too.
+// (2026-10-22). Its first reason — the modal buttons' focus frame one line
+// outside the case, which had to stand inside the strip — went with the
+// frame (architect 2026-10-23, paint_modal_dialog's button walk); it stands
+// because the keys' legends are printed in the strip's bottom pad
+// (key_legend_seat, paint_handler.cpp), which a pad of 0 would leave no row.
 inline constexpr bool is_strip_pad(int64_t v) {
     return v >= 1 && v <= 40;
 }

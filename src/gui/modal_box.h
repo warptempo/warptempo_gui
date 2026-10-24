@@ -45,10 +45,12 @@
 // a prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the main window's ring: the box IS the ring's rect. At the
-// tablet's 2304 x 1440, 300 % and the strip pad's 13 W: the ring's top row
+// tablet's 2304 x 1440, 300 % and the strip pad's 13 W: the ring's top slot
 // 201–203 (the view bar's, directly under the band's rows 54–200), its
-// bottom row 1290–1292, its columns 21–23 and 2280–2282, the interior x
-// 24..2279 and y 204..1289 (the main canvas's own rows 315–1289); the
+// bottom slot 1290–1292, its column slots 21–23 and 2280–2282, the
+// one-device-px ring on the slots' outer edges (rows 201 and 1292, columns
+// 21 and 2282), the interior x 22..2281 and y 202..1291 (THE RING IS THE
+// ONLY MARGIN, below; the main canvas's own rows 315–1289); the
 // controls row 1293–1439, its case rows 1332–1400, its first case's columns
 // 21–89 and its last 2214–2282.
 //
@@ -71,7 +73,7 @@
 // starts on 1051), where the dock bar's border under the row made it 15 +
 // 18 + 14 = 47 until then. THE ROWS: the keyboard's band 1037–1439 (its
 // first key row's top 1051), the controls row 890–1036 (its case rows
-// 929–997), the ring's bottom row 887–889, the interior y 204..886.
+// 929–997), the ring's bottom slot 887–889, the interior y 202..888.
 //
 // THE INTERIOR'S GROUND SAYS WHAT THE SURFACE IS (ModalBoxGround): THE FIELD
 // GROUND, the list's dark field pair, where you pick or type — the render
@@ -145,14 +147,34 @@ inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
     return box;
 }
 
-// THE BOX'S INTERIOR: inside the ring, one program line in on each side —
-// the member's ground (ModalBoxGround) and the rect its content clips to.
+// THE RING IS THE ONLY MARGIN (architect 2026-10-23, on the installed
+// player: "the amount of spacing there is between the selection, the left
+// edge, top edge, and the frame itself … at most one device pixel, since the
+// bevel is one pixel. It looks like there's too much space around the
+// selection row"; and "if you're going to remove padding from the player,
+// then remove a similar amount of padding from the modal text editor, like
+// the settings editor"). THE INTERIOR is the box inside its ONE-DEVICE-PX
+// ring (hairline_px, the line the painter draws on the slot's outer edge —
+// the slot's other rows the field like the interior), and every member's
+// content stands ONE DEVICE PX OF AIR inside that (modal_box_content_pad_px):
+// the lists' rows on the left, the top and the right, so the lit row's bar
+// reaches to one px from the ring's columns and the first row stands one px
+// under its top row; a dialog's text box — a prompt's question, a dialog
+// editor's line — on the left and the top, its pen one W further in, the
+// pad a text field needs (modal_box_text_inset_px). (The interior one
+// program line in, its 3-px slot at 300 %, with the list's 1-W pad and the
+// text's 7-W inset inside it — 6 px of air round the lit row, 24 before the
+// text — stood 2026-10-14 to 2026-10-23.)
 inline GuiRect modal_box_interior_rect(const AppState& a, int keyboard_h) {
     const GuiRect box = modal_box_rect(a, keyboard_h);
-    const int     lw  = program_line_px();
+    const int     lw  = hairline_px();
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return GuiRect{box.x + lw, box.y + lw, box.w - 2 * lw, box.h - 2 * lw};
 }
+// THE CONTENT'S AIR inside the interior (THE RING IS THE ONLY MARGIN,
+// above): one device px at every scale, never scaled — it is measured
+// against the one-px ring.
+inline int modal_box_content_pad_px() { return 1; }
 
 // THE PANEL: everything the modal takes ABOVE the controls row — the box
 // and the ground margins beside it — across the lane, from
@@ -180,16 +202,17 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 }
 
 // THE TEXT INSIDE THE BOX (architect 2026-10-14, the prompts' question and
-// the dialog editors' line; mock_modal_settings_osk_v2.png's x 45 at 300 %):
-// its pen 7 W in from the interior's left (and its wrap the same 7 W short
-// of the interior's right) — Windows' edit-control inset, the sunken edge's
-// two lines and the retired dialog field's 5-W pad, the inset the settings
-// choice combo's text took until its removal the same day — on
+// the dialog editors' line; THE RING IS THE ONLY MARGIN since 2026-10-23,
+// above): its text box the content's one px of air in from the interior's
+// left, its pen kModalBoxTextPadPx = 1 W further in — the pad a text field
+// needs — and its wrap the same inset short of the interior's right; on
 // THE LIST'S ROWS: the first row the folder overlay's first row
-// (folder_overlay.h's row box, 17 W at its 1-W pad under the ring), each
-// further row one row pitch (the row and its 1-W gap) below, the cap centred
-// on each row's band (redesign_baseline).
-inline constexpr double kModalBoxTextInsetPx = 7.0;
+// (folder_overlay.h's row box, 17 W at the content's one px under the
+// ring), each further row one row pitch (the row and its 1-W gap) below, the
+// cap centred on each row's band (redesign_baseline). (The 7-W inset of
+// 2026-10-14 — Windows' edit-control inset, mock_modal_settings_osk_v2.png's
+// x 45 at 300 % — retired 2026-10-23.)
+inline constexpr double kModalBoxTextPadPx = 1.0;
 inline int modal_box_text_inset_px() {
-    return scaled_px(kModalBoxTextInsetPx);
+    return modal_box_content_pad_px() + scaled_px(kModalBoxTextPadPx, 1);
 }

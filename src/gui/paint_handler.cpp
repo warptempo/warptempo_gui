@@ -327,7 +327,8 @@ struct ButtonBoxFace {
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE HI-FI SKIN'S BLANK KEY
 // (architect 2026-10-23; paint_key, cool_edit_paint.h, where its states
-// stand). A PRESSED button (a live press) is the key down; a CHECKED one (the
+// stand). A PRESSED button (a live press) is the key down with its LED lit
+// for as long as the press stands (2026-10-23); a CHECKED one (the
 // roster's `selected`, `lamp`) its LED lit; a DISABLED button keeps the face
 // its state gives, a dead checked button still reading checked (the
 // roster's rule at paint_icon_row), its legend dimmed by the caller. NO HOT
@@ -1228,27 +1229,30 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     paint_cell_rect(cr, row, hex(kCaptionGround));
     const GuiColor ink = hex(active ? kBoneInk : kCaptionInkInactive);
 
-    // THE ICON: the quaver (paint_quaver, the one seat a picked outline will
-    // replace) in its cell at kCaptionIconXAt300, the cell the lane's height.
-    const double icon_s = static_cast<double>(skin_px(kCaptionIconAt300, 1));
-    paint_quaver(cr, static_cast<double>(row.x + skin_px(kCaptionIconXAt300)),
-                 static_cast<double>(row.y) +
-                     (static_cast<double>(row.h) - icon_s * 40.0 / 34.0) * 0.5,
-                 icon_s, ink);
+    // THE ICON: the quaver, Quaver.svg through the icon road (render.h's
+    // caption block; icons.h's THE BOXED GLYPHS): its box icon_box_px of the
+    // 21-px ink, the box's rows centered on the lane (rounded down), its left
+    // edge at kCaptionIconXAt300, in the file's own bone.
+    const int icon_x = row.x + skin_px(kCaptionIconXAt300);
+    const int icon_h = icons::icon_box_px(kCaptionIconInkAt300);
+    const int icon_w = icons::icon_box_w_px(icon_h);
+    icons::draw_boxed(cr, icons::Icon::Quaver, icon_x,
+                      row.y + (row.h - icon_h) / 2, icon_h);
 
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
     // piece is open. THE BOLD FACE (gui_font.h: Liberation Sans Bold at the
     // title size) through the shaping chokepoint, its cap band centred in the
-    // lane, the pen at kCaptionTitleXAt300, the bone (the dulled ink while
-    // the window is inactive), no shadow. THE ROOM runs to Minimise's cell:
+    // lane, the pen kCaptionTitleGapAt300 past the icon's box, the bone (the
+    // dulled ink while the window is inactive), no shadow. THE ROOM runs to
+    // Minimise's cell:
     // TOO LONG FOR IT the title is CUT AT A CODEPOINT and ends in "...", the
     // longest prefix whose own run and the ellipsis's fit; a room too narrow
     // for even the ellipsis paints no title.
     const GuiFont font = gui_font(GuiFace::Bold);
     const std::string title = caption_title(app);
-    const int title_x = row.x + skin_px(kCaptionTitleXAt300);
+    const int title_x = icon_x + icon_w + skin_px(kCaptionTitleGapAt300);
     const double room = static_cast<double>(
         rects[static_cast<size_t>(GuiCaptionButton::Minimize)].x - title_x);
     const double baseline = redesign_baseline(
@@ -3122,19 +3126,11 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // palette block) —
 // square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome's Info face, the tooltip's own);
-// a row of the icon row's own height, holding — left to right, EVERY
-// DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
-// declaration: the box's own vertical margin, read for all five) — a square
-// box the toolbar case's height with the CLASS GLYPH centred at the box's
-// own inset (CardNormal for a normal card, the balloon with its blue
-// i, CardCritical for a critical one, the red disc with its white X — each
-// in its drawing's own colours, nothing coloured here), that pad, THE
-// SENTENCE
-// of the one sans in the info text, and that pad PLUS THE GLYPH'S INSET to
-// the right edge (architect 2026-10-01: the air the eye sees left of the
-// text, from the glyph's ink, repeated after it — the ruling at
-// notification_pad_px) — the box sitting that same pad below the card's top
-// and above its foot.
+// a row of the icon row's own height holding THE SENTENCE alone, one pad
+// (notification_pad_px) in from each side — NO CLASS GLYPH since 2026-10-23
+// (architect: "they show the old card insignia, the 18th century stamp";
+// the layout block in the body; the glyph's square box before the text and
+// its inset repeated after it, 2026-08-30 to 2026-10-23, git history).
 // (A window-close X stood in a second button box at the right from
 // 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
 // when the whole card became the button — "whole card dismisses, X gone" —
@@ -3186,34 +3182,22 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kNotificationGapPx, 1);
-    // THE CARD'S GLYPH BOX IS ITS OWN, SQUARE, its glyph Windows' small 16
-    // px (notifications.h's kNotificationGlyph*: the small toolbar case's
-    // height, decoupled from the live case 2026-10-06; the 32-laptop-px
-    // square before 2026-10-02).
-    const int btn      = notification_glyph_box_px();
-    const int glyph_px = notification_glyph_px();
-    // THE GLYPH INSET IS THE ROUNDED LEAD: the box is the lead, the glyph
-    // and the lead, each rounded at the element (notification_glyph_box_px),
-    // so `btn - glyph_px` is twice the lead and always even — 18 at the
-    // tablet's 300 %, 8 at the laptop's 138 % — and this division is exact.
-    const int inset    = (btn - glyph_px) / 2;
-    // ONE NUMBER FOR ALL FIVE DISTANCES (architect 2026-08-30): the box's
-    // vertical margin is the card's every pad, so the horizontal placement
-    // cannot disagree with the vertical centering it is taken from — the
-    // text's right air adding the inset above (2026-10-01, below).
+    // ONE NUMBER FOR EVERY DISTANCE (architect 2026-08-30): the card's
+    // vertical margin round its glyph box is the card's every pad.
     const int pad      = notification_pad_px();
     const int right_x  = room.x + room.w;
-    // The chrome every card carries besides its text: THREE PADS, THE
-    // GLYPH'S INSET AND ONE BOX (2026-10-01) — the glyph's box with a pad on
-    // each side of it (the left edge's and the one between it and the text),
-    // and at the text's right, the card's right edge, one pad PLUS THE INSET.
-    // THE INSET IS THE TEXT'S RIGHT AIR MATCHING ITS LEFT AS THE EYE SEES IT
-    // (architect 2026-10-01, the ruling at notification_pad_px): the box is
-    // invisible and its glyph's ink stands `inset` inside it, so the text's
-    // left air reads as pad + inset, and the right pad repeats that. (The X's
-    // box and its pad left the sum the same day, with the X.)
-    const int right_pad = pad + inset;
-    const int chrome_w  = 2 * pad + btn + right_pad;
+    // THE CARD CARRIES NO GLYPH (architect 2026-10-23, on the installed
+    // skin: "they show the old card insignia, the 18th century stamp"): the
+    // class glyphs (CardNormal, CardCritical — their enumerators and files
+    // stay) are not drawn and their box leaves the row, so the chrome every
+    // card carries besides its text is TWO PADS, the text one pad in from
+    // the card's left edge and one pad short of its right. The card's height
+    // is still the one-line card's (notification_card_h_px, its glyph box's
+    // rows), every line on it as before. (The glyph's square box, a pad each
+    // side of it and the glyph's inset repeated at the text's right,
+    // 2026-08-30 to 2026-10-23, are git history.)
+    const int right_pad = pad;
+    const int chrome_w  = 2 * pad;
     // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
     // clips the publication too, or the hit would claim a press on pixels
     // the bottom row owns. An empty answer is hit by nothing (rect_contains).
@@ -3230,7 +3214,6 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     struct LaidCard {
         const AppState::Notification*        n = nullptr;
         GuiRect                              card{0, 0, 0, 0};
-        int                                  glyph_x   = 0;
         int                                  text_x    = 0;
         int                                  text_room = 0;
         std::vector<text_shape::ShapedRun>   lines;
@@ -3249,7 +3232,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const AppState::Notification& n = st.cards[i];
         // THE WIDTH IS THE WHOLE SENTENCE'S, clamped — the rule the wrap did
         // not change — and the ROOM the wrap breaks against is what that
-        // width leaves between the glyph's box and the right pad.
+        // width leaves between the two pads.
         //
         // IT CEILS (architect 2026-08-31): a box that must CONTAIN a run is
         // not a point on a grid, so banker's rounding is the wrong class for
@@ -3268,19 +3251,17 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // std::max keeps the clamp's own precondition stated at the call.
         w = std::clamp(w, min_w, std::max(min_w, max_w));
         const int card_x    = right_x - w;
-        const int glyph_x   = card_x + pad;
-        const int text_x    = glyph_x + btn + pad;
+        const int text_x    = card_x + pad;
         const int text_room = card_x + w - right_pad - text_x;
         std::vector<text_shape::ShapedRun> lines =
             notification_text_lines(font, n.text, whole,
                                     static_cast<double>(text_room));
         // THE CARD GROWS DOWNWARD BY WHOLE LINES; its first line is a
-        // one-line card and the glyph's box and the first baseline sit in it.
+        // one-line card and the first baseline sits in it.
         const GuiRect card{
             card_x, y, w,
             line1_h + (static_cast<int>(lines.size()) - 1) * line_h};
-        laid.push_back(LaidCard{&n, card, glyph_x, text_x, text_room,
-                                std::move(lines)});
+        laid.push_back(LaidCard{&n, card, text_x, text_room, std::move(lines)});
         y += card.h + gap;
     }
 
@@ -3290,21 +3271,11 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     for (const LaidCard& c : laid) {
         const AppState::Notification& n = *c.n;
         const GuiRect& card = c.card;
-        const int glyph_x   = c.glyph_x;
         const int text_x    = c.text_x;
         const int text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
+        // The box alone, no class glyph (the layout block above).
         paint_popup_chrome(cr, card);
-
-        const int box_y = card.y + pad;
-        // The card's class glyph, no case, at the card's own placement.
-        icons::draw(cr,
-                    n.cls == AppState::NotificationClass::Critical
-                        ? icons::Icon::CardCritical
-                        : icons::Icon::CardNormal,
-                    static_cast<double>(glyph_x + inset),
-                    static_cast<double>(box_y + inset),
-                    static_cast<double>(glyph_px));
 
         if (text_room > 0) {
             cairo_save(cr);
@@ -5093,9 +5064,6 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //                          (Save ends x=504, Do Not Save begins x=513;
 //                          identically 619..626): 8 device px at 138 %
 //                          (6 · 1.38 = 8.28 → 8), 18 at 300 %.
-//   kModalFocusFramePx 1 W — the keyboard focus frame, painted for the
-//                          focused button in the gap or the face beside it
-//                          (the rule is at the constant).
 // The text in the box stands at the box's own inset (modal_box.h's
 // modal_box_text_inset_px) on the list's rows (folder_overlay.h's row box).
 // (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
@@ -5162,23 +5130,10 @@ constexpr double kModalButtonGapPx    = 6.0;
 // player's nine are row 8's case, the program's (architect 2026-10-05,
 // bottom_row_seats; render.h's program block).
 constexpr double kModalBtnMinWidthPx  = 75.0;
-// THE FOCUS FRAME'S WIDTH — the keyboard-focused button's frame, ONE
-// DkShadow line OUTSIDE its raised box (architect 2026-10-02, the planner's
-// reading of the Windows default-button frame; the face at the button walk
-// below). PAINTED FOR ONE AND MOVING NOTHING: between two buttons the
-// row's 6-W gap absorbs it, and at the row's ends — every owner's cluster
-// flush with the box's ring since 2026-10-14 (modal_controls_seats; the
-// render player's right pair since 2026-10-05) — it paints on the ground
-// beyond the ring's outer edge, so the buttons never move. One relief line
-// (relief_line_px). VERTICALLY IT STANDS INSIDE THE CONTROLS ROW BY
-// CONSTRUCTION (2026-10-22): the row is the strip, pad + case + pad
-// (render.h's strip_h_px), the cases and the word buttons on the case's rows
-// (23 W on 23 W), and the pad's floor of one W (is_strip_pad,
-// device_config.h; strip_pad_px floored at one device px) is the frame's
-// room above and below — the row being the rect the player and the picker
-// publish and a focus move damages, the frame never lands on the box's ring
-// outside it.
-constexpr double kModalFocusFramePx   = 1.0;
+// (THE FOCUS FRAME — kModalFocusFramePx, one relief line outside the
+// keyboard-focused button, Windows' default-button frame, 2026-10-02 to
+// 2026-10-23 — is not painted, architect 2026-10-23: the button walk's NO
+// FOCUS FRAME.)
 // THE PLAYER ROW'S GROUP SPACE — between its items (transport → scrub,
 // scrub → clock, clock → the lamp): 8 Windows px, the roster's group gap it
 // stood at from 2026-10-02 until the roster's groups became Cool Edit's
@@ -5560,10 +5515,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // EVERY OWNER'S BUTTON IS THE KEY since 2026-10-23 (the word buttons
     // square keys, modal_word_buttons), so one band for all.
     const int btn_h = seats.case_h;
-    // The focus frame's width (kModalFocusFramePx, above): painted in the gap
-    // or beside the ring, never reserved, so the frame can never push the row
-    // around when the focus moves. One relief line.
-    const int ring = scaled_px(kModalFocusFramePx, 1);
 
     // -- The buttons' words and widths, shaped up front (the layout needs the
     //    row's total before anything can be placed). --
@@ -5913,10 +5864,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // than the row, the cluster starts at the row's left seat and runs past
     // the right one (modal_word_buttons).
     //
-    // THE FOCUS FRAME RESERVES NOTHING: between neighbours the 6-W gap
-    // absorbs it (kModalFocusFramePx) and at the row's ends it paints in the
-    // face beyond the ring's outer edge, so the focus can move anywhere on
-    // the row without reflowing it.
     const int cx1 = seats.right_x;                      // one past the row's right seat
     // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
     // family's controls row): the push button on the rows the player's cases
@@ -5926,10 +5873,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int btn_y = seats.case_y;
 
     // THE TEXT IN THE BOX — a prompt's question, an editor's line — stands on
-    // the list's rows (folder_overlay.h's row box: the first row its pad under
-    // the ring, each further row one row pitch below) at the box's text inset
-    // from the interior's left (modal_box_text_inset_px, the same inset short
-    // of its right), the cap centred on each row's band.
+    // the list's rows (folder_overlay.h's row box: the first row one device
+    // px under the ring, each further row one row pitch below) at the box's
+    // text inset from the interior's left (modal_box_text_inset_px — THE RING
+    // IS THE ONLY MARGIN, modal_box.h — the same inset short of its right),
+    // the cap centred on each row's band.
     const GuiRect interior   = boxed ? modal_box_interior_rect(app, kb_h)
                                      : GuiRect{0, 0, 0, 0};
     const int     text_inset = modal_box_text_inset_px();
@@ -5937,7 +5885,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int     text_w     = std::max(0, interior.w - 2 * text_inset);
     const int     row_h      = folder_overlay::button_row_height_px();
     const int     row_pitch  = row_h + folder_overlay::button_row_gap_px();
-    const int     row0_y     = interior.y + folder_overlay::pad_px();
+    const int     row0_y     = interior.y + folder_overlay::row_inset_px();
     // ONE LINE ON THE BOX'S FIRST ROW, in the chrome's text on the face —
     // a prompt's question and the progress modal's sentence alike — CLIPPED
     // at the text inset short of the interior's right edge: a line longer
@@ -6427,19 +6375,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (Repeat One, `lit`); DOWN for a LIVE PRESS — armed with the pointer
         // inside it, or armed from the keyboard — nothing shifted. (Windows'
         // push button 2026-10-02 to 2026-10-22, the ebony case 2026-10-22 to
-        // 2026-10-23.) THE FOCUS IS
-        // THE WINDOWS DEFAULT-BUTTON FRAME: one line (the ring's light) round the
-        // OUTSIDE of the box, in the reserved band (kModalFocusFramePx), worn
-        // by the ACTIVELY focused button and by the PASSIVELY focused one —
-        // Enter's target while a field has the keyboard — alike (the planner's
-        // reading of the Windows grammar, 2026-10-02, which the architect has
-        // not yet seen on the glass). The two focus strengths stay in the
-        // state (AppState::modal_dialog_focus_active), where the keyboard's
-        // walk reads them; the picture no longer tells them apart. A PRESSED
-        // BUTTON THAT HOLDS THE FOCUS — every pointer press since 2026-10-03
-        // (arm_modal_dialog_press) — wears both, the frame in the band
-        // outside and the pressed face inside, as Windows draws a focused
-        // pressed button: the two compose with no case of their own. NO
+        // 2026-10-23.) THE FOCUS IS NOT PAINTED (below): the two focus
+        // strengths stay in the state (AppState::modal_dialog_focus_active),
+        // where the keyboard's walk reads them. NO
         // HOVER FACE but on the player's row (below): the pointer walk
         // (update_modal_dialog_hover) drives the tooltip and that row's hot
         // button.
@@ -6448,31 +6386,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // face through the one painter, paint_roster_case — the rest face,
         // Cool Edit's down face pressed (the glyph one line right and down)
         // and for Repeat One's lamp, NO HOT FACE (program_spec.h's
-        // case_hot_face) — and no separators. The focus frame stays the
-        // keyboard's cue round the outside.
+        // case_hot_face) — and no separators.
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
         // their dialog stands and publish enabled=true, and the player's are
         // all glyph buttons: the glyph's disabled face (icons::draw_disabled,
         // Cool Edit's emboss), the case the face its state gives, the
         // roster's rule (architect 2026-10-02 and 2026-10-09). The press face is gated on
-        // the bit rather than trusted — a button can go dead UNDER a hold —
-        // while the focus frame is not: a stale focus must stay visible where
-        // the keyboard is.
+        // the bit rather than trusted — a button can go dead UNDER a hold.
         const bool enabled = plan[i].enabled;
         const bool armed   = enabled &&
                              static_cast<int>(i) == app.modal_dialog_pressed;
         const bool pressed = enabled &&
             ((armed && app.modal_dialog_press_inside) ||
              static_cast<int>(i) == app.modal_dialog_key_pressed);
-        const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
-        // THE FOCUS FRAME in the ring's light tone (2026-10-23: the
-        // DkShadow black of Windows' frame vanishes on the dark ground).
-        if (focused)
-            paint_relief_line_frame(
-                cr, GuiRect{r.x - ring, r.y - ring, r.w + 2 * ring,
-                            r.h + 2 * ring},
-                palette().hilight);
+        // NO FOCUS FRAME (architect 2026-10-23: "when I open up the settings
+        // and I press cancel, it gets that square drawn around it. Let's get
+        // rid of that"): the focused button — Enter's target, the
+        // Windows-strict tables unchanged (AppState::modal_dialog_focus) —
+        // wears nothing; the key's pressed face and its LED are the only
+        // signs. The default-button frame's one relief line in the ring's
+        // light tone, 2026-10-02 to 2026-10-23, read as a bevel on the flat
+        // ground.
         // THE KEY (2026-10-23, paint_roster_case), flat, its LED lit for the
         // row's one checked button; THE LEGEND UNDER IT (paint_key_legend's
         // one seat): a glyph button's the player's own legend
@@ -6540,9 +6475,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // panel, the box and the ground margins beside it, and the controls row
     // under it, lifted onto the keyboard's band when the keyboard stands),
     // and the player's and the picker's the controls row
-    // (modal_controls_row_rect, the strip: pad + case + pad, the focus frame
-    // inside it by the pad's 1-W floor, kModalFocusFramePx; the list above it
-    // is the folder overlay's own rect) — because that is the rectangle the
+    // (modal_controls_row_rect, the strip: pad + case + pad, the legends in
+    // its bottom pad; the list above it is the folder overlay's own rect) — because that is the rectangle the
     // modal owns and the rectangle its damage must erase.
     // THE SESSION IS STAMPED HERE, one write for both branches at the moment
     // the geometry becomes readable: it is the id of the surface these rects
@@ -6828,25 +6762,26 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //   PRESSED               -> the highlight's own face: a row press is an arm
 //                            whose act is the lift, and the highlight is what
 //                            it promises
-// NO HOVER FACE (architect 2026-10-02). THE RING'S FOCUS ON THE LIST
-// (`list_focused`) is the dialog's focus frame round the highlighted row — one
-// DkShadow line outside it, the frame a focused dialog button wears (the
-// planner's reading of the Windows grammar, 2026-10-02, judged on the glass).
+// NO HOVER FACE (architect 2026-10-02) AND NO FOCUS FRAME (architect
+// 2026-10-23): THE RING'S FOCUS ON THE LIST (`list_focused`) is the keyboard's
+// state alone, the lit row the only sign (the walk below).
 //
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
 // list's keyboard focus — what Enter and Load in place act on, and nothing
 // else: Space and the Play button answer the TRANSPORT and never read the
 // highlight)
-// and the TRANSPORT'S ITEM, whose wav glyph is swapped for the roster's
-// Play (the one-button-two-faces precedent) whether the item is
-// live or paused.
+// and the TRANSPORT'S ITEM, which its row does not mark (architect
+// 2026-10-23; the wav glyph swapped for Play until then).
 //
 // STATE-AXIS: the face is decided ONCE per row from the highlight, the press
 // arm and the ring, and the glyph from the row's kind and the
 // item's path; there is no second list of what a row looks like anywhere.
-// THE LIST ROWS' QUAVER (architect 2026-10-23, pv_41): its size, device px
-// at 300 % (skin_px).
-static constexpr double kListQuaverAt300 = 22.0;
+// THE LIST ROWS' BOXED GLYPH AND NAME (architect 2026-10-23; the walk's
+// glyph block below): the glyph's ink height, its box's x and the name's x
+// past the modal box's outer left edge, device px at 300 % (skin_px).
+static constexpr double kListGlyphInkAt300 = 27.0;
+static constexpr double kListGlyphXAt300   = 18.0;
+static constexpr double kListNameXAt300    = 64.0;
 
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
     if (!folder_overlay::stands(app)) return;
@@ -6911,36 +6846,44 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // is neither takes NO FILL and the band's field shows through it.
             const bool lit = pressed || highlighted;
             if (lit) paint_cell_rect(cr, r, pal.selected_fill);
-            // THE LIST'S FOCUS: the focus frame one line outside the
-            // highlighted row while the modal ring stands on the list (the
-            // block above); the rows' one-Windows-px gap and pad hold it.
-            if (highlighted && ov.list_focused) {
-                const int fl = relief_line_px();
-                paint_relief_line_frame(
-                    cr, GuiRect{r.x - fl, r.y - fl, r.w + 2 * fl, r.h + 2 * fl},
-                    palette().hilight);
-            }
+            // NO FOCUS FRAME (architect 2026-10-23: "a highlight around the
+            // button, which is more of a usability thing for the laptop, but
+            // the laptop is deprecated as an authoring surface"): the lit row
+            // is the list's one sign, focused or not — `list_focused` still
+            // steers the keyboard's walk. The frame's one relief line in the
+            // ring's light tone round the highlighted row, 2026-10-02 to
+            // 2026-10-23, read as a bevel on the flat field.
 
-            // THE QUAVER BEFORE EVERY NAME (architect 2026-10-23, pv_41;
-            // paint_quaver, the one seat a picked outline will replace): at
-            // kListQuaverAt300 (22 px at 300 %, its cell 22 x 26) from the
-            // box's outer left edge plus 6 W, centred on the row, the name
-            // at 21 W — the mock's 18 and 64 device px at 300 % — in the
-            // bone. (The icon set's folder, wav and transport glyphs at
-            // Windows' small 16-px seat stood 2026-08-28 to 2026-10-23; the
-            // transport's item is no longer marked on its row — the clock
-            // and the scrub say which item plays.)
+            // THE ROW'S GLYPH (architect 2026-10-23: "use the logo in the
+            // render player, but then we need a folder icon as well … more
+            // squares to match the buttons"; "the same proportion as the
+            // caption"): BY THE ROW'S KIND through the icon road — WavRow
+            // (the quaver, Quaver.svg's link) on a wav row, FolderRow (the
+            // square with its tab) on a folder or project row — a BOXED
+            // GLYPH (icons.h's THE BOXED GLYPHS): its ink kListGlyphInkAt300
+            // = 27 px, .525 of the 51-px row, so its box icon_box_px(27) (40
+            // px at 300 %), the box's rows centered on the row (rounded
+            // down), its left edge kListGlyphXAt300 = 18 px past the box's
+            // outer left edge; the name at kListNameXAt300 = 64. THE PLAYING
+            // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
+            // renders row looks good now" — the clock and the scrub say
+            // which item plays). (The paint_quaver vector of the morning, and
+            // the icon set's glyphs at Windows' small 16-px seat 2026-08-28
+            // to 2026-10-23, Play swapped in on the item's row, are git
+            // history.)
             (void)glyph;
             (void)gap;
             (void)inset;
             (void)rp;
             const int x0 = modal_box_rect(app, 0).x;
-            const double qs = static_cast<double>(skin_px(kListQuaverAt300, 1));
-            paint_quaver(cr, static_cast<double>(x0 + scaled_px(6)),
-                         static_cast<double>(r.y) +
-                             (static_cast<double>(r.h) - qs * 40.0 / 34.0) * 0.5,
-                         qs, hex(kBoneInk));
-            const int text_x = x0 + scaled_px(21);
+            const int gh = icons::icon_box_px(kListGlyphInkAt300);
+            icons::draw_boxed(cr,
+                              row.kind == AppState::FolderOverlayRow::Kind::Wav
+                                  ? icons::Icon::WavRow
+                                  : icons::Icon::FolderRow,
+                              x0 + skin_px(kListGlyphXAt300),
+                              r.y + (r.h - gh) / 2, gh);
+            const int text_x = x0 + skin_px(kListNameXAt300);
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
             // the field text on a resting row (architect 2026-10-06, the

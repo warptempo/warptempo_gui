@@ -114,8 +114,20 @@ GuiRect key_led_rect(const GuiRect& r);
 //   PRESSED  — a live press arm (the glass's or the mouse's) or a keyboard
 //              key's armed state: the face kKeyFacePressed and the top rows,
 //              the foot and the right column painted as that face (the key
-//              is down, no edge left standing), the outline and the LED
-//              unchanged, nothing shifted.
+//              is down, no edge left standing), the outline unchanged,
+//              nothing shifted — AND THE LED LIT whatever the checked state
+//              (architect 2026-10-23: "I would expect the little light to
+//              turn on when pressed"; "make the LEDs flash when pressed.
+//              Flash meaning turn on, as long as the button is held"): a
+//              key carrying a lamp (Unlit or Lit) is lit for as long as the
+//              press arm stands and returns to its state at the lift — the
+//              band's, row 8's, the render player's and the word buttons'
+//              keys alike, through paint_key (a lampless key, None — the
+//              scrub's thumb, the keyboard's keys — stays lampless). THE
+//              PRESSED-AND-LIT FACE IS THE BAKE'S: the lit patches hold
+//              every key size pressed and at rest (materials.cpp's
+//              rebuild_lit_patches), so a held key is still one blit, its
+//              glow included.
 //   CHECKED  — THE LED LIT, the key otherwise as its press state gives.
 //   DISABLED — the key as its state gives; the caller dims the legend
 //              (kDimInk).
@@ -127,19 +139,10 @@ GuiRect key_led_rect(const GuiRect& r);
 void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
 void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
 
-// -- THE QUAVER (architect 2026-10-23; his pick of an outline pending) --------
-
-// THE QUAVER — the caption's icon and the lists' row glyph — the one seat
-// a picked outline will replace: make_sheet2.vec_mock()'s geometry (option
-// 2, the antialiased vector of the mock), in a cell s x h at (x, y), s =
-// `size_px` and h = s · 40 / 34 (the caption's 34 x 40 cell; the lists' 22
-// x 26 the same proportion): the head an axis-aligned ellipse, rx .22 s and
-// ry .15 s, centred at (.35 s, .72 h); the stem 1.6 device px wide (butt
-// caps) from the head's centre-right rising .62 s; the flag one cubic from
-// the stem's top toward (stem + .22 s, top + .18 s) and on to (stem + .26 s,
-// top + .40 s), 1.6 px, round caps — `ink` its one color.
-void paint_quaver(cairo_t* cr, double x, double y, double size_px,
-                  GuiColor ink);
+// (THE QUAVER'S PAINTER — paint_quaver, make_sheet2.vec_mock()'s vector, the
+// caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
+// retired with his pick: the quaver is an icon, assets/icons/Quaver.svg,
+// icons.h's THE BOXED GLYPHS.)
 
 // -- THE TIME FIELD AND THE LABEL -------------------------------------------------
 

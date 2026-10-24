@@ -3638,7 +3638,7 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 
 // THE DIALOG BUTTONS' POINTER WALK, run on every motion under a standing
 // dialog. It answers three readers — the armed button's inside bit with the
-// feint (below), whose pressed face and focus frame are painted and damage
+// feint (below), whose pressed face is painted and damages
 // the stashed box; THE RENDER PLAYER'S HOT BUTTON (AppState::player_hot,
 // architect 2026-10-06; never lit since the player's cases became the
 // program's, 2026-10-09: Cool Edit's case has no hover face); and this
@@ -3654,8 +3654,8 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // was cancelled, so nothing has to be re-armed. THE FOCUS IS NOT THIS
 // WALK'S: the press already moved it onto the armed button (architect
 // 2026-10-03, Windows' rule; arm_modal_dialog_press), so leaving the button
-// leaves the focus where it is and the held-away face (the focus frame) is
-// the painter's own composition rather than a case (paint_modal_dialog). The
+// leaves the focus where it is and the held-away face is the key at rest
+// (the focus unpainted since 2026-10-23, paint_modal_dialog). The
 // whole rule and the pair's read-as-one-fact contract are at
 // AppState::modal_dialog_pressed.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
@@ -3814,10 +3814,9 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
         app.modal_dialog_focus_active = false;
         // AND THE LIST'S RING BIT GOES WITH IT (2026-08-29): on the two
         // list-bearing owners the ring's stops are [list, buttons…], and the
-        // press REPLACES whatever focus the dialog had. Without this the band
-        // kept its focus frame beside the button's new one, so the ring
-        // looked like it was in two places at once. Paint-only, but the frame
-        // is the ring's whole cue.
+        // press REPLACES whatever focus the dialog had, so the ring stands in
+        // one place (the bit also decides what a bare Enter means; the focus
+        // frames it once painted retired 2026-10-23).
         if (app.folder_overlay.list_focused) {
             app.folder_overlay.list_focused = false;
             viewport.invalidate_rect(folder_overlay::surface_rect(app));

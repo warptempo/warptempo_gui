@@ -77,41 +77,10 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, bool pressed,
 }
 
 void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led) {
+    // THE LED LIGHTS WHILE PRESSED (the declaration's PRESSED row).
+    if (pressed && led == GuiKeyLed::Unlit) led = GuiKeyLed::Lit;
     if (led == GuiKeyLed::Lit && materials::paint_lit_key(cr, r, pressed)) return;
     paint_key_plain(cr, r, pressed, led);
-}
-
-void paint_quaver(cairo_t* cr, double x, double y, double s, GuiColor ink) {
-    if (s <= 0.0) return;
-    const double h  = s * 40.0 / 34.0;
-    const double k  = s / 34.0;   // the mock's device-px nudges at its 34
-    const double hx = x + s * 0.35, hy = y + h * 0.72;
-    const double sx0 = hx + s * 0.20;
-    const double sx = sx0 - 0.3 * k;
-    const double top = hy - s * 0.62;
-    const double x1 = sx0 + s * 0.22, y1 = hy - s * 0.44;
-    const double x2 = sx0 + s * 0.26, y2 = hy - s * 0.22;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    set_palette_source(cr, ink);
-    cairo_save(cr);
-    cairo_translate(cr, hx, hy);
-    cairo_scale(cr, s * 0.22, s * 0.15);
-    cairo_new_path(cr);
-    cairo_arc(cr, 0.0, 0.0, 1.0, 0.0, 2.0 * 3.14159265358979323846);
-    cairo_restore(cr);
-    cairo_fill(cr);
-    cairo_set_line_width(cr, 1.6 * std::max(1.0, k));
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
-    cairo_move_to(cr, sx, hy);
-    cairo_line_to(cr, sx, top);
-    cairo_stroke(cr);
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-    cairo_move_to(cr, sx, top);
-    cairo_curve_to(cr, sx + (x1 - sx) * 0.9, top + (y1 - top) * 0.2, x1,
-                   y1 - 2.0 * k, x2, y2);
-    cairo_stroke(cr);
-    cairo_restore(cr);
 }
 
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,

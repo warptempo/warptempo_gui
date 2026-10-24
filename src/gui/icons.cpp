@@ -124,6 +124,13 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
     paint_raster(cr, faces_for(icon, px).live.get(), x, y);
 }
 
+void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h) {
+    if (box_h <= 0) return;
+    const double spare = box_h * (1.0 - kGlyphBoxW / kGlyphBoxH);
+    draw(cr, icon, static_cast<double>(box_x) - spare * 0.5,
+         static_cast<double>(box_y), static_cast<double>(box_h));
+}
+
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px) {
     const int px = static_cast<int>(std::nearbyint(size_px));

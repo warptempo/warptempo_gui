@@ -18,13 +18,16 @@ files"). EVERY `.png` HERE IS THE ARCHITECT'S OWN (below, "The architect's own f
 A DRAWING SEVERAL ACTS WEAR IS ONE FILE AND SYMLINKS (architect 2026-10-19: "repeats should use symlinks"), relative,
 inside this folder, the real file the act that owns the drawing:
 
-- `AppIcon.png` -> `Warp.png` (the caption's icon and the program icon outside the window: the Android launcher
+- `AppIcon.png` -> `Warp.png` (the program icon outside the window — the caption wears `Quaver.svg` since
+  2026-10-23: the Android launcher
   icon rendered from it at every APK build, `android/app/build_apk.sh`; the Linux icon a link to it,
   `docs/INSTALL.md`);
-- `BpmIterations.svg` -> `WavRow.svg` (`audio-x-generic`; the BPM Iterations button keeps the note, the program icon
-  until 2026-10-15);
+- `BpmIterations.svg` -> `WavRow.svg` (the BPM Iterations button keeps the note — the quaver since 2026-10-23,
+  `audio-x-generic` until then; no band key wears a glyph in the hi-fi skin);
+- `WavRow.svg` -> `Quaver.svg` (2026-10-23: the wav rows wear the caption's quaver, architect "use the logo in the
+  render player");
 - `CardCritical.svg` -> `Cancel.svg` (`process-stop`);
-- `UpAFolder.svg` -> `FolderRow.svg` (`folder`; Up a Folder wears the folder row's drawing, architect 2026-10-10);
+- `UpAFolder.svg` -> `FolderRow.svg` (the folder; Up a Folder wears the folder row's drawing, architect 2026-10-10);
 - `TransportPlay.svg` -> `Play.svg` (`media-playback-start`; the editor's Play / Stop toggle on row 8 is its own pair
   since 2026-10-20, so a drop for it leaves the render player's Play standing; its stop face, `TransportStop.svg`,
   owns `media-playback-stop` outright, the render player wearing no stop).
@@ -91,6 +94,21 @@ redo at the set's outline weight, his pick B1 — shipped then as cut at 2048 x 
 ImageMagick's Lanczos filter 2026-10-19, when the exception became the drop road. The set's earlier own files — the
 architect's digital metronome, 2026-10-16 to 2026-10-17, and the speedometer, the evening of 2026-10-17, both drawn with
 Gemini — and the baton's first cutout, the morning of 2026-10-18, retired (git history).
+
+## The project's own SVGs
+
+Two SVGs here are no extraction (architect 2026-10-23, the hi-fi skin), the project's own and licensed under the GNU
+LGPL v3 like the set, each one filled path in the bone F0F0F0 on a 34 x 40-unit viewBox, its ink on rows 7..34 and its
+root tag `data-body-shift="0 0"` — BOXED GLYPHS, placed by their box and never centered on their ink
+(`src/gui/icons.h`, THE BOXED GLYPHS):
+
+| File | Drawing | Wearers |
+|---|---|---|
+| `Quaver.svg` | the quaver: Gemini Argon's one-path conversion of the planner's bitmap at the architect's prompt (his pick, row 4 of the caption sheet) | the caption's icon; the wav rows (`WavRow.svg`'s link) |
+| `FolderRow.svg` | the planner's folder, `M 4 10 H 15 V 14 H 30 V 34 H 4 Z` — a square with a tab at the top (architect: "just a simple square with a tab at the top"; his pick, variant c of three tabs) | the folder and project rows; Up a Folder (`UpAFolder.svg`'s link) |
+
+`FolderRow.svg` and `WavRow.svg` were `folder` and `audio-x-generic` until 2026-10-23; their rows in the tables below
+are the builder's record (`tools/icon_set_adwaita_322/mapping.tsv` still names them).
 
 ## The changed files
 

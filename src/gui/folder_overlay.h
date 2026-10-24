@@ -172,7 +172,16 @@ inline constexpr double kRowGapPx = 1.0;
 inline constexpr double kRowHeightPx = 17.0;
 inline int button_row_height_px() { return scaled_px(kRowHeightPx, 1); }
 inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
+// (Its one reader since 2026-10-23 is the notification stack's margin,
+// notifications.cpp: the rows stand at row_inset_px below.)
 inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
+// THE ROWS' INSET INSIDE THE BOX'S INTERIOR — left, top and right, and the
+// listing's foot: THE CONTENT'S ONE DEVICE PX OF AIR (modal_box.h's THE RING
+// IS THE ONLY MARGIN, architect 2026-10-23: "at most one device pixel, since
+// the bevel is one pixel"), so the lit row's bar stands one px from the
+// ring's columns and the first row one px under its top row. (kPanelPadPx's
+// 1 W inside the interior's 1-W slot stood 2026-10-14 to 2026-10-23.)
+inline int row_inset_px()         { return modal_box_content_pad_px(); }
 // THE ROW'S GLYPH IS WINDOWS' SMALL ICON, 16 Windows px (2026-10-06): it
 // read the toolbar case's glyph until the toolbars took Windows' large
 // case, whose 24-px seat would overrun
@@ -217,7 +226,7 @@ inline bool stands(const AppState& a) {
 inline int content_height_px(const AppState& a) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return 0;
-    return 2 * pad_px() + n * button_row_height_px() +
+    return 2 * row_inset_px() + n * button_row_height_px() +
            (n - 1) * button_row_gap_px();
 }
 
@@ -256,8 +265,8 @@ inline GuiRect surface_rect(const AppState& a) {
 // Field). Every geometry below reads this and not the surface — the rows,
 // the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
 // row_at's containment — so a row can never paint over the ring or be
-// pressed through it. THE FIRST ROW STANDS AT THE BOX'S TOP, one pad under
-// the ring.
+// pressed through it. THE FIRST ROW STANDS AT THE BOX'S TOP, one device px
+// under the ring (row_inset_px).
 // (THE FOLDER NAME ABOVE THE PLAYLIST — the viewed folder's name in one list
 // row and an etched pair under it, the render player's alone, 2026-10-10 to
 // 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no
@@ -288,15 +297,16 @@ inline void clamp_scroll(AppState& a) {
 // -- The rows ----------------------------------------------------------------
 
 // Row `index`'s PAINTED rect under the live scroll offset — full band width
-// less the pad on both sides, at the button's row pitch (the painter and the
-// press router read their rects from here and nowhere else). It may lie partly or wholly
-// outside the band; the painter clips and the hit test asks the band first.
+// less the rows' inset on both sides, at the button's row pitch (the painter
+// and the press router read their rects from here and nowhere else). It may
+// lie partly or wholly outside the band; the painter clips and the hit test
+// asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
     const GuiRect band = content_rect(a);
     const int h = button_row_height_px();
-    const int y = band.y + pad_px() + index * (h + button_row_gap_px()) -
+    const int y = band.y + row_inset_px() + index * (h + button_row_gap_px()) -
                   a.folder_overlay.scroll_px;
-    return GuiRect{band.x + pad_px(), y, band.w - 2 * pad_px(), h};
+    return GuiRect{band.x + row_inset_px(), y, band.w - 2 * row_inset_px(), h};
 }
 
 // THE ONE WALK OVER THE ROWS, and the reason paint and hit cannot drift: both
@@ -329,7 +339,7 @@ inline int row_at(const AppState& a, int x, int y) {
     return hit;
 }
 
-// Scroll so row `index` lies wholly inside the band (its pad respected) —
+// Scroll so row `index` lies wholly inside the band (its inset respected) —
 // the keyboard row walk's owner of "keep the focused row visible", moving the
 // offset by the least amount that does it and nothing when the row already
 // shows. Clamps.
@@ -338,8 +348,8 @@ inline void scroll_row_into_view(AppState& a, int index) {
     if (index < 0 || index >= n) return;
     const GuiRect band = content_rect(a);
     const GuiRect r    = row_rect(a, index);
-    const int top      = band.y + pad_px();
-    const int bottom   = band.y + band.h - pad_px();
+    const int top      = band.y + row_inset_px();
+    const int bottom   = band.y + band.h - row_inset_px();
     if (r.y < top) {
         a.folder_overlay.scroll_px -= (top - r.y);
     } else if (r.y + r.h > bottom) {

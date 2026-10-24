@@ -5945,10 +5945,10 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // the folder overlay's list is one member, standing where an editor's
     // field stands (-1) with one difference — the player OPENS with the ring
     // NOWHERE (-1 and `list_focused` false), and the first Tab lands on the
-    // list. LANDING THERE SHOWS: the highlighted row wears the focus frame a
-    // focused button wears (2026-10-02), which it does not while the ring
-    // stands elsewhere, and the band repaints for it at the bit's write
-    // below. What it does NOT change is the highlight itself: Up/Down walk it
+    // list. LANDING THERE SHOWS NOTHING since 2026-10-23 (the focus frame
+    // the highlighted row wore from 2026-10-02 retired, paint_folder_overlay;
+    // the band still repaints at the bit's write below, a no-op picture).
+    // What it does NOT change is the highlight itself: Up/Down walk it
     // either way, and what else the landing decides is what a bare Enter
     // means. Left/Right are NOT the ring's here: they are the seeks, the car's
     // rewind and fast-forward, on a button or off it. THE PICKER'S RING IS THE
@@ -6077,8 +6077,8 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         app.modal_dialog_focus_active = next >= 0;
         viewport.invalidate_rect(dlg.box);
     }
-    // THE LIST BIT, written on the same walk: the highlight's focus frame
-    // says whether the ring is on the list, so the band repaints with it.
+    // THE LIST BIT, written on the same walk (it says whether the ring is on
+    // the list; no frame paints it since 2026-10-23, the repaint kept).
     if (list_up && app.folder_overlay.list_focused != list_next) {
         app.folder_overlay.list_focused = list_next;
         viewport.invalidate_rect(folder_overlay::surface_rect(app));

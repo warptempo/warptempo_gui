@@ -6204,12 +6204,13 @@ struct AppState {
     // feint first had it (arm_modal_dialog_press, the one site).
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it:
-    //   pointer ON the armed button   -> the PRESSED face with its focus
-    //                                    frame; the release COMMITS
-    //   pointer OFF it                -> the button rests (its focus frame,
-    //                                    the passive focus the press gave
-    //                                    it); the release commits NOTHING and
-    //                                    leaves the button PASSIVELY FOCUSED
+    //   pointer ON the armed button   -> the PRESSED face, its LED lit;
+    //                                    the release COMMITS
+    //   pointer OFF it                -> the button rests (the passive
+    //                                    focus the press gave it, unpainted
+    //                                    since 2026-10-23); the release
+    //                                    commits NOTHING and leaves the
+    //                                    button PASSIVELY FOCUSED
     // Sliding back on restores the pressed face and a release there DOES
     // commit — the arm never died, so there is nothing to re-arm. The reason
     // is in the ruling itself: a button that keeps a lit face while held away
@@ -8242,10 +8243,10 @@ struct AppState {
     //                 opens, with no field beside it. The picker seats it on
     //                 the CURRENT project's row at the open;
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
-    //                 nothing at all (false, the open state). IT PAINTS, as
-    //                 the focus frame round the HIGHLIGHTED ROW while the
-    //                 list holds the ring (paint_folder_overlay) — the frame
-    //                 a focused modal button wears, worn by the list here. The highlight itself is unmoved by it,
+    //                 nothing at all (false, the open state). IT PAINTS
+    //                 NOTHING since 2026-10-23 (the focus frame round the
+    //                 highlighted row retired, paint_folder_overlay). The
+    //                 highlight itself is unmoved by it,
     //                 Up/Down walking it either way, and it also decides what
     //                 a bare Enter means: on the list, the highlight's OPEN
     //                 act; on a button, that button's press.
@@ -9120,9 +9121,8 @@ inline int64_t render_player_position(const AppState& a,
 // spec's scrub_handle_box_px through render.h's scrub_handle_box_px: 14
 // Windows px): the thumb's CENTRE — which is what names the frame — runs
 // from half a box in to half a box short of the end, so the thumb — the
-// 11-px pointed trackbar thumb (architect 2026-10-02; Windows' since
-// 2026-10-06), narrower than the box — never hangs off either end of its
-// channel. The USABLE SPAN is the
+// 8-W key-shaped block since 2026-10-23, narrower than the box — never
+// hangs off either end of its channel. The USABLE SPAN is the
 // item less that box; an item too
 // narrow to hold one seats the centre at the left inset and answers frame 0,
 // the same cold answer a zero item gives.
@@ -9143,16 +9143,17 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // Breeze slider; the spec's scrub_handle_box_px since 2026-10-07), and its
 // ONE reader is the press router, which asks it whether a press TAKES the
 // thumb where it stands (the band) or makes it JUMP to the press (the rest of
-// the item, architect 2026-10-02); the painted thumb is the narrower 11
-// Windows px (paint_scrub_thumb), and wears no hover face.
+// the item, architect 2026-10-02); the thumb (paint_scrub_thumb) wears no
+// hover face.
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
 //
-// THE BAND IS THE THUMB'S BOX WIDENED TO THE HANDLE'S (architect
-// 2026-10-02): the painted thumb's own rows (scrub_thumb_h_px, centred in the
-// track's band exactly as the painter centres it) by the grab box's columns
-// centred on that column (render.h's scrub_handle_box_px — the grab, not the
-// picture: the 11-px thumb is painted inside it), HALF-OPEN on both
+// THE BAND IS THE PAINTED THUMB (architect 2026-10-23, the thumb grown to
+// 8 x 16 W — on screen is as painted; the thumb's box widened to the 14-W
+// handle box, 2026-10-02 to 2026-10-23, retired): the thumb's own rows
+// (scrub_thumb_h_px, centred in the track's band exactly as the painter
+// centres it) by its own columns (scrub_thumb_w_px, from handle_x − w / 2,
+// the painter's own left edge), HALF-OPEN on both
 // axes like every other
 // pixel-cell test in the product (a pixel x covers [x, x+1), containing_pixel's
 // rule). A press outside it but on the item makes the thumb JUMP there
@@ -9161,7 +9162,7 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
                                            int x, int y) {
     if (track.w <= 0 || track.h <= 0) return false;
-    const int box = scrub_handle_box_px();
+    const int box = scrub_thumb_w_px();
     const int th  = scrub_thumb_h_px();
     const int bx  = handle_x - box / 2;
     const int by  = track.y + (track.h - th) / 2;

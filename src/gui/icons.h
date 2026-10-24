@@ -227,9 +227,16 @@ enum class Icon {
                          // stood 2026-10-12 to 2026-10-18)
     Settings,            // Settings (bare `;`) — the set's
                          // preferences-system
-    // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
-    FolderRow,           // a folder row — the set's folder
-    WavRow,              // a wav row — the set's audio-x-generic
+    // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker),
+    // BOXED DRAWINGS since 2026-10-23 (THE BOXED GLYPHS, below).
+    FolderRow,           // a folder row — the planner's folder, a square
+                         // with a tab at the top (architect 2026-10-23: "just
+                         // a simple square with a tab at the top"; his pick
+                         // variant c off three tabs, the body squarer, the
+                         // tab a third of the width)
+    WavRow,              // a wav row — the quaver, a symlink to Quaver.svg
+                         // (architect 2026-10-23: "use the logo in the
+                         // render player")
     // THE RENDER PLAYER'S ROW.
     RepeatOne,           // Toggle Repeat One — one glyph in both states,
                          // the lamp carrying the state; the set's
@@ -265,13 +272,19 @@ enum class Icon {
                          // Warp.png, the program icon outside the window too
                          // (a build product of this file since 2026-10-19:
                          // android/app/build_apk.sh's launcher step, and the
-                         // Linux icon a link to it, docs/INSTALL.md)
+                         // Linux icon a link to it, docs/INSTALL.md); the
+                         // caption no longer wears it (Quaver below)
+    Quaver,              // the caption's icon (architect 2026-10-23, his
+                         // pick row 4 of the caption sheet): the quaver,
+                         // Gemini Argon's one-path conversion of the
+                         // planner's bitmap at his prompt, a BOXED DRAWING
+                         // (below); the wav rows wear it too (WavRow's link)
 };
 
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 61;
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.png` if that file is there, else
@@ -279,9 +292,10 @@ inline constexpr int kIconCount = 60;
 // is a missing file at the next launch, which fails it. THE REPEATS ARE
 // SYMLINKS (architect 2026-10-19: "repeats should use symlinks"), relative,
 // inside the folder, the canonical file the act that owns the drawing:
-// AppIcon.png -> Warp.png, BpmIterations.svg -> WavRow.svg, CardCritical.svg
-// -> Cancel.svg, UpAFolder.svg -> FolderRow.svg and TransportPlay.svg ->
-// Play.svg (the folder's README lists them). Both bundle roads dereference a link (the laptop's
+// AppIcon.png -> Warp.png, BpmIterations.svg -> WavRow.svg, WavRow.svg ->
+// Quaver.svg (2026-10-23), CardCritical.svg -> Cancel.svg, UpAFolder.svg ->
+// FolderRow.svg and TransportPlay.svg -> Play.svg (the folder's README lists
+// them). Both bundle roads dereference a link (the laptop's
 // read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy), so the
 // load reads a link as the file it names; a PNG dropped for a repeated act
 // replaces that act's glyph alone, the link's other wearer keeping the link.
@@ -299,7 +313,7 @@ inline constexpr const char* kIconNames[] = {
     "SwitchTab", "Settings", "FolderRow", "WavRow", "RepeatOne",
     "UpAFolder", "CardNormal", "CardCritical", "Close", "Tooltips",
     "JumpToDefiningMarker", "OpenTextEditor", "DeleteFolder", "ValueDrag",
-    "AppIcon",
+    "AppIcon", "Quaver",
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
@@ -336,6 +350,34 @@ static_assert(std::size(kIconNames) == kIconCount);
 // Where a shifted drawing crosses the cell's edge it clips, accepted. The
 // shift is the product's: the builder writes it beside the drawing it
 // measured, and nothing else in a file is the product's.
+//
+// THE BOXED GLYPHS (architect 2026-10-23: the caption's quaver, "use the
+// logo in the render player, but then we need a folder icon as well … the
+// same proportion as the caption"): Quaver.svg (WavRow.svg its link) and
+// FolderRow.svg (UpAFolder.svg its link) are DRAWN TO A BOX, not centered on
+// their ink: each a 34 x 40-unit viewBox (kGlyphBoxW x kGlyphBoxH) whose ink
+// stands on rows 7..34, kGlyphBoxInkRows = 27 tall, and they are PLACED BY
+// THE BOX — its rows centered on the seat, its left edge the seat's x. THEY
+// ARE EXEMPT FROM THE BODY-CENTERING BY THEIR OWN FILES, not by a rule here:
+// each root tag carries `data-body-shift="0 0"`, the declared-shift case
+// above, so load_set takes the file's zero and measures nothing. ONE RULE
+// FOR EVERY BOXED SEAT (icon_box_px): the seat names its ink's height in
+// device px at 300 %, and the box is that ink's 40 / 27 — the caption's
+// 21-px ink (skin_px(21 · 40 / 27), the box 31 tall and 26 wide at 300 %)
+// and the list rows' 27-px ink, .525 of the 51-px row (skin_px(40), the box
+// 40 tall and 34 wide).
+inline constexpr double kGlyphBoxW       = 34.0;
+inline constexpr double kGlyphBoxH       = 40.0;
+inline constexpr double kGlyphBoxInkRows = 27.0;
+// The box's height, device px, for a seat whose ink is `ink_px_at300`
+// device px tall at 300 % (skin_px, rounded at the element, floored at 1).
+inline int icon_box_px(double ink_px_at300) {
+    return skin_px(ink_px_at300 * kGlyphBoxH / kGlyphBoxInkRows, 1);
+}
+// The box's width at height `box_h`, the viewBox's proportion, rounded.
+inline int icon_box_w_px(int box_h) {
+    return static_cast<int>(std::nearbyint(box_h * kGlyphBoxW / kGlyphBoxH));
+}
 
 // THE LOAD, once, in gui_main before the window: the folder's files fetched
 // from the bundle (GuiPlatform::bundled_icon_files — the repository's
@@ -371,6 +413,13 @@ void drop_rasters();
 // 16. Cairo state is saved and restored. Cannot fail: the launch's load
 // parsed every drawing.
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
+
+// A BOXED GLYPH (THE BOXED GLYPHS, above) in its box: `box_h` device px
+// tall (icon_box_px), its top-left (box_x, box_y). The raster is draw's
+// square cell box_h a side, the drawing fitted to its height and centered
+// across it (svg_icon::rasterise), so the cell stands half the cell's spare
+// width left of the box's edge.
+void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h);
 
 // THE DISABLED GLYPH — a dead button's face: COOL EDIT'S OWN (architect
 // 2026-10-15). Cool Edit Pro 2.1 ships a disabled bitmap beside every
