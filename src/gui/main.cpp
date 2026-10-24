@@ -228,9 +228,8 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-22 rather than adjusted, AT THE STRIP PAD'S 13 W (the `strip_pad`
-// key's first-run value, render.h's strip_pad_px; every W more takes four
-// scaled W from the well), the waveform the whole leftover and both gaps 0
+// 2026-10-22 rather than adjusted, AT THE STRIP PAD'S 13 W (a constant since
+// 2026-10-23, program_spec.h's strip_pad_px), the waveform the whole leftover and both gaps 0
 // in every stack (the rule above). Every lane is its own composite of
 // rounded parts (scaled_px's rule), so the device rows below are read off
 // the lane accessors, never off a Windows total times the factor — in
@@ -438,8 +437,7 @@ int strip_total_h(bool top_strip) {
 // gui_scale 300 and the strip pad's 13 W the lanes leave 1440 − 301 − 150 =
 // 989 device rows (the hi-fi skin's 40-row caption, 2026-10-23; 975 under the
 // simple layout's 54-row caption, 2026-10-22). A COLOR moves no lane: the 989
-// rows hold under every waveform preset; the strip pad does (four scaled W
-// of well per W of pad). May
+// rows hold under every waveform preset. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -3358,11 +3356,6 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE STRIP PAD RIDES THE SAME ROAD (the `strip_pad` key, 2026-10-22;
-    // render.h's strip_pad_px): every lane is laid at it from the first
-    // frame; the other road is the settings editor's commit
-    // (GuiInputHandler::apply_strip_pad).
-    set_strip_pad_w(device_config.strip_pad);
     // THE IMAGE ROAD IS CHECKED AT LAUNCH (materials.h's head, 2026-10-23):
     // a `Ground` or `Marker` file in the `tiles/` folder beside the config
     // that is neither a PNG nor a JPEG is the blunt terminal line naming

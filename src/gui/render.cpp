@@ -2583,15 +2583,7 @@ namespace {
     // settings editor's gui_scale commit). EVERY painted pixel quantity in the product reads it
     // through gui_scale_factor().
     int    g_gui_scale_percent = 100;
-    // THE STRIP PAD, in W (render.h's strip_pad_px): set by set_strip_pad_w
-    // from the same two application points, the `strip_pad` key's (gui_main's
-    // startup read and the settings editor's commit). 13 the frame of
-    // record's, the device config's first-run value.
-    int    g_strip_pad_w = 13;
 } // namespace
-
-void   set_strip_pad_w(int w) { g_strip_pad_w = w; }
-int    strip_pad_w() { return g_strip_pad_w; }
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 

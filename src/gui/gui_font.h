@@ -20,9 +20,13 @@
 // kGuiFaceSizes below, each use's EM IN DEVICE PX AT THE TABLET'S 300 %,
 // SCALED WITH gui_scale and rounded at the element (the amendment the same
 // night: size_px = nearbyint(authored · gui_scale / 300), the scaled_px
-// road) — BODY 22 Regular, TITLE 22 Bold (the caption's title alone), RULER
-// 15 Regular, the CUES' 22 Regular (the body's size: the flag labels and the
-// flag editor), LEGEND 14 Regular (the keys' legends and the tooltip). (The
+// road) — BODY 22 Regular (the clocks, the state line, the lists, the cards,
+// the prompts, the editors, the keyboard's caps, and THE TOOLTIP since
+// 2026-10-23: "the tooltips font size should be the same as the flags"),
+// TITLE 22 Bold (the caption's title alone), RULER 15 Regular (the ruler's
+// digits alone), the CUES' 22 Regular (the body's size: the flag labels and
+// the flag editor), LEGEND 14 Regular (the keys' printed legends alone; the
+// tooltip wore it the first night of the skin). (The
 // three recorded Windows metric sets — MS Sans Serif 8's {11, 2, x 6} cell,
 // the ruler's six-row digit, Cool Edit's cue cap of 7 — and the ems derived
 // to stand their ink those rows tall, 2026-10-05 to 2026-10-23, are git
@@ -91,7 +95,7 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {1, 22.0},   // Bold: the caption's title
     {0, 15.0},   // Small: the ruler's digits
     {0, 22.0},   // Program: the cues' labels and the flag editor
-    {0, 14.0},   // Legend: the keys' legends and the tooltip
+    {0, 14.0},   // Legend: the keys' legends
 };
 
 struct GuiFontBytes {

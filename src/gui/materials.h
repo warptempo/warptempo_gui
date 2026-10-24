@@ -85,14 +85,15 @@ struct AppState;
 // table, cairo into a 2304 x 1440 surface: a solid fill 0.016 ms, a 1:1
 // blit of a window-sized bake at identity with EXTEND_NONE and
 // FILTER_NEAREST 0.047 ms, an EXTEND_REFLECT pattern 1.73 ms): BAKE ONCE PER
-// WINDOW GEOMETRY — its key the client size, the gui_scale, the strip pad
-// (which move the lanes and the key seats), True Colors (the bakes hold the
+// WINDOW GEOMETRY — its key the client size and the gui_scale (which move
+// the lanes and the key seats; the strip pad a constant since 2026-10-23,
+// program_spec.h), True Colors (the bakes hold the
 // window's bytes) and the LED glow (led_glow below) — never at a palette
 // install, a project open or any other Settings OK. A frame compares the
 // key alone; the layout is read at the bake. The bake itself takes tens of
 // ms (the blur over the window), once. THE FIRST BAKE IS IMMEDIATE, at the
 // first frame's PRE-PAINT HOOK (materials::ensure_settled, main.cpp); a
-// gui_scale commit, a strip pad commit, a led_glow commit and True Colors
+// gui_scale commit, a led_glow commit and True Colors
 // bake at once, one act one bake (materials::ensure). EVERY BAKE REINSTALLS
 // THE PALETTE off the new ground's mean, so the next pre-paint widens that
 // frame's damage to the whole client and rebuilds the flag cache from the
@@ -153,7 +154,8 @@ struct AppState;
 // title, the flag labels, the clocks' digits, the tab name, the state line,
 // the lists' rows, the cards, the prompts, the editors' text, the keyboard's
 // caps — and on the ruler's digits and ticks; THE LEGEND INK kLegendInk
-// C4C4C8, the keys' printed legends and the tooltip; THE DIM INK kDimInk
+// C4C4C8, the keys' printed legends and the tooltip (the tooltip at the
+// body size since 2026-10-23, paint_shift_tooltip); THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone (a dead caption button wears the
 // bone since 2026-10-23, render.h's caption block). NO WORD
 // WEARS A SHADOW but the ruler's digits and ticks (one device px of black at
@@ -253,8 +255,7 @@ std::optional<std::string> check();
 // (take_bake_landed). A zero-sized client bakes nothing. A FAILURE is an
 // image of the road's that will not decode (check passed its header): its
 // stderr line and the hard fail. Callers: the one-act roads,
-// GuiInputHandler::apply_gui_scale, apply_strip_pad, apply_led_glow and
-// apply_true_colors.
+// GuiInputHandler::apply_gui_scale, apply_led_glow and apply_true_colors.
 void ensure(const AppState& app);
 // THE BAKE BEHIND THE SETTLE GATE (the head's BAKE RULE): the first bake at
 // once; a changed key of a baked window only once the tick has armed it

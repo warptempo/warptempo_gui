@@ -362,14 +362,16 @@ KeyLegendSeat key_legend_seat(const GuiRect& key, double run_w) {
 // THE RENDER PLAYER'S LEGENDS (architect 2026-10-23, the frame of record
 // pv_41 and its generator make_pivot4.py: PREV PLAY NEXT … REFRESH DOWN UP
 // FOLDER LOAD CANCEL), by the act each key runs; the root's sixth slot,
-// Delete, its own word.
+// Delete, its own word. THE REPEAT KEY READS REPEAT (architect 2026-10-23,
+// "player repeat btn is mislabeled refresh"): its act is Toggle Repeat One,
+// the mock's REFRESH a misprint.
 const char* render_player_button_legend(AppState::PlayerButtonAct act) {
     using Act = AppState::PlayerButtonAct;
     switch (act) {
         case Act::Home:          return "PREV";
         case Act::PlayPause:     return "PLAY";
         case Act::NextTrack:     return "NEXT";
-        case Act::RepeatOne:     return "REFRESH";
+        case Act::RepeatOne:     return "REPEAT";
         case Act::HighlightDown: return "DOWN";
         case Act::HighlightUp:   return "UP";
         case Act::Up:            return "FOLDER";
@@ -2995,9 +2997,15 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    // THE TOOLTIP IS A LEGEND (architect 2026-10-23): the legend face, 14 px
-    // at 300 %, in the legend ink kLegendInk on the field.
-    const GuiFont font = gui_font(GuiFace::Legend);
+    // THE TOOLTIP WEARS THE BODY FACE (architect 2026-10-23, "the tooltips
+    // font size should be the same as the flags"): GuiFace::Body, 22 px at
+    // 300 %, the flags' and the cards' size, in the legend ink kLegendInk on
+    // the field; the box grows with the face's own line (its pads are the
+    // chrome spec's, below) — 39 device rows at 300 % for one line (the
+    // line 25, the hairline and the 2-W pad twice). The legend face, 14 px,
+    // is the keys' print alone (it was the tooltip's the first night of the
+    // skin).
+    const GuiFont font = gui_font(GuiFace::Body);
     const bool two_line = (line2 != nullptr);
     const text_shape::ShapedRun r1 = text_shape::shape_text_run(font, line1);
     const double band1 = gui_font_line_px(font);

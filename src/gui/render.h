@@ -296,8 +296,9 @@ struct TrimRange {
 // stand on `card_ground` — THE FIELD, kFieldGround — INSIDE A ONE-DEVICE-PX
 // SUNKEN RING in the ring tones, dark top and left, light bottom and right,
 // mitred (paint_popup_chrome, paint_hairline_frame), the cards' words the
-// bone (`card_text`) at the body size, THE TOOLTIP'S THE LEGEND — the legend
-// face in kLegendInk. (Windows 2000's one-W `card_frame` border, square, on
+// bone (`card_text`) at the body size, THE TOOLTIP'S the body face too
+// (since 2026-10-23, "the same as the flags"; the legend face its first
+// night) in the legend ink kLegendInk. (Windows 2000's one-W `card_frame` border, square, on
 // the Face, then the wood, 2026-10-04 to 2026-10-23.) THIS PARAGRAPH IS THE
 // RULE'S ONE STATEMENT.
 // THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
@@ -1345,20 +1346,14 @@ inline int icon_case_w_px() {
 inline int icon_case_h_px() {
     return icon_case_w_px();
 }
-// THE STRIP PAD (architect 2026-10-22, the simple layout; "a number still
-// under tuning gets a device key and a Settings row"): THE `strip_pad`
-// DEVICE KEY's W (device_config.h; the mocks ran 8 .. 15, layout4_pad13 the
-// pick), the live value pushed at launch and at the settings editor's OK
-// (GuiInputHandler::apply_strip_pad) — the band's and row 8's air above and
-// below the case, one number for both strips: 39 device px at 300 % and the
-// pad's 13, 18 at 138 %. FLOORED AT ONE DEVICE PX: the key's 1-W floor
-// (is_strip_pad, device_config.h, where the reason stands — the legends'
-// row since 2026-10-23, the retired focus frame's room before), and this
-// floor keeps a row there at a scale that would round one W to nothing.
-void set_strip_pad_w(int w);
-int  strip_pad_w();
+// THE STRIP PAD (architect 2026-10-22, the simple layout; a constant since
+// 2026-10-23, program_spec.h's strip_pad_px, 13 W — its ruling there): the
+// band's and row 8's ground above and below the case, one number for both
+// strips: 39 device px at 300 %, 18 at 138 %. FLOORED AT ONE DEVICE PX so
+// a row stands there at a scale that would round the pad to nothing (the
+// legends' row since 2026-10-23).
 inline int strip_pad_px() {
-    return scaled_px(strip_pad_w(), 1);
+    return scaled_px(kProgramSpec.strip_pad_px, 1);
 }
 // THE CASE'S TOP, AS AN OFFSET FROM THE BAND'S OWN TOP — and from row 8's
 // and the modal controls row's: the strip pad, the one expression every
@@ -1702,27 +1697,27 @@ inline int bottom_row_h_px() {
 // 2026-10-22): the band (the pad, the key, the pad), the canvas column's 38
 // above the canvas (the view bar 8, the ruler 12, the marker lane 17, the
 // canvas's top frame row 1), the canvas's bottom frame row 1 under it and
-// row 8 (the pad, the key, the pad). `pad` the strip pad's W
-// (strip_pad_px). THE CAPTION IS NOT IN IT since 2026-10-23: its height is
+// row 8 (the pad, the key, the pad), the strip pad program_spec.h's
+// constant (strip_pad_px). THE CAPTION IS NOT IN IT since 2026-10-23: its height is
 // the skin's device px at 300 % (caption_row_h_px, 40 there).
-constexpr int chrome_stack_authored_h(const ChromeSpec& s, int pad) {
+constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines + kWindowFramePx - 2)
         : 0;
     return frame +
-           program_strip_authored_h(kProgramSpec, pad) +
+           program_strip_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
            program_canvas_bottom_authored_h(kProgramSpec) +
-           program_strip_authored_h(kProgramSpec, pad);
+           program_strip_authored_h(kProgramSpec);
 }
-// THE STACK AT THE FRAME OF RECORD'S PAD, 13 W: 87 above (the band 49, the
+// THE STACK AT THE STRIP PAD'S 13 W: 87 above (the band 49, the
 // column 38) and 50 below (the ring's last row 1, row 8 49), 137 W, 411
 // device rows at 300 % — with the caption's 40 the tablet's well 989 rows of
 // the surface's 1440 (975 under Windows 2000's 54-row caption, 2026-10-22 to
 // 2026-10-23: the well took the 14 rows the caption gave up); on the
 // laptop's maximized 1920 x 1047 at 138 % the caption 18 rows (25 before),
-// the well 878 (871). Every W of pad takes 4 W from it.
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000, 13) == 137);
+// the well 878 (871).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 137);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect

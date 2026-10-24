@@ -3720,15 +3720,6 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
-    // THE STRIP PAD'S ONE LIVE ACT (architect 2026-10-22, the simple layout;
-    // render.h's strip_pad_px): the settings editor's `strip_pad=` commit
-    // pushes the W to the renderer (set_strip_pad_w) and runs the scale's
-    // relayout — full-window invalidate, the resize-path geometry-and-cache
-    // rebuild, the materials baked again at once (their case patches sit on
-    // the strips' rows). The commit gates the no-op and writes the config;
-    // this applies.
-    void apply_strip_pad(int w);
-
     // THE LED GLOW'S ONE LIVE ACT (architect 2026-10-23; materials.h's
     // set_led_glow): the settings editor's `led_glow=` commit pushes the
     // device px to the materials and bakes at once (the glow is in the bake's

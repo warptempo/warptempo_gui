@@ -37,8 +37,8 @@
 // on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
 // stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND directly under the caption — THE STRIP PAD, the
-// key, THE STRIP PAD (the `strip_pad` device key, W, under tuning: render.h's
-// strip_pad_px; the keys' legends in the bottom pad), its keys in plain runs
+// key, THE STRIP PAD (13 W, settled 2026-10-23: strip_pad_px's field below;
+// the keys' legends in the bottom pad), its keys in plain runs
 // on the ground, the runs `run_gap_px` apart; then THE CANVAS COLUMN inside
 // THE PROGRAM RING — THE VIEW BAR (the trim bar: the ring's dark top row,
 // the black field, the light line: 8), THE
@@ -96,6 +96,18 @@ struct ProgramSpec {
     // band's between its three left runs (layout4: "add a spacing after
     // render, and after flatten").
     int  run_gap_px;
+    // THE STRIP PAD (architect 2026-10-22, the simple layout; SETTLED AT 13
+    // 2026-10-23 — "I never asked for that strip pad number … I don't think
+    // I needed to change that number", the legends' vertical seat "seems to
+    // be perfect"; the mocks ran 8 .. 15, layout4_pad13 the pick): THIS MUCH
+    // GROUND ABOVE AND BELOW THE KEY on both strips, the band's and row 8's
+    // (and the modal controls row's, row 8's own rows), the keys' printed
+    // legends standing in the bottom pad (paint_handler.cpp's
+    // key_legend_seat). A settled design is a constexpr: the `strip_pad`
+    // device key and its Settings row, 2026-10-22 to 2026-10-23, are
+    // removed, an old `strip_pad=` line the ordinary unknown-key hard fail.
+    // render.h's strip_pad_px the one road to device px.
+    int  strip_pad_px;
     // THE STRIPS' ENDS ARE THE PROGRAM RING'S OUTER COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring; render.h's program_ring_columns the one owner), so the
@@ -241,6 +253,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_outer_px      = 1,
     .case_hot_face      = false,
     .run_gap_px         = 15,
+    .strip_pad_px       = 13,
     .tab_name_air_px    = 5.0,
     .state_air_px       = 5.0,
     .column_margin_px      = 6,
@@ -271,10 +284,9 @@ constexpr int program_case_authored_px(const ProgramSpec& p) {
     return p.case_light_px + p.glyph_px + p.case_shadow_px + p.case_outer_px;
 }
 // THE BAND AND ROW 8 (2026-10-22, the simple layout): the strip pad, the
-// case, the strip pad — `pad` the `strip_pad` key's W (render.h's
-// strip_pad_px), so these totals take it.
-constexpr int program_strip_authored_h(const ProgramSpec& p, int pad) {
-    return pad + program_case_authored_px(p) + pad;
+// case, the strip pad (strip_pad_px's field, 13 since 2026-10-23).
+constexpr int program_strip_authored_h(const ProgramSpec& p) {
+    return p.strip_pad_px + program_case_authored_px(p) + p.strip_pad_px;
 }
 // The canvas column's lanes above the canvas (the head): the view bar a
 // line, its field and a line; the ruler its ground and its bottom line; the
@@ -304,7 +316,7 @@ constexpr int program_stereo_divider_authored_h(const ProgramSpec& p) {
 }
 static_assert(program_case_authored_px(kProgramSpec) == 23);
 // THE FRAME OF RECORD'S STRIPS (layout4_pad13): 13 + 23 + 13.
-static_assert(program_strip_authored_h(kProgramSpec, 13) == 49);
+static_assert(program_strip_authored_h(kProgramSpec) == 49);
 // ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
 // the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
 static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);

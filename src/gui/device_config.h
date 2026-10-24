@@ -86,16 +86,13 @@
 //                            line is the ordinary unknown-key hard fail, the
 //                            planner editing both devices' configs at the
 //                            install)
-//   strip_pad=<W>            THE STRIP PAD (architect 2026-10-22, the simple
-//                            layout), a TUNING PHASE: an integer in Windows
-//                            px [1, 40], the band's and row 8's air above and
-//                            below their cases (render.h's strip_pad_px; the
-//                            mocks ran 8 .. 15, 13 the pick); a Settings row,
-//                            applied LIVE at OK (the lanes relaid and the
-//                            materials baked again, the apply shape
-//                            GuiInputHandler::apply_strip_pad), both
-//                            templates writing 13; the key leaves when he
-//                            settles the value, which becomes a constant
+//   (strip_pad=<W>, THE STRIP PAD, a tuning key with a Settings row
+//                            2026-10-22 to 2026-10-23, SETTLED AT 13 W —
+//                            program_spec.h's strip_pad_px, the ruling
+//                            there; an old `strip_pad=` line is the ordinary
+//                            unknown-key hard fail, the planner editing both
+//                            devices' configs at the install and the sync
+//                            script's setup removing it on the tablet)
 //   led_glow=<px>            THE LIT LED'S GLOW (architect 2026-10-23, "agree
 //                            to all"), a TUNING PHASE: an integer in DEVICE
 //                            px [0, 32], the halo's reach past the LED's rect
@@ -128,8 +125,8 @@
 // three tuning keys APPENDED after `role` 2026-10-21, a tuning phase's
 // keys at the end as the 2026-09 phases' stood (`text_shadow` gone
 // 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
-// appended 2026-10-22 and `led_glow` 2026-10-23, the tuning keys keeping
-// the end; `true_colors` placed after `waveform` 2026-10-21, the two display
+// appended 2026-10-22 and gone 2026-10-23, `led_glow` appended 2026-10-23,
+// the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -379,9 +376,6 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
-    // THE STRIP PAD (2026-10-22, the head's list): required; 13 the
-    // templates' and the construction state's.
-    int         strip_pad   = 13;
     // THE LED GLOW (2026-10-23, the head's list): OPTIONAL, absent the
     // default; device px.
     int         led_glow    = 4;
@@ -395,20 +389,6 @@ inline constexpr bool is_led_glow(int64_t v) {
 }
 inline constexpr const char* kLedGlowGrammarReason =
     "must be an integer in [0, 32] in canonical spelling";
-
-// THE STRIP PAD'S RANGE — the one owner, the reader's and the settings
-// editor's (the scale's shape): an integer in Windows px, [1, 40] — 40 well
-// past the mocks' 15 (a tuning range, the head's list). THE FLOOR IS ONE W
-// (2026-10-22). Its first reason — the modal buttons' focus frame one line
-// outside the case, which had to stand inside the strip — went with the
-// frame (architect 2026-10-23, paint_modal_dialog's button walk); it stands
-// because the keys' legends are printed in the strip's bottom pad
-// (key_legend_seat, paint_handler.cpp), which a pad of 0 would leave no row.
-inline constexpr bool is_strip_pad(int64_t v) {
-    return v >= 1 && v <= 40;
-}
-inline constexpr const char* kStripPadGrammarReason =
-    "must be an integer in [1, 40] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -699,13 +679,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves six keys —
+// the settings editor's ONE device-key body, which serves five keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
 // `true_colors=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
-// 2026-10-23, `text_shadow=` until 2026-10-22), since 2026-10-22
-// `strip_pad=`, whose arm hands the live apply to
-// GuiInputHandler::apply_strip_pad, and since 2026-10-23 `led_glow=`, whose
+// 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
+// 2026-10-23), and since 2026-10-23 `led_glow=`, whose
 // arm hands its bake to GuiInputHandler::apply_led_glow
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
@@ -726,7 +705,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=cool-edit-default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on`, `strip_pad=13` and
+// required since 2026-10-14), `true_colors=on` and
 // `led_glow=4` (the struct's own values) and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —

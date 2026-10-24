@@ -67,15 +67,16 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// SEVEN editable ones the per-device config carries — gui_scale and
+// SIX editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // and since 2026-10-21 true_colors (the popup's command row made a key) and
-// since 2026-10-22 the tuning key strip_pad (the simple layout's pad), and
 // since 2026-10-23 the tuning key led_glow (the hi-fi skin's lit LED) (the
+// strip pad's key, editable 2026-10-22..10-23, left with it, the pad
+// settled at a constant, program_spec.h's strip_pad_px; the
 // two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable
 // 2026-10-21..10-22, left with its key, the shadow one scaled px; icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,
@@ -92,7 +93,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors and the three tuning keys — in ONE body,
+//    waveform, true_colors and the tuning key led_glow — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -101,7 +102,7 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; waveform, true_colors and the tuning keys at once, applied live
+//    card; waveform, true_colors and led_glow at once, applied live
 //    at the OK, no card (the screen is the answer).
 //    gui_scale, the
 //    one other
@@ -157,7 +158,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "strip_pad", "led_glow",
+    "led_glow",
 };
 
 struct GuiSettingsEditor {
@@ -242,7 +243,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `strip_pad=` and `led_glow=` — in one
+    // `waveform=`, `true_colors=` and `led_glow=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or

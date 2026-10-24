@@ -311,10 +311,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other six editable device keys — projects_repo and, since
+    // move. (The other five editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
-    // 2026-10-21), since 2026-10-21 true_colors, since 2026-10-22 strip_pad
-    // and since 2026-10-23 led_glow — take their one direct-set body in
+    // 2026-10-21), since 2026-10-21 true_colors and since 2026-10-23
+    // led_glow — take their one direct-set body in
     // commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
@@ -960,9 +960,9 @@ void GuiSettingsEditor::commit() {
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it; `led_glow` (2026-10-23, the hi-fi skin's lit LED) by
-// one bake, its arm next (`bevel_light` and `bevel_dark` stood there
-// 2026-10-21 to 2026-10-23); `strip_pad` (2026-10-22, the simple layout's
-// pad) the same, its arm last.
+// one bake, its arm last (`bevel_light` and `bevel_dark` stood there
+// 2026-10-21 to 2026-10-23, `strip_pad` after it 2026-10-22 to 2026-10-23,
+// the pad settled at a constant, program_spec.h).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key.) The commit is the OK's or Enter's (the choice rows' list
@@ -1077,29 +1077,6 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         }
         app.device_config->led_glow = static_cast<int>(v);
         input->apply_led_glow(static_cast<int>(v));
-        (void)persist();
-        applied();
-        return true;
-    }
-
-    // THE STRIP PAD (architect 2026-10-22, the simple layout; a number
-    // under tuning gets a key and a Settings row): the scale's canonical
-    // integer spelling under the range's one owner (is_strip_pad,
-    // device_config.h), APPLIED LIVE AT THE COMMIT through the scale's own
-    // apply shape (GuiInputHandler::apply_strip_pad — the lanes relaid, the
-    // materials baked again, the whole window), so NO CARD: the layout on
-    // screen is the answer.
-    if (key == "strip_pad") {
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_strip_pad(v)) {
-            reject(kStripPadGrammarReason);
-            return true;
-        }
-        if (static_cast<int>(v) == app.device_config->strip_pad) {
-            unchanged(); return true;
-        }
-        app.device_config->strip_pad = static_cast<int>(v);
-        input->apply_strip_pad(static_cast<int>(v));
         (void)persist();
         applied();
         return true;

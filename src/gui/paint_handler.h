@@ -52,8 +52,8 @@ struct GuiTargetRender;
 // stand-ins move the band's left runs and row 8's block), each row's own
 // layout function the painter reads too (paint_handler.cpp: icon_row_seats
 // and icon_row_walk, row8_block and row8_block_walk, player_row_layout). A
-// function of the client size, the scale and the strip pad alone, which is
-// in the bake's key. (word_and_key_case_rects, the word buttons' and the
+// function of the client size and the scale alone (the strip pad a
+// constant since 2026-10-23), which are in the bake's key. (word_and_key_case_rects, the word buttons' and the
 // keyboard's ebony patches, 2026-10-22 to 2026-10-23, is retired.)
 std::vector<GuiRect> program_case_rects(const AppState& app);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the

@@ -4108,17 +4108,6 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     materials::ensure(app);
 }
 
-void GuiInputHandler::apply_strip_pad(int w) {
-    // The apply shape is at the declaration (input_handler.h): the lanes'
-    // heights read the pad, so the window relays out as at a scale change,
-    // and the case patches move with the strips' rows (materials.h's BAKE
-    // RULE: the pad is in the bake's key, one act one bake).
-    set_strip_pad_w(w);
-    viewport.invalidate_all();
-    paint_handler.on_resize(app.width, app.height);
-    materials::ensure(app);
-}
-
 void GuiInputHandler::apply_led_glow(int px) {
     // The apply shape is at the declaration (input_handler.h): the glow is
     // in the bake's key, so a changed value bakes once (the bake rule's one

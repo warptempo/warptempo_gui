@@ -62,12 +62,11 @@ Tile make_tile(const GuiRect& r, Surface s) {
 }
 
 // THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale, the
-// strip pad (it moves the band's and row 8's key seats), the conversion and
-// the LED glow — every lane, every seat and so every tile's rect and every
+// conversion and the LED glow (the strip pad a constant since 2026-10-23) — every lane, every seat and so every tile's rect and every
 // lit patch is a function of them, so a frame compares these and never lays
 // anything out.
 struct Key {
-    int  w = 0, h = 0, scale = 0, pad = 0, glow = 0;
+    int  w = 0, h = 0, scale = 0, glow = 0;
     bool converted = false;
     bool operator==(const Key&) const = default;
 };
@@ -76,8 +75,8 @@ struct Key {
 int g_led_glow = 4;
 
 Key key_of(const AppState& app) {
-    return Key{app.width, app.height, gui_scale_percent(), strip_pad_w(),
-               g_led_glow, display_transform::active()};
+    return Key{app.width, app.height, gui_scale_percent(), g_led_glow,
+               display_transform::active()};
 }
 
 // THE WINDOW'S GEOMETRY A BAKE IS FOR — every tile's rect, laid out at the
