@@ -368,8 +368,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 
 // WHAT A KEY WEARS, AND IT IS TEXT AND NOTHING ELSE (architect 2026-08-27, on
 // glass): every cap is a WORD or a character on the ONE sans face in the
-// keys' own size (gui_font.h's GuiFace::Keys, 34 px at 300 %, architect
-// 2026-10-23 night; the product's one text size until then), shaped through
+// keys' own size (gui_font.h's GuiFace::Keys, 24 px at 300 %, architect
+// 2026-10-24, "C24"; 34 the night before, the product's one text size until
+// then), shaped through
 // the one chokepoint like every other label. The function keys wore Breeze
 // glyphs for a day and read OVERSIZED beside the letter caps — a 22-unit
 // icon scaled to the key's own height next to a letter at the one text size
@@ -406,16 +407,18 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // backspace, we would shorten to BKSP"): the form is the keyboard's own
 // abbreviation in capitals as keyboards print it — Backspace -> BKSP, Return
 // -> RET — applied ONLY where a word measurably fails its key. NOTHING IS
-// SHORTENED TODAY (2026-10-23): measured in the keys face (Liberation Sans,
-// HarfBuzz's unhinted advances, text_shape's road) against the face of the
-// narrowest key each word wears inside its one-device-px outline, every word
-// fits at 300 % on the tablet's 2304 and at 200 % and 150 % on the laptop's
-// 1920 (em 34 / 23 / 17; the one-standard-key face 217 / 183 / 185 px, the
-// function-width face 331 / 278 / 281): "Backspace", on the symbol pages'
-// one-standard key, 166 / 113 / 83 px; "Return" 102 / 69 / 51; "Space" on
-// its twelve-quarter key 96 / 65 / 48; "&123" 79 / 54 / 40; "Shift" 68 /
-// 46 / 34; "Esc" 57 / 38 / 28; "Tab" 55 / 37 / 27. (In Tahoma, 2026-10-06,
-// "Backspace" fit the key with 2 W clear each side.)
+// SHORTENED TODAY (2026-10-24, the keys face at 24): measured in the keys
+// face (Liberation Sans, HarfBuzz's unhinted advances, text_shape's road)
+// against the face of the narrowest key each word wears inside its
+// one-device-px outline, every word fits at 300 % on the tablet's 2304 and
+// at 200 % and 150 % on the laptop's 1920 (em 24 / 16 / 12; the
+// one-standard-key face 217 / 183 / 185 px, the function-width face 331 /
+// 278 / 281): "Backspace", on the symbol pages' one-standard key, 117 / 78
+// / 59 px; "Return" 72 / 48 / 36; "Space" on its twelve-quarter key 68 / 45
+// / 34; "&123" 56 / 37 / 28; "Shift" 48 / 32 / 24; "Esc" 40 / 27 / 20;
+// "Tab" 39 / 26 / 19. (At the night's 34, 2026-10-23, every word fit too,
+// "Backspace" 166 px at 300 %; in Tahoma, 2026-10-06, "Backspace" fit the
+// key with 2 W clear each side.)
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the key DOWN one device px, its

@@ -14,7 +14,7 @@ THE TOOL WRITES SVGs AND THE LICENCE TEXTS ONLY: never a PNG — the architect's
 `assets/icons/` by hand (the drop road, architect 2026-10-19, `src/gui/icons.h`'s head; the `own` treatment that
 copied Warp's baton retired with it) — and never a symlink: a drawing several acts wear is ONE row, the canonical
 file, and the folder carries the others as links (`AppIcon.png` -> `Warp.png`, `BpmIterations.svg` -> `WavRow.svg`,
-`CardCritical.svg` -> `Cancel.svg`, `UpAFolder.svg` -> `FolderRow.svg`, `TransportPlay.svg` -> `Play.svg`). `text-to-outlines` is the history clock's
+`UpAFolder.svg` -> `FolderRow.svg`, `TransportPlay.svg` -> `Play.svg`). `text-to-outlines` is the history clock's
 slot, `document-open-recent`, with its digits turned into Liberation Sans Bold outlines (HistoryView, history's again
 since 2026-10-18; its dated notice names the file as it was named when written, `DocumentOpenRecent`, kept so the
 bytes stand). (`tab-b`, which derived TabDetachB by element order for Switch Tab's tab-B face, left with that file
@@ -35,7 +35,9 @@ licence texts and writes `README_table.md` (the shift its own column), which the
 check of its faithful drawing (nothing removed, written to the scratch folder alone) against the sheet cropped to the
 slot and against the theme's shipped 48 PNG. Every SVG of the output is byte-identical to the folder's file of the
 same name; compare with `cmp` — the folder's PNGs and links are not
-the tool's.
+the tool's, nor are the project's own boxed drawings that replaced three seats' files (`FolderRow.svg` 2026-10-23,
+`CardNormal.svg` 2026-10-24, the planner's drawings; `WavRow.svg` a link to `Quaver.svg`), whose rows stay the
+builder's record.
 THE SHADOW PROOF (2026-10-15): every regenerated file rendered by `rsvg-convert` at 192 px is byte-identical (`cmp`
 of the PNGs) to the copy the architect approved, made by removing the same ids from the files shipped before.
 The folder's README (`assets/icons/README.md`) is hand-written around the table.

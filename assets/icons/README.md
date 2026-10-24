@@ -26,11 +26,13 @@ inside this folder, the real file the act that owns the drawing:
   `audio-x-generic` until then; no band key wears a glyph in the hi-fi skin);
 - `WavRow.svg` -> `Quaver.svg` (2026-10-23: the wav rows wear the caption's quaver, architect "use the logo in the
   render player");
-- `CardCritical.svg` -> `Cancel.svg` (`process-stop`);
 - `UpAFolder.svg` -> `FolderRow.svg` (the folder; Up a Folder wears the folder row's drawing, architect 2026-10-10);
 - `TransportPlay.svg` -> `Play.svg` (`media-playback-start`; the editor's Play / Stop toggle on row 8 is its own pair
   since 2026-10-20, so a drop for it leaves the render player's Play standing; its stop face, `TransportStop.svg`,
   owns `media-playback-stop` outright, the render player wearing no stop).
+
+(`CardCritical.svg` -> `Cancel.svg`, `process-stop`, until 2026-10-24: the critical card wears the planner's X since,
+its own file, below.)
 
 A PNG dropped for one of a link's acts replaces that act's glyph alone. The set is hard-coded (the `icons` device key
 and the Settings Icons row were removed 2026-10-12). The program reads the files at launch, in place, through resvg
@@ -97,20 +99,23 @@ Gemini — and the baton's first cutout, the morning of 2026-10-18, retired (git
 
 ## The project's own SVGs
 
-Two SVGs here are no extraction (architect 2026-10-23, the hi-fi skin), the project's own and licensed under the GNU
-LGPL v3 like the set, each one filled path in the bone F0F0F0 on a 34 x 40-unit viewBox, its ink on rows 7..34 and its
-root tag `data-body-shift="0 0"` — BOXED GLYPHS, placed by their box and never centered on their ink
+Four SVGs here are no extraction (architect 2026-10-23, the hi-fi skin; the cards' two 2026-10-24), the project's own
+and licensed under the GNU LGPL v3 like the set, each drawn in the bone F0F0F0 on a 34 x 40-unit viewBox, its ink on
+rows 7..34 and its root tag `data-body-shift="0 0"` — BOXED GLYPHS, placed by their box and never centered on their ink
 (`src/gui/icons.h`, THE BOXED GLYPHS):
 
 | File | Drawing | Wearers |
 |---|---|---|
 | `Quaver.svg` | the quaver: Gemini Argon's one-path conversion of the planner's bitmap at the architect's prompt (his pick, row 4 of the caption sheet) | the caption's icon; the wav rows (`WavRow.svg`'s link) |
 | `FolderRow.svg` | the planner's folder, `M 4 10 H 15 V 14 H 30 V 34 H 4 Z` — a square with a tab at the top (architect: "just a simple square with a tab at the top"; his pick, variant c of three tabs) | the folder and project rows; Up a Folder (`UpAFolder.svg`'s link) |
+| `CardNormal.svg` | the planner's i, two rectangles 6 units wide on x 14..20 — the dot on rows 7..13, the stem on rows 16..34 (architect 2026-10-24: "a very simple basic small rectangle with a larger rectangle below, that's the i … Spartan and minimalist"; his pick I1) | a normal card's glyph |
+| `CardCritical.svg` | the planner's X, the caption's close at its stroke ratio — the two diagonals of a 17-unit square centered on (17, 20.5), stroke 3.3, butt caps (architect 2026-10-24: "an X, a scalable X sort of like the close button in the caption, for the error"; his pick X1) | a critical card's glyph |
 
-`FolderRow.svg` and `WavRow.svg` were `folder` and `audio-x-generic` until 2026-10-23; their rows in the tables below
-
-The dropped `WavRow.png`, `FolderRow.png` and `UpAFolder.png` of the classical set (the brass record and portfolio) were REMOVED 2026-10-23 night: under the PNG-wins rule they outranked the quaver and the folder the architect ruled for the list rows ("use the logo in the render player, but then we need a folder icon as well"); a new drop under those names would win again.
+`FolderRow.svg` and `WavRow.svg` were `folder` and `audio-x-generic` until 2026-10-23, and `CardNormal.svg` was
+`dialog-information` until 2026-10-24 — the product's file the planner's drawing since; their rows in the tables below
 are the builder's record (`tools/icon_set_adwaita_322/mapping.tsv` still names them).
+
+The dropped `WavRow.png`, `FolderRow.png` and `UpAFolder.png` of the classical set (the brass record and portfolio) were REMOVED 2026-10-23 night: under the PNG-wins rule they outranked the quaver and the folder the architect ruled for the list rows ("use the logo in the render player, but then we need a folder icon as well"); a new drop under those names would win again. The dropped `CardNormal.png` and `CardCritical.png` (the classical set's card medallions) were REMOVED 2026-10-24 for the same reason: they outranked the i and the X the architect ruled for the cards.
 
 ## The changed files
 
@@ -156,8 +161,9 @@ finds the playhead; its 48 slot (300, 50), the sheet's other being edit-find-rep
 shipped `view-restore.png` at d 0.65 where the first slot sits at 54.7) and Toggle Waveform Magnification
 `audio-volume-high` (the loud speaker for the louder waveform), zoom.svg's three magnifiers retired ("low contrast"); the
 Read-Only toggle the one padlock `changes-prevent` in both states (2026-10-21; the `changes-allow` pair of 2026-10-14 retired); Save `document-save` (the
-floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. CardCritical wears
-`process-stop`, as Cancel does (a link). Every seat's drawing is named in the table below. (Toggle Cumulative's
+floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. The cards wear the planner's i
+and X since 2026-10-24 (above; CardCritical wore `process-stop` as Cancel does, a link, and CardNormal
+`dialog-information` until then). Every seat's drawing is named in the table below. (Toggle Cumulative's
 `accessories-calculator` and Toggle Session History's `network-wired-disconnected` left the folder 2026-10-19 with
 their acts.)
 

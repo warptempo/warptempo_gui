@@ -587,7 +587,8 @@ void install_true_colors(bool on);
 // black shadow at (+1, +1) (2026-10-23), STANDING ON THE
 // GROUND'S BOTTOM ROW and rising into it, painted over the digits' shadow
 // where a major's top row meets it; THE DIGITS the ruler face (GuiFace::Small,
-// 17 px at 300 % since 2026-10-23 night, "R17"; 15 the skin's first night,
+// 16 px at 300 % since 2026-10-24, "R16" — R17 the night before, 15 the
+// skin's first night,
 // "the timestamps are good"; the base's six-row digit 2026-10-09 to
 // 2026-10-23) standing on the authored baseline
 // row 7 under the air above, "basically touching the trim bar", in the
@@ -1320,9 +1321,9 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
 // case is not one row's: paint_handler.cpp's three rows read it. THE CARD AND THE FOLDER OVERLAY'S LIST
-// ROWS ARE NOT THE CASE: a card draws no glyph since 2026-10-23, its height
-// still the composite of its old glyph box (notifications.h's
-// kNotificationGlyph*), and a list row's boxed glyph stands at the painter's
+// ROWS ARE NOT THE CASE: a card's boxed glyph stands at its own pad and
+// ratio (notifications.h's kNotificationPadAt300 and
+// kNotificationGlyphRatio, 2026-10-24), and a list row's at the painter's
 // own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).
 // THE PROGRAM RING'S SLOT (2026-10-23): ONE W, its own rounded part
 // (floored at 1) — AN AREA, the place the old one-W line stood, kept so the

@@ -4,28 +4,24 @@
 #include "paint_handler.h"    // the lane table
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
-int notification_glyph_px() {
-    return scaled_px(kNotificationGlyphPx);
+int notification_pad_px() {
+    // P18 (the ruling at the declaration): an area, rounded at the element.
+    return skin_px(kNotificationPadAt300, 1);
 }
 
-int notification_glyph_box_px() {
-    return scaled_px(kNotificationGlyphLeadPx) + notification_glyph_px() +
-           scaled_px(kNotificationGlyphLeadPx);
+int notification_cap_px() {
+    return static_cast<int>(
+        std::nearbyint(gui_font_cap_px(gui_font(GuiFace::Body))));
 }
 
 int notification_card_h_px() {
-    return scaled_px(kNotificationAirPx) + notification_glyph_box_px() +
-           scaled_px(kNotificationAirPx);
-}
-
-int notification_pad_px() {
-    // THE BOX'S OWN VERTICAL MARGIN, and so the card's every pad (the ruling
-    // and the five distances at the declaration): the card's air around the
-    // glyph's 22-px box in its 28-px line, three Windows px a side. An ODD
-    // difference floors, putting the extra pixel below the box.
-    return (notification_card_h_px() - notification_glyph_box_px()) / 2;
+    // ring + pad + cap + pad + ring, each its own rounded part (the
+    // composite rule, scaled_px's head).
+    return 2 * hairline_px() + 2 * notification_pad_px() +
+           notification_cap_px();
 }
 
 int notification_card_max_w_px(const AppState& a) {

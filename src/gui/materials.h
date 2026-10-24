@@ -155,8 +155,8 @@ struct AppState;
 // title, the flag labels, the clocks' digits, the tab name, the state line,
 // the lists' rows, the cards, the prompts, the editors' text, the tooltip
 // (the bone since 2026-10-23 night, like the flags, paint_shift_tooltip) —
-// and on the keyboard's caps in their keys face (34 px at 300 %, 2026-10-23
-// night) and the ruler's digits and ticks; THE LEGEND INK kLegendInk
+// and on the keyboard's caps in their keys face (24 px at 300 %, 2026-10-24)
+// and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone (a dead caption button wears the
 // bone since 2026-10-23, render.h's caption block). NO WORD

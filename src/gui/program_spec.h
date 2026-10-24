@@ -169,7 +169,7 @@ struct ProgramSpec {
     // §4.4, shrunk to 1 + 6 + 4 — "the timestamps should basically be
     // touching the trim bar — one Windows pixel of empty space above"), then
     // its own light bottom line: THE DIGITS the ruler face (GuiFace::Small,
-    // gui_font.h's type table: 17 px at 300 % since 2026-10-23 night, its
+    // gui_font.h's type table: 16 px at 300 % since 2026-10-24, "R16", its
     // ink from just inside row 3 down to the baseline at 300 %; the base's
     // six-row digit on rows 1 .. 6 under row 0's air 2026-10-09 to
     // 2026-10-23), their BASELINE the top of this ground row (7), the black

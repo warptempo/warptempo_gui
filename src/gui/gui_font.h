@@ -23,15 +23,17 @@
 // road) — BODY 22 Regular (the clocks, the state line, the lists, the cards,
 // the prompts, the editors, and THE TOOLTIP since 2026-10-23: "the tooltips
 // font size should be the same as the flags"), TITLE 22 Bold (the caption's
-// title alone), RULER 17 Regular (the ruler's digits alone; architect
-// 2026-10-23 night, "R17" off 15 / 17 / 19 / 21 on the live lane — 15 the
-// skin's first night), the CUES' 22 Regular (the body's size: the flag
-// labels and the flag editor), LEGEND 14 Regular (the keys' printed legends
-// alone; the tooltip wore it the first night of the skin), KEYS 34 Regular
-// (the on-screen keyboard's caps alone — the letters, the symbol pages'
-// characters and the word caps; architect 2026-10-23 night, "C34" off
-// 22 / 28 / 34 / 40 on the first row, and "a separate face": the caps wore
-// the body's 22 until then). (The
+// title alone), RULER 16 Regular (the ruler's digits alone; architect
+// 2026-10-24, "R16" off 14 / 15 / 16 / 17 on zz_type_sheet_22 — "we took
+// them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
+// 2026-10-23 to 2026-10-24, the skin's first night 15), the CUES' 22
+// Regular (the body's size: the flag labels and the flag editor), LEGEND 14
+// Regular (the keys' printed legends alone; the tooltip wore it the first
+// night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
+// the letters, the symbol pages' characters and the word caps, "a separate
+// face"; architect 2026-10-24, "C24" off 22 / 24 / 26 / 28 on
+// zz_type_sheet_23 — the night's C34, off 22 / 28 / 34 / 40, stood
+// 2026-10-23 to 2026-10-24, the caps wearing the body's 22 before it). (The
 // three recorded Windows metric sets — MS Sans Serif 8's {11, 2, x 6} cell,
 // the ruler's six-row digit, Cool Edit's cue cap of 7 — and the ems derived
 // to stand their ink those rows tall, 2026-10-05 to 2026-10-23, are git
@@ -99,10 +101,10 @@ struct GuiFaceSize {
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body
     {1, 22.0},   // Bold: the caption's title
-    {0, 17.0},   // Small: the ruler's digits
+    {0, 16.0},   // Small: the ruler's digits
     {0, 22.0},   // Program: the cues' labels and the flag editor
     {0, 14.0},   // Legend: the keys' legends
-    {0, 34.0},   // Keys: the on-screen keyboard's caps
+    {0, 24.0},   // Keys: the on-screen keyboard's caps
 };
 
 struct GuiFontBytes {

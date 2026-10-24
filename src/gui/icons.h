@@ -247,11 +247,19 @@ enum class Icon {
                          // row's drawing, a symlink to FolderRow.svg
                          // (architect 2026-10-10: the plain folder, enough
                          // to tell it from the Highlight Previous arrow)
-    // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h).
-    CardNormal,          // a NORMAL card's glyph — the set's
-                         // dialog-information
-    CardCritical,        // a CRITICAL card's glyph — Cancel's drawing,
-                         // process-stop (a symlink)
+    // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h), BOXED
+    // DRAWINGS since 2026-10-24 (THE BOXED GLYPHS, below).
+    CardNormal,          // a NORMAL card's glyph — the planner's i, a small
+                         // rectangle over a larger one (architect
+                         // 2026-10-24: "Spartan and minimalist … sit nicely
+                         // with the other icons, the note and the folder";
+                         // his pick I1; the set's dialog-information until
+                         // then)
+    CardCritical,        // a CRITICAL card's glyph — the planner's X, the
+                         // caption's close at its stroke ratio (architect
+                         // 2026-10-24: "a scalable X sort of like the close
+                         // button in the caption, for the error"; his pick
+                         // X1; a symlink to Cancel's process-stop until then)
     Close,               // Close (the render player) — the set's
                          // window-close
     Tooltips,            // Toggle Tooltips (bare backslash) — the set's
@@ -300,8 +308,7 @@ inline constexpr int kIconCount = 61;
 // inside the folder, the canonical file the act that owns the drawing:
 // AppIcon.svg -> Quaver.svg (2026-10-23; AppIcon.png -> Warp.png until
 // then), BpmIterations.svg -> WavRow.svg, WavRow.svg -> Quaver.svg
-// (2026-10-23), CardCritical.svg -> Cancel.svg, UpAFolder.svg ->
-// FolderRow.svg and TransportPlay.svg -> Play.svg (the folder's README lists
+// (2026-10-23), UpAFolder.svg -> FolderRow.svg and TransportPlay.svg -> Play.svg (the folder's README lists
 // them). Both bundle roads dereference a link (the laptop's
 // read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy), so the
 // load reads a link as the file it names; a PNG dropped for a repeated act
@@ -360,19 +367,24 @@ static_assert(std::size(kIconNames) == kIconCount);
 //
 // THE BOXED GLYPHS (architect 2026-10-23: the caption's quaver, "use the
 // logo in the render player, but then we need a folder icon as well … the
-// same proportion as the caption"): Quaver.svg (WavRow.svg its link) and
-// FolderRow.svg (UpAFolder.svg its link) are DRAWN TO A BOX, not centered on
+// same proportion as the caption"; the cards' i and X 2026-10-24, "sit
+// nicely with the other icons, the note and the folder"): FOUR FILES —
+// Quaver.svg (WavRow.svg its link), FolderRow.svg (UpAFolder.svg its link),
+// CardNormal.svg and CardCritical.svg — are DRAWN TO A BOX, not centered on
 // their ink: each a 34 x 40-unit viewBox (kGlyphBoxW x kGlyphBoxH) whose ink
 // stands on rows 7..34, kGlyphBoxInkRows = 27 tall, and they are PLACED BY
 // THE BOX — its rows centered on the seat, its left edge the seat's x. THEY
 // ARE EXEMPT FROM THE BODY-CENTERING BY THEIR OWN FILES, not by a rule here:
 // each root tag carries `data-body-shift="0 0"`, the declared-shift case
 // above, so load_set takes the file's zero and measures nothing. ONE RULE
-// FOR EVERY BOXED SEAT (icon_box_px): the seat names its ink's height in
-// device px at 300 %, and the box is that ink's 40 / 27 — the caption's
-// 21-px ink (skin_px(21 · 40 / 27), the box 31 tall and 26 wide at 300 %)
-// and the list rows' 27-px ink, .525 of the 51-px row (skin_px(40), the box
-// 40 tall and 34 wide).
+// FOR EVERY BOXED SEAT: the box is the ink's 40 / 27, ROUNDED AT THE BOX.
+// A seat whose ink is authored in device px at 300 % takes icon_box_px —
+// the caption's 21-px ink (skin_px(21 · 40 / 27), the box 31 tall and 26
+// wide at 300 %) and the list rows' 27-px ink, .525 of the 51-px row
+// (skin_px(40), the box 40 tall and 34 wide); a seat whose ink is already
+// live device px, derived from live lengths, takes icon_box_live_px — the
+// cards' ink, .525 of the first line's inside height (notifications.h's
+// kNotificationGlyphRatio: the box 40 tall and 34 wide at 300 %).
 inline constexpr double kGlyphBoxW       = 34.0;
 inline constexpr double kGlyphBoxH       = 40.0;
 inline constexpr double kGlyphBoxInkRows = 27.0;
@@ -380,6 +392,14 @@ inline constexpr double kGlyphBoxInkRows = 27.0;
 // device px tall at 300 % (skin_px, rounded at the element, floored at 1).
 inline int icon_box_px(double ink_px_at300) {
     return skin_px(ink_px_at300 * kGlyphBoxH / kGlyphBoxInkRows, 1);
+}
+// The box's height, device px, for a seat whose ink is `ink_px` LIVE device
+// px tall (the same 40 / 27, rounded at the box with std::nearbyint,
+// floored at 1).
+inline int icon_box_live_px(double ink_px) {
+    const int h = static_cast<int>(
+        std::nearbyint(ink_px * kGlyphBoxH / kGlyphBoxInkRows));
+    return h < 1 ? 1 : h;
 }
 // The box's width at height `box_h`, the viewBox's proportion, rounded.
 inline int icon_box_w_px(int box_h) {

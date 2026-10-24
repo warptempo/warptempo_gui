@@ -7,7 +7,7 @@ digits turned into Liberation Sans Bold outlines by text_to_paths.py at the buil
 at the head; THE BODY-CENTERING SHIFT measured on each written file and inserted on its root tag as `data-body-shift`
 (body_shift.py, architect 2026-10-19); the tarball's four licence texts; and README_table.md, each sheet with its sha256. THE TOOL WRITES SVGs AND
 THE LICENCE TEXTS ONLY — never a PNG (the architect's own drawings are dropped into the folder by hand, the drop road,
-icons.h's head) and never a symlink (a repeated drawing, AppIcon.svg, BpmIterations.svg, CardCritical.svg,
+icons.h's head) and never a symlink (a repeated drawing, AppIcon.svg, BpmIterations.svg,
 UpAFolder.svg and TransportPlay.svg, is a link the folder carries, with no row here: mapping.tsv names each canonical
 file once). Its
 output's SVGs are byte-identical to the folder's of the same name (compare with `cmp`; the folder's PNGs and links are

@@ -7,10 +7,16 @@
 // A small card stacked top-right from the icon row (the live chrome
 // vocabulary's card seat, notification_stack_bound), newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
-// the one sans, NO CLASS GLYPH since 2026-10-23 (architect: "they show the
-// old card insignia"; the CardNormal / CardCritical glyph at the left
-// 2026-08-29 to 2026-10-23), and ONE PAD round the sentence
-// (notification_pad_px below), ON THE CARD FACE — the tooltip's look, the
+// the one sans, THE CLASS GLYPH AT THE LEFT AGAIN since 2026-10-24 — the
+// planner's i (CardNormal) and X (CardCritical), BOXED GLYPHS in the
+// folder's and the quaver's form (icons.h's THE BOXED GLYPHS; architect: "a
+// very simple basic small rectangle with a larger rectangle below, that's
+// the i, and then an X … for the error … Spartan and minimalist … sit
+// nicely with the other icons, the note and the folder"; the Adwaita glyphs
+// 2026-08-29 to 2026-10-23, then none for one night — "they show the old
+// card insignia"), and ONE PAD of plain field between the ring and the
+// content on all four sides (notification_pad_px below; P18, architect
+// 2026-10-24), ON THE CARD FACE — the tooltip's look, the
 // theme's `card_ground` under `card_text` inside the one-device-px sunken
 // ring (architect 2026-10-04, the sides 2026-10-06, the ring 2026-10-23;
 // render.h's palette block, THE CARD FACE): the
@@ -704,7 +710,11 @@ inline std::string lowercase_initial(std::string_view s) {
 // paint_notifications), which put the pair at 231 px and 228 px, both under
 // 272, so the clamp still answers the floor for both and they still paint
 // at one width; the width rule was not part of either ruling and the floor
-// keeps the number it was measured at. NOR DID THE FACES' CHANGES: under
+// keeps the number it was measured at. NOR DID THE GLYPH'S RETURN
+// (2026-10-24): the chrome ring + pad + the glyph's box + the gap + pad +
+// ring is 1 + 18 + 34 + 10 + 18 + 1 = 82 device px at 300 %, and the pair
+// shapes to about 237 and 232 device px in the body face's 22, both near
+// 320 against the floor's 594. NOR DID THE FACES' CHANGES: under
 // the body face at the recorded Windows metrics less the tracking
 // (gui_font.h; 2026-10-06) the pair shapes through the live chokepoint to
 // 118.7 and 116.1 Windows px in Tahoma at every gui_scale, which with the
@@ -759,61 +769,50 @@ inline constexpr int kNotificationMaxLines = 3;
 
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
-// THE CARD'S OWN GLYPH, ITS BOX AND ITS AIR, in Windows px (2026-10-06): the
-// card read the toolbar's case and band until the toolbars took Windows'
-// LARGE case, and it keeps Windows' SMALL icon on constants of its own
-// (report_TC's catch) — the 16-px glyph (kNotificationGlyphPx) in a square
-// box three px of box above and below it (kNotificationGlyphLeadPx;
-// 3 + 16 + 3 = 22, the small toolbar case's height) and three px of card
-// above and below the box (kNotificationAirPx), so a one-line card is
-// 3 + 22 + 3 = 28: every length the card had while it read Windows' small
-// toolbar band, each a composite of its rounded parts (scaled_px's rule).
-// THE GLYPH IS NOT DRAWN since 2026-10-23 (no class glyph, the head); its
-// box stays the one-line card's height composite.
-inline constexpr int kNotificationGlyphPx     = 16;
-inline constexpr int kNotificationGlyphLeadPx = 3;
-inline constexpr int kNotificationAirPx       = 3;
-// The glyph's square box, device px: lead + glyph + lead.
-int notification_glyph_box_px();
-// The glyph, device px.
-int notification_glyph_px();
-
-// A ONE-LINE card's height, and the height every card's FIRST line occupies:
-// the glyph's box on the card's air above and below it — the glyph sitting
-// at the box's own inset,
-// AT THE FIRST LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30:
-// the text grows downward under the icon, nothing reflows beside it; the X
-// that sat beside the glyph at that height retired 2026-10-01).
-// A card of `lines` lines is this plus (lines - 1) line spacings, which only
-// the painter can know — a line count needs a shaped run, and shaping needs
-// the paint's own font — so no pure function of the window states a card's
-// real height and none is offered here.
-int notification_card_h_px();
-
-// THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph
-// and the text is ONE NUMBER, the box's own vertical margin — the
-// centering the card's height already derives from its air (28 = 22 +
-// 2 x 3 Windows px). It is read for ALL FIVE of the card's distances: left edge ->
-// glyph box, glyph box -> text, text -> right edge, top -> box, box ->
-// bottom (six until the X's box retired, 2026-10-01: text -> X box and
-// X box -> right edge became the one text -> right edge). ONE OF THE FIVE
-// ADDS A TERM, and it is text -> right edge (architect 2026-10-01: "to the
-// left of the text has the same spacing as to the right of the text"): the
-// glyph's box is invisible and its drawn glyph sits the box's own inset
-// inside it, so the eye measures the text's LEFT air from the glyph's ink —
-// pad plus that inset — and a bare pad at the text's right read as the text
-// pressed against the edge. The right air is therefore pad + inset, the left
-// air as seen repeated after the text; the inset is the icon box's own
-// (btn - glyph) / 2, read at the painter, never a second constant. Nothing
-// else is authored here: the number IS
-// (notification_card_h_px() - the button box) / 2, so a retune of either
-// moves all five together, and the painter reads no foreign constant (the
-// icon row's lane pad and the folder overlay's icon-to-name gap both left it
-// that day — the overlay's rows keep their gap, that being their surface).
-// PARITY: where card_h - btn is odd the integer floor puts the extra pixel
-// BELOW the box, exactly as the icon row's own centering does for its
-// buttons — the same floor, not a second rule.
+// THE CARD'S ONE PAD (architect 2026-10-24, "P18" off the 16 / 17 / 18
+// series on zz_card_sheet_21): 18 px OF PLAIN FIELD AT 300 % between the
+// card's one-device-px ring (hairline_px) and its content on ALL FOUR SIDES
+// — ring -> glyph box at the left, the text's last pen -> ring at the right,
+// ring -> the first line's cap top above, the last line -> ring below. AN
+// AREA, so it scales through skin_px, rounded at the element and floored at
+// one px (6 at 100 %, 9 at 150 %, 12 at 200 %); the ring is a line and stays
+// one device px at every scale. (The Windows-era pad — the 28-W card's
+// vertical margin round the small toolbar case's 22-W box, 3 W, 2026-08-30
+// to 2026-10-23 — and the box's 16-W glyph and 3-W leads are git history.)
+inline constexpr double kNotificationPadAt300 = 18.0;
 int notification_pad_px();
+
+// THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
+// 2026-10-24, the mock of record's rule): the inside height pad + cap + pad,
+// and the ratio the caption's (21 of its 40-px lane) and the list rows'
+// (27 of their 51-px row) — the one proportion every boxed glyph keeps to
+// its line. Its box is that ink's 40 / 27, rounded at the box
+// (icons::icon_box_live_px: the ink is already live px, derived from the
+// live pad and cap).
+inline constexpr double kNotificationGlyphRatio = 0.525;
+
+// THE GAP FROM THE GLYPH'S BOX TO THE TEXT'S PEN is the caption's title gap,
+// kCaptionTitleGapAt300 (render.h: 10 px at 300 %, skin_px) — the same
+// seat, a boxed glyph then a sentence, so one number (architect 2026-10-24,
+// the mock of record).
+
+// THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
+// own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline
+// reads), rounded to whole px so the first line's rows are whole.
+int notification_cap_px();
+
+// A ONE-LINE card's height, and the height every card's FIRST line occupies
+// (architect 2026-10-24): ring + pad + THE BODY FACE'S CAP + pad + ring —
+// the text's CAP BAND, not its ascender, between the two pads (the clock
+// field's and the mock's rule; the modal box's ascender rule is not the
+// card's), so the first line's cap top stands at ring + pad. AT THE FIRST
+// LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30: the text
+// grows downward under the glyph, nothing reflows beside it). A card of
+// `lines` lines is this plus (lines - 1) line spacings, which only the
+// painter can know — a line count needs a shaped run, and shaping needs the
+// paint's own font — so no pure function of the window states a card's real
+// height and none is offered here.
+int notification_card_h_px();
 
 // The card's largest possible width at this window and scale: the scaled
 // ceiling above, and — where the window cannot even hold that — the window
@@ -877,8 +876,9 @@ GuiRect notification_stack_bound(const AppState& a);
 // 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
 // is 12 (1107 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
-// recorded at main.cpp's vertical-stack owner). Every window this product
-// runs in holds more cards than the architect will ever stack.
+// recorded at main.cpp's vertical-stack owner). The card shrank since (53
+// px at 300 % with P18, 2026-10-24), so every count is higher: every window
+// this product runs in holds more cards than the architect will ever stack.
 int notification_capacity(const AppState& a);
 
 // Whether `id` names a card that is IN THE LIVE STACK — which is the same as

@@ -1008,8 +1008,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
                                                       : icons::Icon::SaveCommit;
         // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
         // while a render or sweep is live — Cancel, Adwaita's
-        // process-stop (its own file, Cancel.svg, which CardCritical links to;
-        // icons.h). The condition and its
+        // process-stop (its own file, Cancel.svg; icons.h). The condition and its
         // contract are at redesign_button_glyph_swapped's Render arm, the
         // click's divergence at finish_chrome_press_release's Render arm.
         case RedesignButton::Render: return icons::Icon::Cancel;
@@ -3201,11 +3200,14 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // `card_ground` inside the one-device-px sunken ring, its words `card_text`
 // (render.h's palette block, THE CARD FACE) — square, NO DROP SHADOW,
 // through the one popup box painter (paint_popup_chrome, the tooltip's own);
-// a row of the icon row's own height holding THE SENTENCE alone, one pad
-// (notification_pad_px) in from each side — NO CLASS GLYPH since 2026-10-23
-// (architect: "they show the old card insignia, the 18th century stamp";
-// the layout block in the body; the glyph's square box before the text and
-// its inset repeated after it, 2026-08-30 to 2026-10-23, git history).
+// inside the ring ONE PAD of plain field on all four sides (P18, architect
+// 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
+// between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
+// the planner's i or X, a BOXED GLYPH (icons.h), its ink .525 of the first
+// line's inside height (kNotificationGlyphRatio) — then the caption's title
+// gap, then THE SENTENCE (the layout block in the body). (The Adwaita glyph
+// in Windows' small box 2026-08-30 to 2026-10-23 and the glyphless card of
+// that night, git history.)
 // (A window-close X stood in a second button box at the right from
 // 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
 // when the whole card became the button — "whole card dismisses, X gone" —
@@ -3256,22 +3258,26 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kNotificationGapPx, 1);
-    // ONE NUMBER FOR EVERY DISTANCE (architect 2026-08-30): the card's
-    // vertical margin round its glyph box is the card's every pad.
+    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the mock of record
+    // make_cards1.py's card): ring, ONE PAD of plain field (notifications.h,
+    // every side), the class glyph's box, the caption's title gap, the
+    // text's pen; the wrap's room ends one pad short of the right ring. The
+    // first line's INSIDE rows are pad + cap + pad; the glyph's ink is
+    // kNotificationGlyphRatio of them, its box the ink's 40 / 27 rounded
+    // (icons::icon_box_live_px), the box's rows centered on the inside rows
+    // (rounded down), its left edge at ring + pad.
+    const int ring     = hairline_px();
     const int pad      = notification_pad_px();
+    const int cap      = notification_cap_px();
+    const int inside_h = pad + cap + pad;
+    const int glyph_h  = icons::icon_box_live_px(
+        kNotificationGlyphRatio * static_cast<double>(inside_h));
+    const int glyph_w  = icons::icon_box_w_px(glyph_h);
+    const int glyph_gap = skin_px(kCaptionTitleGapAt300);
+    const int lead_w   = ring + pad + glyph_w + glyph_gap;
+    const int tail_w   = pad + ring;
+    const int chrome_w = lead_w + tail_w;
     const int right_x  = room.x + room.w;
-    // THE CARD CARRIES NO GLYPH (architect 2026-10-23, on the installed
-    // skin: "they show the old card insignia, the 18th century stamp"): the
-    // class glyphs (CardNormal, CardCritical — their enumerators and files
-    // stay) are not drawn and their box leaves the row, so the chrome every
-    // card carries besides its text is TWO PADS, the text one pad in from
-    // the card's left edge and one pad short of its right. The card's height
-    // is still the one-line card's (notification_card_h_px, its glyph box's
-    // rows), every line on it as before. (The glyph's square box, a pad each
-    // side of it and the glyph's inset repeated at the text's right,
-    // 2026-08-30 to 2026-10-23, are git history.)
-    const int right_pad = pad;
-    const int chrome_w  = 2 * pad;
     // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
     // clips the publication too, or the hit would claim a press on pixels
     // the bottom row owns. An empty answer is hit by nothing (rect_contains).
@@ -3306,7 +3312,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const AppState::Notification& n = st.cards[i];
         // THE WIDTH IS THE WHOLE SENTENCE'S, clamped — the rule the wrap did
         // not change — and the ROOM the wrap breaks against is what that
-        // width leaves between the two pads.
+        // width leaves between the text's pen and the right pad.
         //
         // IT CEILS (architect 2026-08-31): a box that must CONTAIN a run is
         // not a point on a grid, so banker's rounding is the wrong class for
@@ -3325,8 +3331,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // std::max keeps the clamp's own precondition stated at the call.
         w = std::clamp(w, min_w, std::max(min_w, max_w));
         const int card_x    = right_x - w;
-        const int text_x    = card_x + pad;
-        const int text_room = card_x + w - right_pad - text_x;
+        const int text_x    = card_x + lead_w;
+        const int text_room = card_x + w - tail_w - text_x;
         std::vector<text_shape::ShapedRun> lines =
             notification_text_lines(font, n.text, whole,
                                     static_cast<double>(text_room));
@@ -3348,23 +3354,28 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const int text_x    = c.text_x;
         const int text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
-        // The box alone, no class glyph (the layout block above).
+        // The box, then the class glyph in its box on the first line's
+        // inside rows (the layout block above).
         paint_popup_chrome(cr, card);
+        icons::draw_boxed(cr,
+                          n.cls == AppState::NotificationClass::Critical
+                              ? icons::Icon::CardCritical
+                              : icons::Icon::CardNormal,
+                          card.x + ring + pad,
+                          card.y + ring + (inside_h - glyph_h) / 2, glyph_h);
 
         if (text_room > 0) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
             set_palette_source(cr, palette().card_text);
-            // The FIRST line's baseline is the one-line card's: ITS CAP BAND
-            // CENTERED in the one-line card by redesign_baseline, the one
-            // rule every chrome label takes (architect 2026-10-22: the line
-            // box centered there read low under descenders, and the one-W
-            // lift on it overshot). Each further line is one face
-            // line-height lower.
-            const double base =
-                redesign_baseline(font, static_cast<double>(card.y),
-                                  static_cast<double>(line1_h));
+            // The FIRST line's baseline puts ITS CAP TOP AT RING + PAD
+            // (architect 2026-10-24): the cap band centered in the first
+            // line, the line being exactly pad + cap + pad inside the ring
+            // (notification_card_h_px) — redesign_baseline's centering on
+            // the rounded cap, stated whole so no half-px floor moves it.
+            // Each further line is one face line-height lower.
+            const double base = static_cast<double>(card.y + ring + pad + cap);
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run(
                     cr, lines[li], static_cast<double>(text_x),
@@ -3667,16 +3678,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int major_top = ground_bottom - scaled_px(kProgramSpec.ruler_major_tick_px);
     const int minor_top = ground_bottom - scaled_px(kProgramSpec.ruler_minor_tick_px);
 
-    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: 17 px
-    // at 300 %, scaled with gui_scale — architect 2026-10-23 night, "R17";
-    // 15 the skin's first night, the six-row Windows digit before it), their
+    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: 16 px
+    // at 300 %, scaled with gui_scale — architect 2026-10-24, "R16"; R17 the
+    // night before, 15 the skin's first night, the six-row Windows digit
+    // before it), their
     // BASELINE THE TOP OF THE GROUND'S ROW 7 — the digits standing above it
     // under the air, "basically touching the trim bar" (architect 2026-10-09
     // ~21:00): at 300 % the baseline 21 device rows under the lane's top, a
-    // digit's ink 11.9 px tall (Liberation Sans's 1430 / 2048 em), so its top
-    // stands on row 9 with 9 rows of ground above it under the trim bar's
-    // light line and its "0"'s overshoot a fifth of a px below the
-    // baseline; the black one-device-px (+1, +1)
+    // digit's ink 11.2 px tall (Liberation Sans's 1430 / 2048 em of 16), so
+    // its top stands 9.8 rows down, just inside row 9, with 9 whole rows of
+    // ground above it under the trim bar's light line, and its "0"'s
+    // overshoot a fifth of a px below the baseline; the black one-device-px
+    // (+1, +1)
     // shadow under them reaching row 7, a major tick's top row — an authored
     // row of the lane, neither solver asked (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
@@ -6544,9 +6557,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // THE KEYS ARE THE HI-FI SKIN'S KEYS (architect 2026-10-23; the one painter
 // paint_key, cool_edit_paint.h): each key at rest on the band's brushed
 // ground, NO LED (a typing key carries no lamp), its cap PRINTED ON ITS
-// FACE in the bone in THE KEYS FACE, 34 px at 300 % (gui_font.h's type
-// table, GuiFace::Keys; architect 2026-10-23 night, "C34" and "a separate
-// face" — the body's 22 until then) — the band painting NO LINE at its own
+// FACE in the bone in THE KEYS FACE, 24 px at 300 % (gui_font.h's type
+// table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
+// far", "a separate face" since that night, the body's 22 before it) — the
+// band painting NO LINE at its own
 // top edge (architect 2026-08-27, on glass). THE OTHER TWO FACES ARE THE
 // KEY DOWN at the key's TWO DEPTHS, the cap riding with the face
 // (2026-10-23; key_depth):
@@ -6620,8 +6634,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
         paint_cell_rect(cr, surf, palette().ground);
     }
 
-    // THE KEYS FACE (gui_font.h's type table, GuiFace::Keys: 34 px at 300 %,
-    // scaled with gui_scale; architect 2026-10-23 night), selected through
+    // THE KEYS FACE (gui_font.h's type table, GuiFace::Keys: 24 px at 300 %,
+    // scaled with gui_scale; architect 2026-10-24, "C24"), selected through
     // the one face owner and shaped through the one chokepoint (text_shape.h)
     // like every other label in the product. EVERY key on this surface takes
     // it — the character caps, the page keys' words and the function keys'
