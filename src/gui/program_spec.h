@@ -168,10 +168,12 @@ struct ProgramSpec {
     // (architect 2026-10-09 ~16:50 / ~21:00: Cool Edit's 17 rows, METRICS
     // §4.4, shrunk to 1 + 6 + 4 — "the timestamps should basically be
     // touching the trim bar — one Windows pixel of empty space above"), then
-    // its own light bottom line: ROW 0 AIR; THE DIGITS the base's six-row
-    // small digit (GuiFace::Small, gui_font.h — every set's small face, a
-    // cell all above the baseline) on rows 1 .. 6, their BASELINE the top of
-    // this ground row (7), the black (+1, +1) shadow's last row 7; THE TICKS
+    // its own light bottom line: THE DIGITS the ruler face (GuiFace::Small,
+    // gui_font.h's type table: 17 px at 300 % since 2026-10-23 night, its
+    // ink from just inside row 3 down to the baseline at 300 %; the base's
+    // six-row digit on rows 1 .. 6 under row 0's air 2026-10-09 to
+    // 2026-10-23), their BASELINE the top of this ground row (7), the black
+    // (+1, +1) shadow reaching row 7; THE TICKS
     // stand on the ground's bottom row and rise this far into it (minor and
     // major: rows 9 .. 10 and 7 .. 10), a major's top row the shadow's last,
     // the tick painted over it (the mock of record's order, paint_ruler_row).

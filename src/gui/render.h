@@ -586,8 +586,9 @@ void install_true_colors(bool on);
 // black shadow at (+1, +1) (2026-10-23), STANDING ON THE
 // GROUND'S BOTTOM ROW and rising into it, painted over the digits' shadow
 // where a major's top row meets it; THE DIGITS the ruler face (GuiFace::Small,
-// 15 px at 300 % since 2026-10-23, "the timestamps are good"; the base's
-// six-row digit 2026-10-09 to 2026-10-23) standing on the authored baseline
+// 17 px at 300 % since 2026-10-23 night, "R17"; 15 the skin's first night,
+// "the timestamps are good"; the base's six-row digit 2026-10-09 to
+// 2026-10-23) standing on the authored baseline
 // row 7 under the air above, "basically touching the trim bar", in the
 // tick's ink over a BLACK one-device-px (+1, +1) shadow (kCeRulerShadow) —
 // the ground 11 W where Cool

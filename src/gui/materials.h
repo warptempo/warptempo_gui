@@ -153,8 +153,9 @@ struct AppState;
 // THE INKS (constants all; 0xRRGGBB, sRGB): THE BONE kBoneInk F0F0F0 on
 // every word and digit the chrome prints at the body size — the caption's
 // title, the flag labels, the clocks' digits, the tab name, the state line,
-// the lists' rows, the cards, the prompts, the editors' text, the keyboard's
-// caps — and on the ruler's digits and ticks; THE LEGEND INK kLegendInk
+// the lists' rows, the cards, the prompts, the editors' text — and on the
+// keyboard's caps in their keys face (34 px at 300 %, 2026-10-23 night) and
+// the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends and the tooltip (the tooltip at the
 // body size since 2026-10-23, paint_shift_tooltip); THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone (a dead caption button wears the

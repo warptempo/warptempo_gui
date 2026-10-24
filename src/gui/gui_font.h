@@ -21,12 +21,17 @@
 // SCALED WITH gui_scale and rounded at the element (the amendment the same
 // night: size_px = nearbyint(authored · gui_scale / 300), the scaled_px
 // road) — BODY 22 Regular (the clocks, the state line, the lists, the cards,
-// the prompts, the editors, the keyboard's caps, and THE TOOLTIP since
-// 2026-10-23: "the tooltips font size should be the same as the flags"),
-// TITLE 22 Bold (the caption's title alone), RULER 15 Regular (the ruler's
-// digits alone), the CUES' 22 Regular (the body's size: the flag labels and
-// the flag editor), LEGEND 14 Regular (the keys' printed legends alone; the
-// tooltip wore it the first night of the skin). (The
+// the prompts, the editors, and THE TOOLTIP since 2026-10-23: "the tooltips
+// font size should be the same as the flags"), TITLE 22 Bold (the caption's
+// title alone), RULER 17 Regular (the ruler's digits alone; architect
+// 2026-10-23 night, "R17" off 15 / 17 / 19 / 21 on the live lane — 15 the
+// skin's first night), the CUES' 22 Regular (the body's size: the flag
+// labels and the flag editor), LEGEND 14 Regular (the keys' printed legends
+// alone; the tooltip wore it the first night of the skin), KEYS 34 Regular
+// (the on-screen keyboard's caps alone — the letters, the symbol pages'
+// characters and the word caps; architect 2026-10-23 night, "C34" off
+// 22 / 28 / 34 / 40 on the first row, and "a separate face": the caps wore
+// the body's 22 until then). (The
 // three recorded Windows metric sets — MS Sans Serif 8's {11, 2, x 6} cell,
 // the ruler's six-row digit, Cool Edit's cue cap of 7 — and the ems derived
 // to stand their ink those rows tall, 2026-10-05 to 2026-10-23, are git
@@ -66,9 +71,10 @@
 #include <string_view>
 
 // THE USES (the head's table): the body, the caption's bold, the ruler's
-// digits (`Small`), the cues' labels (`Program`) and the keys' legends.
-enum class GuiFace { Body, Bold, Small, Program, Legend };
-inline constexpr std::size_t kGuiFaceCount = 5;
+// digits (`Small`), the cues' labels (`Program`), the keys' legends and the
+// on-screen keyboard's caps (`Keys`).
+enum class GuiFace { Body, Bold, Small, Program, Legend, Keys };
+inline constexpr std::size_t kGuiFaceCount = 6;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the Linux
@@ -79,7 +85,7 @@ inline constexpr std::size_t kGuiFaceCount = 5;
 // its file by its index here. Both are TrueType (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
-    "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends
+    "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps
     "LiberationSans-Bold.ttf",    // 1: the caption's title
 };
 
@@ -93,9 +99,10 @@ struct GuiFaceSize {
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body
     {1, 22.0},   // Bold: the caption's title
-    {0, 15.0},   // Small: the ruler's digits
+    {0, 17.0},   // Small: the ruler's digits
     {0, 22.0},   // Program: the cues' labels and the flag editor
     {0, 14.0},   // Legend: the keys' legends
+    {0, 34.0},   // Keys: the on-screen keyboard's caps
 };
 
 struct GuiFontBytes {

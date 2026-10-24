@@ -3663,11 +3663,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int major_top = ground_bottom - scaled_px(kProgramSpec.ruler_major_tick_px);
     const int minor_top = ground_bottom - scaled_px(kProgramSpec.ruler_minor_tick_px);
 
-    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: 15 px
-    // at 300 %, scaled with gui_scale, 2026-10-23; the six-row Windows digit
-    // before it), their BASELINE THE TOP OF THE GROUND'S ROW 7 — the digits
-    // standing above it under row 0's air, "basically touching the trim
-    // bar" (architect 2026-10-09 ~21:00), the black one-device-px (+1, +1)
+    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: 17 px
+    // at 300 %, scaled with gui_scale — architect 2026-10-23 night, "R17";
+    // 15 the skin's first night, the six-row Windows digit before it), their
+    // BASELINE THE TOP OF THE GROUND'S ROW 7 — the digits standing above it
+    // under the air, "basically touching the trim bar" (architect 2026-10-09
+    // ~21:00): at 300 % the baseline 21 device rows under the lane's top, a
+    // digit's ink 11.9 px tall (Liberation Sans's 1430 / 2048 em), so its top
+    // stands on row 9 with 9 rows of ground above it under the trim bar's
+    // light line and its "0"'s overshoot a fifth of a px below the
+    // baseline; the black one-device-px (+1, +1)
     // shadow under them reaching row 7, a major tick's top row — an authored
     // row of the lane, neither solver asked (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
@@ -6534,7 +6539,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // THE KEYS ARE THE HI-FI SKIN'S KEYS (architect 2026-10-23; the one painter
 // paint_key, cool_edit_paint.h): each key at rest on the band's brushed
 // ground, NO LED (a typing key carries no lamp), its cap PRINTED ON ITS
-// FACE in the bone at the body size — the band painting NO LINE at its own
+// FACE in the bone in THE KEYS FACE, 34 px at 300 % (gui_font.h's type
+// table, GuiFace::Keys; architect 2026-10-23 night, "C34" and "a separate
+// face" — the body's 22 until then) — the band painting NO LINE at its own
 // top edge (architect 2026-08-27, on glass). THE OTHER TWO FACES ARE THE
 // KEY DOWN at the key's TWO DEPTHS, the cap riding with the face
 // (2026-10-23; key_depth):
@@ -6608,13 +6615,16 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
         paint_cell_rect(cr, surf, palette().ground);
     }
 
-    // THE ONE SANS FACE at the product's ONE text size, selected through the
-    // one face owner and shaped through the one chokepoint (text_shape.h) like
-    // every other label in the product. EVERY key on this surface takes it —
-    // the character caps, the page keys' words and the function keys' words
-    // alike — so there is no second way a cap can be drawn. A cap is one to
-    // nine glyphs, which are the cheapest runs there are.
-    const GuiFont font = gui_font(GuiFace::Body);
+    // THE KEYS FACE (gui_font.h's type table, GuiFace::Keys: 34 px at 300 %,
+    // scaled with gui_scale; architect 2026-10-23 night), selected through
+    // the one face owner and shaped through the one chokepoint (text_shape.h)
+    // like every other label in the product. EVERY key on this surface takes
+    // it — the character caps, the page keys' words and the function keys'
+    // words alike — so there is no second way a cap can be drawn; a word too
+    // long for its key is SHORTENED, never the face shrunk (cap_word,
+    // onscreen_keyboard.h). A cap is one to nine glyphs, which are the
+    // cheapest runs there are.
+    const GuiFont font = gui_font(GuiFace::Keys);
 
     onscreen_keyboard::for_each_key(
         app, page,
@@ -6668,8 +6678,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 r.x + (r.w - run.width_px) * 0.5) + ride;
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h)) + ride;
-            // THE CAP IN THE BONE at the body's size, no shadow
-            // (materials.h's INKS, 2026-10-23).
+            // THE CAP IN THE BONE in the keys face, no shadow (materials.h's
+            // INKS, 2026-10-23), its cap band centered on the key by
+            // redesign_baseline and riding with the key's depth.
             set_palette_source(cr, hex(kBoneInk));
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });

@@ -367,12 +367,14 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 }
 
 // WHAT A KEY WEARS, AND IT IS TEXT AND NOTHING ELSE (architect 2026-08-27, on
-// glass): every cap is a WORD or a character on the ONE sans face at the
-// product's one text size, shaped through the one chokepoint like every other
-// label. The function keys wore Breeze glyphs for a day and read OVERSIZED
-// beside the letter caps — a 22-unit icon scaled to the key's own height next
-// to a letter at the one text size — and there is plenty of horizontal room on a full-width
-// row, so they wear words.
+// glass): every cap is a WORD or a character on the ONE sans face in the
+// keys' own size (gui_font.h's GuiFace::Keys, 34 px at 300 %, architect
+// 2026-10-23 night; the product's one text size until then), shaped through
+// the one chokepoint like every other label. The function keys wore Breeze
+// glyphs for a day and read OVERSIZED beside the letter caps — a 22-unit
+// icon scaled to the key's own height next to a letter at the one text size
+// — and there is plenty of horizontal room on a full-width row, so they
+// wear words.
 //
 // AND THE WORD A FUNCTION KEY WEARS IS THE KEY'S NAME (planner 2026-09-01,
 // under the capitalization sweep's universal-rules spine): all five say what
@@ -399,11 +401,21 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // until the same evening's ruling closed the one act-named cap out (it named
 // what the key DOES to the editor standing over it, the button convention);
 // Shift, Tab and Space Qt spells the same as this keyboard always did.
-// BACKSPACE'S WORD IS THE WHOLE WORD, "Backspace" (architect 2026-10-06: in
-// Tahoma it fits the key with 2 clear each side), one spelling on every
-// page. MEASURED with the tracking against the symbol pages'
-// one-standard-key box (about 54 Windows px at 400 %): "Backspace" is 50.0
-// Windows px in Tahoma, 2 clear each side (measured 2026-10-06).
+// A WORD TOO LONG FOR ITS KEY IS SHORTENED, NEVER THE FACE SHRUNK (architect
+// 2026-10-23 night, with the keys face: "words that are too long, like
+// backspace, we would shorten to BKSP"): the form is the keyboard's own
+// abbreviation in capitals as keyboards print it — Backspace -> BKSP, Return
+// -> RET — applied ONLY where a word measurably fails its key. NOTHING IS
+// SHORTENED TODAY (2026-10-23): measured in the keys face (Liberation Sans,
+// HarfBuzz's unhinted advances, text_shape's road) against the face of the
+// narrowest key each word wears inside its one-device-px outline, every word
+// fits at 300 % on the tablet's 2304 and at 200 % and 150 % on the laptop's
+// 1920 (em 34 / 23 / 17; the one-standard-key face 217 / 183 / 185 px, the
+// function-width face 331 / 278 / 281): "Backspace", on the symbol pages'
+// one-standard key, 166 / 113 / 83 px; "Return" 102 / 69 / 51; "Space" on
+// its twelve-quarter key 96 / 65 / 48; "&123" 79 / 54 / 40; "Shift" 68 /
+// 46 / 34; "Esc" 57 / 38 / 28; "Tab" 55 / 37 / 27. (In Tahoma, 2026-10-06,
+// "Backspace" fit the key with 2 W clear each side.)
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the key DOWN one device px, its
@@ -444,8 +456,13 @@ inline constexpr Page page_after(Role role, Page page) {
 //
 // Only the VERTICAL dimensions and the gaps are authored at 100% and scaled
 // like every other redesigned dimension; the key PITCH is the window's (see
-// kUnitsPerRow). The proportions are the reference photograph's: a key about
-// two and a half times wider than tall, gaps a tenth of the key's height.
+// kUnitsPerRow), so a key's proportion is the window's width over the scaled
+// height and moves with both (2026-10-23, measured off for_each_key's own
+// arithmetic): the one-standard key 219-220 x 87 device px on the tablet's
+// 2304 at 300 %, about two and a half times wider than tall — the reference
+// photograph's proportion, which the height was authored to there — but
+// 184-185 x 58 (about 3.2) on the laptop's 1920 at 200 % and 187-188 x 44
+// (about 4.3) at 150 %; the gaps a tenth of the key's height at every scale.
 // IN WINDOWS PX since the unit's change (architect 2026-10-02): the laptop
 // pixel's 40 / 4 / 4 re-authored to the device sizes they had on the tablet.
 inline constexpr double kKeyHeightPx = 29.0;   // one row's key box
