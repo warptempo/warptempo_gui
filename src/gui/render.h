@@ -1215,9 +1215,10 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
 // re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
 // editor's line stands in the modal family's box, its text at the box's own
-// inset (modal_box.h's modal_box_text_inset_px: the field's two lines and
-// 5-W pad read as one 7-W number until 2026-10-23, one device px and 1 W
-// since — THE RING IS THE ONLY MARGIN). THE TIME FIELDS were never this field:
+// pad (modal_box.h's modal_box_text_pad_px: the field's two lines and 5-W
+// pad read as one 7-W number until 2026-10-23, one device px and 1 W that
+// morning, 12 px from the ring at 300 % since that night, the clock fields'
+// pad). THE TIME FIELDS were never this field:
 // row 8's clock and the render player's position and length are Cool Edit's
 // dark field, its height and its pad program_spec.h's own, the pad 5 W
 // since 2026-10-10, equal to this field's then.)
@@ -1301,7 +1302,8 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // scaled_px(20): 69 device px at 300 %, 84 at 360 % (the glyph 72, the
 // slots 4 each), 31 at the laptop's 138 % — AN AREA since the hi-fi skin,
 // THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one device
-// px and whose down face rides one device px right and down, 2026-10-23).
+// px and whose down face rides one device px right and down checked, two
+// held, 2026-10-23).
 // A glyph, where one is drawn (icons::draw_cased; no band key wears one in
 // the skin), rasterizes at icon_glyph_px at the case's first slot in from
 // its corner.

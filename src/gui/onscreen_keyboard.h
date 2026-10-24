@@ -406,7 +406,8 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // Windows px in Tahoma, 2 clear each side (measured 2026-10-06).
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
-// what says the arm is the key's ARMED FACE — the key DOWN (paint_key,
+// what says the arm is the key's ARMED FACE — the key DOWN one device px, its
+// checked depth (paint_key,
 // 2026-10-23; the ebony case's checked face 2026-10-22 to 2026-10-23,
 // Windows' soft sunken face over the Hilight dither before), which this key and
 // the symbol-mode key (while a symbol page stands) wear off their lamps — and

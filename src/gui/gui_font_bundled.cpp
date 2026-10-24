@@ -78,11 +78,13 @@ struct OutlineFace {
 };
 
 // EACH FILE'S OWN METRICS (gui_font.h's head, 2026-10-23), per em, read
-// once at the install: the "H" ink height the cap band is measured on, and
-// the face's ascender, descender and line height (FreeType's, the file's
+// once at the install: the "H" ink height the cap band is measured on, the
+// "l" ink height the ascender line is measured on (gui_font_ascender_ink_px),
+// and the face's ascender, descender and line height (FreeType's, the file's
 // hhea) — the vertical metrics every seat reads.
 struct FileMetrics {
     double cap_em     = 0.0;
+    double l_ink_em   = 0.0;
     double ascent_em  = 0.0;
     double descent_em = 0.0;
     double line_em    = 0.0;
@@ -217,14 +219,16 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
         FileMetrics& m = g_metrics[i];
-        m.cap_em = outline_ink_em(g_outline[i], U'H');
+        m.cap_em   = outline_ink_em(g_outline[i], U'H');
+        m.l_ink_em = outline_ink_em(g_outline[i], U'l');
         if (const FT_Face ft = g_outline[i].ft) {
             const double upem = static_cast<double>(ft->units_per_EM);
             m.ascent_em  = static_cast<double>(ft->ascender) / upem;
             m.descent_em = -static_cast<double>(ft->descender) / upem;
             m.line_em    = static_cast<double>(ft->height) / upem;
         }
-        if (m.cap_em <= 0.0 || m.ascent_em <= 0.0) ok = false;
+        if (m.cap_em <= 0.0 || m.l_ink_em <= 0.0 || m.ascent_em <= 0.0)
+            ok = false;
         g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
         if (!g_sign_axis_ok[i]) ok = false;
     }
@@ -245,6 +249,10 @@ double gui_font_line_px(const GuiFont& f) {
 
 double gui_font_cap_px(const GuiFont& f) {
     return g_metrics[file_of(f.face)].cap_em * gui_font_em_px(f);
+}
+
+double gui_font_ascender_ink_px(const GuiFont& f) {
+    return g_metrics[file_of(f.face)].l_ink_em * gui_font_em_px(f);
 }
 
 const GuiSignAxis& gui_sign_axis(GuiFace face) {

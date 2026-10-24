@@ -52,7 +52,10 @@
 // 1292, columns 21 and 2282), the interior x 22..2281 and y 188..1291 (THE
 // RING IS THE ONLY MARGIN, below; the main canvas's own rows 301–1289); the
 // controls row 1293–1439, its case rows 1332–1400, its first case's columns
-// 21–89 and its last 2214–2282.
+// 21–89 and its last 2214–2282. A DIALOG'S TEXT (THE TEXT INSIDE THE BOX,
+// below) 12 px from the ring on both axes: its pen on column 33, its
+// ascender line on row 199, its first baseline at y 215 (the "l" 15.9 px
+// tall), its wrap ending one past column 2270.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // mock_modal_settings_osk_v2.png; the spacing 2026-10-22): when a dialog
@@ -147,16 +150,15 @@ inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
 // then remove a similar amount of padding from the modal text editor, like
 // the settings editor"). THE INTERIOR is the box inside its ONE-DEVICE-PX
 // ring (hairline_px, the line the painter draws on the slot's outer edge —
-// the slot's other rows the field like the interior), and every member's
-// content stands ONE DEVICE PX OF AIR inside that (modal_box_content_pad_px):
-// the lists' rows on the left, the top and the right, so the lit row's bar
-// reaches to one px from the ring's columns and the first row stands one px
-// under its top row; a dialog's text box — a prompt's question, a dialog
-// editor's line — on the left and the top, its pen one W further in, the
-// pad a text field needs (modal_box_text_inset_px). (The interior one
-// program line in, its 3-px slot at 300 %, with the list's 1-W pad and the
-// text's 7-W inset inside it — 6 px of air round the lit row, 24 before the
-// text — stood 2026-10-14 to 2026-10-23.)
+// the slot's other rows the field like the interior), and the lists' rows
+// stand ONE DEVICE PX OF AIR inside that (modal_box_content_pad_px) on the
+// left, the top and the right, so the lit row's bar reaches to one px
+// from the ring's columns and the first row stands one px under its top row;
+// a dialog's text — a prompt's question, a dialog editor's line — keeps its
+// own pad, 12 px at 300 % (THE TEXT INSIDE THE BOX, below). (The interior
+// one program line in, its 3-px slot at 300 %, with the list's 1-W pad and
+// the text's 7-W inset inside it — 6 px of air round the lit row, 24 before
+// the text — stood 2026-10-14 to 2026-10-23.)
 inline GuiRect modal_box_interior_rect(const AppState& a, int keyboard_h) {
     const GuiRect box = modal_box_rect(a, keyboard_h);
     const int     lw  = hairline_px();
@@ -193,18 +195,45 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
     return GuiRect{row.x, y0, row.w, std::max(0, y1 - y0)};
 }
 
-// THE TEXT INSIDE THE BOX (architect 2026-10-14, the prompts' question and
-// the dialog editors' line; THE RING IS THE ONLY MARGIN since 2026-10-23,
-// above): its text box the content's one px of air in from the interior's
-// left, its pen kModalBoxTextPadPx = 1 W further in — the pad a text field
-// needs — and its wrap the same inset short of the interior's right; on
-// THE LIST'S ROWS: the first row the folder overlay's first row
-// (folder_overlay.h's row box, 17 W at the content's one px under the
-// ring), each further row one row pitch (the row and its 1-W gap) below, the
-// cap centred on each row's band (redesign_baseline). (The 7-W inset of
+// THE TEXT INSIDE THE BOX — a prompt's question, the progress modal's
+// sentence and the dialog editors' line (architect 2026-10-14; the pad
+// 2026-10-23, on his capture at 300 %, tmp/theme_next/pressed1/pk_cap_05.png:
+// the ink 5 px right of the ring and 18 under it — "it looks odd because the
+// horizontal padding is very small, but the vertical padding is large"; his
+// pick S3, the clock fields' pad): THE INK 12 PX FROM THE RING ON BOTH AXES
+// at 300 %, scaled with gui_scale through skin_px (kModalBoxTextPadAt300,
+// the clock fields' kTimeFieldPadAt300 the same number by the same road, the
+// ring counted in it as the time field counts its own): THE PEN on the ring's
+// left column plus the pad, THE WRAP the same pad short of the ring's right
+// column, and THE FIRST ROW'S ASCENDER LINE — the face's own "l" ink top,
+// gui_font_ascender_ink_px, never the line box's top: the air he sees is the
+// ink's — on the ring's top row plus the pad (modal_box_text_baseline0), each
+// further row one list row pitch below (the row and its 1-W gap). 12 px at
+// 300 %, 6 at 138 %, 14 at 360 %. THE LISTS (the project picker, the render
+// player) KEEP THEIR ROWS ("the player's rows look good"): the folder
+// overlay's row box, 17 W, at the content's one px under the ring, the cap
+// centred on each row's band (redesign_baseline). (The 7-W inset of
 // 2026-10-14 — Windows' edit-control inset, mock_modal_settings_osk_v2.png's
-// x 45 at 300 % — retired 2026-10-23.)
-inline constexpr double kModalBoxTextPadPx = 1.0;
-inline int modal_box_text_inset_px() {
-    return modal_box_content_pad_px() + scaled_px(kModalBoxTextPadPx, 1);
+// x 45 at 300 % — and the 1-W pad past the content's one px of air that
+// replaced it the morning of 2026-10-23, kModalBoxTextPadPx, its first row
+// the list's, are retired.)
+inline constexpr double kModalBoxTextPadAt300 = 12.0;
+inline int modal_box_text_pad_px() {
+    return skin_px(kModalBoxTextPadAt300, 1);
+}
+// THE TEXT'S ROOM in the box `box` (modal_box_rect): x the pen's column, w
+// the soft wrap's width (the box less the pad on each side), zero on a box
+// too narrow to hold it; y and h the interior's rows, the text's clip.
+inline GuiRect modal_box_text_room(const GuiRect& box) {
+    const int pad = modal_box_text_pad_px();
+    const int lw  = hairline_px();
+    if (box.w <= 2 * pad || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
+    return GuiRect{box.x + pad, box.y + lw, box.w - 2 * pad, box.h - 2 * lw};
+}
+// THE FIRST ROW'S BASELINE in the box `box`: the ring's top row plus the pad
+// is the ascender line, the baseline the ascender's own height under it,
+// rounded at the element.
+inline double modal_box_text_baseline0(const GuiFont& font, const GuiRect& box) {
+    return static_cast<double>(box.y + modal_box_text_pad_px()) +
+           std::nearbyint(gui_font_ascender_ink_px(font));
 }

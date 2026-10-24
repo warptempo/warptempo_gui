@@ -99,14 +99,16 @@ enum class GuiKeyLed { None, Unlit, Lit };
 // W above the outline's bottom row — rows y1 − 8 .. y1 − 6 and columns
 // x0 + 6 .. x0 + 11 at 300 %, rows y1 − 3 and columns x0 + 3 .. x0 + 5 at
 // the laptop's 138 % (x0, y1 the outline's left column and bottom row), the
-// mock's own place. `down` the key's down geometry (paint_key's PRESSED
-// row): THE LED RIDES WITH THE FACE, one device px right and down
-// (hairline_px; architect 2026-10-23, "the LED doesn't seem to be moving …
-// that's not realistic") — x0 + 7 .. x0 + 12 on rows y1 − 7 .. y1 − 5 at
-// 300 %, x0 + 4 .. x0 + 6 on row y1 − 2 at 138 %. Empty on a key too small
+// mock's own place. `depth` the key's depth in device px, 0, 1 or 2
+// (key_depth; paint_key's CHECKED and HELD rows): THE LED RIDES WITH THE
+// FACE, `depth` device px right and down (hairline_px; architect 2026-10-23,
+// "the LED doesn't seem to be moving … that's not realistic") — at 300 %
+// x0 + 7 .. x0 + 12 on rows y1 − 7 .. y1 − 5 checked and x0 + 8 .. x0 + 13
+// on rows y1 − 6 .. y1 − 4 held; at 138 % x0 + 4 .. x0 + 6 on row y1 − 2
+// checked and x0 + 5 .. x0 + 7 on row y1 − 1 held. Empty on a key too small
 // to hold it at rest. The one owner of the seat: the painter and the bake's
 // glow read it.
-GuiRect key_led_rect(const GuiRect& r, bool down);
+GuiRect key_led_rect(const GuiRect& r, int depth);
 
 // ONE KEY on `r`, w x h (the band's, row 8's and the render player's
 // icon_case_w_px square; a word button's or a keyboard key's own box) —
@@ -124,45 +126,56 @@ GuiRect key_led_rect(const GuiRect& r, bool down);
 //              column kKeyFoot (the last column inside it) — the key stands
 //              proud (make_pivot1.push_buttons' order: the top rows, the
 //              foot, the right column over both).
-//   PRESSED  — THE KEY DOWN, ONE DEVICE PX RIGHT AND DOWN (architect
-//              2026-10-23, the pressed sheet's reading F: "one display
-//              pixel, because I thought that's what we were doing"): inside
-//              the unchanged outline a ONE-DEVICE-PX band of kKeyFoot along
-//              the top row and the left column — the hole's wall the sunken
-//              cap no longer hides — and the face kKeyFacePressed filling
-//              the rest; the light rows, the foot and the right column gone;
-//              THE LED one device px right and down with the face
-//              (key_led_rect's `down`), and whatever the key carries on its
-//              face rides with it (the keyboard's caps; a printed legend
-//              stands on the ground under the key and does not move). A
-//              live press arm (the glass's or the mouse's) or a keyboard
-//              key's armed state is down, AND THE LED LIT whatever the
-//              checked state (architect 2026-10-23: "I would expect the
-//              little light to turn on when pressed"; "make the LEDs flash
-//              when pressed. Flash meaning turn on, as long as the button is
-//              held"): a key carrying a lamp (Unlit or Lit) is lit for as
-//              long as the press arm stands and returns to its state at the
-//              lift — the band's, row 8's, the render player's and the word
-//              buttons' keys alike (a lampless key, None — the scrub's
-//              thumb, the keyboard's keys — stays lampless).
-//   CHECKED  — THE SAME GEOMETRY: THE KEY DOWN WITH ITS LED LIT (architect
+//   TWO DEPTHS (architect 2026-10-23, on the pressed sheet's K3: "when a
+//              button is pressed but I'm not touching it — pushed in but I'm
+//              not touching it — it's at a middle depth, and then when I
+//              push it in, it goes deeper regardless of whether it was
+//              pushed in or not"; "when a button is pressed and I push it
+//              in, nothing happens — this will give extra feedback": a
+//              hi-fi deck's key travels past where it sticks). THE DOWN KEY
+//              inside the unchanged outline: a band of kKeyFoot `depth`
+//              device px along the top row and the left column — the hole's
+//              wall the sunken cap no longer hides — and the face
+//              kKeyFacePressed filling the rest; the light rows, the foot
+//              and the right column gone; THE LED `depth` device px right
+//              and down with the face (key_led_rect), and whatever the key
+//              carries on its face rides with it by the same depth (the
+//              keyboard's caps; a printed legend stands on the ground under
+//              the key and does not move). key_depth the one derivation.
+//   CHECKED  — THE MIDDLE DEPTH, ONE DEVICE PX (the pressed sheet's reading
+//              F of 2026-10-23: "one display pixel, because I thought
+//              that's what we were doing"), THE LED LIT (architect
 //              2026-10-23: "once I memorize the position of the buttons, I
 //              should be able to scan with the corner of my vision … by
-//              seeing which ones are pushed in"), so a press on a checked
-//              key changes nothing visible (the lit radio member swallows
-//              anyway). A lit LED IS a key down: paint_key reads `led` Lit
-//              as down whatever `pressed` says.
+//              seeing which ones are pushed in"). A lit LED IS a checked
+//              key: paint_key reads `led` Lit as checked.
+//   HELD     — THE DEEP DEPTH, TWO DEVICE PX, WHATEVER THE CHECKED STATE: a
+//              live press arm (the glass's or the mouse's) or a keyboard
+//              key under the finger, `pressed`; at the lift the key returns
+//              to its checked depth. THE LED LIT while it stands (architect
+//              2026-10-23: "I would expect the little light to turn on when
+//              pressed"; "make the LEDs flash when pressed. Flash meaning
+//              turn on, as long as the button is held"): a key carrying a
+//              lamp (Unlit or Lit) is lit for as long as the press arm
+//              stands and returns to its state at the lift — the band's,
+//              row 8's, the render player's and the word buttons' keys
+//              alike (a lampless key, None — the scrub's thumb, the
+//              keyboard's keys — stays lampless).
 //   DISABLED — the key as its state gives; the caller dims the legend
 //              (kDimInk).
 //   HOT      — none.
-// THE LED (key_led_rect) per `led`. paint_key takes a lit key — always down
-// — from the bake's patch, its glow composited there round the moved LED
-// (materials::paint_lit_key; materials.cpp's rebuild_lit_patches), so a
-// held or checked key is still one blit, and paints it plain where no patch
-// holds the size; paint_key_plain is the painter itself, `down` the
-// geometry, the bake's own road to a patch.
+// THE LED (key_led_rect) per `led`. paint_key takes a lit key — always at
+// depth 1 or 2 — from the bake's patch for its size and depth, its glow
+// composited there round that depth's LED (materials::paint_lit_key;
+// materials.cpp's rebuild_lit_patches), so a held or checked key is still
+// one blit, and paints it plain where no patch holds the size;
+// paint_key_plain is the painter itself, `depth` the geometry (0 the key at
+// rest), the bake's own road to a patch and the keyboard's, whose lampless
+// keys carry a checked state (the Shift arm) paint_key cannot read off an
+// LED.
+int key_depth(bool pressed, bool checked);
 void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
-void paint_key_plain(cairo_t* cr, const GuiRect& r, bool down, GuiKeyLed led);
+void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 
 // (THE QUAVER'S PAINTER — paint_quaver, make_sheet2.vec_mock()'s vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is

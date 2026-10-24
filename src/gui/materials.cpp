@@ -123,10 +123,12 @@ uint32_t word_of(GuiColor c) {
 // window bakes once no size change has arrived for this long.
 constexpr auto kBakeSettle = std::chrono::milliseconds(150);
 
-// ONE LIT KEY'S PATCH (materials.h's LIT KEYS): its size; a lit key is
-// always down (cool_edit_paint.h's paint_key), so one patch a size.
+// ONE LIT KEY'S PATCH (materials.h's LIT KEYS): its size and its depth; a
+// lit key is always down, checked at depth 1 or held at depth 2
+// (cool_edit_paint.h's paint_key), so two patches a size.
 struct LitPatch {
     int  w = 0, h = 0;
+    int  depth = 0;
     Tile tile;
 };
 
@@ -625,31 +627,32 @@ std::size_t bytes_of_surface(cairo_surface_t* s) {
 }
 
 // THE LIT KEYS' PATCHES (materials.h's LIT KEYS and set_led_glow): for
-// every size the key painter's own lit key at the origin — DOWN, a lit key
-// being a key down (architect 2026-10-23; cool_edit_paint.h's paint_key):
-// the wall's one-device-px band inside the outline's top row and left
-// column, the LED one device px right and down — then THE GLOW composited
-// over the face inside the wall and the outline, round THE MOVED LED's rect
-// (key_led_rect with `down`) — the accent at alpha .35 at the rect's edge
-// falling off as (1 − d / glow)² to 0 at `glow` px out, d the pixel's
-// distance from the rect — the LED's own pixels left as painted. In the
-// window's bytes: the painter converts its own colors (set_palette_source),
-// the glow's accent converted here.
+// every size and each of the two down depths, 1 checked and 2 held
+// (architect 2026-10-23; cool_edit_paint.h's paint_key), the key painter's
+// own lit key at the origin — the wall's band `depth` device px inside the
+// outline's top row and left column, the LED `depth` device px right and
+// down — then THE GLOW composited over the face inside the wall and the
+// outline, round THAT DEPTH'S LED rect (key_led_rect) — the accent at alpha
+// .35 at the rect's edge falling off as (1 − d / glow)² to 0 at `glow` px
+// out, d the pixel's distance from the rect — the LED's own pixels left as
+// painted. In the window's bytes: the painter converts its own colors
+// (set_palette_source), the glow's accent converted here.
 void rebuild_lit_patches() {
     State& s = state();
     s.lit.clear();
     const GuiColor accent = display_color(hex(s.accent));
     const double ar = accent.r * 255.0, ag = accent.g * 255.0, ab = accent.b * 255.0;
     constexpr double kGlowPeak = 0.35;
-    // The face's first row and column: past the outline and the wall.
-    const int face0 = 2 * hairline_px();
-    for (const auto& [w, h] : s.lit_sizes) {
+    for (const auto& [w, h] : s.lit_sizes)
+    for (const int depth : {1, 2}) {
+        // The face's first row and column: past the outline and the wall.
+        const int face0 = (1 + depth) * hairline_px();
         cairo_surface_t* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
         cairo_t* cr = cairo_create(surf);
         const GuiRect r{0, 0, w, h};
-        paint_key_plain(cr, r, /*down=*/true, GuiKeyLed::Lit);
+        paint_key_plain(cr, r, depth, GuiKeyLed::Lit);
         cairo_destroy(cr);
-        const GuiRect led = key_led_rect(r, /*down=*/true);
+        const GuiRect led = key_led_rect(r, depth);
         if (g_led_glow > 0 && led.w > 0 && led.h > 0) {
             cairo_surface_flush(surf);
             unsigned char* data = cairo_image_surface_get_data(surf);
@@ -683,6 +686,7 @@ void rebuild_lit_patches() {
         LitPatch lp;
         lp.w = w;
         lp.h = h;
+        lp.depth = depth;
         lp.tile = make_tile(GuiRect{0, 0, w, h}, Surface(surf));
         s.lit.push_back(std::move(lp));
     }
@@ -934,11 +938,11 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
     cairo_restore(cr);
 }
 
-bool paint_lit_key(cairo_t* cr, const GuiRect& r) {
+bool paint_lit_key(cairo_t* cr, const GuiRect& r, int depth) {
     const State& s = state();
     if (!s.baked) return false;
     for (const LitPatch& p : s.lit) {
-        if (p.w != r.w || p.h != r.h) continue;
+        if (p.w != r.w || p.h != r.h || p.depth != depth) continue;
         cairo_save(cr);
         cairo_matrix_t at;
         cairo_matrix_init_translate(&at, -static_cast<double>(r.x),

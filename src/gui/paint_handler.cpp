@@ -323,10 +323,11 @@ namespace {
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE HI-FI SKIN'S BLANK KEY
 // (architect 2026-10-23; paint_key, cool_edit_paint.h, where its states
-// stand). A PRESSED button (a live press) and a CHECKED one (the roster's
-// `selected`, `lamp`) are ONE GEOMETRY, the key DOWN one device px right
-// and down with its LED lit (2026-10-23) — a press lighting the LED for as
-// long as it stands; a DISABLED button keeps the face its state gives, a
+// stand). A CHECKED button (the roster's `selected`, `lamp`) is the key
+// DOWN one device px right and down with its LED lit, a PRESSED one (a live
+// press) TWO DEVICE PX whatever its checked state (the two depths,
+// 2026-10-23) — a press lighting the LED for as long as it stands, the key
+// back at its checked depth at the lift; a DISABLED button keeps the face its state gives, a
 // dead checked button still down (the roster's rule at paint_icon_row),
 // its legend dimmed by the caller. NO HOT FACE. It answers nothing: no
 // roster key carries anything on its face (the legends, the word buttons'
@@ -1358,9 +1359,12 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // covers it (the roster's gate — the hit test's, which claims no press
     // on a dead button). Maximise is dead where the window cannot be
     // restored (the tablet). EVERY GLYPH IN THE BONE, no cell face: PRESSED
-    // — its Caption arm standing with the pointer inside it — the glyph ONE
-    // DEVICE PX RIGHT AND DOWN in the same bone, the move the whole pressed
-    // look as on the keys (architect 2026-10-23: "the bone should stay");
+    // — its Caption arm standing with the pointer inside it — the glyph TWO
+    // DEVICE PX RIGHT AND DOWN in the same bone, THE KEYS' HELD DEPTH (a
+    // caption button has no checked state, so a press takes the held
+    // depth: a press is a press, architect 2026-10-23; key_depth,
+    // cool_edit_paint.h), the move the whole pressed look as on the keys
+    // (architect 2026-10-23: "the bone should stay");
     // and NO DISABLED LOOK — a dead button wears the bone like its
     // neighbors and simply does not respond (architect 2026-10-23: "we have
     // no more disabled rule for the buttons, so … get rid of that for the
@@ -1376,9 +1380,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
             face.enabled = caption_button_enabled(gui, id);
         // A box the clip does not reach is skipped (clip_meets).
         if (!clip_meets(cr, b)) continue;
-        const double ride = caption_button_pushed(app, i)
-                                ? static_cast<double>(hairline_px())
-                                : 0.0;
+        const double ride = static_cast<double>(
+            key_depth(caption_button_pushed(app, i), false) * hairline_px());
         paint_caption_glyph(cr, id, static_cast<double>(b.x) + b.w * 0.5 + ride,
                             static_cast<double>(row.y) + row.h * 0.5 + ride,
                             hex(kBoneInk));
@@ -5127,8 +5130,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // ring's outer columns, no row-8 pad, no tail): every key the program's case
 // at the case's seat, the keys abutting (modal_word_buttons, the player's
 // player_row_layout). (The 6-W inter-button gap, modal_popup.png's 8 laptop
-// px, stood until 2026-10-23.) The text in the box stands at the box's own inset (modal_box.h's
-// modal_box_text_inset_px) on the list's rows (folder_overlay.h's row box).
+// px, stood until 2026-10-23.) The text in the box stands 12 px from the
+// ring at 300 % on both axes (modal_box.h's THE TEXT INSIDE THE BOX), one
+// list row pitch a row.
 // (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
 // at 29 W, kModalFieldHeightPx 23 W tall with its text kModalFieldPadXPx 5 W
 // in, its label before it and its horizontal travel — stood on the bottom
@@ -5885,23 +5889,29 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // taskbar dialog's centered band before it, until that day.)
     const int btn_y = seats.case_y;
 
-    // THE TEXT IN THE BOX — a prompt's question, an editor's line — stands on
-    // the list's rows (folder_overlay.h's row box: the first row one device
-    // px under the ring, each further row one row pitch below) at the box's
-    // text inset from the interior's left (modal_box_text_inset_px — THE RING
-    // IS THE ONLY MARGIN, modal_box.h — the same inset short of its right),
-    // the cap centred on each row's band.
+    // THE TEXT IN THE BOX — a prompt's question, an editor's line — 12 PX
+    // FROM THE RING ON BOTH AXES at 300 % (modal_box.h's THE TEXT INSIDE THE
+    // BOX, 2026-10-23): the pen at the text room's x, the wrap its width,
+    // the first row's baseline modal_box_text_baseline0 (the "l"'s ink top
+    // the pad under the ring), each further row one list row pitch below.
+    // The rows keep the list's band (row_h) for the published geometry, the
+    // first row's band placed so redesign_baseline lands on that baseline.
+    const GuiRect box_rect   = boxed ? modal_box_rect(app, kb_h)
+                                     : GuiRect{0, 0, 0, 0};
     const GuiRect interior   = boxed ? modal_box_interior_rect(app, kb_h)
                                      : GuiRect{0, 0, 0, 0};
-    const int     text_inset = modal_box_text_inset_px();
-    const int     text_x0    = interior.x + text_inset;
-    const int     text_w     = std::max(0, interior.w - 2 * text_inset);
+    const GuiRect text_room  = modal_box_text_room(box_rect);
+    const int     text_x0    = text_room.x;
+    const int     text_w     = text_room.w;
     const int     row_h      = folder_overlay::button_row_height_px();
     const int     row_pitch  = row_h + folder_overlay::button_row_gap_px();
-    const int     row0_y     = interior.y + folder_overlay::row_inset_px();
+    const double  baseline0  = modal_box_text_baseline0(font, box_rect);
+    const int     row0_y     = static_cast<int>(baseline0) -
+                               static_cast<int>(redesign_baseline(font, 0.0,
+                                                static_cast<double>(row_h)));
     // ONE LINE ON THE BOX'S FIRST ROW, in the chrome's text on the face —
     // a prompt's question and the progress modal's sentence alike — CLIPPED
-    // at the text inset short of the interior's right edge: a line longer
+    // at the text room's right edge, the pad short of the ring: a line longer
     // than the box's width is cut there, the buttons under it on the
     // controls row always whole.
     const auto paint_first_row_line = [&](const std::string& text) {
@@ -5912,10 +5922,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         cairo_rectangle(cr, text_x0, interior.y, text_w, interior.h);
         cairo_clip(cr);
         set_palette_source(cr, palette().label);
-        text_shape::show_shaped_run(
-            cr, msg, static_cast<double>(text_x0),
-            redesign_baseline(font, static_cast<double>(row0_y),
-                              static_cast<double>(row_h)));
+        text_shape::show_shaped_run(cr, msg, static_cast<double>(text_x0),
+                                    baseline0);
         cairo_restore(cr);
     };
 
@@ -6197,18 +6205,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // 2026-08-13 retired with the field). ONE SHAPED RUN, the rows cut
             // from its own pen (text_shape::byte_offsets_px) by the one wrap
             // rule, text_editor::soft_wrap_rows: each row the most text that
-            // fits the room between the two text insets less THE CARET'S
-            // COLUMN, reserved at the right so a caret at a full row's end
-            // stands inside the room. Row i stands on the list's row i
-            // (row0_y + i · row_pitch), its bytes painting from the line's start
-            // (`line_x0`, the text inset): its origin
+            // fits the text room (the box less its pad each side) less THE
+            // CARET'S COLUMN, reserved at the right so a caret at a full
+            // row's end stands inside the room. Row i stands one list row
+            // pitch under the one before (row0_y + i · row_pitch, the first
+            // row's band seated on the pad's baseline above), its bytes
+            // painting from the line's start (`line_x0`, the pen): its origin
             // is that start less its first byte's pen. A line taller
             // than the box is cut at the box's interior — nothing scrolls, and
             // the 1024-byte cap keeps a real line inside it.
             // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14: the Settings
             // editor's "Setting:" and the BPM editor's "BPM:" both removed,
             // architect "drop"): the two editors share one shape, the line
-            // starting at the text inset on every row.
+            // starting at the pen on every row.
             const int line_x0 = text_x0;
             const int line_w = std::max(0, text_w);
             // THE CARET ONE DEVICE PX WIDE (render.h's line rule, the
@@ -6401,8 +6410,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE RENDER PLAYER'S ROW IS ROW 8'S CASES (architect 2026-10-05;
         // the program's since 2026-10-09): its nine boxes take the roster's
         // face through the one painter, paint_roster_case — the rest face,
-        // the key DOWN one device px right and down for a press and for
-        // Repeat One's lit lamp alike (2026-10-23), NO HOT FACE
+        // the key DOWN one device px for Repeat One's lit lamp and two for
+        // a press (the two depths, 2026-10-23), NO HOT FACE
         // (program_spec.h's case_hot_face) — and no separators.
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
@@ -6527,17 +6536,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // ground, NO LED (a typing key carries no lamp), its cap PRINTED ON ITS
 // FACE in the bone at the body size — the band painting NO LINE at its own
 // top edge (architect 2026-08-27, on glass). THE OTHER TWO FACES ARE THE
-// KEY DOWN, one device px right and down, the cap riding with the face
-// (2026-10-23):
-//   ARMED     — the CHECKED face, the band's checked case's. Worn by SHIFT
+// KEY DOWN at the key's TWO DEPTHS, the cap riding with the face
+// (2026-10-23; key_depth):
+//   ARMED     — the CHECKED face, ONE DEVICE PX right and down, the band's
+//               checked case's. Worn by SHIFT
 //               while it is armed and by the SYMBOL-MODE key while a symbol
 //               page stands — the two lamps.
 //               IT IS ALL SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap
 //               is the word "Shift" in both states — that, and the letter
 //               caps, every one of which turns capital while the arm stands.
-//   PRESSED   — the same down face, the roster's pressed face; ARMED and
-//               PRESSED read alike, as the band's checked and pressed cases
-//               do.
+//   PRESSED   — the HELD face, TWO DEVICE PX right and down whatever the
+//               armed state, the roster's pressed face; a press on an armed
+//               key goes deeper, as on the band's checked cases.
 // (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
 // Hilight dither armed, the cap in the theme's label — 2026-10-02 to
 // 2026-10-22; the ebony case 2026-10-22 to 2026-10-23.)
@@ -6628,14 +6638,16 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                  page != onscreen_keyboard::Page::Letters);
 
             // THE KEY (architect 2026-10-23; paint_key, cool_edit_paint.h):
-            // pressed or armed (Shift, the symbol page's key — a checked key)
-            // the key down, NO LED — a typing key carries no lamp; the cap
-            // printed ON its face, so it RIDES WITH THE FACE, one device px
-            // right and down while the key is down.
+            // the TWO DEPTHS by key_depth — the key under the finger HELD,
+            // two device px, whatever its armed state; armed (Shift, the
+            // symbol page's key — a checked key) and not held CHECKED, one;
+            // NO LED — a typing key carries no lamp, so the depth goes to
+            // paint_key_plain directly; the cap printed ON its face, so it
+            // RIDES WITH THE FACE by the key's depth, right and down.
             const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-            const bool down = pressed || armed;
-            paint_key(cr, r, down, GuiKeyLed::None);
-            const double ride = down ? static_cast<double>(hairline_px()) : 0.0;
+            const int depth = key_depth(pressed, armed);
+            paint_key_plain(cr, r, depth, GuiKeyLed::None);
+            const double ride = static_cast<double>(depth * hairline_px());
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
             // the function keys, Space and the page keys), or, where it
