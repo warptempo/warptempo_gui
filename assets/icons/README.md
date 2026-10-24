@@ -108,6 +108,8 @@ root tag `data-body-shift="0 0"` — BOXED GLYPHS, placed by their box and never
 | `FolderRow.svg` | the planner's folder, `M 4 10 H 15 V 14 H 30 V 34 H 4 Z` — a square with a tab at the top (architect: "just a simple square with a tab at the top"; his pick, variant c of three tabs) | the folder and project rows; Up a Folder (`UpAFolder.svg`'s link) |
 
 `FolderRow.svg` and `WavRow.svg` were `folder` and `audio-x-generic` until 2026-10-23; their rows in the tables below
+
+The dropped `WavRow.png`, `FolderRow.png` and `UpAFolder.png` of the classical set (the brass record and portfolio) were REMOVED 2026-10-23 night: under the PNG-wins rule they outranked the quaver and the folder the architect ruled for the list rows ("use the logo in the render player, but then we need a folder icon as well"); a new drop under those names would win again.
 are the builder's record (`tools/icon_set_adwaita_322/mapping.tsv` still names them).
 
 ## The changed files
