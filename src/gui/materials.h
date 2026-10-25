@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <string_view>
 
 struct AppState;
 
@@ -115,37 +114,36 @@ struct AppState;
 //           keyboard's band and every modal's controls row stand on it.
 //   MARKER  ONE TILE, THE MARKER LANE'S ROWS, window-wide, its surface twice
 //           the window's width (the LOOP).
-//   KEYS    THE KEY PATCHES (2026-10-24, the MOTTLE below): PER KEY, PER
-//           DEPTH, every key the geometry lays out (paint_handler.h's
-//           program_key_seats — the band's and row 8's in both states of
-//           the `h` view, the render player's nine, every word button of
-//           every answer set, the scrub's thumb and, on a platform with the
-//           on-screen keyboard, every key of its three pages), each keyed
-//           by its IDENTITY (GuiKeyKind) and its size: a lamp key's RESTING
-//           patch (depth 0, the LED dead), its CHECKED patch (one device px
-//           down, lit) and its HELD patch (two, lit — architect 2026-10-23,
-//           the two depths; cool_edit_paint.h's paint_key), the lit two
-//           with THE GLOW composited round that depth's LED (led_glow
-//           below); a lampless key (the keyboard's, the thumb) the depths
-//           it can stand at, no LED. Each patch is the key as the key
-//           painter draws it at that depth, ITS FACE MOTTLED (the key's
-//           own grain, read at the depth's ride) under the LED and the
-//           glow — so a key is one blit at every depth, and no noise and
-//           no blend is computed at paint time. An accent change rebuilds
-//           the lit patches alone (set_accent); the rest stand.
-// RESIDENT at 300 % on 2304 x 1440, 36 050 160 bytes (the arithmetic off
-// the geometry, 2026-10-24): the ground's tile 13.3 MB (rows 0 .. 1440
+//   KEYS    THE KEY PATCHES: ONE PER KEY SIZE, PER DEPTH, PER LAMP — every
+//           size the geometry lays out (paint_handler.h's program_key_seats
+//           — the band's and row 8's in both states of the `h` view, the
+//           controls row's square key (the render player's nine and every
+//           word button), the scrub's thumb and, on a platform with the
+//           on-screen keyboard, every key of its three pages): a lamp key's
+//           RESTING patch (depth 0, the LED dead), its CHECKED patch (one
+//           device px down, lit) and its HELD patch (two, lit — architect
+//           2026-10-23, the two depths; cool_edit_paint.h's paint_key), the
+//           lit two with THE GLOW composited round that depth's LED
+//           (led_glow below); a lampless key (the keyboard's, the thumb) the
+//           depths it can stand at, no LED. Each patch is the key as the
+//           key painter draws it at that depth, its face flat (THE KEY
+//           below) — two keys of one size at one depth are the same bytes,
+//           so a size is one patch whichever key stands there — and a key
+//           is one blit at every depth, no blend computed at paint time. An
+//           accent change rebuilds the lit patches alone (set_accent); the
+//           rest stand.
+// RESIDENT at 300 % on 2304 x 1440, 15 396 504 bytes (the arithmetic off
+// the geometry, 2026-10-25): the ground's tile 13.3 MB (rows 0 .. 1440
 // window-wide, the band's top the surface's first row since 2026-10-24);
-// the lane's 0.94 MB, 2304 x 51 doubled; THE KEY PATCHES 21.8 MB — 41
-// roster keys and the player's nine at three depths and the seven words
-// (Save, Discard, Cancel, Retry, Yes, OK, Delete) at two, all 69 x 69, 3.1
-// MB; the thumb's one 24 x 48; the on-screen keyboard's 109 keys over its
-// three pages at depths 0 and 2 and its four lamps' keys (Shift, the three
-// symbol-mode keys) at 1 too, 222 patches, 18.7 MB. On the laptop's
-// maximized 1920 x 1047 at 200 %, 9 953 344 bytes (no keyboard; the lamp
-// keys' 46 x 46 patches 1.4 MB). materials::resident_bytes, which the trace
-// line prints at every bake with the patches' count and time, is the
-// measure.
+// the lane's 0.94 MB, 2304 x 51 doubled; THE KEY PATCHES 1.19 MB, 13 of
+// them — the one 69 x 69 lamp key (the band, row 8 and the controls row)
+// at its three depths, the thumb's one 24 x 48, and the on-screen
+// keyboard's four sizes, 219 / 220 / 676 x 87 at depths 0 and 2 and the
+// 333 x 87 of Shift, Backspace, Enter and the symbol-mode key at 1 too
+// (nine patches, 1.12 MB). On the laptop's maximized 1920 x 1047 at 200 %,
+// 8 590 640 bytes (no keyboard; the lamp key's three 46 x 46 patches and
+// the thumb's 8 x 16). materials::resident_bytes, which the trace line
+// prints at every bake with the patches' count and time, is the measure.
 //
 // THE REGIONS — WHICH GROUND A SURFACE IS (GuiMaterialRegion, a scope the
 // painter names): GROUND the brushed panel — the band and row 8 under and
@@ -154,7 +152,7 @@ struct AppState;
 // between the program ring's columns and the cue labels' face boxes on it;
 // FLAT everything else — the ruler's flat ground, the view bar's
 // field, the fields, the modal box, the cards and the tooltip, every key
-// (its edges solid fills, its face the patch's).
+// (a solid fill on every pixel, baked into its patch).
 // UNTOUCHED: the well and everything the palette draws (the canvas, the view
 // bar's span, the cues' triangles and dots, the playhead).
 //
@@ -227,40 +225,13 @@ inline constexpr uint32_t kSelectionText = kBoneInk;
 // the face darker, the edges gone, a wall of the foot tone the depth's
 // device px inside the outline's top row and left column and the LED the
 // depth's device px right and down (cool_edit_paint.h's paint_key).
-//
-// THE MOTTLE (architect 2026-10-24, his go the same evening; the frame of
-// record tmp/theme_next/keys1/zz_keys_69_mottle_only_S2_015.png, its
-// generator make_keys1.py's `crumple` and `shade`): EVERY KEY'S FACE WEARS A
-// CRUMPLED-PAPER RELIEF — "like when a paper is all wrinkly", "much more
-// subtle" than the facets of the first round; "the texture must follow the
-// push"; "each button could be different, slightly different from the
-// others"; "almost, if not entirely, zero performance hit". THE RELIEF a
-// height field of kKeyMottleOctaves octaves of RIDGED VALUE NOISE — per
-// octave a uniform random grid upsampled by PIL's bicubic (a = −0.5) at the
-// octave's cell, a random offset into it, the ridge 1 − |2n − 1|, the
-// amplitudes 1, .5, .25, the cell kKeyMottleCreasePx halving per octave with
-// a floor of 2 (so every octave runs at 2); THE SHADING s = −.9 ∂y − .4 ∂x of
-// the field (lit from the top light edge and a little from the left;
-// numpy.gradient's differences), normalized to unit deviation over the
-// resting face and scaled by kKeyMottleStrength; the face pixel
-// round(tone · (1 + s)), each channel clipped — multiplicative on the face's
-// tone alone (kKeyFace at rest, kKeyFacePressed down), so the face's mean
-// holds and no tone derived off it moves. THE FACE ALONE: the outline, the
-// light top rows, the foot, the right column, the down key's wall, the LED,
-// the glow and the printed legend are as they were. EACH KEY ITS OWN GRAIN,
-// seeded by its IDENTITY (GuiKeyKind; std::mt19937, never its position), the
-// same every frame and every bake; ONE FIELD PER KEY over the inside of its
-// outline, read IN THE FACE'S OWN COORDINATES — a key down shows the same
-// grain one or two device px right and down, clipped to the down face. THE
-// CREASE IS kKeyMottleCreasePx DEVICE PX AT EVERY gui_scale (his S2, picked
-// in device px on the tablet: a line-rule-like constant beside the glow), the
-// strength his 1.5 % (off 0.5 .. 5 % by 0.5 at S2). BAKED, never painted:
-// the face is the key's patch (the head's KEYS). NO GRADIENT OF ANY KIND on
-// the face — the belly, the dome, the cylinder and the light-only crest were
-// judged on the same frames and not taken ("they make things look dirty").
-inline constexpr int    kKeyMottleCreasePx = 2;
-inline constexpr double kKeyMottleStrength = 0.015;
-inline constexpr int    kKeyMottleOctaves  = 3;
+// THE FACE IS FLAT, 3A3A3C at rest and 2C2C2E down, with no grain and no
+// gradient of any kind (architect 2026-10-25, "none": a crumpled-paper
+// mottle on the face lived 2026-10-24 to 2026-10-25 and came off on the
+// glass — with the eye already expecting a modeled key the grain read too
+// strong, and none was his pick off a 0 .. 1.5 % series; the per-key
+// patches it needed cost the on-screen keyboard 18.7 MB resident, his
+// second reason).
 inline constexpr uint32_t kKeyFace        = 0x3A3A3C;
 inline constexpr uint32_t kKeyFacePressed = 0x2C2C2E;
 inline constexpr uint32_t kKeyTopLight    = 0x767678;
@@ -292,36 +263,11 @@ inline constexpr cool_edit_derive::Hls kLedLitHls =
 constexpr uint32_t accent_of_ink(uint32_t ink) {
     return cool_edit_derive::tone(ink, 0.0, kLedLitHls.l, 0.0, kLedLitHls.s);
 }
-// THE KEY'S IDENTITY (the MOTTLE's seed and the patches' key, 2026-10-24):
-// its kind in the top byte, its number in the kind below — a band or row-8
-// key its RedesignButton, a render player key its index in the player's row
-// (player_row_layout's order), a word button its WORD (gui_word_key_id), an
-// on-screen keyboard key its stable place (onscreen_keyboard::key_index:
-// page, row, column), the scrub's thumb 0. Never a position: a key keeps its
-// grain wherever its row lays it.
-enum class GuiKeyKind : uint32_t {
-    Roster = 1, Player = 2, Word = 3, Keyboard = 4, Thumb = 5,
-};
-constexpr uint32_t gui_key_id(GuiKeyKind kind, uint32_t n) {
-    return (static_cast<uint32_t>(kind) << 24) | (n & 0xFFFFFFu);
-}
-// A WORD BUTTON'S IDENTITY: its word's FNV-1a, folded to the kind's 24 bits —
-// the same word the same key on every dialog ("OK", "Cancel", a prompt's
-// answers).
-constexpr uint32_t gui_word_key_id(std::string_view word) {
-    uint32_t h = 2166136261u;
-    for (const char c : word) {
-        h ^= static_cast<uint8_t>(c);
-        h *= 16777619u;
-    }
-    return gui_key_id(GuiKeyKind::Word, (h >> 24) ^ (h & 0xFFFFFFu));
-}
-// ONE KEY THE BAKE MAKES PATCHES FOR (the head's KEYS; program_key_seats,
-// paint_handler.h): its identity and size, whether it carries a lamp (its
-// LED then dead at depth 0 and lit at 1 and 2, cool_edit_paint.h's
+// ONE KEY SIZE THE BAKE MAKES PATCHES FOR (the head's KEYS;
+// program_key_seats, paint_handler.h): its size, whether it carries a lamp
+// (its LED then dead at depth 0 and lit at 1 and 2, cool_edit_paint.h's
 // paint_key), and the depths it can stand at, bit d for depth d.
 struct GuiKeySeat {
-    uint32_t id = 0;
     int      w = 0, h = 0;
     bool     lamp = true;
     uint8_t  depths = 0b111;
@@ -416,16 +362,14 @@ bool set_source(cairo_t* cr, GuiColor c);
 // ground's flat mean.
 void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m);
 
-// A KEY'S BAKED PATCH (the head's KEYS): the patch of the key `id` of
-// `r`'s size at `depth` device px down (0 at rest, 1 checked, 2 held;
-// key_depth), `lamp` whether it carries an LED (dead at 0, lit at 1 and 2),
-// blitted 1:1 at `r` — true; false where none is baked (before the first
-// bake, a key or size the bake did not see — a keyboard key while a resize
-// waits on the gate — or a depth it does not bake), the caller then
-// painting the flat key, never noise at paint (cool_edit_paint.h's
-// paint_key_at_depth).
-bool paint_key_patch(cairo_t* cr, const GuiRect& r, uint32_t id, int depth,
-                     bool lamp);
+// A KEY'S BAKED PATCH (the head's KEYS): the patch for a key of `r`'s size
+// at `depth` device px down (0 at rest, 1 checked, 2 held; key_depth),
+// `lamp` whether it carries an LED (dead at 0, lit at 1 and 2), blitted 1:1
+// at `r` — true; false where none is baked (before the first bake, a size
+// the bake did not see — a keyboard key while a resize waits on the gate —
+// or a depth it does not bake), the caller then painting the key itself
+// (cool_edit_paint.h's paint_key_at_depth).
+bool paint_key_patch(cairo_t* cr, const GuiRect& r, int depth, bool lamp);
 
 // THE DISABLED GLYPH'S TONES (icons::draw_disabled, which no band case calls
 // since 2026-10-23: the keys print no glyph): Cool Edit's measured emboss,

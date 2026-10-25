@@ -333,12 +333,10 @@ namespace {
 // roster key carries anything on its face (the legends, the word buttons'
 // words among them, stand under the key and do not move); the on-screen
 // keyboard's caps, which do ride the face, are paint_key's own caller and
-// read the ride there. `id` the key's identity, its mottle's seed and its
-// patches' key (materials.h's GuiKeyKind, 2026-10-24): a band or row-8 key
-// its RedesignButton, a player key its index, a word button its word.
+// read the ride there.
 void paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
-                       bool pressed, uint32_t id) {
-    paint_key(cr, r, pressed, lamp ? GuiKeyLed::Lit : GuiKeyLed::Unlit, id);
+                       bool pressed) {
+    paint_key(cr, r, pressed, lamp ? GuiKeyLed::Lit : GuiKeyLed::Unlit);
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -1823,9 +1821,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
-        paint_roster_case(cr, key, face.selected, pressed,
-                          gui_key_id(GuiKeyKind::Roster,
-                                     static_cast<uint32_t>(def.id)));
+        paint_roster_case(cr, key, face.selected, pressed);
 
         // THE HI-FI SKIN (architect 2026-10-23): THE KEY IS BLANK — nothing
         // stands on its face; the icon set stays loaded for a later drop —
@@ -2593,9 +2589,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
-        paint_roster_case(cr, key, face.selected, pressed,
-                          gui_key_id(GuiKeyKind::Roster,
-                                     static_cast<uint32_t>(def.id)));
+        paint_roster_case(cr, key, face.selected, pressed);
         // THE KEY IS BLANK, ITS LEGEND UNDER IT (the band's rule, 2026-10-23:
         // redesign_button_legend through the one seat, dimmed when dead).
         paint_key_legend(cr, key, legend, face.enabled);
@@ -5259,8 +5253,8 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 } // namespace
 
 // THE RENDER PLAYER'S ROW LAYOUT (2026-10-21: lifted out of the modal
-// painter's player branch so the painter and the materials' case patches,
-// program_key_seats below, read ONE layout): each of the nine cases' left
+// painter's player branch; the key patches read the controls row's square
+// key alone, program_key_seats below): each of the nine cases' left
 // column in the plan's order, the clock's two fields and the scrub's span,
 // on the controls row's seats (modal_controls_seats). The row's arrangement
 // and its rulings are at the painter's player branch.
@@ -5342,24 +5336,20 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 // THE KEYS AT THIS GEOMETRY (the declaration, paint_handler.h): every key
 // the rows lay out, in both states of the `h` view, each the layout's own
 // (icon_row_seats with icon_row_walk, row8_block with row8_block_walk,
-// player_row_layout, modal_word_buttons' square key, the scrub's thumb,
-// onscreen_keyboard::for_each_key) — the painters read the same — each
-// under the identity its painter passes (materials.h's GuiKeyKind).
+// modal_controls_seats' square key, the scrub's thumb,
+// onscreen_keyboard::for_each_key) — the painters read the same.
 std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
     std::vector<GuiKeySeat> out;
-    // A key seen twice (a band key in both states, a word on two answer
-    // sets) is one seat, its depths the union.
-    const auto add = [&](uint32_t id, int w, int h, bool lamp, uint8_t depths) {
+    // A size seen twice (every roster key, the controls row's square key,
+    // the keyboard's equal keys) is one seat, its depths the union.
+    const auto add = [&](int w, int h, bool lamp, uint8_t depths) {
         if (w <= 0 || h <= 0) return;
         for (GuiKeySeat& o : out)
-            if (o.id == id && o.w == w && o.h == h && o.lamp == lamp) {
+            if (o.w == w && o.h == h && o.lamp == lamp) {
                 o.depths |= depths;
                 return;
             }
-        out.push_back(GuiKeySeat{id, w, h, lamp, depths});
-    };
-    const auto roster = [](RedesignButton b) {
-        return gui_key_id(GuiKeyKind::Roster, static_cast<uint32_t>(b));
+        out.push_back(GuiKeySeat{w, h, lamp, depths});
     };
     // THE BAND: the left runs in both states, their cases cut at the left
     // runs' limit (a case wholly past it is never painted); the right run,
@@ -5377,13 +5367,11 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
                 const int n = static_cast<int>(run.size());
                 for (int i = 0; i < n; ++i)
                     if (seats.case_x(x, i) < seats.left_limit)
-                        add(roster(run[static_cast<std::size_t>(i)].id),
-                            seats.btn_w, seats.btn_h, true, 0b111);
+                        add(seats.btn_w, seats.btn_h, true, 0b111);
                 x = seats.next_run_x(x, n);
             }
         }
-        for (const IconRowDef& def : kIconRowRightRun)
-            add(roster(def.id), seats.btn_w, seats.btn_h, true, 0b111);
+        add(seats.btn_w, seats.btn_h, true, 0b111);
     }
     // ROW 8'S RIGHT BLOCK, in both states.
     const GuiRect row8 = bottom_row_area(app);
@@ -5393,32 +5381,22 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
         for (const bool history : {false, true})
             row8_block_walk(
                 history, row8_block(app, history, row8), lengths,
-                [&](const TransportRowDef& def, int) {
-                    add(roster(def.id), seats.case_w, seats.case_h, true, 0b111);
+                [&](const TransportRowDef&, int) {
+                    add(seats.case_w, seats.case_h, true, 0b111);
                 },
                 [](const TransportRowDef&) {});
     }
-    // THE CONTROLS ROW: the render player's nine (its lamp, Repeat One, at
-    // all three depths with the rest) and every word button of every answer
-    // set and of the dialog editors' OK / Cancel (never checked: rest and
-    // held), on the row's seats with no keyboard and with one (the same
-    // square key).
+    // THE CONTROLS ROW'S SQUARE KEY, on the row's seats with no keyboard
+    // and with one: the render player's nine (its lamp, Repeat One, at all
+    // three depths with the rest; the player never stands over the
+    // keyboard) and every word button, every one the row's square key
+    // (modal_word_buttons; never checked: rest and held).
     for (const int keyboard_h : {0, onscreen_keyboard::surface_height_px()}) {
         const BottomRowSeats ps = modal_controls_seats(app, keyboard_h);
-        if (ps.case_w <= 0 || ps.case_h <= 0) continue;
-        if (keyboard_h == 0)
-            for (std::size_t i = 0; i < player_row_layout(ps).x.size(); ++i)
-                add(gui_key_id(GuiKeyKind::Player, static_cast<uint32_t>(i)),
-                    ps.case_w, ps.case_h, true, 0b111);
-        for (const std::span<const PromptAnswer> table : kPromptAnswerTables)
-            for (const PromptAnswer& a : table)
-                add(gui_word_key_id(a.label), ps.case_w, ps.case_h, true, 0b101);
-        for (const std::string_view word : {kModalOkLabel, kModalCancelLabel})
-            add(gui_word_key_id(word), ps.case_w, ps.case_h, true, 0b101);
+        add(ps.case_w, ps.case_h, true, keyboard_h == 0 ? 0b111 : 0b101);
     }
     // THE SCRUB'S THUMB: at rest, no LED (paint_scrub_thumb).
-    add(gui_key_id(GuiKeyKind::Thumb, 0), scrub_thumb_w_px(), scrub_thumb_h_px(),
-        false, 0b001);
+    add(scrub_thumb_w_px(), scrub_thumb_h_px(), false, 0b001);
     // THE ON-SCREEN KEYBOARD'S KEYS, on a platform that has it: every key of
     // the three pages at rest and held, the two lamps' keys (Shift, the
     // symbol-mode key) armed too — no LED (paint_onscreen_keyboard).
@@ -5426,21 +5404,20 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
         for (int p = 0; p < onscreen_keyboard::kPageCount; ++p)
             onscreen_keyboard::for_each_key(
                 app, static_cast<onscreen_keyboard::Page>(p),
-                [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
+                [&](uint32_t, const onscreen_keyboard::KeyDef& k,
                     const GuiRect& r) {
                     using Role = onscreen_keyboard::Role;
                     const bool armable =
                         k.role == Role::Shift || k.role == Role::SymbolMode;
-                    add(gui_key_id(GuiKeyKind::Keyboard, index), r.w, r.h,
-                        false, armable ? 0b111 : 0b101);
+                    add(r.w, r.h, false, armable ? 0b111 : 0b101);
                 });
     return out;
 }
 
 // (THE WORD BUTTONS AND THE KEYS AT THIS GEOMETRY — word_and_key_case_rects,
 // the ebony's patches for every answer set's cluster and every keyboard
-// page's keys, 2026-10-22 to 2026-10-23 — went with the ebony; since
-// 2026-10-24 the mottle's patches seat them again, program_key_seats above.)
+// page's keys, 2026-10-22 to 2026-10-23 — went with the ebony; the key
+// patches seat their sizes again, program_key_seats above.)
 
 
 // THE MODAL FAMILY'S BOX'S PAINTER (defined with the folder overlay's
@@ -6103,8 +6080,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE ROW'S LAYOUT is player_row_layout's (the abutting cases, the
         // group space, the clock's two fields measured first, the fixed left run,
         // the right-flushed pair and the scrub taking what is between them —
-        // the rules stated there), the one layout the materials' case
-        // patches read too (program_key_seats).
+        // the rules stated there).
         const GuiFont cfont = gui_font(GuiFace::Body);
         const PlayerRowLayout pl = player_row_layout(seats);
         assert(plan.size() == pl.x.size());
@@ -6532,14 +6508,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // keys unchanged, only the drawing) — always live while its dialog
         // stands. The icon set's glyphs are not drawn (their enumerators stay
         // on the plan for a later drop).
-        // ITS IDENTITY (materials.h's GuiKeyKind, 2026-10-24): a player
-        // key its index in the player's row, a word button its word.
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-        paint_roster_case(cr, r, plan[i].lit, pressed,
-                          plan[i].glyph
-                              ? gui_key_id(GuiKeyKind::Player,
-                                           static_cast<uint32_t>(i))
-                              : gui_word_key_id(plan[i].label));
+        paint_roster_case(cr, r, plan[i].lit, pressed);
         std::string legend;
         int legend_access = -1;
         if (plan[i].glyph) {
@@ -6744,15 +6714,11 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // two device px, whatever its armed state; armed (Shift, the
             // symbol page's key — a checked key) and not held CHECKED, one;
             // NO LED — a typing key carries no lamp, so the depth goes to
-            // paint_key_at_depth directly, the key's patch by its stable
-            // place (onscreen_keyboard::key_index, its mottle's identity,
-            // materials.h's GuiKeyKind, 2026-10-24); the cap printed ON its
-            // face, so it RIDES WITH THE FACE by the key's depth, right and
-            // down, as the grain under it does.
+            // paint_key_at_depth directly; the cap printed ON its face, so it
+            // RIDES WITH THE FACE by the key's depth, right and down.
             const GuiMaterialScope flat(GuiMaterialRegion::Flat);
             const int depth = key_depth(pressed, armed);
-            paint_key_at_depth(cr, r, depth, GuiKeyLed::None,
-                               gui_key_id(GuiKeyKind::Keyboard, index));
+            paint_key_at_depth(cr, r, depth, GuiKeyLed::None);
             const double ride = static_cast<double>(depth * hairline_px());
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
