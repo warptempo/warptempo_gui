@@ -991,17 +991,9 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         text_editor::deactivate(app.settings_editor);
     };
     // The write is advisory in the ruling's sense: it may fail, the live value
-    // stands either way, and the failure is the press's answer on a card.
-    auto persist = [&]() -> bool {
-        const auto failure = write_device_config(*app.device_config);
-        if (failure) {
-            std::fprintf(stderr, "warptempo_gui: %s\n",
-                         failure->diagnostic.c_str());
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 failure->display);
-        }
-        return !failure;
-    };
+    // stands either way, and the failure is the press's answer on a card
+    // (persist_device_config, the one body the preset picker's pick shares).
+    auto persist = [&]() -> bool { return persist_device_config(); };
     auto applied = [&]() {
         std::fprintf(stderr,
             "warptempo_gui: Setting applied: %s=%s\n",
@@ -1017,9 +1009,11 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // every device key required, the default spelled — a pick of the default
     // wrote no line until then, device_config.h) — and, unlike the path keys
     // and like the font of 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT,
-    // which is the OK's (or
+    // which in this editor is the OK's (or
     // Enter's), never a list row's (architect 2026-10-14, "OK alone";
-    // settings_editor.h's head): the preset is installed and the screen
+    // settings_editor.h's head; the preset picker's row tap, 2026-10-25, is
+    // the key's other door, through the same apply_waveform_preset): the
+    // preset is installed and the screen
     // repainted (install_waveform_preset), so NO CARD — the color is on
     // screen, the answer; this key and the tuning keys apply at the commit,
     // every other device key at the next open or launch. A failed write
@@ -1031,11 +1025,8 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
             reject(kPaletteGrammarReason);
             return true;
         }
-        std::string& field = app.device_config->waveform;
-        if (value == field) { unchanged(); return true; }
-        field = value;
-        install_waveform_preset(palette_record(value));
-        (void)persist();
+        if (value == app.device_config->waveform) { unchanged(); return true; }
+        apply_waveform_preset(value);
         applied();
         return true;
     }
@@ -1117,6 +1108,23 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                              kProjectsPathAppliesCard);
     }
     return true;
+}
+
+bool GuiSettingsEditor::persist_device_config() {
+    const auto failure = write_device_config(*app.device_config);
+    if (failure) {
+        std::fprintf(stderr, "warptempo_gui: %s\n",
+                     failure->diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure->display);
+    }
+    return !failure;
+}
+
+void GuiSettingsEditor::apply_waveform_preset(const std::string& name) {
+    app.device_config->waveform = name;
+    install_waveform_preset(palette_record(name));
+    (void)persist_device_config();
 }
 
 void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {

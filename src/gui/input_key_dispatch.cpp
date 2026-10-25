@@ -8,6 +8,7 @@
 #include "file_loader.h"     // source_load_dry_run (the Open project picker's act)
 #include "folder_overlay.h"  // the player's and the picker's key routers (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
+#include "palette_file.h"    // kGuiBuiltinPalettes (the preset picker's rows)
 #include "marker_store_validate.h"  // first_past_eof_wall_defect (the three
                                     // promote roads' shared wall guard)
 #include "project_model.h"   // resolve_project / enumerate_project_names
@@ -36,6 +37,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -455,6 +457,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // answering per key.
     const bool is_settings_editor =
         (key == GuiKeys::Semicolon && !ctrl && !shift && !alt);
+    // SHIFT+;, THE PRESET PICKER (architect 2026-10-25), admitted with its
+    // bare twin and for its reason: the list authors nothing in the piece,
+    // and its pick writes the `waveform` device key, which the typed road
+    // commits on a locked tab too. Through the shared predicate the dispatch
+    // arm reads; the iteration lock inherits it.
+    const bool is_preset_picker = is_preset_picker_key(key, mods);
     // THE TOOLTIP LAMP, bare backslash (architect 2026-09-29): a chrome
     // posture — whether the resting pointer raises hints — authoring nothing
     // the lock protects, so it is admitted on a locked tab and under the
@@ -518,7 +526,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_play_renders ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
-             is_settings_editor ||
+             is_settings_editor || is_preset_picker ||
              is_tooltip_lamp || is_iteration_off_edge);
 }
 
@@ -6623,6 +6631,78 @@ void GuiInputHandler::open_project_commit(int index) {
     prompt.request_close(GuiCloseTarget::Reopen);
 }
 
+// -- THE PRESET PICKER (architect 2026-10-25; the contract is at the
+//    declaration) ---------------------------------------------------------------
+//
+// The picker's second content: the opener, its list and its open act. The
+// highlight, the close and the key router are the picker's shared machinery
+// below, unchanged but for the router's opener arms.
+
+// THE OPENER — Shift+; (is_preset_picker_key), and the Settings button's
+// shift-click and long press, which dispatch that chord at the lift. The
+// project picker's own guards, for its reasons: a prompt veils everything, a
+// standing picker is what is already on screen (its router answers both
+// openers' chords before this body is reached), and a load has no window to
+// paint a pick into. The shared modal stop runs once the open is certain
+// (the overlays STOP, the decision table at stop_playback_for_modal_open).
+void GuiInputHandler::open_preset_picker() {
+    if (app.prompt.active) return;
+    if (picker_active()) return;
+    if (app.loading) return;
+
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.picker.active  = true;
+    app.picker.session = text_editor::next_session_id();
+    build_preset_picker_rows();
+    viewport.invalidate_all();
+}
+
+// THE LIST: kGuiBuiltinPalettes in the include's order (Cool Edit's twenty,
+// then the program's eight), one glyph-less Preset row each, its text the
+// preset's DISPLAY NAME (architect 2026-10-25: memorable names, never the
+// key). A ROW'S INDEX IS ITS PRESET'S INDEX in that table, so the row carries
+// no key and the commit reads the table. The band opens on THE LIVE PRESET —
+// the `waveform` device key's row, scrolled into view by the one
+// set_highlight. The key is a built-in's by the load wall's own grammar
+// (is_builtin_palette_name, the device config's reader), so the row is
+// always found; row 0 stands for the case the wall rules out.
+void GuiInputHandler::build_preset_picker_rows() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    ov       = AppState::FolderOverlay{};
+    ov.owner = AppState::FolderOverlay::Owner::PresetPicker;
+    int live = 0;
+    for (const GuiBuiltinPalette& preset : kGuiBuiltinPalettes) {
+        if (app.device_config->waveform == preset.key)
+            live = static_cast<int>(ov.rows.size());
+        AppState::FolderOverlayRow row;
+        row.kind = AppState::FolderOverlayRow::Kind::Preset;
+        row.name = preset.display_name;
+        ov.rows.push_back(std::move(row));
+    }
+    folder_overlay::clamp_scroll(app);
+    folder_overlay::set_highlight(app, live);
+}
+
+// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
+// press-and-lift) and Enter on the highlight, one body: THE PRESET IS
+// INSTALLED AT ONCE AND PERSISTED through the typed Waveform row's own road
+// (GuiSettingsEditor::apply_waveform_preset — the live key, the install and
+// the device-config write, its failure carding as the typed commit's), THEN
+// THE PICKER CLOSES (architect 2026-10-25: the box covers the waveform, and
+// the new colors on it are the answer — no card on success). The row already
+// live commits nothing and just closes.
+void GuiInputHandler::preset_picker_commit(int index) {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::PresetPicker) return;
+    constexpr int n = static_cast<int>(std::size(kGuiBuiltinPalettes));
+    if (index < 0 || index >= n) return;
+    const std::string key = kGuiBuiltinPalettes[index].key;
+    if (key != app.device_config->waveform)
+        settings_editor.apply_waveform_preset(key);
+    close_picker();
+}
+
 // REVERT (the contract is at the declaration, input_handler.h). THE
 // PICKER'S SAME-PROJECT NO-OP IS NOT ON THIS ROAD: that arm lives inside
 // open_project_commit, and this act never passes through it — it seats the
@@ -6739,7 +6819,9 @@ void GuiInputHandler::picker_open_highlight() {
         // project, or on row 0, so the only way to reach here is a listing
         // with no rows at all — every folder under projects_path refused by
         // the model, or none there. Enter on an empty band would otherwise
-        // read as a dead key over a panel that is plainly standing.
+        // read as a dead key over a panel that is plainly standing. THE
+        // PROJECT PICKER'S ALONE: the preset picker's listing is the
+        // compiled-in table, never empty, its highlight always seated.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Choose a project first");
         return;
@@ -6814,19 +6896,45 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // session-wide set dies in the catch-all any more.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
-    // CTRL+O CLOSES THE PICKER (architect 2026-10-25: the key that opens an
-    // overlay is the way out of it, as bare `l` is the player's): the act
-    // the picker's Cancel button runs (close_picker, the one close body), and
-    // the Open Project key's lift under the picker, which dispatches this
-    // chord — so the key and the button cannot drift. Asked here, ahead of
-    // the mode's gate, because this router is the picker's whole vocabulary.
-    // (Ctrl+O was a consumed nothing here from 2026-08-28 until then.)
-    if (ctrl && !shift && !alt && key == GuiKeys::O) {
+    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25, the preset picker's
+    // arrival): the two pickers share this router and the overlay's tag says
+    // whose opener a chord is, so each content's opener chords act under it
+    // alone and are the catch-all's consumed nothing under the other — the
+    // other picker's opener key greys there (redesign_button_enabled's
+    // overlay arm), and a chord with no button behind it is silent the same.
+    const bool project_picker =
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::ProjectPicker;
+    const bool preset_picker =
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::PresetPicker;
+
+    // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
+    // opens an overlay is the way out of it, as bare `l` is the player's):
+    // the act the picker's Cancel button runs (close_picker, the one close
+    // body), and the Open Project key's lift under the picker, which
+    // dispatches this chord — so the key and the button cannot drift. Asked
+    // here, ahead of the mode's gate, because this router is the picker's
+    // whole vocabulary. (Ctrl+O was a consumed nothing here from 2026-08-28
+    // until then.)
+    if (project_picker && ctrl && !shift && !alt && key == GuiKeys::O) {
         close_picker();
         return true;
     }
 
-    // CTRL+ALT+O RUNS REVERT UNDER THE PICKER (architect 2026-10-25): the
+    // `;` AND SHIFT+; CLOSE THE PRESET PICKER (architect 2026-10-25, the
+    // same rule one content over): the Settings key's two lifts under the
+    // picker — its tap, bare `;`, and its shift-click or long press, Shift+;
+    // (is_preset_picker_key), the opener's own chord — both run the one
+    // close body, so "a press on it closes the picker" holds however the
+    // key is pressed. The typed editor does not open over a standing picker.
+    if (preset_picker &&
+        (is_preset_picker_key(key, mods) ||
+         (bare && key == GuiKeys::Semicolon))) {
+        close_picker();
+        return true;
+    }
+
+    // CTRL+ALT+O RUNS REVERT UNDER THE PROJECT PICKER (architect
+    // 2026-10-25; under the preset picker the catch-all's nothing): the
     // same body the ordinary dispatch's arm calls, with the same (default)
     // question_asked, and the long press on the Open Project key under the
     // picker, whose lift turns its Shift into this chord
@@ -6836,7 +6944,7 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // and its refusals card over it. The picker's state is untouched by the
     // ask. (The catch-all consumed the chord in silence from 2026-08-28
     // until then.)
-    if (is_revert_project_key(key, mods)) {
+    if (project_picker && is_revert_project_key(key, mods)) {
         revert_project();
         return true;
     }

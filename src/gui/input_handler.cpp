@@ -327,10 +327,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road's exit), Ctrl+S consumed by the router
-    // as the save, Ctrl+O as the close and Ctrl+Alt+O as Revert (2026-10-25,
-    // whose question stands over the picker — the prompt gate above then
-    // owns every key, so its Esc is the question's Cancel and a second Esc
-    // the picker's close), and Ctrl+Shift+S (the publish chord, 2026-10-10)
+    // as the save, under the project picker Ctrl+O as the close and
+    // Ctrl+Alt+O as Revert (2026-10-25, whose question stands over the
+    // picker — the prompt gate above then owns every key, so its Esc is the
+    // question's Cancel and a second Esc the picker's close), under the
+    // preset picker `;` and Shift+; as the close (2026-10-25), and
+    // Ctrl+Shift+S (the publish chord, 2026-10-10)
     // as a consumed nothing — the pull's question must not open over a
     // picker. The gesture clause is the player's
     // own: the overlay's row press arm is a member of
@@ -2104,6 +2106,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // defense (settings_editor.cpp).
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
         settings_editor.open();
+        return;
+    }
+    // SHIFT+; OPENS THE PRESET PICKER (architect 2026-10-25), bare `;`'s
+    // shifted twin and the Settings button's shift-click and long press: the
+    // waveform presets as a list in the folder overlay, a tap installing and
+    // keeping one (open_preset_picker; the chord's readers are at
+    // is_preset_picker_key). The lock gates above admit it with bare `;`; the
+    // `h` view's allowlist refuses it with bare `;`.
+    if (is_preset_picker_key(key, mods)) {
+        open_preset_picker();
         return;
     }
 

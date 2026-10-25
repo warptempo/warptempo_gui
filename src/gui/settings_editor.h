@@ -37,7 +37,11 @@ struct GuiInputHandler;
 // (route_modal_editor_key, input_key_dispatch.cpp: a Tab that advanced the
 // buffer is consumed, one that did not walks the dialog's focus ring onto
 // OK and Cancel — so a second Tab, or a Tab on a prefix that completes to
-// nothing, is the walk; there is no list to show, the popups being gone):
+// nothing, is the walk; Tab shows no list, the popups being gone — THE ONE
+// LIST is the PRESET PICKER since 2026-10-25, the `waveform` key's presets by
+// name in the folder overlay, opened by the Settings button's shift twin
+// (Shift+;, the glass long press), never by Tab, its pick committing through
+// this editor's own apply, apply_waveform_preset):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
 //      `=` yet, a COMPLETE key — any key this editor recalls, the twelve,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
@@ -143,7 +147,12 @@ struct GuiInputHandler;
 // stood and its list dropping over the well — stood 2026-10-07 to 2026-10-14
 // and is removed whole; a closed domain's help is Tab (stage 3 above), and
 // the commit is OK's and Enter's — the screen changing at the commit, never
-// before.
+// before. (THE `waveform` KEY ALONE HAS A LIST AGAIN since 2026-10-25, the
+// architect reversing this for it: "we rejected drop downs because it was
+// too much work to make them Windows identical, but now we don't have the
+// responsibility". It is no choice editor and no drop-down: the preset
+// picker, the folder overlay's third content, whose row tap commits at once
+// — apply_waveform_preset, this editor's own road.)
 //
 // THE KEYS TAB COMPLETES — ONE TABLE, THE TWELVE: the Settings popup's eleven
 // key rows and its True Colors row (2026-09-02..10-21) by their config names:
@@ -241,7 +250,26 @@ struct GuiSettingsEditor {
     // no-op answers false, so each is a Tab that walks.
     bool autocomplete_value();
 
+    // THE `waveform` KEY'S APPLY AND PERSIST — ONE ROAD, TWO DOORS (architect
+    // 2026-10-25): the typed Waveform row's commit (commit_device_setting's
+    // waveform arm, after its grammar and unchanged gates) and the PRESET
+    // PICKER's pick (GuiInputHandler::preset_picker_commit) both land here.
+    // The live key takes `name`, the preset is installed and the screen
+    // repainted (install_waveform_preset), and the device config is written
+    // (persist_device_config: a failure cards and the live colors stand for
+    // the session). No card on success — the colors are the answer.
+    // Precondition: is_builtin_palette_name(name), and `name` differs from
+    // the live key (each door asks its own no-op first).
+    void apply_waveform_preset(const std::string& name);
+
 private:
+    // THE DEVICE CONFIG'S WRITE, ADVISORY (the commit's persist): the whole
+    // struct written (write_device_config, device_config.h); a failure prints
+    // the diagnostic and cards the display, the live value standing either
+    // way. Returns whether the file was written. Its readers are every device
+    // key's commit (commit_device_setting's persist) and the waveform apply
+    // above.
+    bool persist_device_config();
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
     // `waveform=`, `true_colors=` and `led_glow=` — in one
     // body (the head's

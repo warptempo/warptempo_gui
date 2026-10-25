@@ -2704,7 +2704,8 @@ private:
     // fourth ModalDialogOwner and never an editor: the band is the whole
     // state, the row is **Cancel** alone since 2026-08-29 (a click on a row is
     // the open act), and route_picker_key below is its whole
-    // plastic vocabulary. ONE CONTENT:
+    // plastic vocabulary. TWO CONTENTS (the preset picker the second since
+    // 2026-10-25):
     //
     //   THE OPEN PROJECT PICKER — Open Project and Ctrl+O, one chord
     //   (is_open_project_key, gui_input.h; on_key's arm dispatches it at the
@@ -2774,7 +2775,30 @@ private:
     //       not happen. The teardown's worker join is the one kill, shared by
     //       both completions (main.cpp's run_project).
     //
-    //   (THE `h` VIEW HAD A SECOND PICKER for one day — bare `'` over the
+    //   THE PRESET PICKER (architect 2026-10-25: "maybe a drop down would
+    //   make it quicker, because I don't like having to type it in every
+    //   time" — "brief it as a scrolling list", "Yes") — the Settings
+    //   button's SHIFT TWIN, Shift+; (is_preset_picker_key, gui_input.h; the
+    //   button's shift-click and glass long press dispatch it at the lift,
+    //   redesign_button_shift_admits), bare `;` staying the typed editor. It
+    //   writes the `waveform` device key and nothing of the piece, so the
+    //   read-only allowlist admits it beside bare `;`; the `h` view refuses
+    //   it with bare `;`.
+    //     open_preset_picker: the opener, open_project_picker's own guards
+    //       (a prompt, a standing picker, a load) and its modal stop.
+    //     build_preset_picker_rows: kGuiBuiltinPalettes in the include's
+    //       order, one glyph-less Preset row each by DISPLAY NAME, a row's
+    //       index its preset's index; the band opens on the LIVE preset's
+    //       row (the `waveform` key's), scrolled into view.
+    //     preset_picker_commit: THE OPEN ACT on row `index` — a tap, a click
+    //       or Enter: the row's preset installed and persisted through the
+    //       typed Waveform row's one road
+    //       (GuiSettingsEditor::apply_waveform_preset, its persist-failure
+    //       card the typed road's), then close_picker — no card on success,
+    //       the colors being the answer; the live row commits nothing and
+    //       just closes.
+    //
+    //   (THE `h` VIEW HAD A THIRD PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
     //   "overengineered; I don't really need it": that key raises the load
     //   CONFIRMATION on the viewed member directly now, with no list
@@ -2789,9 +2813,12 @@ private:
     //       the row click's first half (folder_overlay_highlight_row's picker
     //       arm) and bare Up / Down's walk.
     //     close_picker: THE ONE CLOSE BODY — Esc, the Cancel button,
-    //       Ctrl+O (the Open Project key's lift), Ctrl+Q's and the
+    //       Ctrl+O (the Open Project key's lift) under the project picker,
+    //       `;` and Shift+; (the Settings key's lifts) under the preset
+    //       picker, Ctrl+Q's and the
     //       compositor's close road (GuiPrompt::request_close, at its head
-    //       beside the player's close, on the exit road alone) and the
+    //       beside the player's close, on the exit road alone), the preset
+    //       pick and the
     //       same-project no-op all pass through it (a reopen ends the
     //       session with the picker standing, and the picker with it); the
     //       overlay leaves with
@@ -2807,10 +2834,12 @@ private:
     //       with none focused, OPENS the highlight; Space presses a focused
     //       button only; Up / Down walk the highlight (repeat-eligible,
     //       scrolling to keep it visible); bare `\` toggles the tooltip lamp
-    //       (set_show_tooltips, the player's arm); Esc closes; Ctrl+O
-    //       closes (2026-10-25, the opener key the way out); Ctrl+Alt+O runs
-    //       Revert (2026-10-25, revert_project, its question standing over
-    //       the picker); Ctrl+S saves with the
+    //       (set_show_tooltips, the player's arm); Esc closes; the
+    //       CONTENT'S OPENER CHORDS (2026-10-25, the opener key the way out;
+    //       each the catch-all's nothing under the other content): under the
+    //       project picker Ctrl+O closes and Ctrl+Alt+O runs Revert
+    //       (revert_project, its question standing over the picker), under
+    //       the preset picker `;` and Shift+; close; Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
@@ -2830,10 +2859,17 @@ private:
     // no-second-road doctrine's stated exception for the Open prompt
     // (2026-08-28, one afternoon: GLASS NEEDS A ROAD THAT IS NOT TYPING) is
     // SPENT rather than kept — the list is now the only road on both
-    // backends, and a row's click and Enter are one act on it.
+    // backends, and a row's click and Enter are one act on it. THE PRESET
+    // PICKER IS A SECOND ROAD ONTO ONE KEY BY RULING (architect 2026-10-25):
+    // the typed `waveform=` line and its Tab completion stand unchanged, and
+    // both roads commit through the one apply
+    // (GuiSettingsEditor::apply_waveform_preset), so they cannot drift.
     void open_project_picker();
     void build_project_picker_rows();
     void open_project_commit(int index);
+    void open_preset_picker();
+    void build_preset_picker_rows();
+    void preset_picker_commit(int index);
     // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
     // history. It never meets open_project_commit's

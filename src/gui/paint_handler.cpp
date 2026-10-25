@@ -6773,8 +6773,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //
 // THE LIST PANEL (2026-08-28; the modal family's box since 2026-10-14),
 // ONE PAINTER FOR EVERY CONTENT —
-// the render player's folders and wavs and the Open project picker's project
-// folders. Contract and gate are at the declaration; the geometry, the scroll
+// the render player's folders and wavs, the Open project picker's project
+// folders and the preset picker's waveform presets (2026-10-25, glyph-less
+// rows by display name). Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. EVERY ROW IS A LIST ROW in the redesign's SANS
@@ -6846,7 +6847,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_rectangle(cr, content.x, content.y, content.w, content.h);
     cairo_clip(cr);
 
-    // THE FACE: both contents list NAMES — files and projects — and take the
+    // THE FACE: every content lists NAMES — files, projects and presets — and take the
     // redesign's sans at the redesign's size like every other row in the
     // product. THE SANS-FOR-LISTINGS RULING IS HIS, AND IT IS A REVERSAL OF
     // HIS OWN (2026-09-03): the player's and the picker's listings took the
@@ -6906,14 +6907,20 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // the icon set's glyphs at Windows' small 16-px seat 2026-08-28
             // to 2026-10-23, Play swapped in on the item's row, are git
             // history.)
+            // A PRESET ROW WEARS NO GLYPH (architect 2026-10-25, the preset
+            // picker: the row is the preset's display name) and its name
+            // starts at the same kListNameXAt300 as every other row's, so
+            // the picker's names stand in the project picker's name column.
             const int x0 = modal_box_rect(app, 0).x;
-            const int gh = icons::icon_box_px(kListGlyphInkAt300);
-            icons::draw_boxed(cr,
-                              row.kind == AppState::FolderOverlayRow::Kind::Wav
-                                  ? icons::Icon::WavRow
-                                  : icons::Icon::FolderRow,
-                              x0 + skin_px(kListGlyphXAt300),
-                              r.y + (r.h - gh) / 2, gh);
+            if (row.kind != AppState::FolderOverlayRow::Kind::Preset) {
+                const int gh = icons::icon_box_px(kListGlyphInkAt300);
+                icons::draw_boxed(
+                    cr,
+                    row.kind == AppState::FolderOverlayRow::Kind::Wav
+                        ? icons::Icon::WavRow
+                        : icons::Icon::FolderRow,
+                    x0 + skin_px(kListGlyphXAt300), r.y + (r.h - gh) / 2, gh);
+            }
             const int text_x = x0 + skin_px(kListNameXAt300);
 
             // THE NAME, shaped through the one chokepoint, after the glyph —

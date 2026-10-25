@@ -2,10 +2,16 @@
 
 // THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28; the
 // keyboard slot's band until 2026-10-14, the modal family's box since,
-// modal_box.h). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, and the OPEN PROJECT PICKER's valid project folders. (A third
-// stood 2026-09-03..30, the AV Sync Stats panel's inert text lines, and went
-// with the panel; a fourth for one day, the `h` view's history picker, retired
+// modal_box.h). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, the OPEN PROJECT PICKER's valid project folders, and since
+// 2026-10-25 the PRESET PICKER's twenty-eight built-in waveform presets by
+// display name (architect: "it would be nice to have some presets, and maybe
+// a drop down would make it quicker, because I don't like having to type it
+// in every time. We rejected drop downs because it was too much work to make
+// them Windows identical, but now we don't have the responsibility" — "brief
+// it as a scrolling list", "Yes"; this widget as it stands, no new chrome).
+// (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
+// with the panel; the `h` view's history picker for one day, retired
 // 2026-08-29 as overengineered, that view's `'` raising its confirmation on
 // the viewed member with no list at all.) Which one fills it is
 // AppState::FolderOverlay::owner, and that tag IS the standing predicate
@@ -21,8 +27,10 @@
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
-// icon and a name (a glyph-less TEXT kind went with the AV Sync Stats panel
-// on 2026-09-30, and an UP row, `..`, was a kind until 2026-09-01, when
+// icon and a name, and since 2026-10-25 the preset picker's glyph-less PRESET
+// rows, a name alone in the names' column (a glyph-less TEXT kind went with
+// the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
+// until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE MODAL FAMILY'S BOX (architect 2026-10-14,
 // modal_box.h, the one owner of the shape: "overlays/modals can take over the
@@ -38,8 +46,9 @@
 // stats"; the File menu that ruling kept live retired with the menu row
 // 2026-10-21, Quit the window manager's close on the laptop, Android's Back on the tablet, and Ctrl+Q): every icon-row button —
 // the view pairs' four included — greys through redesign_button_enabled's
-// first arm (the render player's Play Renders button excepted, its own
-// closer, 2026-10-13). The waveform's own
+// first arm (each content's opener key excepted, its own closer:
+// Play Renders 2026-10-13, Open Project and Settings 2026-10-25 —
+// is_folder_overlay_opener). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
@@ -98,10 +107,10 @@
 // field pair, "like a file explorer, not popping out like a rising bevel" —
 // a surface you pick from (the modal box's one flat field, modal_box.h) — inside the
 // canvas column's sunken ring since 2026-10-14 (the plain sunken two-line
-// edge round the keyboard slot's band before it). IT COVERS BOTH CONTENTS,
+// edge round the keyboard slot's band before it). IT COVERS EVERY CONTENT,
 // this one widget being every
 // Windows list in the product (the player's folders and wavs, the project
-// picker's projects); the controls row under it — the transport, the scrub,
+// picker's projects, the preset picker's presets); the controls row under it — the transport, the scrub,
 // the buttons — stands on the face. A
 // resting row paints no fill at all, and the highlighted row is a flat fill
 // in the theme's selected pair (render.h's palette block), focused or not.
@@ -120,7 +129,9 @@
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
 // highlights under every owner — the picker has no field beside the band):
 // under the PLAYER an open enters a folder or plays a wav; under
-// the PROJECT PICKER it reopens the row's project. Enter on the highlight is
+// the PROJECT PICKER it reopens the row's project; under the PRESET PICKER
+// it installs and keeps the row's preset and closes the picker
+// (preset_picker_commit, 2026-10-25). Enter on the highlight is
 // the keyboard's own click and reaches the same fork, which is at
 // the press router and the key routers, never here — the panel knows rows,
 // not projects.
@@ -162,7 +173,8 @@ inline constexpr double kRowGapPx = 1.0;
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
 // first hours), the panel's row gap, the row's boxed glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then). A folder row wears
-// icons::Icon::FolderRow and a wav row icons::Icon::WavRow. (The glyph-less
+// icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a preset row
+// (2026-10-25) wears none, its name in the same column. (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
 // which wore the folder glyph because it named a folder, with the player's
 // move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while
@@ -238,7 +250,8 @@ inline int content_height_px(const AppState& a) {
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — no content can stand empty anyway (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
-// always lists at least the project that is open).
+// always lists at least the project that is open, the preset picker the
+// compiled-in twenty-eight).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {
@@ -348,8 +361,8 @@ inline void scroll_row_into_view(AppState& a, int index) {
 //
 // THE DAMAGE IS THE CALLER'S: each of the three answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
-// no include of one — the player damages through its own helper, the other
-// two contents through the input handler's. Nothing else about the highlight lives
+// no include of one — the player damages through its own helper, the two
+// pickers through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 

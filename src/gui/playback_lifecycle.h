@@ -176,7 +176,7 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-25 — NINE
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-25 — TEN
     // sites (the color picker's open was another 2026-10-07..14): THE
     // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
     // input_render_dispatch.cpp, 2026-10-14, the batch's Render press);
@@ -186,7 +186,8 @@ struct GuiPlaybackLifecycle {
     // was this caller before it), the `m`
     // bpm editor (handle_mode_keys), the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
-    // 2026-08-28) and the PULL confirmation (run_history_pull_press,
+    // 2026-08-28), the PRESET PICKER (open_preset_picker, 2026-10-25, the
+    // picker's second content) and the PULL confirmation (run_history_pull_press,
     // OK / Cancel); the TWO
     // prompt opens (prompt.cpp: unsaved, and Revert's confirmation —
     // the error notice's was a third until that prompt kind retired whole on
@@ -239,7 +240,8 @@ struct GuiPlaybackLifecycle {
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
     //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
-    //     and the progress modal — and THE TWO OVERLAYS, the picker and the
+    //     and the progress modal — and THE TWO OVERLAYS, the picker (both
+    //     its contents, the project and the preset picker) and the
     //     render player (whose own transport begins where the project's
     //     audition ends), all standing in the modal family's box — STOP.
     //   * The LANE EDITORS' OPEN (the flag editor and the iteration bound
