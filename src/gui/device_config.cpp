@@ -223,7 +223,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
         // the ordinary bad-value hard fail with no migration. An EMPTY value
         // is refused like any other non-name, and an ABSENT line is the
         // scanner's missing-required-key refusal (architect 2026-10-14: every
-        // key required, the default spelled — `waveform=cool-edit-default`).
+        // key required, the default spelled —
+        // `waveform=warptempo-phosphor-gold-and-ice`).
         // An old `palette=`, `chrome=`, `scheme=` or `caption=` line is the
         // unknown key below (the `caption` key's arm stood here
         // 2026-10-08..10-21).

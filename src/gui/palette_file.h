@@ -14,9 +14,9 @@
 // 2026-10-21, "ok to delete other captions"; the fortepiano chrome,
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
-//     (kGuiPaletteRoles below) and nothing else: one of the twenty-eight
-//     built-in presets (kGuiBuiltinPalettes: Cool Edit Pro 2.1's twenty and
-//     the program's own eight), the `waveform` device key (named
+//     (kGuiPaletteRoles below) and nothing else: one of the built-in
+//     presets (kGuiBuiltinPalettes, the program's own twenty-four), the
+//     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
 //     window), set by the settings editor's `waveform=` line, whose Tab
@@ -77,26 +77,22 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE TWENTY-EIGHT, COMPILED IN — kGuiBuiltinPalettes
-// below, GENERATED into palette_presets.inc by
-// tools/theme_catalog/gen_cool_edit_presets.py from two committed texts (the
-// transcription's rules are its head's; regenerate, never hand-edit), in
-// this order: COOL EDIT'S COLOR PRESETS (architect 2026-10-09 ~13:30: "only
-// Cool Edit Pro palettes for waveform needed now"), the twenty schemes Cool
-// Edit Pro 2.1 carries in its executable, in its order
-// (tools/theme_catalog/cool_edit_presets.txt); then THE PROGRAM'S OWN EIGHT
-// (architect 2026-10-25, on the planner's freestyle mocks: "implement these
-// as themes so I can test it live"), in their text's order
-// (tools/theme_catalog/warptempo_presets.txt, whose head is their design).
-// Each a KEY (the source's prefix, `cool-edit-` or `warptempo-`, and the
-// scheme's name in the key grammar — the `waveform` key's word for it), a
-// DISPLAY NAME (the source's own, "Default" for Cool Edit's "(Default
-// Scheme)") and THE ELEVEN. THE DEFAULT PALETTE is Cool
-// Edit's own "(Default Scheme)" (`cool-edit-default`, kGuiDefaultPaletteKey;
-// architect 2026-10-16, "make default the default theme"; "Midnight" was the
-// default 2026-10-12 to 2026-10-16) — the one both first-run templates spell
-// (`waveform=cool-edit-default`; every device key required, architect
-// 2026-10-14).
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY-FOUR, COMPILED IN —
+// kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
+// tools/theme_catalog/gen_presets.py from one committed text,
+// tools/theme_catalog/warptempo_presets.txt (whose head is their design and
+// provenance; the transcription's rules are the generator's head's;
+// regenerate, never hand-edit), in its order: the PHOSPHOR FAMILY (architect
+// 2026-10-25 night, "delete everything that's not the phosphor themes. Pick
+// one of them as a default and just drop variations there"), variations of
+// one green ink in lightness, saturation and hue, under contrasting and
+// fitting cue pairs. Each a KEY (`warptempo-` and the display name in the
+// key grammar — the `waveform` key's word for it), a DISPLAY NAME (the
+// source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Phosphor, Gold and
+// Ice" (`warptempo-phosphor-gold-and-ice`, kGuiDefaultPaletteKey; architect
+// 2026-10-25) — the one both first-run templates spell
+// (`waveform=warptempo-phosphor-gold-and-ice`; every device key required,
+// architect 2026-10-14).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -107,28 +103,21 @@
 // GuiPalette member it fills (render.h's palette block owns what each
 // paints). THE TABLE CARRIES NO VALUES (2026-10-09): every built-in palette's
 // eleven, the default's among them, are the generated rows of
-// kGuiBuiltinPalettes below — Cool Edit's own bytes, one source — where the
-// table held a value column per chrome default until that day.
+// kGuiBuiltinPalettes below, one source.
 //
-// WHAT EACH ROLE TAKES FROM A COOL EDIT SCHEME (the generator's head owns the
-// transcription; the program's own eight are recorded in the same keys and
-// transcribed alike): the canvas its WvBk, the ink its WvFg, THE LIT OUTLINE
-// the ink at HLS lightness 0.3157, hue and saturation kept (Cool Edit has no
-// such key: the lightness measured on Cool Edit's view bar span shadows,
-// cool_edit_derive.h's `span_shadow` record — the product's span itself
-// neutral grey since 2026-10-25, materials.h — run once by
-// the generator and proven below), `grid` its GrdL, `center` its Cntr, `cue`
-// its CueM (the red of the default scheme, F34B58) and `range` its RngM (the
-// blue, 4B82F3), `playhead_stem` its Curs (the yellow),
-// THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color": the
-// ground of the program's panel — the toolbar band, row 8 and the canvas
-// column's lanes — whose every other tone derives from it,
-// cool_edit_derive.h; a material's mean in its place on every surface since
-// 2026-10-21 — the brushed ground's since 2026-10-23 — the head; a scheme recording none — Classic Cool, for which
-// Cool Edit follows the Windows 3D face — takes THE DEFAULT PRESET'S FACE,
-// 626C7B, read off Default's own row by the generator (architect 2026-10-16:
-// "make classic cool inherit from default again. default is the chrome so
-// it's internally consistent")); THE INVALID COLOR `invalid_label` ITS Cntr
+// WHAT EACH ROLE TAKES FROM A PRESET, recorded in Cool Edit Pro 2.1's value
+// grammar (the generator's head owns the transcription): the canvas its
+// WvBk, the ink its WvFg, THE LIT OUTLINE the ink at HLS lightness 0.3157,
+// hue and saturation kept (no preset records one: the lightness measured on
+// Cool Edit's view bar span shadows, cool_edit_derive.h's `span_shadow`
+// record — the product's span itself neutral grey since 2026-10-25,
+// materials.h — run once by the generator and proven below), `grid` its
+// GrdL, `center` its Cntr, `cue` its CueM (the default's gold, FFB84D) and
+// `range` its RngM (its ice, 8FD8FF), `playhead_stem` its Curs (the yellow),
+// THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
+// in every preset: the record, since the panel is a material's mean on every
+// surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
+// head); THE INVALID COLOR `invalid_label` ITS Cntr
 // TOO, the preset's own center-line color (architect 2026-10-11 ~01:00–01:20;
 // Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
 // the selected role with them: "No flags change color when you select them
@@ -138,8 +127,8 @@
 // may part it from the center line); and THE ONE COOL EDIT HAS NO KEY FOR,
 // the same in every built-in: THE SCANNER WHITE, COOL EDIT'S OWN CONSTANT
 // (architect 2026-10-16, observed in Cool Edit Pro 2.1 under Wine on the
-// laptop: the scanner is white on every preset he tried, so its preset text
-// records no key for it; the zoom anchor's stem is the same design, so both
+// laptop: the scanner is white on every preset he tried, so its value
+// grammar records no key for it; the zoom anchor's stem is the same design, so both
 // are canonical — his rulings of 2026-10-07, "let's go back to a white
 // scanner", and 2026-10-09 now its confirmation) — THE PLAYHEAD AND THE SCANNER still TWO
 // roles, so a palette may part them: `playhead_stem` THE PLAYHEAD'S HEAD AND
@@ -236,8 +225,8 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — Cool Edit's twenty in its order, then
-// the program's own eight, GENERATED (palette_presets.inc; never hand-edited): the key, the display
+// THE BUILT-IN PALETTES (the head) — the program's twenty-four in their
+// text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
 // default a row, every lit outline the generator's rule off its ink and
@@ -250,13 +239,13 @@ struct GuiBuiltinPalette {
 inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
-// THE DEFAULT PALETTE (the head): Cool Edit's "(Default Scheme)",
-// "Default" (architect 2026-10-16, "make default the default theme";
-// Midnight is among the others now) — the `waveform=` value both first-run
-// templates SPELL (GuiPlatform::device_config_defaults; every device key
-// required, architect 2026-10-14 — a config with no line took it
-// 2026-10-07..14).
-inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-default";
+// THE DEFAULT PALETTE (the head): "Phosphor, Gold and Ice" (architect
+// 2026-10-25, "pick one of them as a default") — the `waveform=` value both
+// first-run templates SPELL (GuiPlatform::device_config_defaults; every
+// device key required, architect 2026-10-14 — a config with no line took it
+// 2026-10-07..14). A config naming a retired key is the launch's hard fail
+// (the 2026-10-14 ruling: no migration).
+inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-phosphor-gold-and-ice";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
@@ -277,7 +266,7 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 }
 
 // (THE WAVEFORM ROW'S ORDER — kGuiPaletteMenuOrder, the default pinned
-// first and the other nineteen alphabetically by display name, architect
+// first and the others alphabetically by display name, architect
 // 2026-10-11 — was the color picker's preset menu's and then the Settings
 // choice row's domain; it went with the choice drop-downs, architect
 // 2026-10-14. The key's Tab completion matches the built-in names in the
@@ -291,8 +280,8 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // THE `waveform` KEY'S REFUSAL (the device config's reader and the row's
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
-    "must be a built-in waveform preset's key (cool-edit-default, "
-    "cool-edit-midnight, ...)";
+    "must be a built-in waveform preset's key "
+    "(warptempo-phosphor-gold-and-ice, warptempo-jade-gold-and-ice, ...)";
 
 // The eleven the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses

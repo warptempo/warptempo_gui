@@ -101,7 +101,7 @@ static_assert(builtin_palettes_well_formed());
 // EVERY BUILT-IN'S LIT OUTLINE IS ITS INK AT COOL EDIT'S VIEW BAR SPAN
 // SHADOW LIGHTNESS (cool_edit_derive.h's `span_shadow` record; the product's
 // span is neutral grey since 2026-10-25, materials.h) (palette_file.h's role
-// table: Cool Edit records no outline; the
+// table: no preset records an outline; the
 // generator ran cool_edit_derive.h's round trip once, and the compiled bytes
 // are the record — this proves the record, nothing derives at paint time).
 static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
@@ -112,7 +112,7 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
                                   lo.a, lo.b);
 }));
 // EVERY BUILT-IN'S INVALID COLOR IS ITS CENTER LINE (palette_file.h's role
-// table, architect 2026-10-11; the generator copies Cool Edit's Cntr into
+// table, architect 2026-10-11; the generator copies each preset's Cntr into
 // both, and this proves the record).
 static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
                                   [](const GuiBuiltinPalette& b) {

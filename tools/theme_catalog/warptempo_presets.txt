@@ -1,14 +1,19 @@
-# THE PROGRAM'S OWN COLOR PRESETS — the second source of the built-in palettes (gen_cool_edit_presets.py writes
-# src/gui/palette_presets.inc from cool_edit_presets.txt first, then from this file). PROVENANCE: the architect's
-# freestyle round of 2026-10-25 ("implement these as themes so I can test it live ... I wouldn't be opposed to shipping
-# multiple ones"), eight presets designed by the planner on the hi-fi panel: THE INK mid-light (HLS lightness .64 to
-# .73) at a saturation near .6 (.54 to .62), so the stems' dots can be lighter than it; THE CUE AND THE RANGE two
-# separable families on the alternating stem — a warm cue over a cool range in six (gold over ice, frost or leaf; mauve
-# over sky, XP Blue's pair), Cool Edit's own cyan over sky in one (Fire and Brick's pair), and under the warm amber ink
-# the pair turned cool, ice over leaf; NO RED BUT THE INVALID'S. Every one shares the rest: WvBk 000000, Cntr A53038
-# (Classic Cool's center line, which the generator also makes the invalid label, so an invalid cue keeps a legible
-# red), Curs FFFF00 and Face 626C7B (Default's, the record; no surface reads it). The outline is derived and the
-# scanner fixed white by the generator's rule, as for Cool Edit's twenty.
+# THE PROGRAM'S COLOR PRESETS — THE ONE SOURCE OF THE BUILT-IN PALETTES (gen_presets.py writes
+# src/gui/palette_presets.inc from this file). PROVENANCE: the architect's freestyle round of 2026-10-25 ("implement
+# these as themes so I can test it live"), presets designed by the planner on the hi-fi panel, and that night his
+# pick of its Phosphor ("the phosphor color is the neighborhood of what I've been looking for ... delete everything
+# that's not the phosphor themes. Pick one of them as a default and just drop variations there"; then "vary the green
+# also"): twenty-four variations of it, Phosphor, Gold and Ice the default (palette_file.h's kGuiDefaultPaletteKey).
+# THE AXES: the base ink at HLS hue 140, saturation .58, lightness .64; Pale lightness .72, Bright .78, Deep .56; Soft
+# saturation .45, Vivid .72; the hue Lime 120, Spring 130, Jade 150, Mint 160; the grid the ink's hue at saturation
+# .5 and lightness .12. THE CUE AND THE RANGE, two colors on the alternating stem: gold over ice the family's own,
+# gold over frost a whiter range, cyan over sky and mauve over sky two pairs kept from Cool Edit Pro 2.1's presets
+# (Fire and Brick's, XP Blue's); and the FITTING pairs, leaf, honey or olive over mint or sage — tonal relatives of
+# the green, low contrast by his word ("waveform magnification means I aim at troughs; low contrast is OK if the
+# marker gets a nice color that fits the ink"). NO RED BUT THE INVALID'S. Every one shares the rest: WvBk 000000, Cntr
+# A53038 (the generator also makes it the invalid label, so an invalid cue keeps a legible red), Curs FFFF00 and Face
+# 626C7B (the record; no surface reads it). The outline is derived and the scanner fixed white by the generator's
+# rules (its head).
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone), EACH VALUES LINE
 # FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are listed; the key is `warptempo-` and the
 # name in the key grammar. Lines opening with '#' are this note and nothing else.
@@ -16,15 +21,47 @@ WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFF
 Phosphor, Gold and Ice
 WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Phosphor, Cyan and Sky
-WvFg=7FDDB8,WvBk=000000,Cntr=A53038,CueM=FFC14D,RngM=EAF2FF,GrdL=0E2E24,Curs=FFFF00,Face=626C7B
-Mint, Gold and Frost
-WvFg=72CFD6,WvBk=000000,Cntr=A53038,CueM=FFC14D,RngM=B8F0C0,GrdL=0C2C30,Curs=FFFF00,Face=626C7B
-Sea Glass, Gold and Leaf
-WvFg=96C8E0,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=A8F0B0,GrdL=0E2634,Curs=FFFF00,Face=626C7B
-Icy, Gold and Leaf
-WvFg=6ADBD4,WvBk=000000,Cntr=A53038,CueM=C17DB0,RngM=4BC0F3,GrdL=0C2E2C,Curs=FFFF00,Face=626C7B
-Soft Midnight, Mauve and Sky
-WvFg=E0C27A,WvBk=000000,Cntr=A53038,CueM=8FD8FF,RngM=B8F0C0,GrdL=2A200C,Curs=FFFF00,Face=626C7B
-Amber, Ice and Leaf
 WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=C17DB0,RngM=4BC0F3,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Phosphor, Mauve and Sky
+WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Phosphor, Gold and Frost
+WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Phosphor, Gold and Ice
+WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Phosphor, Cyan and Sky
+WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=C17DB0,RngM=4BC0F3,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Phosphor, Mauve and Sky
+WvFg=A6E7BC,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Bright Phosphor, Gold and Ice
+WvFg=4ED079,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Deep Phosphor, Gold and Ice
+WvFg=7ACD95,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Soft Phosphor, Gold and Ice
+WvFg=97D8AD,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Soft Phosphor, Gold and Ice
+WvFg=61E58D,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Vivid Phosphor, Gold and Ice
+WvFg=6ED86E,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=0F2E0F,Curs=FFFF00,Face=626C7B
+Lime, Gold and Ice
+WvFg=8EE18E,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=0F2E0F,Curs=FFFF00,Face=626C7B
+Pale Lime, Gold and Ice
+WvFg=6ED880,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=0F2E14,Curs=FFFF00,Face=626C7B
+Spring, Gold and Ice
+WvFg=6ED8A3,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+Jade, Gold and Ice
+WvFg=8EE1B8,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+Pale Jade, Gold and Ice
+WvFg=6ED8B5,WvBk=000000,Cntr=A53038,CueM=FFB84D,RngM=8FD8FF,GrdL=0F2E24,Curs=FFFF00,Face=626C7B
+Mint, Gold and Ice
+WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=A8E8A0,RngM=A0F0D0,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Phosphor, Leaf and Mint
+WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=E8D48A,RngM=A0F0D0,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Phosphor, Honey and Mint
+WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=C8D878,RngM=B0E0B8,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Phosphor, Olive and Sage
+WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=A8E8A0,RngM=A0F0D0,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Phosphor, Leaf and Mint
+WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=E8D48A,RngM=A0F0D0,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Phosphor, Honey and Mint
+WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=C8D878,RngM=B0E0B8,GrdL=10301C,Curs=FFFF00,Face=626C7B
+Pale Phosphor, Olive and Sage

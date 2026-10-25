@@ -214,9 +214,9 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/theme_file.cpp
     # THE WAVEFORM PRESETS (2026-10-07; compiled in alone since 2026-10-14;
     # the caption schemes gone since 2026-10-21): the program's role table
-    # (eleven roles since 2026-10-11), the built-in palettes (Cool Edit's
-    # twenty presets and the program's own eight, the one default
-    # `cool-edit-default`), and the lookups
+    # (eleven roles since 2026-10-11), the built-in palettes (the program's
+    # own twenty-four, the one default `warptempo-phosphor-gold-and-ice`),
+    # and the lookups
     # the device config and the Settings Waveform row read. GUI-ONLY.
     src/gui/palette_file.cpp
     src/gui/project_model.cpp

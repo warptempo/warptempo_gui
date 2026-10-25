@@ -6657,8 +6657,8 @@ void GuiInputHandler::open_preset_picker() {
     viewport.invalidate_all();
 }
 
-// THE LIST: kGuiBuiltinPalettes in the include's order (Cool Edit's twenty,
-// then the program's eight), one glyph-less Preset row each, its text the
+// THE LIST: kGuiBuiltinPalettes in the include's order (the program's
+// twenty-four, their text's order), one glyph-less Preset row each, its text the
 // preset's DISPLAY NAME (architect 2026-10-25: memorable names, never the
 // key). A ROW'S INDEX IS ITS PRESET'S INDEX in that table, so the row carries
 // no key and the commit reads the table. The band opens on THE LIVE PRESET —

@@ -293,7 +293,7 @@ inline constexpr Tone kTones[] = {
     // the product's span materials.h's neutral grey trio; THE SHADOW'S
     // (a, b) IS THE WAVEFORM OUTLINE'S RULE, read by palette_file.cpp's
     // proof and checked by the generator (tools/theme_catalog/
-    // gen_cool_edit_presets.py): its top row and left
+    // gen_presets.py): its top row and left
     // column, and its bottom row and right column — the ink at HLS L 0.94
     // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7, the
     // default palette's ink); the ink tones' proof is over Cool Edit's five
