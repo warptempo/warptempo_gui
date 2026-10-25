@@ -25,8 +25,9 @@
 #     the Windows 3D face (under Wine's D4D0C8 its registry recorded a darkened UserFace 9F9785), and the product's
 #     "Windows" is its default chrome, Default — Windows 95's C0C0C0 stood for one afternoon of the same day;
 #   waveform_outline <- THE INK AT HLS LIGHTNESS 0.3157, hue and saturation kept: Cool Edit records no outline, and the
-#     lit outline takes the view bar span's shadow rule (src/gui/cool_edit_derive.h's `span_shadow` tone, its (a, b)
-#     read off that file and checked to be (0, 0.3157)), its round trip ported below operation for operation, so the
+#     lit outline takes the lightness measured on Cool Edit's view bar span shadows (src/gui/cool_edit_derive.h's
+#     `span_shadow` record, its (a, b) read off that file and checked to be (0, 0.3157); the product's span itself is
+#     neutral grey since 2026-10-25, materials.h), its round trip ported below operation for operation, so the
 #     bytes are cool_edit_derive.h's tone() exactly (palette_file.cpp's static_assert proves every row);
 #   invalid_label <- Cntr TOO, THE PRESET'S OWN CENTER-LINE COLOR (architect 2026-10-11 ~01:00-01:20: the invalid
 #     color is each palette's center line, the triangle, the dots and the resting label of an invalid cue and the `h`

@@ -98,8 +98,10 @@ constexpr bool builtin_palettes_well_formed() {
     return true;
 }
 static_assert(builtin_palettes_well_formed());
-// EVERY BUILT-IN'S LIT OUTLINE IS ITS INK AT THE VIEW BAR SPAN'S SHADOW
-// LIGHTNESS (palette_file.h's role table: Cool Edit records no outline; the
+// EVERY BUILT-IN'S LIT OUTLINE IS ITS INK AT COOL EDIT'S VIEW BAR SPAN
+// SHADOW LIGHTNESS (cool_edit_derive.h's `span_shadow` record; the product's
+// span is neutral grey since 2026-10-25, materials.h) (palette_file.h's role
+// table: Cool Edit records no outline; the
 // generator ran cool_edit_derive.h's round trip once, and the compiled bytes
 // are the record — this proves the record, nothing derives at paint time).
 static_assert(std::ranges::all_of(kGuiBuiltinPalettes,

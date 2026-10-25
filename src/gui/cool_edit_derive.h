@@ -62,9 +62,11 @@
 // fields the field's two lines; THE CANVAS COLUMN (2026-10-09) the mid (the
 // ruler's ground), the hilight (the brass's light lines, the program ring's
 // light column and row), the dark (the ring's dark column and rows) and the
-// cue shadow — and TWO TONES OFF THE WAVEFORM'S INK rather than the face,
-// the view bar's span bevels (ToneSource::Ink below; their proof over Cool
-// Edit's five presets). The band's recess, its panes' mid lines, the dock
+// cue shadow. THE TWO TONES OFF THE WAVEFORM'S INK, Cool Edit's view bar
+// span bevels (ToneSource::Ink below, their proof over its five presets),
+// are records since 2026-10-25 (the span is materials.h's neutral grey
+// trio): their shadow's lightness is THE WAVEFORM OUTLINE'S RULE
+// (palette_file.cpp's proof, the generator). The band's recess, its panes' mid lines, the dock
 // bar and the tab strip's four Organizer tones are records since the
 // simple layout (2026-10-22): the band and row 8 plain wood, the strip gone.
 //
@@ -208,10 +210,13 @@ constexpr uint32_t tone(uint32_t face, double a, double b, double c = 1.0,
 // -- THE TONES ----------------------------------------------------------------
 
 // THE ROLE A TONE IS DERIVED FROM: the panel's `face` (every tone of §2.1)
-// or, since 2026-10-09, THE WAVEFORM'S INK (`waveform_ink`): the view bar's
-// span is a raised block of Cool Edit's WvFg — its body the ink itself, its
-// light and dark bevels the ink at a FIXED HLS lightness with its hue and
-// saturation kept (L 0.94 and, refit, 0.3157; a = 0 below), the same round trip as the face's tones.
+// or THE WAVEFORM'S INK (`waveform_ink`): Cool Edit's view bar span is a
+// raised block of its WvFg — its body the ink itself, its light and dark
+// bevels the ink at a FIXED HLS lightness with its hue and saturation kept
+// (L 0.94 and, refit, 0.3157; a = 0 below), the same round trip as the
+// face's tones. The product's span is neutral grey since 2026-10-25
+// (materials.h's trio); the two Ink rows stand as records, the shadow's
+// the waveform outline's rule.
 enum class ToneSource { Face, Ink };
 
 struct Tone {
@@ -284,7 +289,11 @@ inline constexpr Tone kTones[] = {
      ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
-    // THE VIEW BAR'S SPAN, off the INK: its top row and left
+    // COOL EDIT'S VIEW BAR SPAN, off the INK — RECORDS since 2026-10-25,
+    // the product's span materials.h's neutral grey trio; THE SHADOW'S
+    // (a, b) IS THE WAVEFORM OUTLINE'S RULE, read by palette_file.cpp's
+    // proof and checked by the generator (tools/theme_catalog/
+    // gen_cool_edit_presets.py): its top row and left
     // column, and its bottom row and right column — the ink at HLS L 0.94
     // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7, the
     // default palette's ink); the ink tones' proof is over Cool Edit's five
@@ -294,10 +303,8 @@ inline constexpr Tone kTones[] = {
     // sits at exactly L = 161/510 = 0.3157, which reproduces all five
     // within one per channel (the proof below) — the gripper's refit
     // precedent at this file's head.
-    {"span_hilight",  0xE3FDF1, 0.0,    0.940, &GuiPalette::ce_span_hilight,
-     ToneSource::Ink},
-    {"span_shadow",   0x0A9757, 0.0,    0.3157, &GuiPalette::ce_span_shadow,
-     ToneSource::Ink},
+    {"span_hilight",  0xE3FDF1, 0.0,    0.940, nullptr, ToneSource::Ink},
+    {"span_shadow",   0x0A9757, 0.0,    0.3157, nullptr, ToneSource::Ink},
 };
 
 constexpr std::size_t painted_tone_count() {
@@ -336,7 +343,9 @@ static_assert(tone(kDefaultFace, 1.0, 0.0) == kDefaultFace);
 // shadow within one per channel. THE SAME SHADOW RULE IS EVERY BUILT-IN
 // PALETTE'S LIT OUTLINE (2026-10-09, palette_file.h's role table: Cool Edit
 // records no outline), run once by the generator and proven exact over the
-// compiled presets by palette_file.cpp.
+// compiled presets by palette_file.cpp — the lightness measured on Cool
+// Edit's span shadows; the product's span itself is neutral grey since
+// 2026-10-25 (materials.h), so this proof is the outline's provenance.
 struct SpanPreset {
     uint32_t ink, hilight, shadow;
 };

@@ -107,7 +107,9 @@
 // WHAT EACH ROLE TAKES FROM A COOL EDIT SCHEME (the generator's head owns the
 // transcription): the canvas its WvBk, the ink its WvFg, THE LIT OUTLINE
 // the ink at HLS lightness 0.3157, hue and saturation kept (Cool Edit has no
-// such key: the view bar span's shadow rule, cool_edit_derive.h, run once by
+// such key: the lightness measured on Cool Edit's view bar span shadows,
+// cool_edit_derive.h's `span_shadow` record — the product's span itself
+// neutral grey since 2026-10-25, materials.h — run once by
 // the generator and proven below), `grid` its GrdL, `center` its Cntr, `cue`
 // its CueM (the red of the default scheme, F34B58) and `range` its RngM (the
 // blue, 4B82F3), `playhead_stem` its Curs (the yellow),
@@ -221,7 +223,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // the publish; it carries which of the cue colors each stem's two phases
 // wear, the colors read live); every other reader paints live from palette()
 // each frame — the canvas, its grid and its center lines (render_canvas),
-// the view bar's span, the cues' dots (paint_marker_stems), the playhead's
+// the cues' dots (paint_marker_stems), the playhead's
 // head and dots, the open flag editor (render_flag_editor_box), the lead-in
 // ring's dots (its stem's pair through phase_reset_stem_dots, the colors
 // read live), the zoom anchor's stem and the scanner.

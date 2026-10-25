@@ -149,8 +149,9 @@ struct AppState;
 // FLAT everything else — the ruler's flat ground, the view bar's
 // field, the fields, the modal box, the cards and the tooltip, every key
 // (a solid fill on every pixel, baked into its patch).
-// UNTOUCHED: the well and everything the palette draws (the canvas, the view
-// bar's span, the cues' triangles and dots, the playhead).
+// UNTOUCHED: the well and everything the palette draws (the canvas, the
+// cues' triangles and dots, the playhead) and the view bar's span (a flat
+// fill of THE SPAN's own grey trio, below).
 //
 // THE TONE RULE: THE GROUND'S FACE IS ITS BAKED TILE'S MEAN COLOR
 // (materials::face; about 1F1F21 on the shipped ground), and the chrome's
@@ -172,8 +173,10 @@ struct AppState;
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone. NO WORD
-// WEARS A SHADOW but the ruler's digits and ticks (one device px of black at
-// (+1, +1), render.h's ruler block): the skin draws none.
+// WEARS A SHADOW but the ruler's digits and ticks and the cue labels, each
+// over ONE DEVICE PX OF BLACK at (+1, +1) (render.h's ruler block and its
+// marker lane's label paragraph; the cue labels' since 2026-10-25,
+// show_cue_label): the skin draws none elsewhere.
 
 enum class GuiMaterial { Ground, Marker };
 inline constexpr int kGuiMaterialCount = 2;
@@ -245,6 +248,21 @@ constexpr uint32_t ring_light_of(uint32_t mean) {
 constexpr uint32_t ring_dark_of(uint32_t mean) {
     return cool_edit_derive::tone(mean, 0.40, 0.0);
 }
+// THE VIEW BAR'S SPAN (architect 2026-10-25, on the evening's mocks: "the
+// trim bar should be a neutral gray", "sort of like the button color, maybe
+// a little different so it doesn't blend in"): a raised block of a NEUTRAL
+// GREY, its body kSpanFace — THE KEY'S FACE LIFTED (kKeyFace 3A3A3C to
+// 505053) so it does not blend in — its top row and left column kSpanLight
+// and its bottom row and right column kSpanDark, THE TONE RULE's light and
+// dark off the body (ring_light_of / ring_dark_of above). His reason: the
+// span's light bevel was the one place a LIGHT version of the waveform's
+// ink showed; the ink lives on the waveform (and the LEDs' hue) alone. No
+// preset touches the trio (render_trim_flags paints it, render.h's view
+// bar block).
+inline constexpr uint32_t kSpanFace  = 0x505053;
+inline constexpr uint32_t kSpanLight = ring_light_of(kSpanFace);
+inline constexpr uint32_t kSpanDark  = ring_dark_of(kSpanFace);
+static_assert(kSpanLight == 0x78787C && kSpanDark == 0x202021);
 // THE MEAN BEFORE THE FIRST BAKE (construction state, never on screen
 // long): the base under the gradient's mean, 1 − .12 / 3.
 inline constexpr uint32_t kGroundMeanEstimate = 0x212123;

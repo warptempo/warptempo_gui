@@ -263,8 +263,9 @@ struct TrimRange {
 //                 constants and the border's ring-light line until then);
 //   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; eleven
 //                 since 2026-10-11): the waveform's canvas, ink and outline
-//                 (ROW 6, below; the ink also the view bar's span, its
-//                 bevels derived from it); THE CANVAS'S TWO LINES, Cool
+//                 (ROW 6, below; the view bar's span wears none of them,
+//                 materials.h's neutral trio since 2026-10-25); THE
+//                 CANVAS'S TWO LINES, Cool
 //                 Edit's — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE CUES' TWO COLORS,
 //                 Cool Edit's —
@@ -395,9 +396,9 @@ struct GuiPalette {
     // the scope's ground as drawn (set_surface_source).
     GuiColor face;
     // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
-    // the panel's tones, each DERIVED from `face` — the view bar's span
-    // bevels from `waveform_ink` — by Cool Edit's own HLS rule at every
-    // install of the program's words; no file names them; read by the
+    // the panel's tones, each DERIVED from `face` by Cool Edit's own HLS
+    // rule at every install of the program's words; no file names them;
+    // read by the
     // program's painters alone (cool_edit_paint.h, the canvas column's lanes
     // in render.cpp and paint_handler.cpp).
     GuiColor ce_mid;
@@ -417,9 +418,6 @@ struct GuiPalette {
     GuiColor ce_label;
     GuiColor ce_label_shadow;
     GuiColor ce_cue_shadow;
-    // the view bar's span bevels, off the waveform's ink (2026-10-09)
-    GuiColor ce_span_hilight;
-    GuiColor ce_span_shadow;
     // (THE BAND'S RECESS AND THE TAB STRIP'S FOUR EDGE TONES left 2026-10-22
     // with the band's void and the strip, the simple layout;
     // THE BUTTON CASE's twenty-four members, its ramp, highlight, shadow ends
@@ -551,10 +549,11 @@ void install_true_colors(bool on);
 // slot's other rows the field (2026-10-23, hairline_px);
 // (Cool Edit's own sunken ring of `ce_mid` and `ce_hilight` 2026-10-09 to
 // 2026-10-22); and in the field THE SPAN, the trim window's columns as
-// a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
-// its body `waveform_ink`, its bottom row and right column `ce_span_shadow`
-// (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h), the two mitred
-// where they meet, every line one device px since 2026-10-23
+// a RAISED BLOCK OF NEUTRAL GREY (architect 2026-10-25, "the trim bar should
+// be a neutral gray"; no preset touches it) — its top row and left column
+// kSpanLight, its body kSpanFace, its bottom row and right column kSpanDark
+// (materials.h's trio, the key's face lifted and the TONE RULE off it), the
+// two mitred where they meet, every line one device px since 2026-10-23
 // (paint_hairline_frame; the mitre 2026-10-09 ~12:40). NO PLAYHEAD IN
 // THE BAR (architect 2026-10-09 ~14:30, "I thought we agreed no dots on the
 // trim bar"): Cool Edit's period-2 cursor
@@ -643,8 +642,8 @@ void install_true_colors(bool on);
 // apex the marker's column on the lane's last row, directly above the
 // canvas's top frame row — over the same triangle one quantum right in
 // `ce_cue_shadow`;
-// THE LABEL — the marker's one label in the program face at cap 7, in the
-// panel's light tone `ce_hilight`, ITS TEXT UNDER THE TRIANGLE'S OWN SHADOW one quantum right and down (architect 2026-10-11, "make the text stand out a little more because it's a little small, but that's on purpose": the cap-7 text stays, and the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the shadow `FlagFace::shadow`, the faded one on a disabled cue; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
+// THE LABEL — the marker's one label in the program face at cap 7, at rest
+// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER THE RULER'S SHADOW, black ONE DEVICE PX right and down (architect 2026-10-25, "we should bring it back and use the regular 1 pixel offset, 1 device pixel"; the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the one black shadow under every look, the faded inert label's included; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
 // the column, ITS LINE BOX CENTRED IN THE LANE (architect 2026-10-09
 // evening, on the glass at 300 %: the editor's band stood three rows of
 // field above and six below, and he asked for it even; the cap band's

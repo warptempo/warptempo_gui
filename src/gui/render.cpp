@@ -1239,9 +1239,11 @@ void render_trim_flags(cairo_t* cr,
     // THE SPAN — the trim window's columns, the begin column through the end
     // column inclusive, sliding off an edge like any content (the clip cuts
     // it; a side lying farther off than one quantum is held there, outside
-    // the clip, so the rect stays in cairo's range at any zoom): the ink's
-    // body, its top row and left column the light bevel, its bottom row and
-    // right column the dark one, each ONE DEVICE PX (render.h's line rule,
+    // the clip, so the rect stays in cairo's range at any zoom): THE NEUTRAL
+    // GREY TRIO (materials.h's kSpanFace / kSpanLight / kSpanDark, architect
+    // 2026-10-25; no preset touches it) — the body kSpanFace, its top row
+    // and left column the light bevel, its bottom row and right column the
+    // dark one, each ONE DEVICE PX (render.h's line rule,
     // the sweep of 2026-10-23; one scaled W until then), the two MITRED at
     // the top-right and bottom-left corner blocks (architect 2026-10-09
     // ~12:40, the diagonal rule reaching the program: cool_edit_paint.h's
@@ -1252,9 +1254,9 @@ void render_trim_flags(cairo_t* cr,
         const int sx = lane_x + span_lo;
         const int sw = span_hi - span_lo;
         paint_cell_rect(cr, GuiRect{sx, field_y, sw, field_h},
-                        pal.waveform_ink);
+                        hex(kSpanFace));
         paint_hairline_frame(cr, GuiRect{sx, field_y, sw, field_h},
-                             pal.ce_span_hilight, pal.ce_span_shadow);
+                             hex(kSpanLight), hex(kSpanDark));
         // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we
         // agreed no dots on the trim bar"): Cool Edit's period-2 cursor column over its span is not
         // drawn.
@@ -1695,20 +1697,22 @@ struct CueSegment {
     // label (ce_off_label) unless selected (2026-10-10).
     bool   inert    = false;
 };
-// THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-11, "make the text stand
-// out a little more because it's a little small, but that's on purpose"; Cool
-// Edit draws no shadow under its cue labels, so this is the product's own
-// departure): the run first in its cue's triangle shadow (`FlagFace::shadow`,
-// the live `ce_cue_shadow` or the disabled cue's faded one) ONE SCALED
-// QUANTUM right and down, then `ink` over it. Every label look on the panel's
-// face goes through here — resting, invalid, inert, selected, and the flag
-// editor's riding cells; the editor's FIELD text does not.
+// THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-25, "we used to have
+// drop shadows for the flag text ... we should bring it back and use the
+// regular 1 pixel offset, 1 device pixel"; Cool Edit draws no shadow under
+// its cue labels, so this is the product's own departure): the run first in
+// THE RULER'S SHADOW — black (kCeRulerShadow) ONE DEVICE PX right and down
+// (hairline_px, paint_ruler_row's own) — then `ink` over it. One shadow
+// under every look, the faded inert label's included (the ruler's does not
+// fade either). Every label look on the panel's face goes through here —
+// resting, invalid, inert, selected, and the flag editor's riding cells; the
+// editor's FIELD text does not. The triangle keeps its own shadow
+// (paint_ce_cue_triangle).
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
-                           double x, double baseline, GuiColor ink,
-                           GuiColor /*shadow*/) {
-    // NO SHADOW in the hi-fi skin (architect 2026-10-23: the 22-px bone
-    // on the brushed lane alone; the triangle keeps its own shadow,
-    // paint_ce_cue_triangle).
+                           double x, double baseline, GuiColor ink) {
+    const double t = static_cast<double>(hairline_px());
+    set_palette_source(cr, hex(kCeRulerShadow));
+    text_shape::show_shaped_run(cr, run, x + t, baseline + t);
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
@@ -1884,8 +1888,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                            : s.inert  ? pal.ce_off_label
                            : c.face.invalid_label
                                       ? pal.invalid_label
-                                      : hex(kBoneInk),
-                           c.face.shadow);
+                                      : hex(kBoneInk));
         }
         cairo_restore(cr);
     }
@@ -2620,8 +2623,8 @@ void fill_program_palette(const GuiPaletteWords& w) {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
     // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
-    // rule (cool_edit_derive.h). The view bar's span bevels derive from the
-    // waveform's ink instead (ToneSource::Ink), so a new ink moves them live.
+    // rule (cool_edit_derive.h); no painted tone derives from the ink (the
+    // view bar's span is materials.h's neutral trio since 2026-10-25).
     const uint32_t face = panel_face(w);
     static constexpr std::size_t kInk = palette_role_index("waveform_ink");
     g_palette.face = hex(face);
@@ -3303,8 +3306,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             show_cue_label(cr, seg_run, tx, baseline,
                            cell_dis ? pal.ce_off_label
                            : red    ? pal.invalid_label
-                                    : hex(kBoneInk),
-                           dis ? pal.ce_off_cue_shadow : pal.ce_cue_shadow);
+                                    : hex(kBoneInk));
             cursor_x = x0 + w;
         };
         // Both handles stand: either ride needs cl.present.
