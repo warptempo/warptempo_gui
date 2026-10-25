@@ -4241,8 +4241,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space in BOTH of
     // its forms (bare, and Shift+Space the A/B audition — a held one would
     // only meet the running-sequence refusal, so no repeat is owed), Home/End
-    // in BOTH of its forms (bare and the ctrl whole-piece jump), and Delete
-    // is one-shot.
+    // in BOTH of its forms (bare and the Shift whole-piece jump, Shift since
+    // 2026-10-24), and Delete is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
          key == GuiKeys::Comma || key == GuiKeys::Period))
@@ -4316,8 +4316,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // and (architect 2026-07-28) the
 // top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can
-// reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
-// open), and Ctrl+Q (close routing) — nothing else: Space-as-playback, zoom,
+// reach the editor itself, bare Esc (exit) and Return (commit) — nothing
+// else, NO HATCH (2026-10-25): Ctrl+S, Ctrl+Q, Space-as-playback, zoom,
 // mode toggles, tab switches, undo/redo, the marker / trim chords, and the
 // Ctrl+Alt render chords all drop here. "The editor
 // itself" CONSUMES the one editor-key owner:
@@ -4331,13 +4331,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is NotEditorKey like any other
 // unbound chord and drops right here, so it cannot cancel, commit, paste, move
 // the caret, or erase. The gate-level
-// carve-outs below are NOT editor consumption — they are gate policy layered on
-// top: bare Tab under any DIALOG editor (the focus ring's step and, where the
-// editor has one, its autocomplete — the fork is
-// route_modal_editor_key's, not this gate's), Ctrl+S (save), and
-// Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
-// so the only NotConsumed keys that can reach route_modal_editor_key's command
-// tail are those last two chords.
+// carve-out below is NOT editor consumption — it is gate policy layered on
+// top: the Tab family under any DIALOG editor (the focus ring's step and,
+// where the editor has one, its autocomplete — the fork is
+// route_modal_editor_key's, not this gate's). Admitted keys flow into the
+// editor routing unchanged; no chord outside the editor's keys and the ring
+// reaches route_modal_editor_key at all.
 // THE ADMITTED SET HAS GROWN TWICE since the dialog arc, both times by the
 // TAB FAMILY: bare Tab, from "the settings and load editors only" to "any
 // dialog editor", when the focus ring landed 2026-08-13; and THE RING'S
@@ -5654,14 +5653,14 @@ bool GuiInputHandler::load_render_entry_in_place(
     // callers. It stays here rather than moving into the shared recipe apply
     // below: the mode's other load closes it too, but only after reading the
     // session the close clears (see there), so the close is each act's own line.
-    // IN PRACTICE IT IS AN IDEMPOTENT NO-OP: the mode ADMITS bare `'`, but in
-    // the view that key raises the confirmation on the VIEWED WALK MEMBER, and
-    // that prompt's OK forks at confirm_load_in_place to one of the mode's own
-    // two loads — never to this act, whose subject is the render player's
-    // parked entry and whose opener the mode refuses. So no renders-side load
-    // ever runs with a visit standing (the closer inventory at
-    // close_history_mode states it). The line stays for the same reason the
-    // close is at the mutator at all.
+    // IT IS A LIVE TEARDOWN since 2026-10-25: the mode admits bare `l`
+    // (architect, "admit both"), so the render player opens over a standing
+    // view and its Load in place reaches this act with the visit up — the
+    // view ends here as a reopen ends it. With the view down the call is the
+    // owner's idempotent early return (the closer inventory at
+    // close_history_mode states both). The view's own bare `'` never reaches
+    // this act: its confirmation forks at confirm_load_in_place to one of the
+    // mode's own two loads.
     close_history_mode();
 
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
@@ -6148,8 +6147,9 @@ void GuiInputHandler::on_key_release(GuiKey key) {
     dispatch_modal_dialog_button(armed);
 }
 
-// Shared key route for EVERY keyboard-modal editor — the settings prompt, the
-// bpm bracket editor and the top-strip flag editor.
+// Shared key route for EVERY keyboard-modal editor — all four
+// text_editor::Kind kinds: the settings editor, the bpm bracket editor, and
+// the marker lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys and a dialog's ring — NO HATCH since
 // 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate (they were this route's
@@ -6761,9 +6761,12 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
 
-    // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner — the
-    // contract the typed prompt this picker replaced carried
-    // (route_modal_editor_key's Ctrl+S arm). EVERY REFUSAL THE OWNER CAN MEET
+    // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner. THE
+    // OVERLAYS KEEP THEIR SAVE AND CLOSE ROADS: the picker and the player are
+    // interface, not modals, so the NO HATCH rule of 2026-10-25 — which
+    // consumes Ctrl+S and Ctrl+Q under a prompt, the progress modal and
+    // every editor — leaves this arm and the Ctrl+Q fall-through below as
+    // they were (the player's twin pair, route_render_player_key). EVERY REFUSAL THE OWNER CAN MEET
     // SAYS ITSELF from inside save() (save_ops.cpp — one composer, every
     // caller inheriting it): the three write arms and the numeric-locale arm
     // since 2026-09-02, and the checkpoint-in-flight arm since 2026-09-24,
@@ -7552,8 +7555,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
 
-    // THE TWO FALL-THROUGHS: Ctrl+S saves with the player standing (no
-    // transport is touched); Ctrl+Q falls through to the ordinary quit road,
+    // THE TWO FALL-THROUGHS, kept under the player because it is interface,
+    // not a modal (the NO HATCH rule of 2026-10-25 is the modals' alone; the
+    // picker's twin pair, route_picker_key): Ctrl+S falls through to the
+    // save with the player standing (no transport is touched); Ctrl+Q falls through to the ordinary quit road,
     // which takes the player down at its head (GuiPrompt::request_close) — the
     // same step the compositor's close takes, stated once there rather than
     // here, so the two roads cannot drift. (The File menu's
@@ -8670,8 +8675,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // walks the modal's focus ring from the first press, while for the two
 // top-strip kinds it never reaches this route at all — the on_key gate
 // swallows it, a flag editor publishing no dialog and so no ring
-// (route_modal_editor_key). For all three, Ctrl+S saves with the editor left
-// open and Esc / Enter are the session's only exits.
+// (route_modal_editor_key). For all three, Esc / Enter are the session's
+// only exits: NO HATCH since 2026-10-25, Ctrl+S and Ctrl+Q consumed at the
+// gate like every other chord.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {

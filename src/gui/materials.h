@@ -142,7 +142,7 @@ struct AppState;
 // 333 x 87 of Shift, Backspace, Enter and the symbol-mode key at 1 too
 // (nine patches, 1.12 MB). On the laptop's maximized 1920 x 1047 at 200 %,
 // 8 590 640 bytes (no keyboard; the lamp key's three 46 x 46 patches and
-// the thumb's 8 x 16). materials::resident_bytes, which the trace line
+// the thumb's 16 x 32). materials::resident_bytes, which the trace line
 // prints at every bake with the patches' count and time, is the measure.
 //
 // THE REGIONS — WHICH GROUND A SURFACE IS (GuiMaterialRegion, a scope the

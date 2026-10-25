@@ -199,8 +199,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // editor down on the close road and raising the unsaved-work prompt,
         // Delete right behind
         // it) was answering a question that had never been on screen. EVERY
-        // key is consumed while the bit is false — the access letters, Esc
-        // and the Ctrl+Q hatch below with them: a consumed no-answer is
+        // key is consumed while the bit is false — the access letters and Esc
+        // with them: a consumed no-answer is
         // the only safe reading of input aimed at an unseen surface, and
         // nothing is lost that a second press after the paint does not
         // recover. The bit's writer is paint_modal_dialog's prompt branch and
@@ -390,14 +390,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // during its own selection drag, and those handlers would otherwise
     // tear the edit down and dispatch a command on any command key; this
     // gate must intercept first so the drag owns the keyboard like every
-    // other drag. Swallow every key that is not an escape hatch. For an
-    // escape hatch, finalize the selection first (reading the still-live
-    // editor geometry) and then fall through with no return, so the
-    // editor and global handlers below run Esc (cancel the edit) or
-    // Ctrl+Q (hand on the close routing, which is what tears the edit down)
-    // exactly as they would with no drag in flight. A text drag is not a navigation
-    // gesture, so it gets no bare-`s` carve-out. BOTH hatches are
-    // modifier-exact: NO MODIFIED ESCAPE BINDS ANYWHERE in this product (the
+    // other drag. Swallow every key but the one escape hatch, BARE Esc (its
+    // only hatch since 2026-10-25; Ctrl+Q was its second until then, and is
+    // consumed as every modal consumes it). For the hatch, finalize the
+    // selection first (reading the still-live editor geometry) and then fall
+    // through with no return, so the editor handler below runs Esc (cancel
+    // the edit) exactly as it would with no drag in flight. A text drag is
+    // not a navigation gesture, so it gets no bare-`s` carve-out. The hatch
+    // is modifier-exact: NO MODIFIED ESCAPE BINDS ANYWHERE in this product (the
     // one that did, Ctrl+Esc, retired on 2026-09-01 when bare Esc took the
     // notification stack whole), so a modified Escape has nothing to be an
     // escape hatch FOR and is swallowed here like any other key rather than

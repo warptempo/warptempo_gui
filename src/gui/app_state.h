@@ -5724,8 +5724,9 @@ struct AppState {
     // standing to the RIGHT of that field, which the flag pass drops along
     // with the edited box and this painter re-paints at the field's right
     // edge. hit_test_flag's walk reads it beside the vector above, so those
-    // boxes take presses as the resting ones do (FlagEditorBox::riding_cells,
-    // render.h).
+    // boxes answer the walk as the resting ones do (FlagEditorBox::riding_cells,
+    // render.h; a press on one is veiled since 2026-10-25, every editor a
+    // modal).
     FlagEditorBox flag_editor_box;
 
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
@@ -14313,19 +14314,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // on the very next frame, no latched state anywhere.)
         // OPEN PROJECT (architect 2026-10-07; the File menu's Open Project
         // row, the same chord's other face, went with the menu row
-        // 2026-10-21): dead under the folder overlay and with no audio, live
-        // otherwise, the opener's gates (open_project_picker): A LOAD greys it at
-        // the head of this body (the opener's own `app.loading` return, and
-        // on_key's head gate before it); A STANDING PICKER greys it there too
-        // (folder_overlay_stands — the picker's veil consumes the press, and
-        // the opener's already-open arm is silent, so a second press over the
-        // picker is a no-op: grey), as does the render player, whose router
-        // consumes Ctrl+O; the `h` view leaves it lit (Ctrl+O is on its
-        // allowlist, the derived partition above). THE MODALS ARE NO TERM:
-        // a prompt veils the chrome and no roster face greys under one, and
-        // under an editor the chord answers with its card ("Close the editor
-        // first"), which is not a no-op — so the face stays lit, as the key
-        // road does. Neither lock drops Ctrl+O (read_only_key_blocked admits
+        // 2026-10-21): live wherever this arm is reached, the opener's gates
+        // (open_project_picker) answered above it: A LOAD greys it at the
+        // head of this body (the opener's own `app.loading` return, and
+        // on_key's head gate before it); UNDER THE FOLDER OVERLAY the
+        // overlay arm above answers first — A STANDING PICKER LEAVES IT LIVE
+        // AND LIT since 2026-10-25, its lift Ctrl+O, which route_picker_key
+        // answers with close_picker (the picker's Cancel), and the render
+        // player greys it (its router consumes Ctrl+O); the `h` view leaves
+        // it lit (Ctrl+O is on its allowlist, the derived partition above).
+        // THE MODALS ARE NO TERM: a prompt, the progress modal and every
+        // editor veil the chrome, every press on it silently consumed, and
+        // nothing behind a modal changes face — dead and ungreyed (the
+        // classes' record at this predicate's head). Neither lock drops Ctrl+O (read_only_key_blocked admits
         // it, the iteration lock inheriting the admission). ITS SHIFT TWIN,
         // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
         // live wherever the roster is, and Revert's own refusals (a
@@ -14893,8 +14894,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlisted Ctrl+Tab (Switch Tab's shifted press
         // carries the march that composes that cycle with a round trip
         // through the other tab, Switch Tab being never-grey); HOME AND END,
-        // the mode's own absolute jumps, stay allowed as KEYS (their two skip
-        // buttons left the row 2026-10-12); the architect
+        // the mode's own absolute jumps, stay allowed, and their two SKIP
+        // buttons with them (back on the row since 2026-10-24, greying only
+        // where the jump would change nothing — their arm above); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
         // THE VIEW: the four VERBS, OPEN TEXT EDITOR and TOGGLE VALUE DRAG
@@ -14912,9 +14914,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // lit for a live session, or at rest where the plain launch or the
         // A/B audition would act (greyed where both would refuse), their
         // predicates needing a loaded piece, which is what that switch is for.
-        // (The two SKIPS' arms, "even the transport's back/forward when
-        // you're already at the home or the beginning of the trim", left with
-        // their buttons 2026-10-12; Home / End keep their keys.)
+        // THE TWO SKIPS grey "even the transport's back/forward when you're
+        // already at the home or the beginning of the trim" — their arm
+        // above, back with their buttons since 2026-10-24
+        // (playhead_end_jump_actionable, both forms).
         //
         // WHAT THE ROW DOES NOT GREY, and why, so nobody "completes" it:
         //   (THE WALLS AND THE WALK'S "NOTHING AHEAD" WERE ON THIS LIST for the
@@ -15767,9 +15770,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // A NAMED LIST WITH A `default`, deliberately, and not the exhaustive shape
 // redesign_button_enabled takes: this is not a classification of the
 // roster (where a new button must be forced to state its row) but a list of
-// the four buttons that HAVE a second glyph (Save, Render, the transport
-// and, since 2026-10-14, the read-only toggle; Switch Tab's tab-B glyph of
-// 2026-10-12 left 2026-10-18), so the honest
+// the three buttons that HAVE a second glyph (Save, Render and the
+// transport; the read-only toggle's padlock pair stood 2026-10-14 to
+// 2026-10-21 and Switch Tab's tab-B glyph 2026-10-12 to 2026-10-18), so the honest
 // default for a new button is "wears its table icon".
 //
 // SAVE HAS THREE GLYPHS SINCE 2026-09-27, the one wider subject, so the
@@ -16794,7 +16797,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // (architect 2026-10-25). PLAY RENDERS READS PLAYER since 2026-10-24 (architect: "the
 // media player could be called the player instead of play"; PLAY until
 // then, the record's word), so the transport's PLAY names one key; PLAYER
-// fits its key at 300 / 200 / 150 % (54 of 69, 35 of 46, 27 of 34 device px).
+// fits its key at 300 / 200 / 150 % (54 of 69, 35 of 46, 27 of 36 device
+// px — the 150 % key the sum of its separately rounded parts, 2 + 30 + 2 +
+// 2, icon_case_w_px).
 // ZOOM TO FIT READS FIT since 2026-10-24 (architect; ZOOM 0 until then), and
 // the three keys of that day print their own words: START and END (the two
 // skips, back on row 8) and COPY (Copy Phase Resets, the band's first run's
@@ -16877,13 +16882,21 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 //   iteration_mode_enabled). Never UNTIE: the act is toggle-shaped there,
 //   and a toggle keeps one print, though the tooltip names the half the
 //   verdict admits ("Untie Markers") as the act's name;
-//   RENDER reads CANCEL while an explicit render is live (architect
-//   2026-10-25, "agree") — redesign_button_glyph's Render arm,
-//   queue_running, the glyph the key's lift runs the cancel on
+//   RENDER reads CANCEL where its next press cancels (architect
+//   2026-10-25, "agree"): redesign_button_glyph's Render arm, queue_running
+//   — the glyph the key's lift runs the cancel on
 //   (finish_chrome_press_release's Render arm) and the tooltip's "Cancel"
-//   reads. A batch's run stands under the progress modal, where the key is
-//   dead behind the veil and changes no face; the live key is the single
-//   render's (Ctrl+Alt+R), which opens no modal;
+//   reads — AND NO PROGRESS MODAL STANDING. queue_running is a batch's bit
+//   too (start_render_batch sets it and opens the progress modal in the
+//   same call), and a batch's run stands behind that modal, where the key
+//   is dead behind the veil and keeps RENDER: nothing behind a modal
+//   changes face (the classes' record at redesign_button_enabled's head),
+//   and the modal's own Cancel is the batch's. THE SINGLE Ctrl+Alt+R
+//   RENDER, which opens no modal, is the one state that prints CANCEL. No
+//   single owner answers "a single render runs with the key live": the
+//   press road reads the painted glyph behind the veil's early return, so
+//   the arm is the glyph predicate under the veil's own term, the shape
+//   Play Renders' enabled arm takes for the same modal;
 //   SAVE reads PULL where its press is the pull (redesign_button_glyph's
 //   Save arm at its third glyph — history_save_is_pull, the `h` view with
 //   GitHub behind and no checkpoint publishing) and COMMIT elsewhere in the
@@ -16892,8 +16905,10 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 //   "agree"); SAVE outside the view, a checkpoint publishing there
 //   included (the press is the plain save).
 // Every word fits its key at 300 / 200 / 150 % (CANCEL and COMMIT about 57
-// of 69, 37 of 46, 28 of 34 device px in the 14-px legend face; RESUME on
-// the player's key about 60 / 39 / 30), so none is shortened.
+// of 69, 37 of 46, 28 of 36 device px in the 14-px legend face, the keys
+// icon_case_w_px's sums of separately rounded parts; RECALL about 54 / 35 /
+// 27; RESUME on the player's key about 60 / 39 / 30, PAUSE 46 / 30 / 23), so
+// none is shortened.
 // THE REPAINT: the word rides the face's stash (RedesignButtonFace::legend,
 // held by main.cpp's per-tick comparator beside the glyph) and the painted
 // extent with it (RedesignButtonFace::painted, whose union with the new one
@@ -16907,7 +16922,9 @@ inline const char* redesign_button_legend(const AppState& a,
             if (redesign_button_glyph_swapped(a, b)) return "STOP";
             break;
         case RedesignButton::Render:
-            if (redesign_button_glyph_swapped(a, b)) return "CANCEL";
+            if (redesign_button_glyph_swapped(a, b) &&
+                !a.batch_progress.active)
+                return "CANCEL";
             break;
         case RedesignButton::Save:
             if (redesign_button_glyph(a, b) == 2) return "PULL";
@@ -16942,10 +16959,14 @@ inline const char* redesign_button_legend(const AppState& a,
 // kSaveCommitLabel "Save and Commit", kSaveCommittingLabel "Committing...",
 // kRenderCancelLabel "Cancel" — are DELETED producer-less with the row's
 // painter; the architect's same-day ruling kept media-record for BOTH of
-// Render's idle meanings, "the context makes it clear", so only the GLYPH
-// SWAPS say state on the row now: Save wears SaveCommit in the history view
-// and while a checkpoint publishes, Render wears Cancel mid-render —
-// redesign_button_icon, paint_handler.cpp). The one hint string that still
+// Render's idle meanings, "the context makes it clear"). WHAT SAYS STATE
+// ON THE ROW NOW is the printed LEGEND (architect 2026-10-25: the word names
+// the act the key's next press runs — the stateful redesign_button_legend
+// overload above, Save's COMMIT / PULL and Render's CANCEL among it); the
+// keys draw no glyph since the hi-fi skin (2026-10-23), so the GLYPH SWAPS
+// (Save's SaveCommit / Pull, Render's Cancel — redesign_button_icon,
+// paint_handler.cpp) are the stash's index the press, the tooltip and the
+// legend read, never a painted face. The one hint string that still
 // carries the words reads "Save and Commit"; "Render
 // Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
@@ -17573,8 +17594,9 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // the editor's own painter re-paints those boxes at the field's right edge and
 // publishes them as a flag rect of its own. The walk asks it FIRST — the editor
 // paints last — so those boxes answer this and hit_test_flag_cell exactly as
-// the resting ones do, which is what makes a press on one an ordinary marker
-// press (the ruling is at FlagEditorBox::riding_cells, render.h).
+// the resting ones do (the ruling is at FlagEditorBox::riding_cells, render.h;
+// a PRESS on one never reaches this walk since 2026-10-25, the editor's modal
+// veil consuming it).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 

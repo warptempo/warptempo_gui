@@ -2495,10 +2495,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // THE GLYPH TERM IS THE THIRD AND IT CLOSED A LATENT CASE WITH IT
             // (2026-08-15): a stateful GLYPH changes a button's pixels without
             // moving either of the other two bits, so this walk was blind to
-            // one. Four buttons have a second glyph — Save, Render, the
-            // read-only toggle and the collapsed play/stop button — and only
-            // the read-only toggle's rode a bit already stashed (its lamp).
-            // RENDER'S mid-render Cancel face is the one that was quietly
+            // one. THREE buttons have a second glyph, re-counted 2026-10-25
+            // off redesign_button_glyph's nonzero arms — Save, Render and the
+            // collapsed play/stop button (the read-only toggle wears one glyph
+            // since 2026-10-21) — and the keys draw no glyph since the hi-fi
+            // skin, so the term now carries the index the LEGEND and the
+            // press read; the LEGEND TERM beside it (2026-10-25) is the printed
+            // word's own. RENDER'S mid-render Cancel face is the one that was quietly
             // uncovered before this term: queue_running moves neither
             // enabled nor selected, so its repaint rested on the render
             // routes' own damage alone. This term is now the one repaint of

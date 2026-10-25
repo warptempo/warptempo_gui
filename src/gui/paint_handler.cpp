@@ -1034,12 +1034,15 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
 // which owns the hint half of the same facts and the reasoning). It lives HERE
 // because the constant icons do: kIconRowButtons is the painter's roster half,
-// and app_state.h carries no icon vocabulary at all. SINCE THE 2026-08-12
-// RELAYOUT DELETED ROW 2'S LABELS these swaps are the toolbar pair's WHOLE
-// stateful face: SAVE is the COMMIT ACT while the history mode stands and
-// wears the commit icon to say so — and keeps wearing it while the checkpoint
-// publishes — and RENDER wears the cancel glyph while an explicit render act
-// is live. Render's two IDLE meanings (plain render, the iteration sweep)
+// and app_state.h carries no icon vocabulary at all. The swaps it names:
+// SAVE is the COMMIT ACT while the history mode stands and wears the commit
+// icon to say so — and keeps wearing it while the checkpoint publishes — and
+// RENDER wears the cancel glyph while an explicit render act is live. THE
+// STATEFUL FACE ON THE ROW IS THE PRINTED LEGEND since 2026-10-25 (the
+// stateful redesign_button_legend overload, app_state.h: the word names the
+// act the key's next press runs), these swaps the toolbar pair's whole
+// stateful face from 2026-08-12, when row 2's labels went, until the hi-fi
+// skin's blank keys. Render's two IDLE meanings (plain render, the iteration sweep)
 // share media-record by the architect's same-day ruling — "the context makes
 // it clear" — with the tooltip alone forking. (Render held the commit
 // override 2026-08-04..08, when the act moved onto the save chord it begins
@@ -1665,8 +1668,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the plain wood, the left members in
-    // THREE RUNS and the right five in ONE — TWENTY members outside the `h`
-    // view and TWELVE inside it, RE-COUNTED off the roster enum, the
+    // THREE RUNS and the right five in ONE — TWENTY-ONE members outside the
+    // `h` view and THIRTEEN inside it (2026-10-25), RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
     // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in

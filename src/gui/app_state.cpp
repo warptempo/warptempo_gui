@@ -212,10 +212,12 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
     // riding run starting past the field's far side.
     //
     // IT IS THE LAST PAINTED FRAME'S TRUTH, like the stash below and for the
-    // same reason: the press that closes the editor resolves its marker hit
-    // AFTER the close, in the same event, and what it must resolve against is
-    // the run the user pressed on. The publication is rewritten (and zeroed)
-    // by the next paint, which the close's own damage schedules. It cannot
+    // same reason: a reader resolves against the run the user is looking at.
+    // (No PRESS reaches this walk while the editor stands since 2026-10-25 —
+    // every editor a modal, its veil consuming a press outside the field;
+    // until then a riding-cell press closed the editor and resolved its hit
+    // here after the close.) The publication is rewritten (and zeroed) by
+    // the next paint, which the editor's close damage schedules. It cannot
     // outlive its column into the `h` view either — the editor is
     // keyboard-modal and swallows bare `h`, so the mode cannot be entered with
     // one open, and the mode's own paint zeroes this.

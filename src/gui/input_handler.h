@@ -2623,21 +2623,24 @@ private:
     // is at land_playhead_on_marker, input_pointer.cpp) and land through
     // Viewport::move_playhead_to, the movement owner. `forward` picks End over
     // Home; `whole_piece` asks the landing owner for the piece's own ends
-    // instead of the trim bounds, which is what the CTRL forms pass
+    // instead of the trim bounds, which is what the SHIFT forms pass
     // (playhead_skip_landing_frame, app_state.h, states the two arms). FOUR
-    // CALLERS: the bare Home and End arms and their two CTRL arms, which the
-    // bottom row's skip buttons dispatch on a plain and a ctrl press. The `h`
+    // FORMS: the bare Home and End arms and the one Shift+Home / Shift+End
+    // arm (Shift since 2026-10-24; Ctrl until then), which the bottom row's
+    // skip buttons dispatch on a plain and a shift press. The `h`
     // history view's own pair is NOT one of them — it clears the MODE's
     // diff-flag focus where these clear the live selection, so it spells its
     // own body and shares only the landing owner, which its mode bit already
     // sends down the piece's-ends arm.
     void run_playhead_end_jump(bool forward, bool whole_piece);
 
-    // Shared key route for EVERY keyboard-modal editor — the settings prompt,
-    // the bpm bracket editor and (architect
-    // 2026-07-28) the top-strip flag editor. The modal contract is stated once
-    // at the definition; returns true if the editor consumed the key (on_key
-    // then returns), false on Ctrl+Q so on_key runs the close routing.
+    // Shared key route for EVERY keyboard-modal editor — all four
+    // text_editor::Kind kinds: the settings editor, the bpm bracket editor
+    // and the marker lane's flag editor (architect 2026-07-28) and iteration
+    // bound editor. The modal contract is stated once
+    // at the definition; it returns true for every key — NO HATCH since
+    // 2026-10-25: the on_key gate admits the editor's own keys and a
+    // dialog's ring alone, so no Ctrl+Q reaches it to fall through.
     // `autocomplete` is the ONLY OPTIONAL hook — the FORWARD-Tab one (the
     // reverse walk never completes), passed by
     // the SETTINGS and LOAD editors and returning whether it ADVANCED the
@@ -2656,10 +2659,10 @@ private:
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
     // caller that forgets it is a program bug, not a runtime condition to guard).
-    // CTRL+Q PASSES A HOOK NO LONGER: the route simply hands the close routing
-    // on, and the CLOSE ROAD tears the editor down (GuiPrompt::request_close,
+    // NO CLOSE HOOK: the window manager's close is the quit road under an
+    // editor, and the CLOSE ROAD tears the editor down (GuiPrompt::request_close,
     // through close_modal_editors_no_commit) — one statement of what closes
-    // before the quit question, shared with the compositor's own close.
+    // before the quit question.
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,
                                 const std::function<bool()>& autocomplete,
@@ -2667,9 +2670,9 @@ private:
                                 const std::function<void()>& cancel,
                                 const std::function<void()>& repaint);
 
-    // Routes a key to the active top-flag editor. Returns true if the editor
-    // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. ALL THREE kinds this editor state carries take
+    // Routes a key to the active top-flag editor. Returns true for every key
+    // (on_key then returns): NO HATCH since 2026-10-25, no Ctrl+Q reaching
+    // it to fall through. ALL THREE kinds this editor state carries take
     // route_modal_editor_key: the bpm
     // bracket editor as ever, the FlagPayload flag editor since it became
     // keyboard-modal, and the
@@ -3938,7 +3941,7 @@ private:
     // shape and input routing like it (it judges no data): true when
     // key+mods should be dropped while a keyboard-modal editor stands. It
     // admits only the keys the active editor consumes (text_editor::Kind, the
-    // five kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S and
+    // four kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S and
     // Ctrl+Q consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
     // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
     // gap these editors have always had, which is also why a refused

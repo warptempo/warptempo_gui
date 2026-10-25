@@ -1454,10 +1454,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // admissions) wears the grey face. ONE SWAP STANDS beside it (architect
 // 2026-10-05): in the `h` view Revert and Load in Place stand in the icon
 // row's slots of a group THIS WALK answers DEAD whole — Undo's (Undo,
-// Redo, Render) — and outside it they do not stand
-// (kIconRowHistoryStandIns, paint_handler.cpp, which names this walk as the
-// membership's derivation). A change here that answers one of those three
-// LIVE in the view is a change to that table too. (The iteration group, dead
+// Redo, Copy Phase Resets and Render, the copy since 2026-10-25) — and
+// outside it they do not stand (kIconRowHistoryStandIns, paint_handler.cpp,
+// which names this walk as the membership's derivation). A change here that
+// answers one of those four LIVE in the view is a change to that table too. (The iteration group, dead
 // whole too, has no stand-ins and is simply hidden whole in the view, below.)
 // ROW 8 HAS ITS OWN SINCE 2026-10-11 (architect): in the view Older / Newer
 // stand in the Left / Right arrows' seats (kTransportHistoryStandIns,
@@ -2029,10 +2029,12 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      under the card;
 //   1. the prompt's veil (the top of the handler — its dialog buttons are the
 //      one thing a press can reach, and a button carries no cursor cue);
-//   2. the DIALOG modal editors' veil, which consumes every press
-//      outside the dialog's own field and buttons — the
-//      shared predicate is modal_dialog_editor_active, whose membership is
-//      AppState::dialog_editor_session's;
+//   2. EVERY EDITOR'S veil (since 2026-10-25, the lane editors with the
+//      dialogs), which consumes every press outside the editor's own field
+//      and a dialog's buttons — the shared predicate is
+//      keyboard_modal_editor_active, whose membership is
+//      AppState::text_editor_session's (all four kinds); the blanket's
+//      field is the dialog's edit control or the lane editor's box;
 //   3. (the open dropdown, which owned the pointer, until 2026-10-21);
 //   4. the loading / empty-audio return, above the whole waveform band. The four
 //      REDESIGNED ROWS are claimed ABOVE it and stay live through a load — they
@@ -3350,9 +3352,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // routes a DRAG to the CARET DRAG while a tap and the double press reach
     // the field's own press — the third ruled divergence,
     // begin_touch_caret_drag's declaration — and a finger on a RIDING box
-    // beside the field
-    // keeps the flag box's pointer answer, hit_test_flag resolving a riding
-    // box to its marker since 2026-09-05.)
+    // beside the field resolves to the pointer translation like any lane
+    // press, where the editor's modal veil consumes it (every editor a
+    // modal since 2026-10-25; the editor stands).)
     // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27), for the flag
     // box carve-out's reason exactly: the keyboard paints over the waveform's lower
     // part, the whole waveform is the pan zone, and a finger landing on a key
@@ -5404,7 +5406,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // contract admits as a command arm through the ordinary press body while a
     // dialog editor stood, which is what gave a keyboard-less user on GLASS a
     // way out of an accidentally opened settings editor. THE MODAL ANSWERS
-    // THAT ITSELF now: all three editor dialogs publish real OK and CANCEL
+    // THAT ITSELF now: both editor dialogs publish real OK and CANCEL
     // buttons, the claim below admits a press on them, and Cancel dispatches
     // the session's own Esc. With Quit's button gone the membership had
     // already derived down to Save, and a convenience chord is
@@ -5413,9 +5415,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // notification cards' claim at the head of this function is hit ABOVE
     // the veil by ruling and is not one (a card is the message about the
     // veiled act, not a reach into the surface). The
-    // KEYBOARD is untouched — Ctrl+S still saves with the editor open, through
-    // the admission this block used to mirror. The full retirement record is at
-    // the deleted predicate's site near the head of this file.)
+    // keyboard has NO HATCH either since 2026-10-25: Ctrl+S, which the
+    // block used to mirror, is consumed at the editors' key gate like every
+    // other chord (modal_editor_key_blocked). The full retirement record is
+    // at the deleted predicate's site near the head of this file.)
 
     // THE DIALOG'S OWN BUTTONS, claimed while an editor dialog stands and
     // ahead of the field claim below (the rects are disjoint; the order only

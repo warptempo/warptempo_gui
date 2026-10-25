@@ -859,16 +859,21 @@ private:
     void paint_ruler_row(cairo_t* cr);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
     // 2026-10-21) — the ICON ROW (top lane 1 since 2026-10-22, row 4: the
-    // twenty-six view/mode/action buttons, no border of its own since
-    // 2026-10-01, twenty-two standing outside the `h` view and thirteen
-    // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
+    // twenty-three view/mode/action buttons (re-counted 2026-10-25 off
+    // kIconRowButtons, the two stand-ins and the right run), no border of its
+    // own since 2026-10-01, twenty-one standing outside the `h` view and
+    // thirteen inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the border
     // under row 8 on the window's foot: the clock cell and the STATE
-    // CELL left, then the marker verbs, the step and walk (Down, Up, Previous
+    // CELL left, then THE TWO SKIPS (Go to Start / Go to End, back since
+    // 2026-10-24), the marker verbs, the step and walk (Down, Up, Previous
     // Marker, Next Marker) and the nudge and play (Switch Tab, Center, Left,
-    // Right and Play / Stop, the last case; architect 2026-10-18) flush right
-    // in their groups, declared below; in the `h` view Older / Newer stand in
+    // Right and Play / Stop, the last case; architect 2026-10-18) as one
+    // block of four runs, the run gap between two (row8_block), its last
+    // case ending one past the PROGRAM RING'S OUTER RIGHT COLUMN — flush
+    // with the ring, never the window's edge (bottom_row_seats,
+    // program_ring_columns) — declared below; in the `h` view Older / Newer stand in
     // the Left / Right seats, 2026-10-11).
     // Both PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the

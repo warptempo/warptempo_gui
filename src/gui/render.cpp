@@ -3216,11 +3216,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // IT IS PUBLISHED AS A SECOND RECT, NEVER FOLDED INTO `box`, and that rect
     // is a FLAG HIT RECT — the same shape and the same two boundaries the
     // flag pass publishes for a resting run, because THE RIDING CELLS ARE THE
-    // MARKER'S OWN CELLS FOR THE POINTER TOO (architect 2026-09-05). A press
-    // on one closes this editor as any outside press does and then acts on the
-    // cell it landed on, so the run has to answer "which marker, which cell"
-    // exactly as the resting boxes answer it — one walk, one idiom, no second
-    // derivation (the contract is at FlagEditorBox::riding_cells). Folding it
+    // MARKER'S OWN CELLS FOR THE POINTER TOO (architect 2026-09-05), so the
+    // run answers "which marker, which cell" exactly as the resting boxes
+    // answer it — one walk, one idiom, no second derivation (the contract is
+    // at FlagEditorBox::riding_cells). A PRESS on one is veiled since
+    // 2026-10-25 — a press outside the field, which the editor's modal veil
+    // consumes, the editor standing (on_button_press). Folding it
     // into `box` would be the wrong union all the same: the caret / text-drag
     // claim seats a caret for ANY press inside `box` and the cursor map shows
     // the I-beam over exactly that rect, so a run folded in would map presses

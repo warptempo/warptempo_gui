@@ -3428,13 +3428,12 @@ void render_flags(cairo_t* cr,
 //                   right edge, so under a BOUND editor the same marker
 //                   publishes both — its triangle and its payload (and, under
 //                   the upper field, its lower cell) in the lane stash, its
-//                   riding run here — and a point falls in exactly one. A press on a riding cell is
-//                   therefore an ORDINARY OUTSIDE PRESS: the payload editor
-//                   closes without committing like it does for every other
-//                   outside press, and the press then acts on the cell under
-//                   it — single-select, land, address that cell, and a
-//                   double-click's second press opening that cell's own
-//                   editor through the ordinary consume-open road. It is
+//                   riding run here — and a point falls in exactly one. A
+//                   PRESS ON A RIDING CELL IS VEILED since 2026-10-25 (every
+//                   editor a modal): it is a press outside the field, which
+//                   on_button_press's veil consumes silently, and the editor
+//                   stands — Esc and Return its way out (until then it closed
+//                   the editor uncommitted and acted on the cell). It is
 //                   still a SECOND rect and still deliberately not folded into
 //                   `box`: the caret / text-drag claim seats a caret for any
 //                   press inside `box` and the cursor map shows the I-beam
