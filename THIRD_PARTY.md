@@ -7,7 +7,7 @@ laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built
 file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
 Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
 code: `fonts/README.md` and `assets/icons/README.md` (the icons, the launcher's drawing among them: `AppIcon.svg`, the
-caption's quaver through its symlink) carry their provenance and licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
+logo lane's quaver through its symlink) carry their provenance and licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
 (2.1.5; SIL Open Font License 1.1, the text in `fonts/LICENSE-Liberation-OFL.txt`, since 2026-10-09, the product's only face since
 2026-10-12); the repository distributes no binary.
 

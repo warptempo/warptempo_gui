@@ -245,18 +245,6 @@ public:
     // are. gui_main reads it once, right after init().
     bool window_is_display_p3() const { return false; }
 
-    // WINDOW ACTIVATION (keyboard focus), straight off xdg_toplevel.configure's
-    // state array: true while the compositor lists XDG_TOPLEVEL_STATE_ACTIVATED.
-    // Its one consumer is the activation EDGE below (the tooltip's hard end,
-    // main.cpp): NO FACE TAKES AN UNFOCUSED LOOK since 2026-10-03 (one
-    // selected pair, focused or not — render.h's palette block).
-    //
-    // FALSE UNTIL THE FIRST CONFIGURE, which is the honest cold answer — we have
-    // not been told we are active. labwc focuses a newly mapped window, so the
-    // initial configure carries ACTIVATED and flips this before any frame is
-    // painted; there is no unfocused flash to design around.
-    bool window_activated() const { return window_activated_; }
-
     // -- NO WINDOW CHROME OF ITS OWN (architect 2026-10-24) ----------------
     //
     // LABWC DECORATES THE WINDOW: server-side decorations through
@@ -319,7 +307,9 @@ public:
     // Contract at GuiInputCore::set_pointer_left_hook, input_core.h.
     void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
 
-    // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel
+    // Fired ONLY on a CHANGE of the window's activation (xdg_toplevel.configure's
+    // ACTIVATED state; no face takes an unfocused look, so the edge is the only
+    // consumer), from the xdg_toplevel
     // configure handler. The compositor re-sends the full state array on every
     // configure (resize, maximize, focus), so the edge test lives in the
     // platform and this hook is the edge itself — main.cpp wires it to end
@@ -895,7 +885,10 @@ private:
     // The run-stop request, cleared at the head of every run() (platform.h).
     bool run_stop_requested_ = false;
     bool has_initial_configure_ = false;
-    // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading; see window_activated().
+    // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading (keyboard focus): false until
+    // the first configure, the honest cold answer; labwc focuses a newly mapped
+    // window, so the initial configure flips it before any frame is painted.
+    // Its one consumer is the activation edge (activation_changed_hook_).
     bool window_activated_ = false;
     // True only while paint_one_frame is executing the pre-paint hook.
     // invalidate_region() consults this flag and skips its trailing

@@ -25,11 +25,12 @@ namespace {
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
 // disabled face asks, its DISABLED copy, Cool Edit's emboss of the live mask
-// over the drawing's own one-unit translate (draw_disabled) — two sizes per
-// scale in use (the toolbar seat, icon_glyph_px, and the small icon's scaled
-// 16 of the caption, the cards and the list rows), at most 4 x kIconCount
-// surfaces. Main thread only: every draw is the
-// painter's.
+// over the drawing's own one-unit translate (draw_disabled) — the sizes in
+// use are draw_boxed's seats, one per scale each (the logo lane's quaver at a
+// 21-px ink at 300 %, the lists' 27-px ink seat, the cards' seat derived from
+// the cap and the pad); the toolbar draws no glyph on its keys (the icons stay
+// loaded), at most 4 x kIconCount surfaces. Main thread only: every draw is
+// the painter's.
 struct SurfaceDeleter {
     void operator()(cairo_surface_t* s) const { cairo_surface_destroy(s); }
 };

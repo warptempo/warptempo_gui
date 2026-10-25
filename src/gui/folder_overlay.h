@@ -36,7 +36,7 @@
 // File open, because Quit should still be enabled — everything else like what
 // we do with history ... Leave that for the player, the picker and the AV
 // stats"; the File menu that ruling kept live retired with the menu row
-// 2026-10-21, Quit the caption's Close and Ctrl+Q): every icon-row button —
+// 2026-10-21, Quit the window manager's close on the laptop, Android's Back on the tablet, and Ctrl+Q): every icon-row button —
 // the view pairs' four included — greys through redesign_button_enabled's
 // first arm (the render player's Play Renders button excepted, its own
 // closer, 2026-10-13). The waveform's own

@@ -6482,9 +6482,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; DOWN with its LED lit for the row's one checked
-        // button (Repeat One, `lit`) and for a LIVE PRESS — armed with the
-        // pointer inside it, or armed from the keyboard — one device px
-        // right and down, the legend under the key unmoved. (Windows'
+        // button (Repeat One, `lit`) — ONE device px right and down — and
+        // for a LIVE PRESS — armed with the pointer inside it, or armed
+        // from the keyboard — TWO device px whatever the checked state (the
+        // two depths, key_depth, 2026-10-23), the legend under the key
+        // unmoved. (Windows'
         // push button 2026-10-02 to 2026-10-22, the ebony case 2026-10-22 to
         // 2026-10-23.) THE FOCUS IS NOT PAINTED (below): the two focus
         // strengths stay in the state (AppState::modal_dialog_focus_active),

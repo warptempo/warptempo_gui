@@ -211,9 +211,8 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // the scanner: no plate render), the flag cache alone, synchronously
 // (Viewport::refresh_flag_cache, so a frame callback served before the tick
 // cannot blit flags in the old colors); then Viewport::invalidate_all, so
-// the swap is one frame (the client alone: the roles a preset moves paint
-// inside it, and the restored laptop's sizing frame outside it wears none of
-// them, platform.h).
+// the swap is one frame (the whole surface, which is the GUI's geometry since
+// 2026-10-24: labwc owns the border outside it).
 // WHY THAT IS ENOUGH (re-read 2026-10-09): the eleven bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,

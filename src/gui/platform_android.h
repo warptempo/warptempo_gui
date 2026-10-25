@@ -255,12 +255,6 @@ public:
     // fatal, ensure_gl_surface: gui_main reads the first answer alone).
     bool window_is_display_p3() const { return window_display_p3_; }
 
-    // WINDOW ACTIVATION (keyboard focus), driven by APP_CMD_GAINED_FOCUS /
-    // APP_CMD_LOST_FOCUS. FALSE UNTIL THE FIRST GAINED_FOCUS, the same honest
-    // cold answer the Wayland backend gives before its first configure; the
-    // launched activity is focused, so the flag flips before any frame paints.
-    bool window_activated() const { return window_activated_; }
-
     // NO WINDOW CHROME OF ITS OWN (architect 2026-10-24; platform_wayland.h's
     // block): the tablet's full-screen window has no caption, no sizing frame
     // and no window verb on the seam; Android's own navigation minimizes and
@@ -319,7 +313,7 @@ public:
     // Contract at GuiInputCore::set_pointer_left_hook, input_core.h.
     void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
 
-    // Fired ONLY on a CHANGE of window_activated(), from the focus commands.
+    // Fired ONLY on a CHANGE of the window's activation (keyboard focus), from the focus commands.
     // Null-safe. Rationale at platform_wayland.h's own declaration.
     void set_activation_changed_hook(std::function<void()> cb);
 
@@ -650,7 +644,10 @@ private:
     // The run-stop request, cleared at the head of every run() (platform.h).
     bool run_stop_requested_ = false;
     bool has_initial_configure_ = false;
-    // Latest focus reading; see window_activated().
+    // Latest focus reading (APP_CMD_GAINED_FOCUS / LOST_FOCUS): false until the
+    // first GAINED_FOCUS, the same honest cold answer the Wayland backend gives
+    // before its first configure; the launched activity is focused, so the flag
+    // flips before any frame paints.
     bool window_activated_ = false;
     // THE S PEN IS HOVERING AS THE POINTER (2026-09-25): true between the
     // pen's translated HOVER_ENTER (the core's pointer_enter) — or the pen's

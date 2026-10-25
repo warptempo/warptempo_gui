@@ -3744,9 +3744,10 @@ inline constexpr PromptAnswer kPromptOkCancel[] = {
 inline constexpr PromptAnswer kPromptDeleteCancel[] = {
     {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
-// walks it (the materials' bake walked it too for the word buttons' ebony
-// patches, 2026-10-22 to 2026-10-23). A table a raise passes must be listed
-// here.
+// walks it, and so does program_key_seats (paint_handler.cpp), which bakes
+// a mottled key patch for every word button of every answer set (the
+// materials' bake, 2026-10-24; the word buttons' ebony patches walked it
+// 2026-10-22 to 2026-10-23). A table a raise passes must be listed here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
     kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
     kPromptOkCancel, kPromptDeleteCancel};

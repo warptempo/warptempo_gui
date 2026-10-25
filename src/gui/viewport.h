@@ -765,10 +765,10 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
-    // (THE WINDOW'S SIZING FRAME takes no damage from here: it wears Windows'
-    // constants, which no act moves (platform.h's damage call, 2026-10-22);
-    // the pre-paint hook's whole-client damage after a materials bake is
-    // invalidate_all's.)
+    // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY since 2026-10-24, labwc owning
+    // the window's border and title bar outside it, so invalidate_all covers
+    // everything the app paints; the pre-paint hook's whole-client damage
+    // after a materials bake is invalidate_all's.)
 
     // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
     // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs

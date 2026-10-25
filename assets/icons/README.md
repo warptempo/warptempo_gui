@@ -19,12 +19,12 @@ A DRAWING SEVERAL ACTS WEAR IS ONE FILE AND SYMLINKS (architect 2026-10-19: "rep
 inside this folder, the real file the act that owns the drawing:
 
 - `AppIcon.svg` -> `Quaver.svg` (2026-10-23, architect "the new note glyph on the caption's color": the program
-  icon outside the window is the caption's quaver — the Android launcher icon rendered from it at every APK build
+  icon outside the window is the logo lane's quaver — the Android launcher icon rendered from it at every APK build
   over the caption's ground, `android/app/build_apk.sh`; the Linux icon `packaging/warptempo_gui.svg`, a link to
   `Quaver.svg`, `docs/INSTALL.md`; `AppIcon.png` -> `Warp.png`, the conductor's baton, 2026-10-18 to 2026-10-23);
 - `BpmIterations.svg` -> `WavRow.svg` (the BPM Iterations button keeps the note — the quaver since 2026-10-23,
   `audio-x-generic` until then; no band key wears a glyph in the hi-fi skin);
-- `WavRow.svg` -> `Quaver.svg` (2026-10-23: the wav rows wear the caption's quaver, architect "use the logo in the
+- `WavRow.svg` -> `Quaver.svg` (2026-10-23: the wav rows wear the logo lane's quaver, architect "use the logo in the
   render player");
 - `UpAFolder.svg` -> `FolderRow.svg` (the folder; Up a Folder wears the folder row's drawing, architect 2026-10-10);
 - `TransportPlay.svg` -> `Play.svg` (`media-playback-start`; the editor's Play / Stop toggle on row 8 is its own pair
@@ -112,7 +112,7 @@ rows 7..34 and its root tag `data-body-shift="0 0"` — BOXED GLYPHS, placed by 
 
 | File | Drawing | Wearers |
 |---|---|---|
-| `Quaver.svg` | the quaver: Gemini Argon's one-path conversion of the planner's bitmap at the architect's prompt (his pick, row 4 of the caption sheet) | the caption's icon; the wav rows (`WavRow.svg`'s link) |
+| `Quaver.svg` | the quaver: Gemini Argon's one-path conversion of the planner's bitmap at the architect's prompt (his pick, row 4 of the caption sheet) | the logo lane's quaver (paint_handler.cpp's logo lane painter, 2026-10-24); the wav rows (`WavRow.svg`'s link) |
 | `FolderRow.svg` | the planner's folder, `M 4 10 H 15 V 14 H 30 V 34 H 4 Z` — a square with a tab at the top (architect: "just a simple square with a tab at the top"; his pick, variant c of three tabs) | the folder and project rows; Up a Folder (`UpAFolder.svg`'s link) |
 | `CardNormal.svg` | the planner's i, two rectangles 6 units wide on x 14..20 — the dot on rows 7..13, the stem on rows 16..34 (architect 2026-10-24: "a very simple basic small rectangle with a larger rectangle below, that's the i … Spartan and minimalist"; his pick I1) | a normal card's glyph |
 | `CardCritical.svg` | the planner's X, the caption's close at its stroke ratio — the two diagonals of a 17-unit square centered on (17, 20.5), stroke 3.3, butt caps (architect 2026-10-24: "an X, a scalable X sort of like the close button in the caption, for the error"; his pick X1) | a critical card's glyph |
@@ -152,7 +152,7 @@ extracted, in both tabs — "use the original, not the modified".)
 ## The deliberate seats
 
 Since 2026-10-23 no toolbar key wears its drawing: the keys are blank, each act's name printed under its key, and the
-act files below stay loaded for a later drop (the drawings on screen are the caption's quaver and the list rows'
+act files below stay loaded for a later drop (the drawings on screen are the logo lane's quaver and the list rows'
 `WavRow` and `FolderRow`). The seats record which drawing each act's file holds.
 
 The architect's (2026-10-14): Source wears `accessories-dictionary` (the primary source), Target `input-tablet` (the

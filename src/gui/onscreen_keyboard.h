@@ -582,7 +582,8 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 //     takes the band (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
 //     arithmetic at modal_box.h's head; at 300 % and the strip pad's 13 W
-//     the controls row 890–1036, its cases 929–997, the box 201–889).
+//     the controls row 890–1036, its cases 929–997, the box 180–889, its top
+//     under the band's rows 0–179 with the 72-row logo lane, 2026-10-24).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press, a cursor
 // zone or the touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),

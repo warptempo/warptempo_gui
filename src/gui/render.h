@@ -1384,9 +1384,10 @@ inline int icon_case_h_px() {
     return icon_case_w_px();
 }
 // THE STRIP PAD (architect 2026-10-22, the simple layout; a constant since
-// 2026-10-23, program_spec.h's strip_pad_px, 13 W — its ruling there): the
-// band's and row 8's ground above and below the case, one number for both
-// strips: 39 device px at 300 %, 18 at 138 %. FLOORED AT ONE DEVICE PX so
+// 2026-10-23, program_spec.h's strip_pad_px, 13 W — its ruling there): row
+// 8's and the modal controls row's ground above and below the case, and the
+// band's ground below it (its upper pad is the logo lane, band_case_top_
+// offset_px), one number: 39 device px at 300 %, 18 at 138 %. FLOORED AT ONE DEVICE PX so
 // a row stands there at a scale that would round the pad to nothing (the
 // legends' row since 2026-10-23).
 inline int strip_pad_px() {

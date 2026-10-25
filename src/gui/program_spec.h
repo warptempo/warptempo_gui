@@ -44,7 +44,8 @@
 // bottom pad), its keys in plain runs
 // on the ground, the runs `run_gap_px` apart; then THE CANVAS COLUMN inside
 // THE PROGRAM RING — THE VIEW BAR (the trim bar: the ring's dark top row,
-// the black field, the light line: 8), THE
+// the black field, the light line: 1 + 5 + 1 = 7 W, 21 rows at 300 % —
+// the field view_bar_field_at300's 15 px), THE
 // RULER FLIPPED (11 rows of ground under the view bar's light line, its
 // ticks standing on its bottom row, then its own light bottom line: 12) and
 // THE MARKER LANE of Cool Edit's cues (17) — the ruler and the lane THE
@@ -103,9 +104,10 @@ struct ProgramSpec {
     // 2026-10-23 — "I never asked for that strip pad number … I don't think
     // I needed to change that number", the legends' vertical seat "seems to
     // be perfect"; the mocks ran 8 .. 15, layout4_pad13 the pick): THIS MUCH
-    // GROUND ABOVE AND BELOW THE KEY on both strips, the band's and row 8's
-    // (and the modal controls row's, row 8's own rows), the keys' printed
-    // legends standing in the bottom pad (paint_handler.cpp's
+    // GROUND ABOVE AND BELOW THE KEY on row 8 and the modal controls row
+    // (row 8's own rows), and BELOW THE KEY on the band, whose upper pad is
+    // the logo lane (2026-10-24, render.h's logo lane block); the keys'
+    // printed legends stand in the bottom pad (paint_handler.cpp's
     // key_legend_seat). A settled design is a constexpr: the `strip_pad`
     // device key and its Settings row, 2026-10-22 to 2026-10-23, are
     // removed, an old `strip_pad=` line the ordinary unknown-key hard fail.

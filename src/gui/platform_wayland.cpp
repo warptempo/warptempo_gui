@@ -1039,8 +1039,8 @@ void GuiPlatform::set_title(const std::string& title) {
 // and drops anything malformed (the rules are at title_bytes_to_utf8). A
 // well-formed name therefore reaches the compositor verbatim, which is the
 // ordinary case. What the string then LOOKS like where labwc shows it (the
-// taskbar, the switcher — it draws no title bar since 2026-10-05, the app's
-// own caption standing in its place) is not ours either way: labwc shapes it
+// title bar it draws since 2026-10-24, the server-side decoration asked for
+// in init, the taskbar, the switcher) is not ours either way: labwc shapes it
 // with its own font stack, so this string never touches text_shape and the
 // product's one-face rule does not apply to it.
 //

@@ -6802,8 +6802,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // the same step the compositor's close takes, stated once there rather
     // than here, so the two roads cannot drift. (The File menu's
     // Quit row was its pointer road above the band from 2026-09-03 evening
-    // until the menu row's removal, 2026-10-21; the caption's Close is the
-    // glass's.) THE SET STAYS ONE: Ctrl+O — Open Project's chord, which is
+    // until the menu row's removal, 2026-10-21; the tablet's quit road is
+    // Android's Back, the laptop's the window manager's close.) THE SET STAYS ONE: Ctrl+O — Open Project's chord, which is
     // this very picker — is consumed by the catch-all below, the mode
     // answering about itself in silence; Ctrl+Alt+O, Revert's chord, dies
     // there the same way, exactly as Open's does.
@@ -7569,8 +7569,8 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // same step the compositor's close takes, stated once there rather than
     // here, so the two roads cannot drift. (The File menu's
     // Quit row was its pointer road above the band from 2026-09-03 evening
-    // until the menu row's removal, 2026-10-21; on the TABLET the caption's
-    // Close is the quit road.)
+    // until the menu row's removal, 2026-10-21; on the TABLET Android's Back
+    // is the quit road, on the laptop the window manager's close.)
     // THE SET STAYS TWO: Ctrl+O and Ctrl+Alt+O are the two chords this
     // router answers with the catch-all's silence — chords
     // bound outside the mode and meaning nothing inside it, the unbound-keys
