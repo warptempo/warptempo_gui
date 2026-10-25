@@ -14,8 +14,9 @@
 // 2026-10-21, "ok to delete other captions"; the fortepiano chrome,
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
-//     (kGuiPaletteRoles below) and nothing else: one of Cool Edit Pro 2.1's
-//     twenty presets (kGuiBuiltinPalettes), the `waveform` device key (named
+//     (kGuiPaletteRoles below) and nothing else: one of the twenty-eight
+//     built-in presets (kGuiBuiltinPalettes: Cool Edit Pro 2.1's twenty and
+//     the program's own eight), the `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
 //     window), set by the settings editor's `waveform=` line, whose Tab
@@ -26,7 +27,7 @@
 //     (materials.h's accent_of_ink, 2026-10-23): no chrome surface reads its
 //     `face` — the panel's Face is the brushed ground's mean (render.cpp's
 //     panel_face, materials.h's TONE RULE) — so the role stands in the table
-//     and the generated rows as the record of Cool Edit's preset, read by
+//     and the generated rows as the record of each preset's Face, read by
 //     the static_asserts alone.
 //   THE CAPTION IS labwc's (render.h's caption note, 2026-10-24): the
 //     app paints none (one flat ground and two title inks as constants
@@ -76,16 +77,21 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE COOL EDIT'S COLOR PRESETS, COMPILED IN
-// (architect 2026-10-09 ~13:30: "only Cool Edit Pro palettes for waveform
-// needed now") — kGuiBuiltinPalettes below, the twenty schemes Cool Edit Pro
-// 2.1 carries in its executable, in its order, GENERATED into
-// palette_presets.inc by tools/theme_catalog/gen_cool_edit_presets.py from
-// the committed text tools/theme_catalog/cool_edit_presets.txt (the
-// transcription's rules are its head's; regenerate, never hand-edit): each a
-// KEY (`cool-edit-` and the scheme's name in the key grammar — the
-// `waveform` key's word for it), a DISPLAY NAME (Cool Edit's own, "Default"
-// for its "(Default Scheme)") and THE ELEVEN. THE DEFAULT PALETTE is Cool
+// THE BUILT-IN PALETTES ARE TWENTY-EIGHT, COMPILED IN — kGuiBuiltinPalettes
+// below, GENERATED into palette_presets.inc by
+// tools/theme_catalog/gen_cool_edit_presets.py from two committed texts (the
+// transcription's rules are its head's; regenerate, never hand-edit), in
+// this order: COOL EDIT'S COLOR PRESETS (architect 2026-10-09 ~13:30: "only
+// Cool Edit Pro palettes for waveform needed now"), the twenty schemes Cool
+// Edit Pro 2.1 carries in its executable, in its order
+// (tools/theme_catalog/cool_edit_presets.txt); then THE PROGRAM'S OWN EIGHT
+// (architect 2026-10-25, on the planner's freestyle mocks: "implement these
+// as themes so I can test it live"), in their text's order
+// (tools/theme_catalog/warptempo_presets.txt, whose head is their design).
+// Each a KEY (the source's prefix, `cool-edit-` or `warptempo-`, and the
+// scheme's name in the key grammar — the `waveform` key's word for it), a
+// DISPLAY NAME (the source's own, "Default" for Cool Edit's "(Default
+// Scheme)") and THE ELEVEN. THE DEFAULT PALETTE is Cool
 // Edit's own "(Default Scheme)" (`cool-edit-default`, kGuiDefaultPaletteKey;
 // architect 2026-10-16, "make default the default theme"; "Midnight" was the
 // default 2026-10-12 to 2026-10-16) — the one both first-run templates spell
@@ -105,7 +111,8 @@
 // table held a value column per chrome default until that day.
 //
 // WHAT EACH ROLE TAKES FROM A COOL EDIT SCHEME (the generator's head owns the
-// transcription): the canvas its WvBk, the ink its WvFg, THE LIT OUTLINE
+// transcription; the program's own eight are recorded in the same keys and
+// transcribed alike): the canvas its WvBk, the ink its WvFg, THE LIT OUTLINE
 // the ink at HLS lightness 0.3157, hue and saturation kept (Cool Edit has no
 // such key: the lightness measured on Cool Edit's view bar span shadows,
 // cool_edit_derive.h's `span_shadow` record — the product's span itself
@@ -229,8 +236,8 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — Cool Edit's presets in its order,
-// GENERATED (palette_presets.inc; never hand-edited): the key, the display
+// THE BUILT-IN PALETTES (the head) — Cool Edit's twenty in its order, then
+// the program's own eight, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
 // default a row, every lit outline the generator's rule off its ink and

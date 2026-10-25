@@ -114,7 +114,8 @@ struct TrimRange {
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
 // flat skin constants with the caption itself.
 // The palette's roles are kGuiPaletteRoles and the compiled built-in
-// palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
+// palettes Cool Edit's twenty presets and the program's own eight,
+// kGuiBuiltinPalettes (palette_file.h); the
 // active palette is the device config's `waveform` — a built-in's key,
 // chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-21;
 // files from a `chromes/` folder were read 2026-10-07..14; the key was

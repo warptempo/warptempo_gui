@@ -290,7 +290,7 @@ private:
     // arm, over its 43 schemes, 2026-10-14..10-21); `true_colors`'s two words
     // since 2026-10-21), the head's stage 3: the path completer's model on a
     // closed list. The value side is a PREFIX (byte compare, the words being
-    // ASCII) of the key's words — Cool Edit's twenty preset names
+    // ASCII) of the key's words — the twenty-eight built-in preset keys
     // (kGuiBuiltinPalettes' keys, palette_file.h) for `waveform`, `on` and
     // `off` (kTrueColorsWords, device_config.h) for `true_colors` — and the
     // buffer advances by the matches' longest common prefix past it: a
