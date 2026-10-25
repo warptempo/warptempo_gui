@@ -15,7 +15,7 @@
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own twenty-four), the
+//     presets (kGuiBuiltinPalettes, the program's own twenty-five), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -77,7 +77,7 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY-FOUR, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY-FIVE, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
@@ -85,13 +85,14 @@
 // regenerate, never hand-edit), in its order: the PHOSPHOR FAMILY (architect
 // 2026-10-25 night, "delete everything that's not the phosphor themes. Pick
 // one of them as a default and just drop variations there"), variations of
-// one green ink in lightness, saturation and hue, under contrasting and
-// fitting cue pairs. Each a KEY (`warptempo-` and the display name in the
-// key grammar — the `waveform` key's word for it), a DISPLAY NAME (the
-// source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Phosphor, Gold and
-// Ice" (`warptempo-phosphor-gold-and-ice`, kGuiDefaultPaletteKey; architect
+// one green ink in lightness, saturation and hue, under cool cue pairs,
+// contrasting and fitting, no warm marker (architect 2026-10-25 night).
+// Each a KEY (`warptempo-` and the display name in the key grammar — the
+// `waveform` key's word for it), a DISPLAY NAME (the
+// source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Phosphor, Cyan and
+// Sky" (`warptempo-phosphor-cyan-and-sky`, kGuiDefaultPaletteKey; architect
 // 2026-10-25) — the one both first-run templates spell
-// (`waveform=warptempo-phosphor-gold-and-ice`; every device key required,
+// (`waveform=warptempo-phosphor-cyan-and-sky`; every device key required,
 // architect 2026-10-14).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
@@ -112,8 +113,8 @@
 // Cool Edit's view bar span shadows, cool_edit_derive.h's `span_shadow`
 // record — the product's span itself neutral grey since 2026-10-25,
 // materials.h — run once by the generator and proven below), `grid` its
-// GrdL, `center` its Cntr, `cue` its CueM (the default's gold, FFB84D) and
-// `range` its RngM (its ice, 8FD8FF), `playhead_stem` its Curs (the yellow),
+// GrdL, `center` its Cntr, `cue` its CueM (the default's cyan, 37FDF8) and
+// `range` its RngM (its sky, 70B3FC), `playhead_stem` its Curs (the yellow),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in every preset: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
@@ -225,7 +226,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's twenty-four in their
+// THE BUILT-IN PALETTES (the head) — the program's twenty-five in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
@@ -239,13 +240,13 @@ struct GuiBuiltinPalette {
 inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
-// THE DEFAULT PALETTE (the head): "Phosphor, Gold and Ice" (architect
+// THE DEFAULT PALETTE (the head): "Phosphor, Cyan and Sky" (architect
 // 2026-10-25, "pick one of them as a default") — the `waveform=` value both
 // first-run templates SPELL (GuiPlatform::device_config_defaults; every
 // device key required, architect 2026-10-14 — a config with no line took it
 // 2026-10-07..14). A config naming a retired key is the launch's hard fail
 // (the 2026-10-14 ruling: no migration).
-inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-phosphor-gold-and-ice";
+inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-phosphor-cyan-and-sky";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
@@ -281,7 +282,7 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
-    "(warptempo-phosphor-gold-and-ice, warptempo-jade-gold-and-ice, ...)";
+    "(warptempo-phosphor-cyan-and-sky, warptempo-jade-cyan-and-sky, ...)";
 
 // The eleven the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses

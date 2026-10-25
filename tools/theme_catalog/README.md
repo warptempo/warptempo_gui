@@ -12,11 +12,11 @@ python3 -I tools/theme_catalog/catalog_md.py           # -> docs/themes/catalog.
 
 ## The presets — warptempo_presets.txt (architect 2026-10-25)
 
-`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's twenty-four presets, the phosphor family — the
+`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's twenty-five presets, the phosphor family — the
 architect's pick that night of the Phosphor of his freestyle round, varied in the ink's lightness, saturation and hue
-under contrasting and fitting cue pairs (its head is their design and provenance), each values line followed by its
-display name, in Cool Edit Pro 2.1's value grammar. Cool Edit's twenty color presets were the built-ins 2026-10-09 to
-2026-10-25 and live in git history.
+under cool cue pairs, contrasting and fitting, no warm marker (its head is their design and provenance), each values
+line followed by its display name, in Cool Edit Pro 2.1's value grammar. Cool Edit's twenty color presets were the
+built-ins 2026-10-09 to 2026-10-25 and live in git history.
 
 `gen_presets.py` transcribes each into the eleven program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
 off the header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never

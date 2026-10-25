@@ -30,7 +30,7 @@
 #   Any other key is read past and never generated (architect 2026-10-14: the question whether Cool Edit's other
 #     preset keys should get a palette role is closed).
 # THE KEY is `warptempo-` and the display name lowercased, every run of other characters one hyphen ("Pale Phosphor,
-# Gold and Ice" -> `warptempo-pale-phosphor-gold-and-ice`), the `waveform` device key's word (a built-in's key alone
+# Cyan and Sky" -> `warptempo-pale-phosphor-cyan-and-sky`), the `waveform` device key's word (a built-in's key alone
 # since 2026-10-14); THE DISPLAY NAME is the source's own. Keys and display names are checked unique, every key in
 # the key grammar (palette_file.cpp's is_preset_key_spelling, which bounds no length) and every display name
 # printable ASCII within 40 bytes (the names' bound).

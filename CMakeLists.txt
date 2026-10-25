@@ -215,7 +215,7 @@ set(WARPTEMPO_GUI_SOURCES
     # THE WAVEFORM PRESETS (2026-10-07; compiled in alone since 2026-10-14;
     # the caption schemes gone since 2026-10-21): the program's role table
     # (eleven roles since 2026-10-11), the built-in palettes (the program's
-    # own twenty-four, the one default `warptempo-phosphor-gold-and-ice`),
+    # own twenty-five, the one default `warptempo-phosphor-cyan-and-sky`),
     # and the lookups
     # the device config and the Settings Waveform row read. GUI-ONLY.
     src/gui/palette_file.cpp

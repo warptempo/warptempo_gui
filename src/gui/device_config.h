@@ -26,18 +26,18 @@
 //                            grid and center lines, the cues and the
 //                            playhead (palette_file.h's head; its Face
 //                            unread under the materials since 2026-10-21):
-//                            a built-in, one of the twenty-four presets'
+//                            a built-in, one of the twenty-five presets'
 //                            keys alone
-//                            (`warptempo-phosphor-gold-and-ice`,
-//                            `warptempo-jade-gold-and-ice`, ...;
+//                            (`warptempo-phosphor-cyan-and-sky`,
+//                            `warptempo-jade-cyan-and-sky`, ...;
 //                            is_builtin_palette_name, palette_file.h; a
 //                            preset file's name until 2026-10-14), chosen by
 //                            the Settings Waveform row; REQUIRED (architect
 //                            2026-10-14; absent meant the default
 //                            2026-10-07..14), the default SPELLED: both
 //                            first-run templates write
-//                            `waveform=warptempo-phosphor-gold-and-ice`,
-//                            "Phosphor, Gold and Ice" since 2026-10-25
+//                            `waveform=warptempo-phosphor-cyan-and-sky`,
+//                            "Phosphor, Cyan and Sky" since 2026-10-25
 //                            (kGuiDefaultPaletteKey, palette_file.h). Named
 //                            `palette` until 2026-10-13 and `chrome` until
 //                            2026-10-21 (the key `chrome` of 2026-10-07 to
@@ -273,7 +273,7 @@
 // keys were the two that might be absent 2026-10-07..14, the absence
 // spelling the default; the default is SPELLED since, the writer emitting
 // every line and the first-run templates naming
-// `waveform=warptempo-phosphor-gold-and-ice`, so an absent line is the shared scanner's
+// `waveform=warptempo-phosphor-cyan-and-sky`, so an absent line is the shared scanner's
 // missing-required-key refusal like any other, with no migration and no
 // launch-time repair — the planner edits the two devices' configs at the
 // install), one canonical spelling per
@@ -330,7 +330,7 @@
 // (an empty value is refused); both backends' templates
 // (GuiPlatform::device_config_defaults) SPELL THE DEFAULT into it (architect
 // 2026-10-14: every key required) — kGuiDefaultPaletteKey (palette_file.h),
-// `warptempo-phosphor-gold-and-ice` — so the first-run file of either device names its
+// `warptempo-phosphor-cyan-and-sky` — so the first-run file of either device names its
 // waveform preset. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
@@ -368,7 +368,7 @@ struct DeviceConfig {
     // THE WAVEFORM PRESET, the `waveform` key's built-in name (architect
     // 2026-10-07; `palette` the member's name until 2026-10-21): required
     // since 2026-10-14, so empty only before a read; the templates spell the
-    // default, `warptempo-phosphor-gold-and-ice` (kGuiDefaultPaletteKey). (`scheme`, the
+    // default, `warptempo-phosphor-cyan-and-sky` (kGuiDefaultPaletteKey). (`scheme`, the
     // `caption` key's, stood before it 2026-10-08..10-21.)
     std::string waveform;
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
@@ -706,7 +706,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp `waveform=warptempo-phosphor-gold-and-ice` (the default spelled, every key
+// both stamp `waveform=warptempo-phosphor-cyan-and-sky` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` and
 // `led_glow=4` (the struct's own values) and no role
 // line
