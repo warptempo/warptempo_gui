@@ -6369,8 +6369,9 @@ bool GuiInputHandler::route_modal_editor_key(
 // spelling of what abandoning means: those bodies own their damage and their
 // is_active guards, so the
 // chain is a no-op when nothing stands. THE PICKER IS NOT AN EDITOR and is
-// not here: the close road takes it down through close_picker beside the
-// player's line, one close body each.
+// not here: the close road's exit takes it down through close_picker beside
+// the player's line, one close body each (a reopen or a revert asked from the
+// picker leaves it standing under its question, GuiPrompt::request_close).
 void GuiInputHandler::close_modal_editors_no_commit() {
     // THE BPM MODE GOES WITH ITS EDITOR, and the kind is read BEFORE the exit
     // that clears it: the bracket session IS its editor, so mode-without-editor
@@ -6438,10 +6439,10 @@ void GuiInputHandler::open_project_picker() {
     // Open project over one asks for what is already on screen — the settings
     // editor's own already-open silence, and a one-dimensional refusal at the
     // state it refuses on. Its key road answers earlier (route_picker_key
-    // consumes Ctrl+O in its catch-all); what reached here was the File menu's
-    // row (retired 2026-10-21), which the panel made unreachable in the same
-    // way, and the Open Project button greys under the panel — so this arm is
-    // the opener's own shape (the gate lives with the act it refuses) rather
+    // answers Ctrl+O with the picker's close since 2026-10-25, and the Open
+    // Project key's lift under the panel is that chord); what reached here
+    // was the File menu's row (retired 2026-10-21) — so this arm is the
+    // opener's own shape (the gate lives with the act it refuses) rather
     // than a road anything takes today.
     if (picker_active()) return;
     if (app.loading) return;
@@ -6586,30 +6587,53 @@ void GuiInputHandler::open_project_commit(int index) {
         return;
     }
 
-    // THE REOPEN. The picker closes; the chosen name is seated for gui_main's
-    // loop; and the close request runs with the REOPEN target — the
-    // unsaved-tab prompt exactly as Ctrl+Q's when the tab is dirty, an
-    // immediate completion when it is clean. The prompt's Cancel leaves the
-    // seated name behind harmlessly: the loop reads it only after run()
-    // returns, and run() returns for a reopen only through this request's own
-    // completion.
+    // THE REOPEN. The chosen name is seated for gui_main's loop and the close
+    // request runs with the REOPEN target — the unsaved-tab prompt exactly as
+    // Ctrl+Q's when the tab is dirty, an immediate completion when it is
+    // clean. THE PICKER STAYS STANDING UNDER ITS QUESTION (architect
+    // 2026-10-25, the render player's precedent made one rule for the
+    // overlays: an overlay stays standing under its own question, Cancel
+    // returning to it, OK ending it — the classes' record at
+    // redesign_button_enabled's head): the prompt paints the modal box over
+    // the list and owns the keyboard and the pointer ahead of the picker's
+    // router and veil, and its Cancel finds the picker as it stood, its
+    // highlight and its scroll untouched. (The pick closed the picker before
+    // asking from 2026-08-28 until then.) THE PICKER ENDS WITH ITS SESSION
+    // WHEN THE REOPEN IS CERTAIN: a clean tab's immediate completion or the
+    // question's Save / Discard asks the platform to stop run(), and the
+    // picker's state — a member of the per-project AppState, built and
+    // destroyed by main.cpp's run_project like the player's and every other
+    // per-session posture — dies with that frame, so no close is spelled
+    // here and none can carry into the next project's session. The prompt's
+    // Cancel leaves the seated name behind harmlessly: the loop reads it only
+    // after run() returns, and run() returns for a reopen only through this
+    // request's own completion. OVER THE `h` VIEW the question stands over
+    // the picker over the view, and the view's own load question
+    // (history_load_in_place, pending_load_member) is never beside it: no
+    // opener runs under a standing prompt, and the view's `'` is the
+    // picker's consumed nothing while the picker stands, so the two
+    // questions cannot coexist.
     // A RUNNING RENDER IS KILLED WHERE THE REOPEN IS CERTAIN, not here: this
     // act only ASKS to close, and the question can be answered Cancel — a kill
     // spelled at the click would have taken a running sweep down for a reopen
     // that never happened. The teardown's own worker join kills it (main.cpp's
     // run_project), on the reopen road and the exit road alike, so both
     // completions kill exactly once and nothing here needs a kill of its own.
-    close_picker();
     app.reopen_project = project->name;
     prompt.request_close(GuiCloseTarget::Reopen);
 }
 
 // REVERT (the contract is at the declaration, input_handler.h). THE
 // PICKER'S SAME-PROJECT NO-OP IS NOT ON THIS ROAD: that arm lives inside
-// open_project_commit, and this act never passes through the picker — it seats
-// the open project's own name for gui_main's loop and asks the close road with
+// open_project_commit, and this act never passes through it — it seats the
+// open project's own name for gui_main's loop and asks the close road with
 // the REVERT target, whose only difference from REOPEN is the question a dirty
-// session is asked (GuiPrompt::request_close).
+// session is asked (GuiPrompt::request_close). IT HAS A PICKER ROAD since
+// 2026-10-25: the picker's router runs it on Ctrl+Alt+O (route_picker_key),
+// the Open Project key's long press under the picker among its spellings,
+// and the question then stands over the picker as the pick's does — the
+// overlay standing under its own question, its three refusals carding over
+// it as they card anywhere.
 void GuiInputHandler::revert_project(bool question_asked) {
     auto refuse = [&](const GuiFailure& failure) {
         std::fprintf(stderr, "warptempo_gui: Revert refused: %s\n",
@@ -6784,8 +6808,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // than here, so the two roads cannot drift. (The File menu's
     // Quit row was its pointer road above the band from 2026-09-03 evening
     // until the menu row's removal, 2026-10-21; the tablet's quit road is
-    // Android's Back, the laptop's the window manager's close.) THE SET STAYS
-    // ONE: Ctrl+Alt+O, Revert's chord, dies in the catch-all below.
+    // Android's Back, the laptop's the window manager's close.) BOTH OF
+    // OPEN'S CHORDS ARE THE PICKER'S OWN since 2026-10-25 — Ctrl+O closes it
+    // and Ctrl+Alt+O reverts, the two arms below — so nothing of the
+    // session-wide set dies in the catch-all any more.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // CTRL+O CLOSES THE PICKER (architect 2026-10-25: the key that opens an
@@ -6797,6 +6823,21 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // (Ctrl+O was a consumed nothing here from 2026-08-28 until then.)
     if (ctrl && !shift && !alt && key == GuiKeys::O) {
         close_picker();
+        return true;
+    }
+
+    // CTRL+ALT+O RUNS REVERT UNDER THE PICKER (architect 2026-10-25): the
+    // same body the ordinary dispatch's arm calls, with the same (default)
+    // question_asked, and the long press on the Open Project key under the
+    // picker, whose lift turns its Shift into this chord
+    // (finish_chrome_press_release) — one road, so the key and the chord
+    // cannot drift. Revert's question then stands over the picker as the
+    // pick's does (the overlay under its own question, open_project_commit),
+    // and its refusals card over it. The picker's state is untouched by the
+    // ask. (The catch-all consumed the chord in silence from 2026-08-28
+    // until then.)
+    if (is_revert_project_key(key, mods)) {
+        revert_project();
         return true;
     }
 

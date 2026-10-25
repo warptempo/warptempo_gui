@@ -6810,8 +6810,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // click activates, 2026-08-29), a scroll drag simply
     // ends. It is a no-op with no arm standing, so it costs the other
     // releases one test. The act may take the whole surface down under this
-    // frame — a wav's play rebinds the engine, a project row's open closes the
-    // picker and requests the reopen — which is why the arm is cleared at the
+    // frame — a wav's play rebinds the engine, a project row's open requests
+    // the reopen (its question standing over the picker, or the session
+    // ending at once on a clean tab) — which is why the arm is cleared at the
     // head of that body and this arm returns immediately after it.
     if (button == GuiMouseButton::Left && finish_folder_overlay_release(x, y))
         return;
@@ -7491,9 +7492,10 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // release while the pointer rested on one of its buttons — the player
     // stays live, so without the stamp the wait would ripen into the
     // PLAYER's button at the same index, a hint beside a pointer not on it.
-    // The picker cannot host a prompt (open_project_commit runs close_picker
-    // before request_close, and request_close takes the player and the
-    // picker down before it asks anything). THE STASH LAGS THE CLOSE BY ONE
+    // The picker hosts its own two questions the same way since 2026-10-25
+    // (the reopen's and Revert's, standing over its list), so the stamp
+    // answers there too: the prompt closed by a key release leaves the
+    // picker live and a wait stamped with the prompt's owner dead. THE STASH LAGS THE CLOSE BY ONE
     // PAINT: the
     // frame that repaints the player's row republishes the stash,
     // paint_shift_tooltip refuses the mismatch on that same frame, and this

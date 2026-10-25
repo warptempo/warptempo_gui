@@ -277,7 +277,8 @@ void GuiPrompt::cancel_paste_confirmation() {
 // WM-close callback, the Open project picker's open act and Revert
 // share identical behaviour; what differs between them is the target, seated
 // here for proceed — and, for Revert alone, the question a dirty session is
-// asked.
+// asked — and, since 2026-10-25, whether a standing picker comes down first
+// (the exit alone; the reopen and the revert are the picker's own questions).
 void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     if (app.prompt.active) return; // already gated; ignore re-entry
     // THE RENDER PLAYER COMES DOWN FIRST, on every road into this one: the
@@ -289,11 +290,21 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // must take the identical step — one road, one closer. A no-op when the
     // mode is down, which is every other close.
     render_player.close();
-    // AND SO DOES A STANDING PICKER (2026-08-28), the same shape one mode
-    // over — one close body, close_picker, which takes the overlay's band
-    // down with it; idempotent, so the road that already closed it — the
-    // Open project picker's own reopen — pays nothing.
-    if (input != nullptr) input->close_picker();
+    // AND SO DOES A STANDING PICKER ON THE EXIT ROAD (2026-08-28), the same
+    // shape one mode over — one close body, close_picker, which takes the
+    // overlay's band down with it. ON THE REOPEN AND REVERT ROADS IT STAYS
+    // (architect 2026-10-25, one rule for the overlays: an overlay stays
+    // standing under its own question, Cancel returning to it, OK ending
+    // it): with a picker standing, those two targets are reached only from
+    // the picker itself — its pick (open_project_commit) and its Ctrl+Alt+O
+    // (route_picker_key), the OPEN key's long press among its spellings —
+    // so the question is the picker's own, painted over the list, and the
+    // picker ends with its session when the reopen completes (AppState dies
+    // with run_project's frame, main.cpp). An exit is no question of the
+    // picker's — Ctrl+Q and the compositor's close — and takes it down
+    // before asking, as it takes the player.
+    if (input != nullptr && target == GuiCloseTarget::Exit)
+        input->close_picker();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
     // identical reason and on the identical road: the keyboard's Ctrl+Q used
     // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which

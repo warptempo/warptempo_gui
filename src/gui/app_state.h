@@ -5878,12 +5878,14 @@ struct AppState {
     // THE FOURTH OWNER IS THE PICKER (architect 2026-08-28): the
     // FIELD-LESS modal over the folder overlay's list — the Open project
     // picker — whose row is **Cancel** and nothing else since 2026-08-29 (a
-    // click on a row opens it). Ranked WITH the player, though NOTHING EVER
-    // PAINTS OVER IT in practice (retold 2026-09-02): the one prompt it could
-    // meet is the reopen's own unsaved-tab question, and the open act closes
-    // the picker BEFORE raising it (`close_picker` then `request_close`), as
-    // the close road does at its head — so the rank is what settles a race
-    // that no road produces. The picker
+    // click on a row opens it). Ranked WITH the player, and like the player
+    // it STANDS UNDER ITS OWN QUESTIONS since 2026-10-25 (architect: one
+    // rule for the overlays) — the reopen's unsaved-tab question and
+    // Revert's discard question, both raised from the picker, take the box
+    // and the controls row over its list, and their Cancel returns to it.
+    // (The open act closed the picker before raising its question from
+    // 2026-08-28 until then.) The close road's exit still takes it down at
+    // its head. The picker
     // and the player are NEVER LIVE TOGETHER (each opener refuses under the
     // other, and neither is an editor), as neither is live beside an editor
     // (both openers refuse under one, both routers consume every editor
@@ -7728,8 +7730,9 @@ struct AppState {
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
-    // GuiInputHandler::close_picker (Esc, Cancel, Ctrl+Q's road, the same-
-    // project no-op and the reopen's own tail all pass through it), which
+    // GuiInputHandler::close_picker (Esc, Cancel, Ctrl+O, Ctrl+Q's road and
+    // the same-project no-op all pass through it; a reopen ends the session
+    // with the picker standing, the whole AppState going with it), which
     // resets the overlay with it — so "the band leaves with the picker" is a
     // fact rather than a list.
     //   `active`   the mode bit — the fourth modal owner and, with the
@@ -8244,8 +8247,10 @@ struct AppState {
     //                 function). The player writes Player at its open and
     //                 None at its close; the picker writes ProjectPicker at
     //                 its open and None at every close
-    //                 path (the reopen's tail included, all of them through
-    //                 close_picker). ONE ROW ACT FORKS ON IT —
+    //                 path (all of them through close_picker; a reopen
+    //                 ends the session with it standing, and the AppState
+    //                 holding it dies with run_project's frame). ONE ROW
+    //                 ACT FORKS ON IT —
     //                 the OPEN, which
     //                 under the player enters a batch folder or plays a wav
     //                 (going UP is the row's act no longer: since 2026-09-01
@@ -14192,6 +14197,20 @@ inline bool redesign_button_enabled(const AppState& a,
     // left by its own key alone, its hints shown and its partition below
     // greying what it refuses.
     //
+    // AN OVERLAY STAYS STANDING UNDER ITS OWN QUESTION (architect
+    // 2026-10-25, the player's precedent made one rule): the player's load
+    // in place and folder delete, the picker's reopen and revert — the
+    // prompt takes the box and the controls row over the overlay's list,
+    // owns the keyboard and the pointer ahead of its router and its veil,
+    // and nothing behind it changes face (the opener key stays lit and
+    // live-faced, its press swallowed by the prompt's veil, so this body
+    // needs no prompt term); Cancel returns to the overlay as it stood, and
+    // the answer that acts runs the act over it — the load closing the
+    // player at its success, the reopen and the revert ending the session
+    // and the picker with it, the delete leaving the player on its new
+    // listing. The picker closed itself before its question from 2026-08-28
+    // until then.
+    //
     // (THE THREE MENU ANCHORS answered first here, from menu_anchor_live,
     // until the menu row's removal, 2026-10-21.)
     // THE LOAD GREYS THE ROSTER (architect 2026-09-24): while there is no
@@ -14231,7 +14250,9 @@ inline bool redesign_button_enabled(const AppState& a,
     // router answers with the player's own close (GuiRenderPlayer::close);
     // while the PROJECT PICKER stands, Open Project stays live and its lift
     // is Ctrl+O, which the picker's router answers with close_picker, the
-    // act its Cancel key runs. Each key toggles exactly as its chord does and
+    // act its Cancel key runs — and its shifted press, the long press on the
+    // glass, is Ctrl+Alt+O, which that router answers with Revert
+    // (2026-10-25). Each key toggles exactly as its chord does and
     // sits lit while its overlay stands (redesign_button_selected). The other
     // overlay's opener stays grey (a press would open one overlay over the
     // other); the press and lift carry the same exemption (on_button_press's
@@ -14330,7 +14351,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // it, the iteration lock inheriting the admission). ITS SHIFT TWIN,
         // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
         // live wherever the roster is, and Revert's own refusals (a
-        // publishing checkpoint, the folder checks) card at revert_project.
+        // publishing checkpoint, the folder checks) card at revert_project —
+        // under the picker too since 2026-10-25, whose router runs the twin's
+        // Ctrl+Alt+O (route_picker_key).
         case RedesignButton::OpenProject:
             return true;
         // THE WALK, UNDER THE TWIN RULE (architect 2026-09-26): its

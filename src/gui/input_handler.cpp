@@ -326,9 +326,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // overlay, at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
-    // already closed by the close road), Ctrl+S consumed by the router as the
-    // save, and Ctrl+Shift+S (the publish chord, 2026-10-10) as a consumed
-    // nothing — the pull's question must not open over a picker. The gesture clause is the player's
+    // already closed by the close road's exit), Ctrl+S consumed by the router
+    // as the save, Ctrl+O as the close and Ctrl+Alt+O as Revert (2026-10-25,
+    // whose question stands over the picker — the prompt gate above then
+    // owns every key, so its Esc is the question's Cancel and a second Esc
+    // the picker's close), and Ctrl+Shift+S (the publish chord, 2026-10-10)
+    // as a consumed nothing — the pull's question must not open over a
+    // picker. The gesture clause is the player's
     // own: the overlay's row press arm is a member of
     // any_pointer_gesture_active under every owner, and while it stands
     // every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
@@ -1250,10 +1254,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // sits beside Open and Quit for the same reason they sit together — the
     // acts on the session as a whole — and the placement is otherwise free on
     // the same terms as Open's: every state that must refuse it refuses it
-    // ABOVE this line (a standing prompt, the two list owners' routers, which
-    // consume it in silence as they consume Ctrl+O, the
+    // ABOVE this line (a standing prompt, the render player's router, which
+    // consumes it in silence as it consumes Ctrl+O, the
     // loading gate, the editor text drag, any keyboard-modal editor) or inside
-    // the act's own body. The `h` view and both locks ADMIT it (their
+    // the act's own body. THE PICKER'S ROUTER ANSWERS IT ABOVE TOO, with this
+    // same body (2026-10-25, route_picker_key), so under the picker the act
+    // runs without reaching this line. The `h` view and both locks ADMIT it (their
     // allowlists name the shared predicate). Ctrl+alt-exact through that
     // predicate (is_revert_project_key, gui_input.h); not repeat-eligible.
     if (is_revert_project_key(key, mods)) {

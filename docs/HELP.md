@@ -85,7 +85,7 @@ Example output, also in lossy audio format:
 
 - [`INSTALL.md`](INSTALL.md): installing, building, the first run, the tablet, daily use, trouble, and migrating an older project folder.
 - The tooltips: every button and its key, with the tooltip lamp lit.
-- There is no menu bar: Open Project is the toolbar's first button (Ctrl+O; its Shift-press or long press is Revert, Ctrl+Alt+O), Quit is Ctrl+Q, Back on the tablet or the close button of the laptop's title bar (the window manager's), and Settings is the toolbar's Settings button (`;`).
+- There is no menu bar: Open Project is the toolbar's first button (Ctrl+O; its Shift-press or long press is Revert, Ctrl+Alt+O). It opens the project list, and while the list stands the key stays lit and pressing it again (or Ctrl+O, or Esc) closes the list, while its Shift-press or long press (or Ctrl+Alt+O) still reverts. A question about unsaved work — choosing another project, or reverting — stands over the list: Cancel (or Esc) returns to the list as it was, and the answer that goes ahead reopens the program on the project. Quit is Ctrl+Q, Back on the tablet or the close button of the laptop's title bar (the window manager's), and Settings is the toolbar's Settings button (`;`).
 - The dialogs: a button's underlined letter is its access key — the letter alone answers a question, Alt with the letter while a text field has the focus; Enter is the focused button and Esc is Cancel.
 - The source comments and `docs/engineering/closed_questions.md`: the engineering record of the rulings behind the behaviour, not user reading.
 - [`README.md`](../README.md): credits and licence.

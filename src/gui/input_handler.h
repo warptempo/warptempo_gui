@@ -2758,11 +2758,16 @@ private:
     //       is torn down. Either refusal says its reason on a notification
     //       card and the picker STAYS OPEN (there is no field to refuse in).
     //       Only a
-    //       project that passes both reaches the reopen: the picker closes,
-    //       the name is seated in app.reopen_project and the close request
-    //       runs with the REOPEN target — the unsaved-tab prompt EXACTLY as
-    //       Ctrl+Q's, its answer completing a reopen instead of an exit
-    //       (GuiCloseTarget, prompt.h). A RUNNING RENDER IS KILLED BY THE
+    //       project that passes both reaches the reopen: the name is seated
+    //       in app.reopen_project and the close request runs with the REOPEN
+    //       target — the unsaved-tab prompt EXACTLY as Ctrl+Q's, its answer
+    //       completing a reopen instead of an exit (GuiCloseTarget,
+    //       prompt.h). THE PICKER STAYS STANDING UNDER THAT QUESTION
+    //       (architect 2026-10-25, the overlays' one rule: an overlay stands
+    //       under its own question, Cancel returning to it, OK ending it),
+    //       and it ends with the session when the reopen completes — its
+    //       state is the per-project AppState's, which run_project destroys.
+    //       A RUNNING RENDER IS KILLED BY THE
     //       SESSION'S TEARDOWN and not by this act, because this act only
     //       ASKS: the prompt's Cancel keeps the session, and a kill spelled
     //       here would already have taken a sweep down for a reopen that did
@@ -2784,10 +2789,12 @@ private:
     //       the row click's first half (folder_overlay_highlight_row's picker
     //       arm) and bare Up / Down's walk.
     //     close_picker: THE ONE CLOSE BODY — Esc, the Cancel button,
-    //       Ctrl+Q's and the
+    //       Ctrl+O (the Open Project key's lift), Ctrl+Q's and the
     //       compositor's close road (GuiPrompt::request_close, at its head
-    //       beside the player's close), the same-project no-op and the
-    //       reopen's own tail all pass through it; the overlay leaves with
+    //       beside the player's close, on the exit road alone) and the
+    //       same-project no-op all pass through it (a reopen ends the
+    //       session with the picker standing, and the picker with it); the
+    //       overlay leaves with
     //       it (the reset restores Owner::None, which IS the band's standing
     //       predicate answering false). A no-op when no picker stands.
     //     route_picker_key: THE WHOLE PLASTIC VOCABULARY while a picker
@@ -2800,8 +2807,10 @@ private:
     //       with none focused, OPENS the highlight; Space presses a focused
     //       button only; Up / Down walk the highlight (repeat-eligible,
     //       scrolling to keep it visible); bare `\` toggles the tooltip lamp
-    //       (set_show_tooltips, the player's arm); Esc closes; Ctrl+S saves
-    //       with the
+    //       (set_show_tooltips, the player's arm); Esc closes; Ctrl+O
+    //       closes (2026-10-25, the opener key the way out); Ctrl+Alt+O runs
+    //       Revert (2026-10-25, revert_project, its question standing over
+    //       the picker); Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
@@ -2827,7 +2836,7 @@ private:
     void open_project_commit(int index);
     // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
-    // history. NOT A PICKER ACT and it never meets open_project_commit's
+    // history. It never meets open_project_commit's
     // same-project no-op: it seats the open project's own name in
     // app.reopen_project and asks the one close road with the REVERT target
     // (GuiCloseTarget, prompt.h), whose completion is the reopen's. Its own
@@ -2841,12 +2850,16 @@ private:
     // (GuiPrompt::request_close). A running
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
-    // `h` view (the three allowlists admit is_revert_project_key); unreachable
-    // under the two list owners, whose routers consume the chord. THE ICON
-    // ROW'S OPEN PROJECT BUTTON
+    // `h` view (the three allowlists admit is_revert_project_key);
+    // unreachable under the render player, whose router consumes the chord.
+    // UNDER THE PICKER IT RUNS (architect 2026-10-25): the picker's router
+    // answers Ctrl+Alt+O with this body, and the question stands over the
+    // picker as the pick's does — the overlay under its own question, Cancel
+    // returning to it. THE ICON ROW'S OPEN PROJECT BUTTON
     // reaches it too, by its shifted press (architect 2026-10-07: the lift
     // dispatches this chord, finish_chrome_press_release), its face the plain
-    // act's, so these refusals card from that road as from the key.
+    // act's, so these refusals card from that road as from the key — under
+    // the picker as well, where the key stays live and lit.
     //
     // `question_asked` IS THE PULL'S RELOAD (architect 2026-09-27): its own
     // prompt already asked whether to discard the session, so the revert

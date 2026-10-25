@@ -15,8 +15,9 @@
 // GuiInputHandler::history_load_in_place in the `h` view, and answered back
 // through the input-handler back-pointer below). Two entry points are exposed:
 // request_close (called by Ctrl+Q, the WM-close callback, the Open
-// prompt's commit and Revert — the ONE close road, which is why the render player's
-// close and the modal editors' abandon both live inside it) and
+// project picker's commit and Revert — the ONE close road, which is why the
+// render player's close, the picker's close on the exit road and the modal
+// editors' abandon all live inside it) and
 // activate_response (called by the keyboard
 // handler when a prompt is active). The other two former lambdas (open_unsaved,
 // proceed) are private helpers; they have no callers outside this cluster.
@@ -62,7 +63,7 @@ struct GuiPrompt {
     // GuiInputHandler (confirm_load_in_place, cancel_load_in_place)
     // — the three load acts being private to that struct — and
     // request_close's own closing steps
-    // (close_picker and close_modal_editors_no_commit),
+    // (close_picker on the exit road, and close_modal_editors_no_commit),
     // the picker's close and each editor's exit body living
     // there beside the surfaces themselves.
     GuiInputHandler*      input = nullptr;
@@ -88,14 +89,19 @@ struct GuiPrompt {
     // identical behaviour, each naming what its close completes — AND WHAT
     // CLOSES BEFORE THE QUIT QUESTION IS STATED HERE, ONCE, for every road:
     // a standing render player comes down at this road's head, a standing
-    // picker with it (close_picker), and with them every standing modal
-    // editor, abandoned uncommitted through the input handler's one body
-    // (close_modal_editors_no_commit). No caller restates any step, which is
-    // what keeps the compositor's close — arriving with no key, so it can run
-    // no keyboard arm of its own — from raising the unsaved-work prompt over
-    // a mode or an editor that is still up. Ctrl+Q, the WM-close callback,
-    // the Open project picker's open act and Revert share the road;
-    // what differs is the target.
+    // picker with it on the EXIT road (close_picker), and with them every
+    // standing modal editor, abandoned uncommitted through the input
+    // handler's one body (close_modal_editors_no_commit). No caller restates
+    // any step, which is what keeps the compositor's close — arriving with
+    // no key, so it can run no keyboard arm of its own — from raising the
+    // unsaved-work prompt over a mode or an editor that is still up.
+    // Ctrl+Q, the WM-close callback, the Open project picker's open act and
+    // Revert share the road; what differs is the target. THE PICKER STAYS
+    // UNDER THE REOPEN AND THE REVERT (architect 2026-10-25, an overlay
+    // stands under its own question): with a picker up, those two targets
+    // come only from the picker itself (its pick and its Ctrl+Alt+O), so
+    // their question paints over its list, Cancel returns to it, and the
+    // completion ends it with the session.
     //
     // THE REVERT TARGET ASKS A DIFFERENT QUESTION AND NOTHING ELSE: every step
     // above runs for it unchanged, and a dirty session is
