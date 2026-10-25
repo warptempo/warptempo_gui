@@ -150,7 +150,7 @@ struct TrimRange {
 // Every colour is a solid fill of integer cells — EXCEPT THE CHROME'S
 // SURFACES ON A GROUND (materials.h: a baked tile copied 1:1, opaque,
 // nothing blended at paint time, every line its tone's own solid) and the
-// lit key's patch (its LED's glow composited at the bake). (The color
+// key's patch (its mottled face and a lit LED's glow, baked, 2026-10-24). (The color
 // picker's hue ring and SV triangle, 2026-10-07..14, were the one place the
 // product painted colors that were not roles; THE PROGRAM CASE'S SHADOW
 // RAMP, 2026-10-09 to 2026-10-23, and THE CAPTION'S GRADIENT, 2026-10-05 to

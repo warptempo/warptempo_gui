@@ -86,17 +86,45 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth,
     cairo_restore(cr);
 }
 
+GuiRect key_face_rect(const GuiRect& r, int depth) {
+    const int px = hairline_px();
+    const GuiRect in{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px};
+    if (in.w <= 0 || in.h <= 0) return GuiRect{};
+    if (depth > 0) {
+        const int wall = std::min({depth * px, in.w, in.h});
+        return GuiRect{in.x + wall, in.y + wall, in.w - wall, in.h - wall};
+    }
+    // paint_key_plain's rest: the light rows (the second where the inside
+    // is taller than two), the foot (where taller than four), the right
+    // column.
+    const int top    = in.h > 2 * px ? 2 * px : px;
+    const int bottom = in.h > 4 * px ? 2 * px : 0;
+    const int h = in.h - top - bottom;
+    const int w = in.w - px;
+    if (w <= 0 || h <= 0) return GuiRect{};
+    return GuiRect{in.x, in.y + top, w, h};
+}
+
 int key_depth(bool pressed, bool checked) {
     return pressed ? 2 : checked ? 1 : 0;
 }
 
-void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led) {
+void paint_key_at_depth(cairo_t* cr, const GuiRect& r, int depth,
+                        GuiKeyLed led, uint32_t id) {
+    // A lamp key's patch carries its LED by depth (dead at rest, lit down,
+    // the declaration's rows), so the lamp is the patch's key with the depth.
+    if (materials::paint_key_patch(cr, r, id, depth, led != GuiKeyLed::None))
+        return;
+    paint_key_plain(cr, r, depth, led);
+}
+
+void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led,
+               uint32_t id) {
     // THE LED LIGHTS WHILE HELD (the declaration's HELD row); the depth from
     // the press arm first, then the lit LED (the CHECKED row).
     const int depth = key_depth(pressed, led == GuiKeyLed::Lit);
     if (pressed && led == GuiKeyLed::Unlit) led = GuiKeyLed::Lit;
-    if (led == GuiKeyLed::Lit && materials::paint_lit_key(cr, r, depth)) return;
-    paint_key_plain(cr, r, depth, led);
+    paint_key_at_depth(cr, r, depth, led, id);
 }
 
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,

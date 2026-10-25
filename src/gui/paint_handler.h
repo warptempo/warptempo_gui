@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "audio.h"
+#include "materials.h"   // GuiKeySeat, program_key_seats' element
 #include "playback.h"
 #include "render.h"
 #include "platform.h"
@@ -46,16 +47,20 @@ struct GuiTargetRender;
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
 // THE PROGRAM'S KEYS, ONE LIST FOR THE MATERIALS' BAKE (2026-10-21; since
-// 2026-10-23 the sizes the LIT KEYS' patches are baked for, materials.h):
-// every key — its outer rect — the band, row 8 and the render player lay
-// out at this window geometry, IN BOTH STATES OF THE `h` VIEW (its hide and
-// stand-ins move the band's left runs and row 8's block), each row's own
-// layout function the painter reads too (paint_handler.cpp: icon_row_seats
-// and icon_row_walk, row8_block and row8_block_walk, player_row_layout). A
-// function of the client size and the scale alone (the strip pad a
-// constant since 2026-10-23), which are in the bake's key. (word_and_key_case_rects, the word buttons' and the
-// keyboard's ebony patches, 2026-10-22 to 2026-10-23, is retired.)
-std::vector<GuiRect> program_case_rects(const AppState& app);
+// 2026-10-24 every key the KEY PATCHES are baked for, each by its identity,
+// materials.h's KEYS and THE MOTTLE): every key the geometry lays out — the
+// band's and row 8's IN BOTH STATES OF THE `h` VIEW (its hide and stand-ins
+// move the band's left runs and row 8's block), the render player's nine,
+// every word button of every answer set (kPromptAnswerTables) and the
+// dialog editors' OK and Cancel, the scrub's thumb and, on a platform with
+// the on-screen keyboard, every key of its three pages — each a seat of its
+// identity (GuiKeyKind), its size, its lamp and the depths it can stand at,
+// each row's own layout function the painter reads too (paint_handler.cpp:
+// icon_row_seats and icon_row_walk, row8_block and row8_block_walk,
+// player_row_layout, modal_word_buttons, onscreen_keyboard::for_each_key). A
+// function of the client size and the scale alone, which are in the bake's
+// key; the sizes alone are read, never a position.
+std::vector<GuiKeySeat> program_key_seats(const AppState& app);
 // THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
 // logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
 // layout): the lane's rows from the legend's first ink column through the

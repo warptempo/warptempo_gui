@@ -164,18 +164,34 @@ GuiRect key_led_rect(const GuiRect& r, int depth);
 //   DISABLED — the key as its state gives; the caller dims the legend
 //              (kDimInk).
 //   HOT      — none.
-// THE LED (key_led_rect) per `led`. paint_key takes a lit key — always at
-// depth 1 or 2 — from the bake's patch for its size and depth, its glow
-// composited there round that depth's LED (materials::paint_lit_key;
-// materials.cpp's rebuild_lit_patches), so a held or checked key is still
-// one blit, and paints it plain where no patch holds the size;
-// paint_key_plain is the painter itself, `depth` the geometry (0 the key at
-// rest), the bake's own road to a patch and the keyboard's, whose lampless
-// keys carry a checked state (the Shift arm) paint_key cannot read off an
-// LED.
+//   THE FACE — MOTTLED (architect 2026-10-24; materials.h's THE MOTTLE):
+//              the face tone above is the face's mean; on screen the face is
+//              the key's own grain, baked with the key into its patch.
+// THE LED (key_led_rect) per `led`. paint_key takes EVERY KEY from the
+// bake's patch for its identity `id` (materials.h's GuiKeyKind), its size
+// and its depth — the face mottled, a lit key's glow composited round that
+// depth's LED (materials::paint_key_patch; materials.cpp's
+// rebuild_key_patches) — so a key at any depth is one blit, and paints the
+// FLAT KEY (paint_key_plain, the face its flat tone) where no patch holds it:
+// before the first bake, a key or size the bake did not see; never noise at
+// paint. paint_key_at_depth is the same road at a depth the caller derived
+// (the on-screen keyboard's, whose lampless keys carry a checked state —
+// the Shift arm — paint_key cannot read off an LED); paint_key_plain is the
+// painter itself, `depth` the geometry (0 the key at rest), the bake's own
+// road to a patch.
 int key_depth(bool pressed, bool checked);
-void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
+void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led,
+               uint32_t id);
+void paint_key_at_depth(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led,
+                        uint32_t id);
 void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
+// THE FACE paint_key_plain leaves on the key `r` at `depth` — the pixels the
+// face tone fills and no edge covers (the REST and DOWN rows above): at rest
+// inside the outline under the two light rows, above the foot and left of
+// the right column; down, inside the outline past the wall's band. The LED
+// stands on it (key_led_rect). The one owner of the face's extent: the
+// painter and the bake's mottle read it.
+GuiRect key_face_rect(const GuiRect& r, int depth);
 
 // (THE QUAVER'S PAINTER — paint_quaver, make_sheet2.vec_mock()'s vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is

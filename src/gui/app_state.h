@@ -13426,7 +13426,7 @@ bool history_mode_hides_button(const AppState& app, RedesignButton b);
 // THE SAME ANSWER FOR THE VIEW WHETHER OR NOT IT STANDS (2026-10-21): true
 // iff the button would be absent INSIDE the `h` view — the chord walk alone,
 // which needs no session. Read where a toolbar's layout is wanted in both
-// states at once (program_case_rects, paint_handler.cpp: the materials' case
+// states at once (program_key_seats, paint_handler.cpp: the materials' case
 // patches seat every case either state paints); history_mode_hides_button
 // is this under the live view's bit.
 bool history_view_hides_button(RedesignButton b);

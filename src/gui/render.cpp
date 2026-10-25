@@ -457,10 +457,12 @@ void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // render.h's caption note.)
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): a key at rest,
-// no LED, on its box.
+// no LED, on its box — its mottled face the thumb's own patch (materials.h's
+// KEYS, GuiKeyKind::Thumb, 2026-10-24).
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     if (box.w <= 0 || box.h <= 0) return;
-    paint_key(cr, box, false, GuiKeyLed::None);
+    paint_key(cr, box, false, GuiKeyLed::None,
+              gui_key_id(GuiKeyKind::Thumb, 0));
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):

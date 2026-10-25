@@ -1,10 +1,10 @@
 #include "materials.h"
 
 #include "app_state.h"          // the lane accessors the bake's geometry reads
-#include "cool_edit_paint.h"    // the key painter the lit patches are baked from
+#include "cool_edit_paint.h"    // the key painter the key patches are baked from
 #include "device_config.h"      // device_config_path — the image road's folder beside it
 #include "display_transform.h"
-#include "paint_handler.h"      // program_case_rects
+#include "paint_handler.h"      // program_key_seats
 #include "palette_file.h"       // program_palette_words' type
 #include "svg_icon.h"           // the image road's decode: raster_info, raster_regions
 
@@ -22,6 +22,7 @@
 #include <span>
 #include <string_view>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -63,7 +64,7 @@ Tile make_tile(const GuiRect& r, Surface s) {
 
 // THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale, the
 // conversion and the LED glow (the strip pad a constant since 2026-10-23) — every lane, every seat and so every tile's rect and every
-// lit patch is a function of them, so a frame compares these and never lays
+// key patch is a function of them, so a frame compares these and never lays
 // anything out.
 struct Key {
     int  w = 0, h = 0, scale = 0, glow = 0;
@@ -87,9 +88,8 @@ struct Geometry {
     int band_y = 0;
     // THE MARKER LANE'S ROWS, window-wide — its tile.
     int lane_y = 0, lane_h = 0;
-    // THE KEY SIZES the lit patches are baked for (program_case_rects'
-    // distinct w x h).
-    std::vector<std::pair<int, int>> key_sizes;
+    // THE KEYS the patches are baked for (program_key_seats).
+    std::vector<GuiKeySeat> key_seats;
 };
 
 Geometry geometry_of(const AppState& app) {
@@ -100,12 +100,7 @@ Geometry geometry_of(const AppState& app) {
     const GuiRect lane = top_marker_row_area(app);
     g.lane_y = lane.y;
     g.lane_h = lane.h;
-    for (const GuiRect& r : program_case_rects(app)) {
-        const std::pair<int, int> s{r.w, r.h};
-        if (r.w > 0 && r.h > 0 &&
-            std::find(g.key_sizes.begin(), g.key_sizes.end(), s) == g.key_sizes.end())
-            g.key_sizes.push_back(s);
-    }
+    g.key_seats = program_key_seats(app);
     return g;
 }
 
@@ -123,14 +118,15 @@ uint32_t word_of(GuiColor c) {
 // window bakes once no size change has arrived for this long.
 constexpr auto kBakeSettle = std::chrono::milliseconds(150);
 
-// ONE LIT KEY'S PATCH (materials.h's LIT KEYS): its size and its depth; a
-// lit key is always down, checked at depth 1 or held at depth 2
-// (cool_edit_paint.h's paint_key), so two patches a size.
-struct LitPatch {
-    int  w = 0, h = 0;
-    int  depth = 0;
-    Tile tile;
-};
+// THE KEY PATCHES' MAP KEY (materials.h's KEYS): the identity, the size,
+// the depth and the lamp, packed — the size's two 14-bit fields hold any
+// window's key.
+uint64_t patch_key(uint32_t id, int w, int h, int depth, bool lamp) {
+    return (static_cast<uint64_t>(id) << 32) |
+           (static_cast<uint64_t>(w & 0x3FFF) << 18) |
+           (static_cast<uint64_t>(h & 0x3FFF) << 4) |
+           (static_cast<uint64_t>(depth & 0x3) << 1) | (lamp ? 1u : 0u);
+}
 
 struct State {
     bool     baked = false;
@@ -139,11 +135,11 @@ struct State {
                                                   kMarkerBase};
     // THE TILES (materials.h's BAKE RULE): the ground's and the lane's.
     std::vector<Tile> ground, marker;
-    // THE LIT KEYS' PATCHES, and the sizes they were baked for (kept so an
-    // accent change rebuilds them without a layout).
-    std::vector<LitPatch>             lit;
-    std::vector<std::pair<int, int>>  lit_sizes;
-    uint32_t                          accent = kLedLitRecord;
+    // THE KEY PATCHES (patch_key), and the keys they were baked for (kept
+    // so an accent change rebuilds the lit ones without a layout).
+    std::unordered_map<uint64_t, Tile> patches;
+    std::vector<GuiKeySeat>            key_seats;
+    uint32_t                           accent = kLedLitRecord;
     // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
     // change waits on the gate the tiles are the last bake's, and none is
     // ever blitted outside this.
@@ -626,91 +622,315 @@ std::size_t bytes_of_surface(cairo_surface_t* s) {
              : 0;
 }
 
-// THE LIT KEYS' PATCHES (materials.h's LIT KEYS and set_led_glow): for
-// every size and each of the two down depths, 1 checked and 2 held
-// (architect 2026-10-23; cool_edit_paint.h's paint_key), the key painter's
-// own lit key at the origin — the wall's band `depth` device px inside the
-// outline's top row and left column, the LED `depth` device px right and
-// down — then THE GLOW composited over the face inside the wall and the
-// outline, round THAT DEPTH'S LED rect (key_led_rect) — the accent at alpha
-// .35 at the rect's edge falling off as (1 − d / glow)² to 0 at `glow` px
-// out, d the pixel's distance from the rect — the LED's own pixels left as
-// painted. In the window's bytes: the painter converts its own colors
-// (set_palette_source), the glow's accent converted here.
-void rebuild_lit_patches() {
-    State& s = state();
-    s.lit.clear();
-    const GuiColor accent = display_color(hex(s.accent));
+// -- THE KEY PATCHES (materials.h's KEYS and THE MOTTLE) -------------------
+
+// PIL's BICUBIC KERNEL, a = −0.5 (Resample.c's bicubic_filter).
+double bicubic(double x) {
+    constexpr double a = -0.5;
+    x = std::abs(x);
+    if (x < 1.0) return ((a + 2.0) * x - (a + 3.0)) * x * x + 1.0;
+    if (x < 2.0) return (((x - 5.0) * x + 8.0) * x - 4.0) * a;
+    return 0.0;
+}
+
+// PIL's RESAMPLING COEFFICIENTS for one axis, `in` to `out` samples
+// upscaling (Resample.c's precompute_coeffs at filterscale 1): per output
+// sample its first input sample, its tap count and its normalized weights,
+// kAxisTaps a sample (the bicubic's support of 2 reaches at most five).
+constexpr int kAxisTaps = 6;
+struct AxisCoeffs {
+    std::vector<int>    first, count;
+    std::vector<double> k;   // kAxisTaps per output sample
+};
+AxisCoeffs axis_coeffs(int in, int out) {
+    AxisCoeffs c;
+    c.first.resize(static_cast<std::size_t>(out));
+    c.count.resize(static_cast<std::size_t>(out));
+    c.k.assign(static_cast<std::size_t>(out) * kAxisTaps, 0.0);
+    const double scale = static_cast<double>(in) / out;
+    constexpr double support = 2.0;
+    for (int xx = 0; xx < out; ++xx) {
+        const double center = (xx + 0.5) * scale;
+        const int xmin = std::max(static_cast<int>(center - support + 0.5), 0);
+        const int xmax = std::clamp(
+            std::min(static_cast<int>(center + support + 0.5), in) - xmin, 0, kAxisTaps);
+        double* k = c.k.data() + static_cast<std::size_t>(xx) * kAxisTaps;
+        double ww = 0.0;
+        for (int x = 0; x < xmax; ++x) {
+            k[x] = bicubic(x + xmin - center + 0.5);
+            ww += k[x];
+        }
+        if (ww != 0.0)
+            for (int x = 0; x < xmax; ++x) k[x] /= ww;
+        c.first[static_cast<std::size_t>(xx)] = xmin;
+        c.count[static_cast<std::size_t>(xx)] = xmax;
+    }
+    return c;
+}
+
+// ONE UNIFORM DOUBLE in [0, 1) off two 32-bit draws (numpy's random()'s
+// construction, noise_bytes's).
+double uniform(std::mt19937& rng) {
+    const uint32_t a = static_cast<uint32_t>(rng()) >> 5;
+    const uint32_t b = static_cast<uint32_t>(rng()) >> 6;
+    return (a * 67108864.0 + b) / 9007199254740992.0;
+}
+
+// ONE OCTAVE OF VALUE NOISE, h x w (make_keys1.value_noise): a uniform grid
+// (h / cell + 3) x (w / cell + 3), row-major, upsampled `cell` times by PIL's
+// bicubic — the rows first, then the columns, each pass stored as float as
+// PIL's float image is — and read from a random offset in [0, cell) on each
+// axis, the row's first.
+std::vector<double> value_noise(std::mt19937& rng, int h, int w, int cell) {
+    const int gh = h / cell + 3, gw = w / cell + 3;
+    std::vector<float> g(static_cast<std::size_t>(gh) * gw);
+    for (float& v : g) v = static_cast<float>(uniform(rng));
+    const int uh = gh * cell, uw = gw * cell;
+    const AxisCoeffs cx = axis_coeffs(gw, uw);
+    const AxisCoeffs cy = axis_coeffs(gh, uh);
+    std::vector<float> horiz(static_cast<std::size_t>(gh) * uw);
+    for (int y = 0; y < gh; ++y)
+        for (int x = 0; x < uw; ++x) {
+            const double* k = cx.k.data() + static_cast<std::size_t>(x) * kAxisTaps;
+            const float* src = g.data() + static_cast<std::size_t>(y) * gw +
+                               cx.first[static_cast<std::size_t>(x)];
+            double acc = 0.0;
+            for (int i = 0; i < cx.count[static_cast<std::size_t>(x)]; ++i)
+                acc += src[i] * k[i];
+            horiz[static_cast<std::size_t>(y) * uw + x] = static_cast<float>(acc);
+        }
+    const int oy = static_cast<int>(rng() % static_cast<uint32_t>(cell));
+    const int ox = static_cast<int>(rng() % static_cast<uint32_t>(cell));
+    std::vector<double> out(static_cast<std::size_t>(h) * w);
+    for (int y = 0; y < h; ++y) {
+        const std::size_t yy = static_cast<std::size_t>(y + oy);
+        const double* k = cy.k.data() + yy * kAxisTaps;
+        const int y0 = cy.first[yy], taps = cy.count[yy];
+        for (int x = 0; x < w; ++x) {
+            double acc = 0.0;
+            for (int i = 0; i < taps; ++i)
+                acc += horiz[static_cast<std::size_t>(y0 + i) * uw + x + ox] * k[i];
+            out[static_cast<std::size_t>(y) * w + x] = static_cast<float>(acc);
+        }
+    }
+    return out;
+}
+
+// A KEY'S SHADING FIELD (materials.h's THE MOTTLE; make_keys1.crumple and
+// shade), w x h over the inside of the key's outline: the ridged octaves
+// seeded by the key's identity, the light's slope of them, normalized to
+// unit deviation over `face` (the resting face, in the field's
+// coordinates) and times kKeyMottleStrength — each pixel's s, the face
+// pixel round(tone · (1 + s)).
+std::vector<double> mottle_field(uint32_t id, int w, int h, const GuiRect& face) {
+    std::vector<double> f(static_cast<std::size_t>(w) * h, 0.0);
+    if (w <= 0 || h <= 0) return f;
+    std::mt19937 rng(id);
+    double amp = 1.0;
+    int cell = std::max(2, kKeyMottleCreasePx);
+    for (int o = 0; o < kKeyMottleOctaves; ++o) {
+        const std::vector<double> n = value_noise(rng, h, w, cell);
+        for (std::size_t i = 0; i < f.size(); ++i)
+            f[i] += amp * (1.0 - std::abs(2.0 * n[i] - 1.0));
+        amp *= 0.5;
+        cell = std::max(2, cell / 2);
+    }
+    // numpy.gradient: central differences inside, one-sided at the ends.
+    const auto at = [&](int x, int y) {
+        return f[static_cast<std::size_t>(y) * w + x];
+    };
+    const auto d = [](int i, int n, auto&& get) {
+        if (n < 2) return 0.0;
+        if (i == 0) return get(1) - get(0);
+        if (i == n - 1) return get(n - 1) - get(n - 2);
+        return (get(i + 1) - get(i - 1)) / 2.0;
+    };
+    std::vector<double> s(f.size());
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const double hy = d(y, h, [&](int i) { return at(x, i); });
+            const double hx = d(x, w, [&](int i) { return at(i, y); });
+            s[static_cast<std::size_t>(y) * w + x] = -0.9 * hy - 0.4 * hx;
+        }
+    double sum = 0.0, sum2 = 0.0, n = 0.0;
+    for (int y = std::max(face.y, 0); y < std::min(face.y + face.h, h); ++y)
+        for (int x = std::max(face.x, 0); x < std::min(face.x + face.w, w); ++x) {
+            const double v = s[static_cast<std::size_t>(y) * w + x];
+            sum += v;
+            sum2 += v * v;
+            n += 1.0;
+        }
+    const double mean = n > 0.0 ? sum / n : 0.0;
+    const double sd = n > 0.0 ? std::sqrt(std::max(0.0, sum2 / n - mean * mean)) : 0.0;
+    const double k = kKeyMottleStrength / (sd + 1e-6);
+    for (double& v : s) v *= k;
+    return s;
+}
+
+// THE GLOW (materials.h's set_led_glow) over the patch `surf` of the key
+// `r` at `depth`: composited over the face inside the wall and the outline,
+// round THAT DEPTH'S LED rect (key_led_rect) — the accent at alpha .35 at
+// the rect's edge falling off as (1 − d / glow)² to 0 at `glow` px out, d
+// the pixel's distance from the rect — the LED's own pixels left as
+// painted. The accent converted to the window's bytes here.
+void composite_glow(cairo_surface_t* surf, const GuiRect& r, int depth) {
+    const GuiRect led = key_led_rect(r, depth);
+    if (g_led_glow <= 0 || led.w <= 0 || led.h <= 0) return;
+    const GuiColor accent = display_color(hex(state().accent));
     const double ar = accent.r * 255.0, ag = accent.g * 255.0, ab = accent.b * 255.0;
     constexpr double kGlowPeak = 0.35;
-    for (const auto& [w, h] : s.lit_sizes)
-    for (const int depth : {1, 2}) {
-        // The face's first row and column: past the outline and the wall.
-        const int face0 = (1 + depth) * hairline_px();
-        cairo_surface_t* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-        cairo_t* cr = cairo_create(surf);
-        const GuiRect r{0, 0, w, h};
-        paint_key_plain(cr, r, depth, GuiKeyLed::Lit);
-        cairo_destroy(cr);
-        const GuiRect led = key_led_rect(r, depth);
-        if (g_led_glow > 0 && led.w > 0 && led.h > 0) {
-            cairo_surface_flush(surf);
-            unsigned char* data = cairo_image_surface_get_data(surf);
-            const int stride = cairo_image_surface_get_stride(surf);
-            const double glow = static_cast<double>(g_led_glow);
-            for (int y = face0; y < h - 1; ++y) {
-                auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
-                for (int x = face0; x < w - 1; ++x) {
-                    // The pixel's centre's distance from the rect.
-                    const double px = x + 0.5, py = y + 0.5;
-                    const double dx = std::max({static_cast<double>(led.x) - px, 0.0,
-                                                px - static_cast<double>(led.x + led.w)});
-                    const double dy = std::max({static_cast<double>(led.y) - py, 0.0,
-                                                py - static_cast<double>(led.y + led.h)});
-                    const double d = std::sqrt(dx * dx + dy * dy);
-                    if (d <= 0.0 || d >= glow) continue;
-                    const double t = 1.0 - d / glow;
-                    const double a = kGlowPeak * t * t;
-                    const uint32_t p = row[x];
-                    const auto mix = [&](int c, double target) {
-                        return static_cast<uint32_t>(std::clamp(
-                            std::nearbyint((1.0 - a) * channel(p, c) + a * target),
-                            0.0, 255.0));
-                    };
-                    row[x] = 0xFF000000u | (mix(0, ar) << 16) | (mix(1, ag) << 8) |
-                             mix(2, ab);
-                }
-            }
-            cairo_surface_mark_dirty(surf);
+    // The face's first row and column: past the outline and the wall.
+    const int face0 = (1 + depth) * hairline_px();
+    cairo_surface_flush(surf);
+    unsigned char* data = cairo_image_surface_get_data(surf);
+    const int stride = cairo_image_surface_get_stride(surf);
+    const double glow = static_cast<double>(g_led_glow);
+    for (int y = face0; y < r.h - 1; ++y) {
+        auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+        for (int x = face0; x < r.w - 1; ++x) {
+            // The pixel's centre's distance from the rect.
+            const double px = x + 0.5, py = y + 0.5;
+            const double dx = std::max({static_cast<double>(led.x) - px, 0.0,
+                                        px - static_cast<double>(led.x + led.w)});
+            const double dy = std::max({static_cast<double>(led.y) - py, 0.0,
+                                        py - static_cast<double>(led.y + led.h)});
+            const double d = std::sqrt(dx * dx + dy * dy);
+            if (d <= 0.0 || d >= glow) continue;
+            const double t = 1.0 - d / glow;
+            const double a = kGlowPeak * t * t;
+            const uint32_t p = row[x];
+            const auto mix = [&](int c, double target) {
+                return static_cast<uint32_t>(std::clamp(
+                    std::nearbyint((1.0 - a) * channel(p, c) + a * target),
+                    0.0, 255.0));
+            };
+            row[x] = 0xFF000000u | (mix(0, ar) << 16) | (mix(1, ag) << 8) |
+                     mix(2, ab);
         }
-        LitPatch lp;
-        lp.w = w;
-        lp.h = h;
-        lp.depth = depth;
-        lp.tile = make_tile(GuiRect{0, 0, w, h}, Surface(surf));
-        s.lit.push_back(std::move(lp));
+    }
+    cairo_surface_mark_dirty(surf);
+}
+
+// THE MOTTLED FACE (materials.h's THE MOTTLE) over the patch `surf` of the
+// key `r` at `depth`, `s` the key's shading field over the inside of its
+// outline: every face pixel (key_face_rect) but the LED's
+// round(tone · (1 + s)) per channel, clipped, s read IN THE FACE'S OWN
+// COORDINATES — `depth` device px up and left of the pixel, so the grain
+// rides with the press. In the window's bytes (display_transform), a run of
+// equal words converted once.
+void mottle_face(cairo_surface_t* surf, const GuiRect& r, int depth, bool lamp,
+                 const std::vector<double>& s) {
+    const int px = hairline_px();
+    const GuiRect in{px, px, r.w - 2 * px, r.h - 2 * px};
+    const GuiRect face = key_face_rect(r, depth);
+    if (in.w <= 0 || in.h <= 0 || face.w <= 0 || face.h <= 0) return;
+    const GuiRect led = lamp ? key_led_rect(r, depth) : GuiRect{};
+    const uint32_t tone = depth > 0 ? kKeyFacePressed : kKeyFace;
+    const double t[3] = {static_cast<double>(channel(tone, 0)),
+                         static_cast<double>(channel(tone, 1)),
+                         static_cast<double>(channel(tone, 2))};
+    const int ride = depth * px;
+    const bool convert_words = display_transform::active();
+    uint32_t last_in = 0xFFFFFFFFu, last_out = 0;
+    cairo_surface_flush(surf);
+    unsigned char* data = cairo_image_surface_get_data(surf);
+    const int stride = cairo_image_surface_get_stride(surf);
+    for (int y = face.y; y < face.y + face.h; ++y) {
+        auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
+        const int fy = y - in.y - ride;
+        for (int x = face.x; x < face.x + face.w; ++x) {
+            if (x >= led.x && x < led.x + led.w && y >= led.y && y < led.y + led.h)
+                continue;
+            const int fx = x - in.x - ride;
+            if (fx < 0 || fy < 0 || fx >= in.w || fy >= in.h) continue;
+            const double m =
+                1.0 + s[static_cast<std::size_t>(fy) * in.w + fx];
+            uint32_t word = 0;
+            for (int c = 0; c < 3; ++c)
+                word |= static_cast<uint32_t>(
+                            std::clamp(std::floor(t[c] * m + 0.5), 0.0, 255.0))
+                        << (16 - 8 * c);
+            if (convert_words) {
+                if (word != last_in) {
+                    last_in = word;
+                    last_out = display_transform::p3_word_from_srgb_fast(word);
+                }
+                word = last_out;
+            }
+            row[x] = 0xFF000000u | word;
+        }
+    }
+    cairo_surface_mark_dirty(surf);
+}
+
+// THE KEY PATCHES (materials.h's KEYS): for every seat and each depth it
+// stands at, the key painter's own key at the origin — a lamp key's LED dead
+// at rest and lit down, a lampless key's none — then ITS FACE MOTTLED (one
+// field per key, every depth reading it), then, lit, THE GLOW. In the
+// window's bytes: the painter converts its own colors (set_palette_source),
+// the face and the glow converted here. `lit_only` (an accent change): the
+// lamp keys' depths 1 and 2 alone, the other patches standing.
+void rebuild_key_patches(bool lit_only) {
+    State& s = state();
+    if (!lit_only) s.patches.clear();
+    const int px = hairline_px();
+    for (const GuiKeySeat& seat : s.key_seats) {
+        if (seat.w <= 0 || seat.h <= 0) continue;
+        if (lit_only && !seat.lamp) continue;
+        const GuiRect r{0, 0, seat.w, seat.h};
+        const GuiRect rest = key_face_rect(r, 0);
+        const std::vector<double> field = mottle_field(
+            seat.id, seat.w - 2 * px, seat.h - 2 * px,
+            GuiRect{rest.x - px, rest.y - px, rest.w, rest.h});
+        for (int depth = 0; depth <= 2; ++depth) {
+            if (!(seat.depths & (1u << depth))) continue;
+            const bool lit = seat.lamp && depth > 0;
+            if (lit_only && !lit) continue;
+            const GuiKeyLed led = !seat.lamp ? GuiKeyLed::None
+                                  : lit      ? GuiKeyLed::Lit
+                                             : GuiKeyLed::Unlit;
+            cairo_surface_t* surf =
+                cairo_image_surface_create(CAIRO_FORMAT_ARGB32, seat.w, seat.h);
+            cairo_t* cr = cairo_create(surf);
+            paint_key_plain(cr, r, depth, led);
+            cairo_destroy(cr);
+            mottle_face(surf, r, depth, seat.lamp, field);
+            if (lit) composite_glow(surf, r, depth);
+            s.patches.insert_or_assign(
+                patch_key(seat.id, seat.w, seat.h, depth, seat.lamp),
+                make_tile(r, Surface(surf)));
+        }
     }
 }
 
 // THE BAKE ITSELF (materials.h's BAKE RULE) for geometry `g`: the two
-// grounds on two threads, then the tiles into State on this one, and the
-// lit patches.
+// grounds on two threads while this one bakes the key patches (which read
+// no ground: the threads touch no State, the patches nothing of theirs, so
+// the bytes are the same however the three interleave), then the tiles into
+// State.
 std::optional<std::string> bake(const Geometry& g) {
     const auto t0 = std::chrono::steady_clock::now();
     // The transform's tables built here, before the threads read them.
     if (display_transform::active()) (void)display_transform::p3_word_from_srgb_fast(0);
     std::array<Baked, kGuiMaterialCount> baked;
+    State& s = state();
+    double keys_ms = 0.0;
     {
         std::array<std::jthread, kGuiMaterialCount> threads;
         for (std::size_t m = 0; m < kGuiMaterialCount; ++m)
             threads[m] = std::jthread([&, m] {
                 bake_one(static_cast<GuiMaterial>(m), g, baked[m]);
             });
+        const auto k0 = std::chrono::steady_clock::now();
+        s.key_seats = g.key_seats;
+        rebuild_key_patches(false);
+        keys_ms = std::chrono::duration<double, std::milli>(
+                      std::chrono::steady_clock::now() - k0)
+                      .count();
     }   // joined
     for (const Baked& b : baked)
         if (!b.error.empty()) return b.error;
 
-    State& s = state();
     s.ground.clear();
     s.marker.clear();
     for (std::size_t m = 0; m < kGuiMaterialCount; ++m) {
@@ -720,17 +940,17 @@ std::optional<std::string> bake(const Geometry& g) {
         s.faces[m] = b.face;
     }
     s.baked = true;
-    s.lit_sizes = g.key_sizes;
-    rebuild_lit_patches();
     // THE TRACE (materials::trace_enabled; paint_handler.cpp's on_redraw the
-    // other line): each ground's thread time and source, the bake's wall
-    // time and the resident bytes.
+    // other line): each ground's thread time and source, the key patches'
+    // count and time, the bake's wall time and the resident bytes.
     if (materials::trace_enabled())
         std::fprintf(stderr,
                      "warptempo_gui: materials baked %dx%d: ground %.1f ms (%s), "
-                     "marker %.1f ms (%s), wall %.1f ms, resident %zu bytes\n",
+                     "marker %.1f ms (%s), keys %zu patches %.1f ms, wall %.1f ms, "
+                     "resident %zu bytes\n",
                      g.w, g.h, baked[0].ms, baked[0].image ? "image" : "brushed",
                      baked[1].ms, baked[1].image ? "image" : "brushed",
+                     s.patches.size(), keys_ms,
                      std::chrono::duration<double, std::milli>(
                          std::chrono::steady_clock::now() - t0)
                          .count(),
@@ -865,7 +1085,7 @@ void set_accent(uint32_t accent) {
     State& s = state();
     if (s.accent == accent) return;
     s.accent = accent;
-    if (s.baked) rebuild_lit_patches();
+    if (s.baked) rebuild_key_patches(true);
 }
 uint32_t accent_color() { return state().accent; }
 
@@ -938,24 +1158,24 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m) {
     cairo_restore(cr);
 }
 
-bool paint_lit_key(cairo_t* cr, const GuiRect& r, int depth) {
+bool paint_key_patch(cairo_t* cr, const GuiRect& r, uint32_t id, int depth,
+                     bool lamp) {
     const State& s = state();
-    if (!s.baked) return false;
-    for (const LitPatch& p : s.lit) {
-        if (p.w != r.w || p.h != r.h || p.depth != depth) continue;
-        cairo_save(cr);
-        cairo_matrix_t at;
-        cairo_matrix_init_translate(&at, -static_cast<double>(r.x),
-                                    -static_cast<double>(r.y));
-        cairo_pattern_set_matrix(p.tile.pattern.get(), &at);
-        cairo_set_source(cr, p.tile.pattern.get());
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_rectangle(cr, r.x, r.y, r.w, r.h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-        return true;
-    }
-    return false;
+    if (!s.baked || r.w <= 0 || r.h <= 0) return false;
+    const auto it = s.patches.find(patch_key(id, r.w, r.h, depth, lamp));
+    if (it == s.patches.end()) return false;
+    const Tile& t = it->second;
+    cairo_save(cr);
+    cairo_matrix_t at;
+    cairo_matrix_init_translate(&at, -static_cast<double>(r.x),
+                                -static_cast<double>(r.y));
+    cairo_pattern_set_matrix(t.pattern.get(), &at);
+    cairo_set_source(cr, t.pattern.get());
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    cairo_fill(cr);
+    cairo_restore(cr);
+    return true;
 }
 
 DisabledGlyphTones disabled_glyph_tones() {
@@ -967,7 +1187,7 @@ std::size_t resident_bytes() {
     std::size_t n = 0;
     for (const auto* set : {&s.ground, &s.marker})
         for (const Tile& t : *set) n += bytes_of_surface(t.surface.get());
-    for (const LitPatch& p : s.lit) n += bytes_of_surface(p.tile.surface.get());
+    for (const auto& [k, t] : s.patches) n += bytes_of_surface(t.surface.get());
     return n;
 }
 
