@@ -19,8 +19,8 @@
 # (to -Dpng=enabled plus a staged libpng, ~200 KB) if anything here bites.
 #
 # Nothing in the product asks CAIRO to decode a PNG: the icons are resvg's
-# (svg_icon.cpp), and the PNGs the product does decode -- the icon drop road's,
-# any act's own 256-px drawing (architect 2026-10-19, icons.h) -- are decoded
+# (svg_icon.cpp), and the pictures the product does decode -- a PNG or JPEG
+# in the `tiles/` folder beside the device config (materials.h) -- are decoded
 # by resvg's own raster-images feature (85_resvg.sh), so the Android backend
 # asks cairo for nothing but the image surface and cairo-ft.
 #

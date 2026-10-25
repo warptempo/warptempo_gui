@@ -23,10 +23,8 @@
 // program is Cool Edit, not a chrome — the 24-W seat is ReactOS's large
 // toolbar glyph, the base's seat for a chrome vocabulary (chrome_spec.h's
 // head, where it stays the chrome's rule), and the program takes no
-// chrome's toolbar; the set's drawings are Adwaita 3.22's SVGs or the
-// architect's own 256-px PNGs (the drop road, 2026-10-19, icons.h), either
-// rasterised or scaled to the seat's device size, so a glyph loses nothing
-// at 20. THE SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the
+// chrome's toolbar. (No key draws a glyph since the hi-fi skin, 2026-10-23:
+// the seat is the key's middle slot alone.) THE SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the
 // glyph at the 72 device px the 24-W seat drew at 300; the device's choice,
 // never this header's).
 //

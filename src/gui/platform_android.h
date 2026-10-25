@@ -63,7 +63,7 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // same day by battery_status (the logo lane's battery + clock legend: sysfs
 // on the laptop, the sliver's broadcast here — gui_battery.h carries the
 // type). It shrank on 2026-10-08 (the theme files' member, below) and grew on
-// 2026-10-06, twice: by bundled_icon_files (the icons' SVG and PNG
+// 2026-10-06, twice: by bundled_icon_files (the icons' SVG
 // files the build ships, read in place at launch: the repository's
 // assets/icons/ on the laptop, the APK's assets here — icons.h's
 // load_set) and by display_width_px (the display's horizontal
@@ -166,7 +166,7 @@ public:
 
     // THE BUNDLED ICON SET'S FILES, the seam's own member (contract at
     // platform_wayland.h): this backend answers the APK's `icons/` assets —
-    // the repository's `assets/icons/*.svg` and `*.png`, links dereferenced,
+    // the repository's `assets/icons/*.svg`, links dereferenced,
     // which build_apk.sh's asset step packs — listed and read through the
     // activity's AAssetManager, reached off the backend's one file-scope
     // pointer (g_android_app), which android_main parks before gui_main asks,

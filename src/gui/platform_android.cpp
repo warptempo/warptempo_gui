@@ -619,7 +619,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 
 // THE TABLET'S ICON BUNDLES ARE THE APK'S ASSET DIRECTORIES (contract at
 // platform_wayland.h's declaration): build_apk.sh copies the repository's
-// assets/icons/*.svg and *.png (each symlink as the file it names, icons.h's
+// assets/icons/*.svg (each symlink as the file it names, icons.h's
 // kIconNames) into assets/icons/, and one reader lists an asset directory
 // (AAssetManager_openDir lists FILES only) and reads every name ending one of
 // `suffixes` whole. The manager is the activity's, off the
@@ -682,7 +682,7 @@ read_asset_dir(const std::string& dir_name,
 // as missing files, the first named — the same hard fail.
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files() {
-    return read_asset_dir("icons", {".svg", ".png"});
+    return read_asset_dir("icons", {".svg"});
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

@@ -33,12 +33,10 @@
 // is that scheme in every colour and metric), read off the architect's
 // ReactOS captures (tmp/reactos*.png, "get it as accurate to ReactOS as we
 // can"). WHERE REACTOS DEPARTS FROM WINDOWS 2000 THE PRODUCT FOLLOWS
-// REACTOS, on purpose and under the Windows 2000 name
-// (docs/engineering/win2000_deviations.md lists the departures; a
-// provenance-clean capture of the real OS beats ReactOS wherever they
-// differ, 2026-10-09). C++ identifiers and file names keep `Win2000` /
-// `win2000` as the abbreviation (kChromeSpecWin2000,
-// docs/engineering/win2000_deviations.md), and prose may say win2000.
+// REACTOS, on purpose and under the Windows 2000 name (a provenance-clean
+// capture of the real OS beats ReactOS wherever they differ, 2026-10-09).
+// C++ identifiers keep `Win2000` / `win2000` as the abbreviation
+// (kChromeSpecWin2000), and prose may say win2000.
 // Windows 95's chrome, Clearlooks and CDE were dropped (they stand in git
 // history).
 // The one instance is kChromeSpecWin2000 below, read through
@@ -94,9 +92,7 @@ struct ChromeSpec {
 // seat, 2026-10-02 to 2026-10-21, left with the row; git history); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png) (THE DROPDOWN, Windows' popup menu, until
-// 2026-10-21);
-// THE ICONS Adwaita 3.22's drawings
-// (icons.h's head; architect 2026-10-14). (Explorer's
+// 2026-10-21). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {

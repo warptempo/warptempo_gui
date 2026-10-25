@@ -105,7 +105,7 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 
 There are no color files: every waveform preset is built into the program, and nothing is read from folders beside the config (the `chromes/` and `captions/` folders the color picker kept until 2026-10-14 are never read; delete them at will).
 
-The icons ship with the program and are never copied: one flat folder, `assets/icons/`, one file per button or face named by its act (`Warp.png`, `Undo.svg`; a drawing two acts share is one file and a symlink), read at every launch straight from the repository on the laptop (as it stands at each launch) and from the APK on the tablet. Where both `<Act>.png` and `<Act>.svg` stand, the PNG is drawn. To replace an act's glyph, drop a square PNG with alpha, 256 px, named `<Act>.png` into `assets/icons/`: it is the glyph at the next launch on the laptop and at the next APK build on the tablet, nothing else needed (the program centers a dropped drawing on its ink at the launch). A launch that cannot read them, or that finds a file that is not well-formed SVG or not a PNG, stops at startup with one line naming the file and what is wrong.
+The icons ship with the program and are never copied: four small SVG drawings in `assets/icons/` (the quaver, the folder and the cards' i and X; a drawing two uses share is one file and a symlink), read at every launch straight from the repository on the laptop and from the APK on the tablet, and rendered by resvg. A launch that cannot read them, or that finds a file that is not well-formed SVG, stops at startup with one line naming the file and what is wrong.
 
 The window's panel ships with nothing: its brushed black ground and the marker lane's brighter strip are drawn by the program itself at launch (`src/gui/materials.h`). To try a picture instead, put `Ground.png` (or `.jpg`) and/or `Marker.png` (or `.jpg`) into a `tiles/` folder beside the config (on the tablet under `adb shell run-as com.warptempo.gui`): `Ground` is scaled to fill the window exactly, centered; `Marker` is scaled to the window's width and its center rows fill the marker lane, made seamless so it scrolls with the markers. Remove the file to go back to the drawn panel. A file of either name that is neither a PNG nor a JPEG stops the startup with one line naming it; every other file in the folder is ignored. (The bundled `assets/tiles/` pictures of the walnut chrome are no longer read.)
 
@@ -170,7 +170,7 @@ bash android/toolchain/bootstrap.sh
 
 ### The prebuilt libraries
 
-The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the icon renderer, built with Rust) statically from `android/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
+The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the icons' renderer and the ground pictures' decoder, built with Rust) statically from `android/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
 
 ```bash
 ls android/prebuilt/arm64-v8a/lib/libgit2.a android/prebuilt/arm64-v8a/lib/libresvg.a

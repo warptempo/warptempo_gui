@@ -74,7 +74,7 @@ struct AppState;
 // WINNING where both stand. A present file replaces the procedural source
 // for that role at the bake; absent, the procedural ground; no key, no row,
 // no card; every other name in the folder is ignored. Decoded by resvg's
-// one road (svg_icon::raster_regions, the icons' Lanczos-3 area filter).
+// one road (svg_icon::raster_regions, its Lanczos-3 area filter).
 // A FILE OF EITHER NAME THAT IS NEITHER A PNG NOR A JPEG IS THE LAUNCH'S
 // HARD FAIL naming the file (materials::check, which reads its first 64 KiB).
 // (The pre-rendered covers `<Name>-<W>x<H>.png` and the bundled
@@ -370,15 +370,6 @@ void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m);
 // or a depth it does not bake), the caller then painting the key itself
 // (cool_edit_paint.h's paint_key_at_depth).
 bool paint_key_patch(cairo_t* cr, const GuiRect& r, int depth, bool lamp);
-
-// THE DISABLED GLYPH'S TONES (icons::draw_disabled, which no band case calls
-// since 2026-10-23: the keys print no glyph): Cool Edit's measured emboss,
-// constants. 0xRRGGBB.
-struct DisabledGlyphTones {
-    uint32_t shadow, light, inset;
-    bool operator==(const DisabledGlyphTones&) const = default;
-};
-DisabledGlyphTones disabled_glyph_tones();
 
 // THE RESIDENT BAKES' BYTES (the head's figures).
 std::size_t resident_bytes();

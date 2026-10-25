@@ -751,13 +751,13 @@ read_bundle_folder(const std::filesystem::path& folder,
     return out;
 }
 
-// The icons: assets/icons/, every `.svg` and `.png` (icons.h's load_set). A
+// The icons: assets/icons/, every `.svg` (icons.h's load_set). A
 // repeat's symlink reads as the file it names: read_bundle_folder's
 // is_regular_file follows links (kIconNames' comment).
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files() {
     return read_bundle_folder(
-        std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR), {".svg", ".png"});
+        std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR), {".svg"});
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {

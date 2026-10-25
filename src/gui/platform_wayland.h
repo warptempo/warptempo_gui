@@ -85,11 +85,10 @@ public:
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
 
-    // THE BUNDLED ICONS' FILES — the drawings of assets/icons/ (one flat
-    // folder since 2026-10-19, icons.h's head), as a map from FILE NAME
-    // (`<Enumerator>.svg` or `<Enumerator>.png`, icons.h's kIconNames; no
-    // folder) to the file's whole bytes, every file of the folder whose name
-    // ends `.svg` or `.png`, a symlink read as the file it names. Read by the
+    // THE BUNDLED ICONS' FILES — the drawings of assets/icons/ (icons.h's
+    // head), as a map from FILE NAME (`<Enumerator>.svg`, icons.h's
+    // kIconNames; no folder) to the file's whole bytes, every file of the
+    // folder whose name ends `.svg`, a symlink read as the file it names. Read by the
     // launch's icon load alone (icons::load_set, icons.h), IN PLACE: nothing
     // is copied into the config folder (nobody authors an icon on the
     // device). A PLATFORM FACT and on the seam for that reason: where the

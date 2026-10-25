@@ -127,20 +127,14 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: the view bar's black field, the
-// ruler's ticks and digits and their black shadow, the disabled glyph's
-// tones) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
+// ruler's ticks and digits and their black shadow) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
 // the bone, legend and dim inks, the ruler's and the fields' grounds, the
 // selection pair, the key's face, edges and LED, the accent, and the baked
-// brushed grounds through set_surface_source) — or THE ICON SET'S
-// OWN INKS (architect 2026-10-06): the icon drawings' colours,
-// gradients and opacities as each file names them (icons.h), period
-// artwork, not roles, so such a glyph is never recoloured by a theme — the
-// one place an antialiased, translucent picture is copied whole, no glyph
-// ever wearing a role (the bound monochrome set that wore its surface's
-// text role left 2026-10-09, icons.h's head); NO KEY DRAWS ONE since
-// 2026-10-23. A DISABLED icon is Cool Edit's emboss of that picture's mask
-// in its constant tones (icons::draw_disabled, architect 2026-10-15), no
-// role entering.
+// brushed grounds through set_surface_source) — or THE ICONS' OWN INKS
+// (architect 2026-10-06): the drawings' colors as each file names them
+// (icons.h), artwork, not roles, so a drawing is never recolored by a
+// theme — the one place an antialiased picture is copied whole; NO KEY
+// DRAWS ONE since 2026-10-23, and no drawing is ever shown disabled.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role: the bone over the ground and the field, the legend ink under the
 // keys and in the tooltip, the bone over the selection's grey.
@@ -309,9 +303,7 @@ struct TrimRange {
 //
 // THE DISABLED FACES (the hi-fi skin, 2026-10-23): a dead key DIMS ITS
 // PRINTED LEGEND (kDimInk, paint_key_legend), its key the face its state
-// gives; a disabled GLYPH, where one is drawn, is Cool Edit's
-// emboss in its constant tones, of the glyph's mask (architect 2026-10-15,
-// icons::draw_disabled); a CUE'S inert label is the faded tone (the
+// gives; a CUE'S inert label is the faded tone (the
 // marker-lane paragraph). Nothing else dims. (Windows' word emboss —
 // DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
 // under its Shadow copy, show_embossed_run, 2026-10-03 — retired with no
@@ -910,7 +902,7 @@ void install_true_colors(bool on);
 // accuracy is lower priority than usability" — Cool Edit's rule yields
 // where usability says so, while "truthfulness applies to the way we
 // interact" (an invisible hit box is untruthful; on screen is as painted).
-// A recorded departure from Cool Edit (win2000_deviations.md), as THE CENTER
+// A recorded departure from Cool Edit, as THE CENTER
 // LINE OVER THE INK is (the mock of record drew it under the waveform with
 // the grid).
 // The waveform's plate is blitted over the ground and the grid, the ink over
@@ -1325,8 +1317,7 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // 2026-10-25) — the
 // kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
 // stand-in tables are the count's one authority (paint_handler.cpp);
-// icons::kIconCount is a different number, the GLYPH set, which the row does
-// not exhaust. THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
+// THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
 // takes the accessors below, so the three rows cannot drift apart.
 //
 // THE CASE (Cool Edit's §1.3 whole, its own 20-W seat since 2026-10-09
@@ -1338,9 +1329,8 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one device
 // px and whose down face rides one device px right and down checked, two
 // held, 2026-10-23).
-// No band key wears a glyph in the skin (2026-10-23): the seat a glyph
-// would take, icon_glyph_px at the case's first slot in from its corner
-// (icon_case_lead_px), is kept below and drawn by no one today.
+// No key wears a glyph in the skin (2026-10-23): the old glyph seat is the
+// key's middle slot alone.
 //
 // THE BAND (architect 2026-10-22, the simple layout; its upper pad the
 // logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, its block
@@ -1368,13 +1358,6 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // modal_box_rect).
 inline int program_line_px() {
     return scaled_px(1, 1);
-}
-inline int icon_glyph_px() {
-    return scaled_px(kProgramSpec.glyph_px);
-}
-// The glyph's seat from the case's corner: the case's highlight line.
-inline int icon_case_lead_px() {
-    return scaled_px(kProgramSpec.case_light_px, 1);
 }
 inline int icon_case_w_px() {
     const ProgramSpec& p = kProgramSpec;
@@ -2092,8 +2075,7 @@ inline constexpr int64_t kTooltipReshowMs = 100;
 inline constexpr int64_t kTooltipAutoPopMs = 5000;
 
 // THE HOVER SLOP (architect 2026-09-29: the wait counts from STILLNESS WITH
-// HYSTERESIS) — A RECORDED DEPARTURE from Windows
-// (docs/engineering/win2000_deviations.md): the wait re-anchors, restarting
+// HYSTERESIS) — A RECORDED DEPARTURE from Windows: the wait re-anchors, restarting
 // (on a spent button re-anchoring alone), and a standing box's life restarts,
 // only when the pointer moves MORE than this from where it was anchored on
 // EITHER axis, so a hovering pen's jitter can neither starve the wait nor

@@ -667,8 +667,9 @@ AppState::RedesignButtonFace& publish_button_face(
 // or line (Cool Edit's panes and grooved recess stood 2026-10-09 to
 // 2026-10-22).
 
-// THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id and its content,
-// an ICON of the live set (icons.h, drawn at the case's glyph seat). The press claim's chord table (input_pointer.cpp) is the
+// THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, in painted
+// order; the key prints its legend and draws no glyph (the hi-fi skin,
+// 2026-10-23). The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
 // WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
@@ -678,16 +679,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // unit of the `h` view's stand-in swap, and its RUN BOUNDARIES — the run gap
 // of wood, the band's one spacing since the simple layout (2026-10-22) —
 // redesign_button_opens_icon_run's.
-//
-// EVERY BUTTON IN THIS ROW IS AN ICON BUTTON since 2026-08-11. The struct
-// carried a `glyph` string too — a shaped sans LETTER centered on both axes,
-// selected by being non-null — for the four view radios, which were the row's
-// only letter faces from its first day. The architect gave them glyphs that
-// day, which left the letter arm with no producer, so the field and the painter's shaped
-// branch below went with it rather than standing as a facility nothing uses.
 struct IconRowDef {
     RedesignButton id;
-    icons::Icon    icon;
 };
 constexpr IconRowDef kIconRowButtons[] = {
     // THE TOOLBAR GROUP — the row's FIRST since the 2026-08-12 grand
@@ -695,11 +688,10 @@ constexpr IconRowDef kIconRowButtons[] = {
     // relayout having dissolved row 2 (architect: the labeled lane goes, "the icon
     // to represent all those various meanings"): Save, Undo, Redo and Render at
     // the row's left, the SAME chords, gates, disabled derivations and
-    // stateful faces the labeled buttons carried — only the FACE is a glyph
-    // in the toolbar case now (Save's SaveCommit swap and Render's Cancel
-    // swap ride redesign_button_icon below; Render serves BOTH plain
+    // stateful faces the labeled buttons carried (Save's and Render's
+    // stateful legends, redesign_button_legend; Render serves BOTH plain
     // render and the iteration sweep by the architect's same-day ruling, the
-    // tooltip alone forking). The old labels are the tooltips.
+    // tooltip alone forking).
     //
     // OPEN PROJECT LEADS THEM ALL (architect 2026-10-07), ONE BUTTON — "just
     // to keep those two together", the button and its shift twin, Revert:
@@ -707,8 +699,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // layout, 2026-10-22: Open, Save, Undo, Redo and Render abutting, the run
     // gap after Render; redesign_button_opens_icon_run). Undo still leads a
     // GROUP with Redo and Render (redesign_button_opens_icon_group), the unit
-    // the `h` view's stand-ins replace, which paints nothing. It wears
-    // OpenProject, the set's document-open (icons.h).
+    // the `h` view's stand-ins replace, which paints nothing.
     //
     // COPY PHASE RESETS STANDS BETWEEN REDO AND RENDER since 2026-10-25
     // (architect: "copy should be moved to the left of render, that's
@@ -723,15 +714,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     // history_mode_hides_button). Its chords, face and tooltip came across
     // unchanged from row 8's verb group (2026-10-24 to 2026-10-25): bare P,
     // Ctrl+P, Ctrl+Shift+P, the barrel's ctrl and the long press as there.
-    {RedesignButton::OpenProject, icons::Icon::OpenProject},
-    {RedesignButton::Save,       icons::Icon::Save},
-    {RedesignButton::Undo,       icons::Icon::Undo},
-    {RedesignButton::Redo,       icons::Icon::Redo},
-    {RedesignButton::IconCopyPhaseResets, icons::Icon::CopyPhaseResets},
-    {RedesignButton::Render,     icons::Icon::Render},
+    {RedesignButton::OpenProject},
+    {RedesignButton::Save},
+    {RedesignButton::Undo},
+    {RedesignButton::Redo},
+    {RedesignButton::IconCopyPhaseResets},
+    {RedesignButton::Render},
     // (The view axes' faces are the two radio pairs at this row's right end,
-    // architect 2026-10-14 — kIconRowViewPairs below, their glyphs at icons.h's
-    // enum; no view button stands in this group.)
+    // architect 2026-10-14 — kIconRowViewPairs below; no view button stands
+    // in this group.)
     // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
     // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
     // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
@@ -793,16 +784,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // separator moving. WORKING-ZOOM CENTER (bare `c`) stood
     // behind it until 2026-09-29, when the architect moved it to the bottom
     // row (kTransportNudgePlayGroup since 2026-10-18) — one box and one 2px gap off
-    // this walk, no separator moving. It wears view-restore, the view shrunk
-    // back whole (architect 2026-10-16, icons.h).
-    {RedesignButton::IconZoomFitBest,  icons::Icon::FullZoomOut},
+    // this walk, no separator moving.
+    {RedesignButton::IconZoomFitBest},
     // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
-    // lamp, after Zoom to Fit in the same group: WaveformMagnification, the loud
-    // speaker — the louder waveform, its vertical scale grown (architect
-    // 2026-10-16; zoom.svg's magnifiers retired, "low contrast").
+    // lamp, after Zoom to Fit in the same group — the louder waveform, its
+    // vertical scale grown.
     // It joins the group rather than opening one, so it adds one box and one
     // 2px gap to the walk and no separator.
-    {RedesignButton::IconWaveformMagnification, icons::Icon::WaveformMagnification},
+    {RedesignButton::IconWaveformMagnification},
     // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
     // to 2026-09-14 — magnify wearing zoom-in-y and reduce wearing
     // zoom-out-y — and left with the setting it stepped (architect
@@ -810,8 +799,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // separator moving.)
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
-    // block on 2026-08-18; their four glyphs went with them and are at the
-    // bottom row's own table below.)
+    // block on 2026-08-18, the bottom row's own table below.)
     // (THE MASS-MARKER CATEGORY OPENED A SEPARATOR-LED GROUP HERE and no
     // longer exists. The PHASE-RESET CLIPBOARD PAIR led it until 2026-08-20,
     // when the architect's propagate relocation deleted both buttons: all five
@@ -828,12 +816,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // above rather than standing alone behind a divider. THE TWO BUTTONS AND
     // BOTH GLYPHS CAME BACK ON 2026-09-04 in a group of their own, further
     // down this table; the mass-marker group itself did not.)
-    // FOLLOW (bare `f`), wearing Follow — an arrow crossing a sheet: the
-    // view follows the playing scanner rather than reading as a transport
-    // control. Out for the hours of 2026-09-23 the Shift+C chase
-    // posture replaced it, and back that evening with its glyph: one box and
-    // one 2px gap onto the walk, no separator moving.
-    {RedesignButton::IconFollow, icons::Icon::Follow},
+    // FOLLOW (bare `f`): the view follows the playing scanner. Out for the
+    // hours of 2026-09-23 the Shift+C chase posture replaced it, and back
+    // that evening: one box and one 2px gap onto the walk, no separator
+    // moving.
+    {RedesignButton::IconFollow},
     // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (bare `m`)
     // and grid iteration mode (bare `i`), back from the menu row behind a
     // separator of their own, just ahead of the render-entry pair. The
@@ -842,11 +829,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // commands have ONE pointer home and it is these buttons. The row gains
     // two boxes, one 2px gap and ONE separator, so the group count moves too
     // (the leader is IconBpm, redesign_button_opens_icon_group).
-    //
-    // THE GLYPHS: BpmIterations for the BPM opener and GridIterations for the
-    // mode lamp (icons.h; the drawings are the set README's).
-    {RedesignButton::IconBpm,  icons::Icon::BpmIterations},
-    {RedesignButton::IconIter, icons::Icon::GridIterations},
+    {RedesignButton::IconBpm},
+    {RedesignButton::IconIter},
     // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
     // row's marker verbs where it had stood since that morning: the group
     // gains one box and one 2px gap, no separator moves, and the leader is
@@ -855,9 +839,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // Ctrl+F is the one road that takes those terms off again, so the act
     // stands beside the mode that produces what it removes (the reasoning in
     // full, and what is deliberately NOT claimed for it, is at the roster
-    // entry, app_state.h). The glyph is Flatten's, the set's edit-clear-all
-    // broom (architect 2026-10-14).
-    {RedesignButton::IconFlatten, icons::Icon::Flatten},
+    // entry, app_state.h).
+    {RedesignButton::IconFlatten},
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
     // the icon row: listen, load-in-place, readonly, history". The render-entry
     // pair keeps its separator-led group and gained the READ-ONLY toggle, the
@@ -868,24 +851,21 @@ constexpr IconRowDef kIconRowButtons[] = {
     // below (architect: "move the button to the history section"), its act
     // outside the `h` view having been Play renders' own; the two that stay
     // keep his order and Listen still opens the group.
-    {RedesignButton::IconListen, icons::Icon::PlayRenders},
-    // The read-only toggle wears the one ReadOnly padlock in both states
-    // (architect 2026-10-21); its lit / sunken face says read-only, as
-    // every toggle's does.
-    {RedesignButton::IconReadOnly,       icons::Icon::ReadOnly},
+    {RedesignButton::IconListen},
+    // The read-only toggle: its lit / sunken face says read-only, as every
+    // toggle's does.
+    {RedesignButton::IconReadOnly},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
-    // `;`, the settings prompt, wearing Settings —
-    // the typed road's pointer spelling, one box and one 2px gap onto the walk
+    // `;`, the settings prompt — the typed road's pointer spelling, one box and one 2px gap onto the walk
     // and no separator moving.
-    {RedesignButton::IconSettings,       icons::Icon::Settings},
+    {RedesignButton::IconSettings},
     // ENABLE TOOLTIPS (architect 2026-09-29, evening), CLOSING the
     // render-entry group behind Settings since 2026-10-01 (architect: help
-    // comes after settings): the bare backslash's LAMP, wearing
-    // Tooltips. Dark at every open, and while dark no tooltip shows
+    // comes after settings): the bare backslash's LAMP. Dark at every open, and while dark no tooltip shows
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
-    {RedesignButton::IconTooltips,       icons::Icon::Tooltips},
+    {RedesignButton::IconTooltips},
     // (THE BACKGROUND SOUND UMBRELLA seats here, the third run's last, when
     // its enumerator lands — RedesignButton's note, 2026-10-22.)
     // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
@@ -937,13 +917,11 @@ constexpr IconRowDef kIconRowButtons[] = {
 // member publishes its rect — a real one or an empty one — in that pass; a
 // press resolves against that painted row (publish_button_face).
 constexpr IconRowDef kIconRowHistoryActGroup[] = {
-    {RedesignButton::HistoryRevert,     icons::Icon::Revert},
+    {RedesignButton::HistoryRevert},
     // THE LOAD IN PLACE (architect 2026-09-01, off the render-entry group):
     // the icon row's press runs the `h` view's own load — the confirmation on
-    // the viewed walk member. It wears LoadInPlace (icons.h names each
-    // set's drawing), the same glyph the render player's Load in place
-    // button wears for the same act.
-    {RedesignButton::IconLoadInPlace,   icons::Icon::LoadInPlace},
+    // the viewed walk member, the render player's Load in Place act.
+    {RedesignButton::IconLoadInPlace},
 };
 struct IconRowStandIn {
     RedesignButton                replaces;   // the authoring group's leader
@@ -970,10 +948,9 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // in both. It paints whole beside the view pairs under the same overflow
 // rule (kIconRowViewPairs), the left groups yielding to both. Its seat is
 // the same in both states, and the mode's two edges damage the whole window
-// anyway (THE REPAINT, above). Its glyph is the set's document-open-recent,
-// the clock turned back, history's again since 2026-10-18 (icons.h).
+// anyway (THE REPAINT, above).
 constexpr IconRowDef kIconRowHistoryOpener =
-    {RedesignButton::IconHistory, icons::Icon::HistoryView};
+    {RedesignButton::IconHistory};
 
 // THE VIEW PAIRS — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
 // 2026-10-01; two radio pairs since 2026-10-14): the Source / Target pair on
@@ -982,10 +959,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // two lit members, in their keys' order. THE ACTS CAME FROM THE ROW-1 VIEW
 // BAR (2026-08-02..2026-10-01), itself kdenlive's workspace switcher — the
 // blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
-// its menu row — reborn as the selectors; the bar's labelled buttons are gone
-// and the acts wear the architect's glyphs (icons.h: Source the dictionary,
-// Target the tablet, 2026-10-14; Warp the conductor's baton, his own PNG of the
-// drop road, 2026-10-18; Phase Reset the camera's phase snapshot, 2026-10-15).
+// its menu row — reborn as the selectors, keys with printed legends since
+// the hi-fi skin (2026-10-23).
 // THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), the four abutting behind the history opener in
 // the band's one right run, Phase Reset's case ending at the program ring's
@@ -1017,10 +992,10 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // device width; each element's own rounding moves the edge by a pixel or
 // so).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
-    {{RedesignButton::ViewSource, icons::Icon::Source},
-     {RedesignButton::ViewTarget, icons::Icon::Target}},
-    {{RedesignButton::ViewWarp,   icons::Icon::Warp},
-     {RedesignButton::ViewPhase,  icons::Icon::PhaseReset}},
+    {{RedesignButton::ViewSource},
+     {RedesignButton::ViewTarget}},
+    {{RedesignButton::ViewWarp},
+     {RedesignButton::ViewPhase}},
 };
 
 // THE BAND'S RIGHT RUN (architect 2026-10-22, the simple layout): the
@@ -1030,62 +1005,6 @@ constexpr IconRowDef kIconRowRightRun[] = {
     kIconRowHistoryOpener,
     kIconRowViewPairs[0][0], kIconRowViewPairs[0][1],
     kIconRowViewPairs[1][0], kIconRowViewPairs[1][1]};
-
-// A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
-// which owns the hint half of the same facts and the reasoning). It lives HERE
-// because the constant icons do: kIconRowButtons is the painter's roster half,
-// and app_state.h carries no icon vocabulary at all. The swaps it names:
-// SAVE is the COMMIT ACT while the history mode stands and wears the commit
-// icon to say so — and keeps wearing it while the checkpoint publishes — and
-// RENDER wears the cancel glyph while an explicit render act is live. THE
-// STATEFUL FACE ON THE ROW IS THE PRINTED LEGEND since 2026-10-25 (the
-// stateful redesign_button_legend overload, app_state.h: the word names the
-// act the key's next press runs), these swaps the toolbar pair's whole
-// stateful face from 2026-08-12, when row 2's labels went, until the hi-fi
-// skin's blank keys. Render's two IDLE meanings (plain render, the iteration sweep)
-// share media-record by the architect's same-day ruling — "the context makes
-// it clear" — with the tooltip alone forking. (Render held the commit
-// override 2026-08-04..08, when the act moved onto the save chord it begins
-// with.) NO KEY DRAWS A GLYPH since 2026-10-23 (the hi-fi skin's blank keys,
-// their legends under them): the resolver stays for the icons' later drop,
-// called by no painter today.
-[[maybe_unused]] icons::Icon redesign_button_icon(const AppState& app,
-                                                  RedesignButton b,
-                                                  icons::Icon table_icon) {
-    // THE CONDITION IS NOT ASKED HERE (2026-08-15): whether a button wears its
-    // second glyph is redesign_button_glyph_swapped's (app_state.h), because
-    // the roster's face STASH carries that bit for the drift comparator and a
-    // second spelling of the same conditions is exactly what would drift.
-    // This body owns only WHICH glyph the swap gives.
-    if (!redesign_button_glyph_swapped(app, b)) return table_icon;
-    switch (b) {
-        // SAVE, in the history view (where its lift is the checkpoint act's
-        // chord, Ctrl+Shift+S since 2026-10-10) and
-        // while a checkpoint publishes.
-        // THE PULL GLYPH (vcs-pull, 2026-09-27) is Save's third, in the view
-        // while the GitHub status reads Behind (redesign_button_glyph).
-        case RedesignButton::Save:
-            return redesign_button_glyph(app, b) == 2 ? icons::Icon::SavePull
-                                                      : icons::Icon::SaveCommit;
-        // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
-        // while a render or sweep is live — Cancel, Adwaita's
-        // process-stop (its own file, Cancel.svg; icons.h). The condition and its
-        // contract are at redesign_button_glyph_swapped's Render arm, the
-        // click's divergence at finish_chrome_press_release's Render arm.
-        case RedesignButton::Render: return icons::Icon::Cancel;
-        // THE COLLAPSED PLAY/STOP BUTTON (architect 2026-08-15): one button
-        // over bare Space, wearing the editor's own STOP (TransportStop, its
-        // own enumerator since 2026-10-20, icons.h) while the TRANSPORT is
-        // live — a plain audition, or an A/B audition sequence including its
-        // silent rests — and the table's TransportPlay otherwise. It is
-        // RENDER-IS-CANCEL's shape applied to a toggle — and unlike Render it
-        // needs no chord exception, because Space already toggles.
-        case RedesignButton::TransportPlayStop:
-            return icons::Icon::TransportStop;
-        default:
-            return table_icon;
-    }
-}
 
 // -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
@@ -1220,7 +1139,7 @@ namespace {
 // settings choice editor's list while it stood). Windows 2000 hides it until
 // Alt is held; ReactOS
 // always draws it, and so does this product — the tablet has no Alt to
-// reveal it (the departure, win2000_deviations.md).
+// reveal it (a deliberate departure).
 //
 // THE LINE IS DrawText's PREFIX UNDERLINE (user32's TEXT_DrawUnderscore)
 // read off his ReactOS capture, tmp/reactos-menu2.png (File's F, Edit's open
@@ -1888,15 +1807,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         paint_roster_case(cr, key, face.selected, pressed);
 
         // THE HI-FI SKIN (architect 2026-10-23): THE KEY IS BLANK — nothing
-        // stands on its face; the icon set stays loaded for a later drop —
-        // and THE LEGEND stands UNDER it, the roster's legend column
+        // stands on its face — and THE LEGEND stands UNDER it, the roster's legend column
         // (redesign_button_legend's stateful overload: the act the next
         // press runs, a toggle keeping its one print, 2026-10-25), dimmed
         // when the button is dead (paint_key_legend's one seat). The stashed
         // glyph bit (redesign_button_glyph) is still published so the
-        // tooltip's drift is caught. (The state
-        // resolver's glyph on the key, redesign_button_icon, stood
-        // 2026-08-13 to 2026-10-23; git history.)
+        // tooltip's drift is caught.
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -1998,9 +1914,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   key-repeat rate (the record at the arrows' chord-table rows,
 //   input_pointer.cpp). The pressed interior is the ordinary arm's, and the
 //   hold has no cue of its own — and, THE LAST GROUP'S LAST CASE CLOSING THE
-//   ROW, THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap on the
-//   live audition bit — the reason this row's paint goes through
-//   redesign_button_icon; Shift+Space the A/B audition). The last button's
+//   ROW, THE ONE PLAY/STOP BUTTON (bare Space, whose LEGEND and TOOLTIP swap
+//   on the live audition bit; Shift+Space the A/B audition). The last button's
 //   right edge stands on the program ring's outer right column
 //   (bottom_row_seats, 2026-10-23).
 //
@@ -2121,22 +2036,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // key off the same ids.
 struct TransportRowDef {
     RedesignButton id;
-    icons::Icon    icon;
 };
 // THE SINGLE-MARKER VERBS (architect 2026-08-18, "move drop/delete/disable/
-// toggle inherit to bottom right row"), the RIGHT BLOCK'S FIRST GROUP: drop
-// (bare `s`, DropMarker's plus), delete (`Delete`, DeleteMarkers's minus), the
-// disable toggle (`Ctrl+D`, Disabled's muted speaker in both sets since
-// 2026-10-07: a disabled marker is one the render does not hear) and inherit/collapse
-// (`Ctrl+N`, Inherit's chain — a pass marker links its tempo to its
-// neighbor). They opened
-// their own separator-led group in the ICON ROW from 2026-08-12 until this
-// move and brought their four glyphs down unchanged.
+// toggle inherit to bottom right row"), the RIGHT BLOCK'S MARKER GROUP: drop
+// (bare `s`), delete (`Delete`), the disable toggle (`Ctrl+D`: a disabled
+// marker is one the render does not hear) and inherit/collapse (`Ctrl+N` — a
+// pass marker links its tempo to its neighbor). They opened their own
+// separator-led group in the ICON ROW from 2026-08-12 until this move.
 //
 // THE GROUP IS FIVE since later the same day, the architect seating ADD TO
 // SELECTION himself — "add group selection icon ('Add to Selection') after
-// toggle inherit, before the separator". It is the group's one MODE (bare `k`,
-// AddToSelection: the pointer with a plus) and therefore wears the lit fill; the
+// toggle inherit, before the separator". It is the group's one MODE (bare `k`)
+// and therefore wears the lit fill; the
 // four verbs above are acts that complete. (Toggle Value Drag, the group's
 // second lamp since 2026-10-11, is the other member that does.)
 //
@@ -2160,14 +2071,12 @@ struct TransportRowDef {
 //
 // THE GROUP IS SEVEN SINCE 2026-10-09 (architect: "resurrect the Open Text
 // Editor button. It should go between jump to defining marker and toggle add
-// to selection"): OPEN TEXT EDITOR — bare Return, the sets'
-// accessories-text-editor —
-// the glass's road to Return with no editor standing. An act that opens an
+// to selection"): OPEN TEXT EDITOR — bare Return — the glass's road to Return with no editor standing. An act that opens an
 // editor, no lamp; it greys where Return would open nothing and on a locked
 // tab, and the `h` view does not paint it (its roster entry, app_state.h).
 //
 // THE GROUP IS EIGHT SINCE 2026-10-11 (architect ~00:40): TOGGLE VALUE DRAG —
-// bare `[`, the set's pen (ValueDrag, since 2026-10-18) — IMMEDIATELY RIGHT
+// bare `[` — IMMEDIATELY RIGHT
 // OF ADD TO SELECTION, the group's second lamp and its last member ("arm Add
 // to Selection, pick several flags, then arm this and drag them"). A
 // one-shot: the drag it arms puts it out; under grid iterations permanently
@@ -2181,16 +2090,16 @@ struct TransportRowDef {
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
-// (architect), taking its glyph with it — its only consumer.)
+// (architect).)
 constexpr TransportRowDef kMarkerVerbGroup[] = {
-    {RedesignButton::IconMarkerDrop,       icons::Icon::DropMarker},
-    {RedesignButton::IconMarkerDelete,     icons::Icon::DeleteMarkers},
-    {RedesignButton::IconMarkerDisable,    icons::Icon::Disabled},
-    {RedesignButton::IconMarkerInherit,        icons::Icon::Inherit},
-    {RedesignButton::IconJumpToDefiningMarker, icons::Icon::JumpToDefiningMarker},
-    {RedesignButton::IconOpenTextEditor,       icons::Icon::OpenTextEditor},
-    {RedesignButton::IconAddToSelection,       icons::Icon::AddToSelection},
-    {RedesignButton::IconValueDrag,            icons::Icon::ValueDrag},
+    {RedesignButton::IconMarkerDrop},
+    {RedesignButton::IconMarkerDelete},
+    {RedesignButton::IconMarkerDisable},
+    {RedesignButton::IconMarkerInherit},
+    {RedesignButton::IconJumpToDefiningMarker},
+    {RedesignButton::IconOpenTextEditor},
+    {RedesignButton::IconAddToSelection},
+    {RedesignButton::IconValueDrag},
 };
 // THE SKIP GROUP (architect 2026-10-24: the two skip buttons back as their
 // own run at the left of Drop), THE RIGHT BLOCK'S FIRST: GO TO START (bare
@@ -2202,44 +2111,40 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
 // transport group with Play until 2026-10-12, when the architect took it out
 // of the row, Home and End keeping their keys.)
 constexpr TransportRowDef kTransportSkipGroup[] = {
-    {RedesignButton::TransportSkipBack,    icons::Icon::GoToStart},
-    {RedesignButton::TransportSkipForward, icons::Icon::GoToEnd},
+    {RedesignButton::TransportSkipBack},
+    {RedesignButton::TransportSkipForward},
 };
 // THE STEP-AND-WALK GROUP (architect 2026-10-18 ~21:40, regrouping row 8's
 // two right-hand groups: "Next marker, previous marker, up, down, separator",
 // read right to left), the right block's second group between the verbs and
 // the nudge-and-play group, in this order: DOWN and UP (bare Down / Up, the
 // value step — its ladder and hold-repeat at their chord rows,
-// input_pointer.cpp; Down / Up), PREVIOUS MARKER (Shift+Tab, PreviousMarker;
-// its ctrl press is the paired march) and NEXT MARKER (the walk: Tab, its
-// shifted press Shift+Tab; its camera the audio view's; NextMarker). (Until 2026-10-18 the marker-walk group was Previous Marker, Next Marker,
+// input_pointer.cpp), PREVIOUS MARKER (Shift+Tab; its ctrl press is the
+// paired march) and NEXT MARKER (the walk: Tab, its shifted press Shift+Tab;
+// its camera the audio view's). (Until 2026-10-18 the marker-walk group was Previous Marker, Next Marker,
 // Center and Switch Tab, and Down / Up led the arrow group behind it.)
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON since
 // 2026-09-29 (architect: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
 // form and Switch Tab its Ctrl form; Previous Marker had merged into the walk
 // on 2026-09-22 under the rule that it could not, and the walk's modified
-// presses stay. THE WALK PAIR WEARS THE SET'S go-first AND go-last
-// (PreviousMarker and NextMarker, icons.h). DOWN, UP,
-// LEFT, RIGHT ARE ONE CONSTRUCTION, the set's cyan arrow — Down / Up for
-// the verticals here, Left / Right for the horizontals in the last
-// group; the vertical pair keeps the architect's 2026-08-14 order, down
-// before up (which superseded the row's original vim order, h j k l).
+// presses stay. Down / Up are the verticals here, Left / Right the
+// horizontals in the last group; the vertical pair keeps the architect's
+// 2026-08-14 order, down before up (which superseded the row's original vim order, h j k l).
 // IN THE `h` VIEW Down and Up are hidden (history_mode_hides_button), the
 // group standing as the walk pair alone.
 constexpr TransportRowDef kTransportStepWalkGroup[] = {
-    {RedesignButton::TransportDown,         icons::Icon::Down},
-    {RedesignButton::TransportUp,           icons::Icon::Up},
-    {RedesignButton::TransportWalkPrevious, icons::Icon::PreviousMarker},
-    {RedesignButton::TransportWalk,         icons::Icon::NextMarker},
+    {RedesignButton::TransportDown},
+    {RedesignButton::TransportUp},
+    {RedesignButton::TransportWalkPrevious},
+    {RedesignButton::TransportWalk},
 };
 // THE NUDGE-AND-PLAY GROUP (architect 2026-10-18 ~21:40: "play button, right
 // nudge, left nudge. Center, switch tabs, separator", read right to left),
-// THE ROW'S LAST: SWITCH TAB (Ctrl+Tab, SwitchTab; its shifted press is the
-// paired march), CENTER (bare `c`, Center — the magnifier that finds the
-// playhead, architect 2026-10-16 — down from the icon row's zoom group since
+// THE ROW'S LAST: SWITCH TAB (Ctrl+Tab; its shifted press is the paired
+// march), CENTER (bare `c` — down from the icon row's zoom group since
 // 2026-09-29), LEFT and RIGHT (bare Left / Right, the nudge — the playhead
-// step; Left / Right) and PLAY / STOP.
+// step) and PLAY / STOP.
 // (Until 2026-10-18 Switch Tab and Center closed the marker-walk group and
 // this group was the four arrows with Play.)
 //
@@ -2254,21 +2159,18 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // stop a scrub is acceptable, because at working zoom his hand moves faster
 // than the scanner. (The Go to Start / Go to End pair came back on
 // 2026-10-24 at the block's other end, kTransportSkipGroup.) Play and stop are
-// ONE stateful button (2026-08-15), so the table carries the editor's own
-// PLAY (TransportPlay; the pair its own since 2026-10-20, icons.h, the render
-// player keeping the set's media glyphs) as its resting glyph and the
-// resolver swaps in TransportStop while an audition runs
-// (redesign_button_icon — Save's and Render's own shape, and the reason this
-// row's paint goes through the resolver). IN THE `h` VIEW the group is Switch Tab, Center, Older and
+// ONE stateful button (2026-08-15): its legend prints STOP while an audition
+// runs (redesign_button_legend's stateful overload — Save's and Render's own
+// shape). IN THE `h` VIEW the group is Switch Tab, Center, Older and
 // Newer: the nudge pair's seats are the history steps'
 // (kTransportHistoryStandIns, below) and Play is hidden
 // (history_mode_hides_button), so it does not stand there.
 constexpr TransportRowDef kTransportNudgePlayGroup[] = {
-    {RedesignButton::TransportSwitchTab,    icons::Icon::SwitchTab},
-    {RedesignButton::IconZoomOriginal,      icons::Icon::Center},
-    {RedesignButton::TransportLeft,         icons::Icon::Left},
-    {RedesignButton::TransportRight,        icons::Icon::Right},
-    {RedesignButton::TransportPlayStop,     icons::Icon::TransportPlay},
+    {RedesignButton::TransportSwitchTab},
+    {RedesignButton::IconZoomOriginal},
+    {RedesignButton::TransportLeft},
+    {RedesignButton::TransportRight},
+    {RedesignButton::TransportPlayStop},
 };
 // THE `h` VIEW'S STAND-INS ON THIS ROW — OLDER AND NEWER IN THE NUDGE PAIR'S
 // SEATS (architect 2026-10-11 ~02:40, "Older / Newer in the arrows' seat";
@@ -2282,9 +2184,7 @@ constexpr TransportRowDef kTransportNudgePlayGroup[] = {
 // at all ("I never use that … the nudge was for precision placement and
 // history view has no placement"). THE KEYS ARE UNCHANGED: `,` / `.` step the
 // walk and bare Left / Right stay the view's playhead step
-// (handle_history_mode_key) — only the buttons moved. They wear the glyphs
-// they wore in the icon row's Undo slots (2026-10-05 to 2026-10-11), the
-// sets' keyframe pair. THIS TABLE IS THE SWAP'S ONE OWNER: the painter
+// (handle_history_mode_key) — only the buttons moved. THIS TABLE IS THE SWAP'S ONE OWNER: the painter
 // seats a stand-in through transport_row_seated and publishes the absent
 // side's empty rects from it.
 // (The arrows' first mode twin, a kHistoryClusterGroup of four history
@@ -2297,9 +2197,9 @@ struct TransportStandIn {
 };
 constexpr TransportStandIn kTransportHistoryStandIns[] = {
     {RedesignButton::TransportLeft,
-     {RedesignButton::HistoryOlder, icons::Icon::Older}},
+     {RedesignButton::HistoryOlder}},
     {RedesignButton::TransportRight,
-     {RedesignButton::HistoryNewer, icons::Icon::Newer}},
+     {RedesignButton::HistoryNewer}},
 };
 // WHAT PAINTS IN `def`'s SEAT: its stand-in while the `h` view stands, else
 // the member itself.
@@ -3298,9 +3198,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
 // the planner's i or X, a BOXED GLYPH (icons.h), its ink .525 of the first
 // line's inside height (kNotificationGlyphRatio) — then the logo lane's brand
-// gap, then THE SENTENCE (the layout block in the body). (The Adwaita glyph
-// in Windows' small box 2026-08-30 to 2026-10-23 and the glyphless card of
-// that night, git history.)
+// gap, then THE SENTENCE (the layout block in the body).
 // (A window-close X stood in a second button box at the right from
 // 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
 // when the whole card became the button — "whole card dismisses, X gone" —
@@ -5669,27 +5567,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     // -- The buttons' words and widths, shaped up front (the layout needs the
     //    row's total before anything can be placed). --
-    // A BUTTON IS A WORD OR A GLYPH (2026-08-28, the render player's row):
-    // `glyph` set means the button is the roster's own icon in a
-    // push-button-box SQUARE — the THREE transport buttons wear
-    // PlayerPrevious, Play (swapped to Pause
-    // while the transport is live, the bottom row's one-button-two-faces
-    // rule) and PlayerNext — the row was FOUR, Stop among
-    // them, until the player's Stop retired 2026-09-01, and the middle
-    // button's live face stays the pause it took on 2026-08-28 — the REPEAT
-    // ONE toggle wears
-    // RepeatOne in both its states, the HIGHLIGHT PAIR Down and Up
-    // (architect 2026-10-10, Highlight Next and Highlight Previous, the band
-    // walk's two keys on glass), the UP A FOLDER button UpAFolder, and
-    // since 2026-09-01 the LOAD IN PLACE wears LoadInPlace and CLOSE
-    // Close — while a word button keeps the
-    // label box every prompt and editor button has always had. THE PLAYER'S
-    // ROW IS ALL GLYPHS NOW and the word kind is the other three owners'
-    // alone: a prompt's answers, the dialog editors' OK / Cancel and the
-    // picker's Cancel. Both kinds wear the roster's raised box (architect
-    // 2026-10-02). `lit` is the roster's SELECTED face — the row's one lamp,
-    // Repeat one, and no other button has a state to say. `player_act` is the player's dispatch vocabulary; the other two
-    // stay zero/false on its buttons.
+    // A BUTTON IS A WORD OR A KEY (2026-08-28, the render player's row):
+    // `glyph` set means the button is one of the player's keys, a blank key
+    // with its printed legend (render_player_button_legend) — the transport
+    // triple, the REPEAT ONE lamp, the HIGHLIGHT PAIR (architect 2026-10-10,
+    // Highlight Next and Highlight Previous, the band walk's two keys on
+    // glass), UP A FOLDER, LOAD IN PLACE (or DELETE at the root) and CLOSE —
+    // while a word button keeps the label box every prompt and editor button
+    // has always had. The word kind is the other three owners' alone: a
+    // prompt's answers, the dialog editors' OK / Cancel and the picker's
+    // Cancel. `lit` is the roster's SELECTED face — the row's one lamp,
+    // Repeat one, and no other button has a state to say. `player_act` is the
+    // player's dispatch vocabulary; the other two stay zero/false on its
+    // buttons.
     struct DialogButtonPlan {
         std::string label;
         // The access key's byte in `label`, -1 for none (Windows strict,
@@ -5710,7 +5600,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // through render_player_button_enabled; true on every other owner's
         // buttons.
         bool        enabled      = true;
-        icons::Icon icon         = icons::Icon::Play;
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
         int         w            = 0;
@@ -5734,29 +5623,27 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else if (player_up) {
         // THE PLAYER'S ROW, in painted order (architect 2026-08-28; the
         // transport is THE MAIN WINDOW'S OWN TRIPLE since 2026-09-01): the
-        // two SKIPS around Play/Pause, on Home and End since 2026-08-31 and
-        // wearing the skip glyphs still —
+        // two SKIPS around Play/Pause, on Home and End since 2026-08-31 —
         // then the scrub and the clock (both laid out in the player's own
         // branch below, the separators either side of them retired
         // 2026-10-02), then the REPEAT ONE
         // lamp, the HIGHLIGHT PAIR (Highlight Next, Highlight Previous: the
         // bare Down / Up keys' band walk on a button, architect 2026-10-10),
         // the UP A FOLDER button, and the last two FLUSH RIGHT: Load in place ·
-        // Close, GLYPH buttons since 2026-09-01 like every other button on
-        // this row.
+        // Close.
         // Close LAST, the escape sentinel by construction as every prompt has
         // it. The plan's order is also the ring's, so Tab walks the row left to
         // right. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
         // (Audacious's own order) until the act retired.
         // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31): the button
-        // wears PAUSE only where its press would PAUSE — the transport live
+        // prints PAUSE only where its press would PAUSE — the transport live
         // AND the highlight on the transport's own item (or nowhere), which
         // is exactly render_player_highlight_act_row answering −1. Under a
         // highlight standing on a folder row or on another wav the press
-        // would GO THERE, so the face is the play glyph and the tooltip's word
+        // would GO THERE, so the face is PLAY's and the tooltip's word
         // follows it. SINCE 2026-09-01 THE FACE AND THE WORD ARE ONE OWNER,
         // render_player_play_face (the act's own two forks read without
-        // acting), and the glyph is its Pause answer alone; the hint takes
+        // acting); the hint takes
         // the whole answer, so a folder row says "Open folder" and a paused
         // transport "Resume". THE HINTS' OTHER STATE BITS ARE RESOLVED HERE
         // TOO (RenderPlayerHintState, app_state.h — each a predicate the act
@@ -5764,7 +5651,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // which this painter already reads for the clock). Every bit
         // reaches a repaint through the row's one damage owner: the three
         // highlight movers and the transport writers damage the row already,
-        // for the Load in place face and the pause glyph.
+        // for the Load in place face and the play key's legend.
         RenderPlayerHintState hint;
         hint.play_face     = render_player_play_face(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
@@ -5813,107 +5700,61 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.end_shift_differs =
             render_player_last_in_item_folder_actionable(app) &&
             end_plain_index != end_twin_index;
-        const bool pause_face = hint.play_face == PlayerPlayFace::Pause;
+        // THE PLAYER'S KEYS (`glyph` the key fork: a blank key with its
+        // printed legend, no drawing since the hi-fi skin, 2026-10-23).
         auto glyph_button = [&](AppState::PlayerButtonAct act,
-                                icons::Icon icon, bool lit = false) {
+                                bool lit = false) {
             DialogButtonPlan b;
             b.player_act = act;
             b.glyph      = true;
             b.lit        = lit;
             b.play_face  = hint.play_face;
             b.enabled    = render_player_button_enabled(app, playback, act);
-            b.icon       = icon;
             b.tooltip    = render_player_button_hint(act, hint);
             b.tooltip2   = render_player_button_shift_hint(act, hint);
             plan.push_back(std::move(b));
         };
-        // (THE `word_button` LAMBDA IS DELETED — 2026-09-01, with its last two
-        // callers: Load in place and Close became GLYPH buttons, so the
-        // player's row is nine glyphs and no word at all. The other three
-        // owners' word buttons are built in their own branches below and the
-        // walk's word arm still paints them; what went is this owner's copy of
-        // the builder, not the kind.)
-        // THE SKIP GLYPHS ARE UNTOUCHED BY EITHER REMAP: the roster's own two
-        // transport skips wear this pair over the same keys, and
-        // PlayerNext's glyph says "skip forward" whether the press lands the
-        // track's end (2026-08-31) or the next track (2026-09-04) — a
-        // skip-forward glyph over a skip-forward act, so nothing is owed
-        // here.
-        glyph_button(AppState::PlayerButtonAct::Home,
-                     icons::Icon::PlayerPrevious);
-        // PLAY/PAUSE WEARS THE PAUSE GLYPH ON THE PAUSE FACE (above), not the
-        // stop square it wore until the row took a Stop button (2026-08-28).
-        // THAT BUTTON RETIRED 2026-09-01 AND THE PAUSE GLYPH STAYS: this is a
-        // player's transport, where a pause is a resumable rest, and the row
-        // is now the main window's triple with the pause face on the middle
-        // button. The roster's transport button is
-        // untouched — bare Space over the project's audio is one toggle with
-        // no pause state, so it keeps a play / stop pair, its own since
-        // 2026-10-20 (TransportPlay / TransportStop, icons.h).
-        glyph_button(AppState::PlayerButtonAct::PlayPause,
-                     pause_face ? icons::Icon::Pause
-                                : icons::Icon::Play);
-        glyph_button(AppState::PlayerButtonAct::NextTrack,
-                     icons::Icon::PlayerNext);
+        // (THE `word_button` LAMBDA IS DELETED — 2026-09-01: the player's
+        // row is keys alone and no word button. The other three owners' word
+        // buttons are built in their own branches below.)
+        glyph_button(AppState::PlayerButtonAct::Home);
+        // PLAY/PAUSE: its legend follows the play face (above); this is a
+        // player's transport, where a pause is a resumable rest. The roster's
+        // transport button is untouched — bare Space over the project's audio
+        // is one toggle with no pause state.
+        glyph_button(AppState::PlayerButtonAct::PlayPause);
+        glyph_button(AppState::PlayerButtonAct::NextTrack);
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
-                     icons::Icon::RepeatOne,
                      app.render_player.repeat_one);
         // THE HIGHLIGHT PAIR (architect 2026-10-10): the render player on
         // glass has no arrow keys, so the bare Down / Up keys' band walk is a
         // pair of buttons — DOWN THEN UP, the order of row 8's own pair
         // (TransportDown, TransportUp) — that move the highlight one row and
         // nothing else (GuiRenderPlayer::move_highlight), so a file is picked
-        // silently and then loaded in place or played. They wear THEIR OWN
-        // PAIR, PlayerDown and PlayerUp (architect 2026-10-22): the player's
-        // family is the classical set's steel, row 8's Down / Up its brass
-        // (the glyphs' record: no key draws one since 2026-10-23).
-        glyph_button(AppState::PlayerButtonAct::HighlightDown,
-                     icons::Icon::PlayerDown);
-        glyph_button(AppState::PlayerButtonAct::HighlightUp,
-                     icons::Icon::PlayerUp);
+        // silently and then loaded in place or played.
+        glyph_button(AppState::PlayerButtonAct::HighlightDown);
+        glyph_button(AppState::PlayerButtonAct::HighlightUp);
         // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,
-        // ahead of the right-flushed pair, on THE PLAIN FOLDER, the folder
-        // row's own drawing (architect 2026-10-10 ~22:40: "the open folder
-        // action is to click on the folder … it just has to be enough to
-        // distinguish it from the other up arrow" — the old copy of the up
-        // arrow stood beside Highlight Previous's as two identical arrows).
-        // Its own enumerator, UpAFolder, wears the folder row's drawing as a
-        // symlink to FolderRow.svg (architect 2026-10-19: one file per
-        // enumerator, a repeat a link — icons.h's kIconNames). It greys at
-        // the root through the act's own wall.
-        glyph_button(AppState::PlayerButtonAct::Up,
-                     icons::Icon::UpAFolder);
-        // THE LAST TWO ARE GLYPHS SINCE 2026-09-01 (architect, with the icon
-        // row's Load in place moving to the history group): "the media player
-        // button should get the checkmark glyph then. Close should then get a
-        // glyph also, to avoid being the odd one out: window-close.svg". So
-        // the LOAD wears LoadInPlace — the very glyph the icon row's
-        // button wears for the same act one surface over (icons.h names
-        // each set's drawing) — and CLOSE wears
-        // Close, Adwaita's window-close (Close.svg; the
-        // notification cards' dismiss was its other reader until the card's X
-        // retired, 2026-10-01; a def is a glyph and several buttons are free
-        // to wear one). The row is NINE GLYPH
-        // BUTTONS and no word button, so its faces take the glyph fork whole.
-        // Close stays LAST, the escape sentinel by construction, and both keep
-        // their acts, their keys and their hints unchanged.
+        // ahead of the right-flushed pair. It greys at the root through the
+        // act's own wall.
+        glyph_button(AppState::PlayerButtonAct::Up);
+        // THE LAST TWO, FLUSH RIGHT: Load in Place (the icon row's history
+        // group runs the same act one surface over) and Close. Close stays
+        // LAST, the escape sentinel by construction.
         // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
         // listing is batch folders, where a load has nothing to name, so the
-        // sixth button deletes — DeleteFolder — the
-        // highlighted folder, and its shift press every folder listed; its
-        // shift line stands only where "all" is more than the highlighted one.
-        // Inside a batch folder the slot is Load in Place, unchanged.
+        // sixth button deletes the highlighted folder, and its shift press
+        // every folder listed; its shift line stands only where "all" is more
+        // than the highlighted one. Inside a batch folder the slot is Load in
+        // Place, unchanged.
         hint.delete_all_differs = render_player_root_folder_count(app) > 1;
         if (app.render_player.folder == AppState::RenderPlayer::Folder::Root)
-            glyph_button(AppState::PlayerButtonAct::Delete,
-                         icons::Icon::DeleteFolder);
+            glyph_button(AppState::PlayerButtonAct::Delete);
         else
-            glyph_button(AppState::PlayerButtonAct::LoadInPlace,
-                         icons::Icon::LoadInPlace);
-        glyph_button(AppState::PlayerButtonAct::Close,
-                     icons::Icon::Close);
+            glyph_button(AppState::PlayerButtonAct::LoadInPlace);
+        glyph_button(AppState::PlayerButtonAct::Close);
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
@@ -6595,8 +6436,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // face's writers damaging the row whole), dimmed when dead; a word button's
         // its word IN CAPITALS, its access key underlined (the Windows-strict
         // keys unchanged, only the drawing) — always live while its dialog
-        // stands. The icon set's glyphs are not drawn (their enumerators stay
-        // on the plan for a later drop).
+        // stands.
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
         paint_roster_case(cr, r, plan[i].lit, pressed);
         std::string legend;
@@ -7262,8 +7102,8 @@ static bool floating_surface_stands(const AppState& app) {
 //     run after them); per member the enabled and
 //     selected bits (publish_button_face's stash, refreshed by a covering
 //     clip), the pressed face (redesign_button_pressed_face, worn only
-//     enabled) and the glyph index (redesign_button_glyph, which with the id
-//     names the drawing redesign_button_icon returns); the cases' tones are
+//     enabled) and the glyph index (redesign_button_glyph, the stateful
+//     legend's fork); the cases' tones are
 //     the palette's.
 // NONE OF THEM IS A PAINT-TIME PUBLICATION of another surface or the
 // displayed basis that on_redraw's head promotes (re-derived by a call-graph

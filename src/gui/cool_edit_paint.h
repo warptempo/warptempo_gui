@@ -34,31 +34,6 @@
 // cue's and the playhead head's 9-7-5-3-1 rows — is drawn as its diagonal
 // (their painters say how). The dots are cells (a dot is not a line).
 
-// THE DISABLED GLYPH'S TWO TONES (architect 2026-10-15; icons.h's THE
-// DISABLED GLYPH), measured off Cool Edit Pro 2.1's own disabled art —
-// BITMAP 221's toolbar strips, each glyph's right 20x20 half drawn on the
-// C0C0C0 button face: the silhouette in 808080 over a F8F8F8 copy one px
-// right and down, byte for byte on B84 (Play), B8 (Undo), B87 (Stop) and
-// B88 (Pause), and on most of the Edit view's B100-B138 — two tones, no dark
-// copy. Constants, as the rings are: face-independent. The product's offset
-// is the bitmap px read as the glyph's own line, ONE ICON UNIT (the drawing's
-// 1 / 48), not one Windows px (architect 2026-10-15).
-// THE INSET RIM, THE PRODUCT'S OWN THIRD TONE (architect 2026-10-15 evening),
-// not Cool Edit's: the silhouette's pixels the light copy does not reach —
-// a one-unit band INSIDE the silhouette along its top-left edges — in
-// kCeDisabledInset, the shadow line falling down and to the right as the
-// pressed case goes. Inside, never a dark copy peeking out up-left, which
-// grew the glyph. The tone his pick off a 70 / 60 / 50 / 40 / 30 / 20 / 10 /
-// 00 series judged on the glass the same evening.
-// NO BAND CASE WEARS A GLYPH since 2026-10-23 (the keys are blank, their
-// legends printed under them), so these tones are the record of the
-// emboss icons::draw_disabled still draws for a caller that asks — Cool
-// Edit's measured bytes, the rim black (his pick on the ebony of
-// 2026-10-21; the case-relative silhouette of that skin is git history).
-inline constexpr uint32_t kCeDisabledShadow = 0x808080;
-inline constexpr uint32_t kCeDisabledLight  = 0xF8F8F8;
-inline constexpr uint32_t kCeDisabledInset  = 0x000000;
-
 // -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
 // (§3); THE RULER'S TICKS AND DIGITS, E0E0E0 (§4.4, face-independent in all

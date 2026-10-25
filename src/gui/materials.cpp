@@ -973,10 +973,6 @@ bool paint_key_patch(cairo_t* cr, const GuiRect& r, int depth, bool lamp) {
     return true;
 }
 
-DisabledGlyphTones disabled_glyph_tones() {
-    return DisabledGlyphTones{kCeDisabledShadow, kCeDisabledLight, kCeDisabledInset};
-}
-
 std::size_t resident_bytes() {
     const State& s = state();
     std::size_t n = 0;

@@ -16,12 +16,12 @@
 #                       no text (an icon of the period draws no <text>, and
 #                       the default pulls a font database and system fonts),
 #                       no svgz; raster-images for an embedded <image>: no
-#                       file of the shipped set (Adwaita 3.22) carries one,
-#                       but every PNG of the icon drop road (any act's,
-#                       architect 2026-10-19, icons.h) is DECODED through
-#                       it (svg_icon.cpp's parse_png wraps the PNG in an
-#                       <image> rendered once at identity), so the feature is
-#                       load-bearing on both devices.
+#                       icon carries one, but every picture the materials
+#                       read from the `tiles/` folder beside the device
+#                       config (a PNG or JPEG, materials.h) is DECODED
+#                       through it (svg_icon.cpp's raster_regions wraps the
+#                       file in an <image> rendered at identity), so the
+#                       feature is load-bearing on both devices.
 #   --profile production  the workspace's own profile: LTO, codegen-units 1
 #                       (1.40 MB in the product's stripped .so against 2.93 MB
 #                       for --release). Rust never contracts a float multiply

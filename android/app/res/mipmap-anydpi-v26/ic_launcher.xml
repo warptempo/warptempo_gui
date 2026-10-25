@@ -6,17 +6,13 @@
      34 x 40 viewBox), rendered by resvg at the art's height and centered
      over THE CAPTION'S GROUND, FLAT: #141415 (render.h's kCaptionGround),
      one color over the whole canvas, so the mask shows the caption's dark
-     shape carrying the note (the conductor's baton, AppIcon.png ->
-     Warp.png, over white #FFFFFF from 2026-10-17 to 2026-10-23; Windows
-     Storm's caption start #800080 from 2026-10-16, the Cool Edit case's 20
-     face-ramp bands under Midnight's Face from 2026-10-12 before it). An
+     shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH RENDERED AT
      EVERY BUILD by android/app/build_apk.sh's launcher step into its staged
-     copy of res/ (architect 2026-10-19: the icon follows a dropped drawing
-     with no step; the Linux desktop icon is the same drawing bare, a link
+     copy of res/ (the Linux desktop icon is the same drawing bare, a link
      into the repository, docs/INSTALL.md):
        ic_launcher_background.png  the full 108 dp canvas flat in #141415;
        ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
@@ -45,11 +41,8 @@
 
      A BUILD PRODUCT, NEVER COMMITTED: this file is the one tracked file of
      res/, and build_apk.sh writes the PNGs beside it in the package tree
-     (byte-stable, -strip) from whatever drawing AppIcon names at the build
-     (a dropped AppIcon.png wins over AppIcon.svg, the drop road's rule,
-     resized into the 52 dp square by ImageMagick's Lanczos filter). The
-     safe-zone figure above is the quaver's; a new drawing's ink is its
-     own. -->
+     (byte-stable, -strip) from assets/icons/AppIcon.svg, the quaver, at
+     the build. The safe-zone figure above is the quaver's. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

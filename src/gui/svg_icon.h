@@ -1,31 +1,23 @@
 #pragma once
 
-// THE ICON RENDERER (architect 2026-10-06: one renderer for every icon) —
-// the bundled drawings, parsed at launch and rasterised through RESVG
-// (resvg's C API, Apache-2.0 OR MIT), built from one pinned source on both
-// devices (android/deps/85_resvg.sh, CMakeLists.txt): an SVG scalable and
-// antialiased — AND THE DROP ROAD'S PNGs (architect 2026-10-19, icons.h's
-// head): any enumerator may be a PNG, his own Gemini-drawn drawings at 256 px,
-// the Adwaita SVG the fallback where it still stands; no longer one file and
-// no longer an exception (the first, Warp's baton of 2026-10-18, was "already
-// very high res, so we can ship it plain and have it scaled by the gui scale
-// and the button casing"). A PNG is DECODED ONCE, at the load, by resvg itself
-// (parse_png) and SCALED BY AN AREA FILTER here, Lanczos-3 from the full
-// raster (rasterise), never by resvg's own <image> resampling. This file is a
+// THE RENDERER (architect 2026-10-06: one renderer for every drawing) —
+// the bundled SVG drawings (icons.h), parsed at launch and rasterised
+// through RESVG (resvg's C API, Apache-2.0 OR MIT), built from one pinned
+// source on both devices (android/deps/85_resvg.sh, CMakeLists.txt), scalable
+// and antialiased — and THE MATERIALS' PICTURES (below), a PNG or JPEG
+// decoded by resvg itself and scaled by an area filter here. This file is a
 // thin wrapper: the parse, the size, one render per (drawing, device px), the
-// launch's body measure, the channel order cairo wants. The one file that
-// includes <resvg.h> is svg_icon.cpp.
+// materials' decode and filter, the channel order cairo wants. The one file
+// that includes <resvg.h> is svg_icon.cpp.
 //
 // THE ERROR RULE: the launch refuses ONLY MALFORMED SVG — resvg's parse error
 // (not well-formed XML, no root <svg>, no usable size) is the validation
 // doctrine's class (1) at the load boundary, the first error only, hard fail
 // naming the file (icons::load_set carries it to gui_main's one stderr line
-// and no window) — AND a `.png` that is not a PNG (parse_png), the same class.
-// A construct resvg does not draw is SKIPPED SILENTLY, as SVG's own error
-// handling prescribes, so the launch cannot vouch for a drawing's picture: AN
-// SVG IS CHECKED AT ITS IMPORT, ON A SHEET, against rsvg-convert (the
-// reference every bundled set has been judged by); a dropped PNG is its own
-// picture. rasterise() cannot fail.
+// and no window). A construct resvg does not draw is SKIPPED SILENTLY, as
+// SVG's own error handling prescribes, so the launch cannot vouch for a
+// drawing's picture: a drawing is checked by eye when it is added.
+// rasterise() cannot fail.
 //
 // THREADS: a parsed tree is immutable and a render writes only the caller's
 // surface, so any thread may render any tree; the icons parse and render on
@@ -41,141 +33,52 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 struct resvg_render_tree;   // resvg.h's opaque tree
 
 namespace svg_icon {
 
-// One parsed file: EXACTLY ONE OF THE TWO IS ENGAGED — `tree` for an SVG
-// file (parse), `raster` for a PNG (parse_png: decoded into a premultiplied
-// ARGB32 surface N x N, N its longer side, held for the process's life — 256
-// KB for a 256-px PNG — so a scale change drops the cache of scaled rasters,
-// never the decode). A value type: copies share the
-// one immutable tree or surface, which the last copy frees
-// (resvg_tree_destroy, cairo_surface_destroy). A re-raster at a new scale is
-// one more render of the same tree or one more resample of the same surface,
-// never a re-parse. `declared_shift` is an SVG's `data-body-shift`
-// attribute when its root tag carries one (parse; body_center_shift's head),
-// never a PNG's.
+// One parsed SVG file. A value type: copies share the one immutable tree,
+// which the last copy frees (resvg_tree_destroy). A re-raster at a new scale
+// is one more render of the same tree, never a re-parse.
 struct Document {
-    std::shared_ptr<resvg_render_tree>     tree;
-    std::shared_ptr<cairo_surface_t>       raster;
-    std::optional<std::pair<float, float>> declared_shift;
+    std::shared_ptr<resvg_render_tree> tree;
 };
 
-// Parse one file's whole bytes, and read the root tag's `data-body-shift`
-// into `declared_shift` (body_center_shift's head) by a plain scan of the
-// `<svg …>` start tag's bytes, before resvg sees them. THE ERROR ARM'S
-// PRODUCERS are a bundled file resvg refuses (a build defect, caught at
-// launch): "not well-formed SVG (resvg error N)", N the library's own code;
-// and an attribute that is not two numbers, "malformed data-body-shift" (the
-// builder writes it, so this is a build defect too); the caller prefixes the
-// file. The options are resvg's defaults: every bundled drawing names its own
-// inks (icons.h's head).
+// Parse one file's whole bytes. THE ERROR ARM'S PRODUCER is a bundled file
+// resvg refuses (a build defect, caught at launch): "not well-formed SVG
+// (resvg error N)", N the library's own code; the caller prefixes the file.
+// The options are resvg's defaults: every bundled drawing names its own inks
+// (icons.h's head).
 std::expected<Document, std::string> parse(std::string_view bytes);
-
-// A PNG'S PARSE (architect 2026-10-18; the drop road's since 2026-10-19, the
-// head): one PNG file's whole bytes, decoded once into the Document's
-// `raster`. ANY SHAPE: the frame is the longer side, N x N, the image at the
-// frame's top-left (the launch's body-centering, body_center_shift, makes the
-// placement moot — the drawing is centered on its ink either way; the square
-// check of 2026-10-18 retired 2026-10-19). THE ERROR ARM'S PRODUCERS, a
-// bundled file that is not a PNG (a build defect, caught at launch, the caller
-// prefixing the file): "not a PNG" (no PNG signature or no IHDR chunk first),
-// and resvg's refusal of the wrapper (the code, as parse's line). A PNG whose
-// body does not decode renders transparent, as an SVG construct resvg does
-// not draw is skipped.
-std::expected<Document, std::string> parse_png(std::string_view bytes);
 
 // The drawing at `px` device px a side (px > 0) into a NEW ARGB32 surface the
 // caller owns (cairo_surface_destroy): scaled uniformly by the smaller of
 // px / its width and px / its height and centred (a square drawing fills the
-// cell), the offset unsnapped, the antialiasing resvg's. A PNG fills the px
-// cell the same way (k = px / N device px per source px), its
-// samples an AREA FILTER: Lanczos-3, separable, from the full N x N raster
-// on premultiplied channels (PIL's Image.LANCZOS construction, the mock the
-// architect judged, 2026-10-18), std::nearbyint at each channel.
-//
-// `shift_x` / `shift_y` TRANSLATE THE DRAWING in its own user units before the
-// scale (positive right / down), composed into resvg's one render transform
-// (a PNG's: into the filter's sample positions, one user unit N / 48 source
-// px — the raster's user space is the 48-unit frame, unit_px);
-// a user-unit shift scales with the raster, so it holds at every px. Zero
-// leaves the drawing exactly as the file centers it.
-//
-// `margin_px` widens the SURFACE alone, right and bottom (px + margin_px a
-// side): the fit is still the px cell's, so a drawing shifted right and down
-// keeps the ink that crosses the cell's edge — the disabled glyph's light
-// copy (icons.h's THE DISABLED GLYPH).
-cairo_surface_t* rasterise(const Document& doc, int px, double shift_x = 0.0,
-                           double shift_y = 0.0, int margin_px = 0);
-
-// ONE USER UNIT OF THE DRAWING in device px at `px` — rasterise's scale (the
-// smaller of px / its width and px / its height); px / 48 for every bundled
-// file, each a 48-unit root — A PNG'S USER SPACE THE SAME 48-UNIT FRAME
-// (px / 48, its N px read as 48 units), so the body shift and the disabled
-// copy's one-unit translate mean what they mean on every file.
-double unit_px(const Document& doc, int px);
-
-// THE BODY-CENTERING SHIFT (icons.h's THE GLYPHS BODY-CENTERED, the three
-// cases): the (dx, dy) in the drawing's user units — rasterise's shift_x /
-// shift_y — that puts the bounding box of its pixels with alpha >= 26/255
-// (0.1) at the frame's center, each rounded to 0.1 unit (std::nearbyint on
-// tenths). THE BUILDER'S SVGs NEVER COME HERE: each carries the shift on its
-// root tag, `data-body-shift="dx dy"` (two numbers, one decimal each, a space
-// between, e.g. "2.6 -0.1" — tools/icon_set_adwaita_322/body_shift.py's
-// rsvg-convert measure at 240 px, the 2026-10-12 table's own method), which
-// parse reads and resvg ignores. This function measures the two remaining
-// cases at launch: an SVG WITHOUT the attribute (a dropped one, never the
-// builder's) on its own render at 240 px (rasterise, unshifted; ~12 ms on
-// average on the laptop), and a PNG on its decoded raster at its native N
-// (free: no render). The two measures agree within 0.1 unit on every builder
-// file (2026-10-19). A drawing with no such pixel takes (0, 0).
-std::pair<float, float> body_center_shift(const Document& doc);
-
-// THE EMBOSSED COPY — the disabled glyph (icons.h's THE DISABLED GLYPH,
-// architect 2026-10-15): Windows' DSS_DISABLED emboss of the glyph's
-// silhouette as Cool Edit draws it, plus the product's own inset rim, built
-// from TWO MASKS, each a raster's ALPHA ALONE (its coverage, so antialiased
-// edges stay soft; colors are never read): `live`, the glyph's own raster
-// (S), and `light`, the same drawing rasterised already translated by its
-// offset (L: rasterise's shift and margin — the offset is the drawing's,
-// antialiased exactly, never a shifted raster). A NEW surface the caller
-// owns, `light`'s size (at least `live`'s), both masks at (0, 0), holding
-// three flat tones (each a straight 0xRRGGBB) premultiplied at their
-// coverages: `light_rgb` at L·(1 − S), the copy outside the silhouette;
-// `shadow_rgb` at min(S, L), the silhouette's body; `inset_rgb` at
-// max(0, S − L), the silhouette's pixels the copy does not reach — a rim
-// one offset wide INSIDE S along its top-left edges. The footprint is
-// S + L·(1 − S), the two-tone emboss's: the rim never grows the glyph.
-// std::nearbyint at each channel (the rounding doctrine).
-cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
-                               uint32_t light_rgb, uint32_t shadow_rgb,
-                               uint32_t inset_rgb);
+// cell), the offset unsnapped, the antialiasing resvg's.
+cairo_surface_t* rasterise(const Document& doc, int px);
 
 // -- THE MATERIALS' ROAD (architect 2026-10-21; since 2026-10-23 the hi-fi
 // skin's IMAGE ROAD, a `Ground` or `Marker` picture beside the config,
 // materials.h) --------------------------------------------------------------
 //
-// A MATERIAL is a raster file, PNG or JPEG, decoded by the icons' own detour
-// (parse_png's: the bytes wrapped in a one-<image> SVG as a base64 data URL,
-// rendered by resvg at the identity, nearest — resvg's raster-images feature
-// decodes both kinds on both devices) and, where it must be scaled, SCALED BY
-// THE ICONS' AREA FILTER (Lanczos-3, separable, PIL's construction). Unlike an
-// icon a material is a RECTANGLE, OPAQUE and LARGE: only the regions the
-// caller keeps are ever resampled, from ONE decode of their source span, and
-// past the image's border the filter reads the border's own pixels (a
-// material has no transparent margin to fade into).
+// A MATERIAL is a raster file, PNG or JPEG, decoded through resvg (the bytes
+// wrapped in a one-<image> SVG as a base64 data URL, rendered at the
+// identity, nearest — resvg's raster-images feature decodes both kinds on
+// both devices; the tablet's cairo has no PNG reader) and, where it must be
+// scaled, SCALED BY AN AREA FILTER (Lanczos-3, separable, PIL's
+// construction). A material is a RECTANGLE, OPAQUE and LARGE: only the
+// regions the caller keeps are ever resampled, from ONE decode of their
+// source span, and past the image's border the filter reads the border's own
+// pixels (a material has no transparent margin to fade into).
 
 // The file's kind and pixel size, read off its header. THE ERROR ARM'S
-// PRODUCER is a bundled material that is neither a PNG (its signature and
-// IHDR, parse_png's test) nor a JPEG (FF D8 and a start-of-frame marker
+// PRODUCER is a material that is neither a PNG (its signature and IHDR) nor
+// a JPEG (FF D8 and a start-of-frame marker
 // before the scan) — a drop defect, caught at launch, the caller prefixing
 // the file.
 struct RasterInfo {
@@ -192,8 +95,9 @@ struct RasterRegion {
 };
 // EACH REGION INTO A NEW opaque ARGB32 surface w x h the caller owns, sRGB as
 // the file holds it, from ONE resvg decode of the regions' union source span:
-// the two passes in double in a fixed order (the icons' rasterise's
-// construction, the kernel stretched by 1 / k on a reduction), the
+// the two passes in double in a fixed order (byte-reproducible:
+// -ffp-contract=off is on for every build; the kernel stretched by 1 / k on a
+// reduction), the
 // horizontal pass on demand over a few rows at a time (the intermediate never
 // the span), each tap's index clamped into the image, std::nearbyint at each
 // channel; AT k = 1 EXACTLY a region is the decoded pixels themselves, its
@@ -215,9 +119,7 @@ std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
 // raster time — cairo's premultiplied word un-premultiplied, converted and
 // premultiplied again (display_transform::display_premultiplied, which keeps
 // a neutral's word whole); off a P3 window it touches nothing. The
-// conversion keeps every pixel's alpha, so the embossed copy above reads its
-// masks off a converted raster as well as an unconverted one; its tones are
-// sRGB constants and the copy is converted after (icons.cpp).
+// conversion keeps every pixel's alpha (icons::boxed_ink reads it).
 void convert_to_display(cairo_surface_t* s);
 
 } // namespace svg_icon

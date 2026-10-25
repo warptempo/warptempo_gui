@@ -133,21 +133,19 @@ for f in $FONT_FILES; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
-# THE BUNDLED ICONS (architect 2026-10-06; ONE FLAT FOLDER since 2026-10-19,
-# the drop road, icons.h's head): every `.svg` and `.png` of the repository's
-# assets/icons/ copied into the package's assets/icons/, which aapt2 link's -A
-# packs (deflated) as the APK's `icons/` asset directory -- a dropped PNG rides
-# the next build with no other step. A REPEAT IS A SYMLINK in the repository
-# (icons.h's kIconNames: AppIcon.svg -> Quaver.svg and seven more); cp -L copies
-# the file it names, so the APK holds regular files alone. The app reads them
-# in place at launch, never copying them out (icons.h's load_set;
+# THE BUNDLED ICONS: every `.svg` of the repository's assets/icons/ copied
+# into the package's assets/icons/, which aapt2 link's -A packs (deflated) as
+# the APK's `icons/` asset directory. A REPEAT IS A SYMLINK in the repository
+# (icons.h's kIconNames: AppIcon.svg and WavRow.svg -> Quaver.svg); cp -L
+# copies the file it names, so the APK holds regular files alone. The app
+# reads them in place at launch, never copying them out (icons.h's load_set;
 # GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is a
 # build defect and stops the script here.
 ICON_DIR="$APPDIR/../../assets/icons"
 shopt -s nullglob
-ICON_FILES=("$ICON_DIR"/*.svg "$ICON_DIR"/*.png)
+ICON_FILES=("$ICON_DIR"/*.svg)
 shopt -u nullglob
-[ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .svg or .png files under $ICON_DIR"
+[ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .svg files under $ICON_DIR"
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
@@ -199,15 +197,11 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. the launcher icon, then aapt2 compile + link -----------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml, tracked, and its two
-# PNG layers per density, RENDERED HERE AT EVERY BUILD (architect 2026-10-19:
-# the icon must follow a drop with no step -- the one-shot generator and its
-# committed PNGs retired) into a staged copy of res/ under the package tree,
-# which aapt2 compiles. THE DRAWING is AppIcon's file in assets/icons/ by the
-# drop road's rule (icons.h's kIconNames: `AppIcon.png` if one is dropped,
-# else `AppIcon.svg`), read through its link: THE QUAVER since 2026-10-23,
-# AppIcon.svg -> Quaver.svg, the caption's own icon (architect 2026-10-23:
-# "the new note glyph on the caption's color"; the conductor's baton,
-# AppIcon.png -> Warp.png, 2026-10-18 to 2026-10-23). THE FRAMINGS (architect
+# PNG layers per density, RENDERED HERE AT EVERY BUILD from the drawing
+# into a staged copy of res/ under the package tree,
+# which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.svg, read
+# through its link: THE QUAVER, AppIcon.svg -> Quaver.svg (architect
+# 2026-10-23: "the new note glyph on the caption's color"). THE FRAMINGS (architect
 # 2026-10-12, "two framings is normal": Android's adaptive mask demands a
 # full-bleed square, Linux desktops take any shape -- the Linux icon is the
 # bare drawing, packaging/warptempo_gui.svg, a link into the repository,
@@ -218,9 +212,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # product's own renderer (svg_icon.cpp), at the art's height, its width the
 # viewBox's (the quaver's 34 x 40: 45 / 67 / 89 / 133 / 177 px wide, resvg
 # rounding up), never rasterised small and upscaled (magick's own delegate
-# renders the SVG at its 34 x 40 user size and blurs at -resize); a dropped
-# PNG resized by ImageMagick's Lanczos filter (the GUI's own filter family)
-# into the square -- centered on the transparent 108 dp canvas; the
+# renders the SVG at its 34 x 40 user size and blurs at -resize) --
+# centered on the transparent 108 dp canvas; the
 # BACKGROUND that canvas FLAT IN THE CAPTION'S GROUND #141415 (architect
 # 2026-10-23; render.h's kCaptionGround), one color over the whole square,
 # which the launcher's mask cuts to its shape (#FFFFFF from 2026-10-17,
@@ -228,13 +221,11 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # case's 20 face-ramp bands under Midnight's Face from 2026-10-12 before
 # it). Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
-# Byte-stable: -strip drops the date chunks. Every GUI pixel is painted by cairo, the roster's icons
-# included (assets/icons/'s SVGs rasterised by resvg, its PNGs decoded by
-# resvg and scaled by an area filter, svg_icon.cpp; each copied by cairo); the
-# app declares no @string, no style, no res/values. aapt2 compile turns the
+# Byte-stable: -strip drops the date chunks. Every GUI pixel is painted by
+# cairo, the icons included (assets/icons/'s SVGs rasterised by resvg,
+# svg_icon.cpp, each copied by cairo); the app declares no @string, no style, no res/values. aapt2 compile turns the
 # staged directory into res.zip, which link takes as a positional input.
-APP_ICON="$ICON_DIR/AppIcon.png"
-[ -f "$APP_ICON" ] || APP_ICON="$ICON_DIR/AppIcon.svg"
+APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to Quaver.svg)"
 LAUNCHER_GROUND="#141415"   # render.h's kCaptionGround
 RES_STAGE="$PKGDIR/res"
@@ -243,10 +234,7 @@ for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432;
     IFS=: read -r density art canvas <<< "$row"
     dir="$RES_STAGE/mipmap-$density"
     mkdir -p "$dir"
-    case "$APP_ICON" in
-        *.svg) resvg -h "$art" "$APP_ICON" -c ;;
-        *)     magick "$APP_ICON" -filter Lanczos -resize "${art}x${art}" png32:- ;;
-    esac | magick - \
+    resvg -h "$art" "$APP_ICON" -c | magick - \
         -background none -gravity center -extent "${canvas}x${canvas}" -strip \
         -define png:compression-level=9 -define png:compression-filter=5 \
         "PNG32:$dir/ic_launcher_foreground.png"

@@ -12,9 +12,7 @@
 // folder's and the quaver's form (icons.h's THE BOXED GLYPHS; architect: "a
 // very simple basic small rectangle with a larger rectangle below, that's
 // the i, and then an X … for the error … Spartan and minimalist … sit
-// nicely with the other icons, the note and the folder"; the Adwaita glyphs
-// 2026-08-29 to 2026-10-23, then none for one night — "they show the old
-// card insignia"), and ONE PAD of plain field between the ring and the
+// nicely with the other icons, the note and the folder"), and ONE PAD of plain field between the ring and the
 // content on all four sides (notification_pad_px below; P18, architect
 // 2026-10-24), ON THE CARD FACE — the tooltip's look, the
 // theme's `card_ground` under `card_text` inside the one-device-px sunken

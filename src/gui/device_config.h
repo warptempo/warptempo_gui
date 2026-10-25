@@ -336,8 +336,7 @@
 // first run stamps a file WITHOUT `role` and its read-back refuses the launch
 // on the missing key — the file is already there for the hand to add
 // `role=author` or `role=mirror` to. (The `icons` and `font` keys left
-// 2026-10-12: one icon set — Adwaita 3.22 since 2026-10-14 — and
-// Liberation Sans, hard-coded.)
+// 2026-10-12: the icons and Liberation Sans are hard-coded.)
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also

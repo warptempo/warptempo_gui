@@ -2130,8 +2130,7 @@ enum class RedesignButton {
     // the long press dispatch Ctrl+Alt+O, the one translated twin on the
     // roster (the lift's chord build, finish_chrome_press_release, states the
     // exception; the key keeps its unshifted spelling, is_revert_project_key).
-    // It wears document-open, the drawing Load in Place already wears
-    // (icons.h, repeated by position). OPEN AND REVERT KEEP THIS ONE POINTER
+    // OPEN AND REVERT KEEP THIS ONE POINTER
     // ROAD since the menu row's removal (2026-10-21; until then the two
     // commands with both a menu row and an icon-row road, the architect's
     // ruling against the no-second-road doctrine's default). Its face is the plain act's (redesign_button_enabled's
@@ -2191,8 +2190,7 @@ enum class RedesignButton {
     // a button is counterintuitive when a double tap on the flag does it, and
     // the double-click is safe since the first click arms and waits and the
     // grab gate doubled. The flag editor's roads are the Return key and the
-    // double-click on the flag, both unchanged; its glyph left icons::Icon
-    // with it.)
+    // double-click on the flag, both unchanged.)
     // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
@@ -2301,8 +2299,7 @@ enum class RedesignButton {
     // bare `m` was that mode's second exit until the architect ruled the swap
     // out ("we should card the exit, because it is still one button
     // automatically affecting the other"), and it is refused with the lock's
-    // own card now. Its glyph is
-    // BpmIterations (icons.h).
+    // own card now.
     //
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
@@ -2325,7 +2322,7 @@ enum class RedesignButton {
     // THE MODE LIVES IN TARGET VIEW ALONE since 2026-09-13: pressed
     // in source view the ON edge crosses to target first, a refused entry
     // stopping the whole press (the record is at the `i` arm,
-    // input_key_dispatch.cpp). Its glyph is GridIterations, the grid (icons.h).
+    // input_key_dispatch.cpp).
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
     // hand-listed, which is what their chord rows buy: Ctrl+B and bare `i`
@@ -2547,9 +2544,8 @@ enum class RedesignButton {
     // vocabulary (bare `v`, the revert, is the other) — bare `'` is on the
     // mode's ALLOWLIST while the walk carries a member — so its face composes the mode, that admission's own accessor
     // and the LOCK, which the allowlist does not carry for it (the arm and the
-    // division are at redesign_button_enabled). It wears LoadInPlace
-    // (icons.h names each set's drawing), the glyph the render player's own
-    // Load in place button wears too.
+    // division are at redesign_button_enabled). The render player's own
+    // Load in Place key runs the same act.
     IconLoadInPlace,
     // THE VIEW PAIRS (architect 2026-10-14) — THE ROW'S LAST, FLUSH AT ITS
     // RIGHT EDGE, painted last and winning any overlap (the overflow rule is
@@ -2643,9 +2639,8 @@ enum class RedesignButton {
     //
     // PLAY AND STOP ARE ONE BUTTON WITH TWO FACES (architect 2026-08-15, at his
     // live look at the row): bare Space is ONE TOGGLE, so the roster carries
-    // ONE member for it and the GLYPH and the TOOLTIP swap on whether the
-    // transport is LIVE — TransportPlay while stopped, TransportStop while
-    // a session runs (the editor's own pair since 2026-10-20, icons.h). That
+    // ONE member for it and the LEGEND and the TOOLTIP swap on whether the
+    // transport is LIVE — PLAY while stopped, STOP while a session runs. That
     // fact is playhead_scanner_active (the GUI-side playback mirror) OR a
     // standing A/B audition sequence, whose rests are silent frames INSIDE
     // one transport session (architect 2026-08-26): the whole condition is
@@ -2658,7 +2653,7 @@ enum class RedesignButton {
     // a sub-tick natural-end window, an accepted cost recorded at the fork. It
     // is RENDER-IS-CANCEL's own shape (one button, one chord, a
     // stateful face driven by one bit), and the resolvers are
-    // redesign_button_glyph_swapped + redesign_button_icon for the glyph and
+    // redesign_button_glyph_swapped for the legend's fork and
     // redesign_button_tooltip's stateful overload for the words.
     //
     // THIS IS SIMPLER THAN WHAT IT REPLACES AND THAT IS THE POINT. The button
@@ -2819,8 +2814,7 @@ enum class RedesignButton {
     // OPEN TEXT EDITOR (architect 2026-10-09: "resurrect the Open Text Editor
     // button. It should go between jump to defining marker and toggle add to
     // selection and the shortcut of course is enter") — the verb group's
-    // SIXTH member, wearing the sets' accessories-text-editor
-    // (icons::Icon::OpenTextEditor). ITS CHORD IS BARE Return and its
+    // SIXTH member. ITS CHORD IS BARE Return and its
     // act is that key's exactly — the addressed cell's editor opened on the
     // focused marker (the Return arm, input_handler.cpp), the payload's
     // canonical-line editor by default and a bound cell's editor where one is
@@ -2914,8 +2908,7 @@ enum class RedesignButton {
     // Selection, pick several flags, then arm this and drag them). Bare `[`, a ONE-SHOT LAMP over AppState::value_drag_lamp: lit,
     // every flag drag is the value drag in every view; dark, none is; the
     // lift of a value drag that began puts it out (the rule is at
-    // value_drag_posture). It wears the set's pen (icons::Icon::ValueDrag,
-    // architect 2026-10-18). ITS FACE: the selected face while ARMED
+    // value_drag_posture). ITS FACE: the selected face while ARMED
     // (value_drag_armed: the lamp lit, or grid iterations standing), the
     // roster's lamp rule; GREY ON A LOCKED TAB, where no flag drag of either
     // axis can act and bare `[` drops at read_only_key_blocked with the lock's
@@ -3001,8 +2994,7 @@ enum class RedesignButton {
     // ctrl form switches the tab and its ctrl-shift form is the diff-flag
     // march.
     TransportWalk,
-    // CENTER (bare `c`, working-zoom center, wearing edit-find since
-    // 2026-10-16, icons.h) — on row 8 since 2026-09-29 (architect; the walk
+    // CENTER (bare `c`, working-zoom center) — on row 8 since 2026-09-29 (architect; the walk
     // group's third until 2026-10-18, the nudge-and-play group's second
     // since, behind Switch Tab), MOVED from the icon row's
     // viewport-class group where it stood beside Zoom to Fit from the
@@ -4353,8 +4345,8 @@ struct GuiChromeGlobalsFingerprint {
 // the Maximize glyph and each box's face — with the caption, 2026-10-24.)
 // The toolbar band (paint_icon_row): its lane, the `h` view (the stand-ins
 // and the hide), and each STANDING member in the walk's order with its run,
-// its four face terms and its glyph index (redesign_button_glyph, which with
-// the id names the drawing redesign_button_icon picks).
+// its four face terms and its glyph index (redesign_button_glyph, the
+// stateful legend's fork).
 struct GuiIconRowMember {
     RedesignButton id{};
     int  run      = 0;
@@ -6751,7 +6743,7 @@ struct AppState {
     //     and restarts only when a motion carries it MORE than the hover slop
     //     from that anchor on either axis (re-anchoring there), so a hovering
     //     pen's jitter cannot starve it — the slop a recorded departure
-    //     (win2000_deviations.md). A change of owner with no motion (a
+    //     from Windows (render.h's hover slop). A change of owner with no motion (a
     //     relayout, a surface closing under a resting pointer) re-anchors and
     //     starts nothing: the wait is a resting pointer's.
     //   * THE RESHOW (TTDT_RESHOW, kTooltipReshowMs, 100): an ARRIVAL with
@@ -11767,9 +11759,8 @@ inline bool authoring_locked(const AppState& a) {
 //     architect, that morning, while they were the row-1 view bar; the
 //     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
-//     disabled face (2026-10-01) — the glyph embossed
-//     (icons::draw_disabled), the selected view's checked face still saying
-//     where you stand — and the KEY's card
+//     disabled face (2026-10-01) — the legend dimmed, the selected view's
+//     checked face still saying where you stand — and the KEY's card
 //     carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
@@ -14785,8 +14776,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
         // view selectors having come down from row 1 to the icon row, two
         // radio pairs since 2026-10-14):
-        // the glyph embossed (icons::draw_disabled), as on every dead
-        // button of that row (paint_icon_row), the selected view's checked
+        // the legend dimmed, as on every dead button of that row
+        // (paint_icon_row), the selected view's checked
         // faces still saying where you stand; the hint names the act and the
         // grey is the message. The repaint is the roster's per-tick
         // comparator (main.cpp), no damage call anywhere here.
@@ -15760,11 +15751,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS WEAR A GLYPH OTHER THAN THEIR TABLE ONE, and the LIVE FACT
-// that decides it — the roster's ONE owner of the stateful-glyph CONDITIONS
-// (2026-08-15). The glyphs themselves live with the painter
-// (redesign_button_icon, paint_handler.cpp), which reads this rather than
-// restating any of these bits, so the condition and the swap cannot drift.
+// WHICH BUTTONS WEAR A SECOND FACE, and the LIVE FACT that decides it — the
+// roster's ONE owner of the stateful-face CONDITIONS (2026-08-15; the name
+// from the glyphs the keys wore until the hi-fi skin, 2026-10-23). The
+// stateful legend reads this rather than restating any of these bits, so the
+// condition and the swap cannot drift.
 //
 // IT EXISTS FOR THE STALENESS COMPARATOR, and that is the whole reason it is a
 // predicate rather than four conditions inline in the resolver: a face's
@@ -15848,8 +15839,8 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // the hint is a face that follows the button (architect 2026-09-24).
         case RedesignButton::Render:
             return a.queue_running;
-        // THE TRANSPORT BUTTON wears TransportStop while an audition runs;
-        // its table glyph is TransportPlay (icons.h). THE A/B AUDITION IS
+        // THE TRANSPORT BUTTON prints STOP while an audition runs and PLAY
+        // otherwise. THE A/B AUDITION IS
         // ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST (architect
         // 2026-08-26), rests included, so its standing phase is the second
         // term: without it the face would flip to Play and back for the few
@@ -16986,10 +16977,10 @@ inline const char* redesign_button_legend(const AppState& a,
 // ON THE ROW NOW is the printed LEGEND (architect 2026-10-25: the word names
 // the act the key's next press runs — the stateful redesign_button_legend
 // overload above, Save's COMMIT / PULL and Render's CANCEL among it); the
-// keys draw no glyph since the hi-fi skin (2026-10-23), so the GLYPH SWAPS
-// (Save's SaveCommit / Pull, Render's Cancel — redesign_button_icon,
-// paint_handler.cpp) are the stash's index the press, the tooltip and the
-// legend read, never a painted face. The one hint string that still
+// keys draw no glyph since the hi-fi skin (2026-10-23), so the GLYPH INDEX
+// (Save's commit / pull, Render's cancel — redesign_button_glyph) is the
+// stash's index the press, the tooltip and the legend read, never a painted
+// face. The one hint string that still
 // carries the words reads "Save and Commit"; "Render
 // Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
@@ -17509,7 +17500,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // label arms had already
 // gone with row 2's labeled painter, 2026-08-12 — Save's and Render's stateful
 // WORDS live on the tooltip overload above and their stateful faces are the
-// GLYPH swaps, redesign_button_icon.)
+// legend's, redesign_button_legend.)
 
 // THE MODIFIER LINE EXISTS EXACTLY WHERE A MODIFIED PRESS DOES SOMETHING.
 // Checked at compile time so the tables cannot drift: a button that gains a

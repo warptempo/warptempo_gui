@@ -165,9 +165,10 @@ set(WARPTEMPO_GUI_SOURCES
     # Sans and its bold) through FreeType on
     # both platforms.
     src/gui/gui_font_bundled.cpp
-    # GUI-ONLY: the icon set (icons.cpp: the load, the raster cache, the
+    # GUI-ONLY: the icons (icons.cpp: the load, the raster cache, the
     # draws) and the wrapper over resvg it reads the bundled drawings through
-    # (svg_icon.cpp, the one file that includes <resvg.h>) are a painting
+    # (svg_icon.cpp, the one file that includes <resvg.h>; it also decodes
+    # the materials' pictures) are a painting
     # concern and exist only here, so like text_shape.cpp they are
     # deliberately in none of the four shared per-directory source lists —
     # warptempo_cli must never carry them, nor resvg. resvg is found in each
@@ -699,12 +700,11 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # paint road (canvas_sink.h's kGuiCanvasDrawList).
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_CANVAS_GL=${WARPTEMPO_CANVAS_GL})
-    # THE BUNDLED ICONS' SOURCE ON THE LAPTOP (architect 2026-10-06,
-    # icons.h's load_set): the repository's own assets/icons/, one flat
-    # folder since 2026-10-19, its absolute path compiled in, since the
-    # laptop runs the executable from its build tree beside this source tree,
-    # read in place at every launch (GuiPlatform::bundled_icon_files,
-    # platform_wayland.cpp) — so a dropped icon needs no rebuild here at all.
+    # THE BUNDLED ICONS' SOURCE ON THE LAPTOP (icons.h's load_set): the
+    # repository's own assets/icons/, its absolute path compiled in, since
+    # the laptop runs the executable from its build tree beside this source
+    # tree, read in place at every launch (GuiPlatform::bundled_icon_files,
+    # platform_wayland.cpp).
     # The APK packs the same files as assets instead (android/app/build_apk.sh),
     # so the Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
