@@ -1165,11 +1165,11 @@ struct GuiInputHandler {
     //
     // THE REFUSAL ANSWER IS THE WHEEL'S MODAL STATE, not the press path's,
     // and per frame rather than at entry: the gesture is the wheel's
-    // navigation-class sibling (it never delivers pointer events and punches
-    // through the keyboard-modal flag editor exactly as the wheel does), so
-    // each frame refuses under the wheel's own modal states — the prompt,
-    // the progress modal, the folder overlay, the dialog
-    // modal editors, loading/empty audio and any live pointer gesture. A
+    // navigation-class sibling (it never delivers pointer events), so each
+    // frame refuses under the wheel's own modal states — the prompt, the
+    // progress modal, the folder overlay, EVERY EDITOR (the lane editors
+    // since 2026-10-25, a pan and a pinch punching through them as the wheel
+    // did until then), loading/empty audio and any live pointer gesture. A
     // modal opening MID-gesture therefore freezes it (the wheel's own
     // behavior), and a live mouse gesture freezes it too (no two writers).
     // BUT NEVER THE WHEEL'S PLACE (architect 2026-10-16, "all gestures that
@@ -1286,12 +1286,9 @@ struct GuiInputHandler {
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
     // bypasses (the dead begin_touch_trim_move's own list MINUS the `h`
     // view, which ADMITS this former as its own view-local vocabulary):
-    // prompt, the editors via keyboard_modal_editor_active (the flag
-    // editor deliberately included though pointer-transparent — every
-    // pointer press CLOSES an open flag editor before any claim runs, and
-    // this begin, which skips the press path, must not become the first
-    // gesture to run under one; the user's tap closes the editor as any
-    // click does, and the next hold works), loading/empty
+    // prompt, the editors via keyboard_modal_editor_active (every editor a
+    // modal since 2026-10-25, the press path's veil and the touch
+    // navigation's refusal reading the same predicate), loading/empty
     // audio, a live pointer gesture. A refused begin arms nothing and the
     // update/end bodies no-op on the drag's own !active guard, so the
     // refused stream is dead rather than a fallback pointer drag.
@@ -1438,25 +1435,29 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
-    // row's twenty-two and row 8's nineteen (row 1's three menu anchors until
-    // 2026-10-21, the tab strip's two until 2026-10-22)
+    // row's twenty-three and row 8's twenty-one (row 1's three menu anchors
+    // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-22):
-    //   THE ICON ROW, 15 + 2 + 1 + 4 = 22 — the left walk's fifteen
-    //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
+    // counts re-derived from them 2026-10-25, Copy Phase Resets up to the
+    // band's first run):
+    //   THE ICON ROW, 16 + 2 + 1 + 4 = 23 — the left walk's sixteen
+    //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
+    //   Resets and Render;
     //   Zoom to Fit, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings and Enable
     //   Tooltips), the history view's two stand-ins (Revert and Load in
     //   Place in Undo's slots — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right behind it in one run (kIconRowViewPairs, Source /
-    //   Target and Warp / Phase Reset since 2026-10-14) — 20
+    //   Target and Warp / Phase Reset since 2026-10-14) — 21
     //   standing outside the `h` view (the two stand-ins publishing empty
-    //   rects) and 12 inside it (the stand-ins in, Undo's group out, and the
-    //   view's hide leaving Open Project and Save's group whole, Full Zoom
-    //   Out and Waveform Magnification (since 2026-10-12) and Enable Tooltips
-    //   alone of theirs, and the iteration group not at all);
-    //   ROW 8, 8 + 4 + 5 + 2 = 19 — the MARKER-VERB GROUP's eight
+    //   rects) and 13 inside it (the stand-ins in, Undo's group out, and the
+    //   view's hide leaving Open Project and Save's group whole, Zoom to Fit
+    //   and Waveform Magnification (since 2026-10-12), Play Renders (since
+    //   2026-10-25) and Enable Tooltips alone of theirs, and the iteration
+    //   group not at all);
+    //   ROW 8, 2 + 8 + 4 + 5 + 2 = 21 — the skips (Go to Start, Go to End,
+    //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
     //   Value Drag since 2026-10-11), the step-and-walk group's four (Down,
@@ -1464,9 +1465,9 @@ struct GuiInputHandler {
     //   nudge-and-play group's five with Play / Stop last (Switch Tab,
     //   Center, Left, Right, Play — kTransportNudgePlayGroup; the two groups
     //   regrouped by the architect 2026-10-18) and the `h` view's Older /
-    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 17 standing
+    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 19 standing
     //   outside the view (the two publishing empty rects), and inside it
-    //   1 + 2 + 4 = 7 — the hide's survivors, Older / Newer in the Left /
+    //   2 + 1 + 2 + 4 = 9 — the hide's survivors, Older / Newer in the Left /
     //   Right seats, the pair's rects empty and Down, Up and Play hidden.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
     // paints — a real rect where it stands, the EMPTY RECT (which no point is
@@ -1643,19 +1644,11 @@ struct GuiInputHandler {
     // endcap and bridge drags. The trim bar's own endcaps and bridge are
     // trim's pointer surface.)
 
-    // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
-    // is a consumed nothing everywhere since the button's unbinding,
-    // 2026-08-12, so it closes nothing; the 2026-08-01 "both buttons" clause
-    // served the right-click scrub that died with it): a press anywhere
-    // OUTSIDE the
-    // published editor box tears an open FlagPayload edit down without
-    // committing — exactly Esc's teardown (pending dropped; Enter is the only
-    // commit route, so closing is cheap and non-destructive) — and the caller
-    // then goes on to act normally. Self-contained: it tests both "is an edit
-    // open" and "is the press outside the box", so the caller carries no
-    // guard. Inside the box the press belongs to
-    // the field (caret / drag-select), so it returns having done nothing.
-    void close_top_flag_editor_for_outside_press(int x, int y);
+    // (THE TOP FLAG EDITOR'S GUARD-FREE CLOSE, close_top_flag_editor_for_
+    // outside_press — a press outside an open marker-lane editor's field
+    // tore it down uncommitted and the press acted on — went 2026-10-25 with
+    // the editors' pointer-transparency: every editor is a modal, and the
+    // veil swallows that press.)
 
     // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss
     // hook's clear: a pointer that has
@@ -2717,17 +2710,19 @@ private:
     //   dispatched through on_key at its lift). It REOPENS IN PLACE:
     //   gui_main's loop rebuilds the object set around the chosen source (the
     //   contract is at main.cpp).
-    //     open_project_picker: the opener. Refuses without touching
-    //       playback while a prompt, any editor or a picker stands, and
-    //       during a load — SAYING SO on the ONE arm where the user has a
-    //       surface to leave (any editor: "Close the editor first") and
-    //       SILENTLY on the other three, a prompt veiling everything and
-    //       being its own answer, a second picker being what is already on
-    //       screen (the reasoning is at the arms, 2026-08-30). THE RENDER
+    //     open_project_picker: the opener. Refuses SILENTLY, without
+    //       touching playback, while a prompt or a picker stands and during a
+    //       load — a prompt veiling everything and being its own answer, a
+    //       second picker being what is already on screen. AN EDITOR HAS NO
+    //       ARM since 2026-10-25 (it carded "Close the editor first" from
+    //       2026-08-30): every editor is a modal, whose veil swallows the
+    //       band's press and whose gate Ctrl+O, so no road reaches this body
+    //       under one. THE RENDER
     //       PLAYER HAS NO ARM AT ALL since 2026-09-03: its own router consumes
     //       Ctrl+O in silence, and the band's Open Project button greys under
     //       it, so no road reaches this body from in there — and the
-    //       picker's router answers the same way. ("Close the render player
+    //       picker's router answers Ctrl+O with its own close since
+    //       2026-10-25, its Open Project key the same chord. ("Close the render player
     //       first" stood from 2026-08-30 and a close-then-open body replaced
     //       it for one day; both are retired.) It
     //       stops playback through the
@@ -3561,16 +3556,14 @@ private:
     // RETIRED with those two gates; the `h` history view is the sole per-zone
     // consumer left, above. Neither this map nor its callers test the bit.
     //
-    // WHAT IT IS BLIND TO, deliberately and by ruling:
-    // - The FLAG editor does not refuse — it is pointer-transparent by ruling, so
-    //   a scrub still acts under an open one and the cursor must not lie about
-    //   that. Its own BOX is the exception and not a refusal: that rect takes
-    //   the caret press, so it answers Text (above) while everything around it
-    //   answers whatever the surface under the editor would. The two DIALOG
-    //   modal editors DO refuse, because their veil really
-    //   does swallow the press (modal_dialog_editor_active) — with the FIELD
-    //   the one rect inside that veil which takes an act, and so the one thing
-    //   the veil's blanket names rather than blanks.
+    // EVERY EDITOR REFUSES (2026-10-25: an act that takes the keyboard is a
+    // modal — keyboard_modal_editor_active): its veil really does swallow
+    // the press, so the map answers the Arrow everywhere but THE FIELD — a
+    // dialog's edit control or a lane editor's published box — the one rect
+    // inside that veil which takes an act, and so the one thing the veil's
+    // blanket names rather than blanks. (The flag editor was
+    // pointer-transparent from 2026-07-28 until then, the map answering
+    // round its box what the surface under it would.)
     //
     // THE CUES ARE HOVER-ONLY WITH NAMED EXCEPTIONS, all of them the same
     // exception (architect 2026-08-03, grown twice since): a LIVE GESTURE WHOSE
@@ -3791,11 +3784,12 @@ private:
     // on_key's head-gate halves, hoisted for the car's two roads above (each
     // gate's ruling stays at its site in on_key): the no-audio verdict, the
     // pointer-gesture drag gate's membership (the editor text drag has its own
-    // gate ahead of it), the keyboard-modal editor gate's sentence, and the
-    // authoring lock's verdict-and-card (true = the lock dropped the chord).
+    // gate ahead of it), and the authoring lock's verdict-and-card (true =
+    // the lock dropped the chord). (The keyboard-modal editor gate's
+    // sentence, modal_editor_swallow_card, retired 2026-10-25: a bound chord
+    // under any modal is silent.)
     bool no_audio_to_dispatch_on() const;
     bool keyboard_owned_by_pointer_gesture() const;
-    std::string modal_editor_swallow_card(GuiKey key, GuiInputState mods);
     bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods);
 
     // THE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect 2026-09-22,
@@ -3869,124 +3863,87 @@ private:
     bool playhead_in_marker_lane() const;
 
 
-    // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
-    // the keyboard, so every chord outside the admitted set is a silent no-op.
-    // EVERY editor does — the single-State dialog one (settings; the commit
-    // title stood beside it 2026-08-07 to 2026-10-10), the bpm bracket, the
-    // bound editor and the
-    // top-strip FlagPayload flag editor, which this ruling brought in, reversing
-    // the old "commands punch through" design and deleting the tail that
-    // discarded an edit on the way to a command.
-    // THREE READERS, re-derived 2026-08-12 (the touch half): the on_key gate
-    // (input_handler.cpp), paired with modal_editor_key_blocked, the
-    // roster pointer walk's no-dwell term (recompute_redesign_button_hover,
-    // input_pointer.cpp — no shift-tooltip dwell runs under a surface that
-    // owns the keyboard), and the touch region begin's gate
-    // (begin_touch_region, input_pointer.cpp — the gesture bypasses the
-    // press path that closes the flag editor, so it refuses under every
-    // editor; the same reading the dead trim-move begin briefly held,
-    // 2026-08-11, whose gesture died 2026-08-12 — the region hold revived
-    // the pattern, not the trim move).
-    // Modality here is CHORDS only, which is why the flag editor's OTHER
-    // transparencies do not consult this predicate — see
-    // modal_dialog_editor_active below for what does and does not.
+    // A KEYBOARD-TAKING MODAL STANDS — THE ONE PREDICATE (architect
+    // 2026-10-25: "acts that need a keyboard — shouldn't they just be
+    // modals? … if we want to make that rule, the buttons at the top stop
+    // responding, and even the waveform stops the pan and drag, that would
+    // be okay. When I have the editor open, I want to be sure I'm editing
+    // exactly what I'm looking at and nothing else"). True while ANY editor
+    // stands — the settings and BPM dialog editors, the flag editor and the
+    // iteration bound editor (AppState::text_editor_session, the one
+    // membership; any_text_editor_active is the same expression under its
+    // platform name). Such a modal ADMITS ITS OWN VOCABULARY ALONE: its
+    // typed characters, its motion keys, Esc and Return, a dialog's ring
+    // and buttons — and its FIELD for the pointer; every other key, press,
+    // wheel detent and touch gesture is consumed, silently, and nothing
+    // behind it changes face (dead and ungreyed — redesign_button_enabled's
+    // record of the classes). The way out is Esc (cancel) and Return
+    // (commit), the on-screen keyboard's own two keys on the glass, a
+    // dialog's Cancel and OK. (The keyboard half has stood since 2026-07-28;
+    // the lane editors were pointer-, wheel- and touch-transparent until
+    // 2026-10-25, which this predicate's pointer readers reverse.)
+    // THE READERS, re-derived by grep 2026-10-25 — EVERY "a modal editor
+    // stands" question asks this, and the few that mean the DIALOG alone ask
+    // modal_dialog_editor_active below, each saying why at its site:
+    //   KEYS — on_key's editor gate (input_handler.cpp, with
+    //     modal_editor_key_blocked: silent since 2026-10-25),
+    //     history_load_in_place's guard, and the car's two roads onto the
+    //     key gates (run_undo_redo_without_key, car_play_refused_by_key_gates,
+    //     silent belts behind GuiCarTransport::admits, which is a reader too);
+    //   POINTER — on_button_press's veil (the press outside the field), the
+    //     chrome lift's re-ask (finish_chrome_press_release, the editor
+    //     opened mid-hold), on_motion's editors' branch, pointer_cursor_kind's
+    //     blanket (the Arrow but the field's I-beam), the roster hover walk's
+    //     veil (recompute_redesign_button_hover), tooltip_dwell_suppressed,
+    //     wheel_context's swallow, and the touch road — the navigation's
+    //     refusal (apply_touch_nav_update) and the region hold's
+    //     (begin_touch_region), one predicate since 2026-10-25.
+    // PUBLIC for the car's gate (GuiCarTransport::admits).
+public:
     bool keyboard_modal_editor_active() const;
 
-    // Modal-editor predicate + key gate (bodies in input_key_dispatch.cpp).
-    // THIS DECLARATION IS THE AUTHORITATIVE STATEMENT of what
-    // modal_dialog_editor_active is for; other sites carry a pointer here.
-    // It names the DIALOG-HOSTED modal editors — the settings editor and the
-    // bpm bracket editor (plus the prompts, gated
-    // separately), the surfaces that
-    // paint in the MODAL since 2026-08-12 — on the BOTTOM ROW since
-    // 2026-08-13, which is where the name came from in the first place (it
-    // was modal_bottom_strip_editor_active while they wrote onto the status
-    // lane; the surface is a modal that yields the whole row now rather than
-    // a tenant of its status span). THE THREE-EDITOR MEMBERSHIP ITSELF LIVES AT
-    // AppState::dialog_editor_session (app_state.h), which names them once and
-    // hands back the live one's session id; this predicate is that id being
-    // non-zero, so the set cannot drift between the two. (The `h` view's load
-    // editor and the Open project editor were members until 2026-08-28, when
-    // both became the field-less PICKER — a modal owner with its own
-    // predicate, picker_active, and NOT in this answer, exactly as the render
-    // player is not.) NINE CALLING
-    // FUNCTIONS, RE-DERIVED BY GREP 2026-08-29 (the count was eight from
-    // 2026-08-14, when two left with the session fix — the dialog
-    // BUTTON claim in on_button_press and dispatch_modal_dialog_button, both
-    // of which ask modal_dialog_stash_current instead, a strictly narrower
-    // question that implies this one; the ninth arrived 2026-08-29, and it is
-    // not a new reader but a re-spelling: on_button_press's own veil had the
-    // four is_active tests written out and now asks here):
-    // SEVEN ask about a POINTER fact and TWO about a KEY.
-    //   wheel_context's swallow (input_handler.cpp), because the wheel is
-    //     NAVIGATION and display, not a chord, so it still punches through
-    //     an open top-strip flag editor;
-    //   pointer_cursor_kind (2026-08-03), because these editors are
-    //     exactly the ones whose veil SWALLOWS a pointer press, so they are
-    //     exactly the ones over which no cursor may promise a gesture;
-    //   the dialog button claim's RELEASE MIRROR in on_button_release
-    //     (2026-08-13 — the buttons act at the lift) and on_motion's
-    //     dialog-walk branch (2026-08-12) — the modal's own two pointer
-    //     surfaces;
-    //   THE VEIL ITSELF, at the tail of on_button_press's modal block: a
-    //     press that reached neither the field nor the buttons is swallowed
-    //     while any of the four stands (it spelled the four is_active tests
-    //     inline until 2026-08-29);
-    //   the CHROME release's veil re-ask (finish_chrome_press_release,
-    //     2026-08-13), which since the reach-through's retirement refuses
-    //     every armed kind outright — one term above the kind switch — and
-    //     exists for the editor OPENED MID-HOLD;
-    //   the roster pointer walk's veil term (recompute_redesign_button_hover —
-    //     under an editor dialog no roster hint starts, the prompt's own
-    //     answer);
-    //   and on the KEYBOARD side, modal_editor_key_blocked's bare-Tab
-    //     admission (2026-08-13: the focus ring's Tab is admitted for exactly
-    //     these four, the flag editor publishing no dialog and so having no
-    //     ring to walk) and repeat_eligible's two arms (the ring walk repeats,
-    //     and nothing repeats once the focus is on a button).
-    // paint_modal_dialog's editor fork is a reader BY PROXY and not a caller
-    // (it reads the same four is_active tests in the same order).
-    // (THE MODAL-TRAP block at on_button_press's top was an eleventh from
-    // 2026-08-11 and is deleted; its record is at the retired predicate's site,
-    // input_pointer.cpp.)
-    // The flag editor's exemption is the same fact in all of them: it is
-    // pointer-transparent, so the wheel reaches the viewport under it, a
-    // waveform press reaches the audio under it, and its roster presses were
-    // never blocked to begin with.
-    // THE RENDER PLAYER AND THE PICKER ARE DELIBERATELY NOT IN IT
-    // (2026-08-28): each is a MODE and not a text editor, so each has its own
-    // predicate (render_player_active and picker_active, above) and every
-    // reader here was audited for whether the mode belongs in its answer —
-    // the veil, the cursor, the hover walk's veil term and the chrome
-    // release's re-ask took a term of their own for both (the wheel reads
-    // the overlay's standing predicate, which covers both); the field's
-    // I-beam,
-    // the editors' Tab admission and the repeat arms did not (the ring's Tab
-    // and the list walk repeat through each router's own arm).
-    // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
-    // not decided here — but it is no longer scattered either: since 2026-07-28
-    // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which
-    // every open site calls and which records the whole decision table (the three
-    // dialog editors and the prompts stop; the top-strip flag editor is
-    // explicitly EXEMPT and keeps a live audition playing). So a new modal
-    // surface inherits the wheel swallow from this predicate and its playback
-    // answer from that owner — it grows neither by hand.
-    // The gate is the sibling of read_only_key_blocked's allowlist shape, and
-    // input routing like it (it judges no data): true
-    // when key+mods should be dropped while a keyboard-modal editor is open
-    // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all five editor kinds, top strip included (the list is
-    // text_editor::Kind). ONE CONSEQUENCE, ACCEPTED: Ctrl+Z is not in the
-    // admitted set, so typing inside an editor has NO UNDO — the gap these
-    // editors have always had, which is also why a refused clipboard cut must
-    // not erase (apply_editor_clipboard, input_handler.cpp).
-    // THE PREDICATE IS PUBLIC since 2026-09-17 for one outside reader, the
-    // car transport's gate (GuiCarTransport::admits: a head-unit button is
-    // dropped under a dialog editor, the tenth calling function); the key
-    // gate beside it stays private.
-public:
+    // THE DIALOG EDITORS ALONE — the settings editor and the BPM bracket
+    // editor, the editors that paint in the MODAL FAMILY'S BOX with a field,
+    // a ring and OK / Cancel buttons (modal_box.h); the membership is
+    // AppState::dialog_editor_session, which names them once and hands back
+    // the live one's session id. It answers the questions only a DIALOG has
+    // — its own surfaces — and nothing about modality, which is
+    // keyboard_modal_editor_active's (above). ITS READERS, re-derived by grep
+    // 2026-10-25, each the dialog's own:
+    //   pointer_cursor_kind (which field the editors' blanket names: the
+    //     dialog's edit control or a lane editor's box), on_button_release's
+    //     mirror of the dialog's OK / Cancel claim, on_motion's walk of the
+    //     dialog's buttons inside the editors' branch;
+    //   modal_editor_key_blocked's ring-Tab admission and repeat_eligible's
+    //     two ring arms — a lane editor publishes no dialog and so has no
+    //     ring to walk.
+    // (Its seven pointer readers of 2026-08-29 — the wheel's swallow, the
+    // cursor's blanket, the press veil, the chrome lift's re-ask, the hover
+    // walk's veil, the touch navigation's refusal and the car's gate —
+    // widened to the one predicate above when the lane editors became
+    // modals, 2026-10-25; the card it once counted retired the same day.)
+    // THE RENDER PLAYER AND THE PICKER ARE IN NEITHER (2026-08-28): each is
+    // an OVERLAY, not a text editor, with its own predicate
+    // (render_player_active, picker_active, folder_overlay_stands) and its
+    // own router, veil and wheel arm.
+    // IT IS NOT A PLAYBACK-STOP PREDICATE and neither is the one above. The
+    // stop has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open,
+    // which every open site calls and which records the whole decision table
+    // (the dialog editors and the prompts stop; the lane editors' open is
+    // EXEMPT and keeps a live audition playing, their payload commit
+    // stopping it).
     bool modal_dialog_editor_active() const;
 private:
+    // The editors' key gate, the sibling of read_only_key_blocked's allowlist
+    // shape and input routing like it (it judges no data): true when
+    // key+mods should be dropped while a keyboard-modal editor stands. It
+    // admits only the keys the active editor consumes (text_editor::Kind, the
+    // five kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S and
+    // Ctrl+Q consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
+    // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
+    // gap these editors have always had, which is also why a refused
+    // clipboard cut must not erase (apply_editor_clipboard,
+    // input_handler.cpp).
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
     // -- THE RENDER PLAYER'S INPUT HALF (2026-08-28) ------------------------
@@ -3998,11 +3955,15 @@ private:
     // dead through redesign_button_enabled's first arm (their faces grey,
     // their press claims refuse) EXCEPT PLAY RENDERS (architect 2026-10-13,
     // "so the user can quickly toggle it on/off by pressing the same button
-    // twice"): it stays lit and its lift, bare `l`, is the player's close. THE ONE EXEMPTION IS THE CAPTION
-    // (the menu row's live File anchor beside it, 2026-09-03 to
-    // 2026-10-21). The wheel scrolls the overlay one row per detent over
+    // twice"): it stays live, SITS LIT while the player stands (2026-10-25,
+    // redesign_button_selected), and its lift, bare `l`, is the player's
+    // close — the picker's Open Project likewise. (The caption was an
+    // exemption 2026-10-05 to 2026-10-24, the menu row's live File anchor
+    // 2026-09-03 to 2026-10-21.) The wheel scrolls the overlay one row per detent over
     // the band and is consumed everywhere else; the cursor is the Arrow; the
-    // tooltip dwell is the modal buttons' own. A MODIFIED PRESS IS CONSUMED
+    // roster's hint dwell is suppressed, an overlay showing no hints
+    // (tooltip_dwell_suppressed), the modal buttons' own standing. A
+    // MODIFIED PRESS IS CONSUMED
     // WITH ONE ADMISSION (2026-08-28): a SHIFT press on the modal row's two
     // skips arms their shifted twin, the roster's shift-click over this
     // surface, and ctrl, alt and every other shift press stay the consumed
@@ -4011,11 +3972,12 @@ private:
     // prompt gate above it, a prompt outranking the
     // player). This predicate is what every one of those readers asks; it is
     // the mode bit and nothing else, named so the readers say what they mean.
-    // (modal_dialog_editor_active stays the four-editor question and is NOT
-    // widened: the player is a mode, not a text editor, and the readers that
-    // ask about text — the field's I-beam, the editors' Tab admission, the
-    // repeat arms — must not see it. The PICKER is the same shape one mode
-    // over — picker_active, with its own router and its own veil arm.)
+    // (Neither editor predicate — keyboard_modal_editor_active,
+    // modal_dialog_editor_active — includes it: the player is an OVERLAY,
+    // not a text editor, and the readers that ask about text — the field's
+    // I-beam, the editors' Tab admission, the repeat arms — must not see it.
+    // The PICKER is the same shape one mode over — picker_active, with its
+    // own router and its own veil arm.)
     bool render_player_active() const { return app.render_player.active; }
 
     // THE PLAYER'S KEY ROUTER — the whole plastic vocabulary while the mode
@@ -4054,8 +4016,10 @@ private:
     // THE PLAYER'S OPENER TOGGLE for bare `l` and bare `'` outside the `h`
     // view: closes a standing player on `l`, opens it otherwise through the
     // one opener (GuiRenderPlayer::open). Its callers have already refused
-    // the modal states (a prompt, an editor, the `h` view, loading — all
-    // above it in on_key). A running render refuses at the opener itself
+    // the modal states (a prompt, an editor, loading — all above it in
+    // on_key); THE `h` VIEW ADMITS bare `l` since 2026-10-25 (architect,
+    // "admit both"), the player opening over the view as the picker does.
+    // A running render refuses at the opener itself
     // (GuiRenderPlayer::open), not here.
     void toggle_render_player();
 

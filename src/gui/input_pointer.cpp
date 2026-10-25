@@ -191,6 +191,29 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false,  true},   // Ctrl+Shift+Z
+    // COPY PHASE RESETS (architect 2026-10-24), the band's first run
+    // between Redo and Render since 2026-10-25 (row 8's verb group between
+    // Add to Selection and Toggle Value Drag the day before; the move is the
+    // seat alone — this row, its admissions and its gates came across
+    // whole, and no reader of this table partitions by lane): BARE P, the
+    // propagate's copy (handle_mode_keys). IT ADMITS CTRL AND THE PAIR (redesign_button_ctrl_admits /
+    // redesign_button_ctrl_shift_admits): the row stays bare P, and the lift
+    // spells the button's own key under the modifiers THE PRESS CARRIED —
+    // read at the press and stamped on the arm, never re-read at the lift
+    // (arm_redesign_press) — so a CTRL press dispatches CTRL+P, PASTE PHASE
+    // RESETS, and a CTRL+SHIFT press CTRL+SHIFT+P, PASTE PHASE RESET STATE,
+    // through the propagate's own arms with their gates and cards. ON THE
+    // GLASS the ctrl is the S Pen's barrel button (pen_report_in_plane,
+    // platform_android.cpp): a tap with it held is the paste, and held
+    // through the long press the hold's shift composes with the carried ctrl
+    // (the pair admitted) into the state paste. A SHIFT press alone is
+    // refused at the arm (Shift+P binds nothing), and a long press with no
+    // barrel is the plain copy. No lamp, no repeat. ITS GATES ARE THE KEYS':
+    // the read-only allowlist names none of the three (the face greys on the
+    // lock), the iteration gate admits the copy alone, and the `h` view's
+    // allowlist names none, so the derived partition hides it there.
+    {RedesignButton::IconCopyPhaseResets,
+     GuiKeys::P,      false, false, false},                             // bare P (+Ctrl: Ctrl+P, +Ctrl+Shift: Ctrl+Shift+P)
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true},   // Ctrl+Alt+R (+Shift)
     // (THE EDIT FLAG BUTTON — bare Return on a button, the flag editor's third
     // road — stood in the bottom row's verb group from 2026-08-27 and in the
@@ -613,30 +636,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // about this row's chord.
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false},                             // bare k
-    // COPY PHASE RESETS (architect 2026-10-24), the verb group's EIGHTH,
-    // between Add to Selection and Toggle Value Drag ("add sel normally
-    // precedes copy"): BARE P, the propagate's copy (handle_mode_keys). IT
-    // ADMITS CTRL AND THE PAIR (redesign_button_ctrl_admits /
-    // redesign_button_ctrl_shift_admits): the row stays bare P, and the lift
-    // spells the button's own key under the modifiers THE PRESS CARRIED —
-    // read at the press and stamped on the arm, never re-read at the lift
-    // (arm_redesign_press) — so a CTRL press dispatches CTRL+P, PASTE PHASE
-    // RESETS, and a CTRL+SHIFT press CTRL+SHIFT+P, PASTE PHASE RESET STATE,
-    // through the propagate's own arms with their gates and cards. ON THE
-    // GLASS the ctrl is the S Pen's barrel button (pen_report_in_plane,
-    // platform_android.cpp): a tap with it held is the paste, and held
-    // through the long press the hold's shift composes with the carried ctrl
-    // (the pair admitted) into the state paste. A SHIFT press alone is
-    // refused at the arm (Shift+P binds nothing), and a long press with no
-    // barrel is the plain copy. No lamp, no repeat. ITS GATES ARE THE KEYS':
-    // the read-only allowlist names none of the three (the face greys on the
-    // lock), the iteration gate admits the copy alone, and the `h` view's
-    // allowlist names none, so the derived partition hides it there.
-    {RedesignButton::IconCopyPhaseResets,
-     GuiKeys::P,      false, false, false},                             // bare P (+Ctrl: Ctrl+P, +Ctrl+Shift: Ctrl+Shift+P)
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40), the verb group's
-    // NINTH and last, immediately right of Copy Phase Resets (right of Add to
-    // Selection until Copy took the seat between, 2026-10-24): BARE `[`, which
+    // EIGHTH and last, immediately right of Add to Selection (Copy Phase
+    // Resets between the two on 2026-10-24 alone): BARE `[`, which
     // was free, the one-shot lamp that arms the flag's value drag, permanently
     // lit under grid iterations (AppState::value_drag_lamp, value_drag_armed;
     // the rule at value_drag_posture). Add to
@@ -801,10 +803,10 @@ static_assert(std::size(kToolbarChords) ==
 // press outside the modal is consumed, and the roster hovers nothing. THE
 // VEIL IS BEHAVIOURAL AND PAINTS NOTHING (architect 2026-08-12): no dim layer
 // — the palette is fully opaque and kdenlive's own parent window stays
-// undimmed under its dialogs — and the cursor is the Arrow over it. THE
-// KEYBOARD CONTRACT IS UNTOUCHED — route_modal_editor_key still admits bare
-// Esc, Ctrl+S and Ctrl+Q while an editor stands, which is where that pair's
-// pointer-side mirror note used to point.)
+// undimmed under its dialogs — and the cursor is the Arrow over it. EVERY
+// EDITOR TAKES THE VEIL since 2026-10-25, the lane editors with the dialogs
+// (keyboard_modal_editor_active); the keyboard contract is
+// modal_editor_key_blocked's, Esc and the editor's own keys, NO HATCH.)
 //
 // THE NOTIFICATION CARDS ARE HIT ABOVE THE VEIL, BY RULING, AND ARE NOT AN
 // EXCEPTION TO IT (architect 2026-08-29): a card is not a reach into the
@@ -2082,14 +2084,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // re-derivation this family forbids. The drag has ONE shape — a caret
     // sliding through a byte run — so being live is the whole record, and it
     // is capture-free, so there is a visible cursor to keep.
-    // IT SITS AHEAD OF THE DIALOG EDITOR'S BLANKET rather than with those
-    // three arms below, and that rank is what makes it ONE owner for BOTH
-    // editor families: the blanket answers first while a dialog editor stands
-    // and would decide its drag by position, while the marker lane's flag
-    // box falls THROUGH the blanket (keyboard-modal, pointer- and
-    // wheel-transparent — modal_dialog_editor_active, input_handler.h) to the
-    // box's own hover arm far
-    // below. One arm above both covers both. THE CARDS AND THE FOUR BLANKETS
+    // IT SITS AHEAD OF THE EDITORS' BLANKET rather than with those
+    // three arms below: the blanket decides by position, and a drag's
+    // selection routinely leaves the field. THE CARDS AND THE FOUR BLANKETS
     // ABOVE STILL WIN, the rank the trim and marker drags already take under
     // them: a card is opaque to the pointer and can be raised from a worker
     // mid-drag, and the rest are structurally inert while a button is held.
@@ -2111,9 +2108,20 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // 2026-09-03: a LIVE text drag never reaches it, the live-drag Text above
     // having answered, so a selection dragged past the field's edge keeps the
     // I-beam instead of flipping to the Arrow this arm would give it.
-    if (modal_dialog_editor_active()) {
-        return rect_contains(app.modal_dialog.field, x, y)
-                   ? GuiCursorKind::Text : GuiCursorKind::Arrow;
+    // EVERY EDITOR'S BLANKET SINCE 2026-10-25 (the lane editors took the
+    // veil: keyboard_modal_editor_active, the one predicate): the Arrow
+    // everywhere but THE FIELD, which wears the I-beam — a dialog's edit
+    // control (app.modal_dialog.field) or a lane editor's published box
+    // (app.flag_editor_box.box, the field the press claim reads through
+    // active_editor_text), the one rect inside the veil that takes an act.
+    // (A lane editor's box answered Text from an arm far below and every
+    // zone around it answered what the surface under it would, until then.)
+    if (keyboard_modal_editor_active()) {
+        const GuiRect& field = modal_dialog_editor_active()
+                                   ? app.modal_dialog.field
+                                   : app.flag_editor_box.box;
+        return rect_contains(field, x, y) ? GuiCursorKind::Text
+                                          : GuiCursorKind::Arrow;
     }
     if (app.loading || audio.total_frames() <= 0) return GuiCursorKind::Arrow;
 
@@ -2235,33 +2243,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // the top of the map rather than here — its own arm carries why.)
     if (any_pointer_gesture_active(app)) return GuiCursorKind::Arrow;
 
-    // THE OPEN FLAG EDITOR'S BOX IS EDITABLE TEXT, so it wears the I-beam
-    // (architect 2026-08-13, with the Text kind: it showed the navigation
-    // surface's PAN before, the marker lane being nav surface under it then, and a
-    // hand over a text field is simply wrong). ABOVE THE MODIFIER ARMS,
-    // because that is where the press path puts the claim: the caret / text-drag
-    // block in on_button_press tests this same published rect
-    // (app.flag_editor_box.box, the painter's stash) for ANY left press,
-    // before any modifier is looked at, so ctrl over the open box still places
-    // a caret and shift EXTENDS THE SELECTION to the clicked byte (architect
-    // 2026-08-30) — both of them caret work, and the cue must say so. The
-    // editor's pointer-TRANSPARENCY is untouched — that is about what a press OUTSIDE
-    // the box reaches, and outside is exactly where this arm stops. A cold or
-    // closed editor publishes a zero rect, which contains no point. It covers
-    // every marker-lane field alike, each publishing the same rect through the
-    // same painter — and covers the RIDING BOXES deliberately NOT: that run is
-    // the marker's own boxes painted beside the field, whatever the editor's
-    // kind, not editable text, so an I-beam over it would promise a caret the
-    // press does not seat. What the run promises instead is the MARKER LANE'S
-    // OWN CUE, and it needs no arm here to get it: the flag arm far below reads
-    // hit_test_flag, which resolves a riding box to its marker (the walk asks
-    // the editor's published run first), so the pointer over one says exactly
-    // what it says over a resting box — which is what the press now does
-    // there.
-    // IT IS THE HOVER'S ARM ALONE: a live text drag out of this box is
-    // answered at the top of the map, by the drag's own record.
-    if (rect_contains(app.flag_editor_box.box, x, y))
-        return GuiCursorKind::Text;
+    // (THE OPEN FLAG EDITOR'S BOX wore the I-beam from an arm here,
+    // 2026-08-13 to 2026-10-25, while the lane editors were
+    // pointer-transparent; the editors' blanket above answers it now.)
 
     const GuiRect top  = top_strip_area(app);
     const bool inside_top = rect_contains(top, x, y);
@@ -2983,8 +2967,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // frame navigates nothing AND SEATS NOTHING; the gesture resumes when the
     // state clears. The `h` view refuses nothing, entered before the
     // gesture or toggled under it (the laptop's bare `h`): the same
-    // waveform navigates either way. The keyboard-modal flag
-    // editor is punched through as the wheel punches it.
+    // waveform navigates either way. EVERY EDITOR REFUSES since 2026-10-25
+    // (keyboard_modal_editor_active, the one predicate the region hold reads
+    // too): the lane editors took the veil, so a pan or pinch no longer
+    // punches through them as it did from 2026-07-28.
     // A REFUSED FRAME ALSO BREAKS THE PAN'S HOLD (2026-10-22): the finger
     // travels on while nothing navigates, so the first frame after the state
     // clears seats afresh where the finger then is and the pan resumes from
@@ -2992,7 +2978,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // swallowed.
     if (app.prompt.active || app.batch_progress.active ||
         any_pointer_gesture_active(app) ||
-        folder_overlay_stands(app) || modal_dialog_editor_active() ||
+        folder_overlay_stands(app) || keyboard_modal_editor_active() ||
         app.loading || audio.total_frames() <= 0) {
         app.touch_nav_zoom.pan_seated = false;
         return;
@@ -3412,12 +3398,9 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // through on_button_press (the shift former's claim sits below every one
     // of these): a prompt or modal editor owns the input, unloaded audio has no columns to span, and a live
     // pointer gesture must not be torn by a second writer. THE EDITOR GATE
-    // IS THE SIX-EDITOR PREDICATE, the marker-lane editors
-    // deliberately included though they are pointer-transparent: every
-    // pointer press CLOSES an open marker-lane editor before any claim
-    // runs, so no region gesture can begin under one — and this begin, which
-    // skips the press path, must not become the first (the declaration
-    // carries the full argument). The `h`
+    // IS THE ONE PREDICATE FOR A KEYBOARD-TAKING MODAL
+    // (keyboard_modal_editor_active), every editor a modal since 2026-10-25,
+    // the touch navigation reading the same one. The `h`
     // HISTORY VIEW IS DELIBERATELY NOT REFUSED — unlike the dead trim-move
     // begin's list — because the view ADMITS the region former as its own
     // view-local vocabulary (its shift former), so the begin FORKS on the
@@ -3581,33 +3564,6 @@ void GuiInputHandler::end_touch_caret_drag() {
     text_editor::restart_blink(*g.ed);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
-}
-
-// The flag editor's guard-free close — the LEFT press's, its one caller since
-// the right button's unbinding (2026-08-12; contract at the declaration,
-// input_handler.h). The box is the painter's
-// published rect, the same one the F2.1 caret block tests, so "outside" means
-// the same thing on every press path.
-void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    if (rect_contains(app.flag_editor_box.box, x, y)) return;
-    // AND THE RIDING BOXES ARE OUTSIDE — whichever of the marker's boxes stand
-    // to the RIGHT of the open field, painted by the same publisher at that
-    // field's right edge whatever its kind (contract at
-    // FlagEditorBox::riding_cells, render.h). They wear the editor's paint
-    // pass but they are the MARKER'S boxes, not the field, so a press on one
-    // is an ordinary outside press: it closes this session without committing
-    // and then falls through to act on the cell it landed on, exactly as a
-    // press on a box standing at REST does (architect 2026-09-05 — the three
-    // editors are transparent to each other for the pointer as they already
-    // are graphically). This owner is KIND-BLIND and that is the point: it
-    // tests the published FIELD and nothing else, so it serves the payload,
-    // bound and level editors through one body. The refusal that stood here
-    // for the payload editor's riding run, and the caller's consume that went
-    // with it, are both gone; the FIELD is still the one thing this owner
-    // refuses on, because a press there is caret work the F2.1 block already
-    // claimed.
-    flag_editor.exit_top_flag_edit_no_commit();
 }
 
 // -- The modal dialog's pointer half (2026-08-12) ---------------------------
@@ -4179,14 +4135,10 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
 // `h` view, never over an open marker-lane editor's own field).
 void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
                                           int x, int y) {
-    // A MARKER-LANE EDITOR STANDING CLOSES FIRST, exactly as an outside press
-    // closes it (no commit), and the wheel then acts on the cell under the
-    // pointer — a riding box included, the one flag walk resolving it to its
-    // marker and cell (topmost_flag_rect, app_state.cpp) off the last painted
-    // frame's publication, which the close leaves standing until the next
-    // paint. The FIELD is not a flag cell (wheel_context answers the stepped
-    // pan there), and this owner refuses on it too.
-    close_top_flag_editor_for_outside_press(x, y);
+    // NO EDITOR STANDS HERE since 2026-10-25: every editor is a modal, and
+    // wheel_context swallows the wheel under one, so this act never closes
+    // one (it closed a marker-lane editor uncommitted first, an outside
+    // press's twin, until then).
     const int hit = hit_test_flag(app, audio, x, y);
     if (hit < 0) return;  // belt: the context answered a flag cell
     const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
@@ -4284,10 +4236,9 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
 // THE CONSUME PREEMPTS THE DRAG ARM: a recognized second press returns before
 // the arm whether its open ran or refused — a double-click is never a drag
 // (architect 2026-09-22; the rule is at DoubleClickSurface, app_state.h) — so
-// no drag can begin under the editor it just opened (the editor owns input;
-// it is pointer-transparent, and a second press that then moves is the
-// editor's problem, not a marker drag). It seeds nothing either — the family
-// rule.
+// no drag can begin under the editor it just opened (the editor owns input
+// and veils the pointer, 2026-10-25, so the press's motion and lift are the
+// veil's). It seeds nothing either — the family rule.
 void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
                                            bool ctrl,
                                            const DoubleClickCandidate&
@@ -5085,13 +5036,14 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // the whole SLIDER ITEM — zero under every owner but the player and read only
 // through a stash that names the live player session). The mapping between a
 // column and a frame is the one the painter's handle uses
-// (render_player_scrub_x_of / _frame_at, app_state.h), which owns the handle
-// box's inset at both ends. THE THUMB DRAGS, WINDOWS' TRACKBAR (architect
+// (render_player_scrub_x_of / _frame_at, app_state.h), whose travel runs the
+// thumb's center from the channel's first column to its last (2026-10-25).
+// THE THUMB DRAGS, WINDOWS' TRACKBAR (architect
 // 2026-10-02 — the fix for "the thumb doesn't drag"; the drag itself stood
 // since the player's birth, but only from the handle's own box, and a press
 // on the track elsewhere seeked at the press and armed nothing): EVERY PRESS
 // ON THE ITEM ARMS THE THUMB DRAG. On THE THUMB'S GRAB BAND — the painted
-// thumb widened to its 14 Windows px box, through the one test
+// thumb, its overhang past the channel's ends included, through the one test
 // (render_player_scrub_handle_hit) — the thumb is TAKEN WHERE IT IS, the grab
 // offset kept so it does not jump under the pointer; ANYWHERE ELSE on the
 // item's band the thumb JUMPS to the press's column and the same press
@@ -5107,7 +5059,7 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // release's seek reads the same span the mapping does.
 int GuiInputHandler::clamp_player_scrub_marker_x(int x) const {
     const GuiRect track = app.modal_dialog.scrub;
-    const int x0   = track.x + scrub_handle_box_px() / 2;
+    const int x0   = render_player_scrub_travel_x0(track);
     const int span = render_player_scrub_usable_span(track);
     if (span <= 0) return x0;
     return x < x0 ? x0 : (x > x0 + span ? x0 + span : x);
@@ -5132,7 +5084,9 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     // — a slider resting at the left end under a zeroed clock IS the state
     // both name, so a sentence only repeated what the press was already
     // looking at (the retirement record is at render_player.h, where the two
-    // shared sentences used to be spelled).
+    // shared sentences used to be spelled). The thumb STANDS there with no
+    // item since 2026-10-25 (render.h's scrub block), painted at frame 0; a
+    // press on it or on the channel is consumed here and seeks nothing.
     if (app.render_player.frames <= 0 || app.render_player.item.empty())
         return true;
     // THE SCRUB RESTS WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
@@ -5358,8 +5312,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // 2026-10-05 and went with the caption; the menu row's live File anchor
     // the other, 2026-09-03 to 2026-10-21, gone with the row.)
     // THE BUTTON ROWS' CLAIM — the icon row's and row 8's — ONE BODY for
-    // their own band claims below and for the render player's veil, which
-    // lets the icon row's press through (architect 2026-10-13).
+    // their own band claims below and for the two overlays' veils, which let
+    // the icon row's press through to their opener (architect 2026-10-13 for
+    // the player, 2026-10-25 for the picker).
     const auto claim_button_row_press = [&] {
         if (chrome_band_modifiers_refused(app, x, y, mods)) return;
         if (button == GuiMouseButton::Left) arm_redesign_press(x, y, mods);
@@ -5409,8 +5364,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE OPEN ACT, which is why the row carries no OK beside that Cancel. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
+    // THE OPEN PROJECT KEY CLOSES IT (architect 2026-10-25, the player's own
+    // Play Renders toggle one overlay over): the icon row's press reaches the
+    // roster's arm, whose painted-bit gate consumes every button but the one
+    // the face leaves live (redesign_button_enabled's overlay arm), and the
+    // lift is Ctrl+O, which the picker's router answers with its close.
     if (app.picker.active) {
         if (button != GuiMouseButton::Left) return;
+        if (rect_contains(top_icon_row_area(app), x, y)) {
+            claim_button_row_press();
+            return;
+        }
         if (!mods.ctrl && !mods.shift && !mods.alt &&
             modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y);
@@ -5484,14 +5448,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // F2.1: mouse drag-to-select inside the active text editor. A press on
     // the active editor's field places the caret and arms a selection
     // drag (anchor == caret until the pointer moves). Resolved before the
-    // per-editor modal swallows below so the gesture reaches the two dialog
-    // editors too. ON GLASS ONLY A TAP AND THE DOUBLE PRESS ARRIVE HERE: a
+    // veil below so the gesture reaches every editor. ON GLASS ONLY A TAP AND
+    // THE DOUBLE PRESS ARRIVE HERE: a
     // finger's drag or hold in the field is the touch translation's caret
     // drag and delivers no press (the trio's bodies beside
-    // begin_touch_region). A press outside the active editor's
-    // region falls through: the dialog editors stay modal — the VEIL — and
-    // swallow it, while the top flag editor closes guard-free below and the
-    // press then acts normally.
+    // begin_touch_region). A press outside the active editor's field is
+    // swallowed by THE VEIL, every editor being a modal since 2026-10-25.
     if (button == GuiMouseButton::Left) {
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
@@ -5500,9 +5462,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // ring round it is chrome, and its buttons were
             // claimed above, so claiming more would map a chrome press to an
             // editor byte — or the marker lane's whole published box, pads
-            // included. Any press OUTSIDE it is a non-caret click, which
-            // closes the flag editor below and then routes normally (the
-            // guard-free lifecycle) or is consumed by the dialog's veil.
+            // included. Any press OUTSIDE it is consumed by the veil
+            // below, closing nothing.
             if (rect_contains(g.field, x, y)) {
                 // THE FIELD TAKES THE FOCUS BACK AT THE PRESS (architect
                 // 2026-10-02; the rule at return_modal_focus_to_field), ahead
@@ -5591,34 +5552,41 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 else          viewport.invalidate_top_strip();
                 return;
             }
-            // A dialog editor stays modal — THE VEIL: a press outside the
-            // box's field and buttons is CONSUMED, closing nothing (the
-            // architect's words: "once I've done that pop-up modal, I can't
-            // do anything else in the window behind it"; the dialog closes
-            // only by its own buttons and keys). THE VEIL HAS NO EXCEPTION
-            // AGAIN since 2026-08-28: the folder overlay's band was its one
-            // admitted surface beyond the box for the afternoon the Open
-            // project prompt kept a field under the picker, and the picker
-            // is a mode of its own now, with a veil of its own above. A
-            // flag-editor press that isn't on the lane text falls through to
-            // the guard-free close below.
-            if (g.dialog) return;
+            // EVERY EDITOR STAYS MODAL — THE VEIL: a press outside the
+            // field (and a dialog's buttons, claimed above) is CONSUMED,
+            // closing nothing (the architect's words: "once I've done that
+            // pop-up modal, I can't do anything else in the window behind
+            // it"; an editor closes only by its own keys and buttons). THE
+            // VEIL HAS NO EXCEPTION AGAIN since 2026-08-28: the folder
+            // overlay's band was its one admitted surface beyond the box for
+            // the afternoon the Open project prompt kept a field under the
+            // picker, and the picker is a mode of its own now, with a veil
+            // of its own above. THE LANE EDITORS — the flag editor and the
+            // iteration bound editor — TOOK THE VEIL 2026-10-25 (architect:
+            // "acts that need a keyboard — shouldn't they just be modals? …
+            // When I have the editor open, I want to be sure I'm editing
+            // exactly what I'm looking at and nothing else"): a press outside
+            // their field no longer closes them uncommitted and acts on —
+            // the pointer-transparency ruling of 2026-07-28, reversed.
+            return;
         }
     }
 
-    // THE VEIL'S LAST WORD: any DIALOG editor still standing here swallows the
-    // press. It asks the membership's own predicate rather than spelling the
-    // dialog surfaces again — the set is NAMED once (modal_dialog_editor_active
-    // over AppState::dialog_editor_session, whose declaration says so) so it
-    // cannot drift, and a third dialog editor would be veiled here by existing
-    // rather than by an edit. What the swallow buys is the same for both,
-    // and the BPM editor is the case that names it: mouse input does not
-    // interact with a dialog beyond its own field and buttons, claimed above,
-    // and the session ends only through Esc / the Enter dispatch path / the
-    // dialog's Cancel and OK (`m` is just a typed character now) — so the
-    // press must not drive a region drag or a marker click, nor tear the
-    // editor down through the top-strip flag-edit routine below.
-    if (modal_dialog_editor_active()) return;
+    // THE VEIL'S LAST WORD: any editor still standing here swallows the
+    // press — every button, every modifier, every surface: the band and row
+    // 8 (their keys dead and ungreyed behind it), the marker lane (no press
+    // on another flag), the waveform (no pan, scrub, placement, marker or
+    // strip drag). It asks THE ONE PREDICATE for "a keyboard-taking modal
+    // stands" (keyboard_modal_editor_active, input_handler.h, whose
+    // declaration names its readers) rather than spelling the editors again,
+    // so a new editor is veiled here by existing rather than by an edit. An
+    // editor ends only through its own keys — Esc, Return — and a dialog's
+    // Cancel and OK; on the glass the on-screen keyboard's own Esc and Enter,
+    // whose claim ranks above every gate. (Until 2026-10-25 the lane editors
+    // were pointer-transparent: a left press outside their field closed them
+    // without committing and then acted, and their band presses reached the
+    // editor's key gate.)
+    if (keyboard_modal_editor_active()) return;
 
     // THE FOUR REDESIGNED BUTTON ROWS (top lanes 1..2 plus the bottom strip's
     // transport row, whose claim closes the block — the toolbar row's own
@@ -5679,9 +5647,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on the block's own terms: the band is bottom lane 0 (bottom_row_area,
     // on the window's foot since the simple layout, 2026-10-22), and
     // everything else is the shape above — below the modal gates (a prompt,
-    // a dialog editor or the progress modal swallows the press; the
-    // pointer-transparent flag editor does not, and its KEYBOARD modality
-    // then answers the dispatched chord exactly as it answers the key),
+    // any editor or the progress modal swallows the press — the lane
+    // editors too since 2026-10-25, their row-8 presses having reached the
+    // editor's key gate until then),
     // above the loading/empty guard, ctrl/alt strict no-ops, and every
     // press in the band that is not on a button a consumed nothing — which
     // since the unification includes the clock cell and the bare ground
@@ -5754,11 +5722,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // existed only to serve a very tall waveform, and we're shrinking the
     // waveform"): a right press, plain or modified, is a consumed nothing
     // everywhere — it falls through the Left-only blocks below and out of this
-    // handler having touched nothing. The flag-editor outside-press close went
-    // with the arm it was added for (2026-08-01's "editor lifecycle runs on
-    // both buttons" served the scrub that could act under an open edit; with
-    // the right button meaningless again, a right press closes nothing) — the
-    // guard-free close is the LEFT press's, below.
+    // handler having touched nothing.
 
     // Mouse authoring is home-view gated like the keyboard: the marker DRAG
     // never moves a warp flag in T+W — selecting and landing but MOVING
@@ -5778,43 +5742,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // navigation, not authoring, and stays view-independent.
 
     if (button == GuiMouseButton::Left) {
-        // Editor lifecycle, guard-free — THE SHARED OWNER, called from the right
-        // press arm above too. A press in the editor's rendered lane text
-        // already repositioned the caret / armed the text drag above (the F2.1
-        // block) and returned; ANY other left press with the top flag editor
-        // open CLOSES it without committing, and then FALLS THROUGH so the press
-        // acts normally (arm a nav press, arm a marker press, place the
-        // playhead, ...). Placed ahead of every claim below so the close really
-        // is unconditional. A DISMISSAL is press-time by standing rule
-        // product-wide — the popup's any-press end, press-anywhere-closes,
-        // this close, the veil.
-        // Consequence: a double-click on the open editor's own marker is
-        // close-then-reopen — the first press closes, selects and arms, its
-        // motionless LIFT seeds a Marker candidate, and the second press
-        // consumes into a fresh open at that press (2026-08-17). That IS the
-        // documented "double-click opens the
-        // editor"; there is no own-marker special case.
-        //
-        // THE RIDING BOXES TAKE THAT SAME ROAD (architect 2026-09-05):
-        // whichever of the marker's boxes stand to the RIGHT of the open field
-        // — under the payload field its two bound cells, under
-        // the lower bound's field the upper cell — are painted by the editor's own
-        // publisher at that field's right edge, and they are the MARKER'S boxes
-        // for the pointer as well as graphically, so a press on one is an
-        // ordinary outside press: it closes the session here and falls through
-        // to the marker claim below like every other press does. Nothing forks
-        // for them on this path, and nothing forks on the editor's KIND: they
-        // resolve through the one flag walk, which asks the editor's published
-        // run (FlagEditorBox::riding_cells) ahead of the lane's stash, so
-        // hit_test_flag answers the edited marker and hit_test_flag_cell
-        // answers the pressed cell — a single click selects, lands and
-        // addresses that cell, and a double click's second press opens that
-        // cell's own editor through the consume-open road. The boxes standing
-        // LEFT of the field never left the lane's own stash and are pressed
-        // through it, as they always were. (The one press this owner still
-        // leaves standing is a press in the FIELD, which the caret / text-drag
-        // block far above already claimed and returned on.)
-        close_top_flag_editor_for_outside_press(x, y);
+        // (THE FLAG EDITOR'S GUARD-FREE CLOSE stood here, 2026-08-01 to
+        // 2026-10-25: any left press outside an open marker-lane editor's
+        // field closed it uncommitted and then acted, its riding boxes
+        // included. Every editor is a modal since 2026-10-25, so the veil
+        // above swallows that press and no editor stands past it.)
 
         // The marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item and that item is now its FLAG BOX alone
@@ -6907,9 +6839,15 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     // THE PICKER'S RELEASE (2026-08-28), its press block's mirror: the modal
     // row's armed Cancel through the one shared dispatch, and every
-    // other lift consumed — the veil's answer.
+    // other lift consumed — the veil's answer — but the Open Project arm, the
+    // one roster button the picker leaves live (2026-10-25), lifted through
+    // the chrome act's own body as the player's Play Renders arm is.
     if (app.picker.active) {
         if (button == GuiMouseButton::Left) {
+            if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+                finish_chrome_press_release(chrome, x, y);
+                return;
+            }
             dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
         }
         return;
@@ -6918,8 +6856,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // on the armed OK / Cancel runs the session's own Enter / Esc through the
     // one modal key route. Above the text-drag branch because the two are
     // mutually exclusive by construction (a press on a button never reaches
-    // the field claim), and above the four editor swallows below, which is
-    // where an unarmed release still ends.
+    // the field claim), and above the editor swallow below, which is
+    // where an unarmed release still ends. THE DIALOG ALONE IS MEANT: these
+    // are a dialog's own OK / Cancel, and a lane editor publishes none.
     if (button == GuiMouseButton::Left && modal_dialog_editor_active()) {
         if (dispatch_modal_dialog_button(take_modal_dialog_release(x, y)))
             return;
@@ -7388,18 +7327,20 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // walk because the walk below is what finds the tooltip's button (the only
     // route that starts a roster wait); the rule is stated at the walk's tail.
     const bool modal_owns_the_keyboard = tooltip_dwell_suppressed();
-    // THE DIALOG'S VEIL (2026-08-12): under a PROMPT or an EDITOR dialog the
-    // WHOLE roster is refused — nothing behind the modal is pressable, so no
-    // roster button is under the pointer for a hint either. The tail reads the
-    // same term as the dialog surface's liveness. The pointer-transparent FLAG
-    // editor raises no veil: it is not a dialog and its roster presses were
-    // never blocked.
+    // THE MODALS' VEIL (2026-08-12; every editor since 2026-10-25): under a
+    // PROMPT, ANY EDITOR or THE PROGRESS MODAL the WHOLE roster is refused —
+    // nothing behind the modal is pressable, so no roster button is under
+    // the pointer for a hint either (keyboard_modal_editor_active, the one
+    // predicate for a keyboard-taking modal; the lane editors raised no veil
+    // until then, their roster presses never blocked).
     // THE FOLDER OVERLAY'S TWO OWNERS ARE DELIBERATELY NOT TERMS HERE
-    // (2026-09-03 evening): under them the hint is refused by the no-wait
-    // rule (tooltip_dwell_suppressed) alone (the menu row's live File anchor,
-    // exempted from both veils, stood above the band until 2026-10-21).
+    // (2026-09-03 evening): each leaves its opener key live (Play Renders,
+    // Open Project — redesign_button_enabled's overlay arm), whose pressed
+    // face this walk's inside bit drives, and under them the hint is refused
+    // by the no-wait rule (tooltip_dwell_suppressed) alone.
     const bool modal_veil =
-        app.prompt.active || modal_dialog_editor_active();
+        app.prompt.active || keyboard_modal_editor_active() ||
+        app.batch_progress.active;
     int  hovered_tip = -1;
     int  hot         = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
@@ -7527,9 +7468,12 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // stands and still wears the stash that armed it: the modal's own walk
     // (update_modal_dialog_hover) owns that surface's wait. A DIALOG SURFACE
     // IS LIVE exactly where on_motion runs that walk, re-derived by grep
-    // 2026-09-25: the prompt and the editor dialogs (the veil's two terms)
-    // and the folder overlay's two owners (the player and the picker —
-    // folder_overlay_stands). The liveness test reads the LIVE
+    // 2026-10-25: the prompt, the editor dialogs and the progress modal (the
+    // veil's terms — a lane editor among them publishes no dialog, so a
+    // dialog owner has no surface to outlive there) and the folder overlay's
+    // two owners (the player and the picker — folder_overlay_stands). The
+    // progress modal joined 2026-10-25: without it the walk hard-ended its
+    // Cancel's wait on every motion, so that hint never showed. The liveness test reads the LIVE
     // surfaces, never the painted stash, so the frame a dialog closes on is
     // the frame this walk takes its hint down, whatever road closed it — the
     // two that carry no input event of their own (a modal button dispatched
@@ -7835,14 +7779,17 @@ void GuiInputHandler::finish_chrome_press_release(
     // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
     // takes the same refusal through it — and so does THE PROGRESS MODAL
     // (2026-10-14), a batch's render chord typed under a held button.
-    // THE PLAYER IS NO TERM FOR THE PLAY RENDERS ARM (architect 2026-10-13):
-    // that button, lit under the player, is the one roster arm the player's
-    // veil admits and its lift is the player's close; any other arm is the
-    // mid-hold case above and stays refused.
-    if (modal_dialog_editor_active() ||
+    // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
+    // for Play Renders under the player, 2026-10-25 for Open Project under the
+    // picker): that button, lit under its overlay, is the one roster arm the
+    // overlay's veil admits and its lift is the overlay's close; any other
+    // arm is the mid-hold case above and stays refused.
+    if (keyboard_modal_editor_active() ||
         (app.render_player.active &&
          arm.index != redesign_button_index(RedesignButton::IconListen)) ||
-        app.picker.active || app.batch_progress.active) return;
+        (app.picker.active &&
+         arm.index != redesign_button_index(RedesignButton::OpenProject)) ||
+        app.batch_progress.active) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
@@ -8879,11 +8826,14 @@ void GuiInputHandler::tick_tooltip() {
 }
 
 // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
-// expression, read by the roster's hover walk. The two list owners and the
-// progress modal (2026-10-14) are terms because each takes the keyboard whole; the pointer-transparent FLAG editor is
-// a term through keyboard_modal_editor_active for the same reason, and it is
-// the case the walk's veil cannot see: the roster stays hoverable under one
-// (that editor raises no veil).
+// expression, read by the roster's hover walk and on_key's modal-opening
+// tooltip end. FIVE TERMS, re-derived 2026-10-25: the prompt, every editor
+// (keyboard_modal_editor_active, the one predicate for a keyboard-taking
+// modal, the lane editors among them), the progress modal, and THE TWO
+// OVERLAYS, the render player and the picker — "overlays don't show hints …
+// the only reason they still show the one button lit is that you can exit
+// by pressing it" (architect 2026-10-25). The `h` view keeps its hints: a
+// view, not an overlay.
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
            app.render_player.active || app.picker.active ||
@@ -9263,15 +9213,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // onscreen even off-view): no-op this frame, leaving the caret put.
         return;
     }
-    if (modal_dialog_editor_active()) {
-        // THE EDITOR DIALOG'S MOTION — the two dialog editors in one branch
-        // (the BPM bracket included since the dialog arc; it used to fall
-        // through to the gesture branches, harmlessly, its presses all
-        // swallowed): the dialog buttons' walk, then the roster walk, whose
-        // veil term refuses the whole roster since the modal-trap
-        // reach-through's retirement, so no roster hint starts under the
-        // pointer.
-        update_modal_dialog_hover(mouse_x, mouse_y);
+    if (keyboard_modal_editor_active()) {
+        // THE EDITORS' MOTION — every editor in one branch since 2026-10-25
+        // (the lane editors fell through to the surface under them until
+        // then, its hover cues and gestures, their presses not veiled): the
+        // dialog buttons' walk WHERE A DIALOG STANDS — a lane editor
+        // publishes no dialog, so it has no buttons to walk — then the roster
+        // walk, whose veil term refuses the whole roster, so no roster hint
+        // starts under the pointer.
+        if (modal_dialog_editor_active())
+            update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
     }

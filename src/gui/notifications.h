@@ -69,17 +69,20 @@
 // restating a count):
 //   * THE GATES' OWN CARDS, the swallowed press answered by the state that
 //     swallowed it, each asked only for a chord the product BINDS IN THE
-//     STANDING MODE (chord_is_bound, gui_input.h): "Close the editor first:
-//     <chord> is ignored while it is open" (the keyboard-modal editor gate —
-//     a typed character is the editor's own and says nothing),
-//     kKeysDuringDrag (input_handler.cpp: the editor text drag, the pointer
-//     gestures' drag-modal gate, the render player's and the picker's own
-//     arms — those two, their routers being their vocabulary, do not ask
-//     chord_is_bound), "No audio is loaded yet", "<chord> is not available
-//     in the history view" (on_key's call site, never the predicate's) and
-//     read_only_chord_card below; the lock's own composer
-//     authoring_lock_card; kIterationLockUndoCard / kIterationLockRedoCard
-//     (app_state.h). THREE of them name the chord through the one speller
+//     STANDING MODE (chord_is_bound, gui_input.h): kKeysDuringDrag
+//     (input_handler.cpp: the pointer gestures' drag-modal gate, the render
+//     player's and the picker's own arms — those two, their routers being
+//     their vocabulary, do not ask chord_is_bound), "No audio is loaded yet",
+//     "<chord> is not available in the history view" (on_key's call site,
+//     never the predicate's) and read_only_chord_card below; the lock's own
+//     composer authoring_lock_card; kIterationLockUndoCard /
+//     kIterationLockRedoCard (app_state.h). A BOUND CHORD UNDER ANY MODAL IS
+//     SILENT (architect 2026-10-25: "chords are used with the laptop, and
+//     I'm not using the laptop for authoring … silence") — the prompt, the
+//     progress modal and every editor, the editor text drag with them; the
+//     editor gate's "Close the editor first: <chord> is ignored while it is
+//     open" and the text drag's kKeysDuringDrag retired that day. TWO of
+//     them name the chord through the one speller
 //     spell_chord (gui_input.h). A GATE'S MEMBERSHIP IS THE CHORD'S ALONE
 //     (architect 2026-09-01: "look for instances where it lies by saying it's
 //     not allowed when, in fact, it's only contextually not allowed") — a
@@ -107,8 +110,9 @@
 //     kHistoryViewMovesNoMarkersCard; the off-edge pair below; bare `m`'s
 //     NINE-arm BPM gate, one card per press carrying the first failure (the
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
-//   * THE MODES: the picker's "Choose a project first" and its opener's
-//     "Close the editor first"; kCheckpointPublishing (below — bare `h`, the
+//   * THE MODES: the picker's "Choose a project first" (its opener's
+//     "Close the editor first" retired 2026-10-25 with the lane editors'
+//     pointer-transparency); kCheckpointPublishing (below — bare `h`, the
 //     publish chord, the save owner, the picker, Revert); "History
 //     is unavailable[: <reason>]" (the press that asks for git where the
 //     bootstrap does not answer — bare `h` at open_history_mode_fresh since

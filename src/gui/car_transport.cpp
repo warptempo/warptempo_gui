@@ -2,7 +2,7 @@
 
 #include "input_handler.h"   // run_undo_redo_without_key,
                              // car_play_refused_by_key_gates,
-                             // modal_dialog_editor_active
+                             // keyboard_modal_editor_active
 
 #include <cstdint>
 #include <string>
@@ -35,7 +35,10 @@ bool GuiCarTransport::admits() const {
     // open and covers the waveform, so the console starts nothing under it.
     if (app.batch_progress.active) return false;
     if (folder_overlay_stands(app)) return false;
-    if (input_handler.modal_dialog_editor_active()) return false;
+    // EVERY EDITOR (2026-10-25: an act that takes the keyboard is a modal,
+    // keyboard_modal_editor_active — the dialog editors alone until then,
+    // the lane editors reaching the helpers' own gates).
+    if (input_handler.keyboard_modal_editor_active()) return false;
     if (app.history_mode.active) return false;
     return true;
 }

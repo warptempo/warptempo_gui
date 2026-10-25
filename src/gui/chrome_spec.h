@@ -73,12 +73,11 @@ struct ChromeSpec {
     // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
     // field is the program's since 2026-10-09, Cool Edit's dark field under
     // every chrome, its height and its 5-W pad program_spec.h's.)
-    // THE SCRUB THUMB'S GRAB BOX — the box the press router takes as the
-    // thumb's grab band and the mapping insets the track by half of at each
-    // end (render.h's scrub block, scrub_handle_box_px). WIN2000 14 (the
-    // laptop pixel's 20 re-authored, architect 2026-10-02), the 11-px
-    // trackbar thumb widened to it.
-    double             scrub_handle_box_px;
+    // (THE SCRUB THUMB'S GRAB BOX, scrub_handle_box_px — WIN2000 14, the
+    // 11-px trackbar thumb widened to it, the inset the mapping took half of
+    // at each end — left the spec 2026-10-25: the thumb's center runs to the
+    // channel's ends and the thumb itself is the grab band, render.h's scrub
+    // block.)
     // (THE DROPDOWN's item height and margin, Windows' popup menu, went with
     // the Settings popup, 2026-10-21.)
     // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY
@@ -105,7 +104,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
-    .scrub_handle_box_px          = 14.0,
 };
 
 // THE LIVE SPEC — the one instance the process paints, Windows 2000's.

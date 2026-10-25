@@ -1321,7 +1321,8 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
 // Edit from the toolbar down, the same under every chrome; program_spec.h's
 // head, where every length below is authored and its source named). The
-// roster's twenty-four view/mode/action buttons stand in it — the
+// roster's twenty-three view/mode/action buttons stand in it (re-counted
+// 2026-10-25) — the
 // kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
 // stand-in tables are the count's one authority (paint_handler.cpp);
 // icons::kIconCount is a different number, the GLYPH set, which the row does
@@ -1452,7 +1453,7 @@ inline int program_run_gap_px() {
 //     the right diagonal; the inner line 3DLight (the face's own colour in
 //     Windows 2000 Standard, invisible on the capture) and Shadow; the face
 //     the ground (the disabled capture's face is the Hilight checker — the
-//     scrub has no disabled state: with no item there is no thumb). DRAWN
+//     scrub had no disabled state: with no item there was no thumb). DRAWN
 //     SCALABLE (paint_scrub_thumb, render.cpp): the pentagon's rings in
 //     device px, antialiased, the light and dark halves MITRED at the
 //     top-right corner along the 45-degree diagonal (paint_relief_frame's
@@ -1479,6 +1480,24 @@ inline int program_run_gap_px() {
 // painted by the key painter with no LED and no legend, centred on the
 // channel; ITS HIT ZONE ITS PAINTED RECT (render_player_scrub_handle_hit:
 // on screen is as painted).
+// THE THUMB ALWAYS STANDS (architect 2026-10-25, "agreed"): whenever the
+// channel has a width, at frame 0 while no item is loaded — the clock's own
+// zeros — so the player opens with its thumb at the channel's left end
+// rather than a bare channel that grew a thumb at the first Play. A press on
+// it or on the channel with no item is consumed and seeks nothing, as
+// before (claim_player_scrub_press's frames <= 0 arm).
+// THE THUMB IS CENTERED ON THE TROUGH'S END (architect 2026-10-25, "centered
+// on the trough's end"): NO INSET — frame 0's column is the channel's first
+// column and the last frame's its last (render_player_scrub_x_of), the
+// thumb's center the frame's column, so HALF THE THUMB OVERHANGS the channel
+// at each end, over the group space beside it (a fader knob at the end of
+// its slot: 12 of the 24 px at 300 %). THE PUBLISHED ITEM is therefore the
+// channel widened by that overhang at each end (AppState::
+// ModalDialogGeometry::scrub, the press router's outer gate and the
+// per-position damage), so a press on the overhanging half takes the thumb
+// and a moving thumb's end column is always inside the damage. (The 14-W
+// grab box the mapping inset the channel by — half of it at each end, a
+// leftover of the pointed Windows thumb — stood 2026-10-02 to 2026-10-25.)
 inline constexpr int    kScrubChannelLines  = 2;
 inline constexpr double kScrubThumbWidthPx  = 8.0;
 inline constexpr double kScrubThumbHeightPx = 16.0;
@@ -1488,20 +1507,6 @@ inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
 // THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px): a key,
 // at rest, no LED.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
-//
-// THE HANDLE'S BOX IS THE MAPPING'S INSET: the chrome spec's
-// scrub_handle_box_px (chrome_spec.h, where its source stands: 14 Windows px
-// under win2000, the painted thumb's 11 widened to it), and this accessor
-// the ONE owner of
-// that length for its readers — the MAPPING insets the track by half of it at
-// each end (the thumb's centre is the frame's position;
-// render_player_scrub_x_of, app_state.h), so the 8-W thumb never hangs off
-// the channel. THE GRAB BAND IS THE PAINTED THUMB since 2026-10-23
-// (render_player_scrub_handle_hit; this box was the band until then).
-// Floored at 2 so the half-box inset is never zero.
-inline int scrub_handle_box_px() {
-    return scaled_px(live_chrome_spec().scrub_handle_box_px, 2);
-}
 
 // (THE TAB STRIP — Cool Edit's Organizer tabs, "Tab A" and "Tab B", a 21-W
 // lane under the band 2026-10-18 to 2026-10-22 — IS REMOVED, architect
@@ -3411,7 +3416,10 @@ void render_flags(cairo_t* cr,
 //                   POINTER TOO (architect 2026-09-05, completing the
 //                   one-graphic-principle ruling for the press: the three
 //                   editors are transparent to each other for the pointer as
-//                   they already are graphically). The one flag walk
+//                   they already are graphically; no press or wheel reaches
+//                   them while the editor stands since 2026-10-25, its veil
+//                   swallowing both, so the rule answers the walk's other
+//                   readers alone). The one flag walk
 //                   (topmost_flag_rect, app_state.cpp) asks this rect FIRST,
 //                   because the editor paints last and so covers whatever the
 //                   lane pass drew under it. The two publications cannot
@@ -3498,8 +3506,9 @@ struct FlagEditorBox {
 // left over the boxes the pass is still painting at rest and took it out of
 // its own box's slot. The field therefore holds its WHOLE run at every width —
 // the text does not scroll inside it any more — and a field reaching past an
-// edge is READ BY PANNING THE VIEWPORT, this editor being pointer- and
-// wheel-transparent so the wheel and the grab-pan work while it stands.
+// edge is READ BY Esc, A PAN AND A REOPEN (architect 2026-10-25): the editor
+// is a modal, so nothing pans while it stands, and its open pans nothing
+// either (the wheel and the grab-pan worked under it until then).
 // State::view_offset_px survives on this surface for the sub-pixel case alone
 // (a run's width rounded down to a whole column, which would otherwise clip
 // the caret's reserved column at end-of-text); the glyph-by-glyph travel its

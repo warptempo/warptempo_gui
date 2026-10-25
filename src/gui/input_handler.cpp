@@ -144,8 +144,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // A KEY THAT RAISES A MODAL TAKES A ROSTER HINT DOWN WITH IT, at every
     // return of this body: Windows shows a tooltip only while its window is
     // active, and a modal takes the activation. The test is the roster walk's
-    // own no-wait rule (tooltip_dwell_suppressed — a prompt, a keyboard-modal
-    // editor, the render player, the picker), asked after the key has run,
+    // own no-wait rule (tooltip_dwell_suppressed — a prompt, any editor, the
+    // progress modal, the render player, the picker: its five terms, the
+    // count re-derived 2026-10-25), asked after the key has run,
     // so a hint never stands over the modal the key just opened, advertising
     // a chord that modal's gate now swallows, for the frames before the
     // tick's walk would find no owner (the walk then also stops a wait still
@@ -205,16 +206,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // recover. The bit's writer is paint_modal_dialog's prompt branch and
         // the whole rule lives at PromptState (app_state.h).
         if (!app.prompt.painted) return;
-        // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
-        // cancel, not a synthesized Esc) and then runs the normal close
-        // path. The unsaved-work dialog (CLOSE_WINDOW) deliberately falls
-        // through to the modal swallow below and keeps blocking this chord.
-        if (app.prompt.trigger == DialogTrigger::PASTE_CONFIRM &&
-            ctrl && !shift && !alt && key == GuiKeys::Q) {
-            prompt.cancel_paste_confirmation();
-            prompt.request_close(GuiCloseTarget::Exit);
-            return;
-        }
+        // NO HATCH (architect 2026-10-25, "block all gestures except the one
+        // escape, or anything that closes the modal"): Ctrl+Q and Ctrl+S
+        // are consumed below with every chord the prompt does not bind, the
+        // paste confirmation's Ctrl+Q (which abandoned the paste and ran the
+        // close road until then) included. A WINDOW MANAGER'S CLOSE over a
+        // standing prompt does what it always did: request_close refuses
+        // re-entry, so it is ignored while the question stands.
         // THE FOCUS RING (2026-08-13), the prompt's half: bare Tab and bare
         // Left/Right walk the answer buttons, and bare Enter or bare Space
         // presses the focused one down and commits it at the key's release. It
@@ -262,17 +260,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // cancel road, cancel_batch_progress — the render cancel's own act, (d)
     // in the bare-Esc enumeration below), and the focus ring's Tab / Left /
     // Right / Enter / Space walk and press its one button, Enter or Space
-    // cancelling at the key's release (route_modal_dialog_focus_key). Ctrl+Q
-    // FALLS THROUGH to the close road, every modal's hatch; EVERY OTHER KEY
-    // IS CONSUMED, silently — a key the modal does not bind is the unbound
-    // silence, and authoring stays locked for the batch's whole run.
+    // cancelling at the key's release (route_modal_dialog_focus_key). EVERY
+    // OTHER KEY IS CONSUMED, silently — a bound chord under any modal says
+    // nothing (2026-10-25) — and authoring stays locked for the batch's
+    // whole run. NO HATCH (architect 2026-10-25): Ctrl+Q fell through to the
+    // close road until then; the window manager's close is the quit road,
+    // and over a running batch it asks the unsaved-work question (or
+    // proceeds) exactly as before, request_close taking nothing down that
+    // the progress modal owns.
     if (app.batch_progress.active) {
-        if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
-            if (route_modal_dialog_focus_key(key, mods)) return;
-            if (!ctrl && !shift && !alt && key == GuiKeys::Escape)
-                cancel_batch_progress();
-            return;
-        }
+        if (route_modal_dialog_focus_key(key, mods)) return;
+        if (!ctrl && !shift && !alt && key == GuiKeys::Escape)
+            cancel_batch_progress();
+        return;
     }
 
     // (THE OPEN DROPDOWN WAS KEYBOARD-MODAL HERE, directly under the prompt —
@@ -378,7 +378,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // HERE BY CONSTRUCTION (2026-09-01, U4): the `h` view cannot stand with
         // no audio, so this reader hands the inventory the state it is in and
         // the term never varies — passing the bit rather than a literal keeps
-        // the six readers one shape.
+        // the readers one shape.
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  kNoAudioLoadedCard);
@@ -421,25 +421,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
-            (!ctrl && !shift && !alt && key == GuiKeys::Escape) ||
-            (ctrl && !shift && !alt && key == GuiKeys::Q);
+            (!ctrl && !shift && !alt && key == GuiKeys::Escape);
         if (!escape_hatch) {
-            // THE SWALLOW SAYS WHY (architect 2026-08-30), in the pointer
-            // drags' own sentence one gate below: what refuses the press is
-            // that a drag is in flight, which is one fact whichever surface
-            // holds the pointer, so the two sites say one thing. It names no
-            // chord for the same reason — the chord is not what was wrong.
-            // FOR A BOUND CHORD ALONE, like every gate on the main dispatch
-            // (chord_is_bound, gui_input.h): a key that binds nothing is
-            // answered by silence whether a drag is in flight or not. BOUND IN
-            // THE STANDING MODE (2026-09-01, U4), which is why the mode bit is
-            // handed over: a MODE-ONLY chord pressed outside its mode — bare
-            // `v` mid-drag with the `h` view down — binds nothing here either,
-            // and telling it a drag swallowed it would claim a key was taken
-            // that nothing would have run.
-            if (chord_is_bound(key, mods, app.history_mode.active))
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     kKeysDuringDrag);
+            // THE SWALLOW IS SILENT (2026-10-25): a text drag exists only
+            // under an editor, which is a modal, and a bound chord under any
+            // modal says nothing — the card this gate raised (the pointer
+            // drags' "Keys are ignored during a drag", 2026-08-30) retired
+            // with the editor gate's own. NO HATCH BUT Esc: Ctrl+Q, the
+            // drag's second hatch until then, is consumed as every modal
+            // consumes it.
             return;
         }
         finalize_editor_text_drag();
@@ -453,9 +443,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // above the dialog editors' blanket and reads the drag's own record,
         // so it is one owner for both editor families.)
         // fall through: the editor handler below runs Esc (cancel the
-        // edit) or Ctrl+Q (hand on the close routing, which tears the edit
-        // down and then opens the close prompt) exactly as with no drag in
-        // flight.
+        // edit) exactly as with no drag in flight.
     }
 
     // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the
@@ -463,75 +451,41 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-08-07 to 2026-10-10), the bpm bracket (a
     // dialog too), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
-    // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
-    // (modal_editor_key_blocked); everything else — playback, navigation, zoom,
-    // mode toggles, tab switches, undo/redo, marker / trim chords, the
-    // Ctrl+Alt render chords — drops HERE, silently, so no authoring or view
-    // change can happen while an edit is up. Admitted keys route through the
-    // editor blocks below.
+    // the editor itself consumes (typing, its motion keys, Esc and Return)
+    // and a dialog's ring get through (modal_editor_key_blocked); everything
+    // else — playback, navigation, zoom, mode toggles, tab switches,
+    // undo/redo, marker / trim chords, the Ctrl+Alt render chords, and since
+    // 2026-10-25 Ctrl+S and Ctrl+Q (NO HATCH) — drops HERE, SILENTLY, so no
+    // authoring or view change can happen while an edit is up. Admitted keys
+    // route through the editor blocks below.
     // This gate is what makes an unbound chord STRUCTURALLY inert rather than
     // merely unlisted: nothing downstream can see it, so nothing downstream can
     // tear an edit down on its way to a command that does not exist.
-    // Modality is about CHORDS only: the wheel still punches through a flag
-    // editor (navigation), which rides modal_dialog_editor_active rather
-    // than this predicate, and opening a flag editor still does not stop
-    // playback — that one rides no predicate at all, each modal surface
+    // THE POINTER IS VEILED BY THE SAME PREDICATE since 2026-10-25 (an act
+    // that takes the keyboard is a modal — keyboard_modal_editor_active's
+    // declaration names every reader); opening a flag editor still does not
+    // stop playback — that one rides no predicate at all, each modal surface
     // spelling its own stop at its open site.
     // Sits after the text-drag gate so an in-flight editor selection drag keeps
     // owning the keyboard exactly as before.
     if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
-        // THE SWALLOWED CHORD SAYS SO (architect 2026-08-30): "I won't make
-        // lots of errors like that — maybe once or twice, then I'll memorize
-        // not to do it." The card names the chord, because here the chord IS
-        // what was wrong: the state is one the user can see (an editor is
-        // painted), and what he cannot see is that this particular press died
-        // at a gate instead of running.
-        //
-        // TYPED CHARACTERS GET NOTHING, and the split needs no test of its
-        // own: what the gate blocks is exactly the NotEditorKey set less the
-        // ring's Tab family, Ctrl+S and Ctrl+Q, and printable insertion is an
-        // OWNED class (text_editor::classify_key), so a character the editor
-        // takes never reaches this line. What does reach it is chords — every
-        // ctrl or alt spelling the editor does not own (the render chords,
-        // undo/redo, the tab switches, the propagates), the bare and shifted
-        // keys that bear no character (Up, Down, Page Up, Page Down, and Tab /
-        // Shift+Tab under the ringless flag editor), and any key whose keysym
-        // resolves to no codepoint at all.
-        //
-        // ONE CARD PER PRESS, and the duplicates ruling (2026-09-01) leaves
-        // that exactly as it was here: no chord in that set is repeat-eligible
-        // under an editor (repeat_eligible's in-editor arm repeats
-        // MotionEditKey and PrintableKey alone), so every press through this
-        // gate is a PHYSICAL one and stacks its own card — a chord pressed
-        // twice under an editor says so twice, which is the count the ruling
-        // is for, and the held-repeat carve-out is never even asked here.
-        //
-        // AND ONLY FOR A CHORD THE PRODUCT BINDS (architect 2026-08-30, the
-        // unbound-keys ruling; the inventory is chord_is_bound, gui_input.h):
-        // "Close the editor first" says the press WOULD have done something,
-        // so a chord that does nothing with no editor open must not be told
-        // the editor is what stopped it. It is answered by the silence every
-        // unbound press gets. THE MODE BIT CHANGES NOTHING THIS GATE CAN SEE
-        // (2026-09-01, U4) and is passed for uniformity with the other five
-        // readers: all five of the view's shapes are PRINTABLE (`v`, `,`, `.`
-        // and the two shifted spellings), so the editor consumes them
-        // as typed characters above this line and none of them ever reaches it.
-        if (chord_is_bound(key, mods, app.history_mode.active))
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 modal_editor_swallow_card(key, mods));
+        // A BOUND CHORD UNDER ANY MODAL IS SILENT (architect 2026-10-25:
+        // "chords are used with the laptop, and I'm not using the laptop for
+        // authoring … silence"): the editors answer a chord they do not own as
+        // the prompt and the progress modal do — consumed, nothing said. (The
+        // card "Close the editor first: <chord> is ignored while it is open"
+        // stood here, for a bound chord alone, 2026-08-30 to 2026-10-25.)
         return;
     }
 
-    // The top-flag editor owns the keyboard while active. Only the three keys
-    // the gate above admits past an open editor arrive here — its own editor
-    // keys, Ctrl+S, and Ctrl+Q — so this block cannot see a command. Routes
+    // The top-flag editor owns the keyboard while active. Only its own editor
+    // keys (and a dialog's ring, for the BPM bracket) pass the gate above, so
+    // this block cannot see a command, and it consumes every key it is handed
+    // (route_modal_editor_key answers true throughout since 2026-10-25, when
+    // its Ctrl+Q fall-through to the close road went with the hatch). Routes
     // BEFORE the render/batch Esc cancel so bare Esc closes the edit
-    // first; Esc with no active edit falls through to the rest. Returning false
-    // (Ctrl+Q only) lets on_key run the close routing, WHICH IS WHAT CLOSES THE
-    // EDIT — the road's own step (GuiPrompt::request_close), so the editor is
-    // still standing through the gates between here and the Ctrl+Q arm and none
-    // of them reads one.
+    // first.
     if (text_editor::is_active(app.top_flag_editor)) {
         if (handle_top_flag_editor_key(key, mods)) return;
     }
@@ -2373,12 +2327,6 @@ bool GuiInputHandler::keyboard_owned_by_pointer_gesture() const {
            app.pending_trim_drag.active;
 }
 
-std::string GuiInputHandler::modal_editor_swallow_card(GuiKey key,
-                                                       GuiInputState mods) {
-    return "Close the editor first: " + spell_chord(key, mods) +
-           " is ignored while it is open";
-}
-
 // THE AUTHORING LOCK'S KEYBOARD VERDICT AND ITS CARD (the ruling, the
 // composition that ranks the read-only sentence first, and the card's two
 // sentences are stated at the gate in on_key): true when the lock drops the
@@ -2472,11 +2420,12 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 // the HEAD GATES on_key asks ahead of the arm, in on_key's order and through
 // the same verdicts and sentences: no audio loaded, an editor text-selection
 // drag or a pointer gesture owning the keyboard (kKeysDuringDrag), an open
-// keyboard-modal editor swallowing the chord (the flag, bound and level
-// editors reach here; the car drops the dialog editors itself), and the
+// editor swallowing the chord — SILENTLY since 2026-10-25, a bound chord
+// under any modal saying nothing (the editor gate in on_key), and the editor
+// a belt here, the caller dropping every editor first — and the
 // authoring lock (a read-only tab cards the chord; the iteration lock admits
 // it so the command's own arm names undo). The routers ranked above those
-// gates — the prompt, the two folder-overlay contents, the dialog editors —
+// gates — the prompt, the two folder-overlay contents, every editor —
 // and the `h` view's gate are the CALLER'S to drop (GuiCarTransport::admits),
 // and chord_is_bound answers true for both chords, which the helpers ask
 // anyway. Then the command itself, as a deliberate press (no repeat).
@@ -2502,15 +2451,10 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
         card_bound(kNoAudioLoadedCard);
         return false;
     }
-    if (app.editor_text_drag.active) {
-        card_bound(kKeysDuringDrag);
-        return false;
-    }
-    if (keyboard_modal_editor_active() &&
-        modal_editor_key_blocked(key, mods)) {
-        card_bound(modal_editor_swallow_card(key, mods));
-        return false;
-    }
+    // AN EDITOR SWALLOWS THE CHORD IN SILENCE (2026-10-25; the one predicate
+    // for a keyboard-taking modal), its text drag with it — a text drag
+    // exists only under an editor.
+    if (keyboard_modal_editor_active()) return false;
     if (keyboard_owned_by_pointer_gesture()) {
         card_bound(kKeysDuringDrag);
         return false;
@@ -2535,14 +2479,11 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
 // (and Space's target-view readiness gate, which ranks below these) and takes
 // only the gates from here.
 //
-// THE EDITOR ARM RAISES NO CARD, AND THE KEY IS WHY. Space is a PRINTABLE key
-// (text_editor::classify_key), so modal_editor_key_blocked ADMITS it and an
-// open flag or bound editor takes it as a typed space: the transport
-// never sees the press, and the field showing the space is the whole answer.
-// The car has no character to type, so its play is consumed in that same
-// silence rather than borrowing the swallow's sentence, which would say Space
-// is ignored when Space is being read. (The DIALOG editors never reach here —
-// the caller drops them.)
+// THE EDITOR ARM RAISES NO CARD: a bound chord under any modal is silent
+// (2026-10-25), and Space is a PRINTABLE key the field takes as a typed
+// space. It reads the one predicate for a keyboard-taking modal, its text
+// drag with it, and is a belt — the caller drops every editor first
+// (GuiCarTransport::admits).
 //
 // THE AUTHORING LOCK IS NOT ASKED, and that too is the key's answer: both its
 // reasons ADMIT Space — read_only_key_blocked carries is_play_pause on its
@@ -2558,10 +2499,6 @@ bool GuiInputHandler::car_play_refused_by_key_gates() {
     };
     if (no_audio_to_dispatch_on()) {
         card_bound(kNoAudioLoadedCard);
-        return true;
-    }
-    if (app.editor_text_drag.active) {
-        card_bound(kKeysDuringDrag);
         return true;
     }
     if (keyboard_modal_editor_active()) return true;
@@ -3310,16 +3247,16 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // them here means the platform never grows remainder in a context the
     // eventual emission could not fire in.
     //
-    // Only the DIALOG modal surfaces swallow the wheel HERE — the roster is
-    // AppState::dialog_editor_session's and this line restates none of it
-    // (it named the retired LOAD editor until 2026-08-29 and the retired
-    // commit-title editor until 2026-10-10) —
-    // modal_dialog_editor_active, deliberately NOT the keyboard gate's
-    // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
-    // (architect 2026-07-28) and the wheel still punches through it anyway,
-    // because the wheel is NAVIGATION, not a chord, and that ruling is about
-    // chords: panning while an edit is open changes no state the edit
-    // owns and discards nothing, so there is nothing for modality to protect.
+    // EVERY EDITOR SWALLOWS THE WHEEL (architect 2026-10-25: an act that
+    // takes the keyboard is a modal, and "even the waveform stops the pan and
+    // drag") — keyboard_modal_editor_active, the one predicate for a
+    // keyboard-taking modal, whose membership this line restates none of.
+    // (The lane editors — the flag editor and the iteration bound editor —
+    // let the wheel pan through them from 2026-07-28, the wheel being
+    // navigation and not a chord, and a wheel over a flag cell closed one
+    // uncommitted and stepped the cell; reversed with their
+    // pointer-transparency, so the wheel is the dialog editors' -1 under
+    // every editor.)
     //
     // The wheel routes by area — the waveform and the top strip — plus the ONE
     // row-wise carve-out below, the redesigned rows' inert band. BOTH
@@ -3389,11 +3326,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // detent over its painted rect reaches neither the waveform nor row 8
     // behind it. -1 for the inert bands' reason. (A running touch gesture
     // that crosses the keys navigates on: its surface was decided at its
-    // start, apply_touch_nav_update.) Under a dialog editor the line below
+    // start, apply_touch_nav_update.) Under any editor the line below
     // swallows everything, the modal family's box over the canvas with it.
     if (rect_contains(onscreen_keyboard::standing_rect(app, gui), x, y))
         return -1;
-    if (modal_dialog_editor_active()) return -1;
+    if (keyboard_modal_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
 
     // THE REDESIGNED ROWS ARE WHEEL-INERT (architect 2026-07-31) — ONE decision
@@ -3470,15 +3407,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // remainder is keyed by this answer, and a remainder grown over the lane's
     // ground must not complete a detent over a flag or the other way round.
     // THE `h` VIEW IS EXCLUDED — its flags are the mode's diff flags and a
-    // wheel there stays the plain stepped pan — and so is AN OPEN MARKER-LANE
-    // EDITOR'S OWN FIELD, which is caret work for the pointer, not a cell
-    // (close_top_flag_editor_for_outside_press refuses on the same rect); its
-    // riding boxes ARE cells (the one flag walk resolves them). THE TOUCH
+    // wheel there stays the plain stepped pan. No editor stands here (the
+    // swallow above, 2026-10-25). THE TOUCH
     // ROAD NEVER READS THIS ANSWER: apply_touch_nav_update asks state alone,
     // so a nav frame over a flag navigates as it does anywhere else.
     if (inside_top && !app.history_mode.active &&
-        !(text_editor::is_active(app.top_flag_editor) &&
-          rect_contains(app.flag_editor_box.box, x, y)) &&
         hit_test_flag(app, audio, x, y) >= 0)
         return 5;
     if (inside_top) return 2;

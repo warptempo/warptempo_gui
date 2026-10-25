@@ -965,8 +965,8 @@ void GuiInputHandler::run_iter_tie_toggle() {
 // a closer may fire with the mode already down.
 //
 // THE CALLER INVENTORY, and the ONE authoritative site for it (re-derived by
-// grep 2026-10-19) — SIX callers, of which FIVE can actually be running with
-// a view up:
+// grep 2026-10-25) — SIX callers, every one of which can run with a view up
+// since the render player opens over it (2026-10-25):
 //   * handle_history_mode_key — bare `h`, the toggle's close arm;
 //   * on_history_prefetch_ready — THE ONE CLOSER THAT IS NOT A USER ACT
 //     (2026-08-09): a scan that finishes FAILED while the view stands ends the
@@ -976,13 +976,14 @@ void GuiInputHandler::run_iter_tie_toggle() {
 //   * run_history_revert — bare `v`, which rewrites the state the now side was
 //     measured against and so must not leave the lane describing it;
 //   * load_history_commit_in_place — the mode's own `'`;
-//   * load_render_entry_in_place — the RENDER PLAYER's load, which has ONE
-//     caller (confirm_load_in_place's player arm) and therefore CANNOT run
-//     with the view standing: the player's opener refuses in the mode, where
-//     bare `'` raises the same prompt on a walk member and routes to the
-//     one above.
-//     Its call is the idempotent no-op this function's early return
-//     exists for, placed at the mutator so the close travels with the act.
+//   * load_render_entry_in_place — the RENDER PLAYER's load, ONE caller
+//     (confirm_load_in_place's player arm), which RUNS WITH THE VIEW
+//     STANDING since 2026-10-25 (architect, "admit both": bare `l` opens the
+//     player over the view as Ctrl+O opens the picker), tearing the view
+//     down as a reopen does; with the view down its call is the idempotent
+//     no-op this function's early return exists for, placed at the mutator
+//     so the close travels with the act. (The player's opener refused in
+//     the mode until then.)
 // There is no pointer closer, and no closer outside this file's two acts, its
 // two loads and the prefetch arrival hook.
 //
@@ -2761,7 +2762,16 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // toggle_actionable), as outside the view.
     const bool is_waveform_magnification =
         is_waveform_magnification_key(key, mods);
-    return !(is_zero || is_page_updown ||
+    // PLAY RENDERS — BARE `l`, THE RENDER PLAYER'S OPENER (architect
+    // 2026-10-25, "admit both": the player opens over the view as the picker
+    // does on Ctrl+O, beside it above). It authors nothing the view froze;
+    // the overlay stands over the view, its router ahead of this gate and its
+    // veil over the view's presses, and a Cancel or an Esc leaves the view as
+    // it stood — while the player's LOAD IN PLACE tears the view down as a
+    // reopen does (load_render_entry_in_place's close_history_mode). Bare
+    // `'`, its keyboard alias outside the view, stays the view's own load.
+    const bool is_play_renders = (key == GuiKeys::L && bare);
+    return !(is_zero || is_page_updown || is_play_renders ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_ctrl_q || is_open_project ||
@@ -3996,29 +4006,13 @@ void GuiInputHandler::run_history_revert() {
 // and every other chord was a ruled silence — RETIRED 2026-10-21 with the
 // Settings popup.)
 
-// The DIALOG-HOSTED modal editors: the settings editor, the bpm editor
-// (top_flag_editor reused with Kind::BpmBracket) — the two surfaces painting
-// in THE BOTTOM ROW'S MODAL since
-// 2026-08-13 (a centered modal dialog for the one day from 2026-08-12, and
-// the bottom strip before that, whence the predicate's old
-// modal_bottom_strip_editor_active name). The LOAD editor stood among them
-// until 2026-08-28, when it became the field-less picker, which is a modal
-// owner and not an editor, and the history view's commit-title editor from
-// 2026-08-07 until its retirement 2026-10-10 — the membership is
-// AppState::dialog_editor_session's
-// and nothing here restates it. Plus the prompts, which own input through
-// their own gates in on_key and the pointer handlers. Since the flag editor
-// became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
-// is keyboard_modal_editor_active); what it names is the POINTER-facing
-// behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the caller roster (re-grepped 2026-08-29 — NINE calling functions over ten
-// call sites, on_button_press's own veil joining that day when it stopped
-// spelling the four is_active tests inline, and the modal-trap block that used
-// to stand among them deleted)
-// is
-// the declaration's, in input_handler.h. The playback stop is
-// NOT here: it has its own owner (stop_playback_for_modal_open) that the open
-// sites call. Authoritative statement at the declaration in input_handler.h.
+// The DIALOG editors alone (the settings editor and the BPM bracket editor,
+// top_flag_editor reused with Kind::BpmBracket) — the membership is
+// AppState::dialog_editor_session's and nothing here restates it. It answers
+// a dialog's own questions (its field, its buttons, its ring); modality is
+// keyboard_modal_editor_active's since 2026-10-25, when the lane editors
+// became modals too. The readers and the record are at the declaration, in
+// input_handler.h.
 bool GuiInputHandler::modal_dialog_editor_active() const {
     // The two are NAMED at AppState::dialog_editor_session, which hands back
     // the live one's session id — one membership serving both questions.
@@ -4037,13 +4031,14 @@ bool GuiInputHandler::any_text_editor_active() const {
     return app.text_editor_session() != 0;
 }
 
-// Keyboard modality — see the declaration for the readers and for why the
-// wheel and playback-stop readers deliberately keep the dialog predicate.
-// It is EXACTLY any_text_editor_active, and that identity is structural rather
-// than coincidental: an editor that swallows printable letters MUST own the
-// keyboard, or typing `c` into a flag would recentre the camera. So this
-// delegates instead of restating the membership — one expression, two names,
-// and the two concepts can only ever be the same set.
+// A keyboard-taking modal stands — the one predicate (its readers and the
+// ruling at the declaration, input_handler.h). It is EXACTLY
+// any_text_editor_active, and that identity is structural rather than
+// coincidental: an editor that swallows printable letters MUST own the
+// keyboard, or typing `c` into a flag would recentre the camera — and, since
+// 2026-10-25, owns the pointer too. So this delegates instead of restating
+// the membership — one expression, two names, and the two concepts can only
+// ever be the same set.
 bool GuiInputHandler::keyboard_modal_editor_active() const {
     return any_text_editor_active();
 }
@@ -4363,9 +4358,14 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // focus state that did not exist before.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
                                                GuiInputState mods) {
-    const bool ctrl  = mods.ctrl;
-    const bool shift = mods.shift;
-    const bool alt   = mods.alt;
+    // NO HATCH (architect 2026-10-25: "we can even block Ctrl+Q — we are
+    // letting the window manager handle everything now … block all gestures
+    // except the one escape, or anything that closes the modal"): the editor's
+    // own keys — typing, its motion keys, Esc and Return — and a dialog's
+    // ring are the whole admitted set; Ctrl+S and Ctrl+Q, admitted until
+    // then, are consumed like every other chord, silently (on_key's gate).
+    // The window manager's close — labwc's button, Android's Back — is the
+    // quit road under every modal (GuiPrompt::request_close).
     const bool is_editor_key =
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
@@ -4380,14 +4380,12 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // editor is deliberately outside it: it is not a dialog, publishes no
     // buttons, and so has no ring for Tab to walk — its whole Tab family still
     // drops here while it stands.
+    // THE DIALOG ALONE IS MEANT here (modal_dialog_editor_active, never the
+    // wider predicate): the ring is a dialog's own.
     const bool is_dialog_focus_tab =
         (modal_dialog_editor_active() &&
          modal_ring_tab_shape(key, mods) != ModalRingTab::None);
-    const bool is_save =
-        (ctrl && !shift && !alt && key == GuiKeys::S);
-    const bool is_ctrl_q =
-        (ctrl && !shift && !alt && key == GuiKeys::Q);
-    return !(is_editor_key || is_dialog_focus_tab || is_save || is_ctrl_q);
+    return !(is_editor_key || is_dialog_focus_tab);
 }
 
 // The Esc-cancel semantics as a callable body, used by the Esc key
@@ -6153,19 +6151,18 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the
 // bpm bracket editor and the top-strip flag editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
-// admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
-// NotConsumed key here is one of the latter two chords. Ctrl+S saves with
-// the editor left open (save is not an exit); Ctrl+Q returns false so on_key
-// runs the close routing, WHICH IS WHAT CLOSES THE EDITOR (the close road's
-// own step, close_modal_editors_no_commit — reached identically by the
-// compositor's keyless WM close, which is why this route no longer carries a
-// teardown hook of its own); anything else is swallowed as a backstop. THE COMMAND ADMISSION IS KEYBOARD-ONLY
-// AGAIN (2026-08-13): it had a pointer-side mirror from 2026-08-11 — the
-// modal-trap reach-through, which let a roster button whose chord is admitted
-// here dispatch from a press while a dialog editor stood — and the architect
-// retired it once every dialog grew real OK and Cancel buttons, so nothing
-// outside this file restates this set and the veil swallows every roster
-// press. Ctrl+S here is unchanged. `autocomplete` is the optional
+// admits only the editor's own keys and a dialog's ring — NO HATCH since
+// 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate (they were this route's
+// save and close fall-through until then) — so a NotConsumed key here is
+// swallowed as a backstop and this route answers true for every key. A
+// WINDOW MANAGER'S CLOSE still tears the editor down uncommitted on the close
+// road's own step (close_modal_editors_no_commit). THE COMMAND ADMISSION IS
+// KEYBOARD-ONLY (2026-08-13): it had a pointer-side mirror from 2026-08-11 —
+// the modal-trap reach-through, which let a roster button whose chord is
+// admitted here dispatch from a press while a dialog editor stood — and the
+// architect retired it once every dialog grew real OK and Cancel buttons,
+// and every editor's veil swallows every roster press since 2026-10-25.
+// `autocomplete` is the optional
 // bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the bpm and flag editors
 // have no vocabulary to complete and pass an empty hook).
 //
@@ -6257,12 +6254,12 @@ bool GuiInputHandler::route_modal_editor_key(
     // selection are preserved untouched and the keys simply do not arrive,
     // which is what focus MEANS on the other surfaces this product has.
     // Anything the ring above did not claim is a CONSUMED NO-OP here — EXCEPT
-    // the modal contract's own three commands, which work from anywhere in the
-    // dialog and keep working from a button exactly as they do from the field:
-    // bare Esc abandons the edit, Ctrl+S saves with the editor open, Ctrl+Q
-    // hands the close routing on. They are spelled here
-    // as the tail below spells them, because this wall stands ABOVE the
-    // editor's own keymap and the tail is unreachable from a focused button.
+    // bare Esc, which abandons the edit from anywhere in the dialog, a button
+    // included, as it does from the field: spelled here because this wall
+    // stands ABOVE the editor's own keymap. (Ctrl+S and Ctrl+Q were admitted
+    // here and at the tail until 2026-10-25 — NO HATCH, a modal admitting
+    // its own vocabulary alone: the gate consumes both now, and the window
+    // manager's close is the quit road.)
     // (The FLAG editor cannot be in this branch: it publishes no dialog, so its
     // ring is empty and the live focus is structurally -1 while it stands.)
     // IT READS THE LIVE FOCUS, never the raw index (modal_dialog_focus_live,
@@ -6274,13 +6271,6 @@ bool GuiInputHandler::route_modal_editor_key(
         if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
             cancel();
             return true;
-        }
-        if (ctrl && !shift && !alt && key == GuiKeys::S) {
-            save_ops.save_from_key();
-            return true;
-        }
-        if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-            return false;  // let on_key run the close routing
         }
         return true;       // modal: swallow, and the field never sees it
     }
@@ -6355,19 +6345,12 @@ bool GuiInputHandler::route_modal_editor_key(
                              "This field is full");
         return true;
     }
-    if (ctrl && !shift && !alt && key == GuiKeys::S) {
-        save_ops.save_from_key();
-        return true;
-    }
-    // CTRL+Q: HAND THE CLOSE ROUTING ON, TEARING NOTHING DOWN HERE. The
-    // editor is closed by the CLOSE ROAD itself (GuiPrompt::request_close,
-    // through close_modal_editors_no_commit) — the road the compositor's own
-    // WM close takes too, which is why the step cannot live on the keyboard's
-    // side of it. The edit is abandoned uncommitted either way, exactly as Esc
-    // abandons it.
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-        return false;  // let on_key run the close routing
-    }
+    // (CTRL+S SAVED AND CTRL+Q HANDED THE CLOSE ROUTING ON from here until
+    // 2026-10-25, the editors' two hatches; the gate consumes both now. A
+    // WINDOW MANAGER'S CLOSE over a standing editor still tears it down
+    // uncommitted on the close road itself — GuiPrompt::request_close,
+    // through close_modal_editors_no_commit — and asks the unsaved-work
+    // question exactly as before.)
     return true;  // modal: swallow
 }
 
@@ -6417,20 +6400,13 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 // history_mode_key_blocked, and the modal and loading refusals, which the key
 // road meets earlier still.
 void GuiInputHandler::open_project_picker() {
-    // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
-    // prompt VEILS everything and is itself the answer on screen — its
-    // question is what the press has to deal with — while an editor is
-    // pointer-transparent in the kinds the top-strip flag editor takes
-    // (FlagPayload and IterBound, text_editor::Kind, text_editor.h), so
-    // the Open Project button is reachable under it and owes a sentence. The KEY road never reaches either arm: Ctrl+O under any
-    // editor dies at on_key's editor gate, which says these very words with
-    // the chord named, and under a prompt at the prompt's own claim above it.
+    // A PROMPT IS SILENT: it VEILS everything and is itself the answer on
+    // screen. (AN EDITOR'S ARM STOOD HERE, carding "Close the editor first",
+    // 2026-08-30 to 2026-10-25, for the Open Project button pressed under a
+    // pointer-transparent lane editor; every editor is a modal since — its
+    // veil swallows the band's press and its key gate Ctrl+O, silently — so
+    // the arm had no producer and went.)
     if (app.prompt.active) return;
-    if (keyboard_modal_editor_active()) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Close the editor first");
-        return;
-    }
     // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
     // "admit both": the File menu's rows were all live in the view (the menu
     // row retired 2026-10-21), and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
@@ -6805,11 +6781,21 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // than here, so the two roads cannot drift. (The File menu's
     // Quit row was its pointer road above the band from 2026-09-03 evening
     // until the menu row's removal, 2026-10-21; the tablet's quit road is
-    // Android's Back, the laptop's the window manager's close.) THE SET STAYS ONE: Ctrl+O — Open Project's chord, which is
-    // this very picker — is consumed by the catch-all below, the mode
-    // answering about itself in silence; Ctrl+Alt+O, Revert's chord, dies
-    // there the same way, exactly as Open's does.
+    // Android's Back, the laptop's the window manager's close.) THE SET STAYS
+    // ONE: Ctrl+Alt+O, Revert's chord, dies in the catch-all below.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+
+    // CTRL+O CLOSES THE PICKER (architect 2026-10-25: the key that opens an
+    // overlay is the way out of it, as bare `l` is the player's): the act
+    // the picker's Cancel button runs (close_picker, the one close body), and
+    // the Open Project key's lift under the picker, which dispatches this
+    // chord — so the key and the button cannot drift. Asked here, ahead of
+    // the mode's gate, because this router is the picker's whole vocabulary.
+    // (Ctrl+O was a consumed nothing here from 2026-08-28 until then.)
+    if (ctrl && !shift && !alt && key == GuiKeys::O) {
+        close_picker();
+        return true;
+    }
 
     // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
     // ring route, whose list arm the player and the picker share. A
@@ -7532,9 +7518,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // `render/` too until 2026-09-01),
     // through the product's own engine on both devices. TWO PRODUCERS, ONE
     // ROUTE: this key and the icon row's Play renders button, which
-    // synthesizes exactly this bare chord. The modal / editor / `h` /
-    // loading gates in on_key run before this handler, so `l` is inert while
-    // any of them owns the keyboard; inside the player the key is the mode's
+    // synthesizes exactly this bare chord. The modal / editor / loading gates
+    // in on_key run before this handler, so `l` is inert while any of them
+    // owns the keyboard; the `h` view's allowlist ADMITS it since 2026-10-25
+    // (the player opens over the view); inside the player the key is the mode's
     // own closer (route_render_player_key) and never reaches here. "Nothing
     // to play: no renders under tmp/" and, since 2026-09-15, "Render player
     // is unavailable while rendering" are the opener's two card refusals.
@@ -8165,8 +8152,10 @@ void GuiInputHandler::cancel_render_player_delete() {
 // (AppState::RenderPlayer::pending_load, raised by its Load in place button or
 // bare `'` inside it) or the `h` VIEW's viewed walk member
 // (AppState::HistoryMode::pending_load_member, raised by bare `'` there). The
-// two raises cannot coexist — the player's opener refuses in the view and the
-// view's key never reaches the player — so the order between the arms is free,
+// two raises cannot coexist — the player opens over the view since
+// 2026-10-25, but its router ranks ahead of the view's `'` while it stands,
+// and no opener runs under the view's standing prompt — so the order between
+// the arms is free,
 // and each arm re-asks its own mode live because the prompt outlives neither.
 void GuiInputHandler::confirm_load_in_place() {
     if (app.render_player.pending_load) {

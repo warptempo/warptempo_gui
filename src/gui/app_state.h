@@ -1988,7 +1988,7 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order (row 1's three menu
 // anchors, File, Edit and Settings, went with the menu row 2026-10-21, the
 // tab strip's two tabs, TabA and TabB, with the strip 2026-10-22): row 4's
-// TWENTY-TWO
+// TWENTY-FIVE (re-counted 2026-10-25, Copy Phase Resets joining from row 8)
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
 // the deleted toolbar row's four behind it since the 2026-08-12 relayout;
 // the HISTORY OPENER and ITS THREE
@@ -2000,11 +2000,12 @@ struct TrimBarPressSeed {
 // PAIRS' FOUR close the row flush right since 2026-10-01, two radio pairs
 // since 2026-10-14, one right run behind the history opener since
 // 2026-10-22), then the
-// bottom row's SEVENTEEN (re-counted 2026-10-12, when Go to Start and
-// Go to End left; nineteen with Older / Newer, which stand in the Left / Right
-// seats in the `h` view, kTransportHistoryStandIns) —
-// the transport's one, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
-// paint_handler.cpp, owns that membership), the old marker-walk group's
+// bottom row's NINETEEN (re-counted 2026-10-25: the skips back
+// 2026-10-24, Copy Phase Resets gone up to the band; twenty-one with Older /
+// Newer, which stand in the Left / Right seats in the `h` view,
+// kTransportHistoryStandIns) —
+// the transport's one, the two skips, the MARKER-VERB GROUP'S EIGHT
+// (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the old marker-walk group's
 // four (Previous Marker, Next Marker, Center and Switch Tab) and the four
 // cardinal arrows, in enum order. THE ROW PAINTS ITS OWN ORDER (architect
 // 2026-10-18, the painter's tables kTransportStepWalkGroup and
@@ -2136,15 +2137,52 @@ enum class RedesignButton {
     // ruling against the no-second-road doctrine's default). Its face is the plain act's (redesign_button_enabled's
     // arm). No lamp: an act, not a mode.
     //
-    // SAVE, UNDO, REDO AND RENDER STAND BEHIND IT IN THE SAME RUN, the five
-    // cases abutting with nothing between them (architect 2026-10-22, the
+    // SAVE, UNDO, REDO, COPY (2026-10-25) AND RENDER STAND BEHIND IT IN THE
+    // SAME RUN, the six cases abutting with nothing between them (architect
+    // 2026-10-22, the
     // simple layout: "push all icons together … add a spacing after render",
     // the run gap after Render the run's end; redesign_button_opens_icon_run).
-    // UNDO STILL LEADS A GROUP of its own with Redo and Render
+    // UNDO STILL LEADS A GROUP of its own with Redo, Copy and Render
     // (redesign_button_opens_icon_group), but a group paints nothing: it is
     // the unit the `h` view's stand-ins replace (kIconRowHistoryStandIns), so
-    // Save stays outside the swap.
+    // Save stays outside the swap. COPY PHASE RESETS STANDS BETWEEN REDO AND
+    // RENDER since 2026-10-25, the run six cases (below).
     OpenProject, Save, Undo, Redo,
+    // COPY PHASE RESETS (architect 2026-10-24) — the phase-reset propagate's
+    // own key, its legend COPY, IN THE BAND'S FIRST RUN BETWEEN REDO AND
+    // RENDER since 2026-10-25 (architect: "copy should be moved to the left
+    // of render, that's usually where copy action would go, between redo
+    // [and render], and it's where it goes in kdenlive … copy is very rarely
+    // used, a handful of times in a movement, and it does affect the whole
+    // large batch of markers; undo / redo also affect the markers"), a member
+    // of Undo's group, which the `h` view's stand-ins replace whole. It stood
+    // in row 8's verb group between Add to Selection and Toggle Value Drag
+    // on 2026-10-24 ("add sel normally precedes copy" — Add to Selection
+    // builds the run the copy reads), and left it because it pushed the
+    // verbs one column further from the pen hand. THE KEY IS THE LETTER P IN THREE PRESSES: bare P COPIES
+    // the phase resets of the selected run of warp markers into the session
+    // clipboard, CTRL+P PASTES them onto the one selected warp marker behind
+    // the paste's confirmation, and CTRL+SHIFT+P PASTES THEIR STATE — the
+    // clipboard's enabled / disabled bits onto the matching destination
+    // resets in lockstep, positions untouched (Paste Phase Reset State,
+    // removed 2026-10-21 and resurrected here; PhaseResetPropagate::
+    // paste_state_apply). The button is its key under the modifiers the
+    // press carries, the roster's grammar: its plain press copies, its ctrl
+    // press pastes and its ctrl+shift press pastes the state — ON THE GLASS
+    // the S Pen's barrel button (the Ctrl bit) with a tap is the paste and
+    // held through the long press the state paste, the hold's shift
+    // composing with the carried ctrl where the pair is admitted; a long
+    // press without the barrel is the plain copy, SHIFT ALONE NOT ADMITTED
+    // (Shift+P binds nothing). THE ADMISSIONS are redesign_button_ctrl_admits
+    // and redesign_button_ctrl_shift_admits. THE FACE IS THE COPY'S
+    // (phase_reset_copy_refusal), the pastes refusing on their own cards
+    // behind a lit face; the tooltip's one modifier line names both pastes.
+    // The `h` view does not paint it (its allowlist names no `p` chord —
+    // history_mode_hides_button), and the read-only lock greys it with the
+    // marker verbs (none of the three chords is on read_only_key_blocked's
+    // allowlist). NO LAMP (an act), NO REPEAT (a copy repeats onto itself
+    // and a paste raises a prompt).
+    IconCopyPhaseResets,
     Render,
     // (THE EDIT FLAG BUTTON — IconMarkerEditFlag, bare Return on a button,
     // wearing text-field — stood in the bottom row's verb group from
@@ -2537,9 +2575,10 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. TWENTY buttons in four groups (2 + 9 + 4 + 5, kRow8Groups,
-    // since 2026-10-24; the clock at the row's left with the tab name and
-    // the state line after it), the block ending at the program ring's
+    // detection. NINETEEN buttons in four groups (2 + 8 + 4 + 5, kRow8Groups,
+    // since 2026-10-25 — 2 + 9 + 4 + 5 on 2026-10-24, Copy Phase Resets
+    // gone up to the band's first run; the clock at the row's left with the
+    // tab name and the state line after it), the block ending at the program ring's
     // outer right column (architect 2026-09-29, the right-handed tablet's
     // layout). The enum lists the
     // marker group, the old walk group and the arrows (the painted order
@@ -2550,9 +2589,9 @@ enum class RedesignButton {
     // CAME BACK 2026-10-24 as its FIRST GROUP (START | END, kTransportSkipGroup;
     // their shift presses the whole piece's ends), enumerated after Play.
     // THE PAINTED ORDER IS THE PAINTER'S SINCE 2026-10-18 (architect,
-    // regrouping the two right-hand groups): the skips, the nine verbs
+    // regrouping the two right-hand groups): the skips, the eight verbs
     // (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump, Edit, Add Sel,
-    // Copy, Drag), then Down, Up, Previous Marker, Next Marker
+    // Drag), then Down, Up, Previous Marker, Next Marker
     // (kTransportStepWalkGroup), then Switch Tab, Center, Left, Right, Play
     // (kTransportNudgePlayGroup, paint_handler.cpp) — nothing reads this
     // block's order: THE
@@ -2802,7 +2841,8 @@ enum class RedesignButton {
     // press is admitted and the tooltip carries one line. Its ctrl presses
     // were the phase-reset propagate pair, Ctrl+Return / Ctrl+Shift+Return,
     // from 2026-10-21 until the pair got its own key that day
-    // (IconCopyPhaseResets below, bare P / Ctrl+P / Ctrl+Shift+P); a ctrl
+    // (IconCopyPhaseResets, the band's since 2026-10-25, bare P / Ctrl+P /
+    // Ctrl+Shift+P); a ctrl
     // or a shift press on it is the consumed nothing, and a long press is
     // the plain open.
     IconOpenTextEditor,
@@ -2868,37 +2908,9 @@ enum class RedesignButton {
     // It keeps the group's Icon* naming: a roster
     // id names the button, not the lane it sits in.
     IconAddToSelection,
-    // COPY PHASE RESETS (architect 2026-10-24) — the phase-reset propagate's
-    // own key, SEATED IN THE VERB GROUP BETWEEN ADD TO SELECTION AND TOGGLE
-    // VALUE DRAG (his: "edit is about flag text, whereas add sel normally
-    // precedes copy" — Add to Selection builds the run the copy reads), its
-    // legend COPY. THE KEY IS THE LETTER P IN THREE PRESSES: bare P COPIES
-    // the phase resets of the selected run of warp markers into the session
-    // clipboard, CTRL+P PASTES them onto the one selected warp marker behind
-    // the paste's confirmation, and CTRL+SHIFT+P PASTES THEIR STATE — the
-    // clipboard's enabled / disabled bits onto the matching destination
-    // resets in lockstep, positions untouched (Paste Phase Reset State,
-    // removed 2026-10-21 and resurrected here; PhaseResetPropagate::
-    // paste_state_apply). The button is its key under the modifiers the
-    // press carries, the roster's grammar: its plain press copies, its ctrl
-    // press pastes and its ctrl+shift press pastes the state — ON THE GLASS
-    // the S Pen's barrel button (the Ctrl bit) with a tap is the paste and
-    // held through the long press the state paste, the hold's shift
-    // composing with the carried ctrl where the pair is admitted; a long
-    // press without the barrel is the plain copy, SHIFT ALONE NOT ADMITTED
-    // (Shift+P binds nothing). THE ADMISSIONS are redesign_button_ctrl_admits
-    // and redesign_button_ctrl_shift_admits. THE FACE IS THE COPY'S
-    // (phase_reset_copy_refusal), the pastes refusing on their own cards
-    // behind a lit face; the tooltip's one modifier line names both pastes.
-    // The `h` view does not paint it (its allowlist names no `p` chord —
-    // history_mode_hides_button), and the read-only lock greys it with the
-    // marker verbs (none of the three chords is on read_only_key_blocked's
-    // allowlist). NO LAMP (an act), NO REPEAT (a copy repeats onto itself
-    // and a paste raises a prompt).
-    IconCopyPhaseResets,
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40) — the verb group's
-    // NINTH and last member, right of Copy Phase Resets since 2026-10-24 and
-    // IMMEDIATELY RIGHT OF ADD TO SELECTION until then (his reason: arm Add to
+    // EIGHTH and last member, IMMEDIATELY RIGHT OF ADD TO SELECTION (Copy
+    // Phase Resets between the two on 2026-10-24 alone; his reason: arm Add to
     // Selection, pick several flags, then arm this and drag them). Bare `[`, a ONE-SHOT LAMP over AppState::value_drag_lamp: lit,
     // every flag drag is the value drag in every view; dark, none is; the
     // lift of a value drag that began puts it out (the rule is at
@@ -3027,10 +3039,11 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-10-25):
-// TWENTY-FOUR in row 4's enum block and TWENTY in the bottom row's — 44
+// TWENTY-FIVE in row 4's enum block and NINETEEN in the bottom row's — 44
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
-// 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24).
-// PAINTED, the split is 22 + 22: HistoryOlder and HistoryNewer, enumerated
+// 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
+// moving up to the band 2026-10-25).
+// PAINTED, the split is 23 + 21: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
@@ -3056,8 +3069,11 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — NINETEEN since 2026-10-12: the
-// transport's one (Play / Stop), the FOUR SINGLE-MARKER VERBS that came down from the icon
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — TWENTY-ONE since 2026-10-25 (the
+// two skips back 2026-10-24; Copy Phase Resets a member that one day, up to
+// the band's first run since): the
+// transport's one (Play / Stop), GO TO START and GO TO END, the FOUR
+// SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), OPEN TEXT EDITOR
 // (2026-10-09), ADD TO SELECTION, TOGGLE VALUE DRAG (2026-10-11)
 // (the EDIT FLAG BUTTON, 2026-08-27, and the COPY VALUE button, 2026-08-29,
@@ -3086,7 +3102,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these nineteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these twenty-one (re-counted 2026-10-25). THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the pointer walk's pressed-face damage
 // (recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3113,7 +3129,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconJumpToDefiningMarker:
         case RedesignButton::IconOpenTextEditor:
         case RedesignButton::IconAddToSelection:
-        case RedesignButton::IconCopyPhaseResets:
         case RedesignButton::IconValueDrag:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
@@ -3169,8 +3184,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // per member (history_view_hides_button) and asks no group.
 //
 // THE GROUPS, in the left walk's order: OPEN PROJECT AND SAVE, then UNDO,
-// REDO AND RENDER (the group the history stand-ins replace, Revert and Load
-// in Place), then the zoom group (Zoom to Fit, the magnification lamp,
+// REDO, COPY PHASE RESETS (since 2026-10-25) AND RENDER (the group the
+// history stand-ins replace, Revert and Load in Place), then the zoom group (Zoom to Fit, the magnification lamp,
 // Follow), the iteration group (the BPM opener, grid iterations, Flatten)
 // and the render-entry group (Play Renders .. Enable Tooltips). The right
 // run's leaders — the history opener and the view pairs' Source and Warp —
@@ -3181,9 +3196,9 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // OPEN PROJECT LEADS SAVE'S GROUP, THE ROW'S FIRST (architect
         // 2026-10-07), so Save is no leader.
         case RedesignButton::OpenProject:
-        // UNDO LEADS REDO AND RENDER (architect 2026-09-29): the group the
-        // `h` view's stand-ins replace (kIconRowHistoryStandIns), so Save
-        // stays outside the swap.
+        // UNDO LEADS REDO, COPY AND RENDER (architect 2026-09-29; Copy
+        // since 2026-10-25): the group the `h` view's stand-ins replace
+        // (kIconRowHistoryStandIns), so Save stays outside the swap.
         case RedesignButton::Undo:
         // ZOOM TO FIT LEADS THE ZOOM GROUP (Full Zoom Out until 2026-10-24),
         // and so ends Undo's group's replacement in the `h` view.
@@ -3206,7 +3221,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // flatten"): the left members stand in THREE PLAIN RUNS, the cases abutting
 // and run_gap_px of wood between two (program_spec.h), each opened by its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
-// Save and Undo / Redo / Render merged), Zoom to Fit (Zoom to Fit ..
+// Save and Undo / Redo / Render merged, Copy Phase Resets between Redo and
+// Render since 2026-10-25), Zoom to Fit (Zoom to Fit ..
 // Flatten: the zoom and iteration groups merged) and Play Renders (Play
 // Renders .. Enable Tooltips, the render-entry group as it stood). THE
 // GROUPS ABOVE STAY THE UNIT of the `h` view's stand-in swap and hide
@@ -5558,6 +5574,16 @@ struct AppState {
         // The painted glyph's index (redesign_button_glyph: 0 the table
         // glyph, 1 the second, 2 Save's third) — the third stashed term.
         int     glyph         = 0;
+        // THE PAINTED LEGEND AND ITS EXTENT (2026-10-25: the legend names
+        // the key's next press, redesign_button_legend's stateful overload)
+        // — the fourth stashed term, the word the comparator holds against
+        // the live overload, and the extent it was painted over
+        // (key_legend_layout's, the key and its legend), whose union with
+        // the next paint's extent is the publication's coverage test, so a
+        // word that narrows is never stamped over its own wider ends.
+        // Empty until the button's first paint.
+        const char* legend    = "";
+        GuiRect painted{0, 0, 0, 0};
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
@@ -5996,8 +6022,10 @@ struct AppState {
         GuiRect                        field{0, 0, 0, 0};
         // THE PLAYER'S TWO PUBLISHED CELLS (2026-08-28), zero under every
         // other owner: the PLAY-SCRUB — THE WHOLE SLIDER ITEM, the button
-        // box's own band, so a press anywhere on it is on the slider and the
-        // per-position damage covers the handle's whole travel; the press
+        // box's own band, THE CHANNEL WIDENED BY THE THUMB'S OVERHANG AT EACH
+        // END (2026-10-25, render.h's scrub block), so a press anywhere on it
+        // is on the slider and the per-position damage covers the thumb's
+        // whole travel, its end columns included; the press
         // router arms the thumb drag against it — published
         // geometry may only SELECT, the seek's frame is decided against the
         // live item length — and the
@@ -6009,7 +6037,10 @@ struct AppState {
         GuiRect                        scrub{0, 0, 0, 0};
         GuiRect                        clock{0, 0, 0, 0};
         // THE SCRUB THUMB'S CENTRE COLUMN AS PAINTED (architect 2026-10-02,
-        // ON SCREEN IS AS PAINTED), -1 when no thumb stands: the column whose
+        // ON SCREEN IS AS PAINTED), -1 when no thumb stands — no channel
+        // (another owner, or a row too narrow to hold one): the thumb stands
+        // whenever the channel does since 2026-10-25, at frame 0 with no
+        // item. The column whose
         // pixels are on screen, which the press router resolves the thumb
         // against (claim_player_scrub_press) rather than the live position a
         // tick ahead. A frame whose clip does not cover the track carries
@@ -7499,8 +7530,10 @@ struct AppState {
         // about — the VIEWED one at the raise, since the view has no list to
         // pick another from. ONE PROMPT BODY, TWO SUBJECTS: the player's is
         // AppState::RenderPlayer::pending_load, and the two raises cannot
-        // coexist (the player's opener refuses in this view and this key never
-        // reaches the player), so at most one is parked. Read back and dropped
+        // coexist (the player opens over this view since 2026-10-25, but its
+        // router ranks ahead of the view's `'` while it stands, and nothing
+        // opens it under the view's standing prompt), so at most one is
+        // parked. Read back and dropped
         // by GuiInputHandler::confirm_load_in_place / cancel_load_in_place.
         //
         // THREE CLEARERS, and the third is why the second is reachable
@@ -9119,37 +9152,43 @@ inline int64_t render_player_position(const AppState& a,
     return pos < 0 ? 0 : (pos > rp.frames ? rp.frames : pos);
 }
 
-// THE SCRUB TRACK'S ONE MAPPING, over the painter's PUBLISHED track rect
-// (AppState::ModalDialogGeometry::scrub, which is the whole SLIDER ITEM): a
-// frame's column on the track and the column's frame back. The painter's
-// handle and the press router's seek share it, so the pixel a press lands on
-// and the pixel the handle paints at answer the same frame. Banker's rounding
-// onto the cells, like every grid conversion.
+// THE SCRUB TRACK'S ONE MAPPING, over the painter's PUBLISHED item rect
+// (AppState::ModalDialogGeometry::scrub, the whole SLIDER ITEM): a frame's
+// column on the channel and the column's frame back. The painter's thumb and
+// the press router's seek share it, so the pixel a press lands on and the
+// pixel the thumb paints at answer the same frame. Banker's rounding onto
+// the cells, like every grid conversion.
 //
-// IT OWNS THE INSET, and the inset is the THUMB'S GRAB BOX (the chrome
-// spec's scrub_handle_box_px through render.h's scrub_handle_box_px: 14
-// Windows px): the thumb's CENTRE — which is what names the frame — runs
-// from half a box in to half a box short of the end, so the thumb — the
-// 8-W key-shaped block since 2026-10-23, narrower than the box — never
-// hangs off either end of its channel. The USABLE SPAN is the
-// item less that box; an item too
-// narrow to hold one seats the centre at the left inset and answers frame 0,
-// the same cold answer a zero item gives.
-inline int render_player_scrub_usable_span(const GuiRect& track) {
-    return track.w - scrub_handle_box_px();
+// THE THUMB'S CENTER RUNS THE CHANNEL END TO END (architect 2026-10-25,
+// "centered on the trough's end"): frame 0's column is the channel's first
+// and the last frame's its last, NO INSET. The published item is the channel
+// widened by the thumb's overhang at each end (render.h's scrub block), so
+// over the ITEM the centre's travel starts half a thumb in
+// (scrub_thumb_w_px() / 2, the painter's own left-edge offset) and the
+// USABLE SPAN is the item less one thumb — the channel's width less one,
+// the first column to the last. An item too narrow to hold one seats the
+// centre at the channel's first column and answers frame 0, the same cold
+// answer a zero item gives. (The mapping inset the channel by half the 14-W
+// grab box at each end, 2026-10-02 to 2026-10-25, which left the thumb's
+// edge 9 px into the trough at frame 0 and 21 px of trough at each end
+// standing for no frame.)
+inline int render_player_scrub_travel_x0(const GuiRect& item) {
+    return item.x + scrub_thumb_w_px() / 2;
+}
+inline int render_player_scrub_usable_span(const GuiRect& item) {
+    return item.w - scrub_thumb_w_px();
 }
 inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const GuiRect track = a.modal_dialog.scrub;
     const int64_t frames = a.render_player.frames;
-    const int x0   = track.x + scrub_handle_box_px() / 2;
+    const int x0   = render_player_scrub_travel_x0(track);
     const int span = render_player_scrub_usable_span(track);
     if (span <= 0 || frames <= 0) return x0;
     const int64_t f = frame < 0 ? 0 : (frame > frames ? frames : frame);
     const double t = static_cast<double>(f) / static_cast<double>(frames);
     return x0 + static_cast<int>(std::nearbyint(t * span));
 }
-// THE THUMB'S GRAB BAND — its own box (2026-08-28, when the scrub became a
-// Breeze slider; the spec's scrub_handle_box_px since 2026-10-07), and its
+// THE THUMB'S GRAB BAND — the painted thumb (below), and its
 // ONE reader is the press router, which asks it whether a press TAKES the
 // thumb where it stands (the band) or makes it JUMP to the press (the rest of
 // the item, architect 2026-10-02); the thumb (paint_scrub_thumb) wears no
@@ -9159,7 +9198,9 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 //
 // THE BAND IS THE PAINTED THUMB (architect 2026-10-23, the thumb grown to
 // 8 x 16 W — on screen is as painted; the thumb's box widened to the 14-W
-// handle box, 2026-10-02 to 2026-10-23, retired): the thumb's own rows
+// handle box, 2026-10-02 to 2026-10-23, retired), its overhanging half at
+// either end of the channel included (the item covers it, 2026-10-25): the
+// thumb's own rows
 // (scrub_thumb_h_px, centred in the track's band exactly as the painter
 // centres it) by its own columns (scrub_thumb_w_px, from handle_x − w / 2,
 // the painter's own left edge), HALF-OPEN on both
@@ -9180,7 +9221,7 @@ inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
 inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
     const GuiRect track = a.modal_dialog.scrub;
     const int64_t frames = a.render_player.frames;
-    const int x0   = track.x + scrub_handle_box_px() / 2;
+    const int x0   = render_player_scrub_travel_x0(track);
     const int span = render_player_scrub_usable_span(track);
     if (span <= 0 || frames <= 0) return 0;
     const int cx = x < x0 ? x0 : (x > x0 + span ? x0 + span : x);
@@ -14132,8 +14173,23 @@ inline bool redesign_button_enabled(const AppState& a,
     // roster's truthful rule. THE PROMPTS, THE DIALOG EDITORS AND THE PROGRESS
     // MODAL are MODAL: they take focus and control by definition, so what
     // they cover — the toolbar — is dead behind their veil WITHOUT
-    // greying, and this body has no arm for them. This is the one record of the
-    // rule.
+    // greying, and this body has no arm for them. SINCE 2026-10-25 THE LANE
+    // EDITORS ARE MODALS TOO — the flag editor and the iteration bound
+    // editor (architect: "acts that need a keyboard — shouldn't they just be
+    // modals?"): an act that takes the keyboard is a modal, and a modal
+    // admits its own vocabulary alone (keyboard_modal_editor_active, the one
+    // predicate, input_handler.h). This is the one record of the rule.
+    //
+    // THE THREE CLASSES (architect 2026-10-25): THE MODALS above; THE TWO
+    // OVERLAYS, the render player and the project picker, which end at a
+    // pick or a load and also leave on Esc and on THEIR OPENER KEY — Play
+    // Renders and Open Project, lit and live under them (the overlay arm
+    // below, redesign_button_selected), the rest of the roster grey and the
+    // hint dwell suppressed ("overlays don't show hints … the only reason
+    // they still show the one button lit is that you can exit by pressing
+    // it"); and THE `h` HISTORY VIEW, which is A VIEW like Source or Phase,
+    // left by its own key alone, its hints shown and its partition below
+    // greying what it refuses.
     //
     // (THE THREE MENU ANCHORS answered first here, from menu_anchor_live,
     // until the menu row's removal, 2026-10-21.)
@@ -14165,18 +14221,23 @@ inline bool redesign_button_enabled(const AppState& a,
     // like what we do with history"; the menu row's File title, live
     // through Quit above the band, went with the row 2026-10-21), the view
     // pairs' four included, and the veil consumes every press on them.
-    // THE PLAYER'S OWN OPENER IS THE ONE EXCEPTION (architect 2026-10-13, low
-    // priority: "we should allow the media player button in media player, so
-    // the user can quickly toggle it on/off by pressing the same button twice"):
-    // while the RENDER PLAYER stands, Play Renders stays lit and its lift is
-    // bare `l`, which the player's router already answers with the player's
-    // own close (GuiRenderPlayer::close), so the button toggles exactly as the
-    // key does. The picker's band keeps it grey (the picker is no player, and
-    // a press there would open one over a list owner); the press and lift
-    // carry the same exemption (on_button_press's player veil,
-    // finish_chrome_press_release's head).
+    // EACH OVERLAY'S OWN OPENER IS ITS ONE EXCEPTION (architect 2026-10-13
+    // for the player: "we should allow the media player button in media
+    // player, so the user can quickly toggle it on/off by pressing the same
+    // button twice"; 2026-10-25 for the picker: "that button should be
+    // usable as a way of getting out also"): while the RENDER PLAYER stands,
+    // Play Renders stays live and its lift is bare `l`, which the player's
+    // router answers with the player's own close (GuiRenderPlayer::close);
+    // while the PROJECT PICKER stands, Open Project stays live and its lift
+    // is Ctrl+O, which the picker's router answers with close_picker, the
+    // act its Cancel key runs. Each key toggles exactly as its chord does and
+    // sits lit while its overlay stands (redesign_button_selected). The other
+    // overlay's opener stays grey (a press would open one overlay over the
+    // other); the press and lift carry the same exemption (on_button_press's
+    // two overlay veils, finish_chrome_press_release's head).
     if (folder_overlay_stands(a))
-        return b == RedesignButton::IconListen && a.render_player.active;
+        return (b == RedesignButton::IconListen && a.render_player.active) ||
+               (b == RedesignButton::OpenProject && a.picker.active);
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -14363,9 +14424,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // project with no batch cell answers "Nothing to play: no renders
         // under tmp/" on a card, and asking that per frame is a
         // directory walk the
-        // painter has no business doing (the `h` button's own reasoning). The
-        // `h` view greys it through the derived partition above, bare `l`
-        // being consumed in there. THE LOAD is what the lock refuses, and that
+        // painter has no business doing (the `h` button's own reasoning). THE
+        // `h` VIEW ADMITS IT since 2026-10-25 (architect: "admit both" — bare
+        // `l` on the view's allowlist beside Ctrl+O, the player opening over
+        // the view as the picker does), so the derived partition above leaves
+        // it lit there. THE LOAD is what the lock refuses, and that
         // refusal belongs to the player's own Load in place button.
         // A RUNNING RENDER GREYS IT (2026-09-30): the open refuses while a run
         // stands (load_in_place_render_blocked, carding
@@ -14375,9 +14438,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // which touched no render (the twin rule); the twin went with the
         // panel on 2026-09-30, and the face reads the plain act alone. The
         // per-tick roster comparator (main.cpp) carries the run's start and
-        // end onto the face.
+        // end onto the face. EXCEPT UNDER THE PROGRESS MODAL (2026-10-25):
+        // a batch's run opens that modal, and nothing behind a modal changes
+        // face — dead and ungreyed, the classes' record at this predicate's
+        // head — so the run's grey answers only where no progress modal
+        // stands (a single render's run).
         case RedesignButton::IconListen:
-            return !load_in_place_render_blocked(a);
+            return !load_in_place_render_blocked(a) ||
+                   a.batch_progress.active;
         // THE READ-ONLY TOGGLE MIRRORED NOTHING UNTIL 2026-09-10 (2026-08-14):
         // bare `o` was always meaningful on a loaded piece — it locks a
         // writable tab and unlocks a locked one — so there was nothing to
@@ -14574,13 +14642,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // flag_editor_open_actionable (nothing focused, the P column on the
         // payload axis, a tie follower's cell — the tie's sentence is the
         // key's card ranked ahead of the shared one, the face one grey for
-        // both); and A STANDING TEXT EDITOR (text_editor_session — the
-        // marker-lane editor in every kind, a
-        // dialog editor), where Return is that editor's own commit and never
-        // an open: the button raises no veil of its own and the marker-lane
-        // editor raises none either, so its lift would dispatch the commit
-        // behind a face named for the open — a face never runs an act other
-        // than the one it names (2026-09-29). The `h` view greys it through the derived partition
+        // both). A STANDING TEXT EDITOR IS NO TERM since 2026-10-25: every
+        // editor is a modal, under which the roster is dead behind the veil
+        // and changes no face (the classes' record at this predicate's
+        // head), so the arm answers only outside every modal. (Its
+        // text_editor_session term, 2026-09-29 to 2026-10-25, greyed the
+        // button under any editor — its lift under a pointer-transparent
+        // lane editor would have dispatched Return, the commit, behind a face
+        // named for the open; the veil swallows that press now.) The `h` view greys it through the derived partition
         // above (its allowlist does not name Return) and, the refusal holding
         // in every session there, does not paint it at all
         // (history_mode_hides_button). The bound cell's kind refusal past the
@@ -14591,7 +14660,6 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconOpenTextEditor:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
-                   a.text_editor_session() == 0 &&
                    flag_editor_open_actionable(a);
         // COPY PHASE RESETS (architect 2026-10-24) GREYS EXACTLY WHERE BARE P
         // WOULD NOT COPY, each term the key's road's own: THE READ-ONLY LOCK
@@ -15476,7 +15544,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // pair member's press a consumed nothing, was a third until the pop of
 // 2026-10-23 night, kToolbarChords' NO RADIO COLUMN.)
 //
-// MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen,
+// MOMENTARY BY DESIGN, and therefore false here: Copy, Paste,
 // Load-in-place —
 // each is an action that completes, with no state to stay lit for — and BPM,
 // whose editor is a transient modal SESSION rather than a resting mode (it
@@ -15557,8 +15625,23 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
-        // OPEN PROJECT (2026-10-07): an act that completes, no lamp.
+        // THE KEY THAT OPENS AN OVERLAY SITS LIT WHILE IT STANDS, AND CLOSES
+        // IT (architect 2026-10-25: "the ones where they're truthful should
+        // show the button that's used to reach them, and that button should
+        // be usable as a way of getting out also"): the toggle pattern, each
+        // reading the bit its own press flips — PLAY RENDERS the render
+        // player's (bare `l`, toggle_render_player: the mode's own closer),
+        // OPEN PROJECT the project picker's (Ctrl+O, whose picker arm is the
+        // picker's Cancel, route_picker_key). So the key sits down at the
+        // checked depth with its LED lit while its overlay stands — the
+        // history opener's face over its view — the one key the overlay
+        // leaves live (redesign_button_enabled's overlay arm). The per-tick
+        // comparator carries the edge. (Both were momentary, no lamp, until
+        // that day.)
+        case RedesignButton::IconListen:
+            return a.render_player.active;
         case RedesignButton::OpenProject:
+            return a.picker.active;
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -15597,7 +15680,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // iterations has a bit that stays true for a face to report.
         case RedesignButton::IconBpm:
         case RedesignButton::IconFlatten:
-        case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         // THE SETTINGS BUTTON IS MOMENTARY (2026-09-29): it opens the prompt,
         // whose own session is the state, the BPM opener's answer.
@@ -16608,8 +16690,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
-        // COPY PHASE RESETS (architect 2026-10-24), the verb group's eighth:
-        // the act's name and its chord, the bare letter by its cap. ITS
+        // COPY PHASE RESETS (architect 2026-10-24), the band's first run's
+        // fifth since 2026-10-25 (row 8's verb group's eighth the day
+        // before): the act's name and its chord, the bare letter by its cap. ITS
         // SECOND LINE NAMES BOTH PASTES in one sentence, Jump to Defining
         // Marker's form (the act and the modifier, not a key): Ctrl+P pastes
         // the phase resets, Ctrl+Shift+P their state. The overload drops it
@@ -16619,8 +16702,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Copy Phase Resets (P)",
                     "Press Ctrl to paste them, Ctrl+Shift to paste their "
                     "state."};
-        // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's NINTH
-        // and last (after Copy Phase Resets since 2026-10-24), a lamp — the hint NAMES THE TOGGLE, Add to Selection's
+        // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's EIGHTH
+        // and last (after Add to Selection), a lamp — the hint NAMES THE TOGGLE, Add to Selection's
         // shape, and the accelerator names the cap (this table's punctuation
         // rule). ONE LINE: it admits no modifier. The words hold lit or dark,
         // spent or not — a tooltip names the act and never a state.
@@ -16706,15 +16789,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // its blank key (paint_handler.cpp's key_legend_seat, the one placement). The
 // tooltip stays the act's name (above). THE `h` VIEW'S FOUR STAND-INS, which
 // the record does not draw, take their acts' own words (REVERT, LOAD, OLDER,
-// NEWER). A button whose GLYPH swapped with its state (Save, Render, Play /
-// Stop) keeps its one legend: the legend names the key, the tooltip the act
-// of the moment. PLAY RENDERS READS PLAYER since 2026-10-24 (architect: "the
+// NEWER). THIS TABLE IS EACH KEY'S RESTING WORD; THE PAINTERS READ THE
+// STATEFUL OVERLOAD BELOW, which names the act the key's next press runs
+// (architect 2026-10-25). PLAY RENDERS READS PLAYER since 2026-10-24 (architect: "the
 // media player could be called the player instead of play"; PLAY until
 // then, the record's word), so the transport's PLAY names one key; PLAYER
 // fits its key at 300 / 200 / 150 % (54 of 69, 35 of 46, 27 of 34 device px).
 // ZOOM TO FIT READS FIT since 2026-10-24 (architect; ZOOM 0 until then), and
 // the three keys of that day print their own words: START and END (the two
-// skips, back on row 8) and COPY (Copy Phase Resets).
+// skips, back on row 8) and COPY (Copy Phase Resets, the band's first run's
+// since 2026-10-25).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -16763,6 +16847,84 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::TransportRight:            return "RIGHT";
     }
     return "";
+}
+
+// THE LEGEND NAMES THE ACT THE KEY'S NEXT PRESS RUNS (architect 2026-10-25)
+// — the stateful overload every painter and every extent reader takes
+// (paint_handler.cpp's two strips, through key_legend_layout), the constant
+// table above its first line and every arm's forward, as the tooltip's
+// stateful overload forwards from its table. A TOGGLE KEEPS ITS PRINT IN
+// BOTH STATES, because its press is the toggle whatever the state — "the
+// toggle acts keep their caption because they still are toggling": every
+// Toggle-named key (MAGNIFY, FOLLOW, TIPS, LOCK, DRAG, ADD SEL, DISABLE,
+// INHERIT outside the grid lamp), the lamps and the two radio pairs keep
+// their words, the depth and the LED being the state. DISABLE KEEPS ITS
+// SHORTHAND (architect 2026-10-25: "we already use shorthand, like ADD SEL
+// … a lot of these stereo interfaces didn't use the exact English"). A key
+// whose next press is a different act than its last prints that act, each
+// arm reading the predicate the face or the tooltip already reads, never a
+// second derivation:
+//   PLAY reads STOP while the transport is live (a plain audition or an A/B
+//   audition, its silent rests included) — redesign_button_glyph_swapped,
+//   the glyph's and the tooltip's own fork, so the glyph stash and the
+//   legend change in one frame;
+//   FIT reads RECALL where the press restores the view the zoom-out left
+//   (overview_command_target's RestoreView arm, the act's own fork, which
+//   the tooltip names "Back to Previous View") — FIT otherwise, its no-op
+//   included (the grey is redesign_button_enabled's);
+//   INHERIT reads TIE under the lit grid-iterations lamp, where the plain
+//   chord is dead and the key is the tie (the tooltip's own fork on
+//   iteration_mode_enabled). Never UNTIE: the act is toggle-shaped there,
+//   and a toggle keeps one print, though the tooltip names the half the
+//   verdict admits ("Untie Markers") as the act's name;
+//   RENDER reads CANCEL while an explicit render is live (architect
+//   2026-10-25, "agree") — redesign_button_glyph's Render arm,
+//   queue_running, the glyph the key's lift runs the cancel on
+//   (finish_chrome_press_release's Render arm) and the tooltip's "Cancel"
+//   reads. A batch's run stands under the progress modal, where the key is
+//   dead behind the veil and changes no face; the live key is the single
+//   render's (Ctrl+Alt+R), which opens no modal;
+//   SAVE reads PULL where its press is the pull (redesign_button_glyph's
+//   Save arm at its third glyph — history_save_is_pull, the `h` view with
+//   GitHub behind and no checkpoint publishing) and COMMIT elsewhere in the
+//   `h` view, where its press is the save-and-commit (the tooltip's own
+//   fork on history_mode.active, "Save and Commit") (architect 2026-10-25,
+//   "agree"); SAVE outside the view, a checkpoint publishing there
+//   included (the press is the plain save).
+// Every word fits its key at 300 / 200 / 150 % (CANCEL and COMMIT about 57
+// of 69, 37 of 46, 28 of 34 device px in the 14-px legend face; RESUME on
+// the player's key about 60 / 39 / 30), so none is shortened.
+// THE REPAINT: the word rides the face's stash (RedesignButtonFace::legend,
+// held by main.cpp's per-tick comparator beside the glyph) and the painted
+// extent with it (RedesignButtonFace::painted, whose union with the new one
+// is the publication's coverage test), so a word that narrows never leaves
+// the old word's ends on the ground.
+inline const char* redesign_button_legend(const AppState& a,
+                                          const GuiAudio& audio,
+                                          RedesignButton b) {
+    switch (b) {
+        case RedesignButton::TransportPlayStop:
+            if (redesign_button_glyph_swapped(a, b)) return "STOP";
+            break;
+        case RedesignButton::Render:
+            if (redesign_button_glyph_swapped(a, b)) return "CANCEL";
+            break;
+        case RedesignButton::Save:
+            if (redesign_button_glyph(a, b) == 2) return "PULL";
+            if (a.history_mode.active) return "COMMIT";
+            break;
+        case RedesignButton::IconZoomFitBest:
+            if (overview_command_target(a, audio).arm ==
+                OverviewCommandTarget::Arm::RestoreView)
+                return "RECALL";
+            break;
+        case RedesignButton::IconMarkerInherit:
+            if (a.iteration_mode_enabled) return "TIE";
+            break;
+        default:
+            break;
+    }
+    return redesign_button_legend(b);
 }
 
 // THE TOOLBAR PAIR'S STATEFUL FACES — Save's and Render's, the two buttons

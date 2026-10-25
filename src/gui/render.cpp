@@ -2927,10 +2927,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // cut off at it, exactly as the cached flag pass clips its resting boxes,
     // so nothing of the field paints in the leftover strip a non-multiple-of-16
     // window leaves beside the waveform. A field cut off at an edge is READ BY
-    // PANNING THE VIEWPORT: the marker-lane editors are pointer- and
-    // wheel-transparent, so the wheel and the grab-pan work while one stands
-    // and the field travels with its marker, which is the same answer the row
-    // gives for a label that is half off the edge at rest.
+    // Esc, A PAN AND A REOPEN (architect 2026-10-25): the marker-lane editors
+    // are modals since that day, so nothing pans while one stands, and the
+    // open does not pan to it either — the field travels with its marker,
+    // the same answer the row gives for a label half off the edge at rest.
+    // (The wheel and the grab-pan worked while one stood, 2026-09-06 to
+    // 2026-10-25.)
     const int bx = area.x + col + anchor_off;
 
     // The text VIEWPORT inside the box: the band the run is clipped to, and the

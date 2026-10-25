@@ -86,8 +86,8 @@ struct GuiFlagEditor {
     // the marker single-selected and landed, the addressed cell written to
     // `side` behind that select, the seed the cell's own token (`+0.00` or
     // `+0` on a blank bracket, the column deciding) fully selected.
-    // Keyboard-modal, pointer/wheel-transparent, no playback stop — the
-    // top-strip family's recorded exemption. Read-only refuses at the callers,
+    // A modal (keyboard, pointer, wheel and touch since 2026-10-25), no
+    // playback stop at the open — the lane editors' recorded exemption. Read-only refuses at the callers,
     // as the flag editor's open does.
     void enter_iter_bound_edit(char column, int idx, MarkerCell side);
     // Commit the open bound session, ON THE LIVE COLUMN (which is the open's

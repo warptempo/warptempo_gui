@@ -176,8 +176,10 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-14 — EIGHT
-    // sites (the color picker's open was a ninth 2026-10-07..14):
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-25 — NINE
+    // sites (the color picker's open was another 2026-10-07..14): THE
+    // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
+    // input_render_dispatch.cpp, 2026-10-14, the batch's Render press);
     // GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
@@ -218,30 +220,35 @@ struct GuiPlaybackLifecycle {
     // The count had held across the day's earlier change by coincidence: the
     // commit-title editor replaced the history commit confirmation, so one
     // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.
-    // TWO MODAL OPENS ARE NOT CALLERS, and each is a recorded exception rather
-    // than a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
+    // THREE MODAL OPENS ARE NOT CALLERS, and each is a recorded exception
+    // rather than a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
     // (PhaseResetPropagate::open_paste_confirmation, its one opener) and
     // stops through
     // stop_playback_if_playing directly, which is mechanically this same stop;
-    // and the render player's LOAD_IN_PLACE_CONFIRM prompt
-    // (GuiInputHandler::render_player_load_in_place) PAUSES the player's own
+    // and the render player's two prompts — its LOAD_IN_PLACE_CONFIRM
+    // (GuiInputHandler::render_player_load_in_place) and its DELETE question
+    // (render_player_delete, input_key_dispatch.cpp) — PAUSE the player's own
     // transport through GuiRenderPlayer::toggle_pause, which takes that same
     // body through the player's fork — a stop that must keep the resume point
     // the ordinary modal stop would not — so the RULE holds for every modal
     // surface even though this function's caller set is not literally every
-    // opener.
+    // opener. And THE LANE EDITORS' OPEN is the table's exemption below.
     // Authoring or answering a dialog over a live audition is the wrong default,
     // and Space is inside each of those surfaces' blocked sets, so playback
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * DIALOG modal surfaces — the two dialog editors, the prompts and
-    //     the picker, all painted as the bottom row's modal since 2026-08-13
-    //     — STOP.
-    //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
-    //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
-    //     wheel-transparent), and editing flag text while listening to the
-    //     passage is a workflow the architect uses. Its open site
+    //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
+    //     and the progress modal — and THE TWO OVERLAYS, the picker and the
+    //     render player (whose own transport begins where the project's
+    //     audition ends), all standing in the modal family's box — STOP.
+    //   * The LANE EDITORS' OPEN (the flag editor and the iteration bound
+    //     editor) IS EXEMPT, and that is a DECISION, not an omission: editing
+    //     flag text while listening to the passage is a workflow the
+    //     architect uses, and it stays recorded so when the editors became
+    //     modals, pointer and wheel included (architect 2026-10-25 — the
+    //     exemption kept as it was; until then their modality was chords
+    //     alone). Its open site
     //     (GuiFlagEditor::enter_top_flag_edit) carries a pointer back here.
     //     THE EXEMPTION IS THE OPEN'S ALONE: the payload COMMIT that changes
     //     the marker is a marker mutation and stops (architect 2026-10-14, the

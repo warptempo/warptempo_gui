@@ -62,8 +62,9 @@ public:
     // whole source frames per pixel at the working zoom on this device, fixed
     // for this audio's lifetime (the rule at working_column_frames,
     // app_state.h). Nothing reads it before a load: the no-audio state greys
-    // every face, and the one tooltip fork that reaches the map
-    // (overview_command_target) answers its no-op first there; the assert is
+    // every face, and the one fork that reaches the map
+    // (overview_command_target — Zoom to Fit's tooltip and, since
+    // 2026-10-25, its legend) answers its no-op first there; the assert is
     // that claim.
     int64_t working_column()  const {
         assert(working_column_ > 0);

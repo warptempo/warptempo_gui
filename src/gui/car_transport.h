@@ -97,10 +97,10 @@ struct GuiInputHandler;
 // player it swaps to at a complete batch takes the commands from there, the
 // hook's fork), while the folder overlay stands (the Open project
 // picker — the player is forked ahead at the hook, so its owner tag never
-// reaches this test), under a DIALOG modal
-// editor (modal_dialog_editor_active: the settings editor and the BPM
-// bracket editor, the surfaces whose open stopped
-// playback and whose keys are theirs alone) and in the `h` history view
+// reaches this test), under ANY EDITOR (keyboard_modal_editor_active, the
+// one predicate for a keyboard-taking modal: the settings and BPM dialog
+// editors and, since 2026-10-25, the flag and iteration bound editors — a
+// modal admits its own vocabulary alone) and in the `h` history view
 // (playback is removed from the view whole and bare Space is consumed
 // there).
 //
@@ -109,8 +109,8 @@ struct GuiInputHandler;
 // or a drag, and follow that rule"), so each meets the head gates on_key asks
 // ahead of its own chord, through the same verdicts and the same sentences:
 //   PREVIOUS AND NEXT ARE Ctrl+Z AND Ctrl+Shift+Z WHOLE
-//     (GuiInputHandler::run_undo_redo_without_key) — under a flag editor or a
-//     pointer drag the chord is swallowed with the key's card, a read-only tab
+//     (GuiInputHandler::run_undo_redo_without_key) — under a pointer drag
+//     the chord is swallowed with the key's card, a read-only tab
 //     cards the chord, the iteration lock cards undo's own sentence — and then
 //     they meet the command's own refusals and cards (the empty stack, the
 //     other tab's lock). Each of those refusals ends
@@ -118,14 +118,14 @@ struct GuiInputHandler;
 //   THE PLAY TAKES BARE SPACE'S GATES
 //     (GuiInputHandler::car_play_refused_by_key_gates) — the gates alone,
 //     because the ACT is the car's own loop rather than toggle_playback: under
-//     a pointer drag it cards `Keys are ignored during a drag` as Space does,
-//     and UNDER A TOP-STRIP FLAG OR BOUND EDITOR IT IS CONSUMED IN
-//     SILENCE, which is what Space does there too (Space is printable, so the
-//     field takes it as a typed character and the transport never sees it;
-//     the car has no character to type, so it borrows no sentence). A
-//     read-only tab and the iteration lock stay LEGAL for it, as they are for
-//     Space.
-// So the play no longer acts under a flag editor or a pointer drag, and what
+//     a pointer drag it cards `Keys are ignored during a drag` as Space does.
+//     A read-only tab and the iteration lock stay LEGAL for it, as they are
+//     for Space.
+// (Under a lane editor the two helpers answered the press themselves — the
+// steps with the editor gate's card, the play in silence — until 2026-10-25,
+// when admits() took every editor; both keep a silent editor arm in on_key's
+// order, a bound chord under any modal being silent.)
+// So nothing the car does acts under an editor or a pointer drag, and what
 // it still acts under is nothing the keyboard would refuse either.
 //
 // THE INPUT HANDLER IS AN ACT OWNER'S AND A GATE OWNER'S BACK-POINTER, NOT
@@ -329,9 +329,10 @@ private:
     // for it in target view. It asks NOTHING ELSE — in particular it does NOT
     // re-ask the play's own key gates (car_play_refused_by_key_gates), and
     // that is load-bearing rather than an economy: by construction they
-    // cannot refuse here, because a drag or an open keyboard-modal editor
-    // already stopped the STEP one line above with the undo chord's own card,
-    // and re-asking them could raise a SECOND card for one console press.
+    // cannot refuse here, because a drag already stopped the STEP one line
+    // above with the undo chord's own card (an editor never reaches the step,
+    // admits() dropping it), and re-asking them could raise a SECOND card for
+    // one console press.
     void car_play_after_step();
     // The latch's tick body (the rules and every clear at its declaration).
     void run_pending_play();

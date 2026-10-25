@@ -712,11 +712,11 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the ICON row, at the window's top on both devices since
 // 2026-10-24 (the app's caption, lane 0 from 2026-10-05, removed: labwc
-// draws the laptop's title bar outside the surface), the logo lane over its keys (the twenty-four
+// draws the laptop's title bar outside the surface), the logo lane over its keys (the twenty-three
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
-// count's authority; twenty stand outside the `h` view and twelve
-// inside it), the toolbar band. Lane 1 is the
+// count's authority; twenty-one stand outside the `h` view and thirteen
+// inside it, re-counted 2026-10-25), the toolbar band. Lane 1 is the
 // TRIM lane (Cool Edit's view bar: the span and its two ends, every trim
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
@@ -2446,7 +2446,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // answer. `f` and `i` are the pure cases (a bare flag flip and nothing
         // else); `t` and `p` happen to damage anyway and still go through here
         // rather than being trusted to. WHAT IT WATCHES, per roster button:
-        // the enabled bit, the selected bit and the glyph.
+        // the enabled bit, the selected bit, the glyph and THE LEGEND
+        // (2026-10-25: the word names the next press's act — FIT / RECALL
+        // and INHERIT / TIE move with no damage of their own; the
+        // publication's coverage is the union of the old and new extents,
+        // publish_button_face, and the damage below is the whole strip, so a
+        // word's change repaints both).
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
@@ -2512,7 +2517,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                       app, audio, audio.total_frames(),
                                       playback, target_render, id) ||
                     f.selected != redesign_button_selected(app, id) ||
-                    f.glyph != redesign_button_glyph(app, id);
+                    f.glyph != redesign_button_glyph(app, id) ||
+                    std::string_view(f.legend) !=
+                        redesign_button_legend(app, audio, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))
                     drift_transport = true;

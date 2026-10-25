@@ -600,12 +600,14 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // "Bound keys either show an effect or a card, so an unbound key is identified
 // by its silence." The gates that answer a swallowed press therefore ask this
 // first, and say nothing for a chord that binds nothing where the press
-// landed: the deduction only works if the silence is reserved for it. SIX
-// READERS, all of them gates and all in on_key (re-greped at this edit): the
-// keyboard-modal editor gate, the editor TEXT DRAG's gate and the pointer
-// gestures' DRAG-MODAL gate, the loading gate, the `h` view's allowlist and
-// the read-only lock — five
-// sentences between them, the two drag gates sharing one literal. THE
+// landed: the deduction only works if the silence is reserved for it. FOUR
+// GATES IN on_key READ IT (re-grepped 2026-10-25): the pointer gestures'
+// DRAG-MODAL gate, the loading gate, the `h` view's allowlist and the
+// read-only lock, four sentences between them — and the car's two roads onto
+// the same gates (run_undo_redo_without_key, car_play_refused_by_key_gates).
+// (THE KEYBOARD-MODAL EDITOR GATE AND THE EDITOR TEXT DRAG'S were readers
+// until 2026-10-25, when a bound chord under any modal became silent —
+// architect: "silence".) THE
 // PLAYER'S AND THE PICKER'S OWN DRAG ARMS, which say that same literal one
 // rank higher, DO NOT ASK: while either mode stands its router is the whole
 // vocabulary, and this inventory does not know it — a bare `r` swallowed by
@@ -654,10 +656,10 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // silent as any unbound letter. Neither
 // router can reach a gate below it either (both are ranked above all six), so
 // no term for them could ever be asked. THE EDITORS ARE THE SAME KIND OF
-// WORLD: an editor's own keys (its motion arm, its ctrl-exact clipboard
-// chords, its printable insertion) are consumed by the editor itself and
-// never reach the gate that would ask this — what the gate blocks is the
-// chords the editor does NOT own, which is what this inventory is for.
+// WORLD and, being modals, ask nothing since 2026-10-25: an editor's own
+// keys (its motion arm, its ctrl-exact clipboard chords, its printable
+// insertion) are consumed by the editor itself, and every chord it does not
+// own is consumed by its gate in silence.
 //
 // A NEW BINDING JOINS THIS LIST. That is the standing cost of spelling the
 // dispatch's membership twice, taken deliberately: the dispatch is an if-ladder

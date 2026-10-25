@@ -383,6 +383,23 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act) {
     }
     return "";
 }
+// THE PLAY KEY'S PRINT NAMES ITS NEXT PRESS (architect 2026-10-25, the
+// roster's legend rule at redesign_button_legend's stateful overload):
+// render_player_play_face, the owner the tooltip and the glyph read — PLAY,
+// PAUSE, RESUME, or OPEN over a folder row. Every other act forwards to the
+// table above (REPEAT a toggle, one print in both states).
+const char* render_player_button_legend(AppState::PlayerButtonAct act,
+                                        PlayerPlayFace face) {
+    if (act == AppState::PlayerButtonAct::PlayPause) {
+        switch (face) {
+            case PlayerPlayFace::Pause:      return "PAUSE";
+            case PlayerPlayFace::Resume:     return "RESUME";
+            case PlayerPlayFace::OpenFolder: return "OPEN";
+            case PlayerPlayFace::Play:       break;
+        }
+    }
+    return render_player_button_legend(act);
+}
 
 // THE KEY'S LEGEND, LAID OUT ONCE (2026-10-23) — the one owner of where a
 // key's legend stands and of the pixels the key and its legend paint
@@ -580,29 +597,50 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // the face publishes for the press, the hover and the tooltip (a legend is
 // print on the ground, never a target). The empty rects take the overload
 // below, which covers what it publishes.
+//
+// THE LEGEND IS THE FOURTH TERM (2026-10-25: the word names the next press,
+// redesign_button_legend's stateful overload): `legend` is the word the
+// caller paints, stashed with the extent it paints over, and THE COVERAGE IS
+// THE UNION OF THAT EXTENT AND THE ONE LAST STASHED — a word that narrows
+// (RECALL to FIT) must have its old ends erased by the same clip before the
+// stash may say the new word, or the comparator would go blind over the
+// stale ends.
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
     const GuiTargetRender& target_render,
-    RedesignButton id, const GuiRect& rect, const GuiRect& painted) {
+    RedesignButton id, const GuiRect& rect, const GuiRect& painted,
+    const char* legend) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
-    if (clip_covers_drawable(cr, app, painted)) {
+    const GuiRect covered =
+        face.painted.w <= 0 || face.painted.h <= 0 ? painted
+        : painted.w <= 0 || painted.h <= 0         ? face.painted
+                                    : union_rect(face.painted, painted);
+    if (clip_covers_drawable(cr, app, covered)) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                                 playback, target_render, id);
         face.selected = redesign_button_selected(app, id);
         face.glyph = redesign_button_glyph(app, id);
+        face.legend  = legend;
+        face.painted = painted;
     }
     return face;
 }
+// A MEMBER THAT DOES NOT STAND publishes the empty rect and paints nothing;
+// its stash takes the live word (nothing painted can disagree with it) and
+// an empty extent, the walk's own damage having erased what stood there.
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
     const GuiTargetRender& target_render,
     RedesignButton id, const GuiRect& rect) {
+    AppState::RedesignButtonFace& face =
+        app.redesign_buttons[redesign_button_index(id)];
+    face.painted = GuiRect{0, 0, 0, 0};
     return publish_button_face(cr, app, audio, playback, target_render, id,
-                               rect, rect);
+                               rect, rect, redesign_button_legend(app, audio, id));
 }
 
 // ROW 4 — THE ICON ROW: THE TOOLBAR BAND (architect 2026-10-09, the program
@@ -671,10 +709,25 @@ constexpr IconRowDef kIconRowButtons[] = {
     // GROUP with Redo and Render (redesign_button_opens_icon_group), the unit
     // the `h` view's stand-ins replace, which paints nothing. It wears
     // OpenProject, the set's document-open (icons.h).
+    //
+    // COPY PHASE RESETS STANDS BETWEEN REDO AND RENDER since 2026-10-25
+    // (architect: "copy should be moved to the left of render, that's
+    // usually where copy action would go, between redo [and render], and
+    // it's where it goes in kdenlive … copy is very rarely used, a handful of
+    // times in a movement, and it does affect the whole large batch of
+    // markers; undo / redo also affect the markers … the copy right now is
+    // pushing all the other buttons one column to the left, which is further
+    // away from my pen hand"): the first run is SIX — OPEN SAVE UNDO REDO
+    // COPY RENDER — and COPY is a member of Undo's group, which the `h`
+    // view's stand-ins replace whole (it is hidden there anyway,
+    // history_mode_hides_button). Its chords, face and tooltip came across
+    // unchanged from row 8's verb group (2026-10-24 to 2026-10-25): bare P,
+    // Ctrl+P, Ctrl+Shift+P, the barrel's ctrl and the long press as there.
     {RedesignButton::OpenProject, icons::Icon::OpenProject},
     {RedesignButton::Save,       icons::Icon::Save},
     {RedesignButton::Undo,       icons::Icon::Undo},
     {RedesignButton::Redo,       icons::Icon::Redo},
+    {RedesignButton::IconCopyPhaseResets, icons::Icon::CopyPhaseResets},
     {RedesignButton::Render,     icons::Icon::Render},
     // (The view axes' faces are the two radio pairs at this row's right end,
     // architect 2026-10-14 — kIconRowViewPairs below, their glyphs at icons.h's
@@ -856,25 +909,25 @@ constexpr IconRowDef kIconRowButtons[] = {
 // that leader's gap. The candidates are the groups every member of which the
 // view greys through the derived partition (history_mode_disables_button,
 // input_pointer.cpp — none of their chords is the mode's vocabulary or on its
-// allowlist): UNDO'S (Undo, Redo, Render — Ctrl+Z, Ctrl+Shift+Z,
-// Ctrl+Alt+R) and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). The
+// allowlist): UNDO'S (Undo, Redo, Copy Phase Resets, Render — Ctrl+Z,
+// Ctrl+Shift+Z, the `p` family, Ctrl+Alt+R) and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). The
 // iteration group takes no stand-in, so it is HIDDEN WHOLE in the view
 // (every member's chord refused in every session, history_mode_hides_button),
 // its cases dropped from their run. No other group is grey whole in the view: the zoom group
-// keeps Zoom to Fit (bare `0`) and the render-entry group the tooltip lamp
-// (bare backslash).
+// keeps Zoom to Fit (bare `0`) and the render-entry group Play Renders (bare
+// `l`, admitted 2026-10-25) and the tooltip lamp (bare backslash).
 //
-// THE SLOTS: UNDO'S THREE take the view's two acts, Revert and Load in
-// Place, so that group stands one case narrower in the view (two until
-// 2026-10-14, when Copy Resolved Value's button left it) — OLDER AND NEWER
+// THE SLOTS: UNDO'S FOUR (Undo, Redo, Copy Phase Resets and Render, since
+// 2026-10-25; three until then) take the view's two acts, Revert and Load in
+// Place, so that group stands two cases narrower in the view — OLDER AND NEWER
 // LEFT IT FOR ROW 8 (architect 2026-10-11 ~02:40; they stood in Undo's and
 // Redo's slots from 2026-10-05): they take the Left / Right arrows' seats in
 // the nudge-and-play group there, the row's per-seat stand-ins
 // (kTransportHistoryStandIns). The zoom group stands on the two members the
 // view does not refuse in every session (Zoom to Fit and, since 2026-10-12,
-// Waveform Magnification) and the render-entry group on one (Enable
-// Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's
-// walk).
+// Waveform Magnification) and the render-entry group on two (Play Renders,
+// since 2026-10-25, and Enable Tooltips), their others hidden
+// (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the view pairs are right-anchored and do not move
 // (kIconRowHistoryOpener).
 //
@@ -955,11 +1008,12 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the clip
 // covers it whole — so a press, a hover and a tooltip land on exactly the
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
-// band holds every run down to 518 Windows px of window width outside the
-// `h` view and 334 inside it (the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-22), so neither host reaches the rule at its
+// band holds every run down to 541 Windows px of window width outside the
+// `h` view and 357 inside it (the width math at paint_icon_row, its one
+// statement, re-derived 2026-10-25 with COPY in the first run, plus the
+// ring's inset at each window edge), so neither host reaches the rule at its
 // scale: the tablet's 2304 device px hold the row in both states up to about
-// 440 % and the laptop's 1920 up to about 370 % (the W arithmetic over the
+// 425 % and the laptop's 1920 up to about 355 % (the W arithmetic over the
 // device width; each element's own rounding moves the edge by a pixel or
 // so).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
@@ -1615,7 +1669,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // view and TWELVE inside it, RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
-    // it) with SAVE, UNDO, REDO and RENDER behind it in the first run; FULL
+    // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in
+    // the first run; FULL
     // ZOOM OUT, THE WAVEFORM MAGNIFICATION LAMP and FOLLOW (the viewport
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
@@ -1635,8 +1690,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (history_mode_hides_button, input_pointer.cpp) — Follow behind Full
     // Zoom Out and the magnification lamp (which the view admits since
     // 2026-10-12, architect: he wants to magnify while walking history), the
-    // iteration group whole, and Listen, the padlock and Settings ahead of
-    // Enable Tooltips — its neighbours closing up and its run standing
+    // iteration group whole, and the padlock and Settings between Play
+    // Renders (admitted 2026-10-25) and Enable Tooltips — its neighbours
+    // closing up and its run standing
     // while any member does. What the view refuses only BY STATE (Save with
     // nothing to commit, Revert with no subject, Load in Place over an empty
     // walk) and what any other mode refuses wears the DEAD FACE, and a window
@@ -1648,19 +1704,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-23): in Windows px, from the program ring's outer left column,
     // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
     // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
-    // fifteen members in three runs,
-    //   15·23 + 2·15 = 375,
-    // and inside it seven in three (Open, Save, Revert, Load in Place | Full
-    // Zoom Out, the lamp | Enable Tooltips), 7·23 + 2·15 = 191; with one run
+    // sixteen members in three runs (re-derived 2026-10-25, COPY joining the
+    // first),
+    //   16·23 + 2·15 = 398,
+    // and inside it eight in three (Open, Save, Revert, Load in Place | Zoom
+    // to Fit, the lamp | Play Renders, Enable Tooltips — Play Renders since
+    // 2026-10-25), 8·23 + 2·15 = 214; with one run
     // gap of wood before the right run the band holds every run at
-    //   375 + 15 + 115 = 505
-    // Windows px outside the view (321 inside it) — the ring's 754 W on the
-    // tablet at 300 % with 249 W of wood between the left runs and the right
+    //   398 + 15 + 115 = 528
+    // Windows px outside the view (344 inside it) — the ring's 754 W on the
+    // tablet at 300 % with 226 W of wood between the left runs and the right
     // run. IN DEVICE PX, off the painted walk (each case its rounded parts,
     // the gap its own scaled_px, the ends program_ring_columns'): at the
     // tablet's 300 % (cases 69, the ring 21 .. 2283) the left runs on x
-    // 21..1145, the right run 1938..2282; at the laptop's 138 % (cases 31,
-    // the gap 21, the ring 15 .. 1905) the left runs on x 15..521, the right
+    // 21..1214, the right run 1938..2282; at the laptop's 138 % (cases 31,
+    // the gap 21, the ring 15 .. 1905) the left runs on x 15..552, the right
     // run 1750..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
@@ -1744,14 +1802,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const auto paint_member = [&](const IconRowDef& def, int bx,
                                   const GuiRect& published, int clip_x2) {
         const GuiRect key{bx, btn_y, btn_w, btn_h};
-        const char* legend = redesign_button_legend(def.id);
+        // THE LEGEND NAMES THE NEXT PRESS'S ACT (2026-10-25,
+        // redesign_button_legend's stateful overload), stashed with the
+        // extent it paints over (publish_button_face).
+        const char* legend = redesign_button_legend(app, audio, def.id);
         const GuiRect extent = key_legend_layout(key, legend).extent;
         const int painted_x2 = std::min(extent.x + extent.w, clip_x2);
         const GuiRect painted{extent.x, extent.y,
                               std::max(0, painted_x2 - extent.x), extent.h};
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, playback, target_render, def.id, published,
-            painted);
+            painted, legend);
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
         // 2026-08-04) and, since 2026-08-15, the per-tab READ-ONLY LOCK. Both
@@ -1826,12 +1887,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // THE HI-FI SKIN (architect 2026-10-23): THE KEY IS BLANK — nothing
         // stands on its face; the icon set stays loaded for a later drop —
         // and THE LEGEND stands UNDER it, the roster's legend column
-        // (redesign_button_legend), dimmed when the button is dead
-        // (paint_key_legend's one seat). A button whose act swaps with its
-        // state (Save in the history view and mid-checkpoint, Render
-        // mid-render, Play / Stop) keeps its one legend; the swap is the
-        // tooltip's and the stashed glyph bit's (redesign_button_glyph,
-        // still published so the tooltip's drift is caught). (The state
+        // (redesign_button_legend's stateful overload: the act the next
+        // press runs, a toggle keeping its one print, 2026-10-25), dimmed
+        // when the button is dead (paint_key_legend's one seat). The stashed
+        // glyph bit (redesign_button_glyph) is still published so the
+        // tooltip's drift is caught. (The state
         // resolver's glyph on the key, redesign_button_icon, stood
         // 2026-08-13 to 2026-10-23; git history.)
         paint_key_legend(cr, key, legend, face.enabled);
@@ -1913,11 +1973,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
 //   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
 //   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
-//   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands),
-//   COPY PHASE RESETS (bare P, since 2026-10-24; Ctrl+P and Ctrl+Shift+P its
-//   pastes) and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while
-//   armed — the row's two lamps). The four verbs, Open Text Editor, Copy
-//   Phase Resets and Toggle Value Drag
+//   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands)
+//   and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while armed — the
+//   row's two lamps); COPY PHASE RESETS stood between the two 2026-10-24 to
+//   2026-10-25 and is the band's first run's since (kIconRowButtons). The
+//   four verbs, Open Text Editor and Toggle Value Drag
 //   are the row's resting greys on a locked tab; the jump and Add to
 //   selection are not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
 //   between Toggle inherit and Add to selection until 2026-09-29; Copy was
@@ -1946,7 +2006,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // TWO MODE TERMS. THE HIDE (architect 2026-10-07): in the `h` view a member whose chord
 // the view refuses in every session is NOT PAINTED (history_mode_hides_button,
 // input_pointer.cpp) — Play / Stop, Up and Down, the four verbs, Jump to
-// Defining Marker, Open Text Editor, Copy Phase Resets and Toggle Value
+// Defining Marker, Open Text Editor and Toggle Value
 // Drag — and publishes an empty rect, the block closing up from
 // the right margin and the state line taking the room; the row in there is
 // GO TO START and GO TO END (the mode's own absolute jumps), ADD TO
@@ -2110,12 +2170,11 @@ struct TransportRowDef {
 // one-shot: the drag it arms puts it out; under grid iterations permanently
 // lit and grey (2026-10-11 ~01:45; its roster entry, app_state.h).
 //
-// THE GROUP IS NINE SINCE 2026-10-24 (architect): COPY PHASE RESETS — bare
-// P, its ctrl press Ctrl+P the paste and its ctrl+shift press Ctrl+Shift+P
-// the state paste, legend COPY — BETWEEN ADD TO SELECTION AND TOGGLE VALUE
-// DRAG ("edit is about flag text, whereas add sel normally precedes copy").
-// An act, no lamp; it greys where the copy would refuse and on a locked tab,
-// and the `h` view does not paint it (its roster entry, app_state.h).
+// THE GROUP WAS NINE 2026-10-24 TO 2026-10-25: COPY PHASE RESETS stood
+// between Add to Selection and Toggle Value Drag, and went up to the band's
+// first run between Redo and Render (architect 2026-10-25: "the copy right
+// now is pushing all the other buttons one column to the left, which is
+// further away from my pen hand"; kIconRowButtons). EIGHT again since.
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
@@ -2128,7 +2187,6 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconJumpToDefiningMarker, icons::Icon::JumpToDefiningMarker},
     {RedesignButton::IconOpenTextEditor,       icons::Icon::OpenTextEditor},
     {RedesignButton::IconAddToSelection,       icons::Icon::AddToSelection},
-    {RedesignButton::IconCopyPhaseResets,      icons::Icon::CopyPhaseResets},
     {RedesignButton::IconValueDrag,            icons::Icon::ValueDrag},
 };
 // THE SKIP GROUP (architect 2026-10-24: the two skip buttons back as their
@@ -2576,12 +2634,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // dims its legend, the band's own composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         const GuiRect key{x, btn_y, btn_w, btn_h};
-        const char* legend = redesign_button_legend(def.id);
+        // The legend names the next press's act (2026-10-25, the band's
+        // rule: redesign_button_legend's stateful overload).
+        const char* legend = redesign_button_legend(app, audio, def.id);
         // THE PAINTED EXTENT, the key and its legend (key_legend_layout,
         // 2026-10-23): the publication's coverage and the gate below.
         const GuiRect painted = key_legend_layout(key, legend).extent;
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id, key, painted);
+            cr, app, audio, playback, target_render, def.id, key, painted,
+            legend);
 
         // A case the clip does not reach is skipped, its face published
         // above (clip_meets) — the case AND its legend, the band's gate: a
@@ -2591,7 +2652,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             face.enabled && redesign_button_pressed_face(app, def.id);
         paint_roster_case(cr, key, face.selected, pressed);
         // THE KEY IS BLANK, ITS LEGEND UNDER IT (the band's rule, 2026-10-23:
-        // redesign_button_legend through the one seat, dimmed when dead).
+        // the stateful legend through the one seat, dimmed when dead).
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -2603,7 +2664,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // against the row's right seat (bottom_row_seats, flush with the program
     // ring's right edge), FOUR RUNS (kRow8Groups, 2026-10-24): the SKIP
     // GROUP (START | END, kTransportSkipGroup), the MARKER-VERB GROUP (its
-    // nine counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
+    // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
     // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
     // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
     // Play, kTransportNudgePlayGroup; architect 2026-10-18), each a plain
@@ -2620,27 +2681,27 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (Windows px, re-derived 2026-10-24 for the fourth group;
-    // the case 23, the skips two, the verbs nine, the step-and-walk group
-    // four and the nudge-and-play group five): the block is 20 cases and
-    // three run gaps, 20·23 + 3·15 = 505 W, its last case ending one past the
-    // program ring's outer right column (bottom_row_seats; the ring 7 W in
-    // from each window edge on the tablet) — on the tablet's 768 at 300 % the
-    // block on W 256..760 (device x 768..2282: the skips 768..905, the verbs
-    // 951..1571, the walk 1617..1892, the nudge 1938..2282, Play
+    // THE NUMBERS (Windows px, re-derived 2026-10-25 with COPY gone to the
+    // band; the case 23, the skips two, the verbs eight, the step-and-walk
+    // group four and the nudge-and-play group five): the block is 19 cases
+    // and three run gaps, 19·23 + 3·15 = 482 W, its last case ending one past
+    // the program ring's outer right column (bottom_row_seats; the ring 7 W
+    // in from each window edge on the tablet) — on the tablet's 768 at 300 %
+    // the block on W 279..760 (device x 837..2282: the skips 837..974, the
+    // verbs 1020..1571, the walk 1617..1892, the nudge 1938..2282, Play
     // 2214..2282); the clock's field on the ring's outer left column, from
     // W 7 (x 21) — the cell (4.45 em of Liberation Sans advances, seven
     // digits, the colon and the point, in the 22-px body face at 300 %, 98 px
     // ceiled) and its two 12-px pads, a 122-px field, x 21..142 — then the
     // name's first ink 5 W past it (x 157, Tab A's advance ~59 px), the state
     // line's 5 W past the name's advance (x ~231), clipped one run gap short
-    // of the block (x 723): about 490 px of state line at 300 %. On the
+    // of the block (x 792): about 560 px of state line at 300 %. On the
     // laptop's 1920 at 200 % (cases 46, the gap 30, the body face ~14.7 px)
-    // the block is 1010 px, from about x 896 to the ring's right column, the
+    // the block is 964 px, from about x 942 to the ring's right column, the
     // clock's field about 82 px from x 14, and the state line keeps about
-    // 710 px.
-    // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor, Copy
-    // Phase Resets and Toggle Value Drag hidden there with the verbs, Down
+    // 755 px.
+    // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
+    // Toggle Value Drag hidden there with the verbs, Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
     // not standing, 9·23 + 3·15 = 252 W, from W 509. THE ROW CARRIES NO
@@ -4910,8 +4971,9 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 // (the fourth, the same day: its Cancel-alone row), THE PROGRESS MODAL (the
 // fifth, 2026-10-14: a batch's Cancel alone, AppState::BatchProgress) or any
 // dialog editor. The
-// top-strip FLAG editor is deliberately absent: it is positional and
-// pointer-transparent, not a dialog, and it never takes this row.
+// top-strip FLAG editor is deliberately absent: it is positional, a modal
+// since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
+// and it never takes this row (on the glass the keyboard's band covers it).
 // EVERY ONE OF THEM STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
 // since 2026-10-14 (modal_box.h; a prompt and a dialog editor stood in the
 // taskbar dialog laid over the row from 2026-10-10 until that day), so with
@@ -5086,8 +5148,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // TWO modal editors (settings / BPM; the commit-title editor was the third
 // until its retirement 2026-10-10); the top-strip
 // FLAG editor is deliberately NOT a dialog — it is positional, editing the
-// marker where it stands, and stays the pointer-transparent unrolled flag
-// (render_flag_editor_box).
+// marker where it stands, the unrolled flag (render_flag_editor_box), a
+// modal since 2026-10-25 by its veil alone (keyboard_modal_editor_active).
 //
 // ONE RENDERER, ONE WINDOW, ONE FRAME — unchanged. Nothing here creates a
 // surface, a window or a second buffer: only the modal's RECTANGLE moved,
@@ -5317,10 +5379,13 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // own gap there, spent with the words on 2026-09-01).
     const int after_scrub =
         group + clock_w + group + 4 * bw;
-    // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
-    // at each end is not a track (28 Windows px since the unit's change).
+    // THE FLOOR IS TWO THUMBS (2026-10-25; two 14-W handle boxes until
+    // then) — a channel shorter than two of the thumbs that ride it is not a
+    // channel. `scrub_w` is the CHANNEL's width; the thumb's center runs its
+    // first column to its last and half the thumb overhangs each end, over
+    // the group space either side (render.h's scrub block).
     l.scrub_w = words_x0 - after_scrub - l.scrub_x0;
-    if (l.scrub_w < 2 * scrub_handle_box_px()) l.scrub_w = 0;
+    if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
 
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
@@ -5633,6 +5698,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
+        // The player's Play key's face (render_player_play_face), its
+        // legend's fork (2026-10-25); Play on every other button.
+        PlayerPlayFace play_face = PlayerPlayFace::Play;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
         // below. ONE OWNER READS IT, re-greped 2026-09-30: the player's nine
@@ -5749,6 +5817,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.player_act = act;
             b.glyph      = true;
             b.lit        = lit;
+            b.play_face  = hint.play_face;
             b.enabled    = render_player_button_enabled(app, playback, act);
             b.icon       = icon;
             b.tooltip    = render_player_button_hint(act, hint);
@@ -6097,15 +6166,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (architect 2026-10-02; the hi-fi skin's two hairlines and
         //    key-shaped thumb 2026-10-23; the look and its owners at
         //    render.h's scrub block). The ITEM is
-        //    published (dlg.scrub) and it is the button box's own band, so a
-        //    press anywhere on it is on the slider and the per-position damage
-        //    covers the thumb's whole travel; the MAPPING owns the inset
-        //    (render_player_scrub_x_of), the thumb's centre being the frame's
-        //    position. --
+        //    published (dlg.scrub): the button box's own band, THE CHANNEL
+        //    WIDENED BY THE THUMB'S OVERHANG AT EACH END (2026-10-25), so a
+        //    press anywhere on the slider — the thumb's overhanging half
+        //    included — is on it and the per-position damage covers the
+        //    thumb's whole travel, its end columns included; the MAPPING
+        //    (render_player_scrub_x_of) runs the thumb's centre, the frame's
+        //    position, from the channel's first column to its last. --
         const AppState::RenderPlayer& rp = app.render_player;
         const int64_t pos = render_player_position(app, playback);
         if (scrub_w > 0) {
-            const GuiRect track{scrub_x0, btn_y, scrub_w, btn_h};
+            // THE CHANNEL, the layout's span, and THE ITEM round it: the
+            // channel widened by the thumb's left half before its first
+            // column and its right half after its last (the thumb's box from
+            // centre − w / 2, render_player_scrub_handle_hit's and the
+            // painter's own left edge), so item.w = channel − 1 + thumb.
+            const int thumb_w = scrub_thumb_w_px();
+            const GuiRect channel{scrub_x0, btn_y, scrub_w, btn_h};
+            const GuiRect track{scrub_x0 - thumb_w / 2, btn_y,
+                                scrub_w - 1 + thumb_w, btn_h};
             dlg.scrub = track;
             // THE THUMB'S ROWS, CENTRED IN THE TRACK'S BAND, and THE CHANNEL
             // at its seat inside them: the thumb is its rows above the
@@ -6115,32 +6194,35 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const int above     = scrub_thumb_above_px();
             const int thumb_h   = scrub_thumb_h_px();
             const int thumb_y   = track.y + (track.h - thumb_h) / 2;
-            // THE THUMB'S COLUMN, when a thumb stands: the drag's carried x
-            // while the thumb is being dragged (the sound continues where it
-            // was and the seek commits at the release), the item position's
-            // own otherwise.
-            const int hx = rp.frames <= 0 ? -1
-                         : rp.scrub.armed ? rp.scrub.marker_x
+            // THE THUMB'S COLUMN — THE THUMB ALWAYS STANDS (2026-10-25,
+            // render.h's scrub block; it stood only while an item was
+            // decoded until then): the drag's carried x while the thumb is
+            // being dragged (the sound continues where it was and the seek
+            // commits at the release), the item position's own otherwise —
+            // the channel's first column, frame 0, while no item is loaded
+            // (render_player_scrub_x_of's frames <= 0 arm, the clock's zeros).
+            const int hx = rp.scrub.armed ? rp.scrub.marker_x
                                           : render_player_scrub_x_of(app, pos);
             // THE CHANNEL (render.h's scrub block, 2026-10-23): a ONE-DEVICE-PX
             // line of the ring's light tone over one of its dark tone, across
-            // the track's width, nothing filled.
+            // the channel's width, nothing filled.
             {
                 const GuiMaterialScope flat(GuiMaterialRegion::Flat);
                 const int px = hairline_px();
-                paint_cell_rect(cr, GuiRect{track.x, thumb_y + above, track.w, px},
+                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
+                                            channel.w, px},
                                 palette().ce_hilight);
-                paint_cell_rect(cr, GuiRect{track.x, thumb_y + above + px,
-                                            track.w, channel_h - px},
+                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above + px,
+                                            channel.w, channel_h - px},
                                 palette().ce_dark);
             }
-            if (rp.frames > 0) {
+            {
                 // THE THUMB — the key-shaped block (render.h's scrub block:
                 // a key at rest, no LED, no legend, 8 x 16 W), centred on the
-                // column and on the channel. No hover face: its painted rect
+                // column and on the channel, its box inside the item at
+                // every column of the travel. No hover face: its painted rect
                 // is the press's business (render_player_scrub_handle_hit)
                 // and the cursor its cue.
-                const int thumb_w = scrub_thumb_w_px();
                 const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
                                     thumb_h};
                 {
@@ -6148,8 +6230,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     paint_scrub_thumb(cr, thumb);
                 }
                 // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
-                // AppState::ModalDialogGeometry::scrub_thumb_x): a clip that
-                // covers the track drew the whole slider, so this column is
+                // AppState::ModalDialogGeometry::scrub_thumb_x), with no item
+                // too: a clip that covers the item — the channel and the
+                // thumb's whole travel, its overhangs included — drew the
+                // whole slider, so this column is
                 // the one on screen; a clip that misses it left the last
                 // frame's thumb standing, so that frame's column is carried
                 // while the session and the track are the same.
@@ -6503,7 +6587,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE KEY (2026-10-23, paint_roster_case), flat, its LED lit for the
         // row's one checked button; THE LEGEND UNDER IT (paint_key_legend's
         // one seat): a glyph button's the player's own legend
-        // (render_player_button_legend), dimmed when dead; a word button's
+        // (render_player_button_legend, the Play key's naming its next press,
+        // 2026-10-25 — its repaint the row's one damage owner, the play
+        // face's writers damaging the row whole), dimmed when dead; a word button's
         // its word IN CAPITALS, its access key underlined (the Windows-strict
         // keys unchanged, only the drawing) — always live while its dialog
         // stands. The icon set's glyphs are not drawn (their enumerators stay
@@ -6513,7 +6599,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         std::string legend;
         int legend_access = -1;
         if (plan[i].glyph) {
-            legend = render_player_button_legend(plan[i].player_act);
+            legend = render_player_button_legend(plan[i].player_act,
+                                                 plan[i].play_face);
             paint_key_legend(cr, r, legend, enabled);
         } else {
             legend = plan[i].label;
