@@ -15,19 +15,15 @@ struct AppState;
 // design is approved": "current attempt to replicate classical on modern is
 // failing … let's embrace that"; his pick off 41 mocks, a late-80s black
 // component deck — brushed black aluminium, blank keys with printed legends).
-// THE FRAMES OF RECORD are tmp/theme_next/pivot1/out/pv_39b_hifi_cap40_tight_
-// clock.png (the main window) and pv_41_player_tight_clock_cap40.png (the
-// render player), the tablet at 300 %; their generators
-// tmp/theme_next/make_pivot1.py (brushed, ring_tones), make_pivot3.py and
-// make_pivot4.py are the numbers' source. Where a number here and the frame
-// part, the frame is the law. This header is the one owner of the grounds,
+// THE NUMBERS HERE ARE THE RECORD (they were fitted to the approved frames of
+// the main window and the render player, the tablet at 300 %). This header is the one owner of the grounds,
 // the bake and its rules, the regions, the ring tones, the chrome's inks, the
 // key's constants, the accent and the LED's glow. (The fortepiano chrome of
 // 2026-10-21 to 2026-10-23 — the walnut, the brass and the ebony, their
 // Gemini masters and pre-rendered covers under assets/tiles/, the bevel keys
 // — is git history.)
 //
-// THE GROUND IS PROCEDURAL (make_pivot1.brushed, ported): BRUSHED BLACK
+// THE GROUND IS PROCEDURAL: BRUSHED BLACK
 // ALUMINIUM — uniform noise (numpy's legacy MT19937 at a fixed seed, 21,
 // drawn row-major as numpy's RandomState.rand draws it, quantized to bytes),
 // blurred along x alone by PIL's GaussianBlur((9, 0.4)) (three passes of its
@@ -159,7 +155,7 @@ struct AppState;
 // THE TONE RULE: THE GROUND'S FACE IS ITS BAKED TILE'S MEAN COLOR
 // (materials::face; about 1F1F21 on the shipped ground), and the chrome's
 // ONLY RING, LINE AND EDGE TONES ARE THE TWO RING TONES OFF IT
-// (make_pivot1.ring_tones; ring_light / ring_dark below): light = HLS with
+// (ring_light / ring_dark below): light = HLS with
 // L + .16 and S × .9, dark = L × .40 — about 48484B and 0C0C0D (the app's
 // old hilight rule, L' = .492 L + .5, lands at L .5+ on any dark ground, the
 // "too bright" he saw). THE SURFACE CHOKEPOINT knows the Face by its bytes:
@@ -177,7 +173,7 @@ struct AppState;
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone. NO WORD
 // WEARS A SHADOW but the ruler's digits and ticks (one device px of black at
-// (+1, +1), render.h's ruler block): the frame of record draws none.
+// (+1, +1), render.h's ruler block): the skin draws none.
 
 enum class GuiMaterial { Ground, Marker };
 inline constexpr int kGuiMaterialCount = 2;
@@ -189,7 +185,7 @@ inline constexpr const char* kGuiMaterialNames[kGuiMaterialCount] = {
 // (GuiMaterialScope). Flat the default.
 enum class GuiMaterialRegion { Flat, Ground, Marker };
 
-// THE PROCEDURAL GROUNDS (the head; make_pivot1.brushed's arguments).
+// THE PROCEDURAL GROUNDS (the head; the brushed ground's arguments).
 inline constexpr uint32_t kGroundBase     = 0x222224;
 inline constexpr uint32_t kMarkerBase     = 0x303032;
 inline constexpr uint32_t kGroundSeed     = 21;
@@ -216,8 +212,7 @@ inline constexpr uint32_t kTimeFieldGround = 0x000000;
 inline constexpr uint32_t kSelectionFill = 0x3E4044;
 inline constexpr uint32_t kSelectionText = kBoneInk;
 
-// THE KEY (architect 2026-10-23; make_pivot1.push_buttons with blank=True,
-// make_pivot4.key): a flat face, a one-device-px black outline, a light top
+// THE KEY (architect 2026-10-23): a flat face, a one-device-px black outline, a light top
 // edge two rows deep (the light row, then the mean of it and the face), a
 // two-row foot and a one-column right edge in the dark — the key stands
 // proud — and the LED: unlit a dead lamp, lit THE ACCENT (accent_color).

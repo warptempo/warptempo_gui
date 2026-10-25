@@ -25,9 +25,9 @@
 // TOOLTIP since 2026-10-23: "the tooltips font size should be the same as
 // the flags"), TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
 // 2026-10-24, the laptop's caption title beside it that morning; architect 2026-10-24, "the caption size
-// 24", off the logo mocks tmp/theme_next/caption1/ — 22 from 2026-10-23
+// 24", off the logo mocks — 22 from 2026-10-23
 // until then), RULER 16 Regular (the ruler's digits alone; architect
-// 2026-10-24, "R16" off 14 / 15 / 16 / 17 on zz_type_sheet_22 — "we took
+// 2026-10-24, "R16" off 14 / 15 / 16 / 17 on his type sheet — "we took
 // them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
 // 2026-10-23 to 2026-10-24, the skin's first night 15), the CUES' 22
 // Regular (the body's size: the flag labels and the flag editor), LEGEND 14
@@ -35,7 +35,7 @@
 // night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
 // the letters, the symbol pages' characters and the word caps, "a separate
 // face"; architect 2026-10-24, "C24" off 22 / 24 / 26 / 28 on
-// zz_type_sheet_23 — the night's C34, off 22 / 28 / 34 / 40, stood
+// his type sheet — the night's C34, off 22 / 28 / 34 / 40, stood
 // 2026-10-23 to 2026-10-24, the caps wearing the body's 22 before it). (The
 // three recorded Windows metric sets — MS Sans Serif 8's {11, 2, x 6} cell,
 // the ruler's six-row digit, Cool Edit's cue cap of 7 — and the ems derived

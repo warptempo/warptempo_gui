@@ -9,13 +9,13 @@
 #include <vector>
 
 // The rules are at the declarations (cool_edit_paint.h); the construction is
-// the approved mock's (tmp/mocks/cool_edit/mock_ce.py), each W of it a
+// the approved mock's, each W of it a
 // rounded part here.
 
 namespace {
 
 // The mean of two words, per channel, truncated (numpy's integer mean of
-// the mock's two rows, make_pivot1.push_buttons).
+// the mock's two rows).
 uint32_t mean_word(uint32_t a, uint32_t b) {
     uint32_t out = 0;
     for (int s = 0; s <= 16; s += 8)

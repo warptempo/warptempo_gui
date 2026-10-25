@@ -110,7 +110,7 @@
 // such key: the view bar span's shadow rule, cool_edit_derive.h, run once by
 // the generator and proven below), `grid` its GrdL, `center` its Cntr, `cue`
 // its CueM (the red of the default scheme, F34B58) and `range` its RngM (the
-// blue, 4B82F3) — METRICS §4.2 — `playhead_stem` its Curs (the yellow, §4.3),
+// blue, 4B82F3), `playhead_stem` its Curs (the yellow),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color": the
 // ground of the program's panel — the toolbar band, row 8 and the canvas
 // column's lanes — whose every other tone derives from it,

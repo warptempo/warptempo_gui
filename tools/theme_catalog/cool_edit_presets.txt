@@ -1,8 +1,7 @@
 # COOL EDIT PRO 2.1'S COLOR PRESETS — the source of the built-in palettes (gen_cool_edit_presets.py writes
 # src/gui/palette_presets.inc from this file). PROVENANCE: the color schemes as text inside coolpro.exe (Cool Edit Pro
-# 2.1, Syntrillium Software), extracted from the architect's own installed copy on 2026-10-09
-# (tmp/research/cool_edit/color_presets.txt, outside the repository) and copied here byte for byte below these
-# comment lines, the two registry names below the one addition; the scheme bytes are the program's own, transcribed
+# 2.1, Syntrillium Software), extracted from the architect's own installed copy on 2026-10-09 (his original
+# extraction file no longer exists) and copied here byte for byte below these comment lines, the two registry names below the one addition; the scheme bytes are the program's own, transcribed
 # as the Windows schemes were from Microsoft's hive.
 # FORMAT: the first line is "(Default Scheme)" followed by its values on the same line; after it EACH VALUES LINE IS
 # FOLLOWED BY ITS NAME LINE (checked against his Wine captures: Face 1C47C6 is "XP Blue", 8751CA "Lipstick and

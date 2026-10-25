@@ -10,7 +10,7 @@
 
 // THE PROGRAM'S PAINTERS (architect 2026-10-09, "chrome means chrome, the
 // program is Cool Edit"; program_spec.h's head) IN THE HI-FI PANEL SKIN
-// (architect 2026-10-23; materials.h's head, the frames of record): THE KEY
+// (architect 2026-10-23; materials.h's head): THE KEY
 // — every case of the band, row 8, the render player, the dialogs' word
 // buttons and the on-screen keyboard — the time field, the panel label and
 // the cue's triangle (the canvas column's lanes — the view bar, the ruler,
@@ -34,10 +34,10 @@
 // cue's and the playhead head's 9-7-5-3-1 rows — is drawn as its diagonal
 // (their painters say how). The dots are cells (a dot is not a line).
 
-// -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
-// The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
-// (§3); THE RULER'S TICKS AND DIGITS, E0E0E0 (§4.4, face-independent in all
-// five presets), the digits' (+1, +1) SHADOW black (§4.4 and §6: "≈ black,
+// -- THE CANVAS COLUMN'S CONSTANTS (2026-10-09) ---------------
+// The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black;
+// THE RULER'S TICKS AND DIGITS, E0E0E0 (face-independent in all
+// five presets), the digits' (+1, +1) SHADOW black ("≈ black,
 // observed down to 0D0708", darker than the panel labels' dark tone). (Cool
 // Edit's period-2 cursor column over the view bar's span, the playhead's
 // color and 000000 alternating, is not drawn: architect 2026-10-09 ~14:30.)
@@ -47,8 +47,8 @@
 // palette (palette_file.h's role table), as the cues' two colors are the
 // palette's `cue` and `range`; the triangles' shadow is the derived
 // `ce_cue_shadow`. THE RULER'S INK IS NO TONE OF FACE AND NEVER SWAPS
-// (architect 2026-10-10, "we follow Cool Edit's theming";
-// METRICS_PRESETS_1010.md §2d, §2e): its ticks are E0E0E0 byte for byte on
+// (architect 2026-10-10, "we follow Cool Edit's theming"):
+// its ticks are E0E0E0 byte for byte on
 // all nine Faces captured that day, the light and engraved ones included,
 // and its digits' cores the same ink over the same black shadow — the
 // ruler's ground is the dark `mid` at every Face, so Cool Edit keeps it
@@ -68,8 +68,8 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 // THE ACCENT (materials::accent_color).
 enum class GuiKeyLed { None, Unlit, Lit };
 
-// THE LED'S RECT on the key `r` (the frame of record's 6 x 3 device px at
-// 300 %, make_pivot4.key): 2 x 1 W (scaled_px — an area, never a line), its
+// THE LED'S RECT on the key `r` (the approved 6 x 3 device px at
+// 300 %): 2 x 1 W (scaled_px — an area, never a line), its
 // left edge 2 W right of the key's left outline column and its bottom row 2
 // W above the outline's bottom row — rows y1 − 8 .. y1 − 6 and columns
 // x0 + 6 .. x0 + 11 at 300 %, rows y1 − 3 and columns x0 + 3 .. x0 + 5 at
@@ -99,7 +99,7 @@ GuiRect key_led_rect(const GuiRect& r, int depth);
 //              and row 2 the mean of it and the face; a foot of two rows
 //              kKeyFoot (the last two rows inside the outline) and a right
 //              column kKeyFoot (the last column inside it) — the key stands
-//              proud (make_pivot1.push_buttons' order: the top rows, the
+//              proud (paint order: the top rows, the
 //              foot, the right column over both).
 //   TWO DEPTHS (architect 2026-10-23, on the pressed sheet's K3: "when a
 //              button is pressed but I'm not touching it — pushed in but I'm
@@ -156,7 +156,7 @@ void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led);
 void paint_key_at_depth(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 
-// (THE QUAVER'S PAINTER — paint_quaver, make_sheet2.vec_mock()'s vector, the
+// (THE QUAVER'S PAINTER — paint_quaver, the mock's vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
 // retired with his pick: the quaver is an icon, assets/icons/Quaver.svg,
 // icons.h's THE BOXED GLYPHS.)
@@ -173,7 +173,7 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field, GuiColor dark,
                          GuiColor light);
 // A PANEL LABEL — row 8's state line, its one reader: `run` in the bone
-// kBoneInk, no shadow (the frame of record draws none, 2026-10-23; the
+// kBoneInk, no shadow (the hi-fi skin draws none, 2026-10-23; the
 // panel label's shadow pair stood 2026-10-10 to 2026-10-23).
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline);
@@ -184,7 +184,7 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 
 // -- THE CUE'S TRIANGLE ---------------------------------------------------------
 
-// COOL EDIT'S POINT-CUE MASK (METRICS §4.2, §4.3), THE CUES' AND THE
+// COOL EDIT'S POINT-CUE MASK, THE CUES' AND THE
 // PLAYHEAD HEAD'S ONE PAINTER: a staircase of five rows of one quantum u
 // (cue_unit_px) from `top` — 9, 7, 5, 3, 1 quanta — each row's SHADOW one
 // quantum right of it. DRAWN AS THE STAIRCASE'S DIAGONALS (architect

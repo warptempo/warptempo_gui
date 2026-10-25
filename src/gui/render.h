@@ -531,8 +531,7 @@ void install_true_colors(bool on);
 // -- THE CANVAS COLUMN: THE VIEW BAR, THE RULER, THE PLAYHEAD -------------------
 //
 // THE CANVAS COLUMN IS COOL EDIT'S, THE SAME UNDER EVERY CHROME (architect
-// 2026-10-09, the program is Cool Edit; the mock of record
-// tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; program_spec.h owns every
+// 2026-10-09, the program is Cool Edit; program_spec.h owns every
 // length): THE VIEW BAR, THE RULER FLIPPED and THE MARKER LANE OF CUES
 // directly under the band, THE CANVAS under them in its frame (row 6's
 // canvas paragraph), all four inside the program ring 6 W in from each side
@@ -543,7 +542,7 @@ void install_true_colors(bool on);
 // (the palette), and the painter constants Cool Edit draws whatever its
 // preset (cool_edit_paint.h).
 //
-// THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3, §4.1; render_trim_flags
+// THE TRIM BAR IS COOL EDIT'S VIEW BAR (render_trim_flags
 // owns the drawing, trim_lane_h_px the rows): a BLACK field 15 px tall at
 // 300 % (kCeViewBarField; view_bar_field_h_px, 2026-10-24) under THE PROGRAM RING's top line, between its dark LEFT
 // and light RIGHT columns (the canvas ring's own, carried up the whole
@@ -558,15 +557,14 @@ void install_true_colors(bool on);
 // where they meet, every line one device px since 2026-10-23
 // (paint_hairline_frame; the mitre 2026-10-09 ~12:40). NO PLAYHEAD IN
 // THE BAR (architect 2026-10-09 ~14:30, "I thought we agreed no dots on the
-// trim bar"; the mock of record draws none): Cool Edit's period-2 cursor
-// column over its span (METRICS §3) is not drawn, so the bar is the black
+// trim bar"): Cool Edit's period-2 cursor
+// column over its span is not drawn, so the bar is the black
 // field and the span's block alone. No track, no caps drawn, no pressed
 // face: the lane's grabs are the span's two ends and its body (TrimBarHit,
 // below). (Windows' miniaturized scroll bar with its checker track and its
 // arrow-button caps stood 2026-10-02 to 2026-10-09; git history.)
 //
-// THE RULER IS COOL EDIT'S, FLIPPED (METRICS §4.4; NOTES.md's "flipped
-// ruler"; paint_ruler_row): the FLAT kRulerGround (`ce_mid`, 2026-10-23)
+// THE RULER IS COOL EDIT'S, FLIPPED (paint_ruler_row): the FLAT kRulerGround (`ce_mid`, 2026-10-23)
 // under the view bar's light line, its own `ce_hilight` line along its
 // foot, between THE PROGRAM RING's dark LEFT and light RIGHT columns, which
 // run unbroken past the foot — every line one device px (hairline_px);
@@ -585,15 +583,15 @@ void install_true_colors(bool on);
 // Edit's is 17, the six rows the marker lane's (program_spec.h's ruler
 // fields).
 
-// THE PLAYHEAD IS COOL EDIT'S CURSOR (METRICS §4.3; architect 2026-10-09,
-// the mock of record): ITS HEAD the cue's triangle — the 9-7-5-3-1 quanta's
+// THE PLAYHEAD IS COOL EDIT'S CURSOR (architect 2026-10-09):
+// ITS HEAD the cue's triangle — the 9-7-5-3-1 quanta's
 // envelope drawn as one antialiased triangle, the apex the playhead's
 // column (paint_ce_cue_triangle, 2026-10-09 ~12:40) — in THE PALETTE'S
 // `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
 // FFFF00 in every default palette) over the same triangle one quantum right
 // in `ce_cue_shadow`, ON THE RULER'S ROWS 6 .. 10, the apex on the
 // ground's bottom row, its top row the digits' last — it covers what stands
-// under it (2026-10-09 ~21:00, the mock of record)
+// under it (2026-10-09 ~21:00)
 // (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
 // CANVAS a DOTTED COLUMN, one device px every four device rows in the same
@@ -638,8 +636,7 @@ void install_true_colors(bool on);
 
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
-// THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09, the mock of record and
-// NOTES.md's "cue construction"; METRICS §4.2; the lengths program_spec.h's,
+// THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09; the lengths program_spec.h's,
 // the drawing render_flag_boxes_impl's): on the lane's PANEL FACE, THE
 // TRIANGLE — the 9-7-5-3-1 quanta's envelope on the lane's last five rows,
 // one antialiased triangle (paint_ce_cue_triangle, 2026-10-09 ~12:40), its
@@ -665,7 +662,7 @@ void install_true_colors(bool on);
 //
 // THE CUES ARE COOL EDIT'S TWO COLORS (architect 2026-10-09 ~11:50–12:00:
 // "red+blue for warp and phase, red only for invalid (half the amount of
-// dots) and for history blue only for + and red only for −"; METRICS §4.2):
+// dots) and for history blue only for + and red only for −"):
 // THE RED `cue` (Cool Edit's CueM, F34B58 in every default palette) and
 // THE BLUE `range` (its RngM, 4B82F3). A point cue's stem is Cool Edit's
 // range start and end superimposed — the blue dots on the canvas's device
@@ -688,7 +685,7 @@ void install_true_colors(bool on);
 // every segment's text the program face on the lane's baseline.
 //
 // THE OVERLAP RULE: LATER WINS BY OCCLUSION, NEVER BY CUTTING (architect
-// 2026-10-09, settled on the five overlap captures of NOTES.md set 2; 2026-10-10
+// 2026-10-09, settled on five overlap captures; 2026-10-10
 // ~19:00, after two near-coincident phase resets showed the earlier one's text
 // over the later's: "why not go simpler — later always wins?", and "a long
 // flag before a short one should continue after the short one ends"). The
@@ -865,10 +862,9 @@ void install_true_colors(bool on);
 // (waveform_plate_inks); the canvas is laid live under the plate's
 // transparent gaps (render_canvas) and bakes nowhere.
 //
-// THE CANVAS IS COOL EDIT'S (architect 2026-10-09, the third part; METRICS
-// §4.1 and §4.4, NOTES.md's set 3, the mock of record
-// tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png): THE WAVEFORM AREA IS THE
-// CANVAS'S INTERIOR, inside its frame (the ring of the panel's tones, the
+// THE CANVAS IS COOL EDIT'S (architect 2026-10-09, the third part):
+// THE WAVEFORM AREA IS THE CANVAS'S INTERIOR, inside its frame (the ring of
+// the panel's tones, the
 // palette head's canvas-frame paragraph; the frame rows are lanes of their
 // own and its columns the column's margins, main.cpp's lane table and
 // waveform_area), so every column mapping, hit test and damage box reads the
@@ -903,13 +899,13 @@ void install_true_colors(bool on);
 // where usability says so, while "truthfulness applies to the way we
 // interact" (an invisible hit box is untruthful; on screen is as painted).
 // A recorded departure from Cool Edit, as THE CENTER
-// LINE OVER THE INK is (the mock of record drew it under the waveform with
+// LINE OVER THE INK is (the original mock drew it under the waveform with
 // the grid).
 // The waveform's plate is blitted over the ground and the grid, the ink over
 // every grid line, the center lines over the ink. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
 // below), so the lines stand where the plate's zero is. THE CHANNELS FILL
-// THEIR WELLS (architect 2026-10-09, "remove", the mock of record's channels
+// THEIR WELLS (architect 2026-10-09, "remove", the channels
 // top to bottom; the two wells 2026-10-16): each takes the canvas's height
 // less the stereo divider, halved and floored, channel 0 from the canvas's
 // first row and channel 1 under the divider (an odd remainder the canvas's
@@ -1041,8 +1037,8 @@ inline int scaled_px(double authored, int floor_px) {
 }
 // THE HI-FI SKIN'S DEVICE-PX LENGTHS (architect 2026-10-23, the amendment to
 // the skin's brief: "the sizes are authored at the tablet's 300 % … and
-// scale with gui_scale"): a length the frame of record measured in device
-// px at 300 % — the logo lane's, the clock field's, the type's — through the
+// scale with gui_scale"): a length measured in device
+// px at 300 % on the approved frame — the logo lane's, the clock field's, the type's — through the
 // scaled_px road, its W the device px over 3, rounded at the element.
 inline int skin_px(double device_px_at_300, int floor_px = 0) {
     return scaled_px(device_px_at_300 / 3.0, floor_px);
@@ -1105,14 +1101,13 @@ constexpr int kMinWindowHeightPx = 480;
 // lane and the cards read are the logo lane's own below. Git history.)
 
 // THE LOGO LANE — THE BAND'S UPPER PAD (architect 2026-10-24, the go "Okay
-// to proceed with the build"; the frame of record
-// tmp/theme_next/caption1/zz_logo_P72.png, make_caption8.py; the legend's
-// glyphs make_legend3.py's bolt() and battery(), his picks B1-19 and T1-17
-// off zz_bolt_sheet_34 / zz_battery_sheet_37 / zz_pair_sheet_40): with the
+// to proceed with the build"; the approved logo frame;
+// the legend's glyphs are the bolt and the battery, his picks B1-19 and T1-17
+// off his glyph sheets): with the
 // tablet's caption gone ("give that height to the waveform, so the buttons
 // run from the top with equal padding"), THE LOGO GOES INTO THE TOP PAD AND
 // THAT PAD ALONE GROWS — kLogoLaneAt300, 72 px at 300 % through skin_px
-// (his pick P72 off zz_logo_P38 .. P84 by 2; 48 at 200 %, 36 at 150 %, 33
+// (his pick P72 off P38 .. P84 by 2; 48 at 200 %, 36 at 150 %, 33
 // at 138 %), the band's three other pads the strip pad (strip_pad_px). It
 // stands AT THE SURFACE'S TOP ON BOTH DEVICES since 2026-10-24 (under the
 // app's own caption on the laptop that morning; labwc's title bar stands
@@ -1170,14 +1165,14 @@ constexpr int kMinWindowHeightPx = 480;
 //     * THE BATTERY (discharging, or the plug state unknown), UPRIGHT, THE
 //       NUB UP, solid: a kLogoBatteryWAt300 x kLogoBatteryHAt300 = 12 x 15
 //       box CENTERED IN THE CELL (architect 2026-10-24, his pick T15 off
-//       zz_battery_sheet_41: "the battery needs to go down a little bit, but
+//       his battery sheet: "the battery needs to go down a little bit, but
 //       make sure that it occupies the same width as the bolt still" — the
-//       denser drawing read larger than the bolt; the drawing of record
-//       tmp/theme_next/caption1/make_legend5.py's battery(15); the 14 x 17
+//       denser drawing read larger than the bolt; the numbers
+//       below are the record; the 14 x 17
 //       box of his T1-17 stood 38c1102a alone): its rows centered on the
 //       cap's center — 15 above the baseline to 1 above at 300 %, the cap's
 //       own rows — its columns the cell's spare halved, the odd column on
-//       the right (the record's floor: 1 left, 2 right at 300 %); the cell,
+//       the right (the floor: 1 left, 2 right at 300 %); the cell,
 //       the bolt and the legend's layout unchanged. The nub a rectangle x .37 ..
 //       .63 of the box's width, y 0 to .14 of its height plus one device px,
 //       the body a rounded rectangle x .18 .. .82, y .14 to the foot,
@@ -1320,7 +1315,7 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
 // takes the accessors below, so the three rows cannot drift apart.
 //
-// THE CASE (Cool Edit's §1.3 whole, its own 20-W seat since 2026-10-09
+// THE CASE (Cool Edit's whole, its own 20-W seat since 2026-10-09
 // ~10:25): one highlight line, the glyph, one shadow line, one black line —
 // 23 W square, the buttons abutting at that pitch; A COMPOSITE OF ITS
 // ROUNDED PARTS (scaled_px's rule), each old line's slot one W and the glyph
@@ -1422,8 +1417,8 @@ inline int program_run_gap_px() {
 //     lines, 4 × relief_line_px (12 device rows at 300 %, 4 at 138 %).
 //   THE THUMB — WINDOWS' POINTED TRACKBAR THUMB (TBS_BOTTOM; architect
 //     2026-10-06, the source ReactOS's own, measured at 100 % on
-//     tmp/reactos-media.png, mplay32's position slider, and confirmed on
-//     tmp/reactos-audio.png, the Device volume slider disabled): a
+//     a ReactOS capture of mplay32's position slider, and confirmed on
+//     one of the Device volume slider disabled): a
 //     rectangle kScrubThumbWidthPx = 11 wide whose bottom ends in a
 //     downward point kScrubThumbPointPx = 5 rows tall, the tip a single
 //     DkShadow pixel under the middle column (mplay32: columns 96..106,
@@ -1451,15 +1446,15 @@ inline int program_run_gap_px() {
 // NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
 // lines on the ground, the position is the thumb. The painter is
 // paint_modal_dialog's player branch; the press is claim_player_scrub_press.
-// THE HI-FI SKIN'S SCRUB (architect 2026-10-23, pv_41: "looks good … the
+// THE HI-FI SKIN'S SCRUB (architect 2026-10-23: "looks good … the
 // scrub fits"; the record above is the Windows thumb it replaced): THE
 // CHANNEL a ONE-DEVICE-PX light line over a one-device-px dark line, the
 // two ring tones, across the scrub's span (kScrubChannelLines hairlines);
 // THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx x kScrubThumbHeightPx W,
 // 8 x 16 since 2026-10-23 (architect, on the installed player: "too tiny.
 // The trough is okay at 1 pixel, but the thumb itself should be larger"; his
-// pick, row 2 of tmp/theme_next/pivot1/out/zz_thumb_sheet_12.png off 4 x 8 /
-// 8 x 16 / 12 x 20 / 15 x 23 — the frame of record's 4 x 8 until then),
+// pick, row 2 of his thumb sheet off 4 x 8 /
+// 8 x 16 / 12 x 20 / 15 x 23 — the earlier 4 x 8 until then),
 // painted by the key painter with no LED and no legend, centred on the
 // channel; ITS HIT ZONE ITS PAINTED RECT (render_player_scrub_handle_hit:
 // on screen is as painted).
@@ -1634,7 +1629,7 @@ inline int cue_triangle_reach_right_px() {
 }
 static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9u and 11u above
 // THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
-// third part; program_spec.h's column_margin_px, METRICS §4.1): the
+// third part; program_spec.h's column_margin_px): the
 // canvas's TOP FRAME ROW is a lane of its own, top lane 5, one line
 // (canvas_top_frame_h_px), directly under the marker lane; its BOTTOM FRAME
 // ROW — THE PROGRAM RING'S LAST ROW — a bottom lane of its own, one line
@@ -1835,8 +1830,8 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
                     static_cast<double>(width), y1 - y0);
     cairo_fill(cr);
 }
-// THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns,
-// METRICS §4.2 / §4.3), A PERIOD TECHNIQUE AT THE DEVICE'S RESOLUTION
+// THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns),
+// A PERIOD TECHNIQUE AT THE DEVICE'S RESOLUTION
 // (~14:20 / ~14:25, waveform_line_px's rule: "on waveform → unscaled"): the
 // line's own column and edge rules (fill_waveform_line), its rows the two
 // wells' (waveform_well_rows: the stereo divider's rows carry none, 2026-10-16)
@@ -1985,7 +1980,7 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // the end's right edge on the end column), and the BRIDGE the span's body
 // between them (render_trim_flags publishes all three; trim_endcap_rect and
 // trim_bridge_gap own the rule). NO CAP IS DRAWN: the span's own bevel is its
-// only edge (METRICS §3, "the span's own bevel is the only edge"), so the
+// only edge ("the span's own bevel is the only edge"), so the
 // zones are the span's painted columns read as its two ends. NARROW: where
 // the span is under two zones wide the begin zone keeps its column and the
 // end zone stands edge to edge right of it, overrunning the end column by
@@ -2133,7 +2128,7 @@ inline int tooltip_hover_slop_px() {
 // kPlayheadUnitPx. Since the canvas became Cool Edit's that day the playhead's
 // head and the cues' triangles stand in the ruler and the marker lane, above
 // the canvas's frame, and nothing on the canvas needed the band; the two
-// channels fill the canvas whole, as the mock of record's do
+// channels fill the canvas whole, as the original mock's did
 // (waveform_channel_band, below). Git history.)
 
 // (THE PLAYHEAD COLUMN'S OLD REACH, playhead_half_px — ± scaled_px(6) − 1,
@@ -2322,8 +2317,8 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // canvas paragraph), and every vertical line on it spans its two wells.
 //
 // THE STEREO DIVIDER (architect 2026-10-16, on his Wine captures of Cool
-// Edit Pro 2.1 in stereo — tmp/Screenshot_2026-10-16_15-50-05.png, the law:
-// rows 521-523, the left join at x 208, the right at x 1872 — "ok to
+// Edit Pro 2.1 in stereo — the measured rows 521-523, the left join at
+// x 208, the right at x 1872 — "ok to
 // implement the bevel divider, but make sure it has no separation from the
 // main chrome"): Cool Edit draws a stereo file as TWO SUNKEN WELLS, one per
 // channel, each with its own ring of the panel's tones, and between them
@@ -2741,8 +2736,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // zoom (1920 columns, ~0.30 s per column) a column at 122.3 s paints 0.53 by
 // the centre rule against 0.87 gained-before-reduction, and at 640 columns
 // (~0.90 s per column) one paints 0.97 against 0.34 (normalized peak
-// estimates on the peak measure, measured 2026-09-23,
-// tmp/gain_check/review_coarse.py). The
+// estimates on the peak measure, measured 2026-09-23). The
 // exact alternative is a second pyramid reduced over the gained samples —
 // immutable with the source like the curve, so the lamp would select between
 // the two pyramids rather than rebuild one — at the memory of a second
@@ -3084,7 +3078,7 @@ struct TrimBarHit {
 };
 
 // Draws THE VIEW BAR — the whole trim lane (architect 2026-10-09, the
-// program is Cool Edit; METRICS §3, the palette block's canvas-column
+// program is Cool Edit; the palette block's canvas-column
 // paragraph for its colors, trim_lane_h_px for its rows), the same under
 // every chrome: the black field across the waveform's columns in its sunken
 // ring (the top line and the left column, the bottom line and the right

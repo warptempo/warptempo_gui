@@ -772,7 +772,7 @@ inline constexpr int kNotificationMaxLines = 3;
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
 // THE CARD'S ONE PAD (architect 2026-10-24, "P18" off the 16 / 17 / 18
-// series on zz_card_sheet_21): 18 px OF PLAIN FIELD AT 300 % between the
+// series): 18 px OF PLAIN FIELD AT 300 % between the
 // card's one-device-px ring (hairline_px) and its content on ALL FOUR SIDES
 // — ring -> glyph box at the left, the text's last pen -> ring at the right,
 // ring -> the first line's cap top above, the last line -> ring below. AN
@@ -785,7 +785,7 @@ inline constexpr double kNotificationPadAt300 = 18.0;
 int notification_pad_px();
 
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
-// 2026-10-24, the mock of record's rule): the inside height pad + cap + pad,
+// 2026-10-24): the inside height pad + cap + pad,
 // and the ratio the retired caption's (21 of its 40-px lane) and the list rows'
 // (27 of their 51-px row) — the one proportion every boxed glyph keeps to
 // its line. Its box is that ink's 40 / 27, rounded at the box
@@ -797,7 +797,7 @@ inline constexpr double kNotificationGlyphRatio = 0.525;
 // gap, kLogoBrandGapAt300 (render.h: 10 px at 300 %, skin_px; the retired
 // caption's title gap, which it was until the caption went the same day) —
 // the same seat, a boxed glyph then words, so one number (architect
-// 2026-10-24, the mock of record).
+// 2026-10-24).
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
 // own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline

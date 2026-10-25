@@ -222,7 +222,7 @@ namespace {
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
 // (2026-10-07 evening): gap 1's midpoint term comes to half the bottom
 // strip less half the top stack, negative at every scale (105 Windows px
-// above against 50 below at the frame of record's pad), so it floors at 0,
+// above against 50 below at the approved pad), so it floors at 0,
 // and gap 2 is the leftover's remainder after W, 0. The centering is
 // infeasible by construction and the waveform takes the whole leftover,
 // which is the rule's own floor rather than a special case; the two gaps'
@@ -558,7 +558,7 @@ GuiRect waveform_area(const AppState& a) {
     // the logical spp exactly at every rate.
     constexpr int kGridStepPx = 16;
     // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
-    // program_spec.h's column_margin_px, METRICS §4.1): the column stands
+    // program_spec.h's column_margin_px): the column stands
     // the margin's face and one frame column in from each side of the window
     // (column_inner_x_px; inside the program frame's columns 2026-10-10 to
     // 2026-10-21, which are gone), and the interior is what the two sides

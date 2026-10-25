@@ -214,7 +214,7 @@ uint32_t mean_of(cairo_surface_t* s) {
     return out;
 }
 
-// -- THE PROCEDURAL BRUSHED GROUND (materials.h's head; make_pivot1.brushed)
+// -- THE PROCEDURAL BRUSHED GROUND (materials.h's head)
 
 // PIL's _gaussian_blur_radius: the extended box radius whose `passes`
 // passes stand for a Gaussian of `sigma`.
@@ -307,7 +307,7 @@ std::vector<uint8_t> noise_bytes(uint32_t seed, int w, int y0, int h) {
     return f;
 }
 
-// THE BRUSHED FACE (make_pivot1.brushed) over rows [y0, y0 + rows) of a
+// THE BRUSHED FACE over rows [y0, y0 + rows) of a
 // field `w` x `field_h`, into a new opaque ARGB32 surface w x rows, sRGB:
 // the noise, PIL's GaussianBlur((9, 0.4)) — three passes along x, then
 // three down y — normalized to zero mean and unit deviation over the rows

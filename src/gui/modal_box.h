@@ -2,17 +2,16 @@
 
 // THE MODAL FAMILY'S SHAPE — ONE OWNER OF THE GEOMETRY EVERY MODAL READS
 // (architect 2026-10-14, on his mocks over tablet captures,
-// tmp/modal_arc/mock_modal_player_v2.png and mock_modal_picker.png: "overlays/
+// the player and the picker: "overlays/
 // modals can take over the area from the trim bar on down, with just the
 // bottom new border remaining"; "use a similar bevel inset as the main GUI
 // window, so the modal/overlay isn't flush against the border"). EVERY MODAL
 // STANDS IN IT: the render player and the project picker (the folder
 // overlay's two contents, folder_overlay.h), and since the same day's second
-// ruling THE PROMPTS AND THE DIALOG EDITORS (mock_modal_progress_v2.png and
-// mock_modal_settings_osk_v2.png: the taskbar dialog laid over the window's
+// ruling THE PROMPTS AND THE DIALOG EDITORS (his progress and settings-keyboard mocks: the taskbar dialog laid over the window's
 // foot, 2026-10-10 to 2026-10-14, is retired — "we should stop doing that"),
 // and since that evening THE PROGRESS MODAL, a batch's "Rendering X of Y..."
-// (AppState::BatchProgress; mock_modal_progress_v2.png's own subject).
+// (AppState::BatchProgress; the progress mock's own subject).
 //
 // (INTERFACE VERSUS MODAL, architect 2026-10-14: the player and the picker
 // stand in the box but are interface, so what they leave dead greys; the
@@ -20,7 +19,7 @@
 // is recorded at redesign_button_enabled's head, app_state.h.)
 //
 // A MODAL TAKES THE AREA FROM THE VIEW BAR'S TOP ROW DOWN (the simple
-// layout, architect 2026-10-22, on the mocks tmp/theme_next/out/screens/,
+// layout, architect 2026-10-22, on the modal mocks,
 // "Yes, this all looks good"): the toolbar band above it (the app's
 // caption over it too, until 2026-10-24) stays as the main window paints
 // it. Across, it runs the window's width,
@@ -35,7 +34,7 @@
 //      the 23-W case, the strip pad (render.h's strip_h_px) — on the ground,
 //      no line, bar or border, its outermost cases or buttons FLUSH WITH THE
 //      RING'S OUTER EDGES; on the window's foot.
-// IN THE HI-FI SKIN (architect 2026-10-23, pv_41): THE PANEL'S MARGINS AND
+// IN THE HI-FI SKIN (architect 2026-10-23): THE PANEL'S MARGINS AND
 // THE CONTROLS ROW are the brushed ground (materials.h's GROUND); THE BOX IS
 // ONE SUNKEN FLAT FIELD, kFieldGround, under a ONE-DEVICE-PX RING in the
 // ring tones on its outer edge (render.h's line rule) — every member's, a
@@ -60,7 +59,7 @@
 // "l" 15.9 px tall), its wrap ending one past column 2269.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
-// mock_modal_settings_osk_v2.png; the spacing 2026-10-22): when a dialog
+// on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
 // editor stands on the glass, the keyboard's band (onscreen_keyboard::
 // surface_rect — its edge pad on all four sides, the lanes' width, no line
 // of its own) stands directly on the window's foot, and the controls row
@@ -199,7 +198,7 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 
 // THE TEXT INSIDE THE BOX — a prompt's question, the progress modal's
 // sentence and the dialog editors' line (architect 2026-10-14; the pad
-// 2026-10-23, on his capture at 300 %, tmp/theme_next/pressed1/pk_cap_05.png:
+// 2026-10-23, on his capture at 300 %:
 // the ink 5 px right of the ring and 18 under it — "it looks odd because the
 // horizontal padding is very small, but the vertical padding is large"; his
 // pick S3, the clock fields' pad; "okay to go up to 12" the same night):
@@ -216,7 +215,7 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // render player) KEEP THEIR ROWS ("the player's rows look good"): the folder
 // overlay's row box, 17 W, at the content's one px under the ring, the cap
 // centred on each row's band (redesign_baseline). (The 7-W inset of
-// 2026-10-14 — Windows' edit-control inset, mock_modal_settings_osk_v2.png's
+// 2026-10-14 — Windows' edit-control inset, the mock's
 // x 45 at 300 % — and the 1-W pad past the content's one px of air that
 // replaced it the morning of 2026-10-23, kModalBoxTextPadPx, its first row
 // the list's, are retired.)

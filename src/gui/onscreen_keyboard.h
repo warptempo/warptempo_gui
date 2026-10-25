@@ -553,7 +553,7 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // -- The keyboard's placement (architect 2026-10-14) -------------------------
 //
 // THE KEYBOARD STANDS ACROSS THE PROGRAM'S LANES (architect 2026-10-14, on
-// the mock tmp/modal_arc/mock_modal_settings_osk_v2.png): its band runs
+// the settings-keyboard mock): its band runs
 // across the program lanes — the band's width the lanes' (bottom_row_area's
 // x and width, the window's since 2026-10-21, when the program frame's
 // columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT;

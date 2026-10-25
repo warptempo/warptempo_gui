@@ -360,8 +360,8 @@ KeyLegendSeat key_legend_seat(const GuiRect& key, double run_w) {
         redesign_baseline(font, pad_y, pad_h)};
 }
 
-// THE RENDER PLAYER'S LEGENDS (architect 2026-10-23, the frame of record
-// pv_41 and its generator make_pivot4.py: PREV PLAY NEXT … REFRESH DOWN UP
+// THE RENDER PLAYER'S LEGENDS (architect 2026-10-23, on the approved
+// player frame: PREV PLAY NEXT … REFRESH DOWN UP
 // FOLDER LOAD CANCEL), by the act each key runs; the root's sixth slot,
 // Delete, its own word. THE REPEAT KEY READS REPEAT (architect 2026-10-23,
 // "player repeat btn is mislabeled refresh"): its act is Toggle Repeat One,
@@ -655,7 +655,7 @@ AppState::RedesignButtonFace& publish_button_face(
 // upper pad since 2026-10-24), the case (band_case_top_offset_px), the
 // strip pad — row 8's lower pad; row 8 the strip pad over its case.
 //
-// THE HORIZONTAL WALK (architect 2026-10-22, layout4: "push all icons
+// THE HORIZONTAL WALK (architect 2026-10-22: "push all icons
 // together … add a spacing after render, and after flatten"): the roster's
 // left members in THREE PLAIN RUNS on the ground — Open Project .. Render,
 // Zoom to Fit .. Flatten, Play Renders .. Enable Tooltips — the keys
@@ -938,7 +938,7 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // history button") and alone since 2026-10-05, when its companions went
 // to the stand-in slots. IT TAKES NO PART IN THE LEFT WALK: it heads the
 // band's RIGHT RUN, attached to Source with no gap (architect 2026-10-22,
-// layout5's verdict: "Layout 4" — History attached to Source), and the left
+// his layout verdict: "Layout 4" — History attached to Source), and the left
 // runs' limit stands one run gap left of it (paint_icon_row). THE REASON IS
 // THE PEN: while the opener closed the
 // left walk, the stand-in swap's one-case-narrower iteration group put its x
@@ -1009,7 +1009,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
 // The tooltip's metrics are measured off its period capture, ReactOS's
-// "Views" (tmp/reactos-tooltips.png); its chrome is the floating surfaces' one box
+// "Views"; its chrome is the floating surfaces' one box
 // (paint_popup_chrome), and its seat, its timing and its damage bound live in
 // render.h.
 //
@@ -1028,7 +1028,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // and the top and bottom air are equal by the arithmetic rather than by a
 // measured pair that could drift. THE PAD IS THE CHROME SPEC'S
 // (tooltip_pad_px, 2026-10-07): WIN2000'S 2 (architect 2026-10-06,
-// Views on tmp/reactos-tooltips.png): the capture's one-line box is 19 rows,
+// Views on that capture): the capture's one-line box is 19 rows,
 // 1 + 2 + 13 + 2 + 1 — the black line, two rows of face, the 13-row cell,
 // two rows, the line — and two face columns stand between the left line and
 // the V, so the pad is 2 each way INSIDE the four-sided frame, whose line is
@@ -1142,7 +1142,7 @@ namespace {
 // reveal it (a deliberate departure).
 //
 // THE LINE IS DrawText's PREFIX UNDERLINE (user32's TEXT_DrawUnderscore)
-// read off his ReactOS capture, tmp/reactos-menu2.png (File's F, Edit's open
+// read off his ReactOS capture (File's F, Edit's open
 // E, Undo's U): ONE W THICK, ONE W OF AIR UNDER THE BASELINE (the cell's
 // ascent + 1 — the F's last ink row 166, the line on 168), FROM THE MARKED
 // GLYPH'S PEN TO ITS ADVANCE LESS ONE W (LineTo stops one short: the F's
@@ -1550,7 +1550,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
         cairo_close_path(cr);
     } else {
         // THE BATTERY: its box centered in the cell (the spare columns
-        // halved, the odd one on the right — the drawing of record's floor;
+        // halved, the odd one on the right — the floor;
         // the rows centered on the cap's center), the nub up.
         const int bw = skin_px(kLogoBatteryWAt300, 1);
         const int bh = skin_px(kLogoBatteryHAt300, 1);
@@ -2290,7 +2290,7 @@ static std::string clock_time_text(const AppState& app,
 
 // THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once, one
 // constant at every time field — THE HI-FI SKIN'S FIELD (architect 2026-10-23, "symmetrical and much
-// tighter"; make_pivot3's clock_tight): 40 DEVICE PX TALL AND 12 PX OF PAD
+// tighter"): 40 DEVICE PX TALL AND 12 PX OF PAD
 // EACH SIDE OF THE DIGITS' CELL, both authored at 300 % and scaled with
 // gui_scale (skin_px; the amendment of the same night) — 18 and 6 at 138 %.
 // (17 W tall with a 5-W pad, scaled_px, 2026-10-09 to 2026-10-23: Cool
@@ -2307,7 +2307,7 @@ static int time_field_pad_px() {
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
 // (architect 2026-10-05): ACID's adjacent fields stand three Windows px of
 // ground apart (columns 1136..1138 between its first two, the same capture);
-// Cool Edit's Begin / End / Length fields three too (METRICS §5.4: pitch 75
+// Cool Edit's Begin / End / Length fields three too (pitch 75
 // round 72-W fields).
 constexpr double kTimeFieldGapPx = 3.0;
 
@@ -2789,7 +2789,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //   * THE NAME — above, the body face on the clock's baseline.
         //   * THE STATE — THE BODY FACE (gui_font(GuiFace::Body)) IN COOL
         //     EDIT'S PANEL LABEL PAIR (show_ce_label: the bone with the
-        //     label's shadow one line right and down, METRICS §6 — 2026-10-09;
+        //     label's shadow one line right and down — 2026-10-09;
         //     past the label threshold the engraved pair, 2026-10-10),
         //     straight on the row's wood, ON THE CLOCK'S OWN BASELINE
         //     (architect 2026-10-07: "whichever one is right, the other
@@ -3249,8 +3249,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kNotificationGapPx, 1);
-    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the mock of record
-    // make_cards1.py's card): ring, ONE PAD of plain field (notifications.h,
+    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1): ring, ONE PAD of plain field (notifications.h,
     // every side), the class glyph's box, the logo lane's brand gap, the
     // text's pen; the wrap's room ends one pad short of the right ring. The
     // first line's INSIDE rows are pad + cap + pad; the glyph's ink is
@@ -3394,7 +3393,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
 // and REAPER'S GEOMETRY MODEL.
 //   LOOK, Cool Edit's FLIPPED RULER (architect 2026-10-09, the program is
-//     Cool Edit; METRICS §4.4, the mock of record; render.h's canvas-column
+//     Cool Edit; render.h's canvas-column
 //     paragraph): the Face-derived ground under the view bar's light line,
 //     its own light bottom line, the ticks E0E0E0 STANDING ON THE GROUND'S
 //     BOTTOM ROW — majors four W, minors two — and the digits over a black
@@ -3660,8 +3659,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ladder's own kRulerMinorsPerStep; only its expression as a duration is
     // gone.)
 
-    // THE TICKS STAND ON THE GROUND'S BOTTOM ROW (METRICS §4.4, the mock's
-    // flipped ruler): each ONE DEVICE PX wide in kCeRulerTick (hairline_px,
+    // THE TICKS STAND ON THE GROUND'S BOTTOM ROW (the flipped ruler): each ONE DEVICE PX wide in kCeRulerTick (hairline_px,
     // render.h's line rule, 2026-10-23), rising the major's four W or the
     // minor's two into the ground from its foot — its rows 7 .. 10 and
     // 9 .. 10 of 0 .. 10, the lengths areas (scaled_px).
@@ -3770,7 +3768,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int lx = col + t / 2 - run_w / 2;   // the walk's clip cuts it
         // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
         // colour to all the numbers"): the tick's ink over Cool Edit's
-        // black (+1, +1) shadow (METRICS §4.4).
+        // black (+1, +1) shadow.
         const double x = static_cast<double>(cx + lx);
         set_palette_source(cr, hex(kCeRulerShadow));
         text_shape::show_shaped_run(cr, run, x + t, baseline + t);
@@ -3807,7 +3805,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // A MAJOR'S LABEL PAINTS BEFORE ITS TICK, so the tick stands whole
             // over the digits' shadow where the shadow's last row meets the
             // major's top row (program_spec.h's ruler fields, 2026-10-09
-            // ~21:00; the mock of record paints the ticks over). Only the
+            // ~21:00; the ticks paint over). Only the
             // label's own major can meet it: a minor rises to row 9, below the
             // shadow's last row 7, and the next major stands a whole step —
             // at least eight minimum minor pitches — away.
@@ -3834,7 +3832,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // -- THE PLAYHEAD'S HEAD ---------------------------------------------------
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
-    // 2026-10-09, the mock of record; METRICS §4.3; render.h's playhead
+    // 2026-10-09; render.h's playhead
     // paragraph): the cue's own 9-7-5-3-1 quanta drawn as their envelope,
     // one antialiased triangle (paint_ce_cue_triangle, 2026-10-09 ~12:40), in
     // the palette's `playhead_stem` (Cool Edit's Curs yellow FFFF00 by
@@ -3844,7 +3842,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // row, its top row the digits' last (2026-10-09 ~21:00, the 11-W
     // ground). It is OPAQUE over the ticks and digits the walk above laid
     // down, covering whatever stands under it (its diagonal edges
-    // antialiased over them; the mock of record). NO SNAP, NO
+    // antialiased over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the view bar, the marker
@@ -4494,7 +4492,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // own triangle. Disabled markers are simply absent from the stash.
 //
 // THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
-// 2026-10-09, METRICS §4.2; the two colors ~11:50; the invalid color
+// 2026-10-09; the two colors ~11:50; the invalid color
 // 2026-10-11; render.h's marker-lane paragraph): one-device-px dots on the
 // CANVAS'S device rows counted from its top row (the canvas sink's
 // stem_dots, one run per well, waveform_well_rows) — none on the canvas's
@@ -5070,8 +5068,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // cases or buttons flush with the box's ring's outer edges
 // (modal_controls_seats). CONTENT PER KIND:
 //   A PROMPT — its question on the box's FIRST ROW at the list's row metrics,
-//   on the box's one flat field (modal_box.h's head;
-//   mock_modal_progress_v2.png's shape), the chrome's text color, and
+//   on the box's one flat field (modal_box.h's head),
+//   the chrome's text color, and
 //   the answer buttons FLUSH RIGHT on the controls row in painted order, the
 //   last one's right edge the ring's outer edge. Each button wears its
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
@@ -5090,7 +5088,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
 //   first row on the field, and Cancel alone flush right on the controls row,
 //   no access letter, raised with passive focus on it.
-//   AN EDITOR — THE BOX IS ITS EDIT CONTROL (mock_modal_settings_osk_v2.png):
+//   AN EDITOR — THE BOX IS ITS EDIT CONTROL:
 //   the whole pending line on the box's flat field in the field's text,
 //   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
 //   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
@@ -5136,7 +5134,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // METRICS. The seats are the controls row's (modal_controls_seats: the box's
 // ring's outer columns, no row-8 pad, no tail): every key the program's case
 // at the case's seat, the keys abutting (modal_word_buttons, the player's
-// player_row_layout). (The 6-W inter-button gap, modal_popup.png's 8 laptop
+// player_row_layout). (The 6-W inter-button gap, the old popup's 8 laptop
 // px, stood until 2026-10-23.) The text in the box stands 12 px from the
 // ring at 300 % on both axes (modal_box.h's THE TEXT INSIDE THE BOX), one
 // list row pitch a row.
@@ -5541,7 +5539,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     cairo_save(cr);
     const GuiFont font = gui_font(GuiFace::Body);
-    // THE HI-FI SKIN (architect 2026-10-23, pv_41; materials.h's REGIONS):
+    // THE HI-FI SKIN (architect 2026-10-23; materials.h's REGIONS):
     // the controls row stands on the brushed GROUND; the box, every field,
     // the scrub's lines and every key flat ("the user shouldn't be typing on
     // a non-flat color").
@@ -6751,7 +6749,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     {
-        // THE HI-FI SKIN (architect 2026-10-23, pv_41): THE PANEL'S MARGINS
+        // THE HI-FI SKIN (architect 2026-10-23): THE PANEL'S MARGINS
         // AND THE LIFTED CONTROLS ROW the brushed GROUND; THE BOX ONE SUNKEN
         // FLAT FIELD, kFieldGround, whatever the member (a prompt's question
         // too: the field is the box) — the ring's slot included — under a
@@ -6949,8 +6947,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 
 // -- THE CANVAS'S FRAME AND THE COLUMN'S MARGINS ---------------------------
 //
-// (architect 2026-10-09, the third part, "accurate to the mock-up"; METRICS
-// §4.1, the mock of record's set 3; program_spec.h's column_margin_px,
+// (architect 2026-10-09, the third part, "accurate to the mock-up";
+// program_spec.h's column_margin_px,
 // render.h's canvas-frame accessors.) ONE PAINTER for the rows from the
 // canvas's top frame row (top lane 5) through its bottom frame row (bottom
 // lane 1, the program ring's last row since the simple layout, 2026-10-22;

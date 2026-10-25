@@ -16,8 +16,8 @@
 // from it (cool_edit_derive.h) beside the painter's own constants.
 //
 // NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
-// 20"): every one of Cool Edit's measurements (tmp/research/cool_edit/
-// METRICS.md, one capture px = one W) is taken at Cool Edit's own W
+// 20"): every one of Cool Edit's measurements (his Cool Edit
+// metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED, THE BUTTON CASE INCLUDED — its 20-W glyph seat, the case 23 (1
 // highlight + 20 + 1 shadow + 1 black), the cases' pitch 23. THE REASON: the
 // program is Cool Edit, not a chrome — the 24-W seat is ReactOS's large
@@ -29,9 +29,7 @@
 // never this header's).
 //
 // THE SIMPLE LAYOUT (architect 2026-10-22, "the bevels are def part of the
-// problem … redesign with dead simple layout"; the frame of record
-// tmp/theme_next/out/layout4/layout4_pad13.png, the modals
-// tmp/theme_next/out/screens/, both at 300 %): ONE SUNKEN RING round the
+// problem … redesign with dead simple layout", the mocks at 300 %): ONE SUNKEN RING round the
 // canvas column and one round row 8's clock are the program's only strokes
 // on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
 // stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
@@ -51,8 +49,7 @@
 // the go ~21:00: the ruler's digits the base's six-row small digit with one
 // W of air above them, the rows saved given to the marker lane, whose label
 // box is the whole lane — "right now it's too small to click"; usability
-// over accuracy, render.h's row-6 canvas paragraph; the mock of record
-// tmp/mocks/cool_edit/mock_CE_S4_TRI_05.png) — then THE CANVAS: its dark top
+// over accuracy, render.h's row-6 canvas paragraph) — then THE CANVAS: its dark top
 // frame row under the marker lane (1), the canvas itself — the waveform
 // area, its grid and its center lines, its two channels' wells with Cool
 // Edit's stereo divider between them (stereo_divider_face_px) — and its
@@ -77,7 +74,7 @@
 // and the text's seats are W lengths, each its own rounded part (scaled_px's
 // rule).
 struct ProgramSpec {
-    // THE CASE (METRICS §1.3): one highlight row and column on the top and
+    // THE CASE: one highlight row and column on the top and
     // left, the glyph seat, one shadow row and column and one black row and
     // column on the right and bottom; cases abut, so the case is the pitch.
     // The glyph's seat is (+1, +1) at rest and (+2, +2) pressed or checked
@@ -86,7 +83,7 @@ struct ProgramSpec {
     int  glyph_px;
     int  case_shadow_px;
     int  case_outer_px;
-    // COOL EDIT'S TOOLBAR HAS NO HOVER FACE (METRICS §1.5: a capture with the
+    // COOL EDIT'S TOOLBAR HAS NO HOVER FACE (a capture with the
     // pointer on a button differs from one without only by Wine's tooltip):
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
@@ -95,13 +92,13 @@ struct ProgramSpec {
     // and row 8's keys stand in PLAIN RUNS on the ground, the keys abutting
     // inside a run and THIS MUCH PLAIN GROUND BETWEEN TWO RUNS — row 8's group
     // gap as the bars left it (a 6-W bar between a 5-W and a 4-W pad), the
-    // band's between its three left runs (layout4: "add a spacing after
+    // band's between its three left runs (architect: "add a spacing after
     // render, and after flatten").
     int  run_gap_px;
     // THE STRIP PAD (architect 2026-10-22, the simple layout; SETTLED AT 13
     // 2026-10-23 — "I never asked for that strip pad number … I don't think
     // I needed to change that number", the legends' vertical seat "seems to
-    // be perfect"; the mocks ran 8 .. 15, layout4_pad13 the pick): THIS MUCH
+    // be perfect"; the mocks ran 8 .. 15, 13 the pick): THIS MUCH
     // GROUND ABOVE AND BELOW THE KEY on row 8 and the modal controls row
     // (row 8's own rows), and BELOW THE KEY on the band, whose upper pad is
     // the logo lane (2026-10-24, render.h's logo lane block); the keys'
@@ -124,7 +121,7 @@ struct ProgramSpec {
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
     // (THE DARK TIME FIELD'S 17-W HEIGHT AND 5-W PAD — Cool Edit's
-    // METRICS §5.4 field, then the dialog field's pad, 2026-10-09 to
+    // measured field, then the dialog field's pad, 2026-10-09 to
     // 2026-10-23 — left this spec with the hi-fi skin: the field's 40 and
     // 12 px at 300 % are paint_handler.cpp's kTimeFieldHeightAt300 /
     // kTimeFieldPadAt300, authored at the tablet's scale. Every time field is
@@ -138,8 +135,8 @@ struct ProgramSpec {
     double tab_name_air_px;
     double state_air_px;
 
-    // -- THE CANVAS COLUMN (METRICS §3, §4; NOTES.md sets 2 and 3) ----------
-    // THE COLUMN'S SIDE MARGIN (METRICS §4.1, Cool Edit's x = 202..207 of
+    // -- THE CANVAS COLUMN ----------------------------------------------------
+    // THE COLUMN'S SIDE MARGIN (Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much ground from each side of the window's
     // client area to the program ring's column, the column's slot one line
@@ -148,14 +145,13 @@ struct ProgramSpec {
     // marker lane's brighter strip and the canvas.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
-    // mock set 3, "grid 4 per half channel"; METRICS §4.4's GrdL): each
+    // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each
     // channel's half height divided into this many, a line at every inner
     // division above and below the zero row (render_canvas, render.h's row-6
     // canvas paragraph).
     int  grid_divisions;
     // THE STEREO DIVIDER'S FACE (architect 2026-10-16, on his Wine captures
-    // of Cool Edit Pro 2.1 in stereo, tmp/Screenshot_2026-10-16_15-50-05.png
-    // rows 521-523): Cool Edit draws a stereo file as TWO SUNKEN WELLS, one
+    // of Cool Edit Pro 2.1 in stereo, rows 521-523 of the capture): Cool Edit draws a stereo file as TWO SUNKEN WELLS, one
     // per channel, each its own ring, and between the upper well's light
     // bottom line and the lower well's dark top line THIS MUCH OF THE
     // PANEL'S FACE — the three rows running through the canvas's side frame
@@ -167,18 +163,18 @@ struct ProgramSpec {
     // (architect 2026-10-24, his pick T15 off a one-step series 18 .. 12 on
     // the live lane — "I think 15 works well … looking at the Cool Edit
     // original there is a similar relationship where the timestamp numbers
-    // fit just about inside the view lane"; the mock of record
-    // zz_trim_47d_T15): the trim lane is a line, this field and a line. THE
+    // fit just about inside the view lane"; his T15 mock):
+    // the trim lane is a line, this field and a line. THE
     // RULING IS THE 300 % NUMBER, read on the hi-fi skin's road
     // (render.h's view_bar_field_h_px through skin_px, floor 1: 15 at 300 %,
     // 10 at 200 %, 8 at 150 %); the spec owns it because the authored sums
     // below read it, as 15 / 3 = 5 W exactly (the static_assert there). The
-    // field was 18 px at 300 % 2026-10-09 to 2026-10-24 (mock set 1's axis,
-    // under Cool Edit's own 30, METRICS §3).
+    // field was 18 px at 300 % 2026-10-09 to 2026-10-24 (the first mock set's axis,
+    // under Cool Edit's own 30).
     int  view_bar_field_at300;
     // THE RULER'S GROUND, its rows 0 .. 10 under the view bar's light line
-    // (architect 2026-10-09 ~16:50 / ~21:00: Cool Edit's 17 rows, METRICS
-    // §4.4, shrunk to 1 + 6 + 4 — "the timestamps should basically be
+    // (architect 2026-10-09 ~16:50 / ~21:00: Cool Edit's 17 rows,
+    // shrunk to 1 + 6 + 4 — "the timestamps should basically be
     // touching the trim bar — one Windows pixel of empty space above"), then
     // its own light bottom line: THE DIGITS the ruler face (GuiFace::Small,
     // gui_font.h's type table: 16 px at 300 % since 2026-10-24, "R16", its
@@ -188,13 +184,13 @@ struct ProgramSpec {
     // (+1, +1) shadow reaching row 7; THE TICKS
     // stand on the ground's bottom row and rise this far into it (minor and
     // major: rows 9 .. 10 and 7 .. 10), a major's top row the shadow's last,
-    // the tick painted over it (the mock of record's order, paint_ruler_row).
+    // the tick painted over it (paint_ruler_row's order).
     int  ruler_ground_px;
     int  ruler_minor_tick_px;
     int  ruler_major_tick_px;
     int  ruler_baseline_px;
     // THE MARKER LANE (architect 2026-10-09 ~16:50 / ~21:00, 17 rows where
-    // Cool Edit's has 11, METRICS §4.2 — the six the ruler gave): this many W
+    // Cool Edit's has 11 — the six the ruler gave): this many W
     // rows above the cue's triangle, then the triangle's cue_triangle_rows
     // quanta on rows 12 .. 16 ("the triangle height is okay right now"), its
     // apex on the lane's last row; THE LABEL'S BOX — the selected fill, the
@@ -229,7 +225,7 @@ struct ProgramSpec {
     int  cue_fill_lead;
     int  cue_fill_pad;
     int  cue_segment_gap;
-    // THE CANVAS DOTS (METRICS §4.2, §4.3), ONE DEVICE PX SQUARE, COUNTED IN
+    // THE CANVAS DOTS, ONE DEVICE PX SQUARE, COUNTED IN
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
@@ -246,7 +242,7 @@ struct ProgramSpec {
     // same phases in device columns counted from the reset's own column
     // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE
     // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
-    // 2026-10-09): METRICS gives the red at capture y ≡ 3 and the blue at
+    // 2026-10-09): the capture gives the red at y ≡ 3 and the blue at
     // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108
     // ≡ 4 (mod 8), so from its own first row the red stands on rows ≡ 7 and
     // the blue on rows ≡ 3 (its first dot, y = 111, canvas row 3, is blue);
@@ -337,7 +333,7 @@ constexpr int program_stereo_divider_authored_h(const ProgramSpec& p) {
     return 1 + p.stereo_divider_face_px + 1;
 }
 static_assert(program_case_authored_px(kProgramSpec) == 23);
-// THE FRAME OF RECORD'S STRIPS (layout4_pad13): 13 + 23 + 13; the band's
+// THE STRIPS: 13 + 23 + 13; the band's
 // authored part under its logo lane 23 + 13.
 static_assert(program_strip_authored_h(kProgramSpec) == 49);
 static_assert(program_band_authored_h(kProgramSpec) == 36);
@@ -361,8 +357,8 @@ static_assert(program_ruler_authored_h(kProgramSpec) +
 // one row under the digits' rows 1 .. 6, ends on row 7), the tick painted
 // over it; the
 // PLAYHEAD'S HEAD, the cue's triangle on the ground's last five rows (6 ..
-// 10), reaches the digits' last row (6) and covers what stands under it
-// (the mock of record). The digits' own rows — one W of air, then the small
+// 10), reaches the digits' last row (6) and covers what stands under it.
+// The digits' own rows — one W of air, then the small
 // face's six — are render.h's assert, where the face is in scope.
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
               kProgramSpec.ruler_baseline_px);

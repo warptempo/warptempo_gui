@@ -3208,8 +3208,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     }
 }
 
-// THE BAND'S RUNS (architect 2026-10-22, the simple layout, on layout3 /
-// layout4: "push all icons together … add a spacing after render, and after
+// THE BAND'S RUNS (architect 2026-10-22, the simple layout, on his layout mocks:
+// "push all icons together … add a spacing after render, and after
 // flatten"): the left members stand in THREE PLAIN RUNS, the cases abutting
 // and run_gap_px of wood between two (program_spec.h), each opened by its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
@@ -7907,7 +7907,7 @@ struct AppState {
     bool queue_cancel_requested  = false;
 
     // THE PROGRESS MODAL (architect 2026-10-10 evening; its shape 2026-10-14
-    // on tmp/modal_arc/mock_modal_progress_v2.png) — THE MODAL FAMILY'S FIFTH
+    // on his progress mock) — THE MODAL FAMILY'S FIFTH
     // MEMBER (modal_box.h, ModalDialogOwner::Progress). EVERY BATCH — the grid
     // iterations and the BPM sweep — opens it AT THE RENDER PRESS: the box with
     // THE FACE INSIDE (a surface you only read), the sentence on its first row
@@ -10019,8 +10019,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 //     cannot take this tempo change") because a group edit is not
 //     one-dimensional — its effect would have spread across every selected
 //     flag — so the button greys AND the key cards, the shape undo and redo
-//     have always had (the rule pair is the arc's own, tmp/refinement_
-//     decisions.md);
+//     have always had (the rule pair is the arc's own);
 //   * a singleton compares tempo_cent_step_landing against the focused
 //     OWNER's own value: Up greys with the marker resting on the bracket's
 //     max, Down on its min, and that refusal is SILENT at the key since
@@ -16800,8 +16799,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 }
 
 // THE ROSTER'S LEGEND COLUMN (architect 2026-10-23, the hi-fi skin: "there's
-// no icons in these consoles … just a little label underneath"; the table of
-// record tmp/theme_next/make_pivot1.py's LEGENDS, in the painter's roster
+// no icons in these consoles … just a little label underneath"; the table
+// of legends, in the painter's roster
 // order): each button's act cut to a hi-fi legend in capitals, printed UNDER
 // its blank key (paint_handler.cpp's key_legend_seat, the one placement). The
 // tooltip stays the act's name (above). THE `h` VIEW'S FOUR STAND-INS, which
@@ -17102,8 +17101,7 @@ inline const char* redesign_button_legend(const AppState& a,
 // something — therefore holds on this form too, not only on the constant table
 // it overrides.
 // THE OVERLOAD TAKES WHAT ITS FORKS READ, AND A PARAMETER LEAVES WITH ITS
-// PRODUCER (2026-09-01, the truthful-tooltips ruling — the survey at
-// tmp/uniformity_survey_tooltips.md is its record — under
+// PRODUCER (2026-09-01, the truthful-tooltips ruling, under
 // redesign_button_enabled's own standing rule): a hint forks on the predicate
 // the act or the face already reads, and several of those need what the
 // enabled predicate needs — the overview command's resolve, the step kind

@@ -31,7 +31,7 @@
 // chrome as ReactOS 0.4.16 draws it (architect 2026-10-06: "pivot to Win2K
 // as the official supported version and focus on that"; its classic chrome
 // is that scheme in every colour and metric), read off the architect's
-// ReactOS captures (tmp/reactos*.png, "get it as accurate to ReactOS as we
+// ReactOS captures ("get it as accurate to ReactOS as we
 // can"). WHERE REACTOS DEPARTS FROM WINDOWS 2000 THE PRODUCT FOLLOWS
 // REACTOS, on purpose and under the Windows 2000 name (a provenance-clean
 // capture of the real OS beats ReactOS wherever they differ, 2026-10-09).
@@ -91,7 +91,7 @@ struct ChromeSpec {
 // THE MENU ROW, Explorer's menu band and the plain menu bar's
 // seat, 2026-10-02 to 2026-10-21, left with the row; git history); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
-// (tmp/reactos-tooltips.png) (THE DROPDOWN, Windows' popup menu, until
+// (measured on a ReactOS capture) (THE DROPDOWN, Windows' popup menu, until
 // 2026-10-21). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)

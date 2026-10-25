@@ -1199,7 +1199,7 @@ void render_trim_flags(cairo_t* cr,
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
-    // THE BAR (METRICS §3, §4.1; the hi-fi skin 2026-10-23): ITS FIELD BLACK
+    // THE BAR (the hi-fi skin 2026-10-23): ITS FIELD BLACK
     // (kCeViewBarField) under THE PROGRAM RING in the two ring tones, every
     // line ONE DEVICE PX on its one-W slot's outer edge (render.h's line
     // rule, hairline_px), the slot's other rows the black field — this bar's
@@ -1256,9 +1256,8 @@ void render_trim_flags(cairo_t* cr,
         paint_hairline_frame(cr, GuiRect{sx, field_y, sw, field_h},
                              pal.ce_span_hilight, pal.ce_span_shadow);
         // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we
-        // agreed no dots on the trim bar"; the mock of record draws none):
-        // Cool Edit's period-2 cursor column over its span (METRICS §3) is
-        // not drawn.
+        // agreed no dots on the trim bar"): Cool Edit's period-2 cursor column over its span is not
+        // drawn.
     }
 
     // THE GRABS, as painted: the span's two end zones and the body between
@@ -1707,9 +1706,9 @@ struct CueSegment {
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
                            double x, double baseline, GuiColor ink,
                            GuiColor /*shadow*/) {
-    // NO SHADOW in the hi-fi skin (architect 2026-10-23, the frame of record
-    // pv_39b: the 22-px bone on the brushed lane alone; the triangle keeps
-    // its own shadow, paint_ce_cue_triangle).
+    // NO SHADOW in the hi-fi skin (architect 2026-10-23: the 22-px bone
+    // on the brushed lane alone; the triangle keeps its own shadow,
+    // paint_ce_cue_triangle).
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }

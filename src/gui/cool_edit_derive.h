@@ -24,8 +24,8 @@
 // chrome), and every other tone the panel puts down is derived from it HERE,
 // the one owner.
 //
-// THE RULE IS THE ONE THE MEASURER PROVED (tmp/research/cool_edit/
-// METRICS.md §2.1, five presets captured at the same pixel positions —
+// THE RULE IS THE ONE THE MEASURER PROVED (§2.1 of his Cool Edit
+// metrics, five presets captured at the same pixel positions —
 // Default 626C7B, XP Blue 1C47C6, Fire and Brick 8E283A, Lipstick and Grapes
 // 8751CA, Seattle Blues C7C8CF): TAKE FACE IN HLS, KEEP ITS HUE AND
 // SATURATION, SET L' = a·L + b (clamped to [0, 1]), and back to RGB —
@@ -33,10 +33,9 @@
 // rounded half up to its byte. The fit's worst channel over the five presets
 // is under 1.0 RGB (1.4 with rounding) for every tone; constant per-channel
 // ratios, Face ± a constant and Windows' dialog rule were tried and rejected
-// (errors 4–66). The (a, b) of each tone is the fit's, read off its script
-// (scripts/tones2.py); THE GRIPPER'S DARK LINE IS (0.526, −0.004) — the
-// table in METRICS.md prints its b as 0, which misses the default's bytes by
-// 2; the refit over the same five presets gives −0.004 at 0.89.
+// (errors 4–66). The (a, b) of each tone is the fit's; THE GRIPPER'S DARK LINE IS
+// (0.526, −0.004) — an earlier table printed its b as 0, which misses the
+// default's bytes by 2; the refit over the same five presets gives −0.004 at 0.89.
 //
 // THE PROOF (static_assert below): the default Face, 626C7B, gives every
 // measured tone of Cool Edit's own default scheme within ONE per channel.
@@ -74,9 +73,9 @@
 // misses are "off by 5 to 8 … imperceptible … OK to implement"): its face
 // ramp, its highlight, its shadow ramp's two ends and the shadow's corner are
 // each a CASE TONE below — the Face's HLS hue kept, L' = A + B·L_F and
-// S' = C·S_F, per row (METRICS_PRESETS_1010.md §4c, the best model the
+// S' = C·S_F, per row (the best model the
 // measurement found; no closed rule fits within 4). The coefficients are the
-// minimax fit over thirteen captured Faces (scripts/m85_case_fit.py) WITH
+// minimax fit over thirteen captured Faces WITH
 // THE DEFAULT FACE HELD WITHIN 2 PER CHANNEL OF ITS MEASURED BYTES (the
 // app's default look does not move; static_assert below). Worst channel
 // error over the twelve other Faces: rows 0–19 5.3–8.8 except row 5 9.4,
@@ -86,12 +85,12 @@
 // B ≈ 0, tinted by hue alone). The default-scheme constants they replace
 // missed the other Faces by 19–34. NOT FOLLOWING FACE (cool_edit_paint.h's
 // constants): the black outer line and the pressed and checked rings,
-// byte-identical on every captured Face (§4a, METRICS §1.5). (THE CASE'S
+// byte-identical on every captured Face. (THE CASE'S
 // FITS BELOW ARE THE PROGRAM'S HISTORY since 2026-10-23: the hi-fi skin's
 // keys are flat constants, cool_edit_paint.h's paint_key; the fits stay as
 // the record their static_asserts prove.)
 //
-// THE TEXT TONES (2026-10-10; tmp/research/cool_edit/METRICS_PRESETS_1010.md,
+// THE TEXT TONES (2026-10-10; his Cool Edit preset metrics,
 // eleven captures over nine Faces, §2–§3): Cool Edit's PROGRAM TEXT — the
 // clock, the active tab's "Files", the Sel / View digits — is NOT the
 // two-parameter rule: its saturation is cut too, S' = c·S + d (the Tone's c
@@ -212,8 +211,7 @@ constexpr uint32_t tone(uint32_t face, double a, double b, double c = 1.0,
 // or, since 2026-10-09, THE WAVEFORM'S INK (`waveform_ink`): the view bar's
 // span is a raised block of Cool Edit's WvFg — its body the ink itself, its
 // light and dark bevels the ink at a FIXED HLS lightness with its hue and
-// saturation kept (METRICS §3: L 0.94 and, refit, 0.3157 — the table's
-// note; a = 0 below), the same round trip as the face's tones.
+// saturation kept (L 0.94 and, refit, 0.3157; a = 0 below), the same round trip as the face's tones.
 enum class ToneSource { Face, Ink };
 
 struct Tone {
@@ -230,7 +228,7 @@ struct Tone {
     // (the head's proof).
     uint32_t               measured_on = kDefaultFace;
 };
-// Each with where Cool Edit draws it (METRICS §2.1, §2.2, §3).
+// Each with where Cool Edit draws it.
 inline constexpr Tone kTones[] = {
     // the dock's recess and the band's stretch where no pane stands (a
     // record since 2026-10-22: the band is plain wood, the simple layout)
@@ -268,11 +266,11 @@ inline constexpr Tone kTones[] = {
     // past kLabelSwapLightness the label is the `dark` / `hilight` pair
     // instead (label_ink / label_shadow below, which fill the pair's two
     // members — no member here). (.244, .750) the refit over seven Faces
-    // (METRICS_PRESETS_1010.md §2c, worst 1; 2026-10-10), the (.264, .740)
+    // (worst 1; 2026-10-10), the (.264, .740)
     // of the five 2026-10-09 presets missing Midnight, Stealth and Safari by 2.
     {"label",         0xD6DADE, 0.244,  0.750, nullptr},
     // the cue's and the playhead head's shadow, one quantum right of each
-    // of the triangle's rows (METRICS §4.2, §4.3; the marker lane and the
+    // of the triangle's rows (the marker lane and the
     // ruler, 2026-10-09)
     {"cue_shadow",    0x31363D, 0.502, -0.004, &GuiPalette::ce_cue_shadow},
     // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
@@ -286,12 +284,12 @@ inline constexpr Tone kTones[] = {
      ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
-    // THE VIEW BAR'S SPAN (METRICS §3), off the INK: its top row and left
+    // THE VIEW BAR'S SPAN, off the INK: its top row and left
     // column, and its bottom row and right column — the ink at HLS L 0.94
     // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7, the
     // default palette's ink); the ink tones' proof is over Cool Edit's five
     // captured presets (below). THE SHADOW'S LIGHTNESS IS 0.3157, NOT
-    // METRICS.md's 0.312 (2026-10-09): 0.312 misses the default's shadow by
+    // the earlier table's 0.312 (2026-10-09): 0.312 misses the default's shadow by
     // 2 in green (95 for 97), while every one of the five measured shadows
     // sits at exactly L = 161/510 = 0.3157, which reproduces all five
     // within one per channel (the proof below) — the gripper's refit
@@ -331,7 +329,7 @@ static_assert([] {
 // The default Face itself is a byte of the round trip (a = 1, b = 0).
 static_assert(tone(kDefaultFace, 1.0, 0.0) == kDefaultFace);
 
-// THE SPAN'S PROOF (METRICS §3; architect 2026-10-09): over Cool Edit's FIVE
+// THE SPAN'S PROOF (architect 2026-10-09): over Cool Edit's FIVE
 // captured presets' waveform inks (WvFg) — Default 4BF3A7, XP Blue 22B893,
 // Fire and Brick FFCE0C, Lipstick and Grapes ED1EC9, Seattle Blues 576AB4 —
 // the fixed-lightness rule reproduces each span's measured highlight and
@@ -377,7 +375,7 @@ constexpr uint32_t tone_of(const Tone& t, uint32_t face, uint32_t ink) {
 }
 
 // THE TEXT THRESHOLD: Cool Edit's program text turns dark above it, keyed on
-// the Face's HLS L (METRICS_PRESETS_1010.md §3b: L and the RGB mean agree on
+// the Face's HLS L (L and the RGB mean agree on
 // every capture; HSV V and luma are ruled out by the label's swap). The
 // captures pin it in (.624, .663] — Dusty Rose's L .624 keeps the light
 // text, Safari So Good's .663 swaps — and 0.64 sits inside that interval
@@ -400,7 +398,7 @@ constexpr uint32_t field_text(uint32_t face) {
     return tone_of(named_tone("text"), face, 0);
 }
 
-// THE LABEL THRESHOLD (2026-10-10; METRICS_PRESETS_1010.md §3a, §3b): the
+// THE LABEL THRESHOLD (2026-10-10): the
 // panel label swaps LATER than the text, on the same key (the Face's HLS L;
 // luma and HSV V ruled out by Safari and Arctic). The captures pin it in
 // (.663, .739] — Safari So Good's L .663 keeps the light label (EEECE2 over
@@ -427,8 +425,8 @@ inline constexpr GuiColor GuiPalette::* kLabelPairMembers[] = {
     &GuiPalette::ce_label, &GuiPalette::ce_label_shadow,
 };
 
-// THE TEXT'S PROOF (METRICS_PRESETS_1010.md §2a and §3d, the clock's flat
-// core; Seattle Blues from METRICS.md): every captured Face's program text
+// THE TEXT'S PROOF (the clock's flat
+// core; Seattle Blues from the first measurement): every captured Face's program text
 // within one per channel, the swap falling where the captures put it.
 struct TextPreset {
     uint32_t face, text;
@@ -457,8 +455,7 @@ static_assert([] {
 static_assert(field_text(kDefaultFace) == program_text(kDefaultFace));
 static_assert(text_swaps(0xC0C0C0) && !text_swaps(kDefaultFace));
 
-// THE DARK TONE AND THE HILIGHT ON OTHER FACES (METRICS_PRESETS_1010.md §2c,
-// §3c: the panel label's shadow, and the swapped label's ink and shadow) —
+// THE DARK TONE AND THE HILIGHT ON OTHER FACES (the panel label's shadow, and the swapped label's ink and shadow) —
 // the chrome's card frame and its Hilight since 2026-10-10 (chrome_derive.h)
 // — within one per channel on the captured Faces, the swapped Grape and
 // Arctic Freeze among them.
@@ -486,7 +483,7 @@ static_assert([] {
     return true;
 }());
 
-// THE LABEL'S PROOF (METRICS_PRESETS_1010.md §2c, §3c, the flat cores of
+// THE LABEL'S PROOF (the flat cores of
 // "Begin"): every captured Face's label ink and shadow within one per
 // channel, the swap falling between Safari So Good and Grape.
 struct LabelPreset {
@@ -514,9 +511,9 @@ static_assert([] {
 // -- THE BUTTON CASE (2026-10-10, the head) ----------------------------------
 
 // ONE CASE TONE: on the Face, L' = a·L + b and S' = c·S, the hue kept (the
-// head's per-row fit, scripts/m85_case_fit.py: a the slope B, b the
+// head's per-row fit: a the slope B, b the
 // intercept A), and `default_byte` Cool Edit's default scheme's byte as
-// measured (METRICS §1.3–1.4), which the default Face reproduces within 2.
+// measured, which the default Face reproduces within 2.
 struct CaseTone {
     double   a, b, c;
     uint32_t default_byte;
@@ -586,15 +583,15 @@ static_assert([] {
     return true;
 }());
 // A grey Face gives a grey case (its saturation 0): Arctic Freeze's shadow
-// starts within one of the measured 5D5D5D (METRICS_PRESETS_1010.md §4a).
+// starts within one of the measured 5D5D5D.
 static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
               within_one(0x5E5E5E, 0x5D5D5D));
 
 // (THE TAB STRIP'S INACTIVE TAB — kTabBodies, Cool Edit's Organizer body
 // gradient and label ink measured per preset off his Wine captures of
 // 2026-10-18, no rule fitting them — IS REMOVED with the strip, architect
-// 2026-10-22, the simple layout; the measurements tmp/tabs_fit/RESULTS.md
-// and git history.)
+// 2026-10-22, the simple layout; the measurements are in git
+// history.)
 
 // -- THE DISABLED CUE'S FADED LOOK (architect 2026-10-10 ~12:20) ---------------
 

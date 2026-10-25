@@ -123,7 +123,7 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE SKIN ON THE SHIPPED GROUND'S MEAN OF RECORD (make_pivot1, about
+// THE SKIN ON THE SHIPPED GROUND'S MEAN OF RECORD (about
 // 1F1F21): the rings about 48484B and 0C0C0D, the constants as listed.
 inline constexpr GuiThemeWords kDefaultCheck = [] {
     GuiPaletteWords p = default_palette_words();
@@ -141,7 +141,7 @@ static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x3E4044);
 static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x0A0A0C);
 static_assert(kDefaultCheck[theme_role_index("card_frame")] == ring_dark_of(0x1F1F21));
-// The ring tones of record (make_pivot1.ring_tones on 1F1F21), each within a
+// The ring tones of record (on 1F1F21), each within a
 // byte of the mock's 48484B / 0C0C0D.
 static_assert(cool_edit_derive::within_two(ring_light_of(0x1F1F21), 0x48484B));
 static_assert(cool_edit_derive::within_two(ring_dark_of(0x1F1F21), 0x0C0C0D));
