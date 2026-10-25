@@ -705,7 +705,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     // render pair) and Ctrl+Alt+O (Revert). (The menu titles' Alt+F, Alt+E
     // and Alt+S, 2026-10-10, and Ctrl+Alt+Shift+P, the state paste, went
     // 2026-10-21; Ctrl+Alt+P, the phase reset propagate's paste, left the
-    // same evening for Ctrl+Shift+Return.) No Alt-alone chord binds (the
+    // same evening, the two pastes Ctrl+P and Ctrl+Shift+P since
+    // 2026-10-24.) No Alt-alone chord binds (the
     // static_asserts below pin Alt+Tab's family and the three former titles'
     // letters), and alt's POINTER vocabulary is empty: no alt-modified press
     // or wheel binds anything. THE Ctrl+Alt SHAPE IS THE INVARIANT rather
@@ -758,9 +759,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Jump to Defining Marker's own chord) and CTRL+SHIFT+J copies that
         // value (architect 2026-10-14, Copy Resolved Value). (In the
         // phase-reset view the pair was Copy / Paste Phase Resets for the
-        // evening of 2026-10-21, retired the same evening for Ctrl+Return /
-        // Ctrl+Shift+Return, below — architect: "pigeon stays ctrl+j /
-        // +shift".) Bare `j` and Shift+J bind nothing.
+        // evening of 2026-10-21, retired the same evening for Return's ctrl
+        // forms — architect: "pigeon stays ctrl+j / +shift" — and the letter
+        // P's three presses since 2026-10-24, below.) Bare `j` and Shift+J
+        // bind nothing.
         case GuiKeys::J: return cl || cs;
         // Drop on the live column / drop a phase reset from the warp column / save,
         // and CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
@@ -771,13 +773,15 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::S: return bare || sh || cl || cs;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
-        // (THE LETTER P BINDS NOTHING since 2026-10-21: Ctrl+P and Ctrl+Alt+P,
-        // the phase-reset propagate's copy and paste, moved onto Return's
-        // ctrl forms that evening, below — architect: "we can give ctrl+enter
-        // as copy and ctrl+shift+enter as paste, on the open text editor
-        // icon"; the state paste's Ctrl+Alt+Shift+P was removed the same day,
-        // and the W/P flip's bare `p` was deleted whole with its view lamp
-        // 2026-09-15.)
+        // THE PHASE-RESET PROPAGATE, ONE LETTER (architect 2026-10-24, the
+        // Copy Phase Resets key): bare `p` COPIES the selected run's phase
+        // resets, CTRL+P PASTES them and CTRL+SHIFT+P PASTES THEIR STATE
+        // (is_phase_reset_copy_key and its two siblings below). Shift+P and
+        // every alt spelling bind nothing. (The letter bound nothing from
+        // 2026-10-21, the pair on Return's ctrl forms, the state paste
+        // removed; Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P before that, and
+        // the W/P flip's bare `p` until its deletion 2026-09-15.)
+        case GuiKeys::P: return bare || cl || cs;
         // (THE LETTER M BINDS NOTHING since 2026-09-23: its Ctrl and Ctrl+Alt
         // chords were the magnification level propagate's copy and paste, and
         // Ctrl+Alt+Shift+M Generate Magnification Level Markers, all deleted
@@ -806,11 +810,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The render pair: the dispatch and the archival one.
         case GuiKeys::R: return ca || cas;
 
-        // The zoom-out and, on its shifted form, RESET TRIM (architect
-        // 2026-09-22 — the maximizer left Shift+[ when the bracket went to
-        // the magnification lamp; `0` already means "the whole song" to the
-        // camera, and its shifted form says it to the trim).
-        case GuiKeys::Digit0: return bare || sh;
+        // Zoom to Fit, on its shifted form FRAME THE TRIM, and on its
+        // ctrl+shift form RESET TRIM (architect 2026-10-24; Shift+0 the
+        // reset from 2026-09-22, when the maximizer left Shift+[ for the
+        // magnification lamp). Ctrl+0 binds nothing.
+        case GuiKeys::Digit0: return bare || sh || cs;
         // The four selectors, one axis each: bare 1 is Source, bare 2
         // Target, bare 3 Warp, bare 4 Phase Reset (architect 2026-10-14, the
         // icon row's two radio pairs; the key for the value standing selects
@@ -861,13 +865,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // 2026-09-01 and retired that evening when bare Esc took the whole
         // stack, one act wanting one chord.
         case GuiKeys::Escape: return bare;
-        // THE RETURN KEY'S THREE ACTS (architect 2026-10-21, the Open Text
-        // Editor seat's): bare opens the addressed cell's editor on the
-        // focused marker, CTRL copies the phase resets of the selected run
-        // of warp markers and CTRL+SHIFT pastes them onto the one selected
-        // warp marker (is_phase_reset_copy_key / is_phase_reset_paste_key
-        // below). Shift+Return and every alt spelling bind nothing.
-        case GuiKeys::Return: case GuiKeys::KpEnter: return bare || cl || cs;
+        // BARE RETURN opens the addressed cell's editor on the focused marker
+        // (the Open Text Editor key's). EVERY MODIFIED RETURN BINDS NOTHING
+        // since 2026-10-24: its ctrl forms carried the phase-reset propagate
+        // pair from 2026-10-21 until the family moved to the letter P.
+        case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
         case GuiKeys::Delete: return bare;
         // The marker walk (bare forward, shift back; its landing camera is
         // the landing owner's, Viewport::land_subject), the A/B tab switch
@@ -892,10 +894,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // and the camera is the hold posture's now (NudgeCamera above).
         case GuiKeys::Left: case GuiKeys::Right:
             return bare;
-        // The trim bounds bare, and the WHOLE-PIECE ends under ctrl
-        // (architect 2026-09-26: the S Pen's side button is glass's Ctrl).
-        // Shift spells nothing.
-        case GuiKeys::Home: case GuiKeys::End: return bare || cl;
+        // The trim bounds bare, and the WHOLE-PIECE ends under SHIFT
+        // (architect 2026-10-24, the Go to Start / Go to End keys' return:
+        // the glass long press is Shift; under ctrl from 2026-09-26, the S
+        // Pen's side button, until then). Ctrl and Ctrl+Shift spell nothing.
+        case GuiKeys::Home: case GuiKeys::End: return bare || sh;
         // The viewport's stepped scroll.
         case GuiKeys::PageUp: case GuiKeys::PageDown: return bare;
 
@@ -942,17 +945,18 @@ static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
 static_assert(chord_is_bound(GuiKeys::Home, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::End, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Home,
-                                 GuiInputState{true, false, false}, false) &&
+                                 GuiInputState{false, true, false}, false) &&
                   chord_is_bound(GuiKeys::End,
-                                 GuiInputState{true, false, false}, false) &&
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Home,
-                                  GuiInputState{false, true, false}, false) &&
+                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::End,
-                                  GuiInputState{false, true, false}, false) &&
+                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::End,
                                   GuiInputState{true, true, false}, false),
-              "Home / End bind bare (the trim-bound jump) and under Ctrl (the "
-              "whole-piece jump); Shift and Ctrl+Shift forms bind nothing");
+              "Home / End bind bare (the trim-bound jump) and under Shift (the "
+              "whole-piece jump, 2026-10-24); Ctrl and Ctrl+Shift forms bind "
+              "nothing");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}, false) &&
@@ -1001,10 +1005,15 @@ static_assert(!chord_is_bound(GuiKeys::J, GuiInputState{}, false) &&
 static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit0,
                                  GuiInputState{false, true, false}, false) &&
+                  chord_is_bound(GuiKeys::Digit0,
+                                 GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Digit0,
-                                  GuiInputState{true, false, false}, false),
-              "bare `0` is full zoom out and Shift+0 is Reset Trim; no other "
-              "decoration of `0` binds");
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Digit0,
+                                  GuiInputState{true, true, true}, false),
+              "bare `0` is Zoom to Fit, Shift+0 frames the trim and "
+              "Ctrl+Shift+0 resets it (2026-10-24); no other decoration of "
+              "`0` binds");
 static_assert(!chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Minus, GuiInputState{}, false),
               "`=` and `-` are unbound: the stepped zoom and its buttons were "
@@ -1078,42 +1087,44 @@ static_assert(!chord_is_bound(GuiKeys::F,
                   !chord_is_bound(GuiKeys::D,
                                   GuiInputState{false, false, true}, false),
               "no Alt-alone letter binds");
-// THE LETTER P BINDS NOTHING (2026-10-21): the propagate's former Ctrl+P and
-// Ctrl+Alt+P moved onto Return's ctrl forms, and the state paste's
-// Ctrl+Alt+Shift+P went the same day — every decoration of `p` is unbound,
-// in both modes.
-consteval bool letter_p_binds_nothing() {
+// THE LETTER P IS THE PROPAGATE (architect 2026-10-24): bare the copy, Ctrl
+// the paste, Ctrl+Shift the state paste, in both modes (the `h` view's
+// allowlist then refuses all three on its card); Shift+P and every alt
+// spelling bind nothing — the anchor walks all eight combinations.
+consteval bool letter_p_binds_the_propagate() {
     for (int bits = 0; bits < 8; ++bits) {
         const GuiInputState mods{(bits & 1) != 0, (bits & 2) != 0,
                                  (bits & 4) != 0};
-        if (chord_is_bound(GuiKeys::P, mods, false) ||
-            chord_is_bound(GuiKeys::P, mods, true))
+        const bool want = !mods.alt && (!mods.shift || mods.ctrl);
+        if (chord_is_bound(GuiKeys::P, mods, false) != want ||
+            chord_is_bound(GuiKeys::P, mods, true) != want)
             return false;
     }
     return true;
 }
-static_assert(letter_p_binds_nothing(),
-              "Ctrl+P, Ctrl+Alt+P and Ctrl+Alt+Shift+P are retired: the "
-              "propagate pair is Ctrl+Return / Ctrl+Shift+Return");
-// RETURN'S THREE ACTS (architect 2026-10-21): bare the editor's open, Ctrl the
-// phase-reset copy, Ctrl+Shift the paste, on both keysyms; Shift alone and
-// every alt spelling bind nothing.
+static_assert(letter_p_binds_the_propagate(),
+              "the letter P binds bare (copy phase resets), Ctrl (paste them) "
+              "and Ctrl+Shift (paste their state); Shift+P and the alt "
+              "spellings bind nothing");
+// RETURN BINDS BARE ALONE (2026-10-24): the editor's open, on both keysyms;
+// its ctrl forms, the propagate pair from 2026-10-21, left for the letter P.
 static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Return,
-                                 GuiInputState{true, false, false}, false) &&
-                  chord_is_bound(GuiKeys::Return,
-                                 GuiInputState{true, true, false}, false) &&
-                  chord_is_bound(GuiKeys::KpEnter,
-                                 GuiInputState{true, true, false}, false) &&
+                  chord_is_bound(GuiKeys::KpEnter, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Return,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Return,
+                                  GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::KpEnter,
+                                  GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{true, false, true}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{false, false, true}, false),
-              "Return binds bare (open the editor), Ctrl (copy phase resets) "
-              "and Ctrl+Shift (paste phase resets); Shift+Return and the alt "
-              "spellings bind nothing");
+              "Return binds bare alone (open the editor); Ctrl+Return, "
+              "Ctrl+Shift+Return, Shift+Return and the alt spellings bind "
+              "nothing");
 // THE PUBLISH CHORD (architect 2026-10-10) binds in both modes; its Alt
 // spelling does not.
 static_assert(chord_is_bound(GuiKeys::S,
@@ -1345,20 +1356,38 @@ inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chord that RESETS THE TRIM to the whole song
-// (GuiInputHandler::handle_trim_maximize): SHIFT+0 exactly — shift, no ctrl,
-// no alt (architect 2026-09-22, off Shift+[ when the bracket went to the
-// magnification lamp). It arrives as the `0` key plus the shift bit on both
-// backends: the Wayland boundary reads LEVEL 0 of the keymap
+// (GuiInputHandler::handle_trim_maximize): CTRL+SHIFT+0 exactly — ctrl and
+// shift, no alt (architect 2026-10-24, when Shift+0 became the trim's frame,
+// below; Shift+0 from 2026-09-22, off Shift+[ when the bracket went to the
+// magnification lamp). It arrives as the `0` key plus the modifier bits on
+// both backends: the Wayland boundary reads LEVEL 0 of the keymap
 // (GuiPlatform::key_from_keycode), so a US layout's `)` never reaches the
 // dispatch, and the Android backend produces keys only through synthesize_key,
-// which carries the GuiKey and the modifier bits the same way. Bare `0` is
-// full zoom out and is untouched. One-shot. TWO READERS: on_key's dispatch arm
-// (input_handler.cpp) and the read-only allowlist (read_only_key_blocked,
-// which ADMITS it — trim is band, not content); the Full zoom out button's
-// shift-click and long press reach the first through on_key
-// (redesign_button_shift_admits). The `h` view's allowlist does
-// not name it: trim is frozen there, so the view cards it.
+// which carries the GuiKey and the modifier bits the same way. One-shot. TWO
+// READERS: on_key's dispatch arm (input_handler.cpp) and the read-only
+// allowlist (read_only_key_blocked, which ADMITS it — trim is band, not
+// content); the Zoom to Fit button's ctrl+shift press (on the glass the S
+// Pen's barrel held through the long press) reaches the first through on_key
+// (redesign_button_ctrl_shift_admits). The `h` view's allowlist does not
+// name it: trim is frozen there, so the view cards it.
 inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Digit0 && mods.ctrl && mods.shift && !mods.alt;
+}
+
+// True for the chord that FRAMES THE TRIM (GuiInputHandler::
+// run_span_framing_command, the trim bar's double-click exactly — a proper
+// trim sub-window with the edge margin each side, else the whole song):
+// SHIFT+0 exactly — shift, no ctrl, no alt (architect 2026-10-24; it was the
+// reset until then, above). Bare `0` is Zoom to Fit's toggle and untouched;
+// `0` is the whole song to the camera, shifted the trim's span to the camera.
+// A CAMERA ACT: it writes no store and no trim, so the read-only allowlist
+// (read_only_key_blocked) and the `h` view's (history_mode_key_blocked)
+// both ADMIT it, as both admit the double-click, and the iteration lock
+// inherits the read-only admission. One-shot. THREE READERS: on_key's
+// dispatch arm (input_handler.cpp) and the two allowlists; the Zoom to Fit
+// button's shift-click and long press reach the first through on_key
+// (redesign_button_shift_admits).
+inline bool is_trim_frame_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Digit0 && mods.shift && !mods.ctrl && !mods.alt;
 }
 
@@ -1396,39 +1425,43 @@ inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::J && mods.ctrl && !mods.shift && !mods.alt;
 }
 
-// THE PHASE-RESET PROPAGATE PAIR (architect 2026-10-21 ~22:45: "we can give
-// ctrl+enter as copy and ctrl+shift+enter as paste, on the open text editor
-// icon, which has no modifiers. pigeon stays ctrl+j / +shift"): CTRL+RETURN
-// COPIES the phase resets of the selected run of warp markers into the
-// session clipboard and CTRL+SHIFT+RETURN PASTES them onto the one selected
-// warp marker, behind the paste's confirmation. RETURN'S CTRL FORMS, so the
-// Open Text Editor seat — bare Return's button — carries them: its ctrl press
-// (the S Pen's barrel button on the glass) is the copy and its ctrl+shift
-// press (the barrel held through the long press) the paste
-// (redesign_button_ctrl_admits / redesign_button_ctrl_shift_admits,
-// app_state.h). KpEnter is the same key, as it is for the bare open. They
-// were Ctrl+P and Ctrl+Alt+P from 2026-07-23 until that evening, and for
-// the hours between the pigeon's Ctrl+J pair in the phase-reset view
-// (closed_questions.md); the letter binds nothing now.
+// THE PHASE-RESET PROPAGATE, THE LETTER P (architect 2026-10-24, the Copy
+// Phase Resets key): BARE P COPIES the phase resets of the selected run of
+// warp markers into the session clipboard, CTRL+P PASTES them onto the one
+// selected warp marker behind the paste's confirmation, and CTRL+SHIFT+P
+// PASTES THEIR STATE — the clipboard's enabled / disabled bits onto the
+// matching destination resets in lockstep, positions untouched, no prompt
+// (PhaseResetPropagate::paste_state_apply, resurrected that day). The Copy
+// Phase Resets key carries all three: its plain press the copy, its ctrl
+// press (the S Pen's barrel button with a tap on the glass) the paste and
+// its ctrl+shift press (the barrel held through the long press) the state
+// paste (redesign_button_ctrl_admits / redesign_button_ctrl_shift_admits,
+// app_state.h). The family was Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P from
+// 2026-07-23 to 2026-10-21, the pigeon's Ctrl+J pair in the phase-reset view
+// for that evening's hours, and Ctrl+Return / Ctrl+Shift+Return on the Open
+// Text Editor seat from that night until 2026-10-24, the state paste removed
+// meanwhile (closed_questions.md).
 //
-// EXACT — ctrl-exact and ctrl+shift-exact, no alt — and ONE-SHOT (a copy
-// repeats onto itself and a paste raises a prompt). Their acts are the
-// propagate's own arms (handle_mode_keys, input_key_dispatch.cpp) with
-// their ladders and cards unchanged: both act from the WARP column alone
-// (phase_reset_copy_refusal / phase_reset_paste_refusal, phase_reset_
-// propagate.h, the first rung). TWO READERS: the dispatch arms and the
-// iteration lock's allowlist (iteration_lock_key_blocked, which admits the
-// COPY alone — clipboard-only, nothing for the undo domain). The read-only
-// allowlist (read_only_key_blocked) and the `h` view's name neither, so both
-// chords drop on a locked tab — a copy arms a paste that writes, and the
-// pair travels together — and card in the view.
+// EXACT — bare-exact, ctrl-exact and ctrl+shift-exact, no alt — and ONE-SHOT
+// (a copy repeats onto itself, a paste raises a prompt and a state paste
+// repeats onto itself). Their acts are the propagate's own arms
+// (handle_mode_keys, input_key_dispatch.cpp) with their ladders and cards:
+// all three act from the WARP column alone (phase_reset_copy_refusal /
+// phase_reset_paste_refusal, phase_reset_propagate.h, the first rung; the two
+// pastes one ladder). TWO READERS: the dispatch arms and the iteration lock's
+// allowlist (iteration_lock_key_blocked, which admits the COPY alone —
+// clipboard-only, nothing for the undo domain). The read-only allowlist
+// (read_only_key_blocked) and the `h` view's name none, so all three drop on
+// a locked tab — a copy arms a paste that writes, and the family travels
+// together — and card in the view.
 inline bool is_phase_reset_copy_key(GuiKey key, GuiInputState mods) {
-    return (key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
-           mods.ctrl && !mods.shift && !mods.alt;
+    return key == GuiKeys::P && !mods.ctrl && !mods.shift && !mods.alt;
 }
 inline bool is_phase_reset_paste_key(GuiKey key, GuiInputState mods) {
-    return (key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
-           mods.ctrl && mods.shift && !mods.alt;
+    return key == GuiKeys::P && mods.ctrl && !mods.shift && !mods.alt;
+}
+inline bool is_phase_reset_state_paste_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::P && mods.ctrl && mods.shift && !mods.alt;
 }
 
 // True for the chord that toggles THE TOOLTIP LAMP (architect 2026-09-29,

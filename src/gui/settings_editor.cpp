@@ -603,7 +603,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // the same grammar the whole-file load runs, so a spelling is loadable
         // iff it commits) and refuses with its card like any other
         // invalid value, with no
-        // second spelling of the refusal here. Shift+0 is the maximizer.
+        // second spelling of the refusal here. Ctrl+Shift+0 is the maximizer.
         const int64_t v = gv.i64;
         // Per-bound walls, exactly the load guard's compare: both bounds
         // 0..EOF-1, the unified inclusive [0, total-1] authored domain. The

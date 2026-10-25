@@ -168,7 +168,7 @@
 //     answer, while a paste that paired blocks lands even byte-equal.
 //   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
 //     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+Shift+J)
-//     and "Copied the selected markers' phase resets" (Ctrl+Return); a refused
+//     and "Copied the selected markers' phase resets" (bare P); a refused
 //     system-clipboard write cards through card_clipboard_refusal ("The
 //     clipboard did not take the copy" / "…the cut" — the editors' Ctrl+X,
 //     the one editor clipboard chord that cards, and only there); and the
@@ -217,7 +217,7 @@
 //     (both forms and the `h` view's), the marker walk at an empty store or a
 //     wall, the singleton tempo step at its bracket's end, Space with nothing
 //     left to play, the history walk's walls and the diff cycle's ends,
-//     Shift+0 over a full window, the picker's row on the project already
+//     Ctrl+Shift+0 over a full window, the picker's row on the project already
 //     open, the render player's folder-end skips, Backspace at the root and
 //     its idle family (no render loaded, seeking before playback), the
 //     position nudge at its wall in both columns, the publish chord over

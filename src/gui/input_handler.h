@@ -509,9 +509,10 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     bare `,` / `.` (the
 //     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle, its
 //     camera the landing owner's, Viewport::land_subject),
-//     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — with
-//     Ctrl+Home / Ctrl+End, the ctrl-carrying claims), bare
-//     Home / End, bare `c` and bare Left / Right (the playhead step,
+//     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — the
+//     one ctrl-carrying claim), bare and shifted Home / End (the shifted
+//     pair since 2026-10-24, the ctrl pair until then), bare `c` and bare
+//     Left / Right (the playhead step,
 //     2026-09-26, the marker lane's press refused over a focused diff
 //     flag). The definition carries the
 //     derivation. handle_history_mode_key consumes exactly these,
@@ -571,7 +572,7 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods);
 // carries the ruling, and it is the model's ONE authoritative home.
 // Authoring-mutation chords (Delete, undo/redo, the propagate commands,
 // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
-// renders and the Shift+0 trim reset are ADMITTED — a save writes the state
+// renders and the Ctrl+Shift+0 trim reset are ADMITTED — a save writes the state
 // the tab already holds, a render reads it, and trim is band — and so,
 // since 2026-10-21, is `;`, the settings editor: the lock governs the keys,
 // not the editor (architect 2026-09-04), its engine-key commits refusing
@@ -665,7 +666,7 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 // unchanged value all write no bound and so deselect nothing. (The read-only
 // arms of that list — the refused bound set and the refused settings commit —
 // are gone with the 2026-08-07 reclassification of trim as band.)
-// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+0, the dedicated trim MAXIMIZER,
+// THE NON-SETTER IS EXACTLY ONE ROUTE: Ctrl+Shift+0, the dedicated trim MAXIMIZER,
 // which widens the window to the whole song rather than claiming one, so there is
 // no window for a deselect to hand the user (the architect's 2026-07-29
 // exemption, kept verbatim through the 2026-07-30 re-pose). Everything else
@@ -1443,7 +1444,7 @@ struct GuiInputHandler {
     // counts re-derived from them 2026-10-22):
     //   THE ICON ROW, 15 + 2 + 1 + 4 = 22 — the left walk's fifteen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
-    //   Full Zoom Out, Waveform Magnification and Follow;
+    //   Zoom to Fit, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings and Enable
     //   Tooltips), the history view's two stand-ins (Revert and Load in
     //   Place in Undo's slots — kIconRowHistoryStandIns), the history opener
@@ -2576,15 +2577,17 @@ private:
     // selection like every other marker verb.
     void run_iter_tie_toggle();
 
-    // The phase-reset clipboard pair and the I / K / L letter-key handlers:
-    // Ctrl+Return copy and Ctrl+Shift+Return paste (Ctrl+P / Ctrl+Alt+P
-    // until 2026-10-21), `i` iteration mode, `k` ADD TO
+    // The phase-reset clipboard family and the I / K / L letter-key handlers:
+    // bare P copy, Ctrl+P paste and Ctrl+Shift+P state paste (architect
+    // 2026-10-24: the Copy Phase Resets key's three presses; Ctrl+Return /
+    // Ctrl+Shift+Return from 2026-10-21, Ctrl+P / Ctrl+Alt+P /
+    // Ctrl+Alt+Shift+P before), `i` iteration mode, `k` ADD TO
     // SELECTION (the sticky ctrl, 2026-08-18) and `l`, the render player's
     // opener. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
-    // The phase-reset paste's refusal ladder, carded (true = refused); the
-    // decision is phase_reset_paste_refusal.
+    // The two phase-reset pastes' one refusal ladder, carded (true =
+    // refused); the decision is phase_reset_paste_refusal.
     bool card_phase_reset_paste_refusal();
 
     // Tab-key family: Ctrl+Tab switches A/B tabs; Ctrl+Shift+Tab is the
@@ -3033,7 +3036,7 @@ private:
     // have undo — so trim is excluded also"). That is the warp store, the phase
     // reset store and the engine settings — what
     // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
-    // Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
+    // Ctrl+Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
     // tab, the camera, the hold posture, the follow lamp and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
@@ -3207,9 +3210,10 @@ private:
     // floor at a gesture: the render boundary owns whether a window is
     // honorable, and it answers with an untrimmed render, not a refusal.)
 
-    // Shift+0 MAXIMIZES the trim to the full window [0, total-1] — RESET TRIM
+    // Ctrl+Shift+0 MAXIMIZES the trim to the full window [0, total-1] — RESET TRIM
     // (architect 2026-07-25 for the act, re-posed 2026-07-30 under always-set,
-    // on Shift+0 since 2026-09-22 — Shift+[ before, x before that: the full
+    // on Ctrl+Shift+0 since 2026-10-24 — Shift+0 from 2026-09-22, Shift+[
+    // before, x before that: the full
     // window IS the old unset state — it renders untrimmed and plays to the
     // natural end). Read-only admits it (trim is band, the ruling at
     // read_only_key_blocked); the body then delegates WHOLE to
@@ -3222,11 +3226,11 @@ private:
 
     // Write the FULL window [0, total-1]. Silent no-op when the window is
     // ALREADY full (the identity guard that replaced the old has-a-bound refusal
-    // gate — an already-maximized Shift+0 stops nothing, repaints nothing and
+    // gate — an already-maximized Ctrl+Shift+0 stops nothing, repaints nothing and
     // triggers nothing). The caller is handle_trim_maximize.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the Shift+0 maximizer)
+    // Field-reset core shared by handle_trim_clear_both (the Ctrl+Shift+0 maximizer)
     // and the crossed-commit reset below: write the canonical full pair for the
     // loaded source through the one seeding owner, full_trim_window
     // (app_state.h). No invalidation and no trigger — callers own their repaint
@@ -3276,7 +3280,7 @@ private:
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
-    // handle_trim_clear_both (the Shift+0 maximizer resets rather than
+    // handle_trim_clear_both (the Ctrl+Shift+0 maximizer resets rather than
     // auto-clears — a non-setter), which calls the park directly instead.
     void commit_trim_mutation();
 

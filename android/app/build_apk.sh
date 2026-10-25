@@ -138,7 +138,7 @@ done
 # assets/icons/ copied into the package's assets/icons/, which aapt2 link's -A
 # packs (deflated) as the APK's `icons/` asset directory -- a dropped PNG rides
 # the next build with no other step. A REPEAT IS A SYMLINK in the repository
-# (icons.h's kIconNames: AppIcon.svg -> Quaver.svg and four more); cp -L copies
+# (icons.h's kIconNames: AppIcon.svg -> Quaver.svg and seven more); cp -L copies
 # the file it names, so the APK holds regular files alone. The app reads them
 # in place at launch, never copying them out (icons.h's load_set;
 # GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is a

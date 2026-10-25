@@ -12,7 +12,7 @@
 // TrimState store in app_state.h): begin and end are authored named roles, and
 // THE WINDOW IS ALWAYS SET — no unset state, no lone bound (architect
 // 2026-07-30). The FULL window [0, total-1] is the old unset state under a new
-// spelling: it renders untrimmed and plays to the natural end, and Shift+0 is
+// spelling: it renders untrimmed and plays to the natural end, and Ctrl+Shift+0 is
 // how the user gets back to it.
 // Every gesture clamps each bound to its absolute walls — frame 0 to EOF-1,
 // the same wall both marker columns hold. All authored positions (both
@@ -22,7 +22,7 @@
 // EACH WALL IS REACHED BY THE COLUMN THAT PAINTS IT (architect 2026-10-14):
 // every former that lands a bound by column lands the column holding frame 0
 // on frame 0 and the column holding the last frame on total-1, so a bound
-// dragged as far as it goes rests where Shift+0 puts it — the rule and why
+// dragged as far as it goes rests where Ctrl+Shift+0 puts it — the rule and why
 // the start needs no arm at trim_bound_frame_at_column, the one owner.
 //
 // PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
@@ -90,12 +90,12 @@
 //   * the CROSSED / COINCIDENT RESETS, with no arm of their own — a reset IS a
 //     trim write, to the full window, so reading the committed begin parks the
 //     playhead at frame 0 by construction;
-//   * `Shift+0`, the maximizer (handle_trim_clear_both), inside its already-full
+//   * `Ctrl+Shift+0`, the maximizer (handle_trim_clear_both), inside its already-full
 //     identity guard, so a refused maximize moves nothing.
 // The first five reach it through the shared commit tail (commit_trim_mutation);
-// Shift+0, which is a non-caller of that tail by design, calls the park itself.
+// Ctrl+Shift+0, which is a non-caller of that tail by design, calls the park itself.
 // EVERY REFUSAL STAYS A REFUSAL: the strictly-inside consumed no-op and
-// Shift+0's identity guard both return above the park, so nothing moves. The
+// Ctrl+Shift+0's identity guard both return above the park, so nothing moves. The
 // move rides each route's EXISTING regime — the trim-mutation playback stop and
 // the setter's deselect are unchanged and stay where they are.
 //
@@ -112,7 +112,7 @@
 // protects the AUTHORED MUSICAL CONTENT — the two marker stores and the engine
 // settings — and trim is BAND: it lives in ViewState beside the viewport and the
 // zoom, it has no undo, and it never dirties the session, which is what the
-// gate's old "authoring mutation" classification of it was missing. So `Shift+0`
+// gate's old "authoring mutation" classification of it was missing. So `Ctrl+Shift+0`
 // is on the keyboard allowlist, the endcap / bridge
 // drags and the ctrl / ctrl+shift bound-set clicks carry no read-only refusal
 // anywhere on their routes, the SWEEP carries none either (trim being band
@@ -142,7 +142,7 @@
 //
 // THE BOUNDS STAY OUTSIDE THE SELECTION SYSTEM (architect 2026-07-18): never
 // selected, never a Tab stop, no Delete, no keyboard nudge — Home / End are
-// their navigation, and Shift+0, the endcap / bridge drags, the sweep and the
+// their navigation, and Ctrl+Shift+0, the endcap / bridge drags, the sweep and the
 // bound-set clicks are trim's whole interface. The flow is DOWNWARD ONLY: a
 // setter EMPTIES the selection and nothing a trim route does ever selects; the
 // playhead is an OUTPUT (the park above) and never an input, no trim route
@@ -196,7 +196,7 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 //
 // BOTH WALLS ARE REACHED BY THE COLUMN THAT PAINTS THEM: the column holding
 // frame 0 lands ON frame 0, and the column holding the source's last frame
-// lands ON the last frame, total-1 — what Shift+0 writes. THE START HOLDS BY
+// lands ON the last frame, total-1 — what Ctrl+Shift+0 writes. THE START HOLDS BY
 // CONSTRUCTION: the grid is anchored at frame 0 of the displayed domain and
 // frame 0 maps to frame 0, so that column's left edge IS frame 0. THE END
 // NEEDS THIS ARM: that column's left edge stands up to one column's span
@@ -218,8 +218,8 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // useless"). So the trim is the one exception, and its arm is this one.
 //
 // SO A FULL DRAG LEAVES THE FULL WINDOW [0, total-1] EXACTLY, the integer
-// pair Shift+0 writes, and every full-window compare (trim_is_full_window —
-// Shift+0's already-full guard, the render's sub-window test, the crossed
+// pair Ctrl+Shift+0 writes, and every full-window compare (trim_is_full_window —
+// Ctrl+Shift+0's already-full guard, the render's sub-window test, the crossed
 // reset's one-frame exception) reads it as full: it renders untrimmed and
 // plays to the natural end. The accepted cost is the release snap's own kind,
 // at most one column: that last column's left edge is no longer a frame a
@@ -247,7 +247,7 @@ int64_t trim_bound_frame_at_column(const AppState& app, const GuiAudio& audio,
 } // namespace
 
 // Reset the pair to the canonical FULL window for the loaded source — the
-// field-level act shared verbatim by handle_trim_clear_both (the Shift+0
+// field-level act shared verbatim by handle_trim_clear_both (the Ctrl+Shift+0
 // maximizer) and the crossed-commit reset (auto_clear_crossed_trim) so the two
 // can never drift. The seeding formula has ONE owner, full_trim_window
 // (app_state.h), which is also what the load and the per-tab bands use. Fields
@@ -354,14 +354,14 @@ void GuiInputHandler::commit_trim_mutation() {
     park_playhead_at_trim_start();
 }
 
-// Shift+0 IS THE MAXIMIZER (architect 2026-07-30 for the act, on Shift+0 since
-// 2026-09-22): it writes the
+// Ctrl+Shift+0 IS THE MAXIMIZER (architect 2026-07-30 for the act, on
+// Ctrl+Shift+0 since 2026-10-24, Shift+0 from 2026-09-22): it writes the
 // FULL window [0, total-1] — the old "unset" outcome, now spelled as a real
 // pair. The caller is handle_trim_maximize. Trim is gesture-owned and excluded
 // from undo/redo history.
 //
 // THE ALREADY-FULL IDENTITY GUARD replaces the old has-a-bound refusal gate: a
-// Shift+0 over an already-maximized window stops nothing, repaints nothing and
+// Ctrl+Shift+0 over an already-maximized window stops nothing, repaints nothing and
 // triggers nothing, which keeps the refusal-gated stop rule exactly as it was.
 // IT IS SILENT (architect 2026-08-31, retiring the one-day card "The trim
 // already covers the whole song"): a benign one-dimensional refusal already at
@@ -376,8 +376,8 @@ void GuiInputHandler::handle_trim_clear_both() {
     } else {
         // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS — the keyboard stop
         // rule at stop_playback_if_playing's declaration (playback_lifecycle.h).
-        // Inside the identity guard, so an already-full Shift+0 stops nothing
-        // (refusal-gated, like every claim's stop). `Shift+0` is in the
+        // Inside the identity guard, so an already-full Ctrl+Shift+0 stops nothing
+        // (refusal-gated, like every claim's stop). `Ctrl+Shift+0` is in the
         // trim-mutation class by the same 2026-07-30 ruling that made it the
         // maximizer.
         playback_lifecycle.stop_playback_if_playing();
@@ -386,8 +386,8 @@ void GuiInputHandler::handle_trim_clear_both() {
         target_render.trigger();
         // AND THE PLAYHEAD PARKS AT THE NEW TRIM START (architect 2026-08-05):
         // the maximizer writes the full window, whose start is frame 0, so this
-        // is where a Shift+0 leaves the cursor. INSIDE the identity guard like
-        // the stop above, so a refused maximize moves nothing. Shift+0 is not a
+        // is where a Ctrl+Shift+0 leaves the cursor. INSIDE the identity guard like
+        // the stop above, so a refused maximize moves nothing. Ctrl+Shift+0 is not a
         // SETTER — it still deselects nothing — but the park rides every trim
         // WRITE, which this is; the two rules have different memberships and
         // that difference is deliberate.
@@ -518,7 +518,7 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // coordinates — hence two values per column. In source view the two agree
 // frame for frame (the same rounding under the same grid) at rest — EXCEPT IN
 // THE COLUMN THAT HOLDS THE LAST FRAME, where the trim half lands on
-// total - 1 (the end wall, as Shift+0 writes it; trim_bound_frame_at_column
+// total - 1 (the end wall, as Ctrl+Shift+0 writes it; trim_bound_frame_at_column
 // owns the landing) and the playhead half keeps the column's lattice frame;
 // in target view this is the inverse image the cursor's value only names. THE TWO HALVES
 // SIT ON ONE PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
@@ -538,7 +538,7 @@ int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
     return trim_bound_frame_at_column(app, audio, col);
 }
 
-// Shift+0 MAXIMIZES the trim to the full window — RESET TRIM (architect
+// Ctrl+Shift+0 MAXIMIZES the trim to the full window — RESET TRIM (architect
 // 2026-07-25 for the
 // act, re-posed 2026-07-30 under always-set — the old "unset" is now
 // [0, total-1], which renders untrimmed and plays to the natural end, so the
@@ -547,7 +547,7 @@ int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
 // (this file's header block: read-only does not reach trim at all since
 // 2026-08-07, and the key is on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
-// makes a second Shift+0 a silent no-op (the ruling at that function) and whose
+// makes a second Ctrl+Shift+0 a silent no-op (the ruling at that function) and whose
 // tail owns the repaint
 // (the waveform's) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
@@ -563,7 +563,7 @@ void GuiInputHandler::handle_trim_maximize() {
 // from 2026-08-16 until the architect deleted it whole on 2026-09-22: he uses
 // the tablet's pen, which reaches the trim bar. The bracket carries the
 // Waveform Magnification lamp since, and the maximizer above moved to
-// Shift+0.)
+// Ctrl+Shift+0.)
 
 // --- Trim boundary mouse gestures ---------------------------------------
 
@@ -951,7 +951,7 @@ void GuiInputHandler::commit_trim_drag() {
         // wall-clamped release rests exactly on its wall; and a bound released
         // in the column holding the source's last frame lands ON that frame
         // (architect 2026-10-14, trim_bound_frame_at_column's rule), so an end
-        // dragged as far as it goes rests where Shift+0 puts it. THE BRIDGE
+        // dragged as far as it goes rests where Ctrl+Shift+0 puts it. THE BRIDGE
         // takes it too: when its end reaches that column the pair stops there
         // and the end lands on total-1, the span deforming by at most one
         // column, the same accepted kind as the snap's own. Degenerate paint
@@ -966,7 +966,7 @@ void GuiInputHandler::commit_trim_drag() {
                 displayed_or_live_target_map(app, audio);
             // The column -> frame half, the walls and the end wall's reach
             // (the column holding the source's last frame lands ON it, as
-            // Shift+0 writes it) are the family's one owner,
+            // Ctrl+Shift+0 writes it) are the family's one owner,
             // trim_bound_frame_at_column (this file's anonymous namespace).
             const auto snap_moved_bound = [&](int64_t& field, int64_t orig) {
                 if (field == orig) return;  // untouched: bit-exact, no snap

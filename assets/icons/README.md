@@ -29,7 +29,13 @@ inside this folder, the real file the act that owns the drawing:
 - `UpAFolder.svg` -> `FolderRow.svg` (the folder; Up a Folder wears the folder row's drawing, architect 2026-10-10);
 - `TransportPlay.svg` -> `Play.svg` (`media-playback-start`; the editor's Play / Stop toggle on row 8 is its own pair
   since 2026-10-20, so a drop for it leaves the render player's Play standing; its stop face, `TransportStop.svg`,
-  owns `media-playback-stop` outright, the render player wearing no stop).
+  owns `media-playback-stop` outright, the render player wearing no stop);
+- `CopyPhaseResets.svg` -> `PhaseReset.svg` (`camera-photo`; Copy Phase Resets, bare P on row 8's marker verbs,
+  architect 2026-10-24 — the phase reset's own drawing for the key that copies them; the key prints COPY and draws no
+  glyph in the hi-fi skin);
+- `GoToStart.svg` -> `PlayerPrevious.svg` and `GoToEnd.svg` -> `PlayerNext.svg` (`media-skip-backward` /
+  `media-skip-forward`; Go to Start / Go to End, Home / End, back on row 8 as their own run 2026-10-24 — the render
+  player's skip pair; the keys print START and END).
 
 (`CardCritical.svg` -> `Cancel.svg`, `process-stop`, until 2026-10-24: the critical card wears the planner's X since,
 its own file, below.)

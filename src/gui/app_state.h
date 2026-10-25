@@ -899,7 +899,7 @@ struct UndoHistory {
 // briefly widened such a stroke is retired too (architect 2026-08-19: the enforced minimum was distracting and too short
 // to be worth its machinery), so the sweep has no width rule of any kind left —
 // a stroke that collapses onto its own anchor clears the trim to the whole song
-// at the release, and Shift+0 is the way back from anything else.
+// at the release, and Ctrl+Shift+0 is the way back from anything else.
 //
 // ESC DOES NOTHING TO A DRAG IN FLIGHT: pointer gestures have no cancel, so a
 // mid-drag Esc is swallowed by the drag-modal gate and the sweep keeps writing
@@ -2060,7 +2060,7 @@ enum class RedesignButton {
     // living on as the tooltips), THE VIEWPORT-CLASS GROUP — the Show trim
     // region button leading the zoom buttons (2026-08-12, the architect's live
     // placement "after the trim"; the Show trim region button gone 2026-09-22
-    // and the stepped zoom pair 2026-09-25, so Full zoom out leads; CENTER
+    // and the stepped zoom pair 2026-09-25, so Zoom to Fit leads; CENTER
     // left for the bottom row's walk group 2026-09-29), the three
     // lamps behind them (Follow, the middle one, was out
     // for the hours of 2026-09-23), the last of which arrived
@@ -2159,27 +2159,34 @@ enum class RedesignButton {
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
     // that the toggle showed at rest was a finger's accommodation no longer
     // wanted. Its shift
-    // admission was Reset Trim's pointer road, which is Full zoom out's
-    // shift press now. FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
+    // admission was Reset Trim's pointer road, which is Zoom to Fit's
+    // ctrl+shift press now (its shift press 2026-09-22 to 2026-10-24). FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
     // front of it the same evening.)
-    // FULL ZOOM OUT (2026-08-12, the grand relayout's roster commit; bare
-    // `0`, whose second press restores the view the first left, and whose
-    // SHIFT-CLICK and long press are Shift+0 RESET TRIM since 2026-09-22 —
-    // `0` is the whole song for the camera and, shifted, for the trim). It
+    // ZOOM TO FIT, legend FIT (architect 2026-10-24; FULL ZOOM OUT, legend
+    // ZOOM 0, from 2026-08-12, the grand relayout's roster commit, until
+    // then): bare `0`, whose second press restores the view the first left.
+    // ITS SHIFT-CLICK AND LONG PRESS ARE SHIFT+0, FRAME THE TRIM — the trim
+    // bar's double-click exactly (run_span_framing_command) — and ITS
+    // CTRL+SHIFT PRESS (on the glass the S Pen's barrel held through the long
+    // press) CTRL+SHIFT+0, RESET TRIM, since 2026-10-24 (Shift+0 reset the
+    // trim from 2026-09-22 until then): `0` is the whole song for the camera,
+    // shifted the trim's span for the camera, and ctrl-shifted the whole
+    // song for the trim. Ctrl+0 binds nothing, so a ctrl press with no shift
+    // is the consumed nothing (finish_chrome_press_release). It
     // stood beside WORKING-ZOOM CENTER (bare `c`) as the zoom pair until
     // 2026-09-29, when Center moved to the bottom row's walk group (its roster
     // entry is there now). THE STEPPED ZOOM BUTTONS AND
     // `=` / `-` WERE REMOVED 2026-09-25 (architect): zoom is on every surface
     // — the Ctrl+drag on the waveform, the two-finger pinch and the S Pen's
     // button-held drag. It does not hold-repeat. It is a momentary
-    // navigation act and LIVE in the `h` view (`0` is on the mode's
-    // allowlist, so the derived partition answers live with nothing
-    // hand-listed). It GREYS where bare `0` has nothing to return to AND
-    // Reset Trim, its shifted twin, would not act (the twin rule, at
-    // redesign_button_enabled's arm).
+    // navigation act and LIVE in the `h` view (`0` and Shift+0 are on the
+    // mode's allowlist, so the derived partition answers live with nothing
+    // hand-listed). It NEVER GREYS past the roster's head gates: the frame,
+    // its shifted twin, always acts — a trim always has a span — so under
+    // the twin rule the face is lit (redesign_button_enabled's arm).
     IconZoomFitBest,
     // WAVEFORM MAGNIFICATION (architect 2026-09-22, reversed and made
-    // universal 2026-09-24) — the backtick's lamp, after Full Zoom Out, THE ONLY
+    // universal 2026-09-24) — the backtick's lamp, after Zoom to Fit, THE ONLY
     // EXCEPTIONS ROAD (architect 2026-09-23). A DISPLAY POSTURE and nothing
     // else: lit, the waveform picture carries the continuous gain derived
     // from the source (GuiAudio::gain_curve, gated by waveform_magnified) in
@@ -2190,7 +2197,7 @@ enum class RedesignButton {
     // tab, under the read-only lock and, since 2026-10-12 (architect: he
     // wants to magnify while walking history), in the `h` view, whose
     // allowlist admits the backtick (history_mode_key_blocked), so the derived
-    // partition shows the button beside Full Zoom Out there; Follow stays
+    // partition shows the button beside Zoom to Fit there; Follow stays
     // refused and hidden in the view.
     IconWaveformMagnification,
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
@@ -2668,6 +2675,19 @@ enum class RedesignButton {
     // press IS wanted on glass — the sequence exists for the touch panel's
     // workflow as much as the desk's.
     TransportPlayStop,
+    // GO TO START / GO TO END (architect 2026-10-24, back on row 8 after
+    // their removal of 2026-10-12): bare Home / End, the trim bounds' jump
+    // (run_playhead_end_jump), THEIR OWN RUN AT THE ROW'S LEFT, ahead of the
+    // marker verbs (kTransportSkipGroup, paint_handler.cpp), legends START
+    // and END. THEIR MODIFIER IS SHIFT since the same day: Shift+Home /
+    // Shift+End are the WHOLE PIECE's 0 and EOF (Ctrl+Home / Ctrl+End from
+    // 2026-09-26 until then, now unbound), so the glass long press reaches
+    // them; the buttons admit Shift and nothing under Ctrl. Each greys where
+    // both its forms would change nothing (playhead_end_jump_actionable,
+    // asked of both — the twin rule), and both stand in the `h` view, whose
+    // own vocabulary the Home / End pair is (history_mode_owns_key: in there
+    // every jump lands on the piece's ends). NO LAMP, NO REPEAT.
+    TransportSkipBack, TransportSkipForward,
     // THE SINGLE-MARKER VERBS, THE RIGHT BLOCK'S FIRST GROUP since 2026-08-18
     // (architect: "move drop/delete/disable/toggle inherit to bottom right
     // row — place a separator to the left of previous marker icon, and place
@@ -2769,37 +2789,13 @@ enum class RedesignButton {
     // derived partition greys it and the view does not paint it. NO LAMP (an
     // act), NO REPEAT (an opener).
     //
-    // ITS CTRL PRESSES ARE THE PHASE-RESET PROPAGATE PAIR (architect
-    // 2026-10-21 ~22:45: "we can give ctrl+enter as copy and ctrl+shift+enter
-    // as paste, on the open text editor icon, which has no modifiers. pigeon
-    // stays ctrl+j / +shift" — and "glass has pen button as ctrl"): a press
-    // WITH CTRL dispatches CTRL+RETURN, COPY PHASE RESETS, and a press with
-    // CTRL AND SHIFT dispatches CTRL+SHIFT+RETURN, PASTE PHASE RESETS — the
-    // button's own key under those modifiers, the roster's grammar, so no
-    // translation. On the laptop the held Ctrl and Ctrl+Shift; ON THE GLASS
-    // the S Pen's barrel button (the Ctrl bit, platform_android.cpp's
-    // pen_report_in_plane) with a tap is the copy, and held through the long
-    // press — the hold's shift composing with a carried ctrl where the pair
-    // is admitted — the paste. THE PRESS READS THE MODIFIERS AT THE PRESS
-    // and the act runs at the lift (the timing doctrine's ICONS ARE UP,
-    // input_handler.h; arm_redesign_press, input_pointer.cpp): the arm
-    // stamps the carried ctrl and shift and the lift dispatches from the
-    // stamp, never re-reading them, the hold's shift measured at the lift
-    // against the press's clock. SHIFT ALONE IS NOT
-    // ADMITTED (Shift+Return binds nothing): a shift-click is the consumed
-    // nothing, and a long press without the barrel is the plain open. THE
-    // ADMISSIONS are redesign_button_ctrl_admits and
-    // redesign_button_ctrl_shift_admits. THE FACE GREYS FOR THE PLAIN ACT
-    // ALONE (one face cannot show three states), and a greyed seat consumes
-    // every press, the modified ones with it; on a lit seat the modifier
-    // acts refuse with their own cards (the propagate's ladders, the warp
-    // column their first rung). THE TOOLTIP NAMES THE PLAIN ACT AND ONE
-    // MODIFIER LINE NAMING BOTH PRESSES since 2026-10-24 (architect: "update
-    // 'open text editor' tooltip to include copy/paste phase"; the
-    // constant table's row, which says why, and the overload's drop in the
-    // phase-reset column; no line from 2026-10-21 until then). (The pair rode the
-    // pigeon's Ctrl+J by view for the evening of 2026-10-21, and Ctrl+P /
-    // Ctrl+Alt+P before that.)
+    // IT IS THE PLAIN ACT ALONE since 2026-10-24 (architect): no modified
+    // press is admitted and the tooltip carries one line. Its ctrl presses
+    // were the phase-reset propagate pair, Ctrl+Return / Ctrl+Shift+Return,
+    // from 2026-10-21 until the pair got its own key that day
+    // (IconCopyPhaseResets below, bare P / Ctrl+P / Ctrl+Shift+P); a ctrl
+    // or a shift press on it is the consumed nothing, and a long press is
+    // the plain open.
     IconOpenTextEditor,
     // ADD TO SELECTION — the verb group's SEVENTH and last member since
     // 2026-10-09, Open Text Editor standing immediately ahead of it (every
@@ -2863,6 +2859,34 @@ enum class RedesignButton {
     // It keeps the group's Icon* naming: a roster
     // id names the button, not the lane it sits in.
     IconAddToSelection,
+    // COPY PHASE RESETS (architect 2026-10-24) — the phase-reset propagate's
+    // own key, SEATED IN THE VERB GROUP BETWEEN ADD TO SELECTION AND TOGGLE
+    // VALUE DRAG (his: "edit is about flag text, whereas add sel normally
+    // precedes copy" — Add to Selection builds the run the copy reads), its
+    // legend COPY. THE KEY IS THE LETTER P IN THREE PRESSES: bare P COPIES
+    // the phase resets of the selected run of warp markers into the session
+    // clipboard, CTRL+P PASTES them onto the one selected warp marker behind
+    // the paste's confirmation, and CTRL+SHIFT+P PASTES THEIR STATE — the
+    // clipboard's enabled / disabled bits onto the matching destination
+    // resets in lockstep, positions untouched (Paste Phase Reset State,
+    // removed 2026-10-21 and resurrected here; PhaseResetPropagate::
+    // paste_state_apply). The button is its key under the modifiers the
+    // press carries, the roster's grammar: its plain press copies, its ctrl
+    // press pastes and its ctrl+shift press pastes the state — ON THE GLASS
+    // the S Pen's barrel button (the Ctrl bit) with a tap is the paste and
+    // held through the long press the state paste, the hold's shift
+    // composing with the carried ctrl where the pair is admitted; a long
+    // press without the barrel is the plain copy, SHIFT ALONE NOT ADMITTED
+    // (Shift+P binds nothing). THE ADMISSIONS are redesign_button_ctrl_admits
+    // and redesign_button_ctrl_shift_admits. THE FACE IS THE COPY'S
+    // (phase_reset_copy_refusal), the pastes refusing on their own cards
+    // behind a lit face; the tooltip's one modifier line names both pastes.
+    // The `h` view does not paint it (its allowlist names no `p` chord —
+    // history_mode_hides_button), and the read-only lock greys it with the
+    // marker verbs (none of the three chords is on read_only_key_blocked's
+    // allowlist). NO LAMP (an act), NO REPEAT (a copy repeats onto itself
+    // and a paste raises a prompt).
+    IconCopyPhaseResets,
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40) — the verb group's
     // EIGHTH and last member, IMMEDIATELY RIGHT OF ADD TO SELECTION (his
     // reason: arm Add to Selection, pick several flags, then arm this and drag
@@ -2960,7 +2984,7 @@ enum class RedesignButton {
     // 2026-10-16, icons.h) — on row 8 since 2026-09-29 (architect; the walk
     // group's third until 2026-10-18, the nudge-and-play group's second
     // since, behind Switch Tab), MOVED from the icon row's
-    // viewport-class group where it stood beside Full zoom out from the
+    // viewport-class group where it stood beside Zoom to Fit from the
     // 2026-08-12 grand relayout. The id keeps its Icon* name, a roster id
     // naming the button and not the lane. Nothing but the seat moved: same
     // chord, glyph, act, tooltip ("Center on Focus (C)", "Center on Playhead
@@ -3003,7 +3027,7 @@ enum class RedesignButton {
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 41;
+inline constexpr int kRedesignButtonCount = 44;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3070,6 +3094,8 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // answer is stated), and one chokepoint is enough.
 inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
     switch (b) {
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportPlayStop:
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconMarkerDelete:
@@ -3078,6 +3104,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconJumpToDefiningMarker:
         case RedesignButton::IconOpenTextEditor:
         case RedesignButton::IconAddToSelection:
+        case RedesignButton::IconCopyPhaseResets:
         case RedesignButton::IconValueDrag:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
@@ -3134,7 +3161,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 //
 // THE GROUPS, in the left walk's order: OPEN PROJECT AND SAVE, then UNDO,
 // REDO AND RENDER (the group the history stand-ins replace, Revert and Load
-// in Place), then the zoom group (Full Zoom Out, the magnification lamp,
+// in Place), then the zoom group (Zoom to Fit, the magnification lamp,
 // Follow), the iteration group (the BPM opener, grid iterations, Flatten)
 // and the render-entry group (Play Renders .. Enable Tooltips). The right
 // run's leaders — the history opener and the view pairs' Source and Warp —
@@ -3170,7 +3197,7 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // flatten"): the left members stand in THREE PLAIN RUNS, the cases abutting
 // and run_gap_px of wood between two (program_spec.h), each opened by its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
-// Save and Undo / Redo / Render merged), Full Zoom Out (Full Zoom Out ..
+// Save and Undo / Redo / Render merged), Zoom to Fit (Zoom to Fit ..
 // Flatten: the zoom and iteration groups merged) and Play Renders (Play
 // Renders .. Enable Tooltips, the render-entry group as it stood). THE
 // GROUPS ABOVE STAY THE UNIT of the `h` view's stand-in swap and hide
@@ -3813,7 +3840,7 @@ struct PromptState {
 // narrower window is less audio to analyse and synthesize; post_trim pares the
 // emission to the exact bounds; plan_trim, trimmer.h). Every rule below serves
 // that render: the window is BAND and not authored content, so it sits OUTSIDE
-// UNDO (Shift+0 the recovery) and stays legal on a read-only tab; a shorter
+// UNDO (Ctrl+Shift+0 the recovery) and stays legal on a read-only tab; a shorter
 // window shortens the target audition as well as the wait, the preview buffer
 // being the window (source-view playback runs to the song's end); Home / End
 // land on its bounds, the passage under work; and the `h` view, which auditions
@@ -6968,8 +6995,9 @@ struct AppState {
     //   DEAD — Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), RENDER (Ctrl+Alt+R, which
     //   left the allowlist with its shifted twin on 2026-08-08 when the
     //   checkpoint act moved onto Ctrl+S), copy and paste (Ctrl+P / Ctrl+Alt+P
-    //   then; Ctrl+Return / Ctrl+Shift+Return, the Open Text Editor seat's
-    //   ctrl presses, since 2026-10-21),
+    //   then; Ctrl+Return / Ctrl+Shift+Return, 2026-10-21 to 2026-10-24; bare
+    //   P / Ctrl+P / Ctrl+Shift+P since, the Copy Phase Resets key, hidden in
+    //   the view),
     //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
     //   the SETTINGS button (bare `;`; the menu row's Settings anchor until
     //   2026-10-21).
@@ -7598,7 +7626,7 @@ struct AppState {
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
     // pair in one stroke under no width rule at all; it replaced the
     // set-from-region arm when the region became the trim), the
-    // Shift+0 MAXIMIZER (writes the full window), and the settings editor's
+    // Ctrl+Shift+0 MAXIMIZER (writes the full window), and the settings editor's
     // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full
     // ruling is at the TrimState store.
@@ -7959,7 +7987,7 @@ struct AppState {
     };
     PendingArchivalCommand pending_archival;
 
-    // Phase reset propagate (W-mode Ctrl+Return / Ctrl+Shift+Return). Single-slot
+    // Phase reset propagate (W-mode bare P / Ctrl+P / Ctrl+Shift+P). Single-slot
     // session-only clipboard cleared on app exit.
     PhaseResetClipboard phase_reset_clipboard;
     // The destination warp-marker index captured when the PHASE RESET paste's
@@ -9177,9 +9205,10 @@ GuiRect top_icon_row_area(const AppState& a);
 // band and its logo lane) repaints only when the fingerprint of their
 // complete painted inputs differs from the one the paint buffer last painted
 // (GuiPaintHandler::upper_rows_fingerprint, settled by
-// settle_owed_lane_damage) — the band's Full Zoom Out reads the zoom level, so
-// those rows are not free of the viewport, only of a viewport step's own
-// changes. The inventory is at Viewport::invalidate_waveform_area
+// settle_owed_lane_damage) — a band face may read the view (Zoom to Fit's
+// read the zoom level until 2026-10-24), so those rows are not free of the
+// viewport, only of a viewport step's own changes. The inventory is at
+// Viewport::invalidate_waveform_area
 // (viewport.h), whose rect starts here.
 int viewport_lanes_top_y(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE BAND AND THE VIEW BAR (the
@@ -11333,13 +11362,15 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
 // arithmetic instead of hand-spelling it per arm. `forward` selects End over
 // Home. Defined in viewport.cpp beside the navigation range it reads.
 //
-// THREE READERS: the shared jump body run_playhead_end_jump
+// FOUR READERS: the shared jump body run_playhead_end_jump
 // (input_key_dispatch.cpp), which every live Home / End route funnels
-// through, the `h` view's own jump arm, and playhead_end_jump_actionable
+// through, the `h` view's own jump arm, playhead_end_jump_actionable
 // (below), the jump acts' one "would this form change anything" owner,
 // through which the acts' own no-op refusals read this compare rather than
-// reading it bare. (The two skip buttons' face and stateful tooltip were the
-// other readers until the buttons left the row 2026-10-12.)
+// reading it bare, and the two skip buttons' stateful tooltip
+// (redesign_button_tooltip's overload, which drops the shift line where the
+// two forms land on one frame; the buttons back on row 8 since 2026-10-24,
+// off it 2026-10-12 to 2026-10-24).
 // A Home / End press is not a pure jump (it also stops a live audition and
 // clears the marker selection, even when the jump moves nothing), which is
 // why the acts read the actionability owner and not this landing alone.
@@ -11353,8 +11384,10 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
 // has TWO ENTRANTS: the `h` HISTORY VIEW takes it for every jump (architect
 // 2026-08-05: the view reviews the WHOLE piece, so an End stopping at a trim
 // bound would hide the flags past it), and the `whole_piece` parameter asks
-// for it outright, which is what CTRL+HOME / CTRL+END pass (architect
-// 2026-09-26: the piece's ends whatever the trim window is). With a full
+// for it outright, which is what SHIFT+HOME / SHIFT+END pass (architect
+// 2026-09-26: the piece's ends whatever the trim window is; on Ctrl until
+// 2026-10-24, when the skip buttons came back with Shift as their modifier,
+// the glass long press reaching it). With a full
 // trim window the two arms coincide. THE RETURNED FRAME IS PRE-CLAMPED
 // through clamp_playhead_to_live_domain above: this function names a
 // LANDING, and a landing must be a frame the cursor can actually occupy. It
@@ -11363,8 +11396,8 @@ int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
                                     bool forward, bool whole_piece);
 
 // WOULD THIS FORM OF THE Home / End JUMP CHANGE ANYTHING (architect
-// 2026-08-30, the twin rule) — the jump acts' one refusal owner (the two
-// SKIP buttons' face term too, until the buttons left the row 2026-10-12),
+// 2026-08-30, the twin rule) — the jump acts' one refusal owner and the two
+// SKIP buttons' face term (off the row 2026-10-12 to 2026-10-24),
 // defined in viewport.cpp beside the landing arithmetic it composes. TRUE iff the press would do something: a live
 // transport session (the press stops it — transport_session_live), a
 // standing selection for the act's unconditional clear (the live arms'
@@ -11373,12 +11406,12 @@ int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
 // history_mode_revert_subject_standing — the same two fields
 // clear_history_mode_focus tests), or a landing that differs from the
 // resting cursor. Every term is an act write read from the act's own owner,
-// never a restatement. TWO READERS: run_playhead_end_jump and the `h` view's
+// never a restatement. THREE READERS: run_playhead_end_jump and the `h` view's
 // own jump arm (each refusing SILENTLY when its form would change nothing — a
 // benign one-dimensional refusal already at its state, the 2026-08-31 ruling,
-// the playhead's own position being the tell); the two skip faces
+// the playhead's own position being the tell) — and the two skip faces
 // (redesign_button_enabled, asking both forms and greying only when neither
-// would act) read it until their buttons left the row 2026-10-12.
+// would act).
 bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
                                   bool forward, bool whole_piece);
 
@@ -11411,8 +11444,9 @@ double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level)
 // (ViewState::whole_song_visible) AND its stamp was taken in the live audio
 // view (OverviewRecall::audio_view). A stamp from the other audio view has
 // been put away with that view and is not restored there. Read by
-// overview_command_target below (its RestoreView arm), which the act, the
-// Full Zoom Out button's face and its tooltip all ask. Defined in
+// overview_command_target below (its RestoreView arm), which the act and the
+// Zoom to Fit button's tooltip ask (its face too until 2026-10-24, when the
+// always-live frame twin made the face constant). Defined in
 // input_handler.cpp beside the act.
 bool overview_recall_restorable(const AppState& a);
 
@@ -11440,9 +11474,10 @@ bool overview_recall_restorable(const AppState& a);
 //   * ZoomOut — everything else: the whole-song state is down and the level
 //     is below the per-file ceiling; `level` is that ceiling, which the press
 //     applies after stamping.
-// THREE READERS: GuiInputHandler::run_overview_command (the act, which
-// decides nothing of its own past this), the Full Zoom Out button's face
-// (redesign_button_enabled) and its tooltip. Defined in input_handler.cpp
+// TWO READERS: GuiInputHandler::run_overview_command (the act, which
+// decides nothing of its own past this) and the Zoom to Fit button's
+// tooltip (its face, redesign_button_enabled, a third until 2026-10-24: the
+// frame twin always acts, so the face no longer asks). Defined in input_handler.cpp
 // beside the act.
 struct OverviewCommandTarget {
     enum class Arm { ZoomOut, RestoreView, NoOp };
@@ -11531,16 +11566,16 @@ inline const ViewState& active_view_state(const AppState& a) {
 //
 // EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO WITH
 // TWO NAMED EXCEPTIONS, and nearly everything it admits the iteration lock
-// admits: navigation, playback, the trim gestures and `Shift+0`,
+// admits: navigation, playback, the trim gestures and `Ctrl+Shift+0`,
 // Ctrl+S, Ctrl+Shift+S, both render chords, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
 // reachable) and
-// THE CLIPBOARD COPY, Ctrl+Return, which is the exception: it reads a run into a
+// THE CLIPBOARD COPY, bare P, which is the exception: it reads a run into a
 // session clipboard and pushes nothing, so the undo domain this lock protects
 // has no interest in it, while the read-only lock eats the propagate family
-// whole for its own reason — one tab's authored content. The PASTE,
-// Ctrl+Shift+Return, stays refused by both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
+// whole for its own reason — one tab's authored content. The two PASTES,
+// Ctrl+P and Ctrl+Shift+P, stay refused by both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
 // A FIFTH ADDITION until 2026-09-10, when the architect ruled its own
 // swap-the-mode exit out; it falls to the base list, which refuses it, same
 // as any other authoring chord.) WHAT
@@ -12331,10 +12366,10 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete
 //     is a delete in every column;
-//   * THE CLIPBOARD COPY, Ctrl+Return, past its three gates;
-//   * THE PROPAGATE PASTE — the phase family's confirmed placement paste
-//     (PhaseResetPropagate::paste_apply), past its own last refusal (its
-//     state paste beside it until its removal, 2026-10-21);
+//   * THE CLIPBOARD COPY, bare P, past its three gates;
+//   * THE TWO PROPAGATE PASTES — the phase family's confirmed placement
+//     paste and its state paste (PhaseResetPropagate::paste_apply,
+//     ::paste_state_apply), each past its own last refusal;
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -13734,16 +13769,17 @@ inline bool playback_launch_playable(const AppState& a,
 //     answers do not survive the walk (below), and the propagate pair
 //     made the point: Ctrl+P and Ctrl+Alt+P left this list with
 //     their BUTTONS (the Edit-menu relocation) though the lock still ate the
-//     chords — blocked, with no face to grey — and as Ctrl+Return /
-//     Ctrl+Shift+Return since 2026-10-21 they ride the Open Text Editor seat,
-//     whose face greys on the lock for its plain act. (BARE `m` AND BARE `i` MADE THE
+//     chords — blocked, with no face to grey — and as bare P / Ctrl+P /
+//     Ctrl+Shift+P since 2026-10-24 they ride the Copy Phase Resets key,
+//     whose face greys on the lock for its plain act (the Open Text Editor
+//     seat's ctrl presses 2026-10-21 to 2026-10-24). (BARE `m` AND BARE `i` MADE THE
 //     POINT TWICE, leaving this list with their buttons at the 2026-08-27
 //     Series relocation and coming back with them on 2026-09-04: the gate's
 //     answer never moved either time, only whether a face existed to wear it.) The mirror is a membership, never an equivalence, in both
 //     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the VIEW PAIRS' FOUR
-//     (bare 1/2/3/4), Full zoom out and Center, follow and the
+//     (bare 1/2/3/4), Zoom to Fit and Center, follow and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (THE TRIM
 //     SCISSORS were on this list, their chord being read-only-legal like every
@@ -13985,20 +14021,27 @@ static_assert(kPhaseResetLeadInSamples == kN / 2 &&
 int64_t phase_reset_lead_in_launch_offset(const AppState& a,
                                           const GuiPlayback& playback);
 
-// WOULD SHIFT+0 (RESET TRIM) ACT — the Full Zoom Out button's shifted twin
-// (redesign_button_shift_admits), asked ahead. Its two terms are the act's
-// own refusals in the order the press meets them: the `h` view's allowlist,
-// which does not admit the chord (history_mode_key_blocked,
-// input_key_dispatch.cpp), then the maximizer's own identity guard,
-// trim_is_full_window at handle_trim_clear_both's head (input_trim.cpp),
-// which refuses over the whole-song window. TWO READERS: the button's face
-// (redesign_button_enabled, the twin rule's OR with the plain press) and its
-// tooltip's shift line (redesign_button_tooltip), so the grey and the line
-// cannot disagree.
-inline bool reset_trim_would_act(const AppState& a, int64_t total_frames) {
-    return !a.history_mode.active &&
-           !trim_is_full_window(a.trim, total_frames);
-}
+// (WOULD SHIFT+0 (RESET TRIM) ACT — reset_trim_would_act, the Full Zoom Out
+// button's shifted twin asked ahead for its face and its tooltip's shift
+// line, 2026-09-22 to 2026-10-24 — LEFT WITH ITS TWO READERS (architect
+// 2026-10-24): the button is Zoom to Fit, its shifted press FRAMES THE TRIM
+// (Shift+0, run_span_framing_command) and its ctrl-shift press resets it
+// (Ctrl+Shift+0). THE FRAME ALWAYS ACTS — a trim always has a span, the whole
+// song's at worst — so under the twin rule the face never greys and the
+// one modifier line naming both presses never drops, and nothing asks the
+// reset ahead any more. The reset's own refusals stand at its act: the `h`
+// view's allowlist, which does not admit the chord (history_mode_key_blocked,
+// input_key_dispatch.cpp, the view's card), then the maximizer's identity
+// guard, trim_is_full_window at handle_trim_clear_both's head
+// (input_trim.cpp), silent over the whole-song window.)
+
+// THE COPY PHASE RESETS KEY'S LADDER TERM (architect 2026-10-24): true iff
+// phase_reset_copy_refusal (phase_reset_propagate.h) answers None — the warp
+// column, a selection, one consecutive run, something to capture. Defined in
+// phase_reset_propagate.cpp beside the ladder, whose header includes this
+// one. ONE READER: the key's face (redesign_button_enabled), which adds the
+// read-only lock; the bare P arm reads the ladder itself to card each rung.
+bool phase_reset_copy_actionable(const AppState& a);
 
 // WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR — the ask-ahead
 // composition of the plain launch's own gates in the act's own order (the
@@ -14223,28 +14266,27 @@ inline bool redesign_button_enabled(const AppState& a,
             return !a.iteration_mode_enabled ||
                    marker_walk_step(a, audio, /*forward=*/false).marker >= 0;
         // CENTER MIRRORS NOTHING (2026-08-12): `c` always frames on a loaded
-        // file. It stood in the icon row's zoom group beside Full zoom out
+        // file. It stood in the icon row's zoom group beside Zoom to Fit
         // until 2026-09-29 and is the bottom row's since (the walk group's
         // until 2026-10-18, the nudge-and-play group's since); its
         // face did not move with it. It admits no modifier (no modified `c`
-        // binds since 2026-10-14), so there is no twin to compose. FULL ZOOM
-        // OUT MIRRORS ITS FORK UNDER THE
-        // TWIN RULE (architect 2026-09-23 — "zero should just lose its
-        // meaning" when there is nothing to return to): bare `0` is a silent
-        // no-op on overview_command_target's NoOp arm (a ceiling the key did
-        // not produce, or a stamp from the other audio view —
-        // overview_recall_restorable is the restorable owner), and the button
-        // admits its shifted twin, Shift+0 Reset Trim (since 2026-09-22), so
-        // it greys only when BOTH would change nothing: the plain fork's NoOp
-        // AND reset_trim_would_act false (the maximizer's own guard,
-        // trim_is_full_window, behind the `h` view's refusal of the chord).
-        // Both are admitted in the `h` view — the derived partition finds
-        // them on the mode's allowlist or its own vocabulary — and each
-        // answers its own arm there.
+        // binds since 2026-10-14), so there is no twin to compose. ZOOM TO
+        // FIT NEVER GREYS UNDER THE TWIN RULE (architect 2026-10-24): bare
+        // `0` is a silent no-op on overview_command_target's NoOp arm (a
+        // ceiling the key did not produce, or a stamp from the other audio
+        // view — overview_recall_restorable is the restorable owner;
+        // architect 2026-09-23, "zero should just lose its meaning" when
+        // there is nothing to return to), but the button admits two twins —
+        // Shift+0, FRAME THE TRIM, and Ctrl+Shift+0, Reset Trim — and THE
+        // FRAME ALWAYS ACTS (a trim always has a span, the whole song's at
+        // worst: run_span_framing_command), so some variant is live wherever
+        // the roster is. (It greyed where the plain fork's NoOp met a reset
+        // that would not act, reset_trim_would_act, from 2026-09-22 until
+        // then, Shift+0 the reset.) Bare `0` and Shift+0 are admitted in the
+        // `h` view — the derived partition finds the plain chord on the
+        // mode's allowlist — and the reset refuses there on the view's card.
         case RedesignButton::IconZoomFitBest:
-            return overview_command_target(a, audio).arm !=
-                       OverviewCommandTarget::Arm::NoOp ||
-                   reset_trim_would_act(a, total_frames);
+            return true;
         case RedesignButton::IconZoomOriginal:
             return true;
         // THE WAVEFORM MAGNIFICATION LAMP IS LIVE IN BOTH AUDIO VIEWS
@@ -14355,11 +14397,12 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // THE MIRROR IS A MEMBERSHIP AND NOT AN EQUIVALENCE, which is why no
         // count is stated here.
-        // The PROPAGATE PAIR (Ctrl+Return, Ctrl+Shift+Return since 2026-10-21;
-        // Ctrl+P, Ctrl+Alt+P before) is still blocked by the gate and is no
-        // longer here as its own, its two buttons having left with the
-        // Edit-menu relocation: the pair rides the Open Text Editor seat's
-        // ctrl presses, whose face greys on the lock for its plain act. THE BPM OPENER AND
+        // THE PROPAGATE FAMILY (bare P, Ctrl+P, Ctrl+Shift+P since
+        // 2026-10-24) is blocked by the gate and IS HERE AGAIN AS ITS OWN, the
+        // Copy Phase Resets key's arm below greying on the lock for its plain
+        // act (its two buttons left with the Edit-menu relocation of
+        // 2026-08-20, and from 2026-10-21 to 2026-10-24 the pair rode the
+        // Open Text Editor seat's ctrl presses). THE BPM OPENER AND
         // GRID ITERATION MODE (bare `m`, bare `i`) left the same way on
         // 2026-08-27 with the Series-menu relocation — blocked by the gate
         // with no face to grey, their menu ITEMS never greying by the command
@@ -14501,17 +14544,32 @@ inline bool redesign_button_enabled(const AppState& a,
         // in every session there, does not paint it at all
         // (history_mode_hides_button). The bound cell's kind refusal past the
         // gate (iter_bound_step_kind_refusal, a belt with no producer today)
-        // stays the key's card behind a lit face.
-        // THE FACE IS THE PLAIN ACT'S ALONE (2026-10-21): the ctrl presses —
-        // Copy and Paste Phase Resets, Ctrl+Return / Ctrl+Shift+Return — are
-        // not ORed in (one face cannot show three states, and the twin rule
-        // is not composed here); on a lit face they refuse with their own
-        // cards, and a greyed face consumes them with the plain press.
+        // stays the key's card behind a lit face. It admits no modifier since
+        // 2026-10-24 (its ctrl presses, the propagate pair from 2026-10-21,
+        // went to the Copy Phase Resets key), so there is no twin to compose.
         case RedesignButton::IconOpenTextEditor:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    a.text_editor_session() == 0 &&
                    flag_editor_open_actionable(a);
+        // COPY PHASE RESETS (architect 2026-10-24) GREYS EXACTLY WHERE BARE P
+        // WOULD NOT COPY, each term the key's road's own: THE READ-ONLY LOCK
+        // (no `p` chord is on read_only_key_blocked's allowlist — a copy arms
+        // a paste that writes, and the family travels together) and THE
+        // COPY'S LADDER (phase_reset_copy_actionable: the warp column, a
+        // selection, one consecutive run, something to capture). THE
+        // ITERATION LOCK IS NO TERM: it admits the copy (clipboard-only,
+        // nothing for the undo domain — iteration_lock_key_blocked's delta
+        // (b)), and refuses the two pastes on its card. THE FACE IS THE
+        // COPY'S ALONE (architect 2026-10-24: the key greys where the copy
+        // would refuse): the pastes, Ctrl+P and Ctrl+Shift+P, are not
+        // ORed in — on a lit face they refuse with their own cards, and a
+        // greyed face consumes them with the plain press, the keyboard
+        // keeping both. The `h` view hides it (history_mode_hides_button: no
+        // `p` chord is on that view's allowlist).
+        case RedesignButton::IconCopyPhaseResets:
+            return !active_view_state(a).read_only &&
+                   phase_reset_copy_actionable(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
@@ -14698,7 +14756,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE STRUCTURAL RULE EVERY NEW ARM KEEPS: a face never restates an
         // act's condition. Each reads a predicate the act's own refusal reads
         // — the two cardinal pairs, the walk pair, Jump to Defining Marker
-        // (and its copy twin) and Open Text Editor name theirs — so the face and
+        // (and its copy twin), Open Text Editor and Copy Phase Resets name
+        // theirs — so the face and
         // the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
@@ -14901,24 +14960,36 @@ inline bool redesign_button_enabled(const AppState& a,
         // diff flag focused or selected, or the step's wall.
         //
         // THE TWO SKIPS GREY WHERE NO FORM OF THE JUMP WOULD CHANGE ANYTHING
-        // (2026-08-30, at the second switch): the one owner
+        // (2026-08-30; back on row 8 since 2026-10-24, off it from
+        // 2026-10-12): the one owner
         // playhead_end_jump_actionable (viewport.cpp, beside the landing
         // arithmetic) answers "would this form change anything" — a live
         // transport session (the press stops it), a standing selection (the
         // act clears it; the mode's diff-flag focus inside the `h` view), or
         // a landing that differs from the resting cursor — and the face asks
-        // it of the BARE form AND the WHOLE-PIECE form (the ctrl-click,
-        // Ctrl+Home / Ctrl+End), greying only when both answer no (the twin
-        // rule at the head of this body). A Home / End press is not a pure
-        // jump — either form also STOPS A LIVE AUDITION and CLEARS THE MARKER
-        // SELECTION even when the jump moves nothing (run_playhead_end_jump
-        // and the `h` arm, input_key_dispatch.cpp) — which is why those side
-        // acts are terms of the owner: a greyed skip forgoes nothing, and a
-        // live whole-piece jump keeps the face lit with the ctrl-click
-        // reachable. The `h` view needs nothing hand-listed: the landing
-        // owner's own mode arm makes both forms the piece's ends in there.
-        // PLAY, in the case list below, takes its own arm beside them; all
-        // three BREAK here to reach that switch.
+        // it of the BARE form AND the WHOLE-PIECE form (the shift-click and
+        // the long press, Shift+Home / Shift+End since 2026-10-24 — the ctrl
+        // forms until the buttons left), greying only when both answer no
+        // (the twin rule at the head of this body). A Home / End press is not
+        // a pure jump — either form also STOPS A LIVE AUDITION and CLEARS THE
+        // MARKER SELECTION even when the jump moves nothing
+        // (run_playhead_end_jump and the `h` arm, input_key_dispatch.cpp) —
+        // which is why those side acts are terms of the owner: a greyed skip
+        // forgoes nothing, and a live whole-piece jump keeps the face lit
+        // with the long press reachable. NEITHER LOCK GREYS THEM (navigation:
+        // read_only_key_blocked admits both forms, the iteration gate
+        // inheriting the admission), and the `h` view needs nothing
+        // hand-listed: the landing owner's own mode arm makes both forms the
+        // piece's ends in there. PLAY, in the case list below, BREAKS here to
+        // reach its arm in the second switch.
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward:
+            return playhead_end_jump_actionable(
+                       a, audio, b == RedesignButton::TransportSkipForward,
+                       /*whole_piece=*/false) ||
+                   playhead_end_jump_actionable(
+                       a, audio, b == RedesignButton::TransportSkipForward,
+                       /*whole_piece=*/true);
         case RedesignButton::TransportPlayStop:
             break;
         // THE LOCK GREYS THE ARROWS TOO (2026-08-30):
@@ -14999,7 +15070,7 @@ inline bool redesign_button_enabled(const AppState& a,
         }
         // JUMP TO DEFINING MARKER (architect 2026-09-29) GREYS WHERE CTRL+J
         // AND ITS SHIFT TWIN, CTRL+SHIFT+J THE COPY (architect 2026-10-14),
-        // BOTH REFUSE — the twin rule's OR, Full Zoom Out's shape: the jump's
+        // BOTH REFUSE — the twin rule's OR, Play's shape: the jump's
         // own three questions in its own order, read from one owner
         // (jump_to_value_source_actionable — the tie road, the eligibility
         // gate, the source lookup), or the copy's one gate,
@@ -15015,7 +15086,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // it through the derived partition, whose allowlist names neither.
         // ONE PAIR IN EVERY VIEW: the phase-reset view's Copy / Paste Phase
         // Resets rode this seat for the evening of 2026-10-21 and left for
-        // the Open Text Editor seat's ctrl presses the same evening.
+        // the Open Text Editor seat's ctrl presses the same evening (their
+        // own key, Copy Phase Resets, since 2026-10-24).
         case RedesignButton::IconJumpToDefiningMarker:
             if (!jump_to_value_source_actionable(a, audio, total_frames) &&
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
@@ -15471,6 +15543,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // OPEN TEXT EDITOR IS MOMENTARY (2026-10-09): it opens an editor, and
         // the editor's own session is the state, the BPM opener's answer.
         case RedesignButton::IconOpenTextEditor:
+        // COPY PHASE RESETS IS MOMENTARY (2026-10-24): a copy completes and
+        // so do its two pastes; the clipboard shows nothing on screen.
+        case RedesignButton::IconCopyPhaseResets:
         // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
         // 2026-09-04): it opens an editor and the editor's own session is the
         // state. FLATTEN IS MOMENTARY
@@ -15509,8 +15584,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
         // walk's three (Walk Previous and Walk in the step-and-walk group,
-        // Switch Tab in the nudge-and-play group since 2026-10-18; the two
-        // skips left the roster 2026-10-12, Home and End being keys alone),
+        // Switch Tab in the nudge-and-play group since 2026-10-18), the two
+        // skips (off the roster 2026-10-12 to 2026-10-24),
         // the four arrows and the marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
@@ -15522,6 +15597,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // superseded lamp's own reasoning is at the roster entry, kept because
         // it was right about the problem it solved.
         case RedesignButton::TransportPlayStop:
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
         case RedesignButton::TransportSwitchTab:
@@ -15693,7 +15770,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the maximizer had no other pointer route, so a keyboardless panel could set
 // a trim window and never get back out of it. The architect's pen reaches the
 // trim bar now, where dragging a bound onto its partner resets to the whole
-// song; the maximizer itself is Shift+0 and has no button.)
+// song; the maximizer itself is Ctrl+Shift+0 since 2026-10-24, Zoom to Fit's
+// ctrl+shift press — Shift+0, its shift press, from 2026-09-22 until then.)
 //
 // THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
@@ -15788,14 +15866,19 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // deletion the same day left it keyboard-only — the hole the scissors'
 // deletion had opened once before, a keyboardless panel able to set a trim
 // window and never get back out of it — and the drop's rule puts it on the
-// button whose bare form is `0`. The plain press never greys, so the face
-// needs no twin term; the long press is the tablet's road.)
+// button whose bare form is `0`. The long press is the tablet's road. SINCE
+// 2026-10-24 THE BUTTON IS ZOOM TO FIT and its shifted press is SHIFT+0,
+// FRAME THE TRIM (the trim bar's double-click), the reset moving to its
+// ctrl-shift press, Ctrl+Shift+0 (redesign_button_ctrl_shift_admits below).)
 // (Center admitted shift for the hours of 2026-09-23 that Shift+C armed the
 // chase posture; the posture, the chord and the admission were deleted that
 // evening when the follow lamp came back.)
-// (The two skips admitted shift for one night of 2026-09-29, Shift+Home /
-// Shift+End being the whole-piece jump; it returned to Ctrl+Home / Ctrl+End
-// the same day (architect), and they admit ctrl, below.)
+// (THE TWO SKIPS JOINED 2026-10-24 with SHIFT+HOME / SHIFT+END, the
+// whole-piece jump (architect: the buttons back on row 8, Shift their
+// modifier so the glass long press reaches the piece's ends; Ctrl+Home /
+// Ctrl+End, which their ctrl press dispatched from 2026-09-26 until they
+// left the row 2026-10-12, are unbound). They admitted shift for one night
+// of 2026-09-29 before.)
 // (SWITCH TAB JOINED 2026-09-29 with Ctrl+Shift+Tab, THE PAIRED MARCH
 // (architect): a bottom-row button whose table row is Ctrl+Tab, the lift ORing the admitted shift into the row's ctrl. The long
 // press is the fingertip's road to the march from the bottom row. A SHIFT-
@@ -15836,6 +15919,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
            b == RedesignButton::TransportPlayStop ||
+           b == RedesignButton::TransportSkipBack ||
+           b == RedesignButton::TransportSkipForward ||
            b == RedesignButton::IconMarkerDrop ||
            b == RedesignButton::IconMarkerInherit ||
            b == RedesignButton::IconJumpToDefiningMarker ||
@@ -15847,14 +15932,15 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two
-// VERTICAL ARROWS, THE WALK and, since 2026-09-29, PREVIOUS MARKER,
+// VERTICAL ARROWS, THE WALK, since 2026-09-29 PREVIOUS MARKER,
 // whose ctrl press is its own Shift+Tab under ctrl, Ctrl+Shift+Tab, the paired
 // march (the lift ORs the carried ctrl into the row's own shift; on glass the
-// S Pen's side button). (CENTER admits no ctrl since 2026-10-14: no
-// modified `c` binds. The two skips, whose bare presses dispatched Home /
-// End and whose ctrl press the WHOLE-PIECE jump, Ctrl+Home / Ctrl+End
-// (architect 2026-09-26, restated 2026-09-29), left the row 2026-10-12: Home /
-// End and Ctrl+Home / Ctrl+End have their keys alone.) The VERTICAL ARROWS'
+// S Pen's side button), and since 2026-10-24 COPY PHASE RESETS (below).
+// (CENTER admits no ctrl since 2026-10-14: no
+// modified `c` binds. The two skips, whose ctrl press was the WHOLE-PIECE
+// jump, Ctrl+Home / Ctrl+End, from 2026-09-26 until they left the row
+// 2026-10-12, admit no ctrl since their return of 2026-10-24: the
+// whole-piece jump is their SHIFT press, Shift+Home / Shift+End.) The VERTICAL ARROWS'
 // ctrl-click (2026-08-31)
 // is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
 // shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
@@ -15889,45 +15975,50 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // input_pointer.cpp).
 //
 // TWO READERS, both in input_pointer.cpp: the band claims' MODIFIER GATE, which
-// admits a ctrl press only where this says so (and a ctrl+shift press only
-// where redesign_button_ctrl_shift_admits does) and leaves it the strict
-// consumed no-op it is everywhere else, and the lift's CHORD BUILD, which
-// moves the carried bit into the dispatched chord (the hold-repeat's arm and
-// fire build the same chord).
-// OPEN TEXT EDITOR JOINED 2026-10-21 (architect: "we can give ctrl+enter as
-// copy and ctrl+shift+enter as paste, on the open text editor icon"): its
-// ctrl press dispatches Ctrl+Return, Copy Phase Resets — the S Pen's barrel
-// button with a tap on the glass — and its ctrl-shift press (below)
-// Ctrl+Shift+Return, the paste.
+// admits a ctrl press only where this says so or where the pair is admitted
+// (a ctrl+shift press only where redesign_button_ctrl_shift_admits does) and
+// leaves it the strict consumed no-op it is everywhere else, and the lift's
+// CHORD BUILD, which moves the carried bit into the dispatched chord (the
+// hold-repeat's arm and fire build the same chord).
+// COPY PHASE RESETS JOINED 2026-10-24 (architect): its ctrl press dispatches
+// Ctrl+P, Paste Phase Resets — the S Pen's barrel button with a tap on the
+// glass — and its ctrl-shift press (below) Ctrl+Shift+P, Paste Phase Reset
+// State. (OPEN TEXT EDITOR stood here 2026-10-21 to 2026-10-24, its ctrl
+// presses Ctrl+Return / Ctrl+Shift+Return, the same pair.)
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportWalkPrevious ||
            b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown ||
-           b == RedesignButton::IconOpenTextEditor;
+           b == RedesignButton::IconCopyPhaseResets;
 }
 // THE CTRL+SHIFT-ADMITTING BUTTONS — THE WALK (architect 2026-09-26), whose
 // ctrl-shift press is its own key under both modifiers, Ctrl+Shift+Tab, the
-// paired march, and since 2026-10-21 OPEN TEXT EDITOR, whose ctrl-shift press
-// is Ctrl+Shift+Return, Paste Phase Resets (on the glass the barrel button
+// paired march; since 2026-10-24 COPY PHASE RESETS, whose ctrl-shift press
+// is Ctrl+Shift+P, Paste Phase Reset State (on the glass the barrel button
 // held through the long press, the hold's shift composing with the carried
-// ctrl). Everywhere else ctrl+shift together spell no
+// ctrl), and ZOOM TO FIT, whose ctrl-shift press is Ctrl+Shift+0, Reset
+// Trim (the barrel through the long press likewise). Everywhere else
+// ctrl+shift together spell no
 // roster chord (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home
 // and the rest are unbound on the keyboard too), so the band claims' modifier
 // gate refuses the pair on every other button and the lift's chord build
-// never sees it there. A button in this set admits CTRL alone as well (the
-// assert below) — the pair is the ctrl admission with a shift beside it —
-// and the walk admits SHIFT alone too (Shift+Tab), though the set's rule does
-// not ask that of a member: Open Text Editor does not (Shift+Return binds
-// nothing).
+// never sees it there. A MEMBER ADMITS ONE OF THE TWO SINGLE MODIFIERS
+// beside the pair (the assert below): the walk and Copy Phase Resets admit
+// CTRL — the pair is the ctrl admission with a shift beside it — and Zoom to
+// Fit SHIFT ALONE, the pair its shift admission with a ctrl beside it (Ctrl+0
+// binds nothing, so its ctrl press with no shift is the lift's consumed
+// nothing — finish_chrome_press_release). The walk admits SHIFT alone too
+// (Shift+Tab); Copy Phase Resets does not (Shift+P binds nothing).
 inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
     return b == RedesignButton::TransportWalk ||
-           b == RedesignButton::IconOpenTextEditor;
+           b == RedesignButton::IconCopyPhaseResets ||
+           b == RedesignButton::IconZoomFitBest;
 }
 // THE SHIFT A PRESS CARRIES, ASKED IN ONE PLACE: alone it is the shift
 // admission, and beside a carried ctrl it is the PAIR's — so beside a
-// carried ctrl a shift is admitted on the walk and Open Text Editor alone
-// (the pair's two members). THREE READERS, all in
+// carried ctrl a shift is admitted on the walk, Copy Phase Resets and Zoom to
+// Fit alone (the pair's three members). THREE READERS, all in
 // input_pointer.cpp: the arm's shift refusal (arm_redesign_press), the lift's
 // re-ask and its long-press term (finish_chrome_press_release).
 inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
@@ -15945,15 +16036,20 @@ inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
 // nothing), or A BUTTON THAT ADMITS THE PAIR (the walk, whose line names its
 // key's three modified forms, each spelled on the key). Left / Right admit
 // neither since 2026-09-21, the horizontal ladder retired. The walk states the
-// pair's implication too: a pair admission without the ctrl admission fails
-// here.
+// pair's implication too: a pair admission with NEITHER single admission
+// fails here — the pair is always one single admission with the other
+// modifier beside it (ctrl for the walk and Copy Phase Resets, shift for Zoom
+// to Fit, 2026-10-24), which is what lets the glass reach it: the barrel's
+// carried ctrl with the long press's shift.
 constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
         const bool both = redesign_button_ctrl_admits(b) &&
                           redesign_button_shift_admits(b);
         const bool pair = redesign_button_ctrl_shift_admits(b);
-        if (pair && !redesign_button_ctrl_admits(b)) return false;
+        if (pair && !redesign_button_ctrl_admits(b) &&
+            !redesign_button_shift_admits(b))
+            return false;
         if (!both) continue;
         const bool ladder = b == RedesignButton::TransportUp ||
                             b == RedesignButton::TransportDown;
@@ -15964,7 +16060,7 @@ constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
 static_assert(redesign_button_dual_modifier_is_ladder_or_pair(),
     "a button admitting both single modifiers is the step ladder (Up / Down, "
     "the pair refused) or admits the pair (the walk), and a pair admission "
-    "implies the ctrl one");
+    "implies one single admission");
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportRight) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportLeft) &&
@@ -15999,13 +16095,33 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
     "Jump to Defining Marker (Ctrl+J) admits Shift alone, reaching "
     "Ctrl+Shift+J, Copy Resolved Value: its row carries the ctrl, so a ctrl "
     "press is refused at the band gate");
-static_assert(redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
-                  redesign_button_ctrl_shift_admits(RedesignButton::IconOpenTextEditor) &&
+static_assert(!redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::IconOpenTextEditor) &&
                   !redesign_button_shift_admits(RedesignButton::IconOpenTextEditor),
-    "Open Text Editor (Return) admits Ctrl, reaching Ctrl+Return, Copy Phase "
-    "Resets, and the pair, reaching Ctrl+Shift+Return, Paste Phase Resets; "
-    "Shift alone binds nothing (architect 2026-10-21); its one tooltip line "
-    "names both presses (2026-10-24)");
+    "Open Text Editor (Return) admits no modifier since 2026-10-24: "
+    "Ctrl+Return, Ctrl+Shift+Return and Shift+Return bind nothing, the "
+    "propagate family on its own key");
+static_assert(redesign_button_ctrl_admits(RedesignButton::IconCopyPhaseResets) &&
+                  redesign_button_ctrl_shift_admits(RedesignButton::IconCopyPhaseResets) &&
+                  !redesign_button_shift_admits(RedesignButton::IconCopyPhaseResets),
+    "Copy Phase Resets (bare P) admits Ctrl, reaching Ctrl+P, Paste Phase "
+    "Resets, and the pair, reaching Ctrl+Shift+P, Paste Phase Reset State; "
+    "Shift alone binds nothing (architect 2026-10-24)");
+static_assert(redesign_button_shift_admits(RedesignButton::IconZoomFitBest) &&
+                  redesign_button_ctrl_shift_admits(RedesignButton::IconZoomFitBest) &&
+                  !redesign_button_ctrl_admits(RedesignButton::IconZoomFitBest),
+    "Zoom to Fit (bare 0) admits Shift, reaching Shift+0, Frame the Trim, and "
+    "the pair, reaching Ctrl+Shift+0, Reset Trim; Ctrl alone binds nothing "
+    "(architect 2026-10-24)");
+static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
+                  redesign_button_shift_admits(RedesignButton::TransportSkipForward) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportSkipBack) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportSkipForward) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::TransportSkipBack) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::TransportSkipForward),
+    "Go to Start / Go to End (Home / End) admit Shift alone, reaching the "
+    "whole piece's ends, Shift+Home / Shift+End; nothing binds under Ctrl "
+    "(architect 2026-10-24)");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button. It sits with the roster (rather than with the chord table in
@@ -16146,17 +16262,22 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // words unchanged); the accelerators are the table's own
         // convention — a key names its own cap. BOTH ARE STATE-FREE HERE ONLY
         // (2026-09-01, the
-        // overload): Full zoom out at the ceiling is the recall, and Center
+        // overload): Zoom to Fit at the ceiling is the recall, and Center
         // with nothing focused centers on the playhead — each press does
-        // something, and the overload names which. FULL ZOOM OUT CARRIES A
-        // SECOND LINE (2026-09-22): its shifted twin is
-        // Shift+0, RESET TRIM, the words the Show trim region button's line
-        // carried for the same act until that button's deletion the same day;
-        // the overload drops it over a full trim window, where the maximizer's
-        // own guard refuses. CENTER CARRIES NONE: it admits no modifier
+        // something, and the overload names which. ZOOM TO FIT (architect
+        // 2026-10-24; "Full Zoom Out (0)" until then, the act unchanged —
+        // the whole piece, and back to the view it left) CARRIES A SECOND
+        // LINE NAMING ITS TWO MODIFIED PRESSES (since 2026-10-24, Jump to
+        // Defining Marker's sentence form, the act and the modifier and not
+        // a key): Shift+0 FRAMES THE TRIM, Ctrl+Shift+0 RESETS IT (Shift+0
+        // reset it from 2026-09-22, the line "Press Shift to reset the
+        // trim."). THE LINE STANDS WHOLE IN EVERY STATE: a multi-form line
+        // stands while any of its forms is live (the overload's head), and
+        // the frame always acts. CENTER CARRIES NONE: it admits no modifier
         // (2026-10-14).
         case RedesignButton::IconZoomFitBest:
-            return {"Full Zoom Out (0)", "Press Shift to reset the trim."};
+            return {"Zoom to Fit (0)",
+                    "Press Shift to frame the trim, Ctrl+Shift to reset it."};
         case RedesignButton::IconZoomOriginal:
             return {"Center on Focus (C)", nullptr};
         // THE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22, renamed
@@ -16330,6 +16451,19 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // lit instead.
         case RedesignButton::TransportPlayStop:
             return {"Play (Space)", "Press Shift for the A/B audition."};
+        // THE TWO SKIPS (architect 2026-10-24, back on row 8): the act's name
+        // and its key by Qt's own name, and the shift line naming the
+        // whole-piece jump the press reaches — the act and the modifier, not
+        // a key. THE LINE STAYS ON A GREYED SKIP: the button greys only when
+        // the bare jump AND the whole-piece jump would both change nothing,
+        // and a disabled button still explains itself; the overload drops it
+        // where the two forms land on one frame.
+        case RedesignButton::TransportSkipBack:
+            return {"Go to Start (Home)",
+                    "Press Shift to go to the piece's start."};
+        case RedesignButton::TransportSkipForward:
+            return {"Go to End (End)",
+                    "Press Shift to go to the piece's end."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
         // the tooltips' own vocabulary. THREE OF THEM ADMIT SHIFT and carry the second
         // line that says so — the DROP since 2026-08-28, whose shifted chord
@@ -16409,20 +16543,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // verb group's sixth: the act's name and its chord as every row
         // writes them, bare Return by Qt's own name (this table's convention
         // above; the keypad's Enter is the same arm's second keysym and is
-        // not named separately). IT ADMITS CTRL AND THE PAIR since 2026-10-21
-        // (Copy / Paste Phase Resets, Ctrl+Return / Ctrl+Shift+Return) AND
-        // ITS SECOND LINE NAMES BOTH since 2026-10-24 (architect: "update
-        // 'open text editor' tooltip to include copy/paste phase"; the
-        // one-line form of 2026-10-21, the modifier acts left to HELP.md, is
-        // retired): ONE LINE FOR TWO MODIFIERS, Jump to Defining Marker's
-        // sentence form naming the modifier and not a key, the pair's two
-        // presses on the one seat. The name holds on either axis — a bound
-        // cell's editor is a text editor as the payload's is — and the
-        // overload drops the line in the phase-reset column, where both
-        // presses refuse at their first rung.
+        // not named separately). ONE LINE: it admits no modifier since
+        // 2026-10-24 (its ctrl presses, Copy / Paste Phase Resets from
+        // 2026-10-21, and the second line naming them, went to the Copy Phase
+        // Resets key that day). The name holds on either axis — a bound
+        // cell's editor is a text editor as the payload's is.
         case RedesignButton::IconOpenTextEditor:
-            return {"Open Text Editor (Return)",
-                    "Press Ctrl to copy phase resets, Ctrl+Shift to paste them."};
+            return {"Open Text Editor (Return)", nullptr};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH
         // since 2026-10-09 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
@@ -16440,6 +16567,17 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
+        // COPY PHASE RESETS (architect 2026-10-24), the verb group's eighth:
+        // the act's name and its chord, the bare letter by its cap. ITS
+        // SECOND LINE NAMES BOTH PASTES in one sentence, Jump to Defining
+        // Marker's form (the act and the modifier, not a key): Ctrl+P pastes
+        // the phase resets, Ctrl+Shift+P their state. The overload drops it
+        // in the phase-reset column, where both pastes refuse at their first
+        // rung.
+        case RedesignButton::IconCopyPhaseResets:
+            return {"Copy Phase Resets (P)",
+                    "Press Ctrl to paste them, Ctrl+Shift to paste their "
+                    "state."};
         // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's EIGHTH
         // and last, a lamp — the hint NAMES THE TOGGLE, Add to Selection's
         // shape, and the accelerator names the cap (this table's punctuation
@@ -16533,6 +16671,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // media player could be called the player instead of play"; PLAY until
 // then, the record's word), so the transport's PLAY names one key; PLAYER
 // fits its key at 300 / 200 / 150 % (54 of 69, 35 of 46, 27 of 34 device px).
+// ZOOM TO FIT READS FIT since 2026-10-24 (architect; ZOOM 0 until then), and
+// the three keys of that day print their own words: START and END (the two
+// skips, back on row 8) and COPY (Copy Phase Resets).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -16540,7 +16681,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::Undo:                      return "UNDO";
         case RedesignButton::Redo:                      return "REDO";
         case RedesignButton::Render:                    return "RENDER";
-        case RedesignButton::IconZoomFitBest:           return "ZOOM 0";
+        case RedesignButton::IconZoomFitBest:           return "FIT";
         case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
         case RedesignButton::IconFollow:                return "FOLLOW";
         case RedesignButton::IconBpm:                   return "BPM";
@@ -16560,6 +16701,8 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::ViewWarp:                  return "WARP";
         case RedesignButton::ViewPhase:                 return "PHASE";
         case RedesignButton::TransportPlayStop:         return "PLAY";
+        case RedesignButton::TransportSkipBack:         return "START";
+        case RedesignButton::TransportSkipForward:      return "END";
         case RedesignButton::IconMarkerDrop:            return "DROP";
         case RedesignButton::IconMarkerDelete:          return "DELETE";
         case RedesignButton::IconMarkerDisable:         return "DISABLE";
@@ -16567,6 +16710,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconJumpToDefiningMarker:  return "JUMP";
         case RedesignButton::IconOpenTextEditor:        return "EDIT";
         case RedesignButton::IconAddToSelection:        return "ADD SEL";
+        case RedesignButton::IconCopyPhaseResets:       return "COPY";
         case RedesignButton::IconValueDrag:             return "DRAG";
         case RedesignButton::TransportWalkPrevious:     return "PREV";
         case RedesignButton::TransportWalk:             return "NEXT";
@@ -16666,7 +16810,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
 //   "Save and Commit (Ctrl+Shift+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
-//   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
+//   Play reads "Stop (Space)" while the transport is live, Zoom to Fit reads "Back to
 //   Previous View (0)" while its whole-song state stands and "Back to Working
 //   Zoom (0)" at a ceiling nothing stamped, Center
 //   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair
@@ -16724,11 +16868,12 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // tmp/uniformity_survey_tooltips.md is its record — under
 // redesign_button_enabled's own standing rule): a hint forks on the predicate
 // the act or the face already reads, and several of those need what the
-// enabled predicate needs — the overview command's resolve and the step
-// kind refusals read GuiAudio, the trim's full-window owner the frame count
-// (the skips' landing owner read GuiAudio too, until their buttons left the
-// row 2026-10-12) — so the two share those objects in the same order and
-// the painter passes them once. IT SHIPPED WITH THE ENABLED PREDICATE'S
+// enabled predicate needs — the overview command's resolve, the step kind
+// refusals and the skips' landing owner read GuiAudio — so the two share
+// that object in the same order and the painter passes it once. (THE FRAME
+// COUNT, which the trim's full-window owner read for Full Zoom Out's reset
+// line from 2026-09-01, LEFT 2026-10-24 with that fork: Zoom to Fit's line
+// never drops.) IT SHIPPED WITH THE ENABLED PREDICATE'S
 // WHOLE SIGNATURE that morning, `playback` and `target_render` carried
 // UNREAD "for the shape", and both left the same day: the rule says an object
 // arrives WITH the arm that reads it, and a fork that comes to need one adds
@@ -16737,8 +16882,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // paint_handler.cpp); the dwell writer (recompute_redesign_button_hover,
 // input_pointer.cpp) asks membership alone and reads the constant table.
 inline RedesignTooltipText redesign_button_tooltip(
-        const AppState& a, const GuiAudio& audio, int64_t total_frames,
-        RedesignButton b) {
+        const AppState& a, const GuiAudio& audio, RedesignButton b) {
     // THE SAVE BUTTON'S OVERRIDES: inside the `h` view the button IS the
     // checkpoint act, so it takes that act's name. It is a one-line form
     // there — Save's one admission, shift (2026-10-11), spells the same
@@ -16859,27 +17003,46 @@ inline RedesignTooltipText redesign_button_tooltip(
     // where the modified press would do nothing different. Each condition is
     // the act's or the face's own predicate — none is restated here.
     switch (b) {
-        // FULL ZOOM OUT WITH A VIEW TO RETURN TO is the recall — the restore
+        // ZOOM TO FIT WITH A VIEW TO RETURN TO is the recall — the restore
         // of the stamped view (architect 2026-09-23) — through the act's one
         // fork (overview_command_target, run_overview_command's own), so the
         // word cannot name an act the press will not run. AT THE NO-OP the
-        // word is the act's name, "Full Zoom Out (0)": the grey carries the
-        // message and a tooltip is the act's name and nothing else. ("Back to
-        // Working Zoom", the unstamped ceiling's `c`, left with that arm the
-        // same day.)
+        // word is the act's name, "Zoom to Fit (0)" (architect 2026-10-24;
+        // "Full Zoom Out (0)" until then): a tooltip is the act's name and
+        // nothing else. ("Back to Working Zoom", the unstamped ceiling's `c`,
+        // left with that arm the same day.)
         //
-        // ITS SHIFT LINE (Reset Trim, 2026-09-22) DROPS WHERE THE SHIFTED
-        // PRESS WOULD NOT ACT, in either name: reset_trim_would_act, the
-        // predicate the face's twin term reads (the maximizer's own guard,
-        // trim_is_full_window, behind the `h` view's refusal of the chord).
+        // ITS MODIFIER LINE NEVER DROPS (2026-10-24): it names the frame
+        // (Shift+0) and the reset (Ctrl+Shift+0), and a multi-form line
+        // stands whole while any of its forms is live — the frame always is
+        // (run_span_framing_command; the head's rule). Until then it named
+        // the reset alone and dropped on reset_trim_would_act.
         case RedesignButton::IconZoomFitBest: {
             const OverviewCommandTarget t = overview_command_target(a, audio);
-            const char* line2 = reset_trim_would_act(a, total_frames)
-                                    ? redesign_button_tooltip(b).line2
-                                    : nullptr;
             if (t.arm == OverviewCommandTarget::Arm::RestoreView)
-                return {"Back to Previous View (0)", line2};
-            return {redesign_button_tooltip(b).line1, line2};
+                return {"Back to Previous View (0)",
+                        redesign_button_tooltip(b).line2};
+            break;
+        }
+        // THE TWO SKIPS' SHIFT LINE DROPS WHERE THE TWO FORMS LAND ON ONE
+        // FRAME (2026-10-24, the buttons' return; their rule of 2026-08-30):
+        // the compare is the landing owner's own (playhead_skip_landing_frame,
+        // asked in both forms) rather than the arithmetic restated here — a
+        // full trim window, or the relevant bound at its piece wall (trim
+        // [0, x] lands bare Home and Shift+Home both on frame 0), or the `h`
+        // view, where every jump is already the piece's end. The first line
+        // never forks: standing already at the bound is a benign
+        // one-dimensional refusal, silent on every surface (notifications.h),
+        // and the name is the name of the press.
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward: {
+            const bool forward = b == RedesignButton::TransportSkipForward;
+            if (playhead_skip_landing_frame(a, audio, forward,
+                                            /*whole_piece=*/false) ==
+                playhead_skip_landing_frame(a, audio, forward,
+                                            /*whole_piece=*/true))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         }
         // CENTER WITH NOTHING FOCUSED centers on the playhead —
         // run_center_command's own fork (center_command_lands_on_focus, the
@@ -16900,16 +17063,17 @@ inline RedesignTooltipText redesign_button_tooltip(
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
-        // OPEN TEXT EDITOR'S CTRL LINE (Copy / Paste Phase Resets, architect
-        // 2026-10-24) DROPS IN THE PHASE-RESET COLUMN, where both presses
-        // refuse at their first rung (NotWarpColumn, phase_reset_copy_refusal
-        // / phase_reset_paste_refusal — "phase clipboard only in warp",
-        // 2026-10-21); the column is the ladders' own read, restated nowhere
-        // else here. The deeper rungs (the selection, the clipboard) stay
-        // behind the line, each press's card answering, as the copy's empty
-        // payload stays behind Jump's. The `h` view hides the button
-        // (history_mode_hides_button), so no hover asks this there.
-        case RedesignButton::IconOpenTextEditor:
+        // COPY PHASE RESETS' PASTE LINE (Ctrl+P and Ctrl+Shift+P, architect
+        // 2026-10-24) DROPS IN THE PHASE-RESET COLUMN, where both pastes
+        // refuse at their first rung (NotWarpColumn, phase_reset_paste_refusal
+        // — "phase clipboard only in warp", 2026-10-21); the column is the
+        // ladder's own read, restated nowhere else here. The deeper rungs (the
+        // clipboard, the one anchor) stay behind the line, each press's card
+        // answering, as the copy's empty payload stays behind Jump's. The `h`
+        // view hides the button (history_mode_hides_button), so no hover asks
+        // this there. (The line rode Open Text Editor's tooltip, dropping the
+        // same way, 2026-10-24 morning, until the family got this key.)
+        case RedesignButton::IconCopyPhaseResets:
             if (a.active_markers_view != 'W')
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
@@ -17105,8 +17269,9 @@ inline RedesignTooltipText redesign_button_tooltip(
 // IT HOLDS ON THE CONSTANT TABLE, the state-free truth. THE STATEFUL OVERLOAD
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
 // on Render's iteration-mode precedent of 2026-08-02): where the admitted
-// twin is dead in the current state — the maximizer over a full window, the
-// crossing in the P column, the audition's shift over a standing sequence,
+// twin is dead in the current state — the crossing in the P column, the
+// two skips' whole-piece line where both forms land on one frame, the
+// audition's shift over a standing sequence,
 // since 2026-09-02 UP / DOWN'S STEP
 // LADDER where every
 // rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
@@ -17118,8 +17283,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // chord (on a mirror outside it the line is renamed Pull, the twin's name by
 // the role, never added), and since 2026-10-14 JUMP TO DEFINING MARKER's
 // copy line where the copy would refuse —
-// and since 2026-10-24 OPEN TEXT EDITOR's copy-and-paste line in the
-// phase-reset column, where both presses refuse at their first rung —
+// and since 2026-10-24 COPY PHASE RESETS' paste line in the phase-reset
+// column, where both pastes refuse at their first rung (the maximizer's
+// line over a full window dropped from 2026-09-22 until Zoom to Fit's line,
+// naming the always-live frame too, stopped dropping that day) —
 // the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,
@@ -17136,10 +17303,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // every button is on both sides of the equivalence. (The render player's own
 // copy at player_button_shift_admits was already exhaustive over its six.)
 //
-// NO EXCEPTION since 2026-10-24: Open Text Editor, which admits ctrl and the
-// pair (Ctrl+Return and Ctrl+Shift+Return, the phase-reset propagate's copy
-// and paste) and carried no line from 2026-10-21, names both in its one line
-// (architect 2026-10-24), so the walk holds it to the rule like every other.
+// NO EXCEPTION: Open Text Editor, which admitted ctrl and the pair from
+// 2026-10-21 and carried no line until 2026-10-24, admits nothing since the
+// propagate family moved to its own key that day (Copy Phase Resets, whose
+// one line names both pastes), so the walk holds every button to the rule.
 constexpr bool redesign_button_modifier_hint_agrees() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
@@ -17316,7 +17483,7 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // live state and its gate answers with its own card (its thread swept every
 // chord with a painted twin against the twin's face predicate the same day);
 // and the seams below that are irreducible. A face lit only by a modified
-// twin whose plain press is a one-dimensional silence (Full Zoom Out by
+// twin whose plain press is a one-dimensional silence (Zoom to Fit by
 // Shift+0, the walk by the other direction, Play by the A/B audition, the
 // player's Home by Shift+Home) is no false advertisement and stands.
 //

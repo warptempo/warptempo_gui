@@ -140,7 +140,7 @@ struct GuiPlaybackLifecycle {
     //     playhead back and so stops as Home / End do, only when that playhead
     //     differs from the resting one; at a ceiling nothing stamped `0` is a
     //     silent no-op and stops nothing.
-    //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: the sweep and Shift+0, matching every
+    //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: the sweep and Ctrl+Shift+0, matching every
     //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
     //     stop at their own commit point). BOTH views, and the rule is unchanged
     //     by the 2026-08-05 playback ungating — what narrowed is only the

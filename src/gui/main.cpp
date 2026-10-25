@@ -173,9 +173,10 @@ namespace {
 // bottom_row_h_px() tall — the strip pad, the case, the strip pad, on the
 // window's foot — the clock in its ringed dark time field, the active tab's
 // name and THE STATE LINE on the ground beside it, and, packed against the
-// right edge, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
-// owns its membership), the step and walk, the nudge and play with Play /
-// Stop last, each a plain run of cases — the flexible gap 2 above both. NO
+// right edge, the two skips (Go to Start, Go to End; 2026-10-24), the
+// MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp, owns its
+// membership), the step and walk, the nudge and play with Play / Stop last,
+// each a plain run of cases — the flexible gap 2 above both. NO
 // TENANT MOVES A LANE: the modal family's box and controls row (modal_box.h)
 // and the on-screen keyboard's band (onscreen_keyboard.h's placement block)
 // stand over the lanes, and every lane here keeps its rows under them.
@@ -773,7 +774,8 @@ GuiRect bottom_canvas_frame_area(const AppState& a) {
 // (2026-10-22): the strip pad, the key, the strip pad on the brushed ground,
 // the clock at the left in its ringed dark time field with the active tab's
 // name and THE STATE LINE on the ground right of it, and, packed against the
-// right edge, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
+// right edge, the skips (Go to Start, Go to End; 2026-10-24), the
+// MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each a plain run of cases,
@@ -2560,7 +2562,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 const RedesignButton tip_id =
                     static_cast<RedesignButton>(tip_i);
                 const RedesignTooltipText live = redesign_button_tooltip(
-                    app, audio, audio.total_frames(), tip_id);
+                    app, audio, tip_id);
                 const bool glyph_drift =
                     app.redesign_buttons[static_cast<size_t>(tip_i)].glyph !=
                     redesign_button_glyph(app, tip_id);

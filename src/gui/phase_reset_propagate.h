@@ -25,24 +25,26 @@ struct GuiActiveViews;
 // consistent with the identity fallback the rest of the target-view paint uses
 // on an empty map.
 //
-// ONE SPELLING IS THE POINT: the phase-reset paste (paste_apply) reports a
-// lockstep divergence in this register ("Stopped at <timestamp> (label name
-// diverged)"), the state paste beside it until its removal (2026-10-21).
+// ONE SPELLING IS THE POINT: both phase-reset pastes (paste_apply and
+// paste_state_apply) report a lockstep divergence in the same register
+// ("Stopped at <timestamp> (label name diverged)"), and a second
+// implementation would let the two drift in the one place the user compares
+// them.
 std::string format_domain_timestamp(double source_frame, const AppState& app,
                                     const GuiAudio& audio);
 
 // THE PROPAGATE CHORDS' CHEAP REFUSALS, each ladder in its arm's own order:
-// the Ctrl+Return / Ctrl+Shift+Return arms (handle_mode_keys,
-// input_key_dispatch.cpp; Ctrl+P / Ctrl+Alt+P until 2026-10-21) switch on
-// these to card, and NO FACE READS THEM since 2026-10-21 — the pair's seat
-// is Open Text Editor's, which greys for its plain act alone (the Edit
-// menu's rows greyed on them from 2026-09-24, the truthful menus, and the
-// pigeon's seat in the phase-reset view for the evening of 2026-10-21).
-// THE FIRST RUNG IS THE WARP COLUMN: both act on a warp-marker selection,
-// so in the phase-reset column both refuse there (architect 2026-10-21,
-// "phase clipboard only in warp": the P-column question is closed and the
-// pair is never widened). Pure: they read
-// the AppState and write nothing.
+// the bare P / Ctrl+P / Ctrl+Shift+P arms (handle_mode_keys,
+// input_key_dispatch.cpp; architect 2026-10-24 — Ctrl+Return /
+// Ctrl+Shift+Return from 2026-10-21, Ctrl+P / Ctrl+Alt+P /
+// Ctrl+Alt+Shift+P before) switch on these to card — THE TWO PASTES SHARE
+// THE PASTE'S LADDER, term for term — and THE COPY'S IS THE COPY PHASE
+// RESETS KEY'S FACE TERM (phase_reset_copy_actionable, app_state.h), the
+// key greying for its plain act alone. THE FIRST RUNG IS THE WARP COLUMN:
+// all three act on a warp-marker selection, so in the phase-reset column
+// they refuse there (architect 2026-10-21, "phase clipboard only in warp":
+// the P-column question is closed and the family is never widened). Pure:
+// they read the AppState and write nothing.
 //
 // THE COPY'S LAST RUNG, NothingToCopy, is phase_reset_copy_captures below,
 // asked BEFORE the clipboard is touched: until 2026-09-24 the arm ran
@@ -62,11 +64,12 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
 // reset falls inside its section (a block with no placements is a real
 // capture: its paste clears the matched destination block), so "captures
 // anything" is "the clipboard would come out non-empty", exactly the test the
-// arm used to make after the fact. Asked at the press alone (its per-tick
-// memo retired with the last face, 2026-10-21).
+// arm used to make after the fact. Asked at the press and by the copy key's
+// face every tick (2026-10-24), memo-free (its per-tick memo retired
+// 2026-10-21; the walk stops at the first propagating member).
 bool phase_reset_copy_captures(const AppState& app);
 
-// The paste's ladder (its arm says why).
+// The two pastes' one ladder (their arms say why).
 enum class PhaseResetPasteRefusal : uint8_t {
     None, NotWarpColumn, ClipboardEmpty, NotOneAnchor,
 };
@@ -85,15 +88,19 @@ struct PhaseResetPropagate {
     GuiTargetRender& target_render;
     // Owned end-of-paste view switch goes through switch_active_markers_view_to
     // so the column switch's selection clear stays consistent with the view
-    // selectors' path (paste_apply's call site, prompt.cpp, holds no
-    // GuiActiveViews).
+    // selectors' path. The two call sites
+    // for paste_apply / paste_state_apply live in different files
+    // (prompt.cpp / input_key_dispatch.cpp), only one of which holds
+    // GuiActiveViews — keeping the dependency here covers both with one
+    // wiring.
     GuiActiveViews&     active_views;
     // The paste-confirm prompt is a modal surface; its open stops playback
-    // through this lifecycle handle — the placement paste's stop (a marker
-    // mutation, architect 2026-10-14).
+    // through this lifecycle handle — the placement paste's stop — and the
+    // state paste, which raises no prompt, stops through it at its first
+    // flipped flag (both pastes marker mutations, architect 2026-10-14).
     GuiPlaybackLifecycle& playback_lifecycle;
-    // The paste's "Stopped at …" report is a notification card
-    // (2026-08-29); this is the one push chokepoint it reaches.
+    // The two pastes' "Stopped at …" reports are notification cards
+    // (2026-08-29); this is the one push chokepoint they reach.
     GuiNotifications&     notifications;
     // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the P-column
     // landing REPLACES the membership with the set the paste created, and a
@@ -115,7 +122,7 @@ struct PhaseResetPropagate {
           playback_lifecycle(playback_lifecycle_),
           notifications(notifications_), selection(selection_) {}
 
-    // Ctrl+Return copy. Caller has already verified W-mode + a CONTIGUOUS run of
+    // Bare P copy. Caller has already verified W-mode + a CONTIGUOUS run of
     // warp markers selected (the paste walks labeled blocks in strict lockstep,
     // so a gap would misalign the two label sequences — the copy gate mirrors
     // the `m` sweep's contiguity requirement). Section-based (architect
@@ -141,7 +148,19 @@ struct PhaseResetPropagate {
     // and produces a single undo entry covering all materialized blocks.
     void paste_apply();
 
-    // (Ctrl+Alt+Shift+P, paste_state_apply, removed 2026-10-21.)
+    // Ctrl+Shift+P (architect 2026-10-24; Ctrl+Alt+Shift+P until its removal
+    // of 2026-10-21): propagate only the disabled/enabled *state* of
+    // clipboard placements onto matching destination phase resets,
+    // leaving positions untouched. Caller has verified W-mode + exactly
+    // one warp marker selected + non-empty clipboard (the paste's ladder,
+    // phase_reset_paste_refusal). Walks the
+    // destination block list in lockstep with the clipboard, stops at
+    // the first label divergence or per-block phase-reset count
+    // mismatch, and produces at most one undo entry covering all
+    // aligned blocks. A divergence/mismatch is reported as a notification
+    // card (GuiNotifications::notify); a clean or empty run is silent.
+    // No confirmation prompt: it applies directly.
+    void paste_state_apply();
 
     // Shared end-of-paste tail: land the completed paste in the P COLUMN OF
     // THE AUDIO VIEW IT WAS PRESSED IN — S+W to S+P, T+W to T+P — with the
@@ -149,17 +168,20 @@ struct PhaseResetPropagate {
     // Shift+S, which stays in its audio view the same way; the tail crossed
     // into T+P until then). The audio view never changes.
     // `created` is the exact post-insert index set of the resets this paste
-    // materialized.
+    // materialized (empty for the state-only tail, which flips flags on resets
+    // that already exist).
     // ONLY A PASTE THAT WROTE A BLOCK REACHES IT (architect 2026-08-31):
     // a run that produced nothing says its sentence on a card and leaves the
     // view exactly where it stands, the switch being a change of scene that
     // reads as a paste. The produced-nothing arms SKIP this call rather than
-    // stubbing it — the live call site is paste_apply's materialized tail.
+    // stubbing it — the two live call sites are paste_apply's materialized tail
+    // and paste_state_apply's applied_pairs tail.
     // THE LINE IS "WROTE A BLOCK", NOT "CHANGED THE STORE" (the same day, the
     // deliberate half): a run that PAIRED blocks and left the store byte-equal
-    // — paste_apply's self-paste at offset zero — STILL LANDS, because a
-    // paste that paired stands as a paste and the switch shows a true
-    // result. What the switch was retired for is a paste that touched no
-    // block at all: pair_count 0, or a divergence at block 0.
+    // — paste_state_apply flipping no flag because every one already matched,
+    // paste_apply's self-paste at offset zero — STILL LANDS, because a paste
+    // that paired stands as a paste and the switch shows a true result. What
+    // the switch was retired for is a paste that touched no block at all:
+    // pair_count 0 on either side, or a divergence / count mismatch at block 0.
     void land_paste_in_phase_reset_view(const std::set<int>& created);
 };

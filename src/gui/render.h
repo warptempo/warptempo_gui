@@ -1700,7 +1700,8 @@ ProgramRingColumns program_ring_columns(const AppState& a);
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12): the clock in
 // its ringed time field, the active tab's name and the state line on the
 // wood beside it at the left (architect 2026-10-02 / 2026-10-03 /
-// 2026-10-05; the name 2026-10-22), and the MARKER-VERB GROUP, the step and
+// 2026-10-05; the name 2026-10-22), and the skips (Go to Start, Go to End;
+// 2026-10-24), the MARKER-VERB GROUP, the step and
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
 // (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
 // 2026-10-18) packed right, each a plain run of cases, run_gap_px of wood

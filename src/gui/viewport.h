@@ -504,9 +504,9 @@ struct Viewport {
     // ABOVE IT DRAW NONE OF THOSE: the toolbar band and its logo lane paint
     // the legend's battery and clock and the roster's faces (the app's
     // caption painted the window's state and the project's name too, until
-    // 2026-10-24). Some of those FACES
-    // are predicates over the view (Full Zoom Out greys where the view
-    // already frames what it would), and many more move with the acts that
+    // 2026-10-24). Those FACES may be predicates over the view (Zoom to
+    // Fit's read the zoom level until 2026-10-24, when its always-live frame
+    // twin made it constant), and many more move with the acts that
     // reach this rect beside a viewport change (Undo / Redo and Save after
     // an edit, an undo or a load in place), so the rows are not dropped
     // from the damage but OWED A CHECK (damage_window_top_rows, above the

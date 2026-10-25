@@ -24,8 +24,8 @@ namespace {
 
 // (THE BOUNDARY GUARD, THE BLOCK TYPE, THE MEMBERSHIP WINDOW, THE DESTINATION
 // WALK AND THE NOTHING-MATCHED SENTENCE LIVE IN propagate_blocks.h, this
-// family's own shared half across its two acts. WHAT STAYS HERE IS THE
-// ANCHOR — the block below and the loops that ask the window OF IT.)
+// family's own shared half across its three acts. WHAT STAYS HERE IS THE
+// ANCHOR — the block below and the three loops that ask the window OF IT.)
 //
 // THE WINDOW IS ASKED OF THE ANCHOR, NOT OF THE RESET (architect 2026-09-11,
 // the block below): a reset aimed at a marker has its anchor ON that marker,
@@ -80,10 +80,9 @@ namespace {
 // different answer for the same clipboard depending on which view the user
 // happened to be in.
 //
-// MEMBERSHIP IS THE ANCHOR'S, IN BOTH ACTS: a reset belongs to the block
-// whose guard window contains its ANCHOR — the copy's capture and the
-// paste's per-block overwrite window (the state paste's buckets too until
-// its removal, 2026-10-21). A
+// MEMBERSHIP IS THE ANCHOR'S, IN ALL THREE ACTS: a reset belongs to the block
+// whose guard window contains its ANCHOR — the copy's capture, the paste's
+// per-block overwrite window, and the state paste's buckets on both sides. A
 // Shift+S reset on a marker then has its anchor on that marker, fraction ~0,
 // and belongs to that marker's block by construction; and the paste's clear
 // window finds the destination's own lead-in reset the same way, which is what
@@ -199,8 +198,11 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
     return PhaseResetCopyRefusal::None;
 }
 
-// Asked at the press alone (the memo that served the per-tick faces retired
-// with the last of them, 2026-10-21 — AppState's note where it stood).
+// Asked at the press and by the Copy Phase Resets key's face every tick since
+// 2026-10-24 (phase_reset_copy_actionable), with no memo: the walk stops at
+// the first propagating member, and a selection is tens of markers. (A memo
+// served the per-tick faces until 2026-10-21, AppState's note where it
+// stood.)
 bool phase_reset_copy_captures(const AppState& app) {
     const auto& mv = app.warpmarkers.markers();
     for (int i : app.selected_markers)
@@ -218,12 +220,15 @@ PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {
     return PhaseResetPasteRefusal::None;
 }
 
-// (THE PIGEON'S FACE IN THE PHASE-RESET VIEW — phase_reset_propagate_pair_
-// actionable and phase_reset_paste_actionable, each chord's authoring-lock
-// gate and then its ladder — stood for the evening of 2026-10-21 and went
-// with that seat's view-dependent acts. The pair's seat is Open Text
-// Editor's since, which greys for its plain act alone, so no face asks the
-// ladders.)
+// THE COPY KEY'S FACE TERM (the declaration, app_state.h): the copy's ladder
+// alone, the lock being the face's own term. (The pigeon's face in the
+// phase-reset view — phase_reset_propagate_pair_actionable and
+// phase_reset_paste_actionable — stood for the evening of 2026-10-21; Open
+// Text Editor's seat, 2026-10-21 to 2026-10-24, greyed for its plain act
+// alone.)
+bool phase_reset_copy_actionable(const AppState& app) {
+    return phase_reset_copy_refusal(app) == PhaseResetCopyRefusal::None;
+}
 
 void PhaseResetPropagate::copy_from_selection() {
     const auto& mv = app.warpmarkers.markers();
@@ -325,7 +330,7 @@ void PhaseResetPropagate::copy_from_selection() {
 
 void PhaseResetPropagate::open_paste_confirmation() {
     // THE THREE GUARDS ARE SILENT AND STAY SILENT (re-verified 2026-08-30
-    // under the strictness ruling): the first two are the Ctrl+Shift+Return dispatch
+    // under the strictness ruling): the first two are the Ctrl+P dispatch
     // arm's own gates, spelled there term for term and CARDED there, so a
     // card here would be the second for one press; the third is a belt
     // against a stale index the selection layer cannot produce. An error arm
@@ -349,8 +354,8 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, so a bare Enter answers
     // Yes (architect 2026-09-16, "align — paste should open on the equivalent
     // of OK"): this confirmation is the deliberate second step of an explicit
-    // act — Ctrl+Shift+Return, by key or by the Open Text Editor seat's
-    // ctrl+shift press — exactly as the load
+    // act — Ctrl+P, by key or by the Copy Phase Resets key's ctrl press
+    // (2026-10-24) — exactly as the load
     // confirmation's and Revert's are, so it takes their default
     // (PromptInitialFocus, app_state.h, where the three-way Save / Discard /
     // Cancel prompts keep the last button for not being confirmations of an
@@ -635,11 +640,247 @@ void PhaseResetPropagate::paste_apply() {
     if (store_changed) undo.stamp_top_entry_with_landing_view();
 }
 
-// (PASTE PHASE RESET STATE — paste_state_apply, Ctrl+Alt+Shift+P, the
+// PASTE PHASE RESET STATE (Ctrl+Shift+P, the Copy Phase Resets key's
+// ctrl+shift press — architect 2026-10-24, resurrected from its removal of
+// 2026-10-21 with the Edit menu; Ctrl+Alt+Shift+P until then): the
 // clipboard's enabled / disabled state propagated onto the matching
-// destination resets in lockstep, positions untouched — IS REMOVED, architect
-// 2026-10-21, with the Edit menu that was its one pointer home. Its body is
-// git history.)
+// destination resets in lockstep, positions untouched. The contract is at
+// the declaration.
+void PhaseResetPropagate::paste_state_apply() {
+    if (app.phase_reset_clipboard.empty()) return;
+    if (app.selected_markers.size() != 1) return;
+    const int anchor = *app.selected_markers.begin();
+    const auto& mv = app.warpmarkers.markers();
+    const int n = static_cast<int>(mv.size());
+    if (anchor < 0 || anchor >= n) return;
+
+    // THE SELECTION IS SPENT, its sibling paste's line for its sibling's
+    // reason (architect 2026-09-12): past the belts, ahead of the run's own
+    // report and of the `any_change` test (selection_consumed, app_state.h).
+    // The write is the LAMP's and not the selection's — the members stay
+    // selected, exactly as they do after every other act in the class.
+    selection_consumed(app);
+
+    const int64_t song_end_frame = target_render.audio.total_frames();
+    const std::vector<PropagateBlock> dest_blocks =
+        walk_named_blocks(mv, anchor, n, song_end_frame);
+    const auto& clip_blocks = app.phase_reset_clipboard.blocks();
+
+    // Boundary guard: the seconds-domain authoring tolerance converted
+    // once to frames (phase reset time_frame lives in source frames on
+    // both sides).
+    const double n_guard = kPropagateBoundaryGuardSeconds *
+        static_cast<double>(target_render.audio.sample_rate());
+    // The live target-view map, for the destination side's anchors (the
+    // clipboard's were captured with the placements). Same reference lifetime
+    // as the placement paste's: this act writes disabled flags on the phase
+    // reset store and touches no warp marker.
+    const std::vector<WarpFrameMapSegment>& map =
+        live_warp_frame_map(app, target_render.audio);
+
+    // Flat list of every clipboard placement so we can bucket the
+    // clipboard side by absolute ANCHOR against block windows, mirroring the
+    // destination-side bucketing.
+    //
+    // THE BUCKETING KEY IS THE ANCHOR ON BOTH SIDES (architect 2026-09-11),
+    // because the CAPTURE decided membership by the anchor: bucketing by the
+    // reset's own frame here would put a reset the copy captured under one
+    // block into a different one, and the two sides' windows would disagree by
+    // the lead-in's source length — which differs per section, so the
+    // disagreement is asymmetric and would surface as a spurious count
+    // mismatch. The clipboard's anchors are the capture's own
+    // (anchor_source_frame); the destination's are computed here against the
+    // live map, exactly as the placement paste's clear window computes them.
+    //
+    // THE CONCATENATION IS ALREADY ANCHOR-ORDERED AND IS LEFT ALONE: capture
+    // produces block-ordered, within-block-time-ordered placements, and the
+    // anchor is monotone in the frame under one map, so the blocks come out
+    // anchor-ascending and each block's placements anchor-ordered within it.
+    // The defensive std::sort that used to stand here was deleted 2026-09-16 —
+    // it could only ever permute EQUAL anchors (std::sort is not stable), i.e.
+    // coincident resets, which is the one thing it must not do: the pairing
+    // below walks this list against the destination indices positionally, so a
+    // tie reshuffle would hand a coincident run's states to the wrong rows.
+    std::vector<const ClipboardPlacement*> all_placements;
+    for (const auto& cb : clip_blocks)
+        for (const auto& p : cb.placements)
+            all_placements.push_back(&p);
+
+    // Snapshot pre-state up front; we commit a single undo entry only
+    // if at least one flag actually changes.
+    std::vector<GuiPhaseResetMarker> pre_state =
+        app.phaseresetmarkers.markers();
+
+    auto& out = app.phaseresetmarkers.markers_mut();
+
+    bool any_change = false;
+    std::string stop_message;
+    // BLOCKS THAT COMPLETED THEIR PASS — the produced-nothing test below, and
+    // NOT the same question as any_change: a block that paired, walked and
+    // found every flag already right counts here (it pasted its state; the
+    // state simply matched), while a block the walk never reached does not.
+    // Bumped at the bottom of the body, so BOTH breaks leave it holding the
+    // number of blocks written before the stop.
+    size_t applied_pairs = 0;
+
+    const size_t pair_count = std::min(clip_blocks.size(), dest_blocks.size());
+    for (size_t i = 0; i < pair_count; ++i) {
+        // Label first, then count — mirrors paste_apply's
+        // stop-on-divergence order.
+        if (clip_blocks[i].label_name != dest_blocks[i].label) {
+            stop_message = "Stopped at " +
+                format_domain_timestamp(dest_blocks[i].start, app,
+                                        target_render.audio) +
+                " (label name diverged)";
+            break;
+        }
+
+        // Shifted membership window [start - N, end - N) on both sides, asked
+        // of each reset's ANCHOR (the block at the head of this file).
+        // A near-end marker of the previous interval (whose anchor is within N
+        // before this block's start) migrates into this block; a near-end
+        // marker of this block (anchored within N before its end) migrates out
+        // into the next interval. If the next interval is unlabeled or
+        // past the compared range, the marker falls off — symmetrically
+        // on both sides. The empty-not-inverted clamp, the song-end block's
+        // UNSHIFTED upper bound and the each-side-follows-its-OWN-extent rule
+        // (dst_hi tests the destination extent and src_hi the source extent
+        // independently) are the window owner's (propagate_membership_window,
+        // propagate_blocks.h).
+        const auto [dst_lo, dst_hi] = propagate_membership_window(
+            dest_blocks[i].start, dest_blocks[i].end, n_guard, song_end_frame);
+        const auto [src_lo, src_hi] = propagate_membership_window(
+            clip_blocks[i].source_start_frame, clip_blocks[i].source_end_frame,
+            n_guard, song_end_frame);
+
+        // Windowed clipboard placements (migration applied). Globally
+        // bucketed by anchor so a near-end placement originally
+        // captured under block i-1 lands in block i's window when i-1
+        // and i are adjacent labeled blocks.
+        std::vector<const ClipboardPlacement*> windowed_clip;
+        for (const auto* p : all_placements) {
+            const double t = p->anchor_source_frame;
+            if (t < src_lo)  continue;
+            if (t >= src_hi) continue;
+            windowed_clip.push_back(p);
+        }
+
+        // Windowed destination markers (markers_ is time-ordered, and the
+        // anchor is monotone in the frame under one map, so these indices come
+        // out ascending and the pairing below walks both sides in order).
+        std::vector<int> dest_indices;
+        dest_indices.reserve(windowed_clip.size());
+        for (size_t k = 0; k < out.size(); ++k) {
+            const double t = phase_reset_anchor_frame(out[k].time_frame, map);
+            if (t < dst_lo)  continue;
+            if (t >= dst_hi) continue;
+            dest_indices.push_back(static_cast<int>(k));
+        }
+        if (dest_indices.size() != windowed_clip.size()) {
+            stop_message = "Stopped at " +
+                format_domain_timestamp(dest_blocks[i].start, app,
+                                        target_render.audio) +
+                " (marker count mismatch)";
+            break;
+        }
+        for (size_t j = 0; j < dest_indices.size(); ++j) {
+            const bool want_disabled = windowed_clip[j]->disabled;
+            auto& m = out[dest_indices[j]];
+            if (m.disabled != want_disabled) {
+                // THE STATE PASTE IS A MARKER MUTATION AND STOPS (architect
+                // 2026-10-14, "a paste state is included"; the keyboard stop
+                // rule at stop_playback_if_playing's declaration) — at its
+                // FIRST FLIP, the run's first real write: the walk decides
+                // what changes as it goes, so this is the one place both
+                // halves of the gating hold, past every belt and the
+                // divergence and count stops, and a run that flips nothing
+                // stops nothing. Later flips find nothing playing.
+                if (!any_change) playback_lifecycle.stop_playback_if_playing();
+                m.disabled = want_disabled;
+                // (A HOP-BRACKET CLEAR RODE THIS ARM for a few hours on
+                // 2026-09-10 — the third road that disables a reset, beside
+                // the two toggles. The ITERATION LOCK landed the same day and
+                // made it unreachable: the state paste is one of the acts the
+                // lock refuses, so no reset can be disabled while any bracket
+                // stands.)
+                any_change = true;
+            }
+        }
+        ++applied_pairs;
+    }
+
+    // An undo entry represents a state change, not a gesture: a paste-
+    // state run that flips no flag leaves the store byte-equal, so it
+    // pushes nothing and touches no dirty/render state. The stop message still
+    // fires unconditionally; the P-column switch fires for every run that WROTE
+    // a block — byte-equal or not — a run that wrote none keeping the view
+    // still (the ruling and its two halves are below).
+    if (any_change) {
+        undo.push_undo_phase_reset(std::move(pre_state));
+        undo.recompute_dirty();
+        viewport.invalidate_waveform_area();
+        target_render.trigger();
+    }
+
+    // ONE CARD FOR THE PRESS, and only where the run paired nothing at all:
+    // pair_count == 0 means one of the two sides produced no block, so the
+    // lockstep loop never ran and no flag could flip — the state a sentence
+    // exists for (architect 2026-08-30, the strictness ruling; the literal is
+    // its sibling's, kNothingMatched above). A DIVERGENCE or a count mismatch
+    // has its own `Stopped at …` report and wins here, and a run that paired
+    // blocks and flipped nothing stays silent: it walked what it had, and a
+    // clean walk says nothing.
+    if (!stop_message.empty()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::move(stop_message));
+    } else if (pair_count == 0) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kNothingMatched);
+    }
+
+    // AND A RUN THAT WROTE NO BLOCK DOES NOT MOVE (architect 2026-08-31 —
+    // the twin of paste_apply's matched==0 arm above). The switch to the P
+    // column is a change of scene that looks exactly like a paste, so on the
+    // produced-nothing path it retires and the card stands alone: the view
+    // stays exactly where the user left it. THE LAND IS SKIPPED, NOT STUBBED —
+    // every run that wrote a block still reaches it unchanged below.
+    //
+    // THE TEST IS applied_pairs, WHICH IS THE WHOLE PRODUCED-NOTHING FAMILY IN
+    // ONE COMPARE, and it covers three shapes that would otherwise each want an
+    // arm: pair_count == 0 (one side produced no block, the loop never ran —
+    // kNothingMatched above), a LABEL DIVERGENCE at block 0, and a MARKER COUNT
+    // MISMATCH at block 0. The last two are paste_apply's enumerated block-0
+    // divergence read across (architect 2026-08-31, closing the asymmetry the
+    // ruling above surfaced): the walk stopped before writing anything, so the
+    // run pasted nothing, said its `Stopped at …`, and must stand still exactly
+    // as its sibling does.
+    //
+    // AND CASE 2 IS RULED THE OTHER WAY, DELIBERATELY (architect 2026-08-31): a
+    // run that PAIRED blocks and left the store byte-equal — every destination
+    // flag already in the clipboard's state, the any_change == false path —
+    // STILL LANDS. A paste that paired stands as a paste: it walked its blocks
+    // and wrote the state they were asked for, and the switch shows a TRUE
+    // result (the destination in the P column, already carrying what was
+    // pasted). It is not the misleading scene the switch was retired for, which
+    // is a paste that touched no block at all. This is a RULING, not an
+    // oversight, and the same line holds for paste_apply's byte-equal
+    // self-paste, which lands too.
+    if (applied_pairs == 0) return;
+
+    // Land in the P column of the standing audio view (paste_apply's landing,
+    // architect 2026-10-14) at the end of a
+    // paste-state run that wrote at least one block — a run stopped LATER by a
+    // divergence or a count mismatch, and a run that flipped no flag because
+    // every one already matched, both included (the ruling above). State paste
+    // creates no resets (it only flips disabled flags on existing ones), so
+    // there is no selection to set and the tail leaves none: the column swap it
+    // runs clears the selection, and nothing restores one.
+    land_paste_in_phase_reset_view({});
+    // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN — paste_apply's restamp
+    // read across, on this act's own push condition (any_change): a run that
+    // flipped no flag pushed nothing, and the entry beneath is not its.
+    if (any_change) undo.stamp_top_entry_with_landing_view();
+}
 
 // The architect inspects a propagate paste by eye instead of the old
 // Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate starts in the warp
@@ -647,7 +888,7 @@ void PhaseResetPropagate::paste_apply() {
 // T+W in T+P (architect 2026-10-14: "the phase-reset paste stays in the
 // current audio view, S+P stays S+P, like Shift+S"; it crossed into T+P
 // until then) — and this tail is shared by the paste
-// action — BY EVERY RUN THAT WROTE A BLOCK, and by no other since 2026-08-31
+// actions — BY EVERY RUN THAT WROTE A BLOCK, and by no other since 2026-08-31
 // (the produced-nothing arms skip it and stand still, the ruling and its
 // two halves at the declaration). SHIFT+S, the drop from the warp column
 // (GuiInputHandler::drop_phase_reset_crossing), is this tail's twin and
@@ -661,8 +902,10 @@ void PhaseResetPropagate::paste_apply() {
 // arm's land below is the playhead's one move, onto the first created reset
 // as the column shows it; a paste that created nothing leaves the playhead
 // where it rested); no playback stop of the tail's own (the placement
-// paste's confirmation stopped any play at its open — the paste a marker
-// mutation, architect 2026-10-14 — the tail adding no stop); no target render is asked for by the landing (the store
+// paste's confirmation stopped any play at its open, and the state paste
+// stops at its first flipped flag — both pastes are marker mutations,
+// architect 2026-10-14 — so a state paste that flipped nothing leaves a play
+// running, the tail adding no stop); no target render is asked for by the landing (the store
 // change already triggered one at the push); and the reset a paste
 // materializes from S+W shows in S+P exactly where the same reset dropped
 // there would, the anchor's re-derivation being the drop's own lead-in
@@ -722,7 +965,7 @@ void PhaseResetPropagate::land_paste_in_phase_reset_view(
         // it) depending on a NEIGHBOUR to clear it: the column switch two
         // lines up, whose clear_selection puts its clear above its own
         // already-empty early return. THAT ARGUMENT HOLDS TODAY and the change
-        // is behavior-neutral — the paste's chord is W-gated, so the
+        // is behavior-neutral — the paste's two chords are W-gated, so the
         // switch to P always fires — but it rests on the switch not being a
         // no-op, which is a property of the paste's ENTRY GATE rather than of
         // this act, and switch_active_markers_view_to DOES return early when
@@ -741,8 +984,9 @@ void PhaseResetPropagate::land_paste_in_phase_reset_view(
         // writing (architect 2026-07-30).
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     }
-    // NO CREATED SET — a PLACEMENT paste whose run produced no reset — NEEDS
-    // NOTHING AT ALL, and that is the
+    // NO CREATED SET — every paste that materialized nothing, not just the state
+    // paste (paste_state_apply always lands with {}; a PLACEMENT paste whose run
+    // produced no reset reaches here too) — NEEDS NOTHING AT ALL, and that is the
     // whole arm: the column swap above cleared the selection and nothing restored
     // one, so there is no group to collapse, no focus to land on, and no lane. The
     // cursor is the playhead, resting where it rested before the press (no

@@ -124,9 +124,9 @@ enum class Icon {
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
                          // from there (architect 2026-10-15)
-    // THE VIEWPORT CONTROLS: Full Zoom Out, Center, the magnification
+    // THE VIEWPORT CONTROLS: Zoom to Fit, Center, the magnification
     // lamp (zoom.svg's three magnifiers retired 2026-10-16, "low contrast").
-    FullZoomOut,         // Full Zoom Out (bare `0`) — the set's
+    FullZoomOut,         // Zoom to Fit (bare `0`) — the set's
                          // view-restore, the view shrunk back whole
                          // (architect 2026-10-16)
     Center,              // Center on Focus (bare `c`) — the set's
@@ -191,15 +191,17 @@ enum class Icon {
                          // file, no symlink
     // THE RENDER PLAYER'S TRANSPORT, the set's media glyphs: its Play/Pause
     // button wears Pause while live.
-    PlayerPrevious,      // the render player's Previous (row 8 has no skip
-                         // since 2026-10-12) — the set's media-skip-backward
+    PlayerPrevious,      // the render player's Previous — the set's
+                         // media-skip-backward (row 8's Go to Start wears it
+                         // too since 2026-10-24, GoToStart's link)
     Play,                // the render player's Play (its Play/Pause button
                          // at rest, and the playing row's glyph in its list)
                          // — the set's media-playback-start
     Pause,               // Pause (the render player's row, while live) —
                          // the set's media-playback-pause
     PlayerNext,          // the render player's Next — the set's
-                         // media-skip-forward
+                         // media-skip-forward (row 8's Go to End wears it
+                         // too since 2026-10-24, GoToEnd's link)
     // THE RENDER PLAYER'S HIGHLIGHT PAIR, ITS OWN (architect 2026-10-22,
     // when the classical icon set drew the player's family in polished
     // steel and row 8's arrows in another metal): the pair does not wear row
@@ -269,6 +271,18 @@ enum class Icon {
                          // the set's go-jump
     OpenTextEditor,      // Open Text Editor (bare Enter) — the set's
                          // accessories-text-editor (architect 2026-10-09)
+    CopyPhaseResets,     // Copy Phase Resets (bare P; Ctrl+P its paste,
+                         // Ctrl+Shift+P its state paste, architect
+                         // 2026-10-24) — the phase reset's camera-photo, a
+                         // symlink to PhaseReset.svg (the key prints COPY
+                         // and draws no glyph in the hi-fi skin)
+    GoToStart,           // Go to Start (Home; Shift+Home the piece's start,
+                         // architect 2026-10-24) — the render player's
+                         // media-skip-backward, a symlink to
+                         // PlayerPrevious.svg (the key prints START)
+    GoToEnd,             // Go to End (End; Shift+End the piece's end) — the
+                         // render player's media-skip-forward, a symlink to
+                         // PlayerNext.svg (the key prints END)
     DeleteFolder,        // Delete Folder (the render player) — the set's
                          // user-trash
     ValueDrag,           // Toggle Value Drag (bare `[`) — the pen, the
@@ -300,7 +314,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 61;
+inline constexpr int kIconCount = 64;
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.png` if that file is there, else
@@ -310,8 +324,10 @@ inline constexpr int kIconCount = 61;
 // inside the folder, the canonical file the act that owns the drawing:
 // AppIcon.svg -> Quaver.svg (2026-10-23; AppIcon.png -> Warp.png until
 // then), BpmIterations.svg -> WavRow.svg, WavRow.svg -> Quaver.svg
-// (2026-10-23), UpAFolder.svg -> FolderRow.svg and TransportPlay.svg -> Play.svg (the folder's README lists
-// them). Both bundle roads dereference a link (the laptop's
+// (2026-10-23), UpAFolder.svg -> FolderRow.svg, TransportPlay.svg -> Play.svg,
+// and since 2026-10-24 CopyPhaseResets.svg -> PhaseReset.svg, GoToStart.svg ->
+// PlayerPrevious.svg and GoToEnd.svg -> PlayerNext.svg (the folder's README
+// lists them). Both bundle roads dereference a link (the laptop's
 // read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy), so the
 // load reads a link as the file it names; a PNG dropped for a repeated act
 // replaces that act's glyph alone, the link's other wearer keeping the link.
@@ -328,7 +344,8 @@ inline constexpr const char* kIconNames[] = {
     "ReadOnly", "PreviousMarker", "NextMarker",
     "SwitchTab", "Settings", "FolderRow", "WavRow", "RepeatOne",
     "UpAFolder", "CardNormal", "CardCritical", "Close", "Tooltips",
-    "JumpToDefiningMarker", "OpenTextEditor", "DeleteFolder", "ValueDrag",
+    "JumpToDefiningMarker", "OpenTextEditor", "CopyPhaseResets",
+    "GoToStart", "GoToEnd", "DeleteFolder", "ValueDrag",
     "AppIcon", "Quaver",
 };
 static_assert(std::size(kIconNames) == kIconCount);

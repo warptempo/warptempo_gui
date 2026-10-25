@@ -908,7 +908,8 @@ private:
     // past it (architect 2026-10-03: the `h` walk line or the render's
     // progress line at the normal face, clipped short of the right block),
     // then the right block packed against the program ring's right edge
-    // (bottom_row_seats) — the
+    // (bottom_row_seats) — the two skips, Go to Start and Go to End
+    // (2026-10-24), the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp),
     // the step and walk and the nudge and play with Play / Stop its last
     // case (2026-10-18) — each group a plain run, the run gap between two

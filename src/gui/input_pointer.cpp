@@ -207,7 +207,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // button and its bare `[` chord: the architect uses the tablet's pen,
     // which reaches the trim bar, so a toggle for the waveform overlay at rest
     // had nothing left to show. Its shift admission — Shift+[ the maximizer — went with the button;
-    // Reset Trim is Shift+0 and rides Full zoom out's shift press. The trim
+    // Reset Trim is Ctrl+Shift+0 since 2026-10-24 and rides Zoom to Fit's
+    // ctrl+shift press (its shift press, Shift+0, until then). The trim
     // scissors' row
     // before it was deleted on 2026-08-18.) THIS TABLE DOES NOT DECIDE
     // PAINTED ORDER — every one of its readers matches by id or by published
@@ -215,24 +216,31 @@ constexpr ToolbarChord kToolbarChords[] = {
     // reads a mismatch here as the layout's truth; that truth is the
     // painter's kIconRowButtons, with each group's leader at
     // redesign_button_opens_icon_group (app_state.h).
-    // FULL ZOOM OUT (2026-08-12, the grand relayout): a momentary
+    // ZOOM TO FIT (2026-08-12, the grand relayout, as Full Zoom Out; renamed
+    // 2026-10-24): a momentary
     // navigation chord, the command's pointer home, click face like
-    // the rest of the row. It stays LIVE in the `h` view — `0` is on the
-    // mode's allowlist — which the derived partition answers with nothing
+    // the rest of the row. It stays LIVE in the `h` view — `0` and Shift+0
+    // are on the mode's allowlist — which the derived partition answers with nothing
     // hand-listed. (CENTER, bare `c`, stood beside it as the zoom pair until
     // 2026-09-29, when its row moved to the bottom row's, below.)
     // THE STEPPED ZOOM BUTTONS
     // (bare `=` / `-`) WERE REMOVED 2026-09-25 (architect): zoom is on every
     // surface — the Ctrl+drag on the waveform, the two-finger pinch, the S
-    // Pen's button-held drag. IT ADMITS A MODIFIER, SHIFT
-    // (redesign_button_shift_admits), since 2026-09-22, its
-    // shift-click or long press dispatching Shift+0, RESET TRIM. It does not
-    // repeat: the `repeats` column is unset.
-    {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false}, // bare 0
+    // Pen's button-held drag. IT ADMITS SHIFT AND THE PAIR since 2026-10-24
+    // (redesign_button_shift_admits / redesign_button_ctrl_shift_admits; Zoom
+    // to Fit since that day): its shift-click or long press dispatches
+    // Shift+0, FRAME THE TRIM (the trim bar's double-click), and its
+    // ctrl+shift press — the S Pen's barrel held through the long press —
+    // Ctrl+Shift+0, RESET TRIM (Shift+0's act from 2026-09-22 until then).
+    // A ctrl press with no shift binds nothing (Ctrl+0): the band gate arms
+    // it so the long press can reach the pair, and the lift consumes it
+    // (finish_chrome_press_release). It does not repeat: the `repeats`
+    // column is unset.
+    {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false}, // bare 0 (+Shift: Shift+0, +Ctrl+Shift: Ctrl+Shift+0)
     // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
     // backtick since 2026-09-23 (bare `]` for its first hours, then bare
     // `[`), a TOGGLE with
-    // a lamp, right after Full zoom out. Live in both audio views, on a locked tab and
+    // a lamp, right after Zoom to Fit. Live in both audio views, on a locked tab and
     // under the read-only lock (a display posture on that allowlist), and
     // DEAD in the `h` view, whose allowlist does not name it.
     {RedesignButton::IconWaveformMagnification,
@@ -254,11 +262,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // which is why the relocation needed no second body anywhere. The shift
     // admission IconPaste carried for Ctrl+Alt+Shift+P went too; the trim
     // scissors' deletion above is the same shape. SINCE 2026-10-21 the Edit
-    // menu is gone with the menu row and the pair is CTRL+RETURN /
+    // menu is gone with the menu row; the pair was CTRL+RETURN /
     // CTRL+SHIFT+RETURN, the Open Text Editor row's ctrl and ctrl+shift
-    // presses below (it rode Jump to Defining Marker's seat in the
-    // phase-reset view for that evening's first landing); the state paste
-    // is removed.)
+    // presses, from that night (it rode Jump to Defining Marker's seat in the
+    // phase-reset view for that evening's first landing), and since
+    // 2026-10-24 the family is the COPY PHASE RESETS row below, bare P with
+    // Ctrl+P and the resurrected state paste Ctrl+Shift+P.)
     // (THE BPM AND ITERATION ROWS SPENT 2026-08-27 TO 2026-09-04 OUT OF THIS
     // TABLE, with their buttons, and it was the propagate relocation's shape
     // exactly: the Series relocation gave bare `m` and bare `i` a MENU ROW
@@ -503,10 +512,23 @@ constexpr ToolbarChord kToolbarChords[] = {
     // rather than mirroring it.
     // The rows below carry the PLAIN chord, as every row does; the
     // admission and its modifier are the roster's, never a column here.
-    // (Home / End have no button since 2026-10-12; their keys are
-    // input_key_dispatch.cpp's.)
     {RedesignButton::TransportPlayStop,
      GuiKeys::Space,  false, false, false},                             // bare Space
+    // GO TO START / GO TO END (architect 2026-10-24, back on row 8 as their
+    // own run at its left after their removal of 2026-10-12): bare Home /
+    // End, the trim bounds' jump (run_playhead_end_jump), the press
+    // dispatching the key at the lift. THEY ADMIT SHIFT
+    // (redesign_button_shift_admits): the shift-click and the long press
+    // dispatch SHIFT+HOME / SHIFT+END, the whole piece's 0 and EOF — the
+    // glass's road to them — and a ctrl press is refused at the band gate
+    // (Ctrl+Home / Ctrl+End bind nothing since that day). No lamp, no repeat
+    // (a jump has one destination, so the long press is free to be the
+    // shift). Both locks admit both forms, and in the `h` view the mode owns
+    // both (history_mode_owns_key), so the buttons stand there.
+    {RedesignButton::TransportSkipBack,
+     GuiKeys::Home,   false, false, false},                             // Home (+Shift: Shift+Home)
+    {RedesignButton::TransportSkipForward,
+     GuiKeys::End,    false, false, false},                             // End (+Shift: Shift+End)
     // THE SINGLE-MARKER VERBS (2026-08-12), the right block's first group
     // since the architect moved them down here on 2026-08-18: drop, delete,
     // disable toggle and inherit/collapse (FLATTEN stood among them for the
@@ -563,24 +585,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // a row spells the chord the dispatch synthesizes, and Return is the
     // spelling every reader accepts (the walk's IsoLeftTab precedent). NOT A
     // RADIO AND NO LAMP (an act whose editor session is the state), and it
-    // does NOT repeat (an opener).
-    //
-    // IT ADMITS CTRL AND THE PAIR since 2026-10-21 (architect: "we can give
-    // ctrl+enter as copy and ctrl+shift+enter as paste, on the open text
-    // editor icon … glass has pen button as ctrl";
-    // redesign_button_ctrl_admits / redesign_button_ctrl_shift_admits): the
-    // row stays bare Return, and the lift spells the button's own key under
-    // the modifiers THE PRESS CARRIED — read at the press and stamped on the
-    // arm, never re-read at the lift (arm_redesign_press) — so a CTRL press
-    // dispatches CTRL+RETURN, COPY PHASE RESETS, and a CTRL+SHIFT press
-    // CTRL+SHIFT+RETURN, PASTE PHASE RESETS, through the propagate's own arms
-    // (handle_mode_keys) with their gates and cards. ON THE GLASS the ctrl is
-    // the S Pen's barrel button (pen_report_in_plane, platform_android.cpp):
-    // a tap with it held is the copy, and held through the long press the
-    // hold's shift composes with the carried ctrl (the pair admitted) into the
-    // paste. A SHIFT press alone is refused at the arm (Shift+Return binds
-    // nothing), and a long press with no barrel is the plain open — shift
-    // alone is not admitted, so the hold reaches nothing.
+    // does NOT repeat (an opener). IT ADMITS NO MODIFIER since 2026-10-24:
+    // its ctrl and ctrl+shift presses, Copy / Paste Phase Resets on
+    // Ctrl+Return / Ctrl+Shift+Return from 2026-10-21, went to the Copy Phase
+    // Resets row below with the family's move to the letter P.
     {RedesignButton::IconOpenTextEditor,
      GuiKeys::Return, false, false, false},                             // bare Return
     // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH
@@ -605,6 +613,27 @@ constexpr ToolbarChord kToolbarChords[] = {
     // about this row's chord.
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false},                             // bare k
+    // COPY PHASE RESETS (architect 2026-10-24), the verb group's EIGHTH,
+    // between Add to Selection and Toggle Value Drag ("add sel normally
+    // precedes copy"): BARE P, the propagate's copy (handle_mode_keys). IT
+    // ADMITS CTRL AND THE PAIR (redesign_button_ctrl_admits /
+    // redesign_button_ctrl_shift_admits): the row stays bare P, and the lift
+    // spells the button's own key under the modifiers THE PRESS CARRIED —
+    // read at the press and stamped on the arm, never re-read at the lift
+    // (arm_redesign_press) — so a CTRL press dispatches CTRL+P, PASTE PHASE
+    // RESETS, and a CTRL+SHIFT press CTRL+SHIFT+P, PASTE PHASE RESET STATE,
+    // through the propagate's own arms with their gates and cards. ON THE
+    // GLASS the ctrl is the S Pen's barrel button (pen_report_in_plane,
+    // platform_android.cpp): a tap with it held is the paste, and held
+    // through the long press the hold's shift composes with the carried ctrl
+    // (the pair admitted) into the state paste. A SHIFT press alone is
+    // refused at the arm (Shift+P binds nothing), and a long press with no
+    // barrel is the plain copy. No lamp, no repeat. ITS GATES ARE THE KEYS':
+    // the read-only allowlist names none of the three (the face greys on the
+    // lock), the iteration gate admits the copy alone, and the `h` view's
+    // allowlist names none, so the derived partition hides it there.
+    {RedesignButton::IconCopyPhaseResets,
+     GuiKeys::P,      false, false, false},                             // bare P (+Ctrl: Ctrl+P, +Ctrl+Shift: Ctrl+Shift+P)
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40), the verb group's
     // EIGHTH and last, immediately right of Add to Selection: BARE `[`, which
     // was free, the one-shot lamp that arms the flag's value drag, permanently
@@ -811,11 +840,17 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // (the alt vocabulary at chord_is_bound, gui_input.h).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
-// Up / Down step ladder's Ctrl rung (the two skip buttons, whose ctrl-click
-// was Ctrl+Home / Ctrl+End, left the row 2026-10-12), the WALK's Ctrl+Tab and
+// Up / Down step ladder's Ctrl rung (the two skip buttons' ctrl-click was
+// Ctrl+Home / Ctrl+End until they left the row 2026-10-12; since their
+// return of 2026-10-24 they admit shift alone), the WALK's Ctrl+Tab,
 // PREVIOUS MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl,
-// 2026-09-29) and OPEN TEXT EDITOR's Ctrl+Return, Copy Phase Resets
-// (2026-10-21) — which is why
+// 2026-09-29) and COPY PHASE RESETS' Ctrl+P, Paste Phase Resets
+// (2026-10-24; Open Text Editor's Ctrl+Return from 2026-10-21) — OR WHERE
+// THE PAIR IS ADMITTED (redesign_button_ctrl_shift_admits), so that ZOOM TO
+// FIT, whose pair is Ctrl+Shift+0 and whose ctrl alone binds nothing, arms a
+// ctrl press for the long press to reach the pair on the glass (the barrel
+// held through the hold); its lift with no shift is the consumed nothing
+// (finish_chrome_press_release) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row is refused exactly as it always was. The walk is kToolbarChords in the
@@ -825,8 +860,9 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // CTRL+SHIFT TOGETHER BIND ONLY WHERE redesign_button_ctrl_shift_admits SAYS
 // SO (app_state.h) — THE WALK, whose ctrl-shift press is its own key under
 // both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26),
-// and OPEN TEXT EDITOR, whose ctrl-shift press is Ctrl+Shift+Return, Paste
-// Phase Resets (architect 2026-10-21). On every other button the pair spells no roster chord — strict modifier
+// COPY PHASE RESETS, whose ctrl-shift press is Ctrl+Shift+P, Paste Phase
+// Reset State, and ZOOM TO FIT, whose is Ctrl+Shift+0, Reset Trim (architect
+// 2026-10-24). On every other button the pair spells no roster chord — strict modifier
 // validation, and Ctrl+Shift+Up is unbound on the keyboard too — so it dies
 // here and the lift's chord build never sees it there. The gate asks the
 // roster, never a named button.
@@ -843,7 +879,8 @@ bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
     for (const ToolbarChord& tc : kToolbarChords) {
         if (redesign_button_hit(app, tc.id, x, y))
             return mods.shift ? !redesign_button_ctrl_shift_admits(tc.id)
-                              : !redesign_button_ctrl_admits(tc.id);
+                              : !(redesign_button_ctrl_admits(tc.id) ||
+                                  redesign_button_ctrl_shift_admits(tc.id));
     }
     return true;
 }
@@ -6037,8 +6074,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // proceeds. ALT survives ONLY in the THREE keyboard Ctrl+Alt
         // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R and, since 2026-09-13,
         // Revert's Ctrl+Alt+O; re-derived by grep of chord_is_bound
-        // 2026-10-21, Ctrl+Alt+Shift+P gone and Ctrl+Alt+P moved onto
-        // Ctrl+Shift+Return)
+        // 2026-10-21, Ctrl+Alt+Shift+P gone and Ctrl+Alt+P moved off alt;
+        // the two pastes Ctrl+P and Ctrl+Shift+P since 2026-10-24)
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
@@ -7941,12 +7978,16 @@ void GuiInputHandler::finish_chrome_press_release(
         // carries ctrl, the hold adds shift, and the lift dispatches
         // Ctrl+Shift+Tab, the paired march — the pen's road to it, the tab
         // row's long press being the fingertip's. Without the pen's button the
-        // same hold is Shift+Tab, the previous marker, as before. AND ON OPEN
-        // TEXT EDITOR (architect 2026-10-21, "glass has pen button as ctrl"):
-        // the barrel held through a long press dispatches Ctrl+Shift+Return,
-        // Paste Phase Resets, the barrel's tap Ctrl+Return, the copy, and the
-        // same hold with no barrel is the plain open, shift alone being no
-        // admission there. (Up / Down admit
+        // same hold is Shift+Tab, the previous marker, as before. ON COPY
+        // PHASE RESETS (architect 2026-10-24; Open Text Editor's from
+        // 2026-10-21, "glass has pen button as ctrl"): the barrel held
+        // through a long press dispatches Ctrl+Shift+P, Paste Phase Reset
+        // State, the barrel's tap Ctrl+P, the paste, and the same hold with
+        // no barrel is the plain copy, shift alone being no admission there.
+        // AND ON ZOOM TO FIT (2026-10-24): the barrel through the long press
+        // is Ctrl+Shift+0, Reset Trim, the hold with no barrel Shift+0, the
+        // frame — and the barrel's TAP is the consumed nothing below, Ctrl+0
+        // binding nothing. (Up / Down admit
         // both modifiers but not the pair, and they repeat, so the term below
         // excludes them twice over.)
         //
@@ -7987,12 +8028,24 @@ void GuiInputHandler::finish_chrome_press_release(
         // reaches this build only on a button that admits the pair (the gate,
         // the re-ask above and the hold's own term), so the chord it spells
         // is that button's key under both modifiers — the walk's
-        // Ctrl+Shift+Tab, Open Text Editor's Ctrl+Shift+Return (the paste; the
-        // S Pen's barrel held through the long press on the glass).
+        // Ctrl+Shift+Tab, Copy Phase Resets' Ctrl+Shift+P and Zoom to Fit's
+        // Ctrl+Shift+0 (the S Pen's barrel held through the long press on the
+        // glass).
+        //
+        // A CARRIED CTRL THE BUTTON ADMITS ONLY BESIDE A SHIFT, WITH NONE
+        // BESIDE IT, IS THE CONSUMED NOTHING (2026-10-24): Zoom to Fit admits
+        // the pair and not ctrl alone (Ctrl+0 binds nothing), and the band
+        // gate arms its ctrl press so the long press can reach the pair; a
+        // lift before the hold — the barrel's tap — spells nothing and
+        // dispatches nothing, never the bare `0` a dropped ctrl would lie
+        // about. On every other button the carried ctrl is the one the gate
+        // already admitted, alone or in the pair.
+        const bool press_shift = arm.shift || held_to_shift;
+        if (arm.ctrl && !press_shift &&
+            !redesign_button_ctrl_admits(tc.id)) return;
         GuiInputState chord{};
-        chord.ctrl  = tc.ctrl ||
-                      (arm.ctrl && redesign_button_ctrl_admits(tc.id));
-        chord.shift = tc.shift || arm.shift || held_to_shift;
+        chord.ctrl  = tc.ctrl || arm.ctrl;
+        chord.shift = tc.shift || press_shift;
         chord.alt   = tc.alt;
         // OPEN PROJECT'S TWIN TRANSLATES (architect 2026-10-07), the roster's
         // one exception to "a modified press spells its button's own key
@@ -9003,7 +9056,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // (THE SLIVER PARAGRAPH IS RETIRED with the release-time min-size check
     // (2026-08-18) and stayed retired when the minimum width floor went the
     // same way (2026-08-19): a jitter drag dissolves nothing and is widened to
-    // nothing — it commits the sliver it drew, and Shift+0 is the way back.)
+    // nothing — it commits the sliver it drew, and Ctrl+Shift+0 is the way back.)
     app.playhead_cursor_sample = far_frame;
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();

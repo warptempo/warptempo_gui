@@ -795,10 +795,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
-    // CLIPBOARD COPY Ctrl+Return, ctrl-exact (it reads a selection into a
+    // CLIPBOARD COPY bare P, bare-exact (it reads a selection into a
     // session clipboard and pushes nothing, so the undo domain this lock
-    // protects has no interest in it; the PASTE, Ctrl+Shift+Return, stays
-    // refused). That
+    // protects has no interest in it; the two PASTES, Ctrl+P and
+    // Ctrl+Shift+P, stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. BOTH LISTS ARE ASKED, the two locks composing on a locked tab
@@ -820,7 +820,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is authoring and drops here
     //                              (playhead_in_marker_lane)
     //   - Home/End (bare or      → playhead to trim region bounds (bare)
-    //     Ctrl)                    or to the piece's ends (Ctrl)
+    //     Shift)                   or to the piece's ends (Shift, since
+    //                              2026-10-24; Ctrl until then)
     //   - PageUp/PageDown        → viewport step scroll by the plain wheel's
     //     (no mods)                stepped-pan step. Pure navigation, same
     //                              family as the playhead-step and Home/End
@@ -829,6 +830,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              restore of that view in the audio view it
     //                              was stamped in; a silent no-op with
     //                              nothing to return to (run_overview_command)
+    //   - Shift+0                → frame the trim (2026-10-24), the trim
+    //                              bar's double-click (run_span_framing_command):
+    //                              the camera alone
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead;
@@ -874,9 +878,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is the Ctrl+S entry's now, on that entry's
     //                              own reasoning — it publishes what the tab
     //                              already holds)
-    //   - Shift+0 (no ctrl,      → the trim maximizer, Reset Trim (2026-08-07,
-    //     no alt)                  on Shift+[ until 2026-09-22). Trim is
-    //                              BAND, not content
+    //   - Ctrl+Shift+0 (no alt)  → the trim maximizer, Reset Trim (2026-08-07,
+    //                              on Shift+[ until 2026-09-22, Shift+0 until
+    //                              2026-10-24). Trim is BAND, not content
     //   - l (no mods)            → the render player (2026-08-28): it plays
     //                              a rendered wav and authors nothing; its
     //                              one authoring act, Load in place, refuses
@@ -893,7 +897,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `i`, `'` in the `h` view, the
-    // phase-reset propagate's copy/paste (Ctrl+Return / Ctrl+Shift+Return),
+    // phase-reset propagate's copy and pastes (bare P, Ctrl+P, Ctrl+Shift+P),
     // and undo/redo (Ctrl+Z / Ctrl+Shift+Z) all drop here. (`;`, THE SETTINGS
     // EDITOR, IS ADMITTED since 2026-10-21 — the lock governs the keys, not
     // the editor, the 2026-09-04 rule: its engine-key commits refuse inside
@@ -1584,10 +1588,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the one command that reaches the whole song. DIGITS 1 TO 4
     // are the ABSOLUTE VIEW SELECTORS, one axis each (architect 2026-10-14;
     // their block is up beside the axis handlers they compose); 5..9 are
-    // unbound. SHIFT+0 is RESET TRIM (architect 2026-09-22; its arm
-    // is further down this body, where the trim bracket family stood).
+    // unbound. CTRL+SHIFT+0 is RESET TRIM (architect 2026-10-24; Shift+0 from
+    // 2026-09-22; its arm is further down this body, where the trim bracket
+    // family stood).
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_overview_command();
+        return;
+    }
+    // SHIFT+0 FRAMES THE TRIM (architect 2026-10-24, Zoom to Fit's shifted
+    // press and long press): the trim bar's double-click EXACTLY — the one
+    // command both run (run_span_framing_command: a proper trim sub-window
+    // with the edge margin each side, else the whole song), so the key, the
+    // button and the gesture are one act. A camera act: no trim bound, the
+    // playhead and the selection untouched, admitted on a locked tab, under
+    // the iteration lock and in the `h` view as the double-click is
+    // (is_trim_frame_key, gui_input.h, the three readers).
+    if (is_trim_frame_key(key, mods)) {
+        run_span_framing_command();
         return;
     }
 
@@ -1607,9 +1624,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // The phase-reset clipboard pair on Return's ctrl forms (Ctrl+Return /
-    // Ctrl+Shift+Return, below the bare Return arm above, which claims the
-    // plain press alone), and the I / K / L letter keys (`i` iteration mode,
+    // The phase-reset clipboard family on the letter P (bare P the copy,
+    // Ctrl+P the paste, Ctrl+Shift+P the state paste; architect 2026-10-24),
+    // and the I / K / L letter keys (`i` iteration mode,
     // `k` add-to-selection, and `l`, the render player's opener).
     if (handle_mode_keys(key, mods)) return;
 
@@ -1910,18 +1927,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.toggle_disabled();
         return;
     }
-    // CTRL+HOME / CTRL+END: the WHOLE-PIECE jump (architect 2026-09-26).
-    // Frame 0 and the ACTIVE DOMAIN's last frame, whatever the trim window
-    // is, where the bare pair lands on the trim bounds — the way to reach
-    // audio the window has cut off without opening the window first. Same
-    // body, same unconditional acts (run_playhead_end_jump,
-    // input_key_dispatch.cpp), through the movement owner as always.
+    // SHIFT+HOME / SHIFT+END: the WHOLE-PIECE jump (architect 2026-09-26; on
+    // SHIFT since 2026-10-24, the Go to Start / Go to End buttons' return —
+    // their long press is the glass's Shift — and Ctrl+Home / Ctrl+End, its
+    // spelling until then, unbound). Frame 0 and the ACTIVE DOMAIN's last
+    // frame, whatever the trim window is, where the bare pair lands on the
+    // trim bounds — the way to reach audio the window has cut off without
+    // opening the window first. Same body, same unconditional acts
+    // (run_playhead_end_jump, input_key_dispatch.cpp), through the movement
+    // owner as always.
     //
-    // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
-    // arms live in a switch this function reaches only with no modifier held —
-    // a chord has no road into handle_plain_bare_keys by construction. Ctrl is
-    // the only modifier they take: Shift, Ctrl+Shift and Alt forms bind
-    // nothing and are consumed no-ops under strict modifier validation.
+    // THEY DISPATCH HERE, WITH THE OTHER MODIFIED CHORDS, because the bare
+    // pair's arms live in a switch this function reaches only with no modifier
+    // held — a chord has no road into handle_plain_bare_keys by construction.
+    // Shift is the only modifier they take: Ctrl, Ctrl+Shift and Alt forms
+    // bind nothing and are consumed no-ops under strict modifier validation.
     //
     // A TEXT EDITOR NEVER REACHES THIS ARM: Home / End under any modifier are
     // the editors' own caret motion and selection (text_editor::classify_key's
@@ -1936,7 +1956,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // in there a jump ALREADY means the piece's ends, so the chord means the
     // same thing in every state (history_mode_owns_key).
     if ((key == GuiKeys::Home || key == GuiKeys::End) &&
-        ctrl && !shift && !alt) {
+        shift && !ctrl && !alt) {
         run_playhead_end_jump(key == GuiKeys::End, /*whole_piece=*/true);
         return;
     }
@@ -1945,7 +1965,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Delete drops at the read-only gate above, which is the keyboard
         // path's single guard, and no pointer path reaches the delete routines.
         // Trim is not part of the selection system, so Delete never acts on a
-        // bound (Shift+0 is trim's clear; the sweep, the bar's drags and its
+        // bound (Ctrl+Shift+0 is trim's clear; the sweep, the bar's drags and its
         // bound-set clicks are its setters).
         // THE TWO COLUMNS ANSWER DIFFERENTLY SINCE 2026-08-24, the Ctrl+D arm's
         // twin: deleting a marker is an EXISTENCE edit rather than a
@@ -2072,21 +2092,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         return;
     }
-    // SHIFT+0 RESETS THE TRIM to the whole song (architect 2026-09-22) — the
-    // maximizer, the RECOVERY route trim's absence from undo requires. It sat
-    // on Shift+[ beside the trim region toggle on bare `[` until the architect
-    // deleted that toggle the same day (the tablet's pen reaches the trim bar)
-    // and gave the
-    // bracket to the Waveform Magnification lamp; `0` already means
-    // "the whole song" to the camera, so its shifted form says it to the
-    // trim. The one predicate is is_trim_maximize_key (gui_input.h). It
-    // arrives as the `0` key plus the shift bit, never as a `)` keysym:
-    // key_from_keycode (platform_wayland.cpp) reads LEVEL 0 of the keymap, so
-    // the shifted level is never consulted. ITS POINTER ROUTE IS FULL ZOOM
-    // OUT'S SHIFT-CLICK AND LONG PRESS (redesign_button_shift_admits, the
-    // bare `0` button's shifted twin), as it was the toggle's until that
-    // button went; a bound dragged onto its partner on the trim bar is the
-    // other road to the whole song (auto_clear_crossed_trim, input_trim.cpp).
+    // CTRL+SHIFT+0 RESETS THE TRIM to the whole song (architect 2026-10-24;
+    // Shift+0 from 2026-09-22, which frames the trim since — its arm beside
+    // bare `0`'s above) — the maximizer, the RECOVERY route trim's absence
+    // from undo requires. It sat on Shift+[ beside the trim region toggle on
+    // bare `[` until the architect deleted that toggle on 2026-09-22 (the
+    // tablet's pen reaches the trim bar) and gave the bracket to the Waveform
+    // Magnification lamp; `0` already means "the whole song" to the camera,
+    // so its ctrl-shifted form says it to the trim. The one predicate is
+    // is_trim_maximize_key (gui_input.h). It arrives as the `0` key plus the
+    // modifier bits, never as a `)` keysym: key_from_keycode
+    // (platform_wayland.cpp) reads LEVEL 0 of the keymap, so the shifted
+    // level is never consulted. ITS POINTER ROUTE IS ZOOM TO FIT'S CTRL+SHIFT
+    // PRESS (redesign_button_ctrl_shift_admits: on the glass the S Pen's
+    // barrel held through the long press); a bound dragged onto its partner
+    // on the trim bar is the other road to the whole song
+    // (auto_clear_crossed_trim, input_trim.cpp).
     //
     // The playhead is an OUTPUT of every trim write, never an input: each parks
     // it at the new trim start (architect 2026-08-05 — the rule and its
