@@ -2022,8 +2022,9 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (41 chord
-// rows = 41 = kRedesignButtonCount, the count's own statement below): row
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (44 chord
+// rows = 44 = kRedesignButtonCount since 2026-10-24, the count's own
+// statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
 //
@@ -2181,9 +2182,11 @@ enum class RedesignButton {
     // button-held drag. It does not hold-repeat. It is a momentary
     // navigation act and LIVE in the `h` view (`0` and Shift+0 are on the
     // mode's allowlist, so the derived partition answers live with nothing
-    // hand-listed). It NEVER GREYS past the roster's head gates: the frame,
-    // its shifted twin, always acts — a trim always has a span — so under
-    // the twin rule the face is lit (redesign_button_enabled's arm).
+    // hand-listed). It GREYS ONLY WHERE NONE OF ITS THREE PRESSES WOULD
+    // ACT (2026-10-25, the twin rule; redesign_button_enabled's arm): the
+    // toggle at its NoOp, the frame where it would land the live viewport
+    // (span_framing_would_act), the reset over a full trim or in the `h`
+    // view (reset_trim_would_act).
     IconZoomFitBest,
     // WAVEFORM MAGNIFICATION (architect 2026-09-22, reversed and made
     // universal 2026-09-24) — the backtick's lamp, after Zoom to Fit, THE ONLY
@@ -2534,19 +2537,25 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SEVENTEEN buttons in three groups, all FLUSH AT THE RIGHT
-    // MARGIN with the CLOCK alone at the row's left pad (architect
-    // 2026-09-29, the right-handed tablet's layout). The enum lists the
+    // detection. TWENTY buttons in four groups (2 + 9 + 4 + 5, kRow8Groups,
+    // since 2026-10-24; the clock at the row's left with the tab name and
+    // the state line after it), the block ending at the program ring's
+    // outer right column (architect 2026-09-29, the right-handed tablet's
+    // layout). The enum lists the
     // marker group, the old walk group and the arrows (the painted order
     // until 2026-10-18), and THE ONE PLAY/STOP BUTTON (bare Space) before
     // them, which the row PAINTS LAST, at the far right (architect
-    // 2026-10-12: the Go to Start / Go to End pair left the row — Home / End
-    // keep their keys — and Play abuts the right arrow, Shift+Play being the
-    // A/B audition). THE PAINTED ORDER IS THE PAINTER'S SINCE 2026-10-18
-    // (architect, regrouping the two right-hand groups): the verbs, then
-    // Down, Up, Previous Marker, Next Marker (kTransportStepWalkGroup), then
-    // Switch Tab, Center, Left, Right, Play (kTransportNudgePlayGroup,
-    // paint_handler.cpp) — nothing reads this block's order: THE
+    // 2026-10-12: Play abuts the right arrow, Shift+Play being the A/B
+    // audition). THE GO TO START / GO TO END PAIR left the row that day and
+    // CAME BACK 2026-10-24 as its FIRST GROUP (START | END, kTransportSkipGroup;
+    // their shift presses the whole piece's ends), enumerated after Play.
+    // THE PAINTED ORDER IS THE PAINTER'S SINCE 2026-10-18 (architect,
+    // regrouping the two right-hand groups): the skips, the nine verbs
+    // (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump, Edit, Add Sel,
+    // Copy, Drag), then Down, Up, Previous Marker, Next Marker
+    // (kTransportStepWalkGroup), then Switch Tab, Center, Left, Right, Play
+    // (kTransportNudgePlayGroup, paint_handler.cpp) — nothing reads this
+    // block's order: THE
     // MARKER GROUP'S SIX VERBS
     // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
     // Delete, disable = Ctrl+D, inherit = Ctrl+N; then JUMP TO DEFINING MARKER
@@ -2888,9 +2897,9 @@ enum class RedesignButton {
     // and a paste raises a prompt).
     IconCopyPhaseResets,
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40) — the verb group's
-    // EIGHTH and last member, IMMEDIATELY RIGHT OF ADD TO SELECTION (his
-    // reason: arm Add to Selection, pick several flags, then arm this and drag
-    // them). Bare `[`, a ONE-SHOT LAMP over AppState::value_drag_lamp: lit,
+    // NINTH and last member, right of Copy Phase Resets since 2026-10-24 and
+    // IMMEDIATELY RIGHT OF ADD TO SELECTION until then (his reason: arm Add to
+    // Selection, pick several flags, then arm this and drag them). Bare `[`, a ONE-SHOT LAMP over AppState::value_drag_lamp: lit,
     // every flag drag is the value drag in every view; dark, none is; the
     // lift of a value drag that began puts it out (the rule is at
     // value_drag_posture). It wears the set's pen (icons::Icon::ValueDrag,
@@ -3017,12 +3026,12 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-22):
-// TWENTY-FOUR in row 4's enum block and SEVENTEEN in the bottom row's — 41
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-25):
+// TWENTY-FOUR in row 4's enum block and TWENTY in the bottom row's — 44
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
-// 2026-10-22). PAINTED, the split is 22 + 19: HistoryOlder and HistoryNewer,
-// enumerated in row
-// 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
+// 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24).
+// PAINTED, the split is 22 + 22: HistoryOlder and HistoryNewer, enumerated
+// in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
@@ -3176,8 +3185,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // `h` view's stand-ins replace (kIconRowHistoryStandIns), so Save
         // stays outside the swap.
         case RedesignButton::Undo:
-        // FULL ZOOM OUT LEADS THE ZOOM GROUP, and so ends Undo's group's
-        // replacement in the `h` view.
+        // ZOOM TO FIT LEADS THE ZOOM GROUP (Full Zoom Out until 2026-10-24),
+        // and so ends Undo's group's replacement in the `h` view.
         case RedesignButton::IconZoomFitBest:
         // THE BPM OPENER LEADS THE ITERATION GROUP (since 2026-09-04).
         case RedesignButton::IconBpm:
@@ -11213,12 +11222,26 @@ int64_t monotonic_ms();
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // THE START THE CHOKEPOINT ABOVE WOULD REST `start` AT, at the live zoom:
 // its grid snap and its two walls as a pure function, the arithmetic's one
-// copy (clamp_viewport_start's body calls it after its level clamp, its one
-// caller). Its snap half is nearest_viewport_grid_point
+// copy (clamp_viewport_start's body calls it after its level clamp; its
+// other caller is zoom_to_start_would_move below, which asks it ahead at an
+// unchanged level). Its snap half is nearest_viewport_grid_point
 // (warp_frame_map_view.h), which hold_derived_on_arrival (below) reads apart
 // from the walls. Body in main.cpp beside the chokepoint.
 int64_t resting_viewport_start(const AppState& a, const GuiAudio& audio,
                                int64_t start);
+// WOULD Viewport::apply_zoom_to_start MOVE THE CAMERA (2026-10-25): the
+// applier's idempotence test as a pure question, its one owner — the applier
+// reads it at its head and returns there when it answers false, so a request
+// whose resting (level, start) is the live viewport's writes nothing,
+// repaints nothing and leaves no state behind. The level is clamp_zoom_level's
+// (the chokepoint's own clamp) and counts as unchanged within 1e-9; at an
+// unchanged level the start is resting_viewport_start's at the live zoom. No
+// piece (a zero frame count) answers false, the applier's own head return.
+// TWO READERS: the applier (viewport.cpp, its body beside it) and
+// span_framing_would_act (input_handler.cpp), the Zoom to Fit key's frame
+// term.
+bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
+                              double new_zoom_level, int64_t new_start);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.
 // ONE FORM ONLY, and it takes the viewport AND its samples-per-pixel
 // EXPLICITLY: there is no live-viewport convenience overload any more (both
@@ -11446,9 +11469,8 @@ double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level)
 // view (OverviewRecall::audio_view). A stamp from the other audio view has
 // been put away with that view and is not restored there. Read by
 // overview_command_target below (its RestoreView arm), which the act and the
-// Zoom to Fit button's tooltip ask (its face too until 2026-10-24, when the
-// always-live frame twin made the face constant). Defined in
-// input_handler.cpp beside the act.
+// Zoom to Fit button's face and tooltip ask. Defined in input_handler.cpp
+// beside the act.
 bool overview_recall_restorable(const AppState& a);
 
 // WHAT BARE `0` WOULD DO — the whole-song zoom command's one fork, named
@@ -11469,17 +11491,18 @@ bool overview_recall_restorable(const AppState& a);
 //     file that opens whole-song-visible, a level the clamp or a zoom gesture
 //     parked there), so nothing was stamped. The press is a benign refusal
 //     already at its state: silent, no card, and the button greys unless its
-//     shifted twin would act (redesign_button_enabled). `level` is unused.
+//     frame or its reset would act (redesign_button_enabled, 2026-10-25).
+//     `level` is unused.
 //     (Until 2026-09-23 the unstamped ceiling ran the `c` command at the
 //     working zoom, CenterAtWorkingZoom, deleted with the ruling.)
 //   * ZoomOut — everything else: the whole-song state is down and the level
 //     is below the per-file ceiling; `level` is that ceiling, which the press
 //     applies after stamping.
-// TWO READERS: GuiInputHandler::run_overview_command (the act, which
-// decides nothing of its own past this) and the Zoom to Fit button's
-// tooltip (its face, redesign_button_enabled, a third until 2026-10-24: the
-// frame twin always acts, so the face no longer asks). Defined in input_handler.cpp
-// beside the act.
+// THREE READERS: GuiInputHandler::run_overview_command (the act, which
+// decides nothing of its own past this), the Zoom to Fit button's face
+// (redesign_button_enabled, its plain term under the twin rule — out for
+// 2026-10-24 alone, back 2026-10-25 when the frame proved not always to act)
+// and its tooltip. Defined in input_handler.cpp beside the act.
 struct OverviewCommandTarget {
     enum class Arm { ZoomOut, RestoreView, NoOp };
     Arm    arm   = Arm::ZoomOut;
@@ -13579,8 +13602,9 @@ inline bool playback_launch_playable(const AppState& a,
 // stamp, and the three wall-refusing acts now run their wall test ahead of it
 // (the rule and its discriminator — the face, not the card — are at
 // Undo::coalesce_gesture). Of the zoom buttons, `c` stays lit because it
-// always acts, and `0` greys only where it has nothing to return to and its shifted twin would
-// not act either (the twin rule below).
+// always acts, and `0` greys only where it has nothing to return to and
+// neither its shifted twin (the frame) nor its ctrl-shifted one (the reset)
+// would act (the twin rule below).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -14022,19 +14046,34 @@ static_assert(kPhaseResetLeadInSamples == kN / 2 &&
 int64_t phase_reset_lead_in_launch_offset(const AppState& a,
                                           const GuiPlayback& playback);
 
-// (WOULD SHIFT+0 (RESET TRIM) ACT — reset_trim_would_act, the Full Zoom Out
-// button's shifted twin asked ahead for its face and its tooltip's shift
-// line, 2026-09-22 to 2026-10-24 — LEFT WITH ITS TWO READERS (architect
-// 2026-10-24): the button is Zoom to Fit, its shifted press FRAMES THE TRIM
-// (Shift+0, run_span_framing_command) and its ctrl-shift press resets it
-// (Ctrl+Shift+0). THE FRAME ALWAYS ACTS — a trim always has a span, the whole
-// song's at worst — so under the twin rule the face never greys and the
-// one modifier line naming both presses never drops, and nothing asks the
-// reset ahead any more. The reset's own refusals stand at its act: the `h`
-// view's allowlist, which does not admit the chord (history_mode_key_blocked,
-// input_key_dispatch.cpp, the view's card), then the maximizer's identity
-// guard, trim_is_full_window at handle_trim_clear_both's head
-// (input_trim.cpp), silent over the whole-song window.)
+// THE ZOOM TO FIT KEY'S TWO MODIFIED TERMS (2026-10-25), asked ahead for its
+// face (redesign_button_enabled, the twin rule's OR with the plain fork,
+// overview_command_target) and its tooltip's modifier line
+// (redesign_button_tooltip's overload, which drops the line where both answer
+// false), so the grey, the line and the presses cannot disagree.
+//
+// WOULD SHIFT+0 (FRAME THE TRIM) ACT: run_span_framing_command's own three
+// steps as a pure question — its span (a proper trim sub-window with the edge
+// margin each side, else the whole song), the span framer's landing, and the
+// applier's idempotence test (zoom_to_start_would_move, the one owner the act
+// itself returns on) — so it is false exactly where the press would land the
+// viewport it leaves: a second framing with nothing moved between, or bare
+// `0`'s ceiling over a full trim. Defined in input_handler.cpp beside the
+// command, the framer's arithmetic file-local there.
+bool span_framing_would_act(const AppState& a, const GuiAudio& audio);
+
+// WOULD CTRL+SHIFT+0 (RESET TRIM) ACT (restored 2026-10-25; it stood
+// 2026-09-22 to 2026-10-24 for the reset on Shift+0, and the always-acting
+// premise of the frame retired it for one day): the act's own refusals in the
+// order the press meets them — the `h` view's allowlist, which does not admit
+// the chord (history_mode_key_blocked, input_key_dispatch.cpp, the view's
+// card), then the maximizer's identity guard, trim_is_full_window at
+// handle_trim_clear_both's head (input_trim.cpp), silent over the whole-song
+// window.
+inline bool reset_trim_would_act(const AppState& a, int64_t total_frames) {
+    return !a.history_mode.active &&
+           !trim_is_full_window(a.trim, total_frames);
+}
 
 // THE COPY PHASE RESETS KEY'S LADDER TERM (architect 2026-10-24): true iff
 // phase_reset_copy_refusal (phase_reset_propagate.h) answers None — the warp
@@ -14272,22 +14311,26 @@ inline bool redesign_button_enabled(const AppState& a,
         // until 2026-10-18, the nudge-and-play group's since); its
         // face did not move with it. It admits no modifier (no modified `c`
         // binds since 2026-10-14), so there is no twin to compose. ZOOM TO
-        // FIT NEVER GREYS UNDER THE TWIN RULE (architect 2026-10-24): bare
-        // `0` is a silent no-op on overview_command_target's NoOp arm (a
-        // ceiling the key did not produce, or a stamp from the other audio
-        // view — overview_recall_restorable is the restorable owner;
-        // architect 2026-09-23, "zero should just lose its meaning" when
-        // there is nothing to return to), but the button admits two twins —
-        // Shift+0, FRAME THE TRIM, and Ctrl+Shift+0, Reset Trim — and THE
-        // FRAME ALWAYS ACTS (a trim always has a span, the whole song's at
-        // worst: run_span_framing_command), so some variant is live wherever
-        // the roster is. (It greyed where the plain fork's NoOp met a reset
-        // that would not act, reset_trim_would_act, from 2026-09-22 until
-        // then, Shift+0 the reset.) Bare `0` and Shift+0 are admitted in the
-        // `h` view — the derived partition finds the plain chord on the
-        // mode's allowlist — and the reset refuses there on the view's card.
+        // FIT GREYS ONLY WHEN NONE OF ITS THREE PRESSES WOULD ACT, the twin
+        // rule (2026-10-25): bare `0` is a silent no-op on
+        // overview_command_target's NoOp arm (a ceiling the key did not
+        // produce, or a stamp from the other audio view —
+        // overview_recall_restorable is the restorable owner; architect
+        // 2026-09-23, "zero should just lose its meaning" when there is
+        // nothing to return to), Shift+0, FRAME THE TRIM, returns where its
+        // landing is the live viewport (span_framing_would_act), and
+        // Ctrl+Shift+0, Reset Trim, where the trim is already full or the
+        // `h` view cards it (reset_trim_would_act) — so a full trim framed
+        // whole by Shift+0 or the trim bar's double-click greys the key, the
+        // frame NOT always acting as the face of 2026-10-24 had it. Bare
+        // `0` and Shift+0 are admitted in the `h` view — the derived
+        // partition finds the plain chord on the mode's allowlist — and the
+        // reset refuses there on the view's card.
         case RedesignButton::IconZoomFitBest:
-            return true;
+            return overview_command_target(a, audio).arm !=
+                       OverviewCommandTarget::Arm::NoOp ||
+                   span_framing_would_act(a, audio) ||
+                   reset_trim_would_act(a, total_frames);
         case RedesignButton::IconZoomOriginal:
             return true;
         // THE WAVEFORM MAGNIFICATION LAMP IS LIVE IN BOTH AUDIO VIEWS
@@ -16258,7 +16301,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
         // category: their axes are the four view selectors' alone now.)
-        // FULL ZOOM OUT AND CENTER (2026-08-12, the icon row's zoom pair until
+        // ZOOM TO FIT AND CENTER (2026-08-12, the icon row's zoom pair until
         // Center moved to the bottom row's walk group on 2026-09-29 with its
         // words unchanged); the accelerators are the table's own
         // convention — a key names its own cap. BOTH ARE STATE-FREE HERE ONLY
@@ -16272,10 +16315,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // Defining Marker's sentence form, the act and the modifier and not
         // a key): Shift+0 FRAMES THE TRIM, Ctrl+Shift+0 RESETS IT (Shift+0
         // reset it from 2026-09-22, the line "Press Shift to reset the
-        // trim."). THE LINE STANDS WHOLE IN EVERY STATE: a multi-form line
-        // stands while any of its forms is live (the overload's head), and
-        // the frame always acts. CENTER CARRIES NONE: it admits no modifier
-        // (2026-10-14).
+        // trim."). THE LINE STANDS WHOLE while either form would act (a
+        // multi-form line stands while any of its forms is live, the
+        // overload's head) and drops there where neither would (2026-10-25).
+        // CENTER CARRIES NONE: it admits no modifier (2026-10-14).
         case RedesignButton::IconZoomFitBest:
             return {"Zoom to Fit (0)",
                     "Press Shift to frame the trim, Ctrl+Shift to reset it."};
@@ -16579,8 +16622,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Copy Phase Resets (P)",
                     "Press Ctrl to paste them, Ctrl+Shift to paste their "
                     "state."};
-        // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's EIGHTH
-        // and last, a lamp — the hint NAMES THE TOGGLE, Add to Selection's
+        // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's NINTH
+        // and last (after Copy Phase Resets since 2026-10-24), a lamp — the hint NAMES THE TOGGLE, Add to Selection's
         // shape, and the accelerator names the cap (this table's punctuation
         // rule). ONE LINE: it admits no modifier. The words hold lit or dark,
         // spent or not — a tooltip names the act and never a state.
@@ -16871,10 +16914,11 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // the act or the face already reads, and several of those need what the
 // enabled predicate needs — the overview command's resolve, the step kind
 // refusals and the skips' landing owner read GuiAudio — so the two share
-// that object in the same order and the painter passes it once. (THE FRAME
-// COUNT, which the trim's full-window owner read for Full Zoom Out's reset
-// line from 2026-09-01, LEFT 2026-10-24 with that fork: Zoom to Fit's line
-// never drops.) IT SHIPPED WITH THE ENABLED PREDICATE'S
+// that object in the same order and the painter passes it once. THE FRAME
+// COUNT rides third, as in the enabled predicate, for the trim's full-window
+// owner (reset_trim_would_act, Zoom to Fit's reset term) — out for
+// 2026-10-24 alone, when that fork briefly left, and back with it
+// 2026-10-25. IT SHIPPED WITH THE ENABLED PREDICATE'S
 // WHOLE SIGNATURE that morning, `playback` and `target_render` carried
 // UNREAD "for the shape", and both left the same day: the rule says an object
 // arrives WITH the arm that reads it, and a fork that comes to need one adds
@@ -16883,7 +16927,8 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // paint_handler.cpp); the dwell writer (recompute_redesign_button_hover,
 // input_pointer.cpp) asks membership alone and reads the constant table.
 inline RedesignTooltipText redesign_button_tooltip(
-        const AppState& a, const GuiAudio& audio, RedesignButton b) {
+        const AppState& a, const GuiAudio& audio, int64_t total_frames,
+        RedesignButton b) {
     // THE SAVE BUTTON'S OVERRIDES: inside the `h` view the button IS the
     // checkpoint act, so it takes that act's name. It is a one-line form
     // there — Save's one admission, shift (2026-10-11), spells the same
@@ -17013,17 +17058,23 @@ inline RedesignTooltipText redesign_button_tooltip(
         // nothing else. ("Back to Working Zoom", the unstamped ceiling's `c`,
         // left with that arm the same day.)
         //
-        // ITS MODIFIER LINE NEVER DROPS (2026-10-24): it names the frame
-        // (Shift+0) and the reset (Ctrl+Shift+0), and a multi-form line
-        // stands whole while any of its forms is live — the frame always is
-        // (run_span_framing_command; the head's rule). Until then it named
-        // the reset alone and dropped on reset_trim_would_act.
+        // ITS MODIFIER LINE names the frame (Shift+0) and the reset
+        // (Ctrl+Shift+0), and a multi-form line stands whole while any of its
+        // forms is live, so it DROPS WHERE NEITHER WOULD ACT (2026-10-25):
+        // span_framing_would_act and reset_trim_would_act, the two terms the
+        // face ORs with the plain fork. (It named the reset alone and dropped
+        // on reset_trim_would_act from 2026-09-01, and never dropped on
+        // 2026-10-24 alone.)
         case RedesignButton::IconZoomFitBest: {
             const OverviewCommandTarget t = overview_command_target(a, audio);
+            const char* line2 =
+                span_framing_would_act(a, audio) ||
+                        reset_trim_would_act(a, total_frames)
+                    ? redesign_button_tooltip(b).line2
+                    : nullptr;
             if (t.arm == OverviewCommandTarget::Arm::RestoreView)
-                return {"Back to Previous View (0)",
-                        redesign_button_tooltip(b).line2};
-            break;
+                return {"Back to Previous View (0)", line2};
+            return {redesign_button_tooltip(b).line1, line2};
         }
         // THE TWO SKIPS' SHIFT LINE DROPS WHERE THE TWO FORMS LAND ON ONE
         // FRAME (2026-10-24, the buttons' return; their rule of 2026-08-30):
@@ -17285,9 +17336,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // the role, never added), and since 2026-10-14 JUMP TO DEFINING MARKER's
 // copy line where the copy would refuse —
 // and since 2026-10-24 COPY PHASE RESETS' paste line in the phase-reset
-// column, where both pastes refuse at their first rung (the maximizer's
-// line over a full window dropped from 2026-09-22 until Zoom to Fit's line,
-// naming the always-live frame too, stopped dropping that day) —
+// column, where both pastes refuse at their first rung, and since 2026-10-25
+// ZOOM TO FIT's frame-and-reset line where neither the frame nor the reset
+// would act (the maximizer's line alone dropped over a full window from
+// 2026-09-22) —
 // the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,

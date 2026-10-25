@@ -420,7 +420,10 @@ struct Viewport {
     // (level, start) after clamping equals the current viewport, it is a true
     // no-op — no repaint and no state left behind — so a second identical framing
     // does nothing, while any pan/zoom in between
-    // makes the target differ and this re-frames. Its callers: the span
+    // makes the target differ and this re-frames; the test is
+    // zoom_to_start_would_move (app_state.h), asked at the head before any
+    // write (2026-10-25), the one owner the Zoom to Fit key's face also reads
+    // through span_framing_would_act. Its callers: the span
     // framer frame_span_into_view (the trim-bar double-click and the group
     // undo/redo restore) and bare `0`'s restore of its stamped view
     // (run_overview_command), whose start is the stamp's, not a span's.
@@ -505,8 +508,9 @@ struct Viewport {
     // the legend's battery and clock and the roster's faces (the app's
     // caption painted the window's state and the project's name too, until
     // 2026-10-24). Those FACES may be predicates over the view (Zoom to
-    // Fit's read the zoom level until 2026-10-24, when its always-live frame
-    // twin made it constant), and many more move with the acts that
+    // Fit's reads the zoom level and the viewport start — its plain fork
+    // and, since 2026-10-25, its frame term; constant for 2026-10-24 alone),
+    // and many more move with the acts that
     // reach this rect beside a viewport change (Undo / Redo and Save after
     // an edit, an undo or a load in place), so the rows are not dropped
     // from the damage but OWED A CHECK (damage_window_top_rows, above the

@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -2949,15 +2950,16 @@ OverviewCommandTarget overview_command_target(const AppState& app,
 }
 
 void GuiInputHandler::run_overview_command() {
-    // The bare `0` key: A TOGGLE BETWEEN FULL ZOOM OUT AND THE VIEW IT LEFT
+    // The bare `0` key, Zoom to Fit (its name since 2026-10-24): A TOGGLE
+    // BETWEEN FULL ZOOM OUT AND THE VIEW IT LEFT
     // (architect 2026-09-23: "Zero actually should be a toggle between full
     // zoom out and restore to previous zoom level, playhead position, and
     // viewport position"). It superseded the 2026-08-05 / 2026-08-18 reading,
     // whose second press ran the `c` command at the stamped level and so
     // re-centred instead of restoring the window.
     //
-    // THE FORK is overview_command_target's, one owner shared with the Full
-    // Zoom Out button's face and tooltip; its three arms:
+    // THE FORK is overview_command_target's, one owner shared with the Zoom
+    // to Fit button's face and tooltip; its three arms:
     //
     // FIRST PRESS (ZoomOut): STAMP the zoom level, the viewport start and the
     // resting playhead into the active tab's OverviewRecall, with the audio
@@ -2991,8 +2993,10 @@ void GuiInputHandler::run_overview_command() {
     // because we've changed views, zero should just lose its meaning"): a
     // ceiling this key did not produce, or a stamp taken in the other audio
     // view. A benign refusal already at its state — silent, no card
-    // (notifications.h) — and the button greys unless Reset Trim, its shifted
-    // twin, would act. The whole-song state is left standing, so a flip back
+    // (notifications.h) — and the button greys unless one of its two modified
+    // presses would act, Shift+0's frame or Ctrl+Shift+0's reset
+    // (span_framing_would_act, reset_trim_would_act; 2026-10-25). The
+    // whole-song state is left standing, so a flip back
     // brings the stamp into reach again. (Until that ruling a cross-view
     // stamp was re-expressed through the live map and the unstamped ceiling
     // ran the `c` command; both arms are deleted.)
@@ -3007,8 +3011,8 @@ void GuiInputHandler::run_overview_command() {
     //
     // THE TWO RECORDS are this function's alone: it is the stamp's one writer
     // and the whole-song state's one setter (both declarations, app_state.h).
-    // The trim-bar DOUBLE-CLICK DIVERGES from this (run_span_framing_command):
-    // it frames the trim / whole-song SPAN.
+    // The trim-bar DOUBLE-CLICK and Shift+0 DIVERGE from this
+    // (run_span_framing_command): they frame the trim / whole-song SPAN.
     const OverviewCommandTarget target = overview_command_target(app, audio);
     switch (target.arm) {
     case OverviewCommandTarget::Arm::ZoomOut: {
@@ -3055,10 +3059,25 @@ void GuiInputHandler::run_overview_command() {
     }
 }
 
-void frame_span_into_view(AppState& app, const GuiAudio& audio,
-                          Viewport& viewport, int64_t lo, int64_t hi,
-                          bool margin) {
-    // The shared span framer (declared in input_handler.h). Computes the margined
+namespace {
+// WHERE THE SPAN FRAMER WOULD LAND — the level and the unsnapped start
+// frame_span_into_view hands apply_zoom_to_start, as a pure question
+// (2026-10-25: lifted out of the framer so span_framing_would_act, the Zoom to
+// Fit key's frame term, asks the arithmetic the act runs, never a copy of it).
+// TWO READERS: frame_span_into_view and span_framing_would_act below. No
+// landing (nullopt) where there is nothing to frame on: no piece loaded, a
+// zero-width waveform, an empty live domain — the framer's three head returns.
+struct SpanFramingLanding {
+    double  level = 0.0;
+    int64_t start = 0;
+};
+
+std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
+                                                       const GuiAudio& audio,
+                                                       int64_t lo, int64_t hi,
+                                                       bool margin) {
+    // The shared span framer's arithmetic (frame_span_into_view, declared in
+    // input_handler.h, applies it). Computes the margined
     // fit level, then ALWAYS derives the start by CENTERING the margined span in
     // the PAINTED window at that level (W·q_t, q_t the sixteenth-frame grid step
     // — the span the waveform will show); the start itself is left unsnapped,
@@ -3068,13 +3087,13 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // to the span's left edge (W·q_t covers the margined span by the fit-level
     // solve, past it by under a sixteenth of a frame per column). Ends at
     // apply_zoom_to_start.
-    if (audio.total_frames() <= 0) return;
+    if (audio.total_frames() <= 0) return std::nullopt;
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
-    if (W <= 0) return;
+    if (W <= 0) return std::nullopt;
     const int64_t column = audio.working_column();
     const int64_t total = live_total_frames(app, audio);
-    if (total <= 0) return;
+    if (total <= 0) return std::nullopt;
 
     if (hi < lo) std::swap(lo, hi);   // defensive; monotone callers keep order
     double flo = static_cast<double>(lo);
@@ -3128,37 +3147,36 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
         static_cast<double>(W);
     const int64_t target_start =
         static_cast<int64_t>(std::nearbyint(mid - visible_t / 2.0));
-
-    // Set level + start through the two clamp chokepoints and repaint like the
-    // other zoom commands; the idempotent current-vs-target no-op lives there.
-    // NOT apply_zoom_change (which would recenter on the playhead).
-    viewport.apply_zoom_to_start(target_level, target_start);
+    return SpanFramingLanding{target_level, target_start};
 }
 
-void GuiInputHandler::run_span_framing_command() {
-    // The trim-bar double-click ZOOMS TO A SPAN, its own route beside the bare
-    // `0` full zoom out (run_overview_command) and `c`'s marker-jump working zoom.
-    // It only ever FRAMES a span,
-    // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
-    // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
-    // FULL trim window lands, it being the whole song). The region arm above
-    // them died with the separate region state. The framing is idempotent — a second double-click with
-    // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
-    // compare), while any pan/zoom between clicks re-frames.
-    if (audio.total_frames() <= 0) return;
+// THE SPAN SHIFT+0 AND THE TRIM BAR'S DOUBLE-CLICK FRAME — the target of
+// run_span_framing_command as a pure question (2026-10-25, lifted beside the
+// landing above for the same reader). TWO READERS: run_span_framing_command
+// and span_framing_would_act below. No span (nullopt) where the command has
+// nothing to dispatch on: no piece, a zero-width waveform, no sample rate, an
+// empty live domain — its head returns.
+struct TrimFramingSpan {
+    int64_t lo     = 0;
+    int64_t hi     = 0;
+    bool    margin = false;
+};
+
+std::optional<TrimFramingSpan> trim_framing_span(const AppState& app,
+                                                 const GuiAudio& audio) {
+    if (audio.total_frames() <= 0) return std::nullopt;
 
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
     const int     sr   = audio.sample_rate();
-    if (W <= 0 || sr <= 0) return;
+    if (W <= 0 || sr <= 0) return std::nullopt;
     const int64_t total = live_total_frames(app, audio);
-    if (total <= 0) return;
+    if (total <= 0) return std::nullopt;
 
     // The target span in ACTIVE-domain frames [lo, hi], and whether it takes the
     // framing margin (the trim window) or none (the whole song already fills
     // the window at the effective ceiling).
-    int64_t lo = 0, hi = total;
-    bool    margin = false;
+    TrimFramingSpan span{0, total, false};
     // (THE REGION ARM IS GONE, 2026-08-18, and with it the span priority this
     // body used to carry: a live region won over the trim, which was a real
     // choice while the two were separate states. The region IS the trim now,
@@ -3179,21 +3197,68 @@ void GuiInputHandler::run_span_framing_command() {
             compute_trim_samples(app, audio.total_frames());
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
-        lo = static_cast<int64_t>(std::nearbyint(
+        span.lo = static_cast<int64_t>(std::nearbyint(
             map_source_to_target(static_cast<double>(trim_src.first), dmap)));
-        hi = static_cast<int64_t>(std::nearbyint(
+        span.hi = static_cast<int64_t>(std::nearbyint(
             map_source_to_target(static_cast<double>(trim_src.second), dmap)));
-        if (hi < lo) std::swap(lo, hi);  // defensive; the monotone map keeps order
-        margin = true;
+        if (span.hi < span.lo)
+            std::swap(span.lo, span.hi);  // defensive; the monotone map keeps order
+        span.margin = true;
     }
+    return span;
+}
+}  // namespace
 
-    // Frame the span through the shared framer (the edge margin per side for
-    // the trim
-    // window, none for the whole song — already whole-song at the effective ceiling,
-    // start 0). Centering + the wall clamp make the whole-song arm degenerate to
-    // the effective ceiling at start 0. The idempotent no-op lives in
-    // apply_zoom_to_start inside the framer.
-    frame_span_into_view(app, audio, viewport, lo, hi, margin);
+void frame_span_into_view(AppState& app, const GuiAudio& audio,
+                          Viewport& viewport, int64_t lo, int64_t hi,
+                          bool margin) {
+    // The shared span framer (declared in input_handler.h): the landing above,
+    // then level + start through the two clamp chokepoints and the repaint like
+    // the other zoom commands; the idempotent current-vs-target no-op lives
+    // there (zoom_to_start_would_move). NOT apply_zoom_change (which would
+    // recenter on the playhead).
+    if (const std::optional<SpanFramingLanding> landing =
+            span_framing_landing(app, audio, lo, hi, margin)) {
+        viewport.apply_zoom_to_start(landing->level, landing->start);
+    }
+}
+
+// WOULD SHIFT+0 (FRAME THE TRIM) ACT — the contract and the reader are at the
+// declaration (app_state.h). The command's own three steps asked ahead: its
+// span, the framer's landing, the applier's idempotence test.
+bool span_framing_would_act(const AppState& app, const GuiAudio& audio) {
+    const std::optional<TrimFramingSpan> span = trim_framing_span(app, audio);
+    if (!span) return false;
+    const std::optional<SpanFramingLanding> landing =
+        span_framing_landing(app, audio, span->lo, span->hi, span->margin);
+    return landing &&
+           zoom_to_start_would_move(app, audio, landing->level, landing->start);
+}
+
+void GuiInputHandler::run_span_framing_command() {
+    // The trim-bar double-click and Shift+0 (since 2026-10-24, Zoom to Fit's
+    // shifted press) ZOOM TO A SPAN, their own route beside bare `0`'s
+    // whole-piece toggle (run_overview_command) and `c`'s marker-jump working
+    // zoom. It only ever FRAMES a span,
+    // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
+    // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
+    // FULL trim window lands, it being the whole song). The region arm above
+    // them died with the separate region state. The framing is idempotent — a second double-click with
+    // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
+    // compare, zoom_to_start_would_move — which is also why the Zoom to Fit
+    // key greys over a framed full trim, span_framing_would_act), while any
+    // pan/zoom between clicks re-frames.
+    // The span is trim_framing_span's (above, the one copy the Zoom to Fit
+    // key's frame term also reads), framed through the shared framer (the edge
+    // margin per side for the trim window, none for the whole song — already
+    // whole-song at the effective ceiling, start 0). Centering + the wall
+    // clamp make the whole-song arm degenerate to the effective ceiling at
+    // start 0.
+    if (const std::optional<TrimFramingSpan> span =
+            trim_framing_span(app, audio)) {
+        frame_span_into_view(app, audio, viewport, span->lo, span->hi,
+                             span->margin);
+    }
 }
 
 // Shared wheel handler. ONE ARM, EXACT-MATCHED (architect approval

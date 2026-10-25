@@ -1644,9 +1644,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 //     rects there), so no press reaches them; their ENABLED BIT still answers
 //     dead out there (redesign_button_enabled reads `history_mode.active` for
 //     them and states the whole succession);
-//   * BARE Home / BARE End and CTRL+HOME / CTRL+END — keys alone since
-//     2026-10-12 (the bottom row's skip buttons left), claimed above beside
-//     the march;
+//   * BARE Home / BARE End and SHIFT+HOME / SHIFT+END — row 8's START and
+//     END buttons since 2026-10-24 (the two skips' return; their plain
+//     presses bare, their shift presses the whole-piece pair, Ctrl+Home /
+//     Ctrl+End until then and keys alone from 2026-10-12, when the skips
+//     left), claimed above beside the march, so both stand in the view;
 //   * BARE `c` — the icon row's Center button since the 2026-08-12
 //     relayout, likewise;
 //   * BARE Tab (with its shifted form, the walk button's shift press) — the
@@ -8350,8 +8352,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // Bare-key (no-modifier) dispatch. See the declaration for the binding list;
 // the caller gates on no modifiers held.
 // THE Home / End JUMP, one body for four arms — bare Home, bare End and their
-// two CTRL forms — so the three unconditional acts are spelled once and the
-// landings differ only in the flags handed to the arithmetic owner.
+// two SHIFT forms (since 2026-10-24; CTRL until then), row 8's START and END
+// buttons' plain and shift presses — so the three unconditional acts are
+// spelled once and the landings differ only in the flags handed to the
+// arithmetic owner.
 //
 // IT IS A ROUTE OUT OF THE MARKER LANE: the playhead is leaving the focused flag
 // for a spot nothing marks, so the selection must go with it — the lane rule's
@@ -8368,8 +8372,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // THE LANDING FRAME COMES FROM THE SHARED OWNER since 2026-08-15
 // (playhead_skip_landing_frame, viewport.cpp), whose two arms this body selects
 // between with `whole_piece`: FALSE takes Viewport::trim_range's own bounds (the
-// bare pair), TRUE forces the piece's ends whatever the trim is (the ctrl pair,
-// architect 2026-09-26). Both come back pre-clamped, and the clamp is idempotent
+// bare pair), TRUE forces the piece's ends whatever the trim is (the shift
+// pair since 2026-10-24, the ctrl pair from architect 2026-09-26 until then).
+// Both come back pre-clamped, and the clamp is idempotent
 // on what move_playhead_to would clamp anyway.
 //
 // THE STEPS STILL RUN UNGATED past the head refusal: the audition stop and
@@ -8635,7 +8640,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::Home:
         // The trim-begin jump. The body is shared with End and with the two
-        // CTRL forms (run_playhead_end_jump, above this dispatch).
+        // SHIFT forms (run_playhead_end_jump, above this dispatch).
         run_playhead_end_jump(/*forward=*/false, /*whole_piece=*/false);
         break;
     case GuiKeys::End:

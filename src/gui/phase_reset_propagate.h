@@ -158,8 +158,11 @@ struct PhaseResetPropagate {
     // the first label divergence or per-block phase-reset count
     // mismatch, and produces at most one undo entry covering all
     // aligned blocks. A divergence/mismatch is reported as a notification
-    // card (GuiNotifications::notify); a clean or empty run is silent.
-    // No confirmation prompt: it applies directly.
+    // card (GuiNotifications::notify); a run that paired no block at all
+    // (one side produced none) cards kNothingMatched, the placement paste's
+    // sentence (propagate_blocks.h); a clean run that paired blocks is
+    // silent, whatever it flipped. No confirmation prompt: it applies
+    // directly.
     void paste_state_apply();
 
     // Shared end-of-paste tail: land the completed paste in the P COLUMN OF

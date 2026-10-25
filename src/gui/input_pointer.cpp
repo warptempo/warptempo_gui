@@ -635,7 +635,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconCopyPhaseResets,
      GuiKeys::P,      false, false, false},                             // bare P (+Ctrl: Ctrl+P, +Ctrl+Shift: Ctrl+Shift+P)
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40), the verb group's
-    // EIGHTH and last, immediately right of Add to Selection: BARE `[`, which
+    // NINTH and last, immediately right of Copy Phase Resets (right of Add to
+    // Selection until Copy took the seat between, 2026-10-24): BARE `[`, which
     // was free, the one-shot lamp that arms the flag's value drag, permanently
     // lit under grid iterations (AppState::value_drag_lamp, value_drag_armed;
     // the rule at value_drag_posture). Add to
@@ -1328,8 +1329,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
-//   FULL ZOOM OUT AND CENTER since the 2026-08-12 relayout (bare `0` is the
-//   allowlist's own zoom admission and bare `c` is the mode's vocabulary —
+//   ZOOM TO FIT (Full Zoom Out until 2026-10-24) AND CENTER since the
+//   2026-08-12 relayout (bare `0` is the allowlist's own zoom admission,
+//   Shift+0's frame beside it, and bare `c` is the mode's vocabulary —
 //   pure navigation, live with nothing hand-listed; Center on the bottom
 //   row since 2026-09-29, beside Switch Tab since 2026-10-18 — Previous
 //   Marker's and Switch Tab's Shift+Tab and Ctrl+Shift+Tab being the mode's
@@ -1400,14 +1402,18 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   partition's dead one, and the walk says so with nothing hand-listed);
 //   the BPM
 //   opener (Ctrl+B), iteration mode (bare `i`), listen
-//   (bare `l`); OPEN TEXT EDITOR (bare Return, its ctrl presses the
-//   phase-reset copy and paste since 2026-10-21 — which had their own two
-//   buttons here as Ctrl+P / Ctrl+Alt+P until the 2026-08-20 relocation);
+//   (bare `l`); OPEN TEXT EDITOR (bare Return, admitting no modifier since
+//   2026-10-24 — its ctrl presses were the phase-reset copy and paste from
+//   2026-10-21 until then); COPY PHASE RESETS (bare P, its ctrl presses
+//   Ctrl+P and Ctrl+Shift+P, the paste and the state paste, 2026-10-24 — the
+//   propagate family, which had its own two buttons here as Ctrl+P /
+//   Ctrl+Alt+P until the 2026-08-20 relocation; none of its three chords on
+//   the view's allowlist, so the walk hides it there);
 //   the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
 //   this walk asks about a chord, never about a lane) — ADD TO SELECTION,
-//   their row's sixth, is NOT here: bare `k` is on the view's allowlist
+//   the verb group's seventh, is NOT here: bare `k` is on the view's allowlist
 //   since 2026-09-17, the lamp producing the view's own multi-selection, so
 //   it answers LIVE; and the icon row's SETTINGS BUTTON (bare `;`,
 //   since 2026-09-29 — off the mode's allowlist, as the typed road always
@@ -7963,9 +7969,12 @@ void GuiInputHandler::finish_chrome_press_release(
         //
         // AND IT REACHES NO CTRL-ADMITTING BUTTON THAT ADMITS NO SHIFT, by
         // construction rather than by an exclusion: such a button's own
-        // predicate answers false (Previous Marker today, and Open Text
-        // Editor without a carried ctrl; the two skips were of them until their buttons left the row
-        // 2026-10-12), so a held press is the ordinary press. The ctrl road on
+        // predicate answers false (Previous Marker today, and Copy Phase
+        // Resets without a carried ctrl — Open Text Editor's place
+        // 2026-10-21 to 2026-10-24, admitting no modifier since; the two
+        // skips were of them until their buttons left the row 2026-10-12,
+        // and came back on Shift 2026-10-24), so a held press is the
+        // ordinary press. The ctrl road on
         // glass is the S Pen's side button held on the button, a real ctrl
         // bit carried by the press like a held Ctrl key, never this hold.
         //

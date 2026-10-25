@@ -2562,7 +2562,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 const RedesignButton tip_id =
                     static_cast<RedesignButton>(tip_i);
                 const RedesignTooltipText live = redesign_button_tooltip(
-                    app, audio, tip_id);
+                    app, audio, audio.total_frames(), tip_id);
                 const bool glyph_drift =
                     app.redesign_buttons[static_cast<size_t>(tip_i)].glyph !=
                     redesign_button_glyph(app, tip_id);

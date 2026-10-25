@@ -75,13 +75,13 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
 int64_t Viewport::trim_begin_sample() const { return trim_range().first; }
 int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 
-// WHERE A Home / End JUMP WOULD LAND THE CURSOR — the contract, the two arms and
-// the clamp's purpose are all at the declaration (app_state.h). THREE READERS:
-// the shared jump body run_playhead_end_jump (input_key_dispatch.cpp) plus the
-// history view's own pair, so the live Home / End, their ctrl forms and the
-// mode's absolute jumps spell one bound once instead of once per route; and
+// WHERE A Home / End JUMP WOULD LAND THE CURSOR — the contract, the two arms,
+// the clamp's purpose and the four readers are all at the declaration
+// (app_state.h): the live Home / End, their shift forms (row 8's START and
+// END buttons' plain and shift presses, 2026-10-24) and the mode's absolute
+// jumps spell one bound once instead of once per route, and
 // playhead_end_jump_actionable just below, the jump acts' "would this form
-// change anything" owner, through which the acts' own no-op refusals read this
+// change anything" owner, is how the acts' own no-op refusals read this
 // landing.
 int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
                                     bool forward, bool whole_piece) {
@@ -89,8 +89,9 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
         // THE WHOLE-PIECE ARM, ONE ARM WITH TWO ENTRANTS. The `h` history view
         // takes it for every jump (architect 2026-08-05: the view reviews the
         // WHOLE piece, so an End stopping at a trim bound would hide the flags
-        // past it), and the CTRL forms take it anywhere (architect 2026-09-26:
-        // frame 0 and the last frame whatever the trim window is). The ends
+        // past it), and the SHIFT forms take it anywhere (architect 2026-09-26:
+        // frame 0 and the last frame whatever the trim window is; Ctrl until
+        // 2026-10-24). The ends
         // are the ACTIVE DOMAIN's own: live_total_frames is what the
         // displayed timeline runs to in either audio view. With a full trim
         // window the two arms coincide.
@@ -765,16 +766,34 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     kick_waveform_sync();
 }
 
+// WOULD THE APPLIER BELOW MOVE THE CAMERA — the contract and the two readers
+// are at the declaration (app_state.h).
+bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
+                              double new_zoom_level, int64_t new_start) {
+    if (audio.total_frames() <= 0) return false;
+    const double level = clamp_zoom_level(a, audio, new_zoom_level);
+    if (std::fabs(level - a.zoom_level) >= 1e-9) return true;
+    return resting_viewport_start(a, audio, new_start) !=
+           a.viewport_start_sample;
+}
+
 void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
-    if (audio.total_frames() <= 0) return;
+    // IDEMPOTENT NO-OP (zoom_to_start_would_move, the test's one owner since
+    // 2026-10-25, when the Zoom to Fit key's face came to ask it ahead): the
+    // resting (level, start) this call would produce equals the current
+    // viewport, so nothing would move — return before any write, without a
+    // repaint. A pan/zoom since the last framing makes them differ and this
+    // proceeds to re-frame. (Until then the test ran after the writes, which
+    // put identical values back.) The no-piece return is the predicate's.
+    if (!zoom_to_start_would_move(app, audio, new_zoom_level, new_start))
+        return;
 
     // Pre-clamp the requested level to the per-file window. clamp_viewport_start
-    // re-applies the identical clamp as the chokepoint; this only sharpens the
-    // no-op detection below.
+    // re-applies the identical clamp as the chokepoint; the whole-song clear
+    // below compares the clamped level.
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
 
     const double  old_level = app.zoom_level;
-    const int64_t old_start = app.viewport_start_sample;
 
     // The whole-song state's clear, the appliers' shared rule (the inventory
     // is at ViewState::whole_song_visible): a framing that moves the level has
@@ -788,16 +807,7 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     app.viewport_start_sample = new_start;
     clamp_viewport_start(app, audio);
 
-    // Idempotent no-op: the resting (level, start) this call would produce equals
-    // the current viewport, so nothing moved — return without repaint (the writes
-    // above put identical values back). A pan/zoom since the last framing makes
-    // them differ and this proceeds to re-frame.
-    if (app.viewport_start_sample == old_start &&
-        std::fabs(app.zoom_level - old_level) < 1e-9) {
-        return;
-    }
-
-    // Past the return above either the level or the start really moved, so
+    // Past the head's return either the level or the start really moved, so
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
     // double-click, the group undo/redo restore's zoom-out-to-fit arm and bare
     // `0`'s restore being what reach here.

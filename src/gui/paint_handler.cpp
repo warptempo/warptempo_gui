@@ -719,7 +719,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // region button itself — bare `[`, wearing tool-rect-selection — was
     // deleted on 2026-09-22 (the tablet's pen reaches the trim bar), one box
     // and one 2px gap
-    // off the walk, no separator moving; FULL ZOOM OUT leads the group. What
+    // off the walk, no separator moving; ZOOM TO FIT (Full Zoom Out until
+    // 2026-10-24) leads the group. What
     // the group collects is the VIEWPORT CLASS — Zoom to Fit, the
     // magnification lamp and FOLLOW — at the head of the band's second run.
     // THIS TABLE IS THE ROW'S PAINTED ORDER — the walk
@@ -2606,12 +2607,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE ACTIVE TAB'S NAME on the ground after it and THE STATE LINE after
     // the name (the block at the clock below) — then THE RIGHT BLOCK, packed
     // against the row's right seat (bottom_row_seats, flush with the program
-    // ring's right edge): the MARKER-VERB GROUP (its eight counted
-    // off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑, Previous Marker
-    // and Next Marker, kTransportStepWalkGroup) and the NUDGE-AND-PLAY GROUP
-    // with Play / Stop last (Switch Tab, Center, ← → Play,
-    // kTransportNudgePlayGroup; architect 2026-10-18), each a plain run, the
-    // run gap between two. The whole block is measured first and laid left
+    // ring's right edge), FOUR RUNS (kRow8Groups, 2026-10-24): the SKIP
+    // GROUP (START | END, kTransportSkipGroup), the MARKER-VERB GROUP (its
+    // nine counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
+    // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
+    // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
+    // Play, kTransportNudgePlayGroup; architect 2026-10-18), each a plain
+    // run, the run gap between two. The whole block is measured first and laid left
     // to right from there, so one expression owns the anchor and no group
     // re-derives it.
     // ITS TWO MODE TERMS are the `h` view's: the hide (architect 2026-10-07,
@@ -3009,15 +3011,16 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     } else {
         if (owner.index >= kRedesignButtonCount) return;
         const RedesignButton id = static_cast<RedesignButton>(owner.index);
-        // THE STATEFUL OVERLOAD, with the two objects its forks read
-        // (2026-09-01; the frame count, a third, left 2026-10-24 with the one
-        // fork that read it): the words fork on what the acts and the faces
-        // read, and this painter is the overload's one reader. It took the
+        // THE STATEFUL OVERLOAD, with the three objects its forks read
+        // (2026-09-01; the frame count, the third, out for 2026-10-24 alone
+        // and back 2026-10-25 with Zoom to Fit's reset term): the words fork
+        // on what the acts and the faces read, and this painter is the
+        // overload's one reader. It took the
         // enabled predicate's whole five for the morning of 2026-09-01,
         // `playback` and `target_render` unread at the far end; they left
         // with the rule that a parameter arrives with its producer.
         const RedesignTooltipText text = redesign_button_tooltip(
-            app, audio, id);
+            app, audio, audio.total_frames(), id);
         // A HINT WITH NO LINE 1 IS NO HINT. Nothing can take a hint away under
         // a standing box any more — tooltip MEMBERSHIP is the menu row and
         // nothing else, in every state (the rule is at redesign_button_tooltip,
