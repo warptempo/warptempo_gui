@@ -180,11 +180,12 @@ struct ProgramSpec {
     // gui_font.h's type table: 16 px at 300 % since 2026-10-24, "R16", its
     // ink from just inside row 3 down to the baseline at 300 %; the base's
     // six-row digit on rows 1 .. 6 under row 0's air 2026-10-09 to
-    // 2026-10-23), their BASELINE the top of this ground row (7), the black
-    // (+1, +1) shadow reaching row 7; THE TICKS
+    // 2026-10-23), their BASELINE the top of this ground row (7), no shadow
+    // under them (architect 2026-10-25); THE TICKS
     // stand on the ground's bottom row and rise this far into it (minor and
-    // major: rows 9 .. 10 and 7 .. 10), a major's top row the shadow's last,
-    // the tick painted over it (paint_ruler_row's order).
+    // major: rows 9 .. 10 and 7 .. 10), a major's top row the baseline's,
+    // the tick painted over a digit's overshoot there (paint_ruler_row's
+    // order).
     int  ruler_ground_px;
     int  ruler_minor_tick_px;
     int  ruler_major_tick_px;
@@ -353,9 +354,8 @@ static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
 static_assert(program_ruler_authored_h(kProgramSpec) +
                   program_marker_lane_authored_h(kProgramSpec) ==
               18 + 11);
-// THE MAJOR TICK'S TOP ROW IS THE DIGITS' SHADOW'S LAST (the black shadow,
-// one row under the digits' rows 1 .. 6, ends on row 7), the tick painted
-// over it; the
+// THE MAJOR TICK'S TOP ROW IS THE DIGITS' BASELINE ROW (7), the tick painted
+// over a digit's overshoot below the baseline; the
 // PLAYHEAD'S HEAD, the cue's triangle on the ground's last five rows (6 ..
 // 10), reaches the digits' last row (6) and covers what stands under it.
 // The digits' own rows — one W of air, then the small

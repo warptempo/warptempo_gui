@@ -1697,20 +1697,21 @@ struct CueSegment {
     // label (ce_off_label) unless selected (2026-10-10).
     bool   inert    = false;
 };
-// THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-25, "we used to have
-// drop shadows for the flag text ... we should bring it back and use the
-// regular 1 pixel offset, 1 device pixel"; Cool Edit draws no shadow under
-// its cue labels, so this is the product's own departure): the run first in
-// THE RULER'S SHADOW — black (kCeRulerShadow) ONE DEVICE PX right and down
-// (hairline_px, paint_ruler_row's own) — then `ink` over it. One shadow
-// under every look, the faded inert label's included (the ruler's does not
-// fade either). Every label look on the panel's face goes through here —
-// resting, invalid, inert, selected, and the flag editor's riding cells; the
-// editor's FIELD text does not. The triangle keeps its own shadow
-// (paint_ce_cue_triangle).
+// THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-25, on the glass:
+// "the shadow on the flags is too subtle; the marker's [triangle's] I think
+// is scaled and it stands out much better. So we should do that"; Cool Edit
+// draws no shadow under its cue labels, so this is the product's own
+// departure): the run first in black (kCeRulerShadow, the ruler ticks'
+// shadow color) at THE CUE TRIANGLE'S OWN SHADOW OFFSET — ONE CUE QUANTUM u
+// (cue_unit_px, scaled), the triangle's rightward offset
+// (paint_ce_cue_triangle) taken right AND down — then `ink` over it. One
+// shadow under every look, the faded inert label's included. Every label
+// look on the panel's face goes through here — resting, invalid, inert,
+// selected, and the flag editor's riding cells; the editor's FIELD text does
+// not. The triangle keeps its own shadow, its own color and right alone.
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
                            double x, double baseline, GuiColor ink) {
-    const double t = static_cast<double>(hairline_px());
+    const double t = static_cast<double>(cue_unit_px());
     set_palette_source(cr, hex(kCeRulerShadow));
     text_shape::show_shaped_run(cr, run, x + t, baseline + t);
     set_palette_source(cr, ink);

@@ -127,7 +127,8 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: the view bar's black field, the
-// ruler's ticks and digits and their black shadow) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
+// ruler's ticks and digits, and the black shadow under the ticks and the cue
+// labels) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
 // the bone, legend and dim inks, the ruler's and the fields' grounds, the
 // selection pair, the key's face, edges and LED, the accent, and the baked
 // brushed grounds through set_surface_source) — or THE ICONS' OWN INKS
@@ -570,14 +571,16 @@ void install_true_colors(bool on);
 // THE TICKS kCeRulerTick (the bone,
 // face-independent in every preset), ONE DEVICE PX wide over a one-px
 // black shadow at (+1, +1) (2026-10-23), STANDING ON THE
-// GROUND'S BOTTOM ROW and rising into it, painted over the digits' shadow
-// where a major's top row meets it; THE DIGITS the ruler face (GuiFace::Small,
+// GROUND'S BOTTOM ROW and rising into it, painted over the digits where a
+// major's top row meets their baseline; THE DIGITS the ruler face (GuiFace::Small,
 // 16 px at 300 % since 2026-10-24, "R16" — R17 the night before, 15 the
 // skin's first night,
 // "the timestamps are good"; the base's six-row digit 2026-10-09 to
 // 2026-10-23) standing on the authored baseline
 // row 7 under the air above, "basically touching the trim bar", in the
-// tick's ink over a BLACK one-device-px (+1, +1) shadow (kCeRulerShadow) —
+// tick's ink, BARE (architect 2026-10-25, on the glass: the black
+// one-device-px shadow under the timestamps "is basically useless because
+// it's so dark, it has no effect") —
 // the ground 11 W where Cool
 // Edit's is 17, the six rows the marker lane's (program_spec.h's ruler
 // fields).
@@ -643,7 +646,7 @@ void install_true_colors(bool on);
 // canvas's top frame row — over the same triangle one quantum right in
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, at rest
-// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER THE RULER'S SHADOW, black ONE DEVICE PX right and down (architect 2026-10-25, "we should bring it back and use the regular 1 pixel offset, 1 device pixel"; the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the one black shadow under every look, the faded inert label's included; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
+// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER A BLACK SHADOW AT THE TRIANGLE'S OWN OFFSET, ONE CUE QUANTUM u (cue_unit_px, scaled) right and down (architect 2026-10-25, on the glass: the one-device-px shadow "too subtle; the marker's [triangle's] I think is scaled and it stands out much better"; the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the one black shadow under every look, the faded inert label's included; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
 // the column, ITS LINE BOX CENTRED IN THE LANE (architect 2026-10-09
 // evening, on the glass at 300 %: the editor's band stood three rows of
 // field above and six below, and he asked for it even; the cap band's

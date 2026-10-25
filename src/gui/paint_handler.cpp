@@ -3396,8 +3396,9 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //     Cool Edit; render.h's canvas-column
 //     paragraph): the Face-derived ground under the view bar's light line,
 //     its own light bottom line, the ticks E0E0E0 STANDING ON THE GROUND'S
-//     BOTTOM ROW — majors four W, minors two — and the digits over a black
-//     (+1, +1) shadow; THE GROUND 11 W, THE DIGITS THE BASE'S SIX-ROW SMALL
+//     BOTTOM ROW — majors four W, minors two — and the digits bare (Cool
+//     Edit's black (+1, +1) shadow under them not drawn, architect
+//     2026-10-25); THE GROUND 11 W, THE DIGITS THE BASE'S SIX-ROW SMALL
 //     DIGIT on its rows 1 .. 6 under one row of air, their baseline the top
 //     of row 7 (architect 2026-10-09 ~16:50 / ~21:00, the product's rows
 //     where Cool Edit's ruler is 17 with cap-7 digits: "one Windows pixel of
@@ -3677,10 +3678,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // digit's ink 11.2 px tall (Liberation Sans's 1430 / 2048 em of 16), so
     // its top stands 9.8 rows down, just inside row 9, with 9 whole rows of
     // ground above it under the trim bar's light line, and its "0"'s
-    // overshoot a fifth of a px below the baseline; the black one-device-px
-    // (+1, +1)
-    // shadow under them reaching row 7, a major tick's top row — an authored
-    // row of the lane, neither solver asked (redesign_baseline's block).
+    // overshoot a fifth of a px below the baseline into row 7, a major
+    // tick's top row; NO SHADOW under them (architect 2026-10-25, on the
+    // glass: "the shadow on the timestamp is basically useless because it's
+    // so dark, it has no effect") — an authored row of the lane, neither
+    // solver asked (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =
         static_cast<double>(lane.y + scaled_px(kProgramSpec.ruler_baseline_px));
@@ -3736,9 +3738,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (the loop's break), the major just right of the end whose label's left
     // half reaches in — a label is narrower than a step (the ladder keeps a
     // step at least 72 W), so one step each side is all there is.
-    // THE TICK'S WIDTH IS ONE DEVICE PX, and so is its shadow's and the
-    // digits' shadow's offset (render.h's line rule, architect 2026-10-23;
-    // the program's quantum 2026-10-09 to 2026-10-23).
+    // THE TICK'S WIDTH IS ONE DEVICE PX, and so is its shadow's offset
+    // (render.h's line rule, architect 2026-10-23; the program's quantum
+    // 2026-10-09 to 2026-10-23).
     const int t = hairline_px();
     // ONE MAJOR'S LABEL at its column `col` and its step time `step_ms`,
     // CENTERED ON THE MAJOR'S COLUMN (the tick's own t wide, the run's centre
@@ -3767,11 +3769,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int run_w = static_cast<int>(std::ceil(run.width_px));
         const int lx = col + t / 2 - run_w / 2;   // the walk's clip cuts it
         // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
-        // colour to all the numbers"): the tick's ink over Cool Edit's
-        // black (+1, +1) shadow.
+        // colour to all the numbers"): the tick's ink, bare (2026-10-25, the
+        // digits' shadow removed; the block above).
         const double x = static_cast<double>(cx + lx);
-        set_palette_source(cr, hex(kCeRulerShadow));
-        text_shape::show_shaped_run(cr, run, x + t, baseline + t);
         set_palette_source(cr, hex(kCeRulerTick));
         text_shape::show_shaped_run(cr, run, x, baseline);
     };
@@ -3803,11 +3803,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const bool tick_on_lane = col >= 0 && col < wave_w;
             if (!tick_on_lane && !major) continue;
             // A MAJOR'S LABEL PAINTS BEFORE ITS TICK, so the tick stands whole
-            // over the digits' shadow where the shadow's last row meets the
-            // major's top row (program_spec.h's ruler fields, 2026-10-09
-            // ~21:00; the ticks paint over). Only the
-            // label's own major can meet it: a minor rises to row 9, below the
-            // shadow's last row 7, and the next major stands a whole step —
+            // over a digit's overshoot below the baseline, where the
+            // overshoot meets the major's top row 7 (program_spec.h's ruler
+            // fields, 2026-10-09 ~21:00; the ticks paint over). Only the
+            // label's own major can meet it: a minor rises to row 9, below
+            // the overshoot's row 7, and the next major stands a whole step —
             // at least eight minimum minor pitches — away.
             if (major) paint_major_label(col, step_ms);
             // ONE DEVICE PX wide (`t`, hairline_px: render.h's line rule,

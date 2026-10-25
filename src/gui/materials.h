@@ -173,10 +173,12 @@ struct AppState;
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone. NO WORD
-// WEARS A SHADOW but the ruler's digits and ticks and the cue labels, each
-// over ONE DEVICE PX OF BLACK at (+1, +1) (render.h's ruler block and its
-// marker lane's label paragraph; the cue labels' since 2026-10-25,
-// show_cue_label): the skin draws none elsewhere.
+// WEARS A SHADOW but the cue labels, over black at the cue triangle's own
+// offset, ONE CUE QUANTUM right and down (architect 2026-10-25;
+// show_cue_label, render.h's marker lane's label paragraph): the skin draws
+// none elsewhere, the ruler's digits included (2026-10-25). Of the lines,
+// the ruler's ticks alone wear one, one device px of black at (+1, +1)
+// (render.h's ruler block).
 
 enum class GuiMaterial { Ground, Marker };
 inline constexpr int kGuiMaterialCount = 2;

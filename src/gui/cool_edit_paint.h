@@ -54,9 +54,12 @@
 // ruler's ground is the dark `mid` at every Face, so Cool Edit keeps it
 // light where the panel's text and label swap. Not a Face tone left
 // undone: following Face here would depart from Cool Edit. IN THE HI-FI SKIN
-// THE TICKS AND DIGITS ARE THE BONE kBoneInk over a ONE-DEVICE-PX black
-// shadow at (+1, +1) on the flat dark kRulerGround (architect 2026-10-23,
-// "the timestamps are good"; render.h's ruler block).
+// THE TICKS AND DIGITS ARE THE BONE kBoneInk on the flat dark kRulerGround
+// (architect 2026-10-23, "the timestamps are good"; render.h's ruler block),
+// THE TICKS over a ONE-DEVICE-PX black shadow at (+1, +1), THE DIGITS BARE
+// (architect 2026-10-25: their shadow "is basically useless because it's so
+// dark, it has no effect"). kCeRulerShadow is also the cue labels' shadow
+// color (show_cue_label, render.cpp).
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
 inline constexpr uint32_t kCeRulerTick      = kBoneInk;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
