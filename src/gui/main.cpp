@@ -712,11 +712,11 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the ICON row, at the window's top on both devices since
 // 2026-10-24 (the app's caption, lane 0 from 2026-10-05, removed: labwc
-// draws the laptop's title bar outside the surface), the logo lane over its keys (the twenty-three
+// draws the laptop's title bar outside the surface), the logo lane over its keys (the twenty-five
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
-// count's authority; twenty-one stand outside the `h` view and thirteen
-// inside it, re-counted 2026-10-25), the toolbar band. Lane 1 is the
+// count's authority; twenty-one stand outside the `h` view and fifteen
+// inside it, re-counted 2026-10-26), the toolbar band. Lane 1 is the
 // TRIM lane (Cool Edit's view bar: the span and its two ends, every trim
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp

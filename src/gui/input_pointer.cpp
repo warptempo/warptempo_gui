@@ -391,17 +391,30 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the allowlist). It stands right-anchored, the view pairs' run's first
     // case, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false},     // bare h
-    // THE HISTORY COMPANIONS — the icon row's last group behind the opener
-    // again since 2026-08-18 (they were this row's from 2026-08-04, the bottom
-    // row's swapped cluster from 2026-08-14, and back here with the architect's
-    // roster relayout; nothing about their chords or gates moved on either
-    // trip — only their FACE at rest, which is the icon row's own mode rule).
-    // Their keys are bound ONLY inside the view. WHAT KEEPS THEM FROM
-    // DISPATCHING OUTSIDE ONE IS THEIR ENABLED BIT (2026-08-05, again since
-    // 2026-08-18): outside the view they wear the dead face — and since
-    // 2026-10-05 do not stand at all, publishing empty rects — and a press is
-    // consumed at arm_redesign_press's disabled line (the arm and its
-    // reasoning are at redesign_button_enabled).
+    // THE WALK LAMP (architect 2026-08-18; reinstated 2026-10-26 as it stood
+    // at its removal) — which walk the `h` view's lane reads: the committed
+    // checkpoint history or this session's own undo/redo timeline. BARE `g`,
+    // a TOGGLE over the two walks, the button flipping the same axis through
+    // the same switch owner (set_history_delta).
+    {RedesignButton::SessionHistory,
+     GuiKeys::G,      false, false, false},                             // bare g
+    // THE HISTORY COMPANIONS — the history group behind the opener since
+    // 2026-08-18, standing only in the `h` view since 2026-10-05 (the
+    // stand-ins, kIconRowHistoryStandIns and kTransportHistoryStandIns,
+    // paint_handler.cpp).
+    //
+    // THE CUMULATIVE READING'S TOGGLE (2026-08-08; reinstated architect
+    // 2026-10-26): bare `u` flips the history view's delta between ITERATIVE
+    // (off) and CUMULATIVE (on). A TOGGLE like the history button — the
+    // selected face reads the live bit its own chord flips. Its key, like the
+    // walk lamp's and the three entries' below, is bound ONLY inside the
+    // view; WHAT KEEPS THEM FROM DISPATCHING OUTSIDE ONE IS THEIR ENABLED BIT
+    // (2026-08-05, again since 2026-08-18): outside the view they do not
+    // stand, publishing empty rects, and a press is consumed at
+    // arm_redesign_press's disabled line (the arm and its reasoning are at
+    // redesign_button_enabled).
+    {RedesignButton::HistoryCumulative,
+     GuiKeys::U,      false, false, false},                             // bare u
     // THE REVERT ACT (2026-08-05): BARE `v` applies the view's SELECTED diff
     // flags backwards into the live state and closes the view. It rode CTRL+H
     // until 2026-09-01, when the architect moved the act onto the letter the
@@ -419,7 +432,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // is consumed with no card and the grey is the message (the
     // truthful-buttons ruling, which retired the 2026-08-15 faceless pair the
     // architect had reversed as a per-selection blink).
-    // OUTSIDE the view the button is dead like its three
+    // OUTSIDE the view the button is dead like its
     // neighbours (2026-08-18) and there is no click to consume at all.
     {RedesignButton::HistoryRevert,
      GuiKeys::V,      false, false, false},                             // bare v
@@ -429,8 +442,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // there, exactly as the keys behave. Neither is a radio and neither is a
     // toggle: they are momentary steps, so both flags read like copy's and
     // paste's, and only the CLICK face is set. Outside the view they never
-    // dispatch at all — the dead face's consumed press, per the companions'
-    // note above; and even reached, bare `,` and `.` are bound in
+    // dispatch at all — the dead face's consumed press, per the Cumulative
+    // entry's note above; and even reached, bare `,` and `.` are bound in
     // handle_history_mode_key alone, so there is nothing for them to fire.
     //
     // NO HOLD-REPEAT, THOUGH THEY STAND IN THE ARROWS' SEATS (architect
@@ -1280,7 +1293,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // in the nudge-and-play group since 2026-10-18). Every one of them is a chord
 // the MODE OWNS, which is exactly what makes this walk answer LIVE for its
 // button with nothing hand-listed — the same free derivation the walk's two
-// arrows and Revert already ride. (The membership is
+// arrows, the Cumulative toggle and Revert already ride. (The membership is
 // re-greped here rather than inherited: this paragraph carried "nothing in
 // kToolbarChords dispatches bare Tab, Home, End or `c`" for three roster
 // growths after it stopped being true.)
@@ -1308,10 +1321,11 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // deleted the lift, and decision 58 composed the lock in — the record is at
 // the companions' arm in redesign_button_enabled, app_state.h, and the note
 // below on the revert act says the same where the entry is spelled); and bare `'` only while
-// THE WALK CARRIES A MEMBER — since 2026-08-09, when the empty walk became a
-// legal standing state — so the load-in-place button greys over a blank lane,
-// which the view reaches whenever a piece has no eligible checkpoint. The
-// derivation carries all of it
+// THE ACTIVE WALK CARRIES A MEMBER — one term for both walks since 2026-08-09,
+// when the empty Remote walk became a legal standing state — so the
+// load-in-place button greys over a blank lane, which the Remote tab reaches
+// whenever a piece has no eligible checkpoint and a live Local tab cannot reach
+// at all. The derivation carries all of it
 // for free — this function restates no term of any of them. They differ in
 // cadence and that is the honest difference: the active walk's count grows as
 // the prefetch streams and the revert subject moves with every click, while the
@@ -1342,12 +1356,15 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   Marker's and Switch Tab's Shift+Tab and Ctrl+Shift+Tab being the mode's
 //   own and Ctrl+Tab on its allowlist),
 //   the load-editor opener (bare `'`, which in this mode loads THE
-//   VIEWED WALK'S MEMBER in place — the commit's sidecars:
-//   a session-dependent entry, dead on a walk with no member, since
-//   2026-08-09), and the history button itself
+//   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
+//   the timeline state on the Local one since 2026-08-08, and live on both:
+//   a session-dependent entry, dead on a walk with no member — the
+//   Remote tab's empty one, since 2026-08-09), and the history button itself
 //   (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
+//   and THE WALK LAMP since 2026-08-18 (bare `g`, the mode's own vocabulary; a
+//   radio pair until the 2026-09-04 collapse),
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
 //   them with nothing hand-listed,
@@ -1371,9 +1388,11 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   and THE BOTTOM ROW'S LEFT / RIGHT CHORDS since 2026-09-26 (bare Left /
 //   Right, the mode's own playhead step, admitted; the hide predicate leaves
 //   them be, but kTransportHistoryStandIns seats Older / Newer in the arrow
-//   BUTTONS' places in this view, the painted pair there).
-//   The walk's two steps plus Revert are the roster's
-//   RESTING-DISABLED family — three of them, all gated at rest on
+//   BUTTONS' places in this view, the painted pair there),
+//   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
+//   and the same free answer). Those three plus Revert are the roster's
+//   RESTING-DISABLED family — four of them, joined by the WALK LAMP on
+//   2026-08-18 (a radio pair then) for five, all five gated at rest on
 //   `history_mode.active` by their
 //   own arm in redesign_button_enabled (which carries the succession, the plain
 //   `true` of 2026-08-15..18 included). This walk's answers for them have never
@@ -1455,13 +1474,15 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // below, the same walk asked about every state), and a button it answers
 // dead only for THIS session (Revert, Load in Place — the two conditional
 // admissions) wears the grey face. ONE SWAP STANDS beside it (architect
-// 2026-10-05): in the `h` view Revert and Load in Place stand in the icon
-// row's slots of a group THIS WALK answers DEAD whole — Undo's (Undo,
-// Redo, Copy Phase Resets and Render, the copy since 2026-10-25) — and
-// outside it they do not stand (kIconRowHistoryStandIns, paint_handler.cpp,
-// which names this walk as the membership's derivation). A change here that
-// answers one of those four LIVE in the view is a change to that table too. (The iteration group, dead
-// whole too, has no stand-ins and is simply hidden whole in the view, below.)
+// 2026-10-05): in the `h` view the history companions stand in the icon
+// row's slots of the two groups THIS WALK answers DEAD whole — Revert and
+// Load in Place in Undo's (Undo, Redo, Copy Phase Resets and Render, the
+// copy since 2026-10-25), the walk lamp and Cumulative in the iteration
+// group's (BPM, Grid, Flatten; again since 2026-10-26) — and outside it
+// they do not stand (kIconRowHistoryStandIns, paint_handler.cpp, which
+// names this walk as the membership's derivation). A change here that
+// answers one of those seven LIVE in the view is a change to that table
+// too.
 // ROW 8 HAS ITS OWN SINCE 2026-10-11 (architect): in the view Older / Newer
 // stand in the Left / Right arrows' seats (kTransportHistoryStandIns,
 // paint_handler.cpp) — a seat ruling, not this walk's: the arrows' chords
@@ -1542,10 +1563,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // hidden button's EMPTY RECT — no point is inside it, so no press, hover or
 // tooltip reaches it, and its face bits refresh unconditionally
 // (publish_button_face) — close its neighbours up, and drop a group, with
-// its separator and gap, only when every member is hidden — the iteration
-// group's case. Undo's group, which the view also refuses
-// whole, is swapped for the history stand-ins rather than dropped
-// (kIconRowHistoryStandIns, paint_handler.cpp); a
+// its separator and gap, only when every member is hidden. The icon row's
+// two groups the view refuses whole are swapped for the history stand-ins
+// rather than dropped (kIconRowHistoryStandIns, paint_handler.cpp); a
 // stand-in's chord is the mode's own or an admission, so no stand-in is
 // ever hidden. The keyboard is untouched: the chord is refused by the
 // allowlist exactly as before. Outside the view nothing is hidden.

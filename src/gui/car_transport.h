@@ -61,7 +61,7 @@ struct GuiInputHandler;
 // parenthesis and a space, then view_pair_label, the view pair's one
 // speller, which carries no tab term of its own), and the TITLE, the big line, is
 // WHERE THE SESSION STANDS, SPELLED AS A BATCH CELL'S BASENAME IS —
-// "<index>_<distance>", the live state's number in the undo timeline's counting
+// "<index>_<distance>", the live state's number in the session walk's counting
 // and its distance from the save ("5_+2", "3_+0", "1_-2" —
 // car_transport_title_line, the formula and the spelling at its declaration) —
 // so a Previous or Next reads back on the console as both numbers stepping
@@ -185,8 +185,12 @@ struct GuiInputHandler;
 //
 //     <index>_<distance>
 //
-// <index> IS THE LIVE STATE'S NUMBER in the undo timeline's counting, the
-// oldest state 1 — U + 1 with U = undo_stack.size(). Bare decimal, no padding:
+// <index> IS THE LIVE STATE'S NUMBER in the session walk's counting, the same
+// number the `h` view's Local walk shows for the state on screen: N − live
+// index = (U + R + 1) − R = U + 1 with U = undo_stack.size() and
+// R = redo_stack.size(). It is that ONE ARITHMETIC here rather than a call
+// into HistoryMode::member_number, because the walk is bound only while the
+// view stands and this line composes on every tick. Bare decimal, no padding:
 // a batch cell pads to its folder's width, and a session has no set to pad
 // against.
 //

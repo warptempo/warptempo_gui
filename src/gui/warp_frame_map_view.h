@@ -715,7 +715,8 @@ struct PhaseHopWindow {
 // than a tighter one: iteration is wanted in quiet, exposed sections with few
 // resets, and a user who sets two ranges within a few hops of each other is
 // doing it deliberately — the ear catches the contortion, the same latitude
-// coincident markers have at rest, with git and undo the way back. A cell where two enabled resets land on ONE frame renders them as one
+// coincident markers have at rest, with git and the session history the way
+// back. A cell where two enabled resets land on ONE frame renders them as one
 // reset (the parser's exact-coincidence collapse and its stderr line, what a
 // coincident drop at rest gets); a cell where they CROSS renders both where
 // the cells put them, in swapped order — which is why the SWEEP SORTS each

@@ -383,7 +383,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // (architect 2026-08-30: bound keys either show an effect or a card, so an
 // unbound key is identified by its silence; the mode term added 2026-09-01,
 // U4). Each asks chord_is_bound — the inventory below this speller, which reads
-// the `h` view's bit so that the view's own five shapes are spoken for only
+// the `h` view's bit so that the view's own seven shapes are spoken for only
 // while it stands — before it composes anything, and a press nothing binds
 // there dies at its gate saying nothing at all. So every chord a card names is
 // one the user could have expected to do something IN THE STATE HE PRESSED IT.
@@ -618,20 +618,20 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // whether or not it would ACT there. The five sub-handlers on that road are in
 // it (handle_escape_cancels, handle_render_dispatch_keys, handle_mode_keys,
 // handle_tab_switch_keys and handle_plain_bare_keys' switch), and so is
-// handle_history_mode_key: the `h` view ADDS its five shapes to the dispatch
+// handle_history_mode_key: the `h` view ADDS its seven shapes to the dispatch
 // rather than replacing it — the allowlist below it still admits the ordinary
-// vocabulary — so the `,` / `.` pair with and without shift
+// vocabulary — so bare `g`, bare `u`, the `,` / `.` pair with and without shift
 // and bare `v` are bindings of this product's keyboard like any other WHILE THE
 // VIEW STANDS, and nothing at all outside it. (Bare `h` itself is NOT one of
 // them: the toggle is claimed in every state, which is why it reads no term.)
 //
 // THE MODE BIT IS THE ONE STATE TERM THIS PREDICATE CARRIES (architect
 // 2026-09-01, U4), and it is THE DISPATCH'S OWN TEST MADE EXECUTABLE rather
-// than a second copy of it: those five shapes' whole binding sits behind two
+// than a second copy of it: those seven shapes' whole binding sits behind two
 // lines — handle_history_mode_key's `if (!app.history_mode.active) return
-// false;` (input_key_dispatch.cpp), which owns four of them, and the revert
+// false;` (input_key_dispatch.cpp), which owns six of them, and the revert
 // arm's own `app.history_mode.active &&` (input_handler.cpp), which owns bare
-// `v` — so outside the view all five fall to handle_plain_bare_keys' default
+// `v` — so outside the view all seven fall to handle_plain_bare_keys' default
 // and to the strict-modifier tail, which already answer them with the unbound
 // silence. Reading the bit here is what makes the gates say the same thing.
 //
@@ -751,10 +751,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
         // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
         case GuiKeys::B: return cl;
-        // -- THE `h` VIEW'S OWN BARE LETTER, bound while it stands and unbound
-        // outside it (2026-09-01, U4): `v` the REVERT ACT (2026-09-01, off
-        // Ctrl+H), whose own arm in input_handler.cpp carries the mode test.
-        case GuiKeys::V:
+        // -- THE `h` VIEW'S OWN BARE LETTERS, bound while it stands and unbound
+        // outside it (2026-09-01, U4): `g` the walk source, `u` the compare
+        // reading — both handle_history_mode_key's, behind its mode return —
+        // and `v` the REVERT ACT (2026-09-01, off Ctrl+H), whose own arm in
+        // input_handler.cpp carries the same mode test.
+        case GuiKeys::G: case GuiKeys::U: case GuiKeys::V:
             return bare && history_view;
         // THE PIGEON'S PAIR, ONE LETTER, ONE MEANING IN EVERY VIEW: CTRL+J
         // goes to where the focused value came from (architect 2026-09-29,
@@ -790,7 +792,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // with the magnification level markers column.)
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
-        // in every state), which is why it reads no mode term while the five
+        // in every state), which is why it reads no mode term while the seven
         // shapes the view ADDS do. ITS REVERT LEFT THIS LINE 2026-09-01:
         // the act was Ctrl+H from 2026-08-05 and is bare `v` now (with the
         // mode-only letters above), so the ctrl spelling binds nothing again

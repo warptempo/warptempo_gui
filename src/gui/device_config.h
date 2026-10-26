@@ -432,11 +432,11 @@ inline constexpr const char* kDefaultProjectsRepo =
 // waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 541
-// Windows px of window at 100 % (357 in the `h` view; re-derived 2026-10-25,
-// Copy Phase Resets joining the band and Play Renders standing in the view)
+// Windows px of window at 100 % (403 in the `h` view; re-derived 2026-10-26,
+// the two history toggles standing in the iteration group's seats)
 // the icon row — the
 // toolbar band, its twenty-one standing members in three left runs and one
-// right run of the program's 23-W case (thirteen in the view, its history
+// right run of the program's 23-W case (fifteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at

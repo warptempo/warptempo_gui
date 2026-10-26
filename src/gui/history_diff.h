@@ -5,6 +5,7 @@
 #include "settings_file.h"
 #include "warpmarkers.h"
 
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
@@ -12,31 +13,36 @@
 #include <deque>
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 struct AppState;
+struct UndoEntry;
 class GuiHistoryPrefetch;
 
 // THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29; moved here
 // 2026-08-30, when the mode's ENTRY refusal became a card too). Every reporter
 // of the fact says these same words, and the reporters are re-greped on this
 // name rather than inherited: this module's own init(), which prints it on
-// stderr with the store's reason appended; THE `h` ENTRY'S REFUSAL, which
-// raises that same composed line on a card when the bootstrap does not answer
-// and opens nothing (GuiInputHandler::open_history_mode_fresh); the
-// CHECKPOINT ACT'S, which raises it for the same reason (run_publish_chord);
-// and the prefetch arrival that closes a standing view, which does both. It
-// lives beside the reason it prefixes rather than in one of the readers, so no
-// reader can drift from the producer. A tooltip names the act and states no
-// reason, so the fact is the KEYS' cards', which append the clone-specific
-// clause a constant tooltip line could not carry anyway.
+// stderr with the store's reason appended; the WALK LAMP'S REFUSAL, which
+// raises that same composed line on a card when bare `g` asks for the remote
+// walk this visit could not bootstrap (GuiInputHandler::set_history_delta);
+// the CHECKPOINT ACT'S, which raises it for the same reason
+// (run_publish_chord); and the prefetch arrival that closes a standing
+// view, which does both. It lives beside the reason it prefixes rather than in one of the
+// readers, so no reader can drift from the producer. (TWO DEAD-BUTTON
+// TOOLTIPS said it too from 2026-09-04 to 2026-09-12 — the walk lamp's and
+// Save-and-Commit's, over the faces this fact greys. A tooltip names the act
+// and states no reason now, so the fact is the KEYS' cards', which append the
+// clone-specific clause a constant tooltip line could not carry anyway.)
 //
-// THE ENTRY IS AMONG THEM AGAIN SINCE 2026-10-19: the view reads the committed
-// checkpoints alone (THE READING, below), so a visit with no clone has nothing
-// to show and `h` refuses it. Each such refusal is input routing with an environment term: a
-// fact about the HOST's clone, never about authored data.
+// THE ENTRY IS NO LONGER AMONG THEM (architect 2026-09-04): a bootstrap the
+// remote walk cannot answer opens the view on the LOCAL walk instead of
+// refusing it, so the fact belongs to the press that asks for git rather than
+// to the press that opens the view. Each such refusal is input routing with an
+// environment term: a fact about the HOST's clone, never about authored data.
 inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
@@ -95,14 +101,16 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // remote URLs and no ref at all — so moving the walk from `origin/main` to
 // the local branch left it untouched and means exactly what it always did.
 //
-// The diff runs THEN -> NOW, older side to newer side: the viewed checkpoint
-// is the OLD side and the NEXT-NEWER item is the new one — the next eligible
-// walk member, or, at the newest index, the LIVE IN-MEMORY STATE serialized
-// through the save writers' own string halves (byte-identical to what a Ctrl+S
-// would land at this instant, built with no file existing anywhere and no disk
-// touched) — so an ADDED entry is one the newer side has and the older did
-// not, and a REMOVED entry is one the older side had and the newer dropped
-// (THE READING, below).
+// The diff runs THEN -> NOW, older side to newer side, and WHICH TWO SIDES is
+// the compare mode's answer (GuiHistoryCompare below). In the CUMULATIVE
+// reading the now side is the LIVE IN-MEMORY STATE serialized through the save
+// writers' own string halves — byte-identical to what a Ctrl+S would land at
+// this instant, built with no file existing anywhere and no disk touched — so an
+// ADDED entry is one the session has and the commit did not, and a REMOVED entry
+// is one the commit had and the session dropped. In the ITERATIVE reading the
+// viewed checkpoint is the OLD side and the NEXT-NEWER item is the new one — the
+// next eligible walk member, or the same live now side at the newest index — and
+// added/removed read the same way one step forward.
 //
 // THE WALK IS LOAD-GATED (architect 2026-08-04): membership in the walk is THE
 // LOAD-IN-PLACE GATE ITSELF — load_commit_sidecars_strict below, the exact
@@ -159,30 +167,46 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // mid-write leaves, once per clone per process). THE WALK STILL READS THE LOCAL BRANCH (the paragraph above): a fetch moves
 // `origin/<branch>`, never what `h` walks.
 
-// THE READING (architect 2026-08-05; the one reading since 2026-10-19). THE
-// HISTORY VIEW READS ITERATIVELY OVER THE COMMITTED CHECKPOINTS ALONE: the
-// viewed checkpoint as the OLD side, against THE NEXT-NEWER ITEM as the new
-// one. It compares FORWARD, toward now: the next-newer ELIGIBLE WALK MEMBER for
-// every index but the newest, and — at the newest index, which has no committed
-// successor — THE FROZEN LIVE NOW SIDE. So it answers "what happened after this
-// checkpoint", one step at a time, which is the question a walk backwards
-// through the history is asking at each stop. (The CUMULATIVE reading — every
-// checkpoint against the live now side, bare `u` — and the SESSION WALK — this
-// session's undo/redo timeline read as states, bare `g` — were removed
-// 2026-10-19, architect: "session and cumulative are not used much —
-// cumulative not at all".)
+// THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
+// against two different "other sides", and the view offers both.
 //
-// THE COLOR GRAMMAR: the NEWER side is always the now side of the diff, so
-// green `[+]` is what the newer side has, red `[-]` what the older side had and
-// the newer dropped — the newer checkpoint, or the session itself at the
-// newest index.
+// WHICH ONE IS SHOWING IS A SESSION PREFERENCE, not view state and not a tab:
+// AppState::history_cumulative is the bit (its contract lives at that field),
+// bare `u` and row 4's Cumulative button toggle it, and it is OFF — iterative —
+// at program start and KEPT ACROSS VISITS thereafter, since the mode's own
+// struct is reset whole at both edges and this deliberately is not in it. THE
+// WALK SOURCE is the icon row's WALK LAMP and bare `g` since 2026-08-18 (two
+// radio buttons over that chord until the 2026-09-04 collapse; row 3's tabs and
+// Ctrl+Tab selected it from 2026-08-05 until 2026-08-18); neither surface
+// touches the reading.
 //
-// THE NEWEST INDEX IS THE LIVE STATE AGAINST THE NEWEST CHECKPOINT,
-// deliberately (architect 2026-08-05, superseding his walk-parent pairing of
-// earlier the same day): a session freshly loaded right after a commit shows a
-// BLANK lane there, which is the architect's stated purpose for the forward
-// direction — and it is the same delta the checkpoint act's "is there anything
-// to commit" asks about (AppState::HistoryMode::head_delta_empty).
+//   ITERATIVE — the viewed checkpoint as the OLD side, against THE NEXT-NEWER
+//   ITEM as the new one. It compares FORWARD, toward now: the next-newer
+//   ELIGIBLE WALK MEMBER for every index but the newest, and — at the newest
+//   index, which has no committed successor — THE FROZEN LIVE NOW SIDE. So it
+//   answers "what happened after this checkpoint", one step at a time, which is
+//   the question a walk backwards through the history is asking at each stop. It
+//   is the state the PROGRAM starts in (the bit's own initializer) — not a
+//   per-visit default: a session that has turned cumulative on stays there until
+//   `u` turns it back or the program closes.
+//
+//   CUMULATIVE — the viewed checkpoint against the frozen live now side, the
+//   reading the mode shipped with. It answers "how does what I have now differ
+//   from that checkpoint?", which is what a restore or a load-in-place is about.
+//
+// THE COLOR GRAMMAR IS ONE RULE ACROSS BOTH, because the NEWER side is always
+// the now side of the diff: green `[+]` is what the newer side has, red `[-]`
+// what the older side had and the newer dropped. In cumulative the newer side is
+// the session; in iterative it is the next step forward — the newer checkpoint,
+// or the session itself at the newest index.
+//
+// THE TWO READINGS COINCIDE AT THE NEWEST INDEX, deliberately and by
+// construction (architect 2026-08-05, superseding his walk-parent pairing of
+// earlier the same day): both are the newest checkpoint against the live state
+// there, so a session freshly loaded right after a commit shows a BLANK lane in
+// BOTH readings — which is the architect's stated purpose for the forward
+// direction. Neither the lane nor any reader needs to know; they are simply the
+// same delta, computed and cached twice.
 //
 // EVERY INDEX HAS A FORWARD PARTNER, so there is no empty-delta special case and
 // no "the end of the walk has nothing to compare against" arm anywhere: the
@@ -196,10 +220,37 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // checkpoint the mode CAN show is the only delta whose two sides are both things
 // the user can reach. (It applies between COMMITTED neighbours only; the newest
 // index's partner is the live state, which nothing can hide.)
+enum class GuiHistoryCompare {
+    Iterative,
+    Cumulative,
+};
+
+// WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view grew a SECOND
+// WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO/REDO
+// TIMELINE. The icon row's WALK LAMP on bare `g` selects THIS axis and only
+// this one — "Remote" and "Local" (2026-08-08); the OTHER axis, the reading,
+// is row 4's Cumulative toggle.
 //
-// THE DELTA VOCABULARY is the six entry vectors plus `scale`. Viewport, trim and
-// the rest of the GUI band never appear: a checkpoint is about authoring
-// content.
+//   COMMIT — the checkpoint walk this mode was built on: the piece's committed
+//   sidecar history, matched by name under `projects/` (the file head owns the
+//   whole model). Its members cost git, its membership is the strict load gate,
+//   and it is the DEFAULT at every entry.
+//
+//   LOCAL — the session's own UNDO/REDO TIMELINE, read with the SAME machinery
+//   over different states: each member is one STATE of that timeline — a redo
+//   entry's, the live one, or an undo entry's snapshots — serialized through the
+//   save writers' own string halves, and the same compute_commit_delta types the
+//   difference. No git, no files, nothing on disk — the walk is what this
+//   session has done and what it can still redo, in the vocabulary the commit
+//   walk already speaks.
+//
+// THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
+// them: the six entry vectors plus `scale`. Viewport, trim and the rest of the
+// GUI band never appear, because they were never undoable in the first place.
+enum class GuiHistoryWalkSource {
+    Commit,
+    Local,
+};
 
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
@@ -222,8 +273,8 @@ struct GuiHistoryWarpEntry {
     // run's FIRST pre-act row whichever row the flag showed — a `4 → 3` flag
     // on the second of two coincident rows reverted the first. THE ORDINAL IS
     // WITHIN THE RUN, NOT A FULL-SIDE ROW INDEX, deliberately: the act is
-    // blind to the walk position (run_history_revert), so a flag's now side is
-    // the live store only at the newest index; a
+    // blind to the reading (run_history_revert), so a flag's now side is the
+    // live store only in the cumulative reading and at the newest index; a
     // full-side index would name nothing on the live store anywhere else,
     // while (frame, ordinal) stays an address on any store's own run. The
     // phase-reset entry carries the same field under
@@ -337,10 +388,11 @@ struct GuiHistoryCommitDelta {
     // here is a term here too, at the one place a reader is already looking.
     //
     // ITS READER IS THE COMMIT ACT'S FACE (AppState::HistoryMode::head_delta_-
-    // empty, app_state.h): the mode asks it once, of the NEWEST checkpoint —
-    // whose delta is the live state against it — to decide whether there is
-    // anything to commit at all, the act committing the LIVE state, whatever
-    // index the lane happens to be displaying. The vocabulary is
+    // empty, app_state.h): the mode asks it once, of the NEWEST checkpoint AND
+    // ALWAYS IN THE CUMULATIVE READING, to decide whether there is anything to
+    // commit at all — the act commits the LIVE state, so "nothing to
+    // checkpoint" is live-vs-newest whatever the lane happens to be
+    // displaying. The vocabulary is
     // exactly this struct's — the two marker columns and `scale` — which is why
     // a settings-only drift the mode never displays reads as empty here too (the
     // asymmetry is recorded at the field, HistoryMode::head_delta_empty).
@@ -372,21 +424,53 @@ struct GuiHistoryNowSide {
     std::string settings_text;
 };
 
+// THE SETTINGS WRITER'S GUI HALF, CAPTURED — every non-engine key's value, held
+// by VALUE so it can outlive the read (NonEngineSettingsSnapshot borrows a
+// ViewState pair and two strings, which is a call-shaped type, not a storable
+// one). It is opaque here because its ViewState members belong to app_state.h,
+// which this header is included BY; the definition and the one overlay rule live
+// in the .cpp.
+//
+// IT EXISTS FOR THE LOCAL WALK. The commit walk's two sides are both files, but a
+// local delta compares two states of THIS session, and both of them have to be
+// spelled with the SAME GUI half or every navigation the view performs would show
+// up as a settings difference. So the capture happens once, at the mode's entry,
+// and both sides of every local delta are formatted through it.
+struct GuiHistoryGuiSide;
+
+// Capture it off the live state. The active tab's band takes the save path's
+// pre-write stash (viewport / zoom / playhead / trim) on a LOCAL copy, exactly
+// as the settings editor's autocomplete recall does, so the bytes match a save
+// while this const read mutates nothing.
+std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
+    const AppState& app);
+
+// One settings file's bytes: the captured GUI half plus whichever engine
+// settings the caller is describing. The live state's own text is this with
+// app.engine_settings; a local walk member's is this with that member's entry's
+// (the LIVE member takes the now side's own text and never reaches this).
+std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
+                                         const EngineSettings&    engine);
+
 // Serialize the live state through the three writers' own string halves
 // (format_warpmarkers_text / format_phaseresetmarkers_text /
-// format_settings_text). The settings half's GUI keys take the save path's
-// pre-write stash (viewport / zoom / playhead / trim) onto the active tab's
-// band on a LOCAL copy, exactly as the settings editor's autocomplete recall
-// does, so the bytes match a save while this const read mutates nothing.
+// format_settings_text). The settings half goes through the two owners above,
+// so the now side and every local walk member are spelled by one rule.
 GuiHistoryNowSide build_history_now_side(const AppState& app);
 
 // THE TYPED LINE DIFF OF ONE PAIR OF SIDES — the whole delta computation, taken
-// off the walk position: the walk hands it the viewed commit's snapshots and
-// THE NEXT-NEWER ITEM's — the member one newer, or the frozen now side at the
-// newest index — and nothing in it knows which.
+// off the walk position so that every reading of every walk runs the identical
+// mechanism over different texts. The commit walk's cumulative reading hands it
+// the viewed commit's snapshots and the frozen now side; its iterative reading
+// hands it that commit's and THE NEXT-NEWER ITEM's; the LOCAL walk hands it two
+// serialized undo states, or one of them and that same frozen now side. Nothing
+// in it knows which, which is what makes four readings one answer-maker rather
+// than four.
 //
-// `sha` is always the VIEWED member's. `sample_rate` is the source's, the
-// nudge window's one input (history_nudge_window_frames).
+// `sha` is always the VIEWED member's, and EMPTY on the local walk: an undo
+// entry has no name, and the delta carries the emptiness rather than
+// inventing one. `sample_rate` is the source's, the nudge window's one
+// input (history_nudge_window_frames).
 GuiHistoryCommitDelta compute_commit_delta(
     const std::string& sha,
     const std::string& then_warp,
@@ -445,15 +529,15 @@ struct GuiHistoryCommitSidecars {
 };
 
 // THE SEVEN-CHARACTER SPELLING every user-facing line uses for a commit —
-// the `'` load confirmation's question (GuiInputHandler::history_load_in_place)
-// and every reason this module composes.
+// the `'` load confirmation's question through
+// AppState::HistoryMode::member_label, and every reason this module composes.
 // The full SHA is returned unchanged when it is shorter than seven, which no
 // git answer is.
 std::string short_sha(const std::string& sha);
 
 // READ ONE COMMIT'S SIDECARS BY SPELLING — the load-in-place-from-a-commit
 // path's input
-// (GuiInputHandler::load_history_commit_in_place), and the commit walk's per-commit
+// (GuiInputHandler::load_history_commit_in_place), and the session walk's per-commit
 // read generalized off the walk: the cache above is INDEX-keyed and holds
 // deltas, while this reads any one commit by name.
 //
@@ -725,8 +809,8 @@ void scan_history_walk(
 // superseding the list this used to build for itself at init) — each member
 // carries the three sidecar snapshots the load gate read on the worker — with
 // each commit's delta computed lazily on first request and cached thereafter PER
-// INDEX, so stepping back over a commit already visited costs nothing and no
-// delta ever runs git at all.
+// (INDEX, COMPARE), so stepping back over a commit already visited costs nothing
+// in either reading and no delta ever runs git at all.
 //
 // THE WALK MAY GROW UNDER A LIVE SESSION, which is the streaming's whole point:
 // a visit opened while the scan is still running sees members appended in walk
@@ -745,10 +829,12 @@ public:
     // reads and no strict load — plus the now-side capture and the delta
     // caches.
     //
-    // Returns available(). TWO FAMILIES OF FAILURE, one stderr line here and the
-    // entry owner's card (open_history_mode_fresh, which then opens nothing;
-    // the checkpoint act's transient bind cards it too, run_publish_chord).
-    // THE HEADER'S: the repo root
+    // Returns available(). TWO FAMILIES OF FAILURE, one stderr line and nothing
+    // else either way — AND A FAILURE NO LONGER REFUSES THE VIEW (architect
+    // 2026-09-04): the entry owner opens on the LOCAL walk instead, so what
+    // this answers is whether the REMOTE walk bootstrapped, and it is the
+    // stored verdict every reader of that question asks for the visit's whole
+    // life (available() below owns the readers). THE HEADER'S: the repo root
     // missing, no `origin` remote, a
     // `projects_repo` that is empty or that names a different repository than
     // this clone's FETCH url or than any of its effective PUSH urls, and a source
@@ -776,10 +862,14 @@ public:
     bool init(const AppState& app, const GuiHistoryPrefetch& prefetch,
               int sample_rate);
 
-    // DID THE BOOTSTRAP ANSWER? — init()'s verdict. A standing visit's is
-    // always true (the entry opens nothing on a false since 2026-10-19), so
-    // its readers are the two binds' own refusals: the entry owner's and the
-    // checkpoint act's transient session (run_publish_chord).
+    // IS THE REMOTE WALK AVAILABLE? — the bootstrap's verdict, ANSWERED ONCE
+    // PER ENTRY and read back from here all visit long (architect 2026-09-04).
+    // A visit whose bootstrap refused still opens, on the local walk, so this
+    // is what every surface that NEEDS git asks. ITS ONE PREDICATE IN THE GUI'S
+    // OWN VOCABULARY IS AppState's history_remote_walk_available, which is what
+    // those readers spell and which carries their inventory — nothing re-runs
+    // git to ask this, and a run that succeeds under a standing visit does not
+    // change the answer that visit opened with.
     bool               available() const { return available_; }
     // The refusal's two clauses (GuiFailure, failure.h): init() printed the
     // diagnostic, and the display clause is what the two cards above name.
@@ -810,26 +900,29 @@ public:
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
 
-    // The commit's delta (THE READING above), computed on first call and
-    // cached per index — each is asked repeatedly, so the cache is what keeps
-    // a step back free. Returns nullptr for an out-of-range index or an
-    // unavailable session. The returned pointer stays valid for the session's
-    // lifetime: the cache is a DEQUE (2026-08-07, replacing the vector sized
-    // once at init), and a deque's push_back — which is the only way
-    // membership grows — never moves the elements already in it. So a walk
-    // that grows under a live session appends empty slots and invalidates no
-    // pointer this ever handed out.
+    // The commit's delta IN ONE OF THE TWO READINGS (GuiHistoryCompare above),
+    // computed on first call and cached per (index, compare) — the two answers
+    // are independent and each is asked repeatedly, so one cache slot per pair
+    // is what keeps a compare switch as free as a step back. Returns nullptr
+    // for an out-of-range index or an unavailable session. The returned pointer
+    // stays valid for the session's lifetime: the cache is a DEQUE per reading
+    // (2026-08-07, replacing the vector sized once at init), and a deque's
+    // push_back — which is the only way membership grows — never moves the
+    // elements already in it. So a walk that grows under a live session appends
+    // empty slots and invalidates no pointer this ever handed out.
     //
-    // EVERY INDEX ANSWERS — no index is a special case, its forward partner
-    // being the next-newer walk member or, at the newest index, the live now
-    // side.
+    // EVERY INDEX ANSWERS IN BOTH READINGS — no index is a special case, the
+    // iterative reading's forward partner being the next-newer walk member or,
+    // at the newest index, the live now side. The two readings COINCIDE at that
+    // newest index and are cached separately there, one delta computed twice.
     //
-    // AND THE PAIRING IS APPEND-STABLE BY CONSTRUCTION, which is what lets a
-    // growing walk leave the cache alone: index i pairs with i−1 (or the
+    // AND THE ITERATIVE PAIRING IS APPEND-STABLE BY CONSTRUCTION, which is what
+    // lets a growing walk leave the cache alone: index i pairs with i−1 (or the
     // live now side at 0), both of which are NEWER than i — and every arrival is
     // older than everything already delivered, so no member ever appears between
     // an index and its forward partner. A cached delta stays the right answer.
-    const GuiHistoryCommitDelta* delta_at(std::size_t index);
+    const GuiHistoryCommitDelta* delta_at(std::size_t         index,
+                                          GuiHistoryCompare   compare);
 
     // What init() resolved: the CLONE the source is in, the source's sidecar
     // base name, and the piece's DIRECTORY (e.g. "projects/550 - 1"),
@@ -847,6 +940,19 @@ public:
     const std::string& repo_root() const { return repo_root_; }
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
+
+    // THE FROZEN NOW SIDE, for the visit's OTHER walk. The local walk measures
+    // against the same three strings this session captured at init(), and it
+    // takes them from here rather than building a second set: one capture per
+    // visit is what makes "the two walks agree about now" structural instead of
+    // a coincidence of two calls made a microsecond apart.
+    //
+    // IT IS CAPTURED WHETHER OR NOT THE BOOTSTRAP ANSWERED (2026-09-04), which
+    // is what the local fallback needs: a visit that opens with no remote walk
+    // still reads its whole undo/redo timeline against this side, so the
+    // capture sits ABOVE init()'s refusal arms rather than at its successful
+    // tail. It is empty only before init() has run at all.
+    const GuiHistoryNowSide& now_side() const { return now_; }
 
 private:
     // The bound store's walk, or an empty one. It ANSWERS EMPTY FOR A
@@ -872,11 +978,222 @@ private:
     const GuiHistoryPrefetch* store_            = nullptr;
     unsigned long long        store_generation_ = 0;
 
-    // One slot per commit, filled on first request and grown to match
-    // membership as the store delivers. A DEQUE, because push_back leaves every
-    // element already in it exactly where it is, which is delta_at's
-    // pointer-stability contract under a growing walk.
-    std::deque<std::optional<GuiHistoryCommitDelta>> cache_;
+    // One slot per (commit, compare mode), filled on first request and grown to
+    // match membership as the store delivers. A DEQUE per reading, because
+    // push_back leaves every element already in it exactly where it is, which is
+    // delta_at's pointer-stability contract under a growing walk. Indexed by the
+    // enum's own value.
+    //
+    // THE FOURTH READING DID NOT LAND HERE (2026-08-07), which retires this
+    // slot's old "adding a third reading is a one-line change" note: the LOCAL
+    // walk offers the same two readings over ANOTHER SOURCE (GuiHistoryLocalWalk
+    // below), so what the view grew was a second source with its own two-slot
+    // cache — not a third compare mode. A genuine third READING would still be
+    // the one-line change the array shape suggests, in both classes.
+    std::array<std::deque<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
+};
+
+// THE LOCAL WALK — THE SESSION'S OWN UNDO/REDO TIMELINE, READ AS A WALK
+// (architect 2026-08-07: "the local history feature will be helpful for
+// understanding undo/redo history"). It is GuiHistoryDiff's formula over
+// different members, and deliberately nothing more: same members-newest-first
+// indexing, same two readings, same forward pairing, same delta type, same
+// painter, same lane.
+//
+// A MEMBER IS ONE STATE OF THE TIMELINE — not one undo entry (architect
+// 2026-08-08, superseding the undo-stack-only walk). With U = the undo stack's
+// size and R = the redo stack's, BOTH CAPTURED AT init, the walk carries
+// N = U + R + 1 members, newest first: every state Ctrl+Z and Ctrl+Shift+Z can
+// reach, plus the one the session is standing in.
+//   * k < R — A FUTURE STATE, `redo_stack[k]`. Redo counter-entries are pushed
+//     as the user undoes, so redo_stack[0] is the FURTHEST future and
+//     redo_stack.back() the nearest: the vector already runs newest-first, and
+//     a counter-entry's snapshots are the state a redo would restore.
+//   * k == R — THE LIVE MEMBER, the session's current state. The walk already
+//     holds it as the frozen now side, so nothing is captured or serialized for
+//     it; its three texts are that side's own.
+//   * k > R — A PAST STATE, `undo_stack[U + R - k]`, whose snapshots are THE
+//     STATE BEFORE THE EVENT THAT ENTRY RECORDS (k = R+1 is the stack's top,
+//     one Ctrl+Z away; k = N-1 is undo_stack[0], the state at file open).
+// Both stacks carry all three pieces — two marker snapshots and the engine
+// block, the carry-everywhere shape at UndoEntry, which restore_history_entry reproduces field for field on the
+// counter-entry it pushes — so serializing them through the save writers' own
+// string halves gives the same three loader-clean texts a commit member carries,
+// and the diff needs no second grammar and no second reader.
+//
+// SO THE MEMBERS ARE THE TIMELINE'S STATES, newest first, and every adjacent
+// pair (k, k−1) brackets exactly one event. THE WALK IS THEREFORE NEVER EMPTY:
+// a session that has authored nothing is N = 1, the live state alone, reading
+// `1/1` and comparing against itself (architect 2026-08-08: "once we've reached
+// the undo history, even if there is nothing in it, we are comparing one state
+// against an identical state"). `0/0` on a Local tab means the walk was never
+// initialized, and nothing else.
+//
+// WHICH MAKES THE ITERATIVE READING EXACTLY ONE EVENT — THE COMMIT WALK'S OWN
+// FORWARD PAIRING, verbatim: member k against member k−1, the next-newer
+// member, and at k == 0 against ITSELF, nothing being newer than the furthest
+// future state. That self-pair is the blank lane the commit walk shows at its
+// newest index right after a commit. At the LIVE member the delta is the change
+// the next REDO would apply; at the first past member it is what Ctrl+Z would
+// revert.
+//
+// THE CUMULATIVE READING IS "how does my session differ", so it measures
+// against THE LIVE MEMBER always — and for a FUTURE member THE SIDES SWAP: the
+// live state is the THEN side and the future state the NOW side, the future
+// state being the newer of the two. That is what keeps THE NEWER SIDE IS GREEN
+// one exceptionless colour rule across the whole timeline instead of a rule with
+// a redo exception. At the live member itself both sides are the same state, so
+// the lane is blank there in both readings.
+//
+// (THE REDO STACK WAS DELIBERATELY EXCLUDED until 2026-08-08, on the reasoning
+// that a walk is what is BEHIND you and that including redo would need a second
+// index origin and a signed position. The architect superseded that with the
+// complaint the states model answers — set a marker, move it, Ctrl+Z, open the
+// view and it read `1/1` about a session holding three states — and the
+// objection went with it: there is ONE index origin here, the newest state, and
+// the live state is a member like any other.)
+//
+// THE TIMELINE IS FROZEN WHILE THE VIEW STANDS, and the premise is derived
+// rather than hoped: every route that could push, pop or evict an entry on
+// EITHER stack is either consumed by the mode's two allowlists or closes the
+// view as part of itself (AppState::HistoryMode owns that derivation — the same
+// one that keeps the frozen now side honest), and it covers the redo stack by
+// the same argument, redo's only writers being push (which clears it) and the
+// two restores. IT IS EXCEPTIONLESS since 2026-08-07: the one admitted producer
+// it shipped with — the S->T view switch's iteration-bracket push — is gone with
+// the ruling that ITERATION MODE IS TARGET-LEGAL, so entering target view writes
+// no store at all, and the mode bit cannot toggle in here either (`i` is not on
+// the keyboard allowlist). So both sizes are captured at init and the caches are
+// plain vectors sized once, and the past members index FROM THE BOTTOM of the
+// undo stack, which is what would make an append harmless if one ever returned:
+// a captured position keeps naming the entry it named and the new entry is
+// simply not in the walk. The premise stands on that derivation alone — nothing
+// at runtime enforces it. member_at re-reads BOTH stacks' SIZES on every ask,
+// but that is a bounds precondition on the subscript, not a check of the
+// premise: a stack shorter than its captured size answers a blank lane rather
+// than being read at indices that now mean other events. (A per-entry PUSH
+// SERIAL verifying each captured position lived for one day of 2026-08-07,
+// written for the kCap-eviction shape the admitted push could reach; the
+// architect deleted it with that producer — member_at states the rule. Do not
+// re-propose it.)
+//
+// A MEMBER PAIR THAT SERIALIZES IDENTICALLY SHOWS A BLANK LANE, which is honest
+// rather than a gap: an event that changes nothing any sidecar would carry
+// leaves nothing for a delta to say about the pair that brackets it — the same
+// blank the commit walk shows for a checkpoint whose content matches its
+// neighbour. (The named instance was the iteration bracket's session-only
+// snapshot, which pushed an entry the dirty walk skipped; the bracket left the
+// undo domain on 2026-09-10, so the shape survives without that producer — a
+// settings entry that rewrites a GUI-kind key is one.)
+class GuiHistoryLocalWalk {
+public:
+    // BIND TO THE LIVE SESSION at the mode's entry: BOTH stacks' sizes are
+    // captured, the GUI half of the settings writer is captured (one snapshot
+    // for BOTH sides of every delta — the reason it is captured at all is at
+    // GuiHistoryGuiSide), and `now` is the visit's frozen now side, taken from
+    // GuiHistoryDiff::now_side() so the two walks measure against one capture —
+    // and so the LIVE MEMBER costs this walk nothing but the copy it already
+    // makes.
+    //
+    // `app` IS RETAINED as the stacks' owner. It outlives every visit (it is the
+    // one long-lived object in the program) and the entries it hands back are
+    // read only through the frozen sizes above. `sample_rate` is the source's,
+    // every delta's nudge window as on the commit walk.
+    void init(const AppState& app, const GuiHistoryNowSide& now,
+              int sample_rate);
+
+    // How many STATES the timeline carries — U + R + 1, the `n/N` denominator
+    // the corner shows on the Local tab, and fixed for the visit. It is never zero once init has
+    // run against a session: a session that has authored nothing answers 1, the
+    // live state alone. Zero is the UNINITIALIZED answer (no visit has bound this
+    // walk), which is the only way a Local tab can read `0/0`.
+    std::size_t entry_count() const { return count_; }
+
+    // WHERE THE SESSION STANDS in the walk — the live member's index, which is
+    // the captured redo count. The ONE entry owner opens the view here rather
+    // than at 0, because 0 is the furthest FUTURE state and this is the state on
+    // screen; with no redo entries the two coincide. Zero on an uninitialized
+    // walk, which no reader reaches (the entry owner calls init first).
+    std::size_t live_index() const { return redo_count_; }
+
+    // The member's delta IN ONE OF THE TWO READINGS, computed on first call and
+    // cached per (index, compare) exactly as the commit walk's is. Returns
+    // nullptr for an out-of-range index, an uninitialized walk, or a stack whose
+    // size no longer matches the capture (the frozen-timeline premise, checked
+    // rather than assumed). The returned pointer is stable for the visit: the
+    // caches are sized once at init and neither stack can grow under them.
+    const GuiHistoryCommitDelta* delta_at(std::size_t       index,
+                                          GuiHistoryCompare compare);
+
+    // ONE MEMBER'S STATE, TYPED — the three pieces a load-in-place puts back
+    // into the live session, handed out as pointers into the state that is
+    // already there (a stack entry's snapshots, or the live stores and engine
+    // block for THE LIVE MEMBER). It is deliberately NOT the member's three
+    // TEXTS: those are the DIFF's medium, and round-tripping typed state
+    // through them to load it would put the strict parsers in a path that
+    // needs no grammar at all.
+    //
+    // ONE CONSUMER — the Local tab's `'` load-in-place
+    // (GuiInputHandler::load_history_local_entry_in_place). It COPIES all three
+    // before it writes anything, which is what keeps the identity load (loading
+    // the live member) from assigning a store to itself.
+    //
+    // THE POINTERS LIVE AS LONG AS THE VISIT DOES and no longer: they name the
+    // frozen stacks and the live stores, so any route that ends the visit —
+    // the load-in-place's own close included — invalidates them.
+    struct MemberState {
+        const std::vector<GuiWarpMarker>*       warp_markers        = nullptr;
+        const std::vector<GuiPhaseResetMarker>* phase_reset_markers = nullptr;
+        const EngineSettings*                   engine_settings     = nullptr;
+    };
+    // EMPTY is member_at's nullptr in optional's spelling and means the same
+    // thing: an out-of-range index, an uninitialized walk, or a stack shorter
+    // than its capture (the bounds precondition). It is the blank-lane state,
+    // and a live Local tab cannot reach it — the walk is bound before the mode
+    // goes up and every step clamps — so the one consumer treats it as a
+    // refusal rather than acting on a guess.
+    std::optional<MemberState> member_state(std::size_t index) const;
+
+private:
+    // One member's three texts, serialized on first ask and kept. Lazy for the
+    // reason the commit walk's deltas are: a visit typically reads a handful of
+    // members out of a timeline that may hold hundreds, and formatting all of
+    // them at `h` would be exactly the entry stall the prefetch arc removed. (The
+    // LIVE member is the one that costs nothing either way — it copies the three
+    // frozen now-side strings — and it takes the same lazy path rather than a
+    // case of its own.)
+    struct Member {
+        bool        built = false;
+        std::string warpmarkers_text;
+        std::string phaseresetmarkers_text;
+        std::string settings_text;
+    };
+    const Member* member_at(std::size_t index);
+
+    // THE BOUNDS PRECONDITION, shared by the two member readers: the walk is bound,
+    // the index is in range, and NEITHER stack has shrunk below its capture.
+    // False means "answer nothing at all" rather than subscript a stack whose
+    // indices may now name other events (member_at's own comment owns the
+    // reasoning; this is where the three tests live).
+    bool member_readable(std::size_t index) const;
+    // THE INDEX -> STACK ENTRY MAPPING, the class comment's three arms in one
+    // place: nullptr for THE LIVE MEMBER (k == R, which has no entry — its state
+    // is the session's own), the redo stack below it, the undo stack above it.
+    // Precondition: member_readable(index), so this never bounds-checks.
+    const UndoEntry* entry_at(std::size_t index) const;
+
+    const AppState*                          app_        = nullptr;
+    // The two captured sizes and the member count they imply — U, R and
+    // N = U + R + 1. `count_` is what entry_count answers and what bounds every
+    // index; the two halves are what member_at maps an index through.
+    std::size_t                              undo_count_ = 0;
+    std::size_t                              redo_count_ = 0;
+    std::size_t                              count_      = 0;
+    int                                      sample_rate_ = 0;
+    std::shared_ptr<const GuiHistoryGuiSide> gui_;
+    GuiHistoryNowSide                        now_;
+    std::vector<Member>                      members_;
+    std::array<std::vector<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
 // -- THE COMMIT ACT — the first of the three mutating git routes ------------
