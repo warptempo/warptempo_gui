@@ -1617,8 +1617,9 @@ struct FlagFace {
 //   WARP, PHASE RESET        cue red   cue red | range blue            light / white
 //   history ADDED (plus)     cue red   —       | cue red               light / white
 //   history REMOVED (minus)  invalid   invalid | —                     light / white
-// "invalid" is the palette's `invalid_label`, each built-in's center line
-// (palette_file.h's role table); THE `range` BLUE LEAVES THE HISTORY VIEW
+// "invalid" is the palette's `invalid_label`, each built-in's own red apart
+// from its center line (palette_file.h's role table, architect 2026-10-25
+// night); THE `range` BLUE LEAVES THE HISTORY VIEW
 // (2026-10-11: the plus takes the marker's own face, the minus the invalid
 // color), each half keeping its phase of 2026-10-09 so a changed pair's two
 // stems on one column still alternate.

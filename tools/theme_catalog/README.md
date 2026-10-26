@@ -21,11 +21,12 @@ built-ins 2026-10-09 to 2026-10-25 and live in git history.
 `gen_presets.py` transcribes each into the eleven program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
 off the header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never
 hand-edited. Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, Curs and Face to their
-roles; THE LIT OUTLINE the ink at HLS lightness 0.3157, the lightness measured on Cool Edit Pro 2.1's view bar span
-shadows across five of its presets (2026-10-09; `src/gui/cool_edit_derive.h`'s `span_shadow`, ported operation for
-operation, `palette_file.cpp` proving every row against the C++ tone()); THE INVALID COLOR its Cntr too; the scanner
-white in every preset. The keys `warptempo-<name>` (the `waveform` device key's words). Byte-stable: the presets in
-the file's order, the roles in the table's, uppercase hex, LF, no timestamp.
+roles, and THE INVALID COLOR the preset's own Inv, the one key of the program's own (architect 2026-10-25 night, the
+center line dim and the invalid and the playhead tuned per preset); THE LIT OUTLINE the ink at HLS lightness 0.3157,
+the lightness measured on Cool Edit Pro 2.1's view bar span shadows across five of its presets (2026-10-09;
+`src/gui/cool_edit_derive.h`'s `span_shadow`, ported operation for operation, `palette_file.cpp` proving every row
+against the C++ tone()); the scanner white in every preset. The keys `warptempo-<name>` (the `waveform` device key's
+words). Byte-stable: the presets in the file's order, the roles in the table's, uppercase hex, LF, no timestamp.
 
 ## The user's list — docs/themes/catalog.md (architect 2026-10-16)
 

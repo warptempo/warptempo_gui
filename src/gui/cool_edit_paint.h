@@ -43,8 +43,9 @@
 // color and 000000 alternating, is not drawn: architect 2026-10-09 ~14:30.)
 // THE PLAYHEAD'S OWN COLOR — the head and its dots in the canvas — is the
 // palette's `playhead_stem`
-// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 its default in every
-// palette (palette_file.h's role table), as the cues' two colors are the
+// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 on most built-ins and
+// another bright color on some (tuned per preset, architect 2026-10-25
+// night; palette_file.h's role table), as the cues' two colors are the
 // palette's `cue` and `range`; the triangles' shadow is the derived
 // `ce_cue_shadow`. THE RULER'S INK IS NO TONE OF FACE AND NEVER SWAPS
 // (architect 2026-10-10, "we follow Cool Edit's theming"):

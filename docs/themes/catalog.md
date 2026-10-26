@@ -11,7 +11,7 @@ The default: Phosphor, Cyan and Sky (`warptempo-phosphor-cyan-and-sky`).
 The program's own presets, made for its black panel: variations of one phosphor-green waveform color, lighter or deeper, softer or more vivid, or turned toward lime, jade or mint, each with two cool marker colors — most of them easy to tell apart, and some a quieter pair in tones related to the green.
 
 - The waveform's outline is each preset's waveform color darkened, the same hue at a fixed lightness (the lightness of Cool Edit Pro 2.1's view bar shadows).
-- The Invalid color, which marks an invalid marker, is each preset's own center-line color, a red.
+- The Invalid color, which marks an invalid marker, is a red of each preset's own, apart from its center line, which is one dim wine red on every preset.
 - The scanner (the line that moves during playback) and the zoom's anchor line are white in every preset, as Cool Edit's scanner is on every one of its presets.
 
 | Preset | Key |

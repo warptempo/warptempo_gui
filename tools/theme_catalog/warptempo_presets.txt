@@ -8,64 +8,72 @@
 # saturation .45, Vivid .72; the hue Lime 120, Spring 130, Jade 150, Mint 160; the grid the ink's hue at saturation
 # .5 and lightness .12. THE CUE AND THE RANGE, two colors on the alternating stem, NO WARM MARKER (architect
 # 2026-10-25 night: "get rid of everything gold and anything where you put a yellowish-orange hue on the marker"; the
-# playhead's yellow is the one warm mark on the canvas): cool families alone. Cyan over sky the family's own, on
+# playhead is the one warm mark on the canvas): cool families alone. Cyan over sky the family's own, on
 # every ink (Cool Edit Pro 2.1's CEPro 1.2 pair, his "better contrast with the background"); on the base and the pale
 # ink alone, mauve over sky (XP Blue's), frost over sky, lavender over ice, orchid over frost, and the FITTING pairs,
 # teal or sage over frost — tonal relatives of the green, for the magnified trough work ("waveform magnification
 # means I aim at troughs; low contrast is OK if the marker gets a nice color that fits the ink"). NO RED BUT THE
-# INVALID'S. Every one shares the rest: WvBk 000000, Cntr A53038 (the generator also makes it the invalid label, so
-# an invalid cue keeps a legible red), Curs FFFF00 and Face 626C7B (the record; no surface reads it). The outline is
-# derived and the scanner fixed white by the generator's rules (its head).
-# FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone), EACH VALUES LINE
-# FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are listed; the key is `warptempo-` and the
-# name in the key grammar. Lines opening with '#' are this note and nothing else.
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+# INVALID'S AND THE DIM CENTER LINE'S. THE INVALID AND THE PLAYHEAD TUNED PER PRESET (architect 2026-10-25 night: "the
+# invalid red we're using was tuned to the default theme; it doesn't work that well with any of these. Tune that as
+# well. And while we're at it, tune the playhead also. The yellow works, so be sure to use that sometimes, but you can
+# use other alternatives"): THE CENTER LINE goes DIM, Cntr one wine 6E2830 on every preset, a hairline that no longer
+# shouts across the canvas; THE INVALID its own Inv, one of four reds — Coral E85C6A (HLS hue 352, saturation .75,
+# lightness .64, the family's own), Crimson D8324A (deeper), Rose F07A9A (pinker, for the pale inks), Brick C04040
+# (duller, with the fitting teal pair); THE PLAYHEAD its Curs — Yellow FFFF00 (Cool Edit's, kept on most presets by his
+# word), Pale Yellow FFFF8C, Lime Yellow E0FF40, Magenta FF4DFF, Pink FF7AC8. The alternatives are spread over the
+# family so each is seen on a base and a pale ink; the default keeps Coral and Yellow. Every one shares the rest: WvBk
+# 000000 and Face 626C7B (the record; no surface reads it). The outline is derived and the scanner fixed white by the
+# generator's rules (its head).
+# FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone, Inv the one key of
+# the program's own), EACH VALUES LINE FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are
+# listed; the key is `warptempo-` and the name in the key grammar. Lines opening with '#' are this note and nothing else.
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Phosphor, Cyan and Sky
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=C17DB0,RngM=4BC0F3,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=D8324A,CueM=C17DB0,RngM=4BC0F3,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Phosphor, Mauve and Sky
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=EAF2FF,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=EAF2FF,RngM=70B3FC,GrdL=10301C,Curs=FF4DFF,Face=626C7B
 Phosphor, Frost and Sky
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=B4A8FF,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=F07A9A,CueM=B4A8FF,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Phosphor, Lavender and Ice
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=D08BE0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=D08BE0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF8C,Face=626C7B
 Phosphor, Orchid and Frost
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=7FD8D0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=C04040,CueM=7FD8D0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Phosphor, Teal and Frost
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,CueM=B0E0B8,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=6FD98F,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=B0E0B8,RngM=EAF2FF,GrdL=10301C,Curs=E0FF40,Face=626C7B
 Phosphor, Sage and Frost
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Pale Phosphor, Cyan and Sky
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=C17DB0,RngM=4BC0F3,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=D8324A,CueM=C17DB0,RngM=4BC0F3,GrdL=10301C,Curs=FF4DFF,Face=626C7B
 Pale Phosphor, Mauve and Sky
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=EAF2FF,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=F07A9A,CueM=EAF2FF,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Pale Phosphor, Frost and Sky
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=B4A8FF,RngM=8FD8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=B4A8FF,RngM=8FD8FF,GrdL=10301C,Curs=FF7AC8,Face=626C7B
 Pale Phosphor, Lavender and Ice
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=D08BE0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=D8324A,CueM=D08BE0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF8C,Face=626C7B
 Pale Phosphor, Orchid and Frost
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=7FD8D0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=C04040,CueM=7FD8D0,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Pale Phosphor, Teal and Frost
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,CueM=B0E0B8,RngM=EAF2FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=8EE1AA,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=B0E0B8,RngM=EAF2FF,GrdL=10301C,Curs=E0FF40,Face=626C7B
 Pale Phosphor, Sage and Frost
-WvFg=A6E7BC,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=A6E7BC,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Bright Phosphor, Cyan and Sky
-WvFg=4ED079,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=4ED079,WvBk=000000,Cntr=6E2830,Inv=D8324A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Deep Phosphor, Cyan and Sky
-WvFg=7ACD95,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=7ACD95,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF8C,Face=626C7B
 Soft Phosphor, Cyan and Sky
-WvFg=97D8AD,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=97D8AD,WvBk=000000,Cntr=6E2830,Inv=F07A9A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
 Pale Soft Phosphor, Cyan and Sky
-WvFg=61E58D,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
+WvFg=61E58D,WvBk=000000,Cntr=6E2830,Inv=D8324A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FF4DFF,Face=626C7B
 Vivid Phosphor, Cyan and Sky
-WvFg=6ED86E,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E0F,Curs=FFFF00,Face=626C7B
+WvFg=6ED86E,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E0F,Curs=FFFF00,Face=626C7B
 Lime, Cyan and Sky
-WvFg=8EE18E,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E0F,Curs=FFFF00,Face=626C7B
+WvFg=8EE18E,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E0F,Curs=FFFF8C,Face=626C7B
 Pale Lime, Cyan and Sky
-WvFg=6ED880,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E14,Curs=FFFF00,Face=626C7B
+WvFg=6ED880,WvBk=000000,Cntr=6E2830,Inv=C04040,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E14,Curs=FFFF00,Face=626C7B
 Spring, Cyan and Sky
-WvFg=6ED8A3,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+WvFg=6ED8A3,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
 Jade, Cyan and Sky
-WvFg=8EE1B8,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+WvFg=8EE1B8,WvBk=000000,Cntr=6E2830,Inv=F07A9A,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FF7AC8,Face=626C7B
 Pale Jade, Cyan and Sky
-WvFg=6ED8B5,WvBk=000000,Cntr=A53038,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E24,Curs=FFFF00,Face=626C7B
+WvFg=6ED8B5,WvBk=000000,Cntr=6E2830,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E24,Curs=FFFF00,Face=626C7B
 Mint, Cyan and Sky

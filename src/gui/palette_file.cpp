@@ -111,14 +111,6 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
            cool_edit_derive::tone(b.words[palette_role_index("waveform_ink")],
                                   lo.a, lo.b);
 }));
-// EVERY BUILT-IN'S INVALID COLOR IS ITS CENTER LINE (palette_file.h's role
-// table, architect 2026-10-11; the generator copies each preset's Cntr into
-// both, and this proves the record).
-static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
-                                  [](const GuiBuiltinPalette& b) {
-    return b.words[palette_role_index("invalid_label")] ==
-           b.words[palette_role_index("center")];
-}));
 // (THE CHOICE ROWS' ORDERS' PROOFS — each a permutation of its table, its
 // first row the kind's default — went with the orders, 2026-10-14.)
 

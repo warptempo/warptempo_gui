@@ -8,22 +8,24 @@
 # outline's lightness below are theirs. Each row a KEY, a DISPLAY NAME and THE ELEVEN PROGRAM ROLES
 # (kGuiPaletteRoles, read off palette_file.h and checked against ROLE_ORDER) under the one transcription below.
 #
-# THE SOURCE, in Cool Edit's value grammar (comma-separated key=value items): EVERY values line is followed by its
+# THE SOURCE, in Cool Edit's value grammar (comma-separated key=value items; its keys and Inv, the one key of the
+# program's own, architect 2026-10-25 night): EVERY values line is followed by its
 # name line. A values line followed by another values line, or by the file's end, is the run's hard fail, the first
 # such line named; a name line following no values line likewise. Lines opening with '#' are the file's note.
 #
 # THE TRANSCRIPTION, each role <- the preset's key, every key required, nothing derived but the outline:
 #   waveform_canvas <- WvBk          waveform_ink <- WvFg          grid <- GrdL          center <- Cntr
 #   cue <- CueM                      range <- RngM                 playhead_stem <- Curs
+#   invalid_label <- Inv, THE PRESET'S OWN INVALID COLOR, apart from its center line (architect 2026-10-25 night: "the
+#     invalid red we're using was tuned to the default theme; it doesn't work that well with any of these. Tune that
+#     as well": the center line dim and the invalid each preset's own, required on every row like every key), the
+#     triangle, the dots and the resting label of an invalid cue and the `h` view's removed half;
 #   face <- Face (the record; no surface reads it, palette_file.h's head);
 #   waveform_outline <- THE INK AT HLS LIGHTNESS 0.3157, hue and saturation kept: the lightness was measured on Cool
 #     Edit Pro 2.1's view bar span shadows across five of its presets (2026-10-09; src/gui/cool_edit_derive.h's
 #     `span_shadow` record, its (a, b) read off that file and checked to be (0, 0.3157); the product's span itself is
 #     neutral grey since 2026-10-25, materials.h), its round trip ported below operation for operation, so the
 #     bytes are cool_edit_derive.h's tone() exactly (palette_file.cpp's static_assert proves every row);
-#   invalid_label <- Cntr TOO, THE PRESET'S OWN CENTER-LINE COLOR (architect 2026-10-11 ~01:00-01:20: the invalid
-#     color is each palette's center line, the triangle, the dots and the resting label of an invalid cue and the `h`
-#     view's removed half);
 #   scanner FFFFFF, the same in every preset (architect 2026-10-16, Cool Edit's own constant white, observed in Cool
 #     Edit Pro 2.1 under Wine: the scanner is white on every preset he tried, so the value grammar records no key for
 #     it; the zoom anchor's stem is the same design).
@@ -55,7 +57,7 @@ ROLE_ORDER = ('waveform_canvas', 'waveform_ink', 'waveform_outline', 'grid', 'ce
               'playhead_stem', 'scanner', 'face')
 # role <- the preset's key (the head)
 FROM_KEY = {'waveform_canvas': 'WvBk', 'waveform_ink': 'WvFg', 'grid': 'GrdL', 'center': 'Cntr', 'cue': 'CueM',
-            'range': 'RngM', 'playhead_stem': 'Curs', 'face': 'Face'}
+            'range': 'RngM', 'invalid_label': 'Inv', 'playhead_stem': 'Curs', 'face': 'Face'}
 # the role the value grammar has no key for (the head)
 FIXED = {'scanner': 0xFFFFFF}
 KEY_PREFIX = 'warptempo-'
@@ -174,7 +176,6 @@ def preset_words(name, values):
     """One preset -> its eleven words in ROLE_ORDER (the head's transcription)."""
     w = {role: word(values, key, name) for role, key in FROM_KEY.items()}
     w['waveform_outline'] = tone(w['waveform_ink'], *OUTLINE)
-    w['invalid_label'] = w['center']
     w.update(FIXED)
     return [w[r] for r in ROLE_ORDER]
 

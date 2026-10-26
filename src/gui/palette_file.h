@@ -113,19 +113,24 @@
 // Cool Edit's view bar span shadows, cool_edit_derive.h's `span_shadow`
 // record — the product's span itself neutral grey since 2026-10-25,
 // materials.h — run once by the generator and proven below), `grid` its
-// GrdL, `center` its Cntr, `cue` its CueM (the default's cyan, 37FDF8) and
-// `range` its RngM (its sky, 70B3FC), `playhead_stem` its Curs (the yellow),
+// GrdL, `center` its Cntr (one dim wine, 6E2830, in every built-in),
+// `cue` its CueM (the default's cyan, 37FDF8) and `range` its RngM (its sky,
+// 70B3FC), `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on most, the
+// default's among them, another bright color on some: tuned per preset,
+// architect 2026-10-25 night),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in every preset: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
-// head); THE INVALID COLOR `invalid_label` ITS Cntr
-// TOO, the preset's own center-line color (architect 2026-10-11 ~01:00–01:20;
+// head); THE INVALID COLOR `invalid_label` ITS Inv, the one key of the
+// program's own, a red tuned per preset apart from its center line (architect
+// 2026-10-25 night: "the invalid red we're using was tuned to the default
+// theme; it doesn't work that well with any of these. Tune that as well";
+// the default's coral, E85C6A; one red role since 2026-10-11 ~01:00–01:20,
 // Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
 // the selected role with them: "No flags change color when you select them
 // … I'd rather the text just go white, and the flag should be the
 // indicator that it's invalid" — a selected invalid label is the chrome's
-// text as every selected label's; still a role of its own, so a palette
-// may part it from the center line); and THE ONE COOL EDIT HAS NO KEY FOR,
+// text as every selected label's); and THE ONE COOL EDIT HAS NO KEY FOR,
 // the same in every built-in: THE SCANNER WHITE, COOL EDIT'S OWN CONSTANT
 // (architect 2026-10-16, observed in Cool Edit Pro 2.1 under Wine on the
 // laptop: the scanner is white on every preset he tried, so its value
@@ -230,8 +235,7 @@ void install_program_palette(const GuiPaletteWords& words);
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
-// default a row, every lit outline the generator's rule off its ink and
-// every invalid color its center line.
+// default a row and every lit outline the generator's rule off its ink.
 struct GuiBuiltinPalette {
     const char*     key;
     const char*     display_name;

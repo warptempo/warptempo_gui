@@ -273,7 +273,8 @@ struct TrimRange {
 //                 Cool Edit's —
 //                 `cue` the red and `range` the blue, the triangles and
 //                 their dots — and THE INVALID COLOR, `invalid_label`,
-//                 each built-in's center line (2026-10-11): an invalid
+//                 each built-in's own red apart from its center line
+//                 (architect 2026-10-25 night, palette_file.h): an invalid
 //                 cue's triangle, dots and resting label and the history's
 //                 removed half (THE MARKER LANE, below); the playhead's role
 //                 `playhead_stem` — its head in the ruler and its dots in
@@ -591,7 +592,9 @@ void install_true_colors(bool on);
 // envelope drawn as one antialiased triangle, the apex the playhead's
 // column (paint_ce_cue_triangle, 2026-10-09 ~12:40) — in THE PALETTE'S
 // `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
-// FFFF00 in every default palette) over the same triangle one quantum right
+// FFFF00 on most built-ins, the default's among them, another bright color
+// on some, tuned per preset, architect 2026-10-25 night) over the same
+// triangle one quantum right
 // in `ce_cue_shadow`, ON THE RULER'S ROWS 6 .. 10, the apex on the
 // ground's bottom row, its top row the digits' last — it covers what stands
 // under it (2026-10-09 ~21:00)
@@ -619,8 +622,8 @@ void install_true_colors(bool on);
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles stood 2026-10-05 to 2026-10-09; the solid `playhead_stem` line
 // before it; git history.)
-// THE PLAYHEAD ALONE IS YELLOW: `playhead_stem` is its head and its dots
-// and nothing else (architect 2026-10-09). THE STEMS THAT BELONG TO THE
+// THE PLAYHEAD ALONE WEARS ITS COLOR: `playhead_stem` is its head and its
+// dots and nothing else (architect 2026-10-09). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
@@ -675,7 +678,8 @@ void install_true_colors(bool on);
 // kind reads from the label alone (his one-label rule). THE FLAG IS THE
 // INVALID INDICATOR (architect 2026-10-11 ~01:00–01:20): an invalid cue's
 // triangle and dots wear THE INVALID COLOR, `invalid_label` (each built-in
-// palette's center line), in place of the cue red.
+// palette's own red, apart from its center line, architect 2026-10-25
+// night), in place of the cue red.
 // THE TRIANGLE NEVER CHANGES WITH SELECTION (Cool Edit's never does). THE
 // TABLE — which triangle, which dots, which label — is resolve_flag_face's
 // head (render.cpp), the one resolver every cue goes through.
@@ -2884,7 +2888,8 @@ struct GuiPlateColumns {
 // edge, so it never leaks into an adjacent region.
 //
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02): the cursor's head is
-// paint_ruler_row's (the yellow triangle in the ruler since 2026-10-09), and
+// paint_ruler_row's (the `playhead_stem` triangle in the ruler since
+// 2026-10-09), and
 // no strip lane is reachable from here.
 //
 // The former two-tone form (an `ink_plate` parameter carrying the displayed
@@ -2905,8 +2910,9 @@ void render_playhead(GuiCanvasSink& sink,
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
 // spanning the canvas's two wells (waveform_well_rows, the stereo divider's
 // rows left to it), solid, in the `scanner` role — the
-// white of the stems that belong to the controls, the playhead alone being
-// yellow (architect 2026-10-09; the palette block's playhead paragraph owns
+// white of the stems that belong to the controls, the playhead alone
+// wearing `playhead_stem` (architect 2026-10-09; the palette block's
+// playhead paragraph owns
 // the rule).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
