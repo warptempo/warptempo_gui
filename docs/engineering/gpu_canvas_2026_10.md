@@ -348,6 +348,17 @@ anywhere. The same process stood through all of it, and the frame after
 the return and the frame after the wake are byte-identical to the launch
 frame (tmp/gpu_arc/lifecycle.sh, id_life_*.png).
 
+THE KNOCKOUT'S PROOF AT 7a3ca555 (2026-10-26, the range-less stem with the
+knockout, canvas_sink.h's head): THIRTEEN states on the tablet — the launch
+view, Zoom to Fit, the magnification lamp, Next Marker twice, Toggle Follow,
+the `h` view and back, the Target view, Previous Marker, the Source view,
+Follow off, the lamp off — each build launched fresh and driven by the same
+taps (tmp/knockout_proof/drive.sh), every pair IDENTICAL cpu against gl over
+the whole frame, the logo lane included (the two runs fell inside one clock
+minute), and every consecutive gl pair differing where the act changes the
+screen. The dense marker view after Next Marker shows the knockout itself:
+the cue's dots over the black, holes through the ink.
+
 ## 6. Hazards named at the design
 
 The EGL surface's colorspace attribute on this driver (a refusal makes the
