@@ -127,8 +127,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,
 // for one shape). The shape is the same at every column: its vertices are
 // col + 0.5 - 4.5u, col + 0.5 + 4.5u and col + 0.5 at whole rows from the
 // whole-row top, so their fractional parts never change, and the shadow is
-// the same shape one whole quantum right. Its antialiased COVERAGE is
-// therefore computed ONCE per (quantum, rows) by cairo itself — the path
+// the same shape one whole unit right. Its antialiased COVERAGE is
+// therefore computed ONCE per (unit, rows) by cairo itself — the path
 // filled in opaque white on a zeroed ARGB32 surface, the byte left being
 // the coverage (cairo's lerp of white through c onto zero is c) — and each
 // triangle is then composited through it with cairo's own arithmetic.
@@ -294,12 +294,12 @@ void stamp_cue_triangle(const DirectPixelTarget& t, const CueTriangleCoverage& c
 // shadow first — where the target is refused, and for a box the clip cuts.
 void paint_cue_triangle_cairo(cairo_t* cr, int col, int top, GuiColor color,
                               GuiColor shadow) {
-    const double u    = cue_unit_px();
+    const double u    = cue_triangle_unit_px();   // one device px
     const int    rows = kProgramSpec.cue_triangle_rows;
     // THE AXIS IS THE STEM PIXEL'S CENTRE (architect 2026-10-09 ~14:35: "at
     // every scale, the marker triangle must be fully centered on the stem"):
     // the stem is one device px at `col`, so the axis is col + 0.5 and the
-    // top edge's 2·rows − 1 quanta stand half to each side of it.
+    // top edge's 2·rows − 1 units stand half to each side of it.
     const double axis = col + 0.5;
     const double half = (2 * rows - 1) * u / 2.0;   // 4.5u
     const double y    = top;
@@ -322,14 +322,14 @@ void paint_cue_triangle_cairo(cairo_t* cr, int col, int top, GuiColor color,
 void paint_cue_split_triangle_cairo(cairo_t* cr, double axis, int top,
                                     GuiColor left, GuiColor right,
                                     GuiColor shadow) {
-    const double u    = cue_unit_px();
+    const double u    = cue_triangle_unit_px();   // one device px
     const int    rows = kProgramSpec.cue_triangle_rows;
     const double half = (2 * rows - 1) * u / 2.0;   // 4.5u, as above
     const double y    = top;
     const double apex = y + rows * u;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    // The shadow whole, one quantum right, as the unsplit triangle's.
+    // The shadow whole, one unit right, as the unsplit triangle's.
     cairo_new_path(cr);
     cairo_move_to(cr, axis - half + u, y);
     cairo_line_to(cr, axis + half + u, y);
@@ -376,7 +376,7 @@ void paint_cue_split_triangle_cairo(cairo_t* cr, double axis, int top,
 // THE PASS (the rule and the identity at the declaration, cool_edit_paint.h).
 void CueTrianglePass::begin(cairo_t* cr) {
     cr_         = cr;
-    u_          = cue_unit_px();
+    u_          = cue_triangle_unit_px();
     direct_     = direct_pixel_target(cr, target_);
     cov_        = direct_ ? &cue_triangle_coverage(
                                 u_, kProgramSpec.cue_triangle_rows)
@@ -389,11 +389,11 @@ void CueTrianglePass::begin(cairo_t* cr) {
 void CueTrianglePass::triangle(int col, int top, GuiColor color,
                                GuiColor shadow) {
     // THE STAMP where the target takes it (the identity is at
-    // CueTriangleCoverage): the shadow one quantum right, then the color.
+    // CueTriangleCoverage): the shadow one unit right, then the color.
     if (direct_) {
         const CueTriangleCoverage& c = *cov_;
         const int dcol = col + target_.dx, dtop = top + target_.dy;
-        // The box both fills reach (the shadow's quantum to the right).
+        // The box both fills reach (the shadow's unit to the right).
         const GuiRect box{dcol + c.dx, dtop + c.dy, c.w + u_, c.h};
         if (cue_triangle_box_uncut(target_, box)) {
             if (flush_owed_) {

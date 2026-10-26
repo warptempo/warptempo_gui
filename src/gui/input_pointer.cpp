@@ -988,8 +988,8 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 
 // THE PLAYHEAD'S HEAD AS PAINTED (architect 2026-10-09 ~17:40, the head drag;
 // the lanes' one drag, above): the head's painted columns — the triangle and
-// its shadow, cut to the waveform's columns — over its five quanta of the
-// ruler's rows, NO INVISIBLE HIT BOX beyond them ("I don't think we should
+// its shadow, cut to the waveform's columns — over its five device rows of
+// the ruler's, NO INVISIBLE HIT BOX beyond them ("I don't think we should
 // get in the habit of making invisible hitboxes"), read from the ruler
 // pass's own publication (AppState::playhead_head_hit, paint_ruler_row) as
 // every flag rect is (ON SCREEN IS AS PAINTED). Its callers ask the flags

@@ -1,59 +1,106 @@
 # THE PROGRAM'S COLOR PRESETS — THE ONE SOURCE OF THE BUILT-IN PALETTES (gen_presets.py writes
-# src/gui/palette_presets.inc from this file). PROVENANCE: ONE INK, the DEC VT220's green 49CA8A (HLS hue 150,
-# saturation .55, lightness .54), under ONE CUE COLOR per preset, a stem's dots in it on both phases (architect
-# 2026-10-26, on the glass: "markers may or may not have improved, but the playhead has actually lost contrast. Revert,
-# then re-implement the range removal (instead of the invalid range fix). Reorient the palettes to the new reality
-# where marker contrast is more important"). THE RULE: A ONE-DEVICE-PX DOT IS SEEN BY ITS LUMINANCE, and a one-color
-# stem must read over the ink (relative luminance about .45) and over the canvas black alike, so THE CUE IS LIGHT —
-# near-white and pale tints (HLS lightness about .8 and up) first, a few mid-light colors for comparison, no dark or mid
-# cue (it vanishes over the ink) and no warm cue (the playhead's yellow is the one warm mark on the canvas, 2026-10-25).
-# The first row and the default (palette_file.h's kGuiDefaultPaletteKey) is Terminal, Frost: the Esper grid's white
-# EAF4FF of the architect's first pick, Terminal, Blue and White (2026-10-25 late; Tron's light-cycle blue 1CC8FF over
-# that white, Tempest's yellow FFF300, the LED-digit red F2142E), the phase that showed over the waveform on the
-# two-color stem, now on both phases. Seventeen presets: the near-whites (frost, white, the bone F0F0F0, silver
-# CFCFCF) and the pale tints (blue, cyan, lavender, lilac, pink and the ink's own tint B0E8CC) first, then for
-# comparison the earlier rounds' sky 70B3FC, cyan 37FDF8, Galaga's lavender B8B8DE, orchid D08BE0, Pinky FFB8FF, the
-# anchor's blue 1CC8FF and magenta FF40FF. Each cue keeps the red it was paired with in the earlier rounds; each new
-# pale tint takes its family's red.
-# EVERYTHING ELSE ONE VALUE ON EVERY ROW: the ink WvFg 49CA8A (Terminal) and its grid GrdL 0F2E1F (the ink's hue at
-# HLS saturation .5 and lightness .12); the playhead Curs FFF300 (Tempest's yellow); the center line Cntr A53038; WvBk
-# 000000; Face 626C7B (the record; no surface reads it). The outline is derived and the scanner fixed white by the
-# generator's rules (its head).
+# src/gui/palette_presets.inc from this file). PROVENANCE: Cool Edit Pro 2.1's twenty color presets, the text inside
+# coolpro.exe (Syntrillium Software), extracted from the architect's own installed copy on 2026-10-09, two of its rows
+# with no name line in the exe's text named from Cool Edit's own registry entries written under Wine on his laptop the
+# same day ("3D", the red-on-blue scheme after CEPro 1.2, and "Easy on the Eyes", the last); the built-ins 2026-10-09 to
+# 2026-10-25, the transcription committed until 0caf911e (git history). They return 2026-10-26 on his words on the
+# glass: "The terminal green is actually very close to the Cool Edit default but a bit paler, which is what I wanted.
+# But maybe the range should return, and we could test the Cool Edit themes but only on the markers — the default Cool
+# Edit markers contrast well, with the flag in red and the range in blue." — "Do both at once — the point is to get
+# closer to Cool Edit again. Also show two versions of each CEP theme — one as it is, and one with Terminal as the
+# ink."
+# FORTY PRESETS IN TWENTY PAIRS, in Cool Edit's own order ("(Default Scheme)" displayed "Default"), each pair:
+#  - THE THEME AS IT IS, "Cool Edit, <name>": every key Cool Edit's own — WvFg, WvBk, Cntr, CueM, RngM, GrdL, Curs and
+#    Face; the one scheme recording no Face (Classic Cool) takes Default's 626C7B, as the built-ins did 2026-10-09..25;
+#  - THEN ITS TERMINAL TWIN, "Terminal, <name>": the Terminal ink WvFg 49CA8A, the DEC VT220's green (HLS hue 150,
+#    saturation .55, lightness .54; the period round of 2026-10-25), and its grid GrdL 0F2E1F (the ink's hue at HLS
+#    saturation .5 and lightness .12), every other key the Cool Edit row's — its canvas, center line, cue, range,
+#    playhead, Face and invalid color.
+# THE INVALID COLOR IS THE ROW'S OWN CENTER LINE, Inv = Cntr on all forty (the 2026-10-11 rule these presets held,
+# architect ~01:00-01:20: the invalid color each palette's center line), written on every row because the generator
+# requires the key. The default (palette_file.h's kGuiDefaultPaletteKey) is Terminal, Default: the Terminal green under
+# Cool Edit's default red and blue markers, his "closer to Cool Edit again" (2026-10-26).
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone — WvFg, WvBk,
-# Cntr, Inv, CueM, GrdL, Curs, Face — Inv the one key of the program's own), EACH VALUES LINE FOLLOWED BY ITS NAME
-# LINE, the display name, in the order the presets are listed; the key is `warptempo-` and the name in the key
-# grammar. Lines opening with '#' are this note and nothing else.
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Frost
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FFFFFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, White
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=F0F0F0,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Bone
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=CFCFCF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Silver
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=DC4E4E,CueM=B3DEFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Blue
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=B8FEFC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Cyan
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=D0D0FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Lavender
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=C46C71,CueM=E0CCFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Lilac
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF2155,CueM=FFD0FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Pink
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B0E8CC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Green
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=70B3FC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Sky
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=37FDF8,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Cyan
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B8B8DE,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Lavender
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=D08BE0,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Orchid
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF2155,CueM=FFB8FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pink
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=1CC8FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Blue
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FF40FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Magenta
+# Cntr, Inv, CueM, RngM, GrdL, Curs, Face — Inv the one key of the program's own, Cool Edit's other keys left out),
+# EACH VALUES LINE FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are listed; the key is
+# `warptempo-` and the name in the key grammar. Lines opening with '#' are this note and nothing else.
+WvFg=4BF3A7,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=F34B58,RngM=4B82F3,GrdL=003500,Curs=FFFF00,Face=626C7B
+Cool Edit, Default
+WvFg=49CA8A,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=F34B58,RngM=4B82F3,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+Terminal, Default
+WvFg=22B893,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,Curs=FFFF00,Face=1C47C6
+Cool Edit, XP Blue
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=1C47C6
+Terminal, XP Blue
+WvFg=22B893,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=313030,Curs=FFFF00,Face=7B7E8B
+Cool Edit, XP Silver
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=7B7E8B
+Terminal, XP Silver
+WvFg=D8B264,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=491010,Curs=FFFF00,Face=9AA280
+Cool Edit, XP Olive
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=9AA280
+Terminal, XP Olive
+WvFg=FFCE0C,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=59041C,Curs=FFFF00,Face=8E283A
+Cool Edit, Fire and Brick
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=8E283A
+Terminal, Fire and Brick
+WvFg=1AF0AB,WvBk=000000,Cntr=A53038,Inv=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=042C4F,Curs=FFFF00,Face=626C7B
+Cool Edit, Classic Cool
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+Terminal, Classic Cool
+WvFg=ED1EC9,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=8751CA
+Cool Edit, Lipstick and Grapes
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=8751CA
+Terminal, Lipstick and Grapes
+WvFg=576AB4,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=C7C8CF
+Cool Edit, Seattle Blues
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=C7C8CF
+Terminal, Seattle Blues
+WvFg=4FD8D1,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=102E4E,Curs=FFFF00,Face=272B6D
+Cool Edit, Midnight
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=272B6D
+Terminal, Midnight
+WvFg=3565D6,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=AEB6D2
+Cool Edit, Periwinkle
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=AEB6D2
+Terminal, Periwinkle
+WvFg=1BF0AB,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=042C4F,Curs=FFFF6C,Face=7088A0
+Cool Edit, CEPro 1.2
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF6C,Face=7088A0
+Terminal, CEPro 1.2
+WvFg=FE0D0D,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=2F1AEE
+Cool Edit, 3D
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=2F1AEE
+Terminal, 3D
+WvFg=13F774,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=010B63,Curs=FFFF00,Face=03040A
+Cool Edit, Stealth
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=03040A
+Terminal, Stealth
+WvFg=83F4A2,WvBk=073C2F,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=555454,Curs=FFFF00,Face=ACA9D0
+Cool Edit, Grape, Lime, and Tangerine
+WvFg=49CA8A,WvBk=073C2F,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=ACA9D0
+Terminal, Grape, Lime, and Tangerine
+WvFg=B2DCA8,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=003500,Curs=FFFF00,Face=A8969C
+Cool Edit, Dusty Rose
+WvFg=49CA8A,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=0F2E1F,Curs=FFFF00,Face=A8969C
+Terminal, Dusty Rose
+WvFg=C7A043,WvBk=000000,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=371C00,Curs=FFFF00,Face=637461
+Cool Edit, Nature Calls
+WvFg=49CA8A,WvBk=000000,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=0F2E1F,Curs=FFFF00,Face=637461
+Terminal, Nature Calls
+WvFg=0DE0FE,WvBk=000000,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=292929,Curs=FFFF00,Face=C0C0C0
+Cool Edit, Arctic Freeze
+WvFg=49CA8A,WvBk=000000,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=C0C0C0
+Terminal, Arctic Freeze
+WvFg=0C55FF,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F0459,Curs=FFFF00,Face=414141
+Cool Edit, Midnight Blues
+WvFg=49CA8A,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=414141
+Terminal, Midnight Blues
+WvFg=D9B732,WvBk=3D2E20,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=3C1E1E,Curs=FFFF00,Face=C1B791
+Cool Edit, Safari So Good
+WvFg=49CA8A,WvBk=3D2E20,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=0F2E1F,Curs=FFFF00,Face=C1B791
+Terminal, Safari So Good
+WvFg=73BA51,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=003500,Curs=FFFF00,Face=626C7B
+Cool Edit, Easy on the Eyes
+WvFg=49CA8A,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+Terminal, Easy on the Eyes

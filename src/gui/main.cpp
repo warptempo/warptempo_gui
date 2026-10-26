@@ -255,7 +255,8 @@ namespace {
 // (waveform_area: the margin and the canvas's frame column, 21 px, and half
 // the flooring's leftover, 3). Per scale the canvas column above the canvas
 // is the view bar (line + field + line) + the ruler (ground + line) + the
-// marker lane (rows above the triangle + its five quanta) + the frame row:
+// marker lane (its W rows + its five label quanta, the triangle's five
+// device rows at its bottom) + the frame row:
 // 21 (3 + 15 + 3) + 36 (33 + 3) + 51 (36 + 15) + 3 = 111 at 300 %, 14 (2 +
 // 10 + 2) + 24 + 34 + 2 = 74 at 200 %, 12 (2 + 8 + 2) at 150 %, 9 (1 + 7 +
 // 1) + 16 (15 + 1) + 22 (17 + 5) + 1 = 48 at 138 %, 26 (4 + 18 + 4) + 44
@@ -1225,8 +1226,9 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
 // (2026-10-09, ON SCREEN IS AS PAINTED): the columns the yellow triangle and
 // its shadow cover, centred on the one-px stem (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own vertices) — 30
-// device px at 300 %, 41 at 360 %, 10 at 138 % — which also holds the one-px
+// cue_triangle_reach_right_px, render.h, the painter's own vertices) — 10
+// device px at every scale (the triangle unscaled, 2026-10-26) — which also
+// holds the one-px
 // line of the scanner and the dots, so a move repaints every column the head
 // stood on and no shadow column is left behind.
 // `px_x` is the waveform's own column (offset from area.x, as every

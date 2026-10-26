@@ -62,17 +62,23 @@
 // it, the column's air, the column's foot, the dock bar, row 8's bars and
 // the border under row 8 stood 2026-10-09 to 2026-10-22; git history.)
 //
-// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN QUANTA, NOT IN ROUNDED W
-// (2026-10-09): a triangle's 9-7-5-3-1 rows (drawn as their envelope, one
-// antialiased triangle, since ~12:40: paint_ce_cue_triangle), its shadow's
-// one-quantum offset, the label's lead from the column and the selected
-// fill's pads are counted in the quantum u = scaled_px(1, 1) (render.h's
-// program_line_px; the dots down the canvas are device rows since 2026-10-09
-// ~14:25, the dot fields below) — the playhead head's
-// construction since 2026-10-05 — so the apex is the stem's column at every
-// scale and the nine units centre on it with no remainder; the LANES' ROWS
-// and the text's seats are W lengths, each its own rounded part (scaled_px's
-// rule).
+// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN UNITS, NOT IN ROUNDED W,
+// TWO UNITS WITH ONE OWNER EACH (render.h's cue_triangle_unit_px and
+// cue_label_unit_px): THE TRIANGLE'S UNIT IS ONE DEVICE PX AT EVERY SCALE
+// (architect 2026-10-26: "I think we should make the triangle smaller …
+// Why not simply leave unscaled? That would preserve the stem/flag size
+// relation from CEP" — "on waveform → unscaled" carried to the cue's
+// triangle), so a triangle's 9-7-5-3-1 rows (drawn as their envelope, one
+// antialiased triangle, since 2026-10-09 ~12:40: paint_ce_cue_triangle) and
+// its shadow's one-unit offset are Cool Edit's own 9 by 5 pixels beside the
+// one-device-px stem, the apex the stem's column and the nine units centred
+// on it with no remainder; THE LABEL'S UNIT IS THE SCALED QUANTUM
+// u = scaled_px(1, 1) (render.h's program_line_px), the label's lead from
+// the column, the selected fill's lead and pads and the segment gap counted
+// in it, because the text they place is scaled. The dots down the canvas
+// are device rows (2026-10-09 ~14:25, the dot fields below). The LANES'
+// ROWS and the text's seats are W lengths, each its own rounded part
+// (scaled_px's rule).
 struct ProgramSpec {
     // THE CASE: one highlight row and column on the top and
     // left, the glyph seat, one shadow row and column and one black row and
@@ -191,10 +197,14 @@ struct ProgramSpec {
     int  ruler_major_tick_px;
     int  ruler_baseline_px;
     // THE MARKER LANE (architect 2026-10-09 ~16:50 / ~21:00, 17 rows where
-    // Cool Edit's has 11 — the six the ruler gave): this many W
-    // rows above the cue's triangle, then the triangle's cue_triangle_rows
-    // quanta on rows 12 .. 16 ("the triangle height is okay right now"), its
-    // apex on the lane's last row; THE LABEL'S BOX — the selected fill, the
+    // Cool Edit's has 11 — the six the ruler gave): COMPOSED OF
+    // `cue_lane_ground_px` W rows and `cue_lane_quanta` label quanta, each
+    // part rounded on its own (render.h's marker_lane_h_px: 51 device rows
+    // at 300 %, 22 at 138 %, 63 at 360 %), THE LANE KEEPING ITS ROWS AT EVERY
+    // SCALE when the triangle left the quantum (2026-10-26); THE TRIANGLE
+    // its cue_triangle_rows DEVICE ROWS at the lane's bottom, its apex on
+    // the lane's last row, the rows above it the remainder (the unit at the
+    // head); THE LABEL'S BOX — the selected fill, the
     // resting face box, the press target and the flag editor's field — this
     // many rows from the lane's top, THE WHOLE LANE (rows 0 .. 16: "the text
     // box should take up the whole marker lane … right now it's too small to
@@ -210,10 +220,11 @@ struct ProgramSpec {
     // 100 % the box on rows 2 .. 13, the cap 7 on rows 5 .. 11 and the
     // baseline the top of row 12, the descenders over the triangle's rows
     // beside it (render.h's asserts, where the face is in scope).
-    int  cue_above_triangle_px;
+    int  cue_lane_ground_px;
+    int  cue_lane_quanta;
     int  cue_triangle_rows;
     int  cue_fill_px;
-    // THE CUE'S HORIZONTAL LENGTHS, IN QUANTA from the marker's column
+    // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA from the marker's column
     // (the head): the label's first column past the column (Cool Edit's
     // stem 416 → label 422), the selected fill's first column (one quantum
     // before the text) and its pad past the text, the gap between two of a
@@ -231,31 +242,30 @@ struct ProgramSpec {
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
     // dotted_waveform_line_runs): THE PLAYHEAD'S every `dot_period`
-    // rows on its phase; A CUE'S TWO PHASES each every `cue_dot_period` rows
-    // — `cue_dot_phase` 7 and `alt_dot_phase` 3, so a stem dotted on both
-    // has a dot every `dot_period` rows, the alt phase's first from the top.
-    // A live cue wears ITS ONE CUE COLOR ON BOTH PHASES and an invalid one
-    // the invalid color on both (architect 2026-10-26: "re-implement the
-    // range removal"); the history view's added half takes the alt phase
-    // alone and its removed half the cue phase alone, so a changed pair's
-    // two stems on one column interleave (render.cpp's resolve_flag_face
-    // owns which color each phase wears). The phase-reset lead-in ring's
-    // right side takes the same rows and its top and bottom runs the same
-    // phases in device columns counted from the reset's own column
+    // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
+    // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
+    // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
+    // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
+    // FIRST FROM THE TOP, and a one-color stem has half the dots (render.cpp's
+    // resolve_flag_face owns which color each phase wears: the invalid color
+    // takes the red's phase, the history's added half its cue red on the
+    // blue's, 2026-10-11); the phase-reset lead-in
+    // ring's right side takes the same rows and its top and bottom runs the
+    // same phases in device columns counted from the reset's own column
     // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE
     // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
-    // 2026-10-09): Cool Edit's capture dots its cues at y ≡ 3 and y ≡ 7
-    // (mod 8), absolute rows, and its canvas starts at y = 108 ≡ 4 (mod 8),
-    // so from the canvas's own first row the phases stand on rows ≡ 7 and
-    // ≡ 3 (its first dot, y = 111, canvas row 3, the alt phase's); the
-    // playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
+    // 2026-10-09): the capture gives the red at y ≡ 3 and the blue at
+    // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108
+    // ≡ 4 (mod 8), so from its own first row the red stands on rows ≡ 7 and
+    // the blue on rows ≡ 3 (its first dot, y = 111, canvas row 3, is blue);
+    // the playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
     // ≡ 0 (mod 4). Every cue row is the playhead's period off the playhead's
     // phase, so the two never share a row on one column.
     int  dot_period;
     int  playhead_dot_phase;
     int  cue_dot_period;
     int  cue_dot_phase;
-    int  alt_dot_phase;
+    int  range_dot_phase;
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
@@ -276,7 +286,8 @@ inline constexpr ProgramSpec kProgramSpec = {
     .ruler_minor_tick_px   = 2,
     .ruler_major_tick_px   = 4,
     .ruler_baseline_px     = 7,
-    .cue_above_triangle_px = 12,
+    .cue_lane_ground_px    = 12,
+    .cue_lane_quanta       = 5,
     .cue_triangle_rows     = 5,
     .cue_fill_px           = 17,
     .cue_label_lead        = 6,
@@ -287,7 +298,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .playhead_dot_phase    = 1,
     .cue_dot_period        = 8,
     .cue_dot_phase         = 7,
-    .alt_dot_phase         = 3,
+    .range_dot_phase       = 3,
 };
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
@@ -310,8 +321,8 @@ constexpr int program_band_authored_h(const ProgramSpec& p) {
 }
 // The canvas column's lanes above the canvas (the head): the view bar a
 // line, its field (authored at 300 %, its W the device px over 3) and a line; the ruler its ground and its bottom line; the
-// marker lane its rows above the triangle and the triangle's quanta (one W
-// each at 100 %); the canvas's top frame row one line. Below the canvas, its
+// marker lane its W rows and its label quanta (one W each at 100 %); the
+// canvas's top frame row one line. Below the canvas, its
 // bottom frame row, one line, the program ring's last row.
 constexpr int program_view_bar_authored_h(const ProgramSpec& p) {
     return 1 + p.view_bar_field_at300 / 3 + 1;
@@ -320,7 +331,7 @@ constexpr int program_ruler_authored_h(const ProgramSpec& p) {
     return p.ruler_ground_px + 1;
 }
 constexpr int program_marker_lane_authored_h(const ProgramSpec& p) {
-    return p.cue_above_triangle_px + p.cue_triangle_rows;
+    return p.cue_lane_ground_px + p.cue_lane_quanta;
 }
 constexpr int program_column_authored_h(const ProgramSpec& p) {
     return program_view_bar_authored_h(p) + program_ruler_authored_h(p) +
@@ -356,27 +367,30 @@ static_assert(program_ruler_authored_h(kProgramSpec) +
                   program_marker_lane_authored_h(kProgramSpec) ==
               18 + 11);
 // THE MAJOR TICK'S TOP ROW IS THE DIGITS' BASELINE ROW (7), the tick painted
-// over a digit's overshoot below the baseline; the
-// PLAYHEAD'S HEAD, the cue's triangle on the ground's last five rows (6 ..
-// 10), reaches the digits' last row (6) and covers what stands under it.
+// over a digit's overshoot below the baseline; the PLAYHEAD'S HEAD, the
+// cue's triangle in its device rows (the head), stands on the ground's last
+// five device rows over the ticks' feet and covers what stands under it.
 // The digits' own rows — one W of air, then the small
 // face's six — are render.h's assert, where the face is in scope.
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
               kProgramSpec.ruler_baseline_px);
-static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
-              kProgramSpec.ruler_baseline_px - 1);
-// THE CUE'S ROWS (the product's lane): the triangle on rows 12 .. 16, the
-// label's box the whole lane, the label's line box centred in it (render.h's
-// asserts read the program face's recorded line box, cap and descent against
-// the lane: the cap on rows 5 .. 11, the descent ending above the last row).
+// THE CUE'S ROWS (the product's lane): the label's box the whole lane, the
+// label's line box centred in it (render.h's asserts read the program face's
+// recorded line box, cap and descent against the lane), the triangle's five
+// device rows at its bottom, never taller than the lane's quanta part.
 static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
-static_assert(kProgramSpec.cue_label_lead >
-              (2 * kProgramSpec.cue_triangle_rows - 1) / 2 + 1);
-// A cue's two phases alternate one dot every playhead period, and neither
+static_assert(kProgramSpec.cue_triangle_rows <= kProgramSpec.cue_lane_quanta);
+// THE LABEL CLEARS THE TRIANGLE: its lead, in label quanta of at least one
+// device px each, reaches past the triangle's painted columns right of the
+// stem, ⌊(2·rows + 1 + 2) / 2⌋ device px with the shadow
+// (render.h's cue_triangle_reach_right_px: 6).
+static_assert(kProgramSpec.cue_label_lead >=
+              (2 * kProgramSpec.cue_triangle_rows + 1 + 2) / 2);
+// The cue's two colors alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
-static_assert((kProgramSpec.alt_dot_phase - kProgramSpec.cue_dot_phase +
+static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
                kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==
               kProgramSpec.dot_period);
 static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=

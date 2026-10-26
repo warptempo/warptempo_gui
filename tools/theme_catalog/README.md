@@ -10,22 +10,19 @@ python3 -I tools/theme_catalog/gen_presets.py [text]   # warptempo_presets.txt -
 python3 -I tools/theme_catalog/catalog_md.py           # -> docs/themes/catalog.md (the user's list of the presets)
 ```
 
-## The presets — warptempo_presets.txt (architect 2026-10-25, 2026-10-26)
+## The presets — warptempo_presets.txt (architect 2026-10-26)
 
-`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's seventeen presets — one ink, the DEC VT220's green,
-under one cue color a preset, a stem's dots in it on both phases, so THE CUE IS LIGHT and reads over the ink and over
-the black alike (architect 2026-10-26: "Reorient the palettes to the new reality where marker contrast is more
-important"); the default, Terminal, Frost, is the white of his first pick (the text's head is their design, provenance
-and the rule), each values line followed
-by its display name, in Cool Edit Pro 2.1's value grammar. Cool Edit's twenty color presets were the built-ins
-2026-10-09 to 2026-10-25 and live in git history.
+`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's forty presets, Cool Edit Pro 2.1's twenty color
+presets in its own order, each as it is and then with the Terminal ink (the DEC VT220's green and its grid under the
+theme's every other color) — "the point is to get closer to Cool Edit again. Also show two versions of each CEP theme"
+(its head is their provenance, the pairing and the invalid color's rule), each values line followed by its display
+name, in Cool Edit Pro 2.1's value grammar.
 
-`gen_presets.py` transcribes each into the ten program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
+`gen_presets.py` transcribes each into the eleven program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
 off the header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never
-hand-edited. Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, Curs and Face to their roles,
-a row carrying the retired RngM the run's hard fail, and THE INVALID COLOR the preset's own Inv, the one key of the
-program's own (architect 2026-10-25 night, the invalid and the playhead tuned per preset, the center line A53038 on
-every one); THE LIT OUTLINE the ink at HLS
+hand-edited. Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, Curs and Face to their
+roles, and THE INVALID COLOR the preset's own Inv, the one key of the program's own (architect 2026-10-25 night; on
+the forty the row's own center line, 2026-10-26); THE LIT OUTLINE the ink at HLS
 lightness 0.3157, the lightness measured on Cool Edit Pro 2.1's view bar span shadows across five of its presets
 (2026-10-09; `src/gui/cool_edit_derive.h`'s `span_shadow`, ported operation for operation, `palette_file.cpp` proving
 every row against the C++ tone()); the scanner white in every preset. The keys `warptempo-<name>` (the `waveform`

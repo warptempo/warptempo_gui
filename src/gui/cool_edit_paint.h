@@ -43,10 +43,10 @@
 // color and 000000 alternating, is not drawn: architect 2026-10-09 ~14:30.)
 // THE PLAYHEAD'S OWN COLOR — the head and its dots in the canvas — is the
 // palette's `playhead_stem`
-// since 2026-10-09 ~11:50, each built-in's Curs, Tempest's yellow FFF300 on
-// every one (tunable per preset, architect 2026-10-25 night;
-// palette_file.h's role table), as the cue color is the palette's
-// `cue`; the triangles' shadow is the derived
+// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 on every built-in but
+// the CEPro 1.2 pair's FFFF6C (palette_file.h's role table), as the cues'
+// two colors are the
+// palette's `cue` and `range`; the triangles' shadow is the derived
 // `ce_cue_shadow`. THE RULER'S INK IS NO TONE OF FACE AND NEVER SWAPS
 // (architect 2026-10-10, "we follow Cool Edit's theming"):
 // its ticks are E0E0E0 byte for byte on
@@ -188,17 +188,27 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // -- THE CUE'S TRIANGLE ---------------------------------------------------------
 
 // COOL EDIT'S POINT-CUE MASK, THE CUES' AND THE
-// PLAYHEAD HEAD'S ONE PAINTER: a staircase of five rows of one quantum u
-// (cue_unit_px) from `top` — 9, 7, 5, 3, 1 quanta — each row's SHADOW one
-// quantum right of it. DRAWN AS THE STAIRCASE'S DIAGONALS (architect
-// 2026-10-09 ~12:40, the head's rule) AND CENTRED ON THE STEM (~14:35: "at
+// PLAYHEAD HEAD'S ONE PAINTER: a staircase of five rows of one unit u
+// (cue_triangle_unit_px, render.h) from `top` — 9, 7, 5, 3, 1 units — each
+// row's SHADOW one unit right of it. THE UNIT IS ONE DEVICE PX AT EVERY
+// SCALE (architect 2026-10-26, on the glass: "I think part of the problem is
+// our flags are so much larger than Cool Edit's. I think we should make the
+// triangle smaller, and that would make colors like the red from Cool Edit
+// less problematic. I think that is a large reason why no colors really
+// look right on the GUI." — then "Why not simply leave unscaled? That would
+// preserve the stem/flag size relation from CEP"): the flag is Cool Edit's
+// 9 by 5 pixels with its one-pixel shadow beside the one-device-px stem, at
+// 1:1 whatever the gui_scale, the history view's split triangle the same
+// (CueTrianglePass::split) and the playhead's head with them (render.h's
+// cue_triangle_unit_px, which names every reader). DRAWN AS THE STAIRCASE'S
+// DIAGONALS (architect 2026-10-09 ~12:40, the head's rule) AND CENTRED ON THE STEM (~14:35: "at
 // every scale, the marker triangle must be fully centered on the stem"): the
 // stem is ONE DEVICE PX at window column `col` (render.h's waveform_line_px,
 // "on waveform → unscaled"), so the axis is its centre s + 0.5 and ONE
 // ANTIALIASED TRIANGLE in `color` has the vertices (s + 0.5 − 4.5u, top),
 // (s + 0.5 + 4.5u, top) and (s + 0.5, top + 5u) — its two sides mirror
-// images about the stem at every gui_scale, u odd or even — over THE SAME
-// TRIANGLE ONE QUANTUM RIGHT in `ce_cue_shadow`, painted first (Cool Edit's
+// images about the stem — over THE SAME
+// TRIANGLE ONE UNIT RIGHT in `ce_cue_shadow`, painted first (Cool Edit's
 // shadow one pixel right of every row is that offset). Its painted columns
 // are [s − ⌊9u / 2⌋, s + ⌊(11u + 2) / 2⌋) — the vertices' outer edges,
 // s + 0.5 − 4.5u and s + 0.5 + 5.5u with the shadow, taken to whole device
@@ -222,14 +232,14 @@ struct CueTriangleCoverage;   // cool_edit_paint.cpp, the stamp's coverage
 // left to right over every label), share ONE PREPARED STAMP TARGET instead of
 // each taking its own. begin() takes direct_pixel_target once — the surface
 // flushed, the clip's rectangle list copied, the translation read — and looks
-// the coverage up once at the quantum read once; triangle() stamps as
+// the coverage up once at the triangle's unit read once; triangle() stamps as
 // paint_ce_cue_triangle's road does and GROWS ONE DIRTY BOX; end() marks that
 // box dirty once.
 // THE CALLER'S CONTRACT: between begin() and end() nothing changes the
 // context's clip, matrix, operator or group (each cairo road below saves and
 // restores its own), so the one target holds the clip list and translation
 // each triangle's own direct_pixel_target would have answered; and nothing
-// else asks the coverage cache, whose one entry the pass holds (the quantum
+// else asks the coverage cache, whose one entry the pass holds (the unit
 // and the rows do not change within a paint).
 // THE IDENTITY RESTS ON: the same coverage bytes, the same cue_lerp8x4, the
 // same stamp order — the shadow then the color, triangles in call order — the

@@ -51,17 +51,14 @@ def head(default_name, default_key):
 
 
 PRESETS_PROVENANCE = (
-    'The program\'s own presets, made for its black panel: one waveform color, the green of the DEC VT220 terminal, '
-    'under seventeen marker colors. A marker\'s dots are one screen pixel each, in its one color, over the waveform '
-    'and over the black canvas alike, and so small a dot is seen by its lightness: the marker colors are light — '
-    'near-whites and pale tints first, then a few stronger colors for comparison, and no dark or warm one (a dark dot '
-    'vanishes over the green, and the playhead\'s yellow is the one warm mark on the waveform). Each preset has a red '
-    'of its own for invalid markers, and a yellow playhead on every one.')
+    'The color presets of Cool Edit Pro 2.1, the program the waveform\'s look comes from: its twenty presets in its '
+    'own order, each twice — first as it is ("Cool Edit, ..."), then with the program\'s own waveform color, the '
+    'green of the DEC VT220 terminal, in place of its waveform and grid colors ("Terminal, ..."), everything else, '
+    'the markers\' two colors among it, the Cool Edit preset\'s own.')
 PRESETS_RULES = [
     'The waveform\'s outline is each preset\'s waveform color darkened, the same hue at a fixed lightness (the '
     'lightness of Cool Edit Pro 2.1\'s view bar shadows).',
-    'The Invalid color, which marks an invalid marker, is a red of each preset\'s own, apart from its center line, '
-    'which is one wine red on every preset.',
+    'The Invalid color, which marks an invalid marker, is each preset\'s own center line color.',
     'The scanner (the line that moves during playback) and the zoom\'s anchor line are white in every preset, as Cool '
     'Edit\'s scanner is on every one of its presets.',
 ]

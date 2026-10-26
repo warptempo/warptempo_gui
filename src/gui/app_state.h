@@ -5714,8 +5714,8 @@ struct AppState {
     // head drag — ScrollDragState::head_drag), the trim stash's doctrine
     // carried to the ruler: GuiPaintHandler::paint_ruler_row publishes the
     // rect it last DREW the head in — the triangle's and its shadow's
-    // columns cut to the waveform's, over the head's five quanta of the
-    // ruler's rows, in SCREEN pixels, no tolerance — and
+    // columns cut to the waveform's, over the head's five device rows of the
+    // ruler's, in SCREEN pixels, no tolerance — and
     // point_on_playhead_head (input_pointer.cpp) reads this and nothing
     // else, so the press and the cursor map answer the head on screen.
     // Written only by a run whose damage clip redrew it (the pass's
@@ -8532,7 +8532,7 @@ struct AppState {
     // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; and since 2026-10-25 the
-    // PRESET PICKER, with the seventeen built-in waveform presets by
+    // PRESET PICKER, with the forty built-in waveform presets by
     // display name (architect: "maybe a drop down would make it quicker,
     // because I don't like having to type it in every time" — "brief it as a
     // scrolling list", "Yes"). (The AV Sync Stats panel's text lines stood
@@ -8625,7 +8625,7 @@ struct AppState {
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph: Folder wears the folder glyph, Wav
     // the wav glyph, and PRESET NONE (architect 2026-10-25: the row is the
-    // preset's memorable DISPLAY NAME, "Terminal, Frost", never its
+    // preset's memorable DISPLAY NAME, "Terminal, Default", never its
     // key, its text starting where a Folder row's name starts). A KIND EXISTS
     // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:
     //   * UP — the `..` row, the folder glyph over the parent — went on
