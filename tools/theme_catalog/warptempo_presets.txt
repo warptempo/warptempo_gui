@@ -1,100 +1,92 @@
 # THE PROGRAM'S COLOR PRESETS — THE ONE SOURCE OF THE BUILT-IN PALETTES (gen_presets.py writes
-# src/gui/palette_presets.inc from this file). PROVENANCE: the period round of 2026-10-25 evening (its research,
-# tmp/ref_palette/research_r3*.md) and the architect's pick of its Terminal, Blue and White (2026-10-25 late): the DEC
-# VT220's green 49CA8A (HLS hue 150, saturation .55, lightness .54), Tron's light-cycle blue 1CC8FF over the Esper
-# grid's white EAF4FF, Tempest's yellow FFF300, the LED-digit red F2142E. That row is kept byte for byte, the anchor
-# and the default (palette_file.h's kGuiDefaultPaletteKey); the other thirty-three are the planner's, under his words
-# of the same night ("do a whole bunch of different random stuff"; the ink as the cue or the canvas as the range, so
-# one phase always shows; a Linux terminal palette mapped by the relation between this green and its own). Thirty-four
-# presets, in FOUR FAMILIES:
-#  - CONTRAST PAIRS: a one-px dot is seen by its luminance, so the pair puts one phase lighter than the ink and one
-#    darker — the ink itself over the canvas black, the bone F0F0F0 over black, the ink's tint B0E8CC (HLS lightness
-#    .80) over black, Pinky FFB8FF and Galaga's lavender B8B8DE over black, silver CFCFCF over black, and frost EAF4FF
-#    over the ink's shade 22774D (lightness .30, near the lit outline).
+# src/gui/palette_presets.inc from this file). PROVENANCE: ONE INK, the DEC VT220's green 49CA8A (HLS hue 150,
+# saturation .55, lightness .54), under ONE CUE COLOR per preset. THE CUE SITS ON THE CANVAS BLACK ALONE since the
+# knockout (architect 2026-10-26: a marker's dot that lands on the waveform is painted in the canvas color,
+# src/gui/canvas_sink.h's head), so its lightness is free — his words: "It opens a lot more possibilities for colors,
+# including just using the ink itself, or pretty much any other color; we just worry about picking a color that looks
+# good with the ink". The anchor, Terminal, Blue (the architect's pick of 2026-10-25 late: Tron's light-cycle blue
+# 1CC8FF, the LED-digit red F2142E, Tempest's yellow FFF300), is kept byte for byte as the first row and the default
+# (palette_file.h's kGuiDefaultPaletteKey); the other thirty-two are the planner's, each cue with the red it was
+# paired with in the earlier rounds. Thirty-three presets; two families among them are terminal palettes mapped:
 #  - THE VGA PALETTE MAPPED: the Terminal green (hue 150, sat .55, light .54) is VGA's bright green 55FF55 (hue 120,
 #    sat 1.0, light .67) at saturation x .55 and lightness x .81, the hue kept; applied to VGA's bright eight that gives
-#    cyan 49CACA, blue 4949CA, magenta CA49CA, yellow CACA49, light red CA4949 (the family's invalid), grey 8A8A8A,
-#    white CFCFCF; to its dark eight (light .33 -> .27) blue 1F1F6B, cyan 1F6B6B, magenta 6B1F6B, brown 6B451F. The
-#    pairs are VGA's own, a bright over its dark sibling or over grey or white. Three ROTATED rows add the 30-degree
-#    hue turn the green itself carries (VGA green 120 -> 150): azure 498ACA over navy 1F456B, rose CA498A over wine
-#    6B1F45, violet 8A49CA over grey.
+#    cyan 49CACA, blue 4949CA, magenta CA49CA, yellow CACA49 and light red CA4949 (the family's invalid). Three ROTATED
+#    rows add the 30-degree hue turn the green itself carries (VGA green 120 -> 150): azure 498ACA, rose CA498A,
+#    violet 8A49CA.
 #  - THE TANGO PALETTE (XFCE's and GNOME's terminal default) MAPPED: Tango's chameleon 8AE234 is the Terminal green at
 #    saturation x .69, the lightness kept; so sky blue 729FCF -> 80A1C2, plum AD7FA8 -> A687A3, orange FCAF3E ->
-#    DFAB5D, scarlet EF2929 -> D04949 (the family's invalid); the aluminiums D3D7CF and EEEEEC as they are.
-#  - PERIOD PAIRS THIS INK NEVER WORE: the period round's sources and the earlier family's cool pairs, each with the
-#    red it was paired with before.
+#    DFAB5D, scarlet EF2929 -> D04949 (the family's invalid).
 # EVERYTHING ELSE ONE VALUE ON EVERY ROW: the ink WvFg 49CA8A (Terminal) and its grid GrdL 0F2E1F (the ink's hue at
 # HLS saturation .5 and lightness .12); the playhead Curs FFF300 (Tempest's yellow); the center line Cntr A53038; WvBk
 # 000000; Face 626C7B (the record; no surface reads it). The outline is derived and the scanner fixed white by the
 # generator's rules (its head).
-# FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone, Inv the one key of
-# the program's own), EACH VALUES LINE FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are
-# listed; the key is `warptempo-` and the name in the key grammar. Lines opening with '#' are this note and nothing else.
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=1CC8FF,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Blue and White
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=49CA8A,RngM=000000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Ink and Black
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=F0F0F0,RngM=000000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Bone and Black
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B0E8CC,RngM=000000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pale Green and Black
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=EAF4FF,RngM=22774D,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Frost and Shade
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FFB8FF,RngM=000000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pink and Black
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B8B8DE,RngM=000000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Lavender and Black
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=CFCFCF,RngM=000000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Silver and Black
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=49CACA,RngM=1F1F6B,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Cyan and Blue
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CA49CA,RngM=1F6B6B,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Magenta and Cyan
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=4949CA,RngM=8A8A8A,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Blue and Grey
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CACA49,RngM=6B451F,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Yellow and Brown
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CFCFCF,RngM=1F1F6B,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA White and Blue
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=49CACA,RngM=6B1F6B,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Cyan and Magenta
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CA49CA,RngM=CFCFCF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Magenta and White
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=498ACA,RngM=1F456B,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Azure and Navy
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CA498A,RngM=6B1F45,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Rose and Wine
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=8A49CA,RngM=8A8A8A,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, VGA Violet and Grey
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=80A1C2,RngM=D3D7CF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Tango Sky and Aluminium
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=A687A3,RngM=80A1C2,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Tango Plum and Sky
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=DFAB5D,RngM=D3D7CF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Tango Orange and Aluminium
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=A687A3,RngM=EEEEEC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Tango Plum and Aluminium
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B8B8DE,RngM=47B8FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Lavender and Sky
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=8C8CFF,RngM=E7FFFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Periwinkle and White
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF2155,CueM=FFB8FF,RngM=7FC1FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Pink and Sky
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FF40FF,RngM=00E0FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Magenta and Cyan
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=C46C71,CueM=706DEB,RngM=75CEC8,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Lilac and Cyan
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=8926FF,RngM=00FFFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Violet and Cyan
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Mauve and Sky
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=D08BE0,RngM=EAF2FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Orchid and Frost
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=B0E0B8,RngM=EAF2FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Sage and Frost
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Cyan and Sky
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=FF8800,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, Orange and White
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=EAF4FF,RngM=1CC8FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
-Terminal, White and Blue
+# FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone — WvFg, WvBk,
+# Cntr, Inv, CueM, GrdL, Curs, Face — Inv the one key of the program's own), EACH VALUES LINE FOLLOWED BY ITS NAME
+# LINE, the display name, in the order the presets are listed; the key is `warptempo-` and the name in the key
+# grammar. Lines opening with '#' are this note and nothing else.
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=1CC8FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=70B3FC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Sky
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=3EBFEA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Soft Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=62BCDA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Dusty Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=DC4E4E,CueM=7AC3E0,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Pale Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=68B5E8,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Steel Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=1DAFE4,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Deep Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=8C8CFF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Periwinkle
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B8B8DE,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Lavender
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=F0F0F0,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Bone
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=CFCFCF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Silver
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Frost
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B0E8CC,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Pale Green
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=B0E0B8,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Sage
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=49CA8A,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Ink
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=37FDF8,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Cyan
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=FF2155,CueM=FFB8FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Pink
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FF40FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Magenta
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=C46C71,CueM=706DEB,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Lilac
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=C17DB0,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Mauve
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=D08BE0,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Orchid
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=FF8800,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Orange
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=FFB000,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Amber
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=49CACA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Cyan
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CA49CA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Magenta
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=4949CA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Blue
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CACA49,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Yellow
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=498ACA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Azure
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=CA498A,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Rose
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=CA4949,CueM=8A49CA,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, VGA Violet
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=80A1C2,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Tango Sky
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=A687A3,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Tango Plum
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D04949,CueM=DFAB5D,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Tango Orange

@@ -905,11 +905,14 @@ bool render_waveform(cairo_surface_t* dest,
     // stored region is `area` whole; THE CALLER CLEARS whatever no call
     // stored (render_waveform_to_cache_surface, waveform_cache.cpp: the
     // spare row of an odd plate and a band whose call returned early).
+    // THE ZERO TEST IS plate_column_covers_row (render.h), the knockout's
+    // one predicate (canvas_sink.h's head), so the cells the plate paints
+    // and the cells a dot knocks out on cannot drift.
     const auto word_at = [&](const WaveformColumnRows& cw, int y) -> uint32_t {
+        if (!plate_column_covers_row(cw, y)) return 0u;
         if (y >= cw.i0 && y <= cw.i1)
             return (y >= cw.lo && y <= cw.hi) ? ink_word : outline_word;
-        if (y >= cw.o0 && y <= cw.o1) return ink_word;
-        return 0u;
+        return ink_word;
     };
     // The boundary rows strictly inside the band (the first row is computed
     // whole), bucketed by row: `ends[r]` closes row y_lo + r's run of column
@@ -1600,45 +1603,48 @@ struct FlagFace {
     GuiColor  triangle;
     GuiColor  shadow;
     GuiCueDot cue_phase_dots;
-    GuiCueDot range_phase_dots;
+    GuiCueDot alt_phase_dots;
     bool      invalid_label;
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
-// diff flags (architect 2026-10-09 ~11:50–12:00, Cool Edit's two cue colors:
-// "red+blue for warp and phase, red only for invalid (half the amount of
-// dots)"; 2026-10-11 ~01:00–01:20, THE FLAG IS THE INVALID INDICATOR and the
-// history's plus and minus). THE TABLE, the ladder read top to bottom, the
-// first matching row wins:
-//   flag                     triangle  dots (red's phase | blue's phase)   label
-//                                                                      rest / selected
-//   DISABLED (any kind)      faded     none                            faded / white
-//   INVALID (any live kind)  invalid   invalid | —                     invalid / white
-//   WARP, PHASE RESET        cue red   cue red | range blue            light / white
-//   history ADDED (plus)     cue red   —       | cue red               light / white
-//   history REMOVED (minus)  invalid   invalid | —                     light / white
-// "invalid" is the palette's `invalid_label`, each built-in's own red apart
-// from its center line (palette_file.h's role table, architect 2026-10-25
-// night); THE `range` BLUE LEAVES THE HISTORY VIEW
-// (2026-10-11: the plus takes the marker's own face, the minus the invalid
-// color), each half keeping its phase of 2026-10-09 so a changed pair's two
-// stems on one column still alternate.
+// diff flags (architect 2026-10-11 ~01:00–01:20, THE FLAG IS THE INVALID
+// INDICATOR and the history's plus and minus; 2026-10-26, ONE CUE COLOR ON
+// BOTH PHASES: "I'd like to see the rangeless design with the knockout just
+// shipped as the default ... It opens a lot more possibilities for colors,
+// including just using the ink itself, or pretty much any other color; we
+// just worry about picking a color that looks good with the ink"). THE
+// TABLE, the ladder read top to bottom, the first matching row wins:
+//   flag                     triangle  dots (cue phase | alt phase)   label
+//                                                                 rest / selected
+//   DISABLED (any kind)      faded     none                       faded / white
+//   INVALID (any live kind)  invalid   invalid | invalid          invalid / white
+//   WARP, PHASE RESET        cue       cue     | cue              light / white
+//   history ADDED (plus)     cue       —       | cue              light / white
+//   history REMOVED (minus)  invalid   invalid | —                light / white
+// "cue" is the palette's `cue`, "invalid" its `invalid_label`, each
+// built-in's own red apart from its center line (palette_file.h's role
+// table, architect 2026-10-25 night). A live stem wears its one color on
+// both phases, its dots over the waveform's plate knocked out in the canvas
+// color (canvas_sink.h's head, THE KNOCKOUT), so its contrast over the ink
+// is the canvas's and the cue color is free. The history's two halves keep
+// ONE PHASE EACH (2026-10-11: the plus the marker's own face, the minus the
+// invalid color), so a changed pair's two stems on one column interleave.
 // THE DISABLED ROW'S FADE (architect 2026-10-10 ~12:20, "the arrow needs to
 // be legible for me, but the text doesn't … since it's disabled, it's inert"):
 // the triangle and its shadow are the live row's triangle color (the `cue`
-// red, or the invalid color of an invalid cue or a REMOVED half, 2026-10-11)
+// color, or the invalid color of an invalid cue or a REMOVED half, 2026-10-11)
 // and `cue_shadow` BLENDED 45 % TOWARD THE FACE, the label's rest tone 65 %
 // toward it — derived solid colors, "an opacity look … not actually opaque"
 // (cool_edit_derive.h, the members `ce_off_*`); the selected label stays the
 // chrome's `label` so a selection shows. Every INERT label — a disabled
 // cue's segments and a tie follower's cells — wears the faded label, one
 // look for inert cue text (the Windows emboss retired from cues 2026-10-10).
-// THE DOTS' ROWS, counted from the canvas's first row, are the red's phase
-// ≡ 7 and the blue's ≡ 3 (mod 8), the blue's first from the top — the
-// capture's absolute red y ≡ 3 / blue y ≡ 7 re-counted from Cool Edit's
-// canvas top at y = 108 ≡ 4 (mod 8) (program_spec.h's dot fields, the
-// derivation's owner); "light" the bone (materials.h's kBoneInk, the words'
-// and the flags' one ink since 2026-10-22; the near-white F0F0F0 on the
+// THE DOTS' ROWS, counted from the canvas's first row, are the cue phase
+// ≡ 7 and the alt phase ≡ 3 (mod 8), the alt phase's first from the top —
+// Cool Edit's capture re-counted from its canvas top at y = 108 ≡ 4 (mod 8)
+// (program_spec.h's dot fields, the derivation's owner); "light" the bone
+// (materials.h's kBoneInk, the words' and the flags' one ink since 2026-10-22; the near-white F0F0F0 on the
 // brass, the same bytes, 2026-10-21; the panel's `ce_hilight` until then),
 // "white" the
 // chrome's `label` — Cool Edit's program text, EFEFEF on the default Face,
@@ -1667,7 +1673,7 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
     }
     if (red)
         return FlagFace{p.invalid_label, p.ce_cue_shadow, GuiCueDot::Invalid,
-                        GuiCueDot::None, true};
+                        GuiCueDot::Invalid, true};
     switch (kind) {
         case GuiFlagKind::Warp:
         case GuiFlagKind::PhaseReset:
@@ -1679,7 +1685,7 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
             return FlagFace{p.invalid_label, p.ce_cue_shadow,
                             GuiCueDot::Invalid, GuiCueDot::None, false};
     }
-    return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::Cue, GuiCueDot::Range,
+    return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::Cue, GuiCueDot::Cue,
                     false};
 }
 
@@ -1969,11 +1975,11 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                     out_stems->push_back(s);
         } else if (out_stems &&
                    (c.face.cue_phase_dots != GuiCueDot::None ||
-                    c.face.range_phase_dots != GuiCueDot::None) &&
+                    c.face.alt_phase_dots != GuiCueDot::None) &&
                    stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(MarkerStem{c.index, static_cast<double>(c.col),
                                             c.face.cue_phase_dots,
-                                            c.face.range_phase_dots});
+                                            c.face.alt_phase_dots});
     }
 }
 
@@ -1987,7 +1993,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 GuiStemDots phase_reset_stem_dots(bool red) {
     const FlagFace f =
         resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red);
-    return GuiStemDots{f.cue_phase_dots, f.range_phase_dots};
+    return GuiStemDots{f.cue_phase_dots, f.alt_phase_dots};
 }
 // The `h` view's live half's dots (declaration in render.h), off the same
 // resolver, for the nudged pair's rectangle runs.
@@ -1995,7 +2001,7 @@ GuiStemDots history_half_dots(bool added) {
     const FlagFace f = resolve_flag_face(
         added ? GuiFlagKind::Added : GuiFlagKind::Removed,
         /*disabled=*/false, /*red=*/false);
-    return GuiStemDots{f.cue_phase_dots, f.range_phase_dots};
+    return GuiStemDots{f.cue_phase_dots, f.alt_phase_dots};
 }
 
 namespace {
@@ -2491,7 +2497,7 @@ void render_history_diff_flags(
             // (resolve_flag_face) by the KIND of each half — a diff line is
             // never the invalid class (HistoryDiffFlag's note). A SINGLE
             // flag: the removed (the minus) the invalid color with its dots
-            // alone, the added (the plus) the cue red with its dots alone
+            // alone, the added (the plus) the cue color with its dots alone
             // (2026-10-11); THE DOTS READ THE
             // DISABLED AXIS (architect 2026-08-22): a single half whose one
             // side is disabled publishes none and wears the faded triangle,
@@ -2525,10 +2531,10 @@ void render_history_diff_flags(
             c.own_stems   = true;
             c.stems[0] = MarkerStem{i, static_cast<double>(col_left),
                                     left_face.cue_phase_dots,
-                                    left_face.range_phase_dots};
+                                    left_face.alt_phase_dots};
             c.stems[1] = MarkerStem{i, static_cast<double>(col_right),
                                     right_face.cue_phase_dots,
-                                    right_face.range_phase_dots};
+                                    right_face.alt_phase_dots};
             // THE RECTANGLE'S TOP AND BOTTOM between the two stems, on a
             // nudged pair whose stems stand on two columns (MarkerStemRun,
             // render.h): published whenever any of it reaches the waveform's
@@ -2585,7 +2591,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the eleven as
+    // THE LIVE WORDS (render.h's program_palette_words): the ten as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
 } // namespace
@@ -2611,7 +2617,7 @@ WaveformPlateInks waveform_plate_inks() {
 const GuiPaletteWords& program_palette_words() { return g_program_words; }
 
 namespace {
-// THE PROGRAM'S ELEVEN into the installed struct and the plate's two baked
+// THE PROGRAM'S TEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's first shared half (the
 // chrome's members, derived from the same Face, are the other's; the
 // generation is each member's own bump) — with THE PANEL'S FACE THE

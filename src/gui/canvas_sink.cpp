@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <utility>
 
 // The canvas sink's two roads (the rule, the invariant and where identity
 // rests are at canvas_sink.h's head).
@@ -14,6 +15,17 @@ namespace {
 int floor_mod(int a, int m) {
     const int r = a % m;
     return r < 0 ? r + m : r;
+}
+
+// THE KNOCKOUT'S COLOR (canvas_sink.h's head): the `waveform_canvas` role,
+// the color render_canvas's ground is laid in, so a hole is the ground's
+// bytes. Its word on both roads is argb32_opaque_word(display_color(...)),
+// the word set_waveform_source stores for it.
+GuiColor knockout_color() {
+    return palette().waveform_canvas;
+}
+uint32_t knockout_word() {
+    return argb32_opaque_word(display_color(knockout_color()));
 }
 
 // THE CELLS OF ONE DOTTED RUN, in order along it: `f(c)` for every c in
@@ -85,37 +97,73 @@ void GuiCairoCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
     cairo_fill(cr_);
 }
 
-// One 1 x 1 rectangle a cell (waveform_line_px's one device px), every run's
-// cells in one path, one fill — the shape of the retired helper
-// fill_dotted_waveform_line (deleted 2026-10-13 with this sink), which the
-// cursor and the ring's right side drew through, and the ring's and the
-// runs' one path of cells.
+// THE KNOCKOUT'S CELL ON THE CAIRO ROAD (canvas_sink.h's head): the plate
+// surface's word under window cell (x, y), where the blit put it — (x −
+// area.x, y − area.y), inside the area's clip and the surface's bounds — is
+// non-zero. The plate stores opaque words or the zero word and nothing else
+// (render.cpp's write pass, THE IDENTITY; the caller clears what no call
+// stored), so this is the cell set plate_column_covers_row (render.h)
+// answers on the bounds the plate was written from.
+bool GuiCairoCanvasSink::plate_covers(int x, int y) const {
+    if (plate_data_ == nullptr) return false;
+    if (x < plate_area_.x || x >= plate_area_.x + plate_area_.w ||
+        y < plate_area_.y || y >= plate_area_.y + plate_area_.h)
+        return false;
+    const int px = x - plate_area_.x;
+    const int py = y - plate_area_.y;
+    if (px >= plate_w_ || py >= plate_h_) return false;
+    const uint32_t* row = reinterpret_cast<const uint32_t*>(
+        plate_data_ + static_cast<std::size_t>(py) * plate_stride_);
+    return row[px] != 0u;
+}
+
+// One 1 x 1 rectangle a cell (waveform_line_px's one device px), the
+// run's cells in TWO PATHS, TWO FILLS (the knockout, canvas_sink.h's head):
+// the cells off the plate in `color`, then the cells over it in the canvas
+// color — disjoint cells under an opaque source, so the order writes
+// nothing different; with no plate handed the second path is empty and not
+// filled. The cursor's dots, the ring's runs and side and the nudged pairs'
+// runs paint through here.
 void GuiCairoCanvasSink::dots(std::span<const GuiCanvasDotRun> runs,
                               GuiColor color) {
-    set_waveform_source(cr_, color);
-    for (const GuiCanvasDotRun& run : runs) {
-        if (run.vertical) {
-            for_each_dot(run.y, run.len, run.period, run.origin, run.phase,
-                         [&](int y) {
-                             cairo_rectangle(cr_, static_cast<double>(run.x),
-                                             static_cast<double>(y), 1.0, 1.0);
-                         });
-        } else {
-            for_each_dot(run.x, run.len, run.period, run.origin, run.phase,
-                         [&](int x) {
-                             cairo_rectangle(cr_, static_cast<double>(x),
-                                             static_cast<double>(run.y), 1.0,
-                                             1.0);
-                         });
+    const auto lay = [&](bool covered) {
+        for (const GuiCanvasDotRun& run : runs) {
+            if (run.vertical) {
+                for_each_dot(run.y, run.len, run.period, run.origin,
+                             run.phase, [&](int y) {
+                                 if (plate_covers(run.x, y) != covered) return;
+                                 cairo_rectangle(cr_,
+                                                 static_cast<double>(run.x),
+                                                 static_cast<double>(y), 1.0,
+                                                 1.0);
+                             });
+            } else {
+                for_each_dot(run.x, run.len, run.period, run.origin,
+                             run.phase, [&](int x) {
+                                 if (plate_covers(x, run.y) != covered) return;
+                                 cairo_rectangle(cr_, static_cast<double>(x),
+                                                 static_cast<double>(run.y),
+                                                 1.0, 1.0);
+                             });
+            }
         }
-    }
+    };
+    set_waveform_source(cr_, color);
+    lay(false);
+    cairo_fill(cr_);
+    if (plate_data_ == nullptr) return;
+    set_waveform_source(cr_, knockout_color());
+    lay(true);
     cairo_fill(cr_);
 }
 
 // THE STEMS' TWO ROADS (paint_marker_stems' head carries the measurement):
 // the direct road where direct_pixel_target admits the context — each dot's
-// word stored inside each clip rect, the target marked dirty at stems_end —
-// else the cached A8 mask laid at the column with the source color.
+// word stored inside each clip rect, the canvas word where the plate covers
+// the dot's cell (the knockout, canvas_sink.h's head), the target marked
+// dirty at stems_end — else the cached A8 mask laid at the column with the
+// source color, then the covered cells as 1 x 1 rectangles in the canvas
+// color, one fill: the same pixels.
 void GuiCairoCanvasSink::stems_begin() {
     direct_ok_ = direct_pixel_target(cr_, direct_);
 }
@@ -123,7 +171,8 @@ void GuiCairoCanvasSink::stems_begin() {
 void GuiCairoCanvasSink::stem_dots(int x, int y, int len, int period,
                                    int phase, GuiColor color) {
     if (direct_ok_) {
-        const uint32_t word = argb32_opaque_word(display_color(color));
+        const uint32_t word  = argb32_opaque_word(display_color(color));
+        const uint32_t knock = knockout_word();
         const int dx      = x + direct_.dx;
         const int y_first = y + phase + direct_.dy;
         const int y_end   = y + len + direct_.dy;   // exclusive
@@ -137,7 +186,8 @@ void GuiCairoCanvasSink::stem_dots(int x, int y, int len, int period,
             for (; yy < hi; yy += period)
                 reinterpret_cast<uint32_t*>(
                     direct_.data +
-                    static_cast<std::size_t>(yy) * direct_.stride)[dx] = word;
+                    static_cast<std::size_t>(yy) * direct_.stride)[dx] =
+                    plate_covers(x, yy - direct_.dy) ? knock : word;
         }
         return;
     }
@@ -145,6 +195,17 @@ void GuiCairoCanvasSink::stem_dots(int x, int y, int len, int period,
     set_waveform_source(cr_, color);
     cairo_mask_surface(cr_, mask, static_cast<double>(x),
                        static_cast<double>(y));
+    if (plate_data_ == nullptr) return;
+    bool any = false;
+    for (int k = phase; k < len; k += period) {
+        if (!plate_covers(x, y + k)) continue;
+        cairo_rectangle(cr_, static_cast<double>(x),
+                        static_cast<double>(y + k), 1.0, 1.0);
+        any = true;
+    }
+    if (!any) return;
+    set_waveform_source(cr_, knockout_color());
+    cairo_fill(cr_);
 }
 
 void GuiCairoCanvasSink::stems_end() {
@@ -152,10 +213,23 @@ void GuiCairoCanvasSink::stems_end() {
     direct_ok_ = false;
 }
 
+// THE BLIT, and the plate kept for the frame's knockout (canvas_sink.h's
+// head): the surface's words read in place, flushed first, its size and the
+// area it was blitted at.
 void GuiCairoCanvasSink::plate(const GuiRect& area, cairo_surface_t* surface,
                                const GuiPlateColumns& /*columns*/,
                                WaveformPlateInks /*inks*/) {
+    plate_data_ = nullptr;
     if (!surface) return;
+    // Both plate surfaces are ARGB32 (render_waveform's guard,
+    // waveform_cache.cpp's creation).
+    assert(cairo_image_surface_get_format(surface) == CAIRO_FORMAT_ARGB32);
+    cairo_surface_flush(surface);
+    plate_data_   = cairo_image_surface_get_data(surface);
+    plate_stride_ = cairo_image_surface_get_stride(surface);
+    plate_w_      = cairo_image_surface_get_width(surface);
+    plate_h_      = cairo_image_surface_get_height(surface);
+    plate_area_   = area;
     cairo_save(cr_);
     cairo_rectangle(cr_, area.x, area.y, area.w, area.h);
     cairo_clip(cr_);
@@ -191,7 +265,8 @@ void GuiListCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
 // negative operand undefined.
 void GuiListCanvasSink::dots(std::span<const GuiCanvasDotRun> runs,
                              GuiColor color) {
-    const uint32_t word = argb32_opaque_word(display_color(color));
+    const uint32_t word  = argb32_opaque_word(display_color(color));
+    const uint32_t knock = knockout_word();
     for (const GuiCanvasDotRun& run : runs) {
         if (run.len <= 0 || run.period <= 0) continue;
         assert(run.phase >= 0 && run.phase < run.period);
@@ -206,6 +281,82 @@ void GuiListCanvasSink::dots(std::span<const GuiCanvasDotRun> runs,
         p.phase  = run.phase;
         p.word   = word;
         list_.prims.push_back(p);
+        knockout(run, knock);
+    }
+}
+
+// THE KNOCKOUT ON THE LIST ROAD (canvas_sink.h's head): the run's cells over
+// the plate's bars written again in the canvas word by records appended
+// after the run's own — a later record overwrites an earlier one in list
+// order, so the shader needs nothing new. The bars are this frame's plate
+// as `plate()` placed it: a band's columns are its rect's, its rows the
+// rect's rows, and its bounds are in the plate's rows, `plate_origin_` the
+// plate's row 0 — the cells the Plate record writes a non-zero word on,
+// plate_column_covers_row (render.h).
+//   A VERTICAL RUN at column x inside a band's columns: the covered rows of
+// that column — [o0, o1] ∪ [i0, i1], merged where they touch, exactly
+// plate_column_covers_row's set — moved to window rows and cut to the
+// band's rows and the run's, each interval ONE MORE DotsColumn of the
+// run's period and phase, its origin moved back to at or before the cut
+// interval's first cell as dots() moves it.
+//   A HORIZONTAL RUN (the ring's top and bottom, the nudged pairs' runs):
+// per covered cell one 1 x 1 Rect.
+void GuiListCanvasSink::knockout(const GuiCanvasDotRun& run,
+                                 uint32_t canvas_word) {
+    for (const PlateBand& b : plate_bands_) {
+        const int bx1 = b.r.x + b.r.w;   // exclusive
+        const int by1 = b.r.y + b.r.h;   // exclusive
+        if (run.vertical) {
+            if (run.x < b.r.x || run.x >= bx1) continue;
+            const WaveformColumnRows& c =
+                list_.columns[b.offset +
+                              static_cast<std::size_t>(run.x - b.r.x)];
+            // The two bars' rows, the empty ones dropped, in order of start.
+            int iv[2][2];
+            int n = 0;
+            if (c.o0 <= c.o1) { iv[n][0] = c.o0; iv[n][1] = c.o1; ++n; }
+            if (c.i0 <= c.i1) { iv[n][0] = c.i0; iv[n][1] = c.i1; ++n; }
+            if (n == 2 && iv[1][0] < iv[0][0]) {
+                std::swap(iv[0][0], iv[1][0]);
+                std::swap(iv[0][1], iv[1][1]);
+            }
+            if (n == 2 && iv[1][0] <= iv[0][1] + 1) {
+                iv[0][1] = std::max(iv[0][1], iv[1][1]);
+                n = 1;
+            }
+            for (int k = 0; k < n; ++k) {
+                const int lo =
+                    std::max({iv[k][0] + plate_origin_, b.r.y, run.y});
+                const int hi = std::min({iv[k][1] + plate_origin_, by1 - 1,
+                                         run.y + run.len - 1});   // inclusive
+                if (lo > hi) continue;
+                GuiCanvasPrimitive p;
+                p.kind   = GuiCanvasKind::DotsColumn;
+                p.r      = GuiRect{run.x, lo, 1, hi + 1 - lo};
+                p.period = run.period;
+                p.origin = lo - floor_mod(lo - run.origin, run.period);
+                p.phase  = run.phase;
+                p.word   = canvas_word;
+                list_.prims.push_back(p);
+            }
+        } else {
+            if (run.y < b.r.y || run.y >= by1) continue;
+            const int y = run.y - plate_origin_;
+            const auto knock_cell = [&](int x) {
+                if (x < b.r.x || x >= bx1) return;
+                const WaveformColumnRows& c =
+                    list_.columns[b.offset +
+                                  static_cast<std::size_t>(x - b.r.x)];
+                if (!plate_column_covers_row(c, y)) return;
+                GuiCanvasPrimitive p;
+                p.kind = GuiCanvasKind::Rect;
+                p.r    = GuiRect{x, run.y, 1, 1};
+                p.word = canvas_word;
+                list_.prims.push_back(p);
+            };
+            for_each_dot(run.x, run.len, run.period, run.origin, run.phase,
+                         knock_cell);
+        }
     }
 }
 
@@ -227,10 +378,15 @@ void GuiListCanvasSink::stem_dots(int x, int y, int len, int period,
 // publication and every publication takes a new revision — and each record's
 // offset into it is the running sum of the stored bands' widths either way,
 // the offsets the copy made.
+// THE BANDS KEPT FOR THE FRAME'S KNOCKOUT (canvas_sink.h's head): each
+// record's rect and column offset, the plate's row 0 the area's y; none
+// where no plate is rendered.
 void GuiListCanvasSink::plate(const GuiRect& area, cairo_surface_t* /*surface*/,
                               const GuiPlateColumns& columns,
                               WaveformPlateInks inks) {
+    plate_bands_.clear();
     if (!columns.rendered) return;
+    plate_origin_ = area.y;
     assert(columns.revision != 0);
     const bool copy = columns.revision != list_.plate_revision;
     if (copy) list_.columns.clear();
@@ -254,6 +410,7 @@ void GuiListCanvasSink::plate(const GuiRect& area, cairo_surface_t* /*surface*/,
         if (copy)
             list_.columns.insert(list_.columns.end(), c.cols.begin(),
                                  c.cols.end());
+        plate_bands_.push_back(PlateBand{p.r, offset});
         offset += c.cols.size();
         list_.prims.push_back(p);
     }
