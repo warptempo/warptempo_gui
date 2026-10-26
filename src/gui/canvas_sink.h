@@ -2,7 +2,6 @@
 #include "render.h"   // GuiRect, GuiColor, GuiCanvasDotRun, GuiPlateColumns
 
 #include <cairo/cairo.h>
-#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -34,13 +33,12 @@
 //     (render_canvas, the center lines, the divider, the ring, the runs) and the default
 //     where it set none (the cursor, the scanner, the anchor, the stems); a
 //     rects call ONE fill of its rectangles under set_waveform_source (the
-//     body set_palette_source shares, render.cpp); a dots call one fill of
-//     its runs' 1 x 1 cells off the plate and one of those over it (THE
-//     KNOCKOUT, below); the stems' DIRECT ROAD (direct_pixel_target,
+//     body set_palette_source shares, render.cpp); a dots call ONE fill of
+//     its runs' 1 x 1 cells; the stems' DIRECT ROAD (direct_pixel_target,
 //     render.h: the converted word stored straight into the target inside
-//     its clip) and their A8 MASK ROAD where it is refused; the plate the
-//     cache surface blitted OVER at the area's origin under the area's
-//     clip.
+//     its clip) and their A8 MASK ROAD where it is refused, both moved here
+//     unchanged in bytes; the plate the cache surface blitted OVER at the
+//     area's origin under the area's clip.
 //   * THE LIST SINK (GuiListCanvasSink) — the GL canvas on both platforms
 //     (the build's WARPTEMPO_CANVAS=gl, kGuiCanvasDrawList): each primitive
 //     appended to the frame's GuiCanvasDrawList in paint order, every word
@@ -64,51 +62,6 @@
 // violation — a translucent or non-rectangular overlay would have to
 // composite on the CPU — and the screencap harness is its detector.
 //
-// THE KNOCKOUT (architect 2026-10-26: "I'd like to see the rangeless design
-// with the knockout just shipped as the default. If it doesn't work, we can
-// revert it. It opens a lot more possibilities for colors, including just
-// using the ink itself, or pretty much any other color; we just worry about
-// picking a color that looks good with the ink"): A DOT THAT LANDS ON A
-// CELL THE WAVEFORM PLATE PAINTED — the ink or the lit outline — IS PAINTED
-// IN THE CANVAS COLOR INSTEAD OF ITS OWN; over the canvas black, the grid
-// and the center lines it keeps its color. THE PLATE'S CELL UNDER THE DOT
-// DECIDES, never the framebuffer (the GL canvas cannot read it): the plate
-// this sink was handed THIS FRAME through plate(); no plate handed (a null
-// surface on the cairo road, `!columns.rendered` on the list road), no
-// knockout. ITS SCOPE IS EVERY DOTTED RUN the sink paints — dots and
-// stem_dots: the cues' stems, the playhead's dots, the lead-in ring's four
-// sides, the nudged pairs' runs — and A RECT NEVER (the scanner, the zoom
-// anchor's stem, the center lines, the divider, the ground). THE CANVAS
-// COLOR is `waveform_canvas`, its word argb32_opaque_word(display_color(...))
-// on both roads — the word render_canvas's ground stores — so a hole is
-// byte-identical to the ground. THE PLATE IS HANDED BEFORE EVERY DOTTED RUN
-// on both roads: on_redraw's paint-order block (paint_handler.cpp) paints
-// the plate, the center lines, the divider, the ring, the stems, the
-// playheads, the scanner and the anchor in that order, and on the cairo
-// road those passes share ONE GATE (the plate branch and the exposure of
-// the waveform's paint area) with ONE SINK for the call — the cairo sink
-// is built per on_redraw — so a pass that paints dots has blitted the plate
-// first; build_canvas_list runs the same order whole. THE ONE PREDICATE is
-// plate_column_covers_row (render.h, beside WaveformColumnRows: the outer
-// bar or the lit inner bar), which render_waveform's write pass asks for its
-// zero word; each road reads the one plate in the representation it holds,
-// as for the plate itself:
-//   * THE CAIRO SINK reads the blitted surface's word under the cell —
-//     non-zero is covered, the same cell set, the plate storing opaque words
-//     or the zero word alone (render.cpp's IDENTITY paragraph); dots() lays
-//     the uncovered cells in the color and the covered in the canvas color,
-//     the stems' direct road stores the canvas word on a covered dot, and
-//     their mask road lays the mask as before and then the covered cells as
-//     1 x 1 rectangles in the canvas color — the same pixels.
-//   * THE LIST SINK keeps the plate's band records and reads their bounds
-//     (GuiCanvasDrawList::columns): after a run's record, one more DotsColumn
-//     record of the same period and phase per covered interval of a
-//     vertical run's column, and one 1 x 1 Rect record per covered cell of a
-//     horizontal run, in the canvas word — the later record overwriting the
-//     earlier in list order, the shader untouched.
-// The identity proof is the two APKs screencapped through the same states
-// (docs/engineering/gpu_canvas_2026_10.md §5).
-//
 // WHERE IDENTITY RESTS, the three claims:
 //   * THE CPU CANVAS AGAINST THE TREE BEFORE THE SINK: the cairo
 //     sink's calls are the painters' own, argument for argument; where a
@@ -116,8 +69,7 @@
 //     share one fill as before, the runs' cells now ordered run by run),
 //     every rectangle is integral under an integral translation with an
 //     opaque source and OVER, so a fill writes the source on exactly the
-//     union of its cells whatever their order in the path. The knockout's
-//     cells (above) are the sink's own addition, the canvas word on them.
+//     union of its cells whatever their order in the path.
 //   * THE GL CANVAS AGAINST THE CPU CANVAS: a rect writes the same word on
 //     the same cells; a dotted run writes the word where (c − origin) mod
 //     period = phase, the same cells the cairo sink enumerates (the list
@@ -126,9 +78,8 @@
 //     select is render_waveform's priority on the same bounds
 //     (render_waveform_columns, render.h, the one producer of both roads),
 //     the zero word where the cairo road leaves the plate transparent and
-//     the canvas shows; a knocked-out dot is the canvas word on the cells
-//     the one predicate covers on both; later records overwrite earlier
-//     ones in list order, the cairo road's paint order; the scissor is the cpu road's clip
+//     the canvas shows; later records overwrite earlier ones in list order,
+//     the cairo road's paint order; the scissor is the cpu road's clip
 //     (the canvas paint area, the plate's area clip containing it); and the
 //     texture over it places every overlay pixel exactly (Milestone 1).
 //   * WHAT IS NOT IDENTICAL BY CONSTRUCTION: the list is rebuilt WHOLE from
@@ -240,21 +191,9 @@ public:
                WaveformPlateInks inks) override;
 
 private:
-    // THE KNOCKOUT'S CELL (the head): the plate surface `plate()` blitted
-    // this frame holds a non-zero word at window cell (x, y).
-    bool plate_covers(int x, int y) const;
-
     cairo_t*          cr_;
     DirectPixelTarget direct_;
     bool              direct_ok_ = false;
-    // The plate this sink blitted (the head's KNOCKOUT): its words, read
-    // in place, and the area's origin and clip it was blitted under; null
-    // data where no plate was handed.
-    const unsigned char* plate_data_   = nullptr;
-    int                  plate_stride_ = 0;
-    int                  plate_w_      = 0;
-    int                  plate_h_      = 0;
-    GuiRect              plate_area_{};
 };
 
 // Rebuilds `list`'s records from empty (the clip and the floater bit are the
@@ -276,19 +215,5 @@ public:
                WaveformPlateInks inks) override;
 
 private:
-    // THE KNOCKOUT'S RECORDS for one dotted run already appended in its
-    // color (the head): the run's cells over the plate's bars again, in the
-    // canvas word.
-    void knockout(const GuiCanvasDotRun& run, uint32_t canvas_word);
-
     GuiCanvasDrawList& list_;
-    // The plate's stored bands as `plate()` placed them this frame (the
-    // head's KNOCKOUT): each band's rect and the offset of its first column
-    // in list_.columns; `plate_origin_` the plate's row 0 in window rows.
-    struct PlateBand {
-        GuiRect     r{};
-        std::size_t offset = 0;
-    };
-    std::vector<PlateBand> plate_bands_;
-    int                    plate_origin_ = 0;
 };

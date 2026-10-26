@@ -154,12 +154,7 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    order, every write opaque, later wins. Dot runs discard by
    `(row − origin) mod period ≠ phase` in integer math. Every color is the
    same converted word the cairo sink would store (`argb32_opaque_word` of
-   `display_color`). THE KNOCKOUT (architect 2026-10-26) is every dotted
-   run's rule on both roads, never a rect's: a dot on a cell the frame's
-   plate covers (`plate_column_covers_row`, the outer or the lit inner bar)
-   is the canvas word — the cairo sink reading the blitted plate's word
-   under the cell, the list appending later records in the canvas word over
-   the covered cells (`canvas_sink.h`'s head). THE PLATE'S BOUNDS HAVE A LIFETIME OF THEIR OWN
+   `display_color`). THE PLATE'S BOUNDS HAVE A LIFETIME OF THEIR OWN
    (2026-10-14): every publication of a plate stamps it with a process-wide
    revision (`GuiPlateColumns::revision`, `next_plate_revision`), the list
    sink copies the bounds into the list only when the revision moved, and
@@ -347,17 +342,6 @@ system makes one, observed by screencap and logcat, no recovery code
 anywhere. The same process stood through all of it, and the frame after
 the return and the frame after the wake are byte-identical to the launch
 frame (tmp/gpu_arc/lifecycle.sh, id_life_*.png).
-
-THE KNOCKOUT'S PROOF AT 7a3ca555 (2026-10-26, the range-less stem with the
-knockout, canvas_sink.h's head): THIRTEEN states on the tablet — the launch
-view, Zoom to Fit, the magnification lamp, Next Marker twice, Toggle Follow,
-the `h` view and back, the Target view, Previous Marker, the Source view,
-Follow off, the lamp off — each build launched fresh and driven by the same
-taps (tmp/knockout_proof/drive.sh), every pair IDENTICAL cpu against gl over
-the whole frame, the logo lane included (the two runs fell inside one clock
-minute), and every consecutive gl pair differing where the act changes the
-screen. The dense marker view after Next Marker shows the knockout itself:
-the cue's dots over the black, holes through the ink.
 
 ## 6. Hazards named at the design
 

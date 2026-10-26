@@ -13,9 +13,9 @@
 // THE COLORS ARE COMPILED IN, AND ONE KIND OF PRESET REMAINS (architect
 // 2026-10-21, "ok to delete other captions"; the fortepiano chrome,
 // materials.h):
-//   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S TEN
+//   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own thirty-three), the
+//     presets (kGuiBuiltinPalettes, the program's own thirty-four), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -62,13 +62,12 @@
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
 // chrome's selected pair). So the palette's program roles are exactly the
-// TEN below: the waveform's canvas, ink and lit outline; THE CANVAS'S
-// GRID AND CENTER LINE, `grid` and `center`; THE CUE COLOR, `cue`, on both
-// of a stem's phases, its contrast over the ink the knockout's (architect
-// 2026-10-26, render.h's marker-lane paragraph), and THE INVALID COLOR,
-// `invalid_label` (architect 2026-10-11 ~01:00–01:20: an invalid cue's
-// triangle, dots and resting label and the `h` view's removed half;
-// render.h's marker-lane paragraph, the table at render.cpp's
+// ELEVEN below: the waveform's canvas, ink and lit outline; THE CANVAS'S
+// GRID AND CENTER LINE, `grid` and `center`; THE CUES' TWO COLORS, `cue` and
+// `range` (architect 2026-10-09 ~11:50–12:00, Cool Edit's cues), and THE
+// INVALID COLOR, `invalid_label` (architect 2026-10-11 ~01:00–01:20: an
+// invalid cue's triangle, dots and resting label and the `h` view's removed
+// half; render.h's marker-lane paragraph, the table at render.cpp's
 // resolve_flag_face); the playhead's `playhead_stem` — its head and its dots
 // alone — and the `scanner`, the white of the stems that belong to the
 // controls: the playback line and the zoom anchor's stem, Cool Edit's own
@@ -78,24 +77,24 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S THIRTY-THREE, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S THIRTY-FOUR, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
 // provenance; the transcription's rules are the generator's head's;
 // regenerate, never hand-edit), in its order: ONE INK, the DEC VT220's
-// green, under thirty-three cue colors, the VGA and Tango palettes mapped
-// among them, each with its own invalid red — the cue standing on the
-// canvas black alone since the knockout (architect 2026-10-26), so its
-// lightness is free (the architect's pick, Terminal, Blue, kept as the
-// first row, and the planner's thirty-two beside it; the text's head is the
-// design and the families' rules).
+// green, under thirty-four cue and range pairs of four families —
+// contrast pairs, the VGA palette mapped, the Tango palette mapped, period
+// pairs — each with its own invalid red (the architect's pick of Terminal,
+// Blue and White, 2026-10-25 late, kept as the first row, and the
+// planner's thirty-three pairs beside it; the text's head is the design and
+// each family's rule).
 // Each a KEY (`warptempo-` and the display name in the key grammar — the
 // `waveform` key's word for it), a DISPLAY NAME (the
-// source's own) and THE TEN. THE DEFAULT PALETTE is "Terminal, Blue"
-// (`warptempo-terminal-blue`, kGuiDefaultPaletteKey; architect 2026-10-26)
-// — the one both first-run templates spell
-// (`waveform=warptempo-terminal-blue`; every device key required,
+// source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Terminal, Blue
+// and White" (`warptempo-terminal-blue-and-white`, kGuiDefaultPaletteKey;
+// architect 2026-10-25 late) — the one both first-run templates spell
+// (`waveform=warptempo-terminal-blue-and-white`; every device key required,
 // architect 2026-10-14).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
@@ -106,7 +105,7 @@
 // the lookups' key, palette_role_index) and the
 // GuiPalette member it fills (render.h's palette block owns what each
 // paints). THE TABLE CARRIES NO VALUES (2026-10-09): every built-in palette's
-// ten, the default's among them, are the generated rows of
+// eleven, the default's among them, are the generated rows of
 // kGuiBuiltinPalettes below, one source.
 //
 // WHAT EACH ROLE TAKES FROM A PRESET, recorded in Cool Edit Pro 2.1's value
@@ -117,9 +116,10 @@
 // record — the product's span itself neutral grey since 2026-10-25,
 // materials.h — run once by the generator and proven below), `grid` its
 // GrdL, `center` its Cntr (A53038 in every built-in, architect 2026-10-25),
-// `cue` its CueM (the default's blue, 1CC8FF), `playhead_stem` its Curs
-// (Tempest's yellow FFF300 on every built-in; tunable per preset, architect
-// 2026-10-25 night),
+// `cue` its CueM (the default's cyan, 37FDF8) and `range` its RngM (its sky,
+// 70B3FC), `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on most, the
+// default's among them, another bright color on some: tuned per preset,
+// architect 2026-10-25 night),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in every preset: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
@@ -127,7 +127,7 @@
 // program's own, a red tuned per preset apart from its center line (architect
 // 2026-10-25 night: "the invalid red we're using was tuned to the default
 // theme; it doesn't work that well with any of these. Tune that as well";
-// the default's red, F2142E; one red role since 2026-10-11 ~01:00–01:20,
+// the default's coral, E85C6A; one red role since 2026-10-11 ~01:00–01:20,
 // Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
 // the selected role with them: "No flags change color when you select them
 // … I'd rather the text just go white, and the flag should be the
@@ -152,7 +152,7 @@
 // every role (the generator's rows).
 //
 // THE TABLE'S ORDER (the color picker's chooser's, 2026-10-07..14): the
-// waveform's three, the canvas's two lines, the cue color, the
+// waveform's three, the canvas's two lines, the cues' two colors, the
 // invalid color, then the two lines that cross the well (the playhead, the
 // scanner), then the panel's face. The generator reads the names off this
 // table and refuses to run when they are not its own order.
@@ -167,6 +167,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"grid",                      &GuiPalette::grid},
     {"center",                    &GuiPalette::center},
     {"cue",                       &GuiPalette::cue},
+    {"range",                     &GuiPalette::range},
     {"invalid_label",             &GuiPalette::invalid_label},
     {"playhead_stem",             &GuiPalette::playhead_stem},
     {"scanner",                   &GuiPalette::scanner},
@@ -178,12 +179,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // install_program_palette takes, a built-in palette holds and palette_record
 // answers.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 10>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 11>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
 // pinned to the table here.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 10> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 11> must be GuiPaletteWords");
 
 // The index of the role named `name` in the table, or kGuiPaletteRoleCount —
 // the reader's one lookup, and install_palette's for the plate's two baked
@@ -194,7 +195,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
     return kGuiPaletteRoleCount;
 }
 
-// INSTALL THE PROGRAM'S TEN (2026-10-07; the install family's second
+// INSTALL THE PROGRAM'S ELEVEN (2026-10-07; the install family's second
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED (chrome_derive.h's live_chrome_words: the
@@ -212,19 +213,19 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // and after the install; when it moved, the synchronous plate rebuild
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
-// (the grid, the center line, the cue color, the invalid color, the playhead,
+// (the grid, the center line, a cue color, the invalid color, the playhead,
 // the scanner: no plate render), the flag cache alone, synchronously
 // (Viewport::refresh_flag_cache, so a frame callback served before the tick
 // cannot blit flags in the old colors); then Viewport::invalidate_all, so
 // the swap is one frame (the whole surface, which is the GUI's geometry since
 // 2026-10-24: labwc owns the border outside it).
-// WHY THAT IS ENOUGH (re-read 2026-10-09): the ten bake into two
+// WHY THAT IS ENOUGH (re-read 2026-10-09): the eleven bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,
 // keyed by the generation (FlagCache::fp_palette_generation), whose rebuild
 // also stages the stem stash (AppState::staged_marker_stems, swapped in at
-// the publish; it carries which role each stem's two phases wear, the
-// colors read live); every other reader paints live from palette()
+// the publish; it carries which of the cue colors each stem's two phases
+// wear, the colors read live); every other reader paints live from palette()
 // each frame — the canvas, its grid and its center lines (render_canvas),
 // the cues' dots (paint_marker_stems), the playhead's
 // head and dots, the open flag editor (render_flag_editor_box), the lead-in
@@ -232,9 +233,9 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's thirty-three in their
+// THE BUILT-IN PALETTES (the head) — the program's thirty-four in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
-// name and the ten in the role table's order. palette_file.cpp asserts
+// name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
 // default a row and every lit outline the generator's rule off its ink.
 struct GuiBuiltinPalette {
@@ -245,13 +246,13 @@ struct GuiBuiltinPalette {
 inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
-// THE DEFAULT PALETTE (the head): "Terminal, Blue" (architect 2026-10-26,
-// the rangeless design "just shipped as the default") — the `waveform=`
+// THE DEFAULT PALETTE (the head): "Terminal, Blue and White" (architect
+// 2026-10-25 late, "I like Terminal, Blue and White") — the `waveform=`
 // value both first-run templates SPELL (GuiPlatform::device_config_defaults;
 // every device key required, architect 2026-10-14 — a config with no line took it
 // 2026-10-07..14). A config naming a retired key is the launch's hard fail
 // (the 2026-10-14 ruling: no migration).
-inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-terminal-blue";
+inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-terminal-blue-and-white";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
@@ -259,7 +260,7 @@ constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
         if (name == b.key) return &b;
     return nullptr;
 }
-// THE DEFAULT PALETTE'S TEN (the derivation checks' and the install
+// THE DEFAULT PALETTE'S ELEVEN (the derivation checks' and the install
 // family's base).
 inline constexpr const GuiPaletteWords& default_palette_words() {
     return builtin_palette(kGuiDefaultPaletteKey)->words;
@@ -287,9 +288,9 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
-    "(warptempo-terminal-blue, warptempo-terminal-ink, ...)";
+    "(warptempo-terminal-blue-and-white, warptempo-terminal-ink-and-black, ...)";
 
-// The ten the built-in palette `name` names. Precondition:
+// The eleven the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses
 // (install_palette at launch; the Waveform row's commit).
 GuiPaletteWords palette_record(std::string_view name);

@@ -280,7 +280,7 @@ private:
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
     // THE WAVEFORM ROW'S INSTALL (architect 2026-10-14; the color picker's
-    // install_live_words until that day, its shape kept): the ten
+    // install_live_words until that day, its shape kept): the eleven
     // installed (install_program_palette, palette_file.h), then the apply
     // shape run once, as install_program_palette's declaration states it —
     // the plate kicked when its inks moved, else the flag cache refreshed,
@@ -318,7 +318,7 @@ private:
     // arm, over its 43 schemes, 2026-10-14..10-21); `true_colors`'s two words
     // since 2026-10-21), the head's stage 3: the path completer's model on a
     // closed list. The value side is a PREFIX (byte compare, the words being
-    // ASCII) of the key's words — the thirty-three built-in preset keys
+    // ASCII) of the key's words — the thirty-four built-in preset keys
     // (kGuiBuiltinPalettes' keys, palette_file.h) for `waveform`, `on` and
     // `off` (kTrueColorsWords, device_config.h) for `true_colors` — and the
     // buffer advances by the matches' longest common prefix past it: a
