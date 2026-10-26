@@ -3,6 +3,7 @@
 #include "input_handler.h"   // validate_target_view_entry (load gate below)
 #include "prompt.h"
 #include "render_output_naming.h"
+#include "score_pages.h"
 #include "selection.h"
 #include "settings_io.h"
 #include "target_render.h"
@@ -190,6 +191,22 @@ std::optional<GuiFailure> source_load_dry_run(
         }
         tab_a_trim = sf->tab_a.trim;
         tab_b_trim = sf->tab_b.trim;
+        // THE SCORE'S HARD FAIL, previewed (score_pages.h's head, the load's
+        // own read below): a malformed pages.txt in the folder `score_path`
+        // names refuses here as the load would, the folder resolved against
+        // the SOURCE'S folder — the project's, never `sidecar_dir`, which the
+        // pull's reload gate points at its scratch staging. An absent folder
+        // is the load's advisory and no refusal of the preview's.
+        if (!sf->score_path.empty()) {
+            const std::filesystem::path folder =
+                score_folder_of(source.parent_path(), sf->score_path);
+            if (auto score = read_score_folder(folder); !score) {
+                const std::filesystem::path txt = folder / "pages.txt";
+                return path_failure("Invalid score in ", txt,
+                                    shown_project_path(txt),
+                                    ": " + score.error());
+            }
+        }
     } else {
         // No sidecar yet: the load stamps the full window on both tabs, which
         // is inside the wall by construction, as the marker templates are.
@@ -623,6 +640,15 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
         app.tab_b.trim.end_frame   = sf.tab_b.trim.end_frame;
         app.tab_a.read_only = sf.tab_a.read_only;
         app.tab_b.read_only = sf.tab_b.read_only;
+        // THE SCORE'S KEYS (architect approval 2026-10-26): the folder and
+        // the viewing range as the file holds them, and each tab's remembered
+        // position — display scratch, applied verbatim like the playhead (the
+        // viewer clamps at use, score_viewer.h).
+        app.score_path       = sf.score_path;
+        app.score_first_page = sf.score_first_page;
+        app.score_last_page  = sf.score_last_page;
+        app.tab_a.score_position = sf.tab_a.score_position;
+        app.tab_b.score_position = sf.tab_b.score_position;
 
         // Persisted viewport/playhead positions are display scratch, not
         // authored data: they apply verbatim (above) with no load-range
@@ -631,6 +657,37 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
         // playhead clamp (clamp_playhead_to_live_domain, both tab snapshots)
         // immediately after this block.
     }
+    // THE SCORE (architect 2026-10-26; score_pages.h's head owns the three
+    // outcomes): the folder `score_path` names, resolved against the project
+    // folder, read beside the sidecars. Absent or unreadable is no score and
+    // one advisory line (the folder rides the sync script and may lag the
+    // sidecar); a malformed pages.txt, or a page's file missing, aborts the
+    // load like any malformed sidecar, the first error only.
+    app.score.reset();
+    if (!app.score_path.empty()) {
+        const std::filesystem::path folder =
+            score_folder_of(parent, app.score_path);
+        auto score = read_score_folder(folder);
+        if (!score) {
+            std::fprintf(stderr,
+                "warptempo_gui: Source load aborted: invalid score in "
+                "'%s': %s\n",
+                (folder / "pages.txt").string().c_str(),
+                score.error().c_str());
+            gui.request_exit();
+            return false;
+        }
+        if (score->pages) {
+            app.score = std::move(score->pages);
+            std::fprintf(stderr,
+                "warptempo_gui: Parsed %d score pages from %s\n",
+                app.score->count(), folder.string().c_str());
+        } else {
+            std::fprintf(stderr, "warptempo_gui: %s; no score\n",
+                         score->advisory.c_str());
+        }
+    }
+
     // If the parsed .settings landed us in target view, the deformed
     // total the viewport clamp below needs is derived on demand from the
     // warp_frame_map cache by live_total_frames (the markers and engine_settings

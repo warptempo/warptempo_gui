@@ -786,10 +786,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // removed; Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P before that, and
         // the W/P flip's bare `p` until its deletion 2026-09-15.)
         case GuiKeys::P: return bare || cl || cs;
-        // (THE LETTER M BINDS NOTHING since 2026-09-23: its Ctrl and Ctrl+Alt
-        // chords were the magnification level propagate's copy and paste, and
-        // Ctrl+Alt+Shift+M Generate Magnification Level Markers, all deleted
-        // with the magnification level markers column.)
+        // BARE `m` OPENS THE SCORE VIEWER (architect 2026-10-26, the SCORE
+        // key's chord), in both modes: the `h` view's allowlist refuses it
+        // there (its bound refusal), and under the viewer its own router
+        // closes on it (route_score_viewer_key, ranked above this
+        // predicate's every reader). Every modified `m` binds nothing — the
+        // magnification level propagate's Ctrl and Ctrl+Alt chords and
+        // Ctrl+Alt+Shift+M went with that markers column 2026-09-23.
+        case GuiKeys::M: return bare;
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven
@@ -1046,6 +1050,26 @@ static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::L,
                                   GuiInputState{true, true, true}, false),
               "`l` binds bare only — the render player — and none of the "
+              "seven modifier combinations spells anything");
+// `m` binds bare only — the score viewer (2026-10-26) — in both modes, and
+// no modifier spells anything on it.
+static_assert(chord_is_bound(GuiKeys::M, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::M, GuiInputState{}, true) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{true, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{false, true, true}, false) &&
+                  !chord_is_bound(GuiKeys::M,
+                                  GuiInputState{true, true, true}, false),
+              "`m` binds bare only — the score viewer — and none of the "
               "seven modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
 // Ctrl+Alt Revert — and no shifted spelling of any of them. (Open

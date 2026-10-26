@@ -7,8 +7,9 @@ shopt -s nocaseglob
 
 # warptempo_sync — the laptop's four errands to the tablet (warptempo).
 #
-#   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio, and
-#                                       nothing else.
+#   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio and
+#                                       each piece's score folder, and nothing
+#                                       else.
 #   warptempo_sync ft [piece ...|all]   FROM the tablet: the renders (each wav
 #                                       with its fingerprint), and nothing else.
 #   warptempo_sync ot [piece]           ON the tablet: an interactive shell as the
@@ -50,7 +51,8 @@ shopt -s nocaseglob
 # THE SIDECARS NEVER TRAVEL HERE (architect 2026-09-27). Both devices hold a clone
 # of github.com/warptempo/warptempo_projects and the app itself commits, pushes
 # and pulls them (Save and Commit in `h`); GitHub is the hub. warptempo_sync
-# carries only what git does not: the audio in, the renders out. ONE DEVICE PER
+# carries only what git does not: the audio and the scores in, the renders out.
+# ONE DEVICE PER
 # MOVEMENT: a movement is authored on one device, so no verb here ever settles a
 # disagreement.
 #
@@ -73,6 +75,20 @@ shopt -s nocaseglob
 # tt NEITHER STOPS NOR STARTS THE APP: a new wav is a piece the app cannot have
 # open, and an unsaved session on the tablet is left alone. A new piece appears in
 # File -> Open Project.
+#
+# tt CARRIES EACH PIECE'S SCORE FOLDER TOO (2026-10-26): after a piece's wav, if
+# the laptop holds `<piece>/score/pages.txt` (tools/score_extract.py's output, the
+# app's score viewer reads it), the pages that pages.txt names, `score/pageNNN.png`
+# by the tool's own spelling, and then `score/pages.txt` itself are each pushed
+# with `adb push --sync` (a file the tablet already holds unchanged is skipped)
+# into the tablet's `projects/<piece>/score/` — those two shapes and nothing else
+# in the folder, never the video, the scan cache or a stray file. pages.txt goes
+# LAST, so the app never reads a list naming a page not yet there. A piece with no
+# score folder says nothing about it (another movement may name the first one's
+# folder through its score_path); a pages.txt naming a page the folder lacks is
+# SKIPPED LOUDLY, the run's last lines naming it, and nothing of that score is
+# copied. Nothing on the tablet is ever deleted here: a page a regenerated
+# pages.txt no longer names stays, unread.
 #
 # ft brings each piece's `render/` DELIVERABLE, the `<title>.wav` and its
 # `<title>.fingerprint`, into the laptop's `<piece>/render/`, AS ONE PAIR: the
@@ -168,7 +184,7 @@ shopt -s nocaseglob
 #      cues' tuning keys, settled 2026-10-26, and the lit LED's glow key,
 #      settled the same day (RETIRED_KEYS below;
 #      src/gui/device_config.h); every other line is kept.
-#   6. the audio, exactly as `warptempo_sync tt all`.
+#   6. the audio and the score folders, exactly as `warptempo_sync tt all`.
 #   7. the directories adb made are opened to the app (below), and the app started.
 #   Run twice it does the same again: the clone is fresh each time and the tracked
 #   files are copied again. What it never touches: a file GitHub's main neither
@@ -672,11 +688,45 @@ open_far_dirs() {                       # $@ = far roots
 }
 
 # THE AUDIO: every target's source wav the tablet lacks, or holds at another size
-# or date. Sets `pushed` to the number of wavs copied (or that would be). A piece
+# or date, and after each piece's wav its score folder (push_score, below). Sets
+# `pushed` to the number of wavs copied (or that would be). A piece
 # whose folder the app would refuse (source_wav) is SKIPPED LOUDLY, not stopped
 # on: its line says why, and `unresolved` carries it to the run's last lines.
 pushed=0
+scores=0
 unresolved=()
+# THE SCORE FOLDER of one piece (the head's tt paragraph): the pages its
+# pages.txt names, then pages.txt. Sets nothing on a piece with no
+# score/pages.txt; counts `scores` for a folder pushed (or that would be).
+push_score() {                          # $1 = piece
+    local p="$1" dir line n count width name f
+    local re='^([0-9]+)[|]'
+    dir="$PROJECTS/$1/score"
+    [[ -f "$dir/pages.txt" ]] || return 0
+    local -a numbers=() files=()
+    while IFS= read -r line; do
+        [[ "$line" =~ $re ]] && numbers+=( "${BASH_REMATCH[1]}" )
+    done < "$dir/pages.txt"
+    count="${#numbers[@]}"
+    # The tool's page_name: the number padded to max(3, the count's digits).
+    width="${#count}"
+    (( width < 3 )) && width=3
+    for n in "${numbers[@]}"; do
+        name="$(printf 'page%0*d.png' "$width" "$((10#$n))")"
+        if [[ ! -f "$dir/$name" ]]; then
+            step "leave the score, NOT COPIED: its pages.txt names $name, which score/ does not hold"
+            unresolved+=( "$p: score/$name is missing" )
+            return 0
+        fi
+        files+=( "$name" )
+    done
+    files+=( "pages.txt" )
+    step "copy the score to the tablet ($(plural "$count" page) and pages.txt; the pages it already holds unchanged are skipped)"
+    for f in "${files[@]}"; do
+        quiet adb push --sync "$dir/$f" "$FAR/projects/$p/score/$f" || die "push failed: $dir/$f"
+    done
+    scores=$((scores + 1))
+}
 push_audio() {
     local p src base farp near far size
     for p in "${targets[@]}"; do
@@ -701,15 +751,16 @@ push_audio() {
         size="$(du -h -- "$src" | cut -f1)"
         if [[ "$near" == "$far" ]]; then
             step "leave the source wav: the tablet has it ($size)"
-            continue
-        fi
-        if [[ -z "$far" ]]; then
-            step "copy the source wav to the tablet ($size; a minute or so the first time)"
         else
-            step "copy the source wav to the tablet ($size): the tablet's differs in size or date"
+            if [[ -z "$far" ]]; then
+                step "copy the source wav to the tablet ($size; a minute or so the first time)"
+            else
+                step "copy the source wav to the tablet ($size): the tablet's differs in size or date"
+            fi
+            quiet adb push --sync "$src" "$farp" || die "push failed: $src"
+            pushed=$((pushed + 1))
         fi
-        quiet adb push --sync "$src" "$farp" || die "push failed: $src"
-        pushed=$((pushed + 1))
+        push_score "$p"
     done
 }
 
@@ -748,14 +799,15 @@ if [[ "$mode" == "tt" ]]; then
     [[ "${#targets[@]}" -gt 0 ]] || die "no pieces"
     push_audio
     printf '\n'
-    if [[ "$pushed" -gt 0 ]]; then
+    if [[ "$pushed" -gt 0 || "$scores" -gt 0 ]]; then
         open_far_dirs "$FAR/projects"
     fi
     printf '\n'
     report_unresolved
     if (( dry )); then printf 'nothing was changed. run it without -n to do this.\n'
-    elif [[ "$pushed" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
-    else printf 'done: %s copied. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)"
+    elif [[ "$pushed" -eq 0 && "$scores" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
+    elif [[ "$scores" -eq 0 ]]; then printf 'done: %s copied. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)"
+    else printf 'done: %s copied, %s brought up to date. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)" "$(plural "$scores" 'score folder')"
     fi
     exit 0
 fi
@@ -1022,7 +1074,7 @@ printf '\n'
 # app wrote since the plan is kept.
 apply_setup() {
     local d f k src key_same root cfg i
-    pushed=0; unresolved=()
+    pushed=0; scores=0; unresolved=()
 
     # 1. THE APP STOPPED, AND ITS FOLDERS THERE.
     head_step "stop the app on the tablet"
@@ -1154,8 +1206,8 @@ apply_setup() {
     fi
     printf '\n'
 
-    # 6. THE AUDIO, as tt all.
-    head_step "copy the audio, as warptempo_sync tt all:"
+    # 6. THE AUDIO AND THE SCORES, as tt all.
+    head_step "copy the audio and the scores, as warptempo_sync tt all:"
     push_audio
     printf '\n'
 

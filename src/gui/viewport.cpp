@@ -195,10 +195,11 @@ void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
     const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
-    if (modal_box_dialog_stands(app) ||
+    if (modal_box_dialog_stands(app) || score_viewer_stands(app) ||
         painted == AppState::ModalDialogOwner::Prompt ||
         painted == AppState::ModalDialogOwner::Editor ||
-        painted == AppState::ModalDialogOwner::Progress)
+        painted == AppState::ModalDialogOwner::Progress ||
+        painted == AppState::ModalDialogOwner::Score)
         invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band it can hang into, the show edge's own pair

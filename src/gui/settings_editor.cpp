@@ -10,6 +10,7 @@
 #include "undo.h"
 #include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
 #include "materials.h"
+#include "score_pages.h"     // the score_path commit's read
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -435,6 +436,75 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
 
+    // -- the score's piece-level keys (architect approval 2026-10-26) -------
+    // THE FOLDER: the commit READS IT, the load's own road (score_pages.h's
+    // three outcomes), so a typed path is the score on screen at the OK —
+    // the SCORE key lit or grey by the next frame — and a committed path is
+    // one the next load accepts: a MALFORMED pages.txt refuses here with the
+    // load's own reason (loadable iff it commits), while an ABSENT folder
+    // commits, the key grey and a card saying where nothing was found (the
+    // folder may arrive by the sync script later). Band-class like every key
+    // of this router: no undo, no dirty, carried by the next save. The empty
+    // value is no score.
+    if (key == "score_path") {
+        if (gv.text == app.score_path) { unchanged(); return true; }
+        if (gv.text.empty()) {
+            app.score.reset();
+            app.score_path.clear();
+            applied(); return true;
+        }
+        const std::filesystem::path folder = score_folder_of(
+            std::filesystem::path(app.source_audio_path).parent_path(),
+            gv.text);
+        auto score = read_score_folder(folder);
+        if (!score) {
+            reject("invalid score in '" +
+                   shown_project_path(folder / "pages.txt") + "': " +
+                   score.error());
+            return true;
+        }
+        app.score_path = gv.text;
+        if (score->pages) {
+            app.score = std::move(score->pages);
+        } else {
+            app.score.reset();
+            std::fprintf(stderr, "warptempo_gui: %s; no score\n",
+                         score->advisory.c_str());
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "No score at '" + shown_project_path(folder) +
+                                     "'");
+        }
+        applied(); return true;
+    }
+    // THE VIEWING RANGE: the score viewer's START / END typed (score_viewer.h),
+    // AUTHORING like them — a read-only tab and grid iterations refuse it
+    // with the lock's own card, the engine-key arm's shape — and refused
+    // where the pair would cross, the one cross-key rule the load enforces
+    // (read_settings_file), so a crossed pair is never committed. A number
+    // past the page count commits (the viewer clamps at use, as the load
+    // admits it).
+    if (key == "score_first_page" || key == "score_last_page") {
+        if (authoring_locked(app)) {
+            const char* card = authoring_lock_card(app);
+            text_editor::refuse(app.settings_editor);
+            viewport.invalidate_dialog_editor_box();
+            std::fprintf(stderr, "warptempo_gui: %s\n", card);
+            notifications.notify(AppState::NotificationClass::Normal, card);
+            return true;
+        }
+        const bool first = (key == "score_first_page");
+        int64_t& bound = first ? app.score_first_page : app.score_last_page;
+        if (gv.i64 == bound) { unchanged(); return true; }
+        const int64_t f = first ? gv.i64 : app.score_first_page;
+        const int64_t l = first ? app.score_last_page : gv.i64;
+        if (f != 0 && l != 0 && f > l) {
+            reject("score_first_page would pass score_last_page");
+            return true;
+        }
+        bound = gv.i64;
+        applied(); return true;
+    }
+
     // -- per-tab GUI keys ------------------------------------------------
     char tab_char = 0;
     std::string suffix;
@@ -656,6 +726,15 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                 "bounds reset to the song edges\n",
                 (tab_char == 'B') ? 'b' : 'a');
         }
+        applied(); return true;
+    }
+
+    if (suffix == "score_position") {
+        // THE SCORE VIEWER'S REMEMBERED POSITION (architect approval
+        // 2026-10-26): band-only on both tabs, the viewer reading it at its
+        // next open (score_viewer.h) — display scratch, no clamp here.
+        if (gv.i64 == band.score_position) { unchanged(); return true; }
+        band.score_position = gv.i64;
         applied(); return true;
     }
 

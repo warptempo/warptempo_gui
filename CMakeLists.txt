@@ -269,6 +269,10 @@ set(WARPTEMPO_GUI_SOURCES
     # output folders, on the one playback engine. GUI-ONLY like every
     # painting and playback concern; it calls the audio_io WAV reader.
     src/gui/render_player.cpp
+    # THE SCORE (2026-10-26): the score folder's table and its reader, and
+    # the built-in page viewer over it. GUI-only: the CLI reads no score.
+    src/gui/score_pages.cpp
+    src/gui/score_viewer.cpp
     # THE CAR TRANSPORT (2026-09-17): the head unit's SECOND owner — the
     # cluster that drives the project's own transport while the render player
     # is closed, and publishes the console's three lines from the tab, the

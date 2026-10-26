@@ -97,7 +97,8 @@ struct GuiInputHandler;
 // player it swaps to at a complete batch takes the commands from there, the
 // hook's fork), while the folder overlay stands (the Open project
 // picker — the player is forked ahead at the hook, so its owner tag never
-// reaches this test), under ANY EDITOR (keyboard_modal_editor_active, the
+// reaches this test), while THE SCORE VIEWER stands (2026-10-26: its open
+// stopped playback and nothing plays under it), under ANY EDITOR (keyboard_modal_editor_active, the
 // one predicate for a keyboard-taking modal: the settings and BPM dialog
 // editors and, since 2026-10-25, the flag and iteration bound editors — a
 // modal admits its own vocabulary alone) and in the `h` history view

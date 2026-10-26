@@ -8,7 +8,8 @@
 // window, so the modal/overlay isn't flush against the border"). EVERY MODAL
 // STANDS IN IT: the render player and the project picker (the folder
 // overlay's contents, folder_overlay.h, the preset picker the third since
-// 2026-10-25), and since the same day's second
+// 2026-10-25; and THE SCORE VIEWER since 2026-10-26, score_viewer.h, its
+// page the box's interior), and since the same day's second
 // ruling THE PROMPTS AND THE DIALOG EDITORS (his progress and settings-keyboard mocks: the taskbar dialog laid over the window's
 // foot, 2026-10-10 to 2026-10-14, is retired — "we should stop doing that"),
 // and since that evening THE PROGRESS MODAL, a batch's "Rendering X of Y..."
@@ -111,11 +112,14 @@ inline bool modal_box_dialog_stands(const AppState& a) {
            a.dialog_editor_session() != 0;
 }
 
-// DOES ANY MEMBER'S BOX STAND — the folder overlay's or a dialog's. The
-// waveform's painted rect is empty while it does (onscreen_keyboard::
-// waveform_paint_area): the box covers the canvas column whole.
+// DOES ANY MEMBER'S BOX STAND — the folder overlay's, a dialog's or, since
+// 2026-10-26, THE SCORE VIEWER'S (score_viewer.h: the page in the interior,
+// paint_modal_dialog's score branch). The waveform's painted rect is empty
+// while it does (onscreen_keyboard::waveform_paint_area): the box covers the
+// canvas column whole.
 inline bool modal_box_stands(const AppState& a) {
-    return folder_overlay_stands(a) || modal_box_dialog_stands(a);
+    return folder_overlay_stands(a) || modal_box_dialog_stands(a) ||
+           score_viewer_stands(a);
 }
 
 // THE CONTROLS ROW (item 2): row 8's own rows — the lane itself

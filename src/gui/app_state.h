@@ -14,6 +14,7 @@
 #include "palette_file.h"   // the Waveform row's domain (kGuiBuiltinPalettes)
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
+#include "score_pages.h"     // the score folder's table (AppState::score)
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
@@ -2023,8 +2024,8 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (46 chord
-// rows = 46 = kRedesignButtonCount since 2026-10-26, the count's own
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (47 chord
+// rows = 47 = kRedesignButtonCount since 2026-10-26, the count's own
 // statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -2051,8 +2052,8 @@ enum class RedesignButton {
     // the switch is Ctrl+Tab, Switch Tab and the walk's ctrl-click. Their
     // record is git history.)
     // THE BACKGROUND SOUND UMBRELLA (planner B's pending act, 2026-10-22):
-    // when its enumerator lands it seats AFTER ENABLE TOOLTIPS, the last of
-    // the band's third run (kIconRowButtons).
+    // when its enumerator lands it seats AFTER THE SCORE KEY, which closes
+    // the band's third run since 2026-10-26 (kIconRowButtons).
     // Row 4, the icon row, in painted order: OPEN PROJECT alone at its head
     // (architect 2026-10-07, below), then the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP from the
@@ -2070,7 +2071,8 @@ enum class RedesignButton {
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
     // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
-    // 2026-10-01: help comes after settings) — and THE HISTORY GROUP — the
+    // 2026-10-01: help comes after settings), THE SCORE KEY closing it since
+    // 2026-10-26 — and THE HISTORY GROUP — the
     // HISTORY OPENER leading its WALK LAMP, its four companions and (since
     // 2026-09-01) the LOAD IN PLACE, which left the render-entry group for
     // it; the six behind the opener stand only in the `h` view (the walk
@@ -2478,6 +2480,18 @@ enum class RedesignButton {
     // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
+    // THE SCORE (architect 2026-10-26), the band's third run's LAST, directly
+    // after Enable Tooltips: BARE `m`, wearing SCORE, opens THE SCORE VIEWER
+    // (score_viewer.h) — the movement's sheet music one page at a time in
+    // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
+    // stands and its press then CLOSES it (is_overlay_opener, the folder
+    // overlay's openers' family), the one roster key the viewer leaves live.
+    // It greys with no score loaded (redesign_button_enabled's arm) and in
+    // the `h` view (off that mode's allowlist, through the derived
+    // partition, Settings' shape), and stays lit on a locked tab and under
+    // grid iterations — viewing authors nothing; the viewer's range keys
+    // carry the locks themselves. No modifier, no repeat.
+    IconScore,
     // THE HISTORY GROUP — its own again since 2026-08-18
     // (architect: "place a separator before the history button, and place
     // cumulative/etc after the history button"). The OPENER leads it: bare
@@ -3048,18 +3062,18 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-10-26):
-// TWENTY-SEVEN in row 4's enum block and NINETEEN in the bottom row's — 46
+// TWENTY-EIGHT in row 4's enum block and NINETEEN in the bottom row's — 47
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
 // moving up to the band 2026-10-25; Toggle Session History and Toggle
-// Cumulative returned 2026-10-26).
-// PAINTED, the split is 25 + 21: HistoryOlder and HistoryNewer, enumerated
+// Cumulative returned 2026-10-26, and the Score key came the same day).
+// PAINTED, the split is 26 + 21: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 46;
+inline constexpr int kRedesignButtonCount = 47;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3198,7 +3212,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // history stand-ins replace, Revert and Load in Place), then the zoom group (Zoom to Fit, the magnification lamp,
 // Follow), the iteration group (the BPM opener, grid iterations, Flatten —
 // the group the walk lamp and Cumulative replace, since 2026-10-26 again)
-// and the render-entry group (Play Renders .. Enable Tooltips). The right
+// and the render-entry group (Play Renders .. the Score key). The right
 // run's leaders — the history opener and the view pairs' Source and Warp —
 // are named for the roster's order alone: the right run is not walked
 // (kIconRowHistoryOpener), so nothing asks them here.
@@ -3608,7 +3622,19 @@ enum class DialogTrigger {
     // takes it back, so a bare Enter answers Cancel — the one-key answer is
     // `d`, Delete's letter, never the Delete key itself, so a second press of
     // the key that raised the question cannot answer it.
-    DELETE_FOLDER_CONFIRM,
+    DELETE_FOLDER_CONFIRM,    // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
+    // confirmation because there's no undo"): "Reset the page range to every
+    // page?", OK / Cancel, raised over the standing viewer by its RESET key
+    // (GuiScoreViewer::raise_reset). OK writes the range 0 / 0
+    // (GuiScoreViewer::confirm_reset); Cancel leaves it as it stood. It
+    // STANDS OVER THE VIEWER as the load confirmation stands over the render
+    // player (LOAD_IN_PLACE_CONFIRM, the model for that), and it is RAISED
+    // WITH CANCEL FOCUSED (PromptInitialFocus::LastButton), the destructive
+    // confirmation's shape, DELETE_FOLDER_CONFIRM's own: no undo stands
+    // behind it, which is the whole reason it asks, so a bare Enter answers
+    // Cancel and only OK itself — a press, or a Tab onto it and Enter —
+    // confirms.
+    SCORE_RESET_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE PROMPT STANDS IN
@@ -4089,6 +4115,18 @@ struct ViewState {
     // Per-tab backing store for app.trim. Synced only at the tab-swap boundary
     // in active_views.cpp (same pattern as viewport/zoom/playhead).
     TrimState     trim;
+
+    // THE SCORE VIEWER'S REMEMBERED POSITION on this tab (architect
+    // 2026-10-26: "once the pages are set, all that's left is the playhead
+    // position, which is stored automatically per tab"): an audio frame at the
+    // score's own rate, the shown page's begin, written at every page change
+    // the viewer makes on the active tab (GuiScoreViewer::show_page) and read
+    // at its open. THE PLAYHEAD'S CLASS — display scratch, written at every
+    // save, dirtying nothing, no undo — and BAND-ONLY: no live field mirrors
+    // it, the viewer writing the active tab's band directly, so the tab
+    // swap's two copies never touch it. Persisted as tab_a_score_position /
+    // tab_b_score_position.
+    int64_t       score_position = 0;
 };
 
 // THE A/B AUDITION'S TIMING (architect 2026-08-26) — the paced feel of
@@ -5914,8 +5952,14 @@ struct AppState {
     // player's and the picker's openers are unreachable under its router and
     // its veil, and no dialog editor stands at a batch's dispatch (the BPM
     // editor's Enter closes the editor before its sweep dispatches).
+    // THE SIXTH OWNER IS THE SCORE VIEWER since 2026-10-26 (score_viewer.h):
+    // the page in the box, its controls on the row. Ranked with the player
+    // and the picker under the prompt (RESET's question stands over it) and
+    // the progress modal; none of the three lower ranks stands beside it —
+    // no road opens it under any of them, and its router consumes their
+    // openers.
     enum class ModalDialogOwner {
-        None, Prompt, Editor, Player, Picker, Progress
+        None, Prompt, Editor, Player, Picker, Progress, Score
     };
     // THE PLAYER'S NINE BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
@@ -5998,11 +6042,20 @@ struct AppState {
     // when a click on a row became the open — its row is Cancel, so
     // dispatch_modal_dialog_button's picker arm reads no bit at all and forks
     // on the LIVE owner as it always did.
+    // THE SCORE VIEWER'S SIX BUTTONS (architect 2026-10-26), its dispatch
+    // vocabulary beside the player's, in the row's order: the PREV / NEXT
+    // pair at the left, RESET, START, END and CLOSE flush right
+    // (score_viewer.h owns each act; dispatch_modal_dialog_button reads it
+    // under the Score owner).
+    enum class ScoreButtonAct {
+        None, PrevPage, NextPage, Reset, SetStart, SetEnd, Close
+    };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
+        ScoreButtonAct  score_act  = ScoreButtonAct::None;   // the score viewer's
         // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
         // transport keys are their own class), published per frame exactly
         // as the rects are, from render_player_button_enabled (whose
@@ -6115,12 +6168,16 @@ struct AppState {
     // fork and modal_dialog_stash_current's live ladder are the others), or the
     // owner-tag doctrine above breaks.
     // THE PROGRESS MODAL (2026-10-14) ranks directly under the prompt, above
-    // the three lower ranks (ModalDialogOwner's fifth-owner block).
+    // the three lower ranks (ModalDialogOwner's fifth-owner block). THE
+    // SCORE VIEWER (2026-10-26) joins the lower ranks, never standing beside
+    // the player, the picker or an editor (ModalDialogOwner's sixth-owner
+    // block).
     uint64_t modal_dialog_live_session() const {
         if (prompt.active) return prompt.session;
         if (batch_progress.active) return batch_progress.session;
         if (render_player.active) return render_player.session;
         if (picker.active) return picker.session;
+        if (score_viewer.active) return score_viewer.session;
         return dialog_editor_session();
     }
 
@@ -7964,7 +8021,9 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, active_audio_view,
     // active_markers_view, active_tab_view, trim,
-    // read_only, projects_repo) — do
+    // read_only, projects_repo, and since 2026-10-26 the score's keys —
+    // score_path, the score_first_page / score_last_page range and the
+    // per-tab score_position, the trim's class) — do
     // NOT participate: they are persisted only by a save of an authored
     // change (Save greys without one, plain_save_actionable) and not tracked
     // as dirty, so quitting without saving simply drops them. The DEVICE key
@@ -8918,6 +8977,96 @@ struct AppState {
         std::vector<std::filesystem::path> pending_delete;
     };
     RenderPlayer render_player;
+
+    // -- THE SCORE (architect 2026-10-26) ------------------------------------
+    //
+    // THE PIECE'S THREE SCORE KEYS, as the `.settings` file holds them
+    // (SettingsFile's fields, settings_file.h, own their grammar):
+    //   `score_path`        the score folder relative to the project folder,
+    //                       empty for none — loaded from the file and from a
+    //                       typed `score_path=` commit, written at every save;
+    //   `score_first_page` / `score_last_page` THE VIEWING RANGE in
+    //                       pages.txt's page numbers, 0 the edge's placeholder
+    //                       (score_viewer_range's resolution). THE TRIM'S
+    //                       CLASS (architect: "no undo, just like with
+    //                       regular trim"): written by the viewer's START,
+    //                       END and RESET and by the typed keys, with no undo
+    //                       entry and no dirty mark, and carried by the next
+    //                       save (save_ops.cpp) like the trim pair.
+    std::string score_path;
+    int64_t     score_first_page = 0;
+    int64_t     score_last_page  = 0;
+    // THE LOADED TABLE (score_pages.h), engaged iff a score is loaded — the
+    // SCORE key's whole enabled question. Written by the project load and by
+    // the typed `score_path=` commit, from the folder `score_path` names.
+    std::optional<GuiScorePages> score;
+
+    // THE SCORE VIEWER'S STATE (score_viewer.h owns the acts and the model;
+    // this is only what it remembers):
+    //   `active`   the mode bit — the sixth modal owner (ModalDialogOwner::
+    //              Score) and THE VIEWER'S STANDING PREDICATE
+    //              (score_viewer_stands, below);
+    //   `session`  its modal session id from the one counter, minted at
+    //              every open;
+    //   `page`     the SHOWN PAGE, an index into `score->pages`, always
+    //              inside the viewing range while the viewer stands (every
+    //              writer lands through GuiScoreViewer::show_page);
+    //   `scrub`    the page scrub's drag arm — armed by a press on the
+    //              scrub's item, the page under the thumb shown at the press
+    //              and at every motion (the player's scrub's shape with the
+    //              seek made immediate: a page is a whole thing to show), the
+    //              grab offset kept on the thumb; the three hard ends drop it
+    //              with nothing owed (clear_score_scrub_drag);
+    //   `cache`    THE DECODED PAGES, at most three — the shown page and its
+    //              two neighbors in the range — each a cairo surface in the
+    //              window's space, owned here and freed at the close (and
+    //              with the AppState, a reopen ending the project).
+    struct ScoreViewer {
+        // ONE DECODED PAGE: the page index and its surface, owned (moved,
+        // never copied; freed with the slot).
+        struct Decoded {
+            int              page    = -1;
+            cairo_surface_t* surface = nullptr;
+            Decoded() = default;
+            Decoded(const Decoded&) = delete;
+            Decoded& operator=(const Decoded&) = delete;
+            Decoded(Decoded&& o) noexcept : page(o.page), surface(o.surface) {
+                o.page = -1;
+                o.surface = nullptr;
+            }
+            Decoded& operator=(Decoded&& o) noexcept {
+                if (this != &o) {
+                    reset();
+                    page = o.page;
+                    surface = o.surface;
+                    o.page = -1;
+                    o.surface = nullptr;
+                }
+                return *this;
+            }
+            ~Decoded() { reset(); }
+            void reset() {
+                if (surface) cairo_surface_destroy(surface);
+                surface = nullptr;
+                page = -1;
+            }
+        };
+        struct ScrubDrag {
+            bool armed   = false;
+            int  grab_dx = 0;      // press x − thumb center; 0 off the thumb
+        };
+        bool                   active  = false;
+        uint64_t               session = 0;
+        int                    page    = 0;
+        // THE PAGE THE LAST PAINT DREW in the interior (paint_modal_dialog's
+        // score branch), -1 at the open: the tick decodes the neighbors only
+        // once the shown page is on screen (GuiScoreViewer::tick), so a page
+        // turn's own frame never waits on them.
+        int                    painted_page = -1;
+        ScrubDrag              scrub;
+        std::array<Decoded, 3> cache;
+    };
+    ScoreViewer score_viewer;
 };
 
 // (THE FLOATERS ABOVE THE NOTIFICATION CARDS — list_popup_at and
@@ -8985,6 +9134,25 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
             return b == RedesignButton::IconSettings;
     }
     return false;
+}
+
+// DOES THE SCORE VIEWER STAND? (architect 2026-10-26, score_viewer.h) — THE
+// ONE PREDICATE, the mode bit; an OVERLAY of the interface class beside the
+// folder overlay's contents (its opener key lit and its closer, standing under
+// its own question — RESET's), not one of that panel's contents: it paints in
+// the modal family's box itself (paint_modal_dialog) and owns no band row.
+inline bool score_viewer_stands(const AppState& a) {
+    return a.score_viewer.active;
+}
+
+// IS `b` THE STANDING OVERLAY'S OPENER KEY? — the folder overlay's answer
+// (is_folder_overlay_opener, above) widened by THE SCORE VIEWER'S, the SCORE
+// key (architect 2026-10-26: the overlay class's one rule, the opener lit and
+// the way out). The roster's greying arm, the selected face and the lift's
+// veil read this family; false with nothing standing.
+inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
+    if (score_viewer_stands(a)) return b == RedesignButton::IconScore;
+    return is_folder_overlay_opener(a, b);
 }
 
 // IS THERE NO PIECE TO DISPATCH ON — a load in flight, or no audio at all (the
@@ -9991,14 +10159,15 @@ inline int64_t snap_authored_frame(double frame) {
 // Nothing ASYNCHRONOUS asks this question now.)
 // THE FORCE-END FINALIZER IS NOT A CONSUMER EITHER — it asks this question
 // nowhere — but it is the one body whose MEMBERSHIP must equal this one:
-// finalize_active_drags (input_pointer.cpp) ends all ELEVEN members (the
-// VALUE DRAG joined 2026-09-10; the settings choice list's scroll hold stood
+// finalize_active_drags (input_pointer.cpp) ends all TWELVE members (the
+// VALUE DRAG joined 2026-09-10 and the SCORE VIEWER'S PAGE SCRUB 2026-10-26;
+// the settings choice list's scroll hold stood
 // 2026-10-08 to 2026-10-14, the color picker's gesture and its two lists'
 // scroll holds beside it until the picker's removal the same day), because
 // its callers' whole promise is that a resize, a WM close or the Ctrl+Q hatch
 // lands on a state this predicate calls free. The two lists are grepped
 // against each other whenever either grows; the finalizer's own head comment
-// spells its eleven in its own order.
+// spells its twelve in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
 // own derivation — the absolute painted-subject drags, the two pendings that
@@ -10017,7 +10186,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.pending_click.active() ||
            app.pending_trim_drag.active ||
            app.folder_overlay.press.armed ||
-           app.render_player.scrub.armed;
+           app.render_player.scrub.armed ||
+           app.score_viewer.scrub.armed;
 }
 
 // THE HOME-VIEW BINDING, NARROWED TO THE WARP COLUMN (architect 2026-08-30):
@@ -14726,8 +14896,13 @@ inline bool redesign_button_enabled(const AppState& a,
     // overlays' openers stay grey (a press would open one overlay over
     // another); the press and lift carry the same exemption (on_button_press's
     // two overlay veils, finish_chrome_press_release's head). The owner of
-    // which key is whose is is_folder_overlay_opener.
-    if (folder_overlay_stands(a)) return is_folder_overlay_opener(a, b);
+    // which key is whose is is_folder_overlay_opener. THE SCORE VIEWER
+    // (architect 2026-10-26) is the same class and takes the same arm: the
+    // whole roster grey under it but the SCORE key, lit, whose lift is bare
+    // `m` and the viewer's own close (route_score_viewer_key) — the family's
+    // owner is_overlay_opener.
+    if (folder_overlay_stands(a) || score_viewer_stands(a))
+        return is_overlay_opener(a, b);
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -14965,6 +15140,15 @@ inline bool redesign_button_enabled(const AppState& a,
         // `h` view's allowlist alike — so no arm and no partition greys it.
         case RedesignButton::IconTooltips:
             return true;
+        // THE SCORE KEY IS LIVE WITH A SCORE LOADED AND DEAD WITHOUT ONE
+        // (architect 2026-10-26): `score_path` empty, its folder or pages.txt
+        // absent — the load's advisory road (score_pages.h) — leaves no table
+        // and nothing to open. No lock greys it (bare `m` is on the read-only
+        // allowlist, which the iteration gate inherits); the `h` view's
+        // partition above answers first, and the standing viewer's overlay
+        // arm above keeps it lit as the way out.
+        case RedesignButton::IconScore:
+            return a.score.has_value();
         // THE HISTORY BUTTON MIRRORS TWO REFUSALS, BOTH OF THE ENTRY: the
         // iteration lock and the publishing flight. The view's own acts push
         // history — the revert, the two loads, the checkpoint's save — and two
@@ -16192,6 +16376,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::OpenProject:
         case RedesignButton::IconSettings:
             return is_folder_overlay_opener(a, b);
+        // THE SCORE KEY, the same pattern over the score viewer's own bit
+        // (architect 2026-10-26): lit while the viewer stands, its press the
+        // viewer's close.
+        case RedesignButton::IconScore:
+            return score_viewer_stands(a);
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -17031,6 +17220,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // own included.
         case RedesignButton::IconTooltips:
             return {"Toggle Tooltips (\\)", nullptr};
+        // THE SCORE (architect 2026-10-26), one line: the act's name and its
+        // key as every row writes them; no shifted twin. It names the opener,
+        // the press under the standing viewer being the same key's close.
+        case RedesignButton::IconScore:
+            return {"Score (M)", nullptr};
         // SETTINGS (architect 2026-09-29): bare `;` opens the settings
         // prompt. The accelerator names the cap, the table's punctuation
         // rule. The name is the retired menu anchor's own word (2026-10-21),
@@ -17406,6 +17600,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconReadOnly:              return "LOCK";
         case RedesignButton::IconSettings:              return "SETUP";
         case RedesignButton::IconTooltips:              return "TIPS";
+        case RedesignButton::IconScore:                 return "SCORE";
         case RedesignButton::IconHistory:               return "HISTORY";
         case RedesignButton::SessionHistory:            return "SESSION";
         case RedesignButton::HistoryCumulative:         return "CUMUL";

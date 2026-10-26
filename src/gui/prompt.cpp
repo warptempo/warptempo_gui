@@ -23,7 +23,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
     case DialogTrigger::PULL_CONFIRM:
     case DialogTrigger::DELETE_FOLDER_CONFIRM:
-        // All four are dispatched directly by activate_response, outside
+    case DialogTrigger::SCORE_RESET_CONFIRM:
+        // All five are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -187,6 +188,24 @@ void GuiPrompt::activate_response(char k) {
         return;
     }
 
+    // THE SCORE VIEWER'S RESET (2026-10-26): OK writes the range's two
+    // edges through the viewer (GuiScoreViewer::confirm_reset), Cancel
+    // leaves it; the viewer stands under its question either way.
+    if (trigger == DialogTrigger::SCORE_RESET_CONFIRM) {
+        if (k == 'o') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->confirm_score_reset();
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            return;
+        }
+        return;
+    }
+
     if (trigger == DialogTrigger::REVERT_CONFIRM) {
         // OK completes the revert through proceed (close_target_ is Revert,
         // seated by the request that raised this); Escape keeps the authored
@@ -305,6 +324,12 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // before asking, as it takes the player.
     if (input != nullptr && target == GuiCloseTarget::Exit)
         input->close_picker();
+    // AND THE SCORE VIEWER COMES DOWN FIRST (2026-10-26), the player's step:
+    // only the exit road reaches here with it standing (its router consumes
+    // Revert's chord and the picker's opener), and a quit question asked
+    // over it would leave a Cancel returning to a viewer the question was
+    // not about. A no-op when it is down.
+    if (input != nullptr) input->close_score_viewer();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
     // identical reason and on the identical road: the keyboard's Ctrl+Q used
     // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which

@@ -43,7 +43,7 @@ struct GuiInputHandler;
 // (Shift+;, the glass long press), never by Tab, its pick committing through
 // this editor's own apply, apply_waveform_preset):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the nine,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the ten,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -116,7 +116,9 @@ struct GuiInputHandler;
 //    is to reach one.
 // 2. GUI-kind keys (viewport / zoom / playhead / active_audio_view /
 //    active_markers_view / active_tab_view / per-tab trim /
-//    per-tab read_only / gui_scale):
+//    per-tab read_only / gui_scale, and since 2026-10-26 the score's five —
+//    score_path, which reads its folder at the commit, the range pair, which
+//    takes the authoring lock, and the per-tab score_position):
 //    commit_gui_setting
 //    parses strictly (a refused commit on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
@@ -155,17 +157,20 @@ struct GuiInputHandler;
 // picker, the folder overlay's third content, whose row tap commits at once
 // — apply_waveform_preset, this editor's own road.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE NINE (the cues' four tuning keys
-// gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled): the four
-// SIDECAR keys a hand edits (the piece's metadata, the engine keys of
-// engine_settings.h), then the DEVICE CONFIG's five editable keys in that file's
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TEN (the cues' four tuning keys
+// gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
+// `score_path` joined the same day): the five SIDECAR keys a hand edits (the
+// piece's metadata, the engine keys of engine_settings.h, and the score
+// folder, typed once per movement, architect 2026-10-26), then the DEVICE
+// CONFIG's five editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
 // `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
-// the view and per-tab band keys) are typed whole, Tab recalling their
+// the view and per-tab band keys, the score's range and positions, which
+// the score viewer writes) are typed whole, Tab recalling their
 // values once complete; a key added to the product's editable set joins this
 // table by hand.
 inline constexpr const char* kSettingsEditorKeys[] = {
-    "title", "notes", "url", "cover",
+    "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
 };
 

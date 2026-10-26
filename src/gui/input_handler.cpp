@@ -321,6 +321,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // THE SCORE VIEWER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-10-26,
+    // score_viewer.h): its router is the whole vocabulary while it stands,
+    // Ctrl+S and Ctrl+Q its two fall-throughs, and its page scrub's arm takes
+    // the keyboard for the gesture as the player's scrub does, the drag
+    // gate's one hatch with it.
+    if (app.score_viewer.active) {
+        if (any_pointer_gesture_active(app)) {
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kKeysDuringDrag);
+                return;
+            }
+        } else if (route_score_viewer_key(key, mods)) {
+            return;
+        }
+    }
+
     // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-08-28): the
     // field-less Open project picker over the folder
     // overlay, at the player's rank (the two never stand together) and with
@@ -3340,6 +3357,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (folder_overlay_stands(app)) {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
     }
+    // THE SCORE VIEWER SWALLOWS THE WHEEL everywhere (2026-10-26): nothing
+    // under its box scrolls, and the page takes no hidden gesture.
+    if (score_viewer_stands(app)) return -1;
     // THE ON-SCREEN KEYBOARD SWALLOWS THE WHEEL (2026-10-10, ON SCREEN IS AS
     // PAINTED): its band (onscreen_keyboard.h's placement block; with the
     // overlay's line and a dialog standing on it until 2026-10-14) is

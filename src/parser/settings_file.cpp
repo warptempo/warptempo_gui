@@ -118,13 +118,26 @@ using warptempo_parse::prefix_line_error;
 // both products by the unknown-key refusal below — no migration, no reader
 // leniency, the recipe refusing `'` and the checkpoint dropping out of the `h`
 // walk, exactly as for every key retired before it.
+//
+// THE SCORE'S FIVE KEYS JOINED 2026-10-26 (architect approval 2026-10-26,
+// "open the frozen parser, put it there"), REQUIRED from their first day:
+// `score_path`, `score_first_page` and `score_last_page` after
+// `active_tab_view`, and `tab_X_score_position` closing each tab's band. The
+// consequence is the standing one in the missing-key direction: a `.settings`
+// written before that day is load-fatal in both products, the refusal naming
+// the first missing key (`score_path`); the architect adds the five lines to
+// his files by hand, and every checkpoint committed before the day drops out
+// of the `h` walk through the same strict gate, accepted with his eyes open.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
+    "score_path", "score_first_page", "score_last_page",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
+    "tab_a_score_position",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
     "tab_b_viewport_start", "tab_b_zoom", "tab_b_playhead_cursor",
+    "tab_b_score_position",
 };
 
 }  // namespace
@@ -218,10 +231,13 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // suffix selects the field. The two tabs share one grammar by construction.
     if (key.rfind("tab_a_", 0) == 0 || key.rfind("tab_b_", 0) == 0) {
         const std::string suffix = key.substr(6);
-        if (suffix == "viewport_start" || suffix == "playhead_cursor") {
+        if (suffix == "viewport_start" || suffix == "playhead_cursor" ||
+            suffix == "score_position") {
             // Canonical integer spelling via parse_authored_frame (digits only,
             // no sign/point/leading zeros, int64 overflow refused) — exactly
             // the writer's %lld output for these non-negative scratch values.
+            // The score position is the same kind of scratch, a frame at the
+            // score's own rate (architect approval 2026-10-26).
             int64_t v = 0;
             if (!parse_authored_frame(value, v))
                 return err("must be a non-negative integer");
@@ -294,6 +310,24 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     if (key == "active_tab_view") {
         if (value != "A" && value != "B") return err("must be A or B");
         out.c = value[0];
+        return R(out);
+    }
+    // THE SCORE'S PIECE-LEVEL KEYS (architect approval 2026-10-26; the
+    // semantics at SettingsFile's fields, settings_file.h). `score_path` takes
+    // the bytes verbatim, the empty value included (no score): the lexer has
+    // already split at the first '=' and a line holds no newline, which is
+    // the whole grammar. The two page numbers are whole non-negative numbers
+    // in the canonical frame spelling, 0 the edge's placeholder; their
+    // crossing is the whole-file rule after the scan (read_settings_file).
+    if (key == "score_path") {
+        out.text = value;
+        return R(out);
+    }
+    if (key == "score_first_page" || key == "score_last_page") {
+        int64_t v = 0;
+        if (!parse_authored_frame(value, v))
+            return err("must be a non-negative integer");
+        out.i64 = v;
         return R(out);
     }
     // THE KEYS THAT LEFT THIS SCHEMA, recorded here because the refusal that
@@ -438,6 +472,8 @@ std::expected<SettingsFile, std::string> read_settings_file(
                 tab->trim.begin_frame = gv.i64;
             } else if (suffix == "trim_end") {
                 tab->trim.end_frame = gv.i64;
+            } else if (suffix == "score_position") {
+                tab->score_position = gv.i64;
             }
         } else if (key == "active_audio_view") {
             out.active_audio_view = gv.c;
@@ -445,10 +481,29 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.active_markers_view = gv.c;
         } else if (key == "active_tab_view") {
             out.active_tab_view = gv.c;
+        } else if (key == "score_path") {
+            out.score_path = gv.text;
+        } else if (key == "score_first_page") {
+            out.score_first_page = gv.i64;
+        } else if (key == "score_last_page") {
+            out.score_last_page = gv.i64;
         }
         return {};
     });
     if (!scan) return std::unexpected(std::move(scan.error()));
+    // THE SCORE'S VIEWING RANGE CANNOT CROSS (architect approval 2026-10-26):
+    // both bounds named (nonzero) with the first past the last is a pair the
+    // GUI never commits — its START and END keys grey at the shown page's
+    // edge of the range, and RESET writes 0 and 0 — so a file carrying one
+    // is hand-damage, refused once the whole file has scanned (the one
+    // cross-key rule; a single pass cannot know the partner yet), in both
+    // products alike.
+    if (out.score_first_page != 0 && out.score_last_page != 0 &&
+        out.score_first_page > out.score_last_page) {
+        return std::unexpected(
+            "score_first_page " + std::to_string(out.score_first_page) +
+            " is past score_last_page " + std::to_string(out.score_last_page));
+    }
     // S+P is a GUI state again, its load wall deleted (architect approval 2026-10-13: S+P returns, ruled 2026-10-12).
     return out;
 }

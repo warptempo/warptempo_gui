@@ -469,6 +469,15 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // the lock protects, so it is admitted on a locked tab and under the
     // grid-iterations lock, whose gate falls through to this list.
     const bool is_tooltip_lamp = is_tooltip_lamp_key(key, mods);
+    // BARE `m`, THE SCORE VIEWER (architect 2026-10-26): viewing a page,
+    // paging and the remembered position's write author nothing the lock
+    // protects, so the opener is admitted on a locked tab and, the iteration
+    // gate falling through to this list, under grid iterations; the viewer's
+    // range keys (START, END, RESET) are authoring and carry both locks
+    // themselves (score_viewer_range_locked, app_state.h). Bare-exact, the
+    // dispatch arm's own spelling.
+    const bool is_score_viewer =
+        (key == GuiKeys::M && !ctrl && !shift && !alt);
     // BARE `i` WHILE GRID ITERATIONS STANDS — THE OFF EDGE, a STATE-DEPENDENT
     // admission like the arrows' lane term (architect 2026-10-13: the mode
     // lights on a tab whose own bit is clear even while the other tab is
@@ -528,7 +537,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
              is_settings_editor || is_preset_picker ||
-             is_tooltip_lamp || is_iteration_off_edge);
+             is_tooltip_lamp || is_score_viewer || is_iteration_off_edge);
 }
 
 // -- THE ITERATION LOCK'S ALLOWLIST ------------------------------------------
@@ -2875,7 +2884,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // any of it.
 //
 // WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: `f` (a
-// session-state toggle) and `o`. (THE PLAYHEAD STEPS were on this list until
+// session-state toggle), `o` and, since 2026-10-26, bare `m`, THE SCORE
+// VIEWER (architect: the `h` view is a view of its own, so the viewer does
+// not open over it; the SCORE key is hidden in here by the derived
+// partition, Settings' own answer). (THE PLAYHEAD STEPS were on this list until
 // 2026-09-26, because in the marker lane the very same press nudges a marker;
 // the architect then gave the view T+W's step, and bare Left / Right are
 // CLAIMED one line above rather than admitted here for exactly that reason —
@@ -4570,6 +4582,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // ring's does; Enter, Space and Esc are one-shot, the open act and the
     // close being acts and the button press being the modal's own
     // press-and-hold. A prompt over the picker is the prompt's own answer.
+    if (app.score_viewer.active && !app.prompt.active) {
+        // THE SCORE VIEWER (2026-10-26): the ring's walk and the page step
+        // repeat, a held arrow turning pages; Home / End land once.
+        if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
+        return !mods.ctrl && !mods.shift && !mods.alt &&
+               (key == GuiKeys::Left || key == GuiKeys::Right);
+    }
     if (app.picker.active && !app.prompt.active) {
         if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
         return !mods.ctrl && !mods.shift && !mods.alt &&
@@ -6541,6 +6560,9 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // so the two list-bearing owners share one arm.
     const bool list_up = !prompt_up &&
                          (app.render_player.active || app.picker.active);
+    // THE SCORE VIEWER'S ARROWS ARE ITS PAGES (2026-10-26), whatever the
+    // focus — the list owners' answer below, with no list in its ring.
+    const bool pages_up = !prompt_up && app.score_viewer.active;
     const bool on_list = list_up && app.folder_overlay.list_focused;
     const int n = static_cast<int>(dlg.buttons.size());
     const int at = (app.modal_dialog_focus >= 0 &&
@@ -6570,11 +6592,11 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         else                   { next = prompt_up ? n - 1 : -1;
                                  list_next = list_up; }
     } else if (key == GuiKeys::Right) {
-        if (list_up) return false;                // the list owners' own
+        if (list_up || pages_up) return false;    // the list owners' own
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? 0 : (at + 1) % n;
     } else if (key == GuiKeys::Left) {
-        if (list_up) return false;                // the list owners' own
+        if (list_up || pages_up) return false;    // the list owners' own
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? n - 1 : (at + n - 1) % n;
     } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
@@ -8226,6 +8248,19 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
+    // `m` (no modifiers): THE SCORE VIEWER (architect 2026-10-26,
+    // score_viewer.h) — TWO PRODUCERS, ONE ROUTE: this key and the icon row's
+    // SCORE key, which synthesizes exactly this bare chord. The modal /
+    // editor / loading gates in on_key run before it; the `h` view's
+    // allowlist refuses it (the view is a view of its own); a locked tab and
+    // grid iterations admit it (read_only_key_blocked's is_score_viewer).
+    // Under the standing viewer the key is its router's close
+    // (route_score_viewer_key) and never reaches here, so this arm opens.
+    if (key == GuiKeys::M && !ctrl && !shift && !alt) {
+        if (score_viewer != nullptr) (void)score_viewer->open();
+        return true;
+    }
+
     return false;
 }
 
@@ -8450,6 +8485,71 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // Bare `v` joined them on 2026-09-01 with the Stop's retirement.
             return true;   // consumed
     }
+}
+
+// -- THE SCORE VIEWER'S KEYBOARD HALF (2026-10-26) ----------------------------
+//
+// The contract is at the declaration (input_handler.h); the acts are
+// GuiScoreViewer's (score_viewer.h). What lives here is the routing, the
+// render player's router's shape (route_render_player_key, above).
+
+bool GuiInputHandler::route_score_viewer_key(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    const bool bare  = !ctrl && !shift && !alt;
+    if (score_viewer == nullptr) return false;
+
+    // THE TWO FALL-THROUGHS, the player's: Ctrl+S saves with the viewer
+    // standing; Ctrl+Q takes the ordinary quit road, which closes the viewer
+    // at its head (GuiPrompt::request_close).
+    if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+
+    // THE RING: Tab / Shift+Tab walk the controls row's keys, Enter and Space
+    // press a ring-focused one (the modal's own rule; Left / Right are the
+    // pages' whatever the focus, the list owners' answer at the ring router).
+    if (route_modal_dialog_focus_key(key, mods)) return true;
+
+    // EVERY MODIFIED CHORD: CONSUMED, SILENTLY (the unbound-keys ruling) —
+    // Ctrl+Tab among them, so the active tab is the viewer's for its life.
+    if (!bare) return true;
+
+    switch (key) {
+        case GuiKeys::Escape:
+        case GuiKeys::M:
+            score_viewer->close();
+            return true;
+        case GuiKeys::Left:
+            score_viewer->step(-1);
+            return true;
+        case GuiKeys::Right:
+            score_viewer->step(+1);
+            return true;
+        case GuiKeys::Home:
+            score_viewer->first_page();
+            return true;
+        case GuiKeys::End:
+            score_viewer->last_page();
+            return true;
+        case GuiKeys::Backslash:
+            // THE TOOLTIP LAMP, the main window's bare `\` answering in here
+            // through the lamp's one body, as under the player.
+            set_show_tooltips(!app.show_tooltips);
+            return true;
+        default:
+            // Space, Enter with no key focused and every other bare key:
+            // consumed, silent.
+            return true;
+    }
+}
+
+void GuiInputHandler::close_score_viewer() {
+    if (score_viewer != nullptr) score_viewer->close();
+}
+
+void GuiInputHandler::confirm_score_reset() {
+    if (score_viewer != nullptr) score_viewer->confirm_reset();
 }
 
 // -- THE VALUE PAIR: Ctrl+Shift+J copies, Ctrl+J jumps ---------------------

@@ -35,6 +35,10 @@ bool GuiCarTransport::admits() const {
     // open and covers the waveform, so the console starts nothing under it.
     if (app.batch_progress.active) return false;
     if (folder_overlay_stands(app)) return false;
+    // THE SCORE VIEWER (2026-10-26): its open stops playback and nothing
+    // plays under it (score_viewer.h's head), so the console starts nothing
+    // either.
+    if (score_viewer_stands(app)) return false;
     // EVERY EDITOR (2026-10-25: an act that takes the keyboard is a modal,
     // keyboard_modal_editor_active — the dialog editors alone until then,
     // the lane editors reaching the helpers' own gates).

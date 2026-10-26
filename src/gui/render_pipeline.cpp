@@ -484,11 +484,18 @@ RenderOutcome do_render(const RenderRequest& req,
                 // captured on the target axis. Both columns pair with target
                 // (W and P), so the dispatch's own column is written as it
                 // stands, a dispatch from S+P writing T+P.
+                // THE RECIPE CARRIES NO SCORE (2026-10-26): the load in place
+                // reads its engine block and markers alone, so it writes the
+                // empty path and the range's edges (the snapshot's own
+                // defaults, NonEngineSettingsSnapshot), loadable like any
+                // template.
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,
                     /*active_audio_view=*/'T',
                     req.authoring.active_markers_view,
-                    req.authoring.active_tab};
+                    req.authoring.active_tab,
+                    /*score_path=*/{}, /*score_first_page=*/0,
+                    /*score_last_page=*/0};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {
                     note_failure(st_path);

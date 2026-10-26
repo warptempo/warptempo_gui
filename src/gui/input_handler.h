@@ -16,6 +16,7 @@
 #include "active_views.h"
 #include "ab_audition.h"
 #include "render_player.h"
+#include "score_viewer.h"
 #include "notifications.h"
 #include "settings_editor.h"
 #include "target_render.h"
@@ -720,6 +721,13 @@ struct GuiInputHandler {
     // own key router (route_render_player_key), the overlay's and the
     // scrub's press routers, and the load road; the tick is main.cpp's.
     GuiRenderPlayer&         render_player;
+    // THE SCORE VIEWER (2026-10-26, score_viewer.h): wired in main.cpp after
+    // both are constructed (the prompt's back-pointer shape, so the long
+    // constructor stays as it is); never null while the GUI runs. Its
+    // readers: the SCORE key's dispatch arm, the viewer's own key router
+    // (route_score_viewer_key), the modal row's dispatch, the page scrub's
+    // pointer half and the prompt's two answers through the forwarders below.
+    GuiScoreViewer*          score_viewer = nullptr;
     // THE NOTIFICATION CARDS (2026-08-29). Its readers here: every producer
     // that answers a user's act with a sentence (the load-in-place refusals,
     // the picker's, the checkpoint verdicts, the propagate
@@ -1685,6 +1693,35 @@ struct GuiInputHandler {
     // the player's block below.
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
+    // THE SCORE VIEWER'S PAGE SCRUB ARM (2026-10-26) drops on the same three
+    // edges, OWING NOTHING: its page is shown at the press and at every
+    // motion, so there is no act at the lift to lose.
+    void clear_score_scrub_drag();
+
+    // -- THE SCORE VIEWER'S INPUT HALF (2026-10-26; the model and the acts
+    //    are score_viewer.h's, the bodies input_key_dispatch.cpp and
+    //    input_pointer.cpp) --
+    // THE VIEWER'S KEY ROUTER — the whole vocabulary while it stands, the
+    // render player's shape: Ctrl+S and Ctrl+Q fall through (the save; the
+    // quit, whose road takes the viewer down first); Tab / Shift+Tab walk the
+    // controls row's keys (the modal ring); Left / Right are PREV / NEXT and
+    // Home / End the range's first / last page; Esc and bare `m` close; bare
+    // backslash is the tooltip lamp; every other key, Space and Ctrl+Tab
+    // among them, is consumed in silence. Returns true when consumed.
+    bool route_score_viewer_key(GuiKey key, GuiInputState mods);
+    // THE PAGE SCRUB'S POINTER HALF: a plain press on the published item
+    // ARMS the drag and SHOWS the page under the thumb at once — on the
+    // thumb it is taken where it stands, its grab offset kept; off it the
+    // thumb jumps to the press — and each motion shows the page under the
+    // thumb; the lift ends the arm with nothing owed. A modified press, or a
+    // range of one page, is consumed and does nothing.
+    bool claim_score_scrub_press(int x, int y, GuiInputState mods);
+    void update_score_scrub_motion(int x);
+    bool finish_score_scrub_release();
+    // THE PROMPT'S ROADS INTO THE VIEWER (prompt.cpp, which holds this
+    // handler and not the viewer): the exit road's teardown and RESET's OK.
+    void close_score_viewer();
+    void confirm_score_reset();
     // (clear_popup_scroll_holds, the choice list's scroll hold's end on the
     // same three edges, 2026-10-08 to 2026-10-14, went with the list.)
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at

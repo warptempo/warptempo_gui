@@ -12,6 +12,7 @@
 #include "materials.h"
 #include "onscreen_keyboard.h"
 #include "render.h"
+#include "score_viewer.h"
 #include "text_editor.h"
 #include "text_shape.h"
 #include "time_format.h"
@@ -663,7 +664,7 @@ AppState::RedesignButtonFace& publish_button_face(
 // THE HORIZONTAL WALK (architect 2026-10-22: "push all icons
 // together … add a spacing after render, and after flatten"): the roster's
 // left members in THREE PLAIN RUNS on the ground — Open Project .. Render,
-// Zoom to Fit .. Flatten, Play Renders .. Enable Tooltips — the keys
+// Zoom to Fit .. Flatten, Play Renders .. Score — the keys
 // abutting inside a run and run_gap_px of ground between two
 // (redesign_button_opens_icon_run, app_state.h, the runs' leaders); the
 // right five — the history opener and the two view pairs — ONE RUN ending
@@ -871,7 +872,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
     {RedesignButton::IconTooltips},
-    // (THE BACKGROUND SOUND UMBRELLA seats here, the third run's last, when
+    // THE SCORE (architect 2026-10-26), the third run's last: bare `m`, the
+    // score viewer's opener and, while it stands, its closer
+    // (RedesignButton::IconScore). One case onto the walk, no run moving.
+    {RedesignButton::IconScore},
+    // (THE BACKGROUND SOUND UMBRELLA seats here, after the Score key, when
     // its enumerator lands — RedesignButton's note, 2026-10-22.)
     // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
     // right-anchored since, kIconRowHistoryOpener below.)
@@ -1618,8 +1623,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the plain wood, the left members in
-    // THREE RUNS and the right five in ONE — TWENTY-ONE members outside the
-    // `h` view and FIFTEEN inside it (2026-10-26), RE-COUNTED off the roster enum, the
+    // THREE RUNS and the right five in ONE — TWENTY-TWO members outside the
+    // `h` view and FIFTEEN inside it (2026-10-26, the SCORE key joining the
+    // third run), RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
     // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in
@@ -1627,7 +1633,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // ZOOM OUT, THE WAVEFORM MAGNIFICATION LAMP and FOLLOW (the viewport
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
-    // READ-ONLY toggle, SETTINGS and ENABLE TOOLTIPS) the third — then,
+    // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS and, since 2026-10-26, the
+    // SCORE key) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
     // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
     // companions stand in two groups' slots — Revert and Load in Place in
@@ -1644,7 +1651,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // Zoom Out and the magnification lamp (which the view admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
     // the padlock and Settings between Play Renders (admitted 2026-10-25)
-    // and Enable Tooltips — its neighbours
+    // and Enable Tooltips, and the Score key after it (2026-10-26) — its
+    // neighbors
     // closing up and its run standing
     // while any member does. What the view refuses only BY STATE (Save with
     // nothing to commit, Revert with no subject, Load in Place over an empty
@@ -1657,22 +1665,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-23): in Windows px, from the program ring's outer left column,
     // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
     // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
-    // sixteen members in three runs (re-derived 2026-10-25, COPY joining the
-    // first),
-    //   16·23 + 2·15 = 398,
+    // seventeen members in three runs (re-derived 2026-10-26, the SCORE key
+    // closing the third),
+    //   17·23 + 2·15 = 421,
     // and inside it ten in three (Open, Save, Revert, Load in Place | Zoom
     // to Fit, the lamp, Cumulative, Session | Play Renders, Enable Tooltips —
     // re-derived 2026-10-26, the reading group back), 10·23 + 2·15 = 260;
     // with one run gap of wood before the right run the band holds every
     // run at
-    //   398 + 15 + 115 = 528
+    //   421 + 15 + 115 = 551
     // Windows px outside the view (390 inside it) — the ring's 754 W on the
-    // tablet at 300 % with 226 W of wood between the left runs and the right
+    // tablet at 300 % with 203 W of wood between the left runs and the right
     // run. IN DEVICE PX, off the painted walk (each case its rounded parts,
     // the gap its own scaled_px, the ends program_ring_columns'): at the
     // tablet's 300 % (cases 69, the ring 21 .. 2283) the left runs on x
-    // 21..1214, the right run 1938..2282; at the laptop's 138 % (cases 31,
-    // the gap 21, the ring 15 .. 1905) the left runs on x 15..552, the right
+    // 21..1283, the right run 1938..2282; at the laptop's 138 % (cases 31,
+    // the gap 21, the ring 15 .. 1905) the left runs on x 15..583, the right
     // run 1750..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
@@ -4947,6 +4955,9 @@ static bool modal_owns_bottom_row(AppState& app) {
     if (app.batch_progress.active) return true;
     if (app.render_player.active) return true;
     if (app.picker.active) return true;
+    // THE SCORE VIEWER (the sixth, 2026-10-26): its PREV / NEXT, scrub, page
+    // cell and range keys take the lane whole, as the player's row does.
+    if (app.score_viewer.active) return true;
     return dialog_editor_to_paint(app) != nullptr;
 }
 
@@ -5362,6 +5373,50 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     return l;
 }
 
+// THE SCORE VIEWER'S ROW LAYOUT (architect 2026-10-26, score_viewer.h's
+// head): THE PLAYER'S SEATS — PREV and NEXT abutting at the row's left (the
+// transport's), the page scrub after the group space, THE PAGE CELL where
+// the player's clock stands, and RESET, START, END and CLOSE abutting flush
+// right, the last key's right edge the row's — the scrub taking what is
+// left, floored at two thumbs as the player's is. THE CELL'S WIDTH is fixed
+// for the table: a time field round the widest-digit specimen of
+// "<count> / <count>" at the table's page count's digits, so nothing moves
+// as the pages turn or the range changes.
+struct ScoreRowLayout {
+    std::array<int, 6> x{};
+    int scrub_x0 = 0, scrub_w = 0;
+    int cell_x0 = 0, cell_w = 0, cell_pad = 0;
+};
+static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
+                                       int page_count) {
+    ScoreRowLayout l;
+    const int group = scaled_px(kPlayerGroupGapPx);
+    const GuiFont cfont = gui_font(GuiFace::Program);
+    char widest = '0';
+    double widest_w = -1.0;
+    for (char d = '0'; d <= '9'; ++d) {
+        const char one[2] = {d, '\0'};
+        const double w = text_shape::memoized_run(cfont, one)->width_px;
+        if (w > widest_w) { widest_w = w; widest = d; }
+    }
+    const std::string digits(std::to_string(std::max(1, page_count)).size(),
+                             widest);
+    l.cell_pad = time_field_pad_px();
+    l.cell_w   = time_field_w_px(
+        text_shape::memoized_run(cfont, digits + " / " + digits)->width_px);
+    const int bw  = seats.case_w;
+    const int cx0 = seats.left_x;
+    l.x[0] = cx0;                          // PREV
+    l.x[1] = cx0 + bw;                     // NEXT
+    l.scrub_x0 = cx0 + 2 * bw + group;
+    const int words_x0 = std::max(cx0, seats.cases_right - 4 * bw);
+    l.scrub_w = words_x0 - (group + l.cell_w + group) - l.scrub_x0;
+    if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
+    l.cell_x0 = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
+    for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * bw;  // RESET .. CLOSE
+    return l;
+}
+
 // THE KEYS AT THIS GEOMETRY (the declaration, paint_handler.h): every key
 // the rows lay out, in both states of the `h` view, each the layout's own
 // (icon_row_seats with icon_row_walk, row8_block with row8_block_walk,
@@ -5541,11 +5596,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // owner-tag doctrine breaks.
     const bool picker_up = !prompt_up && !progress_up && !player_up &&
                            app.picker.active;
+    // THE SCORE VIEWER, the sixth owner (2026-10-26): the lower ranks' rank,
+    // never live beside the player, the picker or an editor (no road opens
+    // it under any of them — their routers and veils consume bare `m` and
+    // grey its key — and its router consumes their openers).
+    const bool score_up = !prompt_up && !progress_up && !player_up &&
+                          !picker_up && app.score_viewer.active &&
+                          app.score.has_value();
     text_editor::State* ed =
-        (prompt_up || progress_up || player_up || picker_up)
+        (prompt_up || progress_up || player_up || picker_up || score_up)
             ? nullptr : dialog_editor_to_paint(app);
     if (!prompt_up && !progress_up && !player_up && !picker_up &&
-        ed == nullptr) {
+        !score_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
         // button, its armed button or its keyboard focus.
@@ -5590,7 +5652,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // frame's bottom row under one Hilight line, its controls centered in it
     // or standing on the keyboard — is retired: "we should stop doing that".)
     // THE PROGRESS MODAL TAKES THE BOX TOO (2026-10-14), on the same field.
-    const bool    boxed   = prompt_up || progress_up || ed != nullptr;
+    // THE SCORE VIEWER TAKES THE BOX TOO (2026-10-26), its page the
+    // interior (the score branch below).
+    const bool    boxed   = prompt_up || progress_up || ed != nullptr ||
+                            score_up;
     const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app, gui);
     const GuiRect lane    = bottom_row_area(app);
     const GuiRect content = modal_controls_row_rect(app, kb_h);
@@ -5652,6 +5717,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         char        response_key = 0;
         bool        editor_ok    = false;
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
+        // The score viewer's dispatch vocabulary (2026-10-26); its keys are
+        // `glyph` keys too, their legends score_viewer_button_legend's.
+        AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
         // The player's Play key's face (render_player_play_face), its
@@ -5818,6 +5886,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         else
             glyph_button(AppState::PlayerButtonAct::LoadInPlace);
         glyph_button(AppState::PlayerButtonAct::Close);
+    } else if (score_up) {
+        // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order:
+        // PREV and NEXT, then (the scrub and the page cell between, laid out
+        // in the branch below) RESET, START, END and CLOSE — each a key with
+        // its printed legend, its face the act's own truthful answer.
+        using Act = AppState::ScoreButtonAct;
+        for (const Act act : {Act::PrevPage, Act::NextPage, Act::Reset,
+                              Act::SetStart, Act::SetEnd, Act::Close}) {
+            DialogButtonPlan b;
+            b.score_act = act;
+            b.glyph     = true;
+            b.enabled   = score_viewer_button_enabled(app, act);
+            b.tooltip   = score_viewer_button_hint(act);
+            plan.push_back(std::move(b));
+        }
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
@@ -5850,7 +5933,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // its own branch below); every other owner's row ONE CLUSTER OF WORD
     // BUTTONS, laid out whole — widths, the flush-right start and each x —
     // by modal_word_buttons, the one layout the painter and the press read.
-    if (player_up) {
+    if (player_up || score_up) {
         for (DialogButtonPlan& b : plan) b.w = seats.case_w;
     } else {
         std::vector<std::string_view> labels;
@@ -5966,6 +6049,83 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         text_shape::show_shaped_run(cr, msg, static_cast<double>(text_x0),
                                     baseline0);
         cairo_restore(cr);
+    };
+
+    // THE SCRUB'S ITEM — the channel and the thumb, painted and published
+    // (dlg.scrub, dlg.scrub_thumb_x) — ONE BODY FOR ITS TWO OWNERS, the
+    // render player's play-scrub and the score viewer's page scrub
+    // (2026-10-26, lifted out of the player's branch): the channel at
+    // `scrub_x0` and `scrub_w` columns on the controls row's case band, the
+    // thumb at the column `thumb_x_of()` answers once the item is published.
+    const auto paint_scrub_item = [&](int scrub_x0, int scrub_w,
+                                      const auto& thumb_x_of) {
+            // THE CHANNEL, the layout's span, and THE ITEM round it: the
+            // channel widened by the thumb's left half before its first
+            // column and its right half after its last (the thumb's box from
+            // center − w / 2, render_player_scrub_handle_hit's and the
+            // painter's own left edge), so item.w = channel − 1 + thumb.
+            const int thumb_w = scrub_thumb_w_px();
+            const GuiRect channel{scrub_x0, btn_y, scrub_w, btn_h};
+            const GuiRect track{scrub_x0 - thumb_w / 2, btn_y,
+                                scrub_w - 1 + thumb_w, btn_h};
+            dlg.scrub = track;
+            // THE THUMB'S ROWS, CENTERED IN THE TRACK'S BAND, and THE CHANNEL
+            // at its seat inside them: the thumb is its rows above the
+            // channel, the channel's own four lines and its rows below, each
+            // part rounded on its own.
+            const int channel_h = scrub_channel_h_px();
+            const int above     = scrub_thumb_above_px();
+            const int thumb_h   = scrub_thumb_h_px();
+            const int thumb_y   = track.y + (track.h - thumb_h) / 2;
+            // THE THUMB'S COLUMN — THE THUMB ALWAYS STANDS (2026-10-25,
+            // render.h's scrub block; it stood only while an item was
+            // decoded until then) — is the owner's, asked once the item is
+            // published (its mapping reads dlg.scrub): the player's at its
+            // branch, the score viewer's at its own.
+            const int hx = thumb_x_of();
+            // THE CHANNEL (render.h's scrub block, 2026-10-23): a ONE-DEVICE-PX
+            // line of the ring's light tone over one of its dark tone, across
+            // the channel's width, nothing filled.
+            {
+                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                const int px = hairline_px();
+                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
+                                            channel.w, px},
+                                palette().ce_hilight);
+                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above + px,
+                                            channel.w, channel_h - px},
+                                palette().ce_dark);
+            }
+            {
+                // THE THUMB — the key-shaped block (render.h's scrub block:
+                // a key at rest, no LED, no legend, 8 x 16 W), centered on the
+                // column and on the channel, its box inside the item at
+                // every column of the travel. No hover face: its painted rect
+                // is the press's business (render_player_scrub_handle_hit)
+                // and the cursor its cue.
+                const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
+                                    thumb_h};
+                {
+                    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                    paint_scrub_thumb(cr, thumb);
+                }
+                // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
+                // AppState::ModalDialogGeometry::scrub_thumb_x), with no item
+                // too: a clip that covers the item — the channel and the
+                // thumb's whole travel, its overhangs included — drew the
+                // whole slider, so this column is
+                // the one on screen; a clip that misses it left the last
+                // frame's thumb standing, so that frame's column is carried
+                // while the session and the track are the same.
+                const bool same_track =
+                    prev_scrub.x == track.x && prev_scrub.y == track.y &&
+                    prev_scrub.w == track.w && prev_scrub.h == track.h;
+                dlg.scrub_thumb_x =
+                    (!clip_covers_drawable(cr, app, track) &&
+                     !face_state_reset && same_track && prev_thumb_x >= 0)
+                        ? prev_thumb_x
+                        : hx;
+            }
     };
 
     if (prompt_up) {
@@ -6085,76 +6245,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const AppState::RenderPlayer& rp = app.render_player;
         const int64_t pos = render_player_position(app, playback);
         if (scrub_w > 0) {
-            // THE CHANNEL, the layout's span, and THE ITEM round it: the
-            // channel widened by the thumb's left half before its first
-            // column and its right half after its last (the thumb's box from
-            // centre − w / 2, render_player_scrub_handle_hit's and the
-            // painter's own left edge), so item.w = channel − 1 + thumb.
-            const int thumb_w = scrub_thumb_w_px();
-            const GuiRect channel{scrub_x0, btn_y, scrub_w, btn_h};
-            const GuiRect track{scrub_x0 - thumb_w / 2, btn_y,
-                                scrub_w - 1 + thumb_w, btn_h};
-            dlg.scrub = track;
-            // THE THUMB'S ROWS, CENTRED IN THE TRACK'S BAND, and THE CHANNEL
-            // at its seat inside them: the thumb is its rows above the
-            // channel, the channel's own four lines and its rows below, each
-            // part rounded on its own.
-            const int channel_h = scrub_channel_h_px();
-            const int above     = scrub_thumb_above_px();
-            const int thumb_h   = scrub_thumb_h_px();
-            const int thumb_y   = track.y + (track.h - thumb_h) / 2;
-            // THE THUMB'S COLUMN — THE THUMB ALWAYS STANDS (2026-10-25,
-            // render.h's scrub block; it stood only while an item was
-            // decoded until then): the drag's carried x while the thumb is
-            // being dragged (the sound continues where it was and the seek
-            // commits at the release), the item position's own otherwise —
-            // the channel's first column, frame 0, while no item is loaded
-            // (render_player_scrub_x_of's frames <= 0 arm, the clock's zeros).
-            const int hx = rp.scrub.armed ? rp.scrub.marker_x
-                                          : render_player_scrub_x_of(app, pos);
-            // THE CHANNEL (render.h's scrub block, 2026-10-23): a ONE-DEVICE-PX
-            // line of the ring's light tone over one of its dark tone, across
-            // the channel's width, nothing filled.
-            {
-                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-                const int px = hairline_px();
-                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
-                                            channel.w, px},
-                                palette().ce_hilight);
-                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above + px,
-                                            channel.w, channel_h - px},
-                                palette().ce_dark);
-            }
-            {
-                // THE THUMB — the key-shaped block (render.h's scrub block:
-                // a key at rest, no LED, no legend, 8 x 16 W), centred on the
-                // column and on the channel, its box inside the item at
-                // every column of the travel. No hover face: its painted rect
-                // is the press's business (render_player_scrub_handle_hit)
-                // and the cursor its cue.
-                const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
-                                    thumb_h};
-                {
-                    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-                    paint_scrub_thumb(cr, thumb);
-                }
-                // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
-                // AppState::ModalDialogGeometry::scrub_thumb_x), with no item
-                // too: a clip that covers the item — the channel and the
-                // thumb's whole travel, its overhangs included — drew the
-                // whole slider, so this column is
-                // the one on screen; a clip that misses it left the last
-                // frame's thumb standing, so that frame's column is carried
-                // while the session and the track are the same.
-                const bool same_track =
-                    prev_scrub.x == track.x && prev_scrub.y == track.y &&
-                    prev_scrub.w == track.w && prev_scrub.h == track.h;
-                dlg.scrub_thumb_x =
-                    (!clip_covers_drawable(cr, app, track) &&
-                     !face_state_reset && same_track && prev_thumb_x >= 0)
-                        ? prev_thumb_x
-                        : hx;
-            }
+            paint_scrub_item(scrub_x0, scrub_w, [&] {
+                // The drag's carried x while the thumb is being dragged (the
+                // sound continues where it was and the seek commits at the
+                // release), the item position's own otherwise — the
+                // channel's first column, frame 0, while no item is loaded
+                // (render_player_scrub_x_of's frames <= 0 arm, the clock's
+                // zeros).
+                return rp.scrub.armed ? rp.scrub.marker_x
+                                      : render_player_scrub_x_of(app, pos);
+            });
         }
 
         // -- THE CLOCK, after the scrub (there since 2026-08-28): TWO TIME
@@ -6202,6 +6302,95 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             cairo_restore(cr);
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
+        }
+    } else if (score_up) {
+        dlg.owner = AppState::ModalDialogOwner::Score;
+        const ScoreRowLayout sl = score_row_layout(seats, app.score->count());
+        assert(plan.size() == sl.x.size());
+        for (std::size_t i = 0; i < sl.x.size(); ++i) plan[i].x = sl.x[i];
+
+        // THE PAGE (score_viewer.h's head): the shown page's decoded surface
+        // SCALED TO FIT the interior — the smaller of the two ratios, uniform —
+        // and centered on both axes at whole device px, the rest of the
+        // interior the field ground paint_modal_box laid. CAIRO'S GOOD FILTER,
+        // its own default (a box filter on a reduction, bilinear near the
+        // identity): the page is a picture of thin staff lines, and at the
+        // laptop's reductions a plain bilinear tap drops them. A page not
+        // decoded (its decode failed) leaves the field ground.
+        // The tick's gate on the neighbors' decode (ScoreViewer::
+        // painted_page): a frame whose clip covers the interior drew the
+        // shown page whole, or its field ground where the decode failed.
+        if (clip_covers_drawable(cr, app, interior))
+            app.score_viewer.painted_page = app.score_viewer.page;
+        if (cairo_surface_t* page = score_viewer_shown_surface(app);
+            page != nullptr && interior.w > 0 && interior.h > 0) {
+            const int pw = cairo_image_surface_get_width(page);
+            const int ph = cairo_image_surface_get_height(page);
+            if (pw > 0 && ph > 0) {
+                const double k = std::min(
+                    static_cast<double>(interior.w) / pw,
+                    static_cast<double>(interior.h) / ph);
+                const int dw = static_cast<int>(std::nearbyint(pw * k));
+                const int dh = static_cast<int>(std::nearbyint(ph * k));
+                const int dx = interior.x + (interior.w - dw) / 2;
+                const int dy = interior.y + (interior.h - dh) / 2;
+                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                cairo_save(cr);
+                cairo_rectangle(cr, interior.x, interior.y, interior.w,
+                                interior.h);
+                cairo_clip(cr);
+                cairo_translate(cr, dx, dy);
+                cairo_scale(cr, static_cast<double>(dw) / pw,
+                            static_cast<double>(dh) / ph);
+                cairo_set_source_surface(cr, page, 0, 0);
+                cairo_pattern_set_filter(cairo_get_source(cr),
+                                         CAIRO_FILTER_GOOD);
+                cairo_paint(cr);
+                cairo_restore(cr);
+            }
+        }
+
+        // THE PAGE SCRUB, the player's item over the viewing range's pages,
+        // the thumb at the shown page (score_scrub_x_of).
+        if (sl.scrub_w > 0) {
+            paint_scrub_item(sl.scrub_x0, sl.scrub_w, [&] {
+                return score_scrub_x_of(app, app.score_viewer.page);
+            });
+        }
+
+        // THE PAGE CELL where the player's clock stands: one sunken time
+        // field reading "<ordinal> / <count>" — the shown page's ordinal
+        // WITHIN THE RANGE and the range's count (the architect's "a page
+        // number of its own") — right-aligned on the field's pad as the
+        // clocks' runs are, in the program face, the bone ink.
+        const int cell_right = std::min(sl.cell_x0 + sl.cell_w, cx1);
+        if (cell_right > sl.cell_x0) {
+            const ScoreViewerRange r = score_viewer_range(app);
+            const std::string text =
+                std::to_string(app.score_viewer.page - r.first + 1) + " / " +
+                std::to_string(r.count());
+            const GuiFont cfont = gui_font(GuiFace::Program);
+            const GuiRect field = time_field_rect(sl.cell_x0, sl.cell_w,
+                                                  seats.case_y, seats.case_h);
+            cairo_save(cr);
+            cairo_rectangle(cr, sl.cell_x0, content.y,
+                            cell_right - sl.cell_x0, content.h);
+            cairo_clip(cr);
+            {
+                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                paint_ce_time_field(cr, field, palette().ce_field_dark,
+                                    palette().ce_field_light);
+            }
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(cfont, text);
+            set_palette_source(cr, hex(kBoneInk));
+            text_shape::show_shaped_run(
+                cr, run,
+                static_cast<double>(sl.cell_x0 + sl.cell_w - sl.cell_pad) -
+                    run.width_px,
+                redesign_baseline(cfont, static_cast<double>(field.y),
+                                  static_cast<double>(field.h)));
+            cairo_restore(cr);
         }
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
@@ -6507,8 +6696,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         std::string legend;
         int legend_access = -1;
         if (plan[i].glyph) {
-            legend = render_player_button_legend(plan[i].player_act,
-                                                 plan[i].play_face);
+            legend = plan[i].score_act != AppState::ScoreButtonAct::None
+                         ? std::string(
+                               score_viewer_button_legend(plan[i].score_act))
+                         : render_player_button_legend(plan[i].player_act,
+                                                       plan[i].play_face);
             paint_key_legend(cr, r, legend, enabled);
         } else {
             legend = plan[i].label;
@@ -6526,6 +6718,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
+        out.score_act    = plan[i].score_act;
         out.enabled      = plan[i].enabled;
         // THE PLAYER'S ENABLED BIT IS PUBLISHED AS PAINTED (architect
         // 2026-09-24, strictly as-painted): the claim reads this bit and the

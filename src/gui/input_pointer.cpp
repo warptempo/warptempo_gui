@@ -383,6 +383,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // three allowlists admit it, so the derived partition leaves it lit).
     // No modifier, no repeat.
     {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false}, // bare backslash
+    // THE SCORE (architect 2026-10-26), behind Enable Tooltips: bare `m`,
+    // the score viewer's opener through on_key like every row, so the `h`
+    // view refuses the lift as it refuses the key (the face hidden there by
+    // the derived partition, Settings' own answer) while a locked tab and
+    // grid iterations admit both (read_only_key_blocked). Under the standing
+    // viewer the key is lit and its lift is the viewer's own router's close
+    // (route_score_viewer_key). No modifier, no repeat.
+    {RedesignButton::IconScore, GuiKeys::M, false, false, false},      // bare m
     // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
     // iteration — its chord opens the mode and closes it, and the button
     // dispatches on both edges because the icon row's band claim sits ABOVE the
@@ -2110,6 +2118,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // buttons — are buttons and a list, which carry no cue anywhere in the
     // product, and every other zone is behind its veil.
     if (app.render_player.active) return GuiCursorKind::Arrow;
+    if (app.score_viewer.active) return GuiCursorKind::Arrow;
     // AND SO IS THE PICKER (2026-08-28): its two pointer surfaces — the
     // overlay's rows and the modal row's one Cancel button — are a list and a
     // button, and it has no field to name the I-beam for.
@@ -3022,7 +3031,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // swallowed.
     if (app.prompt.active || app.batch_progress.active ||
         any_pointer_gesture_active(app) ||
-        folder_overlay_stands(app) || keyboard_modal_editor_active() ||
+        folder_overlay_stands(app) || score_viewer_stands(app) ||
+        keyboard_modal_editor_active() ||
         app.loading || audio.total_frames() <= 0) {
         app.touch_nav_zoom.pan_seated = false;
         return;
@@ -3425,6 +3435,13 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     if (folder_overlay::stands(app) &&
         rect_contains(folder_overlay::surface_rect(app), x, y))
         return false;
+    // AND UNDER THE SCORE VIEWER'S PANEL (2026-10-26): the page covers the
+    // waveform whole and takes no gesture, so a finger there resolves to the
+    // pointer translation, whose press the viewer's veil consumes, rather
+    // than to a pan or a region hold the viewer refuses.
+    if (score_viewer_stands(app) &&
+        rect_contains(modal_panel_rect(app, /*keyboard_h=*/0), x, y))
+        return false;
     return point_on_nav_surface(app, gui, x, y);
 }
 
@@ -3458,6 +3475,7 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // for the gesture that skips the press path: a held finger on the band or
     // the waveform under either mode begins no sweep.
     if (app.render_player.active || app.picker.active) return;
+    if (app.score_viewer.active) return;
     // AND THE PROGRESS MODAL'S (2026-10-14), for the same gesture's reason.
     if (app.batch_progress.active) return;
     if (keyboard_modal_editor_active()) return;
@@ -3888,6 +3906,7 @@ bool GuiInputHandler::modal_dialog_stash_current() const {
       : app.batch_progress.active ? AppState::ModalDialogOwner::Progress
       : app.render_player.active  ? AppState::ModalDialogOwner::Player
       : app.picker.active         ? AppState::ModalDialogOwner::Picker
+      : app.score_viewer.active   ? AppState::ModalDialogOwner::Score
                                   : AppState::ModalDialogOwner::Editor;
     if (dlg.owner != live) return false;
     return dlg.session == app.modal_dialog_live_session();
@@ -4052,6 +4071,22 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     if (app.picker.active) {
         close_picker();
         return true;
+    }
+    // THE SCORE VIEWER'S ROW (2026-10-26): the published face decides, as
+    // the player's does — a key painted dead is consumed — and each act is
+    // the viewer's own (score_viewer.h).
+    if (app.score_viewer.active) {
+        if (!b.enabled || score_viewer == nullptr) return true;
+        switch (b.score_act) {
+            case AppState::ScoreButtonAct::PrevPage: score_viewer->step(-1);     return true;
+            case AppState::ScoreButtonAct::NextPage: score_viewer->step(+1);     return true;
+            case AppState::ScoreButtonAct::Reset:    score_viewer->raise_reset(); return true;
+            case AppState::ScoreButtonAct::SetStart: score_viewer->set_start();   return true;
+            case AppState::ScoreButtonAct::SetEnd:   score_viewer->set_end();     return true;
+            case AppState::ScoreButtonAct::Close:    score_viewer->close();       return true;
+            case AppState::ScoreButtonAct::None:     return false;
+        }
+        return false;
     }
     dispatch_modal_dialog_editor_act(b.editor_ok);
     return true;
@@ -5215,6 +5250,61 @@ void GuiInputHandler::clear_player_scrub_drag() {
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
 }
 
+// -- THE SCORE VIEWER'S PAGE SCRUB (2026-10-26; the contract at the
+//    declaration, input_handler.h) — the play-scrub's claim with the seek
+//    made immediate: the page under the thumb is SHOWN at the press and at
+//    every motion ("the scrub should be like the media player scrub"; a page
+//    is a whole thing to show, so nothing waits for the lift). The thumb
+//    paints at the shown page (score_scrub_x_of), so it moves page by page
+//    under the pointer. --
+
+bool GuiInputHandler::claim_score_scrub_press(int x, int y,
+                                              GuiInputState mods) {
+    if (!app.score_viewer.active || score_viewer == nullptr) return false;
+    if (!modal_dialog_stash_current()) return false;
+    const GuiRect track = app.modal_dialog.scrub;
+    if (track.w <= 0 || track.h <= 0) return false;
+    if (!rect_contains(track, x, y)) return false;
+    // Consumed from here: a modified press does nothing on the track, and a
+    // range of one page has no other page to show (the scrub dead).
+    if (mods.ctrl || mods.shift || mods.alt) return true;
+    if (!app.score || score_viewer_range(app).count() <= 1) return true;
+    // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED): on its grab band the
+    // press takes it where it stands, the grab offset kept; anywhere else on
+    // the item the thumb jumps to the press.
+    const int marker_x = app.modal_dialog.scrub_thumb_x;
+    const bool on_thumb =
+        marker_x >= 0 && render_player_scrub_handle_hit(track, marker_x, x, y);
+    AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
+    drag         = AppState::ScoreViewer::ScrubDrag{};
+    drag.armed   = true;
+    drag.grab_dx = on_thumb ? x - marker_x : 0;
+    score_viewer->show_page(score_scrub_page_at(app, x - drag.grab_dx));
+    viewport.invalidate_rect(track);
+    return true;
+}
+
+void GuiInputHandler::update_score_scrub_motion(int x) {
+    const AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
+    if (!drag.armed || score_viewer == nullptr) return;
+    if (app.modal_dialog.scrub.w <= 0) return;
+    score_viewer->show_page(score_scrub_page_at(app, x - drag.grab_dx));
+}
+
+bool GuiInputHandler::finish_score_scrub_release() {
+    if (!app.score_viewer.scrub.armed) return false;
+    clear_score_scrub_drag();
+    return true;
+}
+
+void GuiInputHandler::clear_score_scrub_drag() {
+    AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
+    if (!drag.armed) return;
+    drag = AppState::ScoreViewer::ScrubDrag{};
+    const GuiRect track = app.modal_dialog.scrub;
+    if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+}
+
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
@@ -5428,6 +5518,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             claim_button_row_press();
             return;
         }
+        if (!mods.ctrl && !mods.shift && !mods.alt &&
+            modal_dialog_stash_current()) {
+            arm_modal_dialog_press(x, y);
+        }
+        return;
+    }
+
+    // THE SCORE VIEWER'S VEIL (2026-10-26), the player's: the band's press
+    // (its one live key the SCORE key), the page scrub's, a plain press on a
+    // row key; every other press — the page itself among them, which takes
+    // no gesture — is consumed.
+    if (app.score_viewer.active) {
+        if (button != GuiMouseButton::Left) return;
+        if (rect_contains(top_icon_row_area(app), x, y)) {
+            claim_button_row_press();
+            return;
+        }
+        if (claim_score_scrub_press(x, y, mods)) return;
         if (!mods.ctrl && !mods.shift && !mods.alt &&
             modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y);
@@ -6928,6 +7036,21 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
+    // THE SCORE VIEWER'S RELEASE (2026-10-26), its press block's mirror: the
+    // SCORE key's arm through the chrome act's body, the page scrub's end,
+    // the armed row key through the one shared dispatch; every other lift
+    // consumed.
+    if (app.score_viewer.active) {
+        if (button == GuiMouseButton::Left) {
+            if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+                finish_chrome_press_release(chrome, x, y);
+                return;
+            }
+            if (finish_score_scrub_release()) return;
+            dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
+        }
+        return;
+    }
     // THE EDITOR DIALOG'S ACT, the same shape over the other surface: the lift
     // on the armed OK / Cancel runs the session's own Enter / Esc through the
     // one modal key route. Above the text-drag branch because the two are
@@ -7195,13 +7318,15 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // 2026-09-16): the two lists must agree, because a caller's whole promise is
 // that what follows lands on a gesture-free state, and that predicate is what
 // "gesture-free" means to the keyboard, the wheel and the cursor. THE
-// ELEVEN, in this body's order: the editor text drag, the marker reposition
+// TWELVE, in this body's order: the editor text drag, the marker reposition
 // drag, THE VALUE DRAG (2026-09-10, the flag's vertical one), the
 // trim drag, the sweep (region_drag), the nav drag (scroll_drag),
 // the three pendings (marker press, trim, deferred click), and THE RENDER
 // PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
 // marker drag, which joined this body 2026-08-28 through their own hard-end
-// clears. (THE POPUP LIST'S SCROLL HOLD was a twelfth 2026-10-08 to
+// clears — and THE SCORE VIEWER'S PAGE SCRUB (2026-10-26), its own clear,
+// which owes nothing: its page is shown at the press and the motion. (THE
+// POPUP LIST'S SCROLL HOLD was a twelfth 2026-10-08 to
 // 2026-10-14, the choice editor's list's, the color picker's gesture and its
 // two lists' holds beside it until that morning.) WHAT EACH LEAVES DIFFERS
 // AND EACH ARM SAYS SO: the drags COMMIT what stands, and the pendings and
@@ -7309,6 +7434,7 @@ void GuiInputHandler::finalize_active_drags() {
     // hook's caller does not, which is why the damage lives in the clears.
     clear_folder_overlay_press();
     clear_player_scrub_drag();
+    clear_score_scrub_drag();
     // (THE POPUP LIST'S SCROLL HOLD ended here 2026-10-08 to 2026-10-14 and
     // went with the settings choice editor's list.)
     // A force-end is not a clean click sequence, so no candidate may survive to
@@ -7582,7 +7708,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (hovered_tip < 0) {
         AppState::RedesignTooltip& t = app.redesign_tooltip;
         const bool dialog_surface_live =
-            modal_veil || folder_overlay_stands(app);
+            modal_veil || folder_overlay_stands(app) ||
+            score_viewer_stands(app);
         const auto dialog_owner_dead =
             [&](const AppState::RedesignTooltip::Owner& o) {
                 return o.surface == AppState::RedesignTooltip::Surface::Dialog &&
@@ -7862,9 +7989,12 @@ void GuiInputHandler::finish_chrome_press_release(
     // is_folder_overlay_opener): that button, lit under its overlay, is the
     // one roster arm the overlay's veil admits and its lift is the overlay's
     // close; any other arm is the mid-hold case above and stays refused.
+    // THE SCORE VIEWER (2026-10-26) is the same class: the SCORE key's arm
+    // is admitted, every other refused (is_overlay_opener, the family).
     if (keyboard_modal_editor_active() ||
-        ((app.render_player.active || app.picker.active) &&
-         !is_folder_overlay_opener(
+        ((app.render_player.active || app.picker.active ||
+          score_viewer_stands(app)) &&
+         !is_overlay_opener(
              app, static_cast<RedesignButton>(arm.index))) ||
         app.batch_progress.active) return;
     switch (arm.kind) {
@@ -8929,7 +9059,7 @@ void GuiInputHandler::tick_tooltip() {
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
            app.render_player.active || app.picker.active ||
-           app.batch_progress.active;
+           app.score_viewer.active || app.batch_progress.active;
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss hook's
@@ -8985,8 +9115,10 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // (2026-08-28): the folder overlay's row press and the scrub's marker
     // drag both act at the lift, so a lift that never comes must drop them
     // with nothing committed — the chrome arm's own rule, on the same edge.
+    // The score viewer's page scrub drops with them, owing nothing.
     clear_folder_overlay_press();
     clear_player_scrub_drag();
+    clear_score_scrub_drag();
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
         app.modal_dialog_pressed < 0)
         return;
@@ -9235,6 +9367,21 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 return;
             }
             update_player_scrub_motion(mouse_x);
+            return;
+        }
+        update_modal_dialog_hover(mouse_x, mouse_y);
+        recompute_redesign_button_hover();
+        return;
+    }
+    // THE SCORE VIEWER'S MOTION (2026-10-26): a standing page scrub shows
+    // the page under the thumb, and otherwise the player's two walks.
+    if (app.score_viewer.active) {
+        if (app.score_viewer.scrub.armed) {
+            if (!mods.primary_button_held) {
+                clear_score_scrub_drag();
+                return;
+            }
+            update_score_scrub_motion(mouse_x);
             return;
         }
         update_modal_dialog_hover(mouse_x, mouse_y);

@@ -163,7 +163,8 @@ bool GuiSaveOps::save() {
             app.tab_a, app.tab_b,
             app.active_audio_view,
             app.active_markers_view,
-            app.active_tab_view};
+            app.active_tab_view,
+            app.score_path, app.score_first_page, app.score_last_page};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             report(notifications,

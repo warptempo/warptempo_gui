@@ -63,7 +63,11 @@
 // first_past_eof_wall_defect (marker_store_validate.h). Persisted
 // viewport/playhead positions are NOT range-checked at load — they are
 // display scratch, not authored data, and the runtime clamps own any
-// out-of-range value. This schema does not check trim bound ordering itself: GUI load
+// out-of-range value (the score's remembered positions and its page numbers
+// past the page count likewise, architect approval 2026-10-26). The ONE
+// cross-key rule this schema does check is the score's viewing range — a
+// crossed nonzero pair refuses (architect approval 2026-10-26, at
+// SettingsFile's score fields). This schema does not check trim bound ordering itself: GUI load
 // reads the raw values, then the caller's auto-clear pass clears a crossed
 // or equal per-tab pair (one stderr line) before the store can rest; the
 // CLI loads the values verbatim, and a still-crossed or -equal pair simply
@@ -180,13 +184,20 @@ inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
 // template stamp, src/gui/device_config.h. Nothing in the parser reads it.)
 
 // One tab's view-state band: viewport / zoom / playhead scratch, the
-// read-only flag, and the trim pair.
+// read-only flag, the trim pair and the score's remembered position.
 struct SettingsFileTab {
     int64_t viewport_start = 0;
     double  zoom           = 0.0;
     int64_t playhead       = 0;
     bool    read_only      = false;
     SettingsTrim trim;
+    // `tab_X_score_position` (architect approval 2026-10-26): THE SCORE
+    // VIEWER'S REMEMBERED POSITION on this tab, an audio frame at the score's
+    // own `# rate` (pages.txt, tools/score_extract.py's head) — display
+    // scratch like the playhead, its canonical whole-frame spelling through
+    // parse_authored_frame and no range check: the viewer clamps it at use
+    // (score_viewer.h).
+    int64_t score_position = 0;
 };
 
 struct SettingsFile {
@@ -205,6 +216,26 @@ struct SettingsFile {
                                             // approval 2026-10-13; M left
                                             // with its column 2026-09-23)
     char   active_tab_view         = 'A';   // A | B
+    // THE SCORE'S THREE PIECE-LEVEL KEYS (architect approval 2026-10-26, the
+    // frozen parser opened for them: "open the frozen parser, put it there").
+    // `score_path` is the score folder RELATIVE TO THE PROJECT FOLDER, or
+    // EMPTY for no score: any byte string the lexer hands over (it splits at
+    // the first '=' and a line holds no newline), taken verbatim — the GUI
+    // resolves it lexically against the project folder and reads the folder
+    // (score_pages.h); the CLI reads none of the three. `score_first_page`
+    // and `score_last_page` are THE VIEWING RANGE in pages.txt's own 1-based
+    // page numbers, whole non-negative integers in the canonical frame
+    // spelling (parse_authored_frame), 0 THE PLACEHOLDER
+    // FOR THE EDGE (first 0 the first page, last 0 the last), which is what
+    // the template and the viewer's Reset write. BOTH NONZERO AND CROSSED
+    // (first > last) is a pair the GUI can never commit (its START and END
+    // keys grey before it) and refuses here, after the scan, in both
+    // products — the one cross-key rule this reader carries. A nonzero value
+    // past the page count loads: the page count is the folder's, which this
+    // reader never sees, and the viewer clamps at use.
+    std::string score_path;
+    int64_t     score_first_page       = 0;
+    int64_t     score_last_page        = 0;
     // (NINE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with
     // row 7's monospace deletion, architect approval 2026-08-01; `gui_scale`,
@@ -306,15 +337,17 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // comment names the key(s) that fill it. (THE `float f` MEMBER WENT WITH
 // `playback_speed` 2026-08-27, architect approval 2026-08-27: it was that key's
 // alone, and no key in the schema carries a float now. THE `std::string text`
-// MEMBER WENT WITH `projects_repo` the same day under the same day's fifth
-// grant: it carried that key and, until 2026-08-09, the four render-environment
-// `*_hash` keys, and no free-text GUI-kind key is left in the schema — the
-// free-text keys that remain are all engine keys, typed into EngineSettings.)
+// MEMBER carries `score_path`, the schema's one free-text GUI-kind key
+// (architect approval 2026-10-26); every other free-text key is an engine
+// key, typed into EngineSettings.)
 struct GuiSettingValue {
     bool        b    = false;   // tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
-    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
+    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_* / _score_position, score_first_page / _last_page
     double      d    = 0.0;     // tab_X_zoom
+    // score_path, verbatim (architect approval 2026-10-26: the one free-text
+    // GUI-kind key, the member's return with it).
+    std::string text;
 };
 
 // The single grammar/vocabulary owner for GUI-kind settings values — the

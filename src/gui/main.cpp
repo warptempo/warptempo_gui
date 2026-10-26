@@ -44,6 +44,7 @@
 #include "ab_audition.h"
 #include "folder_overlay.h"
 #include "render_player.h"
+#include "score_viewer.h"
 #include "car_transport.h"
 #include "save_ops.h"
 #include "selection.h"
@@ -1549,6 +1550,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // playback_lifecycle.h): the one stop body publishes the head unit's
     // "paused" from its player fork, and the player is built after it.
     playback_lifecycle.render_player = &render_player;
+    // THE SCORE VIEWER (2026-10-26, score_viewer.h), beside the player: its
+    // acts over AppState::ScoreViewer, reached from the input handler
+    // (wired below) and its tick.
+    GuiScoreViewer score_viewer(app, viewport, playback_lifecycle,
+                                notifications);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle,
@@ -1601,6 +1607,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The prompt's back-pointer, for the render player's load confirmation
     // (its one reader is recorded at the member, prompt.h).
     prompt.input = &input_handler;
+    input_handler.score_viewer = &score_viewer;
     // And the A/B audition's, for the `c` command each half opens with (its
     // one reader is apply_working_zoom; the rule is at ab_audition.h).
     ab_audition.input = &input_handler;
@@ -2065,6 +2072,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // at the button-lost edge (clear_release_time_press_arms).
         input_handler.clear_folder_overlay_press();
         input_handler.clear_player_scrub_drag();
+        input_handler.clear_score_scrub_drag();
         // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), this hook's hover
         // half: a pointer that has left rests on no card, so every card the
         // hover paused has its clock re-armed here (a card a press still holds
@@ -2796,6 +2804,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             render_player.tick();
             return;
         }
+        // THE SCORE VIEWER'S TICK (2026-10-26): one neighbor of the shown
+        // page decoded per tick once that page is on screen
+        // (GuiScoreViewer::tick). Nothing plays under the viewer (its open
+        // took the modal-open stop), so the lines below have nothing to do
+        // and run as they would.
+        score_viewer.tick();
 
         // THE A/B AUDITION'S REST DEADLINE AND ITS DEVICE WATCH, sampled here
         // and ABOVE the playing-only guard below — a rest has nothing playing
