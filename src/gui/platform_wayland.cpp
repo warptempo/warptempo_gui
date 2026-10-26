@@ -700,7 +700,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
-    // `waveform=warptempo-phosphor-cyan-and-sky`, the tablet's template the same
+    // `waveform=warptempo-terminal-blue-and-white`, the tablet's template the same
     // (palette_file.h owns the name).
     cfg.waveform      = kGuiDefaultPaletteKey;
     // NO ROLE (architect 2026-10-10): the program never invents one, so the

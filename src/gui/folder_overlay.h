@@ -4,7 +4,7 @@
 // keyboard slot's band until 2026-10-14, the modal family's box since,
 // modal_box.h). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, and since
-// 2026-10-25 the PRESET PICKER's twenty-eight built-in waveform presets by
+// 2026-10-25 the PRESET PICKER's eight built-in waveform presets by
 // display name (architect: "it would be nice to have some presets, and maybe
 // a drop down would make it quicker, because I don't like having to type it
 // in every time. We rejected drop downs because it was too much work to make
@@ -251,7 +251,7 @@ inline int content_height_px(const AppState& a) {
 // rows in it — no content can stand empty anyway (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the preset picker the
-// compiled-in twenty-eight).
+// compiled-in eight).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {

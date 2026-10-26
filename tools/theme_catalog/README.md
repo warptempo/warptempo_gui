@@ -12,9 +12,9 @@ python3 -I tools/theme_catalog/catalog_md.py           # -> docs/themes/catalog.
 
 ## The presets — warptempo_presets.txt (architect 2026-10-25)
 
-`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's twenty-eight presets, the period round — ten
-inks, each a real period screen's green (the architect's Phosphor of his freestyle round among them), under cue pairs
-quoted from original period screens and lights (its head is their design and provenance), each values line followed
+`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's eight presets, the architect's pick of the period
+round's Terminal, Blue and White (2026-10-25 late) and seven variations of its cue blue and invalid red — one ink, the
+DEC VT220's green, under eight blues over white (its head is their design and provenance), each values line followed
 by its display name, in Cool Edit Pro 2.1's value grammar. Cool Edit's twenty color presets were the built-ins
 2026-10-09 to 2026-10-25 and live in git history.
 

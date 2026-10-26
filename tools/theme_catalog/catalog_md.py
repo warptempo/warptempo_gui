@@ -51,9 +51,9 @@ def head(default_name, default_key):
 
 
 PRESETS_PROVENANCE = (
-    'The program\'s own presets, made for its black panel: ten green waveform colors, each the green of a real period '
-    'screen — a phosphor monitor, a terminal, an oscilloscope, a storage tube, a radar, a home computer, a fluorescent '
-    'display, a spectrum meter — each with two marker colors taken from period screens and lights.')
+    'The program\'s own presets, made for its black panel: one waveform color, the green of the DEC VT220 terminal, '
+    'with eight marker blues over white, from a vivid light-cycle blue to softer, dustier and paler ones, each with a '
+    'red of its own for invalid markers, and a yellow playhead on every one.')
 PRESETS_RULES = [
     'The waveform\'s outline is each preset\'s waveform color darkened, the same hue at a fixed lightness (the '
     'lightness of Cool Edit Pro 2.1\'s view bar shadows).',

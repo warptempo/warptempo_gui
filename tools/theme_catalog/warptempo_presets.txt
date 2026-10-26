@@ -1,101 +1,39 @@
 # THE PROGRAM'S COLOR PRESETS — THE ONE SOURCE OF THE BUILT-IN PALETTES (gen_presets.py writes
-# src/gui/palette_presets.inc from this file). PROVENANCE: the architect's freestyle round of 2026-10-25, his pick that
-# night of its Phosphor ("the phosphor color is the neighborhood of what I've been looking for"), and THE PERIOD ROUND
-# of 2026-10-25 evening, every value designed by the planner under his rulings: the center line back to A53038 ("the
-# center line was a good color before"); cyan over sky on three rows, no longer pervasive; more greens, deeper and
-# richer, none paler or more saturated than the family has (the pale ink stays at lightness .72, nothing above; the new
-# inks at lightness .50 to .60); the markers free, pairs quoted from ORIGINAL period screens and lights (hi-fi and
-# studio gear, CRT phosphors, EFIS cockpits, the C64 and the Amiga, arcade screens, period films); the invalid leaning
-# red, tuned per row; the playhead yellow on most rows and never yellow beside an amber or orange marker (those rows
-# take a magenta, pink or ice playhead). Twenty-eight presets, Phosphor, Cyan and Sky the default (palette_file.h's
+# src/gui/palette_presets.inc from this file). PROVENANCE: THE PERIOD ROUND of 2026-10-25 evening (its research,
+# tmp/ref_palette/research_r3*.md: pairs quoted from original period screens and lights) and the architect's pick of
+# its Terminal, Blue and White that night ("I like Terminal, Blue and White. Drop the other ones and iterate from
+# there"): the DEC VT220's green 49CA8A (HLS hue 150, saturation .55, lightness .54), Tron's light-cycle blue 1CC8FF
+# over the Esper grid's white EAF4FF, Tempest's yellow FFF300, the LED-digit red F2142E (the Lexicon 480L's and
+# MAN66A's). That row is kept byte for byte, the anchor he can flip back to; every value of the other seven designed by
+# the planner under his words ("the blue is a little like neon, a little too vivid on the tablet ... if we change the
+# blue the red should change too"). Eight presets, Terminal, Blue and White the default (palette_file.h's
 # kGuiDefaultPaletteKey).
-# THE INKS, ten, every one a green of a real period screen, each named for its source, with its grid the ink's hue at
-# HLS saturation .5 and lightness .12 (the kept inks keep their grid 10301C): Phosphor 6FD98F (hue 140, sat .58, light
-# .64, the family's base), Pale Phosphor 8EE1AA (light .72), Deep Phosphor 4ED079 (light .56); Terminal 49CA8A (hue
-# 150, sat .55, light .54: the DEC VT220's green, measured 2BAE69 at hue 148 to 151); Scope 56DC5F (hue 124, sat .66,
-# light .60: the HP spectrum analyzer's and Tektronix 7603's trace, hue 121 to 129); Storage 41D2AC (hue 164, sat .62,
-# light .54: the Tektronix 4010 storage tube, hue 164 to 165); Radar 26D94A (hue 132, sat .70, light .50: the PPI
-# sweep, 02CC1D at hue 128, and P1's 525 nm); Commodore 9AD284 (the C64's light green, Pepto's measured byte, hue 103,
-# sat .46, light .67, grid 182E0F); Fluorescent 54D4D0 (hue 178, sat .60, light .58: the ZnO:Zn vacuum fluorescent
-# display, Marantz 03DCEB at hue 184, the Alesis BRC at 167); Spectrum 58D945 (hue 112, sat .66, light .56: Winamp 2's
-# spectrum green 29CE10 and the Nakamichi Dragon's LED green at 111).
-# THE PAIRS (cue over range) and their sources: Cyan and Sky 37FDF8 / 70B3FC (Cool Edit's CEPro 1.2, three rows);
-# Amber and Ice FFB000 / EAF2FF (EFIS caution amber over the scale white) and its kin Amber FFAE00 (the P3 amber
-# phosphor, 602 nm), FF9A2A (Blade Runner's Spinner readouts) and FEA02C (the Sony ES amber fluorescent); Magenta and
-# Cyan FF40FF / 00E0FF (EFIS selected-data magenta over sky cyan); Periwinkle and White 8C8CFF / E7FFFF (R-Type's BEAM
-# legend over its score digits); Lavender and Sky B8B8DE / 47B8FF (Galaga's color 7 over Pac-Man's color 6); Pink and
-# White FFB8FF / E7FFFF (Pinky over R-Type's white); Orange and White FF8800 / FFFFFF (Amiga Workbench 1.x); Lilac and
-# Cyan 706DEB / 75CEC8 (the C64's light blue over its cyan, Colodore) and 6C5EB5 / 70A4B2 (the same two, Pepto);
-# Magenta and Ice FF4FB0 / 8FD8FF (Max Headroom's lines); Blue and White 1CC8FF / EAF4FF (Tron's light cycle over the
-# Esper's grid), 7AB8FF / D8E8FF (Aliens' motion tracker over WarGames' big board) and 6688BB / FFFFFF (Workbench
-# 2.0's blue over white); Violet and Cyan 8926FF / 00FFFF (Defender's logo over its laser); Pink and Sky FFB8FF /
-# 7FC1FF (Pinky over Gradius's Option blue); Blue and Ice 7ADBFE / EAF2FF (the McIntosh meter blue); Cyan and Magenta
-# 00F3F3 / FF00F3 (Tempest's color RAM); and the kept Sage and Frost B0E0B8 / EAF2FF, Frost and Sky EAF2FF / 70B3FC,
-# Lavender and Ice B4A8FF / 8FD8FF.
-# THE INVALID, Inv: Coral E85C6A, Crimson D8324A, Rose F07A9A and Brick C04040 kept; LED Red F2142E (the Lexicon
-# 480L's and MAN66A's red LED digits, hue 351 to 353), McIntosh Red ED1934, Lives Red FF3131 (R-Type's remaining-lives
-# icon), Peak Red EF3110 (Winamp's spectrum peak), Girder Red FF2155 (Donkey Kong's), Over-level F15D40 (the Akai
-# GX-65's red-orange VFD segments), C64 Light Red C46C71 (Colodore). THE PLAYHEAD, Curs: Yellow FFFF00 (Cool Edit's)
-# on most rows; Tempest Yellow FFF300, Max Headroom Yellow FFD23A, WarGames Yellow FFD22E, C64 Yellow EDF171, Amiga
-# Orange FF8800, Gradius Ice B3DEFF, Pale Yellow FFFF8C, Lime Yellow E0FF40, Magenta FF4DFF, Pink FF7AC8. THE CENTER
-# LINE A53038 on every row. Every one shares the rest: WvBk 000000 and Face 626C7B (the record; no surface reads it).
-# The outline is derived and the scanner fixed white by the generator's rules (its head).
+# THE AXIS OF THIS ROUND, the cue blue's saturation and lightness: from the neon 1CC8FF (hue 195, sat 1.0, light .55)
+# down to the May blue of the GUI's own first ink lineage 7AC3E0 (hue 197, sat .62, light .68), through the softened
+# 3EBFEA and the dusty 62BCDA, and across to the Technics display blue 68B5E8, the Marantz 2270 dial blue 1DAFE4 and
+# Cool Edit's sky 70B3FC. THE INVALID, Inv, paired with the blue by saturation: LED Red F2142E and McIntosh Red ED1934
+# with the vivid blues; Crimson D8324A, Coral E85C6A and the ANSI bright red DC4E4E with the softer ones.
+# EVERYTHING ELSE ONE VALUE ON EVERY ROW: the ink WvFg 49CA8A (Terminal) and its grid GrdL 0F2E1F (the ink's hue at
+# HLS saturation .5 and lightness .12); the range RngM EAF4FF (white; one row's Frost EAF2FF exists only to name a
+# second row); the playhead Curs FFF300 (Tempest's yellow); the center line Cntr A53038; WvBk 000000; Face 626C7B (the
+# record; no surface reads it). The outline is derived and the scanner fixed white by the generator's rules (its
+# head).
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone, Inv the one key of
 # the program's own), EACH VALUES LINE FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are
 # listed; the key is `warptempo-` and the name in the key grammar. Lines opening with '#' are this note and nothing else.
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
-Phosphor, Cyan and Sky
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=FFB000,RngM=EAF2FF,GrdL=10301C,Curs=FF4DFF,Face=626C7B
-Phosphor, Amber and Ice
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FF40FF,RngM=00E0FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
-Phosphor, Magenta and Cyan
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=8C8CFF,RngM=E7FFFF,GrdL=10301C,Curs=FFFF00,Face=626C7B
-Phosphor, Periwinkle and White
-WvFg=6FD98F,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B8B8DE,RngM=47B8FF,GrdL=10301C,Curs=FFFF00,Face=626C7B
-Phosphor, Lavender and Sky
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=B0E0B8,RngM=EAF2FF,GrdL=10301C,Curs=E0FF40,Face=626C7B
-Pale Phosphor, Sage and Frost
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,Inv=FF2155,CueM=FFB8FF,RngM=E7FFFF,GrdL=10301C,Curs=FFFF00,Face=626C7B
-Pale Phosphor, Pink and White
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=FF8800,RngM=FFFFFF,GrdL=10301C,Curs=B3DEFF,Face=626C7B
-Pale Phosphor, Orange and White
-WvFg=8EE1AA,WvBk=000000,Cntr=A53038,Inv=C46C71,CueM=706DEB,RngM=75CEC8,GrdL=10301C,Curs=EDF171,Face=626C7B
-Pale Phosphor, Lilac and Cyan
-WvFg=4ED079,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=37FDF8,RngM=70B3FC,GrdL=10301C,Curs=FFFF00,Face=626C7B
-Deep Phosphor, Cyan and Sky
-WvFg=4ED079,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=FF9A2A,RngM=EAF4FF,GrdL=10301C,Curs=FF7AC8,Face=626C7B
-Deep Phosphor, Amber and White
-WvFg=4ED079,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=FF4FB0,RngM=8FD8FF,GrdL=10301C,Curs=FFD23A,Face=626C7B
-Deep Phosphor, Magenta and Ice
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=FFAE00,RngM=EAF2FF,GrdL=0F2E1F,Curs=FF4DFF,Face=626C7B
-Terminal, Amber and Ice
 WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=1CC8FF,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
 Terminal, Blue and White
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=EAF2FF,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
-Terminal, Frost and Sky
-WvFg=56DC5F,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=8926FF,RngM=00FFFF,GrdL=0F2E11,Curs=FFFF00,Face=626C7B
-Scope, Violet and Cyan
-WvFg=56DC5F,WvBk=000000,Cntr=A53038,Inv=C04040,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E11,Curs=FFFF00,Face=626C7B
-Scope, Cyan and Sky
-WvFg=56DC5F,WvBk=000000,Cntr=A53038,Inv=FF2155,CueM=FFB8FF,RngM=7FC1FF,GrdL=0F2E11,Curs=FFFF8C,Face=626C7B
-Scope, Pink and Sky
-WvFg=41D2AC,WvBk=000000,Cntr=A53038,Inv=F07A9A,CueM=B4A8FF,RngM=8FD8FF,GrdL=0F2E26,Curs=FFFF00,Face=626C7B
-Storage, Lavender and Ice
-WvFg=41D2AC,WvBk=000000,Cntr=A53038,Inv=EF3110,CueM=7AB8FF,RngM=D8E8FF,GrdL=0F2E26,Curs=FFD22E,Face=626C7B
-Storage, Blue and White
-WvFg=26D94A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=FF40FF,RngM=00E0FF,GrdL=0F2E15,Curs=FFFF00,Face=626C7B
-Radar, Magenta and Cyan
-WvFg=26D94A,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=8C8CFF,RngM=8FD8FF,GrdL=0F2E15,Curs=FFFF00,Face=626C7B
-Radar, Periwinkle and Ice
-WvFg=9AD284,WvBk=000000,Cntr=A53038,Inv=C46C71,CueM=6C5EB5,RngM=70A4B2,GrdL=182E0F,Curs=EDF171,Face=626C7B
-Commodore, Lilac and Cyan
-WvFg=9AD284,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=6688BB,RngM=FFFFFF,GrdL=182E0F,Curs=FF8800,Face=626C7B
-Commodore, Blue and White
-WvFg=54D4D0,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=7ADBFE,RngM=EAF2FF,GrdL=0F2E2D,Curs=FFFF00,Face=626C7B
-Fluorescent, Blue and Ice
-WvFg=54D4D0,WvBk=000000,Cntr=A53038,Inv=F15D40,CueM=FEA02C,RngM=EAF2FF,GrdL=0F2E2D,Curs=FF4DFF,Face=626C7B
-Fluorescent, Amber and Ice
-WvFg=58D945,WvBk=000000,Cntr=A53038,Inv=FF3131,CueM=00F3F3,RngM=FF00F3,GrdL=132E0F,Curs=FFF300,Face=626C7B
-Spectrum, Cyan and Magenta
-WvFg=58D945,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=B8B8DE,RngM=47B8FF,GrdL=132E0F,Curs=FFFF00,Face=626C7B
-Spectrum, Lavender and Sky
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=ED1934,CueM=3EBFEA,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Soft Blue and White
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=62BCDA,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Dusty Blue and White
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=62BCDA,RngM=EAF2FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Dusty Blue and Frost
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=DC4E4E,CueM=7AC3E0,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Pale Blue and White
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=D8324A,CueM=68B5E8,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Steel Blue and White
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=F2142E,CueM=1DAFE4,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Deep Blue and White
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=E85C6A,CueM=70B3FC,RngM=EAF4FF,GrdL=0F2E1F,Curs=FFF300,Face=626C7B
+Terminal, Sky and White
