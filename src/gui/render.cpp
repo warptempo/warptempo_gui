@@ -1559,7 +1559,9 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 // THE LABEL'S SEGMENT BOXES (render.h's marker-lane paragraph;
 // program_spec.h's cue lengths), as offsets from the marker's column: the
 // first present segment's box opens the fill lead past the column (the
-// label's lead less one pad quantum, render.h's cue_fill_lead_px), each box
+// label's lead less one pad quantum, render.h's cue_fill_lead_px — the lead
+// the triangle's reach right plus the live `cue_lead` gap, so the boxes
+// follow the triangle's rows, architect 2026-10-26 ~12:40), each box
 // is its text's whole-column width with a pad quantum either side (the text
 // at its box's start plus the pad — the label's lead), and each next box
 // stands the segment gap past the one before. `w` the three texts' widths,
@@ -2580,17 +2582,12 @@ double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
 
-// THE CUE TRIANGLE'S LIVE TUNING (the contract at GuiCueTriangleTuning,
-// render.h).
+// THE CUES' LIVE TUNING (the contract at GuiCueTuning, render.h).
 namespace {
-GuiCueTriangleTuning g_cue_triangle_tuning;
+GuiCueTuning g_cue_tuning;
 } // namespace
-void set_cue_triangle_tuning(const GuiCueTriangleTuning& t) {
-    g_cue_triangle_tuning = t;
-}
-const GuiCueTriangleTuning& cue_triangle_tuning() {
-    return g_cue_triangle_tuning;
-}
+void                set_cue_tuning(const GuiCueTuning& t) { g_cue_tuning = t; }
+const GuiCueTuning& cue_tuning() { return g_cue_tuning; }
 
 // -- The palette's chokepoints (the contract is at their declaration,
 // render.h) ---------------------------------------------------------------
@@ -3097,7 +3094,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // TWO SETS OF ROWS. THE TEXT VIEWPORT IS THE FIELD'S WHOLE INNER HEIGHT,
     // inside the outline (2026-10-09, the field the whole lane since ~21:00)
     // — so a descender or a history bracket below the lane's baseline paints
-    // whole (rows 34 .. 39 of the 51 at 300 %, the cues' 26 px). THE CARET
+    // whole (rows 34 .. 39 of the 51 at 300 %, the cues' default 26 px). THE CARET
     // AND THE SELECTION BAND ARE THE TEXT'S LINE BOX (architect 2026-10-09
     // ~23:30, render.h's EDITING paragraph): the program face's own ascent
     // above the baseline and its line below that top, the dialog field's own

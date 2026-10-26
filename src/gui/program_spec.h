@@ -77,10 +77,11 @@
 // and every row centred on it with no remainder; THE LABEL'S UNIT IS THE SCALED QUANTUM
 // u = scaled_px(1, 1) (render.h's program_line_px), the selected fill's pads,
 // the segment gap and the label's shadow's offset counted in it, because
-// the text they place is scaled; THE LABEL'S LEAD from the column is 14
-// device px at 300 %, scaled (render.h's cue_label_lead_px, architect
-// 2026-10-26 ~11:30, "lead 14"), a skin length rather than a field here,
-// being no whole count of W or quanta. The dots down the canvas
+// the text they place is scaled; THE LABEL'S LEAD from the column is THE
+// TRIANGLE'S REACH RIGHT (unscaled) PLUS A GAP OF 8 DEVICE PX AT 300 %,
+// scaled, under tuning as the `cue_lead` key (render.h's cue_label_lead_px,
+// architect 2026-10-26 ~12:40: the label follows the rows), a skin length
+// rather than a field here, being no whole count of W or quanta. The dots down the canvas
 // are device rows (2026-10-09 ~14:25, the dot fields below). The LANES'
 // ROWS and the text's seats are W lengths, each its own rounded part
 // (scaled_px's rule).
@@ -221,16 +222,18 @@ struct ProgramSpec {
     // baseline row — render.h's cue_baseline_px derives it from the lane's
     // height and the program face's cap band, and the flag editor's
     // selection band, the face's line box, stands from that baseline; at
-    // 300 % the baseline row 34 of the 51, the box on rows 10 .. 39, the
-    // descenders over the triangle's rows beside it.
+    // 300 % and the default 26 px the baseline row 34 of the 51, the box
+    // on rows 10 .. 39, the descenders over the triangle's rows beside it.
     int  cue_lane_ground_px;
     int  cue_lane_quanta;
     int  cue_fill_px;
     // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA (the head): the
     // selected fill's pad either side of the text — the fill's first column
     // one pad before the text, so THE FILL'S LEAD IS THE LABEL'S LEAD LESS
-    // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself 14
-    // device px at 300 %, render.h's cue_label_lead_px) — and the gap
+    // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself THE
+    // TRIANGLE'S REACH RIGHT PLUS THE LIVE `cue_lead` GAP, architect
+    // 2026-10-26 ~12:40 — 14 device px at 300 % at five rows, 18 at nine
+    // under the default gap of 8, render.h's cue_label_lead_px) — and the gap
     // between two of a marker's label
     // segments' boxes (the bound cells, the history's two halves — the
     // product's own, a segment's text standing the gap and two pads past
@@ -381,9 +384,9 @@ static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
 // ground and this lane at 100 %, is device_config.h's kCueTriangleRowsMax).
 static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
-// (THE LABEL CLEARS THE TRIANGLE: render.h's cue_label_lead_px, a skin
-// length, asserts it at 300 % for the rows' ceiling and floors at the
-// triangle's reach right, rows + 1 device px, at every scale.)
+// (THE LABEL CLEARS THE TRIANGLE BY CONSTRUCTION: render.h's
+// cue_label_lead_px is the triangle's reach right, rows + 1 device px, plus
+// the `cue_lead` gap, never negative, at every scale and row count.)
 // The cue's two colors alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);

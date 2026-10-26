@@ -176,7 +176,8 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 // SUNKEN RING — `dark` on its top row and left column, `light` on its
 // bottom row and right column, mitred — the ring tones off the ground's mean
 // (the palette's `ce_dark` / `ce_hilight`). Its digits are the caller's, the
-// bone kBoneInk, no shadow — every time field in the program face's 26 px,
+// bone kBoneInk, no shadow — every time field in the program face's live
+// size (the `cue_text` key, 26 px by default),
 // row 8's clock (architect 2026-10-26 ~11:30) and the render player's two
 // (~12:10, "yes" to symmetry; gui_font.h's table) — centred on both axes (paint_handler.cpp's
 // time_field_* accessors own the 40-px height and the 12-px pads).

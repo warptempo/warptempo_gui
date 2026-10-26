@@ -311,10 +311,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other seven editable device keys — projects_repo and, since
+    // move. (The other nine editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
     // 2026-10-21), since 2026-10-21 true_colors, since 2026-10-23
-    // led_glow and since 2026-10-26 cue_triangle_rows and cue_triangle_aa —
+    // led_glow and since 2026-10-26 cue_triangle_rows, cue_triangle_aa,
+    // cue_text and cue_lead —
     // take their one direct-set body in
     // commit(),
     // commit_device_setting, ahead of this router.)
@@ -961,9 +962,11 @@ void GuiSettingsEditor::commit() {
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it; `led_glow` (2026-10-23, the hi-fi skin's lit LED) by
-// one bake, its arm after that; `cue_triangle_rows` and `cue_triangle_aa`
-// (2026-10-26 ~11:50, the cue triangle's rows and antialiasing) by the flag
-// cache's rebuild and a whole repaint, their arm last (`bevel_light` and
+// one bake, its arm after that; `cue_triangle_rows`, `cue_triangle_aa`
+// (2026-10-26 ~11:50, the cue triangle's rows and antialiasing),
+// `cue_text` and `cue_lead` (~12:40, the Program face's size and the
+// label's gap past the triangle's reach) by the flag cache's rebuild and a
+// whole repaint, their arm last (`bevel_light` and
 // `bevel_dark` stood there
 // 2026-10-21 to 2026-10-23, `strip_pad` after it 2026-10-22 to 2026-10-23,
 // the pad settled at a constant, program_spec.h).
@@ -1077,27 +1080,44 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE CUE TRIANGLE'S TUNING KEYS (architect 2026-10-26 ~11:50: "the
-    // flag at the same size as I see it on screen here on the laptop, so
-    // that the tablet takes the same physical size marker"; a number under
-    // tuning gets a key and a Settings row): the rows in the scale's
-    // canonical integer spelling, the antialiasing in true_colors' words,
-    // each under its one owner (is_cue_triangle_rows, parse_cue_triangle_aa,
-    // device_config.h; a row count past the ceiling refused with its reason
-    // on the card), APPLIED AT THE COMMIT by the flag cache's rebuild and a
-    // whole repaint (GuiInputHandler::apply_cue_triangle), so NO CARD: the
-    // triangles on screen are the answer.
-    if (key == "cue_triangle_rows") {
+    // THE CUES' TUNING KEYS (architect 2026-10-26: ~11:50, "the flag at the
+    // same size as I see it on screen here on the laptop, so that the tablet
+    // takes the same physical size marker"; ~12:40, "Resurrect the text size
+    // and lead-in label keys"; a number under tuning gets a key and a
+    // Settings row): the triangle's rows, the label's size and its gap past
+    // the triangle's reach in the scale's canonical integer spelling, the
+    // antialiasing in true_colors' words, each under its one owner
+    // (is_cue_triangle_rows, is_cue_text, is_cue_lead,
+    // parse_cue_triangle_aa, device_config.h; a value past its range
+    // refused with its reason on the card), APPLIED AT THE COMMIT by the
+    // flag cache's rebuild and a whole repaint
+    // (GuiInputHandler::apply_cue_tuning), so NO CARD: the cues on screen
+    // are the answer.
+    struct CueIntKey {
+        const char* key;
+        int DeviceConfig::* field;
+        bool (*valid)(int64_t);
+        const char* reason;
+    };
+    static constexpr CueIntKey kCueIntKeys[] = {
+        {"cue_triangle_rows", &DeviceConfig::cue_triangle_rows,
+         is_cue_triangle_rows, kCueTriangleRowsGrammarReason},
+        {"cue_text", &DeviceConfig::cue_text, is_cue_text,
+         kCueTextGrammarReason},
+        {"cue_lead", &DeviceConfig::cue_lead, is_cue_lead,
+         kCueLeadGrammarReason},
+    };
+    for (const CueIntKey& k : kCueIntKeys) {
+        if (key != k.key) continue;
         int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_cue_triangle_rows(v)) {
-            reject(kCueTriangleRowsGrammarReason);
+        if (!parse_authored_frame(value, v) || !k.valid(v)) {
+            reject(k.reason);
             return true;
         }
-        if (static_cast<int>(v) == app.device_config->cue_triangle_rows) {
-            unchanged(); return true;
-        }
-        app.device_config->cue_triangle_rows = static_cast<int>(v);
-        input->apply_cue_triangle();
+        int& live_field = app.device_config->*k.field;
+        if (static_cast<int>(v) == live_field) { unchanged(); return true; }
+        live_field = static_cast<int>(v);
+        input->apply_cue_tuning();
         (void)persist();
         applied();
         return true;
@@ -1109,7 +1129,7 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
             unchanged(); return true;
         }
         app.device_config->cue_triangle_aa = *on;
-        input->apply_cue_triangle();
+        input->apply_cue_tuning();
         (void)persist();
         applied();
         return true;
@@ -1348,7 +1368,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
     // gui_scale, projects_repo, projects_path, waveform, true_colors and the
-    // three tuning keys — gui_scale and the rest the device config's — per-tab trim /
+    // five tuning keys — gui_scale and the rest the device config's — per-tab trim /
     // read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S (or, for a device key, the config's writer)

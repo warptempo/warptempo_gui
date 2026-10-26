@@ -12,10 +12,11 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Ten keys live here and nowhere else,
-// EVERY ONE REQUIRED but the three tuning keys at the end — `led_glow`,
-// `cue_triangle_rows` and `cue_triangle_aa`, each optional (architect
-// 2026-10-12, his "yes" 2026-10-14; the strictness paragraph below):
+// piece (architect 2026-08-27). Twelve keys live here and nowhere else,
+// EVERY ONE REQUIRED but the five tuning keys at the end — `led_glow`,
+// `cue_triangle_rows`, `cue_triangle_aa`, `cue_text` and `cue_lead`, each
+// optional (architect 2026-10-12, his "yes" 2026-10-14; the strictness
+// paragraph below):
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -101,9 +102,9 @@
 //                            to all"), a TUNING PHASE: an integer in DEVICE
 //                            px [0, 32], the halo's reach past the LED's rect
 //                            baked into the lit key's patch (materials.h's
-//                            set_led_glow), 0 none. OPTIONAL — THE ONE KEY
-//                            NOT REQUIRED (the brief's ruling: an absent line
-//                            is 4, kDefaultLedGlowPx), the writer always
+//                            set_led_glow), 0 none. OPTIONAL, the first
+//                            key not required (the brief's ruling: an absent
+//                            line is 4, kDefaultLedGlowPx), the writer always
 //                            naming it; a Settings row "LED Glow", applied at
 //                            OK by ONE BAKE (GuiInputHandler::apply_led_glow,
 //                            the bake rule's one Settings-OK exception,
@@ -121,7 +122,7 @@
 //                            (kDefaultCueTriangleRows, Cool Edit's 9 by 5),
 //                            written always; a Settings row, applied at OK by
 //                            the flag cache's rebuild and a whole repaint
-//                            (GuiInputHandler::apply_cue_triangle)
+//                            (GuiInputHandler::apply_cue_tuning)
 //   cue_triangle_aa=<on|off> EVERY TRIANGLE ANTIALIASED (`on`, the envelope
 //                            the morning of 2026-10-26 painted) OR COOL
 //                            EDIT'S STAIRCASE (`off`), the same ruling's
@@ -129,6 +130,29 @@
 //                            words. OPTIONAL, absent `off`
 //                            (kDefaultCueTriangleAa), written always; applied
 //                            as cue_triangle_rows
+//   cue_text=<px>            THE PROGRAM FACE'S SIZE — the cues' labels and
+//                            every use the face-size table's Program row
+//                            names (gui_font.h) — in device px at 300 %,
+//                            scaled with gui_scale (architect 2026-10-26
+//                            ~12:40, on the glass at nine rows: "Also flag
+//                            text size might need to change. Resurrect the
+//                            text size and lead-in label keys — shadows stay
+//                            as is"), a TUNING PHASE: an integer [1, 44] (the
+//                            bound's derivation at is_cue_text below).
+//                            OPTIONAL like led_glow, absent 26
+//                            (kDefaultCueTextPx, the size he settled ~11:30),
+//                            written always; applied as cue_triangle_rows
+//   cue_lead=<px>            THE CUE LABEL'S GAP PAST THE TRIANGLE'S REACH
+//                            RIGHT, in device px at 300 %, scaled (the same
+//                            ruling: "It seems the lead-in was not scaled —
+//                            increasing rows seems to not move text, but it
+//                            should, relative to what I tuned it to"; the
+//                            lead itself the reach plus this gap, render.h's
+//                            cue_label_lead_px), a TUNING PHASE: an integer
+//                            [0, 60]. OPTIONAL, absent 8 (kDefaultCueLeadPx,
+//                            his settled lead of 14 less the five rows'
+//                            reach of 6), written always; applied as
+//                            cue_triangle_rows
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
@@ -152,10 +176,10 @@
 // 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
 // appended 2026-10-22 and gone 2026-10-23, `led_glow` appended 2026-10-23,
 // `cue_triangle_rows` and `cue_triangle_aa` after it 2026-10-26 ~11:50,
-// the cue label's three tuning keys after it the morning of 2026-10-26 and
-// gone that day, settled at 26, 14 and on (gui_font.h's Program size,
-// render.h's cue_label_lead_px and show_cue_label's shadow; an old line is
-// the ordinary unknown-key hard fail), the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
+// `cue_text` and `cue_lead` after them 2026-10-26 ~12:40 (`cue_shadow`,
+// their morning's third, retired that day, the shadow painted always,
+// render.cpp's show_cue_label; an old line is the ordinary unknown-key hard
+// fail), the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -330,7 +354,7 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors` and the three tuning keys among them
+// `waveform`, `true_colors` and the five tuning keys among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -407,10 +431,13 @@ struct DeviceConfig {
     // THE LED GLOW (2026-10-23, the head's list): OPTIONAL, absent the
     // default; device px.
     int         led_glow    = 4;
-    // THE CUE TRIANGLE'S TWO TUNING KEYS (2026-10-26, the head's list):
-    // OPTIONAL, absent the defaults below; the rows in device rows.
+    // THE CUES' FOUR TUNING KEYS (2026-10-26, the head's list): OPTIONAL,
+    // absent the defaults below; the rows in device rows, the size and the
+    // gap in device px at 300 %.
     int         cue_triangle_rows = 5;
     bool        cue_triangle_aa   = false;
+    int         cue_text          = 26;
+    int         cue_lead          = 8;
 };
 
 // THE LED GLOW'S DEFAULT AND RANGE — the one owner, the reader's and the
@@ -422,11 +449,11 @@ inline constexpr bool is_led_glow(int64_t v) {
 inline constexpr const char* kLedGlowGrammarReason =
     "must be an integer in [0, 32] in canonical spelling";
 
-// THE CUE TRIANGLE'S TUNING KEYS' DEFAULTS AND GRAMMARS (architect 2026-10-26
-// ~11:50; the ruling and the planner's density numbers at
-// paint_ce_cue_triangle's head, cool_edit_paint.h) — the one owner, the
-// reader's, the settings editor's and the live state's (render.h's
-// GuiCueTriangleTuning, seeded from them).
+// THE CUES' TUNING KEYS' DEFAULTS AND GRAMMARS (architect 2026-10-26: the
+// triangle's two ~11:50, the ruling and the planner's density numbers at
+// paint_ce_cue_triangle's head, cool_edit_paint.h; the label's two ~12:40)
+// — the one owner, the reader's, the settings editor's and the live
+// state's (render.h's GuiCueTuning, seeded from them).
 //
 // `cue_triangle_rows`: THE TRIANGLE'S HEIGHT IN DEVICE ROWS at every scale,
 // its top row 2·rows − 1 cells, its painted columns (rows − 1) left of the
@@ -439,8 +466,8 @@ inline constexpr const char* kLedGlowGrammarReason =
 // (program_spec.h's ruler_ground_px) — 11 device rows at 100 %, 15 at
 // 138 %, 33 at 300 % — while THE MARKER LANE is 17 W rows at 100 % (12 W
 // and 5 label quanta; 22 at 138 %, 51 at 300 %) and its label stands
-// beside the triangle, never above it (the lead clears the reach right,
-// render.h's cue_label_lead_px), so the lane gives the triangle every row
+// beside the triangle, never above it (the lead is the reach right plus a
+// gap, render.h's cue_label_lead_px), so the lane gives the triangle every row
 // and holds 11 with 6 over. From 100 % up both lanes hold the ceiling.
 // Below 100 % — the scale's vocabulary reaches 50, a scale neither device
 // runs — the ruler's ground rounds under 11 rows (6 at 50 %) and a taller
@@ -463,6 +490,48 @@ inline constexpr const char* kCueTriangleRowsGrammarReason =
 // format_cue_triangle_aa and parse_cue_triangle_aa forward to that owner),
 // `off` by default.
 inline constexpr bool kDefaultCueTriangleAa = false;
+//
+// `cue_text`: THE PROGRAM FACE'S EM in device px at 300 %, the face-size
+// table's unit (gui_font.h's kGuiFaceSizes, whose Program row, 26, is the
+// default), scaled with gui_scale as every face size is. THE BOUND IS THE
+// LANE: the label's line box — the flag editor's caret and selection band,
+// the face's own line height at that em, Liberation Sans's hhea ascender +
+// descender + line gap, 1854 + 434 + 67 = 2355 units of its 2048, 1.1499
+// em, rounded at the element (gui_font_line_px) — must fit the marker
+// lane's 51 device rows at 300 % (render.h's marker_lane_h_px, 36 W rows
+// and 5 quanta of 3): at 44 the box is 51 rows, at 45 it is 52. A CONSTANT
+// HERE because the reader runs before the face is installed (gui_main
+// reads the config ahead of the window); render.h's cue_text_bound_holds
+// checks it against the installed face at the window's first open (a
+// tripwire). The bound is the key's own unit's, 300 %, where it is tuned:
+// at another scale the em and the lane round on their own, the lane's clip
+// bounding the box — it still loads and paints. The time fields (row 8's
+// clock, the player's two) keep their 40-row height whatever the size
+// (paint_handler.cpp's time_field_h_px).
+inline constexpr int kDefaultCueTextPx = 26;
+inline constexpr int kCueTextMaxPx     = 44;
+inline constexpr bool is_cue_text(int64_t v) {
+    return v >= 1 && v <= kCueTextMaxPx;
+}
+inline constexpr const char* kCueTextGrammarReason =
+    "must be an integer in [1, 44] in canonical spelling, 44 the marker "
+    "lane's rows";
+// `cue_lead`: THE LABEL'S GAP PAST THE TRIANGLE'S REACH RIGHT, device px at
+// 300 % (render.h's cue_label_lead_px adds it, scaled, to the unscaled
+// reach), 8 by default — his settled lead of 14 at five rows (~11:30) less
+// that triangle's reach of 6, so the label stands where he tuned it and
+// follows the rows from there. THE FLOOR, 0, is the text against the
+// triangle's shadow column: no gap can put it under the flag. The ceiling,
+// 60, bounds a tuning range many times the default and keeps the integer's
+// narrowing exact.
+inline constexpr int kDefaultCueLeadPx = 8;
+inline constexpr int kCueLeadMaxPx     = 60;
+inline constexpr bool is_cue_lead(int64_t v) {
+    return v >= 0 && v <= kCueLeadMaxPx;
+}
+inline constexpr const char* kCueLeadGrammarReason =
+    "must be an integer in [0, 60] in canonical spelling, the gap past the "
+    "flag's reach";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -767,15 +836,16 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves seven keys —
+// the settings editor's ONE device-key body, which serves nine keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
 // `true_colors=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
 // 2026-10-23), since 2026-10-23 `led_glow=`, whose
 // arm hands its bake to GuiInputHandler::apply_led_glow, and since
-// 2026-10-26 `cue_triangle_rows=` and `cue_triangle_aa=`, whose arm hands
-// the flag cache's rebuild to GuiInputHandler::apply_cue_triangle
+// 2026-10-26 `cue_triangle_rows=`, `cue_triangle_aa=`, `cue_text=` and
+// `cue_lead=`, whose arms hand the flag cache's rebuild to
+// GuiInputHandler::apply_cue_tuning
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
@@ -796,8 +866,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=warptempo-terminal-default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on`,
-// `led_glow=4`, `cue_triangle_rows=5` and `cue_triangle_aa=off` (the
-// struct's own values) and no role
+// `led_glow=4`, `cue_triangle_rows=5`, `cue_triangle_aa=off`,
+// `cue_text=26` and `cue_lead=8` (the struct's own values) and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

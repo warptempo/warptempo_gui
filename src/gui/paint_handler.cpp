@@ -47,7 +47,8 @@
 // THE BOTTOM ROW HAS NO MONOSPACE FACE (architect 2026-10-05, after his
 // ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere";
 // gui_font.h): row 8's clock, its tab name and its state line are THE
-// PROGRAM FACE, the cues' 26 px (architect 2026-10-26 ~11:30: "the bottom
+// PROGRAM FACE, the cues' live size (the `cue_text` key, 26 px by
+// default; render.h's GuiCueTuning) (architect 2026-10-26 ~11:30: "the bottom
 // left timestamp and tab/github/etc text should take 26 as well"), and the
 // render player's two time fields with them (architect 2026-10-26 ~12:10,
 // "yes" to symmetry with row 8's clock); every modal string the body face,
@@ -2252,7 +2253,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // font color should not be this yellowish color") — 40 DEVICE PX TALL at
 // 300 % (time_field_h_px, scaled with gui_scale), CENTRED ON THE CASE'S ROWS
 // (a half-row tie toward the top, the cap rule's own), its run in THE
-// PROGRAM FACE, 26 px at 300 %, in every time field (row 8's clock,
+// PROGRAM FACE, the live `cue_text` size (26 px at 300 % by default), in
+// every time field (row 8's clock,
 // architect 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to
 // symmetry; gui_font.h's table), its cap band centred in the field by
 // redesign_baseline — at 300 % the 17.9-row cap band in the 40-row field,
@@ -2274,7 +2276,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
 // the one face, so the three fields are one width. The cell is 4.448 em
 // (seven tabular digits at 0.556 em and the colon and the point at 0.278):
-// at 300 % 26 px, 115.7 device px ceiled to 116, the field 140; at 138 % a
+// at 300 % and the default 26 px, 115.7 device px ceiled to 116, the field
+// 140; at 138 % a
 // 12-px em, 53.4 ceiled to 54, the field 66. THE PLAYER'S ROW HOLDS THEM
 // (2026-10-26, the body's 22 px, fields of 122 and 57, until then): its
 // scrub is what the fixed terms leave (player_row_layout), the two fields
@@ -2355,12 +2358,12 @@ static int time_field_pad_px() {
 // round 72-W fields).
 constexpr double kTimeFieldGapPx = 3.0;
 
-// The time fields' metrics, MEMOISED ON THE SCALE — eleven tiny shaping
+// The time fields' metrics, MEMOISED ON THE FACE'S EM — eleven tiny shaping
 // passes (ten digits and the specimen) of THE PROGRAM FACE, every time
 // field's (row 8's clock and the render player's two since 2026-10-26
-// ~12:10; one slot per face that day until then), that answer the same
-// thing on every frame until the scale moves (the widths are the face's
-// own).
+// ~12:10), that answer the same thing on every frame until the em moves:
+// the scale, or the face's live size (the `cue_text` key, 2026-10-26
+// ~12:40, render.h's GuiCueTuning) — the widths are the face's own.
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2368,7 +2371,7 @@ constexpr double kTimeFieldGapPx = 3.0;
 // glyph ever walks; row 8's cell and each player field's is time_w, and each
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
-    int    percent  = -1;     // the scale this was measured at
+    double em       = -1.0;   // the em this was measured at (device px)
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
 };
 static TimeFieldMetrics g_time_field_metrics;
@@ -2376,7 +2379,8 @@ static TimeFieldMetrics g_time_field_metrics;
 static const TimeFieldMetrics& time_field_metrics() {
     TimeFieldMetrics& m = g_time_field_metrics;
     const GuiFont font = gui_font(GuiFace::Program);
-    if (m.percent == font.percent) return m;
+    const double em = gui_font_em_px(font);
+    if (m.em == em) return m;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -2387,7 +2391,7 @@ static const TimeFieldMetrics& time_field_metrics() {
     std::string specimen(kTimeShape);
     for (char& c : specimen) if (c == 'D') c = widest;
     m.time_w = text_shape::shape_text_run(font, specimen).width_px;
-    m.percent = font.percent;
+    m.em = em;
     return m;
 }
 
@@ -2641,7 +2645,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // verbs 1020..1571, the walk 1617..1892, the nudge 1938..2282, Play
     // 2214..2282); the clock's field on the ring's outer left column, from
     // W 7 (x 21) — the cell (4.45 em of Liberation Sans advances, seven
-    // digits, the colon and the point, in the program face's 26 px at 300 %,
+    // digits, the colon and the point, in the program face's default 26 px
+    // at 300 %,
     // 116 px ceiled) and its two 12-px pads, a 140-px field, x 21..160 — then
     // the name's first ink 5 W past it (x 176, Tab A's advance ~69 px), the
     // state line's 5 W past the name's advance (x ~260), clipped one run gap
@@ -2699,8 +2704,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                   GuiRect{});
 
     // THE CLOCK — the first TIME FIELD (the shape and the fixed-width rule
-    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' 26 px
-    // (architect 2026-10-26 ~11:30, gui_font.h's table), named
+    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' live
+    // size (the `cue_text` key, 26 px by default; architect 2026-10-26
+    // ~11:30, gui_font.h's table), named
     // through the one face owner (gui_font.h), inside the save/restore this
     // body already opened, IN ITS RING (2026-10-22: the program ring's two
     // tones round the field, paint_ce_time_field's clock ring). The render
@@ -3055,8 +3061,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     cairo_save(cr);
     // THE TOOLTIP WEARS THE FLAGS' FACE (architect 2026-10-23, "the tooltips
-    // font size should be the same as the flags"): GuiFace::Program, 26 px
-    // at 300 % since the flags' size settled there (2026-10-26 ~11:30), IN
+    // font size should be the same as the flags"): GuiFace::Program, the
+    // flags' live size (the `cue_text` key, 26 px at 300 % by default), IN
     // THE BONE kBoneInk like the flags and every word (architect 2026-10-23
     // night; the legend ink kLegendInk its first night, now the keys' print
     // alone) on the field, no shadow; the box grows with the face's own line

@@ -3773,17 +3773,21 @@ private:
     // config; this applies.
     void apply_led_glow(int px);
 
-    // THE CUE TRIANGLE'S TUNING'S ONE LIVE ACT (architect 2026-10-26 ~11:50,
-    // the `cue_triangle_rows` and `cue_triangle_aa` keys;
-    // GuiCueTriangleTuning, render.h): the settings editor's commit of either
-    // installs the live config's two values (set_cue_triangle_tuning),
-    // REFRESHES THE FLAG CACHE — whose fingerprint keys the tuning by field
-    // (FlagCache::fp_cue_triangle), so the cues' triangles repaint at the new
-    // rows or edges and their labels re-lay at the lead's new floor — and
-    // invalidates the whole window, so the ruler's playhead head, painted
-    // live, repaints with them. No bake: nothing of the materials reads it.
-    // The commit gates the no-op and writes the config; this applies.
-    void apply_cue_triangle();
+    // THE CUES' TUNING'S ONE LIVE ACT (architect 2026-10-26, the
+    // `cue_triangle_rows` and `cue_triangle_aa` keys ~11:50, `cue_text` and
+    // `cue_lead` ~12:40; GuiCueTuning, render.h): the settings editor's
+    // commit of any of the four installs the live config's four values
+    // (set_cue_tuning over cue_tuning_of), REFRESHES THE FLAG CACHE — whose
+    // fingerprint keys the tuning by field (FlagCache::fp_cue_tuning), so
+    // the cues' triangles repaint at the new rows or edges and their labels
+    // re-shape at the new size (the run memo and the scaled font keyed by
+    // it, gui_font.h's GuiFont) and re-lay at the new lead — and invalidates
+    // the whole window, so the ruler's playhead head, the live flag editor
+    // and its riding cells, row 8's clock and state line, the player's
+    // clocks and the tooltip, all painted live, repaint with them. No bake:
+    // nothing of the materials reads it. The commit gates the no-op and
+    // writes the config; this applies.
+    void apply_cue_tuning();
 
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the

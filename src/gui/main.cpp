@@ -1418,6 +1418,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return {1, {}};
         }
         window_up = true;
+        // THE `cue_text` CEILING CHECKED AGAINST THE INSTALLED FACE, once,
+        // the face being installed by init() (a tripwire: the ceiling is a
+        // constant because the config is read before the face exists;
+        // cue_text_bound_holds, render.h).
+        assert(cue_text_bound_holds());
         // THE WINDOW'S COLOR SPACE, read once, here: after init() adopted the
         // window and before any painter or worker thread runs
         // (display_transform.h's head, architect 2026-10-08). True Colors,
@@ -3402,13 +3407,12 @@ int gui_main(const char* argument) {
         return 1;
     }
     materials::set_led_glow(device_config.led_glow);
-    // THE CUE TRIANGLE'S TUNING IS THE CONFIG'S TOO (the `cue_triangle_rows`
-    // and `cue_triangle_aa` keys, 2026-10-26 ~11:50; GuiCueTriangleTuning,
-    // render.h): seeded here, before any cue is painted or the flag cache
-    // keyed; the settings editor's commit is the live road
-    // (GuiInputHandler::apply_cue_triangle).
-    set_cue_triangle_tuning(GuiCueTriangleTuning{
-        device_config.cue_triangle_rows, device_config.cue_triangle_aa});
+    // THE CUES' TUNING IS THE CONFIG'S TOO (the `cue_triangle_rows`,
+    // `cue_triangle_aa`, `cue_text` and `cue_lead` keys, 2026-10-26;
+    // GuiCueTuning, render.h): seeded here, before any text is shaped, any
+    // cue painted or the flag cache keyed; the settings editor's commit is
+    // the live road (GuiInputHandler::apply_cue_tuning).
+    set_cue_tuning(cue_tuning_of(device_config));
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

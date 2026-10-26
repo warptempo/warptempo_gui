@@ -395,14 +395,18 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // the scale.
     if (key == "led_glow" && app.device_config != nullptr)
         return format_gui_scale_percent(app.device_config->led_glow);
-    // THE CUE TRIANGLE'S TUNING KEYS (2026-10-26): the rows through the
-    // config's own serializer, the switch through its word's owner
-    // (format_cue_triangle_aa, device_config.h).
+    // THE CUES' TUNING KEYS (2026-10-26): the rows, the size and the gap
+    // through the config's own serializer, the switch through its word's
+    // owner (format_cue_triangle_aa, device_config.h).
     if (key == "cue_triangle_rows" && app.device_config != nullptr)
         return format_gui_scale_percent(app.device_config->cue_triangle_rows);
     if (key == "cue_triangle_aa" && app.device_config != nullptr)
         return std::string(
             format_cue_triangle_aa(app.device_config->cue_triangle_aa));
+    if (key == "cue_text" && app.device_config != nullptr)
+        return format_gui_scale_percent(app.device_config->cue_text);
+    if (key == "cue_lead" && app.device_config != nullptr)
+        return format_gui_scale_percent(app.device_config->cue_lead);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

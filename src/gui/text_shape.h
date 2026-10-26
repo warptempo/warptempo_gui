@@ -106,8 +106,10 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // its paint, a fixed vocabulary of a few dozen words). A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
-// and a GuiFont is its face and percent alone — so a run is looked up here by
-// the face, the percent and the text's bytes, and only a text not yet seen
+// and a GuiFont is its face, percent and size alone (the size live for the
+// Program face, the `cue_text` key, gui_font.h's GuiFont) — so a run is
+// looked up here by the face, the percent, the size and the text's bytes,
+// and only a text not yet seen
 // under that font is shaped. IDENTITY RESTS ON THAT PREMISE: a hit returns
 // the very run shape_text_run returned for the same font and bytes, so the
 // caller's show_shaped_run puts down the same glyphs at the same offsets as a

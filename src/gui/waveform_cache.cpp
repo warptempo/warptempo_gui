@@ -1273,9 +1273,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE PALETTE THEY ARE PAINTED IN, keyed by field (contract at
     // FlagCache::fp_palette_generation).
     const uint64_t pal_gen = palette_generation();
-    // THE CUE TRIANGLE'S TUNING THEY ARE PAINTED AT, keyed by field (contract
-    // at FlagCache::fp_cue_triangle).
-    const GuiCueTriangleTuning cue_tri = cue_triangle_tuning();
+    // THE CUES' TUNING THEY ARE PAINTED AT, keyed by field (contract at
+    // FlagCache::fp_cue_tuning).
+    const GuiCueTuning cue_tune = cue_tuning();
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
     // positioned at marker times only.
@@ -1365,7 +1365,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_gui_scale_percent       == gui_scale &&
         flag_cache.fp_palette_generation      == pal_gen &&
-        flag_cache.fp_cue_triangle            == cue_tri &&
+        flag_cache.fp_cue_tuning              == cue_tune &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
         flag_cache.fp_warp_generation   == warp_gen &&
@@ -1595,7 +1595,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_gui_scale_percent       = gui_scale;
     flag_cache.fp_palette_generation      = pal_gen;
-    flag_cache.fp_cue_triangle            = cue_tri;
+    flag_cache.fp_cue_tuning              = cue_tune;
     flag_cache.fp_target                  = is_target;
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;

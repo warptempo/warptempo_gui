@@ -408,12 +408,13 @@ struct FlagCache {
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
     uint64_t  fp_palette_generation  = 0;
-    // THE CUE TRIANGLE'S TUNING THESE PIXELS WERE PAINTED AT
-    // (cue_triangle_tuning(), render.h — architect 2026-10-26 ~11:50, the
-    // `cue_triangle_rows` and `cue_triangle_aa` keys): the rows set every
-    // triangle's cells and the label's lead floor, the switch its edges, so a
-    // commit re-renders the surface BY FIELD, the scale's shape.
-    GuiCueTriangleTuning fp_cue_triangle{};
+    // THE CUES' TUNING THESE PIXELS WERE PAINTED AT (cue_tuning(),
+    // render.h — architect 2026-10-26, the `cue_triangle_rows`,
+    // `cue_triangle_aa`, `cue_text` and `cue_lead` keys): the rows set every
+    // triangle's cells and the label's lead, the switch the triangles'
+    // edges, the size every label's glyphs and the gap the lead past the
+    // reach, so a commit re-renders the surface BY FIELD, the scale's shape.
+    GuiCueTuning fp_cue_tuning{};
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -623,9 +624,9 @@ struct GuiPaintHandler {
     //     with it (2026-08-29);
     //   - THE PALETTE, read live: fp_palette_generation (render.h's
     //     palette_generation — every flag pixel a palette color, 2026-10-03);
-    //   - THE CUE TRIANGLE'S TUNING, read live: fp_cue_triangle (render.h's
-    //     cue_triangle_tuning — the triangle's rows and its antialiasing,
-    //     2026-10-26);
+    //   - THE CUES' TUNING, read live: fp_cue_tuning (render.h's
+    //     cue_tuning — the triangle's rows and its antialiasing, the label's
+    //     size and its gap past the triangle's reach, 2026-10-26);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;
