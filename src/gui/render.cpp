@@ -1700,21 +1700,24 @@ struct CueSegment {
 };
 // THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-25, on the glass:
 // "the shadow on the flags is too subtle; the marker's [triangle's] I think
-// is scaled and it stands out much better. So we should do that"; Cool Edit
-// draws no shadow under its cue labels, so this is the product's own
-// departure): the run first in black (kCeRulerShadow, the ruler ticks'
-// shadow color) at THE CUE TRIANGLE'S OWN SHADOW OFFSET — ONE CUE QUANTUM u
-// (cue_unit_px, scaled), the triangle's rightward offset
-// (paint_ce_cue_triangle) taken right AND down — then `ink` over it. One
-// shadow under every look, the faded inert label's included. Every label
-// look on the panel's face goes through here — resting, invalid, inert,
-// selected, and the flag editor's riding cells; the editor's FIELD text does
-// not. The triangle keeps its own shadow, its own color and right alone.
+// is scaled and it stands out much better. So we should do that"; and that
+// evening, "the flag shadow looks good, so the text should be made to match
+// the flag, not the other way around"; Cool Edit draws no shadow under its
+// cue labels, so this is the product's own departure): the run first in
+// `shadow`, THE CUE TRIANGLE'S OWN SHADOW COLOR (its FlagFace's `shadow`,
+// resolve_flag_face: `ce_cue_shadow`, or `ce_off_cue_shadow` under a
+// disabled cue), at THE TRIANGLE'S OWN SHADOW OFFSET — ONE CUE QUANTUM u
+// (cue_unit_px, scaled) right, the same rows (paint_ce_cue_triangle) — then
+// `ink` over it. One shadow under every look, the faded inert label's
+// included. Every label look on the panel's face goes through here —
+// resting, invalid, inert, selected, and the flag editor's riding cells;
+// the editor's FIELD text does not.
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
-                           double x, double baseline, GuiColor ink) {
+                           double x, double baseline, GuiColor ink,
+                           GuiColor shadow) {
     const double t = static_cast<double>(cue_unit_px());
-    set_palette_source(cr, hex(kCeRulerShadow));
-    text_shape::show_shaped_run(cr, run, x + t, baseline + t);
+    set_palette_source(cr, shadow);
+    text_shape::show_shaped_run(cr, run, x + t, baseline);
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
@@ -1890,7 +1893,8 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                            : s.inert  ? pal.ce_off_label
                            : c.face.invalid_label
                                       ? pal.invalid_label
-                                      : hex(kBoneInk));
+                                      : hex(kBoneInk),
+                           c.face.shadow);
         }
         cairo_restore(cr);
     }
@@ -3304,11 +3308,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const double tx = static_cast<double>(x0 + pad_l);
             // The resting label's ink: the faded inert label, else an invalid
             // marker's invalid color, else the bone
-            // (resolve_flag_face's table; materials.h's INKS).
+            // (resolve_flag_face's table; materials.h's INKS). Its shadow
+            // the marker's triangle's, as the resting cell's (c.face.shadow
+            // in the lane pass): faded on a disabled marker alone, a tie
+            // follower's cells over the live one.
             show_cue_label(cr, seg_run, tx, baseline,
                            cell_dis ? pal.ce_off_label
                            : red    ? pal.invalid_label
-                                    : hex(kBoneInk));
+                                    : hex(kBoneInk),
+                           dis ? pal.ce_off_cue_shadow : pal.ce_cue_shadow);
             cursor_x = x0 + w;
         };
         // Both handles stand: either ride needs cl.present.

@@ -128,8 +128,8 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: the view bar's black field, the
-// ruler's ticks and digits, and the black shadow under the ticks and the cue
-// labels) — or THE HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
+// ruler's ticks and digits, and the black shadow under the ticks) — or THE
+// HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
 // the bone, legend and dim inks, the ruler's and the fields' grounds, the
 // selection pair, the key's face, edges and LED, the accent, and the baked
 // brushed grounds through set_surface_source) — or THE ICONS' OWN INKS
@@ -650,7 +650,7 @@ void install_true_colors(bool on);
 // canvas's top frame row — over the same triangle one quantum right in
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, at rest
-// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER A BLACK SHADOW AT THE TRIANGLE'S OWN OFFSET, ONE CUE QUANTUM u (cue_unit_px, scaled) right and down (architect 2026-10-25, on the glass: the one-device-px shadow "too subtle; the marker's [triangle's] I think is scaled and it stands out much better"; the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the one black shadow under every look, the faded inert label's included; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
+// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER THE TRIANGLE'S OWN SHADOW — ITS COLOR AND ITS OFFSET, ONE CUE QUANTUM u (cue_unit_px, scaled) right (architect 2026-10-25, on the glass: the one-device-px shadow "too subtle; the marker's [triangle's] I think is scaled and it stands out much better", and the text made to match the flag; the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the one shadow under every look, the faded inert label's included; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
 // the column, ITS LINE BOX CENTRED IN THE LANE (architect 2026-10-09
 // evening, on the glass at 300 %: the editor's band stood three rows of
 // field above and six below, and he asked for it even; the cap band's
