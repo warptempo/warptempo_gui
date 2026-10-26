@@ -3870,16 +3870,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own 9-7-5-3-1 device px drawn as their
-    // envelope, one antialiased triangle (paint_ce_cue_triangle, 2026-10-09
-    // ~12:40; UNSCALED WITH THE CUE'S, architect 2026-10-26 ~10:10: "All
+    // paragraph): the cue's own 9-7-5-3-1 device px in whole cells, Cool
+    // Edit's aliased staircase (paint_ce_cue_triangle, 2026-10-26;
+    // UNSCALED WITH THE CUE'S, architect 2026-10-26 ~10:10: "All
     // triangles unscaled", cue_triangle_unit_px, render.h), in the palette's `playhead_stem` (Cool Edit's Curs yellow
     // FFFF00 by default, 2026-10-09) over the same triangle one device px
     // right in `ce_cue_shadow`, ON THE GROUND'S LAST FIVE DEVICE ROWS, its
     // apex — the bottom centre of the playhead's one-px column — on the
     // ground's bottom row (2026-10-09 ~21:00, the 11-W ground). It is OPAQUE over the ticks and digits the walk above laid
-    // down, covering whatever stands under it (its diagonal edges
-    // antialiased over them). NO SNAP, NO
+    // down, covering whatever stands under it (every cell whole, no edge
+    // blended over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the view bar, the marker

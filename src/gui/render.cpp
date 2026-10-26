@@ -1558,7 +1558,8 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 
 // THE LABEL'S SEGMENT BOXES (render.h's marker-lane paragraph;
 // program_spec.h's cue lengths), as offsets from the marker's column: the
-// first present segment's box opens the fill lead past the column, each box
+// first present segment's box opens the fill lead past the column (the live
+// `cue_lead` less one pad quantum, render.h's cue_fill_lead_px), each box
 // is its text's whole-column width with a pad quantum either side (the text
 // at its box's start plus the pad — the label's lead), and each next box
 // stands the segment gap past the one before. `w` the three texts' widths,
@@ -1572,7 +1573,7 @@ static CueSegmentBoxes cue_segment_boxes(const int (&w)[3],
                                          const bool (&present)[3]) {
     const int u = cue_label_unit_px();   // the label's quantum, scaled
     CueSegmentBoxes b;
-    int x = kProgramSpec.cue_fill_lead * u;
+    int x = cue_fill_lead_px();
     for (int s = 0; s < 3; ++s) {
         b.x0[s] = x;
         b.x1[s] = x;
@@ -1698,28 +1699,33 @@ struct CueSegment {
     // label (ce_off_label) unless selected (2026-10-10).
     bool   inert    = false;
 };
-// THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-25, on the glass:
-// "the shadow on the flags is too subtle; the marker's [triangle's] I think
-// is scaled and it stands out much better. So we should do that"; and that
-// evening, "the flag shadow looks good, so the text should be made to match
-// the flag, not the other way around"; Cool Edit draws no shadow under its
-// cue labels, so this is the product's own departure): the run first in
-// `shadow`, THE CUE TRIANGLE'S OWN SHADOW COLOR (its FlagFace's `shadow`,
-// resolve_flag_face: `ce_cue_shadow`, or `ce_off_cue_shadow` under a
-// disabled cue), at THE TRIANGLE'S OWN SHADOW OFFSET — ONE TRIANGLE UNIT
-// right, the same rows (paint_ce_cue_triangle): ONE DEVICE PX at every scale
-// since the triangle went unscaled (cue_triangle_unit_px, architect
-// 2026-10-26), the label's shadow and the flag's ONE RULE, "the text should
-// match the flag" — then `ink` over it. One shadow under every look, the faded inert label's
-// included. Every label look on the panel's face goes through here —
-// resting, invalid, inert, selected, and the flag editor's riding cells;
-// the editor's FIELD text does not.
+// THE CUE LABEL'S ONE TEXT PAINTER: the run first in `shadow`, THE CUE
+// TRIANGLE'S OWN SHADOW COLOR (its FlagFace's `shadow`, resolve_flag_face:
+// `ce_cue_shadow`, or `ce_off_cue_shadow` under a disabled cue; architect
+// 2026-10-25, on the glass: "the flag shadow looks good, so the text should
+// be made to match the flag, not the other way around"), ONE LABEL QUANTUM
+// RIGHT, the same rows — cue_label_unit_px, the scaled quantum: 3 device px
+// at 300 %, 2 at 200 %, 1 at 100 % — then `ink` over it. THE OFFSET IS THE
+// TEXT'S, NOT THE FLAG'S (architect 2026-10-26 ~10:50: "Actually text
+// shadow should stay, and be GUI scaled so different from the flag. 1
+// device px at any font size is meaningless for a shadow, so it should be 3
+// device px at 300 %"): the flag's shadow is one device px at every scale
+// (paint_ce_cue_triangle), the label's scales with its text, so the two
+// differ by his ruling. Cool Edit draws no shadow under its cue labels, so
+// this is the product's own departure. THE SHADOW IS ON OR OFF BY THE
+// `cue_shadow` TUNING KEY (GuiCueTuning, render.h; "You can add shadow
+// on/off for test"), off the ink alone. One shadow under every look, the
+// faded inert label's included. Every label look on the panel's face goes
+// through here — resting, invalid, inert, selected, and the flag editor's
+// riding cells; the editor's FIELD text does not.
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
                            double x, double baseline, GuiColor ink,
                            GuiColor shadow) {
-    const double t = static_cast<double>(cue_triangle_unit_px());
-    set_palette_source(cr, shadow);
-    text_shape::show_shaped_run(cr, run, x + t, baseline);
+    if (cue_tuning().shadow) {
+        const double t = static_cast<double>(cue_label_unit_px());
+        set_palette_source(cr, shadow);
+        text_shape::show_shaped_run(cr, run, x + t, baseline);
+    }
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
@@ -1737,14 +1743,12 @@ struct CueDraw {
     // no cell boundary: no bracket lives in a commit).
     bool                      segments_are_cells = true;
     // THE HISTORY'S CHANGED PAIR (render_history_diff_flags, 2026-10-11):
-    // the triangle SPLIT, its left half face.triangle and its right half
-    // `split_right`, its axis `axis_offset` past col — a stem's centre 0.5,
-    // or 1.0 where a nudged pair's midpoint falls on the boundary right of
-    // col — and ITS OWN STEMS, the pair's two, published in place of the
-    // face's one at col (each still gated to the waveform's columns).
+    // the triangle SPLIT at col (CueTrianglePass::split), its cells left of
+    // col and the apex column face.triangle and those right of it
+    // `split_right` — and ITS OWN STEMS, the pair's two, published in place
+    // of the face's one at col (each still gated to the waveform's columns).
     bool                      split = false;
     GuiColor                  split_right{};
-    double                    axis_offset = 0.5;
     bool                      own_stems = false;
     std::array<MarkerStem, 2> stems{};
 };
@@ -1910,8 +1914,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     triangles.begin(cr);
     for (const CueDraw& c : cues) {
         if (c.split)
-            triangles.split(static_cast<double>(c.col) + c.axis_offset,
-                            tri_top, c.face.triangle, c.split_right,
+            triangles.split(c.col, tri_top, c.face.triangle, c.split_right,
                             c.face.shadow);
         else
             triangles.triangle(c.col, tri_top, c.face.triangle,
@@ -2346,8 +2349,8 @@ void render_history_diff_flags(
         // The label's lead, both segments' pads and the gap between a
         // changed pair's halves. A bound must never under-state, and the
         // widest flag in a commit may be a pair.
-        static_cast<double>((kProgramSpec.cue_fill_lead +
-                             4 * kProgramSpec.cue_fill_pad +
+        static_cast<double>(cue_fill_lead_px() +
+                            (4 * kProgramSpec.cue_fill_pad +
                              kProgramSpec.cue_segment_gap) * u);
 
     // THE NUDGED PAIR'S COLUMNS. The iterator maps a flag's time_frame — the
@@ -2415,9 +2418,10 @@ void render_history_diff_flags(
             // THE LEFT MARKER'S STEM COLUMN, the iterator's; on a pair the
             // right one's off its own frame (paint_col above) — the same
             // column on a same-frame pair. THE FLAG STANDS CENTRED BETWEEN
-            // THEM: col the midpoint floored, the triangle's axis the two
-            // stems' centres' mean, so 0.5 past col on an even sum and on
-            // the boundary right of col (1.0) on an odd one. THE LANDING
+            // THEM: col the midpoint floored, the aliased triangle's apex
+            // column (2026-10-26: whole cells centre on a column, so an odd
+            // sum's midpoint, on the boundary right of col, takes col, half a
+            // column left of the true midpoint). THE LANDING
             // READS THIS BASIS (history_diff_flag_landing_domain_frame,
             // app_state.h, 2026-10-11): both halves mapped first, then
             // centred, so a click, Tab or Center seats the playhead under
@@ -2430,7 +2434,6 @@ void render_history_diff_flags(
             const int col_sum = col_left + col_right;
             c.col = static_cast<int>(
                 std::floor(static_cast<double>(col_sum) / 2.0));
-            c.axis_offset = (col_sum - 2 * c.col == 1) ? 1.0 : 0.5;
             // THE TWO HALVES AS TWO SEGMENTS, THE LEFT MARKER'S FIRST (the
             // removed then the added, the added first on a pair moved
             // earlier — HistoryDiffFlag::added_left), their box layout the
@@ -2563,6 +2566,13 @@ int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
+
+// THE CUE LABEL'S LIVE TUNING (the contract at GuiCueTuning, render.h).
+namespace {
+GuiCueTuning g_cue_tuning;
+} // namespace
+void                set_cue_tuning(const GuiCueTuning& t) { g_cue_tuning = t; }
+const GuiCueTuning& cue_tuning() { return g_cue_tuning; }
 
 // -- The palette's chokepoints (the contract is at their declaration,
 // render.h) ---------------------------------------------------------------

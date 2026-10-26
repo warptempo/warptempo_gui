@@ -1226,7 +1226,7 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
 // (2026-10-09, ON SCREEN IS AS PAINTED): the columns the yellow triangle and
 // its shadow cover, centred on the one-px stem (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own vertices) — 10
+// cue_triangle_reach_right_px, render.h, the painter's own cells) — 10
 // device px at every scale (the triangle unscaled, 2026-10-26) — which also
 // holds the one-px
 // line of the scanner and the dots, so a move repaints every column the head
@@ -1417,6 +1417,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return {1, {}};
         }
         window_up = true;
+        // THE `cue_text` CEILING CHECKED AGAINST THE INSTALLED FACE, once,
+        // the face being installed by init() (a tripwire: the ceiling is a
+        // constant because the config is read before the face exists;
+        // cue_text_bound_holds, render.h).
+        assert(cue_text_bound_holds());
         // THE WINDOW'S COLOR SPACE, read once, here: after init() adopted the
         // window and before any painter or worker thread runs
         // (display_transform.h's head, architect 2026-10-08). True Colors,
@@ -3401,6 +3406,12 @@ int gui_main(const char* argument) {
         return 1;
     }
     materials::set_led_glow(device_config.led_glow);
+    // THE CUE LABEL'S TUNING IS THE CONFIG'S TOO (the `cue_text`, `cue_lead`
+    // and `cue_shadow` keys, 2026-10-26; GuiCueTuning, render.h): seeded
+    // here, before any cue is shaped or the flag cache keyed; the settings
+    // editor's commit is the live road (GuiInputHandler::apply_cue_tuning).
+    set_cue_tuning(GuiCueTuning{device_config.cue_text, device_config.cue_lead,
+                                device_config.cue_shadow});
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

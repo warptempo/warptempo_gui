@@ -158,7 +158,8 @@ shopt -s nocaseglob
 #      (waveform=warptempo-terminal-default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
 #      true_colors=on line (TRUE_COLORS_LINE below; 2026-10-21) the same way
-#      (no tuning key is required now: led_glow is optional, absent = 4), and
+#      (no tuning key is required now: led_glow, cue_text, cue_lead and cue_shadow
+#      are optional, absent = 4, 22, 18 and on), and
 #      every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve

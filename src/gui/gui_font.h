@@ -30,7 +30,9 @@
 // 2026-10-24, "R16" off 14 / 15 / 16 / 17 on his type sheet — "we took
 // them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
 // 2026-10-23 to 2026-10-24, the skin's first night 15), the CUES' 22
-// Regular (the body's size: the flag labels and the flag editor), LEGEND 14
+// Regular (the body's size: the flag labels and the flag editor) BY
+// DEFAULT, THE ONE LIVE SIZE — the `cue_text` tuning key's (architect
+// 2026-10-26, GuiFont below), LEGEND 14
 // Regular (the keys' printed legends alone; the tooltip wore it the first
 // night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
 // the letters, the symbol pages' characters and the word caps, "a separate
@@ -105,7 +107,8 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body
     {1, 24.0},   // Bold: the brand
     {0, 16.0},   // Small: the ruler's digits
-    {0, 22.0},   // Program: the cues' labels and the flag editor
+    {0, 22.0},   // Program: the cues' labels and the flag editor (the
+                 // default of the LIVE size, the `cue_text` key's: below)
     {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps
 };
@@ -129,20 +132,28 @@ struct GuiFontBytes {
 // build is a build defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
 
-// A FACE AT A SCALE: what every text consumer holds, the successor of a cairo
-// scaled font. `percent` is gui_scale (render.h's gui_font(face) builds one
-// at the live scale).
+// A FACE AT A SCALE AND A SIZE: what every text consumer holds, the
+// successor of a cairo scaled font. `percent` is gui_scale and `px_at_300`
+// the use's em in device px at 300 % (render.h's gui_font(face) builds one
+// at the live scale and the live size). THE SIZE TRAVELS IN THE VALUE
+// because ONE USE'S SIZE IS LIVE: the Program face's, the `cue_text` device
+// key's (architect 2026-10-26, "flag text can now be bigger … Config key
+// would work here for tuning"; render.h's GuiCueTuning) — the table's 22
+// its default — so every cache keyed on a GuiFont (the scaled font below,
+// text_shape's run memo) keys on the size too, and a committed size
+// re-shapes with no cache of its own to drop. Every other use's size is
+// the table's.
 struct GuiFont {
-    GuiFace face    = GuiFace::Body;
-    int     percent = 100;
+    GuiFace face      = GuiFace::Body;
+    int     percent   = 100;
+    double  px_at_300 = 22.0;
 };
 
-// THE USE'S EM IN DEVICE PX at the font's scale: its table size times
+// THE USE'S EM IN DEVICE PX at the font's scale: its size at 300 % times
 // gui_scale over 300, rounded at the element, floored at one px.
 inline double gui_font_em_px(const GuiFont& f) {
     const double v = std::nearbyint(
-        kGuiFaceSizes[static_cast<std::size_t>(f.face)].px_at_300 *
-        static_cast<double>(f.percent) / 300.0);
+        f.px_at_300 * static_cast<double>(f.percent) / 300.0);
     return v < 1.0 ? 1.0 : v;
 }
 

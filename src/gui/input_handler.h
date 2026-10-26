@@ -3773,6 +3773,19 @@ private:
     // config; this applies.
     void apply_led_glow(int px);
 
+    // THE CUE LABEL'S TUNING'S ONE LIVE ACT (architect 2026-10-26, the
+    // `cue_text`, `cue_lead` and `cue_shadow` keys; GuiCueTuning, render.h):
+    // the settings editor's commit of any of the three installs the live
+    // config's three values (set_cue_tuning), REFRESHES THE FLAG CACHE —
+    // whose fingerprint keys the tuning by field (FlagCache::fp_cue_tuning),
+    // so the cued labels re-shape at the new size (the run memo and the
+    // scaled font keyed by it, gui_font.h's GuiFont) and re-lay at the new
+    // lead — and invalidates the whole window, so the live flag editor and
+    // its riding cells repaint with them. No bake: nothing of the materials
+    // reads it. The commit gates the no-op and writes the config; this
+    // applies.
+    void apply_cue_tuning();
+
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to

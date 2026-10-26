@@ -7,6 +7,7 @@
 #include "chrome_spec.h"      // live_chrome_spec(), the live chrome's lengths
 #include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
+#include "device_config.h"    // the cue tuning keys' defaults (GuiCueTuning)
 
 #include <algorithm>
 #include <array>
@@ -590,9 +591,9 @@ void install_true_colors(bool on);
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (architect 2026-10-09):
 // ITS HEAD the cue's triangle, UNSCALED WITH IT — the 9-7-5-3-1 device
-// px's envelope drawn as one antialiased triangle, the apex the playhead's
-// column (paint_ce_cue_triangle, 2026-10-09 ~12:40; the triangle's unit one
-// device px, architect 2026-10-26 ~10:10: "All triangles unscaled",
+// px's staircase in whole cells, Cool Edit's aliased drawing (2026-10-26),
+// the apex the playhead's column (paint_ce_cue_triangle; the triangle's unit
+// one device px, architect 2026-10-26 ~10:10: "All triangles unscaled",
 // cue_triangle_unit_px) — in THE PALETTE'S
 // `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
 // FFFF00 on every built-in but the CEPro 1.2 pair's FFFF6C) over the same
@@ -647,14 +648,26 @@ void install_true_colors(bool on);
 // THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09; the lengths program_spec.h's,
 // the drawing render_flag_boxes_impl's): on the lane's PANEL FACE, THE
 // TRIANGLE — COOL EDIT'S 9 BY 5 PIXELS, UNSCALED (architect 2026-10-26,
-// paint_ce_cue_triangle's head), the 9-7-5-3-1 device px's envelope on the
-// lane's last five device rows, one antialiased triangle (2026-10-09
-// ~12:40), its apex the marker's column on the lane's last row, directly
+// paint_ce_cue_triangle's head), the 9-7-5-3-1 device px's staircase on
+// the lane's last five device rows in whole cells, Cool Edit's aliased
+// drawing (architect 2026-10-26), its apex the marker's column on the
+// lane's last row, directly
 // above the canvas's top frame row — over the same triangle one device px
 // right in `ce_cue_shadow`;
-// THE LABEL — the marker's one label in the program face at cap 7, at rest
-// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER THE TRIANGLE'S OWN SHADOW — ITS COLOR AND ITS OFFSET, ONE TRIANGLE UNIT right, one device px since the triangle's unit is (2026-10-26, cue_triangle_unit_px; architect 2026-10-25, on the glass: "the flag shadow looks good, so the text should be made to match the flag, not the other way around"; the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the one shadow under every look, the faded inert label's included; the flag editor's field text takes none; the shadow is ink, never extent), starting six label quanta right of
-// the column (cue_label_unit_px, scaled), ITS LINE BOX CENTRED IN THE LANE (architect 2026-10-09
+// THE LABEL — the marker's one label, at rest
+// in the bone kBoneInk (materials.h's INKS), ITS TEXT OVER A SHADOW IN THE
+// TRIANGLE'S OWN SHADOW COLOR, ONE LABEL QUANTUM RIGHT — 3 device px at
+// 300 %, scaled, where the flag's shadow is one device px (architect
+// 2026-10-26 ~10:50: "text shadow should stay, and be GUI scaled so
+// different from the flag. 1 device px at any font size is meaningless for
+// a shadow"; the product departs from Cool Edit, which draws none;
+// `show_cue_label`, render.cpp, the one painter of every label look on the
+// face, the one shadow under every look, the faded inert label's included;
+// on or off by the `cue_shadow` tuning key; the flag editor's field text
+// takes none; the shadow is ink, never extent), in the program face at the
+// live `cue_text` size (GuiCueTuning), starting the live `cue_lead` right of
+// the column (cue_label_lead_px, scaled), ITS LINE BOX CENTRED IN THE LANE AT
+// EVERY SIZE (architect 2026-10-26, "Make sure text is centered"; 2026-10-09
 // evening, on the glass at 300 %: the editor's band stood three rows of
 // field above and six below, and he asked for it even; the cap band's
 // centring of ~21:45 retired;
@@ -1002,11 +1015,37 @@ int    gui_scale_percent();
 // since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
+// THE CUE LABEL'S LIVE TUNING (architect 2026-10-26, three device keys
+// under tuning, device_config.h's cue tuning paragraph): THE PROGRAM FACE'S
+// SIZE (`cue_text`, device px at 300 %, gui_font below), THE LABEL'S LEAD
+// from the marker's column (`cue_lead`, device px at 300 %,
+// cue_label_lead_px) and THE LABEL'S SHADOW on or off (`cue_shadow`,
+// show_cue_label, render.cpp). Seeded from the device config at launch
+// (gui_main, beside the LED's glow) and set again by the settings editor's
+// commit (GuiInputHandler::apply_cue_tuning); THE FLAG CACHE KEYS IT BY
+// FIELD (FlagCache::fp_cue_tuning, paint_handler.h), so a commit rebuilds
+// the cached cues, and the flag editor reads it live. GUI thread only.
+struct GuiCueTuning {
+    int  text_px = kDefaultCueTextPx;
+    int  lead_px = kDefaultCueLeadPx;
+    bool shadow  = kDefaultCueShadow;
+    bool operator==(const GuiCueTuning&) const = default;
+};
+void                set_cue_tuning(const GuiCueTuning& t);
+const GuiCueTuning& cue_tuning();
+
 // A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
 // asks for its text — the body, the brand's bold or the ruler's small face
-// at the current gui_scale.
+// at the current gui_scale, each at the face-size table's size; THE PROGRAM
+// FACE — the cues' labels and the flag editor, which share it by the table's
+// row, so the two move together — at THE LIVE `cue_text` (GuiCueTuning
+// above, 2026-10-26).
 inline GuiFont gui_font(GuiFace face) {
-    return GuiFont{face, gui_scale_percent()};
+    const double px =
+        face == GuiFace::Program
+            ? static_cast<double>(cue_tuning().text_px)
+            : kGuiFaceSizes[static_cast<std::size_t>(face)].px_at_300;
+    return GuiFont{face, gui_scale_percent(), px};
 }
 
 // One authored length in WINDOWS PX -> device pixels, the ONE conversion every
@@ -1549,25 +1588,55 @@ inline int ruler_lane_h_px() {
 // triangle, so the flag is Cool Edit's 9 by 5 pixels beside the one-px stem
 // at 1:1 whatever the gui_scale. ITS READERS: the triangle's rows and
 // columns and its shadow's offset (paint_ce_cue_triangle, the split
-// triangle, the stamp's coverage), the extent every cull, hit and damage
-// box reads (cue_triangle_half_w_px, cue_triangle_reach_right_px, below),
-// the cue label's shadow offset (show_cue_label, render.cpp: the text
-// matches the flag) — and THE PLAYHEAD'S HEAD, the same painter in the
-// ruler, unscaled with it (architect 2026-10-26 ~10:10: "All triangles
-// unscaled" — Cool Edit's cursor head stands in the same 1:1 relation to
-// its dotted line).
+// triangle, the stamp — whole device cells since 2026-10-26, Cool Edit's
+// aliased staircase), the extent every cull, hit and damage box reads
+// (cue_triangle_half_w_px, cue_triangle_reach_right_px, below) — and THE
+// PLAYHEAD'S HEAD, the same painter in the ruler, unscaled with it
+// (architect 2026-10-26 ~10:10: "All triangles unscaled" — Cool Edit's
+// cursor head stands in the same 1:1 relation to its dotted line). THE CUE
+// LABEL'S SHADOW IS NOT ITS READER (architect 2026-10-26 ~10:50: "text
+// shadow should stay, and be GUI scaled so different from the flag. 1
+// device px at any font size is meaningless for a shadow"): the label's
+// shadow is one LABEL quantum right, below.
 inline int waveform_line_px();   // the canvas's line, defined at row 6's block
 inline int cue_triangle_unit_px() {
     return waveform_line_px();
 }
 // THE LABEL'S UNIT IS THE SCALED QUANTUM, u = scaled_px(1, 1), the
 // program's line (program_line_px): the text is scaled, so its placing is —
-// the label's lead from the column, the selected fill's lead and pads, the
-// segment gap (program_spec.h's cue horizontal lengths), the flag editor's
-// field outline, the marker lane's quanta part (marker_lane_h_px) and the
-// cull bounds that sum them (marker_flag_max_width_px, the history lane's).
+// the selected fill's pads, the segment gap (program_spec.h's cue
+// horizontal lengths), the flag editor's field outline, the marker lane's
+// quanta part (marker_lane_h_px), the cull bounds that sum them
+// (marker_flag_max_width_px, the history lane's) and THE LABEL'S SHADOW'S
+// OFFSET, one quantum right — 3 device px at 300 %, 2 at 200 %, 1 at 100 %
+// (architect 2026-10-26 ~10:50, "it should be 3 device px at 300 %";
+// show_cue_label, render.cpp) — where the flag's own shadow is one device
+// px at every scale (cue_triangle_unit_px above): the two shadows differ by
+// his ruling.
 inline int cue_label_unit_px() {
     return scaled_px(1, 1);
+}
+// THE LABEL'S LEAD from the marker's column to its text — THE LIVE
+// `cue_lead` (GuiCueTuning, device px at 300 %, 18 by default: the six
+// label quanta it stood at before it was a key, architect 2026-10-26) taken
+// through skin_px, rounded at the element, and NEVER LESS THAN THE
+// TRIANGLE'S REACH RIGHT (cue_triangle_reach_right_px, 6 device px), the
+// key's grammar floor at 300 % (is_cue_lead, device_config.h) held at every
+// scale: the lead is scaled and the triangle is not, so at a small scale a
+// short lead would put the text under the flag. A domain clamp, never a
+// refusal. THE FILL'S LEAD IS THE LEAD LESS ONE PAD QUANTUM
+// (cue_fill_lead_px): the text stands one pad inside its fill
+// (program_spec.h's cue horizontal lengths; cue_segment_boxes, render.cpp),
+// the relation the lengths' static_assert held while the lead was a
+// constant. Readers: the segment boxes (cue_segment_boxes), the cull bounds
+// (marker_flag_max_width_px below, the history lane's).
+inline int cue_triangle_reach_right_px();   // below, the triangle's extent
+inline int cue_label_lead_px() {
+    return std::max(skin_px(static_cast<double>(cue_tuning().lead_px)),
+                    cue_triangle_reach_right_px());
+}
+inline int cue_fill_lead_px() {
+    return cue_label_lead_px() - kProgramSpec.cue_fill_pad * cue_label_unit_px();
 }
 // THE TRIANGLE'S ROWS: cue_triangle_rows device rows (5) at every scale.
 inline int cue_triangle_h_px() {
@@ -1610,7 +1679,13 @@ double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // px), stands in the lane by the box rule — the floor of the leftover above,
 // the odd row below — and THE BASELINE IS THE BOX'S TOP PLUS THE FACE'S OWN
 // ASCENT (20 at 300 %); at 300 % the box on rows 13 .. 37 of the lane's 51,
-// the baseline 33, the cap band (15.1 rows) centred on the lane. (The rows
+// the baseline 33, the cap band (15.1 rows) centred on the lane. THE SIZE
+// IS LIVE (architect 2026-10-26, the `cue_text` key: "Make sure text is
+// centered"): gui_font(GuiFace::Program) answers the live size, so the box,
+// its top and the baseline below are derived at every call from the live
+// size and scale, never a constant — at 300 % a 30 px em's box is 34 rows
+// on rows 8 .. 41, its baseline 35; the grammar's ceiling (44, is_cue_text,
+// device_config.h) is the largest em whose box fits the lane's 51 rows. (The rows
 // below are the recorded Windows metrics' of 2026-10-09 to 2026-10-23.) The
 // resting label and the editor's text must share one baseline (the editor's
 // text sits at the label's seat), so the line box's centring wins and the
@@ -1638,20 +1713,37 @@ inline int cue_baseline_px() {
            static_cast<int>(std::nearbyint(
                gui_font_ascent_px(gui_font(GuiFace::Program))));
 }
+// THE `cue_text` CEILING'S TRIPWIRE (device_config.h's kCueTextMaxPx, a
+// constant there because the config is read before the face is installed):
+// at 300 %, the key's unit, the ceiling's line box fits the marker lane's
+// rows and one more px would not — the derivation checked against the
+// installed face's own metrics. Asserted once at the window's first open
+// (gui_main's session, after GuiPlatform::init installs the face).
+inline bool cue_text_bound_holds() {
+    const int lane_at_300 =
+        static_cast<int>(std::nearbyint(kProgramSpec.cue_lane_ground_px * 3.0)) +
+        kProgramSpec.cue_lane_quanta * 3;
+    const auto box = [](int px) {
+        return static_cast<int>(std::nearbyint(gui_font_line_px(
+            GuiFont{GuiFace::Program, 300, static_cast<double>(px)})));
+    };
+    return box(kCueTextMaxPx) <= lane_at_300 &&
+           box(kCueTextMaxPx + 1) > lane_at_300;
+}
 // (THE RULER'S DIGIT ROWS AND THE CUE LABEL'S ROWS AT 100 %, asserted
 // against the recorded Windows metrics 2026-10-09 to 2026-10-23, went with
 // those metrics: the faces' vertical metrics are their own at the table's
 // sizes since 2026-10-23, gui_font.h's head, so the line box and the
 // baseline above are derived at the live scale alone.)
 // THE TRIANGLE'S PAINTED COLUMNS round its stem column `col` — the cue's and
-// the playhead head's one extent, read off the painter's own vertices
-// (paint_ce_cue_triangle, architect 2026-10-09 ~14:35, centred on the
-// one-px stem: the top edge from col + 0.5 − 4.5u to col + 0.5 + 4.5u, the
-// shadow triangle one unit right of it, so the outer edges col + 0.5 −
-// 4.5u and col + 0.5 + 5.5u, u the triangle's unit, one device px) taken to
-// whole device columns: [col − cue_triangle_half_w_px(), col +
-// cue_triangle_reach_right_px()), ⌊9u / 2⌋ left and ⌊(11u + 2) / 2⌋ right —
-// 4 and 6 device px at every scale (2026-10-26). THE ONE ROAD for every
+// the playhead head's one extent, read off the painter's own cells
+// (paint_ce_cue_triangle, Cool Edit's aliased staircase since 2026-10-26,
+// centred on the one-px stem, architect 2026-10-09 ~14:35: the top row's
+// nine cells from col − 4u to col + 4u, the shadow's one unit right of
+// them, u the triangle's unit, one device px): [col −
+// cue_triangle_half_w_px(), col + cue_triangle_reach_right_px()), (rows −
+// 1)·u left and (rows + 1)·u right — the apex cell, four cells and the
+// shadow's one — 4 and 6 device px at every scale. THE ONE ROAD for every
 // reader of that width: the cue's published triangle box (paint_cues), the
 // label's face box from its own triangle's left edge (paint_cues; no label is
 // clipped), the flag iterator's cull,
@@ -1660,14 +1752,12 @@ inline int cue_baseline_px() {
 // (render_playhead, playhead_invalidate_rect, main.cpp), so no repaint can
 // be narrower than what the head painted.
 inline int cue_triangle_half_w_px() {
-    const int rows = kProgramSpec.cue_triangle_rows;
-    return (2 * rows - 1) * cue_triangle_unit_px() / 2;
+    return (kProgramSpec.cue_triangle_rows - 1) * cue_triangle_unit_px();
 }
 inline int cue_triangle_reach_right_px() {
-    const int rows = kProgramSpec.cue_triangle_rows;
-    return ((2 * rows + 1) * cue_triangle_unit_px() + 2) / 2;
+    return (kProgramSpec.cue_triangle_rows + 1) * cue_triangle_unit_px();
 }
-static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9u and 11u above
+static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9-7-5-3-1 above
 // THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
 // third part; program_spec.h's column_margin_px): the
 // canvas's TOP FRAME ROW is a lane of its own, top lane 5, one line
@@ -1999,11 +2089,12 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     const int u = cue_label_unit_px();
     const double glyph_bound =
         gui_font_advance_bound_px(gui_font(GuiFace::Program));
-    // The payload's lead and its fill's pad past the text.
+    // The payload's lead (the live cue_lead, cue_label_lead_px) and its
+    // fill's pad past the text.
     const double label =
         static_cast<double>(glyphs) * glyph_bound +
-        static_cast<double>((kProgramSpec.cue_label_lead +
-                             kProgramSpec.cue_fill_pad) * u);
+        static_cast<double>(cue_label_lead_px() +
+                            kProgramSpec.cue_fill_pad * u);
     if (!iteration_on) return label;
     // Each cell: the segment gap and its two pads round its glyphs.
     const double cell =
@@ -2338,7 +2429,8 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // surface). Anything else answers false and the caller takes cairo's road.
 // The surface is flushed here; the caller marks it dirty after its last
 // write, and around any cairo drawing it lets fall between its writes marks
-// before and flushes after (CueTrianglePass's hand-over).
+// before and flushes after (CueTrianglePass lets none fall: a pass whose
+// target is refused paints every triangle through cairo).
 struct DirectPixelTarget {
     unsigned char* data = nullptr;
     int stride = 0;
@@ -3296,8 +3388,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // (architect 2026-10-09, Cool Edit's cues; the look, the states and the
 // overlap rule at the palette block's marker-lane paragraph, every length
 // program_spec.h's): each marker's TRIANGLE with its apex on the marker's
-// pixel column on the lane's last rows, and its LABEL six label quanta right of
-// the column on its box over the lane's whole height — the payload label
+// pixel column on the lane's last rows, and its LABEL the live `cue_lead`
+// right of the column (cue_label_lead_px) on its box over the lane's whole height — the payload label
 // (the warp payload's scale truncation at kMarkerFlagScaleGlyphs above) and,
 // where
 // they paint, its two bound cells as further segments — in the program face
@@ -3728,10 +3820,11 @@ struct HistoryDiffFlag {
 // history_diff.h): each half keeps ITS OWN STEM at its own frame in its own
 // half's dots — the removed the invalid color alone, the added the cue red
 // alone — and the one
-// flag's triangle stands CENTRED BETWEEN THE TWO STEMS, a SPLIT TRIANGLE
-// (CueTrianglePass::split, cool_edit_paint.h): its left half the LEFT
-// marker's color, its right half the right marker's, split on the vertical
-// through its apex. Its label is the two halves as two segments, THE LEFT
+// flag's triangle stands CENTRED BETWEEN THE TWO STEMS — its apex on the
+// midpoint's column, floored — a SPLIT TRIANGLE (CueTrianglePass::split,
+// cool_edit_paint.h): its cells left of the apex column the LEFT marker's
+// color, those right of it the right marker's, the apex column the left
+// marker's. Its label is the two halves as two segments, THE LEFT
 // MARKER'S FIRST, the segment gap between them. A NUDGED pair (the halves
 // apart) also draws the RECTANGLE's top and bottom between its two stems on
 // the canvas (MarkerStemRun), always; a SAME-FRAME pair stands removed left,

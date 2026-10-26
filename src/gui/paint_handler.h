@@ -340,8 +340,8 @@ struct WaveformCache {
 // rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
 // lane's composite height), so no cached label pixel leaves those rows
 // however far a glyph overshoots; the triangles stand on the lane's own rows
-// (CueTriangleCoverage's box, cool_edit_paint.cpp, the shadow one device px
-// right and never down); and the flag editor and its riding cells paint
+// (paint_ce_cue_triangle's cells, cool_edit_paint.h, the shadow one device
+// px right and never down); and the flag editor and its riding cells paint
 // later onto the frame, never into this surface. The ruler lane above is in
 // the band as its clean upper boundary, with margin, not because anything
 // there is inked by a cue; the frame row is the strip's own foot.
@@ -408,6 +408,12 @@ struct FlagCache {
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
     uint64_t  fp_palette_generation  = 0;
+    // THE CUE LABEL'S TUNING THESE PIXELS WERE LAID OUT AT (cue_tuning(),
+    // render.h — architect 2026-10-26, the `cue_text`, `cue_lead` and
+    // `cue_shadow` keys): the label's size, its lead and its shadow are each
+    // in every cued label's pixels, so a commit re-renders the surface BY
+    // FIELD, the scale's shape.
+    GuiCueTuning fp_cue_tuning{};
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -602,7 +608,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (26 fields, RE-DERIVED 2026-10-26 off the compare in
+    // (27 fields, RE-DERIVED 2026-10-26 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -617,6 +623,8 @@ struct GuiPaintHandler {
     //     with it (2026-08-29);
     //   - THE PALETTE, read live: fp_palette_generation (render.h's
     //     palette_generation — every flag pixel a palette color, 2026-10-03);
+    //   - THE CUE LABEL'S TUNING, read live: fp_cue_tuning (render.h's
+    //     cue_tuning — the label's size, lead and shadow, 2026-10-26);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;

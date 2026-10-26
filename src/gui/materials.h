@@ -173,10 +173,12 @@ struct AppState;
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone. NO WORD
-// WEARS A SHADOW but the cue labels, over the cue triangle's own shadow,
-// its color and its offset, ONE TRIANGLE UNIT right, one device px
-// (cue_triangle_unit_px, 2026-10-26; architect 2026-10-25;
-// show_cue_label, render.h's marker lane's label paragraph): the skin draws
+// WEARS A SHADOW but the cue labels, over a shadow in the cue triangle's
+// own shadow color, ONE LABEL QUANTUM right, 3 device px at 300 % and
+// scaled, where the triangle's is one device px (architect 2026-10-26
+// ~10:50, "be GUI scaled so different from the flag"; cue_label_unit_px,
+// show_cue_label, render.h's marker lane's label paragraph; on or off by
+// the `cue_shadow` tuning key): the skin draws
 // none elsewhere, the ruler's digits included (2026-10-25). Of the lines,
 // the ruler's ticks alone wear one, one device px of black at (+1, +1)
 // (render.h's ruler block).

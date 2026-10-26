@@ -68,14 +68,17 @@
 // (architect 2026-10-26: "I think we should make the triangle smaller …
 // Why not simply leave unscaled? That would preserve the stem/flag size
 // relation from CEP" — "on waveform → unscaled" carried to the cue's
-// triangle), so a triangle's 9-7-5-3-1 rows (drawn as their envelope, one
-// antialiased triangle, since 2026-10-09 ~12:40: paint_ce_cue_triangle) and
-// its shadow's one-unit offset are Cool Edit's own 9 by 5 pixels beside the
-// one-device-px stem, the apex the stem's column and the nine units centred
+// triangle), so a triangle's 9-7-5-3-1 rows (whole cells, Cool Edit's
+// aliased staircase since 2026-10-26: paint_ce_cue_triangle) and its
+// shadow's one-unit offset are Cool Edit's own 9 by 5 pixels beside the
+// one-device-px stem, the apex the stem's column and the nine cells centred
 // on it with no remainder; THE LABEL'S UNIT IS THE SCALED QUANTUM
-// u = scaled_px(1, 1) (render.h's program_line_px), the label's lead from
-// the column, the selected fill's lead and pads and the segment gap counted
-// in it, because the text they place is scaled. The dots down the canvas
+// u = scaled_px(1, 1) (render.h's program_line_px), the selected fill's pads,
+// the segment gap and the label's shadow's offset counted in it, because
+// the text they place is scaled; THE LABEL'S LEAD from the column is the
+// `cue_lead` tuning key's, device px at 300 % scaled (render.h's
+// cue_label_lead_px, architect 2026-10-26), no field here while it is
+// tuned. The dots down the canvas
 // are device rows (2026-10-09 ~14:25, the dot fields below). The LANES'
 // ROWS and the text's seats are W lengths, each its own rounded part
 // (scaled_px's rule).
@@ -214,27 +217,28 @@ struct ProgramSpec {
     // band stood three rows of field above and six below, and he asked for
     // it even; the cap band's centring of ~21:45 before it): no authored
     // baseline row — render.h's
-    // cue_baseline_px derives it from the lane's height and the program
-    // face's recorded line box (ascent + descent) by the box rule, the box's
-    // top plus the ascent, the flag editor's selection band the same box; at
-    // 100 % the box on rows 2 .. 13, the cap 7 on rows 5 .. 11 and the
-    // baseline the top of row 12, the descenders over the triangle's rows
-    // beside it (render.h's asserts, where the face is in scope).
+    // cue_baseline_px derives it AT EVERY CALL from the lane's height and the
+    // program face's own line box at its LIVE size (the `cue_text` tuning
+    // key, architect 2026-10-26: "Make sure text is centered") by the box
+    // rule, the box's top plus the ascent, the flag editor's selection band
+    // the same box; at 300 % and the default 22 px the box on rows 13 .. 37
+    // of the 51, the baseline 33, the descenders over the triangle's rows
+    // beside it.
     int  cue_lane_ground_px;
     int  cue_lane_quanta;
     int  cue_triangle_rows;
     int  cue_fill_px;
-    // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA from the marker's column
-    // (the head): the label's first column past the column (Cool Edit's
-    // stem 416 → label 422), the selected fill's first column (one quantum
-    // before the text) and its pad past the text, the gap between two of a
-    // marker's label segments' boxes (the bound cells, the history's two
-    // halves — the product's own, a segment's text standing the label's
-    // lead past the previous one's end). (A label is never clipped: a later
-    // cue's face box occludes an earlier label, render.h's overlap rule,
-    // 2026-10-10.)
-    int  cue_label_lead;
-    int  cue_fill_lead;
+    // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA (the head): the
+    // selected fill's pad either side of the text — the fill's first column
+    // one pad before the text, so THE FILL'S LEAD IS THE LABEL'S LEAD LESS
+    // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself the
+    // `cue_lead` tuning key's, 18 device px at 300 % by default, the six
+    // quanta it stood at as a field here — Cool Edit's stem 416 → label 422 —
+    // until 2026-10-26) — and the gap between two of a marker's label
+    // segments' boxes (the bound cells, the history's two halves — the
+    // product's own, a segment's text standing the gap and two pads past
+    // the previous one's end). (A label is never clipped: a later cue's face
+    // box occludes an earlier label, render.h's overlap rule, 2026-10-10.)
     int  cue_fill_pad;
     int  cue_segment_gap;
     // THE CANVAS DOTS, ONE DEVICE PX SQUARE, COUNTED IN
@@ -290,8 +294,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .cue_lane_quanta       = 5,
     .cue_triangle_rows     = 5,
     .cue_fill_px           = 17,
-    .cue_label_lead        = 6,
-    .cue_fill_lead         = 5,
     .cue_fill_pad          = 1,
     .cue_segment_gap       = 4,
     .dot_period            = 4,
@@ -375,18 +377,16 @@ static_assert(program_ruler_authored_h(kProgramSpec) +
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
               kProgramSpec.ruler_baseline_px);
 // THE CUE'S ROWS (the product's lane): the label's box the whole lane, the
-// label's line box centred in it (render.h's asserts read the program face's
-// recorded line box, cap and descent against the lane), the triangle's five
-// device rows at its bottom, never taller than the lane's quanta part.
+// label's line box centred in it at the live size (render.h's
+// cue_baseline_px; the size's ceiling, device_config.h's is_cue_text, the
+// largest whose box fits the lane at 300 %), the triangle's five device rows
+// at its bottom, never taller than the lane's quanta part.
 static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
 static_assert(kProgramSpec.cue_triangle_rows <= kProgramSpec.cue_lane_quanta);
-// THE LABEL CLEARS THE TRIANGLE: its lead, in label quanta of at least one
-// device px each, reaches past the triangle's painted columns right of the
-// stem, ⌊(2·rows + 1 + 2) / 2⌋ device px with the shadow
-// (render.h's cue_triangle_reach_right_px: 6).
-static_assert(kProgramSpec.cue_label_lead >=
-              (2 * kProgramSpec.cue_triangle_rows + 1 + 2) / 2);
+// (THE LABEL CLEARS THE TRIANGLE at runtime since its lead became the
+// `cue_lead` key, 2026-10-26: render.h's cue_label_lead_px never stands
+// nearer the column than the triangle's reach right, 6 device px.)
 // The cue's two colors alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
@@ -395,9 +395,8 @@ static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
               kProgramSpec.dot_period);
 static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=
               kProgramSpec.playhead_dot_phase);
-// The label's text stands one pad quantum inside its fill: the fill's lead
-// and pad are the label's lead (render.cpp's cue_segment_boxes).
-static_assert(kProgramSpec.cue_label_lead ==
-              kProgramSpec.cue_fill_lead + kProgramSpec.cue_fill_pad);
+// (The label's text stands one pad quantum inside its fill — the fill's
+// lead and pad are the label's lead — at runtime since 2026-10-26:
+// render.h's cue_fill_lead_px.)
 
 #endif // WARPTEMPO_GUI_PROGRAM_SPEC_H
