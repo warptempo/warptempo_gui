@@ -2698,15 +2698,20 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // IN THE `h` VIEW THE NAME'S RUN ENDS IN THE WALK LINE'S OWN
         // SEPARATOR, "Tab A | " (architect 2026-10-24: the name ran into the
         // line's position, `Tab A 007/114 | GitHub: ...`; kSegmentSeparator,
-        // the one spelling), the state air then measured past that run's
-        // advance as everywhere. The pipe is the `h` view's alone: outside
-        // it the state cell carries the ordinary progress text and the name
-        // stands bare. The walk line is never empty while the view stands
-        // (its position reads `0/0` at worst), so the seam is unconditional
-        // there; the view's two edges repaint the whole window
+        // the one spelling), and THE SEPARATOR'S OWN TRAILING SPACE IS THE
+        // WHOLE SEAM (architect 2026-10-25: "a giant ... amount of space"
+        // after the pipe): no state air past that run's advance, so
+        // `Tab A | 007/114 | GitHub: ...` reads as one line with one spacing,
+        // the seam the same space as every ` | ` inside the walk line. The
+        // pipe is the `h` view's alone: outside it the state cell carries
+        // the ordinary progress text, the name stands bare and the state air
+        // stands as below. The walk line is never empty while the view
+        // stands (its position reads `0/0` at worst), so the seam is
+        // unconditional there; the view's two edges repaint the whole window
         // (open_history_mode_fresh / close_history_mode).
+        const bool name_ends_in_separator = app.history_mode.active;
         std::string name_text = app.active_tab_view == 'B' ? "Tab B" : "Tab A";
-        if (app.history_mode.active)
+        if (name_ends_in_separator)
             name_text += kSegmentSeparator;
         const text_shape::ShapedRun name_run =
             text_shape::shape_text_run(font, name_text);
@@ -2715,16 +2720,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double name_origin =
             static_cast<double>(name_x) - text_shape::ink_left_px(name_run);
         // THE STATE LINE: on the row's free wood, no panel, ITS FIRST INK the
-        // state air (5 W) past the name's advance: the clip starts there and
-        // the run's origin stands its own left bearing short of it
-        // (ink_left_px, text_shape.h). Its RIGHT CLIP stands one run gap
+        // state air (5 W) past the name's advance — AT the advance, no air,
+        // where the name's run ends in the separator (the `h` view, the
+        // block above; 2026-10-25): the clip starts there and the run's
+        // origin stands its own left bearing short of it (ink_left_px,
+        // text_shape.h). Its RIGHT CLIP stands one run gap
         // short of the right block (2026-10-22; the pad before a bar
         // 2026-10-21, one group gap of 2 W short of its gripper before); a
         // window too narrow to leave that span positive paints no state text
         // — the row's crop-at-the-floor allowance (the block above).
         const int state_x =
             static_cast<int>(std::ceil(name_origin + name_run.width_px)) +
-            scaled_px(kProgramSpec.state_air_px);
+            (name_ends_in_separator ? 0
+                                    : scaled_px(kProgramSpec.state_air_px));
         const int state_w = (right_block_x - lengths.gap) - state_x;
         set_palette_source(cr, hex(kBoneInk));
         text_shape::show_shaped_run(cr, name_run, name_origin, baseline);
