@@ -17,14 +17,13 @@ color presets in its own order, each as it is and then with the Terminal ink (th
 the theme's every other color) — "the point is to get closer to Cool Edit again. Also show two versions of each CEP
 theme" — and directly after Terminal, Default the proportional row, Cool Edit's default with every color moved as its
 ink moves to the Terminal ink, "so that they're all still proportional" (its head is their provenance, the pairing,
-the proportional derivation and the invalid color's rule), each values line followed by its display
+the proportional derivation), each values line followed by its display
 name, in Cool Edit Pro 2.1's value grammar.
 
-`gen_presets.py` transcribes each into the eleven program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
+`gen_presets.py` transcribes each into the ten program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
 off the header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never
 hand-edited. Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, Curs and Face to their
-roles, and THE INVALID COLOR the preset's own Inv, the one key of the program's own (architect 2026-10-25 night; on
-every row but Terminal, Default, Proportional the row's own center line, on that row its own violet, 2026-10-26); THE LIT OUTLINE the ink at HLS
+roles; THE LIT OUTLINE the ink at HLS
 lightness 0.3157, the lightness measured on Cool Edit Pro 2.1's view bar span shadows across five of its presets
 (2026-10-09; `src/gui/cool_edit_derive.h`'s `span_shadow`, ported operation for operation, `palette_file.cpp` proving
 every row against the C++ tone()); the scanner white in every preset. The keys `warptempo-<name>` (the `waveform`

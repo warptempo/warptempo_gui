@@ -16,105 +16,100 @@
 #  - THEN ITS TERMINAL TWIN, "Terminal, <name>": the Terminal ink WvFg 49CA8A, the DEC VT220's green (HLS hue 150,
 #    saturation .55, lightness .54; the period round of 2026-10-25), and its grid GrdL 0F2E1F (the ink's hue at HLS
 #    saturation .5 and lightness .12), every other key the Cool Edit row's — its canvas, center line, cue, range,
-#    playhead, Face and invalid color.
+#    playhead and Face.
 # THE PROPORTIONAL ROW, "Terminal, Default, Proportional" (architect 2026-10-26: "I'd like to see every color on the
 # default palette from Cool Edit shifted just as the relationship between the waveform inks is, so that they're all
 # still proportional"): the relation from Cool Edit's default ink 4BF3A7 (HLS hue 152.9, lightness .624, saturation
 # .875; Python colorsys HLS) to the Terminal ink 49CA8A (150.2, .539, .549) is hue -2.6 degrees, lightness x.865,
 # saturation x.627, applied to EVERY key of "Cool Edit, Default" (black stays black): Cntr A90404 -> 781E22, CueM
 # F34B58 -> CA4959, RngM 4B82F3 -> 4979CA, GrdL 003500 -> 0A2509, Curs FFFF00 -> B3AD29, Face 626C7B -> 595F66.
-# THE INVALID COLOR IS THE ROW'S OWN CENTER LINE, Inv = Cntr, on every row but Terminal, Default, Proportional (the
-# 2026-10-11 rule these presets held, architect ~01:00-01:20: the invalid color each palette's center line), written
-# on every row because the generator requires the key. THE PROPORTIONAL ROW'S INVALID COLOR IS ITS OWN, Inv 9F49CA, a
-# violet at the mapped cue's lightness and saturation (HLS hue 280, .539, .549), a third color beside the row's red cue
-# and blue range (architect 2026-10-26: the center-line red "is too close to the regular marker red. It becomes kind
-# of meaningless … let's just give the invalid one a different color … it couldn't be green because of the ink and
-# the connotation with adding, but it could be some purplish color … do that for the terminal default proportional
-# theme only"). The default (palette_file.h's kGuiDefaultPaletteKey) is Terminal, Default: the Terminal green under
+# NO PRESET CARRIES AN INVALID COLOR (architect 2026-10-26 ~15:10, "It's very odd having anything but red mean
+# invalid"): a coincident marker's label is struck, in the cue colors (render.cpp's resolve_flag_face).
+# The default (palette_file.h's kGuiDefaultPaletteKey) is Terminal, Default: the Terminal green under
 # Cool Edit's default red and blue markers, his "closer to Cool Edit again" (2026-10-26).
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone — WvFg, WvBk,
-# Cntr, Inv, CueM, RngM, GrdL, Curs, Face — Inv the one key of the program's own, Cool Edit's other keys left out),
+# Cntr, CueM, RngM, GrdL, Curs, Face — Cool Edit's other keys left out),
 # EACH VALUES LINE FOLLOWED BY ITS NAME LINE, the display name, in the order the presets are listed; the key is
 # `warptempo-` and the name in the key grammar. Lines opening with '#' are this note and nothing else.
-WvFg=4BF3A7,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=F34B58,RngM=4B82F3,GrdL=003500,Curs=FFFF00,Face=626C7B
+WvFg=4BF3A7,WvBk=000000,Cntr=A90404,CueM=F34B58,RngM=4B82F3,GrdL=003500,Curs=FFFF00,Face=626C7B
 Cool Edit, Default
-WvFg=49CA8A,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=F34B58,RngM=4B82F3,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+WvFg=49CA8A,WvBk=000000,Cntr=A90404,CueM=F34B58,RngM=4B82F3,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
 Terminal, Default
-WvFg=49CA8A,WvBk=000000,Cntr=781E22,Inv=9F49CA,CueM=CA4959,RngM=4979CA,GrdL=0A2509,Curs=B3AD29,Face=595F66
+WvFg=49CA8A,WvBk=000000,Cntr=781E22,CueM=CA4959,RngM=4979CA,GrdL=0A2509,Curs=B3AD29,Face=595F66
 Terminal, Default, Proportional
-WvFg=22B893,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,Curs=FFFF00,Face=1C47C6
+WvFg=22B893,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,Curs=FFFF00,Face=1C47C6
 Cool Edit, XP Blue
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=1C47C6
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=1C47C6
 Terminal, XP Blue
-WvFg=22B893,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=313030,Curs=FFFF00,Face=7B7E8B
+WvFg=22B893,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=313030,Curs=FFFF00,Face=7B7E8B
 Cool Edit, XP Silver
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=7B7E8B
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=7B7E8B
 Terminal, XP Silver
-WvFg=D8B264,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=491010,Curs=FFFF00,Face=9AA280
+WvFg=D8B264,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=491010,Curs=FFFF00,Face=9AA280
 Cool Edit, XP Olive
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=9AA280
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=9AA280
 Terminal, XP Olive
-WvFg=FFCE0C,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=59041C,Curs=FFFF00,Face=8E283A
+WvFg=FFCE0C,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=59041C,Curs=FFFF00,Face=8E283A
 Cool Edit, Fire and Brick
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=8E283A
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=8E283A
 Terminal, Fire and Brick
-WvFg=1AF0AB,WvBk=000000,Cntr=A53038,Inv=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=042C4F,Curs=FFFF00,Face=626C7B
+WvFg=1AF0AB,WvBk=000000,Cntr=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=042C4F,Curs=FFFF00,Face=626C7B
 Cool Edit, Classic Cool
-WvFg=49CA8A,WvBk=000000,Cntr=A53038,Inv=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+WvFg=49CA8A,WvBk=000000,Cntr=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
 Terminal, Classic Cool
-WvFg=ED1EC9,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=8751CA
+WvFg=ED1EC9,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=8751CA
 Cool Edit, Lipstick and Grapes
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=8751CA
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=8751CA
 Terminal, Lipstick and Grapes
-WvFg=576AB4,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=C7C8CF
+WvFg=576AB4,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=C7C8CF
 Cool Edit, Seattle Blues
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=C7C8CF
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=C7C8CF
 Terminal, Seattle Blues
-WvFg=4FD8D1,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=102E4E,Curs=FFFF00,Face=272B6D
+WvFg=4FD8D1,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=102E4E,Curs=FFFF00,Face=272B6D
 Cool Edit, Midnight
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=272B6D
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=272B6D
 Terminal, Midnight
-WvFg=3565D6,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=AEB6D2
+WvFg=3565D6,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=AEB6D2
 Cool Edit, Periwinkle
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=AEB6D2
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=AEB6D2
 Terminal, Periwinkle
-WvFg=1BF0AB,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=042C4F,Curs=FFFF6C,Face=7088A0
+WvFg=1BF0AB,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=042C4F,Curs=FFFF6C,Face=7088A0
 Cool Edit, CEPro 1.2
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF6C,Face=7088A0
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF6C,Face=7088A0
 Terminal, CEPro 1.2
-WvFg=FE0D0D,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=2F1AEE
+WvFg=FE0D0D,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=2F1AEE
 Cool Edit, 3D
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=2F1AEE
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=2F1AEE
 Terminal, 3D
-WvFg=13F774,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=010B63,Curs=FFFF00,Face=03040A
+WvFg=13F774,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=010B63,Curs=FFFF00,Face=03040A
 Cool Edit, Stealth
-WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=03040A
+WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F2E1F,Curs=FFFF00,Face=03040A
 Terminal, Stealth
-WvFg=83F4A2,WvBk=073C2F,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=555454,Curs=FFFF00,Face=ACA9D0
+WvFg=83F4A2,WvBk=073C2F,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=555454,Curs=FFFF00,Face=ACA9D0
 Cool Edit, Grape, Lime, and Tangerine
-WvFg=49CA8A,WvBk=073C2F,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=ACA9D0
+WvFg=49CA8A,WvBk=073C2F,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=ACA9D0
 Terminal, Grape, Lime, and Tangerine
-WvFg=B2DCA8,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=003500,Curs=FFFF00,Face=A8969C
+WvFg=B2DCA8,WvBk=000000,Cntr=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=003500,Curs=FFFF00,Face=A8969C
 Cool Edit, Dusty Rose
-WvFg=49CA8A,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=0F2E1F,Curs=FFFF00,Face=A8969C
+WvFg=49CA8A,WvBk=000000,Cntr=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=0F2E1F,Curs=FFFF00,Face=A8969C
 Terminal, Dusty Rose
-WvFg=C7A043,WvBk=000000,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=371C00,Curs=FFFF00,Face=637461
+WvFg=C7A043,WvBk=000000,Cntr=804000,CueM=804000,RngM=804000,GrdL=371C00,Curs=FFFF00,Face=637461
 Cool Edit, Nature Calls
-WvFg=49CA8A,WvBk=000000,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=0F2E1F,Curs=FFFF00,Face=637461
+WvFg=49CA8A,WvBk=000000,Cntr=804000,CueM=804000,RngM=804000,GrdL=0F2E1F,Curs=FFFF00,Face=637461
 Terminal, Nature Calls
-WvFg=0DE0FE,WvBk=000000,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=292929,Curs=FFFF00,Face=C0C0C0
+WvFg=0DE0FE,WvBk=000000,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=292929,Curs=FFFF00,Face=C0C0C0
 Cool Edit, Arctic Freeze
-WvFg=49CA8A,WvBk=000000,Cntr=616161,Inv=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=C0C0C0
+WvFg=49CA8A,WvBk=000000,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=C0C0C0
 Terminal, Arctic Freeze
-WvFg=0C55FF,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F0459,Curs=FFFF00,Face=414141
+WvFg=0C55FF,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F0459,Curs=FFFF00,Face=414141
 Cool Edit, Midnight Blues
-WvFg=49CA8A,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=414141
+WvFg=49CA8A,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=414141
 Terminal, Midnight Blues
-WvFg=D9B732,WvBk=3D2E20,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=3C1E1E,Curs=FFFF00,Face=C1B791
+WvFg=D9B732,WvBk=3D2E20,Cntr=804000,CueM=804000,RngM=804000,GrdL=3C1E1E,Curs=FFFF00,Face=C1B791
 Cool Edit, Safari So Good
-WvFg=49CA8A,WvBk=3D2E20,Cntr=804000,Inv=804000,CueM=804000,RngM=804000,GrdL=0F2E1F,Curs=FFFF00,Face=C1B791
+WvFg=49CA8A,WvBk=3D2E20,Cntr=804000,CueM=804000,RngM=804000,GrdL=0F2E1F,Curs=FFFF00,Face=C1B791
 Terminal, Safari So Good
-WvFg=73BA51,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=003500,Curs=FFFF00,Face=626C7B
+WvFg=73BA51,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=003500,Curs=FFFF00,Face=626C7B
 Cool Edit, Easy on the Eyes
-WvFg=49CA8A,WvBk=000000,Cntr=FFFFFF,Inv=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
+WvFg=49CA8A,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
 Terminal, Easy on the Eyes

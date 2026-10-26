@@ -253,10 +253,8 @@ struct ProgramSpec {
     // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
     // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
     // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
-    // FIRST FROM THE TOP, and a one-color stem has half the dots (render.cpp's
-    // resolve_flag_face owns which color each phase wears: the invalid color
-    // takes the red's phase, the history's added half its cue red on the
-    // blue's, 2026-10-11); the phase-reset lead-in
+    // FIRST FROM THE TOP, every live cue's (render.cpp's resolve_flag_face
+    // owns which color each phase wears); the phase-reset lead-in
     // ring's right side takes the same rows and its top and bottom runs the
     // same phases in device columns counted from the reset's own column
     // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE

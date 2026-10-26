@@ -2783,11 +2783,14 @@ void GuiInputHandler::run_center_command() {
             // own stops (input_key_dispatch.cpp) — and the no-focus arm, which
             // spells none, centres the resting playhead all the same.
             playback_lifecycle.stop_playback_if_playing();
+            // On the focused CUE: a nudged pair's focused half alone
+            // (AppState::HistoryMode::focus_half, 2026-10-26).
             land_playhead_on_domain_frame(
                 app, audio, viewport,
                 history_diff_flag_landing_domain_frame(
                     app, audio,
-                    app.history_mode.flags[static_cast<std::size_t>(focus)]));
+                    app.history_mode.flags[static_cast<std::size_t>(focus)],
+                    app.history_mode.focus_half));
         }
         viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();

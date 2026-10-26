@@ -2049,21 +2049,24 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // its ctrl form (the tab switch) keeping it lit wherever the roster is.
     // The seed, the walls and the empty arm are stated there; each is a
     // silent consumed no-op here.
-    const int there = history_diff_cycle_target(app, audio, forward);
-    if (there < 0) return;
+    const HistoryDiffStop there = history_diff_cycle_target(app, audio, forward);
+    if (there.flag < 0) return;
     playback_lifecycle.stop_playback_if_playing();
     // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
     // shape: the set clears and the focus alone stands, which is the plain
     // click's rest too. Ordered so the clearer cannot undo the focus it
-    // writes.
+    // writes. THE STOP IS A CUE (2026-10-26): the flag and the half of it
+    // the focus stands on, a nudged pair's two cues two stops.
     clear_history_mode_focus(app.history_mode);
-    app.history_mode.focus = there;
+    app.history_mode.focus      = there.flag;
+    app.history_mode.focus_half = there.half;
     // Every branch that reaches here lands, through the movement owner.
     land_playhead_on_domain_frame(
         app, audio, viewport,
         history_diff_flag_landing_domain_frame(
             app, audio,
-            app.history_mode.flags[static_cast<std::size_t>(there)]));
+            app.history_mode.flags[static_cast<std::size_t>(there.flag)],
+            there.half));
     // THE CAMERA IS THE CALLER'S STATEMENT, the live walk's own
     // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker),
     // and THE LIVE FAMILY'S LANDING IS MIRRORED ARM FOR ARM (architect
@@ -4035,10 +4038,12 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 // ordinal within the frame's run), HistoryDiffFlag::then_ordinal /
 // now_ordinal, render.h; the contract at GuiHistoryWarpEntry::ordinal,
 // history_diff.h):
-//   * ADDED ONLY (`[+]`, the newer side has this line and the older did not) →
+//   * ADDED ONLY (a plain label, the newer side has this line and the older
+//     did not) →
 //     DELETE the live row at (frame, now_ordinal). None there is NOTHING
 //     HAPPENING for that flag — never a refusal, never a diagnostic.
-//   * REMOVED ONLY (`[-]`, the older side had it and the newer dropped it) →
+//   * REMOVED ONLY (a struck label, the older side had it and the newer
+//     dropped it) →
 //     PUT THE THEN SIDE BACK at (frame, then_ordinal) within the live run.
 //   * CHANGED (the double flag) → BOTH: delete the now row, put the then line
 //     back at its own ordinal. It is not an in-place write, because the two
@@ -4053,7 +4058,7 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 // row the flag showed, so a `4 → 3` flag on the second of two coincident rows
 // replaced the first (`100|1, 100|4` against `100|1, 100|3` reverted to
 // `100|4, 100|3` — the visible gain unchanged and an untouched row rewritten)
-// and reverting a `[+]3` beside a common `1` deleted the `1`. The one apply
+// and reverting an added `3` beside a common `1` deleted the `1`. The one apply
 // body, apply_history_revert_column above, resolves every subject against the
 // PRE-ACT store and states the order that keeps the identities valid.
 //

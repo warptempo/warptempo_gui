@@ -214,8 +214,7 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // a large reason why no colors really look right on the GUI." — then "Why
 // not simply leave unscaled? That would preserve the stem/flag size
 // relation from CEP"): the staircase stands in whole device cells beside
-// the one-device-px stem, the history view's split triangle the same
-// (CueTrianglePass::split) and the playhead's head with them (render.h's
+// the one-device-px stem, the playhead's head with them (render.h's
 // cue_triangle_unit_px, which names every reader). THE ROW COUNT IS SCALED
 // (architect 2026-10-26 ~13:40, on the row count as a per-device number:
 // "why density? why not just simple scale? tablet is only real surface.
@@ -237,8 +236,8 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // THE SHADOW IS ONE LABEL QUANTUM RIGHT AND ONE DOWN (architect 2026-10-26
 // ~13:05: the triangle's shadow takes the label's own offset, render.h's
 // cue_label_shadow_offset_px — 3 and 3 device px at 300 %, 2 and 2 at
-// 200 %, scaled — on every triangle, one rule: the cue's, the split one
-// whole beneath its two colors, the playhead's head). THE CALLER'S CLIP
+// 200 %, scaled — on every triangle, one rule: the cue's and the
+// playhead's head). THE CALLER'S CLIP
 // CUTS IT: in the marker lane the triangle stands on the lane's last rows
 // and the lane's clip (paint_cues, render.cpp) ends at the lane's last
 // row, so the shadow's bottom `offset` rows are lost and it never
@@ -267,8 +266,8 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
 // left to right over every label), share ONE PREPARED TARGET instead of each
 // taking its own. begin() asks direct_pixel_target once — the surface
 // flushed, the clip's rectangle list copied, the translation read — and the
-// unit, the rows and the shadow's offset once; triangle() and split() stamp
-// the cells and GROW ONE DIRTY BOX (the shadow's offset right and down
+// unit, the rows and the shadow's offset once; triangle() stamps
+// the cells and GROWS ONE DIRTY BOX (the shadow's offset right and down
 // within it);
 // end() marks that box dirty once. Where the target is refused, every
 // triangle of the pass fills through cairo instead, so the two roads never
@@ -291,28 +290,14 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
 class CueTrianglePass {
 public:
     void begin(cairo_t* cr);
-    // The ordinary triangle: the stamp where the target was taken, else
-    // cairo's two fills.
+    // The triangle: the stamp where the target was taken, else cairo's two
+    // fills. (The `h` view's split triangle, two colors about the apex
+    // column, 2026-10-10 to 2026-10-26, left when a nudged pair became two
+    // cues.)
     void triangle(int col, int top, GuiColor color, GuiColor shadow);
-    // THE SPLIT TRIANGLE of the `h` view's changed pair (architect
-    // 2026-10-10 / 2026-10-11; render_history_diff_flags through paint_cues):
-    // the same cells and shadow (whole, offset as the unsplit's) at column
-    // `col` — the stem's own on a
-    // same-frame pair, the two stems' midpoint floored on a nudged one — its
-    // cells left of `col` in `left`, those right of it in `right`, and THE
-    // APEX COLUMN `col` in `left`: an aliased cell is one color whole, so the
-    // column the antialiased split shared (2026-10-11 to 2026-10-26) is the
-    // left marker's, as the left marker's segment comes first in the label —
-    // a deliberate asymmetry of one column. The ordinary triangle's two roads.
-    void split(int col, int top, GuiColor left, GuiColor right,
-               GuiColor shadow);
     void end();
 
 private:
-    // Both doors' one body: `split_x` the first column `right` takes, or
-    // INT_MAX for one color.
-    void cells(int col, int top, GuiColor left, GuiColor right, int split_x,
-               GuiColor shadow);
     void stamp_span(int x0, int x1, int y, uint32_t pixel);
     cairo_t*          cr_        = nullptr;
     DirectPixelTarget target_{};

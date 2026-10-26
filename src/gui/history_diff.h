@@ -194,9 +194,10 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 //   reading the mode shipped with. It answers "how does what I have now differ
 //   from that checkpoint?", which is what a restore or a load-in-place is about.
 //
-// THE COLOR GRAMMAR IS ONE RULE ACROSS BOTH, because the NEWER side is always
-// the now side of the diff: green `[+]` is what the newer side has, red `[-]`
-// what the older side had and the newer dropped. In cumulative the newer side is
+// THE LANE'S GRAMMAR IS ONE RULE ACROSS BOTH, because the NEWER side is always
+// the now side of the diff: a plain label is what the newer side has, a struck
+// one what the older side had and the newer dropped (render.h's history
+// paragraph, 2026-10-26). In cumulative the newer side is
 // the session; in iterative it is the next step forward — the newer checkpoint,
 // or the session itself at the newest index.
 //
@@ -488,7 +489,7 @@ GuiHistoryCommitDelta compute_commit_delta(
 // unchanged — read as ONE CHANGED PAIR, the marker nudged (pair_nudged_changes,
 // history_diff.cpp). WHY 150: the window exists so a moved marker's history
 // flag is not hidden behind its partner's; at his working zoom a short label
-// such as "[-]a.03" is cut by a neighbor's triangle up to about 120 ms past its
+// such as "a.03" is cut by a neighbor's triangle up to about 120 ms past its
 // stem (measured on his tablet capture 2026-10-12: a pair 104 ms apart already
 // overlapping), and 150 gives margin past that for longer labels while
 // standing at half the ~300 ms least spacing of real markers of either kind in

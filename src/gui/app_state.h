@@ -5676,7 +5676,7 @@ struct AppState {
     // painted has no box to click.
     std::vector<FlagHitRect> flag_hit_rects;
     std::vector<MarkerStem>  marker_stems;
-    // THE NUDGED PAIRS' RECTANGLE RUNS (MarkerStemRun, render.h; 2026-10-11),
+    // THE NUDGED PAIRS' RING RUNS (MarkerStemRun, render.h; 2026-10-11),
     // the stems' companion: the history lane's painter alone writes them (the
     // rebuild empties the staged half before any lane painter runs), they
     // stage and promote with the pair above and drop with it at a mode edge,
@@ -6939,11 +6939,11 @@ struct AppState {
     //
     // WHAT IT SHOWS. While it stands the marker lane paints NO live marker.
     // In their place it paints ONE COMMIT'S DELTA against the session: a flag
-    // per line the session has and that commit did not (`[+]`), a flag per line
-    // that commit had and the session dropped (`[-]`), and ONE DOUBLE-WIDTH
-    // flag per same-frame pair (the removed half then, the added half now),
-    // each half in its kind's colour, added or removed, the label's sign
-    // saying it in words too (render_history_diff_flags). The flags sit at their
+    // per line the session has and that commit did not (its label plain), a
+    // flag per line that commit had and the session dropped (its label
+    // struck), ONE flag per same-frame pair (its label the removed half,
+    // struck, then the added half) and TWO CUES joined by a ring per nudged
+    // pair (render_history_diff_flags, architect 2026-10-26). The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
     // marker stands exactly where it stood. Row 8's state cell, beside the
     // clock, carries the walk line: the member's position, then the
@@ -7486,6 +7486,21 @@ struct AppState {
         // focus over it, and the modified lane pair, which writes a non-empty
         // set and the focus it lands on.
         int         focus  = -1;
+        // WHICH CUE OF THE FOCUSED FLAG THE PLAYHEAD STANDS ON (architect
+        // 2026-10-26: "it's accurate that every marker gets a tab — next
+        // marker, previous marker tab"): a nudged pair paints two cues
+        // (render_history_diff_flags), each its own Tab stop and landing, and
+        // this names the one the focus stands on — the removed line's at
+        // then_frame or the added line's at now_frame. Meaningful exactly
+        // while `focus` names a nudged pair; on every other flag its one cue
+        // stands for both (HistoryDiffFlag::cue_frame). EVERY SETTER OF
+        // `focus` WRITES IT BESIDE: the plain click and the modified pair the
+        // half of the rect they hit (FlagHitRect::diff_half), the Tab cycle
+        // its stop's (history_diff_cycle_target). It never changes the
+        // picture — the selected look is the whole item's, both cues — so no
+        // fingerprint keys it. Cleared with the focus
+        // (clear_history_mode_focus) and by the whole-struct reset.
+        HistoryDiffHalf focus_half = HistoryDiffHalf::Removed;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
         // `flags` beside the focus and the REVERT ACT's subject. It is the live
         // selection model re-expressed mode-locally — shift-click takes the
@@ -12613,41 +12628,54 @@ struct MarkerWalkStep {
 MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                                 bool forward);
 
-// WHERE A HISTORY FLAG LANDS THE PLAYHEAD, IN THE DISPLAYED DOMAIN — the Tab
-// walk's, the focus click's, the Center press's and the walk's seed
+// WHERE A HISTORY FLAG'S CUE LANDS THE PLAYHEAD, IN THE DISPLAYED DOMAIN —
+// the Tab walk's, the focus click's, the Center press's and the walk's seed
 // (history_diff_cycle_target below), each landing it through the movement
-// owner's domain form (land_playhead_on_domain_frame, input_handler.h): the
-// flag's own frame forward-mapped, and on a NUDGED pair THE PAINTED CENTRE
-// (2026-10-11) — the mean of its two halves' frames EACH MAPPED into the
-// displayed domain first (std::nearbyint), the basis the painter centres the
-// split triangle on (render_history_diff_flags maps both stems and stands the
-// flag between the painted columns). A midpoint taken in SOURCE frames and
-// then mapped would leave the triangle across a warp breakpoint in target
-// view, where the map's slope differs on the pair's two sides; in source view
-// the map is the identity and the two agree. The pair's then / now SOURCE
-// frames stay what pairing and revert read; only the landing is the domain's.
+// owner's domain form (land_playhead_on_domain_frame, input_handler.h): THE
+// CUE'S OWN FRAME forward-mapped (HistoryDiffFlag::cue_frame) — on a NUDGED
+// pair the frame of `half` alone, the removed cue's then_frame or the added
+// cue's now_frame, each standing at its own column (architect 2026-10-26,
+// "every marker gets a tab"; the painted centre between the two, 2026-10-11
+// to 2026-10-26, left with the split triangle); on every other flag its one
+// cue's, `half` unread. The pair's then / now SOURCE frames stay what
+// pairing and revert read; only the landing is the domain's.
 inline int64_t history_diff_flag_landing_domain_frame(
-        const AppState& a, const GuiAudio& audio, const HistoryDiffFlag& f) {
-    if (!f.nudged()) return source_frame_to_active_domain(a, audio, f.time_frame);
-    const int64_t then_d = source_frame_to_active_domain(a, audio, f.then_frame);
-    const int64_t now_d  = source_frame_to_active_domain(a, audio, f.now_frame);
-    return static_cast<int64_t>(std::nearbyint(
-        (static_cast<double>(then_d) + static_cast<double>(now_d)) / 2.0));
+        const AppState& a, const GuiAudio& audio, const HistoryDiffFlag& f,
+        HistoryDiffHalf half) {
+    return source_frame_to_active_domain(a, audio, f.cue_frame(half));
 }
 
-// THE `h` VIEW'S DIFF-FLAG CYCLE, ITS STOP — the index a bare Tab (forward)
-// or Shift+Tab (back) would focus in history_mode.flags, or -1 where the press
-// is a silent consumed no-op. ONE OWNER, ONE READER: the act
+// ONE STOP OF THE `h` VIEW'S DIFF-FLAG CYCLE: a flag's index in
+// history_mode.flags and the cue of it the stop stands on (`flag` -1 for no
+// stop).
+struct HistoryDiffStop {
+    int             flag = -1;
+    HistoryDiffHalf half = HistoryDiffHalf::Removed;
+};
+
+// THE `h` VIEW'S DIFF-FLAG CYCLE, ITS STOP — the cue a bare Tab (forward)
+// or Shift+Tab (back) would focus in history_mode.flags, or no stop where
+// the press is a silent consumed no-op. ONE OWNER, ONE READER: the act
 // (GuiInputHandler::cycle_history_diff_flag_focus, input_key_dispatch.cpp),
 // which lands on the answer. The Walk button's face does not ask it: its
 // ctrl form, the tab switch, keeps it lit wherever the roster is
 // (redesign_button_enabled, the walk's arm).
 //
-// AN EMPTY LIST AND THE NO-WRAP WALLS answer -1: forward from the last flag,
-// back from the first.
+// THE STOPS ARE THE CUES (architect 2026-10-26: "it's accurate that every
+// marker gets a tab — next marker, previous marker tab. As it is now with
+// the merge, neither marker gets a tab, and the point in the middle gets a
+// tab"): a nudged pair is TWO stops, its left cue then its right in column
+// order (HistoryDiffFlag::left_half / right_half), every other flag one.
+// From a focus on a pair's left cue a Tab steps to its right cue, and from
+// its right cue a Shift+Tab to its left; past those the step leaves the
+// flag, arriving on the next flag's left cue forward and the previous
+// flag's right cue back.
+//
+// AN EMPTY LIST AND THE NO-WRAP WALLS answer no stop: forward from the last
+// cue, back from the first.
 //
 // THE SEED IS THE PLAYHEAD ANCHOR (architect 2026-08-22), not the list's
-// first index: with no focus standing, a Tab lands the nearest flag STRICTLY
+// first index: with no focus standing, a Tab lands the nearest cue STRICTLY
 // PAST the playhead and a Shift+Tab the nearest strictly before it — the live
 // cycle's own rule verbatim ("the playhead frame is the sole cycle anchor",
 // stated at Selection::cycle_selection), so a reader who has just opened the
@@ -12661,42 +12689,62 @@ inline int64_t history_diff_flag_landing_domain_frame(
 // in whichever of source (identity) or target (the live map) the tab was in.
 //
 // THE CANDIDATE'S FRAME IS WHERE IT LANDS (history_diff_flag_landing_domain_-
-// frame above — a nudged pair's painted centre), so a playhead the walk parked
-// on a pair is ON it here too.
+// frame above — each cue's own frame), so a playhead the walk parked on a
+// cue is ON it here too.
 //
 // FIRST/LAST HIT IS THE NEAREST HIT: rebuild_history_diff_flags leaves the
-// list sorted ASCENDING BY time_frame and the source->domain translation is
-// monotone, so the scan needs no minimum-search (a nudged pair's midpoint
-// keeps that order: no other line of the column stands within its window,
-// the merge's own rule, history_diff.h). Where several flags share one
-// frame (a changed/removed/added coincidence, which the stable sort keeps
-// grouped) the group's first member forward and its last backward is the
-// stop, and the index step then walks the rest of the group — every flag
-// stays Tab-reachable. STRICT INEQUALITY is the live family's own: a playhead
-// parked exactly on an unfocused flag steps PAST it.
-inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
-                                     bool forward) {
+// list sorted ASCENDING BY time_frame — a nudged pair's left cue's — and the
+// source->domain translation is monotone, so the scan in (flag, left cue,
+// right cue) order needs no minimum-search: a nudged pair's right cue keeps
+// that order, no other line of the column standing within its window (the
+// merge's own rule, history_diff.h). Where several flags share one frame (a
+// changed/removed/added coincidence, which the stable sort keeps grouped)
+// the group's first member forward and its last backward is the stop, and
+// the index step then walks the rest of the group — every cue stays
+// Tab-reachable. STRICT INEQUALITY is the live family's own: a playhead
+// parked exactly on an unfocused cue steps PAST it.
+inline HistoryDiffStop history_diff_cycle_target(const AppState& a,
+                                                 const GuiAudio& audio,
+                                                 bool forward) {
     const auto& flags = a.history_mode.flags;
     const int n = static_cast<int>(flags.size());
-    if (n == 0) return -1;
+    if (n == 0) return {};
+    const auto flag_at = [&](int i) -> const HistoryDiffFlag& {
+        return flags[static_cast<std::size_t>(i)];
+    };
     const int here = a.history_mode.focus;
     if (here >= 0 && here < n) {
-        if (forward) return here + 1 < n ? here + 1 : -1;
-        return here > 0 ? here - 1 : -1;
+        const HistoryDiffFlag& f = flag_at(here);
+        const HistoryDiffHalf h = a.history_mode.focus_half;
+        if (forward) {
+            if (f.nudged() && h == f.left_half()) return {here, f.right_half()};
+            if (here + 1 < n) return {here + 1, flag_at(here + 1).left_half()};
+            return {};
+        }
+        if (f.nudged() && h == f.right_half()) return {here, f.left_half()};
+        if (here > 0) return {here - 1, flag_at(here - 1).right_half()};
+        return {};
     }
     const int64_t ph_f = a.playhead_cursor_sample;
-    auto frame_of = [&](int i) -> int64_t {
-        return history_diff_flag_landing_domain_frame(
-            a, audio, flags[static_cast<std::size_t>(i)]);
+    auto frame_of = [&](int i, HistoryDiffHalf h) -> int64_t {
+        return history_diff_flag_landing_domain_frame(a, audio, flag_at(i), h);
     };
     if (forward) {
-        for (int i = 0; i < n; ++i)
-            if (frame_of(i) > ph_f) return i;
+        for (int i = 0; i < n; ++i) {
+            const HistoryDiffFlag& f = flag_at(i);
+            if (frame_of(i, f.left_half()) > ph_f) return {i, f.left_half()};
+            if (f.nudged() && frame_of(i, f.right_half()) > ph_f)
+                return {i, f.right_half()};
+        }
     } else {
-        for (int i = n - 1; i >= 0; --i)
-            if (frame_of(i) < ph_f) return i;
+        for (int i = n - 1; i >= 0; --i) {
+            const HistoryDiffFlag& f = flag_at(i);
+            if (f.nudged() && frame_of(i, f.right_half()) < ph_f)
+                return {i, f.right_half()};
+            if (frame_of(i, f.left_half()) < ph_f) return {i, f.left_half()};
+        }
     }
-    return -1;
+    return {};
 }
 
 // How a marker landing treats the camera, stated by the caller that asks for
@@ -13156,6 +13204,7 @@ inline bool history_step_button_actionable(
 inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
     const bool stood = (mode.focus != -1) || !mode.selection.empty();
     mode.focus = -1;
+    mode.focus_half = HistoryDiffHalf::Removed;
     mode.selection.clear();
     return stood;
 }
@@ -18154,6 +18203,17 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // about which box was hit.
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
                               int mouse_x, int mouse_y);
+
+// WHICH CUE of an `h`-view diff flag the point landed on — the topmost
+// rect's published half (FlagHitRect::diff_half; architect 2026-10-26, a
+// nudged pair's two cues each their own focus and landing). Same backward
+// walk, same topmost-wins arbitration as hit_test_flag, so the index and
+// the half are one rect's. TWO READERS: the mode's two flag claims
+// (handle_history_mode_press's plain claim and its modified one,
+// input_pointer.cpp), each handing the half to the click it runs. It answers
+// Removed for a point that hits no flag, which no reader asks.
+HistoryDiffHalf hit_test_history_diff_half(const AppState& app, int mouse_x,
+                                           int mouse_y);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box

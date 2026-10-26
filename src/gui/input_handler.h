@@ -440,8 +440,8 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // identical clamp, the identical damage and the identical audition end. It
 // exists for the callers holding a frame that belongs to no store entry — the
 // `h` history mode's diff flags, whose removed lines name frames the session no
-// longer has and whose nudged pair lands between its two MAPPED stems
-// (history_diff_flag_landing_domain_frame, app_state.h, 2026-10-11) — and
+// longer has, each cue landing on its own frame mapped once
+// (history_diff_flag_landing_domain_frame, app_state.h) — and
 // land_playhead_on_marker shares its write, so the marker route and the frame
 // route cannot drift. Same contract otherwise: playhead write plus the movement
 // owner's audition end, no selection, read-only allowed.
@@ -4533,8 +4533,11 @@ private:
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press);
-    void focus_history_diff_flag(int hit);
-    void select_history_diff_flags_modified(int hit, bool extend);
+    // `half`: the cue the press hit (hit_test_history_diff_half), the
+    // focus's half and the landing (AppState::HistoryMode::focus_half).
+    void focus_history_diff_flag(int hit, HistoryDiffHalf half);
+    void select_history_diff_flags_modified(int hit, HistoryDiffHalf half,
+                                            bool extend);
     void close_history_mode();
     // The session is the press's (run_publish_chord's own): the `h` visit's,
     // or the main window's transient bind.

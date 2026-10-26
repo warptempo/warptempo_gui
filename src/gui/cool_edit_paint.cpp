@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <limits>
 #include <vector>
 
 // The rules are at the declarations (cool_edit_paint.h); the construction is
@@ -153,11 +152,9 @@ uint32_t cue_fill_pixel(GuiColor c) {
 
 // CAIRO'S ROAD, one whole-cell rectangle per row, the shadow's first, `so`
 // right and `so` down: where the target is refused (the identity at
-// CueTrianglePass, cool_edit_paint.h). `split` the column from which
-// `right` takes over (cells at or past it), or INT_MAX for one color.
+// CueTrianglePass, cool_edit_paint.h).
 void paint_cue_cells_cairo(cairo_t* cr, int col, int top, int rows, int so,
-                           GuiColor left, GuiColor right, int split,
-                           GuiColor shadow) {
+                           GuiColor color, GuiColor shadow) {
     const int u = cue_triangle_unit_px();   // one device px
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -168,19 +165,13 @@ void paint_cue_cells_cairo(cairo_t* cr, int col, int top, int rows, int so,
     }
     set_palette_source(cr, shadow);
     cairo_fill(cr);
-    const auto half = [&](GuiColor c, bool right_half) {
-        cairo_new_path(cr);
-        for (int r = 0; r < rows; ++r) {
-            const CueRowSpan sp = cue_row_span(col, r, rows, u);
-            const int x0 = right_half ? std::max(sp.x0, split) : sp.x0;
-            const int x1 = right_half ? sp.x1 : std::min(sp.x1, split);
-            if (x1 > x0) cairo_rectangle(cr, x0, top + r * u, x1 - x0, u);
-        }
-        set_palette_source(cr, c);
-        cairo_fill(cr);
-    };
-    half(left, false);
-    if (split != std::numeric_limits<int>::max()) half(right, true);
+    cairo_new_path(cr);
+    for (int r = 0; r < rows; ++r) {
+        const CueRowSpan sp = cue_row_span(col, r, rows, u);
+        cairo_rectangle(cr, sp.x0, top + r * u, sp.x1 - sp.x0, u);
+    }
+    set_palette_source(cr, color);
+    cairo_fill(cr);
     cairo_restore(cr);
 }
 
@@ -227,40 +218,22 @@ void CueTrianglePass::stamp_span(int x0, int x1, int y, uint32_t pixel) {
 
 void CueTrianglePass::triangle(int col, int top, GuiColor color,
                                GuiColor shadow) {
-    cells(col, top, color, color, std::numeric_limits<int>::max(), shadow);
-}
-
-void CueTrianglePass::split(int col, int top, GuiColor left, GuiColor right,
-                            GuiColor shadow) {
-    // The cells right of the apex column take `right`, the apex column the
-    // left's (the declaration's rule).
-    cells(col, top, left, right, col + u_, shadow);
-}
-
-void CueTrianglePass::cells(int col, int top, GuiColor left, GuiColor right,
-                            int split_x, GuiColor shadow) {
     if (!direct_) {
-        paint_cue_cells_cairo(cr_, col, top, rows_, so_, left, right, split_x,
-                              shadow);
+        paint_cue_cells_cairo(cr_, col, top, rows_, so_, color, shadow);
         return;
     }
     // THE STAMP: the shadow's cells `so_` right and `so_` down, then the
     // color's.
-    const bool two  = split_x != std::numeric_limits<int>::max();
     const int  dcol = col + target_.dx, dtop = top + target_.dy;
-    const int  dsplit = two ? split_x + target_.dx : split_x;
     const uint32_t sh = cue_fill_pixel(shadow);
-    const uint32_t lp = cue_fill_pixel(left);
-    const uint32_t rp = cue_fill_pixel(right);
+    const uint32_t cp = cue_fill_pixel(color);
     for (int r = 0; r < rows_; ++r) {
         const CueRowSpan sp = cue_row_span(dcol, r, rows_, u_);
         stamp_span(sp.x0 + so_, sp.x1 + so_, dtop + r * u_ + so_, sh);
     }
     for (int r = 0; r < rows_; ++r) {
         const CueRowSpan sp = cue_row_span(dcol, r, rows_, u_);
-        const int y = dtop + r * u_;
-        stamp_span(sp.x0, std::min(sp.x1, dsplit), y, lp);
-        if (two) stamp_span(std::max(sp.x0, dsplit), sp.x1, y, rp);
+        stamp_span(sp.x0, sp.x1, dtop + r * u_, cp);
     }
 }
 

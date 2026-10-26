@@ -62,7 +62,10 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_TRUETYPE_TABLES_H
 
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 
@@ -81,13 +84,19 @@ struct OutlineFace {
 // once at the install: the "H" ink height the cap band is measured on, the
 // "l" ink height the ascender line is measured on (gui_font_ascender_ink_px),
 // and the face's ascender, descender and line height (FreeType's, the file's
-// hhea) — the vertical metrics every seat reads.
+// hhea) — the vertical metrics every seat reads — and THE STRIKE'S TWO
+// (gui_font_strike_band, 2026-10-26): the "l" ink WIDTH, its one stem, and
+// the OS/2 table's yStrikeoutPosition, the table read through
+// FT_Get_Sfnt_Table (this file's one road onto a TrueType table, opened
+// for the strike).
 struct FileMetrics {
     double cap_em     = 0.0;
     double l_ink_em   = 0.0;
     double ascent_em  = 0.0;
     double descent_em = 0.0;
     double line_em    = 0.0;
+    double l_stem_em  = 0.0;
+    double strike_em  = 0.0;
 };
 FileMetrics g_metrics[kGuiFontFileCount];
 
@@ -154,6 +163,17 @@ double outline_ink_em(const OutlineFace& f, char32_t cp) {
            static_cast<double>(f.ft->units_per_EM);
 }
 
+// THE OUTLINE'S INK WIDTH OF ONE GLYPH, per em: the same unscaled, unhinted
+// bounding box across (xMax − xMin) — the stroke, read off the "l"
+// (gui_font_strike_band). 0 when the face lacks the glyph.
+double outline_ink_width_em(const OutlineFace& f, char32_t cp) {
+    if (f.ft == nullptr) return 0.0;
+    const FT_UInt gid = FT_Get_Char_Index(f.ft, cp);
+    if (gid == 0 || FT_Load_Glyph(f.ft, gid, FT_LOAD_NO_SCALE) != 0) return 0.0;
+    return static_cast<double>(f.ft->glyph->metrics.width) /
+           static_cast<double>(f.ft->units_per_EM);
+}
+
 // THE OUTLINE'S INK CENTRE OF ONE GLYPH, in font units up from the baseline,
 // off the same unscaled, unhinted bounding box as outline_ink_em; `gid` 0
 // when the face lacks the glyph.
@@ -214,20 +234,28 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     bool ok = true;
     // EVERY FILE BUILDS (gui_font.h's head), and each file's "H" ink, its
     // own vertical metrics (FreeType's ascender, descender and height, the
-    // file's hhea, per em) and its sign axis are read off it; every file
-    // must carry the "H" and the seven glyphs its axis is measured on.
+    // file's hhea, per em), its strike's stem and position (the "l" across,
+    // the OS/2 yStrikeoutPosition) and its sign axis are read off it; every
+    // file must carry the "H", the "l", an OS/2 table and the seven glyphs
+    // its axis is measured on.
     for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
         FileMetrics& m = g_metrics[i];
         m.cap_em   = outline_ink_em(g_outline[i], U'H');
         m.l_ink_em = outline_ink_em(g_outline[i], U'l');
+        m.l_stem_em = outline_ink_width_em(g_outline[i], U'l');
         if (const FT_Face ft = g_outline[i].ft) {
             const double upem = static_cast<double>(ft->units_per_EM);
             m.ascent_em  = static_cast<double>(ft->ascender) / upem;
             m.descent_em = -static_cast<double>(ft->descender) / upem;
             m.line_em    = static_cast<double>(ft->height) / upem;
+            if (const auto* os2 = static_cast<const TT_OS2*>(
+                    FT_Get_Sfnt_Table(ft, FT_SFNT_OS2)))
+                m.strike_em =
+                    static_cast<double>(os2->yStrikeoutPosition) / upem;
         }
-        if (m.cap_em <= 0.0 || m.l_ink_em <= 0.0 || m.ascent_em <= 0.0)
+        if (m.cap_em <= 0.0 || m.l_ink_em <= 0.0 || m.ascent_em <= 0.0 ||
+            m.l_stem_em <= 0.0 || m.strike_em <= 0.0)
             ok = false;
         g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
         if (!g_sign_axis_ok[i]) ok = false;
@@ -253,6 +281,17 @@ double gui_font_cap_px(const GuiFont& f) {
 
 double gui_font_ascender_ink_px(const GuiFont& f) {
     return g_metrics[file_of(f.face)].l_ink_em * gui_font_em_px(f);
+}
+
+GuiStrikeBand gui_font_strike_band(const GuiFont& f) {
+    // The rule and the measured rows are at the declaration (gui_font.h).
+    const FileMetrics& m = g_metrics[file_of(f.face)];
+    const double em = gui_font_em_px(f);
+    const int h = std::max(1, static_cast<int>(std::nearbyint(m.l_stem_em * em)));
+    const double centre = m.strike_em * em;
+    return GuiStrikeBand{
+        static_cast<int>(std::nearbyint(-centre - static_cast<double>(h) / 2.0)),
+        h};
 }
 
 const GuiSignAxis& gui_sign_axis(GuiFace face) {

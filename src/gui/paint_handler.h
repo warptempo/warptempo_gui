@@ -11,6 +11,7 @@
 #include <cairo/cairo.h>
 #include <array>
 #include <string>
+#include <string_view>
 #include <vector>
 
 
@@ -100,30 +101,28 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // — architect 2026-08-28; the picker's row is Cancel alone since 2026-08-29 and
 // wears no label.)
 
-// THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
-// DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's
-// original `[+] <payload>`). Defined in waveform_cache.cpp beside its first
-// caller and declared here for its SECOND (2026-08-05): ROW 8'S STATE CELL's
-// walk line, whose `Scale: [-]<then> [+]<now>` is the same vocabulary at
-// another surface, so the two cannot spell the sign differently.
-//   * a WARP payload is the tempo token, so this reads `[+]1.05` live and
-//     `[+]#1.05` disabled;
+// THE `h` HISTORY LANE'S ONE LABEL SPELLING — THE LINE'S OWN TEXT AS THE
+// LIVE LANE SHOWS IT, NO SIGN (architect 2026-10-26 ~15:30: "we could also
+// remove the brackets plus minus, because that becomes redundant at that
+// point. And those are always hard to see anyways at the font size. A
+// strike through is easier to see"): the removed half tells itself by its
+// STRUCK label (resolve_flag_face's table), the added by its plain one. The
+// disable byte `#` leads where the line's own '#' is set, the line's own
+// byte. Defined in waveform_cache.cpp beside its one caller. THE FOUR LINE
+// KINDS:
+//   * a WARP line's payload is its tempo token: `1.05` live, `#1.05`
+//     disabled;
 //   * a PHASE RESET has no payload — its frame is its whole identity — so it
-//     reads the bare `[-]` / `[+]`, with the `#` disable spelling as its one
-//     payload when the bit is set (`[+]#`). That is what makes the phase-reset
-//     column's same-frame CHANGED pair say anything at all: a same-frame
-//     change there IS a disable toggle, so `[-]#` beside `[+]` is the toggle
-//     in the file's own spelling, where `[-]` beside `[+]` would carry no
-//     information (a NUDGED pair's `[-]` beside `[+]` says the move, its two
-//     stems apart, 2026-10-11);
-//   * the CORNER passes disabled=false and the `scale=` token, the payload arm
-//     alone.
+//     reads the live lane's display token (kPhaseResetLaneToken, render.h):
+//     `reset` live, `#reset` disabled. A phase-reset same-frame CHANGED pair
+//     IS a disable toggle, so `#reset` (struck) beside `reset` — or the
+//     reverse — is the toggle in the file's own spelling.
+// (Row 8's walk line spells its own `Scale: [-]<then> [+]<now>`,
+// history_walk_line in paint_handler.cpp: a struck run has no road there.)
 //
-// A warp token is rest-of-line, the whole payload. ASCII by
-// construction: the signs are literals and every token comes from a sidecar
-// grammar that is ASCII-only.
-std::string history_diff_label(const char* sign, bool disabled,
-                               const std::string& token = {});
+// A warp token is rest-of-line, the whole payload. ASCII by construction:
+// every token comes from a sidecar grammar that is ASCII-only.
+std::string history_diff_label(bool disabled, std::string_view token);
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //
@@ -876,7 +875,6 @@ private:
         // and bottom dot runs are phased from, so the pattern stays put on
         // the song as the view pans.
         double stem_x = 0.0;
-        bool   red    = false; // the reset is in the column's red set (the ring's dots)
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 
@@ -1046,11 +1044,11 @@ private:
     //
     // NO PAINT-TIME COLOR OVERRIDE (architect 2026-10-03): the stem paints
     // the stash's class. The open flag editor's refusal recolors nothing.
-    // It paints the `h` view's nudged pairs' rectangle runs first
+    // It paints the `h` view's nudged pairs' ring runs first
     // (paint_marker_stem_runs, AppState::marker_stem_runs), the stems their
     // sides.
     void paint_marker_stems(GuiCanvasSink& sink, const GuiRect& area);
-    // The nudged pairs' rectangle runs (MarkerStemRun, render.h; the body
+    // The nudged pairs' ring runs (MarkerStemRun, render.h; the body
     // owns the form), paint_marker_stems' first act.
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing

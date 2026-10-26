@@ -1025,18 +1025,11 @@ uint64_t hash_selection(const std::set<int>& s,
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).
 
-// ONE DIFF FLAG'S LABEL, both columns, both sides — and, since 2026-08-05, the
-// bottom strip's `Scale:` segment too. The contract and the shapes it produces
-// are at the declaration (paint_handler.h); what the body says is the whole
-// spelling: THE SIGN, THEN THE PAYLOAD DIRECTLY AGAINST IT.
-//
-// NO SPACE AFTER THE BRACKET (architect 2026-08-05, superseding the arc's
-// original `[+] <payload>`), which is why the empty-payload case needs no arm of
-// its own any more: a phase reset with its bit clear appends nothing and rests
-// at the bare sign.
-std::string history_diff_label(const char* sign, bool disabled,
-                               const std::string& token) {
-    std::string out(sign);
+// ONE DIFF FLAG'S LABEL, both columns, both sides. The contract and the four
+// shapes it produces are at the declaration (paint_handler.h): the disable
+// byte where the line's own is set, then the line's token, no sign.
+std::string history_diff_label(bool disabled, std::string_view token) {
+    std::string out;
     if (disabled) out += '#';
     out += token;
     return out;
@@ -1084,14 +1077,15 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // each is meaningful exactly when its own half's bool is set.
     //
     // A WARP token is the payload past the '|'; a phase reset has no payload,
-    // so the phase fills pass no token at all.
+    // so the phase fills pass the live lane's display token
+    // (kPhaseResetLaneToken; history_diff_label's four line kinds).
     //
     // EACH HALF'S ORDINAL RIDES ALONG TOO (2026-09-16): a changed pair copies
     // both sides', a removed flag its then side's, an added flag its now
     // side's — off the same delta entry, so the row the flag shows is the row
     // the revert addresses (the contract is at HistoryDiffFlag, render.h).
     // AND EACH HALF'S OWN FRAME (2026-10-11, the nudged pair): `then_frame`
-    // and `now_frame` off the same entry, `time_frame` the left marker's —
+    // and `now_frame` off the same entry, `time_frame` the left cue's —
     // a changed pair's smaller frame, which on a same-frame pair is the one.
     if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
@@ -1102,9 +1096,9 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed      = true;
             f.added        = true;
             f.removed_text =
-                history_diff_label("[-]", c.then_disabled);
+                history_diff_label(c.then_disabled, kPhaseResetLaneToken);
             f.added_text =
-                history_diff_label("[+]", c.now_disabled);
+                history_diff_label(c.now_disabled, kPhaseResetLaneToken);
             f.then_ordinal            = c.then_ordinal;
             f.now_ordinal             = c.now_ordinal;
             f.then_disabled           = c.then_disabled;
@@ -1118,7 +1112,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.then_frame   = e.frame;
             f.removed      = true;
             f.removed_text =
-                history_diff_label("[-]", e.disabled);
+                history_diff_label(e.disabled, kPhaseResetLaneToken);
             f.then_ordinal            = e.ordinal;
             f.then_disabled           = e.disabled;
             f.then_effective_disabled = e.disabled;
@@ -1130,7 +1124,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.now_frame  = e.frame;
             f.added      = true;
             f.added_text =
-                history_diff_label("[+]", e.disabled);
+                history_diff_label(e.disabled, kPhaseResetLaneToken);
             f.now_ordinal            = e.ordinal;
             f.now_effective_disabled = e.disabled;
             out.push_back(std::move(f));
@@ -1145,9 +1139,9 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed      = true;
             f.added        = true;
             f.removed_text =
-                history_diff_label("[-]", c.then_disabled, c.then_tempo_token);
+                history_diff_label(c.then_disabled, c.then_tempo_token);
             f.added_text =
-                history_diff_label("[+]", c.now_disabled, c.now_tempo_token);
+                history_diff_label(c.now_disabled, c.now_tempo_token);
             f.then_token    = c.then_tempo_token;
             f.then_ordinal            = c.then_ordinal;
             f.now_ordinal             = c.now_ordinal;
@@ -1162,7 +1156,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.then_frame   = e.frame;
             f.removed      = true;
             f.removed_text =
-                history_diff_label("[-]", e.disabled, e.tempo_token);
+                history_diff_label(e.disabled, e.tempo_token);
             f.then_token    = e.tempo_token;
             f.then_ordinal            = e.ordinal;
             f.then_disabled           = e.disabled;
@@ -1174,7 +1168,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame = e.frame;
             f.now_frame  = e.frame;
             f.added      = true;
-            f.added_text = history_diff_label("[+]", e.disabled, e.tempo_token);
+            f.added_text = history_diff_label(e.disabled, e.tempo_token);
             f.now_ordinal            = e.ordinal;
             f.now_effective_disabled = e.effective_disabled;
             out.push_back(std::move(f));
@@ -1479,11 +1473,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback OR that share their frame with another row of their own store,
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
-    // INVALID — the triangle and its stem's dots alone in the invalid color,
-    // `invalid_label`, its resting label in it too (resolve_flag_face's
-    // table, render.cpp; architect 2026-10-09 ~11:50, 2026-10-11); DISABLED
-    // wins over it, a disabled invalid marker painting the disabled look in
-    // the faded invalid color.
+    // STRUCK — the plain cue with its label struck through (resolve_flag_face's
+    // table, render.cpp; architect 2026-10-26 ~15:10, "have coincident
+    // markers be shown as a strike through"); a disabled one is the faded cue
+    // with its faded label struck.
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag

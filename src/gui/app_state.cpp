@@ -267,6 +267,13 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     return MarkerCell::Payload;
 }
 
+HistoryDiffHalf hit_test_history_diff_half(const AppState& app, int mouse_x,
+                                           int mouse_y) {
+    // The rule is at the declaration (app_state.h).
+    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
+    return r ? r->diff_half : HistoryDiffHalf::Removed;
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     (void)audio;

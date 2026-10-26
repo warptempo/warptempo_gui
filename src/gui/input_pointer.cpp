@@ -1814,9 +1814,9 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // audition's end, then the seat. Every caller of this one is a command whose
 // subject is the playhead (the `h` mode's Tab cycle, its `c` and its two
 // diff-flag click bodies), so none of them wants the reseat. IT TAKES A
-// DISPLAYED-DOMAIN FRAME (2026-10-11): its callers land a diff flag where the
-// flag is painted (history_diff_flag_landing_domain_frame, app_state.h), and a
-// nudged pair's painted centre exists only in the displayed domain.
+// DISPLAYED-DOMAIN FRAME (2026-10-11): its callers land a diff flag's cue
+// where it is painted, its frame mapped into the displayed domain once by the
+// one owner (history_diff_flag_landing_domain_frame, app_state.h).
 void land_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t domain_frame) {
     // The A/B audition's end, this entry point's half of it — the argument is
@@ -8386,8 +8386,11 @@ bool GuiInputHandler::handle_history_mode_press(
                 // the one-day lift deferral of 2026-08-15 is inverted): the
                 // range / toggle, the focus move, the land and the region
                 // clear run HERE, on the live hit, with the press's own
-                // modifier shape (shift != ctrl by this branch's gate).
-                select_history_diff_flags_modified(hit, shift);
+                // modifier shape (shift != ctrl by this branch's gate), on
+                // the cue it hit (a nudged pair's two each their own,
+                // 2026-10-26).
+                select_history_diff_flags_modified(
+                    hit, hit_test_history_diff_half(app, x, y), shift);
                 return true;
             }
         }
@@ -8500,8 +8503,10 @@ bool GuiInputHandler::handle_history_mode_press(
         // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
         // painter's stash holds the diff flags' rects, published by the same
         // pass that built app.history_mode.flags, so the index it returns is an
-        // index into that list — a double-width changed pair claiming as the one
-        // rect it is painted as. A cold stash answers -1, which is the
+        // index into that list — a same-frame pair claiming as the one rect it
+        // is painted as, a nudged pair's two cues each the pair's index with
+        // its own half (hit_test_history_diff_half, read beside it below). A
+        // cold stash answers -1, which is the
         // empty-stretch answer and is correct: nothing is clickable that is not
         // drawn. A FLAG runs the focus click AT THE PRESS (2026-08-17, like
         // the two modified clicks above — no drag to become, so nothing needs
@@ -8537,10 +8542,12 @@ bool GuiInputHandler::handle_history_mode_press(
             // already gives. THE EMPTY-LANE STRETCH IS UNTOUCHED, the lamp governing
             // FLAG presses alone as it does on the live lane
             // (AppState::add_to_selection's scope rule).
+            const HistoryDiffHalf half = hit_test_history_diff_half(app, x, y);
             if (app.add_to_selection)
-                select_history_diff_flags_modified(hit, /*extend=*/false);
+                select_history_diff_flags_modified(hit, half,
+                                                   /*extend=*/false);
             else
-                focus_history_diff_flag(hit);
+                focus_history_diff_flag(hit, half);
         } else {
             arm_placement_press(x, y, /*history=*/true,
                                 /*seed_empty_lane=*/false);
@@ -8597,7 +8604,7 @@ bool GuiInputHandler::handle_history_mode_press(
 // 2026-09-22.)
 // The rest of the minimalism STANDS: no store selection, no live focus, no
 // auto-select, no playback stop.
-void GuiInputHandler::focus_history_diff_flag(int hit) {
+void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
     const int was = app.history_mode.focus;
     const bool had_selection = !app.history_mode.selection.empty();
     // THROUGH THE ONE PAIR CLEARER (2026-08-06, closing the one route that
@@ -8606,15 +8613,20 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
     // hit arm simply re-seats the focus over it. The return is deliberately
     // unread — the damage decision below is finer than "anything stood".
     clear_history_mode_focus(app.history_mode);
-    if (hit >= 0 && hit < static_cast<int>(app.history_mode.flags.size()))
-        app.history_mode.focus = hit;
+    if (hit >= 0 && hit < static_cast<int>(app.history_mode.flags.size())) {
+        app.history_mode.focus      = hit;
+        app.history_mode.focus_half = half;
+    }
     if (app.history_mode.focus >= 0) {
+        // THE CUE THE PRESS HIT is the landing (a nudged pair's two cues each
+        // their own, 2026-10-26).
         land_playhead_on_domain_frame(
             app, audio, viewport,
             history_diff_flag_landing_domain_frame(
                 app, audio,
                 app.history_mode.flags[
-                    static_cast<std::size_t>(app.history_mode.focus)]));
+                    static_cast<std::size_t>(app.history_mode.focus)],
+                app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
     // (the flag's and its stem's colours swap; the stem's column stays put),
@@ -8671,7 +8683,9 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 // arm changes at least one flag's face (ctrl always flips the clicked one's
 // membership; shift always writes a set containing it) — and where it would not,
 // a repaint of the strip is the same cost the plain click pays.
-void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
+void GuiInputHandler::select_history_diff_flags_modified(int hit,
+                                                         HistoryDiffHalf half,
+                                                         bool extend) {
     const int n = static_cast<int>(app.history_mode.flags.size());
     if (hit < 0 || hit >= n) return;
     std::set<int>& sel = app.history_mode.selection;
@@ -8688,12 +8702,13 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
         if (it != sel.end()) sel.erase(it);
         else                 sel.insert(hit);
     }
-    app.history_mode.focus = hit;
+    app.history_mode.focus      = hit;
+    app.history_mode.focus_half = half;
     land_playhead_on_domain_frame(
         app, audio, viewport,
         history_diff_flag_landing_domain_frame(
-            app, audio,
-            app.history_mode.flags[static_cast<std::size_t>(hit)]));
+            app, audio, app.history_mode.flags[static_cast<std::size_t>(hit)],
+            half));
     viewport.invalidate_all();
 }
 

@@ -85,11 +85,10 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
-// cues paint INVALID (the triangle and its dots alone in the invalid color,
-// `invalid_label`, and the resting label in it too, a selected one the
-// chrome's text — resolve_flag_face's table, render.cpp; architect
-// 2026-10-09 ~11:50, 2026-10-11), so
-// the cue is never masked by a selection. `red` is a PAINT cue with two
+// cues paint STRUCK (the plain cue with its label struck through, in every
+// look — resting, faded, selected — resolve_flag_face's table, render.cpp;
+// architect 2026-10-26 ~15:10, the invalid color retired), so
+// the mark is never masked by a selection. `red` is a PAINT cue with two
 // meanings: the
 // render normalizes this marker, OR this marker shares its frame with another.
 // Three contributors, all computed SILENTLY from the display path (no resolver

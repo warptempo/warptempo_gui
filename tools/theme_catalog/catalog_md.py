@@ -61,9 +61,6 @@ PRESETS_PROVENANCE = (
 PRESETS_RULES = [
     'The waveform\'s outline is each preset\'s waveform color darkened, the same hue at a fixed lightness (the '
     'lightness of Cool Edit Pro 2.1\'s view bar shadows).',
-    'The Invalid color, which marks an invalid marker, is each preset\'s own center line color, except on '
-    '"Terminal, Default, Proportional", whose Invalid color is its own violet, a third color beside its red and blue '
-    'markers.',
     'The scanner (the line that moves during playback) and the zoom\'s anchor line are white in every preset, as Cool '
     'Edit\'s scanner is on every one of its presets.',
 ]

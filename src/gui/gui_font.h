@@ -135,8 +135,10 @@ struct GuiFontBytes {
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
 // two files selects as an FT-BACKED cairo face, which is what text_shape
-// requires, and carries the "H" the cap band is measured on and the hyphen,
-// the "0" and the five marks the sign axis is measured on. Its producer is
+// requires, and carries the "H" the cap band is measured on, the "l" and
+// the OS/2 strikeout position the strike is measured on
+// (gui_font_strike_band), and the hyphen, the "0" and the five marks the
+// sign axis is measured on. Its producer is
 // breach-only (the bytes are the repository's own, so a face that fails to
 // build is a build defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
@@ -176,6 +178,29 @@ double gui_font_cap_px(const GuiFont& f);
 // field inside the ring (modal_box.h's modal_box_text_baseline0, 2026-10-23: the air the eye
 // sees is the ink's, not the line box's).
 double gui_font_ascender_ink_px(const GuiFont& f);
+
+// THE STRIKE'S BAND (architect 2026-10-26 ~15:10, "have coincident markers
+// be shown as a strike through … They become one"; "it's the same thickness
+// as the regular — for example, a T would have the same thickness"): the
+// rows of the bar a struck cue label wears through its run (show_cue_label,
+// render.cpp, the one painter), relative to the run's baseline row —
+// [baseline + dy, baseline + dy + h). THE THICKNESS IS THE FACE'S STROKE AT
+// THE SIZE: the use's file's "l" — one vertical stem — measured across its
+// unscaled outline (xMax − xMin, per em, read at the install) times the em,
+// std::nearbyint, at least one device px. THE HEIGHT IS THE FACE'S OWN
+// STRIKEOUT POSITION (the file's OS/2 yStrikeoutPosition, per em, read at
+// the install): the band centered on it above the baseline, its top edge
+// rounded to a whole row at the element and the thickness below it. For
+// Liberation Sans Regular (the "l" 180 of 2048 units, the strikeout 530):
+// at 300 %'s 22 px a stroke of 1.93 → 2 rows, centered 5.69 above the
+// baseline → rows baseline − 7 .. − 6; at 200 %'s 15 px 1.32 → 1 row,
+// 3.88 above → baseline − 4; at 138 %'s 10 px 0.88 → 1 row, 2.59 above →
+// baseline − 3.
+struct GuiStrikeBand {
+    int dy = 0;   // the band's top row less the baseline row (negative: up)
+    int h  = 1;   // the band's rows, the stroke
+};
+GuiStrikeBand gui_font_strike_band(const GuiFont& f);
 
 // FIVE MARKS ON ONE RULE, EACH SEATED ON ITS TARGET (kGuiLiftedSigns, one
 // table, one reader): a mark rises by its target's ink centre less its own,
