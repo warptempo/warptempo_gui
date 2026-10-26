@@ -1226,9 +1226,12 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
 // (2026-10-09, ON SCREEN IS AS PAINTED): the columns the yellow triangle and
 // its shadow cover, centred on the one-px stem (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own cells) — 2·rows
-// device px at every scale (the triangle unscaled, 2026-10-26; 10 at the
-// default five rows, 18 at nine) — which also
+// cue_triangle_reach_right_px, render.h, the painter's own cells) — the
+// rows less one left, the rows and the shadow's offset right: 7 + 11 = 18
+// device px at 300 %, 4 + 7 = 11 at 200 %, 3 + 5 = 8 at 138 % (the cells one
+// device px, the rows and the shadow's offset scaled, 2026-10-26) — its
+// rows the whole band from the window's top below, so the shadow's offset
+// down is inside it too — which also
 // holds the one-px
 // line of the scanner and the dots, so a move repaints every column the head
 // stood on and no shadow column is left behind.
@@ -1418,11 +1421,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return {1, {}};
         }
         window_up = true;
-        // THE `cue_text` CEILING CHECKED AGAINST THE INSTALLED FACE, once,
-        // the face being installed by init() (a tripwire: the ceiling is a
-        // constant because the config is read before the face exists;
-        // cue_text_bound_holds, render.h).
-        assert(cue_text_bound_holds());
         // THE WINDOW'S COLOR SPACE, read once, here: after init() adopted the
         // window and before any painter or worker thread runs
         // (display_transform.h's head, architect 2026-10-08). True Colors,
@@ -3407,12 +3405,6 @@ int gui_main(const char* argument) {
         return 1;
     }
     materials::set_led_glow(device_config.led_glow);
-    // THE CUES' TUNING IS THE CONFIG'S TOO (the `cue_triangle_rows`,
-    // `cue_triangle_aa`, `cue_text` and `cue_lead` keys, 2026-10-26;
-    // GuiCueTuning, render.h): seeded here, before any text is shaped, any
-    // cue painted or the flag cache keyed; the settings editor's commit is
-    // the live road (GuiInputHandler::apply_cue_tuning).
-    set_cue_tuning(cue_tuning_of(device_config));
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

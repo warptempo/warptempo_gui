@@ -20,12 +20,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them but the five optional tuning keys at its
-// end (TWELVE keys since 2026-10-26 ~12:40, `cue_text` and `cue_lead`
-// returned after the triangle's two; TEN that day ~11:50,
-// `cue_triangle_rows` and `cue_triangle_aa` appended after `led_glow`, the
-// seven required ones unchanged; EIGHT 2026-10-23, `strip_pad` settled to a constant,
-// program_spec.h; nine
+// REQUIRED SET, every one of them but the optional `led_glow` (EIGHT keys
+// since 2026-10-23, `strip_pad` settled to a constant, program_spec.h; nine
 // that day, the bevel pair gone and `led_glow` appended; TEN 2026-10-21 evening,
 // `true_colors` placed after `waveform`, below; nine that afternoon, the three
 // tuning keys appended, `caption` gone and `chrome` renamed
@@ -61,16 +57,12 @@ namespace {
 //
 // THE TUNING KEYS stand after `role`, where the tuning phases' keys have
 // always stood, each leaving when he settles its value: `led_glow`
-// (2026-10-23, the hi-fi skin's lit LED), then `cue_triangle_rows` and
-// `cue_triangle_aa` (2026-10-26 ~11:50, the cue triangle's rows and its
-// antialiasing), then `cue_text` and `cue_lead` (2026-10-26 ~12:40, the
-// Program face's size and the label's gap past the triangle's reach), THE
-// OPTIONAL KEYS (device_config.h's list), each written always. (`strip_pad` stood before it
+// (2026-10-23, the hi-fi skin's lit LED), THE ONE OPTIONAL KEY
+// (device_config.h's list), written always. (`strip_pad` stood before it
 // 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's
 // strip_pad_px; `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23,
-// `text_shadow` beside them until 2026-10-22; `cue_shadow` beside the
-// label's two the morning of 2026-10-26, retired that day, the header's
-// record.)
+// `text_shadow` beside them until 2026-10-22; the cues' seven after it
+// 2026-10-26, settled that day, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -80,17 +72,11 @@ constexpr const char* kDeviceConfigKeys[] = {
     "true_colors",
     "role",
     "led_glow",
-    "cue_triangle_rows",
-    "cue_triangle_aa",
-    "cue_text",
-    "cue_lead",
 };
-// THE REQUIRED KEYS: every key of the writer's order but the five optional
-// tuning keys, its last five.
-constexpr std::size_t kDeviceConfigOptionalKeyCount = 5;
+// THE REQUIRED KEYS: every key of the writer's order but the optional
+// `led_glow`, its last.
 constexpr std::span<const char* const> kDeviceConfigRequiredKeys(
-    kDeviceConfigKeys,
-    std::size(kDeviceConfigKeys) - kDeviceConfigOptionalKeyCount);
+    kDeviceConfigKeys, std::size(kDeviceConfigKeys) - 1);
 } // namespace
 
 std::string format_gui_scale_percent(int percent) {
@@ -158,18 +144,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "led_glow") {
             // The scale's canonical digits (format_gui_scale_percent).
             s += format_gui_scale_percent(cfg.led_glow);
-        } else if (k == "cue_triangle_rows") {
-            // The same canonical digits.
-            s += format_gui_scale_percent(cfg.cue_triangle_rows);
-        } else if (k == "cue_triangle_aa") {
-            // true_colors' word (format_cue_triangle_aa, its owner's).
-            s += format_cue_triangle_aa(cfg.cue_triangle_aa);
-        } else if (k == "cue_text") {
-            // The same canonical digits.
-            s += format_gui_scale_percent(cfg.cue_text);
-        } else if (k == "cue_lead") {
-            // The same canonical digits.
-            s += format_gui_scale_percent(cfg.cue_lead);
         }
         s += '\n';
     }
@@ -295,43 +269,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kLedGlowGrammarReason);
             }
             out.led_glow = static_cast<int>(v);
-            return {};
-        }
-        // THE CUE TRIANGLE'S ROWS AND ITS ANTIALIASING (2026-10-26 ~11:50):
-        // the rows in the scale's canonical integer spelling under their
-        // range's one owner (is_cue_triangle_rows, device_config.h), the
-        // switch in true_colors' words (parse_cue_triangle_aa); absent, the
-        // struct's defaults stand.
-        if (key == "cue_triangle_rows") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) || !is_cue_triangle_rows(v)) {
-                return bad_value(ln, key, value, kCueTriangleRowsGrammarReason);
-            }
-            out.cue_triangle_rows = static_cast<int>(v);
-            return {};
-        }
-        if (key == "cue_triangle_aa") {
-            const std::optional<bool> on = parse_cue_triangle_aa(value);
-            if (!on) {
-                return bad_value(ln, key, value, kCueTriangleAaGrammarReason);
-            }
-            out.cue_triangle_aa = *on;
-            return {};
-        }
-        // THE CUE LABEL'S SIZE AND ITS GAP PAST THE TRIANGLE'S REACH
-        // (2026-10-26 ~12:40): each in the scale's canonical integer spelling
-        // under its range's one owner (is_cue_text, is_cue_lead,
-        // device_config.h); absent, the struct's defaults stand.
-        if (key == "cue_text" || key == "cue_lead") {
-            const bool text = key == "cue_text";
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) ||
-                !(text ? is_cue_text(v) : is_cue_lead(v))) {
-                return bad_value(ln, key, value,
-                                 text ? kCueTextGrammarReason
-                                      : kCueLeadGrammarReason);
-            }
-            (text ? out.cue_text : out.cue_lead) = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

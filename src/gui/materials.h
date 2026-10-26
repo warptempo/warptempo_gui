@@ -175,9 +175,9 @@ struct AppState;
 // 6A6A6E, a disabled key's legend alone. NO WORD
 // WEARS A SHADOW but the cue labels and row 8's tab name and state line,
 // over a shadow in the cue triangle's own shadow color, ONE LABEL QUANTUM
-// RIGHT AND ONE DOWN, 3 and 3 device px at 300 % and scaled, where the
-// triangle's is one device px right (architect 2026-10-26 ~10:50, "be GUI
-// scaled so different from the flag"; ~11:30, "shadow on", "the same
+// RIGHT AND ONE DOWN, 3 and 3 device px at 300 % and scaled, the
+// triangle's own offset since 2026-10-26 ~13:05 (architect 2026-10-26
+// ~10:50, "be GUI scaled"; ~11:30, "shadow on", "the same
 // shadow for the tab/git/etc text"; render.h's cue_label_shadow_offset_px,
 // show_cue_label and show_ce_label, render.h's marker lane's label
 // paragraph): the skin draws none elsewhere, the clocks' digits and the

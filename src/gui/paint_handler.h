@@ -340,8 +340,10 @@ struct WaveformCache {
 // rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
 // lane's composite height), so no cached label pixel leaves those rows
 // however far a glyph overshoots; the triangles stand on the lane's own rows
-// (paint_ce_cue_triangle's cells, cool_edit_paint.h, the shadow one device
-// px right and never down); and the flag editor and its riding cells paint
+// under a clip of those rows (paint_ce_cue_triangle's cells,
+// cool_edit_paint.h; paint_cues), so the shadow's offset down, one label
+// quantum since 2026-10-26 ~13:05, is cut at the lane's last row and never
+// lands on the frame row; and the flag editor and its riding cells paint
 // later onto the frame, never into this surface. The ruler lane above is in
 // the band as its clean upper boundary, with margin, not because anything
 // there is inked by a cue; the frame row is the strip's own foot.
@@ -408,13 +410,6 @@ struct FlagCache {
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
     uint64_t  fp_palette_generation  = 0;
-    // THE CUES' TUNING THESE PIXELS WERE PAINTED AT (cue_tuning(),
-    // render.h — architect 2026-10-26, the `cue_triangle_rows`,
-    // `cue_triangle_aa`, `cue_text` and `cue_lead` keys): the rows set every
-    // triangle's cells and the label's lead, the switch the triangles'
-    // edges, the size every label's glyphs and the gap the lead past the
-    // reach, so a commit re-renders the surface BY FIELD, the scale's shape.
-    GuiCueTuning fp_cue_tuning{};
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -609,7 +604,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (27 fields, RE-DERIVED 2026-10-26 off the compare in
+    // (26 fields, RE-DERIVED 2026-10-26 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -621,12 +616,12 @@ struct GuiPaintHandler {
     //   - THE SCALE, one field read live off render.h: fp_gui_scale_percent —
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move
-    //     with it (2026-08-29);
+    //     with it (2026-08-29) — the cue triangle's rows and the Program
+    //     face's size among them, constants of the scale since 2026-10-26
+    //     ~13:05 (render.h's cue_triangle_rows, gui_font.h's table), so the
+    //     cues' tuning field of that day left with its keys;
     //   - THE PALETTE, read live: fp_palette_generation (render.h's
     //     palette_generation — every flag pixel a palette color, 2026-10-03);
-    //   - THE CUES' TUNING, read live: fp_cue_tuning (render.h's
-    //     cue_tuning — the triangle's rows and its antialiasing, the label's
-    //     size and its gap past the triangle's reach, 2026-10-26);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;

@@ -5714,7 +5714,7 @@ struct AppState {
     // head drag — ScrollDragState::head_drag), the trim stash's doctrine
     // carried to the ruler: GuiPaintHandler::paint_ruler_row publishes the
     // rect it last DREW the head in — the triangle's and its shadow's
-    // columns cut to the waveform's, over the head's live device rows of the
+    // columns cut to the waveform's, over the head's device rows of the
     // ruler's, in SCREEN pixels, no tolerance — and
     // point_on_playhead_head (input_pointer.cpp) reads this and nothing
     // else, so the press and the cursor map answer the head on screen.

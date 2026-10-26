@@ -274,10 +274,10 @@ inline constexpr Tone kTones[] = {
     // (worst 1; 2026-10-10), the (.264, .740)
     // of the five 2026-10-09 presets missing Midnight, Stealth and Safari by 2.
     {"label",         0xD6DADE, 0.244,  0.750, nullptr},
-    // the cue's and the playhead head's shadow, one device px right of each
-    // of the triangle's rows (the marker lane and the ruler, 2026-10-09;
-    // unscaled 2026-10-26), and the cue label's, one label quantum right
-    // (show_cue_label, render.cpp)
+    // the cue's and the playhead head's shadow, one label quantum right and
+    // down of the triangle's cells (the marker lane and the ruler,
+    // 2026-10-09; the label's offset since 2026-10-26 ~13:05), and the cue
+    // label's, the same offset (show_cue_label, render.cpp)
     {"cue_shadow",    0x31363D, 0.502, -0.004, &GuiPalette::ce_cue_shadow},
     // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
     // "Files"' and the field digits' light ink on a dark Face — the chrome's

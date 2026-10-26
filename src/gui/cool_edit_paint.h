@@ -33,11 +33,9 @@
 // bar's span, the program ring. THE TRIANGLES ARE ITS ONE EXCEPTION, AT
 // 1:1 (architect 2026-10-26, "agree": "at this size the staircase is the
 // truthful drawing and the antialiasing only blurs it"): the cue's and the
-// playhead head's rows, unscaled since the same day, are Cool Edit's
-// aliased staircase in whole cells by default — the `cue_triangle_aa` key,
-// under tuning since 2026-10-26 ~11:50, paints their antialiased envelope
-// instead (paint_ce_cue_triangle). The dots are cells (a dot is not a
-// line).
+// playhead head's rows, their cells one device px, are Cool Edit's
+// aliased staircase in whole cells (paint_ce_cue_triangle). The dots are
+// cells (a dot is not a line).
 
 // -- THE CANVAS COLUMN'S CONSTANTS (2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black;
@@ -176,8 +174,7 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 // SUNKEN RING — `dark` on its top row and left column, `light` on its
 // bottom row and right column, mitred — the ring tones off the ground's mean
 // (the palette's `ce_dark` / `ce_hilight`). Its digits are the caller's, the
-// bone kBoneInk, no shadow — every time field in the program face's live
-// size (the `cue_text` key, 26 px by default),
+// bone kBoneInk, no shadow — every time field in the program face's 22 px,
 // row 8's clock (architect 2026-10-26 ~11:30) and the render player's two
 // (~12:10, "yes" to symmetry; gui_font.h's table) — centred on both axes (paint_handler.cpp's
 // time_field_* accessors own the 40-px height and the 12-px pads).
@@ -204,158 +201,125 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // PAINTER: a staircase of `rows` rows of whole cells of one unit u
 // (cue_triangle_unit_px, render.h) from `top` — 2·rows − 1 cells on the top
 // row down to one, the apex row one cell and each row above it two cells
-// wider (9, 7, 5, 3, 1 at the default five) — CENTRED ON THE STEM'S COLUMN
-// `col` (architect 2026-10-09 ~14:35: "at every scale, the marker triangle
-// must be fully centered on the stem"; the stem one device px there,
-// render.h's waveform_line_px), each row's SHADOW the same cells one unit
-// right in `shadow`, painted first (Cool Edit's shadow one pixel right of
-// every row). THE UNIT IS ONE DEVICE PX AT EVERY SCALE (architect
-// 2026-10-26, on the glass: "I think part of the problem is our flags are
-// so much larger than Cool Edit's. I think we should make the triangle
-// smaller, and that would make colors like the red from Cool Edit less
-// problematic. I think that is a large reason why no colors really look
-// right on the GUI." — then "Why not simply leave unscaled? That would
-// preserve the stem/flag size relation from CEP"), the history view's split
-// triangle the same (CueTrianglePass::split) and the playhead's head with
-// them (render.h's cue_triangle_unit_px, which names every reader).
+// wider (15, 13, … 1 at 300 %'s eight rows; 9, 7, 5, 3, 1 at 200 %'s five,
+// Cool Edit's own flag) — CENTRED ON THE STEM'S COLUMN `col` (architect
+// 2026-10-09 ~14:35: "at every scale, the marker triangle must be fully
+// centered on the stem"; the stem one device px there, render.h's
+// waveform_line_px), its SHADOW the same cells in `shadow`, painted first.
 //
-// THE SIZE AND THE ANTIALIASING ARE UNDER TUNING, TWO DEVICE KEYS (architect
-// 2026-10-26 ~11:50: "I'd like to see the marker/playhead triangle mocked
-// with antialiasing at the equivalent size of the CEP flag I posted. The
-// laptop is 15.6 inch FHD and the tablet is 10.9 inches. Calculate the dpi.
-// You can either mock or just code if it's cheaper: the flag at the same
-// size as I see it on screen here on the laptop, so that the tablet takes
-// the same physical size marker"). THE PLANNER'S NUMBERS: the laptop's
-// 1920 x 1080 at 15.6 in is 141 ppi, the tablet's 2304 x 1440 at 10.9 in
-// 249 ppi, 1.77 times the laptop's; Cool Edit's 9 by 5 flag on the laptop
-// is 1.62 by 0.90 mm, and the same physical flag on the tablet 15.9 by 8.8
-// device px — the staircase's odd widths make it 17 by 9 (1.73 by 0.92
-// mm), the nearest. So the ROW COUNT is a per-device number, 5 on the
-// laptop and 9 on the tablet: `cue_triangle_rows` (render.h's
-// cue_triangle_rows, the one accessor every reader reads; [3, 11], absent
-// 5, device_config.h) and `cue_triangle_aa` (on | off, absent off), each
-// with a Settings row and applied live, until he settles them.
+// THE CELL IS ONE DEVICE PX AT EVERY SCALE (architect 2026-10-26, on the
+// glass: "I think part of the problem is our flags are so much larger than
+// Cool Edit's. I think we should make the triangle smaller, and that would
+// make colors like the red from Cool Edit less problematic. I think that is
+// a large reason why no colors really look right on the GUI." — then "Why
+// not simply leave unscaled? That would preserve the stem/flag size
+// relation from CEP"): the staircase stands in whole device cells beside
+// the one-device-px stem, the history view's split triangle the same
+// (CueTrianglePass::split) and the playhead's head with them (render.h's
+// cue_triangle_unit_px, which names every reader). THE ROW COUNT IS SCALED
+// (architect 2026-10-26 ~13:40, on the row count as a per-device number:
+// "why density? why not just simple scale? tablet is only real surface.
+// later tablets may have higher dpi, but not lower" — and "yes" to the
+// planner's proposal): authored 8 device px at 300 %, the rows the tuning
+// key left on the tablet (~13:05, "read the current setting and apply"),
+// rounded at the element like every length off the canvas
+// (render.h's cue_triangle_rows, the one accessor) — 8 rows at 300 %, 5 at
+// 200 % (Cool Edit's 9 by 5 at the laptop's inspection scale), 4 at 150 %
+// and 138 %, 1 at the scale's floor of 50 %, the stem's own cell.
 //
-// TWO DRAWINGS, ONE GEOMETRY (the `cue_triangle_aa` key):
-//   off — DRAWN ALIASED, COOL EDIT'S HARD STAIRCASE (architect 2026-10-26
-//         ~10:40, "agree" to "at this size the staircase is the truthful
-//         drawing and the antialiasing only blurs it"; the antialiased
-//         envelope of the diagonal rule, 2026-10-09 ~12:40, stood until then
-//         — the rule's supersession at 1:1 is closed_questions.md's): a
-//         bitmap in effect, every pixel the color or the shadow whole, no
-//         coverage anywhere.
-//   on  — THE STAIRCASE'S ANTIALIASED ENVELOPE, the drawing of 2026-10-09
-//         ~12:40 to the morning of 2026-10-26 restored whole as an arm: ONE
-//         ANTIALIASED TRIANGLE in `color` with the vertices (col + 0.5 −
-//         (rows − 0.5)u, top), (col + 0.5 + (rows − 0.5)u, top) and
-//         (col + 0.5, top + rows·u) — its two sides mirror images about the
-//         stem's centre — over THE SAME TRIANGLE ONE UNIT RIGHT in `shadow`,
-//         painted first, filled under ANTIALIAS_DEFAULT.
-// Both share the row count, the unit and THE PAINTED COLUMNS [col − (rows −
-// 1)u, col + (rows + 1)u) with the shadow — the envelope's outer edges are
-// the staircase's own cell edges (cue_triangle_half_w_px and
+// DRAWN ALIASED, COOL EDIT'S HARD STAIRCASE (architect 2026-10-26 ~10:40,
+// "agree" to "at this size the staircase is the truthful drawing and the
+// antialiasing only blurs it"; ~13:05 the antialiased envelope's tuning
+// key settled "off" on the glass and retired with its arm,
+// closed_questions.md): a bitmap in effect,
+// every pixel the color or the shadow whole, no coverage anywhere.
+//
+// THE SHADOW IS ONE LABEL QUANTUM RIGHT AND ONE DOWN (architect 2026-10-26
+// ~13:05: the triangle's shadow takes the label's own offset, render.h's
+// cue_label_shadow_offset_px — 3 and 3 device px at 300 %, 2 and 2 at
+// 200 %, scaled — on every triangle, one rule: the cue's, the split one
+// whole beneath its two colors, the playhead's head). THE CALLER'S CLIP
+// CUTS IT: in the marker lane the triangle stands on the lane's last rows
+// and the lane's clip (paint_cues, render.cpp) ends at the lane's last
+// row, so the shadow's bottom `offset` rows are lost and it never
+// crosses the canvas's top frame row — "if so, that is correct" (the same
+// ruling); in the ruler the head's paint is clipped to the head's own rows,
+// the ground's last `rows` (paint_ruler_row, paint_handler.cpp), so its
+// shadow is cut alike at the ground's bottom row. Its painted columns are
+// [col − (rows − 1)u, col + rows·u + offset) (cue_triangle_half_w_px and
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads);
-// the caller's clip cuts it.
+// its rows [top, top + rows·u + offset) before the clip.
 // `shadow` is the shadow's color: `ce_cue_shadow` for a live cue and the
 // playhead's head, the faded `ce_off_cue_shadow` for a disabled cue
-// (2026-10-10, cool_edit_derive.h's faded look). TWO ROADS, ONE DRAWING, ON
-// EACH ARM (CueTrianglePass below): the stamp writes the drawing's words
-// straight into the target where direct_pixel_target takes it, else cairo
-// fills it. On the cpu canvas and the GL canvas alike the triangles paint
-// on the CPU — into the flag cache's surface and the ruler's cairo context
-// — never through the canvas sink, so the two canvases share the one
-// drawing.
+// (2026-10-10, cool_edit_derive.h's faded look). TWO ROADS, ONE DRAWING
+// (CueTrianglePass below): the stamp writes the cells' words straight into
+// the target where direct_pixel_target takes it, else cairo fills the same
+// cells as whole-pixel rectangles, antialias NONE. On the cpu canvas and the
+// GL canvas alike the triangles paint on the CPU — into the flag cache's
+// surface and the ruler's cairo context — never through the canvas sink, so
+// the two canvases share the one drawing.
 // One triangle alone (the playhead's head): a one-triangle CueTrianglePass.
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
                            GuiColor shadow);
-
-struct CueTriangleCoverage;   // cool_edit_paint.cpp, the envelope's coverage
 
 // THE TRIANGLE PASS (2026-10-13, a cost cut that paints the same pixels): the
 // cues' triangles, one consecutive run on one context (paint_cues, render.cpp,
 // left to right over every label), share ONE PREPARED TARGET instead of each
 // taking its own. begin() asks direct_pixel_target once — the surface
 // flushed, the clip's rectangle list copied, the translation read — and the
-// unit, the live rows and the live switch once (and, on the envelope's arm,
-// looks its coverage up once); triangle() and split() stamp and GROW ONE
-// DIRTY BOX; end() marks that box dirty once.
+// unit, the rows and the shadow's offset once; triangle() and split() stamp
+// the cells and GROW ONE DIRTY BOX (the shadow's offset right and down
+// within it);
+// end() marks that box dirty once. Where the target is refused, every
+// triangle of the pass fills through cairo instead, so the two roads never
+// meet in one pass.
 // THE CALLER'S CONTRACT: between begin() and end() nothing changes the
-// context's clip, matrix, operator or group (each cairo road saves and
-// restores its own), so the one target holds the clip list and translation
-// each triangle's own direct_pixel_target would have answered; and nothing
-// else asks the coverage cache, whose one entry the pass holds (the tuning
-// does not change within a paint).
-// THE STAIRCASE'S IDENTITY RESTS ON (2026-10-26, the cells aliased): an
-// opaque solid filled with OVER and antialias NONE over whole-pixel
-// rectangles, under a clip of whole-pixel boxes, covers each pixel whole or
-// not at all, and a whole coverage stores the source pixel (cairo's in-place
-// span fill, _fill_xrgb32_lerp_opaque_spans, its 255 arm) — the word
-// cue_fill_pixel writes, the color's 16-bit shorts' high bytes
-// (_cairo_color_compute_shorts, color_to_uint32). The stamp writes that word
-// into exactly the cells cairo's fill covers, the cells intersected with
-// each clip box (a cut cell is cut alike on both roads, a whole pixel being
-// in a box or not), the shadow's first and then the color's, as the two
-// fills do. Where the target is refused every staircase of the pass fills
-// through cairo, so its two roads never meet in one pass.
-// THE ENVELOPE'S IDENTITY RESTS ON (2026-10-13; CueTriangleCoverage,
-// cool_edit_paint.cpp): the same coverage bytes, the same cue_lerp8x4, the
-// same stamp order — the shadow then the color, triangles in call order —
-// the same clip list, the same cue_fill_pixel words of the same colors, and
-// THE HAND-OVER where a cairo fill falls inside the run (a box the clip
-// cuts, the split triangle, a refused target taking every triangle to
-// cairo): before the fill the stamped box is marked dirty and emptied, after
-// it the surface is flushed before the next stamp. The direct writes and
-// cairo's fills land in the one image buffer in the pass's own call order,
-// each handed over before the other road reads it.
+// context's clip, matrix, operator or group, so the one target holds the
+// clip list and translation each triangle's own direct_pixel_target would
+// have answered.
+// THE IDENTITY RESTS ON (2026-10-26, the cells aliased): an opaque solid
+// filled with OVER and antialias NONE over whole-pixel rectangles, under a
+// clip of whole-pixel boxes, covers each pixel whole or not at all, and a
+// whole coverage stores the source pixel (cairo's in-place span fill,
+// _fill_xrgb32_lerp_opaque_spans, its 255 arm) — the word cue_fill_pixel
+// writes, the color's 16-bit shorts' high bytes (_cairo_color_compute_shorts,
+// color_to_uint32). The stamp writes that word into exactly the cells cairo's
+// fill covers, the cells intersected with each clip box (a cut cell is cut
+// alike on both roads, a whole pixel being in a box or not), the shadow's
+// first, offset right and down alike on both roads, and then the color's,
+// as the two fills do.
 class CueTrianglePass {
 public:
     void begin(cairo_t* cr);
-    // The ordinary triangle: the arm's stamp where the target was taken (on
-    // the envelope's arm, and its box uncut, cue_triangle_box_uncut), else
+    // The ordinary triangle: the stamp where the target was taken, else
     // cairo's two fills.
     void triangle(int col, int top, GuiColor color, GuiColor shadow);
     // THE SPLIT TRIANGLE of the `h` view's changed pair (architect
-    // 2026-10-10 / 2026-10-11; render_history_diff_flags through paint_cues),
-    // `axis` the two stems' centres' mean in window x — a stem's centre
-    // col + 0.5 on a same-frame pair, on a nudged one possibly a column
-    // boundary. THE STAIRCASE: the same cells and shadow at the apex column
-    // ⌊axis − 0.5⌋, the two stems' midpoint floored, its cells left of it in
-    // `left`, those right of it in `right`, and THE APEX COLUMN in `left`: an
-    // aliased cell is one color whole, so the column the envelope shares is
-    // the left marker's, as the left marker's segment comes first in the
-    // label — a deliberate asymmetry of one column; the ordinary triangle's
-    // two roads. THE ENVELOPE (2026-10-11 to 2026-10-26 morning, restored
-    // whole): the same triangle and shadow on the vertical through `axis`,
-    // the half left of it in `left` and the half right of it in `right`,
-    // antialiased, the axis column's coverage shared when the axis is a
-    // stem's centre; always cairo's road (its group's arithmetic is not the
-    // stamp's), inside the hand-over. On a nudged pair whose axis falls on a
-    // boundary the envelope stands half a column right of the staircase's
-    // apex, so its shadow's last column, half covered, lies one past the
-    // reach right the hit and cull boxes read — the old road's own extent,
-    // kept.
-    void split(double axis, int top, GuiColor left, GuiColor right,
+    // 2026-10-10 / 2026-10-11; render_history_diff_flags through paint_cues):
+    // the same cells and shadow (whole, offset as the unsplit's) at column
+    // `col` — the stem's own on a
+    // same-frame pair, the two stems' midpoint floored on a nudged one — its
+    // cells left of `col` in `left`, those right of it in `right`, and THE
+    // APEX COLUMN `col` in `left`: an aliased cell is one color whole, so the
+    // column the antialiased split shared (2026-10-11 to 2026-10-26) is the
+    // left marker's, as the left marker's segment comes first in the label —
+    // a deliberate asymmetry of one column. The ordinary triangle's two roads.
+    void split(int col, int top, GuiColor left, GuiColor right,
                GuiColor shadow);
     void end();
 
 private:
-    // The staircase's two doors' one body: `split_x` the first column
-    // `right` takes, or INT_MAX for one color.
+    // Both doors' one body: `split_x` the first column `right` takes, or
+    // INT_MAX for one color.
     void cells(int col, int top, GuiColor left, GuiColor right, int split_x,
                GuiColor shadow);
     void stamp_span(int x0, int x1, int y, uint32_t pixel);
-    void grow_dirty(const GuiRect& box);
-    // The envelope's hand-over around a cairo fill (the identity above).
-    void fallback_begin();
-    void fallback_end();
-    cairo_t*                   cr_         = nullptr;
-    DirectPixelTarget          target_{};
-    bool                       direct_     = false;
-    bool                       aa_         = false;
-    int                        u_          = 0;
-    int                        rows_       = 0;
-    const CueTriangleCoverage* cov_        = nullptr;
-    GuiRect                    dirty_{};
-    bool                       dirty_any_  = false;
-    bool                       flush_owed_ = false;
+    cairo_t*          cr_        = nullptr;
+    DirectPixelTarget target_{};
+    bool              direct_    = false;
+    int               u_         = 0;
+    int               rows_      = 0;
+    int               so_        = 0;   // the shadow's offset, right and down
+    GuiRect           dirty_{};
+    bool              dirty_any_ = false;
 };

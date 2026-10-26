@@ -1560,8 +1560,8 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 // program_spec.h's cue lengths), as offsets from the marker's column: the
 // first present segment's box opens the fill lead past the column (the
 // label's lead less one pad quantum, render.h's cue_fill_lead_px — the lead
-// the triangle's reach right plus the live `cue_lead` gap, so the boxes
-// follow the triangle's rows, architect 2026-10-26 ~12:40), each box
+// the triangle's reach right plus the gap, so the boxes follow the
+// triangle's rows, architect 2026-10-26 ~12:40), each box
 // is its text's whole-column width with a pad quantum either side (the text
 // at its box's start plus the pad — the label's lead), and each next box
 // stands the segment gap past the one before. `w` the three texts' widths,
@@ -1718,9 +1718,9 @@ struct CueSegment {
 // and down, CONFIRMED ON THE GLASS 2026-10-26 ~12:10 (the panel label's "one line right and down", whose painter
 // show_ce_label now paints row 8's tab name and state line through this
 // same offset and color), so the
-// label's shadow steps one quantum each way, while the flag's shadow stays
-// one device px right alone at every scale (paint_ce_cue_triangle, Cool
-// Edit's triangle). Cool Edit draws no shadow under its cue labels, so this
+// label's shadow steps one quantum each way — and since 2026-10-26 ~13:05
+// the triangle's shadow the same, one rule (paint_ce_cue_triangle's head).
+// Cool Edit draws no shadow under its cue labels, so this
 // is the product's own departure. One shadow under every look, the faded
 // inert label's included. Every label look on the panel's face goes through
 // here — resting, invalid, inert, selected, and the flag editor's riding
@@ -1748,17 +1748,12 @@ struct CueDraw {
     // no cell boundary: no bracket lives in a commit).
     bool                      segments_are_cells = true;
     // THE HISTORY'S CHANGED PAIR (render_history_diff_flags, 2026-10-11):
-    // the triangle SPLIT (CueTrianglePass::split) — the staircase at col,
-    // its cells left of col and the apex column face.triangle and those
-    // right of it `split_right`; the antialiased envelope on its axis
-    // `axis_offset` past col (a stem's centre 0.5, or 1.0 where a nudged
-    // pair's midpoint falls on the boundary right of col), its left half
-    // face.triangle and its right half `split_right` — and ITS OWN STEMS,
-    // the pair's two, published in place of the face's one at col (each
-    // still gated to the waveform's columns).
+    // the triangle SPLIT at col (CueTrianglePass::split), its cells left of
+    // col and the apex column face.triangle and those right of it
+    // `split_right` — and ITS OWN STEMS, the pair's two, published in place
+    // of the face's one at col (each still gated to the waveform's columns).
     bool                      split = false;
     GuiColor                  split_right{};
-    double                    axis_offset = 0.5;
     bool                      own_stems = false;
     std::array<MarkerStem, 2> stems{};
 };
@@ -1916,22 +1911,35 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     }
 
     // THE TRIANGLES, LEFT TO RIGHT, over every label: ONE PASS on one
-    // prepared target (CueTrianglePass, cool_edit_paint.h). Its contract
-    // holds here: every label above closed its own save / restore, and the
-    // pass's cairo roads keep theirs, so the clip, the matrix, the operator
-    // and the group are the caller's throughout.
+    // prepared target (CueTrianglePass, cool_edit_paint.h), UNDER A CLIP OF
+    // THE LANE'S ROWS over the waveform's columns (the caller's columns, so
+    // the clip only gains its rows; whole pixels, so the stamp's identity
+    // holds): the triangle stands on the lane's last rows and its shadow
+    // one label quantum down (paint_ce_cue_triangle's head), so the shadow's
+    // bottom rows are cut at the lane's last row and never reach the
+    // canvas's top frame row below it, which the surface also holds
+    // (architect 2026-10-26 ~13:05: "if so, that is correct"). Its contract
+    // holds here: every label above closed its own save / restore, the clip
+    // is set before begin() and released after end(), and the pass's cairo
+    // roads keep theirs, so the clip, the matrix, the operator and the
+    // group are constant throughout the pass.
+    cairo_save(cr);
+    cairo_rectangle(cr, static_cast<double>(x0), static_cast<double>(lane.y),
+                    static_cast<double>(w > 0 ? w : 0),
+                    static_cast<double>(lane.h));
+    cairo_clip(cr);
     CueTrianglePass triangles;
     triangles.begin(cr);
     for (const CueDraw& c : cues) {
         if (c.split)
-            triangles.split(static_cast<double>(c.col) + c.axis_offset,
-                            tri_top, c.face.triangle, c.split_right,
+            triangles.split(c.col, tri_top, c.face.triangle, c.split_right,
                             c.face.shadow);
         else
             triangles.triangle(c.col, tri_top, c.face.triangle,
                                c.face.shadow);
     }
     triangles.end();
+    cairo_restore(cr);
 
     // THE PUBLICATION, left to right.
     for (int i = 0; i < n; ++i) {
@@ -1963,8 +1971,9 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             r.iter_upper_boundary_x = cells && c.seg[2].present
                                           ? static_cast<double>(c.seg[2].x0)
                                           : right;
-            // The triangle's box: its top edge and the shadow's unit, its
-            // live rows.
+            // The triangle's box: its top edge and the shadow's offset right
+            // (cue_triangle_reach_right_px), its rows — the shadow's offset
+            // down lies past the lane's last row, cut by the clip above.
             FlagHitRect tri;
             tri.x = static_cast<double>(c.col - half);
             tri.y = static_cast<double>(tri_top);
@@ -2432,10 +2441,7 @@ void render_history_diff_flags(
             // THEM: col the midpoint floored, the staircase's apex column
             // (2026-10-26: whole cells centre on a column, so an odd sum's
             // midpoint, on the boundary right of col, takes col, half a
-            // column left of the true midpoint), and the antialiased
-            // envelope's axis the two stems' centres' mean (the
-            // `cue_triangle_aa` key), 0.5 past col on an even sum and on the
-            // boundary right of col (1.0) on an odd one. THE LANDING
+            // column left of the true midpoint). THE LANDING
             // READS THIS BASIS (history_diff_flag_landing_domain_frame,
             // app_state.h, 2026-10-11): both halves mapped first, then
             // centred, so a click, Tab or Center seats the playhead under
@@ -2448,7 +2454,6 @@ void render_history_diff_flags(
             const int col_sum = col_left + col_right;
             c.col = static_cast<int>(
                 std::floor(static_cast<double>(col_sum) / 2.0));
-            c.axis_offset = (col_sum - 2 * c.col == 1) ? 1.0 : 0.5;
             // THE TWO HALVES AS TWO SEGMENTS, THE LEFT MARKER'S FIRST (the
             // removed then the added, the added first on a pair moved
             // earlier — HistoryDiffFlag::added_left), their box layout the
@@ -2581,13 +2586,6 @@ int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
-
-// THE CUES' LIVE TUNING (the contract at GuiCueTuning, render.h).
-namespace {
-GuiCueTuning g_cue_tuning;
-} // namespace
-void                set_cue_tuning(const GuiCueTuning& t) { g_cue_tuning = t; }
-const GuiCueTuning& cue_tuning() { return g_cue_tuning; }
 
 // -- The palette's chokepoints (the contract is at their declaration,
 // render.h) ---------------------------------------------------------------
@@ -3094,7 +3092,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // TWO SETS OF ROWS. THE TEXT VIEWPORT IS THE FIELD'S WHOLE INNER HEIGHT,
     // inside the outline (2026-10-09, the field the whole lane since ~21:00)
     // — so a descender or a history bracket below the lane's baseline paints
-    // whole (rows 34 .. 39 of the 51 at 300 %, the cues' default 26 px). THE CARET
+    // whole (rows 33 .. 37 of the 51 at 300 %, the cues' 22 px). THE CARET
     // AND THE SELECTION BAND ARE THE TEXT'S LINE BOX (architect 2026-10-09
     // ~23:30, render.h's EDITING paragraph): the program face's own ascent
     // above the baseline and its line below that top, the dialog field's own

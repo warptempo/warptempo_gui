@@ -51,9 +51,8 @@ private:
 // (measured 2026-10-07). So the hb font is built ONCE PER
 // cairo_scaled_font_t and hung on it as cairo USER DATA, destroyed by cairo
 // with it: KEYED ON THE SCALED FONT'S IDENTITY AND INVALIDATED WITH IT by
-// construction. The face owner's per-face cache (gui_outline_scaled_font)
-// rebuilds the scaled font when the em moves (the percent, or the Program
-// face's live size, the `cue_text` key),
+// construction. The face owner's per-(face, percent) cache
+// (gui_outline_scaled_font) rebuilds the scaled font when the percent moves,
 // and the new one carries no hb font until its first shape, so the two can
 // never disagree; a pointer-keyed mirror here could (a freed scaled font's
 // address reused by its successor), and a second cache in the owner would
@@ -157,21 +156,17 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
 
 SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
     // The contract, the premise identity rests on and the clear's harmlessness
-    // are at the declaration. The key is the font's three fields' bytes,
-    // then the text's: the uses' faces differ in the first, so the ruler's
-    // timestamps, the cue labels and the keys' legends never collide, and
-    // the size (the Program face's live `cue_text`) keys a committed size's
-    // re-shape.
+    // are at the declaration. The key is the font's two fields' bytes, then
+    // the text's: the uses' faces differ in the first, so the ruler's
+    // timestamps, the cue labels and the keys' legends never collide.
     constexpr std::size_t kMemoCap = 4096;
     static std::unordered_map<std::string, SharedRun> memo;
     std::string key;
-    key.reserve(utf8.size() + 2 * sizeof(int) + sizeof(double));
+    key.reserve(utf8.size() + 2 * sizeof(int));
     const int face = static_cast<int>(font.face);
     key.append(reinterpret_cast<const char*>(&face), sizeof face);
     key.append(reinterpret_cast<const char*>(&font.percent),
                sizeof font.percent);
-    key.append(reinterpret_cast<const char*>(&font.px_at_300),
-               sizeof font.px_at_300);
     key.append(utf8);
     const auto it = memo.find(key);
     if (it != memo.end()) return it->second;

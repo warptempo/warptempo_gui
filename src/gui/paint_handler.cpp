@@ -47,12 +47,12 @@
 // THE BOTTOM ROW HAS NO MONOSPACE FACE (architect 2026-10-05, after his
 // ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere";
 // gui_font.h): row 8's clock, its tab name and its state line are THE
-// PROGRAM FACE, the cues' live size (the `cue_text` key, 26 px by
-// default; render.h's GuiCueTuning) (architect 2026-10-26 ~11:30: "the bottom
-// left timestamp and tab/github/etc text should take 26 as well"), and the
+// PROGRAM FACE, the cues' 22 px (architect 2026-10-26 ~11:30: "the bottom
+// left timestamp and tab/github/etc text should take 26 as well", the size
+// since tuned with the cues and settled ~13:05, gui_font.h), and the
 // render player's two time fields with them (architect 2026-10-26 ~12:10,
 // "yes" to symmetry with row 8's clock); every modal string the body face,
-// 22 (gui_font.h's table). The no-wiggle guarantee is the fields' own
+// 22 too, a row of its own (gui_font.h's table). The no-wiggle guarantee is the fields' own
 // fixed widths.
 //
 // EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
@@ -2253,13 +2253,12 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // font color should not be this yellowish color") — 40 DEVICE PX TALL at
 // 300 % (time_field_h_px, scaled with gui_scale), CENTRED ON THE CASE'S ROWS
 // (a half-row tie toward the top, the cap rule's own), its run in THE
-// PROGRAM FACE, the live `cue_text` size (26 px at 300 % by default), in
-// every time field (row 8's clock,
+// PROGRAM FACE, 22 px at 300 %, in every time field (row 8's clock,
 // architect 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to
 // symmetry; gui_font.h's table), its cap band centred in the field by
-// redesign_baseline — at 300 % the 17.9-row cap band in the 40-row field,
-// its 30-row line inside it; at 138 % a 12-px em, its 8.3-row cap band in
-// the 18-row field, its 14-row line inside it. The digits are
+// redesign_baseline — at 300 % the 15.1-row cap band in the 40-row field,
+// its 25-row line inside it; at 138 % a 10-px em, its 6.9-row cap band in
+// the 18-row field, its 11-row line inside it. The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
 // the digits, the colon and the point — so the colon and the point stand
 // still as the time runs.
@@ -2269,21 +2268,19 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // the time runs). The reserved cell is measured from the widest string the
 // field can ever show in this face — the widest digit in every digit slot of
 // "DD:DD.DDD" (kTimeShape) — shaped through the one chokepoint at the
-// live size, so nothing is trusted to the face. The field is that cell plus
+// live scale, so nothing is trusted to the face. The field is that cell plus
 // THE PAD either side — 12 DEVICE PX at 300 % (time_field_pad_px; architect
 // 2026-10-23, "symmetrical and much tighter"; 5 W from 2026-10-10 until
 // then) — its width ceiled,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
 // the one face, so the three fields are one width. The cell is 4.448 em
 // (seven tabular digits at 0.556 em and the colon and the point at 0.278):
-// at 300 % and the default 26 px, 115.7 device px ceiled to 116, the field
-// 140; at 138 % a
-// 12-px em, 53.4 ceiled to 54, the field 66. THE PLAYER'S ROW HOLDS THEM
-// (2026-10-26, the body's 22 px, fields of 122 and 57, until then): its
-// scrub is what the fixed terms leave (player_row_layout), the two fields
-// and their gap 289 device px at 300 % and 136 at 138 %, 36 and 18 more
-// than the body's, so on the maximized windows the scrub's channel is
-// 1280 device px at 300 % (2304 wide) and 1442 at 138 % (1920 wide).
+// at 300 % and 22 px, 97.9 device px ceiled to 98, the field 122; at
+// 138 % a 10-px em, 44.5 ceiled to 45, the field 57. THE PLAYER'S ROW
+// HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
+// the two fields and their gap 253 device px at 300 % and 118 at 138 %, so
+// on the maximized windows the scrub's channel is 1316 device px at 300 %
+// (2304 wide) and 1460 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2358,12 +2355,11 @@ static int time_field_pad_px() {
 // round 72-W fields).
 constexpr double kTimeFieldGapPx = 3.0;
 
-// The time fields' metrics, MEMOISED ON THE FACE'S EM — eleven tiny shaping
+// The time fields' metrics, MEMOISED ON THE SCALE — eleven tiny shaping
 // passes (ten digits and the specimen) of THE PROGRAM FACE, every time
 // field's (row 8's clock and the render player's two since 2026-10-26
-// ~12:10), that answer the same thing on every frame until the em moves:
-// the scale, or the face's live size (the `cue_text` key, 2026-10-26
-// ~12:40, render.h's GuiCueTuning) — the widths are the face's own.
+// ~12:10), that answer the same thing on every frame until the scale
+// moves — the widths are the face's own.
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2371,7 +2367,7 @@ constexpr double kTimeFieldGapPx = 3.0;
 // glyph ever walks; row 8's cell and each player field's is time_w, and each
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
-    double em       = -1.0;   // the em this was measured at (device px)
+    int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
 };
 static TimeFieldMetrics g_time_field_metrics;
@@ -2379,8 +2375,7 @@ static TimeFieldMetrics g_time_field_metrics;
 static const TimeFieldMetrics& time_field_metrics() {
     TimeFieldMetrics& m = g_time_field_metrics;
     const GuiFont font = gui_font(GuiFace::Program);
-    const double em = gui_font_em_px(font);
-    if (m.em == em) return m;
+    if (m.percent == font.percent) return m;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -2391,7 +2386,7 @@ static const TimeFieldMetrics& time_field_metrics() {
     std::string specimen(kTimeShape);
     for (char& c : specimen) if (c == 'D') c = widest;
     m.time_w = text_shape::shape_text_run(font, specimen).width_px;
-    m.em = em;
+    m.percent = font.percent;
     return m;
 }
 
@@ -2645,16 +2640,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // verbs 1020..1571, the walk 1617..1892, the nudge 1938..2282, Play
     // 2214..2282); the clock's field on the ring's outer left column, from
     // W 7 (x 21) — the cell (4.45 em of Liberation Sans advances, seven
-    // digits, the colon and the point, in the program face's default 26 px
-    // at 300 %,
-    // 116 px ceiled) and its two 12-px pads, a 140-px field, x 21..160 — then
-    // the name's first ink 5 W past it (x 176, Tab A's advance ~69 px), the
-    // state line's 5 W past the name's advance (x ~260), clipped one run gap
-    // short of the block (x 792): about 530 px of state line at 300 %. On the
-    // laptop's 1920 at 138 % (cases 31, the gap 21, the program face 12 px)
-    // the block is 652 px, from x 1253 to the ring's right column, the clock's
-    // field 66 px on x 15..80, the name from x 88, and the state line from
-    // x ~127 to its clip at x 1232, about 1100 px.
+    // digits, the colon and the point, in the program face's 22 px at
+    // 300 %, 98 px ceiled) and its two 12-px pads, a 122-px field, x
+    // 21..142 — then the name's first ink 5 W past it (x 158, Tab A's
+    // advance ~59 px), the state line's 5 W past the name's advance (x
+    // ~232), clipped one run gap short of the block (x 792): about 560 px
+    // of state line at 300 %. On the laptop's 1920 at 138 % (cases 31, the
+    // gap 21, the program face 10 px) the block is 652 px, from x 1253 to
+    // the ring's right column, the clock's field 57 px on x 15..71, the name
+    // from x 79, and the state line from x ~113 to its clip at x 1232, about
+    // 1120 px.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
     // Toggle Value Drag hidden there with the verbs, Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
@@ -2704,9 +2699,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                   GuiRect{});
 
     // THE CLOCK — the first TIME FIELD (the shape and the fixed-width rule
-    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' live
-    // size (the `cue_text` key, 26 px by default; architect 2026-10-26
-    // ~11:30, gui_font.h's table), named
+    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' 22 px
+    // (architect 2026-10-26 ~11:30, settled ~13:05; gui_font.h's table),
+    // named
     // through the one face owner (gui_font.h), inside the save/restore this
     // body already opened, IN ITS RING (2026-10-22: the program ring's two
     // tones round the field, paint_ce_time_field's clock ring). The render
@@ -3061,8 +3056,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     cairo_save(cr);
     // THE TOOLTIP WEARS THE FLAGS' FACE (architect 2026-10-23, "the tooltips
-    // font size should be the same as the flags"): GuiFace::Program, the
-    // flags' live size (the `cue_text` key, 26 px at 300 % by default), IN
+    // font size should be the same as the flags"): GuiFace::Program, 22 px
+    // at 300 % since the flags' size settled there (2026-10-26 ~13:05), IN
     // THE BONE kBoneInk like the flags and every word (architect 2026-10-23
     // night; the legend ink kLegendInk its first night, now the keys' print
     // alone) on the field, no shadow; the box grows with the face's own line
@@ -3899,18 +3894,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own triangle — its live rows (5, the 9-7-5-3-1
-    // device px, unless `cue_triangle_rows` sets them) in whole cells, Cool
-    // Edit's aliased staircase, or their antialiased envelope under
-    // `cue_triangle_aa` (paint_ce_cue_triangle, 2026-10-26;
-    // UNSCALED WITH THE CUE'S, architect 2026-10-26 ~10:10: "All
-    // triangles unscaled", cue_triangle_unit_px, render.h), in the palette's `playhead_stem` (Cool Edit's Curs yellow
-    // FFFF00 by default, 2026-10-09) over the same triangle one device px
-    // right in `ce_cue_shadow`, ON THE GROUND'S LAST `rows` DEVICE ROWS, its
+    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 8 at
+    // 300 %) in whole device cells, Cool Edit's aliased staircase
+    // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
+    // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
+    // cue_triangle_unit_px, render.h), in the palette's `playhead_stem` (Cool Edit's Curs yellow
+    // FFFF00 by default, 2026-10-09) over the same triangle one label
+    // quantum right and down in `ce_cue_shadow` (2026-10-26 ~13:05, the
+    // label's own offset), ON THE GROUND'S LAST `rows` DEVICE ROWS, its
     // apex — the bottom centre of the playhead's one-px column — on the
     // ground's bottom row (2026-10-09 ~21:00, the 11-W ground). It is OPAQUE over the ticks and digits the walk above laid
-    // down, covering whatever stands under it (every cell whole on the
-    // staircase; the envelope's edges blended over them). NO SNAP, NO
+    // down, covering whatever stands under it (every cell whole, no edge
+    // blended over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the view bar, the marker
@@ -3941,6 +3936,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         GuiRect head_hit{0, 0, 0, 0};
         if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
             const int head_top = ground_bottom - rows;
+            // THE HEAD'S CLIP: the waveform's columns over the head's own
+            // rows, the ground's last `rows` — so the shadow, one label
+            // quantum right AND DOWN (paint_ce_cue_triangle's head,
+            // 2026-10-26 ~13:05), loses its bottom rows at the ground's
+            // bottom row and never reaches the ruler's line or the marker
+            // lane below, the marker lane's clip cutting the cues' shadows
+            // alike (paint_cues, render.cpp). Whole pixels, so the stamp's
+            // identity holds.
             cairo_save(cr);
             cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
@@ -3952,7 +3955,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED
             // HEAD — its triangle's and shadow's columns [col − left,
             // col + right) cut to the waveform's columns as the clip above
-            // cuts them, over the head's `rows` device rows of the ruler's — and
+            // cuts them, over the head's `rows` device rows of the ruler's
+            // (the shadow's rows below them cut by that clip) — and
             // nothing beyond it ("I don't think we should get in the habit of
             // making invisible hitboxes"), published by the pass's rule
             // (publish_head, the pass's head).

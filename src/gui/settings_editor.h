@@ -43,7 +43,7 @@ struct GuiInputHandler;
 // (Shift+;, the glass long press), never by Tab, its pick committing through
 // this editor's own apply, apply_waveform_preset):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the fourteen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the ten,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -52,21 +52,16 @@ struct GuiInputHandler;
 //      one commit that evening, e7fc8d10, and from ~21:05 a prefix took the
 //      key alone). A prefix several keys start with stops at their longest
 //      common prefix (the path completer's rule; `projects_` against
-//      `projects_repo` and `projects_path`; `cue` stops at `cue_`, the four
-//      cue keys' common prefix, and `cue_t` advances nothing, `cue_text`,
-//      `cue_triangle_rows` and `cue_triangle_aa` parting at its next letter,
-//      so `cue_te` completes `cue_text=` and `cue_tr` stops at
-//      `cue_triangle_`); no match, an empty line or a prefix already at the
-//      common prefix advances nothing.
+//      `projects_repo` and `projects_path`); no match, an empty line or a prefix
+//      already at the common prefix advances nothing.
 //   2. THE KEY'S CURRENT VALUE. On `key=` with nothing after the `=` — the
 //      first Tab's stop — the next Tab fills THE VALUE THE KEY HOLDS (the
 //      2026-08-13 recall, unchanged), so a value is edited and never
 //      retyped. The value is what the writer writes, byte for byte
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
-//      short closed list — `waveform`'s built-in preset names (2026-10-14),
-//      `true_colors`'s `on` / `off` (2026-10-21) and `cue_triangle_aa`'s, the
-//      same two (2026-10-26) — the prefix completes
+//      short closed list — `waveform`'s built-in preset names (2026-10-14) and
+//      `true_colors`'s `on` / `off` (2026-10-21) — the prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
 //      filesystem (complete_path_value, 2026-09-02). Every other non-empty
@@ -76,16 +71,14 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// TEN editable ones the per-device config carries — gui_scale and
+// SIX editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
-// and since 2026-10-21 true_colors (the popup's command row made a key),
-// since 2026-10-23 the tuning key led_glow (the hi-fi skin's lit LED), and
-// since 2026-10-26 the cues' four tuning keys cue_triangle_rows,
-// cue_triangle_aa, cue_text and cue_lead (the
+// and since 2026-10-21 true_colors (the popup's command row made a key) and
+// since 2026-10-23 the tuning key led_glow (the hi-fi skin's lit LED) (the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
 // settled at a constant, program_spec.h's strip_pad_px; the
 // two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable
@@ -104,8 +97,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors and the tuning keys led_glow, cue_triangle_rows,
-//    cue_triangle_aa, cue_text and cue_lead — in ONE body,
+//    waveform, true_colors and the tuning key led_glow — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -114,7 +106,7 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; waveform, true_colors and the tuning keys at once, applied live
+//    card; waveform, true_colors and led_glow at once, applied live
 //    at the OK, no card (the screen is the answer).
 //    gui_scale, the
 //    one other
@@ -162,9 +154,10 @@ struct GuiInputHandler;
 // picker, the folder overlay's third content, whose row tap commits at once
 // — apply_waveform_preset, this editor's own road.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE FOURTEEN (2026-10-26 ~12:40): the
-// four SIDECAR keys a hand edits (the piece's metadata, the engine keys of
-// engine_settings.h), then the DEVICE CONFIG's ten editable keys in that file's
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TEN (the cues' four tuning keys
+// gone 2026-10-26 ~13:05, settled): the four
+// SIDECAR keys a hand edits (the piece's metadata, the engine keys of
+// engine_settings.h), then the DEVICE CONFIG's six editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
 // `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys) are typed whole, Tab recalling their
@@ -173,8 +166,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "led_glow", "cue_triangle_rows", "cue_triangle_aa", "cue_text",
-    "cue_lead",
+    "led_glow",
 };
 
 struct GuiSettingsEditor {
@@ -278,8 +270,7 @@ private:
     // above.
     bool persist_device_config();
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `led_glow=`, `cue_triangle_rows=`,
-    // `cue_triangle_aa=`, `cue_text=` and `cue_lead=` — in one
+    // `waveform=`, `true_colors=` and `led_glow=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
@@ -324,13 +315,11 @@ private:
     // "ok to add autocomplete", "agree all" — the preset completer for the
     // color key, `waveform` (`chrome` until 2026-10-21; the `caption` key's
     // arm, over its 43 schemes, 2026-10-14..10-21); `true_colors`'s two words
-    // since 2026-10-21, `cue_triangle_aa`'s, the same two, since
-    // 2026-10-26), the head's stage 3: the path completer's model on a
+    // since 2026-10-21), the head's stage 3: the path completer's model on a
     // closed list. The value side is a PREFIX (byte compare, the words being
     // ASCII) of the key's words — the forty built-in preset keys
     // (kGuiBuiltinPalettes' keys, palette_file.h) for `waveform`, `on` and
-    // `off` (kTrueColorsWords, device_config.h) for `true_colors` and
-    // `cue_triangle_aa` (kCueTriangleAaWords, the same array) — and the
+    // `off` (kTrueColorsWords, device_config.h) for `true_colors` — and the
     // buffer advances by the matches' longest common prefix past it: a
     // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is
     // not a folder), an ambiguous prefix stops at the common prefix (he
