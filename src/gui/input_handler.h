@@ -3773,19 +3773,6 @@ private:
     // config; this applies.
     void apply_led_glow(int px);
 
-    // THE CUE LABEL'S TUNING'S ONE LIVE ACT (architect 2026-10-26, the
-    // `cue_text`, `cue_lead` and `cue_shadow` keys; GuiCueTuning, render.h):
-    // the settings editor's commit of any of the three installs the live
-    // config's three values (set_cue_tuning), REFRESHES THE FLAG CACHE —
-    // whose fingerprint keys the tuning by field (FlagCache::fp_cue_tuning),
-    // so the cued labels re-shape at the new size (the run memo and the
-    // scaled font keyed by it, gui_font.h's GuiFont) and re-lay at the new
-    // lead — and invalidates the whole window, so the live flag editor and
-    // its riding cells repaint with them. No bake: nothing of the materials
-    // reads it. The commit gates the no-op and writes the config; this
-    // applies.
-    void apply_cue_tuning();
-
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to
@@ -3972,9 +3959,21 @@ private:
     // behind it changes face (dead and ungreyed — redesign_button_enabled's
     // record of the classes). The way out is Esc (cancel) and Return
     // (commit), the on-screen keyboard's own two keys on the glass, a
-    // dialog's Cancel and OK. (The keyboard half has stood since 2026-07-28;
-    // the lane editors were pointer-, wheel- and touch-transparent until
-    // 2026-10-25, which this predicate's pointer readers reverse.)
+    // dialog's Cancel and OK — AND FOR A LANE EDITOR (the flag editor, the
+    // iteration bound editor: this predicate and not
+    // modal_dialog_editor_active) A LEFT PRESS IN THE LANES THE KEYBOARD
+    // LEAVES VISIBLE — the view bar, the ruler, the marker lane, the
+    // waveform as painted — which closes it AS ESC DOES and acts on nothing
+    // else (architect 2026-10-26 ~11:30: "the OSK does not close by tapping
+    // outside it when a flag editor is open — by my ruling, but it should be
+    // reversed. Currently no pan or any other movement outside OSK is
+    // possible, and I think that should remain, except for a tap outside OSK
+    // (in waveform + marker/time/trim lane only) to close"); the wheel, the
+    // pan, the pinch, the hold and every other press stay consumed. THE RULE
+    // IS THE LANE EDITOR'S, NOT THE KEYBOARD'S: the laptop takes the same
+    // press the same way. The dialog editors' box covers those lanes, so the
+    // press never reaches them. (The rule's one owner is on_button_press's
+    // veil, input_pointer.cpp.)
     // THE READERS, re-derived by grep 2026-10-25 — EVERY "a modal editor
     // stands" question asks this, and the few that mean the DIALOG alone ask
     // modal_dialog_editor_active below, each saying why at its site:
@@ -3983,7 +3982,8 @@ private:
     //     history_load_in_place's guard, and the car's two roads onto the
     //     key gates (run_undo_redo_without_key, car_play_refused_by_key_gates,
     //     silent belts behind GuiCarTransport::admits, which is a reader too);
-    //   POINTER — on_button_press's veil (the press outside the field), the
+    //   POINTER — on_button_press's veil (the press outside the field, and
+    //     the lane editor's closing press in the lanes), the
     //     chrome lift's re-ask (finish_chrome_press_release, the editor
     //     opened mid-hold), on_motion's editors' branch, pointer_cursor_kind's
     //     blanket (the Arrow but the field's I-beam), the roster hover walk's

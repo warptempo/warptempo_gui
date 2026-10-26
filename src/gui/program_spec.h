@@ -75,10 +75,10 @@
 // on it with no remainder; THE LABEL'S UNIT IS THE SCALED QUANTUM
 // u = scaled_px(1, 1) (render.h's program_line_px), the selected fill's pads,
 // the segment gap and the label's shadow's offset counted in it, because
-// the text they place is scaled; THE LABEL'S LEAD from the column is the
-// `cue_lead` tuning key's, device px at 300 % scaled (render.h's
-// cue_label_lead_px, architect 2026-10-26), no field here while it is
-// tuned. The dots down the canvas
+// the text they place is scaled; THE LABEL'S LEAD from the column is 14
+// device px at 300 %, scaled (render.h's cue_label_lead_px, architect
+// 2026-10-26 ~11:30, "lead 14"), a skin length rather than a field here,
+// being no whole count of W or quanta. The dots down the canvas
 // are device rows (2026-10-09 ~14:25, the dot fields below). The LANES'
 // ROWS and the text's seats are W lengths, each its own rounded part
 // (scaled_px's rule).
@@ -212,18 +212,14 @@ struct ProgramSpec {
     // many rows from the lane's top, THE WHOLE LANE (rows 0 .. 16: "the text
     // box should take up the whole marker lane … right now it's too small to
     // click"; render.h's cue_fill_h_px reads the lane's own composite, so the
-    // box is the lane at every scale); THE LABEL'S LINE BOX CENTRED IN THAT
-    // BOX (architect 2026-10-09 evening, on the glass at 300 %: the editor's
-    // band stood three rows of field above and six below, and he asked for
-    // it even; the cap band's centring of ~21:45 before it): no authored
-    // baseline row — render.h's
-    // cue_baseline_px derives it AT EVERY CALL from the lane's height and the
-    // program face's own line box at its LIVE size (the `cue_text` tuning
-    // key, architect 2026-10-26: "Make sure text is centered") by the box
-    // rule, the box's top plus the ascent, the flag editor's selection band
-    // the same box; at 300 % and the default 22 px the box on rows 13 .. 37
-    // of the 51, the baseline 33, the descenders over the triangle's rows
-    // beside it.
+    // box is the lane at every scale); THE LABEL'S CAP BAND CENTRED IN THAT
+    // BOX (architect 2026-10-26 ~11:30, "check the text vertical alignment —
+    // consider that we only use a narrow range of chars"): no authored
+    // baseline row — render.h's cue_baseline_px derives it from the lane's
+    // height and the program face's cap band, and the flag editor's
+    // selection band, the face's line box, stands from that baseline; at
+    // 300 % the baseline row 34 of the 51, the box on rows 10 .. 39, the
+    // descenders over the triangle's rows beside it.
     int  cue_lane_ground_px;
     int  cue_lane_quanta;
     int  cue_triangle_rows;
@@ -231,10 +227,9 @@ struct ProgramSpec {
     // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA (the head): the
     // selected fill's pad either side of the text — the fill's first column
     // one pad before the text, so THE FILL'S LEAD IS THE LABEL'S LEAD LESS
-    // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself the
-    // `cue_lead` tuning key's, 18 device px at 300 % by default, the six
-    // quanta it stood at as a field here — Cool Edit's stem 416 → label 422 —
-    // until 2026-10-26) — and the gap between two of a marker's label
+    // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself 14
+    // device px at 300 %, render.h's cue_label_lead_px) — and the gap
+    // between two of a marker's label
     // segments' boxes (the bound cells, the history's two halves — the
     // product's own, a segment's text standing the gap and two pads past
     // the previous one's end). (A label is never clipped: a later cue's face
@@ -377,16 +372,15 @@ static_assert(program_ruler_authored_h(kProgramSpec) +
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
               kProgramSpec.ruler_baseline_px);
 // THE CUE'S ROWS (the product's lane): the label's box the whole lane, the
-// label's line box centred in it at the live size (render.h's
-// cue_baseline_px; the size's ceiling, device_config.h's is_cue_text, the
-// largest whose box fits the lane at 300 %), the triangle's five device rows
-// at its bottom, never taller than the lane's quanta part.
+// label's cap band centred in it (render.h's cue_baseline_px), the
+// triangle's five device rows at its bottom, never taller than the lane's
+// quanta part.
 static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
 static_assert(kProgramSpec.cue_triangle_rows <= kProgramSpec.cue_lane_quanta);
-// (THE LABEL CLEARS THE TRIANGLE at runtime since its lead became the
-// `cue_lead` key, 2026-10-26: render.h's cue_label_lead_px never stands
-// nearer the column than the triangle's reach right, 6 device px.)
+// (THE LABEL CLEARS THE TRIANGLE: render.h's cue_label_lead_px, a skin
+// length, asserts it at 300 % and floors at the triangle's reach right, 6
+// device px, at every scale.)
 // The cue's two colors alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
@@ -396,7 +390,6 @@ static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
 static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=
               kProgramSpec.playhead_dot_phase);
 // (The label's text stands one pad quantum inside its fill — the fill's
-// lead and pad are the label's lead — at runtime since 2026-10-26:
-// render.h's cue_fill_lead_px.)
+// lead and pad are the label's lead: render.h's cue_fill_lead_px.)
 
 #endif // WARPTEMPO_GUI_PROGRAM_SPEC_H

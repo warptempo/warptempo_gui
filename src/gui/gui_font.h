@@ -20,19 +20,21 @@
 // kGuiFaceSizes below, each use's EM IN DEVICE PX AT THE TABLET'S 300 %,
 // SCALED WITH gui_scale and rounded at the element (the amendment the same
 // night: size_px = nearbyint(authored · gui_scale / 300), the scaled_px
-// road) — BODY 22 Regular (the clocks, the state line, the lists, the cards,
-// the prompts, the editors, the logo lane's battery + clock legend, and THE
-// TOOLTIP since 2026-10-23: "the tooltips font size should be the same as
-// the flags"), TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
+// road) — PROGRAM 26 Regular (architect 2026-10-26 ~11:30, the cue
+// label's size tuning settled: "text 26 … the bottom left timestamp and tab/github/etc
+// text should take 26 as well"): THE CUES' LABELS, THE LANE'S EDITORS (the
+// flag editor, the iteration bound editor), ROW 8'S CLOCK AND ITS STATE
+// LINE (the tab's name, the GitHub word, the walk line, the progress line)
+// and THE TOOLTIP ("the tooltips font size should be the same as the
+// flags", 2026-10-23); BODY 22 Regular, THE REST (the lists, the cards, the
+// prompts, the dialog editors, the render player's two time fields, the
+// logo lane's battery + clock legend); TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
 // 2026-10-24, the laptop's caption title beside it that morning; architect 2026-10-24, "the caption size
 // 24", off the logo mocks — 22 from 2026-10-23
 // until then), RULER 16 Regular (the ruler's digits alone; architect
 // 2026-10-24, "R16" off 14 / 15 / 16 / 17 on his type sheet — "we took
 // them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
-// 2026-10-23 to 2026-10-24, the skin's first night 15), the CUES' 22
-// Regular (the body's size: the flag labels and the flag editor) BY
-// DEFAULT, THE ONE LIVE SIZE — the `cue_text` tuning key's (architect
-// 2026-10-26, GuiFont below), LEGEND 14
+// 2026-10-23 to 2026-10-24, the skin's first night 15), LEGEND 14
 // Regular (the keys' printed legends alone; the tooltip wore it the first
 // night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
 // the letters, the symbol pages' characters and the word caps, "a separate
@@ -78,8 +80,9 @@
 #include <string_view>
 
 // THE USES (the head's table): the body, the brand's bold, the ruler's
-// digits (`Small`), the cues' labels (`Program`), the keys' legends and the
-// on-screen keyboard's caps (`Keys`).
+// digits (`Small`), the cues' labels and their kin (`Program`: the lane's
+// editors, row 8's clock and state line, the tooltip), the keys' legends
+// and the on-screen keyboard's caps (`Keys`).
 enum class GuiFace { Body, Bold, Small, Program, Legend, Keys };
 inline constexpr std::size_t kGuiFaceCount = 6;
 
@@ -107,8 +110,8 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body
     {1, 24.0},   // Bold: the brand
     {0, 16.0},   // Small: the ruler's digits
-    {0, 22.0},   // Program: the cues' labels and the flag editor (the
-                 // default of the LIVE size, the `cue_text` key's: below)
+    {0, 26.0},   // Program: the cues' labels, the lane's editors, row 8's
+                 // clock and state line, the tooltip
     {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps
 };
@@ -132,28 +135,20 @@ struct GuiFontBytes {
 // build is a build defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
 
-// A FACE AT A SCALE AND A SIZE: what every text consumer holds, the
-// successor of a cairo scaled font. `percent` is gui_scale and `px_at_300`
-// the use's em in device px at 300 % (render.h's gui_font(face) builds one
-// at the live scale and the live size). THE SIZE TRAVELS IN THE VALUE
-// because ONE USE'S SIZE IS LIVE: the Program face's, the `cue_text` device
-// key's (architect 2026-10-26, "flag text can now be bigger … Config key
-// would work here for tuning"; render.h's GuiCueTuning) — the table's 22
-// its default — so every cache keyed on a GuiFont (the scaled font below,
-// text_shape's run memo) keys on the size too, and a committed size
-// re-shapes with no cache of its own to drop. Every other use's size is
-// the table's.
+// A FACE AT A SCALE: what every text consumer holds, the successor of a cairo
+// scaled font. `percent` is gui_scale (render.h's gui_font(face) builds one
+// at the live scale).
 struct GuiFont {
-    GuiFace face      = GuiFace::Body;
-    int     percent   = 100;
-    double  px_at_300 = 22.0;
+    GuiFace face    = GuiFace::Body;
+    int     percent = 100;
 };
 
-// THE USE'S EM IN DEVICE PX at the font's scale: its size at 300 % times
+// THE USE'S EM IN DEVICE PX at the font's scale: its table size times
 // gui_scale over 300, rounded at the element, floored at one px.
 inline double gui_font_em_px(const GuiFont& f) {
     const double v = std::nearbyint(
-        f.px_at_300 * static_cast<double>(f.percent) / 300.0);
+        kGuiFaceSizes[static_cast<std::size_t>(f.face)].px_at_300 *
+        static_cast<double>(f.percent) / 300.0);
     return v < 1.0 ? 1.0 : v;
 }
 

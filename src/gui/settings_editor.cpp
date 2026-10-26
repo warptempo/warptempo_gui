@@ -313,9 +313,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // file's reader runs, so "loadable iff it commits" still holds across the
     // move. (The other five editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
-    // 2026-10-21), since 2026-10-21 true_colors, since 2026-10-23
-    // led_glow and since 2026-10-26 cue_text, cue_lead and cue_shadow — take
-    // their one direct-set body in
+    // 2026-10-21), since 2026-10-21 true_colors and since 2026-10-23
+    // led_glow — take their one direct-set body in
     // commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
@@ -961,9 +960,7 @@ void GuiSettingsEditor::commit() {
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it; `led_glow` (2026-10-23, the hi-fi skin's lit LED) by
-// one bake, its arm after that; `cue_text`, `cue_lead` and `cue_shadow`
-// (2026-10-26, the cue label's size, lead and shadow) by the flag cache's
-// rebuild, their arm last (`bevel_light` and `bevel_dark` stood there
+// one bake, its arm last (`bevel_light` and `bevel_dark` stood there
 // 2026-10-21 to 2026-10-23, `strip_pad` after it 2026-10-22 to 2026-10-23,
 // the pad settled at a constant, program_spec.h).
 // (`theme`, in force at once with the palette repainted whole, had an arm
@@ -1071,45 +1068,6 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         }
         app.device_config->led_glow = static_cast<int>(v);
         input->apply_led_glow(static_cast<int>(v));
-        (void)persist();
-        applied();
-        return true;
-    }
-
-    // THE CUE LABEL'S TUNING KEYS (architect 2026-10-26: "flag text can now
-    // be bigger … the flag's left padding distance from marker can now be
-    // smaller … Config key would work here for tuning"; ~10:50, "You can add
-    // shadow on/off for test"): the size and the lead in the scale's
-    // canonical integer spelling, the shadow in true_colors' words, each
-    // under its one owner (is_cue_text, is_cue_lead, parse_cue_shadow,
-    // device_config.h), APPLIED AT THE COMMIT by the flag cache's rebuild
-    // (GuiInputHandler::apply_cue_tuning), so NO CARD: the cues on screen
-    // are the answer.
-    if (key == "cue_text" || key == "cue_lead") {
-        const bool text = key == "cue_text";
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) ||
-            !(text ? is_cue_text(v) : is_cue_lead(v))) {
-            reject(text ? kCueTextGrammarReason : kCueLeadGrammarReason);
-            return true;
-        }
-        int& live = text ? app.device_config->cue_text
-                         : app.device_config->cue_lead;
-        if (static_cast<int>(v) == live) { unchanged(); return true; }
-        live = static_cast<int>(v);
-        input->apply_cue_tuning();
-        (void)persist();
-        applied();
-        return true;
-    }
-    if (key == "cue_shadow") {
-        const std::optional<bool> on = parse_cue_shadow(value);
-        if (!on) { reject(kCueShadowGrammarReason); return true; }
-        if (*on == app.device_config->cue_shadow) {
-            unchanged(); return true;
-        }
-        app.device_config->cue_shadow = *on;
-        input->apply_cue_tuning();
         (void)persist();
         applied();
         return true;
@@ -1281,8 +1239,6 @@ bool GuiSettingsEditor::complete_closed_value(const std::string& key,
         append = closed_list_advance(value, names);
     } else if (key == "true_colors") {
         append = closed_list_advance(value, kTrueColorsWords);
-    } else if (key == "cue_shadow") {
-        append = closed_list_advance(value, kCueShadowWords);
     }
     if (append.empty()) return false;
     return append_at_line_end(app, viewport, append);

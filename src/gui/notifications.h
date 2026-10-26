@@ -32,8 +32,8 @@
 // is what is true right now, replaced as it changes, never timed out and
 // never cleared by a key press — the render's progress line and the `h`
 // walk's line, which live in ROW 8'S STATE LINE, on the row's ground right of
-// the clock's time field (architect 2026-10-03: the normal face,
-// left-aligned a group space past the field, clipped a group space short of
+// the clock's time field (architect 2026-10-03: the normal face, the
+// flags' program face since 2026-10-26, left-aligned a group space past the field, clipped a group space short of
 // the right block; paint_bottom_row_buttons_and_clock, paint_handler.cpp,
 // owns that line) — A BATCH'S PROGRESS IS THE PROGRESS MODAL'S since
 // 2026-10-14 ("Rendering X of Y..." in the modal family's box from the Render

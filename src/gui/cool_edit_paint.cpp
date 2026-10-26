@@ -278,6 +278,11 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
 
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline) {
+    // The cue label's shadow (the declaration's rule; show_cue_label,
+    // render.cpp, paints the same pair under the cues).
+    const double t = static_cast<double>(cue_label_shadow_offset_px());
+    set_palette_source(cr, palette().ce_cue_shadow);
+    text_shape::show_shaped_run(cr, run, x + t, baseline + t);
     set_palette_source(cr, hex(kBoneInk));
     text_shape::show_shaped_run(cr, run, x, baseline);
 }

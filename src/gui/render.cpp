@@ -1558,8 +1558,8 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 
 // THE LABEL'S SEGMENT BOXES (render.h's marker-lane paragraph;
 // program_spec.h's cue lengths), as offsets from the marker's column: the
-// first present segment's box opens the fill lead past the column (the live
-// `cue_lead` less one pad quantum, render.h's cue_fill_lead_px), each box
+// first present segment's box opens the fill lead past the column (the
+// label's lead less one pad quantum, render.h's cue_fill_lead_px), each box
 // is its text's whole-column width with a pad quantum either side (the text
 // at its box's start plus the pad — the label's lead), and each next box
 // stands the segment gap past the one before. `w` the three texts' widths,
@@ -1704,28 +1704,31 @@ struct CueSegment {
 // `ce_cue_shadow`, or `ce_off_cue_shadow` under a disabled cue; architect
 // 2026-10-25, on the glass: "the flag shadow looks good, so the text should
 // be made to match the flag, not the other way around"), ONE LABEL QUANTUM
-// RIGHT, the same rows — cue_label_unit_px, the scaled quantum: 3 device px
-// at 300 %, 2 at 200 %, 1 at 100 % — then `ink` over it. THE OFFSET IS THE
-// TEXT'S, NOT THE FLAG'S (architect 2026-10-26 ~10:50: "Actually text
-// shadow should stay, and be GUI scaled so different from the flag. 1
-// device px at any font size is meaningless for a shadow, so it should be 3
-// device px at 300 %"): the flag's shadow is one device px at every scale
-// (paint_ce_cue_triangle), the label's scales with its text, so the two
-// differ by his ruling. Cool Edit draws no shadow under its cue labels, so
-// this is the product's own departure. THE SHADOW IS ON OR OFF BY THE
-// `cue_shadow` TUNING KEY (GuiCueTuning, render.h; "You can add shadow
-// on/off for test"), off the ink alone. One shadow under every look, the
-// faded inert label's included. Every label look on the panel's face goes
-// through here — resting, invalid, inert, selected, and the flag editor's
-// riding cells; the editor's FIELD text does not.
+// RIGHT AND ONE DOWN — cue_label_unit_px, the scaled quantum: 3 and 3
+// device px at 300 %, 2 and 2 at 200 %, 1 and 1 at 100 % — then `ink` over
+// it, ALWAYS PAINTED (architect 2026-10-26 ~11:30, "shadow on": the tuning
+// switch settled and left). THE OFFSET IS THE TEXT'S, NOT THE FLAG'S
+// (architect 2026-10-26 ~10:50: "Actually text shadow should stay, and be
+// GUI scaled so different from the flag. 1 device px at any font size is
+// meaningless for a shadow, so it should be 3 device px at 300 %"; ~11:30,
+// "the shadow looks scaled right but not down — check the offset"): THE
+// PLANNER'S READING, 2026-10-26, is the panel's own label convention, right
+// and down (the panel label's "one line right and down", whose painter
+// show_ce_label now paints row 8's tab name and state line through this
+// same offset and color), so the
+// label's shadow steps one quantum each way, while the flag's shadow stays
+// one device px right alone at every scale (paint_ce_cue_triangle, Cool
+// Edit's triangle). Cool Edit draws no shadow under its cue labels, so this
+// is the product's own departure. One shadow under every look, the faded
+// inert label's included. Every label look on the panel's face goes through
+// here — resting, invalid, inert, selected, and the flag editor's riding
+// cells; the editor's FIELD text does not. The shadow is ink, never extent.
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
                            double x, double baseline, GuiColor ink,
                            GuiColor shadow) {
-    if (cue_tuning().shadow) {
-        const double t = static_cast<double>(cue_label_unit_px());
-        set_palette_source(cr, shadow);
-        text_shape::show_shaped_run(cr, run, x + t, baseline);
-    }
+    const double t = static_cast<double>(cue_label_shadow_offset_px());
+    set_palette_source(cr, shadow);
+    text_shape::show_shaped_run(cr, run, x + t, baseline + t);
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
@@ -2567,13 +2570,6 @@ double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
 
-// THE CUE LABEL'S LIVE TUNING (the contract at GuiCueTuning, render.h).
-namespace {
-GuiCueTuning g_cue_tuning;
-} // namespace
-void                set_cue_tuning(const GuiCueTuning& t) { g_cue_tuning = t; }
-const GuiCueTuning& cue_tuning() { return g_cue_tuning; }
-
 // -- The palette's chokepoints (the contract is at their declaration,
 // render.h) ---------------------------------------------------------------
 
@@ -3079,21 +3075,18 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // TWO SETS OF ROWS. THE TEXT VIEWPORT IS THE FIELD'S WHOLE INNER HEIGHT,
     // inside the outline (2026-10-09, the field the whole lane since ~21:00)
     // — so a descender or a history bracket below the lane's baseline paints
-    // whole (rows 12 .. 14 of the 17 at 100 %, 37 .. 43 of the 51 at 300 %,
-    // render.h's descent assert). THE CARET AND THE SELECTION BAND ARE THE
-    // TEXT'S LINE BOX (architect 2026-10-09 ~23:30, render.h's EDITING
-    // paragraph): the program face's recorded ascent above the baseline and
-    // its descent below it, the dialog field's own band rule
-    // (paint_modal_dialog) — Windows' edit control fills its line with the
-    // selection, and this field round a smaller line leaves rows of field
-    // above and below the band. THE BOX IS CENTRED IN THE LANE and the
-    // baseline is defined from it (architect 2026-10-09 evening, on the
-    // glass at 300 %: the band stood three rows of field above and six
-    // below, and he asked for it even): the band's rows are read off the one derivation the
-    // baseline is (cue_line_box_top_px, cue_line_box_h_px, render.h), never
-    // re-derived from the baseline — at 100 % rows 2 .. 13 of the inner
-    // 1 .. 15, at 138 % rows 2 .. 18 of 1 .. 20, at 300 % 7 .. 42 of 3 .. 47,
-    // at 360 % 10 .. 52 of 4 .. 58.
+    // whole (rows 34 .. 39 of the 51 at 300 %, the cues' 26 px). THE CARET
+    // AND THE SELECTION BAND ARE THE TEXT'S LINE BOX (architect 2026-10-09
+    // ~23:30, render.h's EDITING paragraph): the program face's own ascent
+    // above the baseline and its line below that top, the dialog field's own
+    // band rule (paint_modal_dialog) — Windows' edit control fills its line
+    // with the selection, and this field round a smaller line leaves rows of
+    // field above and below the band. THE BASELINE CENTRES THE CAP BAND IN
+    // THE LANE and the box is placed from it (architect 2026-10-26 ~11:30,
+    // "check the text vertical alignment"): the band's rows are read off the
+    // one derivation (cue_line_box_top_px, cue_line_box_h_px, render.h),
+    // never re-derived here — at 300 % rows 10 .. 39 of the inner 3 .. 47,
+    // at 200 % 8 .. 27 of 2 .. 31, at 138 % 4 .. 17 of 1 .. 20.
     const int view_y = lane.y + u;
     const int view_h = fill_h - 2 * u;
     const int band_y = lane.y + cue_line_box_top_px();

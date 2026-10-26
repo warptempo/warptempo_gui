@@ -20,10 +20,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them but the four optional tuning keys at its
-// end (ELEVEN keys since 2026-10-26, `cue_text`, `cue_lead` and
-// `cue_shadow` appended after `led_glow`, the seven required ones unchanged;
-// EIGHT 2026-10-23, `strip_pad` settled to a constant, program_spec.h; nine
+// REQUIRED SET, every one of them but the optional `led_glow` (EIGHT keys
+// since 2026-10-23, `strip_pad` settled to a constant, program_spec.h; nine
 // that day, the bevel pair gone and `led_glow` appended; TEN 2026-10-21 evening,
 // `true_colors` placed after `waveform`, below; nine that afternoon, the three
 // tuning keys appended, `caption` gone and `chrome` renamed
@@ -59,12 +57,12 @@ namespace {
 //
 // THE TUNING KEYS stand after `role`, where the tuning phases' keys have
 // always stood, each leaving when he settles its value: `led_glow`
-// (2026-10-23, the hi-fi skin's lit LED), then `cue_text`, `cue_lead` and
-// `cue_shadow` (2026-10-26, the cue label's size, lead and shadow), THE
-// OPTIONAL KEYS (device_config.h's list), each written always. (`strip_pad` stood before it
+// (2026-10-23, the hi-fi skin's lit LED), THE ONE OPTIONAL KEY
+// (device_config.h's list), written always. (`strip_pad` stood before it
 // 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's
 // strip_pad_px; `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23,
-// `text_shadow` beside them until 2026-10-22.)
+// `text_shadow` beside them until 2026-10-22; the cue label's three after
+// it the morning of 2026-10-26, settled that day, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -74,16 +72,11 @@ constexpr const char* kDeviceConfigKeys[] = {
     "true_colors",
     "role",
     "led_glow",
-    "cue_text",
-    "cue_lead",
-    "cue_shadow",
 };
-// THE REQUIRED KEYS: every key of the writer's order but the four optional
-// tuning keys, its last four.
-constexpr std::size_t kDeviceConfigOptionalKeyCount = 4;
+// THE REQUIRED KEYS: every key of the writer's order but the optional
+// `led_glow`, its last.
 constexpr std::span<const char* const> kDeviceConfigRequiredKeys(
-    kDeviceConfigKeys,
-    std::size(kDeviceConfigKeys) - kDeviceConfigOptionalKeyCount);
+    kDeviceConfigKeys, std::size(kDeviceConfigKeys) - 1);
 } // namespace
 
 std::string format_gui_scale_percent(int percent) {
@@ -151,13 +144,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "led_glow") {
             // The scale's canonical digits (format_gui_scale_percent).
             s += format_gui_scale_percent(cfg.led_glow);
-        } else if (k == "cue_text") {
-            s += format_gui_scale_percent(cfg.cue_text);
-        } else if (k == "cue_lead") {
-            s += format_gui_scale_percent(cfg.cue_lead);
-        } else if (k == "cue_shadow") {
-            // true_colors' words (format_cue_shadow, device_config.h).
-            s += format_cue_shadow(cfg.cue_shadow);
         }
         s += '\n';
     }
@@ -283,31 +269,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kLedGlowGrammarReason);
             }
             out.led_glow = static_cast<int>(v);
-            return {};
-        }
-        // THE CUE LABEL'S TUNING KEYS (2026-10-26): the size and the lead in
-        // the scale's canonical integer spelling, the shadow in true_colors'
-        // words, each under its one owner (is_cue_text, is_cue_lead,
-        // parse_cue_shadow, device_config.h); absent, the struct's default
-        // stands.
-        if (key == "cue_text" || key == "cue_lead") {
-            const bool text = key == "cue_text";
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) ||
-                !(text ? is_cue_text(v) : is_cue_lead(v))) {
-                return bad_value(ln, key, value,
-                                 text ? kCueTextGrammarReason
-                                      : kCueLeadGrammarReason);
-            }
-            (text ? out.cue_text : out.cue_lead) = static_cast<int>(v);
-            return {};
-        }
-        if (key == "cue_shadow") {
-            const std::optional<bool> on = parse_cue_shadow(value);
-            if (!on) {
-                return bad_value(ln, key, value, kCueShadowGrammarReason);
-            }
-            out.cue_shadow = *on;
             return {};
         }
         return warptempo_parse::prefix_line_error(

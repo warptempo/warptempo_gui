@@ -260,28 +260,27 @@ const GuiSignAxis& gui_sign_axis(GuiFace face) {
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
-    // One per face, rebuilt when its EM moves — the scale (its two
-    // application points, set_gui_scale_percent) or the Program face's live
-    // size (the `cue_text` key, gui_font.h's GuiFont): a paint asks for it
-    // per run. The hb font text_shape shapes with hangs on this scaled font
-    // as cairo user data and dies with it (text_shape.cpp's hb_font_of), so
-    // it follows this cache's key and rebuild without a second cache.
+    // One per face, rebuilt when the scale moves (its two application
+    // points, set_gui_scale_percent): a paint asks for it per run. The hb
+    // font text_shape shapes with hangs on this scaled font as cairo user
+    // data and dies with it (text_shape.cpp's hb_font_of), so it follows this
+    // cache's key and rebuild without a second cache.
     struct Cached {
-        double               em   = -1.0;
-        cairo_scaled_font_t* font = nullptr;
+        int                  percent = -1;
+        cairo_scaled_font_t* font    = nullptr;
     };
     static Cached cache[kGuiFaceCount];
     Cached& c = cache[face_index(f.face)];
-    const double em = gui_font_em_px(f);
-    if (c.em == em) return c.font;
+    if (c.percent == f.percent) return c.font;
     if (c.font != nullptr) cairo_scaled_font_destroy(c.font);
+    const double em = gui_font_em_px(f);
     cairo_matrix_t font_matrix;
     cairo_matrix_t ctm;
     cairo_matrix_init_scale(&font_matrix, em, em);
     cairo_matrix_init_identity(&ctm);
     c.font = cairo_scaled_font_create(outline_of(f.face).face, &font_matrix,
                                       &ctm, g_options);
-    c.em = em;
+    c.percent = f.percent;
     return c.font;
 }
 

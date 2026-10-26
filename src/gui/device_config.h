@@ -105,29 +105,6 @@
 //                            OK by ONE BAKE (GuiInputHandler::apply_led_glow,
 //                            the bake rule's one Settings-OK exception,
 //                            recorded at materials.h's BAKE RULE)
-//   cue_text=<px>            THE CUE LABEL'S TEXT SIZE (architect
-//                            2026-10-26: "flag text can now be bigger …
-//                            Config key would work here for tuning"), a
-//                            TUNING PHASE: the Program face's em in device px
-//                            at 300 % (gui_font.h's kGuiFaceSizes unit,
-//                            scaled with gui_scale), an integer [1, 44] (the
-//                            bound's derivation at is_cue_text below).
-//                            OPTIONAL like led_glow, absent 22
-//                            (kDefaultCueTextPx), written always; applied at
-//                            OK by the flag cache's rebuild
-//                            (GuiInputHandler::apply_cue_tuning)
-//   cue_lead=<px>            THE CUE LABEL'S LEAD from the marker's column
-//                            (architect 2026-10-26: "the flag's left padding
-//                            distance from marker can now be smaller"), a
-//                            TUNING PHASE: device px at 300 %, scaled, an
-//                            integer [6, 60] (is_cue_lead below). OPTIONAL,
-//                            absent 18 (kDefaultCueLeadPx), written always;
-//                            applied as cue_text
-//   cue_shadow=<on|off>      THE CUE LABEL'S SHADOW painted or not (architect
-//                            2026-10-26: "You can add shadow on/off for
-//                            test"), a TUNING PHASE: true_colors' two words.
-//                            OPTIONAL, absent `on` (kDefaultCueShadow),
-//                            written always; applied as cue_text
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
@@ -150,8 +127,10 @@
 // keys at the end as the 2026-09 phases' stood (`text_shadow` gone
 // 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
 // appended 2026-10-22 and gone 2026-10-23, `led_glow` appended 2026-10-23,
-// `cue_text`, `cue_lead` and `cue_shadow` after it 2026-10-26, the tuning
-// keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
+// the cue label's three tuning keys after it the morning of 2026-10-26 and
+// gone that day, settled at 26, 14 and on (gui_font.h's Program size,
+// render.h's cue_label_lead_px and show_cue_label's shadow; an old line is
+// the ordinary unknown-key hard fail), the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -403,12 +382,6 @@ struct DeviceConfig {
     // THE LED GLOW (2026-10-23, the head's list): OPTIONAL, absent the
     // default; device px.
     int         led_glow    = 4;
-    // THE CUE LABEL'S THREE TUNING KEYS (2026-10-26, the head's list):
-    // OPTIONAL, absent the defaults below; the size and the lead in device
-    // px at 300 %.
-    int         cue_text    = 22;
-    int         cue_lead    = 18;
-    bool        cue_shadow  = true;
 };
 
 // THE LED GLOW'S DEFAULT AND RANGE — the one owner, the reader's and the
@@ -419,57 +392,6 @@ inline constexpr bool is_led_glow(int64_t v) {
 }
 inline constexpr const char* kLedGlowGrammarReason =
     "must be an integer in [0, 32] in canonical spelling";
-
-// THE CUE LABEL'S TUNING KEYS' DEFAULTS AND GRAMMARS (architect 2026-10-26)
-// — the one owner, the reader's, the settings editor's and the live state's
-// (render.h's GuiCueTuning, seeded from them).
-//
-// `cue_text`: THE PROGRAM FACE'S EM in device px at 300 %, the face-size
-// table's unit (gui_font.h's kGuiFaceSizes, whose Program row, 22, is the
-// default), scaled with gui_scale as every face size is. THE BOUND IS THE
-// LANE: the label's line box — the face's own line height at that em,
-// Liberation Sans's hhea ascender + descender + line gap, 1854 + 434 + 67 =
-// 2355 units of its 2048, 1.1499 em, rounded at the element
-// (gui_font_line_px) — must fit the marker lane's 51 device rows at 300 %
-// (render.h's marker_lane_h_px, 36 W rows and 5 quanta of 3), so the box
-// rule centres it inside the lane (cue_baseline_px): at 44 the box is 51
-// rows, at 45 it is 52. A CONSTANT HERE because the reader runs before the
-// face is installed (gui_main reads the config ahead of the window);
-// render.h's cue_text_bound_holds checks it against the installed face at
-// the window's first open (a tripwire). The bound is the key's own unit's,
-// 300 %, where it is tuned: at another scale the em and the lane round on
-// their own (at 138 % the 44 is a 20 px em whose 23-row box stands one row
-// over the lane's 22, the box rule's top row 0 and its foot under the
-// lane's own clip) — it still loads and paints.
-inline constexpr int kDefaultCueTextPx = 22;
-inline constexpr int kCueTextMaxPx     = 44;
-inline constexpr bool is_cue_text(int64_t v) {
-    return v >= 1 && v <= kCueTextMaxPx;
-}
-inline constexpr const char* kCueTextGrammarReason =
-    "must be an integer in [1, 44] in canonical spelling";
-// `cue_lead`: THE LABEL'S LEAD from the marker's column, device px at 300 %
-// (render.h's cue_label_lead_px scales it), 18 by default — the six label
-// quanta of 3 it stood at before it was a key (program_spec.h's cue
-// horizontal lengths). THE FLOOR IS THE TRIANGLE'S REACH RIGHT, 6 device px
-// (render.h's cue_triangle_reach_right_px: the apex cell, four cells and the
-// shadow's one), so at 300 % no label stands under the flag;
-// cue_label_lead_px holds the same floor at every scale, the triangle being
-// unscaled and the lead scaled. The ceiling, 60, bounds a tuning range
-// more than three times the default and keeps the integer's narrowing
-// exact.
-inline constexpr int kDefaultCueLeadPx = 18;
-inline constexpr int kCueLeadMinPx     = 6;
-inline constexpr int kCueLeadMaxPx     = 60;
-inline constexpr bool is_cue_lead(int64_t v) {
-    return v >= kCueLeadMinPx && v <= kCueLeadMaxPx;
-}
-inline constexpr const char* kCueLeadGrammarReason =
-    "must be an integer in [6, 60] in canonical spelling";
-// `cue_shadow`: THE LABEL'S SHADOW painted or not, TRUE_COLORS' TWO WORDS
-// (kTrueColorsWords below, the one spelling: format_cue_shadow and
-// parse_cue_shadow forward to that owner), `on` by default.
-inline constexpr bool kDefaultCueShadow = true;
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -635,13 +557,6 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     if (v == kTrueColorsOff) return false;
     return std::nullopt;
 }
-// `cue_shadow`'s words, true_colors' own (the cue tuning paragraph above).
-inline constexpr const char* const (&kCueShadowWords)[2] = kTrueColorsWords;
-inline constexpr const char* kCueShadowGrammarReason = kTrueColorsGrammarReason;
-inline const char* format_cue_shadow(bool on) { return format_true_colors(on); }
-inline std::optional<bool> parse_cue_shadow(std::string_view v) {
-    return parse_true_colors(v);
-}
 
 // THE role GRAMMAR (architect 2026-10-10) — the two words, exactly; the one
 // owner the reader and the writer read.
@@ -769,15 +684,13 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves nine keys —
+// the settings editor's ONE device-key body, which serves five keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
 // `true_colors=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
-// 2026-10-23), since 2026-10-23 `led_glow=`, whose
-// arm hands its bake to GuiInputHandler::apply_led_glow, and since
-// 2026-10-26 `cue_text=`, `cue_lead=` and `cue_shadow=`, whose arms hand the
-// flag cache's rebuild to GuiInputHandler::apply_cue_tuning
+// 2026-10-23), and since 2026-10-23 `led_glow=`, whose
+// arm hands its bake to GuiInputHandler::apply_led_glow
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
@@ -798,8 +711,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=warptempo-terminal-default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` and
-// `led_glow=4`, `cue_text=22`, `cue_lead=18` and `cue_shadow=on` (the
-// struct's own values) and no role
+// `led_glow=4` (the struct's own values) and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

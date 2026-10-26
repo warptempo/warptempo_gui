@@ -60,9 +60,8 @@ struct GuiInputHandler;
 //      retyped. The value is what the writer writes, byte for byte
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
-//      short closed list — `waveform`'s built-in preset names (2026-10-14),
-//      `true_colors`'s `on` / `off` (2026-10-21) and `cue_shadow`'s, the
-//      same two (2026-10-26) — the prefix completes
+//      short closed list — `waveform`'s built-in preset names (2026-10-14) and
+//      `true_colors`'s `on` / `off` (2026-10-21) — the prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
 //      filesystem (complete_path_value, 2026-09-02). Every other non-empty
@@ -79,9 +78,7 @@ struct GuiInputHandler;
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // and since 2026-10-21 true_colors (the popup's command row made a key) and
-// since 2026-10-23 the tuning key led_glow (the hi-fi skin's lit LED), and
-// since 2026-10-26 the cue label's three tuning keys cue_text, cue_lead and
-// cue_shadow (the
+// since 2026-10-23 the tuning key led_glow (the hi-fi skin's lit LED) (the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
 // settled at a constant, program_spec.h's strip_pad_px; the
 // two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable
@@ -100,8 +97,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors and the tuning keys led_glow, cue_text, cue_lead
-//    and cue_shadow — in ONE body,
+//    waveform, true_colors and the tuning key led_glow — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -110,7 +106,7 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; waveform, true_colors and the tuning keys at once, applied live
+//    card; waveform, true_colors and led_glow at once, applied live
 //    at the OK, no card (the screen is the answer).
 //    gui_scale, the
 //    one other
@@ -171,7 +167,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "led_glow", "cue_text", "cue_lead", "cue_shadow",
+    "led_glow",
 };
 
 struct GuiSettingsEditor {
@@ -275,8 +271,7 @@ private:
     // above.
     bool persist_device_config();
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `led_glow=`, `cue_text=`, `cue_lead=` and
-    // `cue_shadow=` — in one
+    // `waveform=`, `true_colors=` and `led_glow=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
@@ -321,13 +316,11 @@ private:
     // "ok to add autocomplete", "agree all" — the preset completer for the
     // color key, `waveform` (`chrome` until 2026-10-21; the `caption` key's
     // arm, over its 43 schemes, 2026-10-14..10-21); `true_colors`'s two words
-    // since 2026-10-21, `cue_shadow`'s, the same two, since 2026-10-26), the
-    // head's stage 3: the path completer's model on a
+    // since 2026-10-21), the head's stage 3: the path completer's model on a
     // closed list. The value side is a PREFIX (byte compare, the words being
     // ASCII) of the key's words — the forty built-in preset keys
     // (kGuiBuiltinPalettes' keys, palette_file.h) for `waveform`, `on` and
-    // `off` (kTrueColorsWords, device_config.h) for `true_colors` and
-    // `cue_shadow` (kCueShadowWords, the same array) — and the
+    // `off` (kTrueColorsWords, device_config.h) for `true_colors` — and the
     // buffer advances by the matches' longest common prefix past it: a
     // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is
     // not a folder), an ambiguous prefix stops at the common prefix (he

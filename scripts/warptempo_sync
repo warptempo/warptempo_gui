@@ -158,15 +158,15 @@ shopt -s nocaseglob
 #      (waveform=warptempo-terminal-default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
 #      true_colors=on line (TRUE_COLORS_LINE below; 2026-10-21) the same way
-#      (no tuning key is required now: led_glow, cue_text, cue_lead and cue_shadow
-#      are optional, absent = 4, 22, 18 and on), and
+#      (no tuning key is required now: led_glow is optional, absent = 4), and
 #      every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
 #      captions, the two bevel keys, which left 2026-10-23 with the
-#      fortepiano chrome, and strip_pad, settled the same day at a constant
-#      (RETIRED_KEYS below; src/gui/device_config.h); every other line is kept.
+#      fortepiano chrome, strip_pad, settled the same day at a constant, and
+#      the cue label's three tuning keys, settled 2026-10-26 (RETIRED_KEYS
+#      below; src/gui/device_config.h); every other line is kept.
 #   6. the audio, exactly as `warptempo_sync tt all`.
 #   7. the directories adb made are opened to the app (below), and the app started.
 #   Run twice it does the same again: the clone is fresh each time and the tracked
@@ -216,15 +216,20 @@ TRUE_COLORS_LINE="true_colors=on"
 # colour keys; caption, which left 2026-10-21 with the built-in captions
 # (chrome, renamed waveform the same day, is renamed in place by step 5, not
 # removed); bevel_light and bevel_dark, the fortepiano chrome's tuning
-# keys, which left 2026-10-23 with it; and strip_pad, the simple layout's
+# keys, which left 2026-10-23 with it; strip_pad, the simple layout's
 # tuning key (2026-10-22), settled at 13 W the same day and made a constant
-# in the program (src/gui/program_spec.h), so setup writes no tuning line.
+# in the program (src/gui/program_spec.h); and the cue label's three tuning
+# keys -- its text size, its lead and its shadow -- added the morning of
+# 2026-10-26 and settled the same day at 26, 14 and on, constants in the
+# program since (src/gui/gui_font.h, src/gui/render.h); so setup writes no
+# tuning line.
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected
               invalid_face invalid_face_selected invalid_label
               playhead_head playhead_stem
-              caption bevel_light bevel_dark strip_pad)
+              caption bevel_light bevel_dark strip_pad
+              cue_text cue_lead cue_shadow)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
@@ -1098,7 +1103,8 @@ apply_setup() {
     # renamed waveform (its value kept; dropped where a waveform line stands),
     # waveform given its default where neither stands, true_colors its line
     # where absent, the retired keys' lines gone (sync_path, the thirteen
-    # colour keys, caption, the bevel pair and strip_pad, RETIRED_KEYS), the
+    # colour keys, caption, the bevel pair, strip_pad and the cue label's
+    # three tuning keys, RETIRED_KEYS), the
     # rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the

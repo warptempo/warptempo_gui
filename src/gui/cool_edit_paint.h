@@ -174,13 +174,20 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 // SUNKEN RING — `dark` on its top row and left column, `light` on its
 // bottom row and right column, mitred — the ring tones off the ground's mean
 // (the palette's `ce_dark` / `ce_hilight`). Its digits are the caller's, the
-// bone kBoneInk at the body's 22 px, centred on both axes (render.h's
+// bone kBoneInk, no shadow — row 8's clock in the program face's 26 px
+// (architect 2026-10-26 ~11:30), the render player's two in the body's 22
+// (gui_font.h's table) — centred on both axes (paint_handler.cpp's
 // time_field_* accessors own the 40-px height and the 12-px pads).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field, GuiColor dark,
                          GuiColor light);
-// A PANEL LABEL — row 8's state line, its one reader: `run` in the bone
-// kBoneInk, no shadow (the hi-fi skin draws none, 2026-10-23; the
-// panel label's shadow pair stood 2026-10-10 to 2026-10-23).
+// A PANEL LABEL — row 8's tab name and state line, its readers: `run` in
+// the bone kBoneInk OVER THE CUE LABEL'S SHADOW, its offset and its color
+// (architect 2026-10-26 ~11:30: "the bottom left timestamp and
+// tab/github/etc text should take 26 as well, with the same shadow for the
+// tab/git/etc text"): the run first in the cue triangle's shadow color
+// (`ce_cue_shadow`, palette()) one label quantum right and one down
+// (render.h's cue_label_shadow_offset_px — 3 and 3 device px at 300 %),
+// then the bone over it. The shadow is ink, never extent.
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline);
 
