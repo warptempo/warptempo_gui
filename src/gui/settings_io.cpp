@@ -51,13 +51,6 @@ enum class SettingKind {
     ViewportStart_B,
     ZoomLevel_B,
     Playhead_B,
-    // THE SCORE'S FIVE (architect approval 2026-10-26, settings_file.h's
-    // fields): the folder, the viewing range, each tab's remembered position.
-    ScorePath,
-    ScoreFirstPage,
-    ScoreLastPage,
-    ScorePosition_A,
-    ScorePosition_B,
 };
 
 struct SettingDescriptor {
@@ -88,12 +81,6 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
-    // THE SCORE (architect approval 2026-10-26): no score, and the range at
-    // its two edges (0 the placeholder — the template cannot know the page
-    // count, and RESET writes the same pair).
-    { "score_path",                  SettingKind::ScorePath,            EngineField::Title,                   ""  },
-    { "score_first_page",            SettingKind::ScoreFirstPage,       EngineField::Title,                   "0" },
-    { "score_last_page",             SettingKind::ScoreLastPage,        EngineField::Title,                   "0" },
     // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
     // `playback_speed` retired whole; `gui_scale`, `audio_player` and
     // `projects_repo` moved to the per-device config, device_config.h, where
@@ -111,14 +98,12 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
     { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "2" },
     { "tab_a_playhead_cursor",       SettingKind::Playhead_A,           EngineField::Title,                   "0" },
-    { "tab_a_score_position",        SettingKind::ScorePosition_A,      EngineField::Title,                   "0" },
     { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   nullptr },
     { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   nullptr },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
     { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "2" },
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
-    { "tab_b_score_position",        SettingKind::ScorePosition_B,      EngineField::Title,                   "0" },
 };
 
 // The on-disk value text for one non-engine descriptor kind, given the
@@ -181,19 +166,6 @@ std::optional<std::string> format_nonengine_value(
             std::snprintf(buf, sizeof(buf), "%lld",
                           static_cast<long long>(gui.tab_b.playhead_cursor_sample));
             return std::string(buf);
-        // THE SCORE (architect approval 2026-10-26): the folder verbatim, the
-        // page numbers and the positions in the canonical frame spelling
-        // validate_gui_setting's arms read back.
-        case SettingKind::ScorePath:
-            return std::string(gui.score_path);
-        case SettingKind::ScoreFirstPage:
-            return format_authored_frame(gui.score_first_page);
-        case SettingKind::ScoreLastPage:
-            return format_authored_frame(gui.score_last_page);
-        case SettingKind::ScorePosition_A:
-            return format_authored_frame(gui.tab_a.score_position);
-        case SettingKind::ScorePosition_B:
-            return format_authored_frame(gui.tab_b.score_position);
     }
     return std::nullopt;
 }
@@ -450,7 +422,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // actual frame (`tab_a_trim_begin=0`), matching what Ctrl+S writes.
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b,
-        app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.score_path, app.score_first_page, app.score_last_page};
+        app.active_audio_view, app.active_markers_view, app.active_tab_view};
     return format_nonengine_value(desc->kind, gui);
 }

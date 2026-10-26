@@ -4121,11 +4121,12 @@ struct ViewState {
     // position, which is stored automatically per tab"): an audio frame at the
     // score's own rate, the shown page's begin, written at every page change
     // the viewer makes on the active tab (GuiScoreViewer::show_page) and read
-    // at its open. THE PLAYHEAD'S CLASS — display scratch, written at every
-    // save, dirtying nothing, no undo — and BAND-ONLY: no live field mirrors
-    // it, the viewer writing the active tab's band directly, so the tab
-    // swap's two copies never touch it. Persisted as tab_a_score_position /
-    // tab_b_score_position.
+    // at its open. THE PLAYHEAD'S CLASS — display scratch, dirtying nothing,
+    // no undo — and BAND-ONLY: no live field mirrors it, the viewer writing
+    // the active tab's band directly, so the tab swap's two copies never
+    // touch it. Persisted as tab_a_score_position / tab_b_score_position in
+    // the score viewer's own file, written through at every change
+    // (score_viewer_file.h), never by a save.
     int64_t       score_position = 0;
 };
 
@@ -8021,12 +8022,12 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, active_audio_view,
     // active_markers_view, active_tab_view, trim,
-    // read_only, projects_repo, and since 2026-10-26 the score's keys —
-    // score_path, the score_first_page / score_last_page range and the
-    // per-tab score_position, the trim's class) — do
-    // NOT participate: they are persisted only by a save of an authored
-    // change (Save greys without one, plain_save_actionable) and not tracked
-    // as dirty, so quitting without saving simply drops them. The DEVICE key
+    // read_only, projects_repo) — do NOT participate: they are persisted
+    // only by a save of an authored change (Save greys without one,
+    // plain_save_actionable) and not tracked as dirty, so quitting without
+    // saving simply drops them. The score's five keys are outside this
+    // question too: no sidecar carries them, and every change writes the
+    // score viewer's own file through (score_viewer_file.h). The DEVICE key
     // gui_scale is outside this question entirely since
     // 2026-08-27: it is not in the sidecar at all, and its commit writes the
     // device config immediately (device_config.h). Trim is
@@ -8980,19 +8981,24 @@ struct AppState {
 
     // -- THE SCORE (architect 2026-10-26) ------------------------------------
     //
-    // THE PIECE'S THREE SCORE KEYS, as the `.settings` file holds them
-    // (SettingsFile's fields, settings_file.h, own their grammar):
+    // THE PIECE'S THREE SCORE KEYS, as the score viewer's own file holds
+    // them (score_viewer_file.h owns their grammar, the file's three
+    // outcomes and the write-through):
     //   `score_path`        the score folder relative to the project folder,
-    //                       empty for none — loaded from the file and from a
-    //                       typed `score_path=` commit, written at every save;
+    //                       empty for none — read from the file at the load
+    //                       (`./score` when the file is absent and the
+    //                       piece's own score/pages.txt exists) and set by a
+    //                       typed `score_path=` commit;
     //   `score_first_page` / `score_last_page` THE VIEWING RANGE in
     //                       pages.txt's page numbers, 0 the edge's placeholder
     //                       (score_viewer_range's resolution). THE TRIM'S
     //                       CLASS (architect: "no undo, just like with
     //                       regular trim"): written by the viewer's START,
     //                       END and RESET and by the typed keys, with no undo
-    //                       entry and no dirty mark, and carried by the next
-    //                       save (save_ops.cpp) like the trim pair.
+    //                       entry and no dirty mark.
+    // EVERY WRITER OF THE THREE (and of ViewState::score_position) WRITES
+    // THE FILE THROUGH at once (write_score_viewer_file); no save carries
+    // them.
     std::string score_path;
     int64_t     score_first_page = 0;
     int64_t     score_last_page  = 0;
@@ -15142,8 +15148,8 @@ inline bool redesign_button_enabled(const AppState& a,
             return true;
         // THE SCORE KEY IS LIVE WITH A SCORE LOADED AND DEAD WITHOUT ONE
         // (architect 2026-10-26): `score_path` empty, its folder or pages.txt
-        // absent — the load's advisory road (score_pages.h) — leaves no table
-        // and nothing to open. No lock greys it (bare `m` is on the read-only
+        // absent or malformed — the load's advisory road (score_pages.h) —
+        // leaves no table and nothing to open. No lock greys it (bare `m` is on the read-only
         // allowlist, which the iteration gate inherits); the `h` view's
         // partition above answers first, and the standing viewer's overlay
         // arm above keeps it lit as the way out.

@@ -194,6 +194,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **The Font row's choices in the "historical" order (Tahoma first)** — retired, architect 2026-10-09 evening ("neither historical nor alphabetical; let's just make it alphabetical"): FreeSans, Liberation Sans, Tahoma, alphabetical by the shown name, the absent key still `tahoma`. Owner: `kGuiFontKeys` (gui_font.h). — removed 2026-10-12 (the Font row is gone).
 - **The Settings popup list and its rows (Title, Notes, URL, Cover, GUI Scale, Projects Repository, Projects Path, Waveform, Bevel Light, Bevel Dark, Text Shadow, each opening the settings editor prefilled; its access keys, its painter, its hit map)** — retired 2026-10-21 for ONE editor with Tab completion over the keys (architect: "settings could gain a tab autocomplete for the keys, making the dropdown less useful" — "yes"): the Settings button and `;` open an empty `key=value` line, Tab completing the key, then `=` and its current value, then a closed value's words (the choice drop-downs went 2026-10-14, the per-row line editors now). Owner: `GuiSettingsEditor`, `kSettingsEditorKeys` (settings_editor.h). (Not reopened by the preset picker of 2026-10-25, a list of the `waveform` key's presets alone in the folder overlay, opened by the Settings button's shift twin and not by a popup: the line above.)
 - **The "True Colors" command row (the Settings popup's toggle, checked at every launch and persisted nowhere, 2026-10-08)** — retired 2026-10-21 for the `true_colors=on|off` device key, required, read at launch and applied live at the settings editor's OK. Owner: `DeviceConfig::true_colors` (device_config.h), `GuiInputHandler::apply_true_colors`.
+- **The score's keys in the .settings schema** — ruled out 2026-10-26 night (other users' files must not need them); the GUI-owned score/viewer.txt instead; the frozen parser restored. Owner: score_viewer_file.h.
 
 ## Zoom, the viewport, the cameras and the waveform picture
 
@@ -594,6 +595,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **`packed-refs.lock` in the cold-start lock recovery** — removed, 2026-09-28: nothing deletes a ref now. Owner: `GuiGitRepo::clear_stale_locks` (git_repo.h).
 - **The sync script's `setup` deleting files the tablet's old clone tracked, and `ft` re-reading the pair as a generation token** — removed, 2026-09-28 (no adversarial backstops). Owner: `scripts/warptempo_sync`.
 - **The score map (`sheet/sheet.map`) as a fourth checkpoint path** — sunset, 2026-08-21, with the score video. Owner: `checkpoint_paths` (history_diff.cpp). — SUPERSEDED 2026-10-26 by the built-in page viewer (score_viewer.h); the mpv road stays the road not taken.
+- **The sync script's `ft` (the tablet's renders fetched to the laptop, each wav with its fingerprint)** — retired 2026-10-26 night (architect: "we're not going to pull renders from the tablet; it's too slow"): commit on the tablet, pull on the laptop and render again, the same file within a few ULPs; the verbs are `tt`, `ot` and `setup`. Owner: `scripts/warptempo_sync`'s head.
 
 ## Touch: the finger, the S Pen and the glass
 

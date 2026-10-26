@@ -14,7 +14,6 @@
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <string_view>
 
 struct ViewState;
 struct AppState;
@@ -97,16 +96,6 @@ struct NonEngineSettingsSnapshot {
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;
-    // THE SCORE'S THREE PIECE-LEVEL KEYS (architect approval 2026-10-26;
-    // SettingsFile's fields own them). Defaulted for the one writer that has
-    // no piece's score to carry — a render entry's recipe (render_pipeline.cpp),
-    // which the load in place reads for its engine block and markers alone —
-    // so its file writes no score and the edges' placeholders; every other
-    // snapshot passes the live three. The borrow rule above holds for the
-    // path.
-    std::string_view   score_path       = {};
-    int64_t            score_first_page = 0;
-    int64_t            score_last_page  = 0;
     // (`projects_repo` LEFT THIS SNAPSHOT 2026-08-27 with its key — the
     // repository is the device config's, device_config.h; the sidecar carries
     // exactly what is about the piece. `follow`, `centered` and

@@ -1,9 +1,10 @@
 #pragma once
 
 // THE SCORE FOLDER'S TABLE AND ITS READER (architect 2026-10-26, the built-in
-// page viewer, score_viewer.h): the pages a project's `score_path` names, one
-// row per page with its audio-frame range, read once at the project load
-// (file_loader.cpp, beside the sidecars) and at a typed `score_path=` commit
+// page viewer, score_viewer.h): the pages a project's `score_path` names
+// (the score viewer's own file, score_viewer_file.h), one row per page with
+// its audio-frame range, read once at the project load (file_loader.cpp,
+// beside the sidecars) and at a typed `score_path=` commit
 // (settings_editor.cpp), never kept fresh otherwise.
 //
 // THE GRAMMAR IS tools/score_extract.py'S, its head comment's "THE GRAMMAR OF
@@ -18,15 +19,20 @@
 // THE THREE OUTCOMES, by the validation doctrine's classes:
 //   * NO FOLDER, OR NO READABLE pages.txt IN IT — no score, the SCORE key
 //     greys, ONE stderr line naming the path (class 5, advisory: the folder
-//     arrives by the sync script and may lawfully lag the sidecar that names
+//     arrives by the sync script and may lawfully lag the piece that names
 //     it). `advisory` carries the line's words.
 //   * A pages.txt PRESENT BUT OUT OF THE GRAMMAR — a header the grammar does
 //     not name or out of its order, a missing `# rate`, a page line out of
 //     grammar, page numbers not 1, 2, 3 …, a begin not under its end, a range
-//     overlapping its predecessor, zero pages — or a page's file missing: THE
-//     PROJECT LOAD HARD-FAILS, the first error only (class 1: the tool writes
-//     the file whole and atomically, so a malformed one is hand-damage). The
-//     error arm's producer.
+//     overlapping its predecessor, zero pages — or a page's file missing:
+//     ALSO NO SCORE AND ONE stderr line at the project load, the SCORE key
+//     grey, never a load failure (class 5, architect 2026-10-26 night: "score
+//     should not be load-fatal: other users shouldn't need the exact same
+//     file I use"). It stays the ERROR ARM, the first error only, because it
+//     has a producer that reads it differently from the first outcome: the
+//     settings editor's `score_path=` commit REFUSES a malformed folder with
+//     these words (its own immediate truth, a courtesy at the typing) where
+//     it commits an absent one with a card; the load prints either.
 //   * A WELL-FORMED FOLDER — the table, every page's file stat'ed present.
 #include <cstdint>
 #include <expected>
@@ -61,8 +67,9 @@ struct GuiScorePages {
 std::filesystem::path score_folder_of(const std::filesystem::path& project_folder,
                                       const std::string&           score_path);
 
-// THE READ (the head's three outcomes): the error arm is the hard fail's
-// sentence, naming the file and, where a line is at fault, its number; an
+// THE READ (the head's three outcomes): the error arm is the malformed
+// folder's sentence, naming the fault and, where a line is at fault, its
+// number (the load's advisory line, the editor's refusal); an
 // engaged table is a score; a disengaged one is no score, `advisory` then
 // holding the stderr line's words (the folder or its pages.txt absent or
 // unreadable).

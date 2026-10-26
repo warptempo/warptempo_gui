@@ -5,13 +5,11 @@
 IFS=$(echo -en "\n\b")
 shopt -s nocaseglob
 
-# warptempo_sync — the laptop's four errands to the tablet (warptempo).
+# warptempo_sync — the laptop's three errands to the tablet (warptempo).
 #
 #   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio and
 #                                       each piece's score folder, and nothing
 #                                       else.
-#   warptempo_sync ft [piece ...|all]   FROM the tablet: the renders (each wav
-#                                       with its fingerprint), and nothing else.
 #   warptempo_sync ot [piece]           ON the tablet: an interactive shell as the
 #                                       app, in its projects folder (or the named
 #                                       piece's); the app is stopped while you are
@@ -36,10 +34,6 @@ shopt -s nocaseglob
 #
 #       warptempo_sync tt          <- every piece's audio the tablet lacks
 #
-#   A render finished on the tablet and you want it on the laptop:
-#
-#       warptempo_sync ft          <- every piece's newer renders
-#
 #   A new or replacement tablet, after the APK is installed:
 #
 #       warptempo_sync setup       <- shows the plan, asks Proceed? [y/N]: type y
@@ -51,16 +45,17 @@ shopt -s nocaseglob
 # THE SIDECARS NEVER TRAVEL HERE (architect 2026-09-27). Both devices hold a clone
 # of github.com/warptempo/warptempo_projects and the app itself commits, pushes
 # and pulls them (Save and Commit in `h`); GitHub is the hub. warptempo_sync
-# carries only what git does not: the audio and the scores in, the renders out.
+# carries only what git does not: the audio and the scores in, nothing out (a
+# render is never fetched from the tablet, architect 2026-10-26 night: the laptop
+# pulls the committed sidecars and renders the same file again, within a few ULPs).
 # ONE DEVICE PER
 # MOVEMENT: a movement is authored on one device, so no verb here ever settles a
 # disagreement.
 #
 # SCOPE. No name and `all` are the same: every piece under the laptop's projects/.
-# Both verbs are cheap to repeat (tt skips a wav the tablet already has at the same
-# size and date; ft skips a render the laptop already has at the same size and date,
-# to the nanosecond, with the same fingerprint), so
-# there is nothing to choose. Names narrow it to those folders. `all` is reserved.
+# tt is cheap to repeat (it skips a wav the tablet already has at the same size and
+# date, and a score file the tablet already holds unchanged), so there is nothing
+# to choose. Names narrow it to those folders. `all` is reserved.
 # A piece git ignores, or whose name holds the word `test` or a `~`, never travels
 # (`unsyncable`): `all` passes it by and says so, naming it is a refusal.
 #
@@ -79,48 +74,22 @@ shopt -s nocaseglob
 # tt CARRIES EACH PIECE'S SCORE FOLDER TOO (2026-10-26): after a piece's wav, if
 # the laptop holds `<piece>/score/pages.txt` (tools/score_extract.py's output, the
 # app's score viewer reads it), the pages that pages.txt names, `score/pageNNN.png`
-# by the tool's own spelling, and then `score/pages.txt` itself are each pushed
-# with `adb push --sync` (a file the tablet already holds unchanged is skipped)
-# into the tablet's `projects/<piece>/score/` — those two shapes and nothing else
-# in the folder, never the video, the scan cache or a stray file. pages.txt goes
-# LAST, so the app never reads a list naming a page not yet there. A piece with no
-# score folder says nothing about it (another movement may name the first one's
-# folder through its score_path); a pages.txt naming a page the folder lacks is
+# by the tool's own spelling, then `score/pages.txt` itself, then
+# `score/audio.wav` (the video's soundtrack, the tool's output since 2026-10-26
+# night) where the folder holds one, are each pushed with `adb push --sync` (a
+# file the tablet already holds unchanged is skipped, so the soundtrack's 265 to
+# 460 MB cross once) into the tablet's `projects/<piece>/score/` — those three
+# shapes and nothing else in the folder, never the video, the scan cache, a
+# stray file or `score/viewer.txt` (the score viewer's own file, which each
+# device writes for itself and which never travels; src/gui/score_viewer_file.h).
+# pages.txt goes LAST OF WHAT THE APP READS, so the app never reads a list naming
+# a page not yet there; the soundtrack, which the app does not read, follows it.
+# A piece with no score/pages.txt says nothing about it (another movement may
+# name the first one's folder through the score_path its own viewer.txt holds);
+# a pages.txt naming a page the folder lacks is
 # SKIPPED LOUDLY, the run's last lines naming it, and nothing of that score is
 # copied. Nothing on the tablet is ever deleted here: a page a regenerated
 # pages.txt no longer names stays, unread.
-#
-# ft brings each piece's `render/` DELIVERABLE, the `<title>.wav` and its
-# `<title>.fingerprint`, into the laptop's `<piece>/render/`, AS ONE PAIR: the
-# fingerprint is the recipe the app reads to reuse that wav instead of rendering
-# again, so a wav beside another render's fingerprint would be reused for a
-# recipe it is not. A WAV'S IDENTITY IS ITS SIZE AND ITS DATE TO THE NANOSECOND,
-# exactly what its fingerprint records (`size=`, `mtime=`) and what the app compares
-# before it reuses the wav; so every copy is dated as on the tablet to the
-# nanosecond (toybox's %y carries the fraction), since a date rounded to the second
-# makes a pair the app rejects. NEWER WINS, by the wav: one the laptop holds NEWER is
-# left alone with its fingerprint and said so. A pair is SKIPPED only when the wav
-# matches (same size and nanosecond date) AND the fingerprint matches (the tablet's
-# sha256 equals the laptop's, or neither has one); a matching wav whose fingerprint
-# does not is repaired alone. A COPY fetches both members to part files beside
-# their targets and checks each against the tablet's own sha256. A fingerprint
-# that does not describe the listed wav (a render in progress, or one cut short)
-# is left on the tablet and nothing on the laptop moves.
-# Only then does it publish: the laptop's old fingerprint is removed FIRST, then the
-# wav renamed into place, then the new fingerprint — so a new wav never stands beside
-# an old fingerprint, and a run cut short between the two renames leaves a wav with
-# no fingerprint, which the next run repairs — and the pair is complete only when
-# the published wav's size and nanosecond date equal what the fingerprint beside it
-# records (else that fingerprint is removed and the run stops: this is what refuses
-# a pair crossed by a render the tablet published during the copy). A TABLET WAV
-# WITH NO FINGERPRINT DELETES THE LAPTOP'S: the one file on the laptop ft ever deletes, because a fingerprint
-# that describes no wav the tablet holds would make the app reuse the wrong
-# render (without one it simply renders again). Nothing is committed. The
-# tablet's render/ is the app's own folder (its uid, mode 770), which adb's shell
-# user cannot enter, so it is read AS THE APP: `adb exec-out run-as
-# com.warptempo.gui cat <file>` streams each file out and the tablet's sha256 of
-# it is checked against the laptop's, each part dated as on the tablet to the
-# nanosecond.
 #
 # setup SHOWS ITS PLAN AND ASKS FIRST (architect 2026-09-28: "add y/n confirm, and
 # that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
@@ -262,8 +231,7 @@ usage() {
     cat <<'HELP'
 warptempo_sync — the laptop's errands to the tablet
 
-  warptempo_sync tt [piece ...|all]    TO the tablet:   the source audio the tablet lacks
-  warptempo_sync ft [piece ...|all]    FROM the tablet: the renders newer than the laptop's
+  warptempo_sync tt [piece ...|all]    TO the tablet:   the source audio and the scores the tablet lacks
   warptempo_sync ot [piece]            ON the tablet:   a shell as the app in its projects folder (exit returns)
   warptempo_sync setup                 make a new (or this) tablet ready: clone, key, settings, audio
                                        (it shows the plan and asks Proceed? [y/N]; nothing is backed up)
@@ -282,12 +250,12 @@ q() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
 
 # ------------------------------------------------------------------ arguments
 
-USAGE="usage: warptempo_sync tt|ft [-n] [-v] [piece ...|all]    or    warptempo_sync ot [piece]    or    warptempo_sync setup [-n] [-v]"
+USAGE="usage: warptempo_sync tt [-n] [-v] [piece ...|all]    or    warptempo_sync ot [piece]    or    warptempo_sync setup [-n] [-v]"
 [[ $# -gt 0 ]] || { usage; exit 0; }
 mode=""; dry=0; verbose=0; names=(); all=0
 for a in "$@"; do
     case "$a" in
-        tt|ft|ot|setup) [[ -z "$mode" ]] || die "$USAGE"; mode="$a" ;;
+        tt|ot|setup) [[ -z "$mode" ]] || die "$USAGE"; mode="$a" ;;
         -n)    dry=1 ;;
         -v)    verbose=1 ;;
         -h|--help) usage; exit 0 ;;
@@ -549,53 +517,6 @@ source_wav() {                          # $1 = piece
     printf '%s' "$dir/${wav_stems[0]}.wav"
 }
 
-# A FILE'S IDENTITY TO THE NANOSECOND, as the app's fingerprint records it
-# (render_cache.cpp: `size=` and `mtime=` in whole nanoseconds, compared exactly).
-# From one `stat -c '%Y|%s|%y'` line, on either device: %Y is whole seconds and
-# the nanoseconds are %y's fraction (toybox on the tablet has no %.9Y; GNU and
-# toybox both print %y's nine digits). Prints "NS SIZE SEC.FRAC" — the last is
-# what `touch -d @...` takes to restore the date exactly. Fails on a malformed line.
-ns_identity() {                         # $1 = "%Y|%s|%y"
-    local sec="${1%%|*}" rest="${1#*|}" size y frac=000000000
-    size="${rest%%|*}"; y="${rest#*|}"
-    [[ "$sec" =~ ^[0-9]+$ && "$size" =~ ^[0-9]+$ ]] || return 1
-    if [[ "$y" =~ \.([0-9]+) ]]; then frac="${BASH_REMATCH[1]}000000000"; frac="${frac:0:9}"; fi
-    printf '%s %s %s.%s' "$(( 10#$sec * 1000000000 + 10#$frac ))" "$size" "$sec" "$frac"
-}
-# The laptop file's "NS SIZE" (ns_identity's first two fields), or fails.
-near_identity() {                       # $1 = laptop path
-    local id
-    id="$(ns_identity "$(stat -c '%Y|%s|%y' -- "$1" 2>/dev/null)")" || return 1
-    printf '%s' "${id% *}"
-}
-# What a fingerprint says its wav is, as "NS SIZE" (its mtime= and size= lines),
-# or fails when it does not say.
-fp_records() {                          # $1 = laptop path of a .fingerprint
-    local sz mt
-    sz="$(sed -n 's/^size=//p' -- "$1" 2>/dev/null)"
-    mt="$(sed -n 's/^mtime=//p' -- "$1" 2>/dev/null)"
-    [[ "$sz" =~ ^[0-9]+$ && "$mt" =~ ^[0-9]+$ ]] || return 1
-    printf '%s %s' "$mt" "$sz"
-}
-
-# One far file OUT, as the app, to a laptop PART file: streamed, checked by sha256
-# against the tablet's own, dated as on the tablet TO THE NANOSECOND (ns_identity:
-# a render's fingerprint records its wav's date exactly, so a date rounded to the
-# second would make the laptop's copy a pair the app rejects). Prints the sha256 it
-# checked. Fails with the part removed. Publishing it (the rename) is the caller's.
-fetch_as_app() {                        # $1 = far path, $2 = laptop part path
-    local far_sum near_sum id
-    mkdir -p -- "$(dirname -- "$2")" || return 1
-    if app_out 'cat "$1"' "$1" > "$2"; then :; else rm -f -- "$2"; return 1; fi
-    far_sum="$(app_sh 'sha256sum "$1"' "$1" | cut -c1-64)"
-    near_sum="$(sha256sum < "$2" | cut -c1-64)"
-    if [[ -z "$far_sum" || "$far_sum" != "$near_sum" ]]; then rm -f -- "$2"; return 1; fi
-    id="$(ns_identity "$(app_sh 'stat -c "%Y|%s|%y" "$1"' "$1" | tr -d '\r')")" || { rm -f -- "$2"; return 1; }
-    touch -d "@${id##* }" -- "$2" || { rm -f -- "$2"; return 1; }
-    printf '%s' "$near_sum"
-    return 0
-}
-
 # One laptop file IN, as the app, into the app's private folder: written beside the
 # target and renamed over it, then checked by sha256.
 put_as_app() {                          # $1 = laptop file, $2 = far path (relative to run-as's home), $3 = mode
@@ -696,10 +617,11 @@ pushed=0
 scores=0
 unresolved=()
 # THE SCORE FOLDER of one piece (the head's tt paragraph): the pages its
-# pages.txt names, then pages.txt. Sets nothing on a piece with no
+# pages.txt names, then pages.txt, then audio.wav where the folder holds one —
+# never viewer.txt or the scan cache. Sets nothing on a piece with no
 # score/pages.txt; counts `scores` for a folder pushed (or that would be).
 push_score() {                          # $1 = piece
-    local p="$1" dir line n count width name f
+    local p="$1" dir line n count width name f audio=""
     local re='^([0-9]+)[|]'
     dir="$PROJECTS/$1/score"
     [[ -f "$dir/pages.txt" ]] || return 0
@@ -721,7 +643,11 @@ push_score() {                          # $1 = piece
         files+=( "$name" )
     done
     files+=( "pages.txt" )
-    step "copy the score to the tablet ($(plural "$count" page) and pages.txt; the pages it already holds unchanged are skipped)"
+    if [[ -f "$dir/audio.wav" ]]; then
+        files+=( "audio.wav" )
+        audio=", then its audio.wav ($(du -h -- "$dir/audio.wav" | cut -f1); a few minutes the first time)"
+    fi
+    step "copy the score to the tablet ($(plural "$count" page) and pages.txt$audio; the files it already holds unchanged are skipped)"
     for f in "${files[@]}"; do
         quiet adb push --sync "$dir/$f" "$FAR/projects/$p/score/$f" || die "push failed: $dir/$f"
     done
@@ -778,7 +704,6 @@ report_unresolved() {
 
 case "$mode" in
     tt)    printf 'warptempo_sync tt%s — the audio, laptop -> tablet (%s %s)\n' "$( (( dry )) && printf ' -n' )" "$link" "$dev" ;;
-    ft)    printf 'warptempo_sync ft%s — the renders, tablet -> laptop (%s %s)\n' "$( (( dry )) && printf ' -n' )" "$link" "$dev" ;;
     setup) printf 'warptempo_sync setup%s — the tablet made ready (%s %s)\n' "$( (( dry )) && printf ' -n' )" "$link" "$dev" ;;
 esac
 if [[ "${#names[@]}" -gt 0 ]]; then
@@ -808,146 +733,6 @@ if [[ "$mode" == "tt" ]]; then
     elif [[ "$pushed" -eq 0 && "$scores" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
     elif [[ "$scores" -eq 0 ]]; then printf 'done: %s copied. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)"
     else printf 'done: %s copied, %s brought up to date. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)" "$(plural "$scores" 'score folder')"
-    fi
-    exit 0
-fi
-
-# ------------------------------------------------------------------------------ ft
-
-if [[ "$mode" == "ft" ]]; then
-    [[ "${#targets[@]}" -gt 0 ]] || die "no pieces"
-    # ONE PAIR ON THE TABLET, as one line: the wav's `%Y|%s|%y` (ns_identity's
-    # input), its fingerprint's sha256 or "-" when it has none, and the wav's name
-    # last (a name may hold anything but a newline). The inventory runs it over
-    # every render wav.
-    # Every utility is handed the `./` spelling (a name may begin with `-`); the
-    # line carries the bare name.
-    far_pair='fp="./${f%.*}.fingerprint"; s=-; [ -f "$fp" ] && s="$(sha256sum "$fp" | cut -c1-64)"; echo "$(stat -c "%Y|%s|%y" "./$f")|$s|$f"'
-    # A pair line as "NS SIZE FPSHA", or fails.
-    pair_token() {                      # $1 = a far_pair line
-        local sec size y fsum name id
-        IFS='|' read -r sec size y fsum name <<<"$1"
-        id="$(ns_identity "$sec|$size|$y")" || return 1
-        [[ "$fsum" == "-" || "$fsum" =~ ^[0-9a-f]{64}$ ]] || return 1
-        printf '%s %s' "${id% *}" "$fsum"
-    }
-    took=0
-    for p in "${targets[@]}"; do
-        printf '%s\n' "$p"
-        fard="$FAR/projects/$p/render"
-        neard="$PROJECTS/$p/render"
-        # THE INVENTORY, BY PAIR. Checked: a missing render/ is an empty answer,
-        # any other failure
-        # stops the run (a line that fails its own read dies at pair_token).
-        # Dot-leading names too (a title may begin with `.`): the two globs are
-        # disjoint, and one that matches nothing stays literal and fails -f.
-        listing="$(app_sh '[ -d "$1" ] || exit 0; cd "$1" || exit 1; for f in *.wav .*.wav; do [ -f "./$f" ] || continue; '"$far_pair"'; done' "$fard")" || \
-            die "could not list the tablet's renders for $p: nothing more was copied"
-        listing="${listing//$'\r'/}"
-        if [[ -z "$listing" ]]; then
-            step "leave it: the tablet has no render for this piece"
-            continue
-        fi
-        while IFS= read -r line; do
-            [[ -n "$line" ]] || continue
-            name="${line#*|}"; name="${name#*|}"; name="${name#*|}"; name="${name#*|}"
-            token="$(pair_token "$line")" || die "could not read the tablet's render '$name' in $p"
-            fid="${token% *}"            # "NS SIZE" of the tablet's wav
-            ffp="${token##* }"           # its fingerprint's sha256, or "-"
-            fns="${fid% *}"
-            near="$neard/$name"
-            fp="${name%.*}.fingerprint"
-            nearfp="$neard/$fp"
-            nfp="-"
-            [[ -f "$nearfp" ]] && nfp="$(sha256sum < "$nearfp" | cut -c1-64)"
-            # THE WAV'S IDENTITY IS ITS SIZE AND ITS DATE TO THE NANOSECOND — what
-            # the fingerprint attests, and what a new render always changes.
-            wav_same=0
-            if [[ -f "$near" ]]; then
-                nid="$(near_identity "$near")" || die "could not read $p/render/$name on the laptop"
-                if [[ "$nid" == "$fid" ]]; then
-                    wav_same=1
-                elif [[ "$fns" -le "${nid% *}" ]]; then
-                    step "leave '$name' and its fingerprint: the laptop's copy is newer than the tablet's"
-                    continue
-                fi
-            fi
-            if (( wav_same )); then
-                # THE WAV MATCHES: the pair is whole when the fingerprint does too.
-                if [[ "$ffp" == "$nfp" ]]; then
-                    step "leave '$name': the laptop has it, and its fingerprint"
-                    continue
-                fi
-                if [[ "$ffp" == "-" ]]; then
-                    # No generation check: removing a fingerprint is always safe
-                    # (without one the app renders again) and copies nothing.
-                    step "DELETE the laptop's '$fp': the tablet's '$name' has no fingerprint, so it describes another render"
-                    run rm -f -- "$nearfp" || die "could not remove $p/render/$fp"
-                    took=$((took + 1))
-                    continue
-                fi
-                step "copy '$fp' from the tablet: the laptop has '$name' but not its fingerprint"
-                show adb exec-out "run-as $PKG cat $fard/$fp" ">" "$nearfp.warptempo_sync-part"
-                if (( ! dry )); then
-                    fetch_as_app "$fard/$fp" "$nearfp.warptempo_sync-part" >/dev/null || \
-                        die "could not bring $p/render/$fp: nothing was replaced"
-                    if [[ "$(fp_records "$nearfp.warptempo_sync-part")" != "$fid" ]]; then
-                        rm -f -- "$nearfp.warptempo_sync-part"
-                        step "leave '$name': the tablet's fingerprint does not describe its wav (a render in progress, or one cut short)"
-                        continue
-                    fi
-                fi
-                run mv -f -- "$nearfp.warptempo_sync-part" "$nearfp" || die "could not place $p/render/$fp"
-                took=$((took + 1))
-                continue
-            fi
-            if [[ "$ffp" == "-" ]]; then pair="'$name' (the tablet has no fingerprint for it)"
-            else pair="'$name' and its fingerprint"; fi
-            if [[ -f "$near" ]]; then step "copy $pair from the tablet, over the laptop's older copy"
-            else step "copy $pair from the tablet"; fi
-            [[ "$ffp" == "-" && -f "$nearfp" ]] && \
-                step "DELETE the laptop's old '$fp' as the wav lands: it describes another render"
-            # BOTH MEMBERS TO PART FILES, both checked — each against the tablet's
-            # own sha256, and the fingerprint against the listed wav — before
-            # either is published.
-            show adb exec-out "run-as $PKG cat $fard/$name" ">" "$near.warptempo_sync-part"
-            [[ "$ffp" != "-" ]] && show adb exec-out "run-as $PKG cat $fard/$fp" ">" "$nearfp.warptempo_sync-part"
-            if (( ! dry )); then
-                if fetch_as_app "$fard/$name" "$near.warptempo_sync-part" >/dev/null; then :; else
-                    die "could not bring $p/render/$name: nothing was replaced"
-                fi
-                if [[ "$ffp" != "-" ]]; then
-                    fetch_as_app "$fard/$fp" "$nearfp.warptempo_sync-part" >/dev/null || {
-                        rm -f -- "$near.warptempo_sync-part"
-                        die "could not bring $p/render/$fp: nothing was replaced"
-                    }
-                fi
-                if [[ "$ffp" != "-" && "$(fp_records "$nearfp.warptempo_sync-part")" != "$fid" ]]; then
-                    rm -f -- "$near.warptempo_sync-part" "$nearfp.warptempo_sync-part"
-                    step "leave '$name': the tablet's fingerprint does not describe its wav (a render in progress, or one cut short)"
-                    continue
-                fi
-            fi
-            # THE PUBLISH: the old fingerprint first, then the wav, then the new one.
-            run rm -f -- "$nearfp" || die "could not remove $p/render/$fp"
-            run mv -f -- "$near.warptempo_sync-part" "$near" || die "could not place $p/render/$name"
-            if [[ "$ffp" != "-" ]]; then
-                run mv -f -- "$nearfp.warptempo_sync-part" "$nearfp" || die "could not place $p/render/$fp ('$name' is in place without it: run it again)"
-                # THE PAIR IS COMPLETE only when the published wav is what the
-                # fingerprint beside it says, to the nanosecond. Otherwise the
-                # fingerprint goes (the app then renders again) and the run stops.
-                if (( ! dry )) && [[ "$(near_identity "$near")" != "$(fp_records "$nearfp")" ]]; then
-                    rm -f -- "$nearfp"
-                    die "$p/render/$name does not match its fingerprint after the copy: the fingerprint was removed; run warptempo_sync ft again"
-                fi
-            fi
-            took=$((took + 1))
-        done <<<"$listing"
-    done
-    printf '\n'
-    if (( dry )); then printf 'nothing was changed. run it without -n to do this.\n'
-    elif [[ "$took" -eq 0 ]]; then printf 'done: nothing newer on the tablet.\n'
-    else printf 'done: %s copied into the pieces'"'"' render/ folders.\n' "$(plural "$took" render)"
     fi
     exit 0
 fi

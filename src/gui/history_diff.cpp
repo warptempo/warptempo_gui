@@ -1286,10 +1286,6 @@ struct GuiHistoryGuiSide {
     char        active_audio_view   = 'S';
     char        active_markers_view = 'W';
     char        active_tab_view     = 'A';
-    // The score's three piece-level keys (2026-10-26), as a save writes them.
-    std::string score_path;
-    int64_t     score_first_page    = 0;
-    int64_t     score_last_page     = 0;
 };
 
 std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
@@ -1314,9 +1310,6 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     gui->active_audio_view   = app.active_audio_view;
     gui->active_markers_view = app.active_markers_view;
     gui->active_tab_view     = app.active_tab_view;
-    gui->score_path          = app.score_path;
-    gui->score_first_page    = app.score_first_page;
-    gui->score_last_page     = app.score_last_page;
     return gui;
 }
 
@@ -1324,8 +1317,7 @@ std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
                                          const EngineSettings&    engine) {
     const NonEngineSettingsSnapshot snap{
         gui.tab_a, gui.tab_b,
-        gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
-        gui.score_path, gui.score_first_page, gui.score_last_page};
+        gui.active_audio_view, gui.active_markers_view, gui.active_tab_view};
     return format_settings_text(snap, engine);
 }
 

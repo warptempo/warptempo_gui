@@ -593,11 +593,8 @@ deletes or copies over, the settings file, the audio) read-only and asked
 `Proceed? [y/N]`, the app not even stopped before a `y`; nothing is backed up
 (architect 2026-09-28: the confirmation is the insurance), so the tablet's old
 `.git` goes whole with any commit GitHub lacks; `warptempo_sync tt` pushes each piece's
-source `.wav` (audio only); `warptempo_sync ft` brings the `render/` deliverables home
-(renders only), each wav WITH ITS FINGERPRINT as one pair — both fetched and
-checked before either is published, the laptop's old fingerprint removed
-first, and a tablet wav with no fingerprint deleting the laptop's, which would
-otherwise describe another render; `warptempo_sync ot` opens an interactive shell on
+source `.wav` and its score folder, and nothing comes back (a render is made
+again on the laptop from the pulled markers); `warptempo_sync ot` opens an interactive shell on
 the tablet as the app, in its projects folder or a named piece's, the app
 stopped while the shell stands and started again on exit. The sidecars
 never travel by the sync script: the app commits, pushes and pulls them (history_diff.h's commit act and pull).

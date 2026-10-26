@@ -2,6 +2,7 @@
 
 #include "modal_box.h"     // modal_area_rect: the viewer's damage
 #include "notifications.h"
+#include "score_viewer_file.h"  // the write-through
 #include "svg_icon.h"      // the materials' road: raster_info, raster_regions
 #include "text_editor.h"   // next_session_id (the one modal counter)
 
@@ -73,9 +74,11 @@ void GuiScoreViewer::show_page(int index) {
     if (index == sv.page) return;
     sv.page = index;
     // EVERY PAGE CHANGE WRITES THE POSITION (the head): the active tab's
-    // band, the page's own begin — display scratch, nothing dirtied.
+    // band, the page's own begin — display scratch, nothing dirtied — and
+    // the score viewer's file at once.
     active_view_state(app).score_position =
         app.score->pages[static_cast<std::size_t>(index)].begin;
+    write_score_viewer_file(app);
     evict_outside_neighborhood();
     if (!cached(app, index)) decode_into_cache(index);
     damage();
@@ -99,6 +102,7 @@ void GuiScoreViewer::set_start() {
     if (!score_viewer_button_enabled(app, AppState::ScoreButtonAct::SetStart))
         return;
     app.score_first_page = app.score_viewer.page + 1;
+    write_score_viewer_file(app);
     evict_outside_neighborhood();
     damage();
 }
@@ -107,6 +111,7 @@ void GuiScoreViewer::set_end() {
     if (!score_viewer_button_enabled(app, AppState::ScoreButtonAct::SetEnd))
         return;
     app.score_last_page = app.score_viewer.page + 1;
+    write_score_viewer_file(app);
     evict_outside_neighborhood();
     damage();
 }
@@ -126,6 +131,7 @@ void GuiScoreViewer::confirm_reset() {
     if (!app.score_viewer.active) return;
     app.score_first_page = 0;
     app.score_last_page  = 0;
+    write_score_viewer_file(app);
     damage();
 }
 

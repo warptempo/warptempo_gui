@@ -3,8 +3,11 @@
 // THE SCORE VIEWER (architect 2026-10-26) — the movement's sheet music ONE
 // PAGE AT A TIME, "like the media player, with the page centered, zoomed to
 // fit onto the available area". Each movement's project names its score
-// folder through `score_path` (four movements may share one); the folder is
-// tools/score_extract.py's output, read at the load (score_pages.h). The
+// folder through `score_path` (four movements may share one; a pages.txt in
+// the piece's own `score/` needs no naming), the score viewer's own file
+// (score_viewer_file.h) holding it with the range and the positions; the
+// folder is tools/score_extract.py's output, read at the load
+// (score_pages.h). The
 // viewer's page numbers are pages.txt's, never the printed ones.
 //
 // NOTHING FOLLOWS THE AUDIO (architect: "no tolerance, no intelligent sync …
@@ -35,8 +38,9 @@
 // placeholder — is THE TRIM'S CLASS ("that would be how we would trim
 // effectively", "no undo, just like with regular trim"): START sets the first
 // to the shown page, END the last, RESET (behind its question, "because
-// there's no undo") both to 0; no undo entry, no dirty mark, carried by the
-// next save. THE QUESTION STANDS OVER THE VIEWER as the load confirmation
+// there's no undo") both to 0; no undo entry, no dirty mark, each written
+// through to the score viewer's file at once (write_score_viewer_file,
+// score_viewer_file.h). THE QUESTION STANDS OVER THE VIEWER as the load confirmation
 // stands over the render player (the model for standing), and it opens with
 // CANCEL FOCUSED as the render player's Delete question does (the model for
 // the focus: a destructive act with no undo behind it), so a bare Enter
@@ -47,7 +51,7 @@
 //
 // THE REMEMBERED POSITION — ViewState::score_position, the active tab's — is
 // the playhead's class: EVERY PAGE CHANGE writes the new page's `begin`
-// (show_page), and the open shows the page that holds it, clamped into the
+// (show_page), through to the score viewer's file at once, and the open shows the page that holds it, clamped into the
 // range (score_page_for_position).
 //
 // THE PAGES ARE DECODED THROUGH THE MATERIALS' ROAD (svg_icon.h: raster_info,
@@ -87,8 +91,9 @@ inline ScoreViewerRange score_viewer_range(const AppState& a) {
     ScoreViewerRange r;
     r.first = edge(a.score_first_page, 0);
     r.last  = edge(a.score_last_page, n - 1);
-    // The load refuses a crossed nonzero pair and the keys never write one,
-    // so this holds by construction; a first past the page count beside a
+    // The score viewer's file never yields a crossed nonzero pair (its
+    // reader takes the defaults for one, score_range_crossed) and the keys
+    // never write one, so this holds by construction; a first past the page count beside a
     // last of 0 resolves to the last page on both.
     if (r.first > r.last) r.first = r.last;
     return r;

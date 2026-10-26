@@ -11,6 +11,7 @@
 #include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
 #include "materials.h"
 #include "score_pages.h"     // the score_path commit's read
+#include "score_viewer_file.h" // the score's five keys: grammar, recall, write-through
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -154,6 +155,7 @@ std::optional<std::string> recall_setting_value(const AppState& app,
     std::optional<std::string> cur =
         format_engine_setting_value(app.engine_settings, key);
     if (!cur) cur = recall_gui_setting_value(app, key);
+    if (!cur) cur = recall_score_viewer_value(app, key);
     return cur;
 }
 
@@ -338,6 +340,97 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
 
+    // THE SCORE VIEWER'S FIVE KEYS (architect 2026-10-26 night), ahead of
+    // the shared schema owner because they are not in that schema: they
+    // live in the score viewer's own file, whose grammar owner
+    // (validate_score_viewer_value, score_viewer_file.h) this asks, and
+    // every committed change WRITES THAT FILE THROUGH at once (the device
+    // keys' road, never the save's). Band-class like every key of this
+    // router: no undo, no dirty.
+    if (auto sv = validate_score_viewer_value(key, value)) {
+        if (!*sv) {
+            reject(sv->error());
+            return true;
+        }
+        const GuiScoreViewerValue& v = **sv;
+        // THE FOLDER: the commit READS IT, the load's own road
+        // (score_pages.h's three outcomes), so a typed path is the score on
+        // screen at the OK — the SCORE key lit or grey by the next frame. A
+        // MALFORMED pages.txt refuses here with the reader's own reason, the
+        // editor's immediate courtesy (the load would take it as no score
+        // and one stderr line); an ABSENT folder commits, the key grey and a
+        // card saying where nothing was found (the folder may arrive by the
+        // sync script later). The empty value is no score.
+        if (key == "score_path") {
+            if (v.text == app.score_path) { unchanged(); return true; }
+            if (v.text.empty()) {
+                app.score.reset();
+                app.score_path.clear();
+                write_score_viewer_file(app);
+                applied(); return true;
+            }
+            const std::filesystem::path folder = score_folder_of(
+                score_viewer_project_folder(app), v.text);
+            auto score = read_score_folder(folder);
+            if (!score) {
+                reject("invalid score in '" +
+                       shown_project_path(folder / "pages.txt") + "': " +
+                       score.error());
+                return true;
+            }
+            app.score_path = v.text;
+            write_score_viewer_file(app);
+            if (score->pages) {
+                app.score = std::move(score->pages);
+            } else {
+                app.score.reset();
+                std::fprintf(stderr, "warptempo_gui: %s; no score\n",
+                             score->advisory.c_str());
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     "No score at '" +
+                                         shown_project_path(folder) + "'");
+            }
+            applied(); return true;
+        }
+        // THE VIEWING RANGE: the score viewer's START / END typed
+        // (score_viewer.h), AUTHORING like them — a read-only tab and grid
+        // iterations refuse it with the lock's own card, the engine-key
+        // arm's shape — and refused where the pair would cross
+        // (score_range_crossed, the file's one cross-key rule), so a crossed
+        // pair is never written. A number past the page count commits (the
+        // viewer clamps at use).
+        if (key == "score_first_page" || key == "score_last_page") {
+            if (authoring_locked(app)) {
+                const char* card = authoring_lock_card(app);
+                text_editor::refuse(app.settings_editor);
+                viewport.invalidate_dialog_editor_box();
+                std::fprintf(stderr, "warptempo_gui: %s\n", card);
+                notifications.notify(AppState::NotificationClass::Normal, card);
+                return true;
+            }
+            const bool first = (key == "score_first_page");
+            int64_t& bound = first ? app.score_first_page : app.score_last_page;
+            if (v.i64 == bound) { unchanged(); return true; }
+            const int64_t f = first ? v.i64 : app.score_first_page;
+            const int64_t l = first ? app.score_last_page : v.i64;
+            if (score_range_crossed(f, l)) {
+                reject("score_first_page would pass score_last_page");
+                return true;
+            }
+            bound = v.i64;
+            write_score_viewer_file(app);
+            applied(); return true;
+        }
+        // THE REMEMBERED POSITION (`tab_a_` / `tab_b_score_position`):
+        // band-only on both tabs, the viewer reading it at its next open
+        // (score_viewer.h) — display scratch, no clamp here.
+        ViewState& band = (key == "tab_b_score_position") ? app.tab_b : app.tab_a;
+        if (v.i64 == band.score_position) { unchanged(); return true; }
+        band.score_position = v.i64;
+        write_score_viewer_file(app);
+        applied(); return true;
+    }
+
     // The shared grammar/vocabulary owner. std::nullopt: `key` is not a
     // GUI-kind key — fall through to the engine path. An error: malformed or
     // out-of-vocabulary value — refused with the returned reason. Otherwise
@@ -433,75 +526,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // Exactly the Ctrl+Tab pair.
         active_views.switch_active_tab_view_to(gv.c);
         target_render.trigger();
-        applied(); return true;
-    }
-
-    // -- the score's piece-level keys (architect approval 2026-10-26) -------
-    // THE FOLDER: the commit READS IT, the load's own road (score_pages.h's
-    // three outcomes), so a typed path is the score on screen at the OK —
-    // the SCORE key lit or grey by the next frame — and a committed path is
-    // one the next load accepts: a MALFORMED pages.txt refuses here with the
-    // load's own reason (loadable iff it commits), while an ABSENT folder
-    // commits, the key grey and a card saying where nothing was found (the
-    // folder may arrive by the sync script later). Band-class like every key
-    // of this router: no undo, no dirty, carried by the next save. The empty
-    // value is no score.
-    if (key == "score_path") {
-        if (gv.text == app.score_path) { unchanged(); return true; }
-        if (gv.text.empty()) {
-            app.score.reset();
-            app.score_path.clear();
-            applied(); return true;
-        }
-        const std::filesystem::path folder = score_folder_of(
-            std::filesystem::path(app.source_audio_path).parent_path(),
-            gv.text);
-        auto score = read_score_folder(folder);
-        if (!score) {
-            reject("invalid score in '" +
-                   shown_project_path(folder / "pages.txt") + "': " +
-                   score.error());
-            return true;
-        }
-        app.score_path = gv.text;
-        if (score->pages) {
-            app.score = std::move(score->pages);
-        } else {
-            app.score.reset();
-            std::fprintf(stderr, "warptempo_gui: %s; no score\n",
-                         score->advisory.c_str());
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "No score at '" + shown_project_path(folder) +
-                                     "'");
-        }
-        applied(); return true;
-    }
-    // THE VIEWING RANGE: the score viewer's START / END typed (score_viewer.h),
-    // AUTHORING like them — a read-only tab and grid iterations refuse it
-    // with the lock's own card, the engine-key arm's shape — and refused
-    // where the pair would cross, the one cross-key rule the load enforces
-    // (read_settings_file), so a crossed pair is never committed. A number
-    // past the page count commits (the viewer clamps at use, as the load
-    // admits it).
-    if (key == "score_first_page" || key == "score_last_page") {
-        if (authoring_locked(app)) {
-            const char* card = authoring_lock_card(app);
-            text_editor::refuse(app.settings_editor);
-            viewport.invalidate_dialog_editor_box();
-            std::fprintf(stderr, "warptempo_gui: %s\n", card);
-            notifications.notify(AppState::NotificationClass::Normal, card);
-            return true;
-        }
-        const bool first = (key == "score_first_page");
-        int64_t& bound = first ? app.score_first_page : app.score_last_page;
-        if (gv.i64 == bound) { unchanged(); return true; }
-        const int64_t f = first ? gv.i64 : app.score_first_page;
-        const int64_t l = first ? app.score_last_page : gv.i64;
-        if (f != 0 && l != 0 && f > l) {
-            reject("score_first_page would pass score_last_page");
-            return true;
-        }
-        bound = gv.i64;
         applied(); return true;
     }
 
@@ -726,15 +750,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                 "bounds reset to the song edges\n",
                 (tab_char == 'B') ? 'b' : 'a');
         }
-        applied(); return true;
-    }
-
-    if (suffix == "score_position") {
-        // THE SCORE VIEWER'S REMEMBERED POSITION (architect approval
-        // 2026-10-26): band-only on both tabs, the viewer reading it at its
-        // next open (score_viewer.h) — display scratch, no clamp here.
-        if (gv.i64 == band.score_position) { unchanged(); return true; }
-        band.score_position = gv.i64;
         applied(); return true;
     }
 

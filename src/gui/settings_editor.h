@@ -118,7 +118,9 @@ struct GuiInputHandler;
 //    active_markers_view / active_tab_view / per-tab trim /
 //    per-tab read_only / gui_scale, and since 2026-10-26 the score's five —
 //    score_path, which reads its folder at the commit, the range pair, which
-//    takes the authoring lock, and the per-tab score_position):
+//    takes the authoring lock, and the per-tab score_position, under their
+//    own grammar owner and WRITTEN THROUGH to the score viewer's file at the
+//    commit, score_viewer_file.h):
 //    commit_gui_setting
 //    parses strictly (a refused commit on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
@@ -159,9 +161,10 @@ struct GuiInputHandler;
 //
 // THE KEYS TAB COMPLETES — ONE TABLE, THE TEN (the cues' four tuning keys
 // gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
-// `score_path` joined the same day): the five SIDECAR keys a hand edits (the
+// `score_path` joined the same day): the five PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
-// folder, typed once per movement, architect 2026-10-26), then the DEVICE
+// folder, the score viewer's file's, typed only for another movement's
+// folder, architect 2026-10-26), then the DEVICE
 // CONFIG's five editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
 // `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
