@@ -391,10 +391,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_true_colors, device_config.h), the writer's own spelling.
     if (key == "true_colors" && app.device_config != nullptr)
         return std::string(format_true_colors(app.device_config->true_colors));
-    // THE LED GLOW (2026-10-23): through the config's own serializer, as
-    // the scale.
-    if (key == "led_glow" && app.device_config != nullptr)
-        return format_gui_scale_percent(app.device_config->led_glow);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

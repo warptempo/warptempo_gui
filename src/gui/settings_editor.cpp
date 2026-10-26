@@ -311,10 +311,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other five editable device keys — projects_repo and, since
+    // move. (The other four editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
-    // 2026-10-21), since 2026-10-21 true_colors and since 2026-10-23
-    // led_glow — take their one direct-set body in
+    // 2026-10-21) and since 2026-10-21 true_colors — take their one
+    // direct-set body in
     // commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
@@ -693,7 +693,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The six device keys other than the scale — one body, ahead of the
+    // 2. The four device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -959,10 +959,10 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it; `led_glow` (2026-10-23, the hi-fi skin's lit LED) by
-// one bake, its arm last (`bevel_light` and `bevel_dark` stood there
-// 2026-10-21 to 2026-10-23, `strip_pad` after it 2026-10-22 to 2026-10-23,
-// the pad settled at a constant, program_spec.h).
+// its arm after it (`bevel_light` and `bevel_dark` stood after it
+// 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
+// settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
+// 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key.) The commit is the OK's or Enter's (the choice rows' list
@@ -1046,28 +1046,6 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         }
         app.device_config->true_colors = *on;
         input->apply_true_colors(*on);
-        (void)persist();
-        applied();
-        return true;
-    }
-
-    // THE LED GLOW (architect 2026-10-23, "agree to all"; a number under
-    // tuning gets a key and a Settings row): the scale's canonical integer
-    // spelling under the range's one owner (is_led_glow, device_config.h),
-    // APPLIED AT THE COMMIT BY ONE BAKE (GuiInputHandler::apply_led_glow —
-    // the bake rule's one Settings-OK exception, materials.h), so NO CARD:
-    // the lamps on screen are the answer.
-    if (key == "led_glow") {
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_led_glow(v)) {
-            reject(kLedGlowGrammarReason);
-            return true;
-        }
-        if (static_cast<int>(v) == app.device_config->led_glow) {
-            unchanged(); return true;
-        }
-        app.device_config->led_glow = static_cast<int>(v);
-        input->apply_led_glow(static_cast<int>(v));
         (void)persist();
         applied();
         return true;
@@ -1302,9 +1280,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, waveform, true_colors and the
-    // tuning key led_glow — gui_scale and the rest the device config's — per-tab trim /
-    // read_only)
+    // gui_scale, projects_repo, projects_path, waveform and true_colors —
+    // gui_scale and the rest the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S (or, for a device key, the config's writer)
     // would write, so recall and save never diverge.

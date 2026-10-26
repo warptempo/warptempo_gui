@@ -1494,7 +1494,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // 2026-10-05): in the `h` view the history companions stand in the icon
 // row's slots of the two groups THIS WALK answers DEAD whole — Revert and
 // Load in Place in Undo's (Undo, Redo, Copy Phase Resets and Render, the
-// copy since 2026-10-25), the walk lamp and Cumulative in the iteration
+// copy since 2026-10-25), Cumulative and the walk lamp in the iteration
 // group's (BPM, Grid, Flatten; again since 2026-10-26) — and outside it
 // they do not stand (kIconRowHistoryStandIns, paint_handler.cpp, which
 // names this walk as the membership's derivation). A change here that

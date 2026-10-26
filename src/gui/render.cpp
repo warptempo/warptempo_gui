@@ -1621,8 +1621,8 @@ struct FlagFace {
 //   history ADDED (plus)     cue red   —       | cue red               light / white
 //   history REMOVED (minus)  invalid   invalid | —                     light / white
 // "invalid" is the palette's `invalid_label`, each built-in's own, its
-// center line on the forty (palette_file.h's role table, architect
-// 2026-10-26); THE `range` BLUE LEAVES THE HISTORY VIEW
+// center line on every row but Terminal, Default, Proportional's violet
+// (palette_file.h's role table, architect 2026-10-26); THE `range` BLUE LEAVES THE HISTORY VIEW
 // (2026-10-11: the plus takes the marker's own face, the minus the invalid
 // color), each half keeping its phase of 2026-10-09 so a changed pair's two
 // stems on one column still alternate.

@@ -20,9 +20,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them but the optional `led_glow` (EIGHT keys
-// since 2026-10-23, `strip_pad` settled to a constant, program_spec.h; nine
-// that day, the bevel pair gone and `led_glow` appended; TEN 2026-10-21 evening,
+// REQUIRED SET, every one of them (SEVEN keys since 2026-10-26, the LED
+// glow settled to a constant, materials.cpp's kLedGlowPx; EIGHT 2026-10-23,
+// `strip_pad` settled to a constant, program_spec.h; nine that day, the
+// bevel pair gone and the LED glow's key appended; TEN 2026-10-21 evening,
 // `true_colors` placed after `waveform`, below; nine that afternoon, the three
 // tuning keys appended, `caption` gone and `chrome` renamed
 // `waveform`; seven 2026-10-12, `icons` and `font` gone;
@@ -56,9 +57,9 @@ namespace {
 // the tuning keys keep the end where they leave from.
 //
 // THE TUNING KEYS stand after `role`, where the tuning phases' keys have
-// always stood, each leaving when he settles its value: `led_glow`
-// (2026-10-23, the hi-fi skin's lit LED), THE ONE OPTIONAL KEY
-// (device_config.h's list), written always. (`strip_pad` stood before it
+// always stood, each leaving when he settles its value; none stands since
+// 2026-10-26. (The LED glow's stood there 2026-10-23 to 2026-10-26, settled at
+// 4 device px, materials.cpp's kLedGlowPx; `strip_pad` before it
 // 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's
 // strip_pad_px; `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23,
 // `text_shadow` beside them until 2026-10-22; the cues' seven after it
@@ -71,12 +72,11 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform",
     "true_colors",
     "role",
-    "led_glow",
 };
-// THE REQUIRED KEYS: every key of the writer's order but the optional
-// `led_glow`, its last.
+// THE REQUIRED KEYS: every key of the writer's order (no optional key since
+// 2026-10-26).
 constexpr std::span<const char* const> kDeviceConfigRequiredKeys(
-    kDeviceConfigKeys, std::size(kDeviceConfigKeys) - 1);
+    kDeviceConfigKeys);
 } // namespace
 
 std::string format_gui_scale_percent(int percent) {
@@ -141,9 +141,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
                                                    : kDeviceRoleMirror;
-        } else if (k == "led_glow") {
-            // The scale's canonical digits (format_gui_scale_percent).
-            s += format_gui_scale_percent(cfg.led_glow);
         }
         s += '\n';
     }
@@ -258,17 +255,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
             } else {
                 return bad_value(ln, key, value, kDeviceRoleGrammarReason);
             }
-            return {};
-        }
-        // THE LED GLOW (2026-10-23): the scale's canonical integer spelling,
-        // the range its one owner's (is_led_glow, device_config.h); absent,
-        // the struct's default stands.
-        if (key == "led_glow") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) || !is_led_glow(v)) {
-                return bad_value(ln, key, value, kLedGlowGrammarReason);
-            }
-            out.led_glow = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

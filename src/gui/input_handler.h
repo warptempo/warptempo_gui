@@ -1449,7 +1449,7 @@ struct GuiInputHandler {
     //   Zoom to Fit, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings and Enable
     //   Tooltips), the history view's four stand-ins (Revert and Load in
-    //   Place in Undo's slots, the walk lamp and Cumulative in the iteration
+    //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right behind it in one run (kIconRowViewPairs, Source /
@@ -3765,14 +3765,6 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
-    // THE LED GLOW'S ONE LIVE ACT (architect 2026-10-23; materials.h's
-    // set_led_glow): the settings editor's `led_glow=` commit pushes the
-    // device px to the materials and bakes at once (the glow is in the bake's
-    // key: the lit keys' patches carry it), the flag cache refreshed and the
-    // whole window invalidated. The commit gates the no-op and writes the
-    // config; this applies.
-    void apply_led_glow(int px);
-
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to
@@ -4457,7 +4449,10 @@ private:
     //     is the USER'S from before `h` until after it.)
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
-    //     this instant, and the head delta measured once. ONE CALLER since
+    //     this instant, and the head delta measured once — OPENING ON THE
+    //     COMMIT WALK'S MEMBER THE LAST VISIT WAS VIEWING (architect
+    //     2026-10-26, AppState::history_viewed_commit_sha), at once where the
+    //     walk holds it, else by the prefetch drain's one pending landing. ONE CALLER since
     //     2026-08-05 — bare `h` — the commit act having stopped re-entering when
     //     it began closing the view instead. IT ALWAYS OPENS since 2026-09-04:
     //     a bootstrap the REMOTE walk refuses lands the visit on the LOCAL one
@@ -4485,7 +4480,11 @@ private:
     //     `u` FLIPS THE READING through it (2026-08-08,
     //     when the reading left the row for row 4's own toggle). A switch is a MODE EDGE with the `,` / `.` step's own
     //     shape, and the owner is idempotent, which is what makes a step onto
-    //     the walk already shown a consumed nothing at its call site.
+    //     the walk already shown a consumed nothing at its call site. IT
+    //     MOVES NEITHER WALK'S POSITION, so it writes no remembered member
+    //     (AppState::history_viewed_commit_sha, 2026-10-26, which the exit
+    //     owner writes); a switch that lands CANCELS the entry's pending
+    //     landing on that member, as a `,` / `.` step does.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * the PUBLISH CHORD'S ACT forks in front of it (run_publish_chord,

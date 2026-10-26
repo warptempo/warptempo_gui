@@ -158,14 +158,15 @@ shopt -s nocaseglob
 #      (waveform=warptempo-terminal-default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
 #      true_colors=on line (TRUE_COLORS_LINE below; 2026-10-21) the same way
-#      (no tuning key is required now: led_glow is optional, absent = 4), and
-#      every line of a retired key the app refuses to start with is removed --
+#      (no tuning key stands now: the last, the lit LED's glow, settled
+#      2026-10-26), and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
 #      captions, the two bevel keys, which left 2026-10-23 with the
-#      fortepiano chrome, strip_pad, settled the same day at a constant, and
-#      the cues' tuning keys, settled 2026-10-26 (RETIRED_KEYS below;
+#      fortepiano chrome, strip_pad, settled the same day at a constant, the
+#      cues' tuning keys, settled 2026-10-26, and the lit LED's glow key,
+#      settled the same day (RETIRED_KEYS below;
 #      src/gui/device_config.h); every other line is kept.
 #   6. the audio, exactly as `warptempo_sync tt all`.
 #   7. the directories adb made are opened to the app (below), and the app started.
@@ -225,6 +226,8 @@ TRUE_COLORS_LINE="true_colors=on"
 # triangle's rows and its antialiasing, the label's size and its gap past
 # the triangle) at 8 rows authored at 300 %, the staircase, 22 and a gap
 # of 8 (src/gui/render.h, src/gui/gui_font.h, src/gui/cool_edit_paint.h);
+# and the lit LED's glow tuning key of 2026-10-23, settled 2026-10-26 at 4
+# device px and a constant in the program since (src/gui/materials.cpp);
 # so setup writes no tuning line.
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
@@ -233,7 +236,7 @@ RETIRED_KEYS=(sync_path theme_level
               playhead_head playhead_stem
               caption bevel_light bevel_dark strip_pad
               cue_shadow cue_triangle_rows cue_triangle_aa cue_text
-              cue_lead)
+              cue_lead led_glow)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }

@@ -54,11 +54,16 @@ PRESETS_PROVENANCE = (
     'The color presets of Cool Edit Pro 2.1, the program the waveform\'s look comes from: its twenty presets in its '
     'own order, each twice — first as it is ("Cool Edit, ..."), then with the program\'s own waveform color, the '
     'green of the DEC VT220 terminal, in place of its waveform and grid colors ("Terminal, ..."), everything else, '
-    'the markers\' two colors among it, the Cool Edit preset\'s own.')
+    'the markers\' two colors among it, the Cool Edit preset\'s own. Directly after "Terminal, Default" stands '
+    '"Terminal, Default, Proportional": every color of Cool Edit\'s default preset shifted as its waveform color is '
+    'shifted to the terminal green (the same hue turn, and the lightness and saturation scaled by the same factors), '
+    'so that they all keep their proportions.')
 PRESETS_RULES = [
     'The waveform\'s outline is each preset\'s waveform color darkened, the same hue at a fixed lightness (the '
     'lightness of Cool Edit Pro 2.1\'s view bar shadows).',
-    'The Invalid color, which marks an invalid marker, is each preset\'s own center line color.',
+    'The Invalid color, which marks an invalid marker, is each preset\'s own center line color, except on '
+    '"Terminal, Default, Proportional", whose Invalid color is its own violet, a third color beside its red and blue '
+    'markers.',
     'The scanner (the line that moves during playback) and the zoom\'s anchor line are white in every preset, as Cool '
     'Edit\'s scanner is on every one of its presets.',
 ]

@@ -62,21 +62,25 @@ Tile make_tile(const GuiRect& r, Surface s) {
     return t;
 }
 
-// THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale, the
-// conversion and the LED glow (the strip pad a constant since 2026-10-23) — every lane, every seat and so every tile's rect and every
-// key patch is a function of them, so a frame compares these and never lays
-// anything out.
+// THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale and
+// the conversion (the strip pad a constant since 2026-10-23, the LED glow
+// since 2026-10-26) — every lane, every seat and so every tile's rect and
+// every key patch is a function of them, so a frame compares these and
+// never lays anything out.
 struct Key {
-    int  w = 0, h = 0, scale = 0, glow = 0;
+    int  w = 0, h = 0, scale = 0;
     bool converted = false;
     bool operator==(const Key&) const = default;
 };
 
-// THE LED GLOW (materials.h's set_led_glow), device px; absent = 4.
-int g_led_glow = 4;
+// THE LED GLOW (materials.h's KEYS): the halo's reach past the lit LED's
+// rect, 4 DEVICE PX at every scale (architect 2026-10-23, "agree to all",
+// tuned on the glass as a device key; settled 2026-10-26 at
+// its default, "it stays on"). Unscaled: the key's own unit was device px.
+constexpr int kLedGlowPx = 4;
 
 Key key_of(const AppState& app) {
-    return Key{app.width, app.height, gui_scale_percent(), g_led_glow,
+    return Key{app.width, app.height, gui_scale_percent(),
                display_transform::active()};
 }
 
@@ -622,7 +626,7 @@ std::size_t bytes_of_surface(cairo_surface_t* s) {
 
 // -- THE KEY PATCHES (materials.h's KEYS) ----------------------------------
 
-// THE GLOW (materials.h's set_led_glow) over the patch `surf` of the key
+// THE GLOW (kLedGlowPx above) over the patch `surf` of the key
 // `r` at `depth`: composited over the face inside the wall and the outline,
 // round THAT DEPTH'S LED rect (key_led_rect) — the accent at alpha .35 at
 // the rect's edge falling off as (1 − d / glow)² to 0 at `glow` px out, d
@@ -630,7 +634,7 @@ std::size_t bytes_of_surface(cairo_surface_t* s) {
 // painted. The accent converted to the window's bytes here.
 void composite_glow(cairo_surface_t* surf, const GuiRect& r, int depth) {
     const GuiRect led = key_led_rect(r, depth);
-    if (g_led_glow <= 0 || led.w <= 0 || led.h <= 0) return;
+    if (led.w <= 0 || led.h <= 0) return;
     const GuiColor accent = display_color(hex(state().accent));
     const double ar = accent.r * 255.0, ag = accent.g * 255.0, ab = accent.b * 255.0;
     constexpr double kGlowPeak = 0.35;
@@ -639,7 +643,7 @@ void composite_glow(cairo_surface_t* surf, const GuiRect& r, int depth) {
     cairo_surface_flush(surf);
     unsigned char* data = cairo_image_surface_get_data(surf);
     const int stride = cairo_image_surface_get_stride(surf);
-    const double glow = static_cast<double>(g_led_glow);
+    constexpr double glow = kLedGlowPx;
     for (int y = face0; y < r.h - 1; ++y) {
         auto* row = reinterpret_cast<uint32_t*>(data + static_cast<std::size_t>(y) * stride);
         for (int x = face0; x < r.w - 1; ++x) {
@@ -884,8 +888,6 @@ void set_accent(uint32_t accent) {
     if (s.baked) rebuild_key_patches(true);
 }
 uint32_t accent_color() { return state().accent; }
-
-void set_led_glow(int px) { g_led_glow = std::max(0, px); }
 
 void follow_displayed_basis(int64_t vp_start, int64_t vp_end, int area_w) {
     State& s = state();

@@ -932,12 +932,13 @@ constexpr IconRowDef kIconRowHistoryActGroup[] = {
     // the viewed walk member, the render player's Load in Place act.
     {RedesignButton::IconLoadInPlace},
 };
-// THE READING GROUP (reinstated architect 2026-10-26): the walk lamp first,
-// as it always stood, then Cumulative — SESSION and CUMUL, each key's LED
-// its state.
+// THE READING GROUP (reinstated architect 2026-10-26): Cumulative first,
+// then the walk lamp — CUMUL and SESSION, each key's LED its state
+// (architect 2026-10-26: "cumul and session should switch places — cumul is
+// more common").
 constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
-    {RedesignButton::SessionHistory},
     {RedesignButton::HistoryCumulative},
+    {RedesignButton::SessionHistory},
 };
 struct IconRowStandIn {
     RedesignButton                replaces;   // the authoring group's leader
@@ -1368,7 +1369,7 @@ static void icon_row_walk(bool history,
     // next group leader; outside the view the stand-in groups never paint.
     // A DELIBERATE ASYMMETRY: A STAND-IN GROUP JOINS THE RUN TO ITS LEFT, NO
     // RUN GAP BEFORE IT (architect 2026-10-26 ~10:10) — the groups it replaces
-    // open no run, so Revert and Load abut OPEN SAVE and Session and Cumul
+    // open no run, so Revert and Load abut OPEN SAVE and Cumul and Session
     // abut FIT MAGNIFY, and the stand-ins take no run-opening mark of their
     // own: "I thought cumul and session were purposely placed in that group —
     // they are view-related, vaguely like fit/mag. The alternative is to have
@@ -1631,7 +1632,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
     // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
     // companions stand in two groups' slots — Revert and Load in Place in
-    // the toolbar group behind Save, the walk lamp and Cumulative in the
+    // the toolbar group behind Save, Cumulative and the walk lamp in the
     // iteration group's (kIconRowHistoryStandIns, the swap's one owner).
     //
     // ONE MODE SWAP AND ONE MODE HIDE (architect 2026-10-05 and 2026-10-07,
@@ -1661,7 +1662,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // first),
     //   16·23 + 2·15 = 398,
     // and inside it ten in three (Open, Save, Revert, Load in Place | Zoom
-    // to Fit, the lamp, Session, Cumulative | Play Renders, Enable Tooltips —
+    // to Fit, the lamp, Cumulative, Session | Play Renders, Enable Tooltips —
     // re-derived 2026-10-26, the reading group back), 10·23 + 2·15 = 260;
     // with one run gap of wood before the right run the band holds every
     // run at

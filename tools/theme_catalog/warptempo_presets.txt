@@ -9,16 +9,28 @@
 # Edit markers contrast well, with the flag in red and the range in blue." — "Do both at once — the point is to get
 # closer to Cool Edit again. Also show two versions of each CEP theme — one as it is, and one with Terminal as the
 # ink."
-# FORTY PRESETS IN TWENTY PAIRS, in Cool Edit's own order ("(Default Scheme)" displayed "Default"), each pair:
+# FORTY-ONE PRESETS: TWENTY PAIRS in Cool Edit's own order ("(Default Scheme)" displayed "Default") and, directly after
+# Terminal, Default, the one PROPORTIONAL row (below). Each pair:
 #  - THE THEME AS IT IS, "Cool Edit, <name>": every key Cool Edit's own — WvFg, WvBk, Cntr, CueM, RngM, GrdL, Curs and
 #    Face; the one scheme recording no Face (Classic Cool) takes Default's 626C7B, as the built-ins did 2026-10-09..25;
 #  - THEN ITS TERMINAL TWIN, "Terminal, <name>": the Terminal ink WvFg 49CA8A, the DEC VT220's green (HLS hue 150,
 #    saturation .55, lightness .54; the period round of 2026-10-25), and its grid GrdL 0F2E1F (the ink's hue at HLS
 #    saturation .5 and lightness .12), every other key the Cool Edit row's — its canvas, center line, cue, range,
 #    playhead, Face and invalid color.
-# THE INVALID COLOR IS THE ROW'S OWN CENTER LINE, Inv = Cntr on all forty (the 2026-10-11 rule these presets held,
-# architect ~01:00-01:20: the invalid color each palette's center line), written on every row because the generator
-# requires the key. The default (palette_file.h's kGuiDefaultPaletteKey) is Terminal, Default: the Terminal green under
+# THE PROPORTIONAL ROW, "Terminal, Default, Proportional" (architect 2026-10-26: "I'd like to see every color on the
+# default palette from Cool Edit shifted just as the relationship between the waveform inks is, so that they're all
+# still proportional"): the relation from Cool Edit's default ink 4BF3A7 (HLS hue 152.9, lightness .624, saturation
+# .875; Python colorsys HLS) to the Terminal ink 49CA8A (150.2, .539, .549) is hue -2.6 degrees, lightness x.865,
+# saturation x.627, applied to EVERY key of "Cool Edit, Default" (black stays black): Cntr A90404 -> 781E22, CueM
+# F34B58 -> CA4959, RngM 4B82F3 -> 4979CA, GrdL 003500 -> 0A2509, Curs FFFF00 -> B3AD29, Face 626C7B -> 595F66.
+# THE INVALID COLOR IS THE ROW'S OWN CENTER LINE, Inv = Cntr, on every row but Terminal, Default, Proportional (the
+# 2026-10-11 rule these presets held, architect ~01:00-01:20: the invalid color each palette's center line), written
+# on every row because the generator requires the key. THE PROPORTIONAL ROW'S INVALID COLOR IS ITS OWN, Inv 9F49CA, a
+# violet at the mapped cue's lightness and saturation (HLS hue 280, .539, .549), a third color beside the row's red cue
+# and blue range (architect 2026-10-26: the center-line red "is too close to the regular marker red. It becomes kind
+# of meaningless … let's just give the invalid one a different color … it couldn't be green because of the ink and
+# the connotation with adding, but it could be some purplish color … do that for the terminal default proportional
+# theme only"). The default (palette_file.h's kGuiDefaultPaletteKey) is Terminal, Default: the Terminal green under
 # Cool Edit's default red and blue markers, his "closer to Cool Edit again" (2026-10-26).
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone — WvFg, WvBk,
 # Cntr, Inv, CueM, RngM, GrdL, Curs, Face — Inv the one key of the program's own, Cool Edit's other keys left out),
@@ -28,6 +40,8 @@ WvFg=4BF3A7,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=F34B58,RngM=4B82F3,GrdL=0035
 Cool Edit, Default
 WvFg=49CA8A,WvBk=000000,Cntr=A90404,Inv=A90404,CueM=F34B58,RngM=4B82F3,GrdL=0F2E1F,Curs=FFFF00,Face=626C7B
 Terminal, Default
+WvFg=49CA8A,WvBk=000000,Cntr=781E22,Inv=9F49CA,CueM=CA4959,RngM=4979CA,GrdL=0A2509,Curs=B3AD29,Face=595F66
+Terminal, Default, Proportional
 WvFg=22B893,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,Curs=FFFF00,Face=1C47C6
 Cool Edit, XP Blue
 WvFg=49CA8A,WvBk=000000,Cntr=E85E3C,Inv=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F2E1F,Curs=FFFF00,Face=1C47C6

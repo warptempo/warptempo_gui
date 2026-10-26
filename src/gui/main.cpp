@@ -3398,13 +3398,11 @@ int gui_main(const char* argument) {
     // a `Ground` or `Marker` file in the `tiles/` folder beside the config
     // that is neither a PNG nor a JPEG is the blunt terminal line naming
     // the file, and no window. The bake waits for the window's size
-    // (materials::ensure_settled, the first frame's pre-paint hook); the
-    // LED's glow is the config's.
+    // (materials::ensure_settled, the first frame's pre-paint hook).
     if (const std::optional<std::string> err = materials::check()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }
-    materials::set_led_glow(device_config.led_glow);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

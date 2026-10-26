@@ -71,7 +71,7 @@ There is NO automated test suite and that is a constraint: Wayland exposes no in
 | The faces and sizes | `src/gui/gui_font.h`, `text_shape.{h,cpp}`, `fonts/README.md` |
 | The drawings and their renderer | `src/gui/icons.h`, `svg_icon.h`, `assets/icons/README.md` |
 | The waveform palette: roles, presets, the `waveform` key, the preset picker | `src/gui/palette_file.h`, `render.h`'s palette block, `cool_edit_derive.h`, `chrome_derive.h`, `theme_file.h`, `tools/theme_catalog/`, `folder_overlay.h` |
-| Device config (seven required keys: `gui_scale`, `projects_repo`, `projects_path`, `last_project`, `waveform`, `true_colors`, `role`; optional `led_glow`), settings, the editors | `src/gui/device_config.{h,cpp}`, `src/parser/settings_file.{h,cpp}`, `src/gui/settings_editor.{h,cpp}`, `settings_io.cpp`'s head |
+| Device config (seven required keys: `gui_scale`, `projects_repo`, `projects_path`, `last_project`, `waveform`, `true_colors`, `role`; no optional key), settings, the editors | `src/gui/device_config.{h,cpp}`, `src/parser/settings_file.{h,cpp}`, `src/gui/settings_editor.{h,cpp}`, `settings_io.cpp`'s head |
 | Authored positions, tempo cents, value brackets, sidecar grammar, the load walls | `src/parser/frame_format.h`, `value_format.h`, `warpmarkers_parse.h`, `marker_store_validate.h`; `snap_authored_frame` |
 | Resolver normalization, trim store, undo coalescing | `resolve_warp_markers_for_render`; `TrimState` (`app_state.h`), `input_trim.cpp`'s head; `src/gui/undo.{h,cpp}` |
 | Zoom, viewport, the sixteenth-frame grid, cameras, the hold, walk and restore landings | `src/gui/viewport.{h,cpp}`, `painter_quantized_spp`, `working_column_frames`, `AppState::camera_hold` |

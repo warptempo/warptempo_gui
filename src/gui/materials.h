@@ -83,14 +83,14 @@ struct AppState;
 // FILTER_NEAREST 0.047 ms, an EXTEND_REFLECT pattern 1.73 ms): BAKE ONCE PER
 // WINDOW GEOMETRY — its key the client size and the gui_scale (which move
 // the lanes and the key seats; the strip pad a constant since 2026-10-23,
-// program_spec.h), True Colors (the bakes hold the
-// window's bytes) and the LED glow (led_glow below) — never at a palette
-// install, a project open or any other Settings OK. A frame compares the
-// key alone; the layout is read at the bake. The bake itself takes tens of
-// ms (the blur over the window), once. THE FIRST BAKE IS IMMEDIATE, at the
-// first frame's PRE-PAINT HOOK (materials::ensure_settled, main.cpp); a
-// gui_scale commit, a led_glow commit and True Colors
-// bake at once, one act one bake (materials::ensure). EVERY BAKE REINSTALLS
+// program_spec.h, and so the LED glow since 2026-10-26, materials.cpp's
+// kLedGlowPx) and True Colors (the bakes hold the window's bytes) — never
+// at a palette install, a project open or any other Settings OK. A frame
+// compares the key alone; the layout is read at the bake. The bake itself
+// takes tens of ms (the blur over the window), once. THE FIRST BAKE IS
+// IMMEDIATE, at the first frame's PRE-PAINT HOOK (materials::ensure_settled,
+// main.cpp); a gui_scale commit and True Colors bake at once, one act one
+// bake (materials::ensure). EVERY BAKE REINSTALLS
 // THE PALETTE off the new ground's mean, so the next pre-paint widens that
 // frame's damage to the whole client and rebuilds the flag cache from the
 // new tiles (take_bake_landed). A CHANGE OF SIZE OF A BAKED WINDOW WAITS ON
@@ -120,7 +120,11 @@ struct AppState;
 //           device px down, lit) and its HELD patch (two, lit — architect
 //           2026-10-23, the two depths; cool_edit_paint.h's paint_key), the
 //           lit two with THE GLOW composited round that depth's LED
-//           (led_glow below); a lampless key (the keyboard's, the thumb) the
+//           (THE LED GLOW: a soft halo, the accent at alpha .35 at the
+//           LED rect's edge fading to 0 at materials.cpp's kLedGlowPx, 4
+//           device px, out, composited over the key's own pixels inside
+//           its outline at the bake, never at paint — architect 2026-10-23,
+//           settled 2026-10-26); a lampless key (the keyboard's, the thumb) the
 //           depths it can stand at, no LED. Each patch is the key as the
 //           key painter draws it at that depth, its face flat (THE KEY
 //           below) — two keys of one size at one depth are the same bytes,
@@ -311,7 +315,7 @@ std::optional<std::string> check();
 // (take_bake_landed). A zero-sized client bakes nothing. A FAILURE is an
 // image of the road's that will not decode (check passed its header): its
 // stderr line and the hard fail. Callers: the one-act roads,
-// GuiInputHandler::apply_gui_scale, apply_led_glow and apply_true_colors.
+// GuiInputHandler::apply_gui_scale and apply_true_colors.
 void ensure(const AppState& app);
 // THE BAKE BEHIND THE SETTLE GATE (the head's BAKE RULE): the first bake at
 // once; a changed key of a baked window only once the tick has armed it
@@ -354,13 +358,6 @@ uint32_t ring_dark();
 // a waveform pick relights every lamp at once. accent_color() is its one reader's road.
 void     set_accent(uint32_t accent);
 uint32_t accent_color();
-// THE LED GLOW (architect 2026-10-23, "agree to all"; the `led_glow` device
-// key, device_config.h): a soft halo BAKED INTO THE LIT KEY'S PATCH — a
-// falloff from the LED's rect, the accent at alpha .35 at the rect's edge
-// fading to 0 at `px` device px out, composited over the key's own pixels
-// inside its outline at the bake, never at paint; 0 none. Pushed at launch
-// and at the settings editor's OK, which then bakes (the key's term).
-void set_led_glow(int px);
 
 // THE MARKER LANE'S PHASE (the brass's 2026-10-22 to 2026-10-23) FOLLOWS THE
 // DISPLAYED BASIS (the head's LOOP): called at every publish of the plate's

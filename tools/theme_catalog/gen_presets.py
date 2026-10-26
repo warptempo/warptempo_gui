@@ -3,7 +3,8 @@
 # INCLUDE, src/gui/palette_presets.inc (the rows of kGuiBuiltinPalettes, src/gui/palette_file.h, which owns what a
 # palette is and does).
 # ONE SOURCE: THE PROGRAM'S PRESETS, warptempo_presets.txt's, in its order (that file's head is their design and
-# provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is and with the Terminal ink); the
+# provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is and with the Terminal ink, and
+# Terminal, Default, Proportional); the
 # value grammar and the outline's lightness below are Cool Edit's. Each row a KEY, a DISPLAY NAME and THE ELEVEN
 # PROGRAM ROLES (kGuiPaletteRoles, read off palette_file.h and checked against ROLE_ORDER) under the one transcription
 # below.
@@ -18,7 +19,8 @@
 #   cue <- CueM                      range <- RngM                 playhead_stem <- Curs
 #   invalid_label <- Inv, THE PRESET'S OWN INVALID COLOR (architect 2026-10-25 night: "the invalid red we're using was
 #     tuned to the default theme; it doesn't work that well with any of these. Tune that as well"; required on every
-#     row like every key; on the forty Cool Edit rows of 2026-10-26 the row's own center line, the text's head), the
+#     row like every key; on every row but Terminal, Default, Proportional the row's own center line, on that
+#     row its own violet, the text's head), the
 #     triangle, the dots and the resting label of an invalid cue and the `h` view's removed half;
 #   face <- Face (the record; no surface reads it, palette_file.h's head);
 #   waveform_outline <- THE INK AT HLS LIGHTNESS 0.3157, hue and saturation kept: the lightness was measured on Cool

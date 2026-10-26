@@ -1028,6 +1028,20 @@ void GuiInputHandler::close_history_mode() {
     // (an `h` off and an `h` on delivered in one dispatch batch reach the paint as
     // a single edge, with no intervening rebuild to notice `active` blinking).
     const unsigned long long generation = app.history_mode.generation;
+    // THE COMMIT WALK'S VIEWED MEMBER IS REMEMBERED HERE, the one exit every
+    // closer takes (architect 2026-10-26; the contract and its reasons are at
+    // AppState::history_viewed_commit_sha): the SHA at the commit walk's
+    // index as the visit leaves it, whichever walk the lane was reading —
+    // unless the entry's landing on the remembered member is still pending
+    // (the remembered SHA then stands), or the index names no delivered
+    // member (an unavailable visit, an empty walk: sha_at's empty answer, and
+    // the remembered SHA stands).
+    if (app.history_mode.session.available() &&
+        !app.history_mode.remembered_landing_pending) {
+        const std::string& viewed =
+            app.history_mode.session.sha_at(app.history_mode.index);
+        if (!viewed.empty()) app.history_viewed_commit_sha = viewed;
+    }
     // (THE PARKED BAND'S RESTORE IS DELETED — architect 2026-08-18, "this
     // removes machinery". From 2026-08-05 this exit read the entry's stashed
     // viewport / zoom / playhead trio and its audio view out before the
@@ -1268,6 +1282,18 @@ void GuiInputHandler::republish_history_lane_now() {
     paint_handler.flush_owed_waveform_rebuild();
 }
 
+// THE REMEMBERED MEMBER'S INDEX in a visit's delivered commit walk, a search
+// over sha_at newest first (AppState::history_viewed_commit_sha), or none —
+// the entry's question and the prefetch drain's.
+static std::optional<std::size_t> find_commit_walk_member(
+    const GuiHistoryDiff& session, const std::string& sha) {
+    if (sha.empty()) return std::nullopt;
+    const std::size_t count = session.commit_count();
+    for (std::size_t i = 0; i < count; ++i)
+        if (session.sha_at(i) == sha) return i;
+    return std::nullopt;
+}
+
 // ENTER THE MODE ON A FRESH SESSION — the one entry owner, the mirror of
 // close_history_mode. Everything about a visit is built here and nowhere else:
 // a new commit walk, and a NOW SIDE CAPTURED AT THIS INSTANT, which is what
@@ -1281,6 +1307,23 @@ void GuiInputHandler::republish_history_lane_now() {
 // made of is here, so a future entry inherits the whole shape — walk, index,
 // cleared focus, head delta, generation bump, lane-stash drop — instead of
 // reproducing part of it.
+//
+// THE VIEW REOPENS ON THE MEMBER IT WAS LAST VIEWING (architect 2026-10-26:
+// "history should remember the x/y that we are viewing, for toggle
+// comparison. after commit, y should update but x should stay"): the commit
+// walk's index is the remembered SHA's (AppState::history_viewed_commit_sha,
+// written by close_history_mode) where the bound walk has delivered it, else
+// 0. A SCAN STILL RUNNING MAY NOT HAVE DELIVERED IT YET — a checkpoint makes
+// the store stale, and the re-walk streams newest first, the new head ahead
+// of the remembered member — so the entry opens at 0 and arms the ONE
+// PENDING LANDING (HistoryMode::remembered_landing_pending), which the
+// prefetch drain takes when the member arrives (on_history_prefetch_ready)
+// and any step or switch by the user cancels. A finished walk that does not
+// hold it opens at 0 silently. Y UPDATES BY CONSTRUCTION: the now side is
+// captured here at every entry and the forward partner is index − 1, so
+// after a checkpoint the remembered member, now one index deeper, is compared
+// against the new checkpoint in the iterative reading and against now in
+// the cumulative.
 //
 // A BOOTSTRAP THAT REFUSES OPENS THE VIEW ANYWAY, ON THE LOCAL WALK (architect
 // 2026-09-04, from the car on the first real road test: the tablet carries no
@@ -1367,16 +1410,29 @@ void GuiInputHandler::open_history_mode_fresh() {
     // UNAVAILABLE return, so a mode that does not open silences nothing.
     playback_lifecycle.stop_playback_if_playing();
     fresh.active = true;
-    fresh.index  = 0;      // the newest commit
+    fresh.index  = 0;      // the newest commit, unless the remembered stands
     fresh.focus  = -1;
+    // THE REMEMBERED MEMBER (the head's paragraph): its index where the bound
+    // walk holds it; else, while the scan still runs, the landing pending; a
+    // finished walk without it leaves 0. A visit on the local fallback has no
+    // commit walk to search.
+    if (fresh.session.available()) {
+        if (const std::optional<std::size_t> at = find_commit_walk_member(
+                fresh.session, app.history_viewed_commit_sha)) {
+            fresh.index = *at;
+        } else if (!app.history_viewed_commit_sha.empty() &&
+                   !history_prefetch.run_done()) {
+            fresh.remembered_landing_pending = true;
+        }
+    }
     // (THE HEAD DELTA IS MEASURED BELOW, once the session is moved in: it may
     // have nothing to measure yet — a visit can open before the prefetch has
     // delivered member 0 — so the measurement is its own owner now rather than
     // two lines here. measure_history_head_delta owns the rule.)
     // EVERY ENTRY IS A NEW GENERATION. The flag cache identifies the mode's
     // content by (active, index, focus, compare) plus this, and two sessions of
-    // the same piece open in the same shape — index 0, focus -1, iterative,
-    // `active` true — so a
+    // the same piece open in the same shape — the same index, focus -1, the
+    // same reading, `active` true — so a
     // close and a reopen the paint never sees between would otherwise be
     // indistinguishable from no change at all, leaving the previous session's
     // diff flags on screen. The bump is HERE rather than at the call site
@@ -1401,7 +1457,7 @@ void GuiInputHandler::open_history_mode_fresh() {
     measure_history_head_delta();
     drop_lane_stash_across_history_edge();
     // AND THE LANE IS REPUBLISHED IN THIS PRESS (2026-08-07): the view opens
-    // showing the newest checkpoint's flags rather than an empty lane that fills
+    // showing the viewed checkpoint's flags rather than an empty lane that fills
     // on the next tick. The edges' one shape — its owner carries the reasoning.
     republish_history_lane_now();
     viewport.invalidate_all();
@@ -1558,6 +1614,9 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // REACTION, and it is the whole of what a growing walk needs while the view
 // stands:
 //   * the head delta gets its one measurement the moment member 0 exists;
+//   * a pending landing on the remembered member (2026-10-26,
+//     HistoryMode::remembered_landing_pending) is taken the moment that
+//     member exists, or dropped when the scan finishes without it;
 //   * the window is damaged, because `n/N` in the bottom corner and the diff
 //     lane both read a count that just changed — the lane through the flag
 //     cache's own fingerprint field, which is why an empty-walk entry's first
@@ -1654,6 +1713,33 @@ void GuiInputHandler::on_history_prefetch_ready() {
         return;
     }
     if (r.members_appended == 0 && !r.became_done) return;
+    // THE PENDING LANDING ON THE REMEMBERED MEMBER (2026-10-26; the entry
+    // armed it, open_history_mode_fresh's head): taken ONCE, the moment the
+    // member arrives, through the `,` / `.` step's own shape — the index
+    // through the one setter (no switch has run, or the landing would be
+    // cancelled, so the walk is the commit one), the focus and its selection
+    // cleared, the lane's stash dropped and republished, the damage below; a
+    // scan that finishes without it ends the wait with the index left at 0.
+    // THE ARRIVAL IS NEAR-IMMEDIATE: the checkpoint's completion kicks the
+    // re-walk and `h` is refused until that completion, so the scan starts
+    // before the entry can; it streams newest first, each candidate a diff
+    // of the piece's directory and, where touched, a tree listing, three
+    // blob reads and three strict parses (history_prefetch.h's head) — the
+    // new head, any commits of other pieces between, then the remembered
+    // member, all local reads, milliseconds — and the landing is kept for a
+    // slow clone all the same.
+    if (app.history_mode.remembered_landing_pending) {
+        if (const std::optional<std::size_t> at = find_commit_walk_member(
+                app.history_mode.session, app.history_viewed_commit_sha)) {
+            app.history_mode.remembered_landing_pending = false;
+            app.history_mode.set_walk_index(*at);
+            clear_history_mode_focus(app.history_mode);
+            drop_lane_stash_across_history_edge();
+            republish_history_lane_now();
+        } else if (history_prefetch.run_done()) {
+            app.history_mode.remembered_landing_pending = false;
+        }
+    }
     measure_history_head_delta();
     viewport.invalidate_all();
 }
@@ -1754,6 +1840,9 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
     }
     app.history_mode.source = source;
     app.history_cumulative  = cumulative;
+    // A SWITCH CANCELS THE PENDING LANDING on the remembered member, as a
+    // step does (HistoryMode::remembered_landing_pending).
+    app.history_mode.remembered_landing_pending = false;
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
     // (NO OVERLAY HIDE, architect 2026-08-19: a walk-or-reading switch is one of
@@ -2224,6 +2313,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // precondition. The arrows' shift line reads the same body to decide
         // whether the twin lands anywhere else, so the hint cannot drift from
         // what this press does.
+        // A STEP CANCELS THE PENDING LANDING on the remembered member
+        // (HistoryMode::remembered_landing_pending): the walk is the user's
+        // once he has moved it.
+        app.history_mode.remembered_landing_pending = false;
         app.history_mode.set_walk_index(
             history_walk_step_landing(app.history_mode, older, mods.shift));
         // THE MODE FOCUS AND ITS SELECTION CLEAR ON EVERY STEP, through the one
@@ -7105,7 +7198,7 @@ void GuiInputHandler::open_preset_picker() {
 }
 
 // THE LIST: kGuiBuiltinPalettes in the include's order (the program's
-// forty, their text's order), one glyph-less Preset row each, its text the
+// forty-one, their text's order), one glyph-less Preset row each, its text the
 // preset's DISPLAY NAME (architect 2026-10-25: memorable names, never the
 // key). A ROW'S INDEX IS ITS PRESET'S INDEX in that table, so the row carries
 // no key and the commit reads the table. The band opens on THE LIVE PRESET —

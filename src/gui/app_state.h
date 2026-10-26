@@ -2492,7 +2492,7 @@ enum class RedesignButton {
     // the companions): the group is everything the `h` view can be driven by
     // from this row. SINCE 2026-10-05 (architect, the row fitting the
     // tablet at gui_scale 400) ONLY THE OPENER STANDS IN EVERY STATE: the
-    // six behind it stand only in the view — the walk lamp and Cumulative
+    // six behind it stand only in the view — Cumulative and the walk lamp
     // in the iteration group's slots, Revert and Load in Place in Undo's
     // group's, both groups refused whole in the view (kIconRowHistoryStandIns,
     // paint_handler.cpp, the swap's one owner), Older and Newer in row 8's
@@ -7329,8 +7329,23 @@ struct AppState {
         // newer (-1), each clamping at its wall as a consumed no-op. It is the
         // commit walk's alone since 2026-08-07 — the local walk keeps its own
         // position in `local_index` below, and the two survive each other's
-        // visits within one session of the view.
+        // visits within one session of the view. THE ENTRY OPENS IT ON THE
+        // REMEMBERED MEMBER (AppState::history_viewed_commit_sha, architect
+        // 2026-10-26), at 0 when none is remembered or delivered.
         std::size_t index  = 0;
+        // THE LANDING ON THE REMEMBERED MEMBER IS PENDING (2026-10-26): the
+        // entry found AppState::history_viewed_commit_sha not yet delivered by
+        // a scan still running (a checkpoint makes the store stale, and the
+        // re-walk streams newest first, the new head ahead of the remembered
+        // member), opened at 0, and set this. The prefetch drain
+        // (GuiInputHandler::on_history_prefetch_ready) lands on the member ONCE
+        // when it arrives, through the step's own shape, and clears it; the
+        // scan finishing without it clears it with the index left at 0. ANY
+        // STEP OR SWITCH BY THE USER CANCELS IT (the `,` / `.` arm and
+        // set_history_delta's switch), so a landing never moves a walk the
+        // user has already moved. Per visit, so the whole-struct reset clears
+        // it at both edges.
+        bool        remembered_landing_pending = false;
         // WHICH WALK THE LANE IS READING (architect 2026-08-07) — selected by
         // the icon row's walk lamp on bare `g` since 2026-08-18, a pair of
         // radios until the 2026-09-04 collapse (row 3's tabs carried it before
@@ -7841,6 +7856,43 @@ struct AppState {
         return history_cumulative ? GuiHistoryCompare::Cumulative
                                   : GuiHistoryCompare::Iterative;
     }
+
+    // THE COMMIT WALK'S VIEWED MEMBER, REMEMBERED BY SHA ACROSS VISITS
+    // (architect 2026-10-26: "history should remember the x/y that we are
+    // viewing, for toggle comparison. after commit, y should update but x
+    // should stay"). x is the viewed walk member — the older side of the
+    // shown delta, HistoryMode::index on the COMMIT walk — and y its forward
+    // partner (GuiHistoryDiff::delta_at's pairing: the next newer member in
+    // the iterative reading, the live now side in the cumulative one and at
+    // the newest index). The full 40-character SHA (GuiHistoryDiff::sha_at);
+    // empty until a visit has viewed a member of this piece's commit walk.
+    //
+    // IT LIVES OUT HERE FOR history_cumulative's REASON: HistoryMode is reset
+    // whole at both mode edges, and this has to outlive a visit. Its scope is
+    // the loaded piece's: run_project (main.cpp) constructs one AppState per
+    // piece, so A PIECE LOAD CLEARS IT, and it is NEVER SERIALIZED.
+    //
+    // WRITTEN AT THE ONE EXIT OWNER (GuiInputHandler::close_history_mode),
+    // the SHA at the commit walk's index as the visit leaves it — whichever
+    // walk the lane was reading, the local walk's position never being
+    // remembered — and NOT WRITTEN where that index names no delivered
+    // member (an unavailable visit, an empty walk) or while the visit's
+    // landing on the remembered member is still pending (HistoryMode's
+    // remembered_landing_pending). The index's only writers are the entry,
+    // the `,` / `.` step and that landing, so the exit's reading is the
+    // member the visit last viewed, however it got there.
+    //
+    // READ AT THE ENTRY (GuiInputHandler::open_history_mode_fresh): the visit
+    // opens on the remembered member's index where the walk has delivered it,
+    // else at 0 with the landing pending until the prefetch delivers it. Y
+    // UPDATES BY CONSTRUCTION: every entry captures a fresh now side and the
+    // forward partner is index − 1, so after a checkpoint (the re-walk
+    // delivering the new head first) the remembered member
+    // stands one index deeper and is compared against the new checkpoint in
+    // the iterative reading and against now in the cumulative. A REMEMBERED
+    // SHA THE FINISHED WALK DOES NOT HOLD (a rewritten projects repository —
+    // adversarial) opens at 0 silently: no card, no stderr line.
+    std::string history_viewed_commit_sha;
 
     // (WINDOW ACTIVATION'S MIRROR, `window_activated`, retired 2026-10-03:
     // its one reader was the folder overlay's highlighted row, whose inactive
@@ -8532,7 +8584,7 @@ struct AppState {
     // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; and since 2026-10-25 the
-    // PRESET PICKER, with the forty built-in waveform presets by
+    // PRESET PICKER, with the forty-one built-in waveform presets by
     // display name (architect: "maybe a drop down would make it quicker,
     // because I don't like having to type it in every time" — "brief it as a
     // scrolling list", "Yes"). (The AV Sync Stats panel's text lines stood

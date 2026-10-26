@@ -114,8 +114,9 @@ struct TrimRange {
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
 // flat skin constants with the caption itself.
 // The palette's roles are kGuiPaletteRoles and the compiled built-in
-// palettes the program's own forty presets, Cool Edit Pro 2.1's twenty
-// as they are and with the Terminal ink, kGuiBuiltinPalettes
+// palettes the program's own forty-one presets, Cool Edit Pro 2.1's twenty
+// as they are and with the Terminal ink and Terminal, Default,
+// Proportional, kGuiBuiltinPalettes
 // (palette_file.h); the
 // active palette is the device config's `waveform` — a built-in's key,
 // chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-21;
@@ -274,7 +275,8 @@ struct TrimRange {
 //                 Cool Edit's —
 //                 `cue` the red and `range` the blue, the triangles and
 //                 their dots — and THE INVALID COLOR, `invalid_label`,
-//                 each built-in's own, its center line on the forty
+//                 each built-in's own, its center line on every row
+//                 but Terminal, Default, Proportional's violet
 //                 (architect 2026-10-26, palette_file.h): an invalid
 //                 cue's triangle, dots and resting label and the history's
 //                 removed half (THE MARKER LANE, below); the playhead's role
@@ -699,7 +701,8 @@ void install_true_colors(bool on);
 // kind reads from the label alone (his one-label rule). THE FLAG IS THE
 // INVALID INDICATOR (architect 2026-10-11 ~01:00–01:20): an invalid cue's
 // triangle and dots wear THE INVALID COLOR, `invalid_label` (each built-in
-// palette's own, its center line on the forty, architect 2026-10-26), in
+// palette's own, its center line on every row but Terminal, Default,
+// Proportional's violet, architect 2026-10-26), in
 // place of the cue red.
 // THE TRIANGLE NEVER CHANGES WITH SELECTION (Cool Edit's never does). THE
 // TABLE — which triangle, which dots, which label — is resolve_flag_face's

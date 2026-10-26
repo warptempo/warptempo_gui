@@ -15,7 +15,7 @@
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own forty), the
+//     presets (kGuiBuiltinPalettes, the program's own forty-one), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -77,7 +77,7 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S FORTY, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S FORTY-ONE, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
@@ -88,7 +88,12 @@
 // DEC VT220's green and its grid under the theme's every other color) —
 // architect 2026-10-26: "we could test the Cool Edit themes but only on the
 // markers … Also show two versions of each CEP theme — one as it is, and
-// one with Terminal as the ink".
+// one with Terminal as the ink" — and directly after Terminal, Default THE
+// PROPORTIONAL ROW, "Terminal, Default, Proportional": every color of Cool
+// Edit, Default moved as its ink moves to the Terminal ink (architect
+// 2026-10-26: "I'd like to see every color on the default palette from Cool
+// Edit shifted just as the relationship between the waveform inks is, so
+// that they're all still proportional"; the derivation the text's head's).
 // Each a KEY (`warptempo-` and the display name in the key grammar — the
 // `waveform` key's word for it), a DISPLAY NAME (the
 // source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Terminal, Default"
@@ -127,9 +132,12 @@
 // head); THE INVALID COLOR `invalid_label` ITS Inv, the one key of the
 // program's own (architect 2026-10-25 night: "the invalid red we're using
 // was tuned to the default theme; it doesn't work that well with any of
-// these. Tune that as well"), ON THE FORTY BUILT-INS THE ROW'S OWN CENTER
+// these. Tune that as well"), ON EVERY BUILT-IN BUT ONE THE ROW'S OWN CENTER
 // LINE (the 2026-10-11 rule the Cool Edit presets held, kept with their
-// return 2026-10-26; the text's head); one red role since 2026-10-11 ~01:00–01:20,
+// return 2026-10-26), on Terminal, Default, Proportional its own violet
+// 9F49CA, a third color beside its red cue and blue range (architect
+// 2026-10-26: the center-line red "is too close to the regular marker red";
+// the text's head); one red role since 2026-10-11 ~01:00–01:20,
 // Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
 // the selected role with them: "No flags change color when you select them
 // … I'd rather the text just go white, and the flag should be the
@@ -235,7 +243,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's forty in their
+// THE BUILT-IN PALETTES (the head) — the program's forty-one in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the

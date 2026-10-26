@@ -10,9 +10,9 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eight keys live here and nowhere else,
-// EVERY ONE REQUIRED but the tuning key `led_glow`, optional (architect
-// 2026-10-12, his "yes" 2026-10-14; the strictness paragraph below):
+// piece (architect 2026-08-27). Seven keys live here and nowhere else,
+// EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
+// strictness paragraph below):
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -26,7 +26,7 @@
 //                            grid and center lines, the cues and the
 //                            playhead (palette_file.h's head; its Face
 //                            unread under the materials since 2026-10-21):
-//                            a built-in, one of the forty presets'
+//                            a built-in, one of the forty-one presets'
 //                            keys alone
 //                            (`warptempo-terminal-default`,
 //                            `warptempo-cool-edit-default`, ...;
@@ -94,17 +94,12 @@
 //                            unknown-key hard fail, the planner editing both
 //                            devices' configs at the install and the sync
 //                            script's setup removing it on the tablet)
-//   led_glow=<px>            THE LIT LED'S GLOW (architect 2026-10-23, "agree
-//                            to all"), a TUNING PHASE: an integer in DEVICE
-//                            px [0, 32], the halo's reach past the LED's rect
-//                            baked into the lit key's patch (materials.h's
-//                            set_led_glow), 0 none. OPTIONAL — THE ONE KEY
-//                            NOT REQUIRED (the brief's ruling: an absent line
-//                            is 4, kDefaultLedGlowPx), the writer always
-//                            naming it; a Settings row "LED Glow", applied at
-//                            OK by ONE BAKE (GuiInputHandler::apply_led_glow,
-//                            the bake rule's one Settings-OK exception,
-//                            recorded at materials.h's BAKE RULE)
+//   (THE LIT LED'S GLOW in device px, an optional tuning key with a
+//                            Settings row 2026-10-23 to 2026-10-26, SETTLED
+//                            AT 4 — materials.cpp's kLedGlowPx (architect
+//                            2026-10-26: "it stays on"); an old line is the
+//                            ordinary unknown-key hard fail, the sync
+//                            script's setup removing it on the tablet)
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
@@ -126,8 +121,9 @@
 // three tuning keys APPENDED after `role` 2026-10-21, a tuning phase's
 // keys at the end as the 2026-09 phases' stood (`text_shadow` gone
 // 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
-// appended 2026-10-22 and gone 2026-10-23, `led_glow` appended 2026-10-23,
-// the cues' tuning keys after it 2026-10-26 and gone that day — the
+// appended 2026-10-22 and gone 2026-10-23, the LED glow's appended
+// 2026-10-23 and gone 2026-10-26, the cues' tuning keys after it 2026-10-26 and gone
+// that day — the
 // label's three in the morning, settled at 26, 14 and on, then four (the
 // triangle's rows and antialiasing, the label's size and gap past the
 // triangle) settled ~13:05 at 8 rows authored at 300 %, the staircase, 22
@@ -308,7 +304,7 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors` and the tuning key `led_glow` among them
+// `waveform` and `true_colors` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -382,19 +378,7 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
-    // THE LED GLOW (2026-10-23, the head's list): OPTIONAL, absent the
-    // default; device px.
-    int         led_glow    = 4;
 };
-
-// THE LED GLOW'S DEFAULT AND RANGE — the one owner, the reader's and the
-// settings editor's: an integer in device px [0, 32], 0 none, absent 4.
-inline constexpr int kDefaultLedGlowPx = 4;
-inline constexpr bool is_led_glow(int64_t v) {
-    return v >= 0 && v <= 32;
-}
-inline constexpr const char* kLedGlowGrammarReason =
-    "must be an integer in [0, 32] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -687,13 +671,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves five keys —
+// the settings editor's ONE device-key body, which serves four keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
 // `true_colors=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
-// 2026-10-23), and since 2026-10-23 `led_glow=`, whose
-// arm hands its bake to GuiInputHandler::apply_led_glow
+// 2026-10-23, the LED glow's 2026-10-23 to 2026-10-26)
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
@@ -713,8 +696,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=warptempo-terminal-default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on` and
-// `led_glow=4` (the struct's own values) and no role
+// required since 2026-10-14), `true_colors=on` (the struct's own value)
+// and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and
