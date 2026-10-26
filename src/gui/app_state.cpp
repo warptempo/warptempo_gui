@@ -288,7 +288,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     //
     // THE SHAPE IS TWO RECTS (2026-10-09, architect: "the union of the
     // triangle and the label's box as painted"): the cue's triangle's box —
-    // its widest row and the shadow's quantum over its five rows — and its
+    // its widest row and the shadow's unit over its live rows — and its
     // label's box. No slope test: the triangle's box is its hit.
     //
     // Z-ORDER is the cue painter's (topmost_flag_rect above): triangles over

@@ -1226,8 +1226,9 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
 // (2026-10-09, ON SCREEN IS AS PAINTED): the columns the yellow triangle and
 // its shadow cover, centred on the one-px stem (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own cells) — 10
-// device px at every scale (the triangle unscaled, 2026-10-26) — which also
+// cue_triangle_reach_right_px, render.h, the painter's own cells) — 2·rows
+// device px at every scale (the triangle unscaled, 2026-10-26; 10 at the
+// default five rows, 18 at nine) — which also
 // holds the one-px
 // line of the scanner and the dots, so a move repaints every column the head
 // stood on and no shadow column is left behind.
@@ -3401,6 +3402,13 @@ int gui_main(const char* argument) {
         return 1;
     }
     materials::set_led_glow(device_config.led_glow);
+    // THE CUE TRIANGLE'S TUNING IS THE CONFIG'S TOO (the `cue_triangle_rows`
+    // and `cue_triangle_aa` keys, 2026-10-26 ~11:50; GuiCueTriangleTuning,
+    // render.h): seeded here, before any cue is painted or the flag cache
+    // keyed; the settings editor's commit is the live road
+    // (GuiInputHandler::apply_cue_triangle).
+    set_cue_triangle_tuning(GuiCueTriangleTuning{
+        device_config.cue_triangle_rows, device_config.cue_triangle_aa});
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

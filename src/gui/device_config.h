@@ -1,7 +1,9 @@
 #pragma once
 
 #include "failure.h"
+#include "program_spec.h"   // kProgramSpec, the triangle rows' ceiling's lanes
 
+#include <algorithm>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -10,9 +12,10 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Nine keys live here and nowhere else,
-// EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
-// strictness paragraph below):
+// piece (architect 2026-08-27). Ten keys live here and nowhere else,
+// EVERY ONE REQUIRED but the three tuning keys at the end — `led_glow`,
+// `cue_triangle_rows` and `cue_triangle_aa`, each optional (architect
+// 2026-10-12, his "yes" 2026-10-14; the strictness paragraph below):
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -105,6 +108,27 @@
 //                            OK by ONE BAKE (GuiInputHandler::apply_led_glow,
 //                            the bake rule's one Settings-OK exception,
 //                            recorded at materials.h's BAKE RULE)
+//   cue_triangle_rows=<rows> THE CUE TRIANGLE'S HEIGHT IN DEVICE ROWS at
+//                            every scale (architect 2026-10-26 ~11:50: "the
+//                            flag at the same size as I see it on screen here
+//                            on the laptop, so that the tablet takes the same
+//                            physical size marker"; the ruling and the
+//                            density numbers at paint_ce_cue_triangle's head,
+//                            cool_edit_paint.h), a TUNING PHASE: an integer
+//                            [3, 11], the top row 2·rows − 1 cells (the
+//                            ceiling's derivation at is_cue_triangle_rows
+//                            below). OPTIONAL like led_glow, absent 5
+//                            (kDefaultCueTriangleRows, Cool Edit's 9 by 5),
+//                            written always; a Settings row, applied at OK by
+//                            the flag cache's rebuild and a whole repaint
+//                            (GuiInputHandler::apply_cue_triangle)
+//   cue_triangle_aa=<on|off> EVERY TRIANGLE ANTIALIASED (`on`, the envelope
+//                            the morning of 2026-10-26 painted) OR COOL
+//                            EDIT'S STAIRCASE (`off`), the same ruling's
+//                            second key, a TUNING PHASE: true_colors' two
+//                            words. OPTIONAL, absent `off`
+//                            (kDefaultCueTriangleAa), written always; applied
+//                            as cue_triangle_rows
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
@@ -127,6 +151,7 @@
 // keys at the end as the 2026-09 phases' stood (`text_shadow` gone
 // 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
 // appended 2026-10-22 and gone 2026-10-23, `led_glow` appended 2026-10-23,
+// `cue_triangle_rows` and `cue_triangle_aa` after it 2026-10-26 ~11:50,
 // the cue label's three tuning keys after it the morning of 2026-10-26 and
 // gone that day, settled at 26, 14 and on (gui_font.h's Program size,
 // render.h's cue_label_lead_px and show_cue_label's shadow; an old line is
@@ -382,6 +407,10 @@ struct DeviceConfig {
     // THE LED GLOW (2026-10-23, the head's list): OPTIONAL, absent the
     // default; device px.
     int         led_glow    = 4;
+    // THE CUE TRIANGLE'S TWO TUNING KEYS (2026-10-26, the head's list):
+    // OPTIONAL, absent the defaults below; the rows in device rows.
+    int         cue_triangle_rows = 5;
+    bool        cue_triangle_aa   = false;
 };
 
 // THE LED GLOW'S DEFAULT AND RANGE — the one owner, the reader's and the
@@ -392,6 +421,48 @@ inline constexpr bool is_led_glow(int64_t v) {
 }
 inline constexpr const char* kLedGlowGrammarReason =
     "must be an integer in [0, 32] in canonical spelling";
+
+// THE CUE TRIANGLE'S TUNING KEYS' DEFAULTS AND GRAMMARS (architect 2026-10-26
+// ~11:50; the ruling and the planner's density numbers at
+// paint_ce_cue_triangle's head, cool_edit_paint.h) — the one owner, the
+// reader's, the settings editor's and the live state's (render.h's
+// GuiCueTriangleTuning, seeded from them).
+//
+// `cue_triangle_rows`: THE TRIANGLE'S HEIGHT IN DEVICE ROWS at every scale,
+// its top row 2·rows − 1 cells, its painted columns (rows − 1) left of the
+// stem and (rows + 1) right with the shadow (render.h's
+// cue_triangle_half_w_px and cue_triangle_reach_right_px); 5 by default,
+// Cool Edit's 9 by 5. THE FLOOR, 3, the 5-3-1 staircase with its shadow.
+// THE CEILING, 11, IS THE TIGHTER OF THE TRIANGLE'S TWO LANES AT 100 %:
+// the same painter draws the playhead's head on THE RULER'S GROUND'S LAST
+// `rows` device rows (paint_ruler_row), and that ground is 11 W
+// (program_spec.h's ruler_ground_px) — 11 device rows at 100 %, 15 at
+// 138 %, 33 at 300 % — while THE MARKER LANE is 17 W rows at 100 % (12 W
+// and 5 label quanta; 22 at 138 %, 51 at 300 %) and its label stands
+// beside the triangle, never above it (the lead clears the reach right,
+// render.h's cue_label_lead_px), so the lane gives the triangle every row
+// and holds 11 with 6 over. From 100 % up both lanes hold the ceiling.
+// Below 100 % — the scale's vocabulary reaches 50, a scale neither device
+// runs — the ruler's ground rounds under 11 rows (6 at 50 %) and a taller
+// head stands over the ruler's top line: no guard, the two devices' scales
+// being 138 and 300.
+inline constexpr int kDefaultCueTriangleRows = 5;
+inline constexpr int kCueTriangleRowsMin     = 3;
+inline constexpr int kCueTriangleRowsMax =
+    std::min(kProgramSpec.ruler_ground_px,
+             program_marker_lane_authored_h(kProgramSpec));
+static_assert(kCueTriangleRowsMax == 11);   // the reason's words below
+inline constexpr bool is_cue_triangle_rows(int64_t v) {
+    return v >= kCueTriangleRowsMin && v <= kCueTriangleRowsMax;
+}
+inline constexpr const char* kCueTriangleRowsGrammarReason =
+    "must be an integer in [3, 11] in canonical spelling, 11 the ruler's "
+    "rows at 100 %";
+// `cue_triangle_aa`: EVERY TRIANGLE ANTIALIASED or the staircase,
+// TRUE_COLORS' TWO WORDS (kTrueColorsWords below, the one spelling:
+// format_cue_triangle_aa and parse_cue_triangle_aa forward to that owner),
+// `off` by default.
+inline constexpr bool kDefaultCueTriangleAa = false;
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -557,6 +628,18 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     if (v == kTrueColorsOff) return false;
     return std::nullopt;
 }
+// `cue_triangle_aa`'s words, true_colors' own (the cue triangle paragraph
+// above).
+inline constexpr const char* const (&kCueTriangleAaWords)[2] =
+    kTrueColorsWords;
+inline constexpr const char* kCueTriangleAaGrammarReason =
+    kTrueColorsGrammarReason;
+inline const char* format_cue_triangle_aa(bool on) {
+    return format_true_colors(on);
+}
+inline std::optional<bool> parse_cue_triangle_aa(std::string_view v) {
+    return parse_true_colors(v);
+}
 
 // THE role GRAMMAR (architect 2026-10-10) — the two words, exactly; the one
 // owner the reader and the writer read.
@@ -684,13 +767,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves five keys —
+// the settings editor's ONE device-key body, which serves seven keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), and since 2026-10-21
 // `true_colors=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
-// 2026-10-23), and since 2026-10-23 `led_glow=`, whose
-// arm hands its bake to GuiInputHandler::apply_led_glow
+// 2026-10-23), since 2026-10-23 `led_glow=`, whose
+// arm hands its bake to GuiInputHandler::apply_led_glow, and since
+// 2026-10-26 `cue_triangle_rows=` and `cue_triangle_aa=`, whose arm hands
+// the flag cache's rebuild to GuiInputHandler::apply_cue_triangle
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
@@ -710,8 +795,9 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=warptempo-terminal-default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on` and
-// `led_glow=4` (the struct's own values) and no role
+// required since 2026-10-14), `true_colors=on`,
+// `led_glow=4`, `cue_triangle_rows=5` and `cue_triangle_aa=off` (the
+// struct's own values) and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

@@ -49,7 +49,8 @@
 // gui_font.h): row 8's clock, its tab name and its state line are THE
 // PROGRAM FACE, the cues' 26 px (architect 2026-10-26 ~11:30: "the bottom
 // left timestamp and tab/github/etc text should take 26 as well"), and the
-// render player's two time fields and every modal string the body face,
+// render player's two time fields with them (architect 2026-10-26 ~12:10,
+// "yes" to symmetry with row 8's clock); every modal string the body face,
 // 22 (gui_font.h's table). The no-wiggle guarantee is the fields' own
 // fixed widths.
 //
@@ -74,9 +75,9 @@
 // it.
 
 // (The bottom row's faces are named at each of their sites — the program
-// face for row 8's clock, name and state line, the body face for the MODAL
-// DIALOG's question, line and button words and the render player's time
-// fields; a run carries the font it was laid out on, so no context state
+// face for row 8's clock, name and state line and the render player's time
+// fields, the body face for the MODAL DIALOG's question, line and button
+// words; a run carries the font it was laid out on, so no context state
 // needs selecting first.)
 
 // (show_row_text, the row's plain-text tier — one run shaped and painted at
@@ -2250,11 +2251,13 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // BONE (E6D5A8, the clocks' own 2026-10-21 to 2026-10-23, retired: "the
 // font color should not be this yellowish color") — 40 DEVICE PX TALL at
 // 300 % (time_field_h_px, scaled with gui_scale), CENTRED ON THE CASE'S ROWS
-// (a half-row tie toward the top, the cap rule's own), its run in ROW 8'S
-// PROGRAM FACE (26 px at 300 %, architect 2026-10-26 ~11:30) or THE
-// PLAYER'S BODY FACE (22 px; gui_font.h's table), its cap band centred in
-// the field by redesign_baseline — at 300 % the program face's 17.9-row cap
-// band in the 40-row field, its 30-row line inside it. The digits are
+// (a half-row tie toward the top, the cap rule's own), its run in THE
+// PROGRAM FACE, 26 px at 300 %, in every time field (row 8's clock,
+// architect 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to
+// symmetry; gui_font.h's table), its cap band centred in the field by
+// redesign_baseline — at 300 % the 17.9-row cap band in the 40-row field,
+// its 30-row line inside it; at 138 % a 12-px em, its 8.3-row cap band in
+// the 18-row field, its 14-row line inside it. The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
 // the digits, the colon and the point — so the colon and the point stand
 // still as the time runs.
@@ -2268,10 +2271,16 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // THE PAD either side — 12 DEVICE PX at 300 % (time_field_pad_px; architect
 // 2026-10-23, "symmetrical and much tighter"; 5 W from 2026-10-10 until
 // then) — its width ceiled,
-// AND NOTHING MORE: row 8's clock exactly as the render player's two fields.
-// At 300 % the cell is 4.448 em: row 8's of the program face's 26 px,
-// about 116 device px ceiled, the field 140; each player field's of the
-// body's 22 px, about 98, the field 122.
+// AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
+// the one face, so the three fields are one width. The cell is 4.448 em
+// (seven tabular digits at 0.556 em and the colon and the point at 0.278):
+// at 300 % 26 px, 115.7 device px ceiled to 116, the field 140; at 138 % a
+// 12-px em, 53.4 ceiled to 54, the field 66. THE PLAYER'S ROW HOLDS THEM
+// (2026-10-26, the body's 22 px, fields of 122 and 57, until then): its
+// scrub is what the fixed terms leave (player_row_layout), the two fields
+// and their gap 289 device px at 300 % and 136 at 138 %, 36 and 18 more
+// than the body's, so on the maximized windows the scrub's channel is
+// 1280 device px at 300 % (2304 wide) and 1442 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2346,11 +2355,12 @@ static int time_field_pad_px() {
 // round 72-W fields).
 constexpr double kTimeFieldGapPx = 3.0;
 
-// The time fields' metrics, MEMOISED PER FACE ON THE SCALE — eleven tiny
-// shaping passes (ten digits and the specimen) that answer the same thing
-// on every frame until the scale moves (the widths are the face's own). Two
-// faces read it (2026-10-26): row 8's clock the program face, the render
-// player's two fields the body face, each its own slot.
+// The time fields' metrics, MEMOISED ON THE SCALE — eleven tiny shaping
+// passes (ten digits and the specimen) of THE PROGRAM FACE, every time
+// field's (row 8's clock and the render player's two since 2026-10-26
+// ~12:10; one slot per face that day until then), that answer the same
+// thing on every frame until the scale moves (the widths are the face's
+// own).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2361,11 +2371,11 @@ struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
 };
-static TimeFieldMetrics g_time_field_metrics[kGuiFaceCount];
+static TimeFieldMetrics g_time_field_metrics;
 
-static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
-    TimeFieldMetrics& m =
-        g_time_field_metrics[static_cast<std::size_t>(font.face)];
+static const TimeFieldMetrics& time_field_metrics() {
+    TimeFieldMetrics& m = g_time_field_metrics;
+    const GuiFont font = gui_font(GuiFace::Program);
     if (m.percent == font.percent) return m;
     char widest = '0';
     double widest_w = -1.0;
@@ -2524,7 +2534,7 @@ struct Row8Clock {
 static int time_field_w_px(double cell_w);
 static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
     Row8Clock c;
-    c.cell_w  = time_field_metrics(gui_font(GuiFace::Program)).time_w;
+    c.cell_w  = time_field_metrics().time_w;
     c.field_x = bottom_row_seats(app, lane).left_x;
     c.field_w = time_field_w_px(c.cell_w);
     return c;
@@ -2694,9 +2704,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // through the one face owner (gui_font.h), inside the save/restore this
     // body already opened, IN ITS RING (2026-10-22: the program ring's two
     // tones round the field, paint_ce_time_field's clock ring). The render
-    // player's two fields share its shape and its metrics' rule at the body
-    // face (time_field_metrics, one slot per face); THE TWO NEVER PAINT IN
-    // THE SAME FRAME: the player owns the row whole while it stands.
+    // player's two fields share its shape, its face and its metrics
+    // (time_field_metrics); THE TWO NEVER PAINT IN THE SAME FRAME: the
+    // player owns the row whole while it stands.
     {
         const GuiFont font = gui_font(GuiFace::Program);
         // THE CLOCK (row8_clock, the one layout): the field at the row's
@@ -3883,16 +3893,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own 9-7-5-3-1 device px in whole cells, Cool
-    // Edit's aliased staircase (paint_ce_cue_triangle, 2026-10-26;
+    // paragraph): the cue's own triangle — its live rows (5, the 9-7-5-3-1
+    // device px, unless `cue_triangle_rows` sets them) in whole cells, Cool
+    // Edit's aliased staircase, or their antialiased envelope under
+    // `cue_triangle_aa` (paint_ce_cue_triangle, 2026-10-26;
     // UNSCALED WITH THE CUE'S, architect 2026-10-26 ~10:10: "All
     // triangles unscaled", cue_triangle_unit_px, render.h), in the palette's `playhead_stem` (Cool Edit's Curs yellow
     // FFFF00 by default, 2026-10-09) over the same triangle one device px
-    // right in `ce_cue_shadow`, ON THE GROUND'S LAST FIVE DEVICE ROWS, its
+    // right in `ce_cue_shadow`, ON THE GROUND'S LAST `rows` DEVICE ROWS, its
     // apex — the bottom centre of the playhead's one-px column — on the
     // ground's bottom row (2026-10-09 ~21:00, the 11-W ground). It is OPAQUE over the ticks and digits the walk above laid
-    // down, covering whatever stands under it (every cell whole, no edge
-    // blended over them). NO SNAP, NO
+    // down, covering whatever stands under it (every cell whole on the
+    // staircase; the envelope's edges blended over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the view bar, the marker
@@ -3934,7 +3946,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED
             // HEAD — its triangle's and shadow's columns [col − left,
             // col + right) cut to the waveform's columns as the clip above
-            // cuts them, over the head's five device rows of the ruler's — and
+            // cuts them, over the head's `rows` device rows of the ruler's — and
             // nothing beyond it ("I don't think we should get in the habit of
             // making invisible hitboxes"), published by the pass's rule
             // (publish_head, the pass's head).
@@ -5292,9 +5304,9 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // specimen alone (time_field_metrics, row 8's own memo), so neither
     // field nor anything right of it moves as the position runs or an
     // item of another length loads — the cell and its pads, as row 8's
-    // clock is.
-    const double cell_w =
-        time_field_metrics(gui_font(GuiFace::Body)).time_w;
+    // clock is, in its face, the program face (architect 2026-10-26
+    // ~12:10, "yes" to symmetry).
+    const double cell_w = time_field_metrics().time_w;
     l.field_pad = time_field_pad_px();
     l.field_w   = time_field_w_px(cell_w);
     l.field_gap = scaled_px(kTimeFieldGapPx);
@@ -6041,8 +6053,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE ROW'S LAYOUT is player_row_layout's (the abutting cases, the
         // group space, the clock's two fields measured first, the fixed left run,
         // the right-flushed pair and the scrub taking what is between them —
-        // the rules stated there).
-        const GuiFont cfont = gui_font(GuiFace::Body);
+        // the rules stated there). THE CLOCK'S FACE IS ROW 8'S CLOCK'S, THE
+        // PROGRAM FACE (architect 2026-10-26 ~12:10, "yes" to symmetry; the
+        // body face until then), the face its fields were measured in.
+        const GuiFont cfont = gui_font(GuiFace::Program);
         const PlayerRowLayout pl = player_row_layout(seats);
         assert(plan.size() == pl.x.size());
         for (std::size_t i = 0; i < pl.x.size(); ++i) plan[i].x = pl.x[i];

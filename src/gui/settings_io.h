@@ -153,7 +153,8 @@ std::string format_settings_text(
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`)
 // and the color key (`waveform`, `chrome` 2026-10-14..10-21 beside the
 // retired `caption`; required since 2026-10-14, so the line is always there
-// to recall), or the switch's word (`true_colors`, 2026-10-21), the same
+// to recall), or the switch's word (`true_colors`, 2026-10-21;
+// `cue_triangle_aa`, 2026-10-26), the same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is
 // the program's own.)

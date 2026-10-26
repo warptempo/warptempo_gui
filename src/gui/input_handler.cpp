@@ -4170,6 +4170,15 @@ void GuiInputHandler::apply_led_glow(int px) {
     viewport.invalidate_all();
 }
 
+void GuiInputHandler::apply_cue_triangle() {
+    // The apply shape is at the declaration (input_handler.h).
+    const DeviceConfig& c = *app.device_config;
+    set_cue_triangle_tuning(
+        GuiCueTriangleTuning{c.cue_triangle_rows, c.cue_triangle_aa});
+    viewport.refresh_flag_cache();
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::apply_true_colors(bool on) {
     // The apply shape is at install_true_colors' declaration (render.h).
     const WaveformPlateInks before = waveform_plate_inks();

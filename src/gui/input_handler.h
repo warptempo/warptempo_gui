@@ -3773,6 +3773,18 @@ private:
     // config; this applies.
     void apply_led_glow(int px);
 
+    // THE CUE TRIANGLE'S TUNING'S ONE LIVE ACT (architect 2026-10-26 ~11:50,
+    // the `cue_triangle_rows` and `cue_triangle_aa` keys;
+    // GuiCueTriangleTuning, render.h): the settings editor's commit of either
+    // installs the live config's two values (set_cue_triangle_tuning),
+    // REFRESHES THE FLAG CACHE — whose fingerprint keys the tuning by field
+    // (FlagCache::fp_cue_triangle), so the cues' triangles repaint at the new
+    // rows or edges and their labels re-lay at the lead's new floor — and
+    // invalidates the whole window, so the ruler's playhead head, painted
+    // live, repaints with them. No bake: nothing of the materials reads it.
+    // The commit gates the no-op and writes the config; this applies.
+    void apply_cue_triangle();
+
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to

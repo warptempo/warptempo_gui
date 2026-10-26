@@ -408,6 +408,12 @@ struct FlagCache {
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
     uint64_t  fp_palette_generation  = 0;
+    // THE CUE TRIANGLE'S TUNING THESE PIXELS WERE PAINTED AT
+    // (cue_triangle_tuning(), render.h — architect 2026-10-26 ~11:50, the
+    // `cue_triangle_rows` and `cue_triangle_aa` keys): the rows set every
+    // triangle's cells and the label's lead floor, the switch its edges, so a
+    // commit re-renders the surface BY FIELD, the scale's shape.
+    GuiCueTriangleTuning fp_cue_triangle{};
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -602,7 +608,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (26 fields, RE-DERIVED 2026-10-26 off the compare in
+    // (27 fields, RE-DERIVED 2026-10-26 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -617,6 +623,9 @@ struct GuiPaintHandler {
     //     with it (2026-08-29);
     //   - THE PALETTE, read live: fp_palette_generation (render.h's
     //     palette_generation — every flag pixel a palette color, 2026-10-03);
+    //   - THE CUE TRIANGLE'S TUNING, read live: fp_cue_triangle (render.h's
+    //     cue_triangle_tuning — the triangle's rows and its antialiasing,
+    //     2026-10-26);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;

@@ -1389,8 +1389,8 @@ void iterate_visible_flags_impl(
     //
     // THE RIGHT CULL IS THE PAINTED EXTENT (architect 2026-09-26): a cue is
     // admitted iff its triangle intersects the waveform's columns [0, w) —
-    // col - reach < w, the triangle's widest row reaching four device px left of
-    // its column (cue_triangle_half_w_px, render.h). So a marker just past
+    // col - reach < w, the triangle's widest row reaching rows − 1 device px
+    // left of its column (cue_triangle_half_w_px, render.h). So a marker just past
     // the last column (the song's last half-column at the right wall, or a
     // marker just past the viewport's end mid-song) is admitted and paints
     // its triangle's left part ALONE on the last columns — every caller clips
@@ -1712,8 +1712,8 @@ struct CueSegment {
 // GUI scaled so different from the flag. 1 device px at any font size is
 // meaningless for a shadow, so it should be 3 device px at 300 %"; ~11:30,
 // "the shadow looks scaled right but not down — check the offset"): THE
-// PLANNER'S READING, 2026-10-26, is the panel's own label convention, right
-// and down (the panel label's "one line right and down", whose painter
+// PLANNER'S READING, 2026-10-26, the panel's own label convention, right
+// and down, CONFIRMED ON THE GLASS 2026-10-26 ~12:10 (the panel label's "one line right and down", whose painter
 // show_ce_label now paints row 8's tab name and state line through this
 // same offset and color), so the
 // label's shadow steps one quantum each way, while the flag's shadow stays
@@ -1746,12 +1746,17 @@ struct CueDraw {
     // no cell boundary: no bracket lives in a commit).
     bool                      segments_are_cells = true;
     // THE HISTORY'S CHANGED PAIR (render_history_diff_flags, 2026-10-11):
-    // the triangle SPLIT at col (CueTrianglePass::split), its cells left of
-    // col and the apex column face.triangle and those right of it
-    // `split_right` — and ITS OWN STEMS, the pair's two, published in place
-    // of the face's one at col (each still gated to the waveform's columns).
+    // the triangle SPLIT (CueTrianglePass::split) — the staircase at col,
+    // its cells left of col and the apex column face.triangle and those
+    // right of it `split_right`; the antialiased envelope on its axis
+    // `axis_offset` past col (a stem's centre 0.5, or 1.0 where a nudged
+    // pair's midpoint falls on the boundary right of col), its left half
+    // face.triangle and its right half `split_right` — and ITS OWN STEMS,
+    // the pair's two, published in place of the face's one at col (each
+    // still gated to the waveform's columns).
     bool                      split = false;
     GuiColor                  split_right{};
+    double                    axis_offset = 0.5;
     bool                      own_stems = false;
     std::array<MarkerStem, 2> stems{};
 };
@@ -1917,7 +1922,8 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     triangles.begin(cr);
     for (const CueDraw& c : cues) {
         if (c.split)
-            triangles.split(c.col, tri_top, c.face.triangle, c.split_right,
+            triangles.split(static_cast<double>(c.col) + c.axis_offset,
+                            tri_top, c.face.triangle, c.split_right,
                             c.face.shadow);
         else
             triangles.triangle(c.col, tri_top, c.face.triangle,
@@ -1955,8 +1961,8 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             r.iter_upper_boundary_x = cells && c.seg[2].present
                                           ? static_cast<double>(c.seg[2].x0)
                                           : right;
-            // The triangle's box: its top edge and the shadow's quantum,
-            // its five rows.
+            // The triangle's box: its top edge and the shadow's unit, its
+            // live rows.
             FlagHitRect tri;
             tri.x = static_cast<double>(c.col - half);
             tri.y = static_cast<double>(tri_top);
@@ -2421,10 +2427,13 @@ void render_history_diff_flags(
             // THE LEFT MARKER'S STEM COLUMN, the iterator's; on a pair the
             // right one's off its own frame (paint_col above) — the same
             // column on a same-frame pair. THE FLAG STANDS CENTRED BETWEEN
-            // THEM: col the midpoint floored, the aliased triangle's apex
-            // column (2026-10-26: whole cells centre on a column, so an odd
-            // sum's midpoint, on the boundary right of col, takes col, half a
-            // column left of the true midpoint). THE LANDING
+            // THEM: col the midpoint floored, the staircase's apex column
+            // (2026-10-26: whole cells centre on a column, so an odd sum's
+            // midpoint, on the boundary right of col, takes col, half a
+            // column left of the true midpoint), and the antialiased
+            // envelope's axis the two stems' centres' mean (the
+            // `cue_triangle_aa` key), 0.5 past col on an even sum and on the
+            // boundary right of col (1.0) on an odd one. THE LANDING
             // READS THIS BASIS (history_diff_flag_landing_domain_frame,
             // app_state.h, 2026-10-11): both halves mapped first, then
             // centred, so a click, Tab or Center seats the playhead under
@@ -2437,6 +2446,7 @@ void render_history_diff_flags(
             const int col_sum = col_left + col_right;
             c.col = static_cast<int>(
                 std::floor(static_cast<double>(col_sum) / 2.0));
+            c.axis_offset = (col_sum - 2 * c.col == 1) ? 1.0 : 0.5;
             // THE TWO HALVES AS TWO SEGMENTS, THE LEFT MARKER'S FIRST (the
             // removed then the added, the added first on a pair moved
             // earlier — HistoryDiffFlag::added_left), their box layout the
@@ -2568,6 +2578,18 @@ void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
+}
+
+// THE CUE TRIANGLE'S LIVE TUNING (the contract at GuiCueTriangleTuning,
+// render.h).
+namespace {
+GuiCueTriangleTuning g_cue_triangle_tuning;
+} // namespace
+void set_cue_triangle_tuning(const GuiCueTriangleTuning& t) {
+    g_cue_triangle_tuning = t;
+}
+const GuiCueTriangleTuning& cue_triangle_tuning() {
+    return g_cue_triangle_tuning;
 }
 
 // -- The palette's chokepoints (the contract is at their declaration,

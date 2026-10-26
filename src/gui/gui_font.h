@@ -24,11 +24,12 @@
 // label's size tuning settled: "text 26 … the bottom left timestamp and tab/github/etc
 // text should take 26 as well"): THE CUES' LABELS, THE LANE'S EDITORS (the
 // flag editor, the iteration bound editor), ROW 8'S CLOCK AND ITS STATE
-// LINE (the tab's name, the GitHub word, the walk line, the progress line)
-// and THE TOOLTIP ("the tooltips font size should be the same as the
-// flags", 2026-10-23); BODY 22 Regular, THE REST (the lists, the cards, the
-// prompts, the dialog editors, the render player's two time fields, the
-// logo lane's battery + clock legend); TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
+// LINE (the tab's name, the GitHub word, the walk line, the progress line),
+// THE RENDER PLAYER'S TWO TIME FIELDS (architect 2026-10-26 ~12:10, "yes"
+// to symmetry with row 8's clock; the body's until then) and THE TOOLTIP
+// ("the tooltips font size should be the same as the flags", 2026-10-23);
+// BODY 22 Regular, THE REST (the lists, the cards, the prompts, the dialog
+// editors, the logo lane's battery + clock legend); TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
 // 2026-10-24, the laptop's caption title beside it that morning; architect 2026-10-24, "the caption size
 // 24", off the logo mocks — 22 from 2026-10-23
 // until then), RULER 16 Regular (the ruler's digits alone; architect
@@ -81,7 +82,8 @@
 
 // THE USES (the head's table): the body, the brand's bold, the ruler's
 // digits (`Small`), the cues' labels and their kin (`Program`: the lane's
-// editors, row 8's clock and state line, the tooltip), the keys' legends
+// editors, row 8's clock and state line, the player's clocks, the
+// tooltip), the keys' legends
 // and the on-screen keyboard's caps (`Keys`).
 enum class GuiFace { Body, Bold, Small, Program, Legend, Keys };
 inline constexpr std::size_t kGuiFaceCount = 6;
@@ -111,7 +113,7 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {1, 24.0},   // Bold: the brand
     {0, 16.0},   // Small: the ruler's digits
     {0, 26.0},   // Program: the cues' labels, the lane's editors, row 8's
-                 // clock and state line, the tooltip
+                 // clock and state line, the player's clocks, the tooltip
     {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps
 };
