@@ -1,27 +1,42 @@
 #!/usr/bin/env python3
-# tools/score_extract.py — a "sheet music" video -> THE SCORE FOLDER the built-in page viewer reads: one PNG per page
-# and pages.txt, each page carrying the audio-frame range on which it is fully on screen (architect 2026-10-26).
+# tools/score_extract.py — a "sheet music" video -> THE SCORE FOLDER the built-in page viewer reads: one PNG per page,
+# pages.txt (the pages' audio-frame ranges, tiling the whole video) and the video's soundtrack (architect 2026-10-26).
 #
 # Standalone: no product target builds or links it (the convention of tools/CMakeLists.txt's head). python3 with
-# numpy and Pillow; ffmpeg and ffprobe on PATH.
+# numpy; ffmpeg and ffprobe on PATH.
 #
-#   score_extract.py <video> <outdir> [--width W] [--rate R] [--min-page SECONDS] [--fade-floor L]
-#                                     [--skip N] [--audio OUT.wav] [--url LINK]
+#   score_extract.py <video> <outdir> [--width W] [--rate R] [--url LINK]
 #
-# <outdir> is the score/ folder, created if absent. It receives page001.png, page002.png, ... (1-based, three digits,
-# four from page 1000 on) and pages.txt, plus the scan cache (scan.npy, scan.meta; see SCAN_NPY). A rerun overwrites
-# them and removes every pageNNN.png numbered past the new count. A refusal (one line, exit 1) writes nothing.
-#   --width W          the page images' width in px (default 2304, the tablet's glass); the height keeps the video's
-#                      aspect, rounded to even (ffmpeg's scale=W:-2): 2304x1296 from a 16:9 video.
-#   --rate R           the unit of pages.txt's frames (default the video's audio sample_rate; required when the video
-#                      has no audio stream).
-#   --min-page SECONDS the page floor (default MIN_PAGE_S).
-#   --fade-floor L     the black ceiling on the 0-255 luminance scale (default FADE_FLOOR).
-#   --skip N           drop the first N detected pages (a cover or title card); the run's per-page lines say whether
-#                      to (default 0).
-#   --audio OUT.wav    also extract the video's audio, pcm_s16le at the stream's own rate and channels. Nothing reads
-#                      it; it is a convenience.
-#   --url LINK         recorded in the header (one token, no whitespace). Nothing reads it.
+# <outdir> is the score/ folder, created if absent. A run writes into it:
+#   page001.png, page002.png, ...  the pages (1-based, three digits, four from page 1000 on), grabbed at --width;
+#   pages.txt                      the pages' ranges (THE GRAMMAR OF pages.txt);
+#   audio.wav                      the video's soundtrack, pcm_s16le at the stream's own rate and channels (AUDIO_WAV):
+#                                  the score's audio is the video's (architect 2026-10-26 night);
+#   scan.npy, scan.meta            the scan cache (SCAN_NPY).
+# A rerun overwrites them and removes every pageNNN.png numbered past the new count. A refusal (one line, exit 1)
+# writes nothing. Nothing about the pages is the user's to set: what a page is and where its range runs are read off
+# the video (WHAT A PAGE IS).
+#   --width W   the page images' width in px (default the video's own width capped at PAGE_WIDTH); the height keeps the
+#               video's aspect, rounded to even (ffmpeg's scale=W:-2): 2304x1296 from a 16:9 4K video.
+#   --rate R    the unit of pages.txt's frames (default the video's audio sample_rate; required when the video has no
+#               audio stream, which then writes no audio.wav).
+#   --url LINK  recorded in the header (one token, no whitespace). Nothing reads it.
+#
+# WHAT A PAGE IS, AND WHICH FRAMES ARE ITS (architect 2026-10-26 evening, the fill rule confirmed that night). The scan
+# (scan_series, detect) cuts the video into static runs and the transitions between them. A LIT STATIC RUN IS A PAGE
+# IFF IT CARRIES BAR LINES (ridge_mask and best_shear on its midpoint frame, at least MIN_BARLINES): a cover, a title
+# card or a white flash carries none and is reported, never numbered, wherever in the video it stands; a black run is
+# never tested. Length is no discriminator: the Jupiter rip's 1.8 s volta page carries bar lines of its own.
+# Consecutive pages whose bar lines match (same_page) are ONE page, every frame between them included: a fade's brief
+# settle splits a page's run without changing the page. THE RANGES TILE THE VIDEO (tile_gap): page 1 begins at frame
+# 0, the last page ends at the video's end (the scan's frame count), and page i's end is page i+1's begin. Between two
+# pages' runs the boundary is THE FIRST FRAME THAT SHOWS THE NEXT PAGE (shows >= SAME_MIN) AT LEAST AS FULLY AS IT
+# SHOWS THE PREVIOUS ONE: every frame before it stays with the previous page — its fade-out while its bar lines still
+# match, then the FILL that shows no page (black, a cover, a title card, the deep end of a fade), the reader's own
+# rule that a page stays until the next is shown — and the frames before the first page's run are the first page's
+# (a cover is backfilled by page 1). So a fade counts as its unfaded page's wherever its bar lines match, a fade-in's
+# frames go to the page after it from the frame its bar lines appear, and a crossfade turns at the first frame whose
+# bar lines show the next page whole while the previous page's show no more fully.
 #
 # THE GRAMMAR OF pages.txt, spelled here once (the product's loader cites this block). LF line ends, ASCII. First the
 # header, every line opening with '#', in this order:
@@ -38,23 +53,42 @@
 # <page> is the page's number, 1, 2, 3, ... with no gap, in line order, equal to its file's number (page<NNN>.png in
 # the same folder). <begin> and <end> are non-negative decimal integers, audio frames at <rate> measured from the
 # video's start (round(seconds * rate)), begin inclusive and end exclusive, begin < end; the ranges ascend and never
-# overlap (a page's begin >= the previous page's end). A frame inside no range is a frame on which no page is fully
-# on screen (a transition, a black gap, boundary bleed, a skipped cover). The frames are a position's unit and the
-# pages' order: nothing aligns them to any recording but the video's own soundtrack.
+# overlap (a page's begin >= the previous page's end). The ranges tile the video: the first begins at 0, each begins
+# where the previous ends, and the last ends at the video's end, so every frame is inside exactly one range; a
+# transition's or a non-page's frames belong to the page WHAT A PAGE IS gives them. The frames are a position's unit
+# and the pages' order: nothing aligns them to any recording but the video's own soundtrack.
 #
-# THE INSTANCE THIS IS BUILT FOR (the only one; measured 2026-10-26): the K.550 rip, youtube BfcXoB9y4rc, "2017-09-09
-# Symphony No. 40 in G minor, K.550 (Mozart) - Sheet Music [i:BfcXoB9y4rc].webm": 3840x2160 VP9 at 30/1 fps (a
-# keyframe every 5.333 s), opus 48000 Hz stereo, 1381.068 s, 408 MB, the whole symphony in one file. On it the scan
-# finds 141 transitions and every one is a ONE-FRAME CUT at the source's 30 fps (a frame-to-frame threshold as low
-# as 0.5 finds the same 141); there is no fade, no crossfade and no black frame anywhere (the darkest page's mean is
-# 215.2); one 0.2 s white flash (mean 253.0, at 791.7 s) is the only static run under the page floor. The fade rules
-# below are carried for the next rip and proven on a synthetic one (DRIFT_THR's comment), not on this. Its run: 141
-# pages, page 001 the first page of music (Molto Allegro, bars 1-5; no cover), page 045 the Andante's first at 6:00.333,
-# page 141 the finale's last (bars 303-308).
+# THE TWO INSTANCES (the only ones; measured 2026-10-26).
+# - THE K.550 RIP, youtube BfcXoB9y4rc, "2017-09-09 Symphony No. 40 in G minor, K.550 (Mozart) - Sheet Music
+#   [i:BfcXoB9y4rc].webm": 3840x2160 VP9 at 30/1 fps (a keyframe every 5.333 s), opus 48000 Hz stereo, 1381.068 s,
+#   408 MB, the whole symphony in one file. The scan finds 141 transitions and every one is a ONE-FRAME CUT at the
+#   source's 30 fps (a frame-to-frame threshold as low as 0.5 finds the same 141); there is no fade, no crossfade, no
+#   black frame and no cover (the darkest page's mean is 215.2). Its one non-page is a 0.2 s white flash at 13:11.700
+#   (mean 254.0, no bar lines), the 6-frame fill of page 071 before it. Its run: 141 pages at 2304 px, page 001 the
+#   first page of music (Molto Allegro, bars 1-5) from frame 0, page 045 the Andante's first at 6:00.333, page 141 the
+#   finale's last (bars 303-308) to the video's end, 1381.033 s (the soundtrack runs 8 ms longer); bar lines 4 to 13 a
+#   page; audio.wav 265 MB.
+# - THE JUPITER RIP, youtube gAmw8ATln68, "Wolfgang Amadeus Mozart: Symphony No. 41 in C major "Jupiter" K. 551
+#   (1788) [gAmw8ATln68].webm": 1920x1080 VP9 at 25/1 fps, opus 48000 Hz stereo, 2384.4 s, 183 MB, the score
+#   pillarboxed (217 px of black either side). The scan finds 199 cuts, one crossfade (one frame, 38:34.200), and
+#   eight fades: from black to a cover (the recording's CD cover, a dark photograph, 0:02.320..0:08.120, mean 20.6, with
+#   a 0.4 s settle in its fade-in) and back to black, a fade-in to the first page of music, two dips through black
+#   (11:44 and 28:04), and the fade to black after the last page. Its non-pages are the cover and that settle, no bar
+#   lines either; the two 0.08 s lit runs at 11:42.800 and 11:47.600 (means 211.5 and 202.8) are settles inside the
+#   dip's fades and carry their pages' lines whole, so they merge into pages 053 and 054. The bar lines hold deep into
+#   every fade: the last frame that still shows the page, or the first, sits at a mean of 8.2 for page 001's fade-in
+#   (of its 174.5), 5.8 and 5.6 at 11:44 (of 213.3 and 204.7), 5.9 and 5.8 at 28:04 (of 212.1 and 213.1) and 4.4 for
+#   page 200's fade-out (of 207.2), 2-5 % of the page; the crossfade's one frame already shows page 195 whole and
+#   page 194 not at all, so it is 195's. Its run: 200 pages at 1920 px, page 001 the first page of music from frame 0
+#   (the cover and both its fades its fill), page 173 the 1.8 s volta page (35:38.440), page 200 the finale's last to
+#   the video's end, 2384.360 s (the soundtrack runs 16 ms longer); bar lines 4 to 16 a page; audio.wav 458 MB.
 #
-# THE MEASURED COSTS on the 12-thread laptop, the whole K.550 run: 3 min 0 s wall, of which the scan is about 2 min
-# 20 s (the 4K VP9 decode alone is 5.2 s per 60 s of video, on six cores) and the 141 page grabs 41 s (0.29 s a page at
-# GRAB_WORKERS); a rerun on the cached scan 41 s; the --audio arm 3 s more (265 MB of WAV).
+# THE MEASURED COSTS on this laptop, 2026-10-26 night. The Jupiter rip: 2 min 54 s wall from nothing, of which the
+# 1080p scan is about 1 min 27 s; 1 min 28 s on its cached scan (the page test's 204 midpoint decodes with their
+# shear searches, the five gaps' 540 frames, the 200 page grabs and 4 s of soundtrack). K.550: 1 min 41 s on its
+# cached scan (142 midpoint decodes at 4K, the flash's 6 frames, the 141 grabs at about 0.29 s a page at
+# GRAB_WORKERS, the soundtrack); its 4K scan adds about 2 min 20 s (the decode alone is 5.2 s per 60 s of video, on
+# six cores). A bar-line reading costs about 0.2 s a frame with its shear search and 0.06 s at a page's known shear.
 import math
 import os
 import subprocess
@@ -82,34 +116,22 @@ import numpy as np
 # the frame.
 DRIFT_THR = 1.0
 SETTLE_THR = 0.5
-# THE BLACK CEILING (the default for --fade-floor): a static run whose mean luminance stays under this is BLACK, the
-# gap after a fade-out, never a page. Black is about 0-3; a printed page is about 150-230 (the K.550 rip's darkest is
-# 215.2). 16 is 5x above black's top and 13x under that page, and still under any score page's ground.
+# THE BLACK CEILING: a static run whose mean luminance stays under this is BLACK, the gap after a fade-out, never a
+# page and never tested for one. Black is about 0-3; a printed page is about 150-230 (the K.550 rip's darkest is
+# 215.2). 16 is 5x above black's top and 13x under that page, and still under any score page's ground. Black is the
+# report's word (and the transitions' classes'); no range depends on it.
 FADE_FLOOR = 16.0
-# THE PAGE FLOOR, in seconds: a span shorter than this is boundary bleed — a transition flash at a window edge, or a
-# frame of crossfade between pages — and is dropped rather than counted as a page. IT IS THE DEFAULT FOR --min-page,
-# not a fixed constant, because the right floor is a property of the rip.
-#
-# THE MARGINS ARE MEASURED ON THE K.550 RIP AND BOTH ARE WIDE. Observed bleed tops out at 0.2s (the movement-2
-# transition flash), while the shortest REAL page is 5.47s (movement 4) and the shortest real VOLTA PARTIAL — the
-# tightest thing that must survive — is 6.03s (movement 3). So 2.0 sits 10x above the largest bleed and 2.7x under the
-# shortest page worth keeping. 5.0 WAS CONSIDERED AND REJECTED on exactly this data: it would still clear every
-# observed bleed, but it leaves only a 1.09x margin under that 5.47s page, and a floor that close to a real page is one
-# slow flip away from eating one. Re-measured by this tool at 30 fps (2026-10-26): the flash 0.200 s, the shortest page
-# 5.400 s, so the margins stand.
-MIN_PAGE_S = 2.0
 # THE SCAN'S THUMBNAIL, the size the motion thresholds were measured at. `flags=area` is the box average a downscale
 # this deep wants, and it is the cheap scaler: bicubic adds 2.3 s per 60 s of 4K video at 30 fps, area 0.7 s.
 DIFF_W, DIFF_H = 480, 270
-# THE PAGE IMAGES' WIDTH (the default for --width): the tablet's glass, 2304 px.
+# THE PAGE IMAGES' WIDTH CAP (--width's default is the video's own width up to it): the tablet's glass, 2304 px.
+# Upscaling a narrower rip adds nothing, and the viewer fits the page to its box.
 PAGE_WIDTH = 2304
 # THE PAGE GRABS are one ffmpeg per page seeking to the page's midpoint frame, GRAB_WORKERS at a time. Measured on a
 # 2-minute slice of the K.550 rip (15 pages): one decode pass selecting every midpoint took 9.56 s (the whole video
 # would take about 110 s), per-page seeks 0.58 s a page one at a time and 0.34 s at 4 at a time (about 48 s for the
 # whole video): each seek decodes from the keyframe before it, at most 5.3 s of video here, far less than the pass.
-# THE SEEK TIME IS HALF A FRAME BEFORE THE FRAME: an input -ss drops every frame whose pts is under it, and WebM pts
-# are whole milliseconds truncated (frame 2693 at 30 fps is 89.766, under 89.7667), so the frame's own time can land
-# on its successor.
+# The analysis decodes (the page test's midpoints, the gaps) run GRAB_WORKERS at a time too.
 GRAB_WORKERS = 4
 # THE SCAN CACHE lives beside the outputs: the three series per scan frame (SCAN_NPY, a 3 x n float64 array, the rows
 # SERIES_ROWS) and the stamp of the input it was taken from (SCAN_META). The stamp is a RESOLVED IDENTITY plus a CHANGE
@@ -123,6 +145,87 @@ SCAN_META = "scan.meta"
 # frame (motion_at's anchor; the diff to the previous frame while in motion).
 SERIES_ROWS = ("diff", "mean", "drift")
 PAGES_TXT = "pages.txt"
+AUDIO_WAV = "audio.wav"
+# THE PAGE TEST AND THE SIGNATURE: BAR LINES, read off a gray frame at THE CANONICAL ANALYSIS HEIGHT, CANON_H lines
+# (the video scaled with flags=area, its width kept to its aspect, by canonical_size), so every pixel constant below
+# has one meaning on every rip. The geometry is the sunset sheet-map extractor's (git a6ccf9a3^, tools/
+# extract_sheet_map.py), which COUNTED bar lines well enough to validate K.550's four movements against kern ground
+# truth; its fixed BINARIZE = 170 and its scipy deskew are replaced here so the test holds on what a scanned score
+# carries (architect 2026-10-26 night: "bulletproof as far as can be: scanned pages, pages slightly off-axis").
+CANON_H = 1080
+# A BAR LINE IS A THIN DARK RIDGE (ridge_mask): a pixel is a ridge pixel when it is darker than BOTH of the pixels
+# RIDGE_SIDE px to its left and its right by RIDGE_DEPTH of the frame's own ink-to-paper contrast, taken as a share
+# of that local paper (the darker of the two sides). So the test is local and relative: a grey or uneven ground, a
+# lowered contrast and a fade toward black (the page scaled down whole) keep their bar lines, while a fixed threshold
+# loses the lines in a shadow or sees the whole frame as ink once the paper sinks under it; and a long dark mass is
+# never a line: the Jupiter rip's pillarbox (217 px of black either side of the page) and its cover (a dark
+# photograph, mean 20) carry none. The contrast is the frame's PAPER_PCT percentile against its INK_PCT percentile,
+# both over the frame's central half (a pillarbox or a letterbox would make its black the ink level). A side at
+# RIDGE_SIDE = 5 px clears a bar line's own width (2-3 columns at CANON_H, 4-5 under a one-px blur); RIDGE_DEPTH = 1/3
+# is the sunset tool's 170 of 255 on a clean page, and passes a 2:1 page (paper 180, ink 90) at a sixth of the local
+# paper, while a bleed-through at a quarter of the ink stays out. MIN_DROP gray levels at least, so the quantization
+# noise of a near-black frame is no ridge; and the ground either side is paper, at least MIN_GROUND of the frame's
+# paper level: the Jupiter rip's black pillarbox carries the encoder's faint full-height seams (a 2-level drop, a
+# 1000 px run at x = 1788 and 1907 on two pages' edge frames), while an uneven ground keeps 0.6 of its paper.
+INK_PCT, PAPER_PCT = 1, 90
+RIDGE_SIDE = 5
+RIDGE_DEPTH = 1 / 3
+MIN_DROP = 2
+MIN_GROUND = 1 / 2
+# THE VERTICAL SMOOTHING before the ridge test: each pixel is the mean of SMOOTH_ROWS rows of its column. A bar line
+# is vertical and keeps its depth; pixel noise falls by the square root of SMOOTH_ROWS, which keeps a noisy frame's
+# speckle (the cover under Gaussian noise of sigma 20 made 3 one-column "lines" without it) from chaining into runs.
+SMOOTH_ROWS = 5
+# THE SHEAR (best_shear): a page off-axis by a degree turns a 700 px bar line into 12 columns of short runs, none
+# reaching the run floor. Each row is shifted by its distance from the frame's middle row times tan(angle) — a shear
+# that straightens a small rotation well enough for column runs, and leaves a line's center where the middle row
+# crosses it — at SHEAR_COARSE_DEG, then at SHEAR_FINE_DEG either side of the best, keeping the one whose runs over
+# the floor are longest (the sum of their squares). A page's shear is found once, at its run's midpoint; the frames of
+# its fades are read at that shear (tile_gap's caller).
+SHEAR_COARSE_DEG = (-1.0, -0.5, 0.0, 0.5, 1.0)
+SHEAR_FINE_DEG = 0.25
+# The run geometry, the sunset tool's at CANON_H: a vertical closing of CLOSE_GAP px heals the breaks (the staff
+# lines crossing, a broken or scanned line), a column is a bar line's when its longest healed run reaches
+# MIN_BARLINE_RUN px, and columns within MERGE_GAP px are one line (a double bar, a repeat sign). A one-column line
+# counts (a thin line, or a 2 px line narrowed by a scan): the sunset tool's two-column floor kept stems and slur ends
+# out of a COUNT, which the ridge depth and the smoothing now do. Measured runs: K.550's 168-447 px, the Jupiter
+# rip's up to 984; notation debris under 100.
+CLOSE_GAP = 6
+MIN_BARLINE_RUN = 160
+MERGE_GAP = 30
+# A PAGE CARRIES AT LEAST MIN_BARLINES bar lines: a system carries one at each end at least, while a title card's
+# ornament or a photograph's edge could carry one thin vertical rule. Every page of both rips carries 4 or more; the
+# cover, the flash and the Jupiter rip's 0.4 s settle in the cover's fade-in carry none.
+MIN_BARLINES = 2
+# THE SIGNATURE of a frame is its bar lines' x-centers (canonical px, ascending). Two signatures SHARE a line when
+# their centers lie within MATCH_TOL px (share); two frames show THE SAME PAGE when the shared lines are at least
+# SAME_MIN of the longer signature (same_page), and a frame SHOWS a page to the degree of the page's lines it carries
+# (shows: shared / the page's count, so a crossfade frame carrying both pages' lines can show each whole).
+#
+# THE MARGINS, measured 2026-10-26 on three frames of every static run of both rips (its second, middle and
+# second-to-last) and on every page against its neighbors. HELD NOISE (one page across its own run, VP9 noise): a
+# line's center moves at most 1 px on the Jupiter rip and 0.5 px on K.550, and every held pair shares 1.0.
+# DISTINCT NEIGHBORS: at MATCH_TOL = 3 the closest pair shares 0.40 (K.550 9:51.800 and 10:02.800, 2 of 5 lines), the
+# Jupiter rip's 0.25, and the volta page shares 0 and 0.0625 with its two neighbors. Two K.550 neighbors (19:52.767
+# and 19:58.200) carry the same seven bars shifted 1-6 px, so the tolerance has a ceiling: they share 0.571 at 5 px,
+# 0.714 at 6 (a merge) and 1.0 at 8. So MATCH_TOL = 3 sits 2 px over the held jitter and 3 px under that pair's merge,
+# and SAME_MIN = 0.65 sits 0.35 under the held floor and 0.25 over the closest distinct pair.
+#
+# THE SYNTHETIC PROOF (2026-10-26 night, numpy + Pillow off the tool's path): two Jupiter pages (2:18.5, the volta
+# page), two K.550 pages (0:03, 13:20), the cover and a black frame, each put through a rotation of +0.5, +1.0 and
+# -1.0 degrees (bilinear, white fill), Gaussian noise of sigma 10 and 20, a one-px box blur, a 2:1 contrast (paper
+# 180, ink 90), a grey ground (paper 200), an uneven ground (1.0 falling to 0.6 across the page), a bleed-through (the
+# page's mirror at a quarter of its ink), 5-row breaks every 37 rows, every stroke one px thinner (plain and at +0.5
+# degrees), and two composites of a scan (rotated 0.7 or -1.0 degrees, ink 70 on paper 200, uneven, blurred, noise of
+# sigma 8). Every variant of every page is a page whose signature shares at least 0.86 with its clean original
+# (K.550 13:20 at -1.0 degrees, 6 of 7); the other 63 of the 64 share 1.0; the cover and the black frame carry no bar
+# line under any.
+MATCH_TOL = 3
+SAME_MIN = 0.65
+# THE DECODE'S ALIGNMENT TRIPWIRE (decode_gray): an analysis frame's mean against the scan's mean of the same frame.
+# The two scales' box averages differ by at most 0.84 (the Jupiter rip) and 0.16 (K.550); a frame one index off
+# differs by up to 18 in the Jupiter rip's fades, and by nothing on a held page, where it changes nothing.
+ALIGN_TOL = 2.0
 
 
 class OptionError(Exception):
@@ -137,13 +240,9 @@ class Refusal(Exception):
 # THE OPTION PROTOCOL is a whole-tail parse: every flag with its exact arity, each at most once, a flag name never a
 # value; anything unclaimed is named and refused. So a mistyped flag cannot pass silently.
 KNOWN_OPTIONS = {
-    "--width":      1,
-    "--rate":       1,
-    "--min-page":   1,
-    "--fade-floor": 1,
-    "--skip":       1,
-    "--audio":      1,
-    "--url":        1,
+    "--width": 1,
+    "--rate":  1,
+    "--url":   1,
 }
 
 
@@ -182,40 +281,19 @@ def option_int(claimed, flag, default, low):
     return value
 
 
-def option_float(claimed, flag, default, low, high):
-    """A finite number in the open interval (low, high): `float()` reads `nan` and `inf` happily, and either one
-    empties the page set silently (a NaN makes the keep and the drop tests both false)."""
-    if flag not in claimed:
-        return default
-    (raw,) = claimed[flag]
-    try:
-        value = float(raw)
-    except ValueError:
-        raise OptionError(f"{flag} takes a number, not {raw!r}") from None
-    if not math.isfinite(value) or not low < value < high:
-        raise OptionError(f"{flag} must be a number above {low:g}" if high == math.inf
-                          else f"{flag} must lie between {low:g} and {high:g}, exclusive")
-    return value
-
 
 def read_options(tail):
     """Every command-line decision, made before the scan touches anything."""
     claimed = parse_argv_tail(tail)
     opts = {
-        "width":      option_int(claimed, "--width", PAGE_WIDTH, 2),
-        "rate":       option_int(claimed, "--rate", None, 1),
-        "min_page":   option_float(claimed, "--min-page", MIN_PAGE_S, 0.0, math.inf),
-        "fade_floor": option_float(claimed, "--fade-floor", FADE_FLOOR, 0.0, 255.0),
-        "skip":       option_int(claimed, "--skip", 0, 0),
-        "audio":      claimed["--audio"][0] if "--audio" in claimed else None,
-        "url":        claimed["--url"][0] if "--url" in claimed else None,
+        "width": option_int(claimed, "--width", None, 2),
+        "rate":  option_int(claimed, "--rate", None, 1),
+        "url":   claimed["--url"][0] if "--url" in claimed else None,
     }
     # One unambiguous token on one header line, recorded verbatim: what a link may look like is not this tool's
     # business.
     if opts["url"] is not None and (not opts["url"] or any(c.isspace() for c in opts["url"])):
         raise OptionError("--url takes one link with no whitespace in it")
-    if opts["audio"] is not None and not opts["audio"]:
-        raise OptionError("--audio takes a file name")
     return opts
 
 
@@ -233,10 +311,10 @@ def probe_stream(video, selector, entries):
     return fields
 
 
-def video_fps(video):
-    """(the frame rate as ffprobe spells it, the same as a Fraction). The spelling goes to ffmpeg's fps filter as is,
-    and frame i of the scan is at i / fps seconds, which holds because the stream starts at 0."""
-    fields = probe_stream(video, "v:0", "avg_frame_rate,start_time")
+def video_stream(video):
+    """(the frame rate as ffprobe spells it, the same as a Fraction, (width, height)). The spelling goes to ffmpeg's fps
+    filter as is, and frame i of the scan is at i / fps seconds, which holds because the stream starts at 0."""
+    fields = probe_stream(video, "v:0", "avg_frame_rate,start_time,width,height")
     if not fields:
         raise Refusal("the file has no video stream")
     text = fields.get("avg_frame_rate", "")
@@ -249,7 +327,10 @@ def video_fps(video):
         start = math.nan
     if start != 0.0:
         raise Refusal(f"the video stream starts at {fields.get('start_time')!r}, not 0")
-    return text, Fraction(int(num), int(den))
+    w, h = fields.get("width", ""), fields.get("height", "")
+    if not (w.isdigit() and h.isdigit() and int(w) > 0 and int(h) > 0):
+        raise Refusal(f"the video's size is unreadable ({w!r} x {h!r})")
+    return text, Fraction(int(num), int(den)), (int(w), int(h))
 
 
 def audio_rate(video):
@@ -314,7 +395,7 @@ def load_or_scan(video, outdir, vf):
     return scan_series(video, vf), stamp, False
 
 
-def detect(series, fade_floor):
+def detect(series):
     """The series -> (static runs, their black flags, the transitions by class, the advisories). Frame k moves by
     motion_at (the scan's own rule over its own rows). A TRANSITION is a maximal run [a, b] of moving frames; the
     STATIC RUNS are what lies between: frames [s, e] with no moving frame in s+1..e, so they alternate with the
@@ -322,11 +403,10 @@ def detect(series, fade_floor):
     frame: the static run before it ends at a - 1, the one after starts at a. A longer transition's frames a..b-1 are
     in motion and belong to no static run; frame b, the first after which nothing moves, starts the next one.
 
-    A static run whose mean luminance stays under `fade_floor` is BLACK. Each transition is classed by its neighbors:
+    A static run whose mean luminance stays under FADE_FLOOR is BLACK. Each transition is classed by its neighbors:
     lit to black a FADE-OUT, black to lit a FADE-IN, lit to lit a CUT (one frame) or a CROSSFADE (more), and lit to
-    lit through black inside the run (a dip with no static black) both a fade-out and a fade-in. The range rule needs
-    no class: a page's range is its static run, so the fade-out's first frame ends the page before it, the frame
-    after a fade-in's last starts the page after it, and a crossfade's frames go to neither."""
+    lit through black inside the run (a dip with no static black) both a fade-out and a fade-in. The classes are the
+    report's: the ranges need none, since the bar lines decide which frames are whose (WHAT A PAGE IS)."""
     diffs, means, drifts = series
     n = len(means)
     moving = np.zeros(n, dtype=bool)
@@ -344,7 +424,7 @@ def detect(series, fade_floor):
             s = k
         k += 1
     statics.append((s, n - 1))
-    black = [bool(means[a:b + 1].max() < fade_floor) for a, b in statics]
+    black = [bool(means[a:b + 1].max() < FADE_FLOOR) for a, b in statics]
     classes = {"cut": [], "crossfade": [], "fade-out": [], "fade-in": [], "within black": []}
     nonmonotonic = []
     for i, (a, b) in enumerate(transitions):
@@ -361,7 +441,7 @@ def detect(series, fade_floor):
             classes["fade-in"].append((a, b))
             if (np.diff(lum) < -SETTLE_THR).any():
                 nonmonotonic.append(("fade-in", a))
-        elif lum.min() < fade_floor:
+        elif lum.min() < FADE_FLOOR:
             classes["fade-out"].append((a, b))
             classes["fade-in"].append((a, b))
         elif a == b:
@@ -369,6 +449,178 @@ def detect(series, fade_floor):
         else:
             classes["crossfade"].append((a, b))
     return statics, black, classes, nonmonotonic
+
+
+
+
+def canonical_size(width, height):
+    """The analysis frame's (width, height): CANON_H lines, the width kept to the video's aspect and rounded to even."""
+    return max(2, 2 * round(width * CANON_H / height / 2)), CANON_H
+
+
+def seek_time(fps, frame):
+    """THE SEEK TIME IS HALF A FRAME BEFORE THE FRAME: an input -ss drops every frame whose pts is under it, and WebM
+    pts are whole milliseconds truncated (frame 2693 at 30 fps is 89.766, under 89.7667), so the frame's own time can
+    land on its successor. Every seek here goes through it: the page grabs and the analysis decodes."""
+    return f"{float(max(Fraction(0), (Fraction(frame) - Fraction(1, 2)) / fps)):.6f}"
+
+
+def decode_gray(video, fps, first, count, size, means):
+    """The frames first .. first + count - 1 at the canonical `size`, gray, one ffmpeg; yielded one at a time (a
+    cover's window is hundreds of frames). `-fps_mode passthrough` is load-bearing: rawvideo is a constant-rate muxer,
+    and without it ffmpeg lays the half-frame-late first frame (seek_time) on a timeline from the seek and DOUBLES it,
+    every later frame landing one index late; the setpts lays the frames out at the video's own rate from 0, so the
+    muxer never sees two equal timestamps (passthrough alone carries the whole-millisecond pts, which collide on the
+    muxer's time base, and ffmpeg prints a line per collision). Each frame's mean is checked against the scan's
+    (`means`, the series' row) within ALIGN_TOL, so a decode that is not the scan's frame for frame refuses instead of
+    tiling wrong; fewer frames than asked is a refusal, as a short scan is."""
+    w, h = size
+    proc = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", seek_time(fps, first), "-i", video,
+                             "-frames:v", str(count), "-fps_mode", "passthrough",
+                             "-vf", f"setpts=N/({fps.numerator}/{fps.denominator})/TB,scale={w}:{h}:flags=area",
+                             "-pix_fmt", "gray", "-f", "rawvideo", "-"], stdout=subprocess.PIPE)
+    got = 0
+    try:
+        while got < count:
+            buf = proc.stdout.read(w * h)
+            if len(buf) < w * h:
+                break
+            gray = np.frombuffer(buf, dtype=np.uint8).reshape(h, w)
+            if abs(gray.mean() - means[first + got]) > ALIGN_TOL:
+                raise Refusal(f"the decode at frame {first + got} is not the scan's (mean {gray.mean():.2f}, the "
+                              f"scan's {means[first + got]:.2f})")
+            got += 1
+            yield gray
+    finally:
+        proc.stdout.close()
+        status = proc.wait()
+    if got < count or status != 0:
+        raise Refusal(f"the decode at frame {first} did not complete (ffmpeg exit {status}, {got} of {count} frames)")
+
+
+def ridge_mask(gray):
+    """The frame's ridge pixels (A BAR LINE IS A THIN DARK RIDGE), on the frame smoothed over SMOOTH_ROWS rows."""
+    h, w = gray.shape
+    cum = np.cumsum(np.bincount(gray[h // 4:3 * h // 4, w // 4:3 * w // 4].ravel(), minlength=256))
+    ink, paper = np.searchsorted(cum, [cum[-1] * INK_PCT / 100, cum[-1] * PAPER_PCT / 100])
+    depth = RIDGE_DEPTH * (paper - ink) / paper if paper > 0 else 1.0
+    k = SMOOTH_ROWS
+    rows = np.cumsum(np.pad(gray.astype(np.int32), ((k // 2 + 1, k - k // 2 - 1), (0, 0)), mode="edge"), axis=0)
+    smooth = ((rows[k:] - rows[:-k]) / k).astype(np.float32)
+    s = RIDGE_SIDE
+    side = np.minimum(smooth[:, :-2 * s], smooth[:, 2 * s:])
+    drop = side - smooth[:, s:-s]
+    mask = np.zeros(gray.shape, dtype=bool)
+    mask[:, s:-s] = (drop > depth * side) & (drop >= MIN_DROP) & (side >= MIN_GROUND * paper)
+    return mask
+
+
+def close_vertical(mask):
+    """The binary closing with a (CLOSE_GAP + 1) x 1 structure, centered: a dilation then an erosion, each the OR or
+    the AND of the shifted rows. The erosion counts the frame's outside as set, so a run touching the edge keeps its
+    end."""
+    r = CLOSE_GAP // 2
+    grown = mask.copy()
+    for o in range(1, r + 1):
+        grown[o:] |= mask[:-o]
+        grown[:-o] |= mask[o:]
+    closed = grown.copy()
+    for o in range(1, r + 1):
+        closed[o:] &= grown[:-o]
+        closed[:-o] &= grown[o:]
+    return closed
+
+
+def longest_runs(mask):
+    """Per column, the longest vertical run of set pixels."""
+    rows = np.arange(mask.shape[0], dtype=np.int32)[:, None]
+    last_unset = np.maximum.accumulate(np.where(mask, np.int32(-1), rows), axis=0)
+    return np.where(mask, rows - last_unset, 0).max(axis=0)
+
+
+def sheared_runs(mask, slope):
+    """(the shear's score, the per-column longest healed runs) of the ridge mask sheared by `slope` (THE SHEAR)."""
+    if slope:
+        h, w = mask.shape
+        shift = np.rint((np.arange(h) - h / 2) * slope).astype(np.int64)
+        cols = np.arange(w)[None, :] + shift[:, None]
+        mask = np.where((cols >= 0) & (cols < w), mask[np.arange(h)[:, None], np.clip(cols, 0, w - 1)], False)
+    runs = longest_runs(close_vertical(mask))
+    long = runs[runs >= MIN_BARLINE_RUN].astype(np.float64)
+    return float((long * long).sum()), runs
+
+
+def lines_of(runs):
+    """The SIGNATURE out of the per-column runs: the bar lines' x-centers in canonical px, ascending."""
+    cols = np.flatnonzero(runs >= MIN_BARLINE_RUN)
+    if len(cols) == 0:
+        return []
+    clusters, start = [], cols[0]
+    for prev, c in zip(cols, cols[1:]):
+        if c - prev > MERGE_GAP:
+            clusters.append((start, prev))
+            start = c
+    clusters.append((start, cols[-1]))
+    return [(int(a) + int(b)) / 2 for a, b in clusters]
+
+
+def best_shear(mask):
+    """(the signature, the slope) at the best of THE SHEAR's candidates."""
+    def at(deg):
+        slope = math.tan(math.radians(deg))
+        return (*sheared_runs(mask, slope), slope, deg)
+
+    best = max((at(deg) for deg in SHEAR_COARSE_DEG), key=lambda c: c[0])
+    for deg in (best[3] - SHEAR_FINE_DEG, best[3] + SHEAR_FINE_DEG):
+        cand = at(deg)
+        if cand[0] > best[0]:
+            best = cand
+    return lines_of(best[1]), best[2]
+
+
+def share(a, b):
+    """How many lines two ascending signatures share within MATCH_TOL, paired in order (bar lines stand at least
+    MERGE_GAP apart, ten times the tolerance, so the in-order pairing is the only one)."""
+    i = j = shared = 0
+    while i < len(a) and j < len(b):
+        if abs(a[i] - b[j]) <= MATCH_TOL:
+            shared, i, j = shared + 1, i + 1, j + 1
+        elif a[i] < b[j]:
+            i += 1
+        else:
+            j += 1
+    return shared
+
+
+def same_page(a, b):
+    return bool(a) and bool(b) and share(a, b) >= SAME_MIN * max(len(a), len(b))
+
+
+def shows(page, frame):
+    """How fully a frame's signature shows a page's: the share of the page's lines it carries."""
+    return share(page, frame) / len(page)
+
+
+def tile_gap(frames, before, after):
+    """THE BOUNDARY between two pages' runs (WHAT A PAGE IS): `frames` are, per frame between them, its signature at
+    the previous page's shear and at the next page's, `before` and `after` the two pages' signatures (None before the
+    first page and after the last). Returns (the boundary's offset into the gap, the frames of the previous page's
+    matched fade-out, of fill, of the next page's matched fade-in): the previous page keeps offsets 0 .. boundary - 1,
+    the next takes boundary on. The matched fade-out ends at the first frame that fails to show the previous page;
+    before the first page the boundary is 0, and the fade-in counts from the first frame that shows the page; after
+    the last page it is the gap's end."""
+    count = len(frames)
+    s_before = [shows(before, f) if before else 0.0 for f, _ in frames]
+    s_after = [shows(after, f) if after else 0.0 for _, f in frames]
+    if before is None:
+        first = next((k for k in range(count) if s_after[k] >= SAME_MIN), count)
+        return 0, 0, first, count - first
+    if after is None:
+        boundary = count
+    else:
+        boundary = next((k for k in range(count) if s_after[k] >= SAME_MIN and s_after[k] >= s_before[k]), count)
+    fade_out = next((k for k in range(boundary) if s_before[k] < SAME_MIN), boundary)
+    return boundary, fade_out, boundary - fade_out, count - boundary
 
 
 def spell_time(seconds):
@@ -391,43 +643,103 @@ def stale_pages(outdir, count):
 
 
 def grab_page(video, fps, frame, width, out):
-    seek = max(Fraction(0), (Fraction(frame) - Fraction(1, 2)) / fps)
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{float(seek):.6f}", "-i", video, "-frames:v", "1",
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", seek_time(fps, frame), "-i", video, "-frames:v", "1",
                     "-vf", f"scale={width}:-2", out], check=True)
+
+
+def group_pages(lit, signatures):
+    """The lit static runs and their (signature, shear) -> (the pages, the non-pages). A page is a list of runs, its
+    first, last and PRINCIPAL run (the longest, the first of equals) and the principal's signature and shear; a run
+    joins the page before it when the two show the same page (same_page against that page's last run), whatever lies
+    between them."""
+    pages, non_pages = [], []
+    for run, (sig, slope) in zip(lit, signatures):
+        if len(sig) < MIN_BARLINES:
+            non_pages.append(run)
+        elif pages and same_page(pages[-1]["runs"][-1][1], sig):
+            pages[-1]["runs"].append((run, sig, slope))
+        else:
+            pages.append({"runs": [(run, sig, slope)]})
+    for page in pages:
+        page["first"], page["last"] = page["runs"][0][0][0], page["runs"][-1][0][1]
+        page["principal"], page["sig"], page["slope"] = max(page["runs"], key=lambda r: r[0][1] - r[0][0])
+    return pages, non_pages
 
 
 def main():
     if len(sys.argv) < 3:
-        print("REFUSE: usage: score_extract.py <video> <outdir> [--width W] [--rate R] [--min-page SECONDS] "
-              "[--fade-floor L] [--skip N] [--audio OUT.wav] [--url LINK]")
+        print("REFUSE: usage: score_extract.py <video> <outdir> [--width W] [--rate R] [--url LINK]")
         return 1
     video, outdir = sys.argv[1], sys.argv[2]
     try:
         opts = read_options(sys.argv[3:])
         if not os.path.isfile(video):
             raise Refusal(f"no video at {video!r}")
-        fps_text, fps = video_fps(video)
-        rate = opts["rate"] if opts["rate"] is not None else audio_rate(video)
+        fps_text, fps, (vid_w, vid_h) = video_stream(video)
+        width = opts["width"] if opts["width"] is not None else min(vid_w, PAGE_WIDTH)
+        stream_rate = audio_rate(video)
+        has_audio = stream_rate is not None
+        rate = opts["rate"] if opts["rate"] is not None else stream_rate
         if rate is None:
             raise Refusal("the video has no audio stream: --rate is required")
         # THE SCAN RATE IS THE VIDEO'S OWN (ffprobe's avg_frame_rate, verbatim into the fps filter, which keeps the
         # index -> time mapping honest on a variable-rate stream too): a page's edges are then the very frames a cut
-        # falls between, so a range covers exactly the frames its page is on screen; at a lower rate an edge could
-        # carry up to (source rate / scan rate - 1) frames of the neighbor. The decode dominates either way: the
+        # falls between, and the analysis decodes' frame indices are the scan's. The decode dominates either way: the
         # whole K.550 scan took 2 min 0 s at 10 fps and about 2 min 20 s at 30.
         vf = f"fps={fps_text},scale={DIFF_W}:{DIFF_H}:flags=area"
         series, stamp, cached = load_or_scan(video, outdir, vf)
-        statics, black, classes, nonmonotonic = detect(series, opts["fade_floor"])
+        statics, black, classes, nonmonotonic = detect(series)
+        n = series.shape[1]
+        size = canonical_size(vid_w, vid_h)
+        lit = [(s, e) for (s, e), b in zip(statics, black) if not b]
+        # THE PAGE TEST: one decode of each lit run's midpoint frame, the frame its page file is grabbed at.
+
+        def midpoint_signature(run):
+            (gray,) = decode_gray(video, fps, run[0] + (run[1] - run[0]) // 2, 1, size, series[1])
+            return best_shear(ridge_mask(gray))
+
+        with ThreadPoolExecutor(GRAB_WORKERS) as pool:
+            signatures = list(pool.map(midpoint_signature, lit))
+        pages, non_pages = group_pages(lit, signatures)
+        if not pages:
+            raise Refusal(f"no page: none of the {len(lit)} lit static runs carries bar lines")
+        # THE GAPS: the frames between one page's last run and the next page's first, plus the frames before the first
+        # page and after the last, each decoded once and read frame by frame (tile_gap).
+        windows = [(i, pages[i - 1]["last"] + 1 if i > 0 else 0, pages[i]["first"] if i < len(pages) else n)
+                   for i in range(len(pages) + 1)]
+        gaps = [(i, a, b) for i, a, b in windows if b > a]
+
+        def read_gap(gap):
+            i, a, b = gap
+            before, after = pages[i - 1] if i > 0 else None, pages[i] if i < len(pages) else None
+            slopes = [p["slope"] for p in (before, after) if p is not None]
+            frames = []
+            for gray in decode_gray(video, fps, a, b - a, size, series[1]):
+                mask = ridge_mask(gray)
+                read = {slope: lines_of(sheared_runs(mask, slope)[1]) for slope in set(slopes)}
+                frames.append((read[slopes[0]], read[slopes[-1]]))
+            return tile_gap(frames, before["sig"] if before else None, after["sig"] if after else None)
+
+        with ThreadPoolExecutor(GRAB_WORKERS) as pool:
+            tiled = dict(zip([g[0] for g in gaps], pool.map(read_gap, gaps)))
     except (OptionError, Refusal) as err:
         print(f"REFUSE: {err}")
         return 1
 
-    n = series.shape[1]
-    lit = [(s, e) for (s, e), b in zip(statics, black) if not b]
-    min_frames = opts["min_page"] * float(fps)    # the page floor in scan frames
-    kept = [(s, e) for s, e in lit if e + 1 - s >= min_frames]
-    bleed = [(s, e) for s, e in lit if e + 1 - s < min_frames]
-    blacks = [(s, e) for (s, e), b in zip(statics, black) if b]
+    means = series[1]
+    bounds = []                                  # each page's first frame, then the video's end
+    taken = [[0, 0, 0, 0] for _ in pages]        # per page: left fill, left fade-in, right fade-out, right fill
+    for i, a, _ in windows:
+        offset, fade_out, fill, fade_in = tiled.get(i, (0, 0, 0, 0))
+        if i < len(pages):
+            bounds.append(a + offset)
+            taken[i][1] = fade_in
+        if i == 0:
+            taken[0][0] = fill
+        else:
+            taken[i - 1][2:] = [fade_out, fill]
+    bounds.append(n)
+    assert bounds[0] == 0 and all(x < y for x, y in zip(bounds, bounds[1:])), "the ranges do not tile the video"
 
     def secs(frame):
         return Fraction(frame) / fps
@@ -435,35 +747,50 @@ def main():
     def span(s, e):
         return f"{spell_time(secs(s))}..{spell_time(secs(e + 1))}"
 
-    print(f"scan: {n} frames at {fps_text} fps ({float(secs(n)):.3f} s){', cached' if cached else ''}; "
-          f"rate {rate}; floors: page {opts['min_page']:g} s, black {opts['fade_floor']:g}")
+    print(f"scan: {n} frames at {fps_text} fps ({float(secs(n)):.3f} s){', cached' if cached else ''}; rate {rate}; "
+          f"{len(lit)} lit runs, analysis at {size[0]}x{size[1]}")
     for name in ("cut", "crossfade", "fade-out", "fade-in"):
         print(f"{name}s: {len(classes[name])}")
     if classes["within black"]:
         print(f"transitions within black: {len(classes['within black'])}")
+    blacks = [(s, e) for (s, e), b in zip(statics, black) if b]
     print(f"black runs: {len(blacks)} ({float(sum(secs(e + 1 - s) for s, e in blacks)):.3f} s)"
           + "".join(f" {span(s, e)}" for s, e in blacks))
-    print(f"bleed dropped: {len(bleed)}"
-          + "".join(f" {span(s, e)} ({float(secs(e + 1 - s)):.3f} s, mean {series[1][s:e + 1].mean():.1f})"
-                    for s, e in bleed))
     for kind, a in nonmonotonic:
         print(f"advisory: the {kind} at {spell_time(secs(a))} is not monotonic")
-    skipped, pages = kept[:opts["skip"]], kept[opts["skip"]:]
-    if skipped:
-        print(f"skipped: {len(skipped)}" + "".join(f" {span(s, e)}" for s, e in skipped))
-    if not pages:
-        print(f"REFUSE: no pages ({len(kept)} detected, {opts['skip']} skipped)")
-        return 1
+    for s, e in non_pages:
+        print(f"not a page: {span(s, e)} ({float(secs(e + 1 - s)):.3f} s, mean {means[s:e + 1].mean():.1f}), "
+              "no bar lines")
+    for i, page in enumerate(pages, start=1):
+        for (s, e), sig, _ in page["runs"]:
+            if (s, e) != page["principal"]:
+                print(f"merged into page {i:03d}: {span(s, e)} ({float(secs(e + 1 - s)):.3f} s, mean "
+                      f"{means[s:e + 1].mean():.1f}), shares {share(sig, page['sig'])} of {len(page['sig'])} lines")
+    # THE GAPS' LINES: each fade's match depth is the scan's mean at its last (fade-out) or first (fade-in) frame
+    # that still shows the page.
+    for i, a, b in gaps:
+        _, fade_out, fill, fade_in = tiled[i]
+        parts = []
+        if i > 0:
+            parts.append(f"page {i:03d} fades out {fade_out}" + (f" to mean {means[a + fade_out - 1]:.1f}"
+                                                                   if fade_out else ""))
+        parts.append(f"fill {fill}")
+        if i < len(pages):
+            parts.append(f"page {i + 1:03d} fades in {fade_in}" + (f" from mean {means[b - fade_in]:.1f}"
+                                                                    if fade_in else ""))
+        print(f"gap {span(a, b - 1)} ({b - a} frame{'' if b - a == 1 else 's'}): " + ", ".join(parts))
 
     def audio_frame(frame):
         return round(secs(frame) * rate)
 
-    ranges = [(audio_frame(s), audio_frame(e + 1)) for s, e in pages]
-    for (b0, e0), (b1, _) in zip(ranges, ranges[1:]):
-        assert e0 <= b1, "overlapping page ranges"
-    assert all(b < e for b, e in ranges), "an empty page range"
-    for i, ((s, e), (b, x)) in enumerate(zip(pages, ranges), start=1):
-        print(f"page {i:03d}  {b}..{x}  ({float(secs(e + 1 - s)):.3f} s, {span(s, e)})")
+    ranges = [(audio_frame(x), audio_frame(y)) for x, y in zip(bounds, bounds[1:])]
+    for i, (page, (b, x)) in enumerate(zip(pages, ranges), start=1):
+        s, e = page["principal"]
+        fill_in, fade_in, fade_out, fill_out = taken[i - 1]
+        runs = len(page["runs"])
+        print(f"page {i:03d}  {b}..{x}  run {span(s, e)} ({float(secs(e + 1 - s)):.3f} s"
+              + (f", {runs} runs {span(page['first'], page['last'])}" if runs > 1 else "")
+              + f"); left fill {fill_in} fade {fade_in}, right fade {fade_out} fill {fill_out}")
 
     os.makedirs(outdir, exist_ok=True)
     if not cached:
@@ -475,10 +802,13 @@ def main():
     if os.path.exists(txt):
         os.remove(txt)
     count = len(pages)
-    jobs = [(s + (e - s) // 2, os.path.join(outdir, page_name(i, count))) for i, (s, e) in enumerate(pages, start=1)]
+    # THE PAGE FILE is grabbed at the midpoint of the page's PRINCIPAL run (group_pages), the page test's own frame:
+    # a frame of a static run, never of a transition, whatever the page's range takes around it.
+    jobs = [(s + (e - s) // 2, os.path.join(outdir, page_name(i, count)))
+            for i, (s, e) in enumerate((page["principal"] for page in pages), start=1)]
     try:
         with ThreadPoolExecutor(GRAB_WORKERS) as pool:
-            list(pool.map(lambda job: grab_page(video, fps, job[0], opts["width"], job[1]), jobs))
+            list(pool.map(lambda job: grab_page(video, fps, job[0], width, job[1]), jobs))
     except subprocess.CalledProcessError as err:
         print(f"FAIL: ffmpeg could not grab a page (exit {err.returncode}); {PAGES_TXT} not written")
         return 1
@@ -494,14 +824,15 @@ def main():
         f.write("\n".join(lines) + "\n")
     os.replace(txt + ".part", txt)
 
-    if opts["audio"] is not None:
+    # THE SOUNDTRACK goes last, on every run: the score's audio is the video's (architect 2026-10-26 night). A video
+    # with no audio stream (the --rate road) has none to write.
+    if has_audio:
         status = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", video, "-vn", "-map", "0:a:0",
-                                 "-c:a", "pcm_s16le", "-f", "wav", opts["audio"]]).returncode
+                                 "-c:a", "pcm_s16le", "-f", "wav", os.path.join(outdir, AUDIO_WAV)]).returncode
         if status != 0:
             print(f"FAIL: ffmpeg could not extract the audio (exit {status}); the pages are written")
             return 1
-    print(f"wrote {count} pages and {PAGES_TXT} to {outdir}"
-          + (f"; audio to {opts['audio']}" if opts["audio"] is not None else ""))
+    print(f"wrote {count} pages, {PAGES_TXT}" + (f" and {AUDIO_WAV}" if has_audio else "") + f" to {outdir}")
     return 0
 
 

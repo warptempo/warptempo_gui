@@ -123,13 +123,14 @@ The audio is not in the repository: put each piece's source `.wav` into its fold
 
 ### A movement's score
 
-The score viewer (the SCORE key, `m`; [`HELP.md`](HELP.md)'s Score) shows the pages of a sheet-music video. Make the pages once per video with the tool (python3 with numpy and Pillow, and ffmpeg and ffprobe on the PATH); it writes `page001.png`, `page002.png` … and `pages.txt` into the folder it is given, creating it, and prints one line per page found:
+The score viewer (the SCORE key, `m`; [`HELP.md`](HELP.md)'s Score) shows the pages of a sheet-music video. Make the pages once per video with the tool (python3 with numpy, and ffmpeg and ffprobe on the PATH); it writes `page001.png`, `page002.png` …, `pages.txt` and `audio.wav` (the video's soundtrack) into the folder it is given, creating it, and prints one line per page found:
 
 ```bash
 tools/score_extract.py "<the video>" "<projects_path>/<piece>/score"
-# a few minutes for a 4K video; the last line: "wrote N pages and pages.txt to …"
-# if page 001 is a cover or title card, run it again with --skip 1 (the second run reuses the scan)
+# a few minutes for a 4K video; the last line: "wrote N pages, pages.txt and audio.wav to …"
 ```
+
+It needs no option: a page is a still frame that carries bar lines, so a cover, a title card or a flash is left out by itself, and each page holds the video from where it first shows until the next one shows, so the pages cover the whole video. A second run reuses the first one's scan.
 
 Then in the app, on that piece, type into the Settings line `score_path=./score`; for another movement of the same video, open that movement's piece and type `score_path=../<the first piece>/score` (for instance `score_path=../550 - 1/score`). The path is relative to the piece's folder. The SCORE key lights once the folder is read; a path with no score folder behind it is kept and says so on a card, and a folder whose `pages.txt` is out of the tool's grammar, or misses a page it names, is refused in the Settings line and, named by a piece's saved `score_path`, stops that piece from loading, naming the line. `score_path` and the page range are kept with the piece's next save, as the trim is. `scripts/warptempo_sync tt` carries the folder to the tablet (Daily use).
 
