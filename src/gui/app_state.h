@@ -8233,7 +8233,7 @@ struct AppState {
     // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; and since 2026-10-25 the
-    // PRESET PICKER, with the twenty-five built-in waveform presets by
+    // PRESET PICKER, with the twenty-eight built-in waveform presets by
     // display name (architect: "maybe a drop down would make it quicker,
     // because I don't like having to type it in every time" — "brief it as a
     // scrolling list", "Yes"). (The AV Sync Stats panel's text lines stood

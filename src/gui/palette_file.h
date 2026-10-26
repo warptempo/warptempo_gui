@@ -15,7 +15,7 @@
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own twenty-five), the
+//     presets (kGuiBuiltinPalettes, the program's own twenty-eight), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -77,16 +77,15 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY-FIVE, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY-EIGHT, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
 // provenance; the transcription's rules are the generator's head's;
-// regenerate, never hand-edit), in its order: the PHOSPHOR FAMILY (architect
-// 2026-10-25 night, "delete everything that's not the phosphor themes. Pick
-// one of them as a default and just drop variations there"), variations of
-// one green ink in lightness, saturation and hue, under cool cue pairs,
-// contrasting and fitting, no warm marker (architect 2026-10-25 night).
+// regenerate, never hand-edit), in its order: TEN PERIOD GREENS, each ink
+// a real period screen's green, under cue pairs quoted from original period
+// screens and lights (the period round, architect 2026-10-25; the text's
+// head is the design).
 // Each a KEY (`warptempo-` and the display name in the key grammar — the
 // `waveform` key's word for it), a DISPLAY NAME (the
 // source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Phosphor, Cyan and
@@ -113,7 +112,7 @@
 // Cool Edit's view bar span shadows, cool_edit_derive.h's `span_shadow`
 // record — the product's span itself neutral grey since 2026-10-25,
 // materials.h — run once by the generator and proven below), `grid` its
-// GrdL, `center` its Cntr (one dim wine, 6E2830, in every built-in),
+// GrdL, `center` its Cntr (A53038 in every built-in, architect 2026-10-25),
 // `cue` its CueM (the default's cyan, 37FDF8) and `range` its RngM (its sky,
 // 70B3FC), `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on most, the
 // default's among them, another bright color on some: tuned per preset,
@@ -231,7 +230,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's twenty-five in their
+// THE BUILT-IN PALETTES (the head) — the program's twenty-eight in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
@@ -286,7 +285,7 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
-    "(warptempo-phosphor-cyan-and-sky, warptempo-jade-cyan-and-sky, ...)";
+    "(warptempo-phosphor-cyan-and-sky, warptempo-terminal-amber-and-ice, ...)";
 
 // The eleven the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses

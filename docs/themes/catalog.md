@@ -8,36 +8,39 @@ The default: Phosphor, Cyan and Sky (`warptempo-phosphor-cyan-and-sky`).
 
 ## Presets
 
-The program's own presets, made for its black panel: variations of one phosphor-green waveform color, lighter or deeper, softer or more vivid, or turned toward lime, jade or mint, each with two cool marker colors — most of them easy to tell apart, and some a quieter pair in tones related to the green.
+The program's own presets, made for its black panel: ten green waveform colors, each the green of a real period screen — a phosphor monitor, a terminal, an oscilloscope, a storage tube, a radar, a home computer, a fluorescent display, a spectrum meter — each with two marker colors taken from period screens and lights.
 
 - The waveform's outline is each preset's waveform color darkened, the same hue at a fixed lightness (the lightness of Cool Edit Pro 2.1's view bar shadows).
-- The Invalid color, which marks an invalid marker, is a red of each preset's own, apart from its center line, which is one dim wine red on every preset.
+- The Invalid color, which marks an invalid marker, is a red of each preset's own, apart from its center line, which is one wine red on every preset.
 - The scanner (the line that moves during playback) and the zoom's anchor line are white in every preset, as Cool Edit's scanner is on every one of its presets.
 
 | Preset | Key |
 |---|---|
 | Phosphor, Cyan and Sky (the default) | `warptempo-phosphor-cyan-and-sky` |
-| Phosphor, Mauve and Sky | `warptempo-phosphor-mauve-and-sky` |
-| Phosphor, Frost and Sky | `warptempo-phosphor-frost-and-sky` |
-| Phosphor, Lavender and Ice | `warptempo-phosphor-lavender-and-ice` |
-| Phosphor, Orchid and Frost | `warptempo-phosphor-orchid-and-frost` |
-| Phosphor, Teal and Frost | `warptempo-phosphor-teal-and-frost` |
-| Phosphor, Sage and Frost | `warptempo-phosphor-sage-and-frost` |
-| Pale Phosphor, Cyan and Sky | `warptempo-pale-phosphor-cyan-and-sky` |
-| Pale Phosphor, Mauve and Sky | `warptempo-pale-phosphor-mauve-and-sky` |
-| Pale Phosphor, Frost and Sky | `warptempo-pale-phosphor-frost-and-sky` |
-| Pale Phosphor, Lavender and Ice | `warptempo-pale-phosphor-lavender-and-ice` |
-| Pale Phosphor, Orchid and Frost | `warptempo-pale-phosphor-orchid-and-frost` |
-| Pale Phosphor, Teal and Frost | `warptempo-pale-phosphor-teal-and-frost` |
+| Phosphor, Amber and Ice | `warptempo-phosphor-amber-and-ice` |
+| Phosphor, Magenta and Cyan | `warptempo-phosphor-magenta-and-cyan` |
+| Phosphor, Periwinkle and White | `warptempo-phosphor-periwinkle-and-white` |
+| Phosphor, Lavender and Sky | `warptempo-phosphor-lavender-and-sky` |
 | Pale Phosphor, Sage and Frost | `warptempo-pale-phosphor-sage-and-frost` |
-| Bright Phosphor, Cyan and Sky | `warptempo-bright-phosphor-cyan-and-sky` |
+| Pale Phosphor, Pink and White | `warptempo-pale-phosphor-pink-and-white` |
+| Pale Phosphor, Orange and White | `warptempo-pale-phosphor-orange-and-white` |
+| Pale Phosphor, Lilac and Cyan | `warptempo-pale-phosphor-lilac-and-cyan` |
 | Deep Phosphor, Cyan and Sky | `warptempo-deep-phosphor-cyan-and-sky` |
-| Soft Phosphor, Cyan and Sky | `warptempo-soft-phosphor-cyan-and-sky` |
-| Pale Soft Phosphor, Cyan and Sky | `warptempo-pale-soft-phosphor-cyan-and-sky` |
-| Vivid Phosphor, Cyan and Sky | `warptempo-vivid-phosphor-cyan-and-sky` |
-| Lime, Cyan and Sky | `warptempo-lime-cyan-and-sky` |
-| Pale Lime, Cyan and Sky | `warptempo-pale-lime-cyan-and-sky` |
-| Spring, Cyan and Sky | `warptempo-spring-cyan-and-sky` |
-| Jade, Cyan and Sky | `warptempo-jade-cyan-and-sky` |
-| Pale Jade, Cyan and Sky | `warptempo-pale-jade-cyan-and-sky` |
-| Mint, Cyan and Sky | `warptempo-mint-cyan-and-sky` |
+| Deep Phosphor, Amber and White | `warptempo-deep-phosphor-amber-and-white` |
+| Deep Phosphor, Magenta and Ice | `warptempo-deep-phosphor-magenta-and-ice` |
+| Terminal, Amber and Ice | `warptempo-terminal-amber-and-ice` |
+| Terminal, Blue and White | `warptempo-terminal-blue-and-white` |
+| Terminal, Frost and Sky | `warptempo-terminal-frost-and-sky` |
+| Scope, Violet and Cyan | `warptempo-scope-violet-and-cyan` |
+| Scope, Cyan and Sky | `warptempo-scope-cyan-and-sky` |
+| Scope, Pink and Sky | `warptempo-scope-pink-and-sky` |
+| Storage, Lavender and Ice | `warptempo-storage-lavender-and-ice` |
+| Storage, Blue and White | `warptempo-storage-blue-and-white` |
+| Radar, Magenta and Cyan | `warptempo-radar-magenta-and-cyan` |
+| Radar, Periwinkle and Ice | `warptempo-radar-periwinkle-and-ice` |
+| Commodore, Lilac and Cyan | `warptempo-commodore-lilac-and-cyan` |
+| Commodore, Blue and White | `warptempo-commodore-blue-and-white` |
+| Fluorescent, Blue and Ice | `warptempo-fluorescent-blue-and-ice` |
+| Fluorescent, Amber and Ice | `warptempo-fluorescent-amber-and-ice` |
+| Spectrum, Cyan and Magenta | `warptempo-spectrum-cyan-and-magenta` |
+| Spectrum, Lavender and Sky | `warptempo-spectrum-lavender-and-sky` |
