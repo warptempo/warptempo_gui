@@ -26,10 +26,10 @@
 //                            grid and center lines, the cues and the
 //                            playhead (palette_file.h's head; its Face
 //                            unread under the materials since 2026-10-21):
-//                            a built-in, one of the eight presets' keys
-//                            alone
+//                            a built-in, one of the thirty-four presets'
+//                            keys alone
 //                            (`warptempo-terminal-blue-and-white`,
-//                            `warptempo-terminal-sky-and-white`, ...;
+//                            `warptempo-terminal-ink-and-black`, ...;
 //                            is_builtin_palette_name, palette_file.h; a
 //                            preset file's name until 2026-10-14), chosen by
 //                            the Settings Waveform row; REQUIRED (architect

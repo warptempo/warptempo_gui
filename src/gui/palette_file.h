@@ -15,7 +15,7 @@
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ELEVEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own eight), the
+//     presets (kGuiBuiltinPalettes, the program's own thirty-four), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -77,16 +77,18 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S EIGHT, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S THIRTY-FOUR, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
 // provenance; the transcription's rules are the generator's head's;
 // regenerate, never hand-edit), in its order: ONE INK, the DEC VT220's
-// green, under eight cue blues over white, each with its own invalid red
-// (the architect's pick of Terminal, Blue and White, 2026-10-25 late, and
-// the planner's eight variations of its blue and red; the text's head is
-// the design).
+// green, under thirty-four cue and range pairs of four families —
+// contrast pairs, the VGA palette mapped, the Tango palette mapped, period
+// pairs — each with its own invalid red (the architect's pick of Terminal,
+// Blue and White, 2026-10-25 late, kept as the first row, and the
+// planner's thirty-three pairs beside it; the text's head is the design and
+// each family's rule).
 // Each a KEY (`warptempo-` and the display name in the key grammar — the
 // `waveform` key's word for it), a DISPLAY NAME (the
 // source's own) and THE ELEVEN. THE DEFAULT PALETTE is "Terminal, Blue
@@ -231,7 +233,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // read live), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's eight in their
+// THE BUILT-IN PALETTES (the head) — the program's thirty-four in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
@@ -286,7 +288,7 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
-    "(warptempo-terminal-blue-and-white, warptempo-terminal-sky-and-white, ...)";
+    "(warptempo-terminal-blue-and-white, warptempo-terminal-ink-and-black, ...)";
 
 // The eleven the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses
