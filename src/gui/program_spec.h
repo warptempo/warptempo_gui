@@ -231,30 +231,31 @@ struct ProgramSpec {
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
     // dotted_waveform_line_runs): THE PLAYHEAD'S every `dot_period`
-    // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
-    // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
-    // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
-    // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
-    // FIRST FROM THE TOP, and a one-color stem has half the dots (render.cpp's
-    // resolve_flag_face owns which color each phase wears: the invalid color
-    // takes the red's phase, the history's added half its cue red on the
-    // blue's, 2026-10-11); the phase-reset lead-in
-    // ring's right side takes the same rows and its top and bottom runs the
-    // same phases in device columns counted from the reset's own column
+    // rows on its phase; A CUE'S TWO PHASES each every `cue_dot_period` rows
+    // — `cue_dot_phase` 7 and `alt_dot_phase` 3, so a stem dotted on both
+    // has a dot every `dot_period` rows, the alt phase's first from the top.
+    // A live cue wears ITS ONE CUE COLOR ON BOTH PHASES and an invalid one
+    // the invalid color on both (architect 2026-10-26: "re-implement the
+    // range removal"); the history view's added half takes the alt phase
+    // alone and its removed half the cue phase alone, so a changed pair's
+    // two stems on one column interleave (render.cpp's resolve_flag_face
+    // owns which color each phase wears). The phase-reset lead-in ring's
+    // right side takes the same rows and its top and bottom runs the same
+    // phases in device columns counted from the reset's own column
     // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE
     // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
-    // 2026-10-09): the capture gives the red at y ≡ 3 and the blue at
-    // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108
-    // ≡ 4 (mod 8), so from its own first row the red stands on rows ≡ 7 and
-    // the blue on rows ≡ 3 (its first dot, y = 111, canvas row 3, is blue);
-    // the playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
+    // 2026-10-09): Cool Edit's capture dots its cues at y ≡ 3 and y ≡ 7
+    // (mod 8), absolute rows, and its canvas starts at y = 108 ≡ 4 (mod 8),
+    // so from the canvas's own first row the phases stand on rows ≡ 7 and
+    // ≡ 3 (its first dot, y = 111, canvas row 3, the alt phase's); the
+    // playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
     // ≡ 0 (mod 4). Every cue row is the playhead's period off the playhead's
     // phase, so the two never share a row on one column.
     int  dot_period;
     int  playhead_dot_phase;
     int  cue_dot_period;
     int  cue_dot_phase;
-    int  range_dot_phase;
+    int  alt_dot_phase;
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
@@ -286,7 +287,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .playhead_dot_phase    = 1,
     .cue_dot_period        = 8,
     .cue_dot_phase         = 7,
-    .range_dot_phase       = 3,
+    .alt_dot_phase         = 3,
 };
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
@@ -372,10 +373,10 @@ static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
 static_assert(kProgramSpec.cue_label_lead >
               (2 * kProgramSpec.cue_triangle_rows - 1) / 2 + 1);
-// The cue's two colors alternate one dot every playhead period, and neither
+// A cue's two phases alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
-static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
+static_assert((kProgramSpec.alt_dot_phase - kProgramSpec.cue_dot_phase +
                kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==
               kProgramSpec.dot_period);
 static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=

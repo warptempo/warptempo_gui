@@ -155,7 +155,7 @@ shopt -s nocaseglob
 #      first start refuses without it), a chrome= line RENAMED waveform= with its
 #      value kept (the key renamed 2026-10-21 for what it sets; dropped where a
 #      waveform= line already stands), a waveform= line added with the default
-#      (waveform=warptempo-terminal-blue-and-white) where the file has neither -- every key is
+#      (waveform=warptempo-terminal-frost) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
 #      true_colors=on line (TRUE_COLORS_LINE below; 2026-10-21) the same way
 #      (no tuning key is required now: led_glow is optional, absent = 4), and
@@ -202,7 +202,7 @@ ROLE_LINE="role=author"
 # THE DEFAULT WAVEFORM PRESET, spelled (every device key required since
 # 2026-10-14; src/gui/palette_file.h's kGuiDefaultPaletteKey): added only where
 # the tablet's file has neither a waveform= line nor a chrome= line to rename.
-WAVEFORM_LINE="waveform=warptempo-terminal-blue-and-white"
+WAVEFORM_LINE="waveform=warptempo-terminal-frost"
 # THE sRGB -> DISPLAY-P3 SWITCH, a required key since 2026-10-21 (the Settings
 # menu's True Colors row made a key; src/gui/device_config.h), on on both
 # devices: added only where the tablet's file has no line.

@@ -23,7 +23,11 @@
 // integral rects all the same), so the sink's vocabulary is three records:
 // a RECT, a DOTTED RUN (GuiCanvasDotRun, render.h: a column or a row of
 // one-px cells on a period's phase, counted from an origin) and THE PLATE
-// (the per-column bar bounds, GuiPlateColumns, with its two inks).
+// (the per-column bar bounds, GuiPlateColumns, with its two inks). EVERY
+// RECORD PAINTS ITS OWN COLOR straight over whatever lies under it, the
+// plate included, and none reads the canvas beneath it (architect
+// 2026-10-26, on the glass: the dots over the plate keep their own color,
+// closed_questions.md).
 //
 // TWO IMPLEMENTATIONS, one per road:
 //   * THE CAIRO SINK (GuiCairoCanvasSink) — the cpu canvas on both

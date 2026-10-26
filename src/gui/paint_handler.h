@@ -992,10 +992,9 @@ private:
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
-    // 2026-10-09, in its TWO CUE COLORS since ~11:50: one-device-px dots on
-    // the canvas's device rows (~14:25, "on waveform → unscaled"), the blue
-    // `range` on rows ≡ 3 and the red `cue`
-    // on rows ≡ 7 (mod 8), each where the cue wears it, the canvas alone
+    // 2026-10-09, in ONE CUE COLOR since 2026-10-26: one-device-px dots on
+    // the canvas's device rows (~14:25, "on waveform → unscaled") ≡ 3 and
+    // ≡ 7 (mod 8), each phase where the cue wears it, the canvas alone
     // (render.h's marker-lane paragraph); a DISABLED marker stems never.
     // Which colors stand is the cue's class whether the marker is selected
     // or not (the cue never changes when selected); it is resolved in the
