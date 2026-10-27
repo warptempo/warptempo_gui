@@ -4124,16 +4124,18 @@ struct ViewState {
     // position, which is stored automatically per tab"): an audio frame at the
     // score's own rate. ON THE PAGE ROAD the shown page's begin, written at
     // every page change the viewer makes on the active tab
-    // (GuiScoreViewer::show_page); UNDER THE SOUNDTRACK THE CURSOR'S FRAME
+    // (GuiScoreViewer::show_page) but a held scrub's, whose page is written at
+    // the lift (architect 2026-10-27); UNDER THE SOUNDTRACK THE CURSOR'S FRAME
     // (architect 2026-10-26 night: "it remembers based on frames. The pages
     // are themselves aliases to frames"), the soundtrack's resting cursor
     // itself, written at every seek, pause, natural end, close and page turn
-    // under playback. Read at the viewer's open. THE PLAYHEAD'S CLASS — display scratch, dirtying nothing,
-    // no undo — and BAND-ONLY: no live field mirrors it, the viewer writing
-    // the active tab's band directly, so the tab swap's two copies never
-    // touch it. Persisted as tab_a_score_position / tab_b_score_position in
-    // the score viewer's own file, written through at every change
-    // (score_viewer_file.h), never by a save.
+    // under playback. Read at the viewer's open. THE PLAYHEAD'S CLASS —
+    // display scratch, dirtying nothing, no undo — and BAND-ONLY: no live
+    // field mirrors it, the viewer writing the active tab's band directly, so
+    // the tab swap's two copies never touch it. Persisted as
+    // tab_a_score_position / tab_b_score_position in the score viewer's own
+    // file, written through at every change (score_viewer_file.h), never by a
+    // save.
     int64_t       score_position = 0;
 };
 
@@ -9039,8 +9041,9 @@ struct AppState {
     //   `page`     the SHOWN PAGE, an index into `score->pages`, always
     //              inside the viewing range while the viewer stands — the
     //              page road's PREV / NEXT / scrub land it (GuiScoreViewer::
-    //              show_page), the soundtrack's cursor decides it under the
-    //              media player's face (GuiScoreViewer::follow_cursor);
+    //              show_page; a held scrub's display_page), the soundtrack's
+    //              cursor decides it under the media player's face
+    //              (GuiScoreViewer::follow_cursor);
     //   `painted_page` the page whose picture the last paint covering the
     //              interior drew (paint_modal_dialog's score branch): the
     //              shown page once its cache entry stands (its surface, or
@@ -9049,20 +9052,26 @@ struct AppState {
     //              blitted in its stead (score_viewer.h's head, THE CACHE).
     //              The tick owes a page turn's position write until the turn
     //              is on screen (`position_owed`);
-    //   `scrub`    the scrub's drag arm — on the page road the page under the
-    //              thumb shown at the press and at every motion; under the
-    //              media player's face the render player's arm (the thumb's
-    //              carried column, on or off the thumb, moved) and
-    //              `was_live`, the press having paused a LIVE soundtrack
-    //              (architect 2026-10-26 ~23:00): the drag CARRIES the thumb
-    //              and seeks nothing, THE SEEK IS AT THE LIFT to the carried
-    //              column (architect 2026-10-26, "no scrubbing"), a
-    //              motionless tap on the thumb seeking nothing, and where
-    //              `was_live` the lift plays on from the drop through the
-    //              live seek's clamp (GuiScoreViewer::play_from, 2026-10-27),
-    //              so a drop at the end reaches the natural end; the three
-    //              hard ends drop it owing nothing, the transport left
-    //              PAUSED (clear_score_scrub_drag);
+    //   `scrub`    the scrub's drag arm, on both faces the render player's
+    //              (the thumb's carried column, on or off the thumb, moved):
+    //              the drag CARRIES the thumb and the lift commits, a
+    //              motionless tap on the thumb committing nothing. ON THE
+    //              PAGE ROAD (architect 2026-10-27, "the thumb follows the
+    //              pen continuously, the page under it changes in steps; the
+    //              lift commits the page under the thumb") the page under the
+    //              carried column is SHOWN as the thumb crosses it, nothing
+    //              written, and the lift writes the shown page's position
+    //              where it differs from `press_page`, the page the press
+    //              found — which a hard end shows again, nothing written.
+    //              UNDER THE MEDIA PLAYER'S FACE nothing is seeked under the
+    //              drag, THE SEEK IS AT THE LIFT to the carried column
+    //              (architect 2026-10-26, "no scrubbing"), and `was_live`
+    //              records the press having paused a LIVE soundtrack
+    //              (architect 2026-10-26 ~23:00): the lift plays on from the
+    //              drop through the live seek's clamp (GuiScoreViewer::
+    //              play_from, 2026-10-27), so a drop at the end reaches the
+    //              natural end; the three hard ends drop it owing nothing,
+    //              the transport left PAUSED (clear_score_scrub_drag);
     //   `transport` THE SOUNDTRACK'S TRANSPORT (the media player's face
     //              alone): IDLE the engine not bound to the soundtrack (the
     //              page road, the soundtrack still loading, or a render run
@@ -9135,12 +9144,13 @@ struct AppState {
             }
         };
         struct ScrubDrag {
-            bool armed    = false;
-            bool on_thumb = false;   // the media player's face: taken on the thumb
-            bool moved    = false;   // the media player's face: a motion moved it
-            int  grab_dx  = 0;       // press x − thumb center; 0 off the thumb
-            int  marker_x = 0;       // the media player's face: the carried column
-            bool was_live = false;   // the media player's face: the press paused LIVE
+            bool armed      = false;
+            bool on_thumb   = false;  // taken on the thumb
+            bool moved      = false;  // a motion moved it
+            int  grab_dx    = 0;      // press x − thumb center; 0 off the thumb
+            int  marker_x   = 0;      // the carried column
+            bool was_live   = false;  // the soundtrack's face: paused LIVE
+            int  press_page = 0;      // the page the press found
         };
         enum class Transport { Idle, Paused, Live };
         bool                         active  = false;

@@ -6457,11 +6457,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             assert(plan.size() == sl.x.size());
             for (std::size_t i = 0; i < sl.x.size(); ++i) plan[i].x = sl.x[i];
 
-            // THE PAGE SCRUB, the player's item over the viewing range's pages,
-            // the thumb at the shown page (score_scrub_x_of).
+            // THE PAGE SCRUB, the player's item over the viewing range's pages:
+            // the drag's carried column while the thumb is dragged (architect
+            // 2026-10-27, "the thumb follows the pen continuously, the page
+            // under it changes in steps"), the shown page's column otherwise
+            // (score_scrub_x_of) — the step.
             if (sl.scrub_w > 0) {
                 paint_scrub_item(sl.scrub_x0, sl.scrub_w, [&] {
-                    return score_scrub_x_of(app, app.score_viewer.page);
+                    return app.score_viewer.scrub.armed
+                               ? app.score_viewer.scrub.marker_x
+                               : score_scrub_x_of(app, app.score_viewer.page);
                 });
             }
 

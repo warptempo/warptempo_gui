@@ -89,7 +89,8 @@ void GuiScoreViewer::close() {
     sv.scrub         = AppState::ScoreViewer::ScrubDrag{};
     sv.position_owed = false;
     // THE CURSOR'S FRAME AT THE CLOSE (the head's THE REMEMBERED POSITION);
-    // the page road wrote at its last page change.
+    // the page road wrote at its last committed page change (a scrub held
+    // through the close commits nothing, its lift lost).
     if (score_viewer_has_soundtrack(app)) write_score_viewer_file(app);
     sv.active = false;
     if (held) {
@@ -108,20 +109,30 @@ void GuiScoreViewer::close() {
 }
 
 void GuiScoreViewer::show_page(int index) {
+    if (display_page(index)) write_page_position();
+}
+
+bool GuiScoreViewer::display_page(int index) {
     AppState::ScoreViewer& sv = app.score_viewer;
-    if (!sv.active || !app.score) return;
+    if (!sv.active || !app.score) return false;
     const ScoreViewerRange r = score_viewer_range(app);
     index = std::clamp(index, r.first, r.last);
-    if (index == sv.page) return;
+    if (index == sv.page) return false;
     sv.page = index;
-    // EVERY PAGE CHANGE WRITES THE POSITION (the head): the active tab's
-    // band, the page's own begin — display scratch, nothing dirtied — and
-    // the score viewer's file at once.
-    active_view_state(app).score_position =
-        app.score->pages[static_cast<std::size_t>(index)].begin;
-    write_score_viewer_file(app);
     damage_interior();
     damage_row();
+    return true;
+}
+
+void GuiScoreViewer::write_page_position() {
+    AppState::ScoreViewer& sv = app.score_viewer;
+    if (!sv.active || !app.score) return;
+    // THE PAGE ROAD'S POSITION WRITE (the head's THE REMEMBERED POSITION):
+    // the active tab's band, the shown page's own begin — display scratch,
+    // nothing dirtied — and the score viewer's file at once.
+    active_view_state(app).score_position =
+        app.score->pages[static_cast<std::size_t>(sv.page)].begin;
+    write_score_viewer_file(app);
 }
 
 void GuiScoreViewer::step(int delta) {

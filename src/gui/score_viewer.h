@@ -60,7 +60,12 @@
 //     pages.txt — always so on the PDF road, tools/score_extract.py's PDF
 //     input, 2026-10-27): PREV and NEXT (the render player's
 //     transport seats), THE PAGE SCRUB (its domain the viewing range's
-//     pages), THE PAGE CELL where the player's clock stands ("7 / 15", the
+//     pages; the phase-reset overlays' rule, drag anywhere, step quantized —
+//     architect 2026-10-27, "the thumb follows the pen continuously, the
+//     page under it changes in steps; the lift commits the page under the
+//     thumb": the drag CARRIES the thumb as the media player's does, the page
+//     under it shown as the thumb crosses into it, and the lift writes the
+//     position), THE PAGE CELL where the player's clock stands ("7 / 15", the
 //     shown page's ordinal within the range and the range's count) and the
 //     same four keys flush right. Left / Right are PREV / NEXT, Home / End
 //     the range's first / last page, Space nothing.
@@ -123,15 +128,16 @@
 // never cross the pair.
 //
 // THE REMEMBERED POSITION — ViewState::score_position, the active tab's — is
-// the playhead's class, written through to the score viewer's file at once:
-// on the page road EVERY PAGE CHANGE writes the new page's `begin`
-// (show_page); under the soundtrack it IS THE CURSOR'S FRAME (architect: "it
-// remembers based on frames. The pages are themselves aliases to frames:
-// begin is an alias to the first frame of a page, end to the last"), written
-// at every seek, pause, natural end and close and at a page turn under
-// playback (the turn's write waits for its paint, so the turn is never late
-// for it). The open shows the page that holds it, clamped into the range
-// (score_page_for_position).
+// the playhead's class, written through to the score viewer's file at once: on
+// the page road EVERY PAGE CHANGE writes the new page's `begin` (show_page)
+// but a held scrub's, whose page is written at the lift (write_page_position;
+// a lost lift writes nothing); under the soundtrack it IS THE CURSOR'S FRAME
+// (architect: "it remembers based on frames. The pages are themselves aliases
+// to frames: begin is an alias to the first frame of a page, end to the
+// last"), written at every seek, pause, natural end and close and at a page
+// turn under playback (the turn's write waits for its paint, so the turn is
+// never late for it). The open shows the page that holds it, clamped into the
+// range (score_page_for_position).
 //
 // THE PAGES ARE DECODED OFF THE MAIN THREAD (architect 2026-10-26 night: "if
 // there's going to be an additional visual lag on the page turning on top of
@@ -374,8 +380,10 @@ inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
 // rect (AppState::ModalDialogGeometry::scrub), the player's travel exactly
 // (render_player_scrub_travel_x0 / _usable_span): the range's first page at
 // the channel's first column, its last at the last, page i at
-// (i − first) / (count − 1) of the travel; the inverse rounds to the nearest
-// page. One page: the thumb at the left, the scrub dead (the press claim).
+// (i − first) / (count − 1) of the travel — the resting thumb's column; the
+// inverse rounds to the nearest page, the page under a dragged thumb's
+// carried column (architect 2026-10-27, the steps the page changes in). One
+// page: the thumb at the left, the scrub dead (the press claim).
 inline int score_scrub_x_of(const AppState& a, int page) {
     const GuiRect track = a.modal_dialog.scrub;
     const int x0   = render_player_scrub_travel_x0(track);
@@ -489,9 +497,18 @@ struct GuiScoreViewer {
 
     // -- The page road --------------------------------------------------------
     // THE ONE PAGE CHANGE: `index` clamped into the viewing range; a change
-    // writes the active tab's remembered position (the page's begin) and
-    // damages the interior and the row. The same page is a no-op.
+    // is displayed and its position written (display_page, then
+    // write_page_position). The same page is a no-op.
     void show_page(int index);
+    // ITS TWO HALVES, apart for the held page scrub alone (architect
+    // 2026-10-27: the page under the thumb shown live, written at the lift —
+    // input_pointer.cpp's score-scrub block): display_page clamps `index`
+    // into the viewing range and, where it differs, makes it the shown page
+    // and damages the interior and the row, returning whether it changed,
+    // nothing written; write_page_position writes the shown page's begin as
+    // the active tab's remembered position, through to the file.
+    bool display_page(int index);
+    void write_page_position();
     // PREV / NEXT (and Left / Right): one page, walled at the range's edges;
     // NEXT biases the decoder forward.
     void step(int delta);
