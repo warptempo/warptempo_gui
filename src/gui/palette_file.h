@@ -15,7 +15,7 @@
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S TEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own forty-one), the
+//     presets (kGuiBuiltinPalettes, the program's own twenty), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -78,30 +78,22 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S FORTY-ONE, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
 // provenance; the transcription's rules are the generator's head's;
 // regenerate, never hand-edit), in its order: COOL EDIT PRO 2.1'S TWENTY
-// COLOR PRESETS IN PAIRS, in Cool Edit's own order, each AS IT IS ("Cool
-// Edit, <name>") and then WITH THE TERMINAL INK ("Terminal, <name>": the
-// DEC VT220's green and its grid under the theme's every other color) —
-// architect 2026-10-26: "we could test the Cool Edit themes but only on the
-// markers … Also show two versions of each CEP theme — one as it is, and
-// one with Terminal as the ink" — and directly after Terminal, Default THE
-// PROPORTIONAL ROW, "Terminal, Default, Proportional": every color of Cool
-// Edit, Default moved as its ink moves to the Terminal ink (architect
-// 2026-10-26: "I'd like to see every color on the default palette from Cool
-// Edit shifted just as the relationship between the waveform inks is, so
-// that they're all still proportional"; the derivation the text's head's).
+// COLOR PRESETS, in Cool Edit's own order, each AS IT IS ("Cool Edit,
+// <name>"), a closed set (architect 2026-10-26: "I am quite sure that I
+// want to just trim down to just the cool edit themes").
 // Each a KEY (`warptempo-` and the display name in the key grammar — the
 // `waveform` key's word for it), a DISPLAY NAME (the
-// source's own) and THE TEN. THE DEFAULT PALETTE is "Terminal, Default"
-// (`warptempo-terminal-default`, kGuiDefaultPaletteKey; architect
-// 2026-10-26, "the point is to get closer to Cool Edit again") — the one
-// both first-run templates spell (`waveform=warptempo-terminal-default`;
-// every device key required, architect 2026-10-14).
+// source's own) and THE TEN. THE DEFAULT PALETTE is "Cool Edit, Default"
+// (`warptempo-cool-edit-default`, kGuiDefaultPaletteKey; architect
+// 2026-10-26) — the one both first-run templates spell
+// (`waveform=warptempo-cool-edit-default`; every device key required,
+// architect 2026-10-14).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -126,7 +118,7 @@
 // Cool Edit's two cue colors, the flag in red and the range in blue
 // (architect 2026-10-26: "the default Cool Edit markers contrast well") —
 // `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on every built-in but
-// the CEPro 1.2 pair's FFFF6C),
+// CEPro 1.2's FFFF6C),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in the default: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
@@ -231,7 +223,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's forty-one in their
+// THE BUILT-IN PALETTES (the head) — the program's twenty in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the ten in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
@@ -244,14 +236,14 @@ struct GuiBuiltinPalette {
 inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
-// THE DEFAULT PALETTE (the head): "Terminal, Default" (architect
-// 2026-10-26, "the point is to get closer to Cool Edit again": the Terminal
-// green under Cool Edit's default red and blue markers) — the `waveform=`
+// THE DEFAULT PALETTE (the head): "Cool Edit, Default" (architect
+// 2026-10-26: Cool Edit's own default, its green ink under its red and blue
+// markers) — the `waveform=`
 // value both first-run templates SPELL (GuiPlatform::device_config_defaults;
 // every device key required, architect 2026-10-14 — a config with no line took it
 // 2026-10-07..14). A config naming a retired key is the launch's hard fail
 // (the 2026-10-14 ruling: no migration).
-inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-terminal-default";
+inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-cool-edit-default";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
@@ -287,7 +279,7 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
-    "(warptempo-terminal-default, warptempo-cool-edit-default, ...)";
+    "(warptempo-cool-edit-default, warptempo-cool-edit-xp-blue, ...)";
 
 // The ten the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses

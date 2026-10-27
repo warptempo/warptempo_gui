@@ -114,14 +114,13 @@ struct TrimRange {
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
 // flat skin constants with the caption itself.
 // The palette's roles are kGuiPaletteRoles and the compiled built-in
-// palettes the program's own forty-one presets, Cool Edit Pro 2.1's twenty
-// as they are and with the Terminal ink and Terminal, Default,
-// Proportional, kGuiBuiltinPalettes
+// palettes the program's own twenty presets, Cool Edit Pro 2.1's twenty
+// as they are, kGuiBuiltinPalettes
 // (palette_file.h); the
 // active palette is the device config's `waveform` — a built-in's key,
 // chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-21;
 // files from a `chromes/` folder were read 2026-10-07..14; the key was
-// `chrome` until 2026-10-21), the first-run default "Terminal, Default"
+// `chrome` until 2026-10-21), the first-run default "Cool Edit, Default"
 // (2026-10-26). There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
 // (2026-10-08). The app computes no color but THE SKIN'S RULES: the ring
@@ -875,9 +874,9 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
-// palette is "Terminal, Default" (`warptempo-terminal-default`,
+// palette is "Cool Edit, Default" (`warptempo-cool-edit-default`,
 // kGuiDefaultPaletteKey, palette_presets.inc; architect 2026-10-26):
-// the outline #247D51 under the #49CA8A ink on black — each outline
+// the outline #0A9757 under the #4BF3A7 ink on black — each outline
 // the ink at HLS lightness 0.3157, the generator's outline rule
 // (tools/theme_catalog/gen_presets.py). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the

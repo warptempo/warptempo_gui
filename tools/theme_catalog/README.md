@@ -12,13 +12,10 @@ python3 -I tools/theme_catalog/catalog_md.py           # -> docs/themes/catalog.
 
 ## The presets — warptempo_presets.txt (architect 2026-10-26)
 
-`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's forty-one presets, Cool Edit Pro 2.1's twenty
-color presets in its own order, each as it is and then with the Terminal ink (the DEC VT220's green and its grid under
-the theme's every other color) — "the point is to get closer to Cool Edit again. Also show two versions of each CEP
-theme" — and directly after Terminal, Default the proportional row, Cool Edit's default with every color moved as its
-ink moves to the Terminal ink, "so that they're all still proportional" (its head is their provenance, the pairing,
-the proportional derivation), each values line followed by its display
-name, in Cool Edit Pro 2.1's value grammar.
+`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's twenty presets, Cool Edit Pro 2.1's twenty
+color presets in its own order, each as it is — "I am quite sure that I want to just trim down to just the cool edit
+themes" (its head is their provenance), each values line followed by its display name, in Cool Edit Pro 2.1's value
+grammar.
 
 `gen_presets.py` transcribes each into the ten program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
 off the header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never

@@ -280,9 +280,8 @@ inline constexpr uint32_t kGroundMeanEstimate = 0x212123;
 
 // THE ACCENT OF AN INK (architect 2026-10-23, "agree to all"): the ink's
 // HUE under the LED's fixed HLS saturation and lightness (kLedLitRecord's),
-// so the default's Terminal green 49CA8A lands at 46DC92, and the inks
-// 6FD98F, 6ED86E and 6ED8B5 at 46DC73, 46DC46 and 46DCAA, each an equally
-// bright lamp of its ink's hue. Worn by the lit LEDs alone; no device key.
+// so the default's green 4BF3A7 lands at 46DC98, each preset's ink an
+// equally bright lamp of its own hue. Worn by the lit LEDs alone; no device key.
 inline constexpr cool_edit_derive::Hls kLedLitHls =
     cool_edit_derive::hls_of(kLedLitRecord);
 constexpr uint32_t accent_of_ink(uint32_t ink) {

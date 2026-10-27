@@ -8666,7 +8666,7 @@ struct AppState {
     // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; and since 2026-10-25 the
-    // PRESET PICKER, with the forty-one built-in waveform presets by
+    // PRESET PICKER, with the twenty built-in waveform presets by
     // display name (architect: "maybe a drop down would make it quicker,
     // because I don't like having to type it in every time" — "brief it as a
     // scrolling list", "Yes"). (The AV Sync Stats panel's text lines stood
@@ -8759,7 +8759,7 @@ struct AppState {
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph: Folder wears the folder glyph, Wav
     // the wav glyph, and PRESET NONE (architect 2026-10-25: the row is the
-    // preset's memorable DISPLAY NAME, "Terminal, Default", never its
+    // preset's memorable DISPLAY NAME, "Cool Edit, Default", never its
     // key, its text starting where a Folder row's name starts). A KIND EXISTS
     // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:
     //   * UP — the `..` row, the folder glyph over the parent — went on

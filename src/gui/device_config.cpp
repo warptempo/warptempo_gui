@@ -222,7 +222,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         // is refused like any other non-name, and an ABSENT line is the
         // scanner's missing-required-key refusal (architect 2026-10-14: every
         // key required, the default spelled —
-        // `waveform=warptempo-terminal-default`).
+        // `waveform=warptempo-cool-edit-default`).
         // An old `palette=`, `chrome=`, `scheme=` or `caption=` line is the
         // unknown key below (the `caption` key's arm stood here
         // 2026-10-08..10-21).

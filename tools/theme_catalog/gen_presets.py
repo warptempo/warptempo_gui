@@ -3,9 +3,8 @@
 # INCLUDE, src/gui/palette_presets.inc (the rows of kGuiBuiltinPalettes, src/gui/palette_file.h, which owns what a
 # palette is and does).
 # ONE SOURCE: THE PROGRAM'S PRESETS, warptempo_presets.txt's, in its order (that file's head is their design and
-# provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is and with the Terminal ink, and
-# Terminal, Default, Proportional); the
-# value grammar and the outline's lightness below are Cool Edit's. Each row a KEY, a DISPLAY NAME and THE TEN
+# provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is); the value grammar and the
+# outline's lightness below are Cool Edit's. Each row a KEY, a DISPLAY NAME and THE TEN
 # PROGRAM ROLES (kGuiPaletteRoles, read off palette_file.h and checked against ROLE_ORDER) under the one transcription
 # below.
 #
