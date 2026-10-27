@@ -1694,10 +1694,10 @@ struct GuiInputHandler {
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
     // THE SCORE VIEWER'S SCRUB ARM (2026-10-26) drops on the same three
-    // edges: on the page road OWING NOTHING (its page is shown at the press
-    // and at every motion), under the soundtrack owing only the position's
-    // write (its seek is live at every motion, so the hard end writes what
-    // the drag already moved, as the lift does).
+    // edges OWING NOTHING on both faces: on the page road its page was shown
+    // at the press and at every motion; under the soundtrack the drag only
+    // carried the thumb and the seek is the lift's, so a hard end seeks
+    // nothing (the render player's clear_player_scrub_drag).
     void clear_score_scrub_drag();
 
     // -- THE SCORE VIEWER'S INPUT HALF (2026-10-26; the model and the acts
@@ -1719,10 +1719,12 @@ struct GuiInputHandler {
     // taken where it stands, its grab offset kept; off it the thumb jumps to
     // the press. ON THE PAGE ROAD the page under the thumb is SHOWN at the
     // press and at every motion and the lift owes nothing (a range of one
-    // page is consumed and does nothing); UNDER THE SOUNDTRACK the frame under
-    // the thumb is SEEKED at the press off the thumb and at every motion, and
-    // the lift writes the position. A modified press is consumed and does
-    // nothing.
+    // page is consumed and does nothing); UNDER THE SOUNDTRACK the render
+    // player's scrub exactly (architect 2026-10-26, "no scrubbing"): the
+    // press and the motion carry the thumb and seek nothing, and THE LIFT
+    // SEEKS the frame under the thumb's last painted column, the position
+    // written with it — a motionless tap on the thumb owes nothing. A
+    // modified press is consumed and does nothing.
     bool claim_score_scrub_press(int x, int y, GuiInputState mods);
     void update_score_scrub_motion(int x);
     bool finish_score_scrub_release();

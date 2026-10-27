@@ -43,10 +43,11 @@
 // and/or time based. No pages. Pages are only kept in the background"):
 //   * THE MEDIA PLAYER'S, with the soundtrack: PLAY / PAUSE at the left (the
 //     render player's transport seat, its key and its legend —
-//     score_viewer_play_face), THE SCRUB (the render player's, its domain the
-//     viewing range's FRAMES: the thumb at the cursor, a press off the thumb
-//     jumping it, a drag SEEKING LIVE at every motion, playing or paused,
-//     the position written at the lift), THE CLOCK (the render player's two
+//     score_viewer_play_face), THE SCRUB (the render player's exactly, its
+//     domain the viewing range's FRAMES: the thumb at the cursor, a press off
+//     the thumb jumping it, a drag CARRYING it and seeking nothing, THE SEEK
+//     AT THE LIFT, playing or paused, the position written with it —
+//     architect 2026-10-26, "no scrubbing"), THE CLOCK (the render player's two
 //     time fields, verbatim: the elapsed time within the range and the
 //     range's length), then RESET, START, END and CLOSE flush right. Space
 //     plays and pauses, Home / End seek the range's first / last frame,
@@ -234,17 +235,13 @@ inline int64_t score_viewer_position(const AppState& a,
 }
 
 // THE PLAY KEY'S FACE, NAMING ITS NEXT PRESS (the render player's rule and
-// its PlayerPlayFace): PAUSE while LIVE; at rest PLAY where the cursor stands
-// at the range's first frame (a fresh rest, the natural end's) and RESUME
-// anywhere else.
-inline PlayerPlayFace score_viewer_play_face(const AppState& a,
-                                             const GuiPlayback& playback) {
-    if (a.score_viewer.transport == AppState::ScoreViewer::Transport::Live)
-        return PlayerPlayFace::Pause;
-    return score_viewer_position(a, playback) ==
-                   score_viewer_frame_range(a).begin
-               ? PlayerPlayFace::Play
-               : PlayerPlayFace::Resume;
+// its PlayerPlayFace): PAUSE while LIVE, PLAY otherwise — at rest anywhere,
+// the press playing on from the cursor (architect 2026-10-26: play / pause
+// only, "keep it simple").
+inline PlayerPlayFace score_viewer_play_face(const AppState& a) {
+    return a.score_viewer.transport == AppState::ScoreViewer::Transport::Live
+               ? PlayerPlayFace::Pause
+               : PlayerPlayFace::Play;
 }
 
 // EACH BUTTON'S TRUTHFUL FACE (the roster's rule: a button greys whenever
@@ -313,7 +310,6 @@ inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
         case Act::PlayPause:
             switch (face) {
                 case PlayerPlayFace::Pause:      return "Pause (Space)";
-                case PlayerPlayFace::Resume:     return "Resume (Space)";
                 case PlayerPlayFace::OpenFolder:
                 case PlayerPlayFace::Play:       break;
             }
@@ -467,12 +463,11 @@ struct GuiScoreViewer {
     // THE SEEK: `frame` clamped into the range; LIVE republishes PLAY's window
     // from there (a target in the range's last frame stops one short of it,
     // the render player's rule, so the natural end takes over), at rest the
-    // cursor moves; the page follows either way. `write` false is the scrub's
-    // live seek inside a drag, whose position is written at its lift
-    // (commit_position).
-    void seek_to(int64_t frame, bool write);
-    // The cursor's frame written through (the scrub's lift and hard ends).
-    void commit_position();
+    // cursor moves; the page follows either way; the position written
+    // through. Its callers are Home / End and the scrub's lift (architect
+    // 2026-10-26, "no scrubbing": the drag carries the thumb and seeks
+    // nothing).
+    void seek_to(int64_t frame);
 
     // -- The range ------------------------------------------------------------
     // START / END: the range's first / last bound set to the shown page —

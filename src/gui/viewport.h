@@ -622,7 +622,7 @@ struct Viewport {
     // a dialog editor's stack stands on the keyboard (modal_box.h) — so a
     // row repaint alone would recompose
     // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's
-    // end, "Resume" at a pause) and leave the old box's pixels standing.
+    // end or at a pause) and leave the old box's pixels standing.
     // While a tooltip stands on a Dialog owner this owner also damages the
     // box's published rect (erasing the old words, which may measure wider)
     // and the band the recomputed box can hang into — the show edge's own

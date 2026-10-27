@@ -9240,13 +9240,17 @@ inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
 // highlight's arm first (render_player_highlight_act_row: a FOLDER row opens,
 // a wav that is not the transport's item plays), then the transport's
 // (transport_toggle_act: LIVE pauses, PAUSED resumes, IDLE plays the item
-// from its start) — so the face, the word and the act cannot disagree.
+// from its start) — so the face, the word and the act cannot disagree. TWO
+// FACES AND OPEN (architect 2026-10-26: play / pause only, "keep it
+// simple"): PAUSE where the press pauses, PLAY wherever it plays — a paused
+// transport's resume from its resume point wearing PLAY — and OPEN over a
+// folder row.
 // Defined in render_player.cpp beside the act it mirrors; the plan builder
 // (paint_modal_dialog) asks it once per frame and hands the answer to the
 // hint below, the glyph being `Pause` and nothing else. It replaces the
 // painter's `pause_face` bit of 2026-08-31, which carried the glyph alone and
 // left the hint saying "Play" over a folder row the press would OPEN.
-enum class PlayerPlayFace { Play, Pause, Resume, OpenFolder };
+enum class PlayerPlayFace { Play, Pause, OpenFolder };
 PlayerPlayFace render_player_play_face(const AppState& a);
 
 // THE STATE THE PLAYER'S HINTS FORK ON, resolved by the plan builder
@@ -9344,12 +9348,11 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
                                    : "Go to Start (Home)";
         // PLAY/PAUSE NAMES ITS FACE, and the face is render_player_play_face's
         // (the glyph's own owner): a folder under the band OPENS, another wav
-        // PLAYS, and on the item's row or an empty band the transport's own
-        // three states name themselves.
+        // PLAYS, and on the item's row or an empty band a live transport
+        // PAUSES and any other PLAYS.
         case AppState::PlayerButtonAct::PlayPause:
             switch (s.play_face) {
                 case PlayerPlayFace::Pause:      return "Pause (Space)";
-                case PlayerPlayFace::Resume:     return "Resume (Space)";
                 case PlayerPlayFace::OpenFolder: return "Open Folder (Space)";
                 case PlayerPlayFace::Play:       break;
             }
@@ -17755,8 +17758,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // Every word fits its key at 300 / 200 / 150 % (CANCEL and COMMIT about 57
 // of 69, 37 of 46, 28 of 36 device px in the 14-px legend face, the keys
 // icon_case_w_px's sums of separately rounded parts; RECALL about 54 / 35 /
-// 27; RESUME on the player's key about 60 / 39 / 30, PAUSE 46 / 30 / 23), so
-// none is shortened.
+// 27; PAUSE on the player's key about 46 / 30 / 23), so none is shortened.
 // THE REPAINT: the word rides the face's stash (RedesignButtonFace::legend,
 // held by main.cpp's per-tick comparator beside the glyph) and the painted
 // extent with it (RedesignButtonFace::painted, whose union with the new one

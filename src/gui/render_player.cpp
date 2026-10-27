@@ -491,7 +491,7 @@ int render_player_highlight_act_row(const AppState& a) {
 // THE PLAY/PAUSE FACE — the contract and the readers are at the declaration
 // (app_state.h). play_button_act's two forks in the act's own order, read
 // without acting: the highlight's row first, then transport_toggle_act's
-// three states.
+// three states on two faces (PAUSE while LIVE, PLAY otherwise).
 PlayerPlayFace render_player_play_face(const AppState& a) {
     if (const int row = render_player_highlight_act_row(a); row >= 0) {
         const Row& r = a.folder_overlay.rows[static_cast<size_t>(row)];
@@ -500,7 +500,7 @@ PlayerPlayFace render_player_play_face(const AppState& a) {
     }
     switch (a.render_player.transport) {
         case Transport::Live:   return PlayerPlayFace::Pause;
-        case Transport::Paused: return PlayerPlayFace::Resume;
+        case Transport::Paused:
         case Transport::Idle:   break;
     }
     return PlayerPlayFace::Play;

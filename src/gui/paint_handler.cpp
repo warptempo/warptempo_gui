@@ -392,14 +392,13 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act) {
 // THE PLAY KEY'S PRINT NAMES ITS NEXT PRESS (architect 2026-10-25, the
 // roster's legend rule at redesign_button_legend's stateful overload):
 // render_player_play_face, the owner the tooltip and the glyph read — PLAY,
-// PAUSE, RESUME, or OPEN over a folder row. Every other act forwards to the
+// PAUSE, or OPEN over a folder row. Every other act forwards to the
 // table above (REPEAT a toggle, one print in both states).
 const char* render_player_button_legend(AppState::PlayerButtonAct act,
                                         PlayerPlayFace face) {
     if (act == AppState::PlayerButtonAct::PlayPause) {
         switch (face) {
             case PlayerPlayFace::Pause:      return "PAUSE";
-            case PlayerPlayFace::Resume:     return "RESUME";
             case PlayerPlayFace::OpenFolder: return "OPEN";
             case PlayerPlayFace::Play:       break;
         }
@@ -5806,8 +5805,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // follows it. SINCE 2026-09-01 THE FACE AND THE WORD ARE ONE OWNER,
         // render_player_play_face (the act's own two forks read without
         // acting); the hint takes
-        // the whole answer, so a folder row says "Open folder" and a paused
-        // transport "Resume". THE HINTS' OTHER STATE BITS ARE RESOLVED HERE
+        // the whole answer, so a folder row says "Open folder" and a live
+        // transport "Pause". THE HINTS' OTHER STATE BITS ARE RESOLVED HERE
         // TOO (RenderPlayerHintState, app_state.h — each a predicate the act
         // or the face reads; the previous-track window needs the position,
         // which this painter already reads for the clock). Every bit
@@ -5927,7 +5926,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // CLOSE — each a key with its printed legend, its face the act's own
         // truthful answer.
         using Act = AppState::ScoreButtonAct;
-        const PlayerPlayFace face = score_viewer_play_face(app, playback);
+        const PlayerPlayFace face = score_viewer_play_face(app);
         const auto key = [&](Act act) {
             DialogButtonPlan b;
             b.score_act = act;

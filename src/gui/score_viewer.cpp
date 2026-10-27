@@ -129,7 +129,7 @@ void GuiScoreViewer::step(int delta) {
 void GuiScoreViewer::first_page() {
     if (!app.score_viewer.active || !app.score) return;
     if (score_viewer_has_soundtrack(app)) {
-        seek_to(score_viewer_frame_range(app).begin, /*write=*/true);
+        seek_to(score_viewer_frame_range(app).begin);
         return;
     }
     show_page(score_viewer_range(app).first);
@@ -138,7 +138,7 @@ void GuiScoreViewer::first_page() {
 void GuiScoreViewer::last_page() {
     if (!app.score_viewer.active || !app.score) return;
     if (score_viewer_has_soundtrack(app)) {
-        seek_to(score_viewer_frame_range(app).end - 1, /*write=*/true);
+        seek_to(score_viewer_frame_range(app).end - 1);
         return;
     }
     show_page(score_viewer_range(app).last);
@@ -190,7 +190,7 @@ void GuiScoreViewer::toggle_play() {
     damage_row();
 }
 
-void GuiScoreViewer::seek_to(int64_t frame, bool write) {
+void GuiScoreViewer::seek_to(int64_t frame) {
     AppState::ScoreViewer& sv = app.score_viewer;
     if (!sv.active || !app.score || !score_viewer_has_soundtrack(app)) return;
     const ScoreFrameRange fr = score_viewer_frame_range(app);
@@ -211,14 +211,6 @@ void GuiScoreViewer::seek_to(int64_t frame, bool write) {
     }
     follow_cursor(rest);
     damage_row();
-    if (write) write_score_viewer_file(app);
-}
-
-void GuiScoreViewer::commit_position() {
-    AppState::ScoreViewer& sv = app.score_viewer;
-    if (!sv.active || !app.score || !score_viewer_has_soundtrack(app)) return;
-    if (sv.transport == Transport::Live)
-        active_view_state(app).score_position = playback.cursor();
     write_score_viewer_file(app);
 }
 
