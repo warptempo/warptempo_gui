@@ -213,7 +213,8 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // simplify — play on last file means play last file"; resume()'s end rule,
 // which continues to the next wav where one exists, a paused seek to the end
 // being the other road to that rest). A scrub dropped at the end of a live
-// item reaches the natural end too (the lift resumes, then seeks live:
+// item reaches the natural end too (the lift resumes at the drop through the
+// live seek's clamp, never the PLAY key's end rule — resume_at,
 // input_pointer.cpp's play-scrub block). THE FOLDER-END
 // RESTART IS RETIRED: from 2026-08-28 the bit `ended_at_folder_end` said the
 // transport was resting THERE and turned the next Play — the car's at the end
@@ -508,13 +509,21 @@ struct GuiRenderPlayer {
     // AT THE END, architect 2026-10-26 ~23:55: "next track if there is one,
     // otherwise play from the start") continues to the folder's next wav
     // where one exists with the REPEAT ONE lamp dark, and replays this item
-    // from its start otherwise. Their second caller is the scrub (THE SOUND
-    // PAUSES WHILE THE SCRUB IS HELD, input_pointer.cpp's play-scrub block):
-    // the press pauses a live item and the lift resumes it and then seeks
-    // live, so a drop at the end reaches the natural end.
+    // from its start otherwise — THAT END RULE IS THE PLAY KEY'S ALONE. The
+    // scrub (THE SOUND PAUSES WHILE THE SCRUB IS HELD, input_pointer.cpp's
+    // play-scrub block) pauses a live item at its press through pause() and
+    // plays it on at the lift through resume_at(frame): the item the press
+    // paused LIVE again from the dropped frame, clamped as seek_to's live arm
+    // clamps (a target in the last frame stops one short of it, architect
+    // 2026-10-27), and never the key's end rule — so a drop at the end
+    // reaches the natural end at once, and a grab taken as the item finished
+    // never walks to the next wav before the drop is read. A no-op with no
+    // item, where LIVE, and on an item shorter than two frames, as resume()
+    // is.
     void toggle_pause();
     void pause();
     void resume();
+    void resume_at(int64_t frame);
     // (STOP STOOD HERE, the act of 2026-08-28 — the transport to IDLE with the
     // item resting at its start, the resume point cleared to 0 and the item
     // itself untouched, a consumed no-op with no item and on an item already
@@ -703,8 +712,8 @@ struct GuiRenderPlayer {
     // release land inside the wav it started. The scrub's press pauses a live
     // item for the hold (input_pointer.cpp's play-scrub block), so a toggle
     // mid-drag resumes or starts the sound under the held thumb, and the
-    // release's resume is then a no-op on a transport already LIVE (resume()'s
-    // own guard) — its seek a live reseek.
+    // release then finds the transport LIVE and takes seek_to's live arm
+    // alone, its resume_at skipped (finish_player_scrub_release).
     //
     // THE TABLE. The Accord's three buttons are REWIND, PLAY/PAUSE and
     // FAST-FORWARD, the outer two arriving as Previous and Next:
@@ -832,7 +841,8 @@ struct GuiRenderPlayer {
     // directional arms and the Play arm's act-side refusal each pushed a
     // re-publish, all five deleted 2026-09-12 with the gates that made them,
     // a constant PLAYING leaving no drifted display to correct):
-    // play_wav's tail and toggle_pause's resume arm
+    // play_wav's tail and play_live_from (the one launch of resume() —
+    // toggle_pause's resume arm — and resume_at, the scrub's lift)
     // — the two writers of the LIVE state; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, which
@@ -909,13 +919,18 @@ private:
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
                   int index);
-    // THE FOLDER'S FORWARD STEP, one body for its two callers (2026-09-04):
-    // the natural end's auto-advance below and the deliberate next_track
-    // above. The next wav of the item's folder as listed, played from its
+    // THE FOLDER'S FORWARD STEP, one body for its three callers (2026-09-04):
+    // the natural end's auto-advance below, the deliberate next_track above
+    // and resume()'s end rule (the PLAY key at the end). The next wav of the item's folder as listed, played from its
     // start; never across folders and never a wrap, the wall being
     // render_player_next_track_actionable. Returns whether it played — a
     // refused decode has raised its own card and left the item untouched.
     bool advance_to_next_in_item_folder();
+    // THE RESUME ROAD'S ONE LAUNCH: the item LIVE from `from` to its end, the
+    // row damaged and the head unit told. Its two callers have already
+    // chosen `from` and passed their guards: resume() through the PLAY key's
+    // end rule, resume_at() through the live seek's clamp.
+    void play_live_from(int64_t from);
     // The natural end: the fence through the one stop body, then — with the
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
     // exception at the head of this file), else the shared forward step

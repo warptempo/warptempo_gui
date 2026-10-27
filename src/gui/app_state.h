@@ -8906,10 +8906,12 @@ struct AppState {
     //              deferred-click shape; a motionless tap on the thumb,
     //              `on_thumb` and not `moved`, seeks nothing); and
     //              `was_live`, the press having paused a LIVE item, which the
-    //              release resumes and then seeks live to the dropped point
-    //              (architect 2026-10-26 ~23:15, THE SOUND PAUSES WHILE THE
-    //              SCRUB IS HELD, the score scrub's rule; the order ~23:55,
-    //              so a drop at the end reaches the natural end); each of
+    //              release resumes at the dropped point (architect 2026-10-26
+    //              ~23:15, THE SOUND PAUSES WHILE THE SCRUB IS HELD, the
+    //              score scrub's rule; through the live seek's clamp and
+    //              never the PLAY key's end rule, 2026-10-27 —
+    //              GuiRenderPlayer::resume_at — so a drop at the end reaches
+    //              the natural end); each of
     //              the three hard
     //              ends — the pointer-leave hook, the button-lost edge and
     //              the force-end finalizer, through clear_player_scrub_drag —
@@ -9056,8 +9058,9 @@ struct AppState {
     //              and seeks nothing, THE SEEK IS AT THE LIFT to the carried
     //              column (architect 2026-10-26, "no scrubbing"), a
     //              motionless tap on the thumb seeking nothing, and where
-    //              `was_live` the lift plays on and then seeks live, so a
-    //              drop at the end reaches the natural end (~23:55); the three
+    //              `was_live` the lift plays on from the drop through the
+    //              live seek's clamp (GuiScoreViewer::play_from, 2026-10-27),
+    //              so a drop at the end reaches the natural end; the three
     //              hard ends drop it owing nothing, the transport left
     //              PAUSED (clear_score_scrub_drag);
     //   `transport` THE SOUNDTRACK'S TRANSPORT (the media player's face

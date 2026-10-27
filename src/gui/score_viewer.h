@@ -76,16 +76,18 @@
 // END, PAUSED there so the scrub stays live — the last page shown, the clock
 // at the range's length, the thumb at the right — and the PLAY key pressed
 // at that rest plays from the range's start (a press always sounds; the
-// automatic rewind is what goes); a pause keeps the cursor. A scrub dropped
-// at the end of a live soundtrack reaches the same natural end (the lift
-// plays on, then seeks live: input_pointer.cpp's score-scrub block). EVERY
+// automatic rewind is what goes); a pause keeps the cursor and shows its
+// page. A scrub dropped at the end of a live soundtrack reaches the same
+// natural end (the lift plays on from the drop through the live seek's
+// clamp, never the PLAY key's end rule: input_pointer.cpp's score-scrub
+// block). EVERY
 // STOP IS THE ONE STOP BODY'S
 // (its score fork parks LIVE at PAUSED with the cursor read first), so the
 // fence-before-rebind ordering holds as it does for the player. THE PAGE
 // FOLLOWS THE CURSOR: each tick while LIVE the page holding the engine's
 // cursor (score_page_for_position over GuiPlayback::cursor(), the one
-// position face) is shown when it differs, and at rest every seek shows the
-// page holding the new cursor. A device that goes away mid-play pauses at
+// position face) is shown when it differs, and at rest every seek and every
+// pause shows the page holding the new cursor. A device that goes away mid-play pauses at
 // the held cursor with the playback card (the render player's tick's rule).
 // THE OPEN lands at the remembered frame clamped into the range, PAUSED, the
 // engine rebound to the soundtrack behind the modal stop (the fence) — IDLE
@@ -146,11 +148,14 @@
 //     page).
 //     From the open, and whenever it lacks a page of the range, the feed
 //     queues the missing pages AFTER THE CACHE'S WANTS, in the likely order
-//     reaching the whole range. THE RANGE SCOPES IT: START, END and RESET's
-//     confirm drop every page outside the new range AT ONCE (range_changed:
-//     "start and end reset that cache and drop anything that's outside of
-//     it", so the full price is paid only until the movement is delineated).
-//     It survives the close as the cache does, goes whole at a box change
+//     reaching the whole range. THE RANGE SCOPES IT ("start and end reset
+//     that cache and drop anything that's outside of it", so the full price
+//     is paid only until the movement is delineated), AND THE FEED IS THE
+//     SCOPE'S OWNER (architect 2026-10-27): every feed, and the drain ahead
+//     of its completion measure, drops every page outside the range as it
+//     stands (scope_gray_to_range), so START, END, RESET's confirm and
+//     SETUP's typed bounds are all covered with none of them named. It
+//     survives the close as the cache does, goes whole at a box change
 //     (gui_scale) and with the score folder and the project. No backstop for
 //     memory: a failed allocation is std::bad_alloc, the rare non-silent
 //     fault.
@@ -499,27 +504,35 @@ struct GuiScoreViewer {
     // pause() where LIVE, play() otherwise.
     void toggle_play();
     // THE PAUSE: LIVE parks at PAUSED through the one stop body, the cursor
-    // kept and written; a no-op at rest. Its callers are toggle_play and the
-    // scrub's press (architect 2026-10-26 ~23:00: the sound pauses while the
-    // scrub is held).
+    // kept, its page shown and the frame written; a no-op at rest. Its
+    // callers are toggle_play, the scrub's press (architect 2026-10-26
+    // ~23:00: the sound pauses while the scrub is held) and the tick's dead
+    // device.
     void pause();
     // THE PLAY: the engine bound to the soundtrack where it is not yet, and
     // [the cursor, the range's end) played once — from the range's first
     // frame where the cursor rests in its last frame or at its end (THE PLAY
     // KEY AT THE END, the head's THE TRANSPORT). Refused, silent, where the
-    // PLAY / PAUSE key is grey; a no-op where LIVE. Its callers are
-    // toggle_play and the scrub's lift where the press paused a live
-    // soundtrack (the sound playing on from the pause's cursor, the lift's
-    // live seek following).
+    // PLAY / PAUSE key is grey; a no-op where LIVE. Its one caller is
+    // toggle_play: THE END RULE IS THE KEY'S ALONE.
     void play();
+    // THE SCRUB'S PLAY ON (architect 2026-10-27, the render player's
+    // resume_at): the soundtrack LIVE from `frame`, clamped as seek_to's live
+    // arm clamps — a target in the range's last frame or at its end stops
+    // one short of the last frame, so the natural end takes over — and
+    // never the PLAY key's end rule; the page follows and the position is
+    // written. Refused, silent, where the PLAY / PAUSE key is grey; a no-op
+    // where LIVE. Its one caller is the scrub's lift where the press paused
+    // a live soundtrack.
+    void play_from(int64_t frame);
     // THE SEEK: `frame` clamped into the range; LIVE republishes PLAY's window
     // from there (a target in the range's last frame stops one short of it,
     // the render player's rule, so the natural end takes over), at rest the
     // cursor moves; the page follows either way; the position written
-    // through. Its callers are Home / End and the scrub's lift (architect
-    // 2026-10-26, "no scrubbing": the drag carries the thumb and seeks
-    // nothing, the sound paused meanwhile; a lift that plays on seeks LIVE
-    // after play(), so a drop at the end reaches the natural end).
+    // through. Its callers are Home / End and the scrub's lift where the
+    // press found the soundtrack paused (architect 2026-10-26, "no
+    // scrubbing": the drag carries the thumb and seeks nothing; a lift that
+    // plays on is play_from's).
     void seek_to(int64_t frame);
 
     // -- The range ------------------------------------------------------------
@@ -550,22 +563,31 @@ private:
     // The page holding `pos` shown where it differs; the interior damaged.
     // Returns whether the page changed.
     bool follow_cursor(int64_t pos);
-    // After START / END / RESET: the gray store's pages outside the new range
-    // dropped, the cursor clamped into the new range and, LIVE, PLAY's window
-    // republished at the cursor to the new end.
+    // After START / END / RESET: the cursor clamped into the new range and,
+    // LIVE, PLAY's window republished at the cursor to the new end (the gray
+    // store's scope is the feed's, scope_gray_to_range).
     void range_changed();
+    // THE RESUME ROAD'S ONE LAUNCH: the soundtrack LIVE from `from` to the
+    // range's end, the page following, the row damaged. Its two callers have
+    // chosen `from` and passed their guards: play() through the PLAY key's
+    // end rule, play_from() through the live seek's clamp.
+    void play_live_from(int64_t from);
     // The natural end: the fence through the one stop body, the rest at the
     // range's end, written.
     void on_natural_end();
     // The decoder's results into the cache and the gray store; the shown
     // page's arrival damages the interior.
     void drain_decoder();
-    // The gray store at the interior's box (dropped whole at a change), the
-    // cache trimmed to the shown page's neighborhood at the current box and
-    // conversion (the last painted page kept while the shown one is absent),
-    // and the decoder handed the work: the cache's wants in order, then the
-    // store's.
+    // The gray store at the interior's box (dropped whole at a change) and
+    // inside the range (scope_gray_to_range), the cache trimmed to the shown
+    // page's neighborhood at the current box and conversion (the last painted
+    // page kept while the shown one is absent), and the decoder handed the
+    // work: the cache's wants in order, then the store's.
     void feed_decoder();
+    // THE GRAY STORE'S RANGE SCOPE: every entry outside the range as it
+    // stands dropped. Its callers are the feed, every time, and the drain
+    // ahead of its completion measure (the head's THE GRAY STORE).
+    void scope_gray_to_range();
     // The gray store measured against the range: short, the asking time
     // stamped where unstamped; whole with a stamp, the completion's timing
     // line printed and the stamp cleared.

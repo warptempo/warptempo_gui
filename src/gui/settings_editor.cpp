@@ -404,7 +404,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // arm's shape — and refused where the pair would cross
         // (score_range_crossed, the file's one cross-key rule), so a crossed
         // pair is never written. A number past the page count commits (the
-        // viewer clamps at use).
+        // viewer clamps at use). The gray store follows the new range at the
+        // viewer's next feed (GuiScoreViewer::scope_gray_to_range, the
+        // scope's one owner), so nothing here trims it.
         if (key == "score_first_page" || key == "score_last_page") {
             if (authoring_locked(app)) {
                 const char* card = authoring_lock_card(app);

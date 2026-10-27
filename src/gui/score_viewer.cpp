@@ -176,8 +176,15 @@ void GuiScoreViewer::pause() {
     if (app.score_viewer.transport != Transport::Live) return;
     // The one stop body, whose score fork reads the engine's cursor into the
     // resting position before the fence and parks the transport at PAUSED;
-    // the frame written through.
+    // the frame written through. THE PAGE FOLLOWS THE RESTING CURSOR
+    // (architect 2026-10-27): the tick follows the cursor only while LIVE, so
+    // a cursor that crossed a page boundary since the last tick would leave
+    // the previous page shown under the next page's clock for the whole
+    // pause. EVERY PAUSE IS THIS BODY (re-grepped 2026-10-27): toggle_play —
+    // PAUSE / Space, and RESET's question through it — the scrub's press and
+    // the tick's dead device; the natural end follows its own rest.
     playback_lifecycle.stop_playback_if_playing();
+    follow_cursor(active_view_state(app).score_position);
     write_score_viewer_file(app);
     damage_row();
 }
@@ -194,13 +201,39 @@ void GuiScoreViewer::play() {
     // play from the start"): the soundtrack has no next track, so a cursor
     // resting in the range's last frame or at its end (the End key's seek,
     // the natural end's rest) plays from the range's start in the same press
-    // — a user act, which always sounds, and never the automatic rewind.
+    // — a user act, which always sounds, and never the automatic rewind. THE
+    // RULE IS THE KEY'S ALONE: the scrub's lift plays on through play_from,
+    // which never runs it.
     const ScoreFrameRange fr = score_viewer_frame_range(app);
     if (fr.length() < 2) return;
     int64_t from = score_viewer_position(app, playback);
     if (from >= fr.end - 1) from = fr.begin;
+    play_live_from(from);
+}
+
+void GuiScoreViewer::play_from(int64_t frame) {
+    if (app.score_viewer.transport == Transport::Live) return;
+    if (!score_viewer_button_enabled(app, playback,
+                                     AppState::ScoreButtonAct::PlayPause))
+        return;
+    if (!bind_soundtrack()) return;
+    // THE SCRUB'S DROP (architect 2026-10-27, the render player's resume_at):
+    // the live seek's clamp and never the PLAY key's end rule — a target in
+    // the range's last frame or at its end stops one short of the last frame,
+    // so the natural end takes over at once and rests at the range's end. The
+    // drop is a seek, so the position is written with it.
+    const ScoreFrameRange fr = score_viewer_frame_range(app);
+    if (fr.length() < 2) return;
+    const int64_t from = std::clamp(frame, fr.begin, fr.end - 2);
+    active_view_state(app).score_position = from;
+    play_live_from(from);
+    write_score_viewer_file(app);
+}
+
+void GuiScoreViewer::play_live_from(int64_t from) {
+    AppState::ScoreViewer& sv = app.score_viewer;
     sv.painted_cursor = -1;
-    playback.play(from, fr.end);
+    playback.play(from, score_viewer_frame_range(app).end);
     sv.transport = Transport::Live;
     follow_cursor(from);
     damage_row();
@@ -261,12 +294,8 @@ void GuiScoreViewer::set_end() {
 
 void GuiScoreViewer::range_changed() {
     AppState::ScoreViewer& sv = app.score_viewer;
-    // THE RANGE SCOPES THE GRAY STORE (score_viewer.h's head): every page
-    // outside the new range goes AT ONCE; the next feed asks for the missing.
-    const ScoreViewerRange gr = score_viewer_range(app);
-    std::erase_if(sv.gray, [&](const GuiScoreGrayPage& g) {
-        return g.page < gr.first || g.page > gr.last;
-    });
+    // THE GRAY STORE NEEDS NOTHING HERE: the next tick's drain and feed scope
+    // it to the new range (scope_gray_to_range, the one owner).
     if (!score_viewer_has_soundtrack(app)) return;
     // THE RANGE EXCLUDES EVERYTHING OUTSIDE IT (the head): the range narrows
     // around the shown page, which holds the cursor, so the cursor stays
@@ -342,13 +371,11 @@ void GuiScoreViewer::tick() {
 
     if (sv.transport == Transport::Live) {
         if (playback.device_unavailable()) {
-            // NO DEVICE PAUSES (the render player's tick's rule): the stop
-            // body's fork reads the held cursor and parks the transport; the
-            // frame written, the one card said. Nothing here retries: the
-            // next PLAY press reopens through play().
-            playback_lifecycle.stop_playback_if_playing();
-            write_score_viewer_file(app);
-            damage_row();
+            // NO DEVICE PAUSES (the render player's tick's rule): the pause
+            // body itself — the held cursor parked, its page followed, the
+            // frame written — and the one card said. Nothing here retries:
+            // the next PLAY press reopens through play().
+            pause();
             notifications.notify(AppState::NotificationClass::Normal,
                                  kPlaybackDeviceUnavailableCard);
         } else if (!playback.is_playing()) {
@@ -426,15 +453,33 @@ void GuiScoreViewer::drain_decoder() {
             }
         }
     }
-    if (gray_landed) note_gray_complete();
+    if (gray_landed) {
+        scope_gray_to_range();
+        note_gray_complete();
+    }
+}
+
+void GuiScoreViewer::scope_gray_to_range() {
+    AppState::ScoreViewer& sv = app.score_viewer;
+    if (!app.score) return;
+    // THE RANGE SCOPES THE GRAY STORE (score_viewer.h's head, architect
+    // 2026-10-27): every page outside the range as it stands now goes, so
+    // every road that moves a bound — START, END, RESET's confirm, SETUP's
+    // typed score_first_page / score_last_page — is covered without being
+    // named. Two ints against a vector of at most the score's pages.
+    const ScoreViewerRange r = score_viewer_range(app);
+    std::erase_if(sv.gray, [&](const GuiScoreGrayPage& g) {
+        return g.page < r.first || g.page > r.last;
+    });
 }
 
 void GuiScoreViewer::note_gray_complete() {
     AppState::ScoreViewer& sv = app.score_viewer;
     if (!app.score || sv.gray_box_w <= 0 || sv.gray_box_h <= 0) return;
     // THE STORE HOLDS ONLY THE RANGE'S PAGES AT ITS BOX, one entry a page
-    // (the drain's and range_changed's rules, the feed's box rule), so it is
-    // whole exactly when it counts the range.
+    // (the drain's rule, the feed's box rule, and scope_gray_to_range ahead
+    // of both of this body's callers), so it is whole exactly when it counts
+    // the range.
     const bool whole =
         static_cast<int>(sv.gray.size()) == score_viewer_range(app).count();
     const auto now = std::chrono::steady_clock::now();
@@ -488,14 +533,16 @@ void GuiScoreViewer::feed_decoder() {
         return i >= r.first && i <= r.last && i >= p - kCacheReach &&
                i <= p + kCacheReach;
     };
-    // THE GRAY STORE'S BOX (score_viewer.h's head): a box change drops the
-    // store whole, as the cache's key rule drops the cache.
+    // THE GRAY STORE'S SCOPE (score_viewer.h's head), enforced at every
+    // feed: a box change drops the store whole, as the cache's key rule drops
+    // the cache, and the pages outside the range go.
     if (box.w != sv.gray_box_w || box.h != sv.gray_box_h) {
         sv.gray.clear();
         sv.gray_box_w = box.w;
         sv.gray_box_h = box.h;
         sv.gray_asked_at.reset();
     }
+    scope_gray_to_range();
     note_gray_complete();
     // THE CACHE'S REACH (the head's THE CACHE): an entry made for another
     // box, under the other conversion, or outside the shown page's reach

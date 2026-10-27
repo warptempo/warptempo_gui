@@ -954,7 +954,8 @@ void GuiRenderPlayer::resume() {
     // has raised its own card and is the press's answer: a rare non-silent
     // fault, no recovery) — and otherwise plays this item from its start in
     // the same press. A press always sounds; the automatic rewind is what
-    // the ruling refused.
+    // the ruling refused. THE RULE IS THE KEY'S ALONE: the scrub's lift
+    // resumes through resume_at, which never runs it.
     int64_t from = rp.resume_frame;
     if (from >= rp.frames - 1) {
         if (!rp.repeat_one && render_player_next_track_actionable(app)) {
@@ -963,6 +964,25 @@ void GuiRenderPlayer::resume() {
         }
         from = 0;
     }
+    play_live_from(from);
+}
+
+void GuiRenderPlayer::resume_at(int64_t frame) {
+    AppState::RenderPlayer& rp = app.render_player;
+    if (rp.item.empty() || rp.frames <= 0) return;
+    if (rp.transport == Transport::Live) return;
+    if (rp.frames < 2) return;
+    // THE SCRUB'S DROP (architect 2026-10-27, the drop decides through the
+    // LIVE SEEK's end rule and never the PLAY key's): the item stays the one
+    // grabbed, and a target in its last frame or at its end stops one short
+    // of the last frame as seek_to's live arm does, so the natural end takes
+    // over at once — the next track or the rest dead at the end, the one
+    // rule's answer (on_natural_end).
+    play_live_from(std::clamp<int64_t>(frame, 0, rp.frames - 2));
+}
+
+void GuiRenderPlayer::play_live_from(int64_t from) {
+    AppState::RenderPlayer& rp = app.render_player;
     rp.painted_cursor = -1;
     playback.play(from, rp.frames);
     rp.transport = Transport::Live;
@@ -1055,16 +1075,18 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     if (rp.transport == Transport::Idle) return;
     const int64_t target = std::clamp<int64_t>(frame, 0, rp.frames);
     if (rp.transport == Transport::Live) {
-        // A LIVE RESEEK IS play() OVER THE LIVE SESSION — the program's one
-        // such site since the main view's placement stops instead (architect
-        // 2026-10-06, stop_playback_if_playing): play() on a running session
-        // moves its resume point without tearing the session down, so the
-        // seek costs no stop-and-restart glitch; the window stays the item
-        // and only the resume point moves. A target inside the last
+        // A LIVE RESEEK IS play() OVER THE LIVE SESSION (the main view's
+        // placement stops instead, architect 2026-10-06,
+        // stop_playback_if_playing; the score viewer's seek_to and
+        // range_changed reseek its soundtrack the same way): play() on a
+        // running session moves its resume point without tearing the session
+        // down, so the seek costs no stop-and-restart glitch; the window stays
+        // the item and only the resume point moves. A target inside the last
         // frame would be a one-frame impulse and a play() over an empty range
-        // returns without lowering the session word's playing bit, so the end of the item
-        // is reached by letting it play out — the seek stops one frame short
-        // of the exclusive end, which is where the natural end takes over.
+        // returns without lowering the session word's playing bit, so the end
+        // of the item is reached by letting it play out — the seek stops one
+        // frame short of the exclusive end, which is where the natural end
+        // takes over (resume_at, the scrub's lift, clamps the same way).
         const int64_t live_target = std::min<int64_t>(target, rp.frames - 2);
         if (live_target < 0) return;
         rp.painted_cursor = -1;
@@ -1246,11 +1268,13 @@ void GuiRenderPlayer::car_next() {
     next_track();
 }
 
-// THE FOLDER'S FORWARD STEP, ONE BODY FOR ITS TWO CALLERS (2026-09-04): the
-// natural end's auto-advance and next_track, which the right skip's plain
-// press runs and the car's own Next composes on a live transport. Never
-// across folders and never a wrap — the wall is the act's own owner above, so
-// the button's face and both callers ask one question. Returns whether the
+// THE FOLDER'S FORWARD STEP, ONE BODY FOR ITS THREE CALLERS (2026-09-04;
+// re-derived by grep 2026-10-27): the natural end's auto-advance, next_track
+// (which the right skip's plain press runs and the car's own Next composes on
+// a live transport), and resume() — THE PLAY KEY AT THE END, its end rule
+// continuing to the next wav (architect 2026-10-26 ~23:55). Never across
+// folders and never a wrap — the wall is the act's own owner above, so the
+// button's face and every caller ask one question. Returns whether the
 // next wav played; a refused decode has raised its own card and left the item
 // where it was, which is what lets the natural end's Repeat One arm and its
 // rest read this as "nothing happened".

@@ -14,7 +14,8 @@
 #   pages.txt                      the pages' ranges (THE GRAMMAR OF pages.txt);
 #   audio.wav                      the video's soundtrack, pcm_s16le STEREO (`-ac 2`: a mono stream is doubled) at
 #                                  the stream's own rate (AUDIO_WAV): the score's audio is the video's, the score
-#                                  viewer's player plays it (architect 2026-10-26 night);
+#                                  viewer's player plays it (architect 2026-10-26 night); a video with no audio
+#                                  stream writes none and removes one already in the folder (architect 2026-10-27);
 #   scan.npy, scan.meta            the scan cache (SCAN_NPY).
 # A rerun overwrites them, every page grabbed again whether or not the scan is cached (SCAN_META), and removes, by
 # name, every page<NNN>.png in the folder (the spelling this tool no longer writes) and every page<NNN>.jpg numbered
@@ -26,7 +27,7 @@
 #               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
 #               another screen or gui_scale.
 #   --rate R    the unit of pages.txt's frames (default the video's audio sample_rate; required when the video has no
-#               audio stream, which then writes no audio.wav).
+#               audio stream, which then writes no audio.wav and removes a previous one).
 #   --url LINK  recorded in the header (one token, no whitespace). Nothing reads it.
 #
 # WHAT A PAGE IS, AND WHICH FRAMES ARE ITS (architect 2026-10-26 evening, the fill rule confirmed that night). The scan
@@ -895,15 +896,21 @@ def main():
     os.replace(txt + ".part", txt)
 
     # THE SOUNDTRACK goes last, on every run: the score's audio is the video's (architect 2026-10-26 night). A video
-    # with no audio stream (the --rate road) has none to write.
+    # with no audio stream (the --rate road) has none to write, AND A PREVIOUS VIDEO'S audio.wav IN THE FOLDER IS
+    # REMOVED (architect 2026-10-27): the viewer would otherwise play another video's music against these pages.
+    wav = os.path.join(outdir, AUDIO_WAV)
+    removed = False
     if has_audio:
         status = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", video, "-vn", "-map", "0:a:0",
-                                 "-c:a", "pcm_s16le", "-ac", "2", "-f", "wav",
-                                 os.path.join(outdir, AUDIO_WAV)]).returncode
+                                 "-c:a", "pcm_s16le", "-ac", "2", "-f", "wav", wav]).returncode
         if status != 0:
             print(f"FAIL: ffmpeg could not extract the audio (exit {status}); the pages are written")
             return 1
-    print(f"wrote {count} pages, {PAGES_TXT}" + (f" and {AUDIO_WAV}" if has_audio else "") + f" to {outdir}")
+    elif os.path.exists(wav):
+        os.remove(wav)
+        removed = True
+    print(f"wrote {count} pages, {PAGES_TXT}" + (f" and {AUDIO_WAV}" if has_audio else "") + f" to {outdir}"
+          + (f"; removed the previous {AUDIO_WAV} (this video has no audio)" if removed else ""))
     return 0
 
 
