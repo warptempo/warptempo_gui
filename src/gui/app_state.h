@@ -17112,6 +17112,15 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // THE TOOLTIPS OWN THE VOCABULARY: the names here are the product's names for
 // its acts, and no manual restates them.
 //
+// A ROSTER TOOLTIP NAMES ITS ACT AND ITS KEY (architect 2026-10-27, "keep"):
+// line 1 is the name plus the bound chord in the accelerator spelling below
+// ("Save (Ctrl+S)", "Play (Space)"), line 2 at most the modifier line. The
+// render player's hints (render_player_button_hint) and the score viewer's
+// (score_viewer_button_hint) follow the same form. The tooltip is the one
+// text that names a key: a card or a label never names a key to press, and
+// the dialog buttons' tooltips are their word alone (the underline carries
+// their access key, PromptState's block).
+//
 // `line2` is THE MODIFIER LINE and is non-null on exactly the buttons that
 // admit a modified press — the shift-admitting set, and since 2026-08-24 the
 // ctrl-admitting one. That is not a coincidence to be maintained: it is asserted
@@ -18123,8 +18132,9 @@ inline RedesignTooltipText redesign_button_tooltip(
         // fork (overview_command_target, run_overview_command's own), so the
         // word cannot name an act the press will not run. AT THE NO-OP the
         // word is the act's name, "Zoom to Fit (0)" (architect 2026-10-24;
-        // "Full Zoom Out (0)" until then): a tooltip is the act's name and
-        // nothing else. ("Back to Working Zoom", the unstamped ceiling's `c`,
+        // "Full Zoom Out (0)" until then): a tooltip's first line is the act's
+        // name with its key, never a reason or a state. ("Back to Working
+        // Zoom", the unstamped ceiling's `c`,
         // left with that arm the same day.)
         //
         // ITS MODIFIER LINE names the frame (Shift+0) and the reset

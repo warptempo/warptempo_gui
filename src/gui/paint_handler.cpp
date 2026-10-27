@@ -267,7 +267,9 @@ namespace {
 //     both halves ("Toggle Read-Only (O)"); a single word is the same string
 //     in either class and settles nothing. The chord suffix "(Ctrl+S)" is not
 //     part of the name and is spelled by its own owner.
-//   * NO KEY HINTS IN UI TEXT, WITH ONE EXCEPTION: WINDOWS' UNDERLINED ACCESS
+//   * A CARD OR A LABEL NEVER NAMES A KEY TO PRESS; THE KEY TEXT IS TWO: THE
+//     TOOLTIP'S KEY (architect 2026-10-27, "keep"; redesign_button_tooltip's
+//     head, app_state.h, owns it) AND WINDOWS' UNDERLINED ACCESS
 //     KEY on the menu row's titles and on every row of their pull-downs,
 //     always shown (architect 2026-10-10, "part of the aesthetic and
 //     therefore important"; the letters at access_key_of,
