@@ -5263,8 +5263,18 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    stands on its grab band, jumping to a press anywhere else, CARRIED by
 //    the motion (clamp_player_scrub_marker_x, the travel's one owner) with
 //    nothing seeked, and THE SEEK AT THE LIFT to the column the motion last
-//    painted the thumb at, playing or paused (seek_to's two arms), the
-//    position written with it; a hard end owes nothing. --
+//    painted the thumb at, the position written with it; a hard end owes
+//    nothing. AND THE SOUND PAUSES WHILE THE SCRUB IS HELD (architect
+//    2026-10-26 ~23:00: "when I'm scrubbing, I would expect the audio to stop
+//    playing because I'm no longer at the scrub position. And then it
+//    wouldn't start playing until I commit by dropping the thumb"): a LIVE
+//    transport is paused at the press (GuiScoreViewer::pause, the key reading
+//    PLAY while held) and the lift, after its seek, plays on from the cursor
+//    (GuiScoreViewer::play) — so a motionless tap on the thumb of a live
+//    transport pauses at the press and plays on from the same cursor at the
+//    lift, a no-op in effect. A DELIBERATE ASYMMETRY: the render player's
+//    scrub keeps playing under the drag (his sentence was about the score;
+//    the render player awaits his ruling). --
 
 bool GuiInputHandler::claim_score_scrub_press(int x, int y,
                                               GuiInputState mods) {
@@ -5289,6 +5299,12 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
         drag.on_thumb = on_thumb;
         drag.grab_dx  = on_thumb ? x - marker_x : 0;
         drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
+        // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live
+        // transport paused here, the cursor read into the resting position
+        // and written as a pause writes it; a paused one arms as it stands.
+        drag.was_live = app.score_viewer.transport ==
+                        AppState::ScoreViewer::Transport::Live;
+        if (drag.was_live) score_viewer->pause();
         viewport.invalidate_rect(track);
         return true;
     }
@@ -5332,18 +5348,26 @@ bool GuiInputHandler::finish_score_scrub_release() {
     // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING (the render player's rule):
     // the thumb was taken where it stood and never moved, and re-seeking its
     // own column would round the position to that column's frame.
-    if (ended.on_thumb && !ended.moved) return true;
-    // THE LIFT IS THE SEEK (architect 2026-10-26, "no scrubbing"): to the
-    // column the motion last painted the thumb at (ON SCREEN IS AS PAINTED;
-    // the painter draws the armed drag's marker_x), the position written
-    // with it.
-    score_viewer->seek_to(score_scrub_frame_at(app, ended.marker_x));
+    // THE LIFT IS THE SEEK otherwise (architect 2026-10-26, "no scrubbing"):
+    // to the column the motion last painted the thumb at (ON SCREEN IS AS
+    // PAINTED; the painter draws the armed drag's marker_x), the position
+    // written with it — at rest, the press having paused a live transport.
+    if (!(ended.on_thumb && !ended.moved))
+        score_viewer->seek_to(score_scrub_frame_at(app, ended.marker_x));
+    // THE COMMIT PLAYS ON where the press paused a live soundtrack (the
+    // block head): from the seeked cursor, play()'s own rule — a cursor
+    // dropped in the range's last frame plays from the range's start.
+    if (ended.was_live) score_viewer->play();
     return true;
 }
 
 void GuiInputHandler::clear_score_scrub_drag() {
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     if (!drag.armed) return;
+    // A LOST LIFT IS NOT A COMMIT (architect 2026-10-26 ~23:00, the
+    // deliberate choice): nothing seeked and nothing played — a live
+    // soundtrack the press paused stays PAUSED where the press left it, the
+    // key reading PLAY.
     drag = AppState::ScoreViewer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -9159,8 +9183,8 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // (2026-08-28): the folder overlay's row press and the scrub's marker
     // drag both act at the lift, so a lift that never comes must drop them
     // with nothing committed — the chrome arm's own rule, on the same edge.
-    // The score viewer's scrub drops with them, owing nothing but, under
-    // the soundtrack, the position its live seeks moved (its clear writes it).
+    // The score viewer's scrub drops with them, owing nothing: a live
+    // soundtrack its press paused stays PAUSED (clear_score_scrub_drag).
     clear_folder_overlay_press();
     clear_player_scrub_drag();
     clear_score_scrub_drag();

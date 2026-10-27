@@ -165,19 +165,29 @@ bool GuiScoreViewer::bind_soundtrack() {
 }
 
 void GuiScoreViewer::toggle_play() {
-    AppState::ScoreViewer& sv = app.score_viewer;
     if (!score_viewer_button_enabled(app, playback,
                                      AppState::ScoreButtonAct::PlayPause))
         return;
-    if (sv.transport == Transport::Live) {
-        // PAUSE: the one stop body, whose score fork reads the engine's
-        // cursor into the resting position before the fence and parks the
-        // transport at PAUSED; the frame written through.
-        playback_lifecycle.stop_playback_if_playing();
-        write_score_viewer_file(app);
-        damage_row();
+    if (app.score_viewer.transport == Transport::Live) pause();
+    else play();
+}
+
+void GuiScoreViewer::pause() {
+    if (app.score_viewer.transport != Transport::Live) return;
+    // The one stop body, whose score fork reads the engine's cursor into the
+    // resting position before the fence and parks the transport at PAUSED;
+    // the frame written through.
+    playback_lifecycle.stop_playback_if_playing();
+    write_score_viewer_file(app);
+    damage_row();
+}
+
+void GuiScoreViewer::play() {
+    AppState::ScoreViewer& sv = app.score_viewer;
+    if (sv.transport == Transport::Live) return;
+    if (!score_viewer_button_enabled(app, playback,
+                                     AppState::ScoreButtonAct::PlayPause))
         return;
-    }
     if (!bind_soundtrack()) return;
     // PLAY: [cursor, the range's end) once; a cursor resting in the range's
     // last frame (the End key's seek) plays from the range's start — a user

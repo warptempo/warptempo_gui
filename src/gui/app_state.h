@@ -9043,12 +9043,15 @@ struct AppState {
     //   `scrub`    the scrub's drag arm — on the page road the page under the
     //              thumb shown at the press and at every motion; under the
     //              media player's face the render player's arm (the thumb's
-    //              carried column, on or off the thumb, moved): the drag
-    //              CARRIES the thumb and seeks nothing, THE SEEK IS AT THE
-    //              LIFT to the carried column (architect 2026-10-26, "no
-    //              scrubbing"), a motionless tap on the thumb owes nothing;
-    //              the three hard ends drop it owing nothing
-    //              (clear_score_scrub_drag);
+    //              carried column, on or off the thumb, moved) and
+    //              `was_live`, the press having paused a LIVE soundtrack
+    //              (architect 2026-10-26 ~23:00): the drag CARRIES the thumb
+    //              and seeks nothing, THE SEEK IS AT THE LIFT to the carried
+    //              column (architect 2026-10-26, "no scrubbing"), a
+    //              motionless tap on the thumb seeking nothing, and where
+    //              `was_live` the lift plays on from the cursor; the three
+    //              hard ends drop it owing nothing, the transport left
+    //              PAUSED (clear_score_scrub_drag);
     //   `transport` THE SOUNDTRACK'S TRANSPORT (the media player's face
     //              alone): IDLE the engine not bound to the soundtrack (the
     //              page road, the soundtrack still loading, or a render run
@@ -9126,6 +9129,7 @@ struct AppState {
             bool moved    = false;   // the media player's face: a motion moved it
             int  grab_dx  = 0;       // press x − thumb center; 0 off the thumb
             int  marker_x = 0;       // the media player's face: the carried column
+            bool was_live = false;   // the media player's face: the press paused LIVE
         };
         enum class Transport { Idle, Paused, Live };
         bool                         active  = false;

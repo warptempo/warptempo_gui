@@ -1696,8 +1696,9 @@ struct GuiInputHandler {
     // THE SCORE VIEWER'S SCRUB ARM (2026-10-26) drops on the same three
     // edges OWING NOTHING on both faces: on the page road its page was shown
     // at the press and at every motion; under the soundtrack the drag only
-    // carried the thumb and the seek is the lift's, so a hard end seeks
-    // nothing (the render player's clear_player_scrub_drag).
+    // carried the thumb and the seek and the play-on are the lift's, so a
+    // hard end seeks nothing and plays nothing, a live soundtrack the press
+    // paused staying PAUSED (a lost lift is not a commit).
     void clear_score_scrub_drag();
 
     // -- THE SCORE VIEWER'S INPUT HALF (2026-10-26; the model and the acts
@@ -1723,8 +1724,12 @@ struct GuiInputHandler {
     // player's scrub exactly (architect 2026-10-26, "no scrubbing"): the
     // press and the motion carry the thumb and seek nothing, and THE LIFT
     // SEEKS the frame under the thumb's last painted column, the position
-    // written with it — a motionless tap on the thumb owes nothing. A
-    // modified press is consumed and does nothing.
+    // written with it — a motionless tap on the thumb seeks nothing. THE
+    // SOUND PAUSES WHILE THE SCRUB IS HELD (architect 2026-10-26 ~23:00, the
+    // score's own; the render player's scrub plays on under its drag): a
+    // LIVE transport is paused at the press and played on from the cursor at
+    // the lift, after its seek. A modified press is consumed and does
+    // nothing.
     bool claim_score_scrub_press(int x, int y, GuiInputState mods);
     void update_score_scrub_motion(int x);
     bool finish_score_scrub_release();

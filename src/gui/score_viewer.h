@@ -43,15 +43,18 @@
 // and/or time based. No pages. Pages are only kept in the background"):
 //   * THE MEDIA PLAYER'S, with the soundtrack: PLAY / PAUSE at the left (the
 //     render player's transport seat, its key and its legend —
-//     score_viewer_play_face), THE SCRUB (the render player's exactly, its
-//     domain the viewing range's FRAMES: the thumb at the cursor, a press off
-//     the thumb jumping it, a drag CARRYING it and seeking nothing, THE SEEK
-//     AT THE LIFT, playing or paused, the position written with it —
-//     architect 2026-10-26, "no scrubbing"), THE CLOCK (the render player's two
-//     time fields, verbatim: the elapsed time within the range and the
-//     range's length), then RESET, START, END and CLOSE flush right. Space
-//     plays and pauses, Home / End seek the range's first / last frame,
-//     Left / Right do nothing (no pages).
+//     score_viewer_play_face), THE SCRUB (the render player's, its domain
+//     the viewing range's FRAMES: the thumb at the cursor, a press off the
+//     thumb jumping it, a drag CARRYING it and seeking nothing, THE SEEK AT
+//     THE LIFT, the position written with it — architect 2026-10-26, "no
+//     scrubbing" — and, the score's own, THE SOUND PAUSED WHILE THE SCRUB IS
+//     HELD: a live soundtrack paused at the press and playing on from the
+//     seeked cursor at the lift — architect 2026-10-26 ~23:00, "it wouldn't
+//     start playing until I commit by dropping the thumb"), THE CLOCK (the
+//     render player's two time fields, verbatim: the elapsed time within the
+//     range and the range's length), then RESET, START, END and CLOSE flush
+//     right. Space plays and pauses, Home / End seek the range's first /
+//     last frame, Left / Right do nothing (no pages).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
 //     pages.txt — the later PDF road): PREV and NEXT (the render player's
 //     transport seats), THE PAGE SCRUB (its domain the viewing range's
@@ -482,19 +485,28 @@ struct GuiScoreViewer {
     void last_page();
 
     // -- The media player's face ---------------------------------------------
-    // PLAY / PAUSE and Space: LIVE pauses (the one stop body, the cursor kept
-    // and written); otherwise the engine bound to the soundtrack where it is
-    // not yet, and [the cursor, the range's end) played once — from the
-    // range's first frame where the cursor rests at its end. Refused, silent,
-    // where its key is grey.
+    // PLAY / PAUSE and Space: refused, silent, where its key is grey; else
+    // pause() where LIVE, play() otherwise.
     void toggle_play();
+    // THE PAUSE: LIVE parks at PAUSED through the one stop body, the cursor
+    // kept and written; a no-op at rest. Its callers are toggle_play and the
+    // scrub's press (architect 2026-10-26 ~23:00: the sound pauses while the
+    // scrub is held).
+    void pause();
+    // THE PLAY: the engine bound to the soundtrack where it is not yet, and
+    // [the cursor, the range's end) played once — from the range's first
+    // frame where the cursor rests in its last. Refused, silent, where the
+    // PLAY / PAUSE key is grey; a no-op where LIVE. Its callers are
+    // toggle_play and the scrub's lift where the press paused a live
+    // soundtrack (the sound playing on from where the thumb dropped).
+    void play();
     // THE SEEK: `frame` clamped into the range; LIVE republishes PLAY's window
     // from there (a target in the range's last frame stops one short of it,
     // the render player's rule, so the natural end takes over), at rest the
     // cursor moves; the page follows either way; the position written
     // through. Its callers are Home / End and the scrub's lift (architect
     // 2026-10-26, "no scrubbing": the drag carries the thumb and seeks
-    // nothing).
+    // nothing, the sound paused meanwhile).
     void seek_to(int64_t frame);
 
     // -- The range ------------------------------------------------------------
