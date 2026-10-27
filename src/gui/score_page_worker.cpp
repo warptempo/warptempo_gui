@@ -48,22 +48,31 @@ cairo_surface_t* decode_fit_page(const GuiScorePageJob& job) {
         cairo_surface_destroy(src);
         return fail("the box has no room for it");
     }
-    cairo_surface_t* out =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, dw, dh);
-    if (cairo_surface_status(out) != CAIRO_STATUS_SUCCESS) {
-        cairo_surface_destroy(out);
+    cairo_surface_t* out = nullptr;
+    if (dw == pw && dh == ph) {
+        // THE IDENTITY (2026-10-26): a page already at the fit size — the
+        // tool's pre-sized page, tools/score_extract.py's --fit — runs no
+        // scale pass; the decode's surface, a new opaque ARGB32 surface this
+        // thread owns (raster_regions' contract at k = 1), is the result.
+        out = src;
+    } else {
+        out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, dw, dh);
+        if (cairo_surface_status(out) != CAIRO_STATUS_SUCCESS) {
+            cairo_surface_destroy(out);
+            cairo_surface_destroy(src);
+            return fail("no surface for it");
+        }
+        cairo_t* cr = cairo_create(out);
+        cairo_scale(cr, static_cast<double>(dw) / pw,
+                    static_cast<double>(dh) / ph);
+        cairo_set_source_surface(cr, src, 0, 0);
+        cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
+        cairo_pattern_set_extend(cairo_get_source(cr), CAIRO_EXTEND_PAD);
+        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+        cairo_paint(cr);
+        cairo_destroy(cr);
         cairo_surface_destroy(src);
-        return fail("no surface for it");
     }
-    cairo_t* cr = cairo_create(out);
-    cairo_scale(cr, static_cast<double>(dw) / pw, static_cast<double>(dh) / ph);
-    cairo_set_source_surface(cr, src, 0, 0);
-    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
-    cairo_pattern_set_extend(cairo_get_source(cr), CAIRO_EXTEND_PAD);
-    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-    cairo_paint(cr);
-    cairo_destroy(cr);
-    cairo_surface_destroy(src);
     cairo_surface_flush(out);
 
     if (job.key.convert) {

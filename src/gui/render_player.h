@@ -859,8 +859,9 @@ private:
     // Rebuild the listing for the live folder: rows, scroll 0, hover and
     // press cleared, and the highlight through THE SEAT RULE'S THREE ARMS —
     // the transport's item's row if it is here, else `seat_folder`'s row if
-    // the caller named one and it is here, else row 0. Damages the band.
-    // `seat_folder` IS REQUIRED AND IS EMPTY EVERYWHERE BUT UP: entering a
+    // the caller named one and it is here, else row 0 — the seated row
+    // centered in the band (folder_overlay::scroll_row_centered, 2026-10-26).
+    // Damages the band. `seat_folder` IS REQUIRED AND IS EMPTY EVERYWHERE BUT UP: entering a
     // folder is memory-less by ruling, so a caller must state that it names
     // none rather than inherit a default (the rule and the architect's words
     // are at the seat block, render_player.cpp).

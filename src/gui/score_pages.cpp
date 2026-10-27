@@ -30,12 +30,13 @@ std::string line_error(int ln, const std::string& words) {
 }  // namespace
 
 std::filesystem::path GuiScorePages::page_file(int i) const {
-    // The tool's page_name: the number padded to max(3, the count's digits).
+    // The tool's page_name: the number padded to max(3, the count's digits),
+    // a grayscale JPEG since 2026-10-26.
     const std::size_t width = std::max<std::size_t>(
         3, std::to_string(count()).size());
     std::string number = std::to_string(i + 1);
     if (number.size() < width) number.insert(0, width - number.size(), '0');
-    return folder / ("page" + number + ".png");
+    return folder / ("page" + number + ".jpg");
 }
 
 std::filesystem::path score_folder_of(const std::filesystem::path& project_folder,
@@ -157,11 +158,11 @@ std::expected<GuiScoreRead, std::string> read_score_folder(
     // refusal, named by its page line.
     const int header_lines = static_cast<int>(lines.size()) - table.count();
     for (int i = 0; i < table.count(); ++i) {
-        const std::filesystem::path png = table.page_file(i);
-        if (!std::filesystem::is_regular_file(png, ec))
+        const std::filesystem::path page = table.page_file(i);
+        if (!std::filesystem::is_regular_file(page, ec))
             return std::unexpected(line_error(
                 header_lines + i + 1,
-                "no '" + png.filename().string() + "' beside it"));
+                "no '" + page.filename().string() + "' beside it"));
     }
     out.pages = std::move(table);
     return out;

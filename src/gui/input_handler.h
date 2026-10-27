@@ -2800,7 +2800,8 @@ private:
     //       kept fresh (a project that appears or vanishes while the picker
     //       stands shows at the next open), no `..` row and no folder inside
     //       a project — a project is a leaf here. The band opens on the
-    //       CURRENT project's row.
+    //       CURRENT project's row, centered in the band
+    //       (folder_overlay::scroll_row_centered, 2026-10-26).
     //     open_project_commit: THE OPEN ACT on row `index` — a click on the
     //       row and Enter on the highlight both reach it, one body. The
     //       row's name goes through the project model (resolve_project); the
@@ -2840,7 +2841,8 @@ private:
     //     build_preset_picker_rows: kGuiBuiltinPalettes in the include's
     //       order, one glyph-less Preset row each by DISPLAY NAME, a row's
     //       index its preset's index; the band opens on the LIVE preset's
-    //       row (the `waveform` key's), scrolled into view.
+    //       row (the `waveform` key's), centered in the band
+    //       (folder_overlay::scroll_row_centered, 2026-10-26).
     //     preset_picker_commit: THE OPEN ACT on row `index` — a tap, a click
     //       or Enter: the row's preset installed and persisted through the
     //       typed Waveform row's one road

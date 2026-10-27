@@ -384,6 +384,21 @@ void GuiScoreViewer::feed_decoder() {
     if (!sv.active || !app.score) return;
     const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
     if (box.w <= 0 || box.h <= 0) return;
+    // THE BOX PRINTED (architect 2026-10-26): the fit box every page job
+    // carries, ONE stderr line per geometry (the laptop's terminal, the
+    // tablet's logcat warptempo:I), again only when the pair changes. It is
+    // the figure tools/score_extract.py's --fit W:H takes to pre-size the
+    // pages for this device's screen and gui_scale: the box is the program's
+    // layout (modal_box_interior_rect), which no tool recomputes. The main
+    // thread's alone, as this body is.
+    static int printed_w = 0;
+    static int printed_h = 0;
+    if (box.w != printed_w || box.h != printed_h) {
+        printed_w = box.w;
+        printed_h = box.h;
+        std::fprintf(stderr, "warptempo_gui: score page box %dx%d\n", box.w,
+                     box.h);
+    }
     const bool convert = display_transform::active();
     const ScoreViewerRange r = score_viewer_range(app);
     const int p = sv.page;

@@ -68,7 +68,10 @@
 // SCROLLS when a listing outgrows the band — the wheel on plastic, the
 // band's own drag on glass, and the keyboard's row walk keeping the focused
 // row visible. No header row, no columns, no scrollbar: the offset is the
-// whole scroll state, and an over-long listing simply scrolls.
+// whole scroll state, and an over-long listing simply scrolls. A LISTING
+// OPENS WITH ITS SEATED ROW CENTERED in the band, as close to center as the
+// listing's ends allow (scroll_row_centered, architect 2026-10-26); every
+// later walk moves the offset by the least amount (scroll_row_into_view).
 //
 // THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S (architect
 // 2026-08-28, the row then the icon row's button; Windows' list row since
@@ -146,6 +149,7 @@
 #include "render.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 namespace folder_overlay {
@@ -355,6 +359,29 @@ inline void scroll_row_into_view(AppState& a, int index) {
         a.folder_overlay.scroll_px += (r.y + r.h) - bottom;
     }
     clamp_scroll(a);
+}
+
+// THE OPEN'S LANDING (architect 2026-10-26: "normally you'd expect a drop
+// down list to center it if possible, or get as close to center"): the
+// offset that puts row `index`'s center on the band's center, the
+// difference rounded at the element, then the one clamp — so a row near
+// either end of the listing lands as close to center as the ends allow, and a
+// listing shorter than the band never scrolls. The three open-time seats
+// call it after their seat (the project picker's and the preset picker's
+// builds, the render player's every rebuild, each a fresh listing); the
+// keyboard walk and the pointer's seats keep scroll_row_into_view's
+// least-move rule (an arrow step scrolls by one row, every list widget's
+// rule). Returns whether the offset moved.
+inline bool scroll_row_centered(AppState& a, int index) {
+    const int n = static_cast<int>(a.folder_overlay.rows.size());
+    if (index < 0 || index >= n) return false;
+    const int     before = a.folder_overlay.scroll_px;
+    const GuiRect band   = content_rect(a);
+    const GuiRect r      = row_rect(a, index);
+    a.folder_overlay.scroll_px += static_cast<int>(std::nearbyint(
+        (r.y + r.h / 2.0) - (band.y + band.h / 2.0)));
+    clamp_scroll(a);
+    return a.folder_overlay.scroll_px != before;
 }
 
 // -- The highlight and the scroll, the mechanics every content drives --------

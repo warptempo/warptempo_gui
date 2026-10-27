@@ -7084,8 +7084,11 @@ void GuiInputHandler::build_project_picker_rows() {
             break;
         }
     }
+    // Seated, then centered: the open's landing (scroll_row_centered,
+    // architect 2026-10-26).
     folder_overlay::clamp_scroll(app);
     folder_overlay::set_highlight(app, current);
+    folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
 // THE OPEN ACT on row `index`. A publishing checkpoint refuses first, then
@@ -7232,8 +7235,8 @@ void GuiInputHandler::open_preset_picker() {
 // preset's DISPLAY NAME (architect 2026-10-25: memorable names, never the
 // key). A ROW'S INDEX IS ITS PRESET'S INDEX in that table, so the row carries
 // no key and the commit reads the table. The band opens on THE LIVE PRESET —
-// the `waveform` device key's row, scrolled into view by the one
-// set_highlight. The key is a built-in's by the load wall's own grammar
+// the `waveform` device key's row, seated by the one set_highlight and
+// centered in the band (scroll_row_centered, architect 2026-10-26). The key is a built-in's by the load wall's own grammar
 // (is_builtin_palette_name, the device config's reader), so the row is
 // always found; row 0 stands for the case the wall rules out.
 void GuiInputHandler::build_preset_picker_rows() {
@@ -7251,6 +7254,7 @@ void GuiInputHandler::build_preset_picker_rows() {
     }
     folder_overlay::clamp_scroll(app);
     folder_overlay::set_highlight(app, live);
+    folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
 // THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own

@@ -178,9 +178,13 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
             }
         }
     }
+    // THE SEATED ROW LANDS CENTERED (folder_overlay::scroll_row_centered,
+    // architect 2026-10-26) on EVERY rebuild — the open's root listing, a
+    // folder entered and the Up act's root entry — since each is a fresh
+    // listing opening; the walks inside it keep the least move.
     folder_overlay::clamp_scroll(app);
     if (ov.highlight_row >= 0)
-        folder_overlay::scroll_row_into_view(app, ov.highlight_row);
+        folder_overlay::scroll_row_centered(app, ov.highlight_row);
     // THE BAND IS ONE RECT (2026-08-28): its height is the slot's ceiling
     // whatever this listing's length, so the rebuild's damage is the same band
     // every other damage takes. THE ROW REPAINTS WITH IT since 2026-08-30: the

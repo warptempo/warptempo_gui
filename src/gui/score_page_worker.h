@@ -5,8 +5,9 @@
 // there's going to be an additional visual lag on the page turning on top of
 // the Bluetooth lag, that's not going to work") — ONE std::jthread, held by
 // the viewer's state (AppState::ScoreViewer::decoder), that turns a page's
-// PNG into the surface the painter blits 1:1, so NO PAGE IS EVER DECODED OR
-// SCALED ON THE MAIN THREAD, the open's included.
+// JPEG (tools/score_extract.py's grayscale page, 2026-10-26) into the
+// surface the painter blits 1:1, so NO PAGE IS EVER DECODED OR SCALED ON THE
+// MAIN THREAD, the open's included.
 //
 // A JOB is a page's file at a FIT BOX (the modal box's interior, its w x h,
 // modal_box_interior_rect) and the window's conversion bit as the GUI thread
@@ -21,7 +22,10 @@
 // picture of thin staff lines, which a plain bilinear tap drops), the edge
 // extended so every pixel stays opaque, then, with the bit set, every pixel
 // through display_transform::p3_premultiplied (the page an authored sRGB
-// picture like every raster). A page whose decode fails is a result with no
+// picture like every raster). A page already at the fit size, the tool's
+// pre-sized page (its --fit, the box this viewer prints at the open:
+// score_viewer.cpp's feed_decoder), skips the scale: the decode's own surface
+// is the result. A page whose decode fails is a result with no
 // surface and ONE stderr line, the rare non-silent fault: the viewer marks it
 // and never asks for it again while that key stands.
 //

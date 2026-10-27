@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
-# tools/score_extract.py — a "sheet music" video -> THE SCORE FOLDER the built-in page viewer reads: one PNG per page,
-# pages.txt (the pages' audio-frame ranges, tiling the whole video) and the video's soundtrack (architect 2026-10-26).
+# tools/score_extract.py — a "sheet music" video -> THE SCORE FOLDER the built-in page viewer reads: one grayscale JPEG
+# per page, pre-sized to the viewer's box, pages.txt (the pages' audio-frame ranges, tiling the whole video) and the
+# video's soundtrack (architect 2026-10-26).
 #
 # Standalone: no product target builds or links it (the convention of tools/CMakeLists.txt's head). python3 with
-# numpy; ffmpeg and ffprobe on PATH.
+# numpy and Pillow (PIL); ffmpeg and ffprobe on PATH.
 #
-#   score_extract.py <video> <outdir> [--width W] [--rate R] [--url LINK]
+#   score_extract.py <video> <outdir> [--fit W:H] [--rate R] [--url LINK]
 #
 # <outdir> is the score/ folder, created if absent. A run writes into it:
-#   page001.png, page002.png, ...  the pages (1-based, three digits, four from page 1000 on), grabbed at --width;
+#   page001.jpg, page002.jpg, ...  the pages (1-based, three digits, four from page 1000 on), grabbed at the fit size
+#                                  (--fit), GRAYSCALE JPEG AT QUALITY 92 (PAGE_JPEG_QUALITY);
 #   pages.txt                      the pages' ranges (THE GRAMMAR OF pages.txt);
 #   audio.wav                      the video's soundtrack, pcm_s16le STEREO (`-ac 2`: a mono stream is doubled) at
 #                                  the stream's own rate (AUDIO_WAV): the score's audio is the video's, the score
 #                                  viewer's player plays it (architect 2026-10-26 night);
 #   scan.npy, scan.meta            the scan cache (SCAN_NPY).
-# A rerun overwrites them and removes every pageNNN.png numbered past the new count. A refusal (one line, exit 1)
-# writes nothing. Nothing about the pages is the user's to set: what a page is and where its range runs are read off
-# the video (WHAT A PAGE IS).
-#   --width W   the page images' width in px (default the video's own width capped at PAGE_WIDTH); the height keeps the
-#               video's aspect, rounded to even (ffmpeg's scale=W:-2): 2304x1296 from a 16:9 4K video.
+# A rerun overwrites them, every page grabbed again whether or not the scan is cached (SCAN_META), and removes, by
+# name, every page<NNN>.png in the folder (the spelling this tool no longer writes) and every page<NNN>.jpg numbered
+# past the new count or misspelled (stale_pages). A refusal (one line, exit 1) writes nothing. Nothing about the pages
+# is the user's to set: what a page is and where its range runs are read off the video (WHAT A PAGE IS).
+#   --fit W:H   THE VIEWER'S BOX in device px (default PAGE_FIT, the tablet's): each page is scaled, down or up, to
+#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 1975x1111
+#               from any 16:9 video at the default. The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
+#               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
+#               another screen or gui_scale.
 #   --rate R    the unit of pages.txt's frames (default the video's audio sample_rate; required when the video has no
 #               audio stream, which then writes no audio.wav).
 #   --url LINK  recorded in the header (one token, no whitespace). Nothing reads it.
@@ -51,7 +57,7 @@
 #
 #     <page>|<begin>|<end>
 #
-# <page> is the page's number, 1, 2, 3, ... with no gap, in line order, equal to its file's number (page<NNN>.png in
+# <page> is the page's number, 1, 2, 3, ... with no gap, in line order, equal to its file's number (page<NNN>.jpg in
 # the same folder). <begin> and <end> are non-negative decimal integers, audio frames at <rate> measured from the
 # video's start (round(seconds * rate)), begin inclusive and end exclusive, begin < end; the ranges ascend and never
 # overlap (a page's begin >= the previous page's end). The ranges tile the video: the first begins at 0, each begins
@@ -66,10 +72,10 @@
 #   408 MB, the whole symphony in one file. The scan finds 141 transitions and every one is a ONE-FRAME CUT at the
 #   source's 30 fps (a frame-to-frame threshold as low as 0.5 finds the same 141); there is no fade, no crossfade, no
 #   black frame and no cover (the darkest page's mean is 215.2). Its one non-page is a 0.2 s white flash at 13:11.700
-#   (mean 254.0, no bar lines), the 6-frame fill of page 071 before it. Its run: 141 pages at 2304 px, page 001 the
+#   (mean 254.0, no bar lines), the 6-frame fill of page 071 before it. Its run: 141 pages, page 001 the
 #   first page of music (Molto Allegro, bars 1-5) from frame 0, page 045 the Andante's first at 6:00.333, page 141 the
 #   finale's last (bars 303-308) to the video's end, 1381.033 s (the soundtrack runs 8 ms longer); bar lines 4 to 13 a
-#   page; audio.wav 265 MB.
+#   page; audio.wav 265 MB. Its pages at the default fit are 1975x1111.
 # - THE JUPITER RIP, youtube gAmw8ATln68, "Wolfgang Amadeus Mozart: Symphony No. 41 in C major "Jupiter" K. 551
 #   (1788) [gAmw8ATln68].webm": 1920x1080 VP9 at 25/1 fps, opus 48000 Hz stereo, 2384.4 s, 183 MB, the score
 #   pillarboxed (217 px of black either side). The scan finds 199 cuts, one crossfade (one frame, 38:34.200), and
@@ -81,11 +87,12 @@
 #   every fade: the last frame that still shows the page, or the first, sits at a mean of 8.2 for page 001's fade-in
 #   (of its 174.5), 5.8 and 5.6 at 11:44 (of 213.3 and 204.7), 5.9 and 5.8 at 28:04 (of 212.1 and 213.1) and 4.4 for
 #   page 200's fade-out (of 207.2), 2-5 % of the page; the crossfade's one frame already shows page 195 whole and
-#   page 194 not at all, so it is 195's. Its run: 200 pages at 1920 px, page 001 the first page of music from frame 0
+#   page 194 not at all, so it is 195's. Its run: 200 pages, page 001 the first page of music from frame 0
 #   (the cover and both its fades its fill), page 173 the 1.8 s volta page (35:38.440), page 200 the finale's last to
 #   the video's end, 2384.360 s (the soundtrack runs 16 ms longer); bar lines 4 to 16 a page; audio.wav 458 MB.
+#   Its pages at the default fit are 1975x1111, enlarged about 3 %.
 #
-# THE MEASURED COSTS on this laptop, 2026-10-26 night. The Jupiter rip: 2 min 54 s wall from nothing, of which the
+# THE MEASURED COSTS on this laptop, 2026-10-26 night, the grabs then PNG at 2304 px wide. The Jupiter rip: 2 min 54 s wall from nothing, of which the
 # 1080p scan is about 1 min 27 s; 1 min 28 s on its cached scan (the page test's 204 midpoint decodes with their
 # shear searches, the five gaps' 540 frames, the 200 page grabs and 4 s of soundtrack). K.550: 1 min 41 s on its
 # cached scan (142 midpoint decodes at 4K, the flash's 6 frames, the 141 grabs at about 0.29 s a page at
@@ -99,6 +106,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 
 import numpy as np
+from PIL import Image
 
 # MOTION, in two thresholds on the 0-255 scale over the DIFF_W x DIFF_H thumbnail, both mean absolute differences:
 # A FRAME STARTS MOTION when it differs from the FIRST FRAME OF THE CURRENT STATIC RUN by more than DRIFT_THR, and
@@ -126,9 +134,27 @@ FADE_FLOOR = 16.0
 # THE SCAN'S THUMBNAIL, the size the motion thresholds were measured at. `flags=area` is the box average a downscale
 # this deep wants, and it is the cheap scaler: bicubic adds 2.3 s per 60 s of 4K video at 30 fps, area 0.7 s.
 DIFF_W, DIFF_H = 480, 270
-# THE PAGE IMAGES' WIDTH CAP (--width's default is the video's own width up to it): the tablet's glass, 2304 px.
-# Upscaling a narrower rip adds nothing, and the viewer fits the page to its box.
-PAGE_WIDTH = 2304
+# THE DEFAULT FIT BOX (--fit's default): THE TABLET'S SCORE-PAGE BOX, the score viewer's fit box
+# modal_box_interior_rect(app, 0) (src/gui/modal_box.h) on the Galaxy Tab S10 FE's 2304 x 1440 at gui_scale 300,
+# derived from the program's layout (2026-10-26) and printed by the viewer itself at its open (score_viewer.cpp's
+# feed_decoder), the line the pair is checked against:
+#   ACROSS: the canvas interior (waveform_area, src/gui/main.cpp) stands column_inner_x_px in from each side, the
+#   column margin's 6 W plus the program line's 1 W, 18 + 3 = 21 px; the room 2304 - 42 = 2262 floors to the
+#   16-px grid step, 2256, its slack of 6 split, so x = 24; the ring's outer columns (program_ring_columns) one
+#   program line outside it, 21 and 2283, the box's x and width 2262; the interior one hairline_px (1 at every
+#   scale) in from each side: x 22, WIDTH 2260.
+#   DOWN: the box runs from the view bar's top row (top_trim_row_area) to the controls row's top
+#   (modal_controls_row_rect, the bottom row's lane). The band above the view bar is the logo lane's 72, the case's
+#   69 (1 + 20 + 1 + 1 W) and the strip pad's 39 (13 W), 180 rows, the flexible gap 0 (the waveform takes the
+#   whole leftover); the bottom row is the strip, 39 + 69 + 39 = 147 rows on the window's foot from row
+#   1440 - 147 = 1293. So the box is rows 180..1292, 1113 rows, and its interior one hairline in: y 181, HEIGHT 1111.
+PAGE_FIT = (2260, 1111)
+# THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
+# A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no
+# gray JPEG (its pixel formats are yuvj420p, 422p and 444p alone), so the grab pipes ffmpeg's gray rawvideo to Pillow,
+# which writes the one-channel file (grab_page). The viewer decodes it through resvg's JPEG road (zune-jpeg, its
+# grayscale expanded to RGBA).
+PAGE_JPEG_QUALITY = 92
 # THE PAGE GRABS are one ffmpeg per page seeking to the page's midpoint frame, GRAB_WORKERS at a time. Measured on a
 # 2-minute slice of the K.550 rip (15 pages): one decode pass selecting every midpoint took 9.56 s (the whole video
 # would take about 110 s), per-page seeks 0.58 s a page one at a time and 0.34 s at 4 at a time (about 48 s for the
@@ -140,7 +166,9 @@ GRAB_WORKERS = 4
 # WITNESS — the realpath, device, inode, size and mtime — THE EXACT FILTER STRING the scan handed ffmpeg and the two
 # motion thresholds (the drift row's anchors depend on them), so a different video, the same path re-encoded in
 # place, or a changed scan compares unequal and rescans. Deliberately NOT a content digest: a 400 MB rip would cost
-# more to digest than to decode. A scan that did not complete acquires no cache.
+# more to digest than to decode. A scan that did not complete acquires no cache. THE GRAB'S FIT IS NOT IN IT: the
+# pages are grabbed on every run, so a rerun at another --fit reuses the cached scan and regrabs every page at the new
+# size.
 SCAN_NPY = "scan.npy"
 SCAN_META = "scan.meta"
 # The diff to the previous frame (0 for the first), the mean luminance, the diff to the current static run's first
@@ -242,9 +270,9 @@ class Refusal(Exception):
 # THE OPTION PROTOCOL is a whole-tail parse: every flag with its exact arity, each at most once, a flag name never a
 # value; anything unclaimed is named and refused. So a mistyped flag cannot pass silently.
 KNOWN_OPTIONS = {
-    "--width": 1,
-    "--rate":  1,
-    "--url":   1,
+    "--fit":  1,
+    "--rate": 1,
+    "--url":  1,
 }
 
 
@@ -283,14 +311,26 @@ def option_int(claimed, flag, default, low):
     return value
 
 
+def option_fit(claimed):
+    """--fit W:H as (W, H), two whole numbers of at least 1 joined by one colon; PAGE_FIT without it."""
+    if "--fit" not in claimed:
+        return PAGE_FIT
+    (raw,) = claimed["--fit"]
+    w, sep, h = raw.partition(":")
+    if not (sep and w.isdigit() and h.isdigit() and w.isascii() and h.isascii()):
+        raise OptionError(f"--fit takes W:H, two whole numbers, not {raw!r}")
+    if int(w) < 1 or int(h) < 1:
+        raise OptionError("--fit's two sides must be at least 1")
+    return int(w), int(h)
+
 
 def read_options(tail):
     """Every command-line decision, made before the scan touches anything."""
     claimed = parse_argv_tail(tail)
     opts = {
-        "width": option_int(claimed, "--width", None, 2),
-        "rate":  option_int(claimed, "--rate", None, 1),
-        "url":   claimed["--url"][0] if "--url" in claimed else None,
+        "fit":  option_fit(claimed),
+        "rate": option_int(claimed, "--rate", None, 1),
+        "url":  claimed["--url"][0] if "--url" in claimed else None,
     }
     # One unambiguous token on one header line, recorded verbatim: what a link may look like is not this tool's
     # business.
@@ -631,22 +671,50 @@ def spell_time(seconds):
 
 
 def page_name(number, count):
-    return f"page{number:0{max(3, len(str(count)))}d}.png"
+    return f"page{number:0{max(3, len(str(count)))}d}.jpg"
 
 
 def stale_pages(outdir, count):
-    """The pageNNN.png in `outdir` numbered past `count` (or carrying a spelling this run does not write), by name."""
+    """By name, the page files in `outdir` this run does not write: every page<NNN>.png (the spelling this tool no
+    longer writes), and every page<NNN>.jpg numbered past `count` or carrying another padding than page_name's."""
     names = []
     for name in sorted(os.listdir(outdir)):
-        stem = name[4:-4] if name.startswith("page") and name.endswith(".png") else ""
-        if stem.isdigit() and (int(stem) > count or name != page_name(int(stem), count)):
+        stem = name[4:-4] if name.startswith("page") and name.endswith((".png", ".jpg")) else ""
+        if not (stem.isdigit() and stem.isascii()):
+            continue
+        if name.endswith(".png") or int(stem) > count or name != page_name(int(stem), count):
             names.append(name)
     return names
 
 
-def grab_page(video, fps, frame, width, out):
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", seek_time(fps, frame), "-i", video, "-frames:v", "1",
-                    "-vf", f"scale={width}:-2", out], check=True)
+def fit_size(width, height, box):
+    """The page's (width, height) in the box: THE VIEWER'S OWN FIT (score_page_worker.cpp's decode_fit_page) — the
+    smaller of the box's two ratios, each side rounded at the element (Python's round and the worker's std::nearbyint
+    both round half to even, on the same doubles) — ONE RULE, DOWN OR UP (planner's ruling 2026-10-26: a page is a
+    picture to fit the box, nothing more; a narrower rip enlarged by a few percent loses nothing). The tool computes
+    the pair itself rather than leave it to ffmpeg's force_original_aspect_ratio (whose av_rescale rounds half away
+    from zero), because the gray pipe needs the size, and so that EVERY page made for a box is exactly the size the
+    viewer would scale it to there: its scale pass then never runs (the worker's identity short-circuit)."""
+    k = min(box[0] / width, box[1] / height)
+    return round(width * k), round(height * k)
+
+
+class GrabFailure(Exception):
+    """A page grab that did not complete, carrying its words."""
+
+
+def grab_page(video, fps, frame, size, out):
+    """One page: ffmpeg decodes the frame, scales it to `size` with the box filter (flags=area, the reduction of
+    thin staff lines DIFF_W's note gives it for; an enlargement it interpolates) and pipes it as one gray rawvideo frame; Pillow writes the grayscale
+    JPEG (PAGE_JPEG_QUALITY)."""
+    w, h = size
+    proc = subprocess.run(["ffmpeg", "-v", "error", "-ss", seek_time(fps, frame), "-i", video, "-frames:v", "1",
+                           "-vf", f"scale={w}:{h}:flags=area,format=gray", "-pix_fmt", "gray", "-f", "rawvideo", "-"],
+                          stdout=subprocess.PIPE)
+    if proc.returncode != 0 or len(proc.stdout) != w * h:
+        raise GrabFailure(f"ffmpeg could not grab a page (exit {proc.returncode}, {len(proc.stdout)} of {w * h} "
+                          "bytes)")
+    Image.frombytes("L", (w, h), proc.stdout).save(out, "JPEG", quality=PAGE_JPEG_QUALITY, optimize=True)
 
 
 def group_pages(lit, signatures):
@@ -670,7 +738,7 @@ def group_pages(lit, signatures):
 
 def main():
     if len(sys.argv) < 3:
-        print("REFUSE: usage: score_extract.py <video> <outdir> [--width W] [--rate R] [--url LINK]")
+        print("REFUSE: usage: score_extract.py <video> <outdir> [--fit W:H] [--rate R] [--url LINK]")
         return 1
     video, outdir = sys.argv[1], sys.argv[2]
     try:
@@ -678,7 +746,7 @@ def main():
         if not os.path.isfile(video):
             raise Refusal(f"no video at {video!r}")
         fps_text, fps, (vid_w, vid_h) = video_stream(video)
-        width = opts["width"] if opts["width"] is not None else min(vid_w, PAGE_WIDTH)
+        page_size = fit_size(vid_w, vid_h, opts["fit"])
         stream_rate = audio_rate(video)
         has_audio = stream_rate is not None
         rate = opts["rate"] if opts["rate"] is not None else stream_rate
@@ -750,7 +818,7 @@ def main():
         return f"{spell_time(secs(s))}..{spell_time(secs(e + 1))}"
 
     print(f"scan: {n} frames at {fps_text} fps ({float(secs(n)):.3f} s){', cached' if cached else ''}; rate {rate}; "
-          f"{len(lit)} lit runs, analysis at {size[0]}x{size[1]}")
+          f"{len(lit)} lit runs, analysis at {size[0]}x{size[1]}, pages at {page_size[0]}x{page_size[1]}")
     for name in ("cut", "crossfade", "fade-out", "fade-in"):
         print(f"{name}s: {len(classes[name])}")
     if classes["within black"]:
@@ -810,9 +878,9 @@ def main():
             for i, (s, e) in enumerate((page["principal"] for page in pages), start=1)]
     try:
         with ThreadPoolExecutor(GRAB_WORKERS) as pool:
-            list(pool.map(lambda job: grab_page(video, fps, job[0], width, job[1]), jobs))
-    except subprocess.CalledProcessError as err:
-        print(f"FAIL: ffmpeg could not grab a page (exit {err.returncode}); {PAGES_TXT} not written")
+            list(pool.map(lambda job: grab_page(video, fps, job[0], page_size, job[1]), jobs))
+    except GrabFailure as err:
+        print(f"FAIL: {err}; {PAGES_TXT} not written")
         return 1
     for name in stale_pages(outdir, count):
         os.remove(os.path.join(outdir, name))

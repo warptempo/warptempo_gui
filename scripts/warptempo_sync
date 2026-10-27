@@ -73,7 +73,7 @@ shopt -s nocaseglob
 #
 # tt CARRIES EACH PIECE'S SCORE FOLDER TOO (2026-10-26): after a piece's wav, if
 # the laptop holds `<piece>/score/pages.txt` (tools/score_extract.py's output, the
-# app's score viewer reads it), the pages that pages.txt names, `score/pageNNN.png`
+# app's score viewer reads it), the pages that pages.txt names, `score/pageNNN.jpg`
 # by the tool's own spelling, then `score/pages.txt` itself, then
 # `score/audio.wav` (the video's soundtrack, the tool's output since 2026-10-26
 # night) where the folder holds one, are each pushed with `adb push --sync` (a
@@ -88,8 +88,12 @@ shopt -s nocaseglob
 # name the first one's folder through the score_path its own viewer.txt holds);
 # a pages.txt naming a page the folder lacks is
 # SKIPPED LOUDLY, the run's last lines naming it, and nothing of that score is
-# copied. Nothing on the tablet is ever deleted here: a page a regenerated
-# pages.txt no longer names stays, unread.
+# copied. Nothing on the tablet is deleted here but a page<NNN>.png the tool no
+# longer writes (2026-10-26: the pages are grayscale JPEG since): once the
+# laptop's folder holds every .jpg its pages.txt names and they are pushed,
+# every `score/page<NNN>.png` standing in the tablet's folder is deleted, each
+# by its own name through far_rm_file, with a step line naming the count; a
+# .jpg a regenerated pages.txt no longer names stays, unread.
 #
 # setup SHOWS ITS PLAN AND ASKS FIRST (architect 2026-09-28: "add y/n confirm, and
 # that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
@@ -618,7 +622,8 @@ scores=0
 unresolved=()
 # THE SCORE FOLDER of one piece (the head's tt paragraph): the pages its
 # pages.txt names, then pages.txt, then audio.wav where the folder holds one —
-# never viewer.txt or the scan cache. Sets nothing on a piece with no
+# never viewer.txt or the scan cache — then the tablet's page<NNN>.png deleted
+# (the retired spelling, 2026-10-26). Sets nothing on a piece with no
 # score/pages.txt; counts `scores` for a folder pushed (or that would be).
 push_score() {                          # $1 = piece
     local p="$1" dir line n count width name f audio=""
@@ -634,7 +639,7 @@ push_score() {                          # $1 = piece
     width="${#count}"
     (( width < 3 )) && width=3
     for n in "${numbers[@]}"; do
-        name="$(printf 'page%0*d.png' "$width" "$((10#$n))")"
+        name="$(printf 'page%0*d.jpg' "$width" "$((10#$n))")"
         if [[ ! -f "$dir/$name" ]]; then
             step "leave the score, NOT COPIED: its pages.txt names $name, which score/ does not hold"
             unresolved+=( "$p: score/$name is missing" )
@@ -651,6 +656,29 @@ push_score() {                          # $1 = piece
     for f in "${files[@]}"; do
         quiet adb push --sync "$dir/$f" "$FAR/projects/$p/score/$f" || die "push failed: $dir/$f"
     done
+    # THE RETIRED SPELLING (the head's tt paragraph): the tablet's page<NNN>.png,
+    # listed by one checked reading (find's NUL-separated names, then an end
+    # record, as the setup inventory), each deleted by its own name.
+    local far_dir="$FAR/projects/$p/score" listing="$scratch/score_png_listing" rec end=0
+    local -a pngs=()
+    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -maxdepth 1 -type f -name "page*.png" -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$far_dir" > "$listing" || \
+        die "could not list the tablet's $p/score: nothing more was copied or deleted"
+    rec=""
+    while IFS= read -r -d '' rec; do
+        (( end )) && die "the tablet's listing of $p/score runs on past its end: nothing more was copied or deleted"
+        if [[ "$rec" == "warptempo_sync-end" ]]; then end=1; continue; fi
+        [[ "$rec" == ./* ]] || die "the tablet's listing of $p/score holds a malformed name ('$rec'): nothing more was copied or deleted"
+        rec="${rec#./}"
+        [[ "$rec" =~ ^page[0-9]+\.png$ ]] && pngs+=( "$rec" )
+        rec=""
+    done < "$listing"
+    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $p/score is incomplete: nothing more was copied or deleted"
+    if [[ "${#pngs[@]}" -gt 0 ]]; then
+        step "DELETE $(plural "${#pngs[@]}" page) the tool no longer writes from the tablet's score/ (page<NNN>.png; the pages are .jpg now)"
+        for f in "${pngs[@]}"; do
+            far_rm_file "$far_dir/$f"
+        done
+    fi
     scores=$((scores + 1))
 }
 push_audio() {
