@@ -48,9 +48,10 @@
 //     thumb jumping it, a drag CARRYING it and seeking nothing, THE SEEK AT
 //     THE LIFT, the position written with it — architect 2026-10-26, "no
 //     scrubbing" — and, the score's own, THE SOUND PAUSED WHILE THE SCRUB IS
-//     HELD: a live soundtrack paused at the press and playing on from the
-//     seeked cursor at the lift — architect 2026-10-26 ~23:00, "it wouldn't
-//     start playing until I commit by dropping the thumb"), THE CLOCK (the
+//     HELD: a live soundtrack paused at the press and playing on from where
+//     the thumb dropped at the lift — architect 2026-10-26 ~23:00, "it
+//     wouldn't start playing until I commit by dropping the thumb"), THE
+//     CLOCK (the
 //     render player's two time fields, verbatim: the elapsed time within the
 //     range and the range's length), then RESET, START, END and CLOSE flush
 //     right. Space plays and pauses, Home / End seek the range's first /
@@ -67,10 +68,18 @@
 // simplified — IDLE (the engine not on the soundtrack), PAUSED, LIVE
 // (AppState::ScoreViewer::transport owns the states): PLAY runs [cursor, the
 // range's end) ONCE and stops — no loop, no auto-advance, no car hook
-// (car_transport.h stays the trim's) — and THE NATURAL END RESTS AT THE
-// RANGE'S FIRST FRAME (the render player's own convention for a finished
-// item: the clock at zero, the slider at its left), PAUSED there so the scrub
-// stays live; a pause keeps the cursor. EVERY STOP IS THE ONE STOP BODY'S
+// (car_transport.h stays the trim's). AT THE END IT CONTINUES IF THERE IS A
+// NEXT TRACK AND STOPS DEAD WHERE IT IS OTHERWISE (architect 2026-10-26
+// ~23:55, the render player's one rule; "if I'm working at the end of the
+// song, I don't want it to go back to the beginning every time it hits the
+// end"): the soundtrack is one track, so THE NATURAL END RESTS AT THE RANGE'S
+// END, PAUSED there so the scrub stays live — the last page shown, the clock
+// at the range's length, the thumb at the right — and the PLAY key pressed
+// at that rest plays from the range's start (a press always sounds; the
+// automatic rewind is what goes); a pause keeps the cursor. A scrub dropped
+// at the end of a live soundtrack reaches the same natural end (the lift
+// plays on, then seeks live: input_pointer.cpp's score-scrub block). EVERY
+// STOP IS THE ONE STOP BODY'S
 // (its score fork parks LIVE at PAUSED with the cursor read first), so the
 // fence-before-rebind ordering holds as it does for the player. THE PAGE
 // FOLLOWS THE CURSOR: each tick while LIVE the page holding the engine's
@@ -267,8 +276,9 @@ inline int64_t score_viewer_position(const AppState& a,
 
 // THE PLAY KEY'S FACE, NAMING ITS NEXT PRESS (the render player's rule and
 // its PlayerPlayFace): PAUSE while LIVE, PLAY otherwise — at rest anywhere,
-// the press playing on from the cursor (architect 2026-10-26: play / pause
-// only, "keep it simple").
+// the press playing on from the cursor, and from the range's start at its
+// end, never a no-op there (architect 2026-10-26: play / pause only, "keep it
+// simple"; the end, ~23:55).
 inline PlayerPlayFace score_viewer_play_face(const AppState& a) {
     return a.score_viewer.transport == AppState::ScoreViewer::Transport::Live
                ? PlayerPlayFace::Pause
@@ -495,10 +505,12 @@ struct GuiScoreViewer {
     void pause();
     // THE PLAY: the engine bound to the soundtrack where it is not yet, and
     // [the cursor, the range's end) played once — from the range's first
-    // frame where the cursor rests in its last. Refused, silent, where the
+    // frame where the cursor rests in its last frame or at its end (THE PLAY
+    // KEY AT THE END, the head's THE TRANSPORT). Refused, silent, where the
     // PLAY / PAUSE key is grey; a no-op where LIVE. Its callers are
     // toggle_play and the scrub's lift where the press paused a live
-    // soundtrack (the sound playing on from where the thumb dropped).
+    // soundtrack (the sound playing on from the pause's cursor, the lift's
+    // live seek following).
     void play();
     // THE SEEK: `frame` clamped into the range; LIVE republishes PLAY's window
     // from there (a target in the range's last frame stops one short of it,
@@ -506,7 +518,8 @@ struct GuiScoreViewer {
     // cursor moves; the page follows either way; the position written
     // through. Its callers are Home / End and the scrub's lift (architect
     // 2026-10-26, "no scrubbing": the drag carries the thumb and seeks
-    // nothing, the sound paused meanwhile).
+    // nothing, the sound paused meanwhile; a lift that plays on seeks LIVE
+    // after play(), so a drop at the end reaches the natural end).
     void seek_to(int64_t frame);
 
     // -- The range ------------------------------------------------------------
@@ -542,7 +555,7 @@ private:
     // republished at the cursor to the new end.
     void range_changed();
     // The natural end: the fence through the one stop body, the rest at the
-    // range's first frame, written.
+    // range's end, written.
     void on_natural_end();
     // The decoder's results into the cache and the gray store; the shown
     // page's arrival damages the interior.

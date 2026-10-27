@@ -8850,10 +8850,12 @@ struct AppState {
     //   `transport` THE TRANSPORT'S STATE, STORED and never derived (the
     //              three states of 2026-08-28; the table is at
     //              GuiRenderPlayer::play_button_act): IDLE — nothing to
-    //              resume, which is no item, an item a natural end left
-    //              resting at its start, or a fresh open; LIVE —
-    //              sounding; PAUSED — an item the transport parked, AT
-    //              WHATEVER FRAME. PAUSED AT FRAME ZERO IS PAUSED, NOT IDLE,
+    //              resume, which is no item bound (a fresh open, an
+    //              unload); LIVE — sounding; PAUSED — an item the transport
+    //              parked, AT WHATEVER FRAME, the natural end's rest AT THE
+    //              ITEM'S END included (architect 2026-10-26 ~23:55: it
+    //              continues if there is a next track and stops dead where
+    //              it is otherwise). PAUSED AT FRAME ZERO IS PAUSED, NOT IDLE,
     //              and that is why this is a field rather than a reading of
     //              `resume_frame`: the tick's no-device arm parks a wav that
     //              never sounded a frame, and the next Play must resume THAT
@@ -8865,25 +8867,22 @@ struct AppState {
     //              live transport that stops passes there, the pause, the
     //              dead device, the natural end, the Up act's unload and the
     //              close alike), and IDLE
-    //              at the FOUR acts that mean "nothing to resume": the
-    //              natural end's rest at the item's start, open()'s reset,
+    //              at the THREE acts that mean "nothing to resume":
+    //              open()'s reset,
     //              and close() and up() through the unload body they share
     //              (GuiRenderPlayer::unload_item), each written AFTER that
     //              fork — open()'s reset alone never meeting it,
     //              since it runs with the mode down. THE ONE PRESS AMONG THEM
-    //              IS UP, and it is the only user road into the state: the
-    //              count stood at THREE with no press at all between
-    //              2026-09-01, when GuiRenderPlayer::stop() retired whole
-    //              with the row's transport triple, and the evening of
-    //              2026-09-04, when the architect made the Up button unload
-    //              the item — "make it like when you first open the player:
-    //              nothing is loaded". LIVE is what
+    //              IS UP, and it is the only user road into the state
+    //              (architect 2026-09-04, the Up button unloading the item —
+    //              "make it like when you first open the player: nothing is
+    //              loaded"). LIVE is what
     //              the play/pause glyph, the tick, the position reader, the
     //              car's directional gates and the head unit's `playing` all
     //              ask for;
     //   `resume_frame` THE RESUME POINT AND NOTHING ELSE — where a pause left
-    //              the cursor (0 after a fresh bind, a natural end or an
-    //              unload);
+    //              the cursor (0 after a fresh bind or an unload, the item's
+    //              `frames` after a natural end that rests);
     //              a seek moves it on a PAUSED transport and the play moves it
     //              on a live one. A SEEK WHILE IDLE IS A CONSUMED NO-OP
     //              (architect 2026-08-29, seek_to's own head, the one owner),
@@ -8907,9 +8906,11 @@ struct AppState {
     //              deferred-click shape; a motionless tap on the thumb,
     //              `on_thumb` and not `moved`, seeks nothing); and
     //              `was_live`, the press having paused a LIVE item, which the
-    //              release resumes from the seeked point (architect
-    //              2026-10-26 ~23:15, THE SOUND PAUSES WHILE THE SCRUB IS
-    //              HELD, the score scrub's rule); each of the three hard
+    //              release resumes and then seeks live to the dropped point
+    //              (architect 2026-10-26 ~23:15, THE SOUND PAUSES WHILE THE
+    //              SCRUB IS HELD, the score scrub's rule; the order ~23:55,
+    //              so a drop at the end reaches the natural end); each of
+    //              the three hard
     //              ends — the pointer-leave hook, the button-lost edge and
     //              the force-end finalizer, through clear_player_scrub_drag —
     //              drops it, seeks nowhere and resumes nothing, the item left
@@ -8941,7 +8942,8 @@ struct AppState {
     //              RETIRED WHOLE — architect 2026-08-31, "we simplify —
     //              play on last file means play last file" — so the bit, its
     //              writer and its seven clears went with it and a folder-end
-    //              rest is now an ordinary idle rest on the last item;)
+    //              rest is now the ordinary PAUSED rest at the last item's
+    //              end, 2026-10-26;)
     //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
     //              asks about; consumed by its OK, dropped by its Cancel. It
     //              is one of that prompt's TWO subjects — the `h` view's is
@@ -9054,7 +9056,8 @@ struct AppState {
     //              and seeks nothing, THE SEEK IS AT THE LIFT to the carried
     //              column (architect 2026-10-26, "no scrubbing"), a
     //              motionless tap on the thumb seeking nothing, and where
-    //              `was_live` the lift plays on from the cursor; the three
+    //              `was_live` the lift plays on and then seeks live, so a
+    //              drop at the end reaches the natural end (~23:55); the three
     //              hard ends drop it owing nothing, the transport left
     //              PAUSED (clear_score_scrub_drag);
     //   `transport` THE SOUNDTRACK'S TRANSPORT (the media player's face

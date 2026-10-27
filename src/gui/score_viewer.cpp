@@ -189,9 +189,12 @@ void GuiScoreViewer::play() {
                                      AppState::ScoreButtonAct::PlayPause))
         return;
     if (!bind_soundtrack()) return;
-    // PLAY: [cursor, the range's end) once; a cursor resting in the range's
-    // last frame (the End key's seek) plays from the range's start — a user
-    // act, not a loop.
+    // PLAY: [cursor, the range's end) once. THE PLAY KEY AT THE END
+    // (architect 2026-10-26 ~23:55, "next track if there is one, otherwise
+    // play from the start"): the soundtrack has no next track, so a cursor
+    // resting in the range's last frame or at its end (the End key's seek,
+    // the natural end's rest) plays from the range's start in the same press
+    // — a user act, which always sounds, and never the automatic rewind.
     const ScoreFrameRange fr = score_viewer_frame_range(app);
     if (fr.length() < 2) return;
     int64_t from = score_viewer_position(app, playback);
@@ -311,12 +314,15 @@ void GuiScoreViewer::confirm_reset() {
 void GuiScoreViewer::on_natural_end() {
     // THE FENCE FIRST, through the one stop body (the session word's playing
     // bit is already down; stop() is the quiescence proof), its score fork
-    // parking the transport at PAUSED; then THE REST AT THE RANGE'S FIRST
-    // FRAME (the head's THE TRANSPORT), its page shown, written.
+    // parking the transport at PAUSED; then, the soundtrack being one track
+    // with nothing to continue to, THE REST AT THE RANGE'S END (architect
+    // 2026-10-26 ~23:55, "it stops dead where it is otherwise"; the head's
+    // THE TRANSPORT): the last page shown, the clock at the range's length,
+    // the thumb at the right, written.
     playback_lifecycle.stop_playback_if_playing();
     const ScoreFrameRange fr = score_viewer_frame_range(app);
-    active_view_state(app).score_position = fr.begin;
-    follow_cursor(fr.begin);
+    active_view_state(app).score_position = fr.end;
+    follow_cursor(fr.end);
     write_score_viewer_file(app);
     damage_row();
 }

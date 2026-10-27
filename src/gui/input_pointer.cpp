@@ -5144,12 +5144,18 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // should stop playback when dragging the thumb, in part because it's less
 // truthful. The thumb is no longer at that place"): a LIVE item is paused at
 // the press (GuiRenderPlayer::pause, the key reading PLAY while held) and
-// the lift, after its seek, resumes it from the seeked point
-// (GuiRenderPlayer::resume) — so the sound plays on exactly where the thumb
-// dropped, and a motionless tap on the thumb of a live item pauses at the
-// press and resumes from the same point at the lift, a no-op in effect. A
-// PAUSED item arms as it stands and stays paused at the lift; a hard end
-// owes nothing, the item left PAUSED (clear_player_scrub_drag).
+// THE LIFT RESUMES IT FIRST, from the pause's own point
+// (GuiRenderPlayer::resume), AND THEN SEEKS LIVE to the dropped column
+// (seek_to's live arm, a target in the item's last frame stopping one short)
+// — so the sound plays on exactly where the thumb dropped, and A DROP AT THE
+// END REACHES THE NATURAL END at once, whose answer is the one rule's
+// (architect 2026-10-26 ~23:55: the next track where there is one, else the
+// rest dead at the item's end — never the PLAY key's replay from the start).
+// A motionless tap on the thumb of a live item pauses at the press and
+// resumes from the same point at the lift, nothing seeked, a no-op in
+// effect. A PAUSED item arms as it stands, the lift's seek moving its resume
+// point, and stays paused; a hard end owes nothing, the item left PAUSED
+// (clear_player_scrub_drag).
 
 // THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
@@ -5249,21 +5255,23 @@ bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+    // THE SOUND PLAYS ON FIRST where the press paused a live item (the block
+    // head): resume() from the pause's own point, the item LIVE again before
+    // the seek below.
+    if (ended.was_live) render_player.resume();
     // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING: the thumb was taken where
     // it stood and never moved, and re-seeking its own column would round the
     // position to that column's frame.
     // THE COMMIT otherwise: the seek to the thumb's column at the lift — the
     // lift's x less the grab offset, clamped onto the travel by the mapping,
-    // which is the column the motion last painted the thumb at — at rest, the
-    // press having paused a live item, so it moves the resume point
-    // (seek_to's PAUSED arm).
+    // which is the column the motion last painted the thumb at — LIVE where
+    // the press paused a live item (seek_to's live arm: a drop in the last
+    // frame stops one short, so the natural end takes over — architect
+    // 2026-10-26 ~23:55), else at rest, moving the resume point (its PAUSED
+    // arm).
     if (!(ended.on_thumb && !ended.moved))
         render_player.seek_to(
             render_player_scrub_frame_at(app, x - ended.grab_dx));
-    // THE SOUND PLAYS ON where the press paused a live item (the block head):
-    // from the seeked point, resume()'s own rule — a point dropped in the
-    // item's last frame replays it from its start.
-    if (ended.was_live) render_player.resume();
     return true;
 }
 
@@ -5297,10 +5305,14 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    playing because I'm no longer at the scrub position. And then it
 //    wouldn't start playing until I commit by dropping the thumb"): a LIVE
 //    transport is paused at the press (GuiScoreViewer::pause, the key reading
-//    PLAY while held) and the lift, after its seek, plays on from the cursor
-//    (GuiScoreViewer::play) — so a motionless tap on the thumb of a live
-//    transport pauses at the press and plays on from the same cursor at the
-//    lift, a no-op in effect. THE ONE RULE OF BOTH SCRUBS (architect
+//    PLAY while held) and the lift plays on FIRST from the pause's cursor
+//    (GuiScoreViewer::play) AND THEN SEEKS LIVE to the dropped column
+//    (seek_to's live arm), so a drop at the range's end reaches the natural
+//    end and rests there (architect 2026-10-26 ~23:55: "it stops dead where
+//    it is"), never the PLAY key's replay from the start; a motionless tap
+//    on the thumb of a live transport pauses at the press and plays on from
+//    the same cursor at the lift, nothing seeked, a no-op in effect. THE ONE
+//    RULE OF BOTH SCRUBS (architect
 //    2026-10-26 ~23:15, the render player's scrub taking it: "we should make
 //    them both the same"; the play-scrub's block head). --
 
@@ -5373,19 +5385,22 @@ bool GuiInputHandler::finish_score_scrub_release() {
     // at every motion.
     if (score_viewer == nullptr || !score_viewer_has_soundtrack(app))
         return true;
+    // THE COMMIT PLAYS ON FIRST where the press paused a live soundtrack (the
+    // block head): play() from the pause's cursor, the transport LIVE again
+    // before the seek below.
+    if (ended.was_live) score_viewer->play();
     // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING (the render player's rule):
     // the thumb was taken where it stood and never moved, and re-seeking its
     // own column would round the position to that column's frame.
     // THE LIFT IS THE SEEK otherwise (architect 2026-10-26, "no scrubbing"):
     // to the column the motion last painted the thumb at (ON SCREEN IS AS
     // PAINTED; the painter draws the armed drag's marker_x), the position
-    // written with it — at rest, the press having paused a live transport.
+    // written with it — LIVE where the press paused a live soundtrack
+    // (seek_to's live arm: a drop in the range's last frame stops one short,
+    // so the natural end takes over and rests at the end — architect
+    // 2026-10-26 ~23:55), else at rest.
     if (!(ended.on_thumb && !ended.moved))
         score_viewer->seek_to(score_scrub_frame_at(app, ended.marker_x));
-    // THE COMMIT PLAYS ON where the press paused a live soundtrack (the
-    // block head): from the seeked cursor, play()'s own rule — a cursor
-    // dropped in the range's last frame plays from the range's start.
-    if (ended.was_live) score_viewer->play();
     return true;
 }
 

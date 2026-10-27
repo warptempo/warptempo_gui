@@ -49,12 +49,12 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // damaged — the play/pause glyph, the clock and the scrub all read it.
     // PAUSED IS WHAT THIS BODY MEANS, AND THIS FORK IS ITS ONE WRITER: a
     // sounding transport that stops is parked where it stopped, at frame 0 as
-    // anywhere else, so the next Play resumes THAT item. The callers that mean
-    // IDLE instead — the natural end's rest at the folder's last and close() —
-    // write it after this returns, and open()'s own reset never reaches this
-    // fork (the state's whole writer set is at the field, app_state.h). The
-    // player's own Stop was a fourth Idle road until it retired whole
-    // 2026-09-01 (the record is at render_player.cpp's retirement comment).
+    // anywhere else — the natural end's rest at the item's end included
+    // (architect 2026-10-26 ~23:55) — so the next Play resumes THAT item. The
+    // callers that mean IDLE instead — close() and up(), through the unload
+    // body — write it after this returns, and open()'s own reset never
+    // reaches this fork (the state's whole writer set is at the field,
+    // app_state.h).
     // The FENCE is the same: playback.stop() proves the callback
     // is out of the item's buffer before a rebind or a free, exactly as it
     // proves it out of the source's. Every player stop — the pause, the
@@ -86,8 +86,8 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         // than merely tidy, this push still carrying the item that act is
         // dropping. The resume point the push reads is the caller's to have
         // written BEFORE calling here (toggle_pause and the tick's
-        // dead-device arm do; the natural end writes its 0 first for the same
-        // reason).
+        // dead-device arm do; the natural end writes the item's end first
+        // for the same reason).
         if (render_player) render_player->publish_media_state();
         return;
     }

@@ -861,15 +861,18 @@ void GuiRenderPlayer::transport_toggle_act() {
     // on the item folder's LAST wav started the folder's FIRST file instead
     // (the car's Play at the end of a playlist), off the one bit
     // `ended_at_folder_end`. The bit, its writer at the natural end and its
-    // seven clears are deleted with the arm; a folder-end rest is now an
-    // ordinary idle rest on the last item, and the car's Play there replays
-    // that last track — which is also where the band is resting.
+    // seven clears are deleted with the arm; a folder-end rest is now the
+    // PAUSED rest at the last item's end (2026-10-26), and the car's Play
+    // there replays that last track from its start (resume()'s end rule) —
+    // which is also where the band is resting.
     //
     // ELSE THE ITEM FROM ITS START, ALWAYS (architect 2026-08-29 ~01:40:
     // "Play when idle should start literally"): `resume_frame` is 0 at every
     // idle rest by construction — seek_to's own head refuses an idle seek, so
-    // nothing can have moved it since the last natural end, fresh bind or
-    // unload — and toggle_pause's resume arm reads exactly that field.
+    // nothing can have moved it since the fresh open or the unload — and
+    // toggle_pause's resume arm reads exactly that field. Every idle rest has
+    // nothing bound since the natural end rests PAUSED (2026-10-26), so this
+    // arm meets the no-item guard below.
     //
     // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (its resume
     // arm's, resume(); architect 2026-08-31 — the one-dimensional rule): a
@@ -940,12 +943,26 @@ void GuiRenderPlayer::resume() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
     if (rp.transport == Transport::Live) return;
-    // RESUME: from the resume point; a point at or past the item's end (the
-    // rest after a natural end, or a seek to the end while paused) replays
-    // from the start — a user act, not a loop.
-    int64_t from = rp.resume_frame;
-    if (from >= rp.frames - 1) from = 0;
     if (rp.frames < 2) return;
+    // RESUME: from the resume point. THE PLAY KEY AT THE END (architect
+    // 2026-10-26 ~23:55, "next track if there is one, otherwise play from the
+    // start"): a point in the item's last frame or at its end (the natural
+    // end's rest, a paused seek to the end) CONTINUES where there is
+    // something to continue to — with the REPEAT ONE lamp lit this item from
+    // its start (the lamp's own answer at the end), else the next wav of the
+    // item's folder through the shared forward step (whose refused decode
+    // has raised its own card and is the press's answer: a rare non-silent
+    // fault, no recovery) — and otherwise plays this item from its start in
+    // the same press. A press always sounds; the automatic rewind is what
+    // the ruling refused.
+    int64_t from = rp.resume_frame;
+    if (from >= rp.frames - 1) {
+        if (!rp.repeat_one && render_player_next_track_actionable(app)) {
+            advance_to_next_in_item_folder();
+            return;
+        }
+        from = 0;
+    }
     rp.painted_cursor = -1;
     playback.play(from, rp.frames);
     rp.transport = Transport::Live;
@@ -1083,11 +1100,13 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
 // AN IDLE TRANSPORT TAKES THE WINDOW LIKE ANY OTHER, and that is deliberate
 // rather than an oversight of the idle rule: `resume_frame` is 0 at every idle
 // rest by construction, so an idle press with a previous entry steps back and
-// PLAYS it — the car's own act at a rest the folder's end left — while the
+// PLAYS it — while the
 // seek arm underneath keeps the idle road's silent refusal for the first
 // entry, where there is nothing to step back to. The idle rule is about not
 // NUDGING a resting transport to some other point in the item it would not
-// resume from; a track change is not a nudge.
+// resume from; a track change is not a nudge. (The folder's end rests PAUSED
+// at the item's end since 2026-10-26, outside the window, so Home there seeks
+// the item's start and a second press inside the window steps back.)
 //
 // TWO READERS ASK IT: render_player_home_takes_previous below, the file step's
 // own fork (which home() and the Home button's hint share), and the CAR'S
@@ -1245,25 +1264,24 @@ bool GuiRenderPlayer::advance_to_next_in_item_folder() {
 
 void GuiRenderPlayer::on_natural_end() {
     AppState::RenderPlayer& rp = app.render_player;
-    // THE REST IS AT THE ITEM'S START, written BEFORE the stop body so the
-    // "paused" the body's fork publishes reads position 0 rather than a
-    // resume point left over from an earlier pause (the resume point is dead
-    // state while the transport is live, so nothing else reads this write).
-    rp.resume_frame = 0;
+    // THE REST IS AT THE ITEM'S END, written BEFORE the stop body so the
+    // "paused" the body's fork publishes reads the end rather than a resume
+    // point left over from an earlier pause (the resume point is dead state
+    // while the transport is live, so nothing else reads this write).
+    rp.resume_frame = rp.frames;
     // THE FENCE FIRST, through the one stop body: the session word's playing
     // bit is already down (the audio thread's terminal exchange lowered it)
     // but stop() is the quiescence proof the
     // next rebind requires, and the body's player fork takes the transport
-    // down behind it — the tick's own natural-end shape.
+    // down behind it to PAUSED — the tick's own natural-end shape. AT THE END
+    // IT CONTINUES IF THERE IS A NEXT TRACK AND STOPS DEAD WHERE IT IS
+    // OTHERWISE (architect 2026-10-26 ~23:55, "advance to the next one if
+    // possible"; the score viewer's one rule): the two arms below play again
+    // and take LIVE with them, and where neither does the transport stays
+    // PAUSED AT THE ITEM'S END — the clock reading its length, the thumb at
+    // the right, the scrub live, the key reading PLAY, whose press at that
+    // rest is resume()'s end rule.
     playback_lifecycle.stop_playback_if_playing();
-    // THE REST IS IDLE, NOT PAUSED: the item rests AT ITS START, and there is
-    // nothing there to resume that a Play from the start does not do
-    // identically — so the next Play replays this item, at the folder's end
-    // included (2026-08-31). Written over the PAUSED the
-    // stop body's fork leaves on
-    // every live transport, and ahead of the two arms below, which play again
-    // and take LIVE with them.
-    rp.transport = Transport::Idle;
     // REPEAT ONE, ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
     // 2026-08-28; the other is the car's loop of the trim on the project
     // transport, 2026-09-17, which reaches no player audio): the lamp
@@ -1276,7 +1294,7 @@ void GuiRenderPlayer::on_natural_end() {
     // "outranks" means: a replay that cannot decode (the item deleted or
     // republished in another shape while it played) has already put its own
     // words on a notification card and left the item untouched, and the rest
-    // written above leaves the transport on that item at its start. Falling
+    // written above leaves the transport on that item at its end. Falling
     // through to the arms below would answer a refused REPEAT with the folder's
     // next wav. A lit lamp means this wav and nothing else, failure included.
     if (rp.repeat_one && !rp.item.empty() && rp.item_index >= 0 &&
@@ -1287,24 +1305,22 @@ void GuiRenderPlayer::on_natural_end() {
             play_wav(folder[static_cast<size_t>(i)].path, folder, i);
         if (!replayed) {
             // The lamp's arm is terminal: nothing follows this return, and the
-            // transport is left idle on an item that will not decode.
+            // transport is left paused at the end of an item that will not
+            // decode.
             damage_row();
         }
         return;
     }
     // AUTO-ADVANCE WITHIN THE ITEM'S FOLDER ONLY (2026-08-28), never across
     // folders and never a wrap: the next wav of the list the item was played
-    // from, or the rest at the item's start. THE WALK IS ONE BODY SINCE
-    // 2026-09-04, shared with the deliberate Next the right skip runs, so the
-    // two cannot walk different folders.
+    // from, or the rest at the item's end. THE WALK IS ONE BODY SINCE
+    // 2026-09-04, shared with the deliberate Next the right skip runs and
+    // with resume()'s end rule, so the three cannot walk different folders.
     if (advance_to_next_in_item_folder()) return;
     // THE FOLDER IS AT ITS END (or the next wav refused to decode, its own
-    // words on a card and the item unchanged) and the transport rests at the
-    // item's start, IDLE — so the next Play replays THIS item. This rest,
-    // open()'s and the Up act's unload are the state's whole production while
-    // the mode stands (close() writes it on the way down), and UP IS THE ONE
-    // USER ACT AMONG THEM since 2026-09-04 — no press reached the state
-    // between the player's Stop retiring (2026-09-01) and that evening.
+    // words on a card and the item unchanged) and the transport STOPS DEAD:
+    // PAUSED at the item's end, so the next Play replays THIS item from its
+    // start (resume()'s end rule, the folder's end having nothing next).
     //
     // THE FOLDER-END RESTART STOOD HERE (architect 2026-08-28) and IS
     // RETIRED (architect 2026-08-31 — "we simplify — play on last file
@@ -1313,11 +1329,11 @@ void GuiRenderPlayer::on_natural_end() {
     // the next Play — the car's Play at the end of a playlist above all —
     // started the folder's FIRST file instead. The bit is deleted whole with
     // its reader in play_button_act and its clears; nothing distinguishes this
-    // rest from any other idle rest at an item's start now, which is the
+    // rest from any other rest at an item's end now, which is the
     // simplification itself.
     //
-    // This is the ordinary idle rest at the item's start: the player has
-    // finished and the head unit is looking at a session that says so.
+    // The player has finished and the head unit is looking at a session that
+    // says so.
     damage_row();
 }
 

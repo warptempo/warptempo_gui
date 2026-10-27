@@ -127,13 +127,14 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // THE TRANSPORT HAS THREE STATES AND THE BUTTONS ANSWER THEM (architect
 // 2026-08-28). THE STATE IS STORED, in
 // `AppState::RenderPlayer::transport` (that field's block owns the reasons,
-// the writer set and the readers) — IDLE (nothing to resume: no item, or an
-// item a natural end or a fresh open left resting at its start — THE UP ACT
-// IS THE ONE USER ROAD INTO IT since 2026-09-04, no press producing it at all
-// between the Stop's retirement and that evening), LIVE,
+// the writer set and the readers) — IDLE (nothing to resume: no item bound, a
+// fresh open's or an unload's — THE UP ACT IS THE ONE USER ROAD INTO IT since
+// 2026-09-04; the natural end rests PAUSED at the item's end since
+// 2026-10-26, so no idle rest carries an item), LIVE,
 // PAUSED (an item the transport parked, AT WHATEVER FRAME — a pause at frame 0
-// is PAUSED, which no reading of the resume point could say) — and the table
-// is at play_button_act.
+// is PAUSED, which no reading of the resume point could say — the natural
+// end's rest at the item's end included) — and the table is at
+// play_button_act.
 //
 // THE MODEL (2026-08-28, revised 2026-08-29): the listing is navigated THE
 // REGULAR WAY and A CLICK ACTIVATES — a click or tap on a folder row ENTERS
@@ -203,10 +204,17 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // reaching its end (architect 2026-09-04 — under the old act Next did
 // nothing at all with the lamp lit).
 //
-// AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
-// item resting at its start AND THAT IS ALL IT MEANS — the next Play replays
-// that last file (architect 2026-08-31:
-// "we simplify — play on last file means play last file"). THE FOLDER-END
+// AT THE END IT CONTINUES IF THERE IS A NEXT TRACK AND STOPS DEAD WHERE IT IS
+// OTHERWISE (architect 2026-10-26 ~23:55, "advance to the next one if
+// possible"; the score viewer's one rule): AT THE FOLDER'S LAST WAV, with the
+// lamp off, the transport stops PAUSED with the item resting AT ITS END — the
+// clock at its length, the thumb at the right — AND THAT IS ALL IT MEANS: the
+// next Play replays that last file from its start (architect 2026-08-31: "we
+// simplify — play on last file means play last file"; resume()'s end rule,
+// which continues to the next wav where one exists, a paused seek to the end
+// being the other road to that rest). A scrub dropped at the end of a live
+// item reaches the natural end too (the lift resumes, then seeks live:
+// input_pointer.cpp's play-scrub block). THE FOLDER-END
 // RESTART IS RETIRED: from 2026-08-28 the bit `ended_at_folder_end` said the
 // transport was resting THERE and turned the next Play — the car's at the end
 // of a playlist above all — into "start the folder's FIRST wav"; the
@@ -445,15 +453,20 @@ struct GuiRenderPlayer {
     //   cursor at 0 answers PAUSED here and resumes its own item), IDLE
     //   everything with nothing to resume:
     //     LIVE    -> pause it.
-    //     PAUSED  -> resume it.
+    //     PAUSED  -> resume it — at the item's end (the natural end's rest)
+    //                the next wav of its folder where one exists, this item
+    //                from its start otherwise or under a lit REPEAT ONE
+    //                (resume()'s end rule, architect 2026-10-26 ~23:55).
     //     IDLE with an item -> the item from ITS START, ALWAYS (architect
     //                        2026-08-29 ~01:40, Audacious: Play when idle
     //                        starts literally) — the folder's end included
     //                        since 2026-08-31. A seek while idle is a consumed
     //                        no-op (seek_to's own head, the one owner), so
-    //                        `resume_frame` is always 0 at an idle rest and
-    //                        every rest the transport's own acts leave it in —
-    //                        a natural end, a fresh bind — plays from frame 0.
+    //                        `resume_frame` is always 0 at an idle rest. NO
+    //                        PRODUCER LEAVES AN ITEM IDLE since the natural
+    //                        end rests PAUSED at the item's end (2026-10-26):
+    //                        every idle rest is a fresh open's or an
+    //                        unload's, with nothing bound.
     //     IDLE with no item -> nothing.
     //
     // THE THREE ROW ARMS RUN open_row, the row click's and Enter's own body,
@@ -491,10 +504,14 @@ struct GuiRenderPlayer {
     // each a silent no-op with no item and in the other's state: pause() —
     // LIVE parks at PAUSED through the one stop body, the resume point the
     // engine's position — and resume() — any rest plays from the resume
-    // point, a point in the item's last frame replaying from its start.
-    // Their second caller is the scrub (THE SOUND PAUSES WHILE THE SCRUB IS
-    // HELD, input_pointer.cpp's play-scrub block): the press pauses a live
-    // item and the lift, after its seek, resumes it.
+    // point, and A POINT IN THE ITEM'S LAST FRAME OR AT ITS END (THE PLAY KEY
+    // AT THE END, architect 2026-10-26 ~23:55: "next track if there is one,
+    // otherwise play from the start") continues to the folder's next wav
+    // where one exists with the REPEAT ONE lamp dark, and replays this item
+    // from its start otherwise. Their second caller is the scrub (THE SOUND
+    // PAUSES WHILE THE SCRUB IS HELD, input_pointer.cpp's play-scrub block):
+    // the press pauses a live item and the lift resumes it and then seeks
+    // live, so a drop at the end reaches the natural end.
     void toggle_pause();
     void pause();
     void resume();
@@ -902,8 +919,9 @@ private:
     // The natural end: the fence through the one stop body, then — with the
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
     // exception at the head of this file), else the shared forward step
-    // above, else the ordinary idle rest at the item's start (2026-08-31 — the
-    // folder's end is no longer a state of its own).
+    // above, else THE REST AT THE ITEM'S END, PAUSED (architect 2026-10-26
+    // ~23:55: it continues if there is a next track and stops dead where it
+    // is otherwise; the folder's end is no state of its own, 2026-08-31).
     // THE LAMP'S ARM IS TERMINAL: it returns on a REFUSED replay too, so a
     // lit lamp never falls through to the advance.
     // A NATURAL
