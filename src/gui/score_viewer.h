@@ -122,17 +122,45 @@
 // there's going to be an additional visual lag on the page turning on top of
 // the Bluetooth lag, that's not going to work"): the page decoder
 // (score_page_worker.h) decodes a page, scales it ONCE to the box's fit size
-// and converts it for the window, and the painter blits it 1:1. THE CACHE
-// (AppState::ScoreViewer::cache) holds the shown page and up to three either
-// side of it in the range — at the tablet's box about 9 MB a page — the
-// decoder asked for the missing ones in the likely order: forward first while
-// the soundtrack sounds or after NEXT, both ways otherwise. IT SURVIVES THE
-// CLOSE, so a reopen is instant, and goes at a score folder change and with
-// the project. A shown page not yet delivered leaves the interior the field
-// ground for that frame and paints the moment it lands (the tick drains the
-// decoder and damages the interior) — NEVER A SYNCHRONOUS DECODE, the open's
-// included. A page whose decode fails is one stderr line, the interior the
+// and converts it for the window, and the painter blits it 1:1 — NEVER A
+// SYNCHRONOUS DECODE, the open's included; the main thread never decodes,
+// scales or expands. TWO HOLDINGS, both the decoder's to fill:
+//   * THE GRAY STORE (AppState::ScoreViewer::gray; architect 2026-10-26
+//     ~22:10: every page of the viewing range "decoded once", held in RAM as
+//     8-bit gray — about 2.2 MB a page fit to 1975 x 1111 in the tablet's
+//     box, 310 MB for all of K.550, about 80 MB for a delineated movement):
+//     each page of the range at the fit box, one byte a pixel, keyed by page
+//     and box and not by the conversion bit (the bytes are the authored sRGB
+//     page).
+//     From the open, and whenever it lacks a page of the range, the feed
+//     queues the missing pages AFTER THE CACHE'S WANTS, in the likely order
+//     reaching the whole range. THE RANGE SCOPES IT: START, END and RESET's
+//     confirm drop every page outside the new range AT ONCE (range_changed:
+//     "start and end reset that cache and drop anything that's outside of
+//     it", so the full price is paid only until the movement is delineated).
+//     It survives the close as the cache does, goes whole at a box change
+//     (gui_scale) and with the score folder and the project. No backstop for
+//     memory: a failed allocation is std::bad_alloc, the rare non-silent
+//     fault.
+//   * THE CACHE (AppState::ScoreViewer::cache), the PAINTED pages: the shown
+//     page and up to three either side of it in the range — at the tablet's
+//     box about 9 MB a page — each made FROM THE STORE where the store holds
+//     it (the decoder expands the gray bytes, a few ms against a JPEG decode)
+//     and from the file otherwise (the one decode yielding the store's bytes
+//     too), asked for in the likely order: forward first while the
+//     soundtrack sounds or after NEXT, both ways otherwise. IT SURVIVES THE
+//     CLOSE, so a reopen is instant, and goes at a score folder change and
+//     with the project.
+// A SHOWN PAGE NOT YET DELIVERED SHOWS THE LAST PAINTED PAGE in its stead
+// (architect 2026-10-26: "a little flash to black … is not helpful"): the
+// painter blits the page ScoreViewer::painted_page names, its cache entry
+// kept by the trim while the shown page's is absent, until the shown page
+// lands (the tick drains the decoder and damages the interior); with nothing
+// painted yet — the open's first frame, a score change — the interior is the
+// field ground. A page whose decode fails is one stderr line, the interior the
 // field ground, and that page is not asked for again under the same key.
+// Every job prints its timing line and the store's completion one more
+// (score_page_worker.h's THE TIMING LINE, note_gray_complete).
 
 #include "app_state.h"
 #include "audio.h"
@@ -392,8 +420,8 @@ inline const AppState::ScoreViewer::Cached* score_viewer_cached(
 }
 
 // THE SCORE FOLDER CHANGED (the project load, a typed `score_path=` commit —
-// the two writers of AppState::score): the page cache dropped and the
-// decoder reset (the head's THE CACHE), and the soundtrack's load restarted
+// the two writers of AppState::score): the page cache and the gray store
+// dropped and the decoder reset (the head's THE PAGES ARE DECODED), and the soundtrack's load restarted
 // for the new folder (GuiScoreAudio::start) or stopped with no score. Never
 // while the viewer stands: neither caller runs under it.
 void score_folder_changed(AppState& app);
@@ -430,7 +458,7 @@ struct GuiScoreViewer {
     // open_project_picker). Takes the modal-open stop, mints the session,
     // lands on the active tab's remembered position (the soundtrack bound,
     // PAUSED, where it can be: the head's THE OPEN), asks the decoder for
-    // what the cache lacks and damages the window.
+    // what the cache and the gray store lack and damages the window.
     bool open();
     // THE ONE CLOSER — CLOSE, Esc, the SCORE key and bare `m`, and the exit
     // road's teardown (GuiPrompt::request_close): the render player's close
@@ -497,18 +525,26 @@ private:
     // The page holding `pos` shown where it differs; the interior damaged.
     // Returns whether the page changed.
     bool follow_cursor(int64_t pos);
-    // After START / END / RESET: the cursor clamped into the new range and,
-    // LIVE, PLAY's window republished at the cursor to the new end.
+    // After START / END / RESET: the gray store's pages outside the new range
+    // dropped, the cursor clamped into the new range and, LIVE, PLAY's window
+    // republished at the cursor to the new end.
     void range_changed();
     // The natural end: the fence through the one stop body, the rest at the
     // range's first frame, written.
     void on_natural_end();
-    // The decoder's results into the cache; the shown page's arrival damages
-    // the interior.
+    // The decoder's results into the cache and the gray store; the shown
+    // page's arrival damages the interior.
     void drain_decoder();
-    // The cache trimmed to the shown page's neighborhood at the current box
-    // and conversion, and the decoder handed the missing pages in order.
+    // The gray store at the interior's box (dropped whole at a change), the
+    // cache trimmed to the shown page's neighborhood at the current box and
+    // conversion (the last painted page kept while the shown one is absent),
+    // and the decoder handed the work: the cache's wants in order, then the
+    // store's.
     void feed_decoder();
+    // The gray store measured against the range: short, the asking time
+    // stamped where unstamped; whole with a stamp, the completion's timing
+    // line printed and the stamp cleared.
+    void note_gray_complete();
     // Damage: the modal family's whole area, the box's interior, the
     // controls row.
     void damage();

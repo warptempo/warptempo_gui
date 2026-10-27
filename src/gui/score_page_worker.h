@@ -6,38 +6,66 @@
 // the Bluetooth lag, that's not going to work") — ONE std::jthread, held by
 // the viewer's state (AppState::ScoreViewer::decoder), that turns a page's
 // JPEG (tools/score_extract.py's grayscale page, 2026-10-26) into the
-// surface the painter blits 1:1, so NO PAGE IS EVER DECODED OR SCALED ON THE
-// MAIN THREAD, the open's included.
+// surface the painter blits 1:1 and the gray bytes the viewer's store holds,
+// so NO PAGE IS EVER DECODED, SCALED OR EXPANDED ON THE MAIN THREAD, the
+// open's included.
 //
-// A JOB is a page's file at a FIT BOX (the modal box's interior, its w x h,
+// A JOB is a page at a FIT BOX (the modal box's interior, its w x h,
 // modal_box_interior_rect) and the window's conversion bit as the GUI thread
 // read it (display_transform::active — the switch's two bits are the GUI
-// thread's, display_transform.h's head, so the job carries the answer). THE
-// RESULT is a NEW opaque ARGB32 surface at the page's FIT SIZE — the page
+// thread's, display_transform.h's head, so the job carries the answer), and
+// what it is to yield: THE PAINTED SURFACE (the viewer's cache), THE GRAY
+// BYTES (the viewer's gray store, AppState::ScoreViewer::gray; architect
+// 2026-10-26 ~22:10), or both. THREE KINDS, the viewer's feed choosing:
+//   * FROM THE FILE, BOTH — a page the cache wants and the store lacks;
+//   * FROM THE FILE, GRAY ALONE — a page of the viewing range the store
+//     lacks and the cache does not want;
+//   * AN EXPANSION — a page the cache wants and the store holds: the store's
+//     bytes carried to this thread by their shared owner, never copied, and
+//     no file read.
+// THE FILE'S ROAD: the decode through the materials' road at k = 1
+// (svg_icon::raster_info and raster_regions, which any thread may run:
+// svg_icon.h's THREADS block), the scale to the page's FIT SIZE — the page
 // scaled uniformly by the smaller of the box's two ratios, each side rounded
-// at the element — made in three steps: the decode through the materials'
-// road at k = 1 (svg_icon::raster_info and raster_regions, which any thread
-// may run: svg_icon.h's THREADS block), the scale by cairo's GOOD filter onto
-// a surface this thread owns (a box filter on a reduction: the page is a
-// picture of thin staff lines, which a plain bilinear tap drops), the edge
-// extended so every pixel stays opaque, then, with the bit set, every pixel
-// through display_transform::p3_premultiplied (the page an authored sRGB
-// picture like every raster). A page already at the fit size, the tool's
-// pre-sized page (its --fit, the box this viewer prints at the open:
-// score_viewer.cpp's feed_decoder), skips the scale: the decode's own surface
-// is the result. A page whose decode fails is a result with no
-// surface and ONE stderr line, the rare non-silent fault: the viewer marks it
-// and never asks for it again while that key stands.
+// at the element — by cairo's GOOD filter onto a surface this thread owns (a
+// box filter on a reduction: the page is a picture of thin staff lines,
+// which a plain bilinear tap drops), the edge extended so every pixel stays
+// opaque; then THE GRAY, one byte a pixel taken from the fit-size ARGB
+// before any conversion — the low (blue) byte of each word: the page is gray
+// already (tools/score_extract.py writes grayscale JPEG, 2026-10-26), so its
+// three channels are one and any of them is the page, and every pixel is
+// opaque, so premultiplication leaves it whole; then, with the bit set,
+// every pixel of the surface through display_transform::p3_premultiplied
+// (the page an authored sRGB picture like every raster). A page already at
+// the fit size, the tool's pre-sized page (its --fit, the box this viewer
+// prints at the open: score_viewer.cpp's feed_decoder), skips the scale: the
+// decode's own surface is the result. THE EXPANSION'S ROAD: each gray byte g
+// into the opaque word FF g g g, which is the file road's surface exactly for
+// a gray page, and NO CONVERSION PASS (expand_gray's proof: sRGB -> P3 is
+// the identity on every neutral word). EVERY RESULT is a NEW opaque ARGB32
+// surface at the fit size and / or a new gray buffer. A page whose decode
+// fails is a result with neither and ONE stderr line, the rare non-silent
+// fault: the viewer marks it and never asks for it again while that key
+// stands. A failed allocation of a buffer is std::bad_alloc, no recovery
+// (architect 2026-10-26: the store has no memory backstop).
+//
+// THE TIMING LINE (architect 2026-10-26 ~22:10, the measurements the next
+// ruling reads off logcat): one stderr line a job, steady clock, one
+// decimal, naming the arms that ran — `warptempo_gui: score page <n>: decode
+// <x> ms, scale <y> ms, gray <z> ms, convert <w> ms` for the file's road,
+// `expand <z> ms` for an expansion; <n> the viewer's page number (the index
+// plus one, score_pages.h).
 //
 // THE QUEUE IS THE MAIN THREAD'S ORDER, REPLACED WHOLE (request): the viewer's
-// tick hands the worker the pages its cache lacks, most wanted first, every
-// time that list changes; the job in progress is never interrupted, and a job
-// naming the key in progress is dropped from the new queue rather than done
-// twice. THE RESULTS are drained on the main thread (drain, the viewer's
-// tick), the receiver owning each surface. A RESET (the score folder changed:
-// score_folder_changed, score_viewer.h) empties the queue and supersedes the
-// job in progress by a generation: whatever an older generation delivers is
-// freed at the drain, unseen.
+// tick hands the worker the work its cache and its store lack, most wanted
+// first, every time that list changes; the job in progress is never
+// interrupted, and a job naming the work in progress, or a finished result
+// not yet drained, is dropped from the new queue rather than done twice.
+// THE RESULTS are drained on the main thread (drain, the viewer's tick), the
+// receiver owning each surface and sharing each gray buffer. A RESET (the
+// score folder changed: score_folder_changed, score_viewer.h) empties the
+// queue and supersedes the job in progress by a generation: whatever an
+// older generation delivers is freed at the drain, unseen.
 
 #include <cairo/cairo.h>
 
@@ -45,6 +73,7 @@
 #include <cstdint>
 #include <deque>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -63,16 +92,51 @@ struct GuiScorePageKey {
     bool operator==(const GuiScorePageKey&) const = default;
 };
 
+// ONE PAGE OF THE GRAY STORE (the head; AppState::ScoreViewer::gray): the
+// page index and the fit box it was made for — NOT the conversion bit: the
+// bytes are the page as authored, sRGB, the window's form being the cache's — and
+// its fit-size pixels, one byte each, row-major, w x h, shared (immutable
+// once made) so a job carries them to the worker without a copy. No bytes is
+// a decode that failed under this page and box, never asked for again while
+// they stand.
+struct GuiScoreGrayPage {
+    int page  = -1;
+    int box_w = 0;
+    int box_h = 0;
+    int w     = 0;
+    int h     = 0;
+    std::shared_ptr<const std::vector<uint8_t>> bytes;
+    bool failed() const { return bytes == nullptr; }
+};
+
+// WHAT A JOB DOES (the head's THREE KINDS), its identity in the queue and in
+// the viewer's change test: the key (a gray-alone job's `convert` is false,
+// unread), whether it yields the surface and the gray bytes, and whether it
+// expands the store's bytes instead of reading the file.
+struct GuiScorePageWork {
+    GuiScorePageKey key;
+    bool            surface = true;
+    bool            gray    = false;
+    bool            expand  = false;
+    bool operator==(const GuiScorePageWork&) const = default;
+};
+
 struct GuiScorePageJob {
-    GuiScorePageKey       key;
+    GuiScorePageWork      work;
+    // The file's road: the page's file. An expansion: the store's page.
     std::filesystem::path file;
+    GuiScoreGrayPage      from;
 };
 
 struct GuiScorePageResult {
-    GuiScorePageKey  key;
-    // The fit-size page, OWNED BY THE RECEIVER (cairo_surface_destroy); null
-    // where the decode failed (its stderr line already printed).
+    GuiScorePageWork work;
+    // The fit-size page when the work asked for it, OWNED BY THE RECEIVER
+    // (cairo_surface_destroy); null where the decode failed (its stderr line
+    // already printed).
     cairo_surface_t* surface = nullptr;
+    // The gray bytes when the work asked for them (made from the file); no
+    // bytes where the decode failed.
+    GuiScoreGrayPage gray;
 };
 
 class GuiScorePageWorker {
@@ -101,10 +165,10 @@ private:
 
     std::mutex                  mtx_;
     std::condition_variable_any cv_;
-    // Under mtx_: the queue, the key in progress, the generation, the results
-    // each tagged with the generation it was taken under.
+    // Under mtx_: the queue, the work in progress, the generation, the
+    // results each tagged with the generation it was taken under.
     std::deque<GuiScorePageJob>                          queue_;
-    std::optional<GuiScorePageKey>                       current_;
+    std::optional<GuiScorePageWork>                      current_;
     uint64_t                                             generation_ = 0;
     std::vector<std::pair<uint64_t, GuiScorePageResult>> done_;
     std::jthread                                         thread_;

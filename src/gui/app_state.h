@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -9031,15 +9032,22 @@ struct AppState {
     //              page road's PREV / NEXT / scrub land it (GuiScoreViewer::
     //              show_page), the soundtrack's cursor decides it under the
     //              media player's face (GuiScoreViewer::follow_cursor);
-    //   `painted_page` the page the last paint covering the interior drew
-    //              (paint_modal_dialog's score branch), -1 at the open: the
-    //              tick owes a page turn's position write until the turn is
-    //              on screen (`position_owed`);
+    //   `painted_page` the page whose picture the last paint covering the
+    //              interior drew (paint_modal_dialog's score branch): the
+    //              shown page once its cache entry stands (its surface, or
+    //              the field ground of a failed decode), -1 at the open; a
+    //              shown page not yet delivered leaves it naming the page
+    //              blitted in its stead (score_viewer.h's head, THE CACHE).
+    //              The tick owes a page turn's position write until the turn
+    //              is on screen (`position_owed`);
     //   `scrub`    the scrub's drag arm — on the page road the page under the
     //              thumb shown at the press and at every motion; under the
     //              media player's face the render player's arm (the thumb's
-    //              carried column, on or off the thumb, moved) with the seek
-    //              made live at every motion; the three hard ends drop it
+    //              carried column, on or off the thumb, moved): the drag
+    //              CARRIES the thumb and seeks nothing, THE SEEK IS AT THE
+    //              LIFT to the carried column (architect 2026-10-26, "no
+    //              scrubbing"), a motionless tap on the thumb owes nothing;
+    //              the three hard ends drop it owing nothing
     //              (clear_score_scrub_drag);
     //   `transport` THE SOUNDTRACK'S TRANSPORT (the media player's face
     //              alone): IDLE the engine not bound to the soundtrack (the
@@ -9057,16 +9065,29 @@ struct AppState {
     //              waits for its paint (GuiScoreViewer::tick);
     //   `forward`  the decoder's bias: the last page step was forward (NEXT)
     //              or the transport sounds, so the neighbors ahead come first;
-    //   `cache`    THE DECODED PAGES (the cache's rules at GuiScoreViewer::
-    //              tick): the shown page and up to three either side of it in
-    //              the range, each at the fit box it was made for, owned here
+    //   `cache`    THE PAINTED PAGES (score_viewer.h's head, THE CACHE;
+    //              trimmed by GuiScoreViewer::feed_decoder): the shown page
+    //              and up to three either side of it in the range — and the
+    //              last painted page while the shown page's is absent — each
+    //              at the fit box and conversion it was made for, owned here
     //              — KEPT ACROSS THE CLOSE so a reopen is instant, dropped at
     //              a score folder change (score_folder_changed) and with the
     //              AppState;
-    //   `asked`    the order last handed to the decoder (the tick's change
+    //   `gray`     THE GRAY STORE (score_viewer.h's head, THE GRAY STORE):
+    //              every page of the viewing range at `gray_box_w` x
+    //              `gray_box_h`, one byte a pixel, shared with the jobs that
+    //              expand it — kept across the close, dropped outside a new
+    //              range at once, whole at a box change, a score folder
+    //              change and with the AppState;
+    //   `gray_box_w`, `gray_box_h` the fit box the store is filled for (the
+    //              feed's, the interior's), 0 before the first open;
+    //   `gray_asked_at` when the store last found itself short of the range
+    //              (the feed), cleared when it completes — the completion's
+    //              timing line (GuiScoreViewer::note_gray_complete);
+    //   `asked`    the work last handed to the decoder (the tick's change
     //              test);
     //   `decoder`  the page decoder (score_page_worker.h), the one thread
-    //              that decodes and scales a page;
+    //              that decodes, scales and expands a page;
     //   `seen_audio` the soundtrack's state the tick last saw, so its arrival
     //              or its failure repaints the face it decides.
     struct ScoreViewer {
@@ -9116,8 +9137,12 @@ struct AppState {
         int64_t                      painted_cursor = -1;
         bool                         position_owed  = false;
         bool                         forward        = true;
-        std::vector<Cached>          cache;
-        std::vector<GuiScorePageKey> asked;
+        std::vector<Cached>           cache;
+        std::vector<GuiScoreGrayPage> gray;
+        int                           gray_box_w = 0;
+        int                           gray_box_h = 0;
+        std::optional<std::chrono::steady_clock::time_point> gray_asked_at;
+        std::vector<GuiScorePageWork> asked;
         GuiScorePageWorker           decoder;
         GuiScoreAudio::State         seen_audio = GuiScoreAudio::State::Absent;
     };

@@ -6356,16 +6356,23 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the smaller of the two ratios, cairo's GOOD filter, the window's
         // conversion), BLITTED 1:1 and centered on both axes at whole device
         // px, the rest of the interior the field ground paint_modal_box laid.
-        // A page not yet delivered, or whose decode failed, leaves the field
-        // ground; the decoder's delivery damages the interior.
-        // The tick's gate on a page turn's owed position write
-        // (ScoreViewer::painted_page): a frame whose clip covers the interior
-        // drew the shown page whole, or its field ground.
-        if (clip_covers_drawable(cr, app, interior))
-            app.score_viewer.painted_page = app.score_viewer.page;
-        if (const AppState::ScoreViewer::Cached* c =
-                score_viewer_cached(app, app.score_viewer.page, interior);
-            c != nullptr && c->surface != nullptr && interior.w > 0 &&
+        // A page whose decode failed leaves the field ground. A page NOT YET
+        // DELIVERED shows THE LAST PAINTED PAGE (ScoreViewer::painted_page,
+        // its entry kept by the feed's trim) until the decoder's delivery
+        // damages the interior; nothing painted yet, the field ground.
+        // painted_page is also the tick's gate on a page turn's owed position
+        // write: a frame whose clip covers the interior and finds the shown
+        // page's entry drew that page whole, or its field ground.
+        const AppState::ScoreViewer::Cached* c =
+            score_viewer_cached(app, app.score_viewer.page, interior);
+        if (c != nullptr) {
+            if (clip_covers_drawable(cr, app, interior))
+                app.score_viewer.painted_page = app.score_viewer.page;
+        } else if (app.score_viewer.painted_page >= 0) {
+            c = score_viewer_cached(app, app.score_viewer.painted_page,
+                                    interior);
+        }
+        if (c != nullptr && c->surface != nullptr && interior.w > 0 &&
             interior.h > 0) {
             const int dw = cairo_image_surface_get_width(c->surface);
             const int dh = cairo_image_surface_get_height(c->surface);

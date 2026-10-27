@@ -5,6 +5,7 @@
 #include "text_editor.h"   // next_session_id (the one modal counter)
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <vector>
 
@@ -27,6 +28,8 @@ void score_folder_changed(AppState& app) {
     AppState::ScoreViewer& sv = app.score_viewer;
     sv.decoder.reset();
     sv.cache.clear();
+    sv.gray.clear();
+    sv.gray_asked_at.reset();
     sv.asked.clear();
     if (app.score) {
         app.score_audio.start(app.score->folder, app.score->rate);
@@ -245,6 +248,12 @@ void GuiScoreViewer::set_end() {
 
 void GuiScoreViewer::range_changed() {
     AppState::ScoreViewer& sv = app.score_viewer;
+    // THE RANGE SCOPES THE GRAY STORE (score_viewer.h's head): every page
+    // outside the new range goes AT ONCE; the next feed asks for the missing.
+    const ScoreViewerRange gr = score_viewer_range(app);
+    std::erase_if(sv.gray, [&](const GuiScoreGrayPage& g) {
+        return g.page < gr.first || g.page > gr.last;
+    });
     if (!score_viewer_has_soundtrack(app)) return;
     // THE RANGE EXCLUDES EVERYTHING OUTSIDE IT (the head): the range narrows
     // around the shown page, which holds the cursor, so the cursor stays
@@ -363,20 +372,77 @@ void GuiScoreViewer::tick() {
 
 void GuiScoreViewer::drain_decoder() {
     AppState::ScoreViewer& sv = app.score_viewer;
+    bool gray_landed = false;
     for (GuiScorePageResult& r : sv.decoder.drain()) {
-        AppState::ScoreViewer::Cached c;
-        c.key     = r.key;
-        c.surface = r.surface;
-        c.failed  = r.surface == nullptr;
-        // An entry already standing under the key (a result the decoder
-        // finished twice across a change of order) is replaced.
-        std::erase_if(sv.cache, [&](const AppState::ScoreViewer::Cached& e) {
-            return e.key == c.key;
-        });
-        const bool shown = sv.active && c.key.page == sv.page;
-        sv.cache.push_back(std::move(c));
-        if (shown) damage_interior();
+        const GuiScorePageKey& k = r.work.key;
+        if (r.work.surface) {
+            AppState::ScoreViewer::Cached c;
+            c.key     = k;
+            c.surface = r.surface;
+            c.failed  = r.surface == nullptr;
+            r.surface = nullptr;
+            // An entry already standing under the key (a result the decoder
+            // finished twice across a change of order) is replaced.
+            std::erase_if(sv.cache,
+                          [&](const AppState::ScoreViewer::Cached& e) {
+                              return e.key == c.key;
+                          });
+            const bool shown = sv.active && c.key.page == sv.page;
+            sv.cache.push_back(std::move(c));
+            if (shown) damage_interior();
+        }
+        // THE GRAY BYTES into the store, under its box and inside the range
+        // as they stand (a result made for another box or a page the range
+        // has since dropped is let go); a failed decode stands as an entry
+        // with no bytes.
+        if (r.work.gray && app.score && k.box_w == sv.gray_box_w &&
+            k.box_h == sv.gray_box_h) {
+            const ScoreViewerRange range = score_viewer_range(app);
+            if (k.page >= range.first && k.page <= range.last) {
+                GuiScoreGrayPage g = std::move(r.gray);
+                if (g.failed())
+                    g = GuiScoreGrayPage{k.page, k.box_w, k.box_h, 0, 0, {}};
+                std::erase_if(sv.gray, [&](const GuiScoreGrayPage& e) {
+                    return e.page == k.page;
+                });
+                sv.gray.push_back(std::move(g));
+                gray_landed = true;
+            }
+        }
     }
+    if (gray_landed) note_gray_complete();
+}
+
+void GuiScoreViewer::note_gray_complete() {
+    AppState::ScoreViewer& sv = app.score_viewer;
+    if (!app.score || sv.gray_box_w <= 0 || sv.gray_box_h <= 0) return;
+    // THE STORE HOLDS ONLY THE RANGE'S PAGES AT ITS BOX, one entry a page
+    // (the drain's and range_changed's rules, the feed's box rule), so it is
+    // whole exactly when it counts the range.
+    const bool whole =
+        static_cast<int>(sv.gray.size()) == score_viewer_range(app).count();
+    const auto now = std::chrono::steady_clock::now();
+    if (!whole) {
+        if (!sv.gray_asked_at) sv.gray_asked_at = now;
+        return;
+    }
+    if (!sv.gray_asked_at) return;
+    // THE COMPLETION'S TIMING LINE (architect 2026-10-26 ~22:10): the pages
+    // held (a failed decode holds none), their bytes in decimal megabytes,
+    // the seconds since the store found itself short.
+    int         held  = 0;
+    std::size_t bytes = 0;
+    for (const GuiScoreGrayPage& g : sv.gray) {
+        if (g.failed()) continue;
+        ++held;
+        bytes += g.bytes->size();
+    }
+    std::fprintf(stderr,
+                 "warptempo_gui: score pages %d held as gray, %.1f MB, %.1f s "
+                 "since asked\n",
+                 held, static_cast<double>(bytes) / 1e6,
+                 std::chrono::duration<double>(now - *sv.gray_asked_at).count());
+    sv.gray_asked_at.reset();
 }
 
 void GuiScoreViewer::feed_decoder() {
@@ -406,40 +472,106 @@ void GuiScoreViewer::feed_decoder() {
         return i >= r.first && i <= r.last && i >= p - kCacheReach &&
                i <= p + kCacheReach;
     };
+    // THE GRAY STORE'S BOX (score_viewer.h's head): a box change drops the
+    // store whole, as the cache's key rule drops the cache.
+    if (box.w != sv.gray_box_w || box.h != sv.gray_box_h) {
+        sv.gray.clear();
+        sv.gray_box_w = box.w;
+        sv.gray_box_h = box.h;
+        sv.gray_asked_at.reset();
+    }
+    note_gray_complete();
     // THE CACHE'S REACH (the head's THE CACHE): an entry made for another
     // box, under the other conversion, or outside the shown page's reach
-    // goes.
+    // goes — but the last painted page's while the shown page's is absent,
+    // the painter's stand-in until it lands.
+    const GuiScorePageKey shown_key{p, box.w, box.h, convert};
+    const bool shown_absent = std::none_of(
+        sv.cache.begin(), sv.cache.end(),
+        [&](const AppState::ScoreViewer::Cached& c) {
+            return c.key == shown_key;
+        });
     std::erase_if(sv.cache, [&](const AppState::ScoreViewer::Cached& c) {
-        return c.key.box_w != box.w || c.key.box_h != box.h ||
-               c.key.convert != convert || !in_reach(c.key.page);
+        if (c.key.box_w != box.w || c.key.box_h != box.h ||
+            c.key.convert != convert)
+            return true;
+        if (shown_absent && c.key.page == sv.painted_page) return false;
+        return !in_reach(c.key.page);
     });
     // THE LIKELY ORDER: the shown page, then forward first while the
     // soundtrack sounds or after NEXT, both ways otherwise.
-    std::vector<int> order{p};
     const bool ahead = sv.transport == Transport::Live || sv.forward;
-    if (ahead) {
-        for (int d = 1; d <= kCacheReach; ++d) order.push_back(p + d);
-        for (int d = 1; d <= kCacheReach; ++d) order.push_back(p - d);
-    } else {
-        for (int d = 1; d <= kCacheReach; ++d) {
-            order.push_back(p + d);
-            order.push_back(p - d);
+    const auto likely_order = [&](int reach) {
+        std::vector<int> order{p};
+        if (ahead) {
+            for (int d = 1; d <= reach; ++d) order.push_back(p + d);
+            for (int d = 1; d <= reach; ++d) order.push_back(p - d);
+        } else {
+            for (int d = 1; d <= reach; ++d) {
+                order.push_back(p + d);
+                order.push_back(p - d);
+            }
         }
-    }
-    std::vector<GuiScorePageKey> keys;
-    std::vector<GuiScorePageJob> jobs;
-    for (const int i : order) {
+        return order;
+    };
+    // The store by page (one entry a page, at the store's box: the head).
+    const std::size_t n = static_cast<std::size_t>(app.score->count());
+    std::vector<const GuiScoreGrayPage*> gray_at(n, nullptr);
+    for (const GuiScoreGrayPage& g : sv.gray)
+        if (g.page >= 0 && static_cast<std::size_t>(g.page) < n)
+            gray_at[static_cast<std::size_t>(g.page)] = &g;
+    std::vector<GuiScorePageWork> works;
+    std::vector<char>             queued(n, 0);
+    // THE CACHE'S WANTS FIRST: a page the store holds is EXPANDED from its
+    // bytes, one it lacks read from the file for both (score_page_worker.h's
+    // THREE KINDS); a page whose store entry failed is marked failed here,
+    // never asked for again.
+    for (const int i : likely_order(kCacheReach)) {
         if (!in_reach(i)) continue;
         const GuiScorePageKey key{i, box.w, box.h, convert};
         const bool held = std::any_of(
             sv.cache.begin(), sv.cache.end(),
             [&](const AppState::ScoreViewer::Cached& c) { return c.key == key; });
         if (held) continue;
-        keys.push_back(key);
-        jobs.push_back(GuiScorePageJob{key, app.score->page_file(i)});
+        const GuiScoreGrayPage* g = gray_at[static_cast<std::size_t>(i)];
+        if (g != nullptr && g->failed()) {
+            AppState::ScoreViewer::Cached c;
+            c.key    = key;
+            c.failed = true;
+            sv.cache.push_back(std::move(c));
+            continue;
+        }
+        queued[static_cast<std::size_t>(i)] = 1;
+        works.push_back(GuiScorePageWork{key, /*surface=*/true,
+                                         /*gray=*/g == nullptr,
+                                         /*expand=*/g != nullptr});
     }
-    if (keys == sv.asked) return;
-    sv.asked = keys;
+    // THEN THE STORE'S: every page of the range it lacks, in the same likely
+    // order reaching the whole range, read from the file for the gray alone.
+    for (const int i : likely_order(r.count())) {
+        if (i < r.first || i > r.last) continue;
+        const std::size_t at = static_cast<std::size_t>(i);
+        if (queued[at] || gray_at[at] != nullptr) continue;
+        works.push_back(GuiScorePageWork{GuiScorePageKey{i, box.w, box.h, false},
+                                         /*surface=*/false, /*gray=*/true,
+                                         /*expand=*/false});
+    }
+    if (works == sv.asked) return;
+    // The jobs made only for a changed order: an expansion carries the
+    // store's bytes by their shared owner, a file job the page's path.
+    std::vector<GuiScorePageJob> jobs;
+    jobs.reserve(works.size());
+    for (const GuiScorePageWork& w : works) {
+        GuiScorePageJob job;
+        job.work = w;
+        if (w.expand) {
+            job.from = *gray_at[static_cast<std::size_t>(w.key.page)];
+        } else {
+            job.file = app.score->page_file(w.key.page);
+        }
+        jobs.push_back(std::move(job));
+    }
+    sv.asked = std::move(works);
     sv.decoder.request(std::move(jobs));
 }
 
