@@ -6291,7 +6291,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         if (scrub_w > 0) {
             paint_scrub_item(scrub_x0, scrub_w, [&] {
                 // The drag's carried x while the thumb is being dragged (the
-                // sound continues where it was and the seek commits at the
+                // sound paused under the hold and the seek committing at the
                 // release), the item position's own otherwise — the
                 // channel's first column, frame 0, while no item is loaded
                 // (render_player_scrub_x_of's frames <= 0 arm, the clock's

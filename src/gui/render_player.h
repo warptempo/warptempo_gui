@@ -486,8 +486,18 @@ struct GuiRenderPlayer {
     // pausing what sounds (the band-left-behind bug from the car's side).
     void transport_toggle_act();
     // Pause a live transport (the resume point is the engine's own position)
-    // or resume a paused one; a no-op with no item.
+    // or resume a paused one; a no-op with no item. ITS TWO ARMS ARE BODIES
+    // OF THEIR OWN (architect 2026-10-26 ~23:15, the score viewer's shape),
+    // each a silent no-op with no item and in the other's state: pause() —
+    // LIVE parks at PAUSED through the one stop body, the resume point the
+    // engine's position — and resume() — any rest plays from the resume
+    // point, a point in the item's last frame replaying from its start.
+    // Their second caller is the scrub (THE SOUND PAUSES WHILE THE SCRUB IS
+    // HELD, input_pointer.cpp's play-scrub block): the press pauses a live
+    // item and the lift, after its seek, resumes it.
     void toggle_pause();
+    void pause();
+    void resume();
     // (STOP STOOD HERE, the act of 2026-08-28 — the transport to IDLE with the
     // item resting at its start, the resume point cleared to 0 and the item
     // itself untouched, a consumed no-op with no item and on an item already
@@ -673,7 +683,11 @@ struct GuiRenderPlayer {
     // scrub's thumb drag commits its seek against the LIVE item at the
     // release (clamped into it by the mapping), so the one visible
     // consequence is that a toggle which started another wav mid-drag has that
-    // release land inside the wav it started.
+    // release land inside the wav it started. The scrub's press pauses a live
+    // item for the hold (input_pointer.cpp's play-scrub block), so a toggle
+    // mid-drag resumes or starts the sound under the held thumb, and the
+    // release's resume is then a no-op on a transport already LIVE (resume()'s
+    // own guard) — its seek a live reseek.
     //
     // THE TABLE. The Accord's three buttons are REWIND, PLAY/PAUSE and
     // FAST-FORWARD, the outer two arriving as Previous and Next:

@@ -8902,14 +8902,18 @@ struct AppState {
     //              where it stands, its grab offset kept (`grab_dx`), and
     //              anywhere else on the band it jumps to the press — its
     //              painted x following the pointer — clamped onto the
-    //              thumb's own travel, never the item's ends — while playback
-    //              continues where it was, the seek committing at the release
-    //              (the product's deferred-click shape; a motionless tap on
-    //              the thumb, `on_thumb` and not `moved`, seeks nothing); each
-    //              of the three hard
+    //              thumb's own travel, never the item's ends — with nothing
+    //              seeked, the seek committing at the release (the product's
+    //              deferred-click shape; a motionless tap on the thumb,
+    //              `on_thumb` and not `moved`, seeks nothing); and
+    //              `was_live`, the press having paused a LIVE item, which the
+    //              release resumes from the seeked point (architect
+    //              2026-10-26 ~23:15, THE SOUND PAUSES WHILE THE SCRUB IS
+    //              HELD, the score scrub's rule); each of the three hard
     //              ends — the pointer-leave hook, the button-lost edge and
     //              the force-end finalizer, through clear_player_scrub_drag —
-    //              drops it and seeks nowhere. THE SCRUB RESTS WHILE THE
+    //              drops it, seeks nowhere and resumes nothing, the item left
+    //              PAUSED. THE SCRUB RESTS WHILE THE
     //              TRANSPORT IS IDLE (architect 2026-08-29, Audacious's own
     //              slider, dead while stopped): a press on the track or on the
     //              handle then is a consumed no-op — no seek and no arm — and
@@ -8974,6 +8978,7 @@ struct AppState {
             bool on_thumb = false;  // armed on the grab band, not the track
             int  grab_dx  = 0;      // press x − thumb centre; 0 off the thumb
             bool moved    = false;  // the carried centre has moved
+            bool was_live = false;  // the press paused a LIVE item
         };
         ScrubDrag                  scrub;
         std::optional<RenderEntry> pending_load;

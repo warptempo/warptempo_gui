@@ -1690,7 +1690,8 @@ struct GuiInputHandler {
     // FINALIZER (finalize_active_drags, which owes them because both arms are
     // members of any_pointer_gesture_active and its callers promise a
     // gesture-free state) — the contracts are with their press routers, in
-    // the player's block below.
+    // the player's block below; a live item the scrub's press paused stays
+    // PAUSED (a lost lift is not a commit).
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
     // THE SCORE VIEWER'S SCRUB ARM (2026-10-26) drops on the same three
@@ -1726,10 +1727,9 @@ struct GuiInputHandler {
     // SEEKS the frame under the thumb's last painted column, the position
     // written with it — a motionless tap on the thumb seeks nothing. THE
     // SOUND PAUSES WHILE THE SCRUB IS HELD (architect 2026-10-26 ~23:00, the
-    // score's own; the render player's scrub plays on under its drag): a
-    // LIVE transport is paused at the press and played on from the cursor at
-    // the lift, after its seek. A modified press is consumed and does
-    // nothing.
+    // one rule of both scrubs since ~23:15): a LIVE transport is paused at
+    // the press and played on from the cursor at the lift, after its seek. A
+    // modified press is consumed and does nothing.
     bool claim_score_scrub_press(int x, int y, GuiInputState mods);
     void update_score_scrub_motion(int x);
     bool finish_score_scrub_release();
@@ -4196,13 +4196,16 @@ private:
     // Windows' trackbar) — on the thumb's grab band (the one test,
     // render_player_scrub_handle_hit) the thumb is taken where it stands, and
     // anywhere else on the band it JUMPS to the press and the same press
-    // drags it on — its painted x follows the pointer while playback
-    // continues where it was, and the RELEASE commits the seek to the thumb's
-    // column (the product's deferred-click shape; a motionless tap on the
-    // thumb seeks nothing). Until that day a press off the handle's box
-    // seeked at the press and armed nothing. The hard end — the pointer-leave
-    // hook, the button-lost edge and the force-end finalizer — drops the arm
-    // and commits nothing.
+    // drags it on — its painted x follows the pointer with nothing seeked,
+    // and the RELEASE commits the seek to the thumb's column (the product's
+    // deferred-click shape; a motionless tap on the thumb seeks nothing).
+    // Until that day a press off the handle's box seeked at the press and
+    // armed nothing. THE SOUND PAUSES WHILE THE SCRUB IS HELD (architect
+    // 2026-10-26 ~23:15, the score scrub's rule, the two scrubs one): a LIVE
+    // item is paused at the press and resumed at the lift from the seeked
+    // point. The hard end — the pointer-leave hook, the button-lost edge and
+    // the force-end finalizer — drops the arm and commits nothing, a live
+    // item the press paused staying PAUSED.
     bool claim_player_scrub_press(int x, int y, GuiInputState mods);
     bool finish_player_scrub_release(int x, int y);
     void update_player_scrub_motion(int x);

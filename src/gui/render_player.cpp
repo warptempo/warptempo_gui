@@ -871,16 +871,16 @@ void GuiRenderPlayer::transport_toggle_act() {
     // nothing can have moved it since the last natural end, fresh bind or
     // unload — and toggle_pause's resume arm reads exactly that field.
     //
-    // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (architect
-    // 2026-08-31 — the one-dimensional rule): a player resting with
-    // nothing bound shows that state on its own row, the clock at zero and the
-    // slider at its left end, so a sentence only repeats what is painted. This
-    // body carried a carded guard of its own from 2026-08-30 as the OUTERMOST
-    // site with the reason — the button, bare Space and the car's toggle all
-    // arrive here — and with the card gone it was a second copy of the
-    // predicate behind it, so it is deleted rather than silenced: the resume
-    // below is the consumed no-op, on `item.empty()` and on the `frames <= 0`
-    // an item cannot reach alike.
+    // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (its resume
+    // arm's, resume(); architect 2026-08-31 — the one-dimensional rule): a
+    // player resting with nothing bound shows that state on its own row, the
+    // clock at zero and the slider at its left end, so a sentence only
+    // repeats what is painted. This body carried a carded guard of its own
+    // from 2026-08-30 as the OUTERMOST site with the reason — the button,
+    // bare Space and the car's toggle all arrive here — and with the card
+    // gone it was a second copy of the predicate behind it, so it is deleted
+    // rather than silenced: the resume below is the consumed no-op, on
+    // `item.empty()` and on the `frames <= 0` an item cannot reach alike.
     toggle_pause();
 }
 
@@ -892,45 +892,54 @@ void GuiRenderPlayer::toggle_repeat_one() {
 }
 
 void GuiRenderPlayer::toggle_pause() {
+    if (app.render_player.transport == Transport::Live) pause();
+    else resume();
+}
+
+void GuiRenderPlayer::pause() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
-    if (rp.transport == Transport::Live) {
-        // PAUSE: the resume point is the engine's own position, read BEFORE
-        // the stop body (whose fence is the one stop); the body's player fork
-        // moves the transport to PAUSED — at whatever frame the cursor holds,
-        // the item's start included — and damages the row.
-        // THE RESUME POINT IS THE PREDICTOR'S POSITION, the one the picture
-        // was drawn from — there is no second reading of the line to choose
-        // between (architect 2026-09-03). The predictor is uncompensated, so
-        // that position is AHEAD of the ear and a resume skips the run
-        // between the two. HOW FAR AHEAD DEPENDS ON THE ANCHOR: the player
-        // never resyncs — `resync_predictor` fires on the waveform camera's
-        // own events and the player displays no waveform — so its anchor is
-        // always the LAUNCH's, the publish instant, and the position leads
-        // the ear by the launch's pickup phase (0 to one callback period,
-        // re-rolled per launch) PLUS the device's output latency; the
-        // phase-sized part of what a resume skips had not reached the port at
-        // all when the press landed. After a resync the anchor is a real port
-        // instant (the cycle stamp) and that phase term is gone, leaving the
-        // latency alone. That is the same lead every other surface carries
-        // and it is the ruling (playback.h's design note, the launch
-        // arithmetic at playback_publish_play); a lead-free second face
-        // existed for a day to park this write behind the ear and went with
-        // the leads. The clock and the scrub paint from
-        // the same call, so the picture does not step at the pause.
-        // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
-        // stop_playback_if_playing leaves app.playhead_cursor_sample where
-        // the user put it, so the player's two pauses are the whole
-        // resting-write set — this arm and the tick's dead-device arm, which
-        // reads the predictor's position exactly as this one does and writes
-        // it before the stop body too. (up() was a third for the evening of
-        // 2026-09-04; it unloads the item now and writes no resume point at
-        // all — the record is at that body.)
-        rp.resume_frame =
-            std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
-        playback_lifecycle.stop_playback_if_playing();
-        return;
-    }
+    if (rp.transport != Transport::Live) return;
+    // PAUSE: the resume point is the engine's own position, read BEFORE
+    // the stop body (whose fence is the one stop); the body's player fork
+    // moves the transport to PAUSED — at whatever frame the cursor holds,
+    // the item's start included — and damages the row.
+    // THE RESUME POINT IS THE PREDICTOR'S POSITION, the one the picture
+    // was drawn from — there is no second reading of the line to choose
+    // between (architect 2026-09-03). The predictor is uncompensated, so
+    // that position is AHEAD of the ear and a resume skips the run
+    // between the two. HOW FAR AHEAD DEPENDS ON THE ANCHOR: the player
+    // never resyncs — `resync_predictor` fires on the waveform camera's
+    // own events and the player displays no waveform — so its anchor is
+    // always the LAUNCH's, the publish instant, and the position leads
+    // the ear by the launch's pickup phase (0 to one callback period,
+    // re-rolled per launch) PLUS the device's output latency; the
+    // phase-sized part of what a resume skips had not reached the port at
+    // all when the press landed. After a resync the anchor is a real port
+    // instant (the cycle stamp) and that phase term is gone, leaving the
+    // latency alone. That is the same lead every other surface carries
+    // and it is the ruling (playback.h's design note, the launch
+    // arithmetic at playback_publish_play); a lead-free second face
+    // existed for a day to park this write behind the ear and went with
+    // the leads. The clock and the scrub paint from
+    // the same call, so the picture does not step at the pause.
+    // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
+    // stop_playback_if_playing leaves app.playhead_cursor_sample where
+    // the user put it, so the player's two pauses are the whole
+    // resting-write set — this arm and the tick's dead-device arm, which
+    // reads the predictor's position exactly as this one does and writes
+    // it before the stop body too. (up() was a third for the evening of
+    // 2026-09-04; it unloads the item now and writes no resume point at
+    // all — the record is at that body.)
+    rp.resume_frame =
+        std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
+    playback_lifecycle.stop_playback_if_playing();
+}
+
+void GuiRenderPlayer::resume() {
+    AppState::RenderPlayer& rp = app.render_player;
+    if (rp.item.empty() || rp.frames <= 0) return;
+    if (rp.transport == Transport::Live) return;
     // RESUME: from the resume point; a point at or past the item's end (the
     // rest after a natural end, or a seek to the end while paused) replays
     // from the start — a user act, not a loop.
@@ -1776,8 +1785,8 @@ void GuiRenderPlayer::publish_media_state() {
     // pushes nothing at all and the car transport's tick takes the wire back
     // (the reasoning is at close()'s tail), so no road reaches this body with
     // the mode down — re-grepped: the eight remaining call sites are
-    // rebuild_rows, move_highlight, set_highlight, play_wav, toggle_pause,
-    // seek_to (twice) and the stop body's player fork, and that fork is
+    // rebuild_rows, move_highlight, set_highlight, play_wav, resume
+    // (toggle_pause's resume arm), seek_to (twice) and the stop body's player fork, and that fork is
     // itself gated on the mode bit. The arm stays because the fault it
     // guards is SILENT AND PERMANENT: a push with `session_active` false
     // calls setActive(false) on the sliver's session, and nothing in this

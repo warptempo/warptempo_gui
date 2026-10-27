@@ -5135,10 +5135,21 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // offset kept so it does not jump under the pointer; ANYWHERE ELSE on the
 // item's band the thumb JUMPS to the press's column and the same press
 // continues as the drag. Either way the thumb's painted x follows the
-// pointer while the sound continues where it was, and the RELEASE commits
-// the seek to the thumb's carried column, the product's deferred-click shape
-// — so a tap on the track seeks at the lift, and a motionless tap on the
-// thumb itself seeks nothing (Windows: clicking the thumb moves nothing).
+// pointer with nothing seeked, and the RELEASE commits the seek to the
+// thumb's carried column, the product's deferred-click shape — so a tap on
+// the track seeks at the lift, and a motionless tap on the thumb itself
+// seeks nothing (Windows: clicking the thumb moves nothing).
+// THE SOUND PAUSES WHILE THE SCRUB IS HELD — THE ONE RULE OF BOTH SCRUBS,
+// this one and the score viewer's below (architect 2026-10-26 ~23:15: "we
+// should stop playback when dragging the thumb, in part because it's less
+// truthful. The thumb is no longer at that place"): a LIVE item is paused at
+// the press (GuiRenderPlayer::pause, the key reading PLAY while held) and
+// the lift, after its seek, resumes it from the seeked point
+// (GuiRenderPlayer::resume) — so the sound plays on exactly where the thumb
+// dropped, and a motionless tap on the thumb of a live item pauses at the
+// press and resumes from the same point at the lift, a no-op in effect. A
+// PAUSED item arms as it stands and stays paused at the lift; a hard end
+// owes nothing, the item left PAUSED (clear_player_scrub_drag).
 
 // THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
@@ -5208,6 +5219,12 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     // channel (the
     // travel is the mapping's, one owner: render_player_scrub_usable_span).
     drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
+    // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live item
+    // paused here, its resume point the engine's position; a paused one arms
+    // as it stands.
+    drag.was_live = app.render_player.transport ==
+                    AppState::RenderPlayer::Transport::Live;
+    if (drag.was_live) render_player.pause();
     viewport.invalidate_rect(track);
     return true;
 }
@@ -5235,17 +5252,28 @@ bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
     // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING: the thumb was taken where
     // it stood and never moved, and re-seeking its own column would round the
     // position to that column's frame.
-    if (ended.on_thumb && !ended.moved) return true;
-    // THE COMMIT: the seek to the thumb's column at the lift — the lift's x
-    // less the grab offset, clamped onto the travel by the mapping, which is
-    // the column the motion last painted the thumb at.
-    render_player.seek_to(render_player_scrub_frame_at(app, x - ended.grab_dx));
+    // THE COMMIT otherwise: the seek to the thumb's column at the lift — the
+    // lift's x less the grab offset, clamped onto the travel by the mapping,
+    // which is the column the motion last painted the thumb at — at rest, the
+    // press having paused a live item, so it moves the resume point
+    // (seek_to's PAUSED arm).
+    if (!(ended.on_thumb && !ended.moved))
+        render_player.seek_to(
+            render_player_scrub_frame_at(app, x - ended.grab_dx));
+    // THE SOUND PLAYS ON where the press paused a live item (the block head):
+    // from the seeked point, resume()'s own rule — a point dropped in the
+    // item's last frame replays it from its start.
+    if (ended.was_live) render_player.resume();
     return true;
 }
 
 void GuiInputHandler::clear_player_scrub_drag() {
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     if (!drag.armed) return;
+    // A LOST LIFT IS NOT A COMMIT (architect 2026-10-26 ~23:15, the score
+    // scrub's own choice, the two scrubs one rule): nothing seeked and
+    // nothing resumed — a live item the press paused stays PAUSED where the
+    // press left it, the key reading PLAY.
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -5272,9 +5300,9 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    PLAY while held) and the lift, after its seek, plays on from the cursor
 //    (GuiScoreViewer::play) — so a motionless tap on the thumb of a live
 //    transport pauses at the press and plays on from the same cursor at the
-//    lift, a no-op in effect. A DELIBERATE ASYMMETRY: the render player's
-//    scrub keeps playing under the drag (his sentence was about the score;
-//    the render player awaits his ruling). --
+//    lift, a no-op in effect. THE ONE RULE OF BOTH SCRUBS (architect
+//    2026-10-26 ~23:15, the render player's scrub taking it: "we should make
+//    them both the same"; the play-scrub's block head). --
 
 bool GuiInputHandler::claim_score_scrub_press(int x, int y,
                                               GuiInputState mods) {
@@ -9183,8 +9211,9 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // (2026-08-28): the folder overlay's row press and the scrub's marker
     // drag both act at the lift, so a lift that never comes must drop them
     // with nothing committed — the chrome arm's own rule, on the same edge.
-    // The score viewer's scrub drops with them, owing nothing: a live
-    // soundtrack its press paused stays PAUSED (clear_score_scrub_drag).
+    // The score viewer's scrub drops with them, both owing nothing: a live
+    // item or soundtrack the press paused stays PAUSED
+    // (clear_player_scrub_drag, clear_score_scrub_drag).
     clear_folder_overlay_press();
     clear_player_scrub_drag();
     clear_score_scrub_drag();
