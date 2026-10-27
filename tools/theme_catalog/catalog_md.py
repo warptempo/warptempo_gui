@@ -51,8 +51,8 @@ def head(default_name, default_key):
 
 
 PRESETS_PROVENANCE = (
-    'The color presets of Cool Edit Pro 2.1, the program the waveform\'s look comes from: its twenty presets in its '
-    'own order, each as it is.')
+    'The color presets of Cool Edit Pro 2.1, the program the waveform\'s look comes from: its twenty presets under '
+    'its own names, each as it is, listed alphabetically.')
 PRESETS_RULES = [
     'The waveform\'s outline is each preset\'s waveform color darkened, the same hue at a fixed lightness (the '
     'lightness of Cool Edit Pro 2.1\'s view bar shadows).',

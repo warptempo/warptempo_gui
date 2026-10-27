@@ -28,17 +28,17 @@
 //                            unread under the materials since 2026-10-21):
 //                            a built-in, one of the twenty presets'
 //                            keys alone
-//                            (`warptempo-cool-edit-default`,
-//                            `warptempo-cool-edit-xp-blue`, ...;
-//                            is_builtin_palette_name, palette_file.h; a
+//                            (`default`, `xp-blue`, ...; no prefix since
+//                            2026-10-27; is_builtin_palette_name,
+//                            palette_file.h; a
 //                            preset file's name until 2026-10-14), chosen by
 //                            the Settings Waveform row; REQUIRED (architect
 //                            2026-10-14; absent meant the default
 //                            2026-10-07..14), the default SPELLED: both
 //                            first-run templates write
-//                            `waveform=warptempo-cool-edit-default`,
-//                            "Cool Edit, Default" since 2026-10-26
-//                            (kGuiDefaultPaletteKey, palette_file.h). Named
+//                            `waveform=default`, "Default" (architect
+//                            2026-10-26; kGuiDefaultPaletteKey,
+//                            palette_file.h). Named
 //                            `palette` until 2026-10-13 and `chrome` until
 //                            2026-10-21 (the key `chrome` of 2026-10-07 to
 //                            2026-10-10 was another thing, retired); an old
@@ -275,7 +275,7 @@
 // keys were the two that might be absent 2026-10-07..14, the absence
 // spelling the default; the default is SPELLED since, the writer emitting
 // every line and the first-run templates naming
-// `waveform=warptempo-cool-edit-default`, so an absent line is the shared scanner's
+// `waveform=default`, so an absent line is the shared scanner's
 // missing-required-key refusal like any other, with no migration and no
 // launch-time repair — the planner edits the two devices' configs at the
 // install), one canonical spelling per
@@ -332,7 +332,7 @@
 // (an empty value is refused); both backends' templates
 // (GuiPlatform::device_config_defaults) SPELL THE DEFAULT into it (architect
 // 2026-10-14: every key required) — kGuiDefaultPaletteKey (palette_file.h),
-// `warptempo-cool-edit-default` — so the first-run file of either device names its
+// `default` — so the first-run file of either device names its
 // waveform preset. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
@@ -370,7 +370,7 @@ struct DeviceConfig {
     // THE WAVEFORM PRESET, the `waveform` key's built-in name (architect
     // 2026-10-07; `palette` the member's name until 2026-10-21): required
     // since 2026-10-14, so empty only before a read; the templates spell the
-    // default, `warptempo-cool-edit-default` (kGuiDefaultPaletteKey). (`scheme`, the
+    // default, `default` (kGuiDefaultPaletteKey). (`scheme`, the
     // `caption` key's, stood before it 2026-10-08..10-21.)
     std::string waveform;
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
@@ -695,7 +695,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp `waveform=warptempo-cool-edit-default` (the default spelled, every key
+// both stamp `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value)
 // and no role
 // line

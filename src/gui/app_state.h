@@ -8760,7 +8760,7 @@ struct AppState {
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph: Folder wears the folder glyph, Wav
     // the wav glyph, and PRESET NONE (architect 2026-10-25: the row is the
-    // preset's memorable DISPLAY NAME, "Cool Edit, Default", never its
+    // preset's memorable DISPLAY NAME, "Midnight Blues", never its
     // key, its text starting where a Folder row's name starts). A KIND EXISTS
     // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:
     //   * UP — the `..` row, the folder glyph over the parent — went on

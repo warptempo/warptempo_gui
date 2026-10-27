@@ -4,9 +4,12 @@
 # palette is and does).
 # ONE SOURCE: THE PROGRAM'S PRESETS, warptempo_presets.txt's, in its order (that file's head is their design and
 # provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is); the value grammar and the
-# outline's lightness below are Cool Edit's. Each row a KEY, a DISPLAY NAME and THE TEN
-# PROGRAM ROLES (kGuiPaletteRoles, read off palette_file.h and checked against ROLE_ORDER) under the one transcription
-# below.
+# outline's lightness below are Cool Edit's.
+# THE ORDER IS ALPHABETICAL BY DISPLAY NAME, case-insensitive (str.lower()), Default sorted among the names (architect
+# 2026-10-27): the text's order is the include's and so the preset picker's, and a name line out of that order is the
+# run's hard fail, the first such row named — the text is reordered by hand, never sorted here.
+# Each row a KEY, a DISPLAY NAME and THE TEN PROGRAM ROLES (kGuiPaletteRoles, read off palette_file.h and checked
+# against ROLE_ORDER) under the one transcription below.
 #
 # THE SOURCE, in Cool Edit's value grammar (comma-separated key=value items, its keys alone since the program's own
 # Inv retired with the invalid color, architect 2026-10-26): EVERY values line is followed by its
@@ -27,9 +30,9 @@
 #     it; the zoom anchor's stem is the same design).
 #   Any other key is read past and never generated (architect 2026-10-14: the question whether Cool Edit's other
 #     preset keys should get a palette role is closed).
-# THE KEY is `warptempo-` and the display name lowercased, every run of other characters one hyphen ("Cool Edit,
-# Lipstick and Grapes" -> `warptempo-cool-edit-lipstick-and-grapes`), the `waveform` device key's word (a built-in's key alone
-# since 2026-10-14); THE DISPLAY NAME is the source's own. Keys and display names are checked unique, every key in
+# THE KEY is the display name lowercased, every run of other characters one hyphen, no prefix (architect 2026-10-27:
+# "Grape, Lime, and Tangerine" -> `grape-lime-and-tangerine`, "CEPro 1.2" -> `cepro-1-2`), the `waveform` device key's
+# word (a built-in's key alone since 2026-10-14); THE DISPLAY NAME is the source's own. Keys and display names are checked unique, every key in
 # the key grammar (palette_file.cpp's is_preset_key_spelling, which bounds no length) and every display name
 # printable ASCII within 40 bytes (the names' bound).
 #
@@ -56,7 +59,6 @@ FROM_KEY = {'waveform_canvas': 'WvBk', 'waveform_ink': 'WvFg', 'grid': 'GrdL', '
             'range': 'RngM', 'playhead_stem': 'Curs', 'face': 'Face'}
 # the role the value grammar has no key for (the head)
 FIXED = {'scanner': 0xFFFFFF}
-KEY_PREFIX = 'warptempo-'
 OUTLINE = (0.0, 0.3157)   # the span shadow's (a, b), checked against cool_edit_derive.h
 TABLE_ROW = r'\{"([a-z_]+)",\s*&GuiPalette::\w+\}'
 
@@ -177,7 +179,7 @@ def preset_words(name, values):
 
 
 def preset_key(name):
-    return KEY_PREFIX + re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
 
 
 def all_presets(source=SOURCE):
@@ -196,6 +198,9 @@ def main():
     ps = all_presets(source)
     keys = [k for k, _, _ in ps]
     names = [n for _, n, _ in ps]
+    for a, b in zip(names, names[1:]):
+        if b.lower() < a.lower():
+            raise SystemExit(f'gen_presets: the name line {b!r} is out of alphabetical order (after {a!r})')
     for what, xs in (('key', keys), ('display name', names)):
         dup = sorted({x for x in xs if xs.count(x) > 1})
         if dup: raise SystemExit(f'gen_presets: duplicate preset {what}s: {dup}')
@@ -212,10 +217,10 @@ def main():
         f.write(GENERATED +
                 '// THE BUILT-IN PALETTES (src/gui/palette_file.h\'s kGuiBuiltinPalettes, included in its initializer): '
                 'the program\'s\n'
-                '// presets, keyed warptempo-, in their text\'s order (tools/theme_catalog/warptempo_presets.txt); '
-                'each its key, its\n'
-                '// display name and the ten in kGuiPaletteRoles\' order under the generator\'s rules; regenerate, '
-                'never hand-edit.\n' + rows)
+                '// presets in their text\'s order, alphabetical by display name (tools/theme_catalog/warptempo_presets.txt); '
+                'each its\n'
+                '// key, its display name and the ten in kGuiPaletteRoles\' order under the generator\'s rules; '
+                'regenerate, never hand-edit.\n' + rows)
     print(f'wrote {os.path.relpath(PRESETS_INC, REPO)}: {len(ps)} built-in palettes')
 
 

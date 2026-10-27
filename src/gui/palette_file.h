@@ -84,15 +84,17 @@
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
 // provenance; the transcription's rules are the generator's head's;
 // regenerate, never hand-edit), in its order: COOL EDIT PRO 2.1'S TWENTY
-// COLOR PRESETS, in Cool Edit's own order, each AS IT IS ("Cool Edit,
-// <name>"), a closed set (architect 2026-10-26: "I am quite sure that I
-// want to just trim down to just the cool edit themes").
-// Each a KEY (`warptempo-` and the display name in the key grammar — the
-// `waveform` key's word for it), a DISPLAY NAME (the
-// source's own) and THE TEN. THE DEFAULT PALETTE is "Cool Edit, Default"
-// (`warptempo-cool-edit-default`, kGuiDefaultPaletteKey; architect
-// 2026-10-26) — the one both first-run templates spell
-// (`waveform=warptempo-cool-edit-default`; every device key required,
+// COLOR PRESETS, each AS IT IS under Cool Edit's own display name, a closed
+// set (architect 2026-10-26: "I am quite sure that I want to just trim down
+// to just the cool edit themes"), ALPHABETICAL BY DISPLAY NAME,
+// case-insensitive, Default among the names (architect 2026-10-27; the
+// generator checks the text's order, and the preset picker lists the table
+// in it).
+// Each a KEY (the display name in the key grammar, no prefix, architect
+// 2026-10-27 — the `waveform` key's word for it), a DISPLAY NAME (Cool
+// Edit's own) and THE TEN. THE DEFAULT PALETTE is "Default" (`default`,
+// kGuiDefaultPaletteKey; architect 2026-10-26) — the one both first-run
+// templates spell (`waveform=default`; every device key required,
 // architect 2026-10-14).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
@@ -236,14 +238,14 @@ struct GuiBuiltinPalette {
 inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
-// THE DEFAULT PALETTE (the head): "Cool Edit, Default" (architect
+// THE DEFAULT PALETTE (the head): "Default" (architect
 // 2026-10-26: Cool Edit's own default, its green ink under its red and blue
 // markers) — the `waveform=`
 // value both first-run templates SPELL (GuiPlatform::device_config_defaults;
 // every device key required, architect 2026-10-14 — a config with no line took it
 // 2026-10-07..14). A config naming a retired key is the launch's hard fail
 // (the 2026-10-14 ruling: no migration).
-inline constexpr const char* kGuiDefaultPaletteKey = "warptempo-cool-edit-default";
+inline constexpr const char* kGuiDefaultPaletteKey = "default";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
@@ -263,12 +265,11 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
     return builtin_palette(name) != nullptr;
 }
 
-// (THE WAVEFORM ROW'S ORDER — kGuiPaletteMenuOrder, the default pinned
-// first and the others alphabetically by display name, architect
-// 2026-10-11 — was the color picker's preset menu's and then the Settings
-// choice row's domain; it went with the choice drop-downs, architect
-// 2026-10-14. The key's Tab completion matches the built-in names in the
-// table's own order, GuiSettingsEditor::complete_closed_value.)
+// (THE PRESETS' ORDER IS THE TABLE'S OWN — alphabetical by display name,
+// Default among the names, architect 2026-10-27 (the head) — with no
+// separate menu order: the preset picker lists the table in it, and the
+// key's Tab completion matches the built-in names in it,
+// GuiSettingsEditor::complete_closed_value.)
 
 // THE ACTIVE PRESET THE INSTALL TAKES IS THE DEVICE CONFIG'S KEY AS WRITTEN
 // (architect 2026-10-14: every key required, the default spelled):
@@ -279,7 +280,7 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // commit): a word naming no built-in palette.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
-    "(warptempo-cool-edit-default, warptempo-cool-edit-xp-blue, ...)";
+    "(default, xp-blue, ...)";
 
 // The ten the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses

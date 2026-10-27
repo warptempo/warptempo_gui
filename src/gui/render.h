@@ -120,7 +120,7 @@ struct TrimRange {
 // active palette is the device config's `waveform` — a built-in's key,
 // chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-21;
 // files from a `chromes/` folder were read 2026-10-07..14; the key was
-// `chrome` until 2026-10-21), the first-run default "Cool Edit, Default"
+// `chrome` until 2026-10-21), the first-run default "Default"
 // (2026-10-26). There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
 // (2026-10-08). The app computes no color but THE SKIN'S RULES: the ring
@@ -874,8 +874,8 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
-// palette is "Cool Edit, Default" (`warptempo-cool-edit-default`,
-// kGuiDefaultPaletteKey, palette_presets.inc; architect 2026-10-26):
+// palette is "Default" (`default`, kGuiDefaultPaletteKey,
+// palette_presets.inc; architect 2026-10-26):
 // the outline #0A9757 under the #4BF3A7 ink on black — each outline
 // the ink at HLS lightness 0.3157, the generator's outline rule
 // (tools/theme_catalog/gen_presets.py). THE PLATE
