@@ -243,8 +243,10 @@ struct GuiPlaybackLifecycle {
     //     and the progress modal — and THE TWO OVERLAYS, the picker (both
     //     its contents, the project and the preset picker) and the
     //     render player (whose own transport begins where the project's
-    //     audition ends), and THE SCORE VIEWER (2026-10-26, under which
-    //     nothing plays), all standing in the modal family's box — STOP.
+    //     audition ends), and THE SCORE VIEWER (2026-10-26, whose own
+    //     soundtrack, since 2026-10-26 night, likewise begins where the
+    //     project's audition ends), all standing in the modal family's box —
+    //     STOP.
     //   * The LANE EDITORS' OPEN (the flag editor and the iteration bound
     //     editor) IS EXEMPT, and that is a DECISION, not an omission: editing
     //     flag text while listening to the passage is a workflow the

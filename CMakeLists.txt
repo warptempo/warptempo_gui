@@ -270,10 +270,14 @@ set(WARPTEMPO_GUI_SOURCES
     # painting and playback concern; it calls the audio_io WAV reader.
     src/gui/render_player.cpp
     # THE SCORE (2026-10-26): the score folder's table and its reader, the
-    # score viewer's own file (score/viewer.txt, the five keys), and the
-    # built-in page viewer over them. GUI-only: the CLI reads no score.
+    # score viewer's own file (score/viewer.txt, the five keys), the
+    # soundtrack's reader and the page decoder (two worker threads, the
+    # 2026-10-26 night player), and the built-in page viewer over them.
+    # GUI-only: the CLI reads no score.
     src/gui/score_pages.cpp
     src/gui/score_viewer_file.cpp
+    src/gui/score_audio.cpp
+    src/gui/score_page_worker.cpp
     src/gui/score_viewer.cpp
     # THE CAR TRANSPORT (2026-09-17): the head unit's SECOND owner — the
     # cluster that drives the project's own transport while the render player

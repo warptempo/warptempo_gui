@@ -1552,8 +1552,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     playback_lifecycle.render_player = &render_player;
     // THE SCORE VIEWER (2026-10-26, score_viewer.h), beside the player: its
     // acts over AppState::ScoreViewer, reached from the input handler
-    // (wired below) and its tick.
-    GuiScoreViewer score_viewer(app, viewport, playback_lifecycle,
+    // (wired below) and its tick. It holds the engine and the target render
+    // for its soundtrack's bind and its close's re-express (2026-10-26
+    // night), the player's own pair.
+    GuiScoreViewer score_viewer(app, audio, playback, viewport,
+                                playback_lifecycle, target_render,
                                 notifications);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
@@ -2212,9 +2215,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     refresh_logo_legend(app, gui);
     gui.set_on_tick([&]() {
         // THE NOTIFICATION CARDS' CLOCK, THE TICK'S FIRST TENANT — the one
-        // thing this body does on EVERY tick, ahead of all four of its early
-        // returns (the startup load's, the render player's fork, the
-        // loading/blank guard and the playing-only guard). A card is a
+        // thing this body does on EVERY tick, ahead of all five of its early
+        // returns (the startup load's, the render player's and the score
+        // viewer's forks, the loading/blank guard and the playing-only
+        // guard). A card is a
         // message about something that has ALREADY happened, so nothing
         // below can be a precondition for retiring one, while every return
         // below is a mode a card can stand over: the render player's own "No
@@ -2638,6 +2642,23 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
 
+        // THE SCORE VIEWER'S ROW, the same comparator (2026-10-26 night):
+        // its PLAY key's face (score_viewer_button_enabled) moves with the
+        // soundtrack's load landing, the device and a render run ending, none
+        // of which damages the row.
+        if (app.score_viewer.active && app.modal_dialog.valid &&
+            app.modal_dialog.owner == AppState::ModalDialogOwner::Score &&
+            app.modal_dialog.session == app.score_viewer.session) {
+            for (const AppState::ModalDialogButton& b :
+                 app.modal_dialog.buttons) {
+                if (b.enabled != score_viewer_button_enabled(
+                                     app, playback, b.score_act)) {
+                    viewport.invalidate_modal_dialog_area();
+                    break;
+                }
+            }
+        }
+
         // A STANDING DIALOG HINT IS A FACE TOO (2026-09-29; the
         // roster's words test above, one surface over): a modal
         // button's words are recomposed onto the stash by every paint of the
@@ -2804,12 +2825,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             render_player.tick();
             return;
         }
-        // THE SCORE VIEWER'S TICK (2026-10-26): one neighbor of the shown
-        // page decoded per tick once that page is on screen
-        // (GuiScoreViewer::tick). Nothing plays under the viewer (its open
-        // took the modal-open stop), so the lines below have nothing to do
-        // and run as they would.
+        // THE SCORE VIEWER'S TICK (2026-10-26; the soundtrack 2026-10-26
+        // night), the player's fork: on EVERY tick it drains the page
+        // decoder into the cache, which outlives the viewer's close
+        // (GuiScoreViewer::tick); while the viewer stands the engine plays
+        // the score's soundtrack or nothing — the project's audio stopped at
+        // its open, the scanner never running — so its tick takes the
+        // natural end, the page follow and the clock's and the scrub's
+        // damage, and nothing below this line applies.
         score_viewer.tick();
+        if (score_viewer_stands(app)) return;
 
         // THE A/B AUDITION'S REST DEADLINE AND ITS DEVICE WATCH, sampled here
         // and ABOVE the playing-only guard below — a rest has nothing playing
@@ -3083,8 +3108,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the
         // project's: the scanner sampling below would move the waveform's
         // scanner off a buffer the waveform does not show. The player's
-        // position is read by its painter and damaged by its own tick.
-        if (app.render_player.active) return;
+        // position is read by its painter and damaged by its own tick. UNDER
+        // THE SCORE VIEWER likewise (2026-10-26 night): the cursor is its
+        // soundtrack's.
+        if (app.render_player.active || score_viewer_stands(app)) return;
         if (!playback.is_playing()) return;
 
         // (The loop-wrap predictor resync that stood HERE, in the pre-paint,
@@ -3312,6 +3339,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The prefetch abandons its scan at the next candidate boundary rather than
     // being waited out: it writes nothing anywhere.
     history_prefetch.shutdown();
+    // THE SCORE'S TWO WORKERS (2026-10-26 night) join beside it: the
+    // soundtrack's load stops at its next chunk and frees its samples — the
+    // engine shut down above holds no pointer into them — and the page
+    // decoder finishes the page in hand and frees every undrained one.
+    app.score_audio.shutdown();
+    app.score_viewer.decoder.shutdown();
     // Everything else — the caches, the handlers, the callbacks' captured
     // objects — dies with this frame, in reverse construction order; the
     // window keeps the callbacks' std::function shells until the next session

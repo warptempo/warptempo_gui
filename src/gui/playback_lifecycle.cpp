@@ -91,6 +91,30 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         if (render_player) render_player->publish_media_state();
         return;
     }
+    // THE SCORE VIEWER'S FORK (2026-10-26 night, score_viewer.h's THE
+    // TRANSPORT), the player's shape: while the viewer stands the engine
+    // plays the score's soundtrack or nothing — the project's audio stopped at
+    // its open — so its "a session stood" state is the viewer's LIVE
+    // transport, and its teardown is that transport parked at PAUSED AT THE
+    // ENGINE'S CURSOR, read through the one position face before the fence
+    // (the resting cursor is the active tab's remembered position, whose
+    // write-through is the viewer's act), the controls row damaged for the
+    // play key's legend. Every viewer stop — the pause, the natural end, the
+    // dead device, the close — comes here, which keeps the fence-before-
+    // rebind ordering one body for the soundtrack too; the natural end
+    // rewrites the rest after it.
+    if (app.score_viewer.active) {
+        using ScoreTransport = AppState::ScoreViewer::Transport;
+        if (!playback.is_playing() &&
+            app.score_viewer.transport != ScoreTransport::Live)
+            return;
+        if (app.score_viewer.transport == ScoreTransport::Live)
+            active_view_state(app).score_position = playback.cursor();
+        playback.stop();
+        app.score_viewer.transport = ScoreTransport::Paused;
+        viewport.invalidate_rect(bottom_row_area(app));
+        return;
+    }
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
     playback.stop();
     app.playhead_scanner_active = false;

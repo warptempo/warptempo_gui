@@ -31,7 +31,11 @@
 // source, so the ratio is 1.0 and the increment is bare 1); on AAudio it is the
 // rate the stream was GRANTED (48000 on the tablet's own speaker, which is 48 k
 // hardware — 44.1 can never be native there), so the ratio is 44100/48000 and
-// every output frame reads a fractional source position. A rate of 0 is the
+// every output frame reads a fractional source position. `source_rate` is THE
+// BOUND BUFFER'S (2026-10-26 night): the score's soundtrack binds at its own
+// 48000, so on the laptop's 44.1 k graph its increment is 48000/44100 and on
+// the tablet bare 1 — the same one division, the device never reopened for
+// it (GuiBoundAudio, playback.h). A rate of 0 is the
 // SUSPENDED device in both: the render body emits silence and holds position,
 // and cursor() holds at the integer cursor rather than extrapolating
 // (playback.h's graph-suspension clause).
@@ -90,17 +94,29 @@ struct GuiPlaybackState {
     // sample-rate callback; read from both threads.
     std::atomic<uint32_t> output_rate{0};
 
-    // Borrowed source buffer.
-    const float* samples       = nullptr;
-    int64_t      total_frames  = 0;
-    int          channels      = 0;
-    int          source_rate   = 0;
+    // Borrowed source buffer, IN ONE OF TWO FORMATS (GuiBoundAudio,
+    // playback.h): `samples` for float32, `samples_i16` for PCM16, exactly
+    // one non-null while a buffer is bound (the render body's hoisted fork
+    // reads `samples_i16` first). Interleaved at `channels`, which is 2 on
+    // every binding.
+    const float*   samples       = nullptr;
+    const int16_t* samples_i16   = nullptr;
+    int64_t        total_frames  = 0;
+    int            channels      = 0;
+    // THE BOUND BUFFER'S OWN RATE (2026-10-26 night): the project source's at
+    // init, and whatever rate each rebind carries since — the score's
+    // soundtrack binds at its own (48000 for both of his folders) without the
+    // device being reopened. Read by the render body's increment and by the
+    // predictor's extrapolation; written with the pointers, in the same
+    // moment (below).
+    int            source_rate   = 0;
     // Domain coordinate of buffer frame 0 (playback.h head comment). Stored
-    // in the same moment as the `samples` pointer (init / rebind_buffer,
-    // under the same refuse-while-playing conditions) so the pair can never
-    // be observed inconsistent. Main-thread only: the public API translates
-    // domain <-> buffer-local at its boundary; the audio callback and every
-    // other position here stay buffer-local and never read this.
+    // in the same moment as the sample pointers and the rate (init /
+    // rebind_buffer, under the same refuse-while-playing conditions) so the
+    // four can never be observed inconsistent. Main-thread only: the public
+    // API translates domain <-> buffer-local at its boundary; the audio
+    // callback and every other position here stay buffer-local and never
+    // read this.
     int64_t      domain_offset = 0;
 
     // THE PUBLISHED WINDOW, THE MAIN THREAD'S MIRROR: the session's start and
@@ -479,5 +495,5 @@ int64_t playback_domain_end(const GuiPlaybackState& state);
 // rebind_buffer()'s whole body — no device call in it on either backend
 // (playback.h's rebind contract, and the reasoning for the refuse-while-playing
 // check, are at the public declaration and repeated at the definition).
-void playback_rebind_buffer(GuiPlaybackState& state, const float* samples,
-                            int64_t total_frames, int64_t domain_offset);
+void playback_rebind_buffer(GuiPlaybackState& state,
+                            const GuiBoundAudio& buffer);

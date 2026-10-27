@@ -4079,6 +4079,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         if (!b.enabled || score_viewer == nullptr) return true;
         switch (b.score_act) {
             case AppState::ScoreButtonAct::PrevPage: score_viewer->step(-1);     return true;
+            case AppState::ScoreButtonAct::PlayPause: score_viewer->toggle_play(); return true;
             case AppState::ScoreButtonAct::NextPage: score_viewer->step(+1);     return true;
             case AppState::ScoreButtonAct::Reset:    score_viewer->raise_reset(); return true;
             case AppState::ScoreButtonAct::SetStart: score_viewer->set_start();   return true;
@@ -5250,13 +5251,18 @@ void GuiInputHandler::clear_player_scrub_drag() {
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
 }
 
-// -- THE SCORE VIEWER'S PAGE SCRUB (2026-10-26; the contract at the
-//    declaration, input_handler.h) — the play-scrub's claim with the seek
-//    made immediate: the page under the thumb is SHOWN at the press and at
-//    every motion ("the scrub should be like the media player scrub"; a page
-//    is a whole thing to show, so nothing waits for the lift). The thumb
-//    paints at the shown page (score_scrub_x_of), so it moves page by page
-//    under the pointer. --
+// -- THE SCORE VIEWER'S SCRUB (2026-10-26; the contract at the declaration,
+//    input_handler.h), ON ITS TWO FACES (score_viewer.h's head). ON THE PAGE
+//    ROAD the play-scrub's claim with the seek made immediate: the page
+//    under the thumb is SHOWN at the press and at every motion ("the scrub
+//    should be like the media player scrub"; a page is a whole thing to show,
+//    so nothing waits for the lift), the thumb painting at the shown page
+//    (score_scrub_x_of). UNDER THE SOUNDTRACK (2026-10-26 night) the render
+//    player's claim over the range's frames — the thumb taken where it stands
+//    on its grab band, jumping to a press anywhere else, carried by the
+//    motion (clamp_player_scrub_marker_x, the travel's one owner) — with THE
+//    SEEK LIVE at the press off the thumb and at every motion, playing or
+//    paused, and the position written at the lift (commit_position). --
 
 bool GuiInputHandler::claim_score_scrub_press(int x, int y,
                                               GuiInputState mods) {
@@ -5265,10 +5271,9 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w <= 0 || track.h <= 0) return false;
     if (!rect_contains(track, x, y)) return false;
-    // Consumed from here: a modified press does nothing on the track, and a
-    // range of one page has no other page to show (the scrub dead).
+    // Consumed from here: a modified press does nothing on the track.
     if (mods.ctrl || mods.shift || mods.alt) return true;
-    if (!app.score || score_viewer_range(app).count() <= 1) return true;
+    if (!app.score) return true;
     // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED): on its grab band the
     // press takes it where it stands, the grab offset kept; anywhere else on
     // the item the thumb jumps to the press.
@@ -5276,6 +5281,20 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     const bool on_thumb =
         marker_x >= 0 && render_player_scrub_handle_hit(track, marker_x, x, y);
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
+    if (score_viewer_has_soundtrack(app)) {
+        drag          = AppState::ScoreViewer::ScrubDrag{};
+        drag.armed    = true;
+        drag.on_thumb = on_thumb;
+        drag.grab_dx  = on_thumb ? x - marker_x : 0;
+        drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
+        if (!on_thumb)
+            score_viewer->seek_to(score_scrub_frame_at(app, drag.marker_x),
+                                  /*write=*/false);
+        viewport.invalidate_rect(track);
+        return true;
+    }
+    // A range of one page has no other page to show (the scrub dead).
+    if (score_viewer_range(app).count() <= 1) return true;
     drag         = AppState::ScoreViewer::ScrubDrag{};
     drag.armed   = true;
     drag.grab_dx = on_thumb ? x - marker_x : 0;
@@ -5285,9 +5304,19 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
 }
 
 void GuiInputHandler::update_score_scrub_motion(int x) {
-    const AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
+    AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     if (!drag.armed || score_viewer == nullptr) return;
-    if (app.modal_dialog.scrub.w <= 0) return;
+    const GuiRect track = app.modal_dialog.scrub;
+    if (track.w <= 0) return;
+    if (score_viewer_has_soundtrack(app)) {
+        const int mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
+        if (mx == drag.marker_x) return;
+        drag.marker_x = mx;
+        drag.moved    = true;
+        score_viewer->seek_to(score_scrub_frame_at(app, mx), /*write=*/false);
+        viewport.invalidate_rect(track);
+        return;
+    }
     score_viewer->show_page(score_scrub_page_at(app, x - drag.grab_dx));
 }
 
@@ -5300,9 +5329,15 @@ bool GuiInputHandler::finish_score_scrub_release() {
 void GuiInputHandler::clear_score_scrub_drag() {
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     if (!drag.armed) return;
+    const AppState::ScoreViewer::ScrubDrag ended = drag;
     drag = AppState::ScoreViewer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+    // THE LIFT WRITES WHAT THE DRAG SEEKED (the soundtrack's face): a
+    // motionless tap on the thumb seeked nothing and owes nothing.
+    if (score_viewer != nullptr && score_viewer_has_soundtrack(app) &&
+        (ended.moved || !ended.on_thumb))
+        score_viewer->commit_position();
 }
 
 
@@ -9115,7 +9150,8 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // (2026-08-28): the folder overlay's row press and the scrub's marker
     // drag both act at the lift, so a lift that never comes must drop them
     // with nothing committed — the chrome arm's own rule, on the same edge.
-    // The score viewer's page scrub drops with them, owing nothing.
+    // The score viewer's scrub drops with them, owing nothing but, under
+    // the soundtrack, the position its live seeks moved (its clear writes it).
     clear_folder_overlay_press();
     clear_player_scrub_drag();
     clear_score_scrub_drag();

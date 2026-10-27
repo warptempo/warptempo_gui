@@ -881,10 +881,14 @@ void GuiTargetRender::complete_successful_buffer(
         // ensure_ready's own call — takes this bind rather than deferring to a
         // re-express that has already happened. Only the Up tail leaves the
         // bit standing, and it is the tail that still has a close to wait for.
-        if (!app.render_player.active) {
-            playback.rebind_buffer(app.target_buffer.data(),
-                                   app.target_buffer_frames,
-                                   dispatched_buffer_start_frame_);
+        // NOR UNDER A SCORE VIEWER HOLDING THE ENGINE (2026-10-26 night,
+        // score_viewer_holds_engine): the soundtrack is bound, live or
+        // paused, and the viewer's close re-expresses the view by the same
+        // road, its transport taken down behind the fence first.
+        if (!app.render_player.active && !score_viewer_holds_engine(app)) {
+            playback.rebind_buffer(GuiBoundAudio::float32(
+                app.target_buffer.data(), app.target_buffer_frames,
+                audio.sample_rate(), dispatched_buffer_start_frame_));
         }
         // Buffer now matches the engine input that produced it. Gate the clear
         // behind the rebind path: a render that completed while
@@ -1102,9 +1106,9 @@ void GuiTargetRender::ensure_ready() {
         // silently refuses (no audio, no playhead move). The buffer's content
         // is unchanged since its last production (is_dirty_ false, frames > 0),
         // so the stamp from that production is exactly this content's origin.
-        playback.rebind_buffer(app.target_buffer.data(),
-                               app.target_buffer_frames,
-                               dispatched_buffer_start_frame_);
+        playback.rebind_buffer(GuiBoundAudio::float32(
+            app.target_buffer.data(), app.target_buffer_frames,
+            audio.sample_rate(), dispatched_buffer_start_frame_));
         return;
     }
 
@@ -1243,6 +1247,7 @@ void GuiTargetRender::rebind_to_source() {
         // a future T→S→T round trip hands ensure_ready's recomputed anchor
         // back to the rebind. target_buffer and frames stay populated
         // (cheap; the next trigger() in target view will overwrite them).
-        playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
+        playback.rebind_buffer(GuiBoundAudio::float32(
+            audio.samples_ptr(), audio.total_frames(), audio.sample_rate(), 0));
     }
 }

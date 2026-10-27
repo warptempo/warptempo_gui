@@ -10,29 +10,79 @@
 // (score_pages.h). The
 // viewer's page numbers are pages.txt's, never the printed ones.
 //
-// NOTHING FOLLOWS THE AUDIO (architect: "no tolerance, no intelligent sync …
-// it's not going to work"): no sync, no follow, no playback under it — its
-// open takes the modal-open stop like every surface in the modal family's
-// box (GuiPlaybackLifecycle::stop_playback_for_modal_open's table), and Space
-// binds nothing in it.
+// IT PLAYS ITS OWN SOUNDTRACK AND NEVER FOLLOWS THE GUI (architect
+// 2026-10-26 night: "the score player is essentially a separate media player.
+// It has nothing to do with what's going on in the GUI, other than I would
+// manually be keeping them both in sync; there's no mechanism for doing that
+// automatically"; the afternoon's "no tolerance, no intelligent sync … it's
+// not going to work" stands for the GUI's playhead): the viewer plays the
+// score folder's audio.wav (score_audio.h, AppState::score_audio — the
+// video's own soundtrack, which pages.txt was cut from), and nothing of the
+// GUI's transport moves: its open takes the modal-open stop like every surface
+// in the modal family's box (GuiPlaybackLifecycle::stop_playback_for_modal_
+// open's table), the project's playhead rests where it was, and the engine is
+// rebound to the project's own buffer at the close.
 //
 // WHAT IT IS AND WHERE IT STANDS: an OVERLAY of the interface class — its
 // opener key (the SCORE key, bare `m`) sits lit and closes it, and it stands
 // under its own question (RESET's) — painted in THE MODAL FAMILY'S BOX
 // (modal_box.h, the geometry's one owner): the box's interior is the page,
 // SCALED TO FIT by the smaller of the two ratios and centered on both axes,
-// the rest the field ground (paint_modal_dialog's score branch); the
-// CONTROLS ROW under it carries, left to right, PREV and NEXT (the render
-// player's transport seats), THE PAGE SCRUB (the player's scrub, its domain
-// the viewing range's pages), THE PAGE CELL where the player's clock stands
-// ("7 / 15", the shown page's ordinal within the range and the range's
-// count) and, flush right, RESET, START, END and CLOSE. Its state is
-// AppState::ScoreViewer and the piece's range keys (app_state.h); this
-// struct owns the acts. It is the sixth modal owner
-// (AppState::ModalDialogOwner::Score), ranked with the player and the
-// picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with other
-// modals"): its router consumes Ctrl+Tab, so the active tab is the viewer's
-// for its whole life.
+// the rest the field ground (paint_modal_dialog's score branch). It is the
+// sixth modal owner (AppState::ModalDialogOwner::Score), ranked with the
+// player and the picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with
+// other modals"): its router consumes Ctrl+Tab, so the active tab is the
+// viewer's for its whole life. Its state is AppState::ScoreViewer and the
+// piece's range keys (app_state.h); this struct owns the acts.
+//
+// TWO FACES OF THE CONTROLS ROW, decided by whether the soundtrack is present
+// (loaded or loading, GuiScoreAudio::present; architect 2026-10-26 night:
+// "when there's audio, the scrub should just be a media player scrub, just
+// like the render player's. The page numbers should not be included at all
+// if there's audio. Everything — the playback, the scrub — should be frame
+// and/or time based. No pages. Pages are only kept in the background"):
+//   * THE MEDIA PLAYER'S, with the soundtrack: PLAY / PAUSE at the left (the
+//     render player's transport seat, its key and its legend —
+//     score_viewer_play_face), THE SCRUB (the render player's, its domain the
+//     viewing range's FRAMES: the thumb at the cursor, a press off the thumb
+//     jumping it, a drag SEEKING LIVE at every motion, playing or paused,
+//     the position written at the lift), THE CLOCK (the render player's two
+//     time fields, verbatim: the elapsed time within the range and the
+//     range's length), then RESET, START, END and CLOSE flush right. Space
+//     plays and pauses, Home / End seek the range's first / last frame,
+//     Left / Right do nothing (no pages).
+//   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
+//     pages.txt — the later PDF road): PREV and NEXT (the render player's
+//     transport seats), THE PAGE SCRUB (its domain the viewing range's
+//     pages), THE PAGE CELL where the player's clock stands ("7 / 15", the
+//     shown page's ordinal within the range and the range's count) and the
+//     same four keys flush right. Left / Right are PREV / NEXT, Home / End
+//     the range's first / last page, Space nothing.
+//
+// THE TRANSPORT (the media player's face) is the render player's model,
+// simplified — IDLE (the engine not on the soundtrack), PAUSED, LIVE
+// (AppState::ScoreViewer::transport owns the states): PLAY runs [cursor, the
+// range's end) ONCE and stops — no loop, no auto-advance, no car hook
+// (car_transport.h stays the trim's) — and THE NATURAL END RESTS AT THE
+// RANGE'S FIRST FRAME (the render player's own convention for a finished
+// item: the clock at zero, the slider at its left), PAUSED there so the scrub
+// stays live; a pause keeps the cursor. EVERY STOP IS THE ONE STOP BODY'S
+// (its score fork parks LIVE at PAUSED with the cursor read first), so the
+// fence-before-rebind ordering holds as it does for the player. THE PAGE
+// FOLLOWS THE CURSOR: each tick while LIVE the page holding the engine's
+// cursor (score_page_for_position over GuiPlayback::cursor(), the one
+// position face) is shown when it differs, and at rest every seek shows the
+// page holding the new cursor. A device that goes away mid-play pauses at
+// the held cursor with the playback card (the render player's tick's rule).
+// THE OPEN lands at the remembered frame clamped into the range, PAUSED, the
+// engine rebound to the soundtrack behind the modal stop (the fence) — IDLE
+// instead while the soundtrack is still loading or a render run stands (the
+// close's re-express would kill the run: load_in_place_render_blocked, the
+// render player's own refusal, here a grey PLAY until it ends), the PLAY
+// press binding then. THE CLOSE takes the render player's close road
+// verbatim where the engine was the viewer's: the stop body's fence, the
+// transport down, the mode bit down, the source bound first, then the S/T
+// flip's re-express.
 //
 // THE VIEWING RANGE — `score_first_page` / `score_last_page`, 0 the edge's
 // placeholder — is THE TRIM'S CLASS ("that would be how we would trim
@@ -40,34 +90,56 @@
 // to the shown page, END the last, RESET (behind its question, "because
 // there's no undo") both to 0; no undo entry, no dirty mark, each written
 // through to the score viewer's file at once (write_score_viewer_file,
-// score_viewer_file.h). THE QUESTION STANDS OVER THE VIEWER as the load confirmation
-// stands over the render player (the model for standing), and it opens with
-// CANCEL FOCUSED as the render player's Delete question does (the model for
-// the focus: a destructive act with no undo behind it), so a bare Enter
-// cancels. The three are AUTHORING and grey on a read-only tab and under
-// grid iterations (score_viewer_range_locked); viewing, paging and the
-// position's write are not, and stay live under both. The shown page is
-// always inside the range, so START and END can never cross the pair.
+// score_viewer_file.h). THE PAGES STAY THE RANGE'S NAMES on both faces (the
+// architect sets them "from the page on screen because that's convenient"),
+// and once set the range EXCLUDES EVERYTHING OUTSIDE IT: the soundtrack's
+// domain is [the first page's begin, the last page's end) — the scrub's
+// span, PLAY's window, the open's clamp — and a range changed under playback
+// republishes PLAY's end at the cursor (score_viewer.cpp's range_changed).
+// THE QUESTION STANDS OVER THE VIEWER as the load confirmation stands over the
+// render player (the model for standing), PAUSING a live soundtrack as the
+// render player's Delete question pauses its transport, and it opens with
+// CANCEL FOCUSED as that question does (a destructive act with no undo behind
+// it), so a bare Enter cancels. The three are AUTHORING and grey on a
+// read-only tab and under grid iterations (score_viewer_range_locked);
+// viewing, paging, playing and the position's write are not, and stay live
+// under both. The shown page is always inside the range, so START and END can
+// never cross the pair.
 //
 // THE REMEMBERED POSITION — ViewState::score_position, the active tab's — is
-// the playhead's class: EVERY PAGE CHANGE writes the new page's `begin`
-// (show_page), through to the score viewer's file at once, and the open shows the page that holds it, clamped into the
-// range (score_page_for_position).
+// the playhead's class, written through to the score viewer's file at once:
+// on the page road EVERY PAGE CHANGE writes the new page's `begin`
+// (show_page); under the soundtrack it IS THE CURSOR'S FRAME (architect: "it
+// remembers based on frames. The pages are themselves aliases to frames:
+// begin is an alias to the first frame of a page, end to the last"), written
+// at every seek, pause, natural end and close and at a page turn under
+// playback (the turn's write waits for its paint, so the turn is never late
+// for it). The open shows the page that holds it, clamped into the range
+// (score_page_for_position).
 //
-// THE PAGES ARE DECODED THROUGH THE MATERIALS' ROAD (svg_icon.h: raster_info,
-// raster_regions at k = 1 — the decoded pixels — and convert_to_display for
-// the P3 window, a page being an authored sRGB picture like every raster),
-// the shown page synchronously at its change and its two neighbors in the
-// range one per run-loop tick after it has been painted (tick): MEASURED on
-// the laptop 2026-10-26 over the K.550 folder's 2304 x 1296 PNGs, 47 to 55 ms
-// a page, file read included, so three are about 150 ms, over the 100 ms a
-// synchronous trio may cost. AT MOST THREE ARE KEPT, dropped at the close. A
-// page whose decode fails here (its file was checked at the load) is a rare
-// non-silent fault: one stderr line, the interior stays the field ground, and
-// that page is not decoded again while the viewer stands.
+// THE PAGES ARE DECODED OFF THE MAIN THREAD (architect 2026-10-26 night: "if
+// there's going to be an additional visual lag on the page turning on top of
+// the Bluetooth lag, that's not going to work"): the page decoder
+// (score_page_worker.h) decodes a page, scales it ONCE to the box's fit size
+// and converts it for the window, and the painter blits it 1:1. THE CACHE
+// (AppState::ScoreViewer::cache) holds the shown page and up to three either
+// side of it in the range — at the tablet's box about 9 MB a page — the
+// decoder asked for the missing ones in the likely order: forward first while
+// the soundtrack sounds or after NEXT, both ways otherwise. IT SURVIVES THE
+// CLOSE, so a reopen is instant, and goes at a score folder change and with
+// the project. A shown page not yet delivered leaves the interior the field
+// ground for that frame and paints the moment it lands (the tick drains the
+// decoder and damages the interior) — NEVER A SYNCHRONOUS DECODE, the open's
+// included. A page whose decode fails is one stderr line, the interior the
+// field ground, and that page is not asked for again under the same key.
 
 #include "app_state.h"
+#include "audio.h"
+#include "display_transform.h"
+#include "modal_box.h"
+#include "playback.h"
 #include "playback_lifecycle.h"
+#include "target_render.h"
 #include "viewport.h"
 
 #include <cstdint>
@@ -99,7 +171,8 @@ inline ScoreViewerRange score_viewer_range(const AppState& a) {
     return r;
 }
 
-// THE PAGE AT A POSITION (the open's landing): the first page whose range
+// THE PAGE AT A POSITION (the open's landing, and under the soundtrack the
+// page that follows the cursor): the first page whose range
 // holds `pos` or lies after it — a frame no page holds (a fade's gap, a
 // regenerated pages.txt) landing on the nearest page at or after it — else
 // the range's last, then clamped into the range.
@@ -123,11 +196,67 @@ inline bool score_viewer_range_locked(const AppState& a) {
     return authoring_locked(a);
 }
 
+// WHICH FACE THE ROW WEARS (the head's TWO FACES): the media player's while
+// the soundtrack is present — loaded or loading — the page road's otherwise.
+inline bool score_viewer_has_soundtrack(const AppState& a) {
+    return a.score_audio.present();
+}
+
+// THE RANGE IN FRAMES (the media player's domain, the head's THE VIEWING
+// RANGE): [the first page's begin, the last page's end), at pages.txt's rate,
+// which is the soundtrack's by its admitted shape (score_audio.h).
+// Precondition: a score is loaded.
+struct ScoreFrameRange {
+    int64_t begin = 0;
+    int64_t end   = 0;
+    int64_t length() const { return end - begin; }
+};
+inline ScoreFrameRange score_viewer_frame_range(const AppState& a) {
+    const ScoreViewerRange r = score_viewer_range(a);
+    return ScoreFrameRange{
+        a.score->pages[static_cast<std::size_t>(r.first)].begin,
+        a.score->pages[static_cast<std::size_t>(r.last)].end};
+}
+
+// THE SOUNDTRACK'S POSITION, the one reader the clock, the scrub's thumb,
+// the page follow and the acts share: the engine's cursor while LIVE (through
+// GuiPlayback::cursor(), the one position face — its window is inside the
+// range), the resting cursor otherwise (the active tab's remembered
+// position), clamped into the range.
+inline int64_t score_viewer_position(const AppState& a,
+                                     const GuiPlayback& playback) {
+    const ScoreFrameRange fr = score_viewer_frame_range(a);
+    const int64_t pos =
+        a.score_viewer.transport == AppState::ScoreViewer::Transport::Live
+            ? playback.cursor()
+            : active_view_state(a).score_position;
+    return std::clamp(pos, fr.begin, fr.end);
+}
+
+// THE PLAY KEY'S FACE, NAMING ITS NEXT PRESS (the render player's rule and
+// its PlayerPlayFace): PAUSE while LIVE; at rest PLAY where the cursor stands
+// at the range's first frame (a fresh rest, the natural end's) and RESUME
+// anywhere else.
+inline PlayerPlayFace score_viewer_play_face(const AppState& a,
+                                             const GuiPlayback& playback) {
+    if (a.score_viewer.transport == AppState::ScoreViewer::Transport::Live)
+        return PlayerPlayFace::Pause;
+    return score_viewer_position(a, playback) ==
+                   score_viewer_frame_range(a).begin
+               ? PlayerPlayFace::Play
+               : PlayerPlayFace::Resume;
+}
+
 // EACH BUTTON'S TRUTHFUL FACE (the roster's rule: a button greys whenever
-// its act would be a no-op): PREV and NEXT at the range's edges; START at
-// the range's first page, END at its last, RESET when the range already is
-// every page, all three under the lock; CLOSE never. The act asks the same.
+// its act would be a no-op): PREV and NEXT at the range's edges; PLAY / PAUSE
+// until the soundtrack is loaded, on a device that never came up
+// (GuiPlayback::device_absent, the render player's own term: a press reopens
+// one that went away), and while the engine is not yet the viewer's under a
+// render run (the head's THE OPEN); START at the range's first page, END at
+// its last, RESET when the range already is every page, all three under the
+// lock; CLOSE never. The act asks the same.
 inline bool score_viewer_button_enabled(const AppState& a,
+                                        const GuiPlayback& playback,
                                         AppState::ScoreButtonAct act) {
     using Act = AppState::ScoreButtonAct;
     if (!a.score_viewer.active || !a.score) return false;
@@ -136,6 +265,11 @@ inline bool score_viewer_button_enabled(const AppState& a,
     switch (act) {
         case Act::PrevPage: return p > r.first;
         case Act::NextPage: return p < r.last;
+        case Act::PlayPause:
+            if (!a.score_audio.ready() || playback.device_absent()) return false;
+            return a.score_viewer.transport !=
+                       AppState::ScoreViewer::Transport::Idle ||
+                   !load_in_place_render_blocked(a);
         case Act::Reset:
             return !score_viewer_range_locked(a) &&
                    !(r.first == 0 && r.last == a.score->count() - 1);
@@ -150,28 +284,40 @@ inline bool score_viewer_button_enabled(const AppState& a,
 }
 
 // THE KEYS' PRINTED LEGENDS (the hi-fi skin's, in capitals under the key).
+// PLAY / PAUSE's is the render player's Play key's, by its face
+// (render_player_button_legend, paint_handler.cpp, which the painter asks).
 inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
     using Act = AppState::ScoreButtonAct;
     switch (act) {
-        case Act::PrevPage: return "PREV";
-        case Act::NextPage: return "NEXT";
-        case Act::Reset:    return "RESET";
-        case Act::SetStart: return "START";
-        case Act::SetEnd:   return "END";
-        case Act::Close:    return "CLOSE";
-        case Act::None:     break;
+        case Act::PrevPage:  return "PREV";
+        case Act::NextPage:  return "NEXT";
+        case Act::PlayPause: return "PLAY";
+        case Act::Reset:     return "RESET";
+        case Act::SetStart:  return "START";
+        case Act::SetEnd:    return "END";
+        case Act::Close:     return "CLOSE";
+        case Act::None:      break;
     }
     return "";
 }
 
 // THE TOOLTIPS: the act's name, Title Case, and the key it binds in the
-// roster's and the player's own form (render_player_button_hint); the range
-// keys bind none.
-inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act) {
+// roster's and the player's own form (render_player_button_hint); PLAY /
+// PAUSE names its face as the player's does; the range keys bind none.
+inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
+                                            PlayerPlayFace face) {
     using Act = AppState::ScoreButtonAct;
     switch (act) {
         case Act::PrevPage: return "Previous Page (Left)";
         case Act::NextPage: return "Next Page (Right)";
+        case Act::PlayPause:
+            switch (face) {
+                case PlayerPlayFace::Pause:      return "Pause (Space)";
+                case PlayerPlayFace::Resume:     return "Resume (Space)";
+                case PlayerPlayFace::OpenFolder:
+                case PlayerPlayFace::Play:       break;
+            }
+            return "Play (Space)";
         case Act::Reset:    return "Reset Range";
         case Act::SetStart: return "Set as Start";
         case Act::SetEnd:   return "Set as End";
@@ -181,8 +327,8 @@ inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act) {
     return "";
 }
 
-// THE PAGE SCRUB'S MAPPING over the painter's PUBLISHED item rect
-// (AppState::ModalDialogGeometry::scrub), the player's travel exactly
+// THE PAGE SCRUB'S MAPPING (the page road) over the painter's PUBLISHED item
+// rect (AppState::ModalDialogGeometry::scrub), the player's travel exactly
 // (render_player_scrub_travel_x0 / _usable_span): the range's first page at
 // the channel's first column, its last at the last, page i at
 // (i − first) / (count − 1) of the travel; the inverse rounds to the nearest
@@ -209,26 +355,73 @@ inline int score_scrub_page_at(const AppState& a, int x) {
                          std::nearbyint(t * static_cast<double>(r.count() - 1)));
 }
 
-// THE SHOWN PAGE'S DECODED SURFACE, or null (not decoded yet, or its decode
-// failed) — the painter's one read of the cache.
-inline cairo_surface_t* score_viewer_shown_surface(const AppState& a) {
-    for (const AppState::ScoreViewer::Decoded& d : a.score_viewer.cache)
-        if (d.page == a.score_viewer.page) return d.surface;
+// THE SOUNDTRACK SCRUB'S MAPPING (the media player's face), the render
+// player's (render_player_scrub_x_of / _frame_at) over the range's frames:
+// the range's first frame at the channel's first column, its end at the
+// last, banker's rounding onto the cells; a zero item or an empty range the
+// first column and the first frame.
+inline int score_scrub_x_of_frame(const AppState& a, int64_t frame) {
+    const GuiRect track = a.modal_dialog.scrub;
+    const int x0   = render_player_scrub_travel_x0(track);
+    const int span = render_player_scrub_usable_span(track);
+    const ScoreFrameRange fr = score_viewer_frame_range(a);
+    if (span <= 0 || fr.length() <= 0) return x0;
+    const int64_t f = std::clamp(frame, fr.begin, fr.end);
+    const double t = static_cast<double>(f - fr.begin) /
+                     static_cast<double>(fr.length());
+    return x0 + static_cast<int>(std::nearbyint(t * span));
+}
+inline int64_t score_scrub_frame_at(const AppState& a, int x) {
+    const GuiRect track = a.modal_dialog.scrub;
+    const int x0   = render_player_scrub_travel_x0(track);
+    const int span = render_player_scrub_usable_span(track);
+    const ScoreFrameRange fr = score_viewer_frame_range(a);
+    if (span <= 0 || fr.length() <= 0) return fr.begin;
+    const int cx = std::clamp(x, x0, x0 + span);
+    const double t = static_cast<double>(cx - x0) / static_cast<double>(span);
+    return fr.begin + static_cast<int64_t>(std::nearbyint(
+                          t * static_cast<double>(fr.length())));
+}
+
+// THE PAGE THE PAINTER BLITS: the cache's entry for `page` at the fit box
+// `box` (the modal box's interior) under the window's conversion bit as it
+// stands, or null — not delivered yet; an entry marked failed answers too,
+// with no surface (the painter's one read of the cache).
+inline const AppState::ScoreViewer::Cached* score_viewer_cached(
+        const AppState& a, int page, const GuiRect& box) {
+    const GuiScorePageKey key{page, box.w, box.h, display_transform::active()};
+    for (const AppState::ScoreViewer::Cached& c : a.score_viewer.cache)
+        if (c.key == key) return &c;
     return nullptr;
 }
 
+// THE SCORE FOLDER CHANGED (the project load, a typed `score_path=` commit —
+// the two writers of AppState::score): the page cache dropped and the
+// decoder reset (the head's THE CACHE), and the soundtrack's load restarted
+// for the new folder (GuiScoreAudio::start) or stopped with no score. Never
+// while the viewer stands: neither caller runs under it.
+void score_folder_changed(AppState& app);
+
 struct GuiScoreViewer {
     AppState&             app;
+    const GuiAudio&       audio;
+    GuiPlayback&          playback;
     Viewport&             viewport;
     GuiPlaybackLifecycle& playback_lifecycle;
+    GuiTargetRender&      target_render;
     GuiNotifications&     notifications;
 
-    GuiScoreViewer(AppState& app_, Viewport& viewport_,
+    GuiScoreViewer(AppState& app_, const GuiAudio& audio_,
+                   GuiPlayback& playback_, Viewport& viewport_,
                    GuiPlaybackLifecycle& playback_lifecycle_,
+                   GuiTargetRender& target_render_,
                    GuiNotifications& notifications_)
         : app(app_),
+          audio(audio_),
+          playback(playback_),
           viewport(viewport_),
           playback_lifecycle(playback_lifecycle_),
+          target_render(target_render_),
           notifications(notifications_) {}
 
     // THE ONE OPENER — the SCORE key's lift and bare `m` (the dispatch arm,
@@ -239,46 +432,91 @@ struct GuiScoreViewer {
     // SCORE key is grey, so no road reaches here (the player's and the
     // picker's own mutual exclusion, input_key_dispatch.cpp's
     // open_project_picker). Takes the modal-open stop, mints the session,
-    // lands on the active tab's remembered position and damages the window.
+    // lands on the active tab's remembered position (the soundtrack bound,
+    // PAUSED, where it can be: the head's THE OPEN), asks the decoder for
+    // what the cache lacks and damages the window.
     bool open();
     // THE ONE CLOSER — CLOSE, Esc, the SCORE key and bare `m`, and the exit
-    // road's teardown (GuiPrompt::request_close): the cache dropped, the
-    // scrub's arm dropped, the whole window damaged.
+    // road's teardown (GuiPrompt::request_close): the render player's close
+    // road where the engine was the viewer's (the head's THE CLOSE), the
+    // cursor's frame written through, the scrub's arm dropped, the cache
+    // KEPT, the whole window damaged (the roster's faces and the canvas
+    // column come back together, so the window is the honest rect).
     void close();
 
+    // -- The page road --------------------------------------------------------
     // THE ONE PAGE CHANGE: `index` clamped into the viewing range; a change
-    // writes the active tab's remembered position (the page's begin),
-    // decodes the page if it is not held, drops what the new neighborhood
-    // does not need and damages the modal area. The same page is a no-op.
+    // writes the active tab's remembered position (the page's begin) and
+    // damages the interior and the row. The same page is a no-op.
     void show_page(int index);
-    // PREV / NEXT (and Left / Right): one page, walled at the range's edges.
+    // PREV / NEXT (and Left / Right): one page, walled at the range's edges;
+    // NEXT biases the decoder forward.
     void step(int delta);
-    // Home / End: the range's first / last page.
+    // Home / End: the range's first / last page — under the soundtrack its
+    // first / last frame (seek_to).
     void first_page();
     void last_page();
 
+    // -- The media player's face ---------------------------------------------
+    // PLAY / PAUSE and Space: LIVE pauses (the one stop body, the cursor kept
+    // and written); otherwise the engine bound to the soundtrack where it is
+    // not yet, and [the cursor, the range's end) played once — from the
+    // range's first frame where the cursor rests at its end. Refused, silent,
+    // where its key is grey.
+    void toggle_play();
+    // THE SEEK: `frame` clamped into the range; LIVE republishes PLAY's window
+    // from there (a target in the range's last frame stops one short of it,
+    // the render player's rule, so the natural end takes over), at rest the
+    // cursor moves; the page follows either way. `write` false is the scrub's
+    // live seek inside a drag, whose position is written at its lift
+    // (commit_position).
+    void seek_to(int64_t frame, bool write);
+    // The cursor's frame written through (the scrub's lift and hard ends).
+    void commit_position();
+
+    // -- The range ------------------------------------------------------------
     // START / END: the range's first / last bound set to the shown page —
     // each refused, silently, where its key is grey.
     void set_start();
     void set_end();
     // RESET: raises its question (DialogTrigger::SCORE_RESET_CONFIRM, Cancel
-    // focused — the head) where
-    // its key is live; confirm_reset is the question's OK.
+    // focused — the head), pausing a live soundtrack first, where its key is
+    // live; confirm_reset is the question's OK.
     void raise_reset();
     void confirm_reset();
 
-    // THE RUN LOOP'S TICK: while the viewer stands, ONE missing neighbor of
-    // the shown page decoded per call (the head's measured reason), so the
-    // shown page's own frame paints first.
+    // THE RUN LOOP'S TICK (main.cpp's on_tick, every tick, the viewer standing
+    // or not): the decoder's results drained into the cache; and while the
+    // viewer stands, the soundtrack's arrival or failure repainting the face,
+    // the LIVE transport's dead device, natural end, page follow and clock /
+    // scrub damage (the render player's tick's shape), a page turn's owed
+    // position written once the turn is painted, and the decoder asked for
+    // the missing pages.
     void tick();
 
 private:
-    // Decode page `index` into the cache's free slot (the shown page's
-    // neighborhood having been made room for); a failure takes its one
-    // stderr line and leaves the slot naming the page with no surface.
-    void decode_into_cache(int index);
-    // Drop every cached page outside {shown − 1, shown, shown + 1}.
-    void evict_outside_neighborhood();
-    // The modal family's whole area: the page, the scrub, the cell, the keys.
+    // The engine bound to the soundtrack where it is not yet: IDLE to PAUSED
+    // behind the stop body's fence. False where it cannot be (not loaded, a
+    // render run standing).
+    bool bind_soundtrack();
+    // The page holding `pos` shown where it differs; the interior damaged.
+    // Returns whether the page changed.
+    bool follow_cursor(int64_t pos);
+    // After START / END / RESET: the cursor clamped into the new range and,
+    // LIVE, PLAY's window republished at the cursor to the new end.
+    void range_changed();
+    // The natural end: the fence through the one stop body, the rest at the
+    // range's first frame, written.
+    void on_natural_end();
+    // The decoder's results into the cache; the shown page's arrival damages
+    // the interior.
+    void drain_decoder();
+    // The cache trimmed to the shown page's neighborhood at the current box
+    // and conversion, and the decoder handed the missing pages in order.
+    void feed_decoder();
+    // Damage: the modal family's whole area, the box's interior, the
+    // controls row.
     void damage();
+    void damage_interior();
+    void damage_row();
 };

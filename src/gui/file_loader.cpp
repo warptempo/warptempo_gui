@@ -4,6 +4,7 @@
 #include "prompt.h"
 #include "render_output_naming.h"
 #include "score_pages.h"
+#include "score_viewer.h"       // score_folder_changed
 #include "score_viewer_file.h"
 #include "selection.h"
 #include "settings_io.h"
@@ -670,6 +671,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
                          score->advisory.c_str());
         }
     }
+    // THE SOUNDTRACK AND THE PAGE CACHE FOLLOW THE TABLE (score_viewer.h's
+    // score_folder_changed): the soundtrack's load starts on its worker for a
+    // loaded score — a separate outcome, its own one stderr line where it
+    // does not play (score_audio.h) — and never holds this load up.
+    score_folder_changed(app);
 
     // If the parsed .settings landed us in target view, the deformed
     // total the viewport clamp below needs is derived on demand from the

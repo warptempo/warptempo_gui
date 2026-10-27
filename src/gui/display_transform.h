@@ -283,13 +283,16 @@ inline uint32_t display_rgb(uint32_t srgb) {
     return active() ? p3_word_from_srgb(srgb) : srgb;
 }
 
-// One PREMULTIPLIED ARGB32 pixel (an antialiased raster's) as the window takes
-// it: un-premultiplied by std::nearbyint, converted, premultiplied again by
-// std::nearbyint at the same alpha. A pixel whose straight color the
-// transform leaves unchanged (a neutral; any pixel off a P3 window) keeps its
-// word whole, so the un-premultiply's rounding never moves a gray.
-inline uint32_t display_premultiplied(uint32_t argb) {
-    if (!active()) return argb;
+// One PREMULTIPLIED ARGB32 pixel (an antialiased raster's) THROUGH THE
+// TRANSFORM, whatever the switch says: un-premultiplied by std::nearbyint,
+// converted, premultiplied again by std::nearbyint at the same alpha. A pixel
+// whose straight color the transform leaves unchanged (a neutral) keeps its
+// word whole, so the un-premultiply's rounding never moves a gray. THE SWITCH
+// IS THE CALLER'S: display_premultiplied below asks it on the GUI thread, and
+// the score viewer's page decoder (score_page_worker.h), a worker the switch's
+// two bits are not safe to read on, is handed the GUI thread's answer with its
+// job.
+inline uint32_t p3_premultiplied(uint32_t argb) {
     const uint32_t a = argb >> 24;
     if (a == 0) return argb;
     uint32_t straight = 0;
@@ -308,6 +311,12 @@ inline uint32_t display_premultiplied(uint32_t argb) {
                << (16 - 8 * k);
     }
     return out;
+}
+
+// One PREMULTIPLIED ARGB32 pixel as the window takes it: p3_premultiplied on
+// a P3 window with True Colors on, the word itself otherwise.
+inline uint32_t display_premultiplied(uint32_t argb) {
+    return active() ? p3_premultiplied(argb) : argb;
 }
 
 } // namespace display_transform

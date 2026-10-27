@@ -35,7 +35,13 @@
 //   tab_a_score_position=<f>   EACH TAB'S REMEMBERED POSITION, an audio frame
 //   tab_b_score_position=<f>   at the score's own `# rate` (pages.txt), the
 //                              canonical frame spelling, display scratch with
-//                              no range check (score_page_for_position clamps)
+//                              no range check (score_page_for_position clamps,
+//                              and the viewer's open under the soundtrack):
+//                              under the soundtrack THE CURSOR'S FRAME
+//                              (architect 2026-10-26 night, "it remembers
+//                              based on frames"), on the page road the shown
+//                              page's begin (score_viewer.h's THE REMEMBERED
+//                              POSITION)
 //
 // THE READ'S THREE OUTCOMES, at the project load beside the sidecars
 // (read_score_viewer_file, GuiFileLoader::load_file):
@@ -52,8 +58,9 @@
 // WRITE-THROUGH (write_score_viewer_file): every change of any of the five
 // writes the whole file at once — the device config's `last_project` road,
 // never the save's — from GuiScoreViewer's page change, START, END and
-// RESET (score_viewer.cpp) and from the settings editor's five typed keys
-// (settings_editor.cpp). No dirty mark and no undo: the range is the trim's
+// RESET, and under the soundtrack its seek, pause, natural end, close and
+// page turn under playback (score_viewer.cpp), and from the settings
+// editor's five typed keys (settings_editor.cpp). No dirty mark and no undo: the range is the trim's
 // class, the positions the playhead's. The `score/` folder is created when
 // absent. A failed write is one stderr line and nothing else (class 5).
 

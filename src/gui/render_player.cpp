@@ -740,7 +740,8 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     playback_lifecycle.stop_playback_if_playing();
     rp.buffer = std::move(*samples);
     rp.frames = frames;
-    playback.rebind_buffer(rp.buffer.data(), rp.frames, 0);
+    playback.rebind_buffer(GuiBoundAudio::float32(
+        rp.buffer.data(), rp.frames, audio.sample_rate(), 0));
 
     // THE SEAT BELOW IS GATED ON THIS, read before the item is overwritten
     // (the fence above touches no field of the item): the band follows the
@@ -1528,7 +1529,8 @@ void GuiRenderPlayer::unload_item(UnloadTail tail) {
     // one Space away from reading it in the meantime. The fence was taken by
     // the stop body above, so this bind is admitted.
     if (audio.total_frames() > 0) {
-        playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
+        playback.rebind_buffer(GuiBoundAudio::float32(
+            audio.samples_ptr(), audio.total_frames(), audio.sample_rate(), 0));
     }
     // THE S/T FLIP'S OWN TAIL FORK, verbatim (switch_active_audio_view_to,
     // input_handler.cpp): target view rebinds the current preview or

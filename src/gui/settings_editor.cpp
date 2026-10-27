@@ -11,6 +11,7 @@
 #include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
 #include "materials.h"
 #include "score_pages.h"     // the score_path commit's read
+#include "score_viewer.h"      // score_folder_changed
 #include "score_viewer_file.h" // the score's five keys: grammar, recall, write-through
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
@@ -366,6 +367,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             if (v.text.empty()) {
                 app.score.reset();
                 app.score_path.clear();
+                score_folder_changed(app);
                 write_score_viewer_file(app);
                 applied(); return true;
             }
@@ -390,6 +392,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                      "No score at '" +
                                          shown_project_path(folder) + "'");
             }
+            // The soundtrack and the page cache follow the folder
+            // (score_folder_changed: the old load joined, the new one
+            // started on its worker).
+            score_folder_changed(app);
             applied(); return true;
         }
         // THE VIEWING RANGE: the score viewer's START / END typed

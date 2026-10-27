@@ -10,8 +10,9 @@
 # <outdir> is the score/ folder, created if absent. A run writes into it:
 #   page001.png, page002.png, ...  the pages (1-based, three digits, four from page 1000 on), grabbed at --width;
 #   pages.txt                      the pages' ranges (THE GRAMMAR OF pages.txt);
-#   audio.wav                      the video's soundtrack, pcm_s16le at the stream's own rate and channels (AUDIO_WAV):
-#                                  the score's audio is the video's (architect 2026-10-26 night);
+#   audio.wav                      the video's soundtrack, pcm_s16le STEREO (`-ac 2`: a mono stream is doubled) at
+#                                  the stream's own rate (AUDIO_WAV): the score's audio is the video's, the score
+#                                  viewer's player plays it (architect 2026-10-26 night);
 #   scan.npy, scan.meta            the scan cache (SCAN_NPY).
 # A rerun overwrites them and removes every pageNNN.png numbered past the new count. A refusal (one line, exit 1)
 # writes nothing. Nothing about the pages is the user's to set: what a page is and where its range runs are read off
@@ -56,7 +57,8 @@
 # overlap (a page's begin >= the previous page's end). The ranges tile the video: the first begins at 0, each begins
 # where the previous ends, and the last ends at the video's end, so every frame is inside exactly one range; a
 # transition's or a non-page's frames belong to the page WHAT A PAGE IS gives them. The frames are a position's unit
-# and the pages' order: nothing aligns them to any recording but the video's own soundtrack.
+# and the pages' order: nothing aligns them to any recording but the video's own soundtrack, audio.wav, whose frames
+# they are when <rate> is the stream's own (the default); the product plays audio.wav only at pages.txt's rate.
 #
 # THE TWO INSTANCES (the only ones; measured 2026-10-26).
 # - THE K.550 RIP, youtube BfcXoB9y4rc, "2017-09-09 Symphony No. 40 in G minor, K.550 (Mozart) - Sheet Music
@@ -828,7 +830,8 @@ def main():
     # with no audio stream (the --rate road) has none to write.
     if has_audio:
         status = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", video, "-vn", "-map", "0:a:0",
-                                 "-c:a", "pcm_s16le", "-f", "wav", os.path.join(outdir, AUDIO_WAV)]).returncode
+                                 "-c:a", "pcm_s16le", "-ac", "2", "-f", "wav",
+                                 os.path.join(outdir, AUDIO_WAV)]).returncode
         if status != 0:
             print(f"FAIL: ffmpeg could not extract the audio (exit {status}); the pages are written")
             return 1

@@ -5373,8 +5373,8 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     return l;
 }
 
-// THE SCORE VIEWER'S ROW LAYOUT (architect 2026-10-26, score_viewer.h's
-// head): THE PLAYER'S SEATS — PREV and NEXT abutting at the row's left (the
+// THE SCORE VIEWER'S PAGE ROAD ROW LAYOUT (architect 2026-10-26,
+// score_viewer.h's head, the face with no soundtrack): THE PLAYER'S SEATS — PREV and NEXT abutting at the row's left (the
 // transport's), the page scrub after the group space, THE PAGE CELL where
 // the player's clock stands, and RESET, START, END and CLOSE abutting flush
 // right, the last key's right edge the row's — the scrub taking what is
@@ -5414,6 +5414,37 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.cell_x0 = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * bw;  // RESET .. CLOSE
+    return l;
+}
+
+// THE SCORE VIEWER'S MEDIA PLAYER ROW (architect 2026-10-26 night, the
+// soundtrack's face, score_viewer.h's head): PLAY / PAUSE at the row's left,
+// the scrub after the group space, THE CLOCK — the render player's two time
+// fields, measured and spaced as its are (player_row_layout) — and RESET,
+// START, END and CLOSE abutting flush right, the scrub taking what is left,
+// floored at two thumbs as the player's is.
+struct ScoreMediaRowLayout {
+    std::array<int, 5> x{};
+    int field_pad = 0, field_w = 0, field_gap = 0;
+    int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
+};
+static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
+    ScoreMediaRowLayout l;
+    const int group = scaled_px(kPlayerGroupGapPx);
+    l.field_pad = time_field_pad_px();
+    l.field_w   = time_field_w_px(time_field_metrics().time_w);
+    l.field_gap = scaled_px(kTimeFieldGapPx);
+    const int clock_w = l.field_w + l.field_gap + l.field_w;
+    const int bw  = seats.case_w;
+    const int cx0 = seats.left_x;
+    l.x[0] = cx0;                          // PLAY / PAUSE
+    l.scrub_x0 = cx0 + bw + group;
+    const int words_x0 = std::max(cx0, seats.cases_right - 4 * bw);
+    l.scrub_w = words_x0 - (group + clock_w + group) - l.scrub_x0;
+    if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
+    l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
+    l.clock_end = l.clock_x0 + clock_w;
+    for (int i = 0; i < 4; ++i) l.x[1 + i] = words_x0 + i * bw;  // RESET .. CLOSE
     return l;
 }
 
@@ -5887,20 +5918,34 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             glyph_button(AppState::PlayerButtonAct::LoadInPlace);
         glyph_button(AppState::PlayerButtonAct::Close);
     } else if (score_up) {
-        // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order:
-        // PREV and NEXT, then (the scrub and the page cell between, laid out
-        // in the branch below) RESET, START, END and CLOSE — each a key with
-        // its printed legend, its face the act's own truthful answer.
+        // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order, ON
+        // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night): the page
+        // road's PREV and NEXT, or the media player's PLAY / PAUSE — its
+        // legend and its word the render player's Play key's by the face
+        // (score_viewer_play_face) — then (the scrub and the page cell or the
+        // clock between, laid out in the branch below) RESET, START, END and
+        // CLOSE — each a key with its printed legend, its face the act's own
+        // truthful answer.
         using Act = AppState::ScoreButtonAct;
-        for (const Act act : {Act::PrevPage, Act::NextPage, Act::Reset,
-                              Act::SetStart, Act::SetEnd, Act::Close}) {
+        const PlayerPlayFace face = score_viewer_play_face(app, playback);
+        const auto key = [&](Act act) {
             DialogButtonPlan b;
             b.score_act = act;
             b.glyph     = true;
-            b.enabled   = score_viewer_button_enabled(app, act);
-            b.tooltip   = score_viewer_button_hint(act);
+            b.play_face = face;
+            b.enabled   = score_viewer_button_enabled(app, playback, act);
+            b.tooltip   = score_viewer_button_hint(act, face);
             plan.push_back(std::move(b));
+        };
+        if (score_viewer_has_soundtrack(app)) {
+            key(Act::PlayPause);
+        } else {
+            key(Act::PrevPage);
+            key(Act::NextPage);
         }
+        for (const Act act : {Act::Reset, Act::SetStart, Act::SetEnd,
+                              Act::Close})
+            key(act);
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
@@ -6305,92 +6350,147 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
     } else if (score_up) {
         dlg.owner = AppState::ModalDialogOwner::Score;
-        const ScoreRowLayout sl = score_row_layout(seats, app.score->count());
-        assert(plan.size() == sl.x.size());
-        for (std::size_t i = 0; i < sl.x.size(); ++i) plan[i].x = sl.x[i];
+        const bool media = score_viewer_has_soundtrack(app);
 
-        // THE PAGE (score_viewer.h's head): the shown page's decoded surface
-        // SCALED TO FIT the interior — the smaller of the two ratios, uniform —
-        // and centered on both axes at whole device px, the rest of the
-        // interior the field ground paint_modal_box laid. CAIRO'S GOOD FILTER,
-        // its own default (a box filter on a reduction, bilinear near the
-        // identity): the page is a picture of thin staff lines, and at the
-        // laptop's reductions a plain bilinear tap drops them. A page not
-        // decoded (its decode failed) leaves the field ground.
-        // The tick's gate on the neighbors' decode (ScoreViewer::
-        // painted_page): a frame whose clip covers the interior drew the
-        // shown page whole, or its field ground where the decode failed.
+        // THE PAGE (score_viewer.h's head): the shown page's surface, made
+        // by the page decoder at the interior's fit size (score_page_worker.h:
+        // the smaller of the two ratios, cairo's GOOD filter, the window's
+        // conversion), BLITTED 1:1 and centered on both axes at whole device
+        // px, the rest of the interior the field ground paint_modal_box laid.
+        // A page not yet delivered, or whose decode failed, leaves the field
+        // ground; the decoder's delivery damages the interior.
+        // The tick's gate on a page turn's owed position write
+        // (ScoreViewer::painted_page): a frame whose clip covers the interior
+        // drew the shown page whole, or its field ground.
         if (clip_covers_drawable(cr, app, interior))
             app.score_viewer.painted_page = app.score_viewer.page;
-        if (cairo_surface_t* page = score_viewer_shown_surface(app);
-            page != nullptr && interior.w > 0 && interior.h > 0) {
-            const int pw = cairo_image_surface_get_width(page);
-            const int ph = cairo_image_surface_get_height(page);
-            if (pw > 0 && ph > 0) {
-                const double k = std::min(
-                    static_cast<double>(interior.w) / pw,
-                    static_cast<double>(interior.h) / ph);
-                const int dw = static_cast<int>(std::nearbyint(pw * k));
-                const int dh = static_cast<int>(std::nearbyint(ph * k));
-                const int dx = interior.x + (interior.w - dw) / 2;
-                const int dy = interior.y + (interior.h - dh) / 2;
-                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+        if (const AppState::ScoreViewer::Cached* c =
+                score_viewer_cached(app, app.score_viewer.page, interior);
+            c != nullptr && c->surface != nullptr && interior.w > 0 &&
+            interior.h > 0) {
+            const int dw = cairo_image_surface_get_width(c->surface);
+            const int dh = cairo_image_surface_get_height(c->surface);
+            const int dx = interior.x + (interior.w - dw) / 2;
+            const int dy = interior.y + (interior.h - dh) / 2;
+            const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+            cairo_save(cr);
+            cairo_rectangle(cr, dx, dy, dw, dh);
+            cairo_clip(cr);
+            cairo_set_source_surface(cr, c->surface, dx, dy);
+            cairo_paint(cr);
+            cairo_restore(cr);
+        }
+
+        if (media) {
+            // -- THE MEDIA PLAYER'S ROW (2026-10-26 night): PLAY / PAUSE,
+            //    the scrub over the range's frames, the clock — the render
+            //    player's items, painted by its own helpers and rules — and
+            //    the four keys flush right. --
+            const ScoreMediaRowLayout ml = score_media_row_layout(seats);
+            assert(plan.size() == ml.x.size());
+            for (std::size_t i = 0; i < ml.x.size(); ++i) plan[i].x = ml.x[i];
+            const int64_t pos = score_viewer_position(app, playback);
+            const ScoreFrameRange fr = score_viewer_frame_range(app);
+            if (ml.scrub_w > 0) {
+                paint_scrub_item(ml.scrub_x0, ml.scrub_w, [&] {
+                    // The drag's carried column while the thumb is dragged,
+                    // the cursor's own otherwise.
+                    return app.score_viewer.scrub.armed
+                               ? app.score_viewer.scrub.marker_x
+                               : score_scrub_x_of_frame(app, pos);
+                });
+            }
+            // THE CLOCK, the render player's two time fields verbatim: the
+            // elapsed time within the range, then the range's length, at
+            // the soundtrack's own rate.
+            const GuiFont cfont = gui_font(GuiFace::Program);
+            const int sr = app.score_audio.rate();
+            auto seconds_of = [sr](int64_t frames) {
+                return sr > 0 ? static_cast<double>(frames) /
+                                    static_cast<double>(sr)
+                              : 0.0;
+            };
+            const int clock_right = std::min(ml.clock_end, cx1);
+            if (clock_right > ml.clock_x0) {
                 cairo_save(cr);
-                cairo_rectangle(cr, interior.x, interior.y, interior.w,
-                                interior.h);
+                cairo_rectangle(cr, ml.clock_x0, content.y,
+                                clock_right - ml.clock_x0, content.h);
                 cairo_clip(cr);
-                cairo_translate(cr, dx, dy);
-                cairo_scale(cr, static_cast<double>(dw) / pw,
-                            static_cast<double>(dh) / ph);
-                cairo_set_source_surface(cr, page, 0, 0);
-                cairo_pattern_set_filter(cairo_get_source(cr),
-                                         CAIRO_FILTER_GOOD);
-                cairo_paint(cr);
+                const int64_t shown[2] = {pos - fr.begin, fr.length()};
+                for (int i = 0; i < 2; ++i) {
+                    const int field_x =
+                        ml.clock_x0 + i * (ml.field_w + ml.field_gap);
+                    const GuiRect field = time_field_rect(
+                        field_x, ml.field_w, seats.case_y, seats.case_h);
+                    {
+                        const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                        paint_ce_time_field(cr, field, palette().ce_field_dark,
+                                            palette().ce_field_light);
+                    }
+                    const text_shape::ShapedRun run =
+                        text_shape::shape_text_run(
+                            cfont, format_timestamp(seconds_of(shown[i])));
+                    set_palette_source(cr, hex(kBoneInk));
+                    text_shape::show_shaped_run(
+                        cr, run,
+                        static_cast<double>(field_x + ml.field_w -
+                                            ml.field_pad) -
+                            run.width_px,
+                        redesign_baseline(cfont, static_cast<double>(field.y),
+                                          static_cast<double>(field.h)));
+                }
+                cairo_restore(cr);
+                dlg.clock = GuiRect{ml.clock_x0 - 1, content.y,
+                                    clock_right - ml.clock_x0 + 2, content.h};
+            }
+        } else {
+            const ScoreRowLayout sl =
+                score_row_layout(seats, app.score->count());
+            assert(plan.size() == sl.x.size());
+            for (std::size_t i = 0; i < sl.x.size(); ++i) plan[i].x = sl.x[i];
+
+            // THE PAGE SCRUB, the player's item over the viewing range's pages,
+            // the thumb at the shown page (score_scrub_x_of).
+            if (sl.scrub_w > 0) {
+                paint_scrub_item(sl.scrub_x0, sl.scrub_w, [&] {
+                    return score_scrub_x_of(app, app.score_viewer.page);
+                });
+            }
+
+            // THE PAGE CELL where the player's clock stands: one sunken time
+            // field reading "<ordinal> / <count>" — the shown page's ordinal
+            // WITHIN THE RANGE and the range's count (the architect's "a page
+            // number of its own") — right-aligned on the field's pad as the
+            // clocks' runs are, in the program face, the bone ink.
+            const int cell_right = std::min(sl.cell_x0 + sl.cell_w, cx1);
+            if (cell_right > sl.cell_x0) {
+                const ScoreViewerRange r = score_viewer_range(app);
+                const std::string text =
+                    std::to_string(app.score_viewer.page - r.first + 1) + " / " +
+                    std::to_string(r.count());
+                const GuiFont cfont = gui_font(GuiFace::Program);
+                const GuiRect field = time_field_rect(sl.cell_x0, sl.cell_w,
+                                                      seats.case_y, seats.case_h);
+                cairo_save(cr);
+                cairo_rectangle(cr, sl.cell_x0, content.y,
+                                cell_right - sl.cell_x0, content.h);
+                cairo_clip(cr);
+                {
+                    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                    paint_ce_time_field(cr, field, palette().ce_field_dark,
+                                        palette().ce_field_light);
+                }
+                const text_shape::ShapedRun run =
+                    text_shape::shape_text_run(cfont, text);
+                set_palette_source(cr, hex(kBoneInk));
+                text_shape::show_shaped_run(
+                    cr, run,
+                    static_cast<double>(sl.cell_x0 + sl.cell_w - sl.cell_pad) -
+                        run.width_px,
+                    redesign_baseline(cfont, static_cast<double>(field.y),
+                                      static_cast<double>(field.h)));
                 cairo_restore(cr);
             }
-        }
-
-        // THE PAGE SCRUB, the player's item over the viewing range's pages,
-        // the thumb at the shown page (score_scrub_x_of).
-        if (sl.scrub_w > 0) {
-            paint_scrub_item(sl.scrub_x0, sl.scrub_w, [&] {
-                return score_scrub_x_of(app, app.score_viewer.page);
-            });
-        }
-
-        // THE PAGE CELL where the player's clock stands: one sunken time
-        // field reading "<ordinal> / <count>" — the shown page's ordinal
-        // WITHIN THE RANGE and the range's count (the architect's "a page
-        // number of its own") — right-aligned on the field's pad as the
-        // clocks' runs are, in the program face, the bone ink.
-        const int cell_right = std::min(sl.cell_x0 + sl.cell_w, cx1);
-        if (cell_right > sl.cell_x0) {
-            const ScoreViewerRange r = score_viewer_range(app);
-            const std::string text =
-                std::to_string(app.score_viewer.page - r.first + 1) + " / " +
-                std::to_string(r.count());
-            const GuiFont cfont = gui_font(GuiFace::Program);
-            const GuiRect field = time_field_rect(sl.cell_x0, sl.cell_w,
-                                                  seats.case_y, seats.case_h);
-            cairo_save(cr);
-            cairo_rectangle(cr, sl.cell_x0, content.y,
-                            cell_right - sl.cell_x0, content.h);
-            cairo_clip(cr);
-            {
-                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-                paint_ce_time_field(cr, field, palette().ce_field_dark,
-                                    palette().ce_field_light);
-            }
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(cfont, text);
-            set_palette_source(cr, hex(kBoneInk));
-            text_shape::show_shaped_run(
-                cr, run,
-                static_cast<double>(sl.cell_x0 + sl.cell_w - sl.cell_pad) -
-                    run.width_px,
-                redesign_baseline(cfont, static_cast<double>(field.y),
-                                  static_cast<double>(field.h)));
-            cairo_restore(cr);
         }
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
@@ -6696,7 +6796,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         std::string legend;
         int legend_access = -1;
         if (plan[i].glyph) {
-            legend = plan[i].score_act != AppState::ScoreButtonAct::None
+            // The score viewer's PLAY / PAUSE prints the render player's Play
+            // key's legend by its face, the same key painted the same way.
+            legend = plan[i].score_act == AppState::ScoreButtonAct::PlayPause
+                         ? render_player_button_legend(
+                               AppState::PlayerButtonAct::PlayPause,
+                               plan[i].play_face)
+                     : plan[i].score_act != AppState::ScoreButtonAct::None
                          ? std::string(
                                score_viewer_button_legend(plan[i].score_act))
                          : render_player_button_legend(plan[i].player_act,

@@ -131,6 +131,12 @@ double predict_position(const GuiPlaybackState& state, int64_t a_sample,
     return predicted;
 }
 
+// ONE SAMPLE AS THE INTERPOLATION READS IT, per bound format (the render
+// body's hoisted fork): a float32 sample is itself, a PCM16 sample its value
+// over 32768 — full scale at ±1.0, the in-tree WAV reader's own scaling.
+inline double unit_of(float v)   { return v; }
+inline double unit_of(int16_t v) { return v / 32768.0; }
+
 }  // namespace
 
 void playback_write_silence(float* const* channel_buffers, int channel_count,
@@ -233,72 +239,85 @@ void playback_render_block(GuiPlaybackState& state,
     double pos = state.fractional_cursor;
 
     int64_t n = 0;
-    for (; n < frame_count; ++n) {
-        double        floor_pos = std::floor(pos);
-        int64_t       src_floor = static_cast<int64_t>(floor_pos);
-        // Reaching or passing the window end (or the buffer total) is either
-        // THE WRAP or THE NATURAL END, forked on the seated loop target FIRST.
-        // THE WRAP: `pos -= (end - loop_begin)` as a double, and the same
-        // block goes on filling from the wrapped position — a wrap is no
-        // terminal, so the natural-end arm below is unreachable while the
-        // window loops. It cannot spin: the publish refused any loop with
-        // `loop_begin >= end - 1`, so the window is at least two frames and
-        // every subtraction moves `pos` down by that much; the position had
-        // passed `end` by less than one increment, so ONE subtraction lands
-        // it in [loop_begin, end) at every rate ratio the two devices
-        // produce (the increment is at most ~1), and the do-while is the
-        // belt for an increment wider than a two-frame window (a 4x source
-        // rate on a 48 k stream), where it takes a second step and still
-        // lands inside the window. The `total` clamp stays as the natural
-        // end's — the wrap target is inside the buffer by the publish's
-        // clamps, and `end <= total`, so a wrapped position can never sit at
-        // or past `total` either. The count is a relaxed +1 for the main
-        // thread's consume (the field's comment, playback_common.h). THE CUT
-        // IS RAW: no crossfade, no ramp at the seam — the ruling that built
-        // the first loop stands ("clicks accepted"), the trim's ends being
-        // the user's own to place.
-        if (src_floor >= end || src_floor >= total) {
-            if (loop_begin >= 0) {
-                const double window = static_cast<double>(end - loop_begin);
-                do {
-                    pos -= window;
-                } while (pos >= static_cast<double>(end));
-                state.loop_wraps.store(
-                    state.loop_wraps.load(std::memory_order_relaxed) + 1,
-                    std::memory_order_relaxed);
-                floor_pos = std::floor(pos);
-                src_floor = static_cast<int64_t>(floor_pos);
-            } else {
-                // THE NATURAL END, the once-through window's one terminal.
-                // Fill the remainder with silence and stop.
-                natural_end = true;
-                playback_write_silence(channel_buffers, channel_count, stride,
-                                       n, frame_count - n);
-                break;
+    // THE SAMPLE FORMAT IS HOISTED OUT OF THE LOOP (2026-10-26 night, the
+    // score's soundtrack): the bound buffer is float32 (the project source,
+    // the target preview, a render player item) or PCM16 (the score's
+    // soundtrack, GuiBoundAudio's second format), and the one loop body is
+    // instantiated once per format through the generic lambda, so the fill
+    // forks once per block and never per sample. The float32 arithmetic is
+    // unchanged; a PCM16 sample reads as `sample / 32768.0` (unit_of) into
+    // the same interpolation.
+    const auto fill = [&](const auto* samples) {
+        for (; n < frame_count; ++n) {
+            double        floor_pos = std::floor(pos);
+            int64_t       src_floor = static_cast<int64_t>(floor_pos);
+            // Reaching or passing the window end (or the buffer total) is either
+            // THE WRAP or THE NATURAL END, forked on the seated loop target FIRST.
+            // THE WRAP: `pos -= (end - loop_begin)` as a double, and the same
+            // block goes on filling from the wrapped position — a wrap is no
+            // terminal, so the natural-end arm below is unreachable while the
+            // window loops. It cannot spin: the publish refused any loop with
+            // `loop_begin >= end - 1`, so the window is at least two frames and
+            // every subtraction moves `pos` down by that much; the position had
+            // passed `end` by less than one increment, so ONE subtraction lands
+            // it in [loop_begin, end) at every rate ratio the two devices
+            // produce (the increment is about 1, a 48 k buffer on a 44.1 k
+            // graph the widest at 1.09), and the do-while is the
+            // belt for an increment wider than a two-frame window (a 4x source
+            // rate on a 48 k stream), where it takes a second step and still
+            // lands inside the window. The `total` clamp stays as the natural
+            // end's — the wrap target is inside the buffer by the publish's
+            // clamps, and `end <= total`, so a wrapped position can never sit at
+            // or past `total` either. The count is a relaxed +1 for the main
+            // thread's consume (the field's comment, playback_common.h). THE CUT
+            // IS RAW: no crossfade, no ramp at the seam — the ruling that built
+            // the first loop stands ("clicks accepted"), the trim's ends being
+            // the user's own to place.
+            if (src_floor >= end || src_floor >= total) {
+                if (loop_begin >= 0) {
+                    const double window = static_cast<double>(end - loop_begin);
+                    do {
+                        pos -= window;
+                    } while (pos >= static_cast<double>(end));
+                    state.loop_wraps.store(
+                        state.loop_wraps.load(std::memory_order_relaxed) + 1,
+                        std::memory_order_relaxed);
+                    floor_pos = std::floor(pos);
+                    src_floor = static_cast<int64_t>(floor_pos);
+                } else {
+                    // THE NATURAL END, the once-through window's one terminal.
+                    // Fill the remainder with silence and stop.
+                    natural_end = true;
+                    playback_write_silence(channel_buffers, channel_count, stride,
+                                           n, frame_count - n);
+                    break;
+                }
             }
+
+            const int64_t src_ceil  = src_floor + 1;
+            const double  frac      = pos - floor_pos;
+
+            const auto* sp_floor = samples +
+                                   static_cast<size_t>(src_floor) * src_channels;
+            // THE LAST-SAMPLE FALLBACK, on a looping window too: the frame before
+            // the wrap interpolates toward itself rather than toward the loop's
+            // first frame — the raw cut above, the same ruling, said once here.
+            const bool ceil_ok = (src_ceil < end && src_ceil < total);
+            const auto* sp_ceil = ceil_ok
+                ? samples + static_cast<size_t>(src_ceil) * src_channels
+                : sp_floor;  // last-sample fallback
+
+            for (int c = 0; c < channel_count; ++c) {
+                const double a = unit_of(sp_floor[c]);
+                const double b = unit_of(sp_ceil[c]);
+                channel_buffers[c][n * stride] = static_cast<float>((1.0 - frac) * a + frac * b);
+            }
+
+            pos += increment;
         }
-
-        const int64_t src_ceil  = src_floor + 1;
-        const double  frac      = pos - floor_pos;
-
-        const float* sp_floor = state.samples +
-                                static_cast<size_t>(src_floor) * src_channels;
-        // THE LAST-SAMPLE FALLBACK, on a looping window too: the frame before
-        // the wrap interpolates toward itself rather than toward the loop's
-        // first frame — the raw cut above, the same ruling, said once here.
-        const bool ceil_ok = (src_ceil < end && src_ceil < total);
-        const float* sp_ceil = ceil_ok
-            ? state.samples + static_cast<size_t>(src_ceil) * src_channels
-            : sp_floor;  // last-sample fallback
-
-        for (int c = 0; c < channel_count; ++c) {
-            const double a = sp_floor[c];
-            const double b = sp_ceil[c];
-            channel_buffers[c][n * stride] = static_cast<float>((1.0 - frac) * a + frac * b);
-        }
-
-        pos += increment;
-    }
+    };
+    if (state.samples_i16 != nullptr) fill(state.samples_i16);
+    else                              fill(state.samples);
 
     // `pos` is now the actual last read position plus one increment — the
     // drift-free next-buffer starting position.
@@ -335,6 +354,7 @@ void playback_render_block(GuiPlaybackState& state,
 
 void playback_clear_binding(GuiPlaybackState& state) {
     state.samples       = nullptr;
+    state.samples_i16   = nullptr;
     state.total_frames  = 0;
     state.domain_offset = 0;
 }
@@ -343,6 +363,7 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
                                 int channels, const float* samples,
                                 int64_t total_frames, int64_t domain_offset) {
     state.samples       = samples;
+    state.samples_i16   = nullptr;
     state.total_frames  = total_frames;
     state.domain_offset = domain_offset;
     state.channels      = channels;
@@ -471,7 +492,8 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // PREDICTOR, so no asymmetry is left on this axis to record.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample, int64_t loop_begin) {
-    if (!state.samples || state.total_frames <= 0) return false;
+    if ((!state.samples && !state.samples_i16) || state.total_frames <= 0)
+        return false;
     // Domain -> buffer-local at the API boundary (playback.h head comment).
     // Everything below — the clamps, the early returns, the command packet
     // this publishes, the main thread's window mirror and cursor beside it,
@@ -723,11 +745,11 @@ int64_t playback_domain_end(const GuiPlaybackState& state) {
     return state.domain_offset + state.total_frames;
 }
 
-void playback_rebind_buffer(GuiPlaybackState& state, const float* samples,
-                            int64_t total_frames, int64_t domain_offset) {
+void playback_rebind_buffer(GuiPlaybackState& state,
+                            const GuiBoundAudio& buffer) {
     // Caller invariant: the device must be fenced by stop() before rebind.
-    // Every caller lives in target_render.cpp, but a live device is NOT
-    // guaranteed: playback.init() failure is deliberately non-fatal at source
+    // The callers are the target render's, the render player's and the score
+    // viewer's (grep rebind_buffer), and a live device is NOT guaranteed: playback.init() failure is deliberately non-fatal at source
     // load (no JACK server means the GUI runs playback-disabled), and a
     // target-preview completion then calls this with no device open. That
     // is harmless — this body performs no device call, the assignments below are
@@ -735,7 +757,7 @@ void playback_rebind_buffer(GuiPlaybackState& state, const float* samples,
     // re-init path that would ever consume them, so playback simply stays
     // disabled. This flag check is defense in depth for skipped stops; a
     // mid-flight pointer swap would be silent corruption. The refusal keeps the
-    // buffer/offset pair consistent: neither is stored.
+    // binding consistent: no field of the new buffer is stored.
     // ACQUIRE, for playback_is_playing()'s reason: the role here stays defense in
     // depth — refuse on a true read — but a FALSE read falls straight through to
     // the pointer swap below, so the same pairing with the audio thread's
@@ -749,9 +771,17 @@ void playback_rebind_buffer(GuiPlaybackState& state, const float* samples,
             "to swap the audio buffer (would race the callback)\n");
         return;
     }
-    state.samples       = samples;
-    state.total_frames  = total_frames;
-    state.domain_offset = domain_offset;
+    // THE FORMAT AND THE RATE TRAVEL WITH THE POINTER, in the same moment
+    // (the fields' comment): the fence the caller took keeps the callback
+    // out of the render body, so the next fill reads the four together, and
+    // every main-thread reader (the predictor's `sr` included) is this
+    // thread. The channel count is not the buffer's to change: 2 on every
+    // binding (the engine runs two output channels, kPlaybackOutputChannels).
+    state.samples       = buffer.f32;
+    state.samples_i16   = buffer.i16;
+    state.total_frames  = buffer.total_frames;
+    state.source_rate   = buffer.source_rate;
+    state.domain_offset = buffer.domain_offset;
     state.cursor.store(0, std::memory_order_relaxed);
     state.start_sample.store(0, std::memory_order_relaxed);
     state.end_sample.store(0, std::memory_order_relaxed);

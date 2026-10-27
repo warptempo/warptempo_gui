@@ -5,7 +5,10 @@
 // (the score viewer's own file, score_viewer_file.h), one row per page with
 // its audio-frame range, read once at the project load (file_loader.cpp,
 // beside the sidecars) and at a typed `score_path=` commit
-// (settings_editor.cpp), never kept fresh otherwise.
+// (settings_editor.cpp), never kept fresh otherwise. The folder's
+// SOUNDTRACK, audio.wav, is a separate outcome started from the same two
+// reads (score_audio.h, through score_viewer.h's score_folder_changed): a
+// table without a playable soundtrack is a score all the same.
 //
 // THE GRAMMAR IS tools/score_extract.py'S, its head comment's "THE GRAMMAR OF
 // pages.txt" block the one statement of it; this reader cites it and spells

@@ -38,8 +38,9 @@
 //     and cursor() / cursor_precise() per paint (the design note's one
 //     observation, below).
 //
-// PLAYBACK PLAYS THE SOURCE AT THE SOURCE'S OWN RATE. The read is fractional —
-// the device may ask for frames at a rate the source is not recorded at, and
+// PLAYBACK PLAYS THE BOUND BUFFER AT ITS OWN RATE (the source's, or the score
+// soundtrack's since 2026-10-26 night, GuiBoundAudio). The read is fractional —
+// the device may ask for frames at a rate the buffer is not recorded at, and
 // the render body's one increment rescales for exactly that (playback_common.h)
 // — but there is no SPEED factor on top of it any more: the variable-speed
 // machinery and its `playback_speed` settings key retired together
@@ -171,6 +172,46 @@
 // beside the render player's Repeat One). The engine keeps it in the command
 // packet's third word (playback_common.h).
 constexpr int64_t kPlaybackNoLoop = -1;
+
+// THE BOUND BUFFER'S RECORD (architect 2026-10-26 night, the score's
+// soundtrack: "not every source file will be 44.1k; detect it from the source
+// audio" — NOTHING CONVERTS): what rebind_buffer binds, interleaved STEREO at
+// its own rate in one of TWO FORMATS, exactly one pointer non-null —
+//   `f32`  float32, the in-tree WAV reader's own decode: the project source,
+//          the target preview and a render player item, all at the source's
+//          rate (the player's decode refuses any other);
+//   `i16`  PCM16 held as it lies in the file, the score's soundtrack
+//          (score_audio.h), at whatever rate its file carries.
+// The render body reads the sample through the format and the buffer at
+// `source_rate / output_rate` per output frame (playback_common.h's head), so
+// a buffer of any rate plays at its own speed on the device as it was opened,
+// which is never reopened for it. `domain_offset` is the domain coordinate of
+// the buffer's frame 0 (the head comment). Built by its two named faces.
+struct GuiBoundAudio {
+    const float*   f32           = nullptr;
+    const int16_t* i16           = nullptr;
+    int64_t        total_frames  = 0;
+    int            source_rate   = 0;
+    int64_t        domain_offset = 0;
+
+    static GuiBoundAudio float32(const float* samples, int64_t total_frames,
+                                 int source_rate, int64_t domain_offset) {
+        GuiBoundAudio b;
+        b.f32           = samples;
+        b.total_frames  = total_frames;
+        b.source_rate   = source_rate;
+        b.domain_offset = domain_offset;
+        return b;
+    }
+    static GuiBoundAudio pcm16(const int16_t* samples, int64_t total_frames,
+                               int source_rate) {
+        GuiBoundAudio b;
+        b.i16          = samples;
+        b.total_frames = total_frames;
+        b.source_rate  = source_rate;
+        return b;
+    }
+};
 
 class GuiPlayback {
 public:
@@ -382,18 +423,21 @@ public:
     int64_t domain_begin() const;
     int64_t domain_end()   const;
 
-    // Swap the borrowed sample buffer pointer without tearing down the
-    // device. Caller must call stop() first; stop() returns only after the
-    // audio callback has quiesced, so the swap cannot race the callback. The
-    // new buffer must match the sample rate and channel count the device was
-    // init()'d with — only `samples`, `total_frames`, and `domain_offset`
-    // (the domain coordinate of the new buffer's frame 0) change. The cursor
-    // is reset to 0; the end_sample is reset to 0 so the next play() supplies
-    // a fresh range. Used by the target render to rebind playback to the
-    // freshly-rendered target_buffer, and to swap back to source.wav
-    // when leaving target view.
-    void rebind_buffer(const float* samples, int64_t total_frames,
-                       int64_t domain_offset);
+    // Swap the borrowed sample buffer without tearing down the device.
+    // Caller must call stop() first; stop() returns only after the audio
+    // callback has quiesced, so the swap cannot race the callback. THE NEW
+    // BUFFER IS STEREO, AT ITS OWN RATE AND IN ITS OWN FORMAT (GuiBoundAudio,
+    // above; architect 2026-10-26 night): the channel count is the one thing
+    // that must match what the device was init()'d with — the pointer, the
+    // format, the frame count, the rate and the domain offset all change, in
+    // the same moment, and the device is not reopened. The cursor is reset to
+    // 0; the end_sample is reset to 0 so the next play() supplies a fresh
+    // range. Used by the target render to rebind playback to the
+    // freshly-rendered target_buffer and to swap back to source.wav when
+    // leaving target view, by the render player for its item and by the score
+    // viewer for the score's soundtrack (each binding back to the view's
+    // buffer at its close).
+    void rebind_buffer(const GuiBoundAudio& buffer);
 
     // Tear down the device. Blocks until the audio callback has drained.
     // Call before the sample buffer dies (at shutdown).

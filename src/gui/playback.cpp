@@ -382,10 +382,9 @@ int64_t GuiPlayback::domain_end() const {
     return playback_domain_end(impl_->state);
 }
 
-void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
-                                int64_t domain_offset) {
+void GuiPlayback::rebind_buffer(const GuiBoundAudio& buffer) {
     if (!impl_) return;
-    playback_rebind_buffer(impl_->state, samples, total_frames, domain_offset);
+    playback_rebind_buffer(impl_->state, buffer);
 }
 
 void GuiPlayback::shutdown() {

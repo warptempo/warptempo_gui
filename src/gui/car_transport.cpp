@@ -35,9 +35,10 @@ bool GuiCarTransport::admits() const {
     // open and covers the waveform, so the console starts nothing under it.
     if (app.batch_progress.active) return false;
     if (folder_overlay_stands(app)) return false;
-    // THE SCORE VIEWER (2026-10-26): its open stops playback and nothing
-    // plays under it (score_viewer.h's head), so the console starts nothing
-    // either.
+    // THE SCORE VIEWER (2026-10-26): its open stops playback and nothing of
+    // the project's plays under it — the engine is its own soundtrack's or
+    // silent (score_viewer.h's head, 2026-10-26 night), with no car hook — so
+    // the console starts nothing either.
     if (score_viewer_stands(app)) return false;
     // EVERY EDITOR (2026-10-25: an act that takes the keyboard is a modal,
     // keyboard_modal_editor_active — the dialog editors alone until then,
@@ -278,6 +279,12 @@ void GuiCarTransport::tick() {
         handed_to_player_ = true;
         return;
     }
+    // A PENDING CAR PLAY DIES UNDER THE SCORE VIEWER TOO (2026-10-26 night):
+    // the viewer may hold the engine on its soundtrack, and a project launch
+    // fired behind it would play the project's window on that buffer. The
+    // console keeps this cluster's lines meanwhile (admits() refuses its
+    // commands; the derived state is the project's at rest).
+    if (score_viewer_stands(app)) pending_play_ = PendingCarPlay{};
     // THE LATCH RUNS AHEAD OF THE COMPARATOR, so a play it fires is already
     // in the state this tick derives and pushes: the console's clock and
     // length go live on the same tick the sound starts, with no extra push.

@@ -1693,9 +1693,11 @@ struct GuiInputHandler {
     // the player's block below.
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
-    // THE SCORE VIEWER'S PAGE SCRUB ARM (2026-10-26) drops on the same three
-    // edges, OWING NOTHING: its page is shown at the press and at every
-    // motion, so there is no act at the lift to lose.
+    // THE SCORE VIEWER'S SCRUB ARM (2026-10-26) drops on the same three
+    // edges: on the page road OWING NOTHING (its page is shown at the press
+    // and at every motion), under the soundtrack owing only the position's
+    // write (its seek is live at every motion, so the hard end writes what
+    // the drag already moved, as the lift does).
     void clear_score_scrub_drag();
 
     // -- THE SCORE VIEWER'S INPUT HALF (2026-10-26; the model and the acts
@@ -1704,17 +1706,23 @@ struct GuiInputHandler {
     // THE VIEWER'S KEY ROUTER — the whole vocabulary while it stands, the
     // render player's shape: Ctrl+S and Ctrl+Q fall through (the save; the
     // quit, whose road takes the viewer down first); Tab / Shift+Tab walk the
-    // controls row's keys (the modal ring); Left / Right are PREV / NEXT and
-    // Home / End the range's first / last page; Esc and bare `m` close; bare
-    // backslash is the tooltip lamp; every other key, Space and Ctrl+Tab
-    // among them, is consumed in silence. Returns true when consumed.
+    // controls row's keys (the modal ring); Esc and bare `m` close; bare
+    // backslash is the tooltip lamp. ON ITS TWO FACES (score_viewer.h's
+    // head): under the soundtrack Space plays and pauses, Home / End seek the
+    // range's first / last frame and Left / Right have no act; on the page
+    // road Left / Right are PREV / NEXT, Home / End the range's first / last
+    // page and Space has no act. Every other key, Ctrl+Tab among them, is
+    // consumed in silence. Returns true when consumed.
     bool route_score_viewer_key(GuiKey key, GuiInputState mods);
-    // THE PAGE SCRUB'S POINTER HALF: a plain press on the published item
-    // ARMS the drag and SHOWS the page under the thumb at once — on the
-    // thumb it is taken where it stands, its grab offset kept; off it the
-    // thumb jumps to the press — and each motion shows the page under the
-    // thumb; the lift ends the arm with nothing owed. A modified press, or a
-    // range of one page, is consumed and does nothing.
+    // THE SCRUB'S POINTER HALF (the bodies' block, input_pointer.cpp): a
+    // plain press on the published item ARMS the drag — on the thumb it is
+    // taken where it stands, its grab offset kept; off it the thumb jumps to
+    // the press. ON THE PAGE ROAD the page under the thumb is SHOWN at the
+    // press and at every motion and the lift owes nothing (a range of one
+    // page is consumed and does nothing); UNDER THE SOUNDTRACK the frame under
+    // the thumb is SEEKED at the press off the thumb and at every motion, and
+    // the lift writes the position. A modified press is consumed and does
+    // nothing.
     bool claim_score_scrub_press(int x, int y, GuiInputState mods);
     void update_score_scrub_motion(int x);
     bool finish_score_scrub_release();
