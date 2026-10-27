@@ -25,7 +25,7 @@ The program needs a C++23 compiler (GCC 12+ or Clang 16+), CMake 3.20+, pkg-conf
 ```bash
 # Arch (the host it is developed on):
 sudo pacman -S --needed base-devel cmake pkgconf git fftw cairo harfbuzz \
-    wayland wayland-protocols libxkbcommon pipewire-jack libgit2 rustup
+    wayland wayland-protocols libxkbcommon pipewire-jack libgit2 rustup poppler
 rustup default stable
 
 # Debian / Ubuntu (libwayland-dev carries wayland-scanner):
@@ -48,7 +48,7 @@ The tablet side adds adb and the Android build's host tools, resvg and ImageMagi
 ```bash
 sudo pacman -S --needed android-tools meson ninja zip unzip imagemagick resvg
 rustup target add aarch64-linux-android   # the APK's resvg
-pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip imagemagick resvg
+pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip imagemagick resvg poppler
 # every line shows a version; "was not found" names a package still to install
 rustup target list --installed
 # lists aarch64-linux-android
@@ -123,16 +123,19 @@ The audio is not in the repository: put each piece's source `.wav` into its fold
 
 ### A movement's score
 
-The score viewer (the SCORE key, `m`; [`HELP.md`](HELP.md)'s Score) shows the pages of a sheet-music video. Make the pages once per video with the tool (python3 with numpy and Pillow, and ffmpeg and ffprobe on the PATH); it writes `page001.jpg`, `page002.jpg` … (grayscale JPEG, each page already the size the tablet's viewer shows it at, about a tenth of the PNG the tool wrote before), `pages.txt` and `audio.wav` (the video's soundtrack, which the viewer plays: 16-bit stereo at the soundtrack's own rate, 265 MB for a 23-minute symphony) into the folder it is given, creating it, and prints one line per page found:
+The score viewer (the SCORE key, `m`; [`HELP.md`](HELP.md)'s Score) shows the pages of a sheet-music video or of a PDF of the printed score. Make the pages once per video or PDF with the tool (python3 with numpy and Pillow; ffmpeg and ffprobe on the PATH for a video, poppler's `pdftoppm` and `pdfinfo` for a PDF). From a video it writes `page001.jpg`, `page002.jpg` … (grayscale JPEG, each page already the size the tablet's viewer shows it at, about a tenth of the PNG the tool wrote before), `pages.txt` and `audio.wav` (the video's soundtrack, which the viewer plays: 16-bit stereo at the soundtrack's own rate, 265 MB for a 23-minute symphony) into the folder it is given, creating it, and prints one line per page found:
 
 ```bash
-tools/score_extract.py "<the video>" "<projects_path>/<piece>/score"
+tools/score_extract.py "<the video or the PDF>" "<projects_path>/<piece>/score"
 # a few minutes for a 4K video; the last line: "wrote N pages, pages.txt and audio.wav to …"
+# (for a PDF: "wrote N pages and pages.txt to …")
 ```
 
 It needs no option: a page is a still frame that carries bar lines, so a cover, a title card or a flash is left out by itself, and each page holds the video from where it first shows until the next one shows, so the pages cover the whole video. A second run reuses the first one's scan. The pages are sized for the tablet's screen at its 300 %; for another screen or scale, open the score viewer there once and read its box off the terminal (on the tablet `adb logcat -s warptempo:I`), `warptempo_gui: score page box 2260x1111`, then run the tool again with `--fit 2260:1111` (that pair). A rerun deletes the folder's old `page<NNN>.png`, and `scripts/warptempo_sync tt` deletes the tablet's.
 
-The SCORE key lights at the next open of that piece: a piece whose folder holds `score/pages.txt` needs no typing. For another movement of the same video, open that movement's piece and type into the Settings line `score_path=../<the first piece>/score` (for instance `score_path=../550 - 1/score`); the path is relative to the piece's folder, and an empty `score_path=` turns the score off. The SCORE key lights once the folder is read; a path with no score folder behind it is kept and says so on a card, and a folder whose `pages.txt` is out of the tool's grammar, or misses a page it names, is refused in the Settings line. At a piece's open such a folder only means no score (the SCORE key dimmed, one line on the terminal); the piece loads as ever. A score folder without a playable `audio.wav` (missing, or not 16-bit stereo at `pages.txt`'s rate) is still a score: the viewer turns its pages by hand, and one line on the terminal says why. `score_path`, the page range and each tab's remembered position (with a soundtrack the exact point it was left at, else the start of the page shown) live in the piece's `score/viewer.txt`, written by the app at every change and never saved with the piece, committed or carried to the other device: each device keeps its own, and a missing or damaged one only means the defaults (a damaged one says so on the terminal and is rewritten at the next change). `scripts/warptempo_sync tt` carries the pages, `pages.txt` and `audio.wav` to the tablet (Daily use).
+From a PDF (the file starting `%PDF-`; `--rate` is refused, `--fit` and `--url` work as for a video) the tool cuts each printed page between its systems: one scale for the whole PDF, set by its tallest system, so every page the viewer shows holds whole systems with their staves at one size, the first staff always at the same height; a page whose systems the tool cannot read (a recitative's short systems) is cut where the other pages are cut on average, each cut moved to a blank row nearby; a page of the PDF without staves (the cover, a preface, a catalog) is left out, with one line saying so. Its folder has no `audio.wav` (a rerun into a folder that held one deletes it, as `scripts/warptempo_sync tt` deletes the tablet's), so the viewer turns its pages by hand.
+
+The SCORE key lights at the next open of that piece: a piece whose folder holds `score/pages.txt` needs no typing. For another movement of the same video, open that movement's piece and type into the Settings line `score_path=../<the first piece>/score` (for instance `score_path=../550 - 1/score`); the path is relative to the piece's folder, and an empty `score_path=` turns the score off. The SCORE key lights once the folder is read; a path with no score folder behind it is kept and says so on a card, and a folder whose `pages.txt` is out of the tool's grammar, or misses a page it names, is refused in the Settings line. At a piece's open such a folder only means no score (the SCORE key dimmed, one line on the terminal); the piece loads as ever. A score folder without a playable `audio.wav` (missing, or not 16-bit stereo at `pages.txt`'s rate) is still a score: the viewer turns its pages by hand, and one line on the terminal says why. `score_path`, the page range and each tab's remembered position (with a soundtrack the exact point it was left at, else the start of the page shown) live in the piece's `score/viewer.txt`, written by the app at every change and never saved with the piece, committed or carried to the other device: each device keeps its own, and a missing or damaged one only means the defaults (a damaged one says so on the terminal and is rewritten at the next change). `scripts/warptempo_sync tt` carries the pages, `pages.txt` and `audio.wav` to the tablet, deleting there what the laptop's folder no longer holds: a page `pages.txt` does not name, and the `audio.wav` of a folder now made from a PDF (Daily use).
 
 ### Restoring a laptop
 

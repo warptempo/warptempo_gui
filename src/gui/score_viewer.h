@@ -57,7 +57,8 @@
 //     right. Space plays and pauses, Home / End seek the range's first /
 //     last frame, Left / Right do nothing (no pages).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
-//     pages.txt — the later PDF road): PREV and NEXT (the render player's
+//     pages.txt — always so on the PDF road, tools/score_extract.py's PDF
+//     input, 2026-10-27): PREV and NEXT (the render player's
 //     transport seats), THE PAGE SCRUB (its domain the viewing range's
 //     pages), THE PAGE CELL where the player's clock stands ("7 / 15", the
 //     shown page's ordinal within the range and the range's count) and the

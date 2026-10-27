@@ -14,11 +14,12 @@
 // pages.txt" block the one statement of it; this reader cites it and spells
 // no second copy. Read here as it stands there, with two readings of the
 // code the tool runs (the code is the authority): the `# src` line's text is
-// FREE TEXT to the line's end (the tool writes the video's basename verbatim,
-// which may carry any byte a file name does), and a page's file name pads its
-// number to max(3, the page count's digits) — `page_name`, which pads EVERY
-// page of a run of 1000 or more to four — and is a .jpg (page001.jpg, the
-// tool's grayscale JPEG pre-sized to the viewer's box, 2026-10-26).
+// FREE TEXT to the line's end (the tool writes the video's or the PDF's
+// basename verbatim, which may carry any byte a file name does), and a page's
+// file name pads its number to max(3, the page count's digits) — `page_name`,
+// which pads EVERY page of a run of 1000 or more to four — and is a .jpg
+// (page001.jpg, the tool's grayscale JPEG pre-sized to the viewer's box,
+// 2026-10-26).
 //
 // THE THREE OUTCOMES, by the validation doctrine's classes:
 //   * NO FOLDER, OR NO READABLE pages.txt IN IT — no score, the SCORE key
