@@ -686,8 +686,17 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // plate against the live inputs, field by field — the dirty-detect's own ten
 // (maybe_enqueue_waveform_render's compare), read here against the LIVE slot
 // fp_* rather than the pending one, since the question is what the glass
-// would be shown.
+// would be shown. THE GEOMETRY WITH NO WAVEFORM ROWS answers TRUE first
+// (2026-10-28, Sol's round): compute_waveform_render_inputs's empty-area arm
+// (waveform_area's w or h at zero — a schema-legal lane stack past the
+// window, waveform_area's owner comment in main.cpp) is the one invalid arm
+// tested here, the other two (a load in flight, no audio) being past by the
+// time the tick asks, after the load returned. Both plate routes skip that
+// area, so the plate is owed by nobody and the first picture is complete
+// without it.
 bool GuiPaintHandler::live_plate_published() const {
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0 || area.h <= 0) return true;
     if (!wf_cache.fp_rendered || waveform_rebuild_owed) return false;
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return false;

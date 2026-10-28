@@ -2212,7 +2212,12 @@ void GuiPlatform::present_held_frame() {
 // tick, outside any paint walk; the flush sends the commit now instead of
 // on the loop's next pass. Before the first configure it cannot come (the
 // load it waits on is gated on that configure), and paint_one_frame would
-// keep the damage if it did.
+// keep the damage if it did. THE BIT CLEARS HERE, AT THE RELEASE, and needs
+// no owed state (2026-10-28, Sol's round; Android's owed release is the
+// other road, platform.h's head): the clear, the paint and the commit run in
+// this one call with no event dispatched between, so no open_unseen() gate
+// (main.cpp's hook block) is asked while the glass still shows the one
+// frame.
 void GuiPlatform::release_presentation() {
     if (!presentation_held_ || run_stop_requested_) return;
     presentation_held_ = false;

@@ -1302,9 +1302,11 @@ void GuiPlatform::request_run_stop() {
     // with them. Deliberately NOT ANativeActivity_finish — that is an exit.
     run_stop_requested_ = true;
     // A run stop is a reopen: the open's hold and its one frame's debt
-    // (platform.h's head).
+    // (platform.h's head). A release still owed is the old set's and dies
+    // here: the new set's hold is its own to release.
     presentation_held_ = true;
     held_frame_owed_   = true;
+    release_owed_      = false;
 }
 
 void GuiPlatform::redeliver_geometry() {
@@ -1381,8 +1383,10 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     if (!has_initial_configure_ || !window_ || !back_) return;
     // THE OPEN'S HOLD (platform.h's head): no paint and no post — the damage
     // waits for the release — but for the hold's one frame
-    // (present_held_frame), which paints here.
-    if (presentation_held_ && !held_frame) return;
+    // (present_held_frame), which paints here, and THE RELEASE'S FRAME
+    // (release_owed_, release_presentation), which paints here under the
+    // hold and ends it at its post (the tail).
+    if (presentation_held_ && !held_frame && !release_owed_) return;
     if (damage_.empty()) return;
 
     // Pre-paint hook: gives the application a chance to update model state
@@ -1430,7 +1434,17 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     // Under the vsync gate (pump's tail) the kept damage posts the next
     // callback at the same pass's tail, so the retry is the next vsync's
     // frame.
-    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) damage_.clear();
+    // THE HOLD ENDS HERE, AT THE RELEASE'S POST (release_presentation): the
+    // finished picture is on the glass, so the hold and the owed release
+    // clear together and the GUI's open_unseen() gates open. A failed post
+    // keeps both, as it keeps the damage, and the next vsync's frame retries.
+    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) {
+        damage_.clear();
+        if (release_owed_) {
+            presentation_held_ = false;
+            release_owed_      = false;
+        }
+    }
 }
 
 bool GuiPlatform::present(int x, int y, int w, int h) {
@@ -1584,12 +1598,21 @@ void GuiPlatform::present_held_frame() {
 // asymmetry of the mechanism: the window here is shown whether or not it was
 // ever posted to, so nothing is owed a paint outside the gate, and the
 // release is called inside a pump() pass (the tick), whose tail posts the
-// callback for the damage declared here (pump's tail, the gate's rule). A
-// window lost under the hold keeps the damage for the next adoption, which
-// adds its own.
+// callback for the damage declared here (pump's tail, the gate's rule). THE
+// RELEASE IS OWED, NOT DONE (2026-10-28, Sol's round): it sets release_owed_
+// and LEAVES THE HOLD STANDING, so presentation_held() reads true — and
+// every open_unseen() gate drops (main.cpp's hook block) — through the vsync
+// wait and the frame's paint: a touch frame in that wait and a car command
+// drained in this same pass after on_tick_ (pump) act on no picture the
+// glass has not shown. The paint's hold gate lets the owed frame through,
+// and its post's success clears both bits (paint_one_frame's tail). A
+// window lost under the hold (or gone at the owed frame's paint) keeps the
+// damage and the owed release for the next adoption, which adds its own
+// damage and whose pass's tail posts the callback. Asked again while owed
+// (the tick asks every pass the hold stands), it does nothing.
 void GuiPlatform::release_presentation() {
-    if (!presentation_held_ || run_stop_requested_) return;
-    presentation_held_ = false;
+    if (!presentation_held_ || release_owed_ || run_stop_requested_) return;
+    release_owed_ = true;
     invalidate_surface_rect(0, 0, width_, height_);
 }
 
@@ -1891,8 +1914,10 @@ void GuiPlatform::pump() {
         vsync_due_ = false;
         paint_one_frame();
     }
+    // UNDER THE OPEN'S HOLD NO CALLBACK IS POSTED, but for the owed release's
+    // frame (release_presentation), which is paced here like any damage.
     if (!damage_.empty() && !vsync_pending_ && window_ &&
-        !presentation_held_) {
+        (!presentation_held_ || release_owed_)) {
         AChoreographer_postFrameCallback64(choreographer_,
                                            &AndroidCallbacks::vsync, nullptr);
         vsync_pending_ = true;

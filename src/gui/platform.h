@@ -62,7 +62,7 @@
 // the cold launch, the picker's choice and Revert (a dirty reopen's prompt
 // answered, on either) and the pull's reload. ONE MECHANISM ON BOTH
 // BACKENDS, two bits — the hold, `presentation_held()`, and its one frame's
-// debt:
+// debt (Android adds a third, the owed release, the release's bullet):
 //   * ARMED BY THE PLATFORM ALONE, both bits together, at the two points an
 //     open becomes certain: CONSTRUCTION (the cold launch's first open) and
 //     request_run_stop (every run stop is a reopen — the picker's choice
@@ -105,10 +105,16 @@
 //     STOP IS REFUSED: the old set's tick, running in the pass that asked
 //     the stop, would otherwise find its own picture complete and present
 //     it — the hold a stop arms is the next set's to release. THE ROAD OUT
-//     IS DIFFERENT PER BACKEND AND RECORDED AT EACH SITE: Wayland paints at
-//     once (the finished picture a compositor frame sooner); Android
-//     declares the damage and the pass's tail posts the vsync callback as
-//     for any damage.
+//     IS DIFFERENT PER BACKEND AND RECORDED AT EACH SITE, and on both the
+//     hold reads true until the finished picture is presented: Wayland
+//     clears it, paints and commits at once in the one call (the finished
+//     picture a compositor frame sooner, no event dispatched between);
+//     Android marks the release OWED and leaves the hold standing, the
+//     pass's tail posts the vsync callback as for any damage, the paint's
+//     hold gate lets that frame through, and the hold and the owed release
+//     clear together only at its successful post (2026-10-28, Sol's round)
+//     — so input stays dropped through the vsync wait and a car command
+//     drained in the release's own pass.
 //   * A ROAD THAT NEVER RELEASES ENDS THE PROCESS: a refused load exits
 //     (fatal_load, run_project), and an exit needs no picture. No timeout
 //     and no recovery code: the plate's worker always completes (NO

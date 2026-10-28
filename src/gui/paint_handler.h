@@ -633,6 +633,11 @@ struct GuiPaintHandler {
     //     frame's pre-paint hook (platform.h's head), ahead of the load
     //     (materials.h's BAKE RULE); a bake's palette reinstall moves no
     //     plate ink (the inks are the preset's words, not the ground's).
+    //   * NO WAVEFORM ROWS (2026-10-28, Sol's round): where waveform_area has
+    //     no rows or no columns (compute_waveform_render_inputs's empty-area
+    //     arm; a schema-legal lane stack past the window, waveform_area's
+    //     owner comment), no route ever renders a plate, so none is owed:
+    //     the predicate answers TRUE and the clipped picture is complete.
     // What may still change after the first picture is STATE, never a part of
     // the picture arriving: the GitHub check's and the history prefetch's
     // verdicts, the score soundtrack's readiness and the target render's

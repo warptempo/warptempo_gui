@@ -203,7 +203,8 @@ public:
     // construction and by request_run_stop; its ONE FRAME painted and posted
     // at once, outside the vsync gate, the hold left standing; released by
     // the GUI — here the whole surface damaged and left to the pass's vsync
-    // post (this backend's road out, at the definition).
+    // post, the hold standing until that frame's post succeeds (this
+    // backend's road out, at the definition).
     bool presentation_held() const { return presentation_held_; }
     void present_held_frame();
     void release_presentation();
@@ -655,11 +656,19 @@ private:
     bool run_stop_requested_ = false;
     // THE OPEN'S PRESENTATION HOLD (platform.h's head): standing from
     // construction — the cold launch's open — and re-armed by every
-    // request_run_stop; cleared by release_presentation alone. Its ONE
+    // request_run_stop; cleared at the post of the frame release_presentation
+    // owes (paint_one_frame's tail), never at the release itself. Its ONE
     // FRAME'S DEBT is armed beside it at the same two points and paid by
-    // present_held_frame alone.
+    // present_held_frame alone. THE RELEASE OWED (2026-10-28, Sol's round):
+    // set by release_presentation alone, the hold left standing; it opens
+    // the paint's hold gate and the vsync post at pump's tail, and clears
+    // with the hold, both bits together, only once that frame's post
+    // succeeds — so every open_unseen() gate (main.cpp's hook block) drops
+    // input until the finished picture is on the glass. request_run_stop
+    // clears it (the next set's hold is its own to release).
     bool presentation_held_ = true;
     bool held_frame_owed_   = true;
+    bool release_owed_      = false;
     bool has_initial_configure_ = false;
     // Latest focus reading (APP_CMD_GAINED_FOCUS / LOST_FOCUS): false until the
     // first GAINED_FOCUS, the same honest cold answer the Wayland backend gives

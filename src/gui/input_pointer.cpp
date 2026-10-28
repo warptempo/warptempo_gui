@@ -3868,8 +3868,11 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
 // nothing.
 // It is measured at the LIFT against the arm's own stamp — no timer, no tick —
 // and it asks nothing about WHICH button: the dispatch reads it only where
-// player_button_shift_admits says so, which is what lets a button with no twin
-// be held for as long as you like and still get its plain act. THE HOLD IS THE
+// player_button_shift_admits or score_button_shift_admits says so (the
+// player's admitted twins, and the score viewer row's two skips, whose
+// shifted form is the 10 s skip — dispatch_modal_dialog_button's score arm;
+// 2026-10-28, Sol's round), which is what lets a button with no twin be held
+// for as long as you like and still get its plain act. THE HOLD IS THE
 // GLASS HALF of the pair and passes silently, the roster's ruling (tooltips do
 // not show on the panel the gesture exists for).
 bool GuiInputHandler::modal_dialog_press_shifted() const {

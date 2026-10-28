@@ -1760,7 +1760,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // paints), and after it on a piece the glass has not shown. The one frame
     // is a paint, not a release, so presentation_held() reads true across it
     // and the drop spans the whole open. Dropped: the key press (all
-    // but plain Ctrl+Q, which ends the process and acts on no picture), the
+    // but plain Ctrl+Q, which ends the process and acts on no picture) and
+    // its repeat (the repeat-eligibility probe answers false, so a dropped
+    // press arms none and a held key's fire disarms it), the
     // button press, the wheel, a touch navigation frame, the region hold's
     // and the caret drag's begins, and the car's buttons. A DROP, NOT A
     // QUEUE: input arriving during the load (read when the loop resumes)
@@ -2006,8 +2008,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // Press-time key-repeat eligibility: the platform consults this before
     // arming repeat so one-shot commands and editor openers never repeat while
-    // held-step gestures and editor typing do.
+    // held-step gestures and editor typing do. FALSE UNDER THE OPEN'S HOLD
+    // (2026-10-28, Sol's round; the block above set_touch_nav_hooks): the
+    // key hook drops the press, and a context that rejects a press must not
+    // empower its hold (repeat_eligible's head). GuiInputCore::key_event asks
+    // this BEFORE delivering the press and arms on its answer, and
+    // maybe_fire_repeat asks it again PER FIRE and disarms on false — so a
+    // press dropped by the hold arms nothing, and a repeat armed before the
+    // hold began dies at its first fire under it; no fire acts after the
+    // release on a press the open dropped.
     gui.set_repeat_eligible_probe([&](GuiKey key, GuiInputState mods) {
+        if (open_unseen()) return false;
         return input_handler.repeat_eligible(key, mods);
     });
 
@@ -2528,7 +2539,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // paints no frame whose pre-paint hook would pay it and the worker
         // stands down while it is owed. Asked every tick until it releases —
         // the completion is the worker's eventfd, which wakes the loop, and
-        // the next tick finds it.
+        // the next tick finds it. On Android the hold reads true past the
+        // release until the released frame's post (platform.h's head), so
+        // this block runs on through the vsync wait; the release it repeats
+        // is a no-op while one is owed.
         if (open_loaded && gui.presentation_held()) {
             paint_handler.flush_owed_waveform_rebuild();
             if (paint_handler.live_plate_published())

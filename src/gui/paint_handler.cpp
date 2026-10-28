@@ -6875,12 +6875,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the key DOWN one device px for Repeat One's lit lamp and two for
         // a press (the two depths, 2026-10-23), NO HOT FACE
         // (program_spec.h's case_hot_face) — and no separators.
-        // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
-        // 2026-08-30) — every other owner's buttons are always live while
-        // their dialog stands and publish enabled=true: the player's legend
-        // dimmed (kDimInk, paint_key_legend, 2026-10-23), the key the face
-        // its state gives, the roster's rule (architect 2026-10-02 and
-        // 2026-10-09). The press face is gated on the bit rather than
+        // THE DISABLED RUNG, on the two rows that publish a stateful bit
+        // (AppState::ModalDialogButton::enabled, the one statement of its
+        // owners; re-grepped 2026-10-28, Sol's round): the PLAYER's buttons
+        // (architect 2026-08-30, render_player_button_enabled) and the SCORE
+        // VIEWER's keys (score_viewer_button_enabled) — every other owner's
+        // buttons are always live while their dialog stands and publish
+        // enabled=true. The legend dimmed (kDimInk, paint_key_legend,
+        // 2026-10-23), the key the face its state gives, the roster's rule
+        // (architect 2026-10-02 and 2026-10-09). The press face is gated on the bit rather than
         // trusted — a button can go dead UNDER a hold.
         const bool enabled = plan[i].enabled;
         const bool armed   = enabled &&
