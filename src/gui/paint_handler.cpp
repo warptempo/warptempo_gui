@@ -889,10 +889,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // its closer (RedesignButton::IconScore). One case onto the walk, no run
     // moving.
     {RedesignButton::IconScore},
-    // THE RAIN (architect 2026-10-28), the third run's last since 2026-10-28:
-    // bare `w`, the background sound's lamp (RedesignButton::IconRain, rain.h).
-    // One case onto the walk, no run moving.
-    {RedesignButton::IconRain},
+    // THE NOISE (architect 2026-10-28), the third run's last since
+    // 2026-10-28: bare `w`, the background sound's lamp
+    // (RedesignButton::IconNoise, noise.h). One case onto the walk, no run
+    // moving.
+    {RedesignButton::IconNoise},
     // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
     // right-anchored since, kIconRowHistoryOpener below.)
 };
@@ -920,7 +921,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
 // refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
 // to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders (bare `l`, admitted 2026-10-25),
-// the tooltip lamp (bare backslash) and the Rain lamp (bare `w`, admitted
+// the tooltip lamp (bare backslash) and the NOISE lamp (bare `w`, admitted
 // 2026-10-28).
 //
 // THE SLOTS: UNDO'S FOUR (Undo, Redo, Copy Phase Resets and Render, since
@@ -937,7 +938,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // view does not refuse in every session (Zoom In and Zoom Out since
 // 2026-10-27, Zoom to Fit and, since 2026-10-12, Waveform Magnification) and
 // the render-entry group on three (Play Renders,
-// since 2026-10-25, Enable Tooltips, and Rain since 2026-10-28), their others hidden
+// since 2026-10-25, Enable Tooltips, and Noise since 2026-10-28), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the view pairs are right-anchored and do not move
 // (kIconRowHistoryOpener).
@@ -1025,7 +1026,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
 // band holds every run down to about 633 Windows px of window width outside
 // the `h` view and 472 inside it (the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-28 with the Rain lamp, plus the ring's
+// statement, re-derived 2026-10-28 with the NOISE lamp, plus the ring's
 // inset at each window edge, about 13 W), so neither host reaches the rule
 // at its scale: the tablet's 2304 device px hold the row in both states up
 // to about 360 % and the laptop's 1920 up to about 300 % (the W arithmetic
@@ -1682,7 +1683,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the plain wood, the left members in
     // THREE RUNS and the right five in ONE — TWENTY-FIVE members outside the
-    // `h` view and EIGHTEEN inside it (2026-10-28, the RAIN lamp closing the
+    // `h` view and EIGHTEEN inside it (2026-10-28, the NOISE lamp closing the
     // third run, standing in the view), RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
@@ -1692,7 +1693,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
     // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS, since 2026-10-26 the
-    // SCORE key and since 2026-10-28 the RAIN lamp) the third — then,
+    // SCORE key and since 2026-10-28 the NOISE lamp) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
     // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
     // companions stand in two groups' slots — Revert and Load in Place in
@@ -1710,7 +1711,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
     // the padlock and Settings between Play Renders (admitted 2026-10-25)
-    // and Enable Tooltips, and the Score key after it (2026-10-26), the Rain
+    // and Enable Tooltips, and the Score key after it (2026-10-26), the NOISE
     // lamp behind it standing (admitted 2026-10-28) — its
     // neighbors
     // closing up and its run standing
@@ -1725,12 +1726,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-23): in Windows px, from the program ring's outer left column,
     // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
     // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
-    // twenty members in three runs (re-derived 2026-10-28, the Rain lamp
+    // twenty members in three runs (re-derived 2026-10-28, the NOISE lamp
     // closing the third),
     //   20·23 + 2·15 = 490,
     // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
-    // Renders, Enable Tooltips, Rain — re-derived 2026-10-28),
+    // Renders, Enable Tooltips, Noise — re-derived 2026-10-28),
     // 13·23 + 2·15 = 329;
     // with one run gap of wood before the right run the band holds every
     // run at
@@ -1740,7 +1741,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // between the left runs and the right run. IN DEVICE PX, off the painted
     // walk (each case its rounded parts, the gap its own scaled_px, the ends
     // program_ring_columns'; re-derived 2026-10-28, the ring's columns the
-    // canvas's frame hairlines, and again that day with the Rain lamp): at
+    // canvas's frame hairlines, and again that day with the NOISE lamp): at
     // the tablet's 300 % (cases 69, the gap 45, the ring 23 .. 2281) the left
     // runs on x 23..1492, the right run 1936..2280; at the laptop's 138 %
     // (cases 31, the gap 21, the ring 15 .. 1905) the left runs on x 15..676,
@@ -1856,7 +1857,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // standing in their slots (since 2026-10-05; the iteration group's
         // again since 2026-10-26, kIconRowHistoryStandIns). The view pairs, Zoom In,
         // Zoom Out, Zoom to Fit, the magnification lamp, the tooltip lamp, the
-        // Rain lamp (2026-10-28) and the history opener stay live, as do the history
+        // NOISE lamp (2026-10-28) and the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
         // bare `g`, `u`, `,` and `.` are the mode's own VOCABULARY and answer live

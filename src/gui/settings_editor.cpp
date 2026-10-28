@@ -111,7 +111,62 @@ std::string common_prefix_on_codepoint_boundary(
     return lcp;
 }
 
-// THE BUFFER'S ADVANCE, the three completers' shared tail: `append` lands at
+// THE FOLDER-NAME MATCH — the path completer's and the noise completer's one
+// listing body (2026-10-28, factored out of complete_path_value; the rules at
+// their declarations): `dir` LISTED AFRESH AT EVERY TAB, with an error_code,
+// so a directory that is not there, not readable or not a directory — or a
+// listing error midway — is no match, and a Tab that completes nothing walks
+// the ring (the one autocomplete model). The matches are the DIRECTORIES
+// whose names start with `tail` (byte compare — the key names a folder); the
+// answer is their count and the ADVANCE past `tail`, their longest common
+// prefix on a codepoint boundary less the tail (empty when the boundary cut
+// took it to the tail or below: the matches diverge inside one character, or
+// a single match is the tail already). Each caller decides what a single
+// match takes after it.
+struct FolderNameAdvance {
+    std::size_t count = 0;
+    std::string append;
+};
+FolderNameAdvance folder_name_advance(const std::filesystem::path& dir,
+                                      const std::string& tail) {
+    std::error_code ec;
+    std::filesystem::directory_iterator it(dir, ec);
+    if (ec) return {};
+    std::vector<std::string> matches;
+    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        if (ec) return {};
+        const std::filesystem::directory_entry& e = *it;
+        // DIRECTORIES ONLY — the key names a folder. Through the link: a
+        // symlinked folder is a folder to name, and the grammar follows
+        // nothing either way.
+        std::error_code dec;
+        if (!e.is_directory(dec) || dec) continue;
+        const std::string name = e.path().filename().string();
+        // Dot-directories are offered only when they are asked for, the
+        // shell's own convention: nearly every home directory holds a
+        // `.config` and a `.cache`, and with an empty tail those join the
+        // match set and drag the common prefix to nothing, so the Tab that
+        // most naturally asks "what is here" would advance by zero characters
+        // and walk the focus ring instead. A tail beginning with `.` says the
+        // hidden names are the ones wanted and lets them all through.
+        if (!name.empty() && name[0] == '.' &&
+            (tail.empty() || tail[0] != '.')) continue;
+        if (name.size() < tail.size() ||
+            name.compare(0, tail.size(), tail) != 0) continue;
+        matches.push_back(name);
+    }
+    if (matches.empty()) return {};
+    FolderNameAdvance out;
+    out.count = matches.size();
+    const std::string lcp = common_prefix_on_codepoint_boundary(matches);
+    // The tail is a prefix of every match, so it is a prefix of the common
+    // prefix — unless the boundary cut took it below the tail, in which case
+    // the matches diverge inside one character and there is nothing to add.
+    if (lcp.size() > tail.size()) out.append = lcp.substr(tail.size());
+    return out;
+}
+
+// THE BUFFER'S ADVANCE, the four completers' shared tail: `append` lands at
 // the LINE'S END whatever the caret was doing, through the one incoming
 // filter, as the recall's does; its over-capacity refusal is silent for the
 // recall's reason (the text is the product's own, not the user's), and
@@ -1061,9 +1116,9 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it, and `rain_level` and `rain_crossfade_ms` (2026-10-28)
-// the same, at once and no card, their arms after it (`bevel_light` and
-// `bevel_dark` stood after it
+// its arm after it, and `noise`, `noise_level` and `noise_crossfade_ms`
+// (2026-10-28) the same, at once and no card, their arms after it
+// (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
 // 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
@@ -1155,36 +1210,64 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE RAIN'S LEVEL AND ITS CROSSFADE (architect 2026-10-28; rain.h owns
-    // the sound): each an integer under its one grammar owner
-    // (parse_rain_level, parse_rain_crossfade_ms, device_config.h), APPLIED
-    // LIVE AT THE COMMIT — the live struct, then the one GuiRain's setter (the
-    // level's gain read by the audio thread at its next fill, the crossfade
-    // at the next transition's draw) — and persisted, so NO CARD: the sound
-    // is the answer. A commit with the lamp dark takes effect at the next
-    // lit press. Neither key has a closed domain, so Tab completes no value
-    // for either (complete_closed_value names neither); stage 2's recall is
-    // the writer's spelling (recall_gui_setting_value).
-    if (key == "rain_level") {
-        const std::optional<int> db = parse_rain_level(value);
-        if (!db) { reject(kRainLevelGrammarReason); return true; }
-        if (*db == app.device_config->rain_level) {
-            unchanged(); return true;
+    // THE NOISE'S FOLDER (architect 2026-10-28; noise.h owns the sound): one
+    // folder name under its one grammar owner (is_noise_folder_name,
+    // device_config.h), the value trimmed as every string key's; a same-name
+    // commit is the unchanged no-op, so GuiNoise::change_folder never sees
+    // one. Otherwise the live struct takes the name and the one GuiNoise
+    // CHANGES FOLDER — THE LAMP DARKENS AND THE MEMORY IS DUMPED ON EVERY
+    // NAME CHANGE, lit or not (his ruling: "whatever's in memory is dumped if
+    // we change the subfolder name"), the new folder probed for the next lit
+    // press — and the file is written. NO CARD: the NOISE key's face is the
+    // answer, live with a folder there and grey when it is absent or refused,
+    // exactly as a launch with that name would show (the absent-folder rule,
+    // noise.h). Tab completes the value against the folders there
+    // (complete_noise_value); stage 2's recall is the name verbatim
+    // (recall_gui_setting_value).
+    if (key == "noise") {
+        if (!is_noise_folder_name(value)) {
+            reject(kNoiseFolderGrammarReason);
+            return true;
         }
-        app.device_config->rain_level = *db;
-        if (app.rain != nullptr) app.rain->set_level_db(*db);
+        if (value == app.device_config->noise) { unchanged(); return true; }
+        app.device_config->noise = value;
+        if (app.noise != nullptr) app.noise->change_folder(value);
         (void)persist();
         applied();
         return true;
     }
-    if (key == "rain_crossfade_ms") {
-        const std::optional<int> ms = parse_rain_crossfade_ms(value);
-        if (!ms) { reject(kRainCrossfadeGrammarReason); return true; }
-        if (*ms == app.device_config->rain_crossfade_ms) {
+
+    // THE NOISE'S LEVEL AND ITS CROSSFADE (architect 2026-10-28; noise.h owns
+    // the sound): each an integer under its one grammar owner
+    // (parse_noise_level, parse_noise_crossfade_ms, device_config.h), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then the one GuiNoise's setter
+    // (the level's gain read by the audio thread at its next fill, the
+    // crossfade at the next transition's draw) — and persisted, so NO CARD:
+    // the sound is the answer. A commit with the lamp dark takes effect at
+    // the next lit press. Neither key has a closed domain or a folder, so Tab
+    // completes no value for either (complete_closed_value and
+    // complete_noise_value name neither); stage 2's recall is the writer's
+    // spelling (recall_gui_setting_value).
+    if (key == "noise_level") {
+        const std::optional<int> db = parse_noise_level(value);
+        if (!db) { reject(kNoiseLevelGrammarReason); return true; }
+        if (*db == app.device_config->noise_level) {
             unchanged(); return true;
         }
-        app.device_config->rain_crossfade_ms = *ms;
-        if (app.rain != nullptr) app.rain->set_crossfade_ms(*ms);
+        app.device_config->noise_level = *db;
+        if (app.noise != nullptr) app.noise->set_level_db(*db);
+        (void)persist();
+        applied();
+        return true;
+    }
+    if (key == "noise_crossfade_ms") {
+        const std::optional<int> ms = parse_noise_crossfade_ms(value);
+        if (!ms) { reject(kNoiseCrossfadeGrammarReason); return true; }
+        if (*ms == app.device_config->noise_crossfade_ms) {
+            unchanged(); return true;
+        }
+        app.device_config->noise_crossfade_ms = *ms;
+        if (app.noise != nullptr) app.noise->set_crossfade_ms(*ms);
         (void)persist();
         applied();
         return true;
@@ -1275,49 +1358,34 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
     const std::filesystem::path dir(head);
     if (!dir.is_absolute()) return false;
 
-    // LISTED AFRESH AT EVERY TAB, with an error_code: a directory that is not
-    // there, not readable or not a directory completes nothing, and a Tab that
-    // completes nothing walks the ring — the one autocomplete model.
-    std::error_code ec;
-    std::filesystem::directory_iterator it(dir, ec);
-    if (ec) return false;
-    std::vector<std::string> matches;
-    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
-        if (ec) return false;
-        const std::filesystem::directory_entry& e = *it;
-        // DIRECTORIES ONLY — the key names a folder. Through the link: a
-        // symlinked folder is a folder to name, and the grammar follows
-        // nothing either way.
-        std::error_code dec;
-        if (!e.is_directory(dec) || dec) continue;
-        const std::string name = e.path().filename().string();
-        // Dot-directories are offered only when they are asked for, the
-        // shell's own convention: nearly every home directory holds a
-        // `.config` and a `.cache`, and with an empty tail those join the
-        // match set and drag the common prefix to nothing, so the Tab that
-        // most naturally asks "what is here" would advance by zero characters
-        // and walk the focus ring instead. A tail beginning with `.` says the
-        // hidden names are the ones wanted and lets them all through.
-        if (!name.empty() && name[0] == '.' &&
-            (tail.empty() || tail[0] != '.')) continue;
-        if (name.size() < tail.size() ||
-            name.compare(0, tail.size(), tail) != 0) continue;
-        matches.push_back(name);
-    }
-    if (matches.empty()) return false;
-
-    std::string lcp = common_prefix_on_codepoint_boundary(matches);
-    // The tail is a prefix of every match, so it is a prefix of the common
-    // prefix — unless the boundary cut took it below the tail, in which case
-    // the matches diverge inside one character and there is nothing to add.
-    if (lcp.size() < tail.size()) return false;
-    std::string append = lcp.substr(tail.size());
-    if (matches.size() == 1) append += '/';
+    // The listing, the directories-only and hidden rules and the prefix
+    // (folder_name_advance, the shared body); a single match here takes a
+    // trailing `/`, the value being a path that may go on.
+    const FolderNameAdvance found = folder_name_advance(dir, tail);
+    if (found.count == 0) return false;
+    std::string append = found.append;
+    if (found.count == 1) append += '/';
     if (append.empty()) return false;
 
     // The append lands at the LINE'S END (append_at_line_end, the
     // completers' shared tail).
     return append_at_line_end(app, viewport, append);
+}
+
+bool GuiSettingsEditor::complete_noise_value(const std::string& value) {
+    // The folder the noise's names live in: `noise/` beside the device
+    // config (GuiNoise::probe's own composition, noise.h). No config home
+    // completes nothing.
+    const std::filesystem::path config = device_config_path();
+    if (config.empty()) return false;
+    // The value side is the name's PREFIX whole — a name has no head — and a
+    // single match is completed WITH NO TRAILING `/`: the value is a name,
+    // not a path. A typed `/` matches no folder's name, so it completes
+    // nothing, as the commit would refuse it.
+    const FolderNameAdvance found =
+        folder_name_advance(config.parent_path() / "noise", value);
+    if (found.count == 0 || found.append.empty()) return false;
+    return append_at_line_end(app, viewport, found.append);
 }
 
 bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
@@ -1383,7 +1451,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's ten and
+        // one key does — any key the recall knows, the table's thirteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");
@@ -1403,9 +1471,12 @@ bool GuiSettingsEditor::autocomplete_value() {
     // key's does, and the path road opens only once something has been
     // typed. The path completer's own no-advance cases (an ambiguous prefix
     // already at the common prefix, no match, a relative or unlistable head)
-    // are Tabs that walk, exactly as here. THE CLOSED DOMAINS TAKE THE SAME
-    // ROAD (architect 2026-10-14 and 2026-10-21): a non-empty value side on
-    // `waveform` or `true_colors` is a prefix of the key's words
+    // are Tabs that walk, exactly as here. THE NOISE KEY TAKES THE SAME ROAD
+    // (2026-10-28): a non-empty value side on `noise` is a prefix of a
+    // folder's name under `noise/` beside the device config
+    // (complete_noise_value), its no-advance cases Tabs that walk. THE CLOSED
+    // DOMAINS TOO (architect 2026-10-14 and 2026-10-21): a non-empty value
+    // side on `waveform` or `true_colors` is a prefix of the key's words
     // (complete_closed_value), its no-advance cases Tabs that walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
         // Leading whitespace off, trailing whitespace kept — the reasons are
@@ -1414,13 +1485,16 @@ bool GuiSettingsEditor::autocomplete_value() {
         // accepts exactly that value.
         if (is_path_completed_key(key))
             return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
+        if (key == "noise")
+            return complete_noise_value(ltrim_ws(pending.substr(eq + 1)));
         return complete_closed_value(key, ltrim_ws(pending.substr(eq + 1)));
     }
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, waveform and true_colors —
-    // gui_scale and the rest the device config's — per-tab trim / read_only)
+    // gui_scale, projects_repo, projects_path, waveform, true_colors and the
+    // noise's three — gui_scale and the rest the device config's — per-tab
+    // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S (or, for a device key, the config's writer)
     // would write, so recall and save never diverge.

@@ -7,8 +7,9 @@ shopt -s nocaseglob
 
 # warptempo_sync — the laptop's three errands to the tablet (warptempo).
 #
-#   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio and
-#                                       each piece's score folder, and nothing
+#   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio,
+#                                       each piece's score folder and the
+#                                       laptop's noise folder, and nothing
 #                                       else.
 #   warptempo_sync ot [piece]           ON the tablet: an interactive shell as the
 #                                       app, in its projects folder (or the named
@@ -17,12 +18,10 @@ shopt -s nocaseglob
 #   warptempo_sync setup                ONE COMMAND that makes a tablet ready:
 #                                       GitHub's projects clone placed on it, its
 #                                       deploy key, its settings file corrected,
-#                                       the rain, the audio, the app started. It
-#                                       shows its plan and asks Proceed? [y/N]
-#                                       before it changes anything. It needs
-#                                       ffmpeg on the laptop for the rain (step 6
-#                                       below) when WARPTEMPO_RAIN_SOURCE names a
-#                                       folder.
+#                                       the noise folder, the audio, the app
+#                                       started. It shows its plan and asks
+#                                       Proceed? [y/N] before it changes
+#                                       anything.
 #
 #   -n   a DRY RUN: say in words what the run would do, and do none of it
 #        (setup -n prints its plan and asks nothing).
@@ -48,7 +47,8 @@ shopt -s nocaseglob
 # THE SIDECARS NEVER TRAVEL HERE (architect 2026-09-27). Both devices hold a clone
 # of github.com/warptempo/warptempo_projects and the app itself commits, pushes
 # and pulls them (Save and Commit in `h`); GitHub is the hub. warptempo_sync
-# carries only what git does not: the audio and the scores in, nothing out (a
+# carries only what git does not: the audio, the scores and the noise in,
+# nothing out (a
 # render is never fetched from the tablet, architect 2026-10-26 night: the laptop
 # pulls the committed sidecars and renders the same file again, within a few ULPs).
 # ONE DEVICE PER
@@ -102,6 +102,33 @@ shopt -s nocaseglob
 # name through far_rm_file, with a step line per kind naming the count. Nothing
 # else on the tablet is deleted here: viewer.txt and any stray file stay.
 #
+# tt AND setup MIRROR THE NOISE FOLDER (2026-10-28, mirror_noise; the sound is
+# src/gui/noise.h's). The laptop's `noise/` beside its device config
+# (${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/noise — derived as
+# PROJECTS is, no private path and no environment variable) holds one
+# subfolder per sound, the `noise` device key naming one; its recordings are
+# whatever the architect converts by his own means to the shape the app
+# admits (16-bit PCM stereo WAV at one rate per folder) — THE SCRIPT CONVERTS
+# NOTHING (architect 2026-10-28: the conversion is his own). Absent, or holding no
+# subfolder with a `.wav`, one line says so and nothing is placed or deleted:
+# the sound is optional. Otherwise, for every subfolder (sorted; a name the
+# app's grammar refuses — is_noise_folder_name, src/gui/device_config.h: a
+# single component with no leading or trailing whitespace and no line break
+# — is skipped with one line, and the tablet's folder of that name, if any,
+# left alone), every `.wav` directly in it (sorted; lowercase `.wav` exactly,
+# the app's own rule) is copied AS THE APP into
+# files/warptempo_gui/noise/<sub>/<name> (put_as_app, mode 644, the subfolder
+# made first) unless the tablet's file has the same sha256 (the deploy key's
+# compare). Then THE TABLET'S noise/ IS BROUGHT TO THE LAPTOP'S SHAPE: every
+# noise/<sub>/<name>.wav the laptop's folder lacks is deleted by its own name
+# (app_rm_noise), and every subfolder the laptop lacks is deleted — its
+# `.wav` files by name first, then the emptied directory by rmdir
+# (app_rmdir_noise, rmdir refusing a folder that is not empty). The tablet's
+# listing is ONE checked reading in push_score's shape. The first copy of his
+# `rain` folder is about 400 MB and a few minutes; a repeat hashes and skips. The
+# tablet's old files/warptempo_gui/sounds/ is not this script's business and
+# is never read or deleted.
+#
 # setup SHOWS ITS PLAN AND ASKS FIRST (architect 2026-09-28: "add y/n confirm, and
 # that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
 # copied over is gone once the answer is y, and the tablet's old .git goes whole,
@@ -153,8 +180,8 @@ shopt -s nocaseglob
 #      waveform= line already stands), a waveform= line added with the default
 #      (waveform=default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
-#      true_colors=on line (2026-10-21), the rain_level=-9 line and the
-#      rain_crossfade_ms=4000 line (2026-10-28; the last a tuning key) the
+#      true_colors=on line (2026-10-21), the noise=rain, noise_level=-9 and
+#      noise_crossfade_ms=4000 lines (2026-10-28; the last a tuning key) the
 #      same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
@@ -162,26 +189,15 @@ shopt -s nocaseglob
 #      captions, the two bevel keys, which left 2026-10-23 with the
 #      fortepiano chrome, strip_pad, settled the same day at a constant, the
 #      cues' tuning keys, settled 2026-10-26, the lit LED's glow key,
-#      settled the same day, and the rain's two fade keys, settled 2026-10-28
-#      at 200 and 40 ms (RETIRED_KEYS below;
+#      settled the same day, the noise's two fade keys, settled 2026-10-28
+#      at 200 and 40 ms, and rain_level and rain_crossfade_ms, renamed
+#      noise_level and noise_crossfade_ms the same day (RETIRED_KEYS below;
 #      src/gui/device_config.h); every other line is kept.
-#   6. THE BACKGROUND SOUND (2026-10-28; src/gui/rain.h owns the sound): the
-#      folder WARPTEMPO_RAIN_SOURCE names on the laptop (below) holds the rain's
-#      segments as `.m4a`; every one of them (sorted; any case of the
-#      extension) is converted ON THE LAPTOP by ffmpeg into scratch as
-#      `<stem>.wav`, PCM16 48 kHz stereo with no metadata and bit-exact (so a
-#      rerun's bytes match and the skip holds), and placed as the app at
-#      files/warptempo_gui/sounds/rain/<stem>.wav — beside the app's settings
-#      file, the folder the app's RAIN key reads — unless the tablet's file
-#      has the same sha256 (the deploy key's check). Then the tablet's folder
-#      is brought to the source's shape: every sounds/rain/*.wav there whose
-#      stem the source lacks is deleted by its own name (app_rm_rain). With
-#      WARPTEMPO_RAIN_SOURCE unset, not a folder, or holding no .m4a, one line
-#      says so and nothing is placed or deleted: the sound is optional. ffmpeg
-#      is needed only where the folder holds .m4a, and then setup stops in its
-#      plan, before any change, without it. The
-#      plan converts nothing: it lists each segment the real pass would
-#      convert and copy, unless the tablet has it.
+#   6. THE NOISE FOLDER (2026-10-28; src/gui/noise.h owns the sound): the
+#      laptop's noise/ mirrored to the tablet's files/warptempo_gui/noise/,
+#      exactly as tt does it (the noise paragraph above, mirror_noise). The
+#      plan lists every file the real pass would copy or delete and every
+#      folder it would remove; the real pass does it.
 #   7. the audio and the score folders, exactly as `warptempo_sync tt all`.
 #   8. the directories adb made are opened to the app (below), and the app started.
 #   Run twice it does the same again: the clone is fresh each time and the tracked
@@ -195,11 +211,9 @@ shopt -s nocaseglob
 # pass sets every shell-owned directory under projects/ and .git to 777. The app's
 # own directories (render/, tmp/, peaks/) are skipped and not entered: shell may not.
 #
-# THE ENVIRONMENT, three WARPTEMPO_* variables and never a literal in here:
-# WARPTEMPO_TABLET_ADDR (the wireless address, below), WARPTEMPO_TABLET_DEPLOY_KEY
-# (the tablet's deploy key, setup's step 4) and WARPTEMPO_RAIN_SOURCE (the
-# laptop folder holding the rain's segments as .m4a, setup's step 6; unset, the
-# rain is not placed).
+# THE ENVIRONMENT, two WARPTEMPO_* variables and never a literal in here:
+# WARPTEMPO_TABLET_ADDR (the wireless address, below) and
+# WARPTEMPO_TABLET_DEPLOY_KEY (the tablet's deploy key, setup's step 4).
 #
 # THE TABLET IS ADDRESSED OVER adb, USB first and the wireless address in
 # WARPTEMPO_TABLET_ADDR (host:port, from the environment) as the fallback;
@@ -228,10 +242,10 @@ WAVEFORM_LINE="waveform=default"
 # THE ADDED LINES, each added only where the tablet's file has no line of its
 # key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
 # required key since 2026-10-21 (the Settings menu's True Colors row made a
-# key), on on both devices; and THE RAIN'S TWO, required since 2026-10-28 —
-# the level, -9 dB, and the crossfade, a tuning key starting at 4000 ms
-# (src/gui/device_config.h records each).
-ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000"
+# key), on on both devices; and THE NOISE'S THREE, required since 2026-10-28 —
+# the sound's folder, rain, the level, -9 dB, and the crossfade, a tuning key
+# starting at 4000 ms (src/gui/device_config.h records each).
+ADDED_LINES="true_colors=on noise=rain noise_level=-9 noise_crossfade_ms=4000"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -251,9 +265,13 @@ ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000"
 # of 8 (src/gui/render.h, src/gui/gui_font.h, src/gui/cool_edit_paint.h);
 # the lit LED's glow tuning key of 2026-10-23, settled 2026-10-26 at 4
 # device px and a constant in the program since (src/gui/materials.cpp);
-# and the rain's two fade tuning keys of 2026-10-28, rain_fade_in_ms and
+# the noise's two fade tuning keys of 2026-10-28, rain_fade_in_ms and
 # rain_fade_out_ms, settled the same day at 200 and 40 ms and constants in
-# the program since (src/gui/rain.h).
+# the program since (src/gui/noise.h); and rain_level and rain_crossfade_ms
+# (retired 2026-10-28, renamed noise_level and noise_crossfade_ms the same
+# day). A TUNED LEVEL DOES NOT TRAVEL THROUGH setup: the old line is deleted
+# and ADDED_LINES' noise_level=-9 takes its place, so the planner renames the
+# two lines by hand at the install, on both devices, the program not running.
 # The tuning key setup DOES write is ADDED_LINES' crossfade line above,
 # leaving this list's way when it settles.
 RETIRED_KEYS=(sync_path theme_level
@@ -264,10 +282,12 @@ RETIRED_KEYS=(sync_path theme_level
               caption bevel_light bevel_dark strip_pad
               cue_shadow cue_triangle_rows cue_triangle_aa cue_text
               cue_lead led_glow
-              rain_fade_in_ms rain_fade_out_ms)
+              rain_fade_in_ms rain_fade_out_ms
+              rain_level rain_crossfade_ms)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
-# THE RAIN'S SOURCE FOLDER on the laptop (setup's step 6), from the environment.
-RAIN_SOURCE="${WARPTEMPO_RAIN_SOURCE:-}"
+# THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
+# beside the app's settings file, the folder the app's NOISE key reads.
+NOISE_FAR="$APPCFG/noise"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
 note() { printf 'warptempo_sync: %s\n' "$1" >&2; }
@@ -276,9 +296,9 @@ usage() {
     cat <<'HELP'
 warptempo_sync — the laptop's errands to the tablet
 
-  warptempo_sync tt [piece ...|all]    TO the tablet:   the source audio and the scores the tablet lacks
+  warptempo_sync tt [piece ...|all]    TO the tablet:   the source audio, the scores and the noise folder it lacks
   warptempo_sync ot [piece]            ON the tablet:   a shell as the app in its projects folder (exit returns)
-  warptempo_sync setup                 make a new (or this) tablet ready: clone, key, settings, rain, audio
+  warptempo_sync setup                 make a new (or this) tablet ready: clone, key, settings, noise, audio
                                        (it shows the plan and asks Proceed? [y/N]; nothing is backed up)
 
   no name = all = every piece       -n = dry run, in words       -v = show the commands too
@@ -329,7 +349,7 @@ ing() {
     local rest="${1#* }"
     case "${1%% *}" in
         copy)    printf 'copying %s' "$rest" ;;
-        convert) printf 'converting %s' "$rest" ;;
+        bring)   printf 'bringing %s' "$rest" ;;
         leave)   printf 'leaving %s' "$rest" ;;
         DELETE)  printf 'DELETING %s' "$rest" ;;
         stop)    printf 'stopping %s' "$rest" ;;
@@ -464,6 +484,9 @@ PROJECTS="${PROJECTS%/}"
 [[ -n "$PROJECTS" ]] || die "no projects_path in the device config: run the GUI once"
 REPO="${PROJECTS%/*}"
 [[ -d "$PROJECTS" ]] || die "no projects folder at $PROJECTS"
+# THE LAPTOP'S NOISE FOLDER, beside the same device config (the head's noise
+# paragraph; mirror_noise).
+NOISE_NEAR="${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/noise"
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/warptempo_sync.XXXXXXXX")" || die "cannot make a scratch folder"
 cleanup() {
@@ -599,21 +622,39 @@ far_rm_file() {                         # $1 = absolute far path of one file
     run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
     far_gone "$1"
 }
-# THE THIRD SHAPE setup DELETES (2026-10-28), the two-shapes rule above extended
-# to it: ONE SEGMENT OF THE RAIN in the app's private folder,
-# files/warptempo_gui/sounds/rain/<name>.wav, by its own name — a single path
-# component ending .wav and nothing else. Any other path is refused before adb
-# is asked.
-app_rm_rain() {                         # $1 = path relative to run-as's home
-    local name
+# THE NOISE'S TWO SHAPES tt and setup DELETE (2026-10-28, mirror_noise), the
+# two-shapes rule above extended to them, in the app's private folder:
+# ONE RECORDING, files/warptempo_gui/noise/<sub>/<name>.wav, by its own name —
+# two path components under noise/, each a plain name (non-empty, no `/`, not
+# `.` or `..`), the second ending .wav — and nothing else (app_rm_noise); and
+# ONE EMPTIED SOUND FOLDER, files/warptempo_gui/noise/<sub> alone, one plain
+# component, removed by rmdir, which refuses a folder that is not empty
+# (app_rmdir_noise). Any other path is refused before adb is asked.
+app_rm_noise() {                        # $1 = path relative to run-as's home
+    local rest sub name
     case "$1" in
-        "$APPCFG/sounds/rain/"*.wav) ;;
-        *) die "refusing to delete '$1': not a segment of the rain" ;;
+        "$NOISE_FAR/"*/*.wav) ;;
+        *) die "refusing to delete '$1': not a recording of the noise" ;;
     esac
-    name="${1#"$APPCFG/sounds/rain/"}"
-    [[ -n "$name" && "$name" != */* && "$name" != "." && "$name" != ".." ]] || \
-        die "refusing to delete '$1': not a segment of the rain"
+    rest="${1#"$NOISE_FAR/"}"
+    sub="${rest%%/*}"; name="${rest#*/}"
+    [[ -n "$sub" && "$sub" != "." && "$sub" != ".." && \
+       -n "$name" && "$name" != */* && "$name" != "." && "$name" != ".." ]] || \
+        die "refusing to delete '$1': not a recording of the noise"
     run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
+    far_gone "$1"
+}
+app_rmdir_noise() {                     # $1 = path relative to run-as's home
+    local sub
+    case "$1" in
+        "$NOISE_FAR/"?*) ;;
+        *) die "refusing to delete '$1': not a sound folder of the noise" ;;
+    esac
+    sub="${1#"$NOISE_FAR/"}"
+    [[ -n "$sub" && "$sub" != */* && "$sub" != "." && "$sub" != ".." ]] || \
+        die "refusing to delete '$1': not a sound folder of the noise"
+    run app_sh 'rmdir "$1"' "$1" || \
+        die "could not delete the folder $1 on the tablet (rmdir refuses one that is not empty): stopping here"
     far_gone "$1"
 }
 # EVERY DELETION IS VERIFIED: a checked far_is must say the path is gone, else
@@ -798,6 +839,121 @@ push_audio() {
     done
 }
 
+# THE NOISE MIRROR (the head's noise paragraph owns the rule), tt's after
+# push_audio and setup's step 6. Sets `noise_mirrored` to 1 when the laptop
+# holds a sound to mirror (the done line's count). Copies first, then the
+# deletions, each file by its own name, then the emptied folders. The sums are
+# readings, so a dry run decides every skip truthfully and lists exactly what
+# the real pass would copy or delete.
+noise_mirrored=0
+mirror_noise() {
+    local d f sub name rel near_sum far_sum listing="$scratch/noise_listing" rec end=0 kept total=0
+    local -a subs=() near_list=() far_subs=() far_files=() gone_files=() gone_dirs=()
+    local -A near_sub=() near_file=() skip_sub=()
+    if [[ ! -d "$NOISE_NEAR" ]]; then
+        printf 'no noise: the laptop has no %s; nothing placed or deleted, the NOISE key as it stands\n' "$NOISE_NEAR"
+        return 0
+    fi
+    # THE LAPTOP'S SOUNDS: its subfolders (a link to a folder counts, as the
+    # app's probe follows one; a dot-name too, the key's grammar admitting
+    # one — never `.` or `..`, which the glob does not match), sorted by the
+    # glob; a name the app's grammar refuses skipped with one line.
+    shopt -s nullglob dotglob
+    local -a dirs=( "$NOISE_NEAR"/*/ )
+    shopt -u nullglob dotglob
+    for d in "${dirs[@]}"; do
+        sub="${d%/}"; sub="${sub##*/}"
+        if [[ "$sub" =~ ^[[:space:]] || "$sub" =~ [[:space:]]$ || \
+              "$sub" == *$'\n'* || "$sub" == *$'\r'* ]]; then
+            printf "skipping the laptop's noise/%s: the app refuses that name (whitespace at an end, or a line break); the tablet's folder of that name, if any, is left alone\n" "$sub"
+            skip_sub["$sub"]=1
+            continue
+        fi
+        subs+=( "$sub" ); near_sub["$sub"]=1
+        # ITS RECORDINGS: every regular file directly in it whose name ends
+        # `.wav` exactly, lowercase (the app's probe; the glob, under
+        # nocaseglob, matches any case, so the test below decides), dotfiles
+        # included as the app includes them.
+        shopt -s nullglob dotglob
+        local -a fs=( "$NOISE_NEAR/$sub"/*.wav )
+        shopt -u nullglob dotglob
+        for f in "${fs[@]}"; do
+            name="${f##*/}"
+            [[ "$name" == ?*.wav && -f "$f" ]] || continue
+            near_list+=( "$sub/$name" ); near_file["$sub/$name"]=1
+            total=$((total + 1))
+        done
+    done
+    if [[ "$total" -eq 0 ]]; then
+        printf 'no noise: %s holds no subfolder with a .wav; nothing placed or deleted, the NOISE key as it stands\n' "$NOISE_NEAR"
+        return 0
+    fi
+
+    # THE TABLET'S noise/, READ CHECKED (push_score's listing shape): its
+    # subfolders and the .wav files directly in them, NUL-separated, then the
+    # end record; a folder not there yet lists nothing. A depth-1 record is a
+    # sound folder; a depth-2 record ending .wav a recording, any other (a
+    # folder inside a sound) none of the mirror's — its parent's rmdir would
+    # refuse, and stop the run, the program never making one.
+    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -mindepth 1 -maxdepth 2 \( -type d -o -type f -name "*.wav" \) -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$NOISE_FAR" > "$listing" || \
+        die "could not list the tablet's $NOISE_FAR: nothing more was copied or deleted"
+    rec=""
+    while IFS= read -r -d '' rec; do
+        (( end )) && die "the tablet's listing of $NOISE_FAR runs on past its end: nothing more was copied or deleted"
+        if [[ "$rec" == "warptempo_sync-end" ]]; then end=1; continue; fi
+        [[ "$rec" == ./?* ]] || die "the tablet's listing of $NOISE_FAR holds a malformed name ('$rec'): nothing more was copied or deleted"
+        rec="${rec#./}"
+        if [[ "$rec" != */* ]]; then
+            far_subs+=( "$rec" )
+        else
+            sub="${rec%%/*}"; name="${rec#*/}"
+            [[ -n "$name" && "$name" != */* ]] || die "the tablet's listing of $NOISE_FAR holds a malformed name ('./$rec'): nothing more was copied or deleted"
+            [[ "$name" == *.wav ]] && far_files+=( "$rec" )
+        fi
+        rec=""
+    done < "$listing"
+    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $NOISE_FAR is incomplete: nothing more was copied or deleted"
+    for rel in "${far_files[@]}"; do
+        sub="${rel%%/*}"
+        [[ -n "${skip_sub[$sub]:-}" || -n "${near_file[$rel]:-}" ]] || gone_files+=( "$rel" )
+    done
+    for sub in "${far_subs[@]}"; do
+        [[ -n "${skip_sub[$sub]:-}" || -n "${near_sub[$sub]:-}" ]] || gone_dirs+=( "$sub" )
+    done
+
+    noise_mirrored=1
+    head_step "bring the tablet's noise folder to the laptop's ($NOISE_NEAR: $(plural "${#subs[@]}" sound), $(plural "$total" recording), $(du -shL -- "$NOISE_NEAR" | cut -f1); about 400 MB and a few minutes the first time, a recording the tablet holds unchanged skipped):"
+    for sub in "${subs[@]}"; do
+        run app_sh 'mkdir -p "$1"' "$NOISE_FAR/$sub" || die "could not make $NOISE_FAR/$sub on the tablet"
+        kept=0
+        for rel in "${near_list[@]}"; do
+            [[ "${rel%%/*}" == "$sub" ]] || continue
+            f="$NOISE_NEAR/$rel"
+            near_sum="$(sha256sum < "$f" | cut -c1-64)"
+            # NOT A CHECKED READING, AND NEED NOT BE (the deploy key's own
+            # rule): a reading that fails counts as "differs", and the answer
+            # is the laptop's file placed again, verified by sum (put_as_app).
+            far_sum="$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$NOISE_FAR/$rel" | cut -c1-64)"
+            if [[ "$near_sum" == "$far_sum" ]]; then
+                kept=$((kept + 1))
+            else
+                step "copy noise/$rel to the tablet ($(du -hL -- "$f" | cut -f1))"
+                put_as_app "$f" "$NOISE_FAR/$rel" 644 || die "noise/$rel did not arrive intact on the tablet"
+            fi
+        done
+        [[ "$kept" -gt 0 ]] && step "leave $(plural "$kept" recording) of noise/$sub/: the tablet holds them unchanged"
+    done
+    for rel in "${gone_files[@]}"; do
+        step "DELETE noise/$rel from the tablet (the laptop's noise folder has no such file)"
+        app_rm_noise "$NOISE_FAR/$rel"
+    done
+    for sub in "${gone_dirs[@]}"; do
+        step "DELETE the tablet's emptied noise/$sub/ (the laptop's noise folder has no such sound)"
+        app_rmdir_noise "$NOISE_FAR/$sub"
+    done
+    return 0
+}
+
 # The pieces push_audio skipped, said again at the end of the run, where they
 # cannot scroll past unseen.
 report_unresolved() {
@@ -836,11 +992,20 @@ if [[ "$mode" == "tt" ]]; then
         open_far_dirs "$FAR/projects"
     fi
     printf '\n'
+    # THE NOISE, EVERY RUN (the head's noise paragraph): the sums make a
+    # repeat cheap. AFTER THE OPENING PASS, so a mirror that stops the run
+    # cannot leave the folders adb just made closed to the app; it writes into
+    # the app's private folder as the app, so nothing of it needs opening.
+    mirror_noise
+    printf '\n'
     report_unresolved
     if (( dry )); then printf 'nothing was changed. run it without -n to do this.\n'
-    elif [[ "$pushed" -eq 0 && "$scores" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
-    elif [[ "$scores" -eq 0 ]]; then printf 'done: %s copied. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)"
-    else printf 'done: %s copied, %s brought up to date. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)" "$(plural "$scores" 'score folder')"
+    elif [[ "$pushed" -eq 0 && "$scores" -eq 0 && "$noise_mirrored" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
+    else
+        done_line="$(plural "$pushed" wav) copied"
+        [[ "$scores" -gt 0 ]] && done_line+=", $(plural "$scores" 'score folder') brought up to date"
+        [[ "$noise_mirrored" -eq 1 ]] && done_line+=", the noise folder brought up to date"
+        printf 'done: %s. A new piece opens from File -> Open Project on the tablet.\n' "$done_line"
     fi
     exit 0
 fi
@@ -964,84 +1129,8 @@ printf '\n'
 # `dry` clear, which DOES it and narrates as it goes. Each pass reads what it
 # needs of the tablet for itself, so the real pass reads the settings file, the
 # deploy key and the audio again after the app is stopped: a last_project the
-# app wrote since the plan is kept.
-#
-# THE BACKGROUND SOUND, step 6 (the head's list owns the rule): the laptop's
-# .m4a segments converted by ffmpeg and placed in the app's sounds/rain/,
-# unless the tablet has each, then the tablet's folder brought to the source's
-# shape. The plan converts nothing and decides no skip — each segment's line
-# says "unless the tablet has it" — while its deletions are decided, the
-# tablet's listing being a reading; the real pass converts each segment into
-# ONE scratch file in turn (overwritten by the next), compares sums, and places.
-place_rain() {
-    local rain_dir="$APPCFG/sounds/rain" f base stem out near_sum far_sum
-    local listing="$scratch/rain_listing" rec end=0
-    local -a m4as=() gone=()
-    local -A want=()
-    if [[ -z "$RAIN_SOURCE" || ! -d "$RAIN_SOURCE" ]]; then
-        printf 'no rain: WARPTEMPO_RAIN_SOURCE names no folder; the RAIN key stays dark\n'
-        return 0
-    fi
-    shopt -s nullglob
-    m4as=( "$RAIN_SOURCE"/*.m4a )
-    shopt -u nullglob
-    if [[ "${#m4as[@]}" -eq 0 ]]; then
-        printf 'no rain: %s holds no .m4a; nothing placed or deleted, the RAIN key as it stands\n' "$RAIN_SOURCE"
-        return 0
-    fi
-    command -v ffmpeg >/dev/null 2>&1 || \
-        die "no ffmpeg on the laptop: setup converts the rain with it (install ffmpeg, or unset WARPTEMPO_RAIN_SOURCE)"
-    for f in "${m4as[@]}"; do
-        base="${f##*/}"; stem="${base%.*}"
-        want["$stem.wav"]=1
-    done
-    # THE TABLET'S SEGMENTS, READ CHECKED (push_score's listing shape): the
-    # .wav names standing in the app's sounds/rain/, then the end record; a
-    # folder not there yet lists nothing.
-    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -maxdepth 1 -type f -name "*.wav" -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$rain_dir" > "$listing" || \
-        die "could not list the tablet's $rain_dir: nothing more was copied or deleted"
-    rec=""
-    while IFS= read -r -d '' rec; do
-        (( end )) && die "the tablet's listing of $rain_dir runs on past its end: nothing more was copied or deleted"
-        if [[ "$rec" == "warptempo_sync-end" ]]; then end=1; continue; fi
-        [[ "$rec" == ./?* ]] || die "the tablet's listing of $rain_dir holds a malformed name ('$rec'): nothing more was copied or deleted"
-        rec="${rec#./}"
-        [[ -n "${want[$rec]:-}" ]] || gone+=( "$rec" )
-        rec=""
-    done < "$listing"
-    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $rain_dir is incomplete: nothing more was copied or deleted"
-
-    head_step "convert the rain's $(plural "${#m4as[@]}" segment) from $RAIN_SOURCE with ffmpeg on the laptop (PCM16, 48 kHz, stereo) and copy each the tablet lacks into the app's $rain_dir/:"
-    run app_sh 'mkdir -p "$1"' "$rain_dir" || die "could not make $rain_dir on the tablet"
-    out="$scratch/rain.wav"
-    for f in "${m4as[@]}"; do
-        base="${f##*/}"; stem="${base%.*}"
-        if (( dry )); then
-            step "convert and copy $stem.wav, unless the tablet has it"
-            continue
-        fi
-        show ffmpeg -nostdin -loglevel error -y -i "$f" -map_metadata -1 \
-            -fflags +bitexact -flags:a +bitexact -ar 48000 -ac 2 -c:a pcm_s16le "$out"
-        ffmpeg -nostdin -loglevel error -y -i "$f" -map_metadata -1 \
-            -fflags +bitexact -flags:a +bitexact -ar 48000 -ac 2 -c:a pcm_s16le "$out" || \
-            die "ffmpeg could not convert $f: nothing more was copied or deleted"
-        near_sum="$(sha256sum < "$out" | cut -c1-64)"
-        # NOT A CHECKED READING, AND NEED NOT BE (the deploy key's own rule): a
-        # reading that fails counts as "differs", and the answer is the
-        # laptop's conversion placed again, verified by sum (put_as_app).
-        far_sum="$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$rain_dir/$stem.wav" | cut -c1-64)"
-        if [[ "$near_sum" == "$far_sum" ]]; then
-            step "leave $stem.wav: the tablet has it"
-        else
-            step "copy $stem.wav to the tablet ($(du -h -- "$out" | cut -f1))"
-            put_as_app "$out" "$rain_dir/$stem.wav" 644 || die "$stem.wav did not arrive intact on the tablet"
-        fi
-    done
-    for rec in "${gone[@]}"; do
-        step "DELETE $rec from the tablet's sounds/rain/ (the source has no ${rec%.wav})"
-        app_rm_rain "$rain_dir/$rec"
-    done
-}
+# app wrote since the plan is kept. Step 6, the noise mirror, is tt's own body
+# (mirror_noise), its sums read again by each pass.
 
 apply_setup() {
     local d f k src key_same root cfg i
@@ -1131,12 +1220,12 @@ apply_setup() {
 
     # 5. THE SETTINGS FILE: projects_repo and role made right, a chrome line
     # renamed waveform (its value kept; dropped where a waveform line stands),
-    # waveform given its default where neither stands, true_colors, rain_level
-    # and rain_crossfade_ms their lines where absent (ADDED_LINES), the
-    # retired keys' lines gone (sync_path, the thirteen
+    # waveform given its default where neither stands, true_colors, noise,
+    # noise_level and noise_crossfade_ms their lines where absent
+    # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
-    # keys, the LED glow's and the rain's two fades, RETIRED_KEYS), the
-    # rest kept.
+    # keys, the LED glow's, the noise's two fades and the level's and the
+    # crossfade's first names, RETIRED_KEYS), the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
     # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
@@ -1166,7 +1255,7 @@ apply_setup() {
                                 if (had_role == 0) print role
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, rain_level and rain_crossfade_ms and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, noise, noise_level and noise_crossfade_ms and has no chrome line and no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
@@ -1178,8 +1267,8 @@ apply_setup() {
     fi
     printf '\n'
 
-    # 6. THE BACKGROUND SOUND (place_rain, above).
-    place_rain
+    # 6. THE NOISE FOLDER, as tt mirrors it (mirror_noise, above).
+    mirror_noise
     printf '\n'
 
     # 7. THE AUDIO AND THE SCORES, as tt all.

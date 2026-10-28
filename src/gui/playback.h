@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <memory>
 
-struct GuiRainVoice;   // rain.h
+struct GuiNoiseVoice;   // noise.h
 
 // Audio playback engine. Owns ONE audio device and drives itself from that
 // device's callback thread. The device half is per backend — a JACK client on
@@ -17,11 +17,11 @@ struct GuiRainVoice;   // rain.h
 // stop()+shutdown() before tearing down the source.
 //
 // THE DEVICE CARRIES A SECOND VOICE (architect 2026-10-28): the app's one
-// rain (rain.h), attached before init (attach_rain below) and summed by the
+// noise (noise.h), attached before init (attach_noise below) and summed by the
 // callback under the engine's own voice on every callback — playing or
 // silent, so the bed plays between plays and under every one of them — and
 // the sum clipped to [-1, 1] (playback_common.h's head). The two output
-// channels carry both; the rain reads its own bank and never the bound
+// channels carry both; the noise reads its own bank and never the bound
 // buffer, so every clause below about the bound buffer stands as written.
 //
 // One bind API, and the domain offset travels with the buffer: init() and
@@ -240,13 +240,13 @@ public:
     bool init(int sample_rate, int channels, const float* samples,
               int64_t total_frames, int64_t domain_offset);
 
-    // ATTACH THE SECOND VOICE (2026-10-28, rain.h): the app's one rain voice,
-    // summed by every callback of this engine from its first to its
+    // ATTACH THE SECOND VOICE (2026-10-28, noise.h): the app's one noise
+    // voice, summed by every callback of this engine from its first to its
     // shutdown. CALLED BEFORE init() — run_project's first act on its
     // engine — and never again, so the pointer never moves while a callback
     // can run. Main thread only; null attaches nothing. Both backends forward
-    // it to the engine state (GuiPlaybackState::rain).
-    void attach_rain(GuiRainVoice* voice);
+    // it to the engine state (GuiPlaybackState::noise).
+    void attach_noise(GuiNoiseVoice* voice);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
     // passes `end_sample` (exclusive). PLAYS THE WINDOW ONCE AND STOPS — no
@@ -377,18 +377,21 @@ public:
     // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
 
-    // THE DROP ITSELF (architect 2026-10-28, the rain lamp's darkening): the
+    // THE DROP ITSELF (architect 2026-10-28, the noise lamp's darkening): the
     // error callback's `stream_dead` latch ALONE — true from a route drop
     // under a live stream until the first reopen attempt closes that stream.
     // AAudio: `impl_ && impl_->stream_dead` (acquire). JACK: false, this
     // backend having no latch (the reason at device_unavailable's JACK
-    // definition). ONE READER: gui_main's per-tick poll beside rain.tick()
-    // (main.cpp), which DARKENS a lit RAIN lamp and silences its voice when
-    // the latch stands (GuiRain::darken_on_dead_stream) and reopens nothing.
-    // A pure read; main thread only.
-    // NOT device_unavailable: the latch alone, not the null stream, so a lamp
-    // already darkened is not darkened again and a refused reopen's null
-    // stream is the press's to answer.
+    // definition). ONE READER: gui_main's per-tick poll beside noise.tick()
+    // (main.cpp), which, while the latch stands, LIT OR NOT, DARKENS the
+    // NOISE lamp and resets its voice (GuiNoise::reset_on_dead_stream,
+    // idempotent, so the per-tick repeat over the dead interval costs
+    // nothing) and reopens nothing. A pure read; main thread only.
+    // NOT device_unavailable: the latch alone, not the null stream, so the
+    // reset runs only over the interval a drop opened, and a refused
+    // reopen's null stream is the press's to answer — a lit press refused
+    // there cards and keeps its lamp lit, silent (noise.h's head), which the
+    // poll must not then darken.
     bool    stream_dead() const;
 
     // WHAT A FACE READS (architect 2026-09-02, the truthful-buttons rule over
@@ -420,7 +423,7 @@ public:
     // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
     // car's Play (car_play_playback, which cards alike, and the two media
     // Play arms, GuiCarTransport::on_media_command and the render player's,
-    // which ignore the answer); by THE RAIN LAMP'S LIT PRESS (architect
+    // which ignore the answer); by THE NOISE LAMP'S LIT PRESS (architect
     // 2026-10-28, the `w` case of input_key_dispatch.cpp: the bed sounds only
     // through the running stream's callback, so the lit press is a launch
     // press for the device question; a FALSE cards and the lamp still

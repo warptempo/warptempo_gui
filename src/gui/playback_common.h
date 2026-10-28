@@ -4,7 +4,7 @@
 #include <atomic>
 #include <cstdint>
 
-struct GuiRainVoice;   // rain.h — the second voice the callbacks sum
+struct GuiNoiseVoice;   // noise.h — the second voice the callbacks sum
 
 // THE PORTABLE HALF OF THE PLAYBACK ENGINE. playback.h is the CONTRACT and
 // nothing here changes it: this file exists because that contract has two
@@ -51,11 +51,11 @@ struct GuiRainVoice;   // rain.h — the second voice the callbacks sum
 // same thing and never was: AAudio may hand the engine a rate the source is not
 // recorded at, and that has to be rescaled whatever the speed.
 //
-// THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the rain). Every
+// THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the noise). Every
 // callback of either backend, on BOTH of its arms — the silence arm between
-// plays and the render body's — SUMS the app's one rain voice into the block
-// the engine just wrote (rain_mix_block, rain.h: its own bank, its own rate
-// ratio, its own fades; GuiPlaybackState::rain below, attached before the
+// plays and the render body's — SUMS the app's one noise voice into the block
+// the engine just wrote (noise_mix_block, noise.h: its own bank, its own rate
+// ratio, its own fades; GuiPlaybackState::noise below, attached before the
 // device opens), and then CLIPS the block: every sample clamped to [-1, 1]
 // (playback_clip_block below), always. The voice reads its own bank and NO
 // SAMPLE OF THE BOUND BUFFER, so the silence arm's "no sample is read" — the
@@ -108,12 +108,12 @@ struct GuiPlaybackState {
     std::atomic<uint32_t> output_rate{0};
 
     // THE SECOND VOICE (2026-10-28, the head's paragraph): the app's one
-    // rain voice (rain.h), SET BEFORE THE DEVICE OPENS (GuiPlayback::
-    // attach_rain, run_project's first act on its engine) and read by the
+    // noise voice (noise.h), SET BEFORE THE DEVICE OPENS (GuiPlayback::
+    // attach_noise, run_project's first act on its engine) and read by the
     // callbacks, never changing while a callback can run — so a plain
     // pointer, no atomic. Null mixes nothing. bind and clear leave it alone:
     // it is the engine's attachment, not the binding's.
-    GuiRainVoice* rain = nullptr;
+    GuiNoiseVoice* noise = nullptr;
 
     // Borrowed source buffer, IN ONE OF TWO FORMATS (GuiBoundAudio,
     // playback.h): `samples` for float32, `samples_i16` for PCM16, exactly

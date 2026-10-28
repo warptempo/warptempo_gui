@@ -1014,9 +1014,9 @@ struct GuiInputHandler {
     // not a fifth owner). No card: it is a user press, not a lost device, and
     // the tab stays where the act had it (the interruption rule,
     // ab_audition.h). So no press can do its own work under a standing act —
-    // the lamps (Follow, Magnification, Tooltips, RAIN), zoom, pan and the
+    // the lamps (Follow, Magnification, Tooltips, NOISE), zoom, pan and the
     // camera keys, which left it standing until that day, end it like
-    // everything else, and the RAIN lamp's lit press can no longer reopen a
+    // everything else, and the NOISE lamp's lit press can no longer reopen a
     // dead stream under an act that would read it as a natural end (Sol's
     // finding of 2026-10-28). A press in the sub-tick window between a play's
     // natural end and the tick that observes it finds the phase standing and
@@ -1504,14 +1504,14 @@ struct GuiInputHandler {
     // row's twenty-nine and row 8's twenty-one (row 1's three menu anchors
     // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-28, the Rain lamp closing the third
+    // counts re-derived from them 2026-10-28, the NOISE lamp closing the third
     // run):
     //   THE ICON ROW, 20 + 4 + 1 + 4 = 29 — the left walk's twenty
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
     //   Resets and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
-    //   Tooltips, the Score key and the Rain lamp), the history view's four stand-ins (Revert and Load in
+    //   Tooltips, the Score key and the NOISE lamp), the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
@@ -1522,7 +1522,7 @@ struct GuiInputHandler {
     //   iteration group out, and the view's hide leaving Open Project and
     //   Save's group whole, Zoom In, Zoom Out, Zoom to Fit and Waveform
     //   Magnification (since 2026-10-12), Play Renders (since 2026-10-25),
-    //   Enable Tooltips and Rain (since 2026-10-28) alone of theirs);
+    //   Enable Tooltips and Noise (since 2026-10-28) alone of theirs);
     //   ROW 8, 2 + 8 + 4 + 5 + 2 = 21 — the skips (Go to Start, Go to End,
     //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining

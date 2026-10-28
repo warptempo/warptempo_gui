@@ -1,7 +1,7 @@
 #include "playback.h"
 
 #include "playback_common.h"
-#include "rain.h"   // rain_mix_block — the second voice the callback sums
+#include "noise.h"  // noise_mix_block — the second voice the callback sums
 
 #include <aaudio/AAudio.h>
 
@@ -46,7 +46,7 @@
 // call. `start_stream` is idempotent on `started`, so the
 // three sites that call it — init's own, the launch gate's
 // (ensure_device_available_for_play, where a reopened stream's start is what
-// the gate's answer rests on — the launch gates', the car's Play, the rain
+// the gate's answer rests on — the launch gates', the car's Play, the noise
 // lamp's lit press, the callers at its declaration) and play()'s retry for
 // the roads that reach it ungated — are
 // one road and an ordinary play makes no device call at all.
@@ -223,7 +223,7 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
         // started between plays), and a stopped-by-the-callback stream would
         // both leave the main thread's `started` flag lying about the device
         // and put the start transient back into the next play. NO SAMPLE OF
-        // THE BOUND BUFFER IS READ HERE — the rain below reads its own bank —
+        // THE BOUND BUFFER IS READ HERE — the noise below reads its own bank —
         // which is what lets stop()'s fence count callbacks and what makes an
         // idle stream harmless to a buffer the main thread is about to
         // replace.
@@ -232,13 +232,14 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
                               kPlaybackOutputChannels, frames, channel_count);
     }
     // THE SECOND VOICE AND THE CLIP, ON BOTH ARMS (2026-10-28,
-    // playback_common.h's head): the rain summed under what the arm wrote —
+    // playback_common.h's head): the noise summed under what the arm wrote —
     // the stream runs between plays, so the bed plays there too — then every
     // sample clamped.
-    if (impl->state.rain != nullptr)
-        rain_mix_block(*impl->state.rain, channel_buffers,
-                       kPlaybackOutputChannels, frames, channel_count,
-                       impl->state.output_rate.load(std::memory_order_relaxed));
+    if (impl->state.noise != nullptr)
+        noise_mix_block(*impl->state.noise, channel_buffers,
+                        kPlaybackOutputChannels, frames, channel_count,
+                        impl->state.output_rate.load(
+                            std::memory_order_relaxed));
     playback_clip_block(channel_buffers, kPlaybackOutputChannels, frames,
                         channel_count);
     impl->callback_cycles.fetch_add(1, std::memory_order_release);
@@ -289,10 +290,11 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // gates through ensure_device_available_for_play, the render player's
     // road through play()'s own head (reopen_stream_if_dead, one body for
     // both). The user presses play again — the same answer the product gives
-    // every other rare, loud fault. THE RAIN LAMP FOLLOWS THIS RULE TOO
+    // every other rare, loud fault. THE NOISE LAMP FOLLOWS THIS RULE TOO
     // (architect 2026-10-28): gui_main's poll on GuiPlayback::stream_dead
-    // darkens a lit lamp at the next tick and silences its voice (rain.h),
-    // and the next lit press is a launch press for the device question.
+    // darkens the lamp and resets the voice, lit or not, at the next tick
+    // (noise.h), and the next lit press is a launch press for the device
+    // question.
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
     impl->stream_dead.store(true, std::memory_order_release);
@@ -533,7 +535,7 @@ bool open_stream(GuiPlayback::Impl& impl) {
 // render player's road, which reaches play() with no gate ahead of it — and
 // by ensure_device_available_for_play, the main window's three launch gates'
 // question (architect 2026-09-02) and its other callers — the car's Play and
-// the rain lamp's lit press (the list at its declaration, playback.h): before
+// the noise lamp's lit press (the list at its declaration, playback.h): before
 // it the gates READ the latch ahead of play() and so never let play() reopen,
 // leaving the tablet mute behind the card after every route drop. A failed
 // reopen leaves playback disabled until the next press — no retry, no timer —
@@ -608,8 +610,8 @@ GuiPlayback::~GuiPlayback() { shutdown(); }
 
 // The forward (contract at the declaration): before init, so no data
 // callback exists to race the store.
-void GuiPlayback::attach_rain(GuiRainVoice* voice) {
-    impl_->state.rain = voice;
+void GuiPlayback::attach_noise(GuiNoiseVoice* voice) {
+    impl_->state.noise = voice;
 }
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,

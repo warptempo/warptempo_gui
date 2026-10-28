@@ -20,11 +20,13 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (NINE keys since 2026-10-28, the rain's two
-// appended after `role` — `rain_level`, permanent, and the tuning key
-// `rain_crossfade_ms` at the end; ELEVEN for part of that day, the rain's two
-// fade tuning keys appended after the crossfade at ~11:30 and settled the
-// same day at 200 and 40 ms, rain.h's constexprs; SEVEN 2026-10-26, the LED
+// REQUIRED SET, every one of them (TEN keys since 2026-10-28, the noise's
+// three after `role` — `noise` and `noise_level`, permanent, and the tuning
+// key `noise_crossfade_ms` at the end; NINE earlier that day, the level and
+// the crossfade appended as `rain_level` and `rain_crossfade_ms` before the
+// rename and the folder key's arrival; ELEVEN for part of that day, two fade
+// tuning keys appended after the crossfade at ~11:30 and settled the same
+// day at 200 and 40 ms, noise.h's constexprs; SEVEN 2026-10-26, the LED
 // glow settled to a constant, materials.cpp's kLedGlowPx; EIGHT 2026-10-23,
 // `strip_pad` settled to a constant, program_spec.h; nine that day, the
 // bevel pair gone and the LED glow's key appended; TEN 2026-10-21 evening,
@@ -60,15 +62,16 @@ namespace {
 // key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
 // the tuning keys keep the end where they leave from.
 //
-// THE RAIN'S LEVEL (architect 2026-10-28): `rain_level` APPENDED after
-// `role`, the permanent keys' end, `role`'s own road.
+// THE NOISE'S FOLDER AND LEVEL (architect 2026-10-28): `noise` and
+// `noise_level` APPENDED after `role`, the permanent keys' end, `role`'s own
+// road, the folder before its loudness.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
-// `rain_crossfade_ms` since 2026-10-28, alone (none stood 2026-10-26 to
+// `noise_crossfade_ms` since 2026-10-28, alone (none stood 2026-10-26 to
 // then). (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
-// 2026-10-28, settled at 200 and 40 ms, rain.h's kRainFadeInMs and
-// kRainFadeOutMs; the LED glow's stood there 2026-10-23 to 2026-10-26,
+// 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
+// kNoiseFadeOutMs; the LED glow's stood there 2026-10-23 to 2026-10-26,
 // settled at 4 device px, materials.cpp's kLedGlowPx; `strip_pad` before it
 // 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's strip_pad_px;
 // `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23, `text_shadow`
@@ -82,8 +85,9 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform",
     "true_colors",
     "role",
-    "rain_level",
-    "rain_crossfade_ms",
+    "noise",
+    "noise_level",
+    "noise_crossfade_ms",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -97,15 +101,15 @@ std::string format_gui_scale_percent(int percent) {
     return std::string(buf);
 }
 
-// The two rain keys' canonical spellings (2026-10-28): `%d`, exactly what
-// parse_canonical_config_int admits back (device_config.h).
-std::string format_rain_level(int db) {
+// The two noise integers' canonical spellings (2026-10-28): `%d`, exactly
+// what parse_canonical_config_int admits back (device_config.h).
+std::string format_noise_level(int db) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", db);
     return std::string(buf);
 }
 
-std::string format_rain_crossfade_ms(int ms) {
+std::string format_noise_crossfade_ms(int ms) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", ms);
     return std::string(buf);
@@ -167,12 +171,15 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
                                                    : kDeviceRoleMirror;
-        } else if (k == "rain_level") {
-            // The level's canonical integer (format_rain_level).
-            s += format_rain_level(cfg.rain_level);
-        } else if (k == "rain_crossfade_ms") {
-            // The tuning key's canonical integer (format_rain_crossfade_ms).
-            s += format_rain_crossfade_ms(cfg.rain_crossfade_ms);
+        } else if (k == "noise") {
+            // The folder's name verbatim (is_noise_folder_name's grammar).
+            s += cfg.noise;
+        } else if (k == "noise_level") {
+            // The level's canonical integer (format_noise_level).
+            s += format_noise_level(cfg.noise_level);
+        } else if (k == "noise_crossfade_ms") {
+            // The tuning key's canonical integer (format_noise_crossfade_ms).
+            s += format_noise_crossfade_ms(cfg.noise_crossfade_ms);
         }
         s += '\n';
     }
@@ -289,25 +296,37 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             return {};
         }
-        // THE RAIN'S TWO KEYS (2026-10-28): each under its one grammar owner
-        // (parse_rain_level, parse_rain_crossfade_ms, device_config.h),
-        // required like every key; any other spelling the launch's hard fail.
-        // (`rain_fade_in_ms` and `rain_fade_out_ms`, settled the same day,
-        // fall to the unknown-key arm below like every retired key.)
-        if (key == "rain_level") {
-            const std::optional<int> db = parse_rain_level(value);
-            if (!db) {
-                return bad_value(ln, key, value, kRainLevelGrammarReason);
+        // THE NOISE'S THREE KEYS (2026-10-28): each under its one grammar
+        // owner (is_noise_folder_name, parse_noise_level,
+        // parse_noise_crossfade_ms, device_config.h), required like every key;
+        // any other spelling the launch's hard fail. The folder's name is
+        // judged by its shape alone: a name whose folder is absent loads, and
+        // the key greys (noise.h). (`rain_level` and `rain_crossfade_ms`,
+        // renamed the same day, and `rain_fade_in_ms` and `rain_fade_out_ms`,
+        // settled that day, fall to the unknown-key arm below like every
+        // retired key.)
+        if (key == "noise") {
+            if (!is_noise_folder_name(value)) {
+                return bad_value(ln, key, value, kNoiseFolderGrammarReason);
             }
-            out.rain_level = *db;
+            out.noise = value;
             return {};
         }
-        if (key == "rain_crossfade_ms") {
-            const std::optional<int> ms = parse_rain_crossfade_ms(value);
-            if (!ms) {
-                return bad_value(ln, key, value, kRainCrossfadeGrammarReason);
+        if (key == "noise_level") {
+            const std::optional<int> db = parse_noise_level(value);
+            if (!db) {
+                return bad_value(ln, key, value, kNoiseLevelGrammarReason);
             }
-            out.rain_crossfade_ms = *ms;
+            out.noise_level = *db;
+            return {};
+        }
+        if (key == "noise_crossfade_ms") {
+            const std::optional<int> ms = parse_noise_crossfade_ms(value);
+            if (!ms) {
+                return bad_value(ln, key, value,
+                                 kNoiseCrossfadeGrammarReason);
+            }
+            out.noise_crossfade_ms = *ms;
             return {};
         }
         return warptempo_parse::prefix_line_error(

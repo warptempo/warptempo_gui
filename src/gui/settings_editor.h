@@ -43,7 +43,7 @@ struct GuiInputHandler;
 // (Shift+;, the glass long press), never by Tab, its pick committing through
 // this editor's own apply, apply_waveform_preset):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the twelve,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the thirteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -64,22 +64,24 @@ struct GuiInputHandler;
 //      `true_colors`'s `on` / `off` (2026-10-21) — the prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
-//      filesystem (complete_path_value, 2026-09-02). Every other non-empty
-//      value side advances nothing.
+//      filesystem (complete_path_value, 2026-09-02), and `noise=<prefix>`
+//      against the folders under `noise/` beside the device config
+//      (complete_noise_value, 2026-10-28). Every other non-empty value side
+//      advances nothing.
 // Every advance lands at the LINE'S END through text_editor::replace_selection,
 // the one incoming filter.
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// SEVEN editable ones the per-device config carries — gui_scale and
+// EIGHT editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // since 2026-10-21 true_colors (the popup's command row made a key), and
-// since 2026-10-28 (architect) the rain's rain_level and its tuning key
-// rain_crossfade_ms (the
+// since 2026-10-28 (architect) the noise's folder noise, its noise_level and
+// its tuning key noise_crossfade_ms (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, materials.cpp's kLedGlowPx; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
@@ -100,7 +102,8 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors, rain_level and rain_crossfade_ms — in ONE body,
+//    waveform, true_colors, noise, noise_level and noise_crossfade_ms — in
+//    ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -110,9 +113,11 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; waveform and true_colors at once, applied live
-//    at the OK, no card (the screen is the answer); the rain's two at once,
-//    handed to the one GuiRain (rain.h) at the OK, no card (the sound is the
-//    answer).
+//    at the OK, no card (the screen is the answer); the noise's level and
+//    crossfade at once, handed to the one GuiNoise (noise.h) at the OK, no
+//    card (the sound is the answer); the noise's folder at once, the lamp
+//    darkened and the resident recordings freed (GuiNoise::change_folder),
+//    no card (the NOISE key's face is the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -163,14 +168,14 @@ struct GuiInputHandler;
 // picker, the folder overlay's third content, whose row tap commits at once
 // — apply_waveform_preset, this editor's own road.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE TWELVE (the cues' four tuning keys
-// gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
-// `score_path` joined the same day; the rain's two 2026-10-28): the five
+// THE KEYS TAB COMPLETES — ONE TABLE, THE THIRTEEN (the cues' four tuning
+// keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
+// `score_path` joined the same day; the noise's three 2026-10-28): the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's seven editable keys in that file's
+// CONFIG's eight editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
 // `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
@@ -180,7 +185,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "rain_level", "rain_crossfade_ms",
+    "noise", "noise_level", "noise_crossfade_ms",
 };
 
 struct GuiSettingsEditor {
@@ -247,8 +252,9 @@ struct GuiSettingsEditor {
     // prefix's), an ambiguous prefix its common prefix; with `key=` and an
     // empty
     // value side, that key's current live value; with a non-empty value side,
-    // the path key's filesystem (complete_path_value) or a closed domain's
-    // words (complete_closed_value), and nothing for every other key. The
+    // the path key's filesystem (complete_path_value), the noise key's
+    // folders (complete_noise_value) or a closed domain's words
+    // (complete_closed_value), and nothing for every other key. The
     // value recalled is byte-identical to what a Ctrl+S (or, for a device
     // key, the config's writer) would write, UTF-8 provenance text included
     // since the 2026-08-02 relaxation (the remaining edge is stated at the
@@ -284,8 +290,8 @@ private:
     // above.
     bool persist_device_config();
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `rain_level=` and `rain_crossfade_ms=` —
-    // in one
+    // `waveform=`, `true_colors=`, `noise=`, `noise_level=` and
+    // `noise_crossfade_ms=` — in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
@@ -316,6 +322,20 @@ private:
     // model's question; `value` is the raw value side (untrimmed: the
     // completion works on what is literally typed).
     bool complete_path_value(const std::string& value);
+    // THE NOISE COMPLETER (2026-10-28), autocomplete_value's arm for the
+    // `noise` key when the value side is NON-EMPTY: the value side is a
+    // folder's name PREFIX, completed against THE SUBFOLDERS OF `noise/`
+    // beside the device config, listed afresh — directories only (through a
+    // link), dot-directories only when asked for, byte compare, the common
+    // prefix on a codepoint boundary, the path completer's own rules through
+    // their one body (folder_name_advance, settings_editor.cpp) — and A
+    // SINGLE MATCH COMPLETED WHOLE WITH NO TRAILING `/` (the value is a name,
+    // not a path). The append at the line's end; every no-advance case (no
+    // match, an ambiguous prefix already at the common prefix, no folder
+    // there) a Tab that walks. The empty value side keeps recalling the live
+    // name (stage 2). Returns whether the buffer advanced; `value` is the raw
+    // value side less its leading whitespace (ltrim_ws's reasons).
+    bool complete_noise_value(const std::string& value);
     // THE KEY COMPLETER (architect 2026-10-21, the popup's retirement), the
     // head's stage 1: `prefix` — the line less its leading whitespace, no `=`
     // on it — against kSettingsEditorKeys by byte compare (the keys are

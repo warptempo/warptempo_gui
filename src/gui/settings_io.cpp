@@ -391,13 +391,17 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_true_colors, device_config.h), the writer's own spelling.
     if (key == "true_colors" && app.device_config != nullptr)
         return std::string(format_true_colors(app.device_config->true_colors));
-    // THE RAIN'S TWO (2026-10-28): each through its one formatter
-    // (format_rain_level, format_rain_crossfade_ms, device_config.h), the
+    // THE NOISE'S THREE (2026-10-28): the folder's name verbatim, as the
+    // writer writes it, and the two integers each through its one formatter
+    // (format_noise_level, format_noise_crossfade_ms, device_config.h), the
     // writer's own spelling.
-    if (key == "rain_level" && app.device_config != nullptr)
-        return format_rain_level(app.device_config->rain_level);
-    if (key == "rain_crossfade_ms" && app.device_config != nullptr)
-        return format_rain_crossfade_ms(app.device_config->rain_crossfade_ms);
+    if (key == "noise" && app.device_config != nullptr)
+        return app.device_config->noise;
+    if (key == "noise_level" && app.device_config != nullptr)
+        return format_noise_level(app.device_config->noise_level);
+    if (key == "noise_crossfade_ms" && app.device_config != nullptr)
+        return format_noise_crossfade_ms(
+            app.device_config->noise_crossfade_ms);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -483,12 +483,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // dispatch arm's own spelling.
     const bool is_score_viewer =
         (key == GuiKeys::M && !ctrl && !shift && !alt);
-    // BARE `w`, THE RAIN LAMP (architect 2026-10-28): DEVICE STATE, NOT THE
-    // PIECE — a second voice under the engine's (rain.h), authoring nothing the
-    // lock protects — so it is admitted on a locked tab and, the iteration
-    // gate falling through to this list, under grid iterations. Bare-exact,
-    // the dispatch arm's own spelling.
-    const bool is_rain =
+    // BARE `w`, THE NOISE LAMP (architect 2026-10-28): DEVICE STATE, NOT THE
+    // PIECE — a second voice under the engine's (noise.h), authoring nothing
+    // the lock protects — so it is admitted on a locked tab and, the
+    // iteration gate falling through to this list, under grid iterations.
+    // Bare-exact, the dispatch arm's own spelling.
+    const bool is_noise =
         (key == GuiKeys::W && !ctrl && !shift && !alt);
     // BARE `i` WHILE GRID ITERATIONS STANDS — THE OFF EDGE, a STATE-DEPENDENT
     // admission like the arrows' lane term (architect 2026-10-13: the mode
@@ -549,7 +549,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
              is_settings_editor || is_preset_picker ||
-             is_tooltip_lamp || is_score_viewer || is_rain ||
+             is_tooltip_lamp || is_score_viewer || is_noise ||
              is_iteration_off_edge);
 }
 
@@ -3224,18 +3224,18 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
-    // THE RAIN LAMP — BARE `w` (2026-10-28, the planner's call, architect
+    // THE NOISE LAMP — BARE `w` (2026-10-28, the planner's call, architect
     // agreed 2026-10-28, Tooltips' class): a DEVICE lamp, the background
-    // sound under everything the engine plays (rain.h), touching nothing the
+    // sound under everything the engine plays (noise.h), touching nothing the
     // view froze and nothing the view has a reason to refuse — so the view
-    // admits it and the Rain key stands lit in here by the derived partition.
-    const bool is_rain = (key == GuiKeys::W && bare);
+    // admits it and the NOISE key stands lit in here by the derived partition.
+    const bool is_noise = (key == GuiKeys::W && bare);
     return !(is_zoom_step || is_zero || is_page_updown || is_play_renders ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_ctrl_q || is_open_project ||
              is_revert_project ||
-             is_tooltip_lamp || is_waveform_magnification || is_rain);
+             is_tooltip_lamp || is_waveform_magnification || is_noise);
 }
 
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -9478,15 +9478,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::W:
-        // Toggle the Rain lamp (architect 2026-10-28), the background sound.
-        // The whole body lives in GuiRain::toggle (rain.h), THE CHOKEPOINT —
-        // two producers, one route: this key and the icon row's RAIN key,
+        // Toggle the NOISE lamp (architect 2026-10-28), the background sound.
+        // The whole body lives in GuiNoise::toggle (noise.h), THE CHOKEPOINT —
+        // two producers, one route: this key and the icon row's NOISE key,
         // which synthesizes exactly this bare chord. History-less, device
         // state, legal on a locked tab, under the grid-iterations lock and in
-        // the `h` view (all three allowlists admit it). With no sounds folder
-        // the key's face is grey and its lift never reaches here; the KEY is
-        // then a SILENT no-op inside toggle (its available() precondition),
-        // the greyed-face rule's keyboard half, as `0` at a ceiling is.
+        // the `h` view (all three allowlists admit it). With no folder under
+        // noise/ of the `noise` key's name the key's face is grey and its
+        // lift never reaches here; the KEY is then a SILENT no-op inside
+        // toggle (its available() precondition), the greyed-face rule's
+        // keyboard half, as `0` at a ceiling is.
         //
         // THE LIT PRESS IS A LAUNCH PRESS FOR THE DEVICE QUESTION (architect
         // 2026-10-28): the bed sounds only through the running stream's
@@ -9504,15 +9505,15 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // this press has already ended any standing A/B audition at on_key's
         // head (GuiInputHandler::end_audition_for_press) before this arm runs,
         // so no act can read the reopened stream under the lowered playing
-        // bit as its play's natural end and go on by itself. (A lit lamp
-        // under a later drop darkens at gui_main's poll, rain.h.)
-        if (app.rain != nullptr) {
-            if (app.rain->available() && !app.rain->lit() &&
+        // bit as its play's natural end and go on by itself. (A later drop
+        // darkens the lamp and resets the voice at gui_main's poll, noise.h.)
+        if (app.noise != nullptr) {
+            if (app.noise->available() && !app.noise->lit() &&
                 !playback.ensure_device_available_for_play()) {
                 notifications.notify(AppState::NotificationClass::Normal,
                                      kPlaybackDeviceUnavailableCard);
             }
-            app.rain->toggle();
+            app.noise->toggle();
         }
         break;
     case GuiKeys::Grave:

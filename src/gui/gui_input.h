@@ -679,7 +679,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 5..9;
 // Backspace, and every letter the ladder never tests (A, E, T, X, Y — W
-// left the class 2026-10-28 for the Rain lamp's toggle; E
+// left the class 2026-10-28 for the NOISE lamp's toggle; E
 // left the class 2026-10-10 for Alt+E, the Edit title's access key, and came
 // BACK 2026-10-21 with the menu row's removal; Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
@@ -800,8 +800,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // magnification level propagate's Ctrl and Ctrl+Alt chords and
         // Ctrl+Alt+Shift+M went with that markers column 2026-09-23.
         case GuiKeys::M: return bare;
-        // BARE `w` TOGGLES THE RAIN LAMP (architect 2026-10-28, the RAIN
-        // key's chord; GuiRain::toggle, rain.h), in both modes: device state,
+        // BARE `w` TOGGLES THE NOISE LAMP (architect 2026-10-28, the NOISE
+        // key's chord; GuiNoise::toggle, noise.h), in both modes: device state,
         // admitted by the read-only allowlist and by the `h` view's. Under a
         // standing overlay its router consumes it (the inherited rule). Every
         // modified `w` binds nothing.
@@ -1100,7 +1100,7 @@ static_assert(chord_is_bound(GuiKeys::M, GuiInputState{}, false) &&
                                   GuiInputState{true, true, true}, false),
               "`m` binds bare only — the score viewer — and none of the "
               "seven modifier combinations spells anything");
-// `w` binds bare only — the Rain lamp (2026-10-28) — in both modes, and no
+// `w` binds bare only — the NOISE lamp (2026-10-28) — in both modes, and no
 // modifier spells anything on it.
 static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::W, GuiInputState{}, true) &&
@@ -1118,7 +1118,7 @@ static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
                                   GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::W,
                                   GuiInputState{true, true, true}, false),
-              "`w` binds bare only — the Rain lamp — and none of the "
+              "`w` binds bare only — the NOISE lamp — and none of the "
               "seven modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
 // Ctrl+Alt Revert — and no shifted spelling of any of them. (Open

@@ -736,7 +736,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
 // count's authority; twenty-five stand outside the `h` view and eighteen
-// inside it, re-counted 2026-10-28 with the Rain lamp), the toolbar band. Lane 1 is the
+// inside it, re-counted 2026-10-28 with the NOISE lamp), the toolbar band. Lane 1 is the
 // TRIM lane (Cool Edit's view bar: the span and its two ends, every trim
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
@@ -1400,11 +1400,11 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
-// input core, the device config, the rain, the held display width and the
+// input core, the device config, the noise, the held display width and the
 // render cache are the caller's and outlive every call.
 GuiProjectOutcome run_project(GuiPlatform&            gui,
                               DeviceConfig&           device_config,
-                              GuiRain&                rain,
+                              GuiNoise&               noise,
                               int&                    held_display_width_px,
                               RenderCache&            render_cache,
                               const GuiProjectSource& project,
@@ -1412,13 +1412,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     AppState     app;
     GuiAudio     audio;
     GuiPlayback  playback;
-    // THE RAIN'S VOICE, ATTACHED BEFORE THE DEVICE EXISTS (2026-10-28,
-    // rain.h): this project's engine mixes the app's one voice under its own
+    // THE NOISE'S VOICE, ATTACHED BEFORE THE DEVICE EXISTS (2026-10-28,
+    // noise.h): this project's engine mixes the app's one voice under its own
     // from its first callback to its shutdown below, the pointer never moving
-    // while a callback can run (GuiPlayback::attach_rain). The lamp is the
+    // while a callback can run (GuiPlayback::attach_noise). The lamp is the
     // app's, so it survives this project's end and the next engine's init
-    // picks the voice up where it stood (GuiRainVoice's thread note).
-    playback.attach_rain(rain.voice());
+    // picks the voice up where it stood (GuiNoiseVoice's thread note).
+    playback.attach_noise(noise.voice());
     WaveformCache wf_cache;
     // Top-strip flag rects live on their own surface, rebuilt
     // synchronously from on_tick. Constructed alongside wf_cache so they share
@@ -1436,10 +1436,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     app.device_config = &device_config;
     app.gui_scale     = device_config.gui_scale;
     app.projects_repo = device_config.projects_repo;
-    // THE RAIN, the app's one, reached by pointer the device config's way
-    // (AppState::rain): the RAIN key's faces, bare `w` and the settings
-    // editor's two rain arms read it.
-    app.rain          = &rain;
+    // THE NOISE, the app's one, reached by pointer the device config's way
+    // (AppState::noise): the NOISE key's faces, bare `w` and the settings
+    // editor's three noise arms read it.
+    app.noise         = &noise;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
     // every later one inherits it standing (the loop contract, platform.h).
@@ -2342,37 +2342,40 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (refresh_logo_legend, its rule and its damage).
         refresh_logo_legend(app, gui);
 
-        // THE RAIN'S POLL, ON EVERY TICK for the same reason (2026-10-28,
-        // rain.h): the bed plays under every mode a return below stands for,
+        // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,
+        // noise.h): the bed plays under every mode a return below stands for,
         // so its two per-tick questions are asked ahead of all of them — a
         // load that failed under a lit lamp darkens the lamp and greys the
-        // key (GuiRain::tick), and a dead stream under a lit lamp darkens it
-        // (the block below). Nothing is damaged here: the roster's per-tick
-        // comparator below carries the RAIN key's face edge, for both.
-        rain.tick();
+        // key (GuiNoise::tick), and a dead stream darkens the lamp and resets
+        // the voice (the block below). Nothing is damaged here: the roster's
+        // per-tick comparator below carries the NOISE key's face edge, for
+        // both.
+        noise.tick();
 
         // THE LAMP FOLLOWS THE NO-AUTO-RECOVER RULE (architect 2026-10-28,
         // "we should follow the rule, iPhone does this also": the iPhone's
         // Background Sounds toggle goes off when the route changes). A route
-        // drop under a lit RAIN lamp (headphones connected or taken off) kills
-        // the AAudio stream, and the bed sounds only through the running
-        // stream's callback, so a lit LED would say the rain plays while
-        // nothing does. ONE QUESTION per tick — the latch
-        // (GuiPlayback::stream_dead) under a lit lamp — and the answer DARKENS
-        // the lamp and SILENCES the voice (GuiRain::darken_on_dead_stream,
-        // whose precondition is this very read): no grace, no reopen, no card.
-        // The drop is a loud fault the music already answers with "the next
-        // play press reopens the device" (the error callback's "nothing
-        // recovers by itself", playback_aaudio.cpp); the lamp answers the same
-        // way, dark, and the next RAIN press is an ordinary lit press — a
-        // fresh random segment, the fade-in, and the `w` case's own reopen or
-        // card. The call touches neither the stream nor the latch, so every
-        // tick below still reads the drop exactly as it did. The latch stands
-        // until a press reopens, so this asks again on every tick of the dead
-        // interval and finds the lamp already dark. JACK has no latch: on the
-        // laptop this is two reads and the method is never called.
-        if (rain.lit() && playback.stream_dead())
-            rain.darken_on_dead_stream();
+        // drop (headphones connected or taken off) kills the AAudio stream,
+        // and the bed sounds only through the running stream's callback, so a
+        // lit LED would say the noise plays while nothing does. ONE QUESTION
+        // per tick — the latch (GuiPlayback::stream_dead), LIT OR NOT — and
+        // the answer DARKENS the lamp and RESETS the voice
+        // (GuiNoise::reset_on_dead_stream, whose precondition is this very
+        // read): no grace, no reopen, no card. The lamp is not asked because
+        // a dark lamp may still hold a voice mid-fade — a dark press by hand
+        // within the 40 ms fade-out just before the drop left `cur` standing
+        // with a fade tail for the next reopen to play. The drop is a loud
+        // fault the music already answers with "the next play press reopens
+        // the device" (the error callback's "nothing recovers by itself",
+        // playback_aaudio.cpp); the lamp answers the same way, dark, and the
+        // next NOISE press is an ordinary lit press — a fresh random segment,
+        // the fade-in, and the `w` case's own reopen or card. The call touches
+        // neither the stream nor the latch, so every tick below still reads
+        // the drop exactly as it did. The latch stands until a press reopens,
+        // so this calls again on every tick of the dead interval, its writes
+        // idempotent and no fill running. JACK has no latch: on the laptop
+        // this is one read and the method is never called.
+        if (playback.stream_dead()) noise.reset_on_dead_stream();
 
         // Startup file load, deferred out of pre-run() to the first tick on a
         // configured window (the compositor's initial configure only lands
@@ -3257,8 +3260,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // this branch is never reached: the act ends once, with one sentence.
         // The reopen is still the press's and never the tick's — the
         // audition's arm reads the latch, as the render player's tick does,
-        // and the lit RAIN lamp's poll on stream_dead (above, in the loop
-        // body) DARKENS the lamp at a drop and reopens nothing (2026-10-28).
+        // and the NOISE lamp's poll on stream_dead (above, in the loop
+        // body) DARKENS the lamp and resets the voice at a drop, lit or not,
+        // and reopens nothing (2026-10-28).
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);
@@ -3499,9 +3503,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // stream stays started between plays for the transient's sake, and a
     // reopen is the one moment it is torn down and brought back (the next
     // session's init owns the rate, and projects may differ in it) — accepted,
-    // one transient per project change rather than per play. A LIT RAIN GAPS
+    // one transient per project change rather than per play. A LIT NOISE GAPS
     // FOR IT and resumes where it was in the next session's first callback,
-    // no fade (GuiRainVoice's thread note, rain.h): after this line no
+    // no fade (GuiNoiseVoice's thread note, noise.h): after this line no
     // callback of this engine touches the voice.
     playback.shutdown();
     // Join the render worker before cache teardown so a render completing
@@ -3652,19 +3656,21 @@ int gui_main(const char* argument) {
     // the live commit's apply shape (GuiInputHandler::apply_true_colors).
     install_true_colors(device_config.true_colors);
 
-    // THE RAIN, ONCE PER PROCESS (architect 2026-10-28, rain.h): the
+    // THE NOISE, ONCE PER PROCESS (architect 2026-10-28, noise.h): the
     // background sound's one owner, constructed beside the config it reads —
-    // the `sounds/rain/` folder beside the config probed once, here (absent is
-    // the ordinary state and silent; a `.wav` out of shape one stderr line,
-    // the key grey), and the two keys' values handed to the voice (the config
-    // is required, so both stand). The lamp is dark at every launch: no key
-    // holds it. Every project's engine mixes its voice (run_project's
-    // attach), and it outlives them all — shut down below, after the loop,
-    // when no engine is left to read its bank.
-    GuiRain rain;
-    rain.probe();
-    rain.set_level_db(device_config.rain_level);
-    rain.set_crossfade_ms(device_config.rain_crossfade_ms);
+    // the folder under `noise/` beside the config that the `noise` key names
+    // probed here (absent is the ordinary state and silent; an unlistable
+    // folder or a `.wav` out of shape one stderr line, the key grey; probed
+    // again only when the settings editor's `noise` arm changes the name,
+    // GuiNoise::change_folder), and the two integer keys' values handed to
+    // the voice (the config is required, so all three stand). The lamp is
+    // dark at every launch: no key holds it. Every project's engine mixes its
+    // voice (run_project's attach), and it outlives them all — shut down
+    // below, after the loop, when no engine is left to read its bank.
+    GuiNoise noise;
+    noise.probe(device_config.noise);
+    noise.set_level_db(device_config.noise_level);
+    noise.set_crossfade_ms(device_config.noise_crossfade_ms);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under
@@ -3734,7 +3740,7 @@ int gui_main(const char* argument) {
     int  exit_status = 0;
     for (;;) {
         const GuiProjectOutcome outcome =
-            run_project(gui, device_config, rain, held_display_width_px,
+            run_project(gui, device_config, noise, held_display_width_px,
                         render_cache, project, window_up);
         if (outcome.reopen.empty()) {
             exit_status = outcome.exit_status;
@@ -3751,11 +3757,11 @@ int gui_main(const char* argument) {
         project = *next;
     }
 
-    // THE RAIN GOES DOWN AFTER EVERY ENGINE (rain.h): each run_project's
+    // THE NOISE GOES DOWN AFTER EVERY ENGINE (noise.h): each run_project's
     // playback.shutdown has run and its engine is destroyed, so no callback
     // holds the bank; the loader is joined and the bank freed here (the
     // destructor's call again is a no-op).
-    rain.shutdown();
+    noise.shutdown();
     gui.shutdown();
     // Remove this process's render-cache directory.
     render_cache.shutdown();

@@ -402,14 +402,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // viewer the key is lit and its lift is the viewer's own router's close
     // (route_score_viewer_key). No modifier, no repeat.
     {RedesignButton::IconScore, GuiKeys::M, false, false, false},      // bare m
-    // THE RAIN (architect 2026-10-28), behind the Score key, the third run's
+    // THE NOISE (architect 2026-10-28), behind the Score key, the third run's
     // last: bare `w`, the background sound's lamp through on_key like every
-    // row (GuiRain::toggle, rain.h, the one chokepoint the key reaches too).
+    // row (GuiNoise::toggle, noise.h, the one chokepoint the key reaches too).
     // Live on a locked tab, under the grid-iterations lock and in the `h`
     // view (all three allowlists admit it, so the derived partition leaves it
-    // standing); grey with no sounds folder (its own arm,
+    // standing); grey with no folder the `noise` key names (its own arm,
     // redesign_button_enabled). No modifier, no repeat.
-    {RedesignButton::IconRain, GuiKeys::W, false, false, false},       // bare w
+    {RedesignButton::IconNoise, GuiKeys::W, false, false, false},      // bare w
     // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
     // iteration — its chord opens the mode and closes it, and the button
     // dispatches on both edges because the icon row's band claim sits ABOVE the
@@ -1396,7 +1396,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   begins with),
 //   ZOOM IN AND ZOOM OUT (2026-10-27; `=` / `-` and their shifted forms on
 //   the allowlist through is_zoom_step_key),
-//   THE RAIN LAMP (2026-10-28; bare `w` on the allowlist, device state the
+//   THE NOISE LAMP (2026-10-28; bare `w` on the allowlist, device state the
 //   view has no reason to refuse),
 //   ZOOM TO FIT (Full Zoom Out until 2026-10-24) AND CENTER since the
 //   2026-08-12 relayout (bare `0` is the allowlist's own zoom admission,
