@@ -246,8 +246,10 @@ enum class GuiHistoryCompare {
 //   walk already speaks.
 //
 // THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
-// them: the six entry vectors plus `scale`. Viewport, trim and the rest of the
-// GUI band never appear, because they were never undoable in the first place.
+// them: the six entry vectors, the `scale` pair the walk line displays, and the
+// engine-block term (GuiHistoryCommitDelta::engine_block_changed, 2026-10-28).
+// Viewport, trim and the rest of the GUI band never appear, because they were
+// never undoable in the first place.
 enum class GuiHistoryWalkSource {
     Commit,
     Local,
@@ -373,15 +375,28 @@ struct GuiHistoryCommitDelta {
     std::vector<GuiHistoryPhaseResetChange> phase_reset_changed;
 
     // THE SCALE IS THE ONLY SETTINGS KEY THIS MODE DISPLAYS (architect's
-    // ruling) — a recorded asymmetry, not an oversight: every other settings
-    // delta (title, bpm, the whole per-tab view-state band, the session prefs)
-    // is deliberately invisible here, so the mode shows authoring
+    // ruling, kept 2026-10-28) — a recorded asymmetry, not an oversight: every
+    // other settings delta (title, bpm, notes, url, cover, the whole per-tab
+    // view-state band) is deliberately absent from the walk line's segment
+    // (history_walk_line, paint_handler.cpp), so the mode shows authoring
     // history rather than session bookkeeping. The tokens are the `scale=`
     // value text VERBATIM from each side, empty where that side carried no
     // `scale=` line at all.
     std::string then_scale_token;
     std::string now_scale_token;
     bool        scale_changed = false;
+
+    // ANY OF THE SIX ENGINE-BLOCK KEYS DIFFERS (architect 2026-10-28) — title,
+    // scale, bpm, notes, url, cover, the parser's roster
+    // (is_canonical_engine_key, engine_settings.h): a key whose value text
+    // differs between the two sides, or that one side carries and the other
+    // does not. It is the commit gate's settings term and has no display: a
+    // notes edit lights the commit act and shows no segment on the walk line.
+    // The set is exactly the dirty rule's authoring-class settings
+    // (AppState::settings_dirty), so Save and Save-and-Commit classify
+    // authoring content one way; the view band and every GUI-kind key stay
+    // outside it (the asymmetry recorded at HistoryMode::head_delta_empty).
+    bool        engine_block_changed = false;
 
     // NOTHING DIFFERS — the whole delta in one word, and the ONE predicate for
     // it. It lives on the type rather than at a consumer so that "empty" cannot
@@ -394,14 +409,17 @@ struct GuiHistoryCommitDelta {
     // commit at all — the act commits the LIVE state, so "nothing to
     // checkpoint" is live-vs-newest whatever the lane happens to be
     // displaying. The vocabulary is
-    // exactly this struct's — the two marker columns and `scale` — which is why
-    // a settings-only drift the mode never displays reads as empty here too (the
-    // asymmetry is recorded at the field, HistoryMode::head_delta_empty).
+    // exactly this struct's — the two marker columns and the six engine-block
+    // keys (2026-10-28) — which is why a drift of the view band or a GUI-kind
+    // key alone reads as empty here (the asymmetry is recorded at the field,
+    // HistoryMode::head_delta_empty). `scale_changed` stays a term beside
+    // `engine_block_changed`, which implies it: the redundancy is harmless and
+    // keeps "every member is a term" literally true.
     bool is_empty() const {
         return warp_added.empty() && warp_removed.empty() &&
                warp_changed.empty() && phase_reset_added.empty() &&
                phase_reset_removed.empty() && phase_reset_changed.empty() &&
-               !scale_changed;
+               !scale_changed && !engine_block_changed;
     }
 
     // (frame_span IS DELETED, architect 2026-08-19. It answered WHERE THE DELTA

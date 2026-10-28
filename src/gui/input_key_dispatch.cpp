@@ -2814,8 +2814,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             stands (AppState::HistoryMode::head_delta_empty
 //                             owns it, the asymmetry included: "no changes" is
 //                             the delta's vocabulary, the two marker columns
-//                             plus `scale`, so a settings-only drift greys the
-//                             act too). The in-flight
+//                             plus the six engine-block keys (2026-10-28), so
+//                             a drift of the view band alone greys the act
+//                             too). The in-flight
 //                             term is one checkpoint at a time; it is nearly
 //                             unreachable in here (the act closes the view and
 //                             `h` will not reopen one over a publishing
@@ -3181,7 +3182,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // (viewport, zoom, playhead, trim, read_only) and share the warp store, the
     // phase-reset store and the engine settings,
     // while the displayed delta's whole vocabulary is those two stores plus
-    // `scale` — so the two walks, the frozen now side and the head delta
+    // the engine block — so the two walks, the frozen now side and the head delta
     // describe the same piece on either tab.
     // The undo/redo stacks the LOCAL walk indexes are session-global for the
     // same reason. What the switch does move is the WINDOW, which the view has

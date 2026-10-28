@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "device_config.h"   // shown_project_path (the card's name for a file)
+#include "engine_settings.h"  // is_canonical_engine_key (the engine block)
 #include "frame_format.h"
 // Every git question this module asks goes through the one git road
 // (libgit2 in process); this file keeps the policy.
@@ -101,12 +102,13 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 constexpr std::size_t kMaxDiffLines = 10000;
 constexpr std::size_t kMaxDiffCells = 16u * 1024u * 1024u;
 
-// The one settings key this mode displays. Matched as a whole-line PREFIX, not
-// as a substring: a key ENDING in `scale=` would contain this text without
-// being this key, and until 2026-08-27 the sidecar shipped exactly such a key
-// (`gui_scale=100`, which moved to the per-device config that day). The rule
-// outlives its one demonstration.
-constexpr std::string_view kScaleKeyPrefix = "scale=";
+// The one settings key this mode displays (GuiHistoryCommitDelta's scale
+// pair). It is read out of the engine block (engine_block_of, below), which
+// matches a line's WHOLE KEY, never a substring: a key ENDING in `scale` would
+// contain this text without being this key, and until 2026-08-27 the sidecar
+// shipped exactly such a key (`gui_scale=100`, which moved to the per-device
+// config that day). The rule outlives its one demonstration.
+constexpr std::string_view kScaleKey = "scale";
 
 // ---------------------------------------------------------------------------
 // git
@@ -259,17 +261,33 @@ std::vector<int> run_ordinals(const std::vector<std::string>& lines,
     return out;
 }
 
-// The `scale=` value text, verbatim, or empty when the side carries no such
-// line.
-std::string scale_token_of(const std::string& settings_text) {
+// THE ENGINE BLOCK OF ONE SIDE'S SETTINGS TEXT: each engine-block line's
+// value text, VERBATIM, keyed by its key; a key the side carries no line for is
+// absent from the map. The roster is the parser's own (is_canonical_engine_key,
+// engine_settings.h — title, scale, bpm, notes, url, cover), never a copy here,
+// and it is the dirty rule's authoring-class settings exactly
+// (AppState::settings_dirty), so the commit gate and Save classify authoring
+// content one way (architect 2026-10-28). The line splits at its FIRST '=',
+// the loader's own lexing (scan_key_value_file, settings_file.cpp), so a key
+// is matched whole: the view band and the GUI-kind keys never enter.
+std::map<std::string, std::string> engine_block_of(
+        const std::string& settings_text) {
+    std::map<std::string, std::string> out;
     for (const std::string& line : split_lines(settings_text)) {
-        if (line.size() >= kScaleKeyPrefix.size() &&
-            std::string_view(line).substr(0, kScaleKeyPrefix.size()) ==
-                kScaleKeyPrefix) {
-            return line.substr(kScaleKeyPrefix.size());
-        }
+        const std::size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = line.substr(0, eq);
+        if (!is_canonical_engine_key(key)) continue;
+        out.emplace(std::move(key), line.substr(eq + 1));
     }
-    return {};
+    return out;
+}
+
+// The `scale=` value text, verbatim, or empty when the side carries no such
+// line — the display's one key, read out of the block above.
+std::string scale_token_of(const std::map<std::string, std::string>& block) {
+    const auto it = block.find(std::string(kScaleKey));
+    return it == block.end() ? std::string{} : it->second;
 }
 
 // ---------------------------------------------------------------------------
@@ -2062,10 +2080,18 @@ GuiHistoryCommitDelta compute_commit_delta(
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
-    // corner's `Scale: [-]a [+]b` says the same kind of thing in both.
-    d.then_scale_token = scale_token_of(then_settings);
-    d.now_scale_token  = scale_token_of(now_settings);
-    d.scale_changed    = (d.then_scale_token != d.now_scale_token);
+    // corner's `Scale: [-]a [+]b` says the same kind of thing in both. The
+    // engine-block term is the same two blocks compared whole: a key whose
+    // value text differs, or that one side carries and the other does not,
+    // differs (GuiHistoryCommitDelta::engine_block_changed).
+    const std::map<std::string, std::string> then_block =
+        engine_block_of(then_settings);
+    const std::map<std::string, std::string> now_block =
+        engine_block_of(now_settings);
+    d.then_scale_token     = scale_token_of(then_block);
+    d.now_scale_token      = scale_token_of(now_block);
+    d.scale_changed        = (d.then_scale_token != d.now_scale_token);
+    d.engine_block_changed = (then_block != now_block);
 
     // One line per commit view, at most. The degraded arm is an ALLOCATION
     // guard, not a format leniency: a loader-clean sidecar past the DP caps is

@@ -7366,7 +7366,7 @@ struct AppState {
     // share one piece. tab_a and tab_b hold a VALUE-SHAPED BAND ALONE (viewport,
     // zoom, playhead, trim, read_only) and share the warp store, the phase-reset
     // store and the engine settings, while the
-    // delta's whole vocabulary is those two stores plus `scale` — so the
+    // delta's whole vocabulary is those two stores plus the engine block — so the
     // walks, the frozen now side and the head delta describe the same piece on
     // either tab.
     // (The walk has its own lamp in row 4, and the READING is row 4's own
@@ -7890,15 +7890,21 @@ struct AppState {
         // is what keeps that true if the pairing ever moves again.
         //
         // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
-        // 2026-08-05): the delta's vocabulary is the two marker columns plus
-        // `scale`, so a session whose only drift is the invisible settings
-        // bookkeeping — the per-tab view band the mode's own navigation moves —
-        // reads EMPTY and greys the act, even though a byte-level commit would
-        // land. Deliberate: a checkpoint is about authoring content, the same
-        // reasoning that makes `scale` the only settings key this mode
-        // displays. A settings-only drift is saved by the plain Ctrl+S, the
-        // view's plain save again since 2026-10-10 (from 2026-08-08 Ctrl+S
-        // was this act and the drift was saved by leaving the view).
+        // 2026-08-05; its vocabulary retold 2026-10-28): the delta's vocabulary
+        // is the two marker columns plus the six engine-block keys (title,
+        // scale, bpm, notes, url, cover; GuiHistoryCommitDelta::engine_block_-
+        // changed), so a session whose only drift is the settings bookkeeping
+        // — the per-tab view band the mode's own navigation moves, and every
+        // other GUI-kind key (viewport, zoom, playhead, trim, read_only, the
+        // active_* keys) — reads EMPTY and greys the act, even though a
+        // byte-level commit would land. Deliberate: a checkpoint is about
+        // authoring content, and the engine block is counted because it is
+        // exactly what the dirty rule counts (AppState::settings_dirty), so
+        // Save and Save-and-Commit classify authoring content one way
+        // (architect 2026-10-28). Only `scale` is DISPLAYED (the walk line's
+        // segment); a notes edit lights the act and shows nothing. A drift of
+        // the view band alone is saved with the next plain Ctrl+S of an
+        // authored change (plain_save_actionable).
         // The act's own NothingToCommit arm remains the byte-level backstop for
         // the state where the bit says there IS something and the repository
         // disagrees.
@@ -8222,7 +8228,10 @@ struct AppState {
     //
     // Authoring-class settings — the six engine-block keys (title, scale,
     // bpm, notes, url, cover; editor commits carry undo history) — participate
-    // in dirty via settings_dirty. View-state keys — the GUI-kind keys
+    // in dirty via settings_dirty. The commit gate counts the same six and no
+    // other settings key (GuiHistoryCommitDelta::engine_block_changed,
+    // history_diff.h; architect 2026-10-28): one classification of authoring
+    // content for Save and Save-and-Commit. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, active_audio_view,
     // active_markers_view, active_tab_view, trim,
     // read_only, projects_repo) — do NOT participate: they are persisted
