@@ -325,17 +325,18 @@ DIFF_W, DIFF_H = 480, 270
 # modal_box_interior_rect(app, 0) (src/gui/modal_box.h) on the Galaxy Tab S10 FE's 2304 x 1440 at gui_scale 300,
 # derived from the program's layout (2026-10-26) and printed by the viewer itself at its open (score_viewer.cpp's
 # feed_decoder), the line the pair is checked against:
-#   ACROSS: the canvas interior (waveform_area, src/gui/main.cpp) stands column_inner_x_px in from each side, the
-#   column margin's 6 W plus the program line's 1 W, 18 + 3 = 21 px; the room 2304 - 42 = 2262 floors to the
-#   16-px grid step, 2256, its slack of 6 split, so x = 24; the ring's outer columns (program_ring_columns) one
-#   program line outside it, 21 and 2283, the box's x and width 2262; the interior one hairline_px (1 at every
-#   scale) in from each side: x 22, WIDTH 2260.
+#   ACROSS (re-derived 2026-10-28, the canvas's frame column one hairline): the canvas interior (waveform_area,
+#   src/gui/main.cpp) stands column_inner_x_px in from each side, the column margin's 6 W plus the frame column's
+#   one device px, 18 + 1 = 19 px; the room 2304 - 38 = 2266 floors to the 16-px grid step, 2256, its slack of 10
+#   split, so x = 24; the ring's outer columns (program_ring_columns) one frame column outside it, 23 and 2281, the
+#   box's x and width 2258; the interior one hairline_px (1 at every scale) in from each side: x 24, WIDTH 2256 —
+#   the canvas's own columns.
 #   DOWN: the box runs from the view bar's top row (top_trim_row_area) to the controls row's top
 #   (modal_controls_row_rect, the bottom row's lane). The band above the view bar is the logo lane's 72, the case's
 #   69 (1 + 20 + 1 + 1 W) and the strip pad's 39 (13 W), 180 rows, the flexible gap 0 (the waveform takes the
 #   whole leftover); the bottom row is the strip, 39 + 69 + 39 = 147 rows on the window's foot from row
 #   1440 - 147 = 1293. So the box is rows 180..1292, 1113 rows, and its interior one hairline in: y 181, HEIGHT 1111.
-PAGE_FIT = (2260, 1111)
+PAGE_FIT = (2256, 1111)
 # THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
 # A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no
 # gray JPEG (its pixel formats are yuvj420p, 422p and 444p alone), so the grab pipes ffmpeg's gray rawvideo to Pillow,

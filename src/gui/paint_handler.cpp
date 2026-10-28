@@ -1688,12 +1688,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // with one run gap of wood before the right run the band holds every
     // run at
     //   467 + 15 + 115 = 597
-    // Windows px outside the view (436 inside it) — the ring's 754 W on the
-    // tablet at 300 % with 157 W of wood between the left runs and the right
-    // run. IN DEVICE PX, off the painted walk (each case its rounded parts,
-    // the gap its own scaled_px, the ends program_ring_columns'): at the
-    // tablet's 300 % (cases 69, the ring 21 .. 2283) the left runs on x
-    // 21..1421, the right run 1938..2282; at the laptop's 138 % (cases 31,
+    // Windows px outside the view (436 inside it) — the ring's 2258 device
+    // px on the tablet at 300 % (752⅔ W) with 467 px (155⅔ W) of ground
+    // between the left runs and the right run. IN DEVICE PX, off the painted
+    // walk (each case its rounded parts, the gap its own scaled_px, the ends
+    // program_ring_columns'; re-derived 2026-10-28, the ring's columns the
+    // canvas's frame hairlines): at the tablet's 300 % (cases 69, the ring
+    // 23 .. 2281) the left runs on x 23..1423, the right run 1936..2280; at
+    // the laptop's 138 % (cases 31,
     // the gap 21, the ring 15 .. 1905) the left runs on x 15..645, the right
     // run 1750..1904. A roster move restates these numbers.
     //
@@ -2429,7 +2431,8 @@ static const TimeFieldMetrics& time_field_metrics() {
 // outer left column, the right seat and the cases' end one past its outer
 // right column — the band's ends (icon_row_seats) and the modal box's
 // (modal_box_rect), so both strips and the controls row stand flush with
-// the ring at every scale; 21 and 2283 at 300 %, 15 and 1905 at 138 %. The
+// the ring at every scale; 23 and 2281 at 300 %, 15 and 1905 at 200 % and
+// at 138 % (re-derived 2026-10-28, the ring's columns the hairlines). The
 // two rows differ only in `row`: row 8's lane (bottom_row_area), or the
 // controls row's, the same rows lifted onto the keyboard's band
 // (modal_controls_row_rect; modal_controls_seats below reads this). Every
@@ -2663,17 +2666,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // band; the case 23, the skips two, the verbs eight, the step-and-walk
     // group four and the nudge-and-play group five): the block is 19 cases
     // and three run gaps, 19·23 + 3·15 = 482 W, its last case ending one past
-    // the program ring's outer right column (bottom_row_seats; the ring 7 W
-    // in from each window edge on the tablet) — on the tablet's 768 at 300 %
-    // the block on W 279..760 (device x 837..2282: the skips 837..974, the
-    // verbs 1020..1571, the walk 1617..1892, the nudge 1938..2282, Play
-    // 2214..2282); the clock's field on the ring's outer left column, from
-    // W 7 (x 21) — the cell (4.45 em of Liberation Sans advances, seven
+    // the program ring's outer right column (bottom_row_seats; the ring 23
+    // device px in from each window edge on the tablet at 300 %, the canvas's
+    // frame hairlines, re-derived 2026-10-28) — on the tablet's 2304 the
+    // block's 1446 px on x 835..2280 (the skips 835..972, the verbs
+    // 1018..1569, the walk 1615..1890, the nudge 1936..2280, Play
+    // 2212..2280); the clock's field on the ring's outer left column, from
+    // x 23 — the cell (4.45 em of Liberation Sans advances, seven
     // digits, the colon and the point, in the program face's 22 px at
     // 300 %, 98 px ceiled) and its two 12-px pads, a 122-px field, x
-    // 21..142 — then the name's first ink 5 W past it (x 158, Tab A's
+    // 23..144 — then the name's first ink 5 W past it (x 160, Tab A's
     // advance ~59 px), the state line's 5 W past the name's advance (x
-    // ~232), clipped one run gap short of the block (x 792): about 560 px
+    // ~234), clipped one run gap short of the block (x 790): about 556 px
     // of state line at 300 %. On the laptop's 1920 at 138 % (cases 31, the
     // gap 21, the program face 10 px) the block is 652 px, from x 1253 to
     // the ring's right column, the clock's field 57 px on x 15..71, the name
@@ -3678,21 +3682,22 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // beside the program ring the brushed GROUND; the ruler's ground THE FLAT
     // kRulerGround (the palette's `ce_mid`); the marker lane THE BRIGHTER
     // BRUSHED STRIP (the Marker tile, at the lane's phase) between the ring's
-    // outer columns; THE PROGRAM RING's two columns ONE DEVICE PX on their
-    // slots' outer edges (render.h's line rule), the dark one left and the
-    // light one right, carried down from the view bar (render_trim_flags)
-    // into the canvas ring's (paint_canvas_column_frame), each slot's other
-    // columns the lane's own ground; THE RULER'S FOOT LINE one device px of
-    // the ring's light tone on its slot's last row, the slot's other rows the
-    // ruler's ground. (The wood, the brass's flat ruler and its strip, the
-    // ring a scaled line, 2026-10-21 to 2026-10-23, are git history.)
+    // outer columns; THE PROGRAM RING's two columns ONE DEVICE PX, the
+    // canvas's frame columns (render.h's program_ring_columns, the hairline
+    // itself since 2026-10-28), the dark one left and the light one right,
+    // carried down from the view bar (render_trim_flags) into the canvas
+    // ring's (paint_canvas_column_frame); THE RULER'S FOOT LINE one device px
+    // of the ring's light tone on its one-W slot's last row
+    // (program_line_px), the slot's other rows the ruler's ground. (The
+    // wood, the brass's flat ruler and its strip, the ring a scaled line,
+    // 2026-10-21 to 2026-10-23, are git history.)
     const GuiPalette& pal = palette();
     const int ground_h = ruler_ground_h_px();
     const int lw       = program_line_px();
     const int px       = hairline_px();
-    const GuiRect canvas_cols = waveform_area(app);
-    const int ring_x0 = canvas_cols.x - lw;
-    const int ring_x1 = canvas_cols.x + canvas_cols.w + lw;
+    const ProgramRingColumns ring = program_ring_columns(app);
+    const int ring_x0 = ring.x;
+    const int ring_x1 = ring.end;
     {
         const GuiMaterialScope ground(GuiMaterialRegion::Ground);
         paint_cell_rect(cr, lane, pal.face);
@@ -3739,7 +3744,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
     // THE RULER'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's
     // margins): the ground and every tick, digit and the head from the
-    // waveform area's x, the frame's side columns one line outside it.
+    // waveform area's x, the frame's side columns directly outside it.
     const GuiRect area = waveform_area(app);
     const int cx = area.x;
 
@@ -3763,20 +3768,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         return;
     }
     // THE GROUND, ITS RING COLUMNS AND ITS FOOT (the head of this body): the
-    // flat ruler ground across the ring's slots and the foot's slot, then
-    // the two hairline columns and the light foot line. The ground and the
-    // columns read the LIVE area, as the canvas's own frame does
+    // flat ruler ground between the ring's columns and across the foot's
+    // slot, then the two hairline columns and the light foot line. The ground
+    // and the columns read the LIVE area, as the canvas's own frame does
     // (paint_canvas_column_frame); the walk below reads the plate's width.
     {
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
         const int frame_h = ground_h + lw;
-        paint_cell_rect(cr, GuiRect{cx - lw, lane.y, area.w + 2 * lw, frame_h},
+        const int ring_w  = ring_x1 - ring_x0;
+        paint_cell_rect(cr, GuiRect{ring_x0, lane.y, ring_w, frame_h},
                         pal.ce_mid);
-        paint_cell_rect(cr, GuiRect{cx - lw, lane.y, px, frame_h}, pal.ce_dark);
-        paint_cell_rect(cr, GuiRect{cx + area.w + lw - px, lane.y, px, frame_h},
+        paint_cell_rect(cr, GuiRect{ring_x0, lane.y, px, frame_h}, pal.ce_dark);
+        paint_cell_rect(cr, GuiRect{ring_x1 - px, lane.y, px, frame_h},
                         pal.ce_hilight);
-        paint_cell_rect(cr, GuiRect{cx - lw + px, lane.y + frame_h - px,
-                                    area.w + 2 * lw - 2 * px, px},
+        paint_cell_rect(cr, GuiRect{ring_x0 + px, lane.y + frame_h - px,
+                                    ring_w - 2 * px, px},
                         pal.ce_hilight);
     }
 
@@ -6125,7 +6131,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
     // row — a prompt's answers, an editor's OK and Cancel and the picker's
-    // Cancel — the last one's right edge the box's ring's outer edge (x 2282
+    // Cancel — the last one's right edge the box's ring's outer edge (x 2280
     // at 300 %), today's button gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
@@ -6622,7 +6628,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
         //    ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S RING'S OUTER EDGE
-        //    (x 2282 at 300 %), as the player's Close ends there; the focus
+        //    (x 2280 at 300 %), as the player's Close ends there; the focus
         //    frame, when worn, stands in the face beside the ring. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
     } else {
@@ -7522,15 +7528,22 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     const int y1 = foot.y + foot.h;
     if (top.w <= 0 || y1 <= top.y) return;
     const GuiPalette& p = palette();
-    const int lw = program_line_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE HI-FI SKIN (architect 2026-10-23; materials.h's REGIONS): the face
     // the brushed GROUND as drawn over its tile (materials::paint_rect — the
-    // canvas interior none of it, the hole), the rings' slots the well's own
-    // black (`waveform_canvas`) and THE RINGS ONE DEVICE PX on their slots'
-    // outer edges (render.h's line rule) in the two ring tones, so the wells
-    // run out to the hairlines.
+    // canvas interior none of it, the hole) and THE RINGS ONE DEVICE PX
+    // (render.h's line rule) in the two ring tones. THE WELLS RUN OUT TO THE
+    // HAIRLINES BECAUSE THE SLOT IS THE HAIRLINE (2026-10-28, render.h's
+    // canvas-frame block): the frame rows and columns are one device px, so
+    // the waveform area — what every canvas painter and hit test reads — is
+    // the whole inside of the rings. NO SLOT FILL STANDS UNDER THE RINGS:
+    // every cell of the rings' rect outside the area is a ring cell (the two
+    // mitred rings cover their rows and columns opaquely, paint_hairline_frame
+    // — the top-left run aliased over the whole top row and left column, the
+    // bottom-right run over the rest) or the divider's face row below, and
+    // inside the area render_canvas lays the canvas whole (the cairo road) or
+    // the hole is left alone (the GL canvas).
     const GuiMaterialScope ground(GuiMaterialRegion::Ground);
     const GuiRect face{top.x, top.y, top.w, y1 - top.y};
     if (hole) {
@@ -7559,13 +7572,10 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     const int upper_end = area.y + d.y + d.line;        // past its light line
     const int lower_top = area.y + d.y + d.line + d.face;
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    paint_cell_rect(cr, GuiRect{ring_x, top.y, ring_w, foot.y + lw - top.y},
-                    p.waveform_canvas);
     paint_hairline_frame(cr, GuiRect{ring_x, top.y, ring_w, upper_end - top.y},
                          p.ce_dark, p.ce_hilight);
     paint_hairline_frame(cr,
-                         GuiRect{ring_x, lower_top, ring_w,
-                                 foot.y + lw - lower_top},
+                         GuiRect{ring_x, lower_top, ring_w, y1 - lower_top},
                          p.ce_dark, p.ce_hilight);
     paint_cell_rect(cr, GuiRect{ring_x, upper_end, ring_w, d.face}, p.face);
     cairo_restore(cr);

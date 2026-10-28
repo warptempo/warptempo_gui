@@ -50,10 +50,12 @@
 // W of air above them, the rows saved given to the marker lane, whose label
 // box is the whole lane — "right now it's too small to click"; usability
 // over accuracy, render.h's row-6 canvas paragraph) — then THE CANVAS: its dark top
-// frame row under the marker lane (1), the canvas itself — the waveform
+// frame row under the marker lane, the canvas itself — the waveform
 // area, its grid and its center lines, its two channels' wells with Cool
 // Edit's stereo divider between them (stereo_divider_face_px) — and its
-// light bottom frame row (1), the ring's last row; then ROW 8, THE STRIP
+// light bottom frame row, the ring's last row (each frame row one device
+// px, the hairline itself, since 2026-10-28: render.h's canvas-frame
+// block); then ROW 8, THE STRIP
 // PAD, the case, THE STRIP PAD, on the window's foot. THE COLUMN STANDS 6 W
 // IN FROM EACH SIDE of the window's client area on the ground
 // (column_margin_px): the view bar, the ruler, the marker lane and the
@@ -154,9 +156,9 @@ struct ProgramSpec {
     // THE COLUMN'S SIDE MARGIN (Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much ground from each side of the window's
-    // client area to the program ring's column, the column's slot one line
-    // (its line one device px on the slot's outer edge, 2026-10-23), then the
-    // column's interior — the view bar's field, the ruler's ground, the
+    // client area to the program ring's column, the column one device px,
+    // the hairline itself (render.h's canvas_frame_column_w_px, 2026-10-28),
+    // then the column's interior — the view bar's field, the ruler's ground, the
     // marker lane's brighter strip and the canvas.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
@@ -323,9 +325,10 @@ constexpr int program_band_authored_h(const ProgramSpec& p) {
 }
 // The canvas column's lanes above the canvas (the head): the view bar a
 // line, its field (authored at 300 %, its W the device px over 3) and a line; the ruler its ground and its bottom line; the
-// marker lane its W rows and its label quanta (one W each at 100 %); the
-// canvas's top frame row one line. Below the canvas, its
-// bottom frame row, one line, the program ring's last row.
+// marker lane its W rows and its label quanta (one W each at 100 %). THE
+// CANVAS'S TWO FRAME ROWS ARE NO W TERM since 2026-10-28: each is one
+// device px at every scale (render.h's canvas-frame block), one W each here
+// until then.
 constexpr int program_view_bar_authored_h(const ProgramSpec& p) {
     return 1 + p.view_bar_field_at300 / 3 + 1;
 }
@@ -337,10 +340,7 @@ constexpr int program_marker_lane_authored_h(const ProgramSpec& p) {
 }
 constexpr int program_column_authored_h(const ProgramSpec& p) {
     return program_view_bar_authored_h(p) + program_ruler_authored_h(p) +
-           program_marker_lane_authored_h(p) + 1;
-}
-constexpr int program_canvas_bottom_authored_h(const ProgramSpec&) {
-    return 1;
+           program_marker_lane_authored_h(p);
 }
 // The stereo divider inside the canvas: the upper well's light bottom line,
 // the face, the lower well's dark top line, one W each (the field's head).
@@ -361,7 +361,7 @@ static_assert(kProgramSpec.view_bar_field_at300 % 3 == 0);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 7);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
-static_assert(program_column_authored_h(kProgramSpec) == 37);
+static_assert(program_column_authored_h(kProgramSpec) == 36);
 static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
 // THE RULER'S ROWS (2026-10-09 ~21:00): the six the ruler gave are the six
 // the marker lane took, so the column and every stack keep their totals.

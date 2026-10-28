@@ -888,9 +888,10 @@ void install_true_colors(bool on);
 // THE WAVEFORM AREA IS THE CANVAS'S INTERIOR, inside its frame (the ring of
 // the panel's tones, the
 // palette head's canvas-frame paragraph; the frame rows are lanes of their
-// own and its columns the column's margins, main.cpp's lane table and
-// waveform_area), so every column mapping, hit test and damage box reads the
-// interior. THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
+// own and its columns beside the column's margins, main.cpp's lane table and
+// waveform_area, each one hairline since 2026-10-28), so every column
+// mapping, hit test and damage box reads the interior, which runs out to
+// the ring's hairlines. THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
 // one pass, the `waveform_canvas` fill and THE HORIZONTAL GRID — per
 // channel, a `grid` line one device px tall ("on waveform → unscaled",
 // architect 2026-10-09 ~14:25, waveform_line_px's rule) at the channel's
@@ -1275,9 +1276,10 @@ inline int logo_lane_h_px() {
 // "everything scales to the 1 pixel line … we scale the icon size by the
 // area, not the borders and the line"): the chokepoint beside scaled_px for
 // every chrome LINE the skin draws, ONE DEVICE PX at every gui_scale — the
-// program ring's columns and rows (their PLACES where the one-W ring stood:
-// each line on its slot's outer edge, the slot's other rows the ground the
-// line encloses), the clock's ring and the time fields' rings, the stereo
+// program ring's columns and rows (the view bar's and the ruler's rows on
+// their one-W slots' outer edges, the slot's other rows the ground the line
+// encloses; the ring's columns and the canvas's frame rows their own
+// one-px slots since 2026-10-28, the canvas-frame block), the clock's ring and the time fields' rings, the stereo
 // divider's three rows, the ruler's two light lines and its ticks with their
 // shadow, the keys' edges and outline and the down key's wall and ride
 // (cool_edit_paint.h's paint_key), the modal box's ring, the cards' and
@@ -1291,8 +1293,8 @@ inline int logo_lane_h_px() {
 // and the flag editor's carets (paint_modal_dialog, render.cpp's flag
 // editor) — read
 // at those sites and nowhere else. Everything else keeps scaled_px, AREAS:
-// the keys, the LED, the lanes' heights, the line SLOTS the ring's lines
-// stand in (program_line_px), the pads and gaps (the lists' row gap, the dialog
+// the keys, the LED, the lanes' heights, the view bar's and the ruler's
+// line SLOTS the ring's rows stand in (program_line_px), the pads and gaps (the lists' row gap, the dialog
 // text's pad, the keyboard's pad and key gap), the flags' triangles and the
 // cue boxes. ARTWORK IS AN AREA IN THIS SENSE (2026-10-23): a drawing's
 // stroke weight is part of the drawing, so it scales with the drawing — the
@@ -1368,11 +1370,15 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).
 // THE PROGRAM RING'S SLOT (2026-10-23): ONE W, its own rounded part
 // (floored at 1) — AN AREA, the place the old one-W line stood, kept so the
-// lanes' and the canvas column's geometry did not move when the skin took
-// its lines to one device px; the ring's line is hairline_px on the slot's
-// outer edge, the slot's other rows or columns the ground it encloses
-// (render_trim_flags, paint_ruler_row, paint_canvas_column_frame,
-// modal_box_rect).
+// lanes' geometry did not move when the skin took its lines to one device
+// px; the ring's line is hairline_px on the slot's outer edge, the slot's
+// other rows the ground it encloses. ITS READERS ARE THE LANES' OWN LINE
+// ROWS ALONE: the view bar's top and bottom rows (trim_lane_h_px,
+// render_trim_flags) and the ruler's foot row (ruler_lane_h_px,
+// paint_ruler_row). THE RING'S COLUMNS AND THE CANVAS'S FRAME ROWS ARE NOT
+// SLOTS since 2026-10-28: each is the hairline itself
+// (canvas_frame_column_w_px and the canvas-frame block below, where the rule
+// and its reason stand).
 inline int program_line_px() {
     return scaled_px(1, 1);
 }
@@ -1521,8 +1527,9 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 // UNDER EVERY CHROME (architect 2026-10-09; program_spec.h owns every length
 // and its source; the colors at the palette block's canvas-column
 // paragraph). Each lane is a composite of its rounded parts (scaled_px's
-// rule): a line is one quantum (program_line_px), a run of face or ground
-// its own scaled_px, the cue's triangle its device rows (2026-10-26).
+// rule): a lane's line slot is one quantum (program_line_px), a run of face
+// or ground its own scaled_px, the cue's triangle its device rows
+// (2026-10-26), the canvas's frame row one device px (2026-10-28).
 //   THE TRIM   the view bar, a line, the field, a line (trim_lane_h_px):
 //              21 device rows at 300 % (3 + 15 + 3), 14 at 200 % (2 + 10 +
 //              2), 12 at 150 % (2 + 8 + 2), 9 at 138 %, 26 at 360 %.
@@ -1535,8 +1542,9 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 // program_spec.h's ruler and marker-lane fields; the two lanes' sum keeps
 // its 87 device rows at 300 % and its 107 at 360 %, and at 138 % rounds one
 // row taller, 38 against 37, the laptop's well one row shorter.)
-//   THE FRAME  the canvas's dark top frame row, one line
-//              (canvas_top_frame_h_px, below): 3 / 1 / 4.
+//   THE FRAME  the canvas's dark top frame row, one hairline
+//              (canvas_top_frame_h_px, below): 1 at every scale
+//              (2026-10-28; 3 / 1 / 4, one scaled W, until then).
 // THE VIEW BAR'S FIELD, 15 DEVICE PX AT 300 % on the skin's road (architect
 // 2026-10-24, his pick T15: program_spec.h's view_bar_field_at300 the owner
 // of the ruling; 18 px at 300 % through scaled_px of 6 W 2026-10-09 to
@@ -1757,38 +1765,59 @@ inline int cue_triangle_reach_right_px() {
 }
 // THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
 // third part; program_spec.h's column_margin_px): the
-// canvas's TOP FRAME ROW is a lane of its own, top lane 5, one line
+// canvas's TOP FRAME ROW is a lane of its own, top lane 5, one hairline
 // (canvas_top_frame_h_px), directly under the marker lane; its BOTTOM FRAME
-// ROW — THE PROGRAM RING'S LAST ROW — a bottom lane of its own, one line
+// ROW — THE PROGRAM RING'S LAST ROW — a bottom lane of its own, one hairline
 // (canvas_bottom_frame_h_px), between the canvas and row 8 (the column's 5-W
 // foot under it went 2026-10-22, the simple layout). Across, the column
-// stands column_margin_w_px of wood in from each side of the window, then
-// its one-line frame column, then its interior — THE WAVEFORM AREA — its
+// stands column_margin_w_px of the ground in from each side of the window,
+// then its one-hairline frame column (canvas_frame_column_w_px), then its
+// interior — THE WAVEFORM AREA — its
 // width floored to the grid step and the floor's leftover (under 16 device
 // px) split between the two margins, the odd pixel to the right (main.cpp's
 // waveform_area owns the split; column_inner_x_px is the side before it):
-// the side 18 + 3 = 21 device px at 300 %, 8 + 1 = 9 at 138 %, 22 + 4 = 26
-// at 360 %.
+// the side 18 + 1 = 19 device px at 300 %, 12 + 1 = 13 at 200 %, 8 + 1 = 9
+// at 138 %, 22 + 1 = 23 at 360 %.
+// THE CANVAS'S FRAME SLOT IS THE HAIRLINE (2026-10-28, the planner's road
+// under the architect's autonomy grant of 2026-10-27, on his later-list
+// item of 2026-10-26, "the phase-reset dotted box ~3/2 device px short of
+// the canvas ring"): the frame rows and the frame column are ONE DEVICE PX
+// at every scale (hairline_px, the line rule), the line itself, so THE
+// WAVEFORM AREA IS THE INTERIOR INSIDE THE FOUR HAIRLINES and nothing
+// stands between the ring and the canvas. The reason is ON SCREEN IS AS
+// PAINTED: from 2026-10-23 to 2026-10-28 the slot stayed one scaled W (3
+// device px at 300 %) with the hairline on its outer edge and the slot's
+// other rows and columns painted in the canvas's own black, so the painted
+// canvas ran out to the hairlines two px past the area every canvas painter
+// and hit test reads — the phase-reset ring, the grid, the center lines,
+// the dots and every hit stopping short of the ring by those two px.
+// (The view bar's two line rows and the ruler's foot row are the lanes'
+// own line slots, program_line_px, and keep their scaled rows.)
+inline int canvas_frame_column_w_px() {
+    return hairline_px();
+}
 inline int canvas_top_frame_h_px() {
-    return program_line_px();
+    return hairline_px();
 }
 inline int canvas_bottom_frame_h_px() {
-    return program_line_px();
+    return hairline_px();
 }
 inline int column_margin_w_px() {
     return scaled_px(kProgramSpec.column_margin_px);
 }
 inline int column_inner_x_px() {
-    return column_margin_w_px() + program_line_px();
+    return column_margin_w_px() + canvas_frame_column_w_px();
 }
 // The two lanes (main.cpp, beside the other lane accessors).
 GuiRect top_canvas_frame_area(const AppState& a);
 GuiRect bottom_canvas_frame_area(const AppState& a);
 // THE PROGRAM RING'S OUTER COLUMNS (2026-10-23, the one owner): its dark
-// left column, one line left of the canvas interior, and one past its light
-// right column, one line right of it — waveform_area's x and width, so the
-// grid floor's leftover decides them and no inset does: 21 and 2283 on the
-// tablet's 2304 at 300 %, 15 and 1905 on the laptop's 1920 at 138 %. EVERY
+// left column, the frame column directly left of the canvas interior, and
+// one past its light right column, directly right of it (the frame column
+// the hairline itself since 2026-10-28, canvas_frame_column_w_px above) —
+// waveform_area's x and width, so the grid floor's leftover decides them and
+// no inset does: 23 and 2281 on the tablet's 2304 at 300 % (the area 24 ..
+// 2279), 15 and 1905 on the laptop's 1920 at 200 % and at 138 %. EVERY
 // STRIP AND BOX STANDING ON THEM READS THEM HERE (architect 2026-10-23,
 // "yes" to tying both strips' ends to the ring): the column's frame
 // (paint_canvas_column_frame), the modal family's box and its controls row
@@ -1856,27 +1885,28 @@ inline int bottom_row_h_px() {
 // the maximised window, window_frame_maximized, left 2026-10-24 with the
 // app's sizing frame): THE PROGRAM'S (program_spec.h; the simple layout
 // 2026-10-22): the band under its logo lane (the key, the pad), the canvas
-// column's 37 above the canvas (the view bar 7 — its field the 15 px at
-// 300 % over 3, program_spec.h — the ruler 12, the marker lane 17, the
-// canvas's top frame row 1), the canvas's bottom frame row 1
-// under it and row 8 (the pad, the key, the pad), the strip pad
-// program_spec.h's constant (strip_pad_px). THE LOGO LANE IS NOT IN IT: its
-// height is the skin's device px at 300 % (logo_lane_h_px, 72 there; the
-// app's caption, 40 there, stood over it on the laptop until 2026-10-24).
+// column's 36 above the canvas (the view bar 7 — its field the 15 px at
+// 300 % over 3, program_spec.h — the ruler 12, the marker lane 17) and row
+// 8 (the pad, the key, the pad) under it, the strip pad program_spec.h's
+// constant (strip_pad_px). THE LOGO LANE IS NOT IN IT: its height is the
+// skin's device px at 300 % (logo_lane_h_px, 72 there; the app's caption,
+// 40 there, stood over it on the laptop until 2026-10-24). NOR ARE THE
+// CANVAS'S TWO FRAME ROWS since 2026-10-28: each is one device px at every
+// scale (the canvas-frame block above), one W each in this sum until then.
 constexpr int chrome_stack_authored_h() {
     return program_band_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
-           program_canvas_bottom_authored_h(kProgramSpec) +
            program_strip_authored_h(kProgramSpec);
 }
-// THE STACK AT THE STRIP PAD'S 13 W: 73 above (the band's case and pad 36,
-// the column 37) and 50 below (the ring's last row 1, row 8 49), 123 W, 369
-// device rows at 300 % — with the logo lane's 72 and no caption the
-// tablet's well 999 rows of the surface's 1440 (2026-10-24: the trim
-// field's 15 px gave it 3 rows; 996 under the 18-px field, 989 under the
-// 40-row caption over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's
-// lane table the record of each scale, the laptop's among them.
-static_assert(chrome_stack_authored_h() == 123);
+// THE STACK AT THE STRIP PAD'S 13 W: 72 above (the band's case and pad 36,
+// the column 36) and row 8's 49 below, 121 W, 363 device rows at 300 % —
+// with the logo lane's 72, the two frame rows' one device px each and no
+// caption the tablet's well 1003 rows of the surface's 1440 (2026-10-28:
+// the frame rows' slots gave it 4 rows; 999 from 2026-10-24, when the trim
+// field's 15 px gave it 3; 996 under the 18-px field, 989 under the 40-row
+// caption over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's lane
+// table the record of each scale, the laptop's among them.
+static_assert(chrome_stack_authored_h() == 121);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2501,12 +2531,13 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // one run per well (waveform_well_rows), its dots keeping the rows they
 // stand on, counted from the canvas's first row as ever (Cool Edit's own
 // dotted cursor keeps its phase across its divider on the capture: rows
-// 517, then 525). At 300 % on the tablet the canvas is 999 rows, 291-1289
-// (main.cpp's lane table, re-derived 2026-10-24 for the logo lane and the
-// 15-px trim field): the upper well's band 498 rows (291-788), the divider
-// 789-791 (the light line, the ground row, the dark line, one device px
-// each) and the lower well's band 498 rows (792-1289), no spare row (999
-// less the divider's 3 is even).
+// 517, then 525). At 300 % on the tablet the canvas is 1003 rows, 289-1291
+// (main.cpp's lane table, re-derived 2026-10-28 for the frame rows' one
+// device px), between the ring's top hairline on row 288 and its bottom one
+// on 1292: the upper well's band 500 rows (289-788), the divider 789-791
+// (the light line, the ground row, the dark line, one device px each) and
+// the lower well's band 500 rows (792-1291), no spare row (1003 less the
+// divider's 3 is even).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot

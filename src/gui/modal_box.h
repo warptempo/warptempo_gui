@@ -27,10 +27,11 @@
 // it. Across, it runs the window's width,
 // as every program lane does. Top to bottom:
 //   1. ONE SUNKEN BOX WEARING THE PROGRAM RING — it stands where the ring
-//      stands: one program line, `ce_dark` top and left, `ce_hilight` right
+//      stands: one hairline, `ce_dark` top and left, `ce_hilight` right
 //      and bottom, mitred, exactly paint_canvas_column_frame's — in the
-//      canvas column's own columns (the column's side margin of wood in from
-//      each side, the waveform area's x and width one line out), its top row
+//      canvas column's own columns (the column's side margin of the ground
+//      in from each side, the waveform area's x and width one frame column,
+//      one hairline, out: render.h's program_ring_columns), its top row
 //      the view bar's top row, its bottom row the ring's last row;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
 //      the 23-W case, the strip pad (render.h's strip_h_px) — on the ground,
@@ -47,18 +48,19 @@
 // a prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the main window's ring: the box IS the ring's rect. At the
-// tablet's 2304 x 1440, 300 % and the strip pad's 13 W: the ring's top slot
-// 180–182 (the view bar's, directly under the band's rows 0–179, the logo
-// lane 0–71, with no caption, 2026-10-24), its bottom slot 1290–1292, its
-// column slots 21–23 and 2280–2282, the one-device-px ring on the slots'
-// outer edges (rows 180 and 1292, columns 21 and 2282), the interior x
-// 22..2281 and y 181..1291 (THE RING IS THE ONLY MARGIN, below; the main
-// canvas's own rows 291–1289 since the 15-px trim field, 2026-10-24); the
-// controls row 1293–1439, its case rows 1332–1400, its first case's columns
-// 21–89 and its last 2214–2282. A DIALOG'S TEXT (THE TEXT INSIDE THE BOX,
-// below) 12 px of plain field inside the ring on both axes: its pen on
-// column 34, its ascender line on row 193, its first baseline at y 209 (the
-// "l" 15.9 px tall), its wrap ending one past column 2269.
+// tablet's 2304 x 1440, 300 % and the strip pad's 13 W (re-derived
+// 2026-10-28, the canvas's frame columns and rows one hairline): the ring's
+// top slot 180–182 (the view bar's, directly under the band's rows 0–179,
+// the logo lane 0–71, with no caption, 2026-10-24), its bottom row 1292 and
+// its columns 23 and 2280 (the canvas's frame row and columns, the hairline
+// itself), the one-device-px ring on rows 180 and 1292 and columns 23 and
+// 2280, the interior x 24..2279 — the main canvas's own columns — and y
+// 181..1291 (THE RING IS THE ONLY MARGIN, below; the main canvas's own rows
+// 289–1291); the controls row 1293–1439, its case rows 1332–1400, its first
+// case's columns 23–91 and its last 2212–2280. A DIALOG'S TEXT (THE TEXT
+// INSIDE THE BOX, below) 12 px of plain field inside the ring on both axes:
+// its pen on column 36, its ascender line on row 193, its first baseline at
+// y 209 (the "l" 15.9 px tall), its wrap ending one past column 2267.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -79,7 +81,7 @@
 // starts on 1051), where the dock bar's border under the row made it 15 +
 // 18 + 14 = 47 until then. THE ROWS: the keyboard's band 1037–1439 (its
 // first key row's top 1051), the controls row 890–1036 (its case rows
-// 929–997), the ring's bottom slot 887–889, the interior y 181..888.
+// 929–997), the ring's bottom row 889, the interior y 181..888.
 //
 // THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (the hi-fi skin, above):
 // the lists, a dialog editor's line, a prompt's question and the progress
@@ -141,7 +143,7 @@ inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
     const ProgramRingColumns ring = program_ring_columns(a);
     const GuiRect trim  = top_trim_row_area(a);
     const GuiRect row   = modal_controls_row_rect(a, keyboard_h);
-    const int     lw    = program_line_px();
+    const int     lw    = hairline_px();   // the ring's line, as the interior's
     const int     y1    = row.y;
     const GuiRect box{ring.x, trim.y, ring.end - ring.x, y1 - trim.y};
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};

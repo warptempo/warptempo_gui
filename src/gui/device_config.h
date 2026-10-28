@@ -412,12 +412,13 @@ inline constexpr const char* kDefaultProjectsRepo =
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
 // pixel the lanes above the waveform — the program's band, its logo lane
-// 72 device px at 300 % over the case and the strip pad, and its canvas
-// column's 37 W — and below it — the canvas's bottom frame row 1 and row
-// 8's 49 — stand 388 device rows above the waveform and 200 below at
-// 400 %, 588 in all, leaving the tablet's 1440 rows 852 of waveform
-// (re-derived 2026-10-24 with the caption gone and the 15-px trim field,
-// main.cpp's stack record); they pass 1440 near 980 %, past which the
+// 72 device px at 300 % over the case and the strip pad, its canvas
+// column's 36 W and the canvas's top frame row, one device px — and below
+// it — the canvas's bottom frame row, one device px, and row 8's 49 W —
+// stand 385 device rows above the waveform and 197 below at 400 %, 582 in
+// all, leaving the tablet's 1440 rows 858 of waveform (re-derived
+// 2026-10-28 with the frame rows' hairlines, main.cpp's stack record);
+// they pass 1440 near 990 %, past which the
 // waveform is the zero height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
@@ -432,9 +433,9 @@ inline constexpr const char* kDefaultProjectsRepo =
 // right-anchored run covers the runs to its left (the overflow rule at
 // kIconRowViewPairs, paint_handler.cpp). The tablet's 2304-px panel holds
 // the row whole in both states up to about 375 % — the left runs on device
-// x 21..1421 and the right run on 1938..2282 at 300 % outside the view (the
+// x 23..1423 and the right run on 1936..2280 at 300 % outside the view (the
 // arithmetic is at paint_icon_row, paint_handler.cpp, its one statement,
-// re-derived 2026-10-27) — and past
+// re-derived 2026-10-28) — and past
 // that ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at

@@ -331,8 +331,9 @@ struct WaveformCache {
 // THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the canvas's top frame row's
-// foot) — the ruler lane, the marker lane and the frame row, 90 device rows
-// at 300 % where the whole strip from row 0 is 408. Every cue pixel is
+// foot) — the ruler lane, the marker lane and the frame row, 36 + 51 + 1 =
+// 88 device rows at 300 % where the whole strip from row 0 is 289
+// (re-derived 2026-10-28, the frame row one device px). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
 // the font: in paint_cues (render.cpp) every label's face box and its text,
 // shadow and ink alike, are painted under a clip of the label's span

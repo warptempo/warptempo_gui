@@ -1192,8 +1192,9 @@ void render_trim_flags(cairo_t* cr,
         viewport_end_sample, waveform_area.w);
 
     // THE BAR'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's margins):
-    // waveform_area's x and its effective width, the frame's side columns one
-    // line outside them.
+    // waveform_area's x and its effective width, the frame's side columns
+    // directly outside them (one hairline each, render.h's
+    // canvas_frame_column_w_px, 2026-10-28).
     const int lane_x   = waveform_area.x;
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
@@ -1201,32 +1202,35 @@ void render_trim_flags(cairo_t* cr,
 
     // THE BAR (the hi-fi skin 2026-10-23): ITS FIELD BLACK
     // (kCeViewBarField) under THE PROGRAM RING in the two ring tones, every
-    // line ONE DEVICE PX on its one-W slot's outer edge (render.h's line
-    // rule, hairline_px), the slot's other rows the black field — this bar's
-    // top line and left column the DARK tone, its right column the LIGHT,
-    // the side columns running UNBROKEN down through the ruler's and the
-    // marker lane's columns (paint_ruler_row) into the canvas ring's own
+    // line ONE DEVICE PX (render.h's line rule, hairline_px) — its top and
+    // foot rows each on its one-W slot's outer edge (program_line_px), the
+    // slot's other rows the black field; its side columns the canvas's frame
+    // columns, the hairline itself (canvas_frame_column_w_px, 2026-10-28) —
+    // this bar's top line and left column the DARK tone, its right column the
+    // LIGHT, the side columns running UNBROKEN down through the ruler's and
+    // the marker lane's columns (paint_ruler_row) into the canvas ring's own
     // (paint_canvas_column_frame) — and ITS FOOT LINE, the ruler's light line
     // over, the light tone on its slot's LAST row, against the ruler. (The
     // wood's ring and the brass's foot line of 2026-10-22, three px a line at
     // 300 %, are git history.)
     const GuiPalette& pal = palette();
     const int lw = program_line_px();
+    const int cw = canvas_frame_column_w_px();
     const int px = hairline_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     {
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-        paint_cell_rect(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw, lane_h},
+        paint_cell_rect(cr, GuiRect{lane_x - cw, lane_y, lane_w + 2 * cw, lane_h},
                         hex(kCeViewBarField));
-        paint_cell_rect(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw, px},
+        paint_cell_rect(cr, GuiRect{lane_x - cw, lane_y, lane_w + 2 * cw, px},
                         pal.ce_dark);
-        paint_cell_rect(cr, GuiRect{lane_x - lw, lane_y, px, lane_h}, pal.ce_dark);
-        paint_cell_rect(cr, GuiRect{lane_x + lane_w + lw - px, lane_y + px, px,
+        paint_cell_rect(cr, GuiRect{lane_x - cw, lane_y, px, lane_h}, pal.ce_dark);
+        paint_cell_rect(cr, GuiRect{lane_x + lane_w + cw - px, lane_y + px, px,
                                     lane_h - px},
                         pal.ce_hilight);
-        paint_cell_rect(cr, GuiRect{lane_x - lw + px, lane_y + lane_h - px,
-                                    lane_w + 2 * lw - 2 * px, px},
+        paint_cell_rect(cr, GuiRect{lane_x - cw + px, lane_y + lane_h - px,
+                                    lane_w + 2 * cw - 2 * px, px},
                         pal.ce_hilight);
     }
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
