@@ -12,10 +12,13 @@
 // SCALED OR EXPANDED ON THE MAIN THREAD, the open's included.
 //
 // A JOB is a page at a FIT BOX (the modal box's interior, its w x h,
-// modal_box_interior_rect) and the window's conversion bit as the GUI thread
-// read it (display_transform::active — the switch's two bits are the GUI
-// thread's, display_transform.h's head, so the job carries the answer), and
-// what it is to yield: THE PAINTED SURFACE (the viewer's cache), THE GRAY
+// modal_box_interior_rect) and, for a job that yields THE PAINTED SURFACE, the
+// window's conversion bit as the GUI thread read it (display_transform::active
+// — the switch's two bits are the GUI thread's, display_transform.h's head, so
+// the job carries the answer; a GRAY-ALONE job's bit is false and unread, its
+// bytes the authored sRGB page, and under the GL canvas every job is
+// gray-alone), and what it is to yield: THE PAINTED SURFACE (the cpu canvas's
+// cache, the viewer's), THE GRAY
 // BYTES (the viewer's gray store, AppState::ScoreViewer::gray; architect
 // 2026-10-26 ~22:10), or both. THREE KINDS, the viewer's feed choosing:
 //   * FROM THE FILE, BOTH — a page the cache wants and the store lacks;

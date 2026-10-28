@@ -645,7 +645,9 @@ struct GuiScoreViewer {
     void confirm_reset();
 
     // THE RUN LOOP'S TICK (main.cpp's on_tick, every tick, the viewer standing
-    // or not): the decoder's results drained into the cache; and while the
+    // or not): the decoder's results drained, the gray bytes into the gray
+    // store and the surfaces into the cache (the cpu canvas's alone), both
+    // outliving the viewer's close; and while the
     // viewer stands, the GL canvas's page report taken
     // (take_gpu_page_report; the GL build alone), the soundtrack's arrival
     // or failure repainting the face,

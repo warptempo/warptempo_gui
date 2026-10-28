@@ -2827,7 +2827,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
         // THE SCORE VIEWER'S TICK (2026-10-26; the soundtrack 2026-10-26
         // night), the player's fork: on EVERY tick it drains the page
-        // decoder into the cache, which outlives the viewer's close
+        // decoder, the gray bytes into the gray store and the surfaces into the
+        // cpu canvas's cache, both of which outlive the viewer's close
         // (GuiScoreViewer::tick); while the viewer stands the engine plays
         // the score's soundtrack or nothing — the project's audio stopped at
         // its open, the scanner never running — so its tick takes the
