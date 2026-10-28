@@ -1299,8 +1299,8 @@ enum class GuiHistoryCommitOutcome {
 // `GitHub: <word>` (github_status_word), and it selects what the publish
 // chord (Ctrl+Shift+S, either view, 2026-10-10) does: UpToDate commits, Ahead
 // commits or retries the push, Behind pulls, Offline asks GitHub again, and
-// the rest refuse with a card — a mirror device committing nothing
-// (run_publish_chord).
+// the rest refuse with a card — a mirror device committing nothing, its
+// UpToDate asking GitHub again (2026-10-28) (run_publish_chord).
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
 //               read that did not answer, a fetch that failed in the clone
@@ -1331,8 +1331,9 @@ enum class GuiGitHubStatus {
 const char* github_status_word(GuiGitHubStatus status);
 
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
-// at every project open, every `h` entry and the publish chord under
-// Offline: derive the clone from the source
+// at every project open, an `h` entry with no standing answer (Unchecked or
+// Offline, 2026-10-28; open_history_mode_fresh) and the publish chord under
+// Offline or a mirror's UpToDate: derive the clone from the source
 // through the same three steps resolve_history_walk_header takes
 // (resolve_repo_root_for_source, open_clone_for and the projects-home guard
 // clone_is_projects_home), read the branch, FETCH

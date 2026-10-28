@@ -8312,8 +8312,10 @@ struct AppState {
     // against GitHub as of the last fetch. PER PROJECT, born Unchecked with
     // this AppState, written on the MAIN THREAD alone: Checking when a check
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
-    // open, every `h` entry, and the publish chord, Ctrl+Shift+S, in either
-    // view while Offline), the
+    // open, an `h` entry while Unchecked or Offline (2026-10-28: a standing
+    // answer is reused, open_history_mode_fresh's head), and the publish
+    // chord, Ctrl+Shift+S, in either view while Offline or, on a mirror,
+    // UpToDate), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
     // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
@@ -13810,8 +13812,8 @@ inline bool history_pull_actionable(const AppState& a) {
 // silent until the measurement lands, as under UP TO DATE. AND THE DEVICE
 // IS AN AUTHOR (architect 2026-10-10, device_is_mirror above): a mirror takes
 // no commit road, so on a mirror this face is dark and the act cards
-// "This device is a mirror" (or, up to date, that GitHub has nothing newer).
-// Every other status
+// "This device is a mirror" (up to date, the mirror's Save is the CHECK's
+// face instead, below). Every other status
 // greys the face — Checking, Refused, Diverged and Unchecked, each carded by
 // the key at the act (run_publish_chord) — Behind is the PULL's face
 // instead (history_pull_actionable above) and Offline the CHECK's
@@ -13847,19 +13849,24 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // WOULD THE PUBLISH CHORD ASK GITHUB AGAIN? (architect 2026-09-28; the
 // chord Ctrl+Shift+S since 2026-10-10) — inside the `h`
 // view, on a visit with a clone, with no checkpoint publishing, while the
-// GitHub status reads OFFLINE: the reading
-// may be minutes old (the hotspot coming up after the view opened), so the
-// chord and the Save button's lift DISPATCH THE CHECK (dispatch_github_check, its
-// one dispatcher) and nothing else — row 8 reads `checking...` and then the
-// answer, and the next press acts on it. The face is live on these terms (a
-// face that advertises an act dispatches it) and greys under Checking like
+// GitHub status reads OFFLINE, AND ON A MIRROR UP TO DATE (2026-10-28): the
+// reading may be minutes old (the hotspot coming up after the view opened),
+// and the mirror's standing UpToDate is the one word the author can make
+// stale between two visits (the `h` entry reuses a standing answer,
+// open_history_mode_fresh's head), so the chord and the Save button's lift
+// DISPATCH THE CHECK (dispatch_github_check, its one dispatcher) and nothing
+// else — row 8 reads `checking...` and then the answer, and the next press
+// acts on it (Behind puts the Pull face up). The face is live on these terms
+// (a face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight. Read by Save's face; the act answers the same
 // status at its own fork (run_publish_chord), below the no-clone and
 // in-flight refusals this restates.
 inline bool history_github_recheck_actionable(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
            !a.history_checkpoint_in_flight &&
-           a.github_status == GuiGitHubStatus::Offline;
+           (a.github_status == GuiGitHubStatus::Offline ||
+            (a.github_status == GuiGitHubStatus::UpToDate &&
+             device_is_mirror(a)));
 }
 
 // IS THERE ANYTHING TO SAVE? — THE PLAIN SAVE'S ONE PREDICATE, and SAVE IS THE
@@ -16443,7 +16450,8 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // AND IN THE VIEW THE GITHUB STATUS IS A TERM (architect 2026-09-27):
         // the face is live where the chord would commit, retry the push,
-        // PULL or — under Offline since 2026-09-28 — ASK GITHUB AGAIN
+        // PULL or — under Offline since 2026-09-28, and on a mirror up to
+        // date since 2026-10-28 — ASK GITHUB AGAIN
         // (history_checkpoint_actionable, history_pull_actionable,
         // history_github_recheck_actionable), and grey on Checking, Refused,
         // Diverged and Unchecked, whose cards are the key's.

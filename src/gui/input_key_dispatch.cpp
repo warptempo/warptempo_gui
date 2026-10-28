@@ -1355,10 +1355,27 @@ static std::optional<std::size_t> find_commit_walk_member(
 // tablet has its own clone since 2026-09-27, so this fallback is for a source
 // outside every clone, or a clone that is not the projects home.)
 //
-// EVERY ENTRY CHECKS GITHUB (architect 2026-09-27): a visit that bootstrapped
-// a clone dispatches the GitHub check (dispatch_github_check), so row 8's
-// `GitHub:` segment is at most one visit old — and under `offline` the
-// publish chord asks again (run_publish_chord, architect 2026-09-28).
+// THE ENTRY CHECKS GITHUB WHERE NO ANSWER STANDS (architect 2026-09-27's
+// every-entry rule, narrowed 2026-10-28 on his "every time I pop in and out of
+// the history it says checking"): a visit that bootstrapped a clone dispatches
+// the GitHub check (dispatch_github_check) when the status reads UNCHECKED (no
+// reading: the project's own check could not classify, or a checkpoint ended
+// WriteFailed before taking one) or OFFLINE (the link may have come up since —
+// the publish chord asks again on the same reasoning, run_publish_chord,
+// architect 2026-09-28). UP TO DATE, AHEAD, BEHIND, DIVERGED and REFUSED
+// STAND, and row 8's segment says "as of the last check" truthfully, because
+// every act of this program that can move either side writes its own reading:
+// the PROJECT OPEN dispatches the check (main.cpp's open arm); the CHECKPOINT'S
+// completion writes the act's own fetched reading
+// (on_history_checkpoint_complete); a PULL writes UpToDate, and its plan and
+// its delayed refusals write what the refs show (run_history_pull_press,
+// execute_history_pull). THE OTHER DEVICE MOVING GITHUB BETWEEN TWO VISITS is
+// met by the act, not the word: the checkpoint fetches first and refuses on a
+// moved remote (RemoteMoved), the pull's plan refuses a branch no longer
+// strictly behind the refs the last fetch left (plan_history_pull's Moved),
+// and a MIRROR'S chord under UpToDate asks GitHub again rather than answer
+// from the word (run_publish_chord, 2026-10-28).
+// The cost is a stale word on row 8 until the next act or project open.
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
     // prefetch store now, and a store describing another source, another
@@ -1464,10 +1481,18 @@ void GuiInputHandler::open_history_mode_fresh() {
     // day, the trim bar's double-click having gone back to the ordinary span
     // framing.)
     app.history_mode = std::move(fresh);
-    // THE GITHUB CHECK, at every entry that bootstrapped a clone (the ruling
-    // is at the head of this owner): the status reads Checking until the
-    // worker answers, and Save's face greys meanwhile.
-    if (history_remote_walk_available(app)) dispatch_github_check();
+    // THE GITHUB CHECK, at an entry that bootstrapped a clone WHERE NO ANSWER
+    // STANDS (the ruling and its proof are at the head of this owner):
+    // Unchecked or Offline dispatches, and the status reads Checking until
+    // the worker answers, Save's face greying meanwhile; every other reading
+    // (Checking itself included — an answer is already on its way) is shown
+    // as it stands, a Refused one until the piece is reopened or an act
+    // re-reads it (architect 2026-10-28).
+    if (history_remote_walk_available(app) &&
+        (app.github_status == GuiGitHubStatus::Unchecked ||
+         app.github_status == GuiGitHubStatus::Offline)) {
+        dispatch_github_check();
+    }
     measure_history_head_delta();
     drop_lane_stash_across_history_edge();
     // AND THE LANE IS REPUBLISHED IN THIS PRESS (2026-08-07): the view opens
@@ -3246,18 +3271,19 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 //   - NO CLONE TO COMMIT INTO (architect 2026-09-04) cards the bootstrap's
 //     reason under the product's one spelling of the fact, kHistoryUnavailable.
 //   - THE GITHUB STATUS (architect 2026-09-27): Checking, Refused, Unchecked
-//     and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
-//     (dispatch_github_check, architect 2026-09-28) and nothing else, the
-//     answer being what the next press acts on — silent in the view, whose
-//     row 8 shows the word, and a card outside it; BEHIND is the PULL ON
-//     EITHER ROLE (run_history_pull_press, its OK / Cancel confirmation when
-//     the pull changes the open piece; the press owns the one road),
-//     reached before the role's gate below.
+//     and Diverged each card their sentence; OFFLINE, AND ON A MIRROR UP TO
+//     DATE, ASK GITHUB AGAIN (dispatch_github_check; architect 2026-09-28,
+//     the mirror's UpToDate 2026-10-28 — the one word the author can make
+//     stale between two visits) and nothing else, the answer being what the
+//     next press acts on — silent in the view, whose row 8 shows the word,
+//     and a card outside it; BEHIND is the PULL ON EITHER ROLE
+//     (run_history_pull_press, its OK / Cancel confirmation when the pull
+//     changes the open piece; the press owns the one road), reached before
+//     the role's gate below.
 //   - THE ROLE (architect 2026-10-10, device_is_mirror, app_state.h): A MIRROR
-//     TAKES NO COMMIT ROAD — up to date, it cards that GitHub has nothing
-//     newer (its chord is the pull road alone); AHEAD, a commit GitHub lacks
-//     and a push retry, refuses on the mirror's card. This is the commit
-//     road's one gate, at its owner.
+//     TAKES NO COMMIT ROAD — its chord is the pull road and the asking above
+//     alone; AHEAD, a commit GitHub lacks and a push retry, refuses on the
+//     mirror's card. This is the commit road's one gate, at its owner.
 //   - On an AUTHOR, UP TO DATE OR AHEAD, THE HEAD DELTA DECIDES. Unmeasured
 //     (the walk's member 0 not yet delivered — the bit rests TRUE, and reading
 //     that as "nothing new" under AHEAD would push without asking whether real
@@ -3301,13 +3327,24 @@ void GuiInputHandler::run_publish_chord() {
         notifications.notify(AppState::NotificationClass::Normal,
                              "GitHub is still being checked");
         return;
+    case GuiGitHubStatus::UpToDate:
+        // AN AUTHOR'S UP TO DATE COMMITS (below): its act fetches first and
+        // reads Behind / Diverged before committing. A MIRROR'S is the
+        // Offline arm's (the reason there).
+        if (!device_is_mirror(app)) break;
+        [[fallthrough]];
     case GuiGitHubStatus::Offline:
-        // THE READING MAY BE STALE (architect 2026-09-28): a view opened
-        // while the link was still coming up would read offline for its
-        // whole life. So the press asks again through the check's one
-        // dispatcher and does nothing else: in the view row 8 turns to
-        // `checking...` and then the answer, and the next press acts on it.
-        // No card in the view — an offline answer is on row 8, which the
+        // OFFLINE, AND ON A MIRROR UP TO DATE, ASK GITHUB AGAIN (architect
+        // 2026-09-28 for Offline; the mirror's UpToDate 2026-10-28): THE
+        // READING MAY BE STALE — a view opened while the link was still
+        // coming up would read offline for its whole life, and the mirror's
+        // standing UpToDate is the one word the author can make stale
+        // between two visits (the `h` entry reuses a standing answer,
+        // open_history_mode_fresh's head), so the act never answers from it.
+        // The press asks again through the check's one dispatcher and does
+        // nothing else: in the view row 8 turns to `checking...` and then
+        // the answer, and the next press acts on it (Behind puts the Pull
+        // face up). No card in the view — row 8 shows the asking, which the
         // screen already shows truthfully; OUTSIDE IT row 8 carries no
         // GitHub word, so the press says what it did (2026-10-10, the
         // head delta's asymmetry above, for its reason).
@@ -3347,14 +3384,11 @@ void GuiInputHandler::run_publish_chord() {
         run_history_pull_press(*session);
         return;
     case GuiGitHubStatus::Ahead:
-    case GuiGitHubStatus::UpToDate:
         break;
     }
     if (device_is_mirror(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             app.github_status == GuiGitHubStatus::UpToDate
-                                 ? "GitHub has nothing newer"
-                                 : "This device is a mirror");
+                             "This device is a mirror");
         return;
     }
     const std::string& dir = session->project_directory();

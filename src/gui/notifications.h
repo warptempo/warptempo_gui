@@ -187,12 +187,13 @@
 //     names the fix), "GitHub has not been checked"; the pull's synchronous
 //     refusals "Pull refused: this device has moved", "Pull refused:
 //     GitHub's checkpoint of this piece would not load" and "Pull failed:
-//     nothing was changed"; the role's two (2026-10-10), "This device is a mirror" and
-//     "GitHub has nothing newer"; and outside the view, where no face shows
+//     nothing was changed"; the role's one (2026-10-10), "This device is a
+//     mirror"; and outside the view, where no face shows
 //     the head delta, "Nothing to commit" and "The checkpoints are still
-//     being read". UNDER `offline` THE CHORD ASKS GITHUB AGAIN (architect
-//     2026-09-28) and cards nothing in the view, where row 8's state cell
-//     carries the answer, and "Asking GitHub again" outside it.
+//     being read". UNDER `offline`, AND ON A MIRROR `up to date` (2026-10-28),
+//     THE CHORD ASKS GITHUB AGAIN (architect 2026-09-28) and cards nothing in
+//     the view, where row 8's state cell carries the answer, and "Asking
+//     GitHub again" outside it.
 //     The GitHub CHECK itself raises nothing — its failing readings print one
 //     stderr line each and the status word is state.
 //
