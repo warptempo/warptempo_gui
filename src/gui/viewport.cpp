@@ -807,11 +807,17 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // bounds is exact in the level's double, and the prior start is on its
 // level's grid already). A pan, Center, FIT, a tab switch, an S/T flip or
 // any other camera writer between presses moves the compared fields and
-// ends the run; the next press seats afresh. A window resize ends the run
-// too, since the centre column itself moved: the next press zooms about
-// the frame centred now. Near a wall the clamp slides the held frame off
-// the centre column and the run keeps that same frame, so the run is
-// reversible off the walls as the Ctrl+drag's anchor is.
+// ends the run; the next press seats afresh. The test is posture identity, so
+// a detour that returns the four fields to exactly the step's own copy — a
+// Ctrl+Tab to the other tab and back, which restores that tab's saved start
+// and level, or FIT followed by its recall — is indistinguishable from the
+// run and continues it: the held frame still sits within half a column of
+// the centre column, the rest the detour returned to, so the reuse costs
+// nothing and keeps IN then OUT reversible across the detour. A window resize
+// ends the run too, since the centre column itself moved: the next press
+// zooms about the frame centred now. Near a wall the clamp slides the held
+// frame off the centre column and the run keeps that same frame, so the run
+// is reversible off the walls as the Ctrl+drag's anchor is.
 void Viewport::zoom_step(double levels) {
     if (!zoom_step_actionable(app, audio, levels)) return;
     const GuiRect wf_area = waveform_area(app);

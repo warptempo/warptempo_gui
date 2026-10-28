@@ -165,7 +165,7 @@ After an OS reinstall, install the packages (above), then restore these from you
 ```bash
 ls -l ~/.android/debug.keystore ~/.android/adbkey ~/.config/warptempo_gui/deploy_key "$WARPTEMPO_TABLET_DEPLOY_KEY"
 cat ~/.config/warptempo_gui/config
-# nine lines, the keys above in that order, every one required. Any other line (sync_path, or any
+# eleven lines, the keys above in that order, every one required. Any other line (sync_path, or any
 # retired key: Migrating) stops the program at startup: delete it with the program not running.
 ```
 

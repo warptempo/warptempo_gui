@@ -251,8 +251,9 @@ ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000 rain_fade_in_ms
 # the triangle) at 8 rows authored at 300 %, the staircase, 22 and a gap
 # of 8 (src/gui/render.h, src/gui/gui_font.h, src/gui/cool_edit_paint.h);
 # and the lit LED's glow tuning key of 2026-10-23, settled 2026-10-26 at 4
-# device px and a constant in the program since (src/gui/materials.cpp);
-# so setup writes no tuning line.
+# device px and a constant in the program since (src/gui/materials.cpp).
+# The tuning keys setup DOES write are ADDED_LINES' rain lines above, each
+# leaving this list's way when it settles.
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected

@@ -4869,7 +4869,15 @@ struct AppState {
     // active_audio_view; camera_posture_identity above stays the chokepoint's
     // alone. Any other camera writer between presses (a pan, Center, FIT, a
     // tab switch, an S/T flip) moves those fields and so ends the run, with no
-    // hook at the chokepoint. `width` is the waveform area's width the step
+    // hook at the chokepoint. The test is POSTURE IDENTITY, so a detour that
+    // returns the four fields to exactly the step's own copy — a Ctrl+Tab to
+    // the other tab and back, which restores that tab's saved start and level
+    // (GuiActiveViews::switch_active_tab_view_to), or FIT followed by its
+    // recall — is indistinguishable from the run and continues it: the held
+    // frame still sits within half a column of the centre column, the rest
+    // the detour returned to, so the reuse costs nothing and keeps IN then
+    // OUT reversible across the detour (the planner's reading 2026-10-28).
+    // `width` is the waveform area's width the step
     // read: a window resize moves the centre column itself, so it ends the
     // run too and the next press zooms about the frame centred now. Per
     // project, invalid at every project open
