@@ -1447,28 +1447,28 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
-    // row's twenty-eight and row 8's twenty-one (row 1's three menu anchors
+    // row's twenty-nine and row 8's twenty-one (row 1's three menu anchors
     // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-27, Zoom In and Zoom Out back in
-    // front of Zoom to Fit):
-    //   THE ICON ROW, 19 + 4 + 1 + 4 = 28 — the left walk's nineteen
+    // counts re-derived from them 2026-10-28, the Rain lamp closing the third
+    // run):
+    //   THE ICON ROW, 20 + 4 + 1 + 4 = 29 — the left walk's twenty
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
     //   Resets and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
-    //   Tooltips and the Score key), the history view's four stand-ins (Revert and Load in
+    //   Tooltips, the Score key and the Rain lamp), the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right behind it in one run (kIconRowViewPairs, Source /
-    //   Target and Warp / Phase Reset since 2026-10-14) — 24
+    //   Target and Warp / Phase Reset since 2026-10-14) — 25
     //   standing outside the `h` view (the four stand-ins publishing empty
-    //   rects) and 17 inside it (the stand-ins in, Undo's group and the
+    //   rects) and 18 inside it (the stand-ins in, Undo's group and the
     //   iteration group out, and the view's hide leaving Open Project and
     //   Save's group whole, Zoom In, Zoom Out, Zoom to Fit and Waveform
-    //   Magnification (since 2026-10-12), Play Renders (since 2026-10-25) and
-    //   Enable Tooltips alone of theirs);
+    //   Magnification (since 2026-10-12), Play Renders (since 2026-10-25),
+    //   Enable Tooltips and Rain (since 2026-10-28) alone of theirs);
     //   ROW 8, 2 + 8 + 4 + 5 + 2 = 21 — the skips (Go to Start, Go to End,
     //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining

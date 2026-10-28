@@ -1,6 +1,7 @@
 #include "playback.h"
 
 #include "playback_common.h"
+#include "rain.h"   // rain_mix_block — the second voice the callback sums
 
 #include <aaudio/AAudio.h>
 
@@ -219,16 +220,25 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
         // life in now (the lifecycle block at the head — the stream stays
         // started between plays), and a stopped-by-the-callback stream would
         // both leave the main thread's `started` flag lying about the device
-        // and put the start transient back into the next play. NO SAMPLE IS
-        // READ HERE, which is what lets stop()'s fence count callbacks and
-        // what makes an idle stream harmless to a buffer the main thread is
-        // about to replace.
-        impl->callback_cycles.fetch_add(1, std::memory_order_release);
-        return AAUDIO_CALLBACK_RESULT_CONTINUE;
+        // and put the start transient back into the next play. NO SAMPLE OF
+        // THE BOUND BUFFER IS READ HERE — the rain below reads its own bank —
+        // which is what lets stop()'s fence count callbacks and what makes an
+        // idle stream harmless to a buffer the main thread is about to
+        // replace.
+    } else {
+        playback_render_block(impl->state, session_word, channel_buffers,
+                              kPlaybackOutputChannels, frames, channel_count);
     }
-
-    playback_render_block(impl->state, session_word, channel_buffers,
-                          kPlaybackOutputChannels, frames, channel_count);
+    // THE SECOND VOICE AND THE CLIP, ON BOTH ARMS (2026-10-28,
+    // playback_common.h's head): the rain summed under what the arm wrote —
+    // the stream runs between plays, so the bed plays there too — then every
+    // sample clamped.
+    if (impl->state.rain != nullptr)
+        rain_mix_block(*impl->state.rain, channel_buffers,
+                       kPlaybackOutputChannels, frames, channel_count,
+                       impl->state.output_rate.load(std::memory_order_relaxed));
+    playback_clip_block(channel_buffers, kPlaybackOutputChannels, frames,
+                        channel_count);
     impl->callback_cycles.fetch_add(1, std::memory_order_release);
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
@@ -588,6 +598,12 @@ void report_xrun_count(GuiPlayback::Impl& impl) {
 
 GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
 GuiPlayback::~GuiPlayback() { shutdown(); }
+
+// The forward (contract at the declaration): before init, so no data
+// callback exists to race the store.
+void GuiPlayback::attach_rain(GuiRainVoice* voice) {
+    impl_->state.rain = voice;
+}
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                        int64_t total_frames, int64_t domain_offset) {

@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cstdint>
 
+struct GuiRainVoice;   // rain.h — the second voice the callbacks sum
+
 // THE PORTABLE HALF OF THE PLAYBACK ENGINE. playback.h is the CONTRACT and
 // nothing here changes it: this file exists because that contract has two
 // implementations — the JACK client (playback.cpp) and the AAudio stream
@@ -48,6 +50,17 @@
 // predictor's speed input. What STAYS is the rate ratio above, which is not the
 // same thing and never was: AAudio may hand the engine a rate the source is not
 // recorded at, and that has to be rescaled whatever the speed.
+//
+// THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the rain). Every
+// callback of either backend, on BOTH of its arms — the silence arm between
+// plays and the render body's — SUMS the app's one rain voice into the block
+// the engine just wrote (rain_mix_block, rain.h: its own bank, its own rate
+// ratio, its own fades; GuiPlaybackState::rain below, attached before the
+// device opens), and then CLIPS the block: every sample clamped to [-1, 1]
+// (playback_clip_block below), always. The voice reads its own bank and NO
+// SAMPLE OF THE BOUND BUFFER, so the silence arm's "no sample is read" — the
+// premise of stop()'s fence — holds as it stood. A SUSPENDED DEVICE (rate 0)
+// sums nothing: the voice's positions hold as the engine's do.
 
 // Sources are stereo-only (the channels != 2 load refusal), so playback runs
 // exactly two output channels on every backend — two JACK ports, or the two
@@ -93,6 +106,14 @@ struct GuiPlaybackState {
     // Written by the backend at open/close and, on JACK, from the graph's
     // sample-rate callback; read from both threads.
     std::atomic<uint32_t> output_rate{0};
+
+    // THE SECOND VOICE (2026-10-28, the head's paragraph): the app's one
+    // rain voice (rain.h), SET BEFORE THE DEVICE OPENS (GuiPlayback::
+    // attach_rain, run_project's first act on its engine) and read by the
+    // callbacks, never changing while a callback can run — so a plain
+    // pointer, no atomic. Null mixes nothing. bind and clear leave it alone:
+    // it is the engine's attachment, not the binding's.
+    GuiRainVoice* rain = nullptr;
 
     // Borrowed source buffer, IN ONE OF TWO FORMATS (GuiBoundAudio,
     // playback.h): `samples` for float32, `samples_i16` for PCM16, exactly
@@ -412,6 +433,15 @@ struct GuiPlaybackState {
 // this runs on the audio thread.
 void playback_write_silence(float* const* channel_buffers, int channel_count,
                             int64_t stride, int64_t first, int64_t frames);
+
+// THE CLIP (the architect's, 2026-10-28): every output sample of the block
+// clamped to [-1, 1] AFTER THE TWO VOICES ARE SUMMED, in both backends,
+// ALWAYS — no key, no condition. The music alone is unchanged for every
+// in-range sample, and a target over full scale clips here in the app instead
+// of at the converter: in his words, the same sound. The stride is
+// playback_write_silence's. No allocation, no I/O, no locks — audio thread.
+void playback_clip_block(float* const* channel_buffers, int64_t stride,
+                         int64_t frame_count, int channel_count);
 
 // THE RENDER BODY. Copy `frame_count` output frames at the current output rate,
 // advancing the cursor. At the fill's window end it either WRAPS — a seated

@@ -568,10 +568,10 @@ GuiPlatform::~GuiPlatform() {
 // stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
 // unit's change, 44 device px — and its earlier values are git history and
 // a closed question.) The icon row fits this panel whole (the arithmetic is
-// at paint_icon_row, paint_handler.cpp: the left runs' 1401, the run gap's
+// at paint_icon_row, paint_handler.cpp: the left runs' 1470, the run gap's
 // 45 and the right run's 345 of the ring's 2258 device px outside the `h`
 // view at 300, re-derived 2026-10-28 with the ring's columns the canvas's
-// frame hairlines), clearing it by 467.
+// frame hairlines and again with the Rain lamp), clearing it by 398.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -616,6 +616,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // first start's read-back refuses on the required `role` key;
     // `warptempo_sync setup` writes `role=author` (GuiDeviceRole,
     // device_config.h).
+    // THE RAIN'S TWO (architect 2026-10-28), spelled: the level -9 dB, "the
+    // rain is a masker", and the tuning crossfade's starting 4000 ms — the
+    // laptop's template the same (device_config.h's head).
+    cfg.rain_level        = -9;
+    cfg.rain_crossfade_ms = 4000;
     return cfg;
 }
 

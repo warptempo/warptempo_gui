@@ -14,6 +14,7 @@
 #include "palette_file.h"   // the Waveform row's domain (kGuiBuiltinPalettes)
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
+#include "rain.h"            // the background sound (AppState::rain)
 #include "score_audio.h"     // the score's soundtrack (AppState::score_audio)
 #include "score_page_worker.h"  // the page decoder (ScoreViewer::decoder)
 #include "score_pages.h"     // the score folder's table (AppState::score)
@@ -2053,8 +2054,8 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (49 chord
-// rows = 49 = kRedesignButtonCount since 2026-10-27, the count's own
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (50 chord
+// rows = 50 = kRedesignButtonCount since 2026-10-28, the count's own
 // statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -2080,9 +2081,8 @@ enum class RedesignButton {
     // layout: the active tab's name stands in row 8 right of the clock, and
     // the switch is Ctrl+Tab, Switch Tab and the walk's ctrl-click. Their
     // record is git history.)
-    // THE BACKGROUND SOUND UMBRELLA (planner B's pending act, 2026-10-22):
-    // when its enumerator lands it seats AFTER THE SCORE KEY, which closes
-    // the band's third run since 2026-10-26 (kIconRowButtons).
+    // THE BACKGROUND SOUND is IconRain, the band's third run's last since
+    // 2026-10-28 (its entry below, after the Score key).
     // Row 4, the icon row, in painted order: OPEN PROJECT alone at its head
     // (architect 2026-10-07, below), then the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP from the
@@ -2100,8 +2100,8 @@ enum class RedesignButton {
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
     // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
-    // 2026-10-01: help comes after settings), THE SCORE KEY closing it since
-    // 2026-10-26 — and THE HISTORY GROUP — the
+    // 2026-10-01: help comes after settings), THE SCORE KEY (2026-10-26) and
+    // THE RAIN LAMP closing it since 2026-10-28 — and THE HISTORY GROUP — the
     // HISTORY OPENER leading its WALK LAMP, its four companions and (since
     // 2026-09-01) the LOAD IN PLACE, which left the render-entry group for
     // it; the six behind the opener stand only in the `h` view (the walk
@@ -2531,8 +2531,9 @@ enum class RedesignButton {
     // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
-    // THE SCORE (architect 2026-10-26), the band's third run's LAST, directly
-    // after Enable Tooltips: BARE `m`, wearing SCORE, opens THE SCORE VIEWER
+    // THE SCORE (architect 2026-10-26), the band's third run's last but one
+    // since 2026-10-28 (the Rain lamp after it), directly after Enable
+    // Tooltips: BARE `m`, wearing SCORE, opens THE SCORE VIEWER
     // (score_viewer.h) — the movement's sheet music one page at a time in
     // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
     // stands and its press then CLOSES it (is_overlay_opener, the folder
@@ -2543,6 +2544,26 @@ enum class RedesignButton {
     // grid iterations — viewing authors nothing; the viewer's range keys
     // carry the locks themselves. No modifier, no repeat.
     IconScore,
+    // THE RAIN (architect 2026-10-28), the band's third run's LAST, directly
+    // after the Score key: BARE `w`, A LAMP LIKE FOLLOW — the fixed legend
+    // RAIN, the LED lit while the bed plays (GuiRain::lit, rain.h, the one
+    // owner of the sound: a continuous second voice under everything the
+    // engine plays, at one level, never ducked). Its press is GuiRain::toggle,
+    // the chokepoint bare `w` reaches too. It GREYS WITH NO SOUNDS FOLDER
+    // (GuiRain::available — `sounds/rain/` beside the device config, the
+    // `tiles/` shape: present plays, absent greys, no card) and DARKENS ITSELF
+    // if the load fails (GuiRain::tick, the key greying from then on). It is
+    // DEVICE STATE, NOT THE PIECE: admitted on a locked tab and under grid
+    // iterations (bare `w` on the read-only allowlist, which the iteration
+    // gate inherits) and in the `h` view (the planner's call, Tooltips' class
+    // — on that mode's allowlist); under a standing overlay it is dead as
+    // every roster key but the opener (the inherited rule,
+    // redesign_button_enabled's overlay arm and the overlays' routers). OFF
+    // AT EVERY LAUNCH — no device key holds the lamp (his "iPhone requires
+    // enabling each time"). THE ONE SOUND: RAIN is committed as the sound, the
+    // folder's name the hook for a later sound choice, which is not built. No
+    // modifier, no repeat.
+    IconRain,
     // THE HISTORY GROUP — its own again since 2026-08-18
     // (architect: "place a separator before the history button, and place
     // cumulative/etc after the history button"). The OPENER leads it: bare
@@ -3115,20 +3136,20 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-27):
-// THIRTY in row 4's enum block and NINETEEN in the bottom row's — 49
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-28):
+// THIRTY-ONE in row 4's enum block and NINETEEN in the bottom row's — 50
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
 // moving up to the band 2026-10-25; Toggle Session History and Toggle
 // Cumulative returned 2026-10-26, and the Score key came the same day; Zoom
-// In and Zoom Out returned 2026-10-27).
-// PAINTED, the split is 28 + 21: HistoryOlder and HistoryNewer, enumerated
+// In and Zoom Out returned 2026-10-27; the Rain lamp came 2026-10-28).
+// PAINTED, the split is 29 + 21: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 49;
+inline constexpr int kRedesignButtonCount = 50;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3268,7 +3289,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // (Zoom In, Zoom Out, Zoom to Fit, the magnification lamp, Follow), the
 // iteration group (the BPM opener, grid iterations, Flatten —
 // the group the walk lamp and Cumulative replace, since 2026-10-26 again)
-// and the render-entry group (Play Renders .. the Score key). The right
+// and the render-entry group (Play Renders .. the Rain lamp). The right
 // run's leaders — the history opener and the view pairs' Source and Warp —
 // are named for the roster's order alone: the right run is not walked
 // (kIconRowHistoryOpener), so nothing asks them here.
@@ -3309,7 +3330,7 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // Render since 2026-10-25), Zoom In (Zoom In .. Flatten: the zoom and
 // iteration groups merged, the step pair at their head since 2026-10-27)
 // and Play Renders (Play
-// Renders .. Enable Tooltips, the render-entry group as it stood). THE
+// Renders .. Rain, the render-entry group as it stands). THE
 // GROUPS ABOVE STAY THE UNIT of the `h` view's stand-in swap and hide
 // (icon_row_walk, paint_handler.cpp); a run is the picture's unit alone, so
 // a group swapped or hidden whole leaves its run standing on the members
@@ -5039,6 +5060,17 @@ struct AppState {
     // gui_main and never null while the GUI runs; the ownership rationale is
     // the callers inventory at write_device_config, device_config.h.
     DeviceConfig* device_config = nullptr;
+
+    // THE BACKGROUND SOUND (architect 2026-10-28, rain.h): the app's ONE
+    // GuiRain, owned by gui_main and reached by pointer like the device
+    // config above — the lamp outlives every project (device state), so it
+    // cannot live in this per-project struct. Seated at each AppState's
+    // construction by run_project and never null while the GUI runs. Its
+    // readers: the RAIN key's enabled and selected arms
+    // (redesign_button_enabled, redesign_button_selected), bare `w`'s arm
+    // (GuiRain::toggle) and the settings editor's two rain arms
+    // (set_level_db, set_crossfade_ms).
+    GuiRain* rain = nullptr;
 
     // THE OPEN PROJECT'S NAME — the name of the folder DIRECTLY UNDER the
     // projects path that holds this source, which is what the project model
@@ -15511,6 +15543,17 @@ inline bool redesign_button_enabled(const AppState& a,
         // arm above keeps it lit as the way out.
         case RedesignButton::IconScore:
             return a.score.has_value();
+        // THE RAIN KEY IS LIVE WITH A SOUNDS FOLDER AND DEAD WITHOUT ONE
+        // (architect 2026-10-28): GuiRain::available, the probe's answer — no
+        // `sounds/rain/` beside the device config, a folder with no `.wav`, a
+        // `.wav` out of shape, or a load that failed (GuiRain::tick darkens the
+        // lamp and drops the answer). No lock greys it (bare `w` is on the
+        // read-only allowlist, which the iteration gate inherits), and the `h`
+        // view's partition above answers LIVE (bare `w` on that allowlist,
+        // 2026-10-28), so the view neither greys nor hides it; a standing
+        // overlay's arm above greys it with the whole roster but the opener.
+        case RedesignButton::IconRain:
+            return a.rain != nullptr && a.rain->available();
         // THE HISTORY BUTTON MIRRORS TWO REFUSALS, BOTH OF THE ENTRY: the
         // iteration lock and the publishing flight. The view's own acts push
         // history — the revert, the two loads, the checkpoint's save — and two
@@ -16704,6 +16747,14 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
+        // THE RAIN LAMP (architect 2026-10-28): the same toggle pattern over a
+        // bit that is not AppState's — GuiRain::lit, the voice's `target` bare
+        // `w` flips (rain.h) — so the LED lights at the press, before the load
+        // lands and the fade-in begins, and the lit face and the lamp cannot
+        // drift. A failed load darkens it from the tick (GuiRain::tick); the
+        // per-tick comparator carries that edge.
+        case RedesignButton::IconRain:
+            return a.rain != nullptr && a.rain->lit();
         // THE CUMULATIVE READING'S LAMP (2026-08-08; reinstated architect
         // 2026-10-26), the toggle pattern over a bit that is NOT the mode's:
         // history_cumulative is a program-session preference, so this reads
@@ -17644,6 +17695,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the press under the standing viewer being the same key's close.
         case RedesignButton::IconScore:
             return {"Score (M)", nullptr};
+        // THE RAIN (architect 2026-10-28), one line, HIS OWN WORDS FOR IT: a
+        // lamp whose tooltip names THE SOUND rather than "Toggle …" — the one
+        // lamp that does, a deliberate exception to the lamp rule at this
+        // table's head, the sound being what the key is; bare `w` admits no
+        // modifier.
+        case RedesignButton::IconRain:
+            return {"Rain (W)", nullptr};
         // SETTINGS (architect 2026-09-29): bare `;` opens the settings
         // prompt. The accelerator names the cap, the table's punctuation
         // rule. The name is the retired menu anchor's own word (2026-10-21),
@@ -18027,6 +18085,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconSettings:              return "SETUP";
         case RedesignButton::IconTooltips:              return "TIPS";
         case RedesignButton::IconScore:                 return "SCORE";
+        case RedesignButton::IconRain:                  return "RAIN";
         case RedesignButton::IconHistory:               return "HISTORY";
         case RedesignButton::SessionHistory:            return "SESSION";
         case RedesignButton::HistoryCumulative:         return "CUMUL";
@@ -18071,7 +18130,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // toggle acts keep their caption because they still are toggling": every
 // Toggle-named key (MAGNIFY, FOLLOW, TIPS, LOCK, DRAG, ADD SEL, DISABLE,
 // INHERIT outside the grid lamp, SESSION and CUMUL in the `h` view since
-// 2026-10-26), the lamps and the two radio pairs keep
+// 2026-10-26), the lamps (RAIN among them, 2026-10-28) and the two radio pairs keep
 // their words, the depth and the LED being the state. DISABLE KEEPS ITS
 // SHORTHAND (architect 2026-10-25: "we already use shorthand, like ADD SEL
 // … a lot of these stereo interfaces didn't use the exact English"). A key

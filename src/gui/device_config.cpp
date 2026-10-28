@@ -20,7 +20,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (SEVEN keys since 2026-10-26, the LED
+// REQUIRED SET, every one of them (NINE keys since 2026-10-28, the rain's
+// two appended after `role` — `rain_level`, permanent, and the tuning key
+// `rain_crossfade_ms` at the end; SEVEN 2026-10-26, the LED
 // glow settled to a constant, materials.cpp's kLedGlowPx; EIGHT 2026-10-23,
 // `strip_pad` settled to a constant, program_spec.h; nine that day, the
 // bevel pair gone and the LED glow's key appended; TEN 2026-10-21 evening,
@@ -56,9 +58,13 @@ namespace {
 // key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
 // the tuning keys keep the end where they leave from.
 //
-// THE TUNING KEYS stand after `role`, where the tuning phases' keys have
-// always stood, each leaving when he settles its value; none stands since
-// 2026-10-26. (The LED glow's stood there 2026-10-23 to 2026-10-26, settled at
+// THE RAIN'S LEVEL (architect 2026-10-28): `rain_level` APPENDED after
+// `role`, the permanent keys' end, `role`'s own road.
+//
+// THE TUNING KEYS stand after the permanent keys, where the tuning phases'
+// keys have always stood, each leaving when he settles its value:
+// `rain_crossfade_ms` since 2026-10-28, alone (none stood 2026-10-26 to
+// then). (The LED glow's stood there 2026-10-23 to 2026-10-26, settled at
 // 4 device px, materials.cpp's kLedGlowPx; `strip_pad` before it
 // 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's
 // strip_pad_px; `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23,
@@ -72,6 +78,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform",
     "true_colors",
     "role",
+    "rain_level",
+    "rain_crossfade_ms",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -82,6 +90,20 @@ constexpr std::span<const char* const> kDeviceConfigRequiredKeys(
 std::string format_gui_scale_percent(int percent) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", percent);
+    return std::string(buf);
+}
+
+// The two rain keys' canonical spellings (2026-10-28): `%d`, exactly what
+// parse_canonical_config_int admits back (device_config.h).
+std::string format_rain_level(int db) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", db);
+    return std::string(buf);
+}
+
+std::string format_rain_crossfade_ms(int ms) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", ms);
     return std::string(buf);
 }
 
@@ -141,6 +163,12 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
                                                    : kDeviceRoleMirror;
+        } else if (k == "rain_level") {
+            // The level's canonical integer (format_rain_level).
+            s += format_rain_level(cfg.rain_level);
+        } else if (k == "rain_crossfade_ms") {
+            // The tuning key's canonical integer (format_rain_crossfade_ms).
+            s += format_rain_crossfade_ms(cfg.rain_crossfade_ms);
         }
         s += '\n';
     }
@@ -255,6 +283,25 @@ std::expected<DeviceConfig, std::string> read_device_config(
             } else {
                 return bad_value(ln, key, value, kDeviceRoleGrammarReason);
             }
+            return {};
+        }
+        // THE RAIN'S TWO KEYS (2026-10-28): each under its one grammar owner
+        // (parse_rain_level, parse_rain_crossfade_ms, device_config.h),
+        // required like every key; any other spelling the launch's hard fail.
+        if (key == "rain_level") {
+            const std::optional<int> db = parse_rain_level(value);
+            if (!db) {
+                return bad_value(ln, key, value, kRainLevelGrammarReason);
+            }
+            out.rain_level = *db;
+            return {};
+        }
+        if (key == "rain_crossfade_ms") {
+            const std::optional<int> ms = parse_rain_crossfade_ms(value);
+            if (!ms) {
+                return bad_value(ln, key, value, kRainCrossfadeGrammarReason);
+            }
+            out.rain_crossfade_ms = *ms;
             return {};
         }
         return warptempo_parse::prefix_line_error(

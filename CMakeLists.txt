@@ -279,6 +279,11 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/score_audio.cpp
     src/gui/score_page_worker.cpp
     src/gui/score_viewer.cpp
+    # THE RAIN (2026-10-28): the background sound — the probe of the sounds
+    # folder beside the device config, its loader thread, and the second
+    # voice both playback devices sum under the engine's (rain.h). GUI-only:
+    # the CLI plays nothing.
+    src/gui/rain.cpp
     # THE CAR TRANSPORT (2026-09-17): the head unit's SECOND owner — the
     # cluster that drives the project's own transport while the render player
     # is closed, and publishes the console's three lines from the tab, the

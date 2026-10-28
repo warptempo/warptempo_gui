@@ -1,6 +1,7 @@
 #include "playback.h"
 
 #include "playback_common.h"
+#include "rain.h"   // rain_mix_block — the second voice the callback sums
 
 #include <jack/jack.h>
 
@@ -98,12 +99,23 @@ int process_callback(jack_nframes_t nframes, void* arg) {
     if (!playback_session_playing(session_word)) {
         playback_write_silence(channel_buffers.data(), channel_count, 1, 0,
                                static_cast<int64_t>(nframes));
-        impl->process_cycles.fetch_add(1, std::memory_order_release);
-        return 0;
+    } else {
+        playback_render_block(impl->state, session_word,
+                              channel_buffers.data(), 1,
+                              static_cast<int64_t>(nframes), channel_count);
     }
-
-    playback_render_block(impl->state, session_word, channel_buffers.data(), 1,
-                          static_cast<int64_t>(nframes), channel_count);
+    // THE SECOND VOICE AND THE CLIP, ON BOTH ARMS (2026-10-28,
+    // playback_common.h's head): the rain summed under what the arm wrote —
+    // the callback runs always, so the bed plays between plays too — then
+    // every sample clamped. The rain reads its own bank: NO SAMPLE OF THE
+    // BOUND BUFFER IS READ on the silence arm still, which is what stop()'s
+    // fence counts on.
+    if (impl->state.rain != nullptr)
+        rain_mix_block(*impl->state.rain, channel_buffers.data(), 1,
+                       static_cast<int64_t>(nframes), channel_count,
+                       impl->state.output_rate.load(std::memory_order_relaxed));
+    playback_clip_block(channel_buffers.data(), 1,
+                        static_cast<int64_t>(nframes), channel_count);
     impl->process_cycles.fetch_add(1, std::memory_order_release);
     return 0;
 }
@@ -122,6 +134,12 @@ void clear_after_failed_init(GuiPlayback::Impl& impl) {
 
 GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
 GuiPlayback::~GuiPlayback() { shutdown(); }
+
+// The forward (contract at the declaration): before init, so no process
+// callback exists to race the store.
+void GuiPlayback::attach_rain(GuiRainVoice* voice) {
+    impl_->state.rain = voice;
+}
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                        int64_t total_frames, int64_t domain_offset) {

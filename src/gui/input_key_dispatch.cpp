@@ -483,6 +483,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // dispatch arm's own spelling.
     const bool is_score_viewer =
         (key == GuiKeys::M && !ctrl && !shift && !alt);
+    // BARE `w`, THE RAIN LAMP (architect 2026-10-28): DEVICE STATE, NOT THE
+    // PIECE — a second voice under the engine's (rain.h), authoring nothing the
+    // lock protects — so it is admitted on a locked tab and, the iteration
+    // gate falling through to this list, under grid iterations. Bare-exact,
+    // the dispatch arm's own spelling.
+    const bool is_rain =
+        (key == GuiKeys::W && !ctrl && !shift && !alt);
     // BARE `i` WHILE GRID ITERATIONS STANDS — THE OFF EDGE, a STATE-DEPENDENT
     // admission like the arrows' lane term (architect 2026-10-13: the mode
     // lights on a tab whose own bit is clear even while the other tab is
@@ -542,7 +549,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
              is_settings_editor || is_preset_picker ||
-             is_tooltip_lamp || is_score_viewer || is_iteration_off_edge);
+             is_tooltip_lamp || is_score_viewer || is_rain ||
+             is_iteration_off_edge);
 }
 
 // -- THE ITERATION LOCK'S ALLOWLIST ------------------------------------------
@@ -3216,12 +3224,18 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
+    // THE RAIN LAMP — BARE `w` (2026-10-28, the planner's call, Tooltips'
+    // class): a DEVICE lamp, the background sound under everything the engine
+    // plays (rain.h), touching nothing the view froze and nothing the view has
+    // a reason to refuse — so the view admits it and the Rain key stands lit
+    // in here by the derived partition.
+    const bool is_rain = (key == GuiKeys::W && bare);
     return !(is_zoom_step || is_zero || is_page_updown || is_play_renders ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_ctrl_q || is_open_project ||
              is_revert_project ||
-             is_tooltip_lamp || is_waveform_magnification);
+             is_tooltip_lamp || is_waveform_magnification || is_rain);
 }
 
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -9462,6 +9476,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // legal on a locked tab and under the grid-iterations lock; refused in
         // the `h` view at that mode's allowlist.
         playback_lifecycle.toggle_follow();
+        break;
+    case GuiKeys::W:
+        // Toggle the Rain lamp (architect 2026-10-28), the background sound.
+        // The whole body lives in GuiRain::toggle (rain.h), THE CHOKEPOINT —
+        // two producers, one route: this key and the icon row's RAIN key,
+        // which synthesizes exactly this bare chord. History-less, device
+        // state, legal on a locked tab, under the grid-iterations lock and in
+        // the `h` view (all three allowlists admit it). With no sounds folder
+        // the key's face is grey and its lift never reaches here; the KEY is
+        // then a SILENT no-op inside toggle (its available() precondition),
+        // the greyed-face rule's keyboard half, as `0` at a ceiling is.
+        if (app.rain != nullptr) app.rain->toggle();
         break;
     case GuiKeys::Grave:
         // Toggle the Waveform Magnification lamp (architect 2026-09-22,

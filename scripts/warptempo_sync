@@ -17,9 +17,12 @@ shopt -s nocaseglob
 #   warptempo_sync setup                ONE COMMAND that makes a tablet ready:
 #                                       GitHub's projects clone placed on it, its
 #                                       deploy key, its settings file corrected,
-#                                       the audio, the app started. It shows its
-#                                       plan and asks Proceed? [y/N] before it
-#                                       changes anything.
+#                                       the rain, the audio, the app started. It
+#                                       shows its plan and asks Proceed? [y/N]
+#                                       before it changes anything. It needs
+#                                       ffmpeg on the laptop for the rain (step 6
+#                                       below) when WARPTEMPO_RAIN_SOURCE names a
+#                                       folder.
 #
 #   -n   a DRY RUN: say in words what the run would do, and do none of it
 #        (setup -n prints its plan and asks nothing).
@@ -150,9 +153,9 @@ shopt -s nocaseglob
 #      waveform= line already stands), a waveform= line added with the default
 #      (waveform=default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
-#      true_colors=on line (TRUE_COLORS_LINE below; 2026-10-21) the same way
-#      (no tuning key stands now: the last, the lit LED's glow, settled
-#      2026-10-26), and every line of a retired key the app refuses to start with is removed --
+#      true_colors=on line (2026-10-21), the rain_level=-9 line and the
+#      rain_crossfade_ms=4000 line (2026-10-28; the last a tuning key) the
+#      same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
@@ -161,8 +164,25 @@ shopt -s nocaseglob
 #      cues' tuning keys, settled 2026-10-26, and the lit LED's glow key,
 #      settled the same day (RETIRED_KEYS below;
 #      src/gui/device_config.h); every other line is kept.
-#   6. the audio and the score folders, exactly as `warptempo_sync tt all`.
-#   7. the directories adb made are opened to the app (below), and the app started.
+#   6. THE BACKGROUND SOUND (2026-10-28; src/gui/rain.h owns the sound): the
+#      folder WARPTEMPO_RAIN_SOURCE names on the laptop (below) holds the rain's
+#      segments as `.m4a`; every one of them (sorted; any case of the
+#      extension) is converted ON THE LAPTOP by ffmpeg into scratch as
+#      `<stem>.wav`, PCM16 48 kHz stereo with no metadata and bit-exact (so a
+#      rerun's bytes match and the skip holds), and placed as the app at
+#      files/warptempo_gui/sounds/rain/<stem>.wav — beside the app's settings
+#      file, the folder the app's RAIN key reads — unless the tablet's file
+#      has the same sha256 (the deploy key's check). Then the tablet's folder
+#      is brought to the source's shape: every sounds/rain/*.wav there whose
+#      stem the source lacks is deleted by its own name (app_rm_rain). With
+#      WARPTEMPO_RAIN_SOURCE unset, not a folder, or holding no .m4a, one line
+#      says so and nothing is placed or deleted: the sound is optional. ffmpeg
+#      is needed only where the folder holds .m4a, and then setup stops in its
+#      plan, before any change, without it. The
+#      plan converts nothing: it lists each segment the real pass would
+#      convert and copy, unless the tablet has it.
+#   7. the audio and the score folders, exactly as `warptempo_sync tt all`.
+#   8. the directories adb made are opened to the app (below), and the app started.
 #   Run twice it does the same again: the clone is fresh each time and the tracked
 #   files are copied again. What it never touches: a file GitHub's main neither
 #   tracks nor ignores (a piece begun on the tablet, or by hand) is listed and
@@ -173,6 +193,12 @@ shopt -s nocaseglob
 # its group, so the app could not even list it. chmod takes on this storage, so one
 # pass sets every shell-owned directory under projects/ and .git to 777. The app's
 # own directories (render/, tmp/, peaks/) are skipped and not entered: shell may not.
+#
+# THE ENVIRONMENT, three WARPTEMPO_* variables and never a literal in here:
+# WARPTEMPO_TABLET_ADDR (the wireless address, below), WARPTEMPO_TABLET_DEPLOY_KEY
+# (the tablet's deploy key, setup's step 4) and WARPTEMPO_RAIN_SOURCE (the
+# laptop folder holding the rain's segments as .m4a, setup's step 6; unset, the
+# rain is not placed).
 #
 # THE TABLET IS ADDRESSED OVER adb, USB first and the wireless address in
 # WARPTEMPO_TABLET_ADDR (host:port, from the environment) as the fallback;
@@ -198,10 +224,13 @@ ROLE_LINE="role=author"
 # required since 2026-10-14; src/gui/palette_file.h's kGuiDefaultPaletteKey): added only where
 # the tablet's file has neither a waveform= line nor a chrome= line to rename.
 WAVEFORM_LINE="waveform=default"
-# THE sRGB -> DISPLAY-P3 SWITCH, a required key since 2026-10-21 (the Settings
-# menu's True Colors row made a key; src/gui/device_config.h), on on both
-# devices: added only where the tablet's file has no line.
-TRUE_COLORS_LINE="true_colors=on"
+# THE ADDED LINES, each added only where the tablet's file has no line of its
+# key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
+# required key since 2026-10-21 (the Settings menu's True Colors row made a
+# key), on on both devices; and THE RAIN'S TWO, required since 2026-10-28 —
+# the level, -9 dB, and the crossfade, a tuning key starting at 4000 ms
+# (src/gui/device_config.h records each).
+ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -231,6 +260,8 @@ RETIRED_KEYS=(sync_path theme_level
               cue_shadow cue_triangle_rows cue_triangle_aa cue_text
               cue_lead led_glow)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
+# THE RAIN'S SOURCE FOLDER on the laptop (setup's step 6), from the environment.
+RAIN_SOURCE="${WARPTEMPO_RAIN_SOURCE:-}"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
 note() { printf 'warptempo_sync: %s\n' "$1" >&2; }
@@ -241,7 +272,7 @@ warptempo_sync — the laptop's errands to the tablet
 
   warptempo_sync tt [piece ...|all]    TO the tablet:   the source audio and the scores the tablet lacks
   warptempo_sync ot [piece]            ON the tablet:   a shell as the app in its projects folder (exit returns)
-  warptempo_sync setup                 make a new (or this) tablet ready: clone, key, settings, audio
+  warptempo_sync setup                 make a new (or this) tablet ready: clone, key, settings, rain, audio
                                        (it shows the plan and asks Proceed? [y/N]; nothing is backed up)
 
   no name = all = every piece       -n = dry run, in words       -v = show the commands too
@@ -292,6 +323,7 @@ ing() {
     local rest="${1#* }"
     case "${1%% *}" in
         copy)    printf 'copying %s' "$rest" ;;
+        convert) printf 'converting %s' "$rest" ;;
         leave)   printf 'leaving %s' "$rest" ;;
         DELETE)  printf 'DELETING %s' "$rest" ;;
         stop)    printf 'stopping %s' "$rest" ;;
@@ -558,6 +590,23 @@ far_rm_file() {                         # $1 = absolute far path of one file
     esac
     [[ "$1" == *"/../"* || "$1" == *"/./"* || "$1" == *"//"* ]] && die "refusing to delete '$1'"
     [[ "${1,,}" == "${FAR,,}/.git/"* || "${1,,}" == *"/.git/"* ]] && die "refusing to delete '$1': inside a .git"
+    run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
+    far_gone "$1"
+}
+# THE THIRD SHAPE setup DELETES (2026-10-28), the two-shapes rule above extended
+# to it: ONE SEGMENT OF THE RAIN in the app's private folder,
+# files/warptempo_gui/sounds/rain/<name>.wav, by its own name — a single path
+# component ending .wav and nothing else. Any other path is refused before adb
+# is asked.
+app_rm_rain() {                         # $1 = path relative to run-as's home
+    local name
+    case "$1" in
+        "$APPCFG/sounds/rain/"*.wav) ;;
+        *) die "refusing to delete '$1': not a segment of the rain" ;;
+    esac
+    name="${1#"$APPCFG/sounds/rain/"}"
+    [[ -n "$name" && "$name" != */* && "$name" != "." && "$name" != ".." ]] || \
+        die "refusing to delete '$1': not a segment of the rain"
     run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
     far_gone "$1"
 }
@@ -910,6 +959,84 @@ printf '\n'
 # needs of the tablet for itself, so the real pass reads the settings file, the
 # deploy key and the audio again after the app is stopped: a last_project the
 # app wrote since the plan is kept.
+#
+# THE BACKGROUND SOUND, step 6 (the head's list owns the rule): the laptop's
+# .m4a segments converted by ffmpeg and placed in the app's sounds/rain/,
+# unless the tablet has each, then the tablet's folder brought to the source's
+# shape. The plan converts nothing and decides no skip — each segment's line
+# says "unless the tablet has it" — while its deletions are decided, the
+# tablet's listing being a reading; the real pass converts each segment into
+# ONE scratch file in turn (overwritten by the next), compares sums, and places.
+place_rain() {
+    local rain_dir="$APPCFG/sounds/rain" f base stem out near_sum far_sum
+    local listing="$scratch/rain_listing" rec end=0
+    local -a m4as=() gone=()
+    local -A want=()
+    if [[ -z "$RAIN_SOURCE" || ! -d "$RAIN_SOURCE" ]]; then
+        printf 'no rain: WARPTEMPO_RAIN_SOURCE names no folder; the RAIN key stays dark\n'
+        return 0
+    fi
+    shopt -s nullglob
+    m4as=( "$RAIN_SOURCE"/*.m4a )
+    shopt -u nullglob
+    if [[ "${#m4as[@]}" -eq 0 ]]; then
+        printf 'no rain: %s holds no .m4a; nothing placed or deleted, the RAIN key as it stands\n' "$RAIN_SOURCE"
+        return 0
+    fi
+    command -v ffmpeg >/dev/null 2>&1 || \
+        die "no ffmpeg on the laptop: setup converts the rain with it (install ffmpeg, or unset WARPTEMPO_RAIN_SOURCE)"
+    for f in "${m4as[@]}"; do
+        base="${f##*/}"; stem="${base%.*}"
+        want["$stem.wav"]=1
+    done
+    # THE TABLET'S SEGMENTS, READ CHECKED (push_score's listing shape): the
+    # .wav names standing in the app's sounds/rain/, then the end record; a
+    # folder not there yet lists nothing.
+    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -maxdepth 1 -type f -name "*.wav" -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$rain_dir" > "$listing" || \
+        die "could not list the tablet's $rain_dir: nothing more was copied or deleted"
+    rec=""
+    while IFS= read -r -d '' rec; do
+        (( end )) && die "the tablet's listing of $rain_dir runs on past its end: nothing more was copied or deleted"
+        if [[ "$rec" == "warptempo_sync-end" ]]; then end=1; continue; fi
+        [[ "$rec" == ./?* ]] || die "the tablet's listing of $rain_dir holds a malformed name ('$rec'): nothing more was copied or deleted"
+        rec="${rec#./}"
+        [[ -n "${want[$rec]:-}" ]] || gone+=( "$rec" )
+        rec=""
+    done < "$listing"
+    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $rain_dir is incomplete: nothing more was copied or deleted"
+
+    head_step "convert the rain's $(plural "${#m4as[@]}" segment) from $RAIN_SOURCE with ffmpeg on the laptop (PCM16, 48 kHz, stereo) and copy each the tablet lacks into the app's $rain_dir/:"
+    run app_sh 'mkdir -p "$1"' "$rain_dir" || die "could not make $rain_dir on the tablet"
+    out="$scratch/rain.wav"
+    for f in "${m4as[@]}"; do
+        base="${f##*/}"; stem="${base%.*}"
+        if (( dry )); then
+            step "convert and copy $stem.wav, unless the tablet has it"
+            continue
+        fi
+        show ffmpeg -nostdin -loglevel error -y -i "$f" -map_metadata -1 \
+            -fflags +bitexact -flags:a +bitexact -ar 48000 -ac 2 -c:a pcm_s16le "$out"
+        ffmpeg -nostdin -loglevel error -y -i "$f" -map_metadata -1 \
+            -fflags +bitexact -flags:a +bitexact -ar 48000 -ac 2 -c:a pcm_s16le "$out" || \
+            die "ffmpeg could not convert $f: nothing more was copied or deleted"
+        near_sum="$(sha256sum < "$out" | cut -c1-64)"
+        # NOT A CHECKED READING, AND NEED NOT BE (the deploy key's own rule): a
+        # reading that fails counts as "differs", and the answer is the
+        # laptop's conversion placed again, verified by sum (put_as_app).
+        far_sum="$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$rain_dir/$stem.wav" | cut -c1-64)"
+        if [[ "$near_sum" == "$far_sum" ]]; then
+            step "leave $stem.wav: the tablet has it"
+        else
+            step "copy $stem.wav to the tablet ($(du -h -- "$out" | cut -f1))"
+            put_as_app "$out" "$rain_dir/$stem.wav" 644 || die "$stem.wav did not arrive intact on the tablet"
+        fi
+    done
+    for rec in "${gone[@]}"; do
+        step "DELETE $rec from the tablet's sounds/rain/ (the source has no ${rec%.wav})"
+        app_rm_rain "$rain_dir/$rec"
+    done
+}
+
 apply_setup() {
     local d f k src key_same root cfg i
     pushed=0; scores=0; unresolved=()
@@ -998,8 +1125,9 @@ apply_setup() {
 
     # 5. THE SETTINGS FILE: projects_repo and role made right, a chrome line
     # renamed waveform (its value kept; dropped where a waveform line stands),
-    # waveform given its default where neither stands, true_colors its line
-    # where absent, the retired keys' lines gone (sync_path, the thirteen
+    # waveform given its default where neither stands, true_colors, rain_level
+    # and rain_crossfade_ms their lines where absent (ADDED_LINES), the
+    # retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad and the cues' tuning
     # keys, RETIRED_KEYS), the
     # rest kept.
@@ -1017,7 +1145,7 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v added="$TRUE_COLORS_LINE" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v added="$ADDED_LINES" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1
                                 nt = split(added, t, " "); for (i = 1; i <= nt; i++) tkey[i] = substr(t[i], 1, index(t[i], "=")) }
                               { for (i = 1; i <= nt; i++) if (substr($0, 1, length(tkey[i])) == tkey[i]) had_t[i] = 1 }
@@ -1032,24 +1160,28 @@ apply_setup() {
                                 if (had_role == 0) print role
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role and true_colors and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, rain_level and rain_crossfade_ms and has no chrome line and no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), $TRUE_COLORS_LINE where none stands, and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE where none stands, $TRUE_COLORS_LINE where none stands, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE where none stands, each of $ADDED_LINES where its key has no line, and no line of a retired key"
     fi
     printf '\n'
 
-    # 6. THE AUDIO AND THE SCORES, as tt all.
+    # 6. THE BACKGROUND SOUND (place_rain, above).
+    place_rain
+    printf '\n'
+
+    # 7. THE AUDIO AND THE SCORES, as tt all.
     head_step "copy the audio and the scores, as warptempo_sync tt all:"
     push_audio
     printf '\n'
 
-    # 7. THE FOLDERS OPENED, THE APP STARTED.
+    # 8. THE FOLDERS OPENED, THE APP STARTED.
     open_far_dirs "$FAR/.git" "$FAR/projects"
     if [[ "${#others[@]}" -gt 0 ]]; then
         printf 'left alone, untracked in the tablet'"'"'s clone (a piece begun there, or by hand):\n'

@@ -707,6 +707,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // NO ROLE (architect 2026-10-10): the program never invents one, so the
     // stamped file's read-back refuses on the required `role` key and the
     // hand adds `role=mirror` here (GuiDeviceRole, device_config.h).
+    // THE RAIN'S TWO (architect 2026-10-28), spelled: the level -9 dB, "the
+    // rain is a masker", and the tuning crossfade's starting 4000 ms — the
+    // tablet's template the same (device_config.h's head).
+    cfg.rain_level        = -9;
+    cfg.rain_crossfade_ms = 4000;
     return cfg;
 }
 

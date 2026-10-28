@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <memory>
 
+struct GuiRainVoice;   // rain.h
+
 // Audio playback engine. Owns ONE audio device and drives itself from that
 // device's callback thread. The device half is per backend — a JACK client on
 // Linux (playback.cpp), an AAudio output stream on Android
@@ -13,6 +15,14 @@
 // The sample buffer is borrowed, not owned: the caller must keep the
 // pointer passed to init() valid until shutdown() returns, and must call
 // stop()+shutdown() before tearing down the source.
+//
+// THE DEVICE CARRIES A SECOND VOICE (architect 2026-10-28): the app's one
+// rain (rain.h), attached before init (attach_rain below) and summed by the
+// callback under the engine's own voice on every callback — playing or
+// silent, so the bed plays between plays and under every one of them — and
+// the sum clipped to [-1, 1] (playback_common.h's head). The two output
+// channels carry both; the rain reads its own bank and never the bound
+// buffer, so every clause below about the bound buffer stands as written.
 //
 // One bind API, and the domain offset travels with the buffer: init() and
 // rebind_buffer() take the bound buffer's domain offset — the displayed-domain
@@ -229,6 +239,14 @@ public:
     // no-op.
     bool init(int sample_rate, int channels, const float* samples,
               int64_t total_frames, int64_t domain_offset);
+
+    // ATTACH THE SECOND VOICE (2026-10-28, rain.h): the app's one rain voice,
+    // summed by every callback of this engine from its first to its
+    // shutdown. CALLED BEFORE init() — run_project's first act on its
+    // engine — and never again, so the pointer never moves while a callback
+    // can run. Main thread only; null attaches nothing. Both backends forward
+    // it to the engine state (GuiPlaybackState::rain).
+    void attach_rain(GuiRainVoice* voice);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
     // passes `end_sample` (exclusive). PLAYS THE WINDOW ONCE AND STOPS — no

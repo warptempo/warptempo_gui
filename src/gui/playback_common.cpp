@@ -152,6 +152,18 @@ void playback_write_silence(float* const* channel_buffers, int channel_count,
     }
 }
 
+void playback_clip_block(float* const* channel_buffers, int64_t stride,
+                         int64_t frame_count, int channel_count) {
+    for (int c = 0; c < channel_count; ++c) {
+        float* dst = channel_buffers[c];
+        for (int64_t n = 0; n < frame_count; ++n) {
+            float& s = dst[n * stride];
+            if (s > 1.0f)  s = 1.0f;
+            if (s < -1.0f) s = -1.0f;
+        }
+    }
+}
+
 void playback_render_block(GuiPlaybackState& state,
                            uint64_t session_word,
                            float* const* channel_buffers,

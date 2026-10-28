@@ -795,7 +795,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The four device keys other than the scale — one body, ahead of the
+    // 2. The six device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1061,7 +1061,9 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it (`bevel_light` and `bevel_dark` stood after it
+// its arm after it, and `rain_level` and `rain_crossfade_ms` (2026-10-28)
+// the same, at once and no card, their arms after it (`bevel_light` and
+// `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
 // 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
@@ -1148,6 +1150,41 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         }
         app.device_config->true_colors = *on;
         input->apply_true_colors(*on);
+        (void)persist();
+        applied();
+        return true;
+    }
+
+    // THE RAIN'S LEVEL AND ITS CROSSFADE (architect 2026-10-28; rain.h owns
+    // the sound): each an integer under its one grammar owner
+    // (parse_rain_level, parse_rain_crossfade_ms, device_config.h), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then the one GuiRain's setter (the
+    // level's gain read by the audio thread at its next fill, the crossfade
+    // at the next transition's draw) — and persisted, so NO CARD: the sound
+    // is the answer. A commit with the lamp dark takes effect at the next
+    // lit press. Neither key has a closed domain, so Tab completes no value
+    // for either (complete_closed_value names neither); stage 2's recall is
+    // the writer's spelling (recall_gui_setting_value).
+    if (key == "rain_level") {
+        const std::optional<int> db = parse_rain_level(value);
+        if (!db) { reject(kRainLevelGrammarReason); return true; }
+        if (*db == app.device_config->rain_level) {
+            unchanged(); return true;
+        }
+        app.device_config->rain_level = *db;
+        if (app.rain != nullptr) app.rain->set_level_db(*db);
+        (void)persist();
+        applied();
+        return true;
+    }
+    if (key == "rain_crossfade_ms") {
+        const std::optional<int> ms = parse_rain_crossfade_ms(value);
+        if (!ms) { reject(kRainCrossfadeGrammarReason); return true; }
+        if (*ms == app.device_config->rain_crossfade_ms) {
+            unchanged(); return true;
+        }
+        app.device_config->rain_crossfade_ms = *ms;
+        if (app.rain != nullptr) app.rain->set_crossfade_ms(*ms);
         (void)persist();
         applied();
         return true;
