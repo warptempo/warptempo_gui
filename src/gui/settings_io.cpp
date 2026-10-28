@@ -391,17 +391,13 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_true_colors, device_config.h), the writer's own spelling.
     if (key == "true_colors" && app.device_config != nullptr)
         return std::string(format_true_colors(app.device_config->true_colors));
-    // THE RAIN'S FOUR (2026-10-28): each through its one formatter
-    // (format_rain_level, format_rain_crossfade_ms, format_rain_fade_in_ms,
-    // format_rain_fade_out_ms, device_config.h), the writer's own spelling.
+    // THE RAIN'S TWO (2026-10-28): each through its one formatter
+    // (format_rain_level, format_rain_crossfade_ms, device_config.h), the
+    // writer's own spelling.
     if (key == "rain_level" && app.device_config != nullptr)
         return format_rain_level(app.device_config->rain_level);
     if (key == "rain_crossfade_ms" && app.device_config != nullptr)
         return format_rain_crossfade_ms(app.device_config->rain_crossfade_ms);
-    if (key == "rain_fade_in_ms" && app.device_config != nullptr)
-        return format_rain_fade_in_ms(app.device_config->rain_fade_in_ms);
-    if (key == "rain_fade_out_ms" && app.device_config != nullptr)
-        return format_rain_fade_out_ms(app.device_config->rain_fade_out_ms);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -37,12 +37,23 @@ struct GuiRenderPlayer;
 // and a device that was never there are one fact to the user. It cannot double
 // with them: it returns, and the stop body it takes leaves the act Idle, so no
 // launch of the act's follows it.
+// BESIDE THOSE FOUR (re-grepped 2026-10-28): the car's Play
+// (car_play_playback, the toggle's play prologue), the score viewer's tick (a
+// dead device mid-soundtrack pauses, the render player's rule) and THE RAIN
+// LAMP'S LIT PRESS (architect 2026-10-28, the `w` case of
+// input_key_dispatch.cpp): the bed sounds only through the running stream's
+// callback, so the lit press asks this same reopen as a launch press does,
+// cards this sentence when it answers false and still lights the lamp, which
+// stays silent until a reopen stands. The lit lamp's own reopen after a drop
+// (gui_main's poll on GuiPlayback::stream_dead) raises no card: no press
+// stands to answer.
 // It lives here rather than in notifications.h
 // because the fact is this cluster's: the question is GuiPlayback::
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
-// 2026-09-02): each of the three PRESS sites reopens a dead AAudio stream
-// before it asks, and cards only when that reopen failed, JACK answering its
-// unchanged read. The reads: the TWO TICKS keep device_unavailable — the
+// 2026-09-02): each PRESS site (the three launch sites, the car's Play, the
+// rain lamp's lit press) reopens a dead AAudio stream before it asks, and
+// cards only when that reopen failed, JACK answering its unchanged read. The
+// reads: the TWO TICKS keep device_unavailable — the
 // render player's (a dead stream mid-play must pause) and the A/B audition's
 // (a dead stream mid-act must end the act, the fourth site above) — and the
 // two PLAY-face predicates (space_launch_would_play,

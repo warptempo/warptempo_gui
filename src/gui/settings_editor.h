@@ -43,7 +43,7 @@ struct GuiInputHandler;
 // (Shift+;, the glass long press), never by Tab, its pick committing through
 // this editor's own apply, apply_waveform_preset):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the fourteen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the twelve,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -71,15 +71,15 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// NINE editable ones the per-device config carries — gui_scale and
+// SEVEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // since 2026-10-21 true_colors (the popup's command row made a key), and
-// since 2026-10-28 (architect) the rain's rain_level and its three tuning
-// keys rain_crossfade_ms, rain_fade_in_ms and rain_fade_out_ms (the
+// since 2026-10-28 (architect) the rain's rain_level and its tuning key
+// rain_crossfade_ms (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, materials.cpp's kLedGlowPx; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
@@ -100,8 +100,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors, rain_level, rain_crossfade_ms, rain_fade_in_ms
-//    and rain_fade_out_ms — in ONE body,
+//    waveform, true_colors, rain_level and rain_crossfade_ms — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -111,7 +110,7 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; waveform and true_colors at once, applied live
-//    at the OK, no card (the screen is the answer); the rain's four at once,
+//    at the OK, no card (the screen is the answer); the rain's two at once,
 //    handed to the one GuiRain (rain.h) at the OK, no card (the sound is the
 //    answer).
 //    gui_scale, the
@@ -164,14 +163,14 @@ struct GuiInputHandler;
 // picker, the folder overlay's third content, whose row tap commits at once
 // — apply_waveform_preset, this editor's own road.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE FOURTEEN (the cues' four tuning keys
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TWELVE (the cues' four tuning keys
 // gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
-// `score_path` joined the same day; the rain's four 2026-10-28): the five
+// `score_path` joined the same day; the rain's two 2026-10-28): the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's nine editable keys in that file's
+// CONFIG's seven editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
 // `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
@@ -181,7 +180,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "rain_level", "rain_crossfade_ms", "rain_fade_in_ms", "rain_fade_out_ms",
+    "rain_level", "rain_crossfade_ms",
 };
 
 struct GuiSettingsEditor {
@@ -285,9 +284,8 @@ private:
     // above.
     bool persist_device_config();
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, and the rain's four, `rain_level=` and
-    // its three tuning keys `rain_crossfade_ms=`, `rain_fade_in_ms=` and
-    // `rain_fade_out_ms=` — in one
+    // `waveform=`, `true_colors=`, `rain_level=` and `rain_crossfade_ms=` —
+    // in one
     // body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or

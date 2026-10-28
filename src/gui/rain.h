@@ -7,7 +7,19 @@
 // score's soundtrack — and over its silence between plays, AT ONE LEVEL,
 // NEVER DUCKED and never paused by any of them; only the lamp or closing the
 // app silences it. The lamp is OFF AT EVERY LAUNCH: no device key holds it
-// (his "iPhone requires enabling each time"). RAIN is committed as THE ONE
+// (his "iPhone requires enabling each time"). THE BED SOUNDS ONLY THROUGH THE
+// RUNNING STREAM'S CALLBACK, so the device question is the lamp's too
+// (architect 2026-10-28): the LIT PRESS asks the launch press's reopen
+// (GuiPlayback::ensure_device_available_for_play, at the `w` case of
+// input_key_dispatch.cpp — a refusal cards and still lights the lamp, silent
+// as a load in flight is), and THE BED SURVIVES A ROUTE DROP UNDER A LIT LAMP
+// (a headphone connected or taken off): the main loop sees the dead stream
+// under the lit lamp and reopens the device at its next-but-one tick
+// (gui_main's poll beside tick(), GuiPlayback::stream_dead), the bed
+// resuming where it was — the one exception to the error callback's "nothing
+// recovers by itself", lamp-only; the music still waits for a launch press.
+// A dark press during the dead interval needs nothing: the latch stays for
+// the next launch press as before. RAIN is committed as THE ONE
 // SOUND; the folder's name is the hook for a later sound choice, which is not
 // built.
 //
@@ -30,13 +42,13 @@
 // two uncorrelated noise beds; his "a must") of `rain_crossfade_ms`, a tuning
 // device key; a lit press starts a fresh random segment from its start (his
 // "random start = the segment road, no mid-segment offset"). The bed FADES IN
-// over `rain_fade_in_ms` at the lit press — from when the load lands, the LED
-// lighting at once — and OUT over `rain_fade_out_ms` at the dark press, two
-// tuning device keys (0 a cut: the envelope reaches the lamp's value within
-// one output frame), both linear amplitude ramps; a press during either fade
-// reverses from the current level, no restart. Each of the three tuning keys
-// (the crossfade and the two fades) becomes a constexpr here when he settles
-// it (the tuning rule). The level is the permanent device key
+// over kRainFadeInMs at the lit press — from when the load lands, the LED
+// lighting at once — and OUT over kRainFadeOutMs at the dark press, both
+// linear amplitude ramps; a press during either fade reverses from the
+// current level, no restart. The two fades are SETTLED (architect 2026-10-28,
+// on the glass, after one day as tuning keys); the crossfade alone is still a
+// tuning key and becomes a constexpr here when he settles it (the tuning
+// rule). The level is the permanent device key
 // `rain_level` in dB, applied to the files as they are: NATURAL LOUDNESS
 // VARIATION KEPT, no per-segment equalizing (his ruling).
 //
@@ -55,6 +67,13 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+// THE TWO FADES (architect 2026-10-28, settled on the glass at 200 and 40 ms):
+// linear amplitude ramps, the envelope's rate per output frame derived from
+// these and the device's rate (rain_mix_block). Both positive, so a fade is
+// never a cut.
+inline constexpr int kRainFadeInMs  = 200;
+inline constexpr int kRainFadeOutMs = 40;
 
 // THE BANK — IMMUTABLE ONCE PUBLISHED. Every segment's samples, interleaved
 // stereo PCM16 HELD AS THE FILE HOLDS THEM, nothing converted (score_audio.h's
@@ -89,9 +108,7 @@ struct GuiRainBank {
 // THE CONTROL WORDS, all std::atomic, written by the main thread and read by
 // the audio thread: `bank` (null until the load lands, then the one published
 // bank), `target` (the lamp: true lit), `gain` (linear, 10^(rain_level/20)),
-// `crossfade_ms` (read at each transition's draw), `fade_in_ms` and
-// `fade_out_ms` (read once per fill, the two envelope steps; 0 a cut) and
-// `seed` (written at every
+// `crossfade_ms` (read at each transition's draw) and `seed` (written at every
 // lit press BEFORE `target`'s release store; read when a sequence starts, so
 // the target's acquire load orders it).
 //
@@ -105,17 +122,21 @@ struct GuiRainBank {
 // AAudioStream_close — each returns only after its callback thread has left)
 // before the new engine's init starts a new callback thread, so exactly one
 // audio thread ever touches these fields, the hand-off ordered by the device
-// close and the thread start. THE LAMP SURVIVES A PROJECT SWITCH (device
-// state; the planner's call, architect agreed 2026-10-28): the bed gaps for
-// the device's reopen (one AAudio stream stop and start on the tablet) and
-// resumes where it was, no fade.
+// close and the thread start. THE SAME HAND-OFF ORDERS THE REOPEN AFTER A
+// ROUTE DROP (the head's lamp paragraph): the framework retires the dead
+// stream's callback thread before its error callback runs, and
+// AAudioStream_close returns only after it is gone, so the reopened stream's
+// thread is again the one audio thread and finds these fields as the drop
+// left them — no fill runs on a dead stream, so the bed resumes where it was.
+// THE LAMP SURVIVES A PROJECT SWITCH (device state; the planner's call,
+// architect agreed 2026-10-28): the bed gaps for the device's reopen (one
+// AAudio stream stop and start on the tablet) and resumes where it was, no
+// fade.
 struct GuiRainVoice {
     std::atomic<const GuiRainBank*> bank{nullptr};
     std::atomic<bool>               target{false};
     std::atomic<float>              gain{1.0f};
     std::atomic<int32_t>            crossfade_ms{4000};
-    std::atomic<int32_t>            fade_in_ms{500};
-    std::atomic<int32_t>            fade_out_ms{40};
     std::atomic<uint64_t>           seed{0};
 
     double   env     = 0.0;
@@ -177,18 +198,17 @@ public:
     // THE PER-TICK POLL (main.cpp's tick, every tick): a load that failed
     // under a lit lamp darkens the lamp and leaves the key grey from then on
     // (available() reads the failure); the roster's per-tick comparator
-    // repaints. Nothing else.
+    // repaints. Nothing else: the dead stream under a lit lamp is gui_main's
+    // poll beside this call (2026-10-28), because the playback object is
+    // there and not here.
     void tick();
 
-    // THE FOUR DEVICE KEYS, LIVE: the level's linear gain read by the audio
+    // THE TWO DEVICE KEYS, LIVE: the level's linear gain read by the audio
     // thread at its next fill, the crossfade read at the next transition's
-    // draw, each fade read at the next fill. Seeded by gui_main from the
-    // config, written by the settings editor's four arms
-    // (commit_device_setting).
+    // draw. Seeded by gui_main from the config, written by the settings
+    // editor's two arms (commit_device_setting).
     void set_level_db(int db);
     void set_crossfade_ms(int ms);
-    void set_fade_in_ms(int ms);
-    void set_fade_out_ms(int ms);
 
     // THE VOICE every project's engine mixes (GuiPlayback::attach_rain).
     GuiRainVoice* voice() { return &voice_; }

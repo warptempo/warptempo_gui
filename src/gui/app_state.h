@@ -5077,8 +5077,8 @@ struct AppState {
     // construction by run_project and never null while the GUI runs. Its
     // readers: the RAIN key's enabled and selected arms
     // (redesign_button_enabled, redesign_button_selected), bare `w`'s arm
-    // (GuiRain::toggle) and the settings editor's four rain arms
-    // (set_level_db, set_crossfade_ms, set_fade_in_ms, set_fade_out_ms).
+    // (GuiRain::toggle) and the settings editor's two rain arms
+    // (set_level_db, set_crossfade_ms).
     GuiRain* rain = nullptr;
 
     // THE OPEN PROJECT'S NAME — the name of the folder DIRECTLY UNDER the

@@ -153,17 +153,17 @@ shopt -s nocaseglob
 #      waveform= line already stands), a waveform= line added with the default
 #      (waveform=default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
-#      true_colors=on line (2026-10-21), the rain_level=-9 line, the
-#      rain_crossfade_ms=4000 line, the rain_fade_in_ms=500 line and the
-#      rain_fade_out_ms=40 line (2026-10-28; the last three tuning keys) the
+#      true_colors=on line (2026-10-21), the rain_level=-9 line and the
+#      rain_crossfade_ms=4000 line (2026-10-28; the last a tuning key) the
 #      same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
 #      captions, the two bevel keys, which left 2026-10-23 with the
 #      fortepiano chrome, strip_pad, settled the same day at a constant, the
-#      cues' tuning keys, settled 2026-10-26, and the lit LED's glow key,
-#      settled the same day (RETIRED_KEYS below;
+#      cues' tuning keys, settled 2026-10-26, the lit LED's glow key,
+#      settled the same day, and the rain's two fade keys, settled 2026-10-28
+#      at 200 and 40 ms (RETIRED_KEYS below;
 #      src/gui/device_config.h); every other line is kept.
 #   6. THE BACKGROUND SOUND (2026-10-28; src/gui/rain.h owns the sound): the
 #      folder WARPTEMPO_RAIN_SOURCE names on the laptop (below) holds the rain's
@@ -228,11 +228,10 @@ WAVEFORM_LINE="waveform=default"
 # THE ADDED LINES, each added only where the tablet's file has no line of its
 # key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
 # required key since 2026-10-21 (the Settings menu's True Colors row made a
-# key), on on both devices; and THE RAIN'S FOUR, required since 2026-10-28 —
-# the level, -9 dB, and three tuning keys: the crossfade starting at 4000 ms,
-# the fade-in at 500 and the fade-out at 40 (src/gui/device_config.h records
-# each).
-ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000 rain_fade_in_ms=500 rain_fade_out_ms=40"
+# key), on on both devices; and THE RAIN'S TWO, required since 2026-10-28 —
+# the level, -9 dB, and the crossfade, a tuning key starting at 4000 ms
+# (src/gui/device_config.h records each).
+ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -250,9 +249,12 @@ ADDED_LINES="true_colors=on rain_level=-9 rain_crossfade_ms=4000 rain_fade_in_ms
 # triangle's rows and its antialiasing, the label's size and its gap past
 # the triangle) at 8 rows authored at 300 %, the staircase, 22 and a gap
 # of 8 (src/gui/render.h, src/gui/gui_font.h, src/gui/cool_edit_paint.h);
-# and the lit LED's glow tuning key of 2026-10-23, settled 2026-10-26 at 4
-# device px and a constant in the program since (src/gui/materials.cpp).
-# The tuning keys setup DOES write are ADDED_LINES' rain lines above, each
+# the lit LED's glow tuning key of 2026-10-23, settled 2026-10-26 at 4
+# device px and a constant in the program since (src/gui/materials.cpp);
+# and the rain's two fade tuning keys of 2026-10-28, rain_fade_in_ms and
+# rain_fade_out_ms, settled the same day at 200 and 40 ms and constants in
+# the program since (src/gui/rain.h).
+# The tuning key setup DOES write is ADDED_LINES' crossfade line above,
 # leaving this list's way when it settles.
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
@@ -261,7 +263,8 @@ RETIRED_KEYS=(sync_path theme_level
               playhead_head playhead_stem
               caption bevel_light bevel_dark strip_pad
               cue_shadow cue_triangle_rows cue_triangle_aa cue_text
-              cue_lead led_glow)
+              cue_lead led_glow
+              rain_fade_in_ms rain_fade_out_ms)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE RAIN'S SOURCE FOLDER on the laptop (setup's step 6), from the environment.
 RAIN_SOURCE="${WARPTEMPO_RAIN_SOURCE:-}"
@@ -1128,12 +1131,11 @@ apply_setup() {
 
     # 5. THE SETTINGS FILE: projects_repo and role made right, a chrome line
     # renamed waveform (its value kept; dropped where a waveform line stands),
-    # waveform given its default where neither stands, true_colors, rain_level,
-    # rain_crossfade_ms, rain_fade_in_ms and rain_fade_out_ms their lines where
-    # absent (ADDED_LINES), the
+    # waveform given its default where neither stands, true_colors, rain_level
+    # and rain_crossfade_ms their lines where absent (ADDED_LINES), the
     # retired keys' lines gone (sync_path, the thirteen
-    # colour keys, caption, the bevel pair, strip_pad and the cues' tuning
-    # keys, RETIRED_KEYS), the
+    # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
+    # keys, the LED glow's and the rain's two fades, RETIRED_KEYS), the
     # rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
@@ -1164,7 +1166,7 @@ apply_setup() {
                                 if (had_role == 0) print role
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, rain_level, rain_crossfade_ms, rain_fade_in_ms and rain_fade_out_ms and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, rain_level and rain_crossfade_ms and has no chrome line and no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"

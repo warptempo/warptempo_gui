@@ -1438,7 +1438,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     app.projects_repo = device_config.projects_repo;
     // THE RAIN, the app's one, reached by pointer the device config's way
     // (AppState::rain): the RAIN key's faces, bare `w` and the settings
-    // editor's four rain arms read it.
+    // editor's two rain arms read it.
     app.rain          = &rain;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
@@ -1851,6 +1851,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
     bool initial_load_done = false;
+    // THE RAIN'S DROP, SEEN ONCE (2026-10-28; the poll beside rain.tick() in
+    // the tick body owns the rule): true from the first tick that finds the
+    // dead stream under a lit lamp until the next tick, which reopens; false
+    // whenever that condition does not hold.
+    bool rain_drop_seen = false;
     // THE LOAD HAS RETURNED, SUCCEEDED (its one writer, the startup tick's
     // load branch): the open's release waits on it (the tick's release
     // block; platform.h's head).
@@ -2349,6 +2354,58 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // of all of them. Nothing is damaged here: the roster's per-tick
         // comparator below carries the RAIN key's face edge.
         rain.tick();
+
+        // THE LIT LAMP REOPENS THE DEAD STREAM BY ITSELF (architect
+        // 2026-10-28): a route drop under a lit RAIN lamp (headphones
+        // connected or taken off) kills the AAudio stream, and the bed sounds
+        // only through the running stream's callback, so the loop takes the
+        // launch press's own road — GuiPlayback::ensure_device_available_for_
+        // play, the reopen AND the start (the rain runs on the silence arm, so
+        // the stream must run, not merely stand) — and the bed resumes where
+        // the drop left it (GuiRainVoice's thread note, rain.h). THE ONE
+        // EXCEPTION to the error callback's "nothing recovers by itself",
+        // LAMP-ONLY: the music still waits for a launch press. The read is
+        // GuiPlayback::stream_dead, the latch alone, set once per drop and
+        // cleared by the first reopen attempt, so this asks ONCE PER DROP,
+        // refused or not, with no retry timer; the answer is NOT carded (no
+        // press stands to answer): a refusal leaves the lamp lit and silent
+        // until the next launch press or a dark press and a lit press (the `w`
+        // case). Nothing is damaged: the RAIN key's face does not change. JACK
+        // has no latch, so on the laptop this is two reads.
+        //
+        // THE GRACE OF ONE TICK: the reopen fires on the SECOND consecutive
+        // tick that finds the latch under a lit lamp. Every other reader of
+        // the drop is a tick BELOW this line in the same body — the render
+        // player's (render_player.tick: a dead device PAUSES), the score
+        // viewer's (score_viewer.tick: it pauses and cards), the A/B
+        // audition's (ab_audition.fire_if_due: it ends the act and cards) and
+        // the main window's natural-end teardown (stop_playback_if_playing
+        // at the foot) — and each must digest the drop BEFORE a stream stands
+        // again: a reopened stream under the lowered playing bit would read to
+        // the render player or the score viewer as a NATURAL END (the player
+        // advancing its folder) and to the audition as a live device, the
+        // music resuming by itself, which the ruling forbids. One tick's grace
+        // puts a whole body below this line between the latch's first
+        // sighting here and the reopen, however the drop raced the tick. THE
+        // EARLY RETURNS BELOW DO NOT BREAK IT (verified 2026-10-28): the
+        // startup load's two (nothing has played before the first load), the
+        // loading / no-audio guard (the load is synchronous inside the
+        // startup tick, so no tick meets `loading`, and no act stands without
+        // audio), the render player's and the score viewer's forks (each
+        // returns AFTER its own tick has read the device, and neither
+        // overlay lets a main-window act stand under it), and the
+        // playing-only guard (nothing playing, nothing to digest).
+        {
+            const bool drop = rain.lit() && playback.stream_dead();
+            if (!drop) {
+                rain_drop_seen = false;
+            } else if (!rain_drop_seen) {
+                rain_drop_seen = true;
+            } else {
+                rain_drop_seen = false;
+                (void)playback.ensure_device_available_for_play();
+            }
+        }
 
         // Startup file load, deferred out of pre-run() to the first tick on a
         // configured window (the compositor's initial configure only lands
@@ -3630,8 +3687,8 @@ int gui_main(const char* argument) {
     // background sound's one owner, constructed beside the config it reads —
     // the `sounds/rain/` folder beside the config probed once, here (absent is
     // the ordinary state and silent; a `.wav` out of shape one stderr line,
-    // the key grey), and the four keys' values handed to the voice (the config
-    // is required, so all four stand). The lamp is dark at every launch: no key
+    // the key grey), and the two keys' values handed to the voice (the config
+    // is required, so both stand). The lamp is dark at every launch: no key
     // holds it. Every project's engine mixes its voice (run_project's
     // attach), and it outlives them all — shut down below, after the loop,
     // when no engine is left to read its bank.
@@ -3639,8 +3696,6 @@ int gui_main(const char* argument) {
     rain.probe();
     rain.set_level_db(device_config.rain_level);
     rain.set_crossfade_ms(device_config.rain_crossfade_ms);
-    rain.set_fade_in_ms(device_config.rain_fade_in_ms);
-    rain.set_fade_out_ms(device_config.rain_fade_out_ms);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

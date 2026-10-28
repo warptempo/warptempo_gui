@@ -9487,7 +9487,27 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // the key's face is grey and its lift never reaches here; the KEY is
         // then a SILENT no-op inside toggle (its available() precondition),
         // the greyed-face rule's keyboard half, as `0` at a ceiling is.
-        if (app.rain != nullptr) app.rain->toggle();
+        //
+        // THE LIT PRESS IS A LAUNCH PRESS FOR THE DEVICE QUESTION (architect
+        // 2026-10-28): the bed sounds only through the running stream's
+        // callback, so on the LIT edge alone this asks the launch gates' own
+        // reopen (GuiPlayback::ensure_device_available_for_play) before the
+        // toggle — a stream a route change killed (Bluetooth headphones
+        // connected with the app open) is reopened and started here instead
+        // of leaving the lit lamp silent until a Play press. A FALSE cards
+        // the launch gates' sentence and STILL toggles: the lamp lights and
+        // stays silent, the load-in-flight shape, until gui_main's poll or
+        // the next launch press reopens. The DARK edge asks nothing. The
+        // ordinary press makes no device call (the start is idempotent on a
+        // running stream; JACK answers its plain read).
+        if (app.rain != nullptr) {
+            if (app.rain->available() && !app.rain->lit() &&
+                !playback.ensure_device_available_for_play()) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kPlaybackDeviceUnavailableCard);
+            }
+            app.rain->toggle();
+        }
         break;
     case GuiKeys::Grave:
         // Toggle the Waveform Magnification lamp (architect 2026-09-22,

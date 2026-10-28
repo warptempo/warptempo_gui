@@ -373,6 +373,26 @@ public:
     // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
 
+    // THE DROP ITSELF (architect 2026-10-28, the rain lamp's reopen): the
+    // error callback's `stream_dead` latch ALONE — true from a route drop
+    // under a live stream until the first reopen attempt closes that stream.
+    // AAudio: `impl_ && impl_->stream_dead` (acquire). JACK: false, this
+    // backend having no latch (the reason at device_unavailable's JACK
+    // definition). ONE READER: gui_main's per-tick poll beside rain.tick()
+    // (main.cpp), which reopens the device through
+    // ensure_device_available_for_play when the latch stands under a lit
+    // RAIN lamp. A pure read; main thread only.
+    // NOT device_unavailable, which is also true on a NULL stream — what a
+    // FAILED reopen leaves behind (reopen_stream_if_dead closes the dead
+    // stream, clearing the latch, then fails to open) — so a poll on it would
+    // ask open_stream again on every tick after one refusal: an open storm.
+    // The latch is set once per drop and cleared by the first reopen attempt,
+    // so a poll on it asks ONCE PER DROP, refused or not, with no retry timer
+    // (his ruling): a refused reopen leaves the lamp lit and silent, and the
+    // next launch press (play()'s head opens a null stream), or a dark press
+    // and a lit press, is the way back.
+    bool    stream_dead() const;
+
     // WHAT A FACE READS (architect 2026-09-02, the truthful-buttons rule over
     // the reopen at the press): THE NEVER-CAME-UP HALF ALONE. The press
     // reopens a dead stream, so only a device that never came up greys a
@@ -396,7 +416,16 @@ public:
     // by the three launch gates — toggle_playback's target pre-sum gate,
     // GuiAbAudition::start's preflight and the launch body's belt
     // (playback_lifecycle.cpp, ab_audition.cpp) — which card
-    // kPlaybackDeviceUnavailableCard only when this answers FALSE. JACK
+    // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
+    // car's Play (car_play_playback, which cards alike, and the two media
+    // Play arms, GuiCarTransport::on_media_command and the render player's,
+    // which ignore the answer); by THE RAIN LAMP'S LIT PRESS (architect
+    // 2026-10-28, the `w` case of input_key_dispatch.cpp: the bed sounds only
+    // through the running stream's callback, so the lit press is a launch
+    // press for the device question; a FALSE cards and the lamp still
+    // lights); and by gui_main's lit-lamp poll (main.cpp, beside rain.tick(),
+    // on stream_dead above: the one road that reopens with no press, the
+    // answer uncarded). JACK
     // answers `!device_unavailable()` and touches nothing (this backend has no
     // latch to clear — the mid-play loss is not recorded, the reason at
     // device_unavailable's definition). AAudio closes a dead stream and

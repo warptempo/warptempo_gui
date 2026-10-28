@@ -795,7 +795,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The eight device keys other than the scale — one body, ahead of the
+    // 2. The six device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1061,9 +1061,8 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it, and the rain's four, `rain_level`, `rain_crossfade_ms`,
-// `rain_fade_in_ms` and `rain_fade_out_ms` (2026-10-28), the same, at once
-// and no card, their arms after it (`bevel_light` and
+// its arm after it, and `rain_level` and `rain_crossfade_ms` (2026-10-28)
+// the same, at once and no card, their arms after it (`bevel_light` and
 // `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1156,16 +1155,15 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE RAIN'S LEVEL, CROSSFADE AND TWO FADES (architect 2026-10-28; rain.h
-    // owns the sound): each an integer under its one grammar owner
-    // (parse_rain_level, parse_rain_crossfade_ms, parse_rain_fade_in_ms,
-    // parse_rain_fade_out_ms, device_config.h), APPLIED LIVE AT THE COMMIT —
-    // the live struct, then the one GuiRain's setter (the level's gain and
-    // the two fades read by the audio thread at its next fill, the crossfade
+    // THE RAIN'S LEVEL AND ITS CROSSFADE (architect 2026-10-28; rain.h owns
+    // the sound): each an integer under its one grammar owner
+    // (parse_rain_level, parse_rain_crossfade_ms, device_config.h), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then the one GuiRain's setter (the
+    // level's gain read by the audio thread at its next fill, the crossfade
     // at the next transition's draw) — and persisted, so NO CARD: the sound
     // is the answer. A commit with the lamp dark takes effect at the next
-    // lit press. No key of the four has a closed domain, so Tab completes no
-    // value for any (complete_closed_value names none); stage 2's recall is
+    // lit press. Neither key has a closed domain, so Tab completes no value
+    // for either (complete_closed_value names neither); stage 2's recall is
     // the writer's spelling (recall_gui_setting_value).
     if (key == "rain_level") {
         const std::optional<int> db = parse_rain_level(value);
@@ -1187,30 +1185,6 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         }
         app.device_config->rain_crossfade_ms = *ms;
         if (app.rain != nullptr) app.rain->set_crossfade_ms(*ms);
-        (void)persist();
-        applied();
-        return true;
-    }
-    if (key == "rain_fade_in_ms") {
-        const std::optional<int> ms = parse_rain_fade_in_ms(value);
-        if (!ms) { reject(kRainFadeGrammarReason); return true; }
-        if (*ms == app.device_config->rain_fade_in_ms) {
-            unchanged(); return true;
-        }
-        app.device_config->rain_fade_in_ms = *ms;
-        if (app.rain != nullptr) app.rain->set_fade_in_ms(*ms);
-        (void)persist();
-        applied();
-        return true;
-    }
-    if (key == "rain_fade_out_ms") {
-        const std::optional<int> ms = parse_rain_fade_out_ms(value);
-        if (!ms) { reject(kRainFadeGrammarReason); return true; }
-        if (*ms == app.device_config->rain_fade_out_ms) {
-            unchanged(); return true;
-        }
-        app.device_config->rain_fade_out_ms = *ms;
-        if (app.rain != nullptr) app.rain->set_fade_out_ms(*ms);
         (void)persist();
         applied();
         return true;

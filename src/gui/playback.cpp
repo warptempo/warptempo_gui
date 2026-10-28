@@ -380,6 +380,13 @@ bool GuiPlayback::device_absent() const {
     return !impl_ || !impl_->client_active;
 }
 
+// NO LATCH ON THIS BACKEND (contract at the declaration; the mid-play loss is
+// not recorded, device_unavailable's definition above): there is no drop to
+// report, so the rain lamp's poll never reopens anything on the laptop.
+bool GuiPlayback::stream_dead() const {
+    return false;
+}
+
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);
