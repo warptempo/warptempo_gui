@@ -324,6 +324,12 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
     its bytes: the cache's expansions read them. Owners:
     `GuiScoreGrayPage` (`score_page_worker.h`),
     `GuiScoreViewer::settle_gray_on_gpu` (`score_viewer.cpp`).
+    MEASURED on the tablet (2026-10-27, `dumpsys meminfo` after the
+    identity harness's ten states, 550 - 2 at 45 pages, 89.6 MB of gray):
+    Native Heap PSS 348.5 MB before, 262.7 MB after (−85.9 MB), TOTAL PSS
+    546.9 → 461.7 MB, GL mtrack about the same (129 / 120 MB); the ten
+    screencaps identical before and after, and against the cpu reference,
+    but the clock's minute.
 
 ## 4. The milestones
 
