@@ -2555,10 +2555,11 @@ enum class RedesignButton {
     // if the load fails (GuiRain::tick, the key greying from then on). It is
     // DEVICE STATE, NOT THE PIECE: admitted on a locked tab and under grid
     // iterations (bare `w` on the read-only allowlist, which the iteration
-    // gate inherits) and in the `h` view (the planner's call, Tooltips' class
-    // — on that mode's allowlist); under a standing overlay it is dead as
-    // every roster key but the opener (the inherited rule,
-    // redesign_button_enabled's overlay arm and the overlays' routers). OFF
+    // gate inherits) and in the `h` view (the planner's call, architect
+    // agreed 2026-10-28, Tooltips' class — on that mode's allowlist); under
+    // a standing overlay it is dead as every roster key but the opener (the
+    // inherited rule, redesign_button_enabled's overlay arm and the overlays'
+    // routers). OFF
     // AT EVERY LAUNCH — no device key holds the lamp (his "iPhone requires
     // enabling each time"). THE ONE SOUND: RAIN is committed as the sound, the
     // folder's name the hook for a later sound choice, which is not built. No
@@ -5068,8 +5069,8 @@ struct AppState {
     // construction by run_project and never null while the GUI runs. Its
     // readers: the RAIN key's enabled and selected arms
     // (redesign_button_enabled, redesign_button_selected), bare `w`'s arm
-    // (GuiRain::toggle) and the settings editor's two rain arms
-    // (set_level_db, set_crossfade_ms).
+    // (GuiRain::toggle) and the settings editor's four rain arms
+    // (set_level_db, set_crossfade_ms, set_fade_in_ms, set_fade_out_ms).
     GuiRain* rain = nullptr;
 
     // THE OPEN PROJECT'S NAME — the name of the folder DIRECTLY UNDER the

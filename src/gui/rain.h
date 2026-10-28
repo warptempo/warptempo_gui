@@ -30,10 +30,13 @@
 // two uncorrelated noise beds; his "a must") of `rain_crossfade_ms`, a tuning
 // device key; a lit press starts a fresh random segment from its start (his
 // "random start = the segment road, no mid-segment offset"). The bed FADES IN
-// over kRainFadeInMs at the lit press — from when the load lands, the LED
-// lighting at once — and OUT over kRainFadeOutMs at the dark press, both
-// linear amplitude ramps; a press during either fade reverses from the
-// current level, no restart. The level is the permanent device key
+// over `rain_fade_in_ms` at the lit press — from when the load lands, the LED
+// lighting at once — and OUT over `rain_fade_out_ms` at the dark press, two
+// tuning device keys (0 a cut: the envelope reaches the lamp's value within
+// one output frame), both linear amplitude ramps; a press during either fade
+// reverses from the current level, no restart. Each of the three tuning keys
+// (the crossfade and the two fades) becomes a constexpr here when he settles
+// it (the tuning rule). The level is the permanent device key
 // `rain_level` in dB, applied to the files as they are: NATURAL LOUDNESS
 // VARIATION KEPT, no per-segment equalizing (his ruling).
 //
@@ -53,12 +56,6 @@
 #include <thread>
 #include <vector>
 
-// THE TWO FADES (architect 2026-10-28, agreed): linear amplitude ramps, the
-// envelope's rate per output frame derived from these and the device's rate
-// (rain_mix_block).
-inline constexpr int kRainFadeInMs  = 1000;
-inline constexpr int kRainFadeOutMs = 80;
-
 // THE BANK — IMMUTABLE ONCE PUBLISHED. Every segment's samples, interleaved
 // stereo PCM16 HELD AS THE FILE HOLDS THEM, nothing converted (score_audio.h's
 // ruling: "better to have speed"), at the folder's one `rate`. Built whole on
@@ -67,7 +64,8 @@ inline constexpr int kRainFadeOutMs = 80;
 // freed only by GuiRain::shutdown, after every engine is down.
 //
 // ALL OF IT RESIDENT FROM THE FIRST LIT PRESS UNTIL THE APP CLOSES (the
-// planner's call on the architect's deferral; about 400 MB for his folder):
+// planner's call on the architect's deferral, architect agreed 2026-10-28;
+// about 400 MB for his folder):
 // the bank is read by the audio thread with no lock, so a buffer may be freed
 // only once no callback can be reading it, and the only moment that is
 // provable without a fence on every engine is the app's end. A rolling window
@@ -91,7 +89,9 @@ struct GuiRainBank {
 // THE CONTROL WORDS, all std::atomic, written by the main thread and read by
 // the audio thread: `bank` (null until the load lands, then the one published
 // bank), `target` (the lamp: true lit), `gain` (linear, 10^(rain_level/20)),
-// `crossfade_ms` (read at each transition's draw) and `seed` (written at every
+// `crossfade_ms` (read at each transition's draw), `fade_in_ms` and
+// `fade_out_ms` (read once per fill, the two envelope steps; 0 a cut) and
+// `seed` (written at every
 // lit press BEFORE `target`'s release store; read when a sequence starts, so
 // the target's acquire load orders it).
 //
@@ -106,13 +106,16 @@ struct GuiRainBank {
 // before the new engine's init starts a new callback thread, so exactly one
 // audio thread ever touches these fields, the hand-off ordered by the device
 // close and the thread start. THE LAMP SURVIVES A PROJECT SWITCH (device
-// state; the planner's call): the bed gaps for the device's reopen (one AAudio
-// stream stop and start on the tablet) and resumes where it was, no fade.
+// state; the planner's call, architect agreed 2026-10-28): the bed gaps for
+// the device's reopen (one AAudio stream stop and start on the tablet) and
+// resumes where it was, no fade.
 struct GuiRainVoice {
     std::atomic<const GuiRainBank*> bank{nullptr};
     std::atomic<bool>               target{false};
     std::atomic<float>              gain{1.0f};
     std::atomic<int32_t>            crossfade_ms{4000};
+    std::atomic<int32_t>            fade_in_ms{500};
+    std::atomic<int32_t>            fade_out_ms{40};
     std::atomic<uint64_t>           seed{0};
 
     double   env     = 0.0;
@@ -177,12 +180,15 @@ public:
     // repaints. Nothing else.
     void tick();
 
-    // THE TWO DEVICE KEYS, LIVE: the level's linear gain read by the audio
+    // THE FOUR DEVICE KEYS, LIVE: the level's linear gain read by the audio
     // thread at its next fill, the crossfade read at the next transition's
-    // draw. Seeded by gui_main from the config, written by the settings
-    // editor's two arms (commit_device_setting).
+    // draw, each fade read at the next fill. Seeded by gui_main from the
+    // config, written by the settings editor's four arms
+    // (commit_device_setting).
     void set_level_db(int db);
     void set_crossfade_ms(int ms);
+    void set_fade_in_ms(int ms);
+    void set_fade_out_ms(int ms);
 
     // THE VOICE every project's engine mixes (GuiPlayback::attach_rain).
     GuiRainVoice* voice() { return &voice_; }

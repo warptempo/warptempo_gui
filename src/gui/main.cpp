@@ -1438,7 +1438,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     app.projects_repo = device_config.projects_repo;
     // THE RAIN, the app's one, reached by pointer the device config's way
     // (AppState::rain): the RAIN key's faces, bare `w` and the settings
-    // editor's two rain arms read it.
+    // editor's four rain arms read it.
     app.rain          = &rain;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
@@ -3630,8 +3630,8 @@ int gui_main(const char* argument) {
     // background sound's one owner, constructed beside the config it reads —
     // the `sounds/rain/` folder beside the config probed once, here (absent is
     // the ordinary state and silent; a `.wav` out of shape one stderr line,
-    // the key grey), and the two keys' values handed to the voice (the config
-    // is required, so both stand). The lamp is dark at every launch: no key
+    // the key grey), and the four keys' values handed to the voice (the config
+    // is required, so all four stand). The lamp is dark at every launch: no key
     // holds it. Every project's engine mixes its voice (run_project's
     // attach), and it outlives them all — shut down below, after the loop,
     // when no engine is left to read its bank.
@@ -3639,6 +3639,8 @@ int gui_main(const char* argument) {
     rain.probe();
     rain.set_level_db(device_config.rain_level);
     rain.set_crossfade_ms(device_config.rain_crossfade_ms);
+    rain.set_fade_in_ms(device_config.rain_fade_in_ms);
+    rain.set_fade_out_ms(device_config.rain_fade_out_ms);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

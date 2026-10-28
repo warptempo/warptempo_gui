@@ -3224,11 +3224,11 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
-    // THE RAIN LAMP — BARE `w` (2026-10-28, the planner's call, Tooltips'
-    // class): a DEVICE lamp, the background sound under everything the engine
-    // plays (rain.h), touching nothing the view froze and nothing the view has
-    // a reason to refuse — so the view admits it and the Rain key stands lit
-    // in here by the derived partition.
+    // THE RAIN LAMP — BARE `w` (2026-10-28, the planner's call, architect
+    // agreed 2026-10-28, Tooltips' class): a DEVICE lamp, the background
+    // sound under everything the engine plays (rain.h), touching nothing the
+    // view froze and nothing the view has a reason to refuse — so the view
+    // admits it and the Rain key stands lit in here by the derived partition.
     const bool is_rain = (key == GuiKeys::W && bare);
     return !(is_zoom_step || is_zero || is_page_updown || is_play_renders ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||

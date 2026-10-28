@@ -20,9 +20,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (NINE keys since 2026-10-28, the rain's
-// two appended after `role` — `rain_level`, permanent, and the tuning key
-// `rain_crossfade_ms` at the end; SEVEN 2026-10-26, the LED
+// REQUIRED SET, every one of them (ELEVEN keys since 2026-10-28 ~11:30, the
+// rain's two fades appended after the crossfade; nine that morning, the
+// rain's two appended after `role` — `rain_level`, permanent, and the tuning
+// key `rain_crossfade_ms` at the end; SEVEN 2026-10-26, the LED
 // glow settled to a constant, materials.cpp's kLedGlowPx; EIGHT 2026-10-23,
 // `strip_pad` settled to a constant, program_spec.h; nine that day, the
 // bevel pair gone and the LED glow's key appended; TEN 2026-10-21 evening,
@@ -63,11 +64,11 @@ namespace {
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
-// `rain_crossfade_ms` since 2026-10-28, alone (none stood 2026-10-26 to
-// then). (The LED glow's stood there 2026-10-23 to 2026-10-26, settled at
-// 4 device px, materials.cpp's kLedGlowPx; `strip_pad` before it
-// 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's
-// strip_pad_px; `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23,
+// the three since 2026-10-28, `rain_crossfade_ms`, then `rain_fade_in_ms` and
+// `rain_fade_out_ms` (none stood 2026-10-26 to then). (The LED glow's stood
+// there 2026-10-23 to 2026-10-26, settled at 4 device px, materials.cpp's
+// kLedGlowPx; `strip_pad` before it 2026-10-22 to 2026-10-23, settled at
+// 13 W, program_spec.h's strip_pad_px; `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23,
 // `text_shadow` beside them until 2026-10-22; the cues' seven after it
 // 2026-10-26, settled that day, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
@@ -80,6 +81,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "role",
     "rain_level",
     "rain_crossfade_ms",
+    "rain_fade_in_ms",
+    "rain_fade_out_ms",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -93,7 +96,7 @@ std::string format_gui_scale_percent(int percent) {
     return std::string(buf);
 }
 
-// The two rain keys' canonical spellings (2026-10-28): `%d`, exactly what
+// The four rain keys' canonical spellings (2026-10-28): `%d`, exactly what
 // parse_canonical_config_int admits back (device_config.h).
 std::string format_rain_level(int db) {
     char buf[32];
@@ -102,6 +105,18 @@ std::string format_rain_level(int db) {
 }
 
 std::string format_rain_crossfade_ms(int ms) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", ms);
+    return std::string(buf);
+}
+
+std::string format_rain_fade_in_ms(int ms) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", ms);
+    return std::string(buf);
+}
+
+std::string format_rain_fade_out_ms(int ms) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", ms);
     return std::string(buf);
@@ -169,6 +184,12 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "rain_crossfade_ms") {
             // The tuning key's canonical integer (format_rain_crossfade_ms).
             s += format_rain_crossfade_ms(cfg.rain_crossfade_ms);
+        } else if (k == "rain_fade_in_ms") {
+            // The tuning key's canonical integer (format_rain_fade_in_ms).
+            s += format_rain_fade_in_ms(cfg.rain_fade_in_ms);
+        } else if (k == "rain_fade_out_ms") {
+            // The tuning key's canonical integer (format_rain_fade_out_ms).
+            s += format_rain_fade_out_ms(cfg.rain_fade_out_ms);
         }
         s += '\n';
     }
@@ -285,9 +306,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             return {};
         }
-        // THE RAIN'S TWO KEYS (2026-10-28): each under its one grammar owner
-        // (parse_rain_level, parse_rain_crossfade_ms, device_config.h),
-        // required like every key; any other spelling the launch's hard fail.
+        // THE RAIN'S FOUR KEYS (2026-10-28): each under its one grammar owner
+        // (parse_rain_level, parse_rain_crossfade_ms, parse_rain_fade_in_ms,
+        // parse_rain_fade_out_ms, device_config.h), required like every key;
+        // any other spelling the launch's hard fail.
         if (key == "rain_level") {
             const std::optional<int> db = parse_rain_level(value);
             if (!db) {
@@ -302,6 +324,22 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kRainCrossfadeGrammarReason);
             }
             out.rain_crossfade_ms = *ms;
+            return {};
+        }
+        if (key == "rain_fade_in_ms") {
+            const std::optional<int> ms = parse_rain_fade_in_ms(value);
+            if (!ms) {
+                return bad_value(ln, key, value, kRainFadeGrammarReason);
+            }
+            out.rain_fade_in_ms = *ms;
+            return {};
+        }
+        if (key == "rain_fade_out_ms") {
+            const std::optional<int> ms = parse_rain_fade_out_ms(value);
+            if (!ms) {
+                return bad_value(ln, key, value, kRainFadeGrammarReason);
+            }
+            out.rain_fade_out_ms = *ms;
             return {};
         }
         return warptempo_parse::prefix_line_error(

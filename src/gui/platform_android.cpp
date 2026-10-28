@@ -616,11 +616,14 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // first start's read-back refuses on the required `role` key;
     // `warptempo_sync setup` writes `role=author` (GuiDeviceRole,
     // device_config.h).
-    // THE RAIN'S TWO (architect 2026-10-28), spelled: the level -9 dB, "the
-    // rain is a masker", and the tuning crossfade's starting 4000 ms — the
-    // laptop's template the same (device_config.h's head).
+    // THE RAIN'S FOUR (architect 2026-10-28), spelled: the level -9 dB, "the
+    // rain is a masker", and the three tuning keys' starting values, the
+    // crossfade 4000 ms, the fade-in 500 and the fade-out 40 — the laptop's
+    // template the same (device_config.h's head).
     cfg.rain_level        = -9;
     cfg.rain_crossfade_ms = 4000;
+    cfg.rain_fade_in_ms   = 500;
+    cfg.rain_fade_out_ms  = 40;
     return cfg;
 }
 

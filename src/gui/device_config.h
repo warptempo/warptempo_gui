@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Nine keys live here and nowhere else,
+// piece (architect 2026-08-27). Eleven keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -97,6 +97,24 @@
 //                            becomes a constexpr in rain.h when he settles
 //                            it (the tuning rule, the LED glow's road); both
 //                            templates spell 4000
+//   rain_fade_in_ms=<ms>     THE RAIN'S FADE-IN at the lit press, in ms
+//                            (architect 2026-10-28): an integer in
+//                            [0, 10000] in canonical spelling, 0 a cut, live
+//                            at the settings editor's OK (read at the next
+//                            fill); A TUNING KEY with a Settings row,
+//                            REQUIRED like every key while it stands, which
+//                            becomes a constexpr in rain.h when he settles
+//                            it; both templates spell 500 (his "too slow" at
+//                            1000)
+//   rain_fade_out_ms=<ms>    THE RAIN'S FADE-OUT at the dark press, in ms
+//                            (architect 2026-10-28): an integer in
+//                            [0, 10000] in canonical spelling, 0 a cut, live
+//                            at the settings editor's OK (read at the next
+//                            fill); A TUNING KEY with a Settings row,
+//                            REQUIRED like every key while it stands, which
+//                            becomes a constexpr in rain.h when he settles
+//                            it; both templates spell 40 (his "too slow" at
+//                            80)
 //   (bevel_light=<percent>, bevel_dark=<percent>, THE FORTEPIANO CHROME'S
 //                            two bevel weights, tuning keys with Settings
 //                            rows 2026-10-21 to 2026-10-23, RETIRED with that
@@ -149,8 +167,8 @@
 // paint_ce_cue_triangle, gui_font.h's Program size; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together; `rain_level` APPENDED after `role` 2026-10-28, `role`'s
-// own road, and the tuning key `rain_crossfade_ms` after it, the tuning keys
-// keeping the end);
+// own road, and the tuning keys `rain_crossfade_ms`, `rain_fade_in_ms` and
+// `rain_fade_out_ms` after it, the tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -288,7 +306,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nine
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -324,8 +342,8 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors` and, since 2026-10-28, `rain_level` and
-// `rain_crossfade_ms` among them
+// `waveform`, `true_colors` and, since 2026-10-28, `rain_level`,
+// `rain_crossfade_ms`, `rain_fade_in_ms` and `rain_fade_out_ms` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -399,10 +417,13 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
-    // THE RAIN'S LEVEL in dB and its crossfade in ms (2026-10-28, the head's
-    // list): required; the construction state is the templates' values.
+    // THE RAIN'S LEVEL in dB, its crossfade and its two fades in ms
+    // (2026-10-28, the head's list): required; the construction state is the
+    // templates' values.
     int         rain_level        = -9;
     int         rain_crossfade_ms = 4000;
+    int         rain_fade_in_ms   = 500;
+    int         rain_fade_out_ms  = 40;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -578,12 +599,12 @@ inline constexpr const char* kDeviceRoleMirror = "mirror";
 inline constexpr const char* kDeviceRoleGrammarReason =
     "must be author or mirror";
 
-// A CANONICAL SIGNED INTEGER (2026-10-28, the two rain keys' shared lexis):
+// A CANONICAL SIGNED INTEGER (2026-10-28, the four rain keys' shared lexis):
 // an optional `-`, then digits with no leading zero, and no `-0` — exactly
 // what `%d` prints, so the reader admits back only the writer's spelling. At
 // most nine digits, which every range below sits far inside, so the
-// accumulation cannot overflow. The one lexer the two rain grammars read;
-// each owns its own range.
+// accumulation cannot overflow. The one lexer the rain grammars read; each
+// owns its own range.
 inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     bool neg = false;
     if (!v.empty() && v.front() == '-') {
@@ -632,6 +653,31 @@ inline std::optional<int> parse_rain_crossfade_ms(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
     if (!n || *n < kRainCrossfadeMinMs || *n > kRainCrossfadeMaxMs)
         return std::nullopt;
+    return n;
+}
+
+// THE rain_fade_in_ms AND rain_fade_out_ms GRAMMAR (architect 2026-10-28) —
+// ONE RANGE FOR THE TWO FADES, an integer in [0, 10000] ms in canonical
+// spelling, 0 a cut (the envelope reaches the lamp's value within one output
+// frame, rain_mix_block); the one owner the same four read for each key
+// (format_rain_fade_in_ms and parse_rain_fade_in_ms, format_rain_fade_out_ms
+// and parse_rain_fade_out_ms). TWO TUNING KEYS: when he settles a length its
+// key, its two functions and its Settings row go, and the value becomes a
+// constexpr in rain.h (the head's list).
+inline constexpr int kRainFadeMinMs = 0;
+inline constexpr int kRainFadeMaxMs = 10000;
+inline constexpr const char* kRainFadeGrammarReason =
+    "must be an integer in [0, 10000] in canonical spelling";
+std::string format_rain_fade_in_ms(int ms);
+std::string format_rain_fade_out_ms(int ms);
+inline std::optional<int> parse_rain_fade_in_ms(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kRainFadeMinMs || *n > kRainFadeMaxMs) return std::nullopt;
+    return n;
+}
+inline std::optional<int> parse_rain_fade_out_ms(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kRainFadeMinMs || *n > kRainFadeMaxMs) return std::nullopt;
     return n;
 }
 
@@ -754,11 +800,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves six keys —
+// the settings editor's ONE device-key body, which serves eight keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
-// `true_colors=`, and since 2026-10-28 `rain_level=` and
-// `rain_crossfade_ms=` (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
+// `true_colors=`, and since 2026-10-28 the rain's four, `rain_level=`,
+// `rain_crossfade_ms=`, `rain_fade_in_ms=` and `rain_fade_out_ms=`
+// (`bevel_light=` and `bevel_dark=` beside it 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
 // 2026-10-23, the LED glow's 2026-10-23 to 2026-10-26)
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
@@ -781,8 +828,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
-// `rain_level=-9` and `rain_crossfade_ms=4000` (2026-10-28) and no role
-// line
+// `rain_level=-9`, `rain_crossfade_ms=4000`, `rain_fade_in_ms=500` and
+// `rain_fade_out_ms=40` (2026-10-28) and no role line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and
 // a blank

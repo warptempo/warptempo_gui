@@ -136,13 +136,17 @@ void rain_mix_block(GuiRainVoice& v, float* const* channel_buffers,
 
     // THE FILL'S CONSTANTS: the rain's own increment (the render body's rate
     // rescaling — 48000/48000 on the tablet, 48000/44100 on the laptop's
-    // graph), the two envelope steps per output frame, and the level, read
-    // once per fill.
-    const double rate      = static_cast<double>(output_rate);
-    const double increment = static_cast<double>(bank->rate) / rate;
-    const double up        = 1000.0 / (kRainFadeInMs * rate);
-    const double down      = 1000.0 / (kRainFadeOutMs * rate);
-    const double gain      = v.gain.load(std::memory_order_relaxed);
+    // graph), the two envelope steps per output frame from the two fade keys,
+    // and the level, each read once per fill, so a settings change applies at
+    // the next fill. A fade of 0 ms is A CUT: the step is the whole range, so
+    // the envelope reaches the lamp's value at the fill's first frame.
+    const double  rate        = static_cast<double>(output_rate);
+    const double  increment   = static_cast<double>(bank->rate) / rate;
+    const int32_t fade_in_ms  = v.fade_in_ms.load(std::memory_order_relaxed);
+    const int32_t fade_out_ms = v.fade_out_ms.load(std::memory_order_relaxed);
+    const double  up   = fade_in_ms > 0 ? 1000.0 / (fade_in_ms * rate) : 1.0;
+    const double  down = fade_out_ms > 0 ? 1000.0 / (fade_out_ms * rate) : 1.0;
+    const double  gain = v.gain.load(std::memory_order_relaxed);
 
     for (int64_t n = 0; n < frame_count; ++n) {
         // THE ENVELOPE moves toward the lamp at its own rate, clamped to
@@ -358,6 +362,16 @@ void GuiRain::set_level_db(int db) {
 void GuiRain::set_crossfade_ms(int ms) {
     voice_.crossfade_ms.store(static_cast<int32_t>(ms),
                               std::memory_order_relaxed);
+}
+
+void GuiRain::set_fade_in_ms(int ms) {
+    voice_.fade_in_ms.store(static_cast<int32_t>(ms),
+                            std::memory_order_relaxed);
+}
+
+void GuiRain::set_fade_out_ms(int ms) {
+    voice_.fade_out_ms.store(static_cast<int32_t>(ms),
+                             std::memory_order_relaxed);
 }
 
 void GuiRain::load(std::stop_token stop) {
