@@ -826,7 +826,8 @@ TooltipHangBands tooltip_hang_bands(const AppState& a) {
             o.index < static_cast<int>(a.modal_dialog.buttons.size()))
             btn = a.modal_dialog.buttons[static_cast<size_t>(o.index)].rect;
     } else if (o.index >= 0 && o.index < kRedesignButtonCount) {
-        btn = a.redesign_buttons[static_cast<size_t>(o.index)].rect;
+        btn = a.redesign_buttons[static_cast<size_t>(o.index)].rect_at(
+            t.shown_x, t.shown_y);
     }
     if (btn.w <= 0 || btn.h <= 0) return bands;
     const int above_bottom = btn.y - tooltip_flip_gap_px();

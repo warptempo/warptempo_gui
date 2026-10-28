@@ -847,10 +847,12 @@ static_assert(std::size(kToolbarChords) ==
 // pairs (and the history opener seated with them), only the columns it
 // painted (paint_icon_row). A zero rect (before
 // that row's first paint, or a member the overflow hides whole) contains no
-// point, which is the correct answer.
+// point, which is the correct answer. THE PLAY KEY'S SECOND RECT, ROW 8'S
+// CLOCK (architect 2026-10-27), answers here too (RedesignButtonFace's
+// `contains`, the field's record), so the clock arms, lifts and passes the
+// band's modifier gate as the key does, and the dispatch is the key's.
 bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
-    return rect_contains(
-        app.redesign_buttons[redesign_button_index(id)].rect, x, y);
+    return app.redesign_buttons[redesign_button_index(id)].contains(x, y);
 }
 
 // (press_on_live_menu_anchor — the folder overlay's two veils' one
@@ -6032,12 +6034,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // editor's key gate until then),
     // above the loading/empty guard, ctrl/alt strict no-ops, and every
     // press in the band that is not on a button a consumed nothing — which
-    // since the unification includes the clock cell and the bare ground
-    // beside it, the lane's pointer-inert span (the status chain that shared
-    // that ground until 2026-08-13 took no clicks either, and took none away
-    // with it) — and the STATE CELL right of the clock since 2026-08-29 is that
-    // same inert ground, a text cell with no rect of its own to test, as is
-    // the active tab's name beside the clock (2026-10-22). ABOVE it stand
+    // includes the bare ground beside the clock, the lane's pointer-inert
+    // span (the status chain that shared that ground until 2026-08-13 took
+    // no clicks either, and took none away with it) — and the STATE CELL
+    // right of the clock since 2026-08-29 is that same inert ground, a text
+    // cell with no rect of its own to test, as is the active tab's name
+    // beside the clock (2026-10-22). THE CLOCK'S FIELD IS ON A BUTTON: the
+    // PLAY key's second rect (architect 2026-10-27,
+    // RedesignButtonFace::field), so a press there is the key's. ABOVE it stand
     // the canvas's bottom frame row (inert chrome, the program ring's) and
     // GAP 2's blank window ground — outside every band here and falling
     // through to the tail's consumed nothing, the ground as window ground by
@@ -7764,8 +7768,10 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // ENABLED TERM (architect 2026-08-07): a disabled button still explains
         // itself, kdenlive's own behaviour. (The hover zone's open-dropdown
         // term went with the popup, 2026-10-21.)
+        // The face's `contains`: Play's second rect, row 8's clock, raises
+        // the key's own tooltip (2026-10-27).
         const bool under_pointer = !modal_veil && !under_card &&
-                                   rect_contains(f.rect, mx, my);
+                                   f.contains(mx, my);
         // THE HOT CANDIDATE (stored by no write while the program's case has
         // no hot face, below): the toolbar button under the pointer on the
         // same gates — and NO keyboard-modal term:
@@ -7816,11 +7822,12 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // (2026-10-01): the card paints no pressed face, so the paint-only bit
     // has nothing to serve there, and its slide-away cancel is its lift's
     // own re-hit (finish_notification_release).
+    // Both of the face's rects (`contains`): a press on row 8's clock holds
+    // the PLAY key down while the pointer stays on the clock (2026-10-27).
     if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster) {
-        const bool inside = rect_contains(
-            app.redesign_buttons[static_cast<size_t>(
-                                     app.chrome_press.index)].rect,
-            mx, my);
+        const bool inside =
+            app.redesign_buttons[static_cast<size_t>(app.chrome_press.index)]
+                .contains(mx, my);
         if (inside != app.chrome_press.inside) {
             app.chrome_press.inside = inside;
             // Only an arm with a click face paints a pressed interior, and

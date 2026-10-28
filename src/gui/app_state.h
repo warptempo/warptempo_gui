@@ -2774,6 +2774,9 @@ enum class RedesignButton {
     // membership; the act is GuiAbAudition, ab_audition.h). Here the long
     // press IS wanted on glass — the sequence exists for the touch panel's
     // workflow as much as the desk's.
+    // ROW 8'S CLOCK IS ITS SECOND RECT (architect 2026-10-27): a press on
+    // the clock's field is a press on this key, its tooltip this key's
+    // (RedesignButtonFace::field holds the rule).
     TransportPlayStop,
     // GO TO START / GO TO END (architect 2026-10-24, back on row 8 after
     // their removal of 2026-10-12): bare Home / End, the trim bounds' jump
@@ -5619,7 +5622,8 @@ struct AppState {
     //
     // NO HOVER IS STORED HERE (architect 2026-10-02: no button wears a hover
     // face). The pointer walk (recompute_redesign_button_hover) reads `rect`
-    // for the tooltip's owner and the armed press's inside bit; a press writes
+    // and Play's second rect, row 8's clock (`field`, `contains`), for the
+    // tooltip's owner and the armed press's inside bit; a press writes
     // the armed chrome press (AppState::ChromePress), whose Roster arm is the
     // pressed face.
     //
@@ -5673,6 +5677,31 @@ struct AppState {
         // Empty until the button's first paint.
         const char* legend    = "";
         GuiRect painted{0, 0, 0, 0};
+        // THE SECOND RECT — ROW 8'S CLOCK, THE PLAY KEY'S ALONE (architect
+        // 2026-10-27: a press on the clock's field is a press on Play /
+        // Stop): the field as painted, published by the clock's painter
+        // (paint_bottom_row_buttons_and_clock), cut at the right block's
+        // left edge where a narrow window lays the block over it (the
+        // block wins in z). EMPTY ON EVERY OTHER MEMBER, and empty on Play
+        // whenever its key does not stand — the `h` view's hide and the
+        // modal's yield publish the empty rect through the one overload
+        // that clears both (publish_button_face) — so the clock answers
+        // exactly where the key answers. Every roster reader asks
+        // `contains`, never `rect` alone: the press, the lift, the band's
+        // modifier gate, the armed press's inside bit and the tooltip's
+        // owner. A press on the field arms the ordinary Roster press on
+        // Play, so the KEY wears the held depth and its LED while the clock
+        // is held (the key shows the act; the clock paints nothing).
+        GuiRect field{0, 0, 0, 0};
+        bool contains(int x, int y) const {
+            return rect_contains(rect, x, y) || rect_contains(field, x, y);
+        }
+        // The rect a point on the face lies in — the field where the point
+        // is on it, the key otherwise: the tooltip's flip seat over the
+        // surface the pointer rested on (tooltip_box_rect's `btn`).
+        const GuiRect& rect_at(int x, int y) const {
+            return rect_contains(field, x, y) ? field : rect;
+        }
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 

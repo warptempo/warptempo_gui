@@ -639,6 +639,9 @@ AppState::RedesignButtonFace& publish_button_face(
 // A MEMBER THAT DOES NOT STAND publishes the empty rect and paints nothing;
 // its stash takes the live word (nothing painted can disagree with it) and
 // an empty extent, the walk's own damage having erased what stood there.
+// ITS SECOND RECT GOES WITH IT (RedesignButtonFace::field, 2026-10-27): the
+// PLAY key hidden in the `h` view or yielded under a modal takes row 8's
+// clock out of the roster with it, the clock answering where the key does.
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
@@ -647,6 +650,7 @@ AppState::RedesignButtonFace& publish_button_face(
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.painted = GuiRect{0, 0, 0, 0};
+    face.field   = GuiRect{0, 0, 0, 0};
     return publish_button_face(cr, app, audio, playback, target_render, id,
                                rect, rect, redesign_button_legend(app, audio, id));
 }
@@ -2684,9 +2688,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // for it to walk over the clock, the block is what shows, whole and
     // opaque, and nothing of the field, its digits or its ring comes through,
     // exactly as the state line already goes under it. The press agrees by
-    // construction: the clock, the name and the line are pointer-inert
-    // ground and the press resolves against the cases' published rects alone
-    // (claim_button_row_press, input_pointer.cpp). Every repaint of the clock
+    // construction: the name and the line are pointer-inert ground, the
+    // clock's field answers as the PLAY key (its second rect, cut at the
+    // block's left edge, the clock's block below) and the press resolves
+    // against the published rects alone (claim_button_row_press,
+    // input_pointer.cpp). Every repaint of the clock
     // is this body run whole under the damage clip (the clock cell's rect,
     // clock_invalidate_rect, main.cpp — there is no field-only path), so the
     // per-frame clock damage repaints the block over the clock inside the
@@ -2737,6 +2743,35 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const int    field_w = clock.field_w;
         const GuiRect clock_field =
             time_field_rect(field_x, field_w, btn_y, btn_h);
+        // THE CLOCK IS PRESSED AS THE PLAY KEY (architect 2026-10-27): the
+        // field as painted is Play / Stop's second rect
+        // (RedesignButtonFace::field), so a press on it is a press on that
+        // key — the lift bare Space, the Shift press or the long press
+        // Shift+Space, the A/B audition — the key's grey its consumed
+        // nothing, and its tooltip the key's own. Published on every pass,
+        // whatever the clip, as the keys' rects are; CUT AT THE RIGHT
+        // BLOCK'S LEFT EDGE, the block winning in z where a narrow window
+        // lays it over the field (the z rule above), so no point answers
+        // twice. Play hidden (the `h` view) or the row yielded (a modal)
+        // publishes the key's empty rect after this, which empties the
+        // field with it (publish_button_face's empty overload). NOTHING IS
+        // PAINTED ON THE CLOCK FOR THE PRESS — no depth, no LED, no digit
+        // shift: the press arms the PLAY key, which wears the held depth
+        // and its LED, and the digits starting or stopping are the act's
+        // own confirmation. The digits are never greyed. ROW 8'S CLOCK
+        // ALONE: the render player's and the score viewer's time fields
+        // share the field's painter (paint_ce_time_field) and never the
+        // press.
+        {
+            GuiRect play_field = clock_field;
+            play_field.w = std::min(clock_field.x + clock_field.w,
+                                    right_block_x) -
+                           clock_field.x;
+            if (play_field.w <= 0) play_field = GuiRect{0, 0, 0, 0};
+            app.redesign_buttons[redesign_button_index(
+                                     RedesignButton::TransportPlayStop)]
+                .field = play_field;
+        }
         // THE FIELD AND ITS RUN ARE SKIPPED WHERE THE CLIP MISSES THE FIELD
         // (clip_meets): the run lies inside the cell published below, which
         // lies inside the field.
@@ -3070,7 +3105,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         if (text.line1 == nullptr) return;
         line1 = text.line1;
         line2 = text.line2;
-        btn   = app.redesign_buttons[owner.index].rect;
+        // The face's rect under the show's point: row 8's clock where the
+        // pointer rested on it (RedesignButtonFace::rect_at), the key
+        // otherwise — tooltip_hang_bands reads the same.
+        btn   = app.redesign_buttons[owner.index].rect_at(
+            app.redesign_tooltip.shown_x, app.redesign_tooltip.shown_y);
     }
     if (btn.w <= 0 || btn.h <= 0) return;
 
