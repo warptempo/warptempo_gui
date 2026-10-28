@@ -8427,8 +8427,8 @@ struct AppState {
     // through it), and this string is back on screen the moment the view
     // closes.
     //
-    // The writers of this string are the render side and the startup load
-    // alone, each clearing what it wrote.
+    // The writers of this string are the render side alone, each clearing
+    // what it wrote.
     std::string queue_progress_text;
 
     // One-slot pending archival render command. An archival dispatch

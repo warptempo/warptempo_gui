@@ -1747,21 +1747,48 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
     // apply_touch_nav_update's declaration (the GUI half, including why the
     // nav gesture stops short of the strip drag's pointer-press arm).
+    //
+    // INPUT WAITS FOR THE PICTURE (architect 2026-10-27, the open's
+    // presentation hold — platform.h's head owns the rule): while the hold
+    // stands the glass shows no picture of this set, so every PRESS-CLASS
+    // hook below DROPS what it is handed (ON SCREEN IS AS PAINTED — an act
+    // would land on a picture the user has not seen): the key press (all
+    // but plain Ctrl+Q, which ends the process and acts on no picture), the
+    // button press, the wheel, a touch navigation frame, the region hold's
+    // and the caret drag's begins, and the car's buttons. A DROP, NOT A
+    // QUEUE: input arriving during the load (read when the loop resumes)
+    // and the plate's few milliseconds after it is gone, the simplest shape
+    // that never acts unseen. Everything else passes, each finding no claim
+    // to act on: the releases (the button's and the key's — a release with
+    // no press of this set's is the run stop's own case, platform.h), the
+    // motion (hover is a model the releasing frame paints), the touch
+    // updates and ends (self-guarded on their begins: a dropped region
+    // begin arms nothing, and the navigation's end clears a seat no frame
+    // made), the pointer's leave, the activation and intent edges, the
+    // settled hook, and the close request (an exit, like Ctrl+Q).
+    const auto open_unseen = [&gui]() { return gui.presentation_held(); };
     gui.set_touch_nav_hooks(
         [&](const GuiTouchNavFrame& frame) {
+            if (open_unseen()) return;
             input_handler.apply_touch_nav_update(frame);
         },
         [&]() { input_handler.end_touch_nav(); },
         [&](int x, int y) {
             return input_handler.touch_point_in_pan_zone(x, y);
         },
-        [&](int x, int y) { input_handler.begin_touch_region(x, y); },
+        [&](int x, int y) {
+            if (open_unseen()) return;
+            input_handler.begin_touch_region(x, y);
+        },
         [&](int x, int y) { input_handler.update_touch_region(x, y); },
         [&]() { input_handler.end_touch_region(); },
         [&](int x, int y) {
             return input_handler.touch_point_in_editor_field(x, y);
         },
-        [&](int x, int y) { input_handler.begin_touch_caret_drag(x, y); },
+        [&](int x, int y) {
+            if (open_unseen()) return;
+            input_handler.begin_touch_caret_drag(x, y);
+        },
         [&](int x, int y) { input_handler.update_touch_caret_drag(x, y); },
         [&]() { input_handler.end_touch_caret_drag(); });
     // THE PEN'S RETAINED ZOOM ANCHOR'S RELEASE (architect 2026-09-27): the
@@ -1785,6 +1812,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
     bool initial_load_done = false;
+    // THE LOAD HAS RETURNED, SUCCEEDED (its one writer, the startup tick's
+    // load branch): the open's release waits on it (the tick's release
+    // block; platform.h's head).
+    bool open_loaded = false;
 
     // THE SESSION'S FATAL-LOAD BIT (2026-08-29), the ONE owner of this
     // session's non-zero exit status. Every in-session load refusal is
@@ -1880,6 +1911,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // any pointer-button press — so no repeat-bit test is needed. The
         // burst's full edge inventory is at AppState::ChromePress.
         app.chrome_press.repeat_due_ms = 0;
+        // The open's hold drops it (the block above set_touch_nav_hooks),
+        // plain Ctrl+Q excepted.
+        if (open_unseen() &&
+            !(mods.ctrl && !mods.shift && !mods.alt && key == GuiKeys::Q))
+            return;
         input_handler.on_key(key, mods);
     });
 
@@ -1910,6 +1946,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // is dropped by the platform's null test rather than delivered against a
     // dead set (the hook captures this session's two owners).
     gui.set_on_media_command([&](GuiMediaCommand cmd) {
+        if (open_unseen()) return;   // the open's hold (the block above)
         if (app.render_player.active) {
             render_player.on_media_command(cmd);
         } else {
@@ -1927,6 +1964,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     gui.set_on_button_press([&](GuiMouseButton button, int x, int y,
                                 GuiInputState mods) {
+        if (open_unseen()) return;   // the open's hold (the block above)
         input_handler.on_button_press(button, x, y, mods);
     });
 
@@ -1940,6 +1978,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // of how many detents a fast touchpad burst crossed in that frame.
     gui.set_on_wheel([&](GuiMouseButton dir, int steps, int x, int y,
                          GuiInputState mods) {
+        if (open_unseen()) return;   // the open's hold (the block above)
         input_handler.on_wheel(dir, steps, x, y, mods);
     });
 
@@ -2255,10 +2294,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (refresh_logo_legend, its rule and its damage).
         refresh_logo_legend(app, gui);
 
-        // Startup file load, deferred out of pre-run() so the window maps and
-        // paints first (the compositor's initial configure / first frame only
-        // land once run() is pumping). Gated on has_initial_configure() so the
-        // load — and its loading notice — run against a mapped, painted surface.
+        // Startup file load, deferred out of pre-run() to the first tick on a
+        // configured window (the compositor's initial configure only lands
+        // once run() is pumping) — under the open's presentation hold, which
+        // keeps the glass on the picker (at a cold launch, on nothing of
+        // ours) through the load and until the finished picture (the
+        // release block below; platform.h's head).
         if (!initial_load_done && gui.has_initial_configure()) {
             initial_load_done = true;
             // THE WHOLE RESOLVED PROJECT, not just its source path: the load
@@ -2284,6 +2325,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 gui.request_exit();
                 return;
             }
+            open_loaded = true;
             // THE REMEMBERED PROJECT (2026-08-27): every successful open —
             // startup's included — writes its name into the device config's
             // last_project, the program's own writer of that file (the
@@ -2317,7 +2359,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // A quit or a project switch never waits on it (the worker
             // abandons a check in flight, history_commit_worker.h).
             input_handler.dispatch_github_check();
-            return;  // loaded state paints on the next tick
+            // The plate's job is dispatched on the next tick (its
+            // dirty-detect below), and the open's release follows its
+            // completion.
+            return;
         }
 
         // End-of-run check for the "Updating..." label's hold: a stretch of
@@ -2435,6 +2480,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // on_tick) wf_cache.fp_* already carries the new viewport, so
         // flags snap together with the just-blitted waveform.
         paint_handler.maybe_rebuild_flag_cache();
+
+        // THE OPEN'S RELEASE (architect 2026-10-27, the presentation hold —
+        // platform.h's head owns the rule): once the load has returned and
+        // the published plate is the live view's
+        // (GuiPaintHandler::live_plate_published, whose declaration says
+        // what COMPLETE checks and why), the platform presents the whole
+        // window in one frame. HERE, after both dirty-detects, so the plate a
+        // completion published and the flag cache rebuilt against it are in
+        // hand; an owed synchronous rebuild is paid first, since the hold
+        // paints no frame whose pre-paint hook would pay it and the worker
+        // stands down while it is owed. Asked every tick until it releases —
+        // the completion is the worker's eventfd, which wakes the loop, and
+        // the next tick finds it.
+        if (open_loaded && gui.presentation_held()) {
+            paint_handler.flush_owed_waveform_rebuild();
+            if (paint_handler.live_plate_published())
+                gui.release_presentation();
+        }
 
         // THE REDESIGNED BUTTONS' STATE-VECTOR STALENESS COMPARATOR — the ONE
         // site that repairs a stale DISABLED or SELECTED face, and the reason no
@@ -3285,11 +3348,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Android this is also where the first session's owed fire lands).
     gui.redeliver_geometry();
 
-    // Paint the initial background before any synchronous load begins so the
-    // window isn't briefly blank on fast disks.
-    gui.invalidate_region(0, 0, app.width, app.height);
-    gui.drain_events();
-
+    // NO DAMAGE IS DECLARED HERE: every set runs under the open's hold, and
+    // its first painted frame is the release's, which damages the whole
+    // window itself (platform.h's head).
     gui.run();
 
     // WHY run() RETURNED, read before anything below dies: an exit (the

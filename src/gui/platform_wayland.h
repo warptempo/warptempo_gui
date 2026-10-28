@@ -145,10 +145,18 @@ public:
     // THE REOPEN'S HALF OF THE PAIR: make run() return with the window
     // standing and the exit bit untouched, so gui_main's loop can rebuild the
     // object set and call run() again (platform.h). Nothing else stops.
+    // It also ARMS THE OPEN'S PRESENTATION HOLD (platform.h's head): a run
+    // stop is a reopen, and the reopen holds the glass.
     void request_run_stop();
     // Has an exit been requested or forced? Read by gui_main after run()
     // returns to tell the two returns apart.
     bool exit_requested() const { return should_exit_; }
+    // THE OPEN'S PRESENTATION HOLD (the rule at platform.h's head): whether
+    // it stands, and the GUI's one release — refused under a pending run
+    // stop; otherwise the whole surface damaged and PAINTED AT ONCE, the
+    // paint flushed (this backend's road out, at the definition).
+    bool presentation_held() const { return presentation_held_; }
+    void release_presentation();
     // Fire on_resize with the window's current geometry, for a freshly
     // installed object set whose window will send no configure of its own —
     // the reopen's case. A no-op before the first configure (no geometry yet;
@@ -156,7 +164,6 @@ public:
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
-    void paint_now();
 
     // THE SYSTEM CLIPBOARD (the CLIPBOARD selection). PRIMARY is deliberately
     // absent — middle-click paste is out of scope and zwp_primary_selection is
@@ -885,6 +892,10 @@ private:
     bool should_exit_ = false;
     // The run-stop request, cleared at the head of every run() (platform.h).
     bool run_stop_requested_ = false;
+    // THE OPEN'S PRESENTATION HOLD (platform.h's head): standing from
+    // construction — the cold launch's open — and re-armed by every
+    // request_run_stop; cleared by release_presentation alone.
+    bool presentation_held_ = true;
     bool has_initial_configure_ = false;
     // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading (keyboard focus): false until
     // the first configure, the honest cold answer; labwc focuses a newly mapped

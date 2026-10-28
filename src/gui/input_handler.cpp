@@ -382,6 +382,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // then honored (the app quits on completion). This gate's Ctrl+Q admission
     // is for a close queued before/around load, which still yields that
     // deferred quit; an urgent abort is pkill / the compositor's force-close.
+    // THE OPEN'S PRESENTATION HOLD SPANS THIS WHOLE STATE (platform.h's head:
+    // armed before the set's run() and released only after its load), and
+    // its key hook drops every platform press but plain Ctrl+Q before this
+    // body runs (run_project's hook block, main.cpp) — so the card below has
+    // no platform producer while the hold stands.
     if (no_audio_to_dispatch_on()) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.request_close(GuiCloseTarget::Exit);

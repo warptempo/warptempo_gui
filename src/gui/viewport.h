@@ -525,7 +525,7 @@ struct Viewport {
     // ROW 8'S STATE CELL — the clock's neighbour (architect 2026-08-29, the
     // evening the STATUS BAR folded back into this row). The cell carries what
     // is TRUE RIGHT NOW: the `h` walk line, else the process line — the
-    // render / batch / loading progress string. So this is the owner
+    // render / batch progress string. So this is the owner
     // for every route that changes what those answer — and, since 2026-09-09,
     // for the one route that flips the CLOCK'S DIRTY SUFFIX, the lane's other
     // piece of state (the inventory below). (The bar was the window's last lane
@@ -568,8 +568,7 @@ struct Viewport {
     // BEING THE DIRTY MARK — architect, plain_save_actionable — and Save's
     // face is repainted by the roster's per-tick comparator.)
     // The `h` WALK LINE has no site of its own here and never did: it rides
-    // the mode's edges, which invalidate the whole window. The file loader's
-    // "Loading..." likewise damages the window whole.
+    // the mode's edges, which invalidate the whole window.
     //
     // Routes that damage the whole window (the loads, the resize path) cover
     // this lane as a superset and are deliberately unlisted; the TOP STRIP AND

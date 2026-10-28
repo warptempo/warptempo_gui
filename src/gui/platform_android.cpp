@@ -990,7 +990,7 @@ void GuiPlatform::adopt_window(bool fire_resize) {
  * adopts a window before main.cpp has wired a single hook, so the geometry is
  * taken then and the CALLBACK is owed (initial_resize_owed_). Every path that
  * can paint calls this before it paints — pump()'s head, and paint_one_frame,
- * which is the funnel paint_now() and drain_events() both go through — so the
+ * which is the funnel drain_events() goes through too — so the
  * first buffer this process posts can never carry the layout computed from
  * AppState's cold default size.
  */
@@ -1299,6 +1299,8 @@ void GuiPlatform::request_run_stop() {
     // the window stay exactly as they are, and the next run() carries on
     // with them. Deliberately NOT ANativeActivity_finish — that is an exit.
     run_stop_requested_ = true;
+    // A run stop is a reopen: the open's hold (platform.h's head).
+    presentation_held_ = true;
 }
 
 void GuiPlatform::redeliver_geometry() {
@@ -1373,6 +1375,9 @@ void GuiPlatform::paint_one_frame() {
     deliver_owed_resize();
 
     if (!has_initial_configure_ || !window_ || !back_) return;
+    // THE OPEN'S HOLD (platform.h's head): no paint and no post — the damage
+    // waits for the release.
+    if (presentation_held_) return;
     if (damage_.empty()) return;
 
     // Pre-paint hook: gives the application a chance to update model state
@@ -1550,15 +1555,18 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
 #endif
 }
 
-void GuiPlatform::paint_now() {
-    // Synchronous paint + post for the one case that cannot wait for run()'s
-    // next pass: a blocking load. paint_one_frame no-ops before the first
-    // window and on empty damage, and the post is immediate, so there is no
-    // flush counterpart to call. NOT GATED BY THE VSYNC CALLBACK (pump's
-    // tail) and touching neither of its bits: a load blocks the loop, so no
-    // callback could land before it returns, and a callback already pending
-    // fires at the next drain like any other.
-    paint_one_frame();
+// THE OPEN'S RELEASE (the rule at platform.h's head). THIS BACKEND'S ROAD OUT
+// IS THE VSYNC GATE, where the Wayland backend paints at once — the one
+// asymmetry of the mechanism: the window here is shown whether or not it was
+// ever posted to, so nothing is owed a paint outside the gate, and the
+// release is called inside a pump() pass (the tick), whose tail posts the
+// callback for the damage declared here (pump's tail, the gate's rule). A
+// window lost under the hold keeps the damage for the next adoption, which
+// adds its own.
+void GuiPlatform::release_presentation() {
+    if (!presentation_held_ || run_stop_requested_) return;
+    presentation_held_ = false;
+    invalidate_surface_rect(0, 0, width_, height_);
 }
 
 // ---------------------------------------------------------------------------
@@ -1797,11 +1805,13 @@ void GuiPlatform::pump() {
     // paint_one_frame's tail) or arriving later posts the next callback at
     // its own pass's tail, so the first damage after idle waits at most one
     // vsync and a pan paints once per vsync. A CALLBACK WITH NO DAMAGE TO
-    // PAINT (a blocking paint took it first, or none came) simply clears the
-    // bit: a vsync with nothing to show is gone, and the next
-    // damage waits for its own. NOTHING ELSE IS GATED: paint_now's and
-    // drain_events' paints (a blocking load's) go out at once and touch
-    // neither bit. NO WINDOW, NO POST: with the window gone (TERM_WINDOW,
+    // PAINT (none came) simply clears the bit: a vsync with nothing to show
+    // is gone, and the next damage waits for its own. NOTHING ELSE IS GATED:
+    // drain_events' paint (a blocking load's, which the open's hold
+    // withholds — platform.h's head) touches neither bit. UNDER THE OPEN'S
+    // HOLD, NO POST: the damage waits for the release, whose pass posts it
+    // here (a callback already in flight lands, and its paint returns at
+    // once). NO WINDOW, NO POST: with the window gone (TERM_WINDOW,
     // or an adoption that read a zero size) the post is withheld, so a
     // backgrounded app's damage does not spin the callback at the panel's
     // rate; a callback already in flight still lands, its pass calls
@@ -1856,7 +1866,8 @@ void GuiPlatform::pump() {
         vsync_due_ = false;
         paint_one_frame();
     }
-    if (!damage_.empty() && !vsync_pending_ && window_) {
+    if (!damage_.empty() && !vsync_pending_ && window_ &&
+        !presentation_held_) {
         AChoreographer_postFrameCallback64(choreographer_,
                                            &AndroidCallbacks::vsync, nullptr);
         vsync_pending_ = true;
@@ -1880,8 +1891,11 @@ void GuiPlatform::drain_events() {
     // IT PAINTS, AND IT DOES NOTHING ELSE.
     //
     // ITS LIVE CALLER IS A BLOCKING LOAD'S PROGRESS CALLBACK (file_loader.cpp),
-    // which calls it many times per load so the window keeps showing progress
-    // while the model is half-built. What the caller was written against is
+    // which calls it many times per load. EVERY LOAD IS A PROJECT OPEN, so
+    // the open's hold stands across it (platform.h's head) and the paint
+    // returns at once: a load shows nothing of the half-built model, the
+    // glass keeping the picker or the cold launch's black until the finished
+    // picture. What the caller was written against is
     // the Wayland backend's wl_display_dispatch_pending: that call dispatches
     // events ALREADY READ and reads no socket, so a load observes no new
     // input, no focus change and no close — only the pending frame-done
@@ -1900,11 +1914,9 @@ void GuiPlatform::drain_events() {
     // magnitude longer than that to be at risk — and a touch during a load
     // that long is the user interrupting his own load, which is his to answer.
     //
-    // paint_now()'s contract is unchanged and is the other half of this pair:
-    // that one is the synchronous paint asked for outright, this one is the
-    // progress paint a load takes on its way through. Like it, NOT GATED BY
-    // THE VSYNC CALLBACK and touching neither of its bits (pump's tail): no
-    // looper source is processed here, so no callback can land.
+    // NOT GATED BY THE VSYNC CALLBACK and touching neither of its bits
+    // (pump's tail): no looper source is processed here, so no callback can
+    // land.
     paint_one_frame();
 }
 

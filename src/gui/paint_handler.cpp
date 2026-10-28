@@ -2888,11 +2888,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const bool state_drawn = state_w > 0 && clip_meets(cr, state_span);
         std::string state;
         if (state_drawn) {
-            // The process line — the render/batch/queue status and the
-            // startup "Loading..." line, empty when there is nothing to
-            // report — unless the walk line wins. It is one of the reasons
-            // this body runs on every frame class (it is the only feedback on
-            // the loading frame).
+            // The process line — the render/batch/queue status, empty when
+            // there is nothing to report — unless the walk line wins.
             state = app.history_mode.active ? history_walk_line(app)
                                             : app.queue_progress_text;
         }
@@ -8087,10 +8084,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // above (main.cpp's vertical rule).
     //
     // THE BOTTOM ROW JOINS THEM (row 7): it is audio-independent in the same
-    // sense — the timestamp reads 00:00.000 with no source, and the loading line
-    // is one of the things the row carries, which is why the separate loading-
-    // only draw that used to sit below is gone. Nothing painted later overlaps
-    // it except the floating surfaces, which paint over everything by design.
+    // sense — the timestamp reads 00:00.000 with no source. Nothing painted
+    // later overlaps it except the floating surfaces, which paint over
+    // everything by design.
     {
         const GuiRect exposed{x, y, w, h};
         // THE CHROME'S PAINT TIME (a throwaway trace for the planner,

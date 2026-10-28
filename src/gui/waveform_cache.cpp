@@ -682,6 +682,27 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     damage_window_top_rows(app, gui, a.y + a.h);
 }
 
+// THE OPEN'S FIRST PICTURE (the declaration, paint_handler.h): the published
+// plate against the live inputs, field by field — the dirty-detect's own ten
+// (maybe_enqueue_waveform_render's compare), read here against the LIVE slot
+// fp_* rather than the pending one, since the question is what the glass
+// would be shown.
+bool GuiPaintHandler::live_plate_published() const {
+    if (!wf_cache.fp_rendered || waveform_rebuild_owed) return false;
+    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) return false;
+    return wf_cache.fp_vp_start            == in.vp_start &&
+           wf_cache.fp_vp_end              == in.vp_end &&
+           wf_cache.fp_area_w              == in.area_w &&
+           wf_cache.fp_area_h              == in.area_h &&
+           wf_cache.fp_divider_px          == in.divider_px &&
+           wf_cache.fp_line_px             == in.line_px &&
+           wf_cache.fp_inks                == in.inks &&
+           wf_cache.fp_gain_hash           == in.gain_hash &&
+           wf_cache.fp_target              == in.is_target &&
+           wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
+}
+
 // -- Synchronous waveform rebuild (THE user-driven render route) ---------
 //
 // Every frame of every user-driven viewport change routes through here: pans

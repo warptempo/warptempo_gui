@@ -488,12 +488,6 @@ private:
     // reset it because the surface a hold would calm is going away) and read by
     // the two WORK-COMPLETION clears, whose deferral is the hold itself.
     //
-    // NOT THE LOADERS: file_loader owns the same status slot for its own
-    // "Loading..." line and assigns it directly, touching neither field. That
-    // costs nothing — a run left standing across a load simply finds the slot
-    // already empty at its next quiet tick, where the "is the text ours" guard
-    // makes the late clear a no-op, and the run state resets there as usual.
-    //
     // last_trigger_time_ is stamped at the TOP of EVERY trigger() call, before
     // any of its early returns and whatever the dispatch turns out to do: a
     // reuse-resolving trigger is still part of the user's cadence, and a run

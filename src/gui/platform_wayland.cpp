@@ -940,8 +940,9 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     if (!arm_playback_timer()) return false;
 
     // Initial commit so the compositor delivers the first xdg_surface
-    // configure. The configure handler then acks, sets has_initial_configure_,
-    // and arms the frame-callback chain.
+    // configure. The configure handler then acks and sets
+    // has_initial_configure_; the frame-callback chain starts at the open's
+    // release, whose paint is the window's first buffer (platform.h's head).
     wl_surface_commit(wl_surface_);
 
     return true;
@@ -1044,9 +1045,10 @@ void GuiPlatform::set_title(const std::string& title) {
 // with its own font stack, so this string never touches text_shape and the
 // product's one-face rule does not apply to it.
 //
-// project_title_ is empty until the load derives it, so the pre-load frames
-// (and the loading line) keep the bare binary name init() seeded: with no
-// project there is no name to separate from.
+// project_title_ is empty until the load derives it, so the window keeps the
+// bare binary name init() seeded until then: with no project there is no name
+// to separate from. At a cold launch nobody sees it — the window maps at the
+// open's release, after the load (platform.h's head).
 void GuiPlatform::apply_window_title() {
     if (project_title_.empty()) {
         set_title("warptempo_gui");
@@ -1070,6 +1072,8 @@ void GuiPlatform::shutdown() {
 
 void GuiPlatform::request_run_stop() {
     run_stop_requested_ = true;
+    // A run stop is a reopen: the open's hold (platform.h's head).
+    presentation_held_ = true;
 }
 
 void GuiPlatform::redeliver_geometry() {
@@ -1846,6 +1850,9 @@ void GuiPlatform::paint_one_frame() {
 #else
     if (!has_initial_configure_) return;
 #endif
+    // THE OPEN'S HOLD (platform.h's head): no paint, no commit and no frame
+    // request — the damage waits, and the release paints it at once.
+    if (presentation_held_) return;
 
     if (damage_.empty()) {
         schedule_frame_callback();
@@ -1946,8 +1953,9 @@ void GuiPlatform::paint_one_frame() {
     // feedback must precede the commit it describes) and the architect kept
     // it on its own merits when that feedback went (the display lead
     // 2026-09-03, the AV Sync Stats panel's instrument 2026-09-30).
-    // paint_now's caller may already have a callback in flight; the request
-    // is then a no-op and the content still commits, as before.
+    // The hold's release paints here directly (release_presentation) and may
+    // find a callback already in flight; the request is then a no-op and the
+    // content still commits.
     request_frame_callback();
 
     for (const DamageRect& d : buf->pending) {
@@ -1983,6 +1991,9 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
 #endif
 
     if (in_pre_paint_) return;  // paint_one_frame will commit shortly
+    // Under the open's hold nothing is asked for the damage (platform.h's
+    // head): the release paints it at once.
+    if (presentation_held_) return;
     if (has_initial_configure_ && !frame_callback_) {
         schedule_frame_callback();
     }
@@ -2153,11 +2164,25 @@ void GuiPlatform::drain_events() {
     if (wl_display_) wl_display_dispatch_pending(wl_display_);
 }
 
-void GuiPlatform::paint_now() {
-    // Synchronous render + commit + flush for the one case that can't wait for
-    // run()'s frame-callback loop: a blocking load. paint_one_frame is null-safe
-    // before the initial configure and no-ops on empty damage; the flush pushes
-    // the commit to the compositor now instead of on the loop's next pass.
+// THE OPEN'S RELEASE (the rule at platform.h's head). THIS BACKEND'S ROAD OUT
+// IS A PAINT AT ONCE, where Android's waits for its vsync gate — the one
+// asymmetry of the mechanism: at a cold launch the surface has never had a
+// buffer, so it is unmapped and a frame request on it would never be
+// answered (xdg-shell maps a toplevel at its first buffer), and at a reopen a
+// paint now saves a compositor frame. Called from the loop's tick, outside
+// any paint walk; the flush sends the commit now instead of on the loop's
+// next pass. Before the first configure it cannot come (the load it waits
+// on is gated on that configure), and paint_one_frame would keep the damage
+// if it did.
+void GuiPlatform::release_presentation() {
+    if (!presentation_held_ || run_stop_requested_) return;
+    presentation_held_ = false;
+    const DamageRect full{0, 0, width_, height_};
+    append_coalesced_rect(damage_, full);
+#if !WARPTEMPO_CANVAS_GL
+    for (int i = 0; i < kShmBufferCount; ++i)
+        append_coalesced_rect(shm_buffers_[i].pending, full);
+#endif
     paint_one_frame();
     if (wl_display_) wl_display_flush(wl_display_);
 }
@@ -2458,7 +2483,9 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         queue_full_surface_damage();
     }
 
-    if (!frame_callback_) schedule_frame_callback();
+    // Under the open's hold the damage waits for the release's paint, whose
+    // commit carries this ack (platform.h's head).
+    if (!frame_callback_ && !presentation_held_) schedule_frame_callback();
 }
 
 void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height,

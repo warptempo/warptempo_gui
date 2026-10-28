@@ -198,7 +198,13 @@ public:
     void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
-    void paint_now();
+    // THE OPEN'S PRESENTATION HOLD (the rule at platform.h's head; the
+    // contract at platform_wayland.h): armed at construction and by
+    // request_run_stop, released by the GUI — here the whole surface damaged
+    // and left to the pass's vsync post (this backend's road out, at the
+    // definition).
+    bool presentation_held() const { return presentation_held_; }
+    void release_presentation();
 
     // THE CLIPBOARD IS THE SYSTEM CLIPBOARD HERE TOO (architect 2026-09-03,
     // ending the process-local stub): ClipboardManager is a Java object with
@@ -645,6 +651,10 @@ private:
     bool should_exit_ = false;
     // The run-stop request, cleared at the head of every run() (platform.h).
     bool run_stop_requested_ = false;
+    // THE OPEN'S PRESENTATION HOLD (platform.h's head): standing from
+    // construction — the cold launch's open — and re-armed by every
+    // request_run_stop; cleared by release_presentation alone.
+    bool presentation_held_ = true;
     bool has_initial_configure_ = false;
     // Latest focus reading (APP_CMD_GAINED_FOCUS / LOST_FOCUS): false until the
     // first GAINED_FOCUS, the same honest cold answer the Wayland backend gives

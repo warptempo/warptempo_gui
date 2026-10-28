@@ -599,6 +599,45 @@ struct GuiPaintHandler {
     // and invalidates the waveform area.
     void on_waveform_render_done(bool ok);
 
+    // THE OPEN'S FIRST PICTURE IS COMPLETE (the presentation hold, platform.h's
+    // head; architect 2026-10-27, "withhold the painting until it's ready to
+    // paint the whole thing"): the live plate is PUBLISHED and is THE LIVE
+    // VIEW'S — a worker completion or a synchronous rebuild has published
+    // (fp_rendered), no rebuild is owed, and every fingerprint field of the
+    // published plate equals what compute_waveform_render_inputs answers for
+    // the live state now (the same ten fields maybe_enqueue_waveform_render
+    // compares), so no plate is missing, stale or still on the worker. Its one
+    // caller is the loop's tick, asked only while the hold stands and only
+    // once the project's load has returned (which applied the restored
+    // camera, tab and views — the load's own tail); the caller pays an owed
+    // rebuild first (flush_owed_waveform_rebuild), since a hold paints no
+    // frame whose pre-paint hook would pay it. WHY THE PLATE ALONE IS THE SET,
+    // each other part of the first picture checked against it (2026-10-27):
+    //   * THE MARKER LANE: the flag cache rebuilds INLINE at both plate
+    //     publishes against the fingerprint just published, and the tick runs
+    //     its fingerprint-guarded rebuild ahead of this ask, so the lane is the
+    //     plate's by construction; the displayed hit map it stages is promoted
+    //     by the releasing frame's on_redraw.
+    //   * A TARGET-VIEW OPEN: the plate's map is the warp map this predicate's
+    //     own inputs build synchronously (the memoized target map), so the
+    //     plate it waits for is the target picture; the target RENDER the
+    //     load dispatches feeds playback and row 8's "Updating..." state, no
+    //     pixel of the plate.
+    //   * THE GAIN: the magnification lamp is dark at every open (AppState::
+    //     show_waveform_magnification), so the field is 0 and the gain
+    //     derivation's thread delays nothing. THE PEAKS PYRAMID is built
+    //     inside the load (GuiAudio::load), before this can be asked.
+    //   * THE SCORE PAGE: the viewer is closed at every open (its opener is
+    //     the one writer of its standing bit); its pages decode when it opens.
+    //   * THE MATERIALS: the first bake runs in the releasing frame's own
+    //     pre-paint hook, before its first pixel; its palette reinstall moves
+    //     no plate ink (the inks are the preset's words, not the ground's).
+    // What may still change after the first picture is STATE, never a part of
+    // the picture arriving: the GitHub check's and the history prefetch's
+    // verdicts, the score soundtrack's readiness and the target render's
+    // completion each move a face or row 8's line when they land.
+    bool live_plate_published() const;
+
     // Dirty-detect for the flag-rect cache. Called from on_tick
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the

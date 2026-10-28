@@ -267,10 +267,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
         return false;
     }
 
+    // NOTHING IS PAINTED FOR THE LOAD: it runs under the open's presentation
+    // hold (platform.h's head), the glass keeping the picker — at a cold
+    // launch nothing of ours — until the finished picture.
     app.loading       = true;
-    app.queue_progress_text = "Loading...";
-    gui.invalidate_region(0, 0, app.width, app.height);
-    gui.paint_now();
 
     // THE WORKING COLUMN (working_column_frames, app_state.h, the rule): the
     // process holds THE DISPLAY'S WIDTH (gui.display_width_px(), the contract
@@ -308,11 +308,13 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     const auto t0 = std::chrono::steady_clock::now();
     // Loading is a blocking, uninterruptible phase: the run loop is suspended
     // for the whole synchronous decode/pyramid/install, so the callback below
-    // only pumps the compositor (drain_events reads no socket fd) and never
-    // reports cancel. A Ctrl+Q / WM close pressed during loading is not
-    // observed until the load completes; the queued event is then read when
-    // run() resumes and the deferred quit is honored on completion. An urgent
-    // abort is pkill / the compositor's force-close.
+    // only pumps the compositor (drain_events reads no socket fd; the paint
+    // it reaches is withheld by the open's hold) and never reports cancel. A
+    // Ctrl+Q / WM close pressed during loading is not observed until the load
+    // completes; the queued event is then read when run() resumes and the
+    // deferred quit is honored on completion (the hold drops every other
+    // queued press — run_project's hook block, main.cpp). An urgent abort is
+    // pkill / the compositor's force-close.
     const bool ok = next.load(path, working_column, [&](float) {
         // Pump the event loop so the compositor stays responsive across a
         // multi-frame load.
@@ -326,7 +328,6 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
         // to and no in-session way to load another, so exit — the user reads
         // the terminal and relaunches.
         app.loading       = false;
-        app.queue_progress_text.clear();
         gui.request_exit();
         return false;
     }
@@ -486,8 +487,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // the four flags above have no other writer in the tree.
     // The flag's one picture, the Save button's grey (architect 2026-10-05,
     // plain_save_actionable), needs no damage call here: this body
-    // invalidates the WHOLE WINDOW on both sides of this assignment — at the
-    // `Loading...` frame above and again at the return below.
+    // invalidates the WHOLE WINDOW at its return below, and the open's
+    // release paints the whole window again (platform.h's head).
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,
             "warptempo_gui: Source load aborted: invalid warp markers in "
@@ -840,11 +841,6 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),
                  audio.num_levels(), load_ms);
-
-    // Source-view load ends with an empty status; a target-view load lets
-    // ensure_ready() -> trigger() replace it with "updating..." for the
-    // eager preview below, so there is no gap in feedback.
-    app.queue_progress_text.clear();
 
     // Target-view validity gate, load half: restoring active_audio_view=T
     // from .settings is an entry into target view and is gated by EXACTLY
