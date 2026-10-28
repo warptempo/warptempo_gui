@@ -1299,8 +1299,10 @@ void GuiPlatform::request_run_stop() {
     // the window stay exactly as they are, and the next run() carries on
     // with them. Deliberately NOT ANativeActivity_finish — that is an exit.
     run_stop_requested_ = true;
-    // A run stop is a reopen: the open's hold (platform.h's head).
+    // A run stop is a reopen: the open's hold and its one frame's debt
+    // (platform.h's head).
     presentation_held_ = true;
+    held_frame_owed_   = true;
 }
 
 void GuiPlatform::redeliver_geometry() {
@@ -1368,7 +1370,7 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
  * hands back. (That is the cpu canvas's post; the GL canvas uploads the
  * damage list rect by rect and swaps the whole frame — present.)
  */
-void GuiPlatform::paint_one_frame() {
+void GuiPlatform::paint_one_frame(bool held_frame) {
     // BEFORE ANY PIXEL: the owed first resize, so the layout the frame is
     // painted from is the panel's and not the cold default. It runs ahead of
     // the guards below because the hook it fires declares its own damage.
@@ -1376,8 +1378,9 @@ void GuiPlatform::paint_one_frame() {
 
     if (!has_initial_configure_ || !window_ || !back_) return;
     // THE OPEN'S HOLD (platform.h's head): no paint and no post — the damage
-    // waits for the release.
-    if (presentation_held_) return;
+    // waits for the release — but for the hold's one frame
+    // (present_held_frame), which paints here.
+    if (presentation_held_ && !held_frame) return;
     if (damage_.empty()) return;
 
     // Pre-paint hook: gives the application a chance to update model state
@@ -1553,6 +1556,25 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     }
     return true;
 #endif
+}
+
+// THE OPEN'S HOLD'S ONE FRAME (the rule at platform.h's head): painted and
+// posted AT ONCE, OUTSIDE THE VSYNC GATE and touching neither of its bits
+// (pump's tail), as the Wayland backend commits it at once: the load the GUI
+// runs next blocks the loop, so a callback posted now would land only after
+// the load, and the frame with it. The swap waits at most for a free buffer,
+// as any post does; nothing has been posted under the hold, so the queue
+// holds at most the frames the last picture left. Called from the loop's
+// tick (inside a pump() pass) at the load's entry, outside any paint walk.
+// At a cold launch it is the first post, and the glass leaves the system's
+// starting window for it. A window gone at the call (TERM_WINDOW) paints
+// nothing (paint_one_frame's own answer) and keeps the damage for the next
+// adoption, the debt paid all the same.
+void GuiPlatform::present_held_frame() {
+    assert(presentation_held_ && held_frame_owed_);
+    held_frame_owed_ = false;
+    invalidate_surface_rect(0, 0, width_, height_);
+    paint_one_frame(/*held_frame=*/true);
 }
 
 // THE OPEN'S RELEASE (the rule at platform.h's head). THIS BACKEND'S ROAD OUT
@@ -1807,11 +1829,12 @@ void GuiPlatform::pump() {
     // vsync and a pan paints once per vsync. A CALLBACK WITH NO DAMAGE TO
     // PAINT (none came) simply clears the bit: a vsync with nothing to show
     // is gone, and the next damage waits for its own. NOTHING ELSE IS GATED:
-    // drain_events' paint (a blocking load's, which the open's hold
-    // withholds — platform.h's head) touches neither bit. UNDER THE OPEN'S
-    // HOLD, NO POST: the damage waits for the release, whose pass posts it
-    // here (a callback already in flight lands, and its paint returns at
-    // once). NO WINDOW, NO POST: with the window gone (TERM_WINDOW,
+    // the open's hold's one frame (present_held_frame, painted and posted at
+    // once ahead of the blocking load) and drain_events' paint (that load's,
+    // which the hold withholds — platform.h's head) touch neither bit.
+    // UNDER THE OPEN'S HOLD, NO POST: the damage waits for the release, whose
+    // pass posts it here (a callback already in flight lands, and its paint
+    // returns at once). NO WINDOW, NO POST: with the window gone (TERM_WINDOW,
     // or an adoption that read a zero size) the post is withheld, so a
     // backgrounded app's damage does not spin the callback at the panel's
     // rate; a callback already in flight still lands, its pass calls
@@ -1894,8 +1917,8 @@ void GuiPlatform::drain_events() {
     // which calls it many times per load. EVERY LOAD IS A PROJECT OPEN, so
     // the open's hold stands across it (platform.h's head) and the paint
     // returns at once: a load shows nothing of the half-built model, the
-    // glass keeping the picker or the cold launch's black until the finished
-    // picture. What the caller was written against is
+    // glass keeping the hold's one frame, the empty waveform, until the
+    // finished picture. What the caller was written against is
     // the Wayland backend's wl_display_dispatch_pending: that call dispatches
     // events ALREADY READ and reads no socket, so a load observes no new
     // input, no focus change and no close — only the pending frame-done

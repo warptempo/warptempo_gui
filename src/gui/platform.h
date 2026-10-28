@@ -23,8 +23,8 @@
 // (the window is configured, and the next iteration's first tick loads on
 // it); the pending damage and any pending frame callback (a callback in
 // flight finds the open's hold below standing and presents nothing, and the
-// new set's first painted frame is the release's, which damages the whole
-// window);
+// new set's first painted frame is the hold's one frame, which damages the
+// whole window);
 // the timerfd and its cadence; the input core's modifier state (the physical
 // keyboard's live truth), its pointer position and focus, and its touch
 // contact bookkeeping (a finger still down on the picker row it tapped to
@@ -52,26 +52,50 @@
 // THE OPEN'S PRESENTATION HOLD (architect 2026-10-27: an open "paints from
 // left to right ... it looks kind of sloppy ... we could withhold the painting
 // until it's ready to paint the whole thing"; nothing is shown for the load
-// itself, his loads being under half a second): FROM THE MOMENT A PROJECT
-// OPEN IS CERTAIN UNTIL THE NEW PROJECT'S FIRST COMPLETE PICTURE, NOTHING IS
-// PRESENTED — the glass keeps the last frame it was shown (the picker, or
-// the project a Revert reopens; at a cold launch nothing of ours), and the
-// finished picture replaces it in one present. ONE MECHANISM ON BOTH
-// BACKENDS, one bit, `presentation_held()`:
-//   * ARMED BY THE PLATFORM ALONE, at the two points an open becomes
-//     certain: CONSTRUCTION (the cold launch's first open) and
+// itself, his loads being under half a second; THE HOLD SHOWS THE EMPTY
+// WAVEFORM, his ruling of the same night, in place of the last frame the
+// glass was shown — the picker frozen mid-tap, or a Revert's prompt): FROM
+// THE MOMENT A PROJECT OPEN IS CERTAIN UNTIL THE NEW PROJECT'S FIRST
+// COMPLETE PICTURE, EXACTLY ONE FRAME IS PRESENTED — THE NEW SET'S PICTURE
+// WITH NO PROJECT LOADED, at the load's entry — and then nothing until the
+// finished picture replaces it in one present. ONE RULE FOR EVERY ROAD IN:
+// the cold launch, the picker's choice and Revert (a dirty reopen's prompt
+// answered, on either) and the pull's reload. ONE MECHANISM ON BOTH
+// BACKENDS, two bits — the hold, `presentation_held()`, and its one frame's
+// debt:
+//   * ARMED BY THE PLATFORM ALONE, both bits together, at the two points an
+//     open becomes certain: CONSTRUCTION (the cold launch's first open) and
 //     request_run_stop (every run stop is a reopen — the picker's choice
 //     answered, Revert, the pull's reload through Revert's road). A
 //     cancelled picker or a prompt's Cancel requests no stop and arms
 //     nothing; the render entry's and the `h` view's loads in place stop no
 //     run and arm nothing.
-//   * WHILE IT STANDS, NO PAINT AND NO PRESENT: paint_one_frame returns
-//     before the pre-paint hook and before any pixel, so no as-painted record
-//     claims a picture the glass never showed (the cheapest correct paint
-//     is none); the damage accumulates and nothing schedules a frame for it
-//     (Wayland asks no frame callback, Android posts no vsync callback). A
-//     surface lost and readopted under it (Android's TERM/INIT) only adds
-//     its full damage.
+//   * THE ONE FRAME, present_held_frame(), asked by the GUI at the load's
+//     entry (run_project's tick, main.cpp, which says what the frame
+//     carries) and nowhere else, so it is painted by THE NEW SET — a fresh
+//     AppState with no audio, which is what makes it carry no state of
+//     either project — on a configured window. It pays the debt, damages the
+//     whole surface and paints and presents it PAST THE HOLD'S GATE AND AT
+//     ONCE (Wayland commits and flushes; Android posts outside its vsync
+//     gate, touching neither of the gate's bits), SYNCHRONOUSLY BECAUSE THE
+//     LOAD THAT FOLLOWS BLOCKS THE LOOP: a frame left to the loop's own
+//     pacing (Wayland's frame callback, Android's vsync callback) could be
+//     answered only after the load returned, beside the finished picture.
+//     IT LEAVES THE HOLD STANDING: the frame is a paint, not a release, so
+//     presentation_held() reads true across it and input stays dropped. At a
+//     cold launch it is the window's first buffer — Wayland maps the
+//     toplevel with it, Android's glass leaves the system's starting window
+//     (the theme's black, Theme.NoTitleBar) for it. Called once per arming;
+//     its one caller is gated once per set (main.cpp), and a second call is
+//     a program bug (the debt's assert).
+//   * WHILE IT STANDS, NO OTHER PAINT AND NO PRESENT: paint_one_frame returns
+//     before the pre-paint hook and before any pixel, but for the one
+//     frame's own call (its argument), so no as-painted record claims a
+//     picture the glass never showed (the cheapest correct paint is none);
+//     the damage accumulates and nothing schedules a frame for it (Wayland
+//     asks no frame callback, Android posts no vsync callback). A surface
+//     lost and readopted under it (Android's TERM/INIT) only adds its full
+//     damage.
 //   * RELEASED BY THE GUI ALONE, release_presentation(), from the loop's
 //     tick once the project's load has returned and the waveform plate the
 //     paint handler holds is the live view's (GuiPaintHandler::
@@ -82,9 +106,9 @@
 //     the stop, would otherwise find its own picture complete and present
 //     it — the hold a stop arms is the next set's to release. THE ROAD OUT
 //     IS DIFFERENT PER BACKEND AND RECORDED AT EACH SITE: Wayland paints at
-//     once (a cold launch's surface is unmapped, and a frame request on it
-//     would never be answered); Android declares the damage and the pass's
-//     tail posts the vsync callback as for any damage.
+//     once (the finished picture a compositor frame sooner); Android
+//     declares the damage and the pass's tail posts the vsync callback as
+//     for any damage.
 //   * A ROAD THAT NEVER RELEASES ENDS THE PROCESS: a refused load exits
 //     (fatal_load, run_project), and an exit needs no picture. No timeout
 //     and no recovery code: the plate's worker always completes (NO
@@ -92,16 +116,19 @@
 //   * INPUT WAITS FOR THE PICTURE: while the hold stands the GUI's press-
 //     class hooks drop what they are handed (run_project's hook block,
 //     main.cpp, which lists them) — a press, a key, a wheel, a touch
-//     gesture's begin or a car button would act on a picture the user has
-//     not seen (ON SCREEN IS AS PAINTED). Releases, motion, focus, the
-//     close request and Ctrl+Q pass: they find no claim, or end the
-//     process.
-// What the laptop shows meanwhile: at a cold launch NO WINDOW — xdg-shell
-// maps a toplevel only at its first buffer, so the configure is acked and
-// the window appears with the finished picture; at a reopen the picker. The
-// tablet: at a cold launch whatever the system shows for a window never
-// posted to (its starting window, the theme's black background —
-// Theme.NoTitleBar); at a reopen the picker.
+//     gesture's begin or a car button would act on the one frame, a
+//     picture with no piece, or on a piece the glass has not shown (ON
+//     SCREEN IS AS PAINTED). Releases, motion, focus, the close request and
+//     Ctrl+Q pass: they find no claim, or end the process.
+// What the glass shows meanwhile, on both devices: from the open's certainty
+// to the load's entry — the next tick, a few milliseconds — the last frame
+// it was shown (the picker, or the prompt a dirty reopen answered; at a cold
+// launch nothing of ours: the laptop no window yet, xdg-shell mapping a
+// toplevel only at its first buffer, the tablet its starting window); then
+// the one frame, the empty waveform, through the load and the plate's
+// render; then the finished picture. The laptop's title names no project
+// across the one frame either: a run stop clears it to the bare binary name
+// until the new load sets the new one (apply_window_title, the rule).
 //
 // THE DAMAGE CALL: invalidate_region takes a rect of the GUI's whole
 // geometry, which is the surface's on both backends since 2026-10-24 (the

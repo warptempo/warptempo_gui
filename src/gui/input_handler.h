@@ -3882,11 +3882,13 @@ private:
     // and Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z
     // WHOLE, GuiCarTransport::on_media_command): a deliberate press that asks
     // on_key's head gates first through the same verdicts and sentences
-    // on_key asks (no audio loaded, a drag owning the keyboard, a
+    // on_key asks (a drag owning the keyboard, a
     // keyboard-modal editor swallowing the chord, the authoring lock — a
     // read-only tab cards the chord), the routers and the `h` view's gate
-    // ranked above them being the caller's to drop. The gates' statement and
-    // order are at the definition.
+    // ranked above them being the caller's to drop, and on_key's no-piece
+    // gate having no car press to answer (the open's hold drops the car's
+    // commands until the load). The gates' statement and order are at the
+    // definition.
     //
     // BOTH ANSWER WHETHER A RESTORE RAN (architect 2026-09-18): false at every
     // refusal arm of their own — the command's two (the iteration lock and
@@ -3909,20 +3911,19 @@ public:
     // car's own loop of the trim, and Space's target-view readiness gate ranks
     // below these — so the cluster keeps both and takes the gates from here.
     // ONE CALLER, GuiCarTransport::car_toggle, which has dropped the routers
-    // and the `h` view first. The statement and the two gates it deliberately
-    // does not ask (the editor swallow's card, the authoring lock) are at the
-    // definition.
+    // and the `h` view first. The statement and what it deliberately does
+    // not ask (the editor swallow's card, the authoring lock, on_key's
+    // no-piece gate) are at the definition.
     bool car_play_refused_by_key_gates();
 private:
 
     // on_key's head-gate halves, hoisted for the car's two roads above (each
-    // gate's ruling stays at its site in on_key): the no-audio verdict, the
-    // pointer-gesture drag gate's membership (the editor text drag has its own
-    // gate ahead of it), and the authoring lock's verdict-and-card (true =
-    // the lock dropped the chord). (The keyboard-modal editor gate's
-    // sentence, modal_editor_swallow_card, retired 2026-10-25: a bound chord
-    // under any modal is silent.)
-    bool no_audio_to_dispatch_on() const;
+    // gate's ruling stays at its site in on_key): the pointer-gesture drag
+    // gate's membership (the editor text drag has its own gate ahead of it),
+    // and the authoring lock's verdict-and-card (true = the lock dropped the
+    // chord). (The keyboard-modal editor gate's sentence,
+    // modal_editor_swallow_card, retired 2026-10-25: a bound chord under any
+    // modal is silent.)
     bool keyboard_owned_by_pointer_gesture() const;
     bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods);
 

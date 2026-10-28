@@ -199,11 +199,13 @@ public:
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
     // THE OPEN'S PRESENTATION HOLD (the rule at platform.h's head; the
-    // contract at platform_wayland.h): armed at construction and by
-    // request_run_stop, released by the GUI — here the whole surface damaged
-    // and left to the pass's vsync post (this backend's road out, at the
-    // definition).
+    // contract at platform_wayland.h): armed with its one frame's debt at
+    // construction and by request_run_stop; its ONE FRAME painted and posted
+    // at once, outside the vsync gate, the hold left standing; released by
+    // the GUI — here the whole surface damaged and left to the pass's vsync
+    // post (this backend's road out, at the definition).
     bool presentation_held() const { return presentation_held_; }
+    void present_held_frame();
     void release_presentation();
 
     // THE CLIPBOARD IS THE SYSTEM CLIPBOARD HERE TOO (architect 2026-09-03,
@@ -653,8 +655,11 @@ private:
     bool run_stop_requested_ = false;
     // THE OPEN'S PRESENTATION HOLD (platform.h's head): standing from
     // construction — the cold launch's open — and re-armed by every
-    // request_run_stop; cleared by release_presentation alone.
+    // request_run_stop; cleared by release_presentation alone. Its ONE
+    // FRAME'S DEBT is armed beside it at the same two points and paid by
+    // present_held_frame alone.
     bool presentation_held_ = true;
+    bool held_frame_owed_   = true;
     bool has_initial_configure_ = false;
     // Latest focus reading (APP_CMD_GAINED_FOCUS / LOST_FOCUS): false until the
     // first GAINED_FOCUS, the same honest cold answer the Wayland backend gives
@@ -846,7 +851,9 @@ private:
     void adopt_window(bool fire_resize);
     void ensure_backbuffer(int w, int h);
     void destroy_backbuffer();
-    void paint_one_frame();
+    // `held_frame` is the open's hold's one frame (present_held_frame), the
+    // one call the hold's gate lets through (platform.h's head).
+    void paint_one_frame(bool held_frame = false);
     // Blit the damaged rectangle out of the backbuffer into the window,
     // honoring the stride and the (possibly widened) dirty rect lock hands
     // back — or, under the GL canvas, upload every rect of damage_ into the

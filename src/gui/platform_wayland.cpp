@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <initializer_list>
+#include <cassert>
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
@@ -942,7 +943,8 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     // Initial commit so the compositor delivers the first xdg_surface
     // configure. The configure handler then acks and sets
     // has_initial_configure_; the frame-callback chain starts at the open's
-    // release, whose paint is the window's first buffer (platform.h's head).
+    // hold's one frame, whose paint is the window's first buffer and maps it
+    // (present_held_frame; platform.h's head).
     wl_surface_commit(wl_surface_);
 
     return true;
@@ -1047,8 +1049,12 @@ void GuiPlatform::set_title(const std::string& title) {
 //
 // project_title_ is empty until the load derives it, so the window keeps the
 // bare binary name init() seeded until then: with no project there is no name
-// to separate from. At a cold launch nobody sees it — the window maps at the
-// open's release, after the load (platform.h's head).
+// to separate from. At a cold launch the window maps wearing it, with the
+// open's hold's one frame ahead of the load (platform.h's head); A REOPEN
+// CLEARS THE NAME at its run stop (request_run_stop, 2026-10-27), so the
+// hold's one frame names no project either — the title is labwc's chrome,
+// but the name is the previous project's state, and the frame carries none
+// — and the bare name stands until the new load sets the new one.
 void GuiPlatform::apply_window_title() {
     if (project_title_.empty()) {
         set_title("warptempo_gui");
@@ -1072,8 +1078,12 @@ void GuiPlatform::shutdown() {
 
 void GuiPlatform::request_run_stop() {
     run_stop_requested_ = true;
-    // A run stop is a reopen: the open's hold (platform.h's head).
+    // A run stop is a reopen: the open's hold and its one frame's debt
+    // (platform.h's head), and the previous project's title cleared
+    // (apply_window_title's rule).
     presentation_held_ = true;
+    held_frame_owed_   = true;
+    set_project_title({});
 }
 
 void GuiPlatform::redeliver_geometry() {
@@ -1844,15 +1854,16 @@ void GuiPlatform::schedule_frame_callback() {
  * persistent backbuffer, uploaded and swapped (present) — Android's
  * paint_one_frame, its swap the commit.
  */
-void GuiPlatform::paint_one_frame() {
+void GuiPlatform::paint_one_frame(bool held_frame) {
 #if WARPTEMPO_CANVAS_GL
     if (!has_initial_configure_ || !back_) return;
 #else
     if (!has_initial_configure_) return;
 #endif
     // THE OPEN'S HOLD (platform.h's head): no paint, no commit and no frame
-    // request — the damage waits, and the release paints it at once.
-    if (presentation_held_) return;
+    // request — the damage waits, and the release paints it at once — but
+    // for the hold's one frame (present_held_frame), which paints here.
+    if (presentation_held_ && !held_frame) return;
 
     if (damage_.empty()) {
         schedule_frame_callback();
@@ -1953,8 +1964,9 @@ void GuiPlatform::paint_one_frame() {
     // feedback must precede the commit it describes) and the architect kept
     // it on its own merits when that feedback went (the display lead
     // 2026-09-03, the AV Sync Stats panel's instrument 2026-09-30).
-    // The hold's release paints here directly (release_presentation) and may
-    // find a callback already in flight; the request is then a no-op and the
+    // The hold's two paints — its one frame (present_held_frame) and its
+    // release (release_presentation) — come here directly and may find a
+    // callback already in flight; the request is then a no-op and the
     // content still commits.
     request_frame_callback();
 
@@ -2164,25 +2176,47 @@ void GuiPlatform::drain_events() {
     if (wl_display_) wl_display_dispatch_pending(wl_display_);
 }
 
-// THE OPEN'S RELEASE (the rule at platform.h's head). THIS BACKEND'S ROAD OUT
-// IS A PAINT AT ONCE, where Android's waits for its vsync gate — the one
-// asymmetry of the mechanism: at a cold launch the surface has never had a
-// buffer, so it is unmapped and a frame request on it would never be
-// answered (xdg-shell maps a toplevel at its first buffer), and at a reopen a
-// paint now saves a compositor frame. Called from the loop's tick, outside
-// any paint walk; the flush sends the commit now instead of on the loop's
-// next pass. Before the first configure it cannot come (the load it waits
-// on is gated on that configure), and paint_one_frame would keep the damage
-// if it did.
-void GuiPlatform::release_presentation() {
-    if (!presentation_held_ || run_stop_requested_) return;
-    presentation_held_ = false;
+void GuiPlatform::damage_whole_surface() {
     const DamageRect full{0, 0, width_, height_};
     append_coalesced_rect(damage_, full);
 #if !WARPTEMPO_CANVAS_GL
     for (int i = 0; i < kShmBufferCount; ++i)
         append_coalesced_rect(shm_buffers_[i].pending, full);
 #endif
+}
+
+// THE OPEN'S HOLD'S ONE FRAME (the rule at platform.h's head): painted and
+// committed AT ONCE, as Android's is posted at once — the load the GUI runs
+// next blocks the loop, so a frame callback asked now would be answered
+// only after it. Called from the loop's tick at the load's entry, on a
+// configured window (the load is gated on that configure), outside any paint
+// walk; the flush sends the commit before the load blocks. At a cold launch
+// the commit carries the first configure's ack with the window's first
+// buffer, and the toplevel maps with this frame. On the cpu canvas a frame
+// that finds both buffers in flight is not painted (paint_one_frame's own
+// answer), the glass keeping what it showed — never at a cold launch, where
+// neither buffer was ever attached.
+void GuiPlatform::present_held_frame() {
+    assert(presentation_held_ && held_frame_owed_);
+    held_frame_owed_ = false;
+    damage_whole_surface();
+    paint_one_frame(/*held_frame=*/true);
+    if (wl_display_) wl_display_flush(wl_display_);
+}
+
+// THE OPEN'S RELEASE (the rule at platform.h's head). THIS BACKEND'S ROAD OUT
+// IS A PAINT AT ONCE, where Android's waits for its vsync gate — the one
+// asymmetry of the mechanism: the surface is mapped by now (the hold's one
+// frame), so a frame request would be answered, and the paint now shows
+// the finished picture a compositor frame sooner. Called from the loop's
+// tick, outside any paint walk; the flush sends the commit now instead of
+// on the loop's next pass. Before the first configure it cannot come (the
+// load it waits on is gated on that configure), and paint_one_frame would
+// keep the damage if it did.
+void GuiPlatform::release_presentation() {
+    if (!presentation_held_ || run_stop_requested_) return;
+    presentation_held_ = false;
+    damage_whole_surface();
     paint_one_frame();
     if (wl_display_) wl_display_flush(wl_display_);
 }
@@ -2435,15 +2469,6 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     xdg_surface_ack_configure(xs, serial);
 
     const bool first = !has_initial_configure_;
-    auto queue_full_surface_damage = [&]() {
-        const DamageRect full{0, 0, width_, height_};
-        append_coalesced_rect(damage_, full);
-#if !WARPTEMPO_CANVAS_GL
-        for (int i = 0; i < kShmBufferCount; ++i) {
-            append_coalesced_rect(shm_buffers_[i].pending, full);
-        }
-#endif
-    };
     // THE SIZE IS THE COMPOSITOR'S (labwc's server-side decorations,
     // 2026-10-24: it owns maximise, restore and resize, and its configure
     // carries the size each leaves the surface): a sized configure takes it,
@@ -2461,7 +2486,7 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
             resize_surface_buffers();
         }
         input_.set_surface_width(width_);
-        queue_full_surface_damage();
+        damage_whole_surface();
         if (on_resize_) on_resize_(width_, height_);
         paint_one_frame();
         return;
@@ -2474,17 +2499,18 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         height_ = want_h;
         resize_surface_buffers();
         input_.set_surface_width(width_);
-        queue_full_surface_damage();
+        damage_whole_surface();
         if (on_resize_) on_resize_(width_, height_);
     } else if (damage_.empty()) {
         // No size change and nothing pending — still schedule a paint so
         // the compositor's reconfigure (an activation or maximize state
         // change) gets honored.
-        queue_full_surface_damage();
+        damage_whole_surface();
     }
 
-    // Under the open's hold the damage waits for the release's paint, whose
-    // commit carries this ack (platform.h's head).
+    // Under the open's hold the damage waits for the hold's own paints — its
+    // one frame, then the release — whose commit carries this ack
+    // (platform.h's head).
     if (!frame_callback_ && !presentation_held_) schedule_frame_callback();
 }
 

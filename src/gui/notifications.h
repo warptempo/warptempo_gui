@@ -70,7 +70,7 @@
 //     STANDING MODE (chord_is_bound, gui_input.h): kKeysDuringDrag
 //     (input_handler.cpp: the pointer gestures' drag-modal gate, the render
 //     player's and the picker's own arms — those two, their routers being
-//     their vocabulary, do not ask chord_is_bound), "No audio is loaded yet",
+//     their vocabulary, do not ask chord_is_bound),
 //     "<chord> is not available in the history view" (on_key's call site,
 //     never the predicate's) and read_only_chord_card below; the lock's own
 //     composer authoring_lock_card; kIterationLockUndoCard /
@@ -352,7 +352,9 @@
 // something that has already happened, so nothing the tick does below can be
 // a precondition for retiring one, while every one of those returns is a mode
 // a card can stand over (the render player's own "No audio device to play
-// the wav" card, the blank window's). It reads monotonic_ms() — the one clock every software
+// the wav" card) but the loading/blank guard's, which nothing raises a card
+// ahead of (the open's hold drops every press until the load, platform.h's
+// head). It reads monotonic_ms() — the one clock every software
 // deadline in the product is stamped on — and nothing here schedules anything.
 //
 // THE HIT (architect 2026-10-01, "whole card dismisses, X gone", reversing

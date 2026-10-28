@@ -1750,9 +1750,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     //
     // INPUT WAITS FOR THE PICTURE (architect 2026-10-27, the open's
     // presentation hold — platform.h's head owns the rule): while the hold
-    // stands the glass shows no picture of this set, so every PRESS-CLASS
-    // hook below DROPS what it is handed (ON SCREEN IS AS PAINTED — an act
-    // would land on a picture the user has not seen): the key press (all
+    // stands the glass shows at most THE HOLD'S ONE FRAME, this set's empty
+    // waveform with no project loaded (the load's entry, the tick below),
+    // so every PRESS-CLASS hook below DROPS what it is handed (ON SCREEN IS
+    // AS PAINTED): before the load an act would land on a picture with no
+    // piece, where every key is a no-op by the roster's own grey
+    // (redesign_button_enabled's no-piece term, the face that frame
+    // paints), and after it on a piece the glass has not shown. The one frame
+    // is a paint, not a release, so presentation_held() reads true across it
+    // and the drop spans the whole open. Dropped: the key press (all
     // but plain Ctrl+Q, which ends the process and acts on no picture), the
     // button press, the wheel, a touch navigation frame, the region hold's
     // and the caret drag's begins, and the car's buttons. A DROP, NOT A
@@ -1761,7 +1767,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // that never acts unseen. Everything else passes, each finding no claim
     // to act on: the releases (the button's and the key's — a release with
     // no press of this set's is the run stop's own case, platform.h), the
-    // motion (hover is a model the releasing frame paints), the touch
+    // motion (hover is a model the next painted frame reads), the touch
     // updates and ends (self-guarded on their begins: a dropped region
     // begin arms nothing, and the navigation's end clears a seat no frame
     // made), the pointer's leave, the activation and intent edges, the
@@ -2297,11 +2303,40 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Startup file load, deferred out of pre-run() to the first tick on a
         // configured window (the compositor's initial configure only lands
         // once run() is pumping) — under the open's presentation hold, which
-        // keeps the glass on the picker (at a cold launch, on nothing of
-        // ours) through the load and until the finished picture (the
-        // release block below; platform.h's head).
+        // keeps the glass on its one frame through the load and until the
+        // finished picture (the release block below; platform.h's head).
         if (!initial_load_done && gui.has_initial_configure()) {
             initial_load_done = true;
+            // THE HOLD'S ONE FRAME (architect 2026-10-27, "the hold shows the
+            // empty waveform"; the mechanism at platform.h's head): painted
+            // and presented NOW, before the load blocks the loop, by this
+            // set — a fresh AppState with no audio — so it carries no state
+            // of either project: every painter answers its no-piece road
+            // (no_audio_to_dispatch_on, app_state.h, or the canvas's own
+            // `plate_branch`, on_redraw). WHAT IT CARRIES, read off on_redraw:
+            //   * THE CANVAS: its ground, the grid, the two center lines and
+            //     the stereo divider's rows over them (render_canvas,
+            //     render_center_lines, render_waveform_divider — on_redraw's
+            //     !plate_branch arm; the GL canvas's list the same, its
+            //     build_canvas_list arm), in the column's face and the two
+            //     wells' rings (paint_canvas_column_frame).
+            //   * THE TOP STRIP — the view bar, the ruler, the marker lane —
+            //     BARE: every pass of it (paint_trim's view bar, the ruler
+            //     with the marker lane's face and the cursor's head, the
+            //     flag blit) is the plate branch's, so the lanes show the
+            //     window's ground (render_background).
+            //   * ROW 8: the clock's field empty and no tab name
+            //     (clock_time_text and paint_bottom_row_buttons_and_clock's
+            //     no-piece arms), the state line empty (no progress text, no
+            //     `h` view).
+            //   * THE KEYS grey and dark: redesign_button_enabled's and
+            //     redesign_button_selected's no-piece terms; the legends as
+            //     the roster prints them.
+            //   * THE LOGO LANE as always (refresh_logo_legend above).
+            //   * NO CARD, NO TOOLTIP, NO OVERLAY: none can stand in a fresh
+            //     set before its load (every press is dropped, and nothing
+            //     raises a card ahead of the load).
+            gui.present_held_frame();
             // THE WHOLE RESOLVED PROJECT, not just its source path: the load
             // takes the project's NAME from here rather than deriving one from
             // the source's parent folder (the rule is at
@@ -2600,7 +2635,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                     f.enabled  != redesign_button_enabled(
                                       app, audio, audio.total_frames(),
                                       playback, target_render, id) ||
-                    f.selected != redesign_button_selected(app, id) ||
+                    f.selected != redesign_button_selected(
+                                      app, audio.total_frames(), id) ||
                     f.glyph != redesign_button_glyph(app, id) ||
                     std::string_view(f.legend) !=
                         redesign_button_legend(app, audio, id);
@@ -3349,8 +3385,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.redeliver_geometry();
 
     // NO DAMAGE IS DECLARED HERE: every set runs under the open's hold, and
-    // its first painted frame is the release's, which damages the whole
-    // window itself (platform.h's head).
+    // its first painted frame is the hold's one frame, which damages the
+    // whole window itself (platform.h's head).
     gui.run();
 
     // WHY run() RETURNED, read before anything below dies: an exit (the

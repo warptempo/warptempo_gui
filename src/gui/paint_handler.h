@@ -629,9 +629,10 @@ struct GuiPaintHandler {
     //     inside the load (GuiAudio::load), before this can be asked.
     //   * THE SCORE PAGE: the viewer is closed at every open (its opener is
     //     the one writer of its standing bit); its pages decode when it opens.
-    //   * THE MATERIALS: the first bake runs in the releasing frame's own
-    //     pre-paint hook, before its first pixel; its palette reinstall moves
-    //     no plate ink (the inks are the preset's words, not the ground's).
+    //   * THE MATERIALS: the process's first bake runs in the hold's one
+    //     frame's pre-paint hook (platform.h's head), ahead of the load
+    //     (materials.h's BAKE RULE); a bake's palette reinstall moves no
+    //     plate ink (the inks are the preset's words, not the ground's).
     // What may still change after the first picture is STATE, never a part of
     // the picture arriving: the GitHub check's and the history prefetch's
     // verdicts, the score soundtrack's readiness and the target render's

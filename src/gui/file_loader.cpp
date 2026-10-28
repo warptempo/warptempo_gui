@@ -268,8 +268,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     }
 
     // NOTHING IS PAINTED FOR THE LOAD: it runs under the open's presentation
-    // hold (platform.h's head), the glass keeping the picker — at a cold
-    // launch nothing of ours — until the finished picture.
+    // hold (platform.h's head), the glass keeping the hold's one frame — the
+    // empty waveform, presented at this load's entry (main.cpp) — until the
+    // finished picture.
     app.loading       = true;
 
     // THE WORKING COLUMN (working_column_frames, app_state.h, the rule): the

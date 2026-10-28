@@ -9282,13 +9282,17 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
     return is_folder_overlay_opener(a, b);
 }
 
-// IS THERE NO PIECE TO DISPATCH ON — a load in flight, or no audio at all (the
-// blank window before the startup load). ONE OWNER for the one condition three
-// surfaces answer (architect 2026-09-24): on_key's head gate, which drops
-// every chord but Ctrl+Q there (GuiInputHandler::no_audio_to_dispatch_on
-// forwards here); the roster's face, which greys every button but the File
-// anchor there (redesign_button_enabled's head) (the dropdown items' faces
-// were a third, until 2026-10-21). It takes the frame
+// IS THERE NO PIECE TO DISPATCH ON — a load in flight, or no audio at all (a
+// set before its load, whose one painted frame is the open's hold's,
+// platform.h's head). ONE OWNER for the one condition its surfaces answer
+// (architect 2026-09-24; the frame's readers 2026-10-27, "the hold shows the
+// empty waveform"): on_key's head gate, which plain Ctrl+Q alone reaches
+// there (the hold drops every other press) and which admits it; the
+// roster's face, which greys every button there (redesign_button_enabled's
+// head) and lights no LED (redesign_button_selected's head); row 8's clock
+// and tab name, blank there (clock_time_text and
+// paint_bottom_row_buttons_and_clock, paint_handler.cpp); and bare `0`'s
+// fork, the no-op (overview_command_target). It takes the frame
 // count rather than the GuiAudio because this header only forward-declares
 // the class.
 inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
@@ -14980,10 +14984,11 @@ inline bool redesign_button_enabled(const AppState& a,
     // (THE THREE MENU ANCHORS answered first here, from menu_anchor_live,
     // until the menu row's removal, 2026-10-21.)
     // THE LOAD GREYS THE ROSTER (architect 2026-09-24): while there is no
-    // piece to dispatch on — a load in flight, or the blank window before the
-    // startup load — every chord but Ctrl+Q drops at on_key's own head gate,
-    // so every button greys through the one owner that gate reads
-    // (no_audio_to_dispatch_on). It replaced the loading/blank guard that sat
+    // piece to dispatch on — a load in flight, or a set before its load,
+    // whose one painted frame is the open's hold's (platform.h's head) —
+    // every key is a no-op, so every button greys through the one owner
+    // on_key's own head gate reads (no_audio_to_dispatch_on); that frame
+    // paints this face. It replaced the loading/blank guard that sat
     // between this body's two switches, which greyed only the buttons that
     // broke out of the first one: the rest stayed lit through the load while
     // their chords dropped (the recorded exception "the roster stays live
@@ -16402,7 +16407,14 @@ inline std::string view_pair_label(char audio, char column) {
     return s;
 }
 
-inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
+inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
+                                     RedesignButton b) {
+    // NO PIECE, NO LAMP (architect 2026-10-27, the open's hold's one frame —
+    // platform.h's head — "the LEDs dark"): with nothing to dispatch on the
+    // frame carries no state of either project, and a lamp lit off a fresh
+    // set's defaults (the S+W view pair) would name views no piece is shown
+    // in. The one owner the roster's grey reads (no_audio_to_dispatch_on).
+    if (no_audio_to_dispatch_on(a, total_frames)) return false;
     switch (b) {
         // THE VIEW PAIRS READ ONE AXIS EACH (architect 2026-10-14): Source and
         // Target the audio view, Warp and Phase Reset the markers view, so a

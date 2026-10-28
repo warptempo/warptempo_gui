@@ -628,7 +628,8 @@ AppState::RedesignButtonFace& publish_button_face(
     if (clip_covers_drawable(cr, app, covered)) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                                 playback, target_render, id);
-        face.selected = redesign_button_selected(app, id);
+        face.selected =
+            redesign_button_selected(app, audio.total_frames(), id);
         face.glyph = redesign_button_glyph(app, id);
         face.legend  = legend;
         face.painted = painted;
@@ -2326,8 +2327,13 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 // samples are source frames. There is no paint-site clamp: one owner caps
 // the clock and it is format_timestamp (at 59:59.999 — a longer source
 // truncates, the architect's ruling, recorded there).
+// WITH NO PIECE THE RUN IS EMPTY and the field stands blank (architect
+// 2026-10-27, the open's hold's one frame, platform.h's head: row 8's clock
+// blank, not 00:00.000 — a time of no piece; the one owner
+// no_audio_to_dispatch_on).
 static std::string clock_time_text(const AppState& app,
                                    const GuiAudio& audio) {
+    if (no_audio_to_dispatch_on(app, audio.total_frames())) return {};
     const int64_t ts_sample = app.playhead_scanner_active
         ? app.playhead_scanner_sample
         : app.playhead_cursor_sample;
@@ -2768,8 +2774,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // stands (its position reads `0/0` at worst), so the seam is
         // unconditional there; the view's two edges repaint the whole window
         // (open_history_mode_fresh / close_history_mode).
+        // WITH NO PIECE THERE IS NO NAME (architect 2026-10-27, the open's
+        // hold's one frame, platform.h's head: no tab of no piece is named;
+        // no_audio_to_dispatch_on): the run is empty, the state line's seat
+        // computed from it as ever, and the `h` view cannot stand there.
+        const bool no_piece =
+            no_audio_to_dispatch_on(app, audio.total_frames());
         const bool name_ends_in_separator = app.history_mode.active;
-        std::string name_text = app.active_tab_view == 'B' ? "Tab B" : "Tab A";
+        std::string name_text = no_piece                    ? ""
+                                : app.active_tab_view == 'B' ? "Tab B"
+                                                             : "Tab A";
         if (name_ends_in_separator)
             name_text += kSegmentSeparator;
         const text_shape::ShapedRun name_run =
@@ -2837,7 +2851,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
         // THE FIELD AND THE LINE, THEIR CONTENT AND ITS PRECEDENCE: the field
         // carries the clock's run, the line the STATE — the `h` walk line,
-        // else the render / batch / loading progress line. The two state
+        // else the render / batch progress line. The two state
         // strings CAN COEXIST and THE WALK LINE WINS — nothing STARTS a render
         // inside the `h` view (both render chords are off its allowlist), but
         // a render or a target preview dispatched BEFORE the visit runs on
@@ -4996,10 +5010,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // Save's grey is the mark
     // (architect 2026-10-05, plain_save_actionable).
     //
-    // The row paints on EVERY frame class (loading, blank, loaded) like the
-    // redesigned rows above it: the clock reads 00:00.000 with no source, and
-    // the buttons must be visible on every frame class their press claim is
-    // live on.
+    // The row paints on EVERY frame class (blank, loaded) like the
+    // redesigned rows above it: with no piece — the open's hold's one frame,
+    // platform.h's head — the clock's field stands empty and no tab is named
+    // (clock_time_text, the name's block), and the buttons must be visible
+    // on every frame class their press claim is live on.
     const GuiRect lane = bottom_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
@@ -7561,7 +7576,7 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
         m.run      = run;
         m.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                              playback, target_render, id);
-        m.selected = redesign_button_selected(app, id);
+        m.selected = redesign_button_selected(app, audio.total_frames(), id);
         m.pressed  = m.enabled && redesign_button_pressed_face(app, id);
         m.glyph    = redesign_button_glyph(app, id);
     };
@@ -8084,7 +8099,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // above (main.cpp's vertical rule).
     //
     // THE BOTTOM ROW JOINS THEM (row 7): it is audio-independent in the same
-    // sense — the timestamp reads 00:00.000 with no source. Nothing painted
+    // sense — with no source the clock's field is empty and no tab is named
+    // (the open's hold's one frame, platform.h's head). Nothing painted
     // later overlaps it except the floating surfaces, which paint over
     // everything by design.
     {

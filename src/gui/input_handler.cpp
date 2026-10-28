@@ -58,11 +58,6 @@
 // answer every swallowed key.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
-// THE NO-AUDIO GATE'S SENTENCE (on_key's loading gate), shared with the car's
-// two roads, which ask the same gate (run_undo_redo_without_key and
-// car_play_refused_by_key_gates).
-constexpr const char* kNoAudioLoadedCard = "No audio is loaded yet";
-
 // THE REASON CHANNEL'S ONE READER IN THIS TU (architect 2026-08-30): the
 // authoring ops compose their own refusal sentences and RETURN them
 // (GuiOpRefusal, warpmarkers_ops.h — the split's rationale is stated there),
@@ -369,47 +364,32 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // Blank / loading state: only the quit / close-gesture bindings run;
-    // everything else no-ops. Dialog can't fire here because dirty is
-    // always false in blank state (the only blank state is the transient
-    // pre-load window before the sole startup load completes, when nothing
-    // has been loaded or edited yet).
+    // THE NO-PIECE GATE: a set before its load has installed the audio
+    // (no_audio_to_dispatch_on, app_state.h). THE OPEN'S PRESENTATION HOLD
+    // SPANS THIS WHOLE STATE (platform.h's head: armed before the set's run()
+    // and released only after its load), and its key hook drops every
+    // platform press but plain Ctrl+Q before this body runs (run_project's
+    // hook block, main.cpp); the chrome's synthesized presses (a key's lift,
+    // its hold-repeat) need a press that same hold dropped, and the car's
+    // roads are dropped at their own hook. So PLAIN Ctrl+Q IS THE ONE KEY
+    // THAT REACHES THIS GATE — read in the set's run() ahead of its first
+    // tick, which runs the load (both backends deliver a pass's input before
+    // its tick) — and it is admitted: dirty is false with nothing loaded, so
+    // the close exits at once.
     //
-    // Loading is a BLOCKING, UNINTERRUPTIBLE phase: the run loop is suspended
-    // for the whole synchronous decode/pyramid/install, so a Ctrl+Q or WM
-    // close pressed during loading is not observed here at all — it is read
-    // when run() resumes after the load completes, and the deferred quit is
-    // then honored (the app quits on completion). This gate's Ctrl+Q admission
-    // is for a close queued before/around load, which still yields that
-    // deferred quit; an urgent abort is pkill / the compositor's force-close.
-    // THE OPEN'S PRESENTATION HOLD SPANS THIS WHOLE STATE (platform.h's head:
-    // armed before the set's run() and released only after its load), and
-    // its key hook drops every platform press but plain Ctrl+Q before this
-    // body runs (run_project's hook block, main.cpp) — so the card below has
-    // no platform producer while the hold stands.
-    if (no_audio_to_dispatch_on()) {
-        if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+    // THE GATE'S REST IS A SILENT RETURN AND RAISES NO CARD: no other press
+    // has a producer here, so there is nothing to answer (the type rule).
+    //
+    // Loading itself is a BLOCKING, UNINTERRUPTIBLE phase: the run loop is
+    // suspended for the whole synchronous decode/pyramid/install, so a Ctrl+Q
+    // or WM close pressed during loading is not observed here at all — it is
+    // read when run() resumes after the load completes, with the audio
+    // installed, and the deferred quit is then honored by Ctrl+Q's own arm
+    // below (the app quits on completion); an urgent abort is pkill / the
+    // compositor's force-close.
+    if (no_audio_to_dispatch_on(app, audio.total_frames())) {
+        if (ctrl && !shift && !alt && key == GuiKeys::Q)
             prompt.request_close(GuiCloseTarget::Exit);
-            return;
-        }
-        // THE SWALLOW SAYS WHY (architect 2026-08-30, the strictness ruling):
-        // a window with no waveform in it looks like a window that should
-        // answer keys, so the state is what the card names rather than the
-        // chord. The card outlives the gate — the load installs the audio and
-        // the sentence retires on its own clock — and fire_if_due is called
-        // above the tick's own loading return, so the clock runs here.
-        // AND ONLY FOR A CHORD THE PRODUCT BINDS (architect 2026-08-30: bound
-        // keys either show an effect or a card, so an unbound key is
-        // identified by its silence — the rule and its inventory are at
-        // chord_is_bound, gui_input.h). A key that does nothing with a piece
-        // loaded says nothing with none loaded either. THE MODE BIT IS FALSE
-        // HERE BY CONSTRUCTION (2026-09-01, U4): the `h` view cannot stand with
-        // no audio, so this reader hands the inventory the state it is in and
-        // the term never varies — passing the bit rather than a literal keeps
-        // the readers one shape.
-        if (chord_is_bound(key, mods, app.history_mode.active))
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNoAudioLoadedCard);
         return;
     }
 
@@ -2355,10 +2335,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 // gate asks, hoisted so the car's undo / redo road (run_undo_redo_without_key,
 // below) asks the same question rather than a second copy of it. The gates'
 // rulings and their rankings stay stated at their sites in on_key.
-bool GuiInputHandler::no_audio_to_dispatch_on() const {
-    return ::no_audio_to_dispatch_on(app, audio.total_frames());
-}
-
 bool GuiInputHandler::keyboard_owned_by_pointer_gesture() const {
     return app.drag.active || app.value_drag.active || app.trim_drag.active ||
            app.region_drag.active ||
@@ -2458,7 +2434,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 // Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z WHOLE). A
 // deliberate press of the chord that never passes through on_key, so it asks
 // the HEAD GATES on_key asks ahead of the arm, in on_key's order and through
-// the same verdicts and sentences: no audio loaded, an editor text-selection
+// the same verdicts and sentences: an editor text-selection
 // drag or a pointer gesture owning the keyboard (kKeysDuringDrag), an open
 // editor swallowing the chord — SILENTLY since 2026-10-25, a bound chord
 // under any modal saying nothing (the editor gate in on_key), and the editor
@@ -2469,6 +2445,10 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 // and the `h` view's gate are the CALLER'S to drop (GuiCarTransport::admits),
 // and chord_is_bound answers true for both chords, which the helpers ask
 // anyway. Then the command itself, as a deliberate press (no repeat).
+// ON_KEY'S NO-PIECE GATE IS NOT ASKED: the car's hook drops every command
+// under the open's presentation hold (run_project's hook block, main.cpp),
+// which stands until the load has installed the audio, so no car press
+// reaches here without a piece.
 //
 // IT ANSWERS THE CAR'S OWN QUESTION (architect 2026-09-18): true iff a
 // restore actually ran — false at each head gate below, otherwise the
@@ -2487,10 +2467,6 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(sentence));
     };
-    if (no_audio_to_dispatch_on()) {
-        card_bound(kNoAudioLoadedCard);
-        return false;
-    }
     // AN EDITOR SWALLOWS THE CHORD IN SILENCE (2026-10-25; the one predicate
     // for a keyboard-taking modal), its text drag with it — a text drag
     // exists only under an editor.
@@ -2511,6 +2487,9 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
 // having already said whatever the key says. The routers ranked above these
 // gates and the `h` view's are the caller's to drop
 // (GuiCarTransport::admits).
+//
+// ON_KEY'S NO-PIECE GATE IS NOT ASKED, as at the skips' road above: no car
+// press reaches here without a piece.
 //
 // IT IS THE GATES AND NOT THE KEY WHOLE, the one place the car's three
 // buttons differ in shape: Previous and Next run Ctrl+Z's own command body,
@@ -2537,10 +2516,6 @@ bool GuiInputHandler::car_play_refused_by_key_gates() {
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(sentence));
     };
-    if (no_audio_to_dispatch_on()) {
-        card_bound(kNoAudioLoadedCard);
-        return true;
-    }
     if (keyboard_modal_editor_active()) return true;
     if (keyboard_owned_by_pointer_gesture()) {
         card_bound(kKeysDuringDrag);
@@ -2890,9 +2865,10 @@ bool overview_recall_restorable(const AppState& app) {
 OverviewCommandTarget overview_command_target(const AppState& app,
                                               const GuiAudio& audio) {
     OverviewCommandTarget t;
-    // NO PIECE, NO ACT: while there is nothing to dispatch on (a load in
-    // flight, or the blank window before the startup load) the fork answers
-    // the no-op through the one owner the roster's grey reads
+    // NO PIECE, NO ACT: while there is nothing to dispatch on (a set before
+    // its load has installed the audio — the open's hold's one frame paints
+    // this face, platform.h's head) the fork answers the no-op through the
+    // one owner the roster's grey reads
     // (no_audio_to_dispatch_on), so the tooltip over the grey face names the
     // act plainly and nothing below reads the working column before a load
     // publishes it.

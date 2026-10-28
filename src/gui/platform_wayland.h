@@ -145,17 +145,22 @@ public:
     // THE REOPEN'S HALF OF THE PAIR: make run() return with the window
     // standing and the exit bit untouched, so gui_main's loop can rebuild the
     // object set and call run() again (platform.h). Nothing else stops.
-    // It also ARMS THE OPEN'S PRESENTATION HOLD (platform.h's head): a run
-    // stop is a reopen, and the reopen holds the glass.
+    // It also ARMS THE OPEN'S PRESENTATION HOLD AND ITS ONE FRAME'S DEBT
+    // (platform.h's head): a run stop is a reopen, and the reopen holds the
+    // glass.
     void request_run_stop();
     // Has an exit been requested or forced? Read by gui_main after run()
     // returns to tell the two returns apart.
     bool exit_requested() const { return should_exit_; }
     // THE OPEN'S PRESENTATION HOLD (the rule at platform.h's head): whether
-    // it stands, and the GUI's one release — refused under a pending run
-    // stop; otherwise the whole surface damaged and PAINTED AT ONCE, the
-    // paint flushed (this backend's road out, at the definition).
+    // it stands; the hold's ONE FRAME, which the GUI asks once per arming at
+    // its load's entry — the whole surface damaged, painted past the hold's
+    // gate and committed and flushed at once, the hold left standing; and
+    // the GUI's one release — refused under a pending run stop; otherwise
+    // the whole surface damaged and PAINTED AT ONCE, the paint flushed (this
+    // backend's road out, at the definition).
     bool presentation_held() const { return presentation_held_; }
+    void present_held_frame();
     void release_presentation();
     // Fire on_resize with the window's current geometry, for a freshly
     // installed object set whose window will send no configure of its own —
@@ -894,8 +899,11 @@ private:
     bool run_stop_requested_ = false;
     // THE OPEN'S PRESENTATION HOLD (platform.h's head): standing from
     // construction — the cold launch's open — and re-armed by every
-    // request_run_stop; cleared by release_presentation alone.
+    // request_run_stop; cleared by release_presentation alone. Its ONE
+    // FRAME'S DEBT is armed beside it at the same two points and paid by
+    // present_held_frame alone.
     bool presentation_held_ = true;
+    bool held_frame_owed_   = true;
     bool has_initial_configure_ = false;
     // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading (keyboard focus): false until
     // the first configure, the honest cold answer; labwc focuses a newly mapped
@@ -1122,7 +1130,11 @@ private:
     // already-issued request by a bare commit of its own: paint_one_frame.)
     void request_frame_callback();
     void schedule_frame_callback();
-    void paint_one_frame();
+    // `held_frame` is the open's hold's one frame (present_held_frame), the
+    // one call the hold's gate lets through (platform.h's head).
+    void paint_one_frame(bool held_frame = false);
+    // The whole surface's damage, on the one list and (cpu) every buffer's.
+    void damage_whole_surface();
     void destroy_wayland_state();
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();

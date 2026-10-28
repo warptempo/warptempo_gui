@@ -600,11 +600,13 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // "Bound keys either show an effect or a card, so an unbound key is identified
 // by its silence." The gates that answer a swallowed press therefore ask this
 // first, and say nothing for a chord that binds nothing where the press
-// landed: the deduction only works if the silence is reserved for it. FOUR
-// GATES IN on_key READ IT (re-grepped 2026-10-25): the pointer gestures'
-// DRAG-MODAL gate, the loading gate, the `h` view's allowlist and the
-// read-only lock, four sentences between them — and the car's two roads onto
-// the same gates (run_undo_redo_without_key, car_play_refused_by_key_gates).
+// landed: the deduction only works if the silence is reserved for it. THREE
+// GATES IN on_key READ IT (re-grepped 2026-10-27): the pointer gestures'
+// DRAG-MODAL gate, the `h` view's allowlist and the read-only lock, three
+// sentences between them — and the car's two roads onto the same gates
+// (run_undo_redo_without_key, car_play_refused_by_key_gates). (The no-piece
+// gate answers in silence: plain Ctrl+Q is the one key that reaches it,
+// on_key's statement.)
 // (THE KEYBOARD-MODAL EDITOR GATE AND THE EDITOR TEXT DRAG'S were readers
 // until 2026-10-25, when a bound chord under any modal became silent —
 // architect: "silence".) THE
