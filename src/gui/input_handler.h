@@ -640,7 +640,8 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 //     write, idempotently across the gesture's later events — the drag arms'
 //     own arrangement below. (This list's first member was the SET-FROM-REGION
 //     act, which retired with the free scratch span it committed.);
-//   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar, ONE
+//   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar — a
+//     ctrl press held past the hold delay the END too (2026-10-27) — ONE
 //     function (set_trim_bound_at_click) and so one deselect — REINSTATED
 //     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
 //     ahead of the same deselect, and run AT THE LIFT since 2026-08-15 (the act
@@ -2130,16 +2131,19 @@ struct GuiInputHandler {
     // road reaches no wheel. Definition in input_pointer.cpp.
     void run_flag_cell_wheel(GuiMouseButton dir, int count, int x, int y);
 
-    // THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (begin) /
-    // ctrl+shift (end) bound set (2026-08-17: its press IS the endcap drag's
-    // arm, the one genuinely ambiguous click; the record's other four kinds
-    // went back to the press with that ruling). The arm writes PendingClickAct
-    // and NOTHING ELSE; the act is taken BY VALUE so the caller can disarm
-    // before running it, the release bodies' standing shape. Every gate the
-    // set meets is re-asked inside it, live at the lift.
+    // THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl bound set
+    // (2026-08-17: its press IS the endcap drag's arm, the one genuinely
+    // ambiguous click; the record's other four kinds went back to the press
+    // with that ruling). The arm writes PendingClickAct — the point, the
+    // press-time `shift` and the press stamp — and NOTHING ELSE; the act is
+    // taken BY VALUE so the caller can disarm before running it, the release
+    // bodies' standing shape. Every gate the set meets is re-asked inside it,
+    // live at the lift, and which bound it writes is decided there too: the
+    // begin, or the end when shifted or held past the hold delay (architect
+    // 2026-10-27).
     // Contract at PendingClickAct (app_state.h), reasoning at the
     // definitions (input_pointer.cpp).
-    void arm_pending_click_act(int x, int y, bool is_begin);
+    void arm_pending_click_act(int x, int y, bool shift);
     void run_pending_click_act(PendingClickAct press);
 
     // The empty marker-lane double-click marker CREATE, run at the SECOND
@@ -3499,7 +3503,9 @@ private:
     // stop, placed past those refusals and just ahead of the bound write, so the
     // ctrl / ctrl+shift press carries none of its own and a refused click leaves
     // a live audition playing. RETURNS whether a bound was written (the wrapper's
-    // arm gate). is_begin picks the bound: ctrl sets begin, ctrl+shift sets end.
+    // arm gate). is_begin picks the bound, decided by the caller where the act
+    // runs: a ctrl press sets the begin, a ctrl+shift press or a ctrl press held
+    // past the hold delay the end (pending_click_writes_begin, 2026-10-27).
     // IT RUNS AT THE LIFT (2026-08-15, the act-at-lift sweep): the press arms
     // PendingClickAct, the motionless lift calls this at the PRESS column, and a
     // crossing calls it and hands over to the drag. The body is unchanged.
@@ -3531,7 +3537,9 @@ private:
     // (trim is history-less) and pointer gestures have no cancel. A REFUSED set
     // arms nothing at all, the arm riding the setter's return value rather than a
     // second copy of its guard ladder.
-    // is_begin picks the bound (ctrl=begin, ctrl+shift=end).
+    // is_begin picks the bound, the hold's verdict at the crossing
+    // (pending_click_writes_begin, 2026-10-27): a ctrl press crossing before
+    // the hold delay the begin; ctrl+shift, or ctrl crossing after it, the end.
     void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
                                                int mouse_y);
 
@@ -3632,6 +3640,10 @@ private:
     //   single-bound drags), the bound-set clicks that write the same two
     //   bounds (ctrl for begin, ctrl+shift for end). Every one of
     //   those arms a single-bound drag, so the cue is one shape for one act.
+    //   THE MAP PROMISES BY POSITION AND MODIFIERS, NEVER BY DURATION: a ctrl
+    //   press held past the hold delay writes the END (2026-10-27,
+    //   PendingClickAct) while the cue keeps the begin's shape, the hold
+    //   having no visual announcement (architect 2026-09-29).
     // - Text: EDITABLE TEXT UNDER THE POINTER, which in this product is two
     //   published rects and nothing else (2026-08-13) — the open top-strip
     //   FLAG EDITOR's unrolled box (which wore the nav surface's Pan before
@@ -3665,7 +3677,10 @@ private:
     // PendingClickAct unconditionally, so the live-gesture arm reads the decider
     // at the pending's PRESS column before keeping the bound's cue — the same
     // question, asked once more where the arm can no longer answer it, so a
-    // press the guard will refuse keeps the Arrow for its whole hold.
+    // press the guard will refuse keeps the Arrow for its whole hold. It asks
+    // for the PRESS-TIME bound (ctrl the begin, ctrl+shift the end): a ctrl
+    // press held past the hold delay writes the end at its lift (2026-10-27),
+    // but the hold has no visual announcement, so the cue does not turn.
     // ALL THREE ARE MODE-SCOPED, and per zone rather than per band (2026-08-05):
     // the `h` history view consumes the endcap/bridge drags and both ctrl clicks,
     // so those three cues go while it stands and the whole band answers Arrow

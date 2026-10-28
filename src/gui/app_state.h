@@ -1140,11 +1140,11 @@ struct PendingTrimDrag {
 // Which act a PendingClickAct is holding. None = nothing armed.
 enum class PendingClickKind {
     None,
-    TrimBoundSet,     // the trim bar's ctrl (begin) / ctrl+shift (end) bound set
+    TrimBoundSet,     // the trim bar's ctrl bound set (begin; end if shifted or held)
 };
 
-// THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl / ctrl+shift bound-set
-// clicks, and nothing else (architect 2026-08-17: CONTENT ACTS THE MOMENT ITS
+// THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl bound-set click, its
+// shifted and held forms included, and nothing else (architect 2026-08-17: CONTENT ACTS THE MOMENT ITS
 // IDENTITY IS CERTAIN — the pointer's lift-deferral is justified ONLY by
 // genuine press ambiguity, a press that routinely starts a drag, and the
 // bound-set press IS the endcap drag's arm, so it is exactly that. The
@@ -1157,7 +1157,8 @@ enum class PendingClickKind {
 // at all).
 //
 // THE SHAPE IS THE PRODUCT'S: the press ARMS a record carrying what the act
-// will need (its press POINT and which bound the click writes); a MOTIONLESS
+// will need (its press POINT, its press-time SHIFT and its press STAMP); a
+// MOTIONLESS
 // release runs the set, RE-ASKING every live gate (they all live inside
 // set_trim_bound_at_click); a CROSSING of grab_moved_threshold_px() (the trim
 // bar's one gate, 2026-09-29) runs the set
@@ -1169,6 +1170,25 @@ enum class PendingClickKind {
 // at the release's coordinates (touch delivers the press at the finger's DOWN
 // point and the release at its last position, and the press point is what the
 // user aimed at, sub-threshold travel being jitter).
+//
+// WHICH BOUND THE CLICK WRITES IS A VERDICT AT THE ACT, NOT A PRESS-TIME FACT
+// (architect 2026-10-27): the lift or the crossing writes the BEGIN unless the
+// press was SHIFTED or has been HELD PAST chrome_shift_hold_ms() —
+// `is_begin = !(shift || held)`, the chrome long press's own term (the
+// roster's lift ORs its carried shift with the same hold), measured against
+// this record's own monotonic_ms() stamp where the act runs, with no timer
+// and no tick. So a Ctrl press lifted or crossed before the hold delay sets
+// the begin and one held past it the END: on glass, where the S Pen's side
+// button is the Ctrl bit (platform_android.cpp) and the hand has no Shift, a
+// tap with the button held sets the begin and a long press the end — the
+// laptop's Ctrl+Shift click — and a laptop Ctrl press held as long sets the
+// end too (both devices alike). A Ctrl+Shift press sets the end whatever its
+// duration. A crossing before the delay sets and then drags the begin, a
+// crossing after it the end. THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect
+// 2026-09-29): nothing marks the delay's passing, no tooltip rises under the
+// press, and the cursor's live-gesture cue names the PRESS-TIME bound for the
+// whole hold (pointer_cursor_kind). The one owner of the verdict is
+// pending_click_writes_begin (input_pointer.cpp).
 //
 // THE CROSSING IS THE POINT OF THE DEFERRAL: it RUNS THE SET at the press
 // column and then hands over to the endcap drag on the bound it just set, so a
@@ -1187,8 +1207,11 @@ struct PendingClickAct {
     PendingClickKind kind = PendingClickKind::None;
     int  press_x  = 0;   // press position (window px): the gate + the act's column
     int  press_y  = 0;
-    // Which bound the click writes (ctrl = begin, ctrl+shift = end).
-    bool is_begin = false;
+    // The press-time shift: a ctrl+shift press, which writes the END
+    // whatever its duration (the verdict is pending_click_writes_begin's).
+    bool shift    = false;
+    // The press's own monotonic_ms() stamp, the hold's origin.
+    int64_t press_ms = 0;
 
     bool active() const { return kind != PendingClickKind::None; }
 };
@@ -3371,8 +3394,9 @@ inline int double_click_slack_px() {
 // redesign_button_shift_admits alone, never a count) before its lift
 // dispatches the SHIFTED twin instead of the plain act. It is what gives glass
 // the shift acts: the road rig has no keyboard, so a finger could reach only
-// half of each shifted pair. THREE READ SITES since 2026-10-01, each a
-// LIFT measuring the hold against its own arm's press stamp: the roster's
+// half of each shifted pair. FOUR READ SITES since 2026-10-27, each a
+// LIFT (or, for the last, a lift or a crossing) measuring the hold against
+// its own arm's press stamp: the roster's
 // chord build (finish_chrome_press_release, input_pointer.cpp, against
 // AppState::ChromePress::press_ms), the RENDER PLAYER'S MODAL ROW since
 // 2026-08-28 (modal_dialog_press_shifted, the same file, against
@@ -3380,8 +3404,12 @@ inline int double_click_slack_px() {
 // modal buttons to admit a modified press — and THE NOTIFICATION CARD'S LIFT
 // since 2026-10-01 (finish_notification_release, the same file, against the
 // same ChromePress stamp on its Card arm), where the shifted act is
-// dismissing EVERY card ("shift click or long press dismisses all"). Same
-// hold, same term, same reason: glass has no shift key.
+// dismissing EVERY card ("shift click or long press dismisses all"), and
+// THE TRIM BAR'S CTRL BOUND SET since 2026-10-27 (pending_click_writes_begin,
+// the same file, against PendingClickAct::press_ms), where a Ctrl press held
+// past the delay writes the END as a Ctrl+Shift press does — read at the
+// motionless lift and at the grab gate's crossing alike, the two places that
+// act runs. Same hold, same term, same reason: glass has no shift key.
 //
 // IT READS THE HOLD DELAY (kHoldDelayMs, gui_input.h — 300 ms, architect
 // 2026-09-29), the value both deliberate holds in the product cross their
@@ -3407,7 +3435,7 @@ inline int double_click_slack_px() {
 // value nor the beat, and no tooltip rises under a held press at all
 // (AppState::RedesignTooltip); the ruling's home is the read site.
 //
-// A NAMED READER OF THE ONE CONSTANT: the three read sites say which hold
+// A NAMED READER OF THE ONE CONSTANT: the four read sites say which hold
 // they measure while the value itself has one owner (kHoldDelayMs,
 // gui_input.h).
 inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
@@ -3524,8 +3552,8 @@ inline int drag_moved_threshold_px() {
 //     flag's drags, the horizontal reposition drag and the value drag
 //     (value_drag_posture, the lamp's), so both begin at this distance;
 //   * PendingTrimDrag — the trim bar's endcap / bridge drag;
-//   * PendingClickAct — the trim bar's deferred ctrl / ctrl+shift bound-set
-//     click, the one member that latches NO `moved` of its own: its crossing
+//   * PendingClickAct — the trim bar's deferred ctrl bound-set click (begin,
+//     or end when shifted or held past the hold delay), the one member that latches NO `moved` of its own: its crossing
 //     RESOLVES the arm outright, running the set and handing over to the
 //     endcap drag above on the same event. THE TRIM BAR IS ONE SURFACE WITH
 //     ONE GATE, so the set and the drag it hands to cross at the same
@@ -10211,7 +10239,7 @@ inline int64_t snap_authored_frame(double frame) {
 // text drag, the MARKER FLAG'S PENDING PRESS (its click acted at the press —
 // 2026-08-17 — but the drag it may become and the seed its release owes both
 // need the world held still), THE ONE DEFERRED PENDING CLICK ACT
-// (PendingClickAct — the trim bar's two bound sets, the one surviving lift act
+// (PendingClickAct — the trim bar's bound sets, the one surviving lift act
 // of 2026-08-17; it holds a whole unrun click, which is why it must be in
 // flight here), the pending trim drag
 // (button held, watching for the threshold), or THE RENDER PLAYER'S TWO ARMS

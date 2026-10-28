@@ -2213,9 +2213,14 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // refuses to do below. Read from the PRESS column, never the live pointer,
     // so the answer is fixed for the pending's life and the cue cannot flicker
     // as the hand moves — the live-trim-gesture rule's own requirement.
+    // THE BOUND IS THE PRESS-TIME ONE (`!shift`) for the whole hold, though a
+    // Ctrl press held past the hold delay writes the END (architect
+    // 2026-10-27, PendingClickAct): THE HOLD HAS NO VISUAL ANNOUNCEMENT
+    // (architect 2026-09-29), and a cue that turned at the delay would be one.
+    const bool pending_click_begin_cue = !app.pending_click.shift;
     const bool trim_bound_set_pending =
         app.pending_click.kind == PendingClickKind::TrimBoundSet &&
-        trim_bound_click_frame(app.pending_click.is_begin,
+        trim_bound_click_frame(pending_click_begin_cue,
                                app.pending_click.press_x).has_value();
     if (app.trim_drag.active || app.pending_trim_drag.active ||
         trim_bound_set_pending) {
@@ -2227,7 +2232,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                   ? app.trim_drag.is_begin
                                   : (app.pending_trim_drag.active
                                          ? app.pending_trim_drag.is_begin
-                                         : app.pending_click.is_begin);
+                                         : pending_click_begin_cue);
         if (both) return GuiCursorKind::TrimResize;
         return is_begin ? GuiCursorKind::TrimBoundBegin
                         : GuiCursorKind::TrimBoundEnd;
@@ -4558,30 +4563,48 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     app.pending_marker_press.cell = cell;
 }
 
-// ARM THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (BEGIN) /
-// ctrl+shift (END) bound set (the contract, and why it alone still defers, is
-// at PendingClickAct, app_state.h: its press IS the endcap drag's arm, the one
-// click with genuine press ambiguity — the 2026-08-17 ruling took the other
-// four kinds back to the press). It writes the pending and does NOTHING ELSE:
-// the act is the lift's, or the crossing's.
+// ARM THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl bound set (the
+// contract, and why it alone still defers, is at PendingClickAct, app_state.h:
+// its press IS the endcap drag's arm, the one click with genuine press
+// ambiguity — the 2026-08-17 ruling took the other four kinds back to the
+// press). It writes the pending and does NOTHING ELSE: the act is the lift's,
+// or the crossing's.
 //
 // THE ARM IS UNCONDITIONAL BY SHAPE. Every gate the set meets — the
 // strictly-inside refusal, the degenerate-geometry returns — lives INSIDE the
 // act and is therefore re-asked LIVE at the lift, which is the chrome lift's
 // own rule: a gate may change under a held button and the LIFT decides.
-// Nothing is carried but the press POINT and which bound the click writes.
+// Nothing is carried but the press POINT, the press-time SHIFT and the
+// press's STAMP: which bound the click writes is decided where the act runs
+// (pending_click_writes_begin below, architect 2026-10-27).
 // THE POINT'S BASIS DOES NOT MOVE UNDER IT: the armed record is a member of
 // the displayed-basis freeze (displayed_basis_frozen, app_state.h —
 // architect 2026-09-24), because the lift and the crossing both convert the
 // stored press_x through the displayed map, the crossing arming the trim drag
 // at it too — so the gates are live and the aim's geometry is the epoch the
 // user pressed in, like every other aimed press.
-void GuiInputHandler::arm_pending_click_act(int x, int y, bool is_begin) {
+void GuiInputHandler::arm_pending_click_act(int x, int y, bool shift) {
     app.pending_click = PendingClickAct{};
     app.pending_click.kind     = PendingClickKind::TrimBoundSet;
     app.pending_click.press_x  = x;
     app.pending_click.press_y  = y;
-    app.pending_click.is_begin = is_begin;
+    app.pending_click.shift    = shift;
+    app.pending_click.press_ms = monotonic_ms();
+}
+
+// WHICH BOUND THE ARMED CLICK WRITES, decided where the act runs (architect
+// 2026-10-27; the rule is at PendingClickAct, app_state.h): the BEGIN unless
+// the press was shifted or has been held past chrome_shift_hold_ms() — the
+// roster lift's own term, the carried press-time shift ORed with the hold,
+// measured against the record's stamp. TWO CALLERS, the two places the act
+// runs: run_pending_click_act (the motionless lift) and on_motion's grab-gate
+// crossing. The cursor's live-gesture cue does not ask it: that cue names
+// the press-time bound (`!shift`) for the whole hold, the hold having no
+// visual announcement (pointer_cursor_kind).
+static bool pending_click_writes_begin(const PendingClickAct& press) {
+    const bool held =
+        monotonic_ms() - press.press_ms >= chrome_shift_hold_ms();
+    return !(press.shift || held);
 }
 
 // RUN THE ARMED ACT — the motionless lift's whole body. Its ONE caller is
@@ -4600,8 +4623,9 @@ void GuiInputHandler::arm_pending_click_act(int x, int y, bool is_begin) {
 // shape exists for.
 void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
     if (press.kind != PendingClickKind::TrimBoundSet) return;
-    // The ctrl (BEGIN) / ctrl+shift (END) bound set, WHOLE AND
-    // UNSPLIT: set_trim_bound_at_click owns every refusal (a degenerate
+    // The ctrl bound set — the BEGIN, or the END when the press was shifted or
+    // held past the hold delay (pending_click_writes_begin, read here at the
+    // lift) — WHOLE AND UNSPLIT: set_trim_bound_at_click owns every refusal (a degenerate
     // audio/geometry state, and above all the STRICTLY-INSIDE guard —
     // a click landing a bound on or past its partner writes nothing,
     // deselects nothing and stops nothing), the playback stop that sits
@@ -4609,7 +4633,7 @@ void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
     // reset, the playhead park at the new trim start, the repaint and the
     // target trigger) and the setter's deselect.
     // Moving the act meant moving that unit, never a piece of it.
-    set_trim_bound_at_click(press.is_begin, press.press_x);
+    set_trim_bound_at_click(pending_click_writes_begin(press), press.press_x);
 }
 
 // -- THE ON-SCREEN KEYBOARD'S TWO EDGES (2026-08-27) -------------------------
@@ -6299,15 +6323,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // THE PRESS ONLY ARMS — THE ONE SURVIVING DEFERRED CLICK
                     // (2026-08-17; contract at PendingClickAct, app_state.h —
                     // this press IS the endcap drag's arm, the genuine press
-                    // ambiguity the deferral exists for): the BEGIN bound set,
-                    // its refusals, its stop, its commit tail and its deselect
+                    // ambiguity the deferral exists for): the bound set, its
+                    // refusals, its stop, its commit tail and its deselect
                     // are the CLICK, and the click runs at the MOTIONLESS LIFT
                     // through the one act owner (run_pending_click_act), at
                     // the PRESS column. A
                     // CROSSING runs that same set and then hands the gesture to
-                    // the single-bound endcap drag on the bound it just wrote,
-                    // so ctrl-press-and-drag is byte-for-byte the gesture it has
-                    // always been.
+                    // the single-bound endcap drag on the bound it just wrote.
+                    // THE BOUND IS THE HOLD'S (architect 2026-10-27): the
+                    // BEGIN when the lift or the crossing comes before the hold
+                    // delay, the END past it — the Ctrl+Shift press below by
+                    // duration, which is how the S Pen's side button (the Ctrl
+                    // bit on glass) reaches the end; the verdict is
+                    // pending_click_writes_begin's.
                     // NO stop here, for the reason it was never here: the bound
                     // set has its own refusals (a degenerate audio/geometry
                     // state, a value not strictly inside its partner), and a
@@ -6315,7 +6343,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // stop to protect. The stop lives INSIDE
                     // set_trim_bound_at_click, past every refusal and
                     // immediately ahead of the bound write.
-                    arm_pending_click_act(x, y, /*is_begin=*/true);
+                    arm_pending_click_act(x, y, /*shift=*/false);
                     return;
                 }
             }
@@ -6346,14 +6374,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect trim_band = top_trim_row_area(app);
             if (rect_contains(trim_band, x, y)) {
-                // THE PRESS ONLY ARMS, the BEGIN set's own shape above: the END
+                // THE PRESS ONLY ARMS, the ctrl set's own shape above: the END
                 // set runs at the motionless lift and a crossing runs it and
                 // then hands over to that bound's endcap drag (the one
-                // surviving deferred click, 2026-08-17).
+                // surviving deferred click, 2026-08-17). The carried shift
+                // makes it the END whatever the press's duration
+                // (pending_click_writes_begin) — the hold reaches no further
+                // bound.
                 // NO stop here either: like the BEGIN set, the stop sits
                 // inside set_trim_bound_at_click past that act's refusals, so a
                 // refused END set leaves a live audition alone.
-                arm_pending_click_act(x, y, /*is_begin=*/false);
+                arm_pending_click_act(x, y, /*shift=*/true);
                 return;
             }
         }
@@ -7420,10 +7451,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_click.active()) {
         // THE MOTIONLESS LIFT OF THE ONE SURVIVING DEFERRED CLICK — the trim
-        // bar's ctrl / ctrl+shift bound set (the contract is at
-        // PendingClickAct, app_state.h; the 2026-08-17 ruling took the record's
-        // other four kinds back to the press). The act runs on the PRESS
-        // column, re-asking every gate live inside set_trim_bound_at_click.
+        // bar's ctrl bound set (the contract is at PendingClickAct,
+        // app_state.h; the 2026-08-17 ruling took the record's other four
+        // kinds back to the press). The act runs on the PRESS column,
+        // re-asking every gate live inside set_trim_bound_at_click, and the
+        // hold's verdict on which bound is taken there, at this lift
+        // (pending_click_writes_begin).
         // THE RELEASE BODIES' STANDING SHAPE: read the pending, DISARM, then
         // act, so the act runs with no gesture live.
         // (A crossed pending is spent at the crossing — it ran its set and
@@ -9799,7 +9832,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // THE ONE SURVIVING DEFERRED CLICK (PendingClickAct, app_state.h): the trim
-    // bar's ctrl / ctrl+shift bound set. Nothing has been committed yet — the
+    // bar's ctrl bound set. Nothing has been committed yet — the
     // set acts at the LIFT or here at the crossing — so this branch owns both
     // ways it can end early. Placed ABOVE the pending trim drag
     // below because the crossing HANDS OVER to it and falls
@@ -9840,11 +9873,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // press-time set: the bound is written at the press column, the drag
         // anchors there, and begin_trim_drag's orig_* capture is the click-set
         // value it always was.
+        // WHICH BOUND IS THE HOLD'S VERDICT AT THIS CROSSING (architect
+        // 2026-10-27, pending_click_writes_begin): a crossing before the hold
+        // delay sets and drags the BEGIN, one after it the END, a shifted
+        // press the END either way.
         // FALL THROUGH (no return) so the pending trim drag armed just now
         // crosses on this same event and applies its first delta, folding the
         // whole press->crossing travel.
-        set_trim_bound_at_click_then_arm_drag(press.is_begin, press.press_x,
-                                              press.press_y);
+        set_trim_bound_at_click_then_arm_drag(pending_click_writes_begin(press),
+                                              press.press_x, press.press_y);
     }
     // Pending trim drag (armed by a plain trim-bar press, or by the crossing of
     // a ctrl / ctrl+shift bound set just above): the trim reposition

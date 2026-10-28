@@ -50,7 +50,12 @@
 //     deferred (the press arms
 //     PendingClickAct, app_state.h, and a CROSSING runs the set at the press
 //     column and then hands over to that bound's endcap drag): the guard is
-//     unchanged and is simply re-asked live where the act now runs.
+//     unchanged and is simply re-asked live where the act now runs. THE BOUND
+//     IS DECIDED THERE TOO (architect 2026-10-27): a ctrl press lifted or
+//     crossed before the hold delay sets the begin, one held past it the END,
+//     as ctrl+shift does at any duration — the S Pen's side button being the
+//     Ctrl bit, a tap with it held sets the begin on glass and a long press
+//     the end, on both devices alike.
 //   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
@@ -72,7 +77,8 @@
 // MEMBERSHIP, re-derived by grepping the routes that write a trim bound:
 //   * the CTRL / CTRL+SHIFT bound-set clicks (set_trim_bound_at_click), AT THEIR
 //     MOTIONLESS LIFT or at their threshold crossing since 2026-08-15 — the act
-//     is unchanged and only its timing moved;
+//     is unchanged and only its timing moved — a ctrl press held past the hold
+//     delay writing the end (2026-10-27);
 //   * the ENDCAP / BRIDGE drag, AT ITS RELEASE ONLY (commit_trim_drag): the
 //     motion arm deliberately parks nothing, a per-frame playhead chase being
 //     a cursor fighting the gesture that is moving it. The trim bar's arrow
@@ -1158,7 +1164,9 @@ void GuiInputHandler::commit_trim_drag() {
 //
 // IT RUNS AT THE LIFT, NOT AT THE PRESS (architect 2026-08-15, the act-at-lift
 // sweep finishing: "all actions should be on mouse-up / finger-up"). The ctrl /
-// ctrl+shift press ARMS PendingClickAct (app_state.h) and commits nothing; the
+// ctrl+shift press ARMS PendingClickAct (app_state.h) and commits nothing, and
+// which bound it writes is decided where it runs (a ctrl press held past the
+// hold delay writes the end, 2026-10-27); the
 // MOTIONLESS LIFT calls this at the PRESS COLUMN, and a THRESHOLD CROSSING calls
 // it and then hands over to the endcap drag through
 // set_trim_bound_at_click_then_arm_drag below. NOTHING IN THIS BODY CHANGED and
@@ -1178,7 +1186,8 @@ void GuiInputHandler::commit_trim_drag() {
 //
 // RETURNS whether a bound was actually written — the wrapper's arm gate, so every
 // refusal above suppresses the drag with no second spelling of the guard ladder.
-// is_begin picks the bound: the ctrl trim-bar click sets begin, ctrl+shift sets
+// is_begin picks the bound, decided by the caller: the ctrl trim-bar click
+// sets begin; ctrl+shift, or a ctrl press held past the hold delay, sets
 // end.
 
 // THE DECISION HALF, hoisted whole (architect 2026-08-03) so the pointer CURSOR
@@ -1294,7 +1303,10 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
 // that never moved. The old pair-survival checks that used to gate the arm died
 // with the unset state (2026-07-30) and are not needed under the new guard either:
 // a set that succeeded left an ORDERED pair by construction, so there is always
-// something to drag. is_begin picks the bound (ctrl=begin, ctrl+shift=end).
+// something to drag. is_begin picks the bound, the hold's verdict at the
+// crossing (pending_click_writes_begin, input_pointer.cpp, 2026-10-27): a ctrl
+// press crossing before the hold delay the begin; ctrl+shift, or a ctrl press
+// crossing after it, the end.
 void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
                                                             int mouse_x,
                                                             int mouse_y) {
