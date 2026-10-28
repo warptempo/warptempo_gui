@@ -45,15 +45,17 @@
 //     render player's transport seat, its key and its legend —
 //     score_viewer_play_face), THE SCRUB (the render player's, its domain
 //     the viewing range's FRAMES: the thumb at the cursor, a press off the
-//     thumb jumping it, a drag CARRYING it and seeking nothing, THE SEEK AT
-//     THE LIFT, the position written with it — architect 2026-10-26, "no
-//     scrubbing" — and, the score's own, THE SOUND PAUSED WHILE THE SCRUB IS
-//     HELD: a live soundtrack paused at the press and playing on from where
-//     the thumb dropped at the lift — architect 2026-10-26 ~23:00, "it
-//     wouldn't start playing until I commit by dropping the thumb"), THE
-//     CLOCK (the
-//     render player's two time fields, verbatim: the elapsed time within the
-//     range and the range's length), then RESET, START, END and CLOSE flush
+//     thumb jumping it, a drag CARRYING it and seeking nothing, the page
+//     holding the frame under it SHOWN LIVE, display only — architect
+//     2026-10-27 ~19:45, "the picture follows the thumb, the sound waits for
+//     the lift" — THE SEEK AT THE LIFT, the position written with it —
+//     architect 2026-10-26, "no scrubbing" — and, the score's own, THE SOUND
+//     PAUSED WHILE THE SCRUB IS HELD: a live soundtrack paused at the press
+//     and playing on from where the thumb dropped at the lift — architect
+//     2026-10-26 ~23:00, "it wouldn't start playing until I commit by
+//     dropping the thumb"), THE CLOCK (the render player's two time fields,
+//     verbatim: the elapsed time within the range and the range's length,
+//     unmoved under a held scrub), then RESET, START, END and CLOSE flush
 //     right. Space plays and pauses, Home / End seek the range's first /
 //     last frame, Left / Right do nothing (no pages).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
@@ -93,8 +95,11 @@
 // FOLLOWS THE CURSOR: each tick while LIVE the page holding the engine's
 // cursor (score_page_for_position over GuiPlayback::cursor(), the one
 // position face) is shown when it differs, and at rest every seek and every
-// pause shows the page holding the new cursor. A device that goes away mid-play pauses at
-// the held cursor with the playback card (the render player's tick's rule).
+// pause shows the page holding the new cursor — the one exception a held
+// scrub, which shows the page under the dragged thumb until the lift's seek
+// lands it (input_pointer.cpp's score-scrub block). A device that goes away
+// mid-play pauses at the held cursor with the playback card (the render
+// player's tick's rule).
 // THE OPEN lands at the remembered frame clamped into the range, PAUSED, the
 // engine rebound to the soundtrack behind the modal stop (the fence) — IDLE
 // instead while the soundtrack is still loading or a render run stands (the
@@ -459,6 +464,19 @@ inline int64_t score_scrub_frame_at(const AppState& a, int x) {
                           t * static_cast<double>(fr.length())));
 }
 
+// THE PAGE UNDER A DRAGGED THUMB'S CARRIED COLUMN, the one answer of both
+// faces (architect 2026-10-27 ~19:45, "the picture follows the thumb, the
+// sound waits for the lift"; input_pointer.cpp's score-scrub block): on the
+// page road the page the column rounds to (score_scrub_page_at, the steps);
+// under the soundtrack the page holding the column's frame
+// (score_page_for_position over score_scrub_frame_at), the very frame the
+// lift seeks, so the seek's page is the page the drag showed.
+inline int score_scrub_page_under(const AppState& a, int x) {
+    if (score_viewer_has_soundtrack(a))
+        return score_page_for_position(a, score_scrub_frame_at(a, x));
+    return score_scrub_page_at(a, x);
+}
+
 // THE PAGE STANDS: the viewer stands with a score loaded and is THE LIVE
 // MODAL SURFACE — no prompt over it (RESET's question takes the box), read
 // through the one ranking (AppState::modal_dialog_live_session) — which is
@@ -548,13 +566,16 @@ struct GuiScoreViewer {
     // is displayed and its position written (display_page, then
     // write_page_position). The same page is a no-op.
     void show_page(int index);
-    // ITS TWO HALVES, apart for the held page scrub alone (architect
-    // 2026-10-27: the page under the thumb shown live, written at the lift —
+    // ITS TWO HALVES, apart for the held scrub (architect 2026-10-27 ~19:45,
+    // "the picture follows the thumb, the sound waits for the lift" —
     // input_pointer.cpp's score-scrub block): display_page clamps `index`
     // into the viewing range and, where it differs, makes it the shown page
     // and damages the interior and the row, returning whether it changed,
-    // nothing written; write_page_position writes the shown page's begin as
-    // the active tab's remembered position, through to the file.
+    // nothing written, nothing seeked — the held scrub's on BOTH FACES, under
+    // the soundtrack the page holding the frame under the thumb, the cursor
+    // and the clock untouched; write_page_position writes the shown page's
+    // begin as the active tab's remembered position, through to the file —
+    // the page road's lift alone.
     bool display_page(int index);
     void write_page_position();
     // PREV / NEXT (and Left / Right): one page, walled at the range's edges;

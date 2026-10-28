@@ -9043,7 +9043,8 @@ struct AppState {
     //              page road's PREV / NEXT / scrub land it (GuiScoreViewer::
     //              show_page; a held scrub's display_page), the soundtrack's
     //              cursor decides it under the media player's face
-    //              (GuiScoreViewer::follow_cursor);
+    //              (GuiScoreViewer::follow_cursor) but while a held scrub
+    //              shows the page under the thumb (display_page, 2026-10-27);
     //   `painted_page` the page whose picture the last paint covering the
     //              interior drew (paint_modal_dialog's score branch): the
     //              shown page once its cache entry stands (its surface, or
@@ -9058,16 +9059,19 @@ struct AppState {
     //   `scrub`    the scrub's drag arm, on both faces the render player's
     //              (the thumb's carried column, on or off the thumb, moved):
     //              the drag CARRIES the thumb and the lift commits, a
-    //              motionless tap on the thumb committing nothing. ON THE
-    //              PAGE ROAD (architect 2026-10-27, "the thumb follows the
-    //              pen continuously, the page under it changes in steps; the
-    //              lift commits the page under the thumb") the page under the
-    //              carried column is SHOWN as the thumb crosses it, nothing
-    //              written, and the lift writes the shown page's position
-    //              where it differs from `press_page`, the page the press
-    //              found — which a hard end shows again, nothing written.
-    //              UNDER THE MEDIA PLAYER'S FACE nothing is seeked under the
-    //              drag, THE SEEK IS AT THE LIFT to the carried column
+    //              motionless tap on the thumb committing nothing. ON BOTH
+    //              FACES (architect 2026-10-27 ~19:45, "the picture follows
+    //              the thumb, the sound waits for the lift") the page under
+    //              the carried column is SHOWN as the thumb crosses it,
+    //              display only, and `press_page`, the page the press found
+    //              (after its pause), is what a hard end shows again, nothing
+    //              written. ON THE PAGE ROAD (architect 2026-10-27, "the
+    //              thumb follows the pen continuously, the page under it
+    //              changes in steps; the lift commits the page under the
+    //              thumb") the lift writes the shown page's position where it
+    //              differs from `press_page`. UNDER THE MEDIA PLAYER'S FACE
+    //              nothing is seeked under the drag, THE SEEK IS AT THE LIFT
+    //              to the carried column's frame, whose page the drag showed
     //              (architect 2026-10-26, "no scrubbing"), and `was_live`
     //              records the press having paused a LIVE soundtrack
     //              (architect 2026-10-26 ~23:00): the lift plays on from the

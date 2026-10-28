@@ -5303,40 +5303,50 @@ void GuiInputHandler::clear_player_scrub_drag() {
 }
 
 // -- THE SCORE VIEWER'S SCRUB (2026-10-26; the contract at the declaration,
-//    input_handler.h), ON ITS TWO FACES (score_viewer.h's head). BOTH ARM AS
-//    THE RENDER PLAYER'S SCRUB ARMS: the thumb taken where it stands on its
-//    grab band, the grab offset kept, jumping to a press anywhere else, and
+//    input_handler.h), ON ITS TWO FACES (score_viewer.h's head), ONE RULE:
+//    THE PICTURE FOLLOWS THE THUMB, THE SOUND WAITS FOR THE LIFT (architect
+//    2026-10-27 ~19:45: "the picture follows the thumb, the sound waits for
+//    the lift" — the waveform's playhead drag's own rule). BOTH ARM AS THE
+//    RENDER PLAYER'S SCRUB ARMS: the thumb taken where it stands on its grab
+//    band, the grab offset kept, jumping to a press anywhere else, and
 //    CARRIED by the motion (clamp_player_scrub_marker_x, the travel's one
-//    owner), the painter drawing it at the carried column while armed. ON
-//    THE PAGE ROAD THE PHASE-RESET OVERLAYS' RULE, drag anywhere, step
-//    quantized (architect 2026-10-27: "the thumb follows the pen
+//    owner), the painter drawing it at the carried column while armed. THE
+//    PAGE UNDER THE CARRIED COLUMN IS SHOWN LIVE, DISPLAY ONLY
+//    (score_scrub_page_under, the one mapping per face; GuiScoreViewer::
+//    display_page): at an off-thumb press and at every motion, nothing
+//    seeked, nothing written, the clock unmoved — a press on the thumb takes
+//    it at the shown page and shows nothing new. On the page road the pages
+//    are the steps (architect 2026-10-27: "the thumb follows the pen
 //    continuously, the page under it changes in steps; the lift commits the
-//    page under the thumb"): the page under the carried column is SHOWN as
-//    the thumb crosses into it (score_scrub_page_at, GuiScoreViewer::
-//    display_page), display only; THE LIFT COMMITS it, the position written
-//    once (write_page_position) where it differs from the page the press
-//    found, and the thumb then rests at the shown page's column
-//    (score_scrub_x_of) — the step; a hard end shows the press's page again,
-//    nothing written. UNDER THE SOUNDTRACK THE RENDER PLAYER'S SCRUB EXACTLY
-//    (architect 2026-10-26, "no scrubbing": audio jumping under the drag is
-//    not helpful) over the range's frames — nothing seeked under the drag,
-//    and THE SEEK AT THE LIFT to the column the motion last painted the
-//    thumb at, the position written with it; a hard end owes nothing. AND
-//    THE SOUND PAUSES WHILE THE SCRUB IS HELD (architect 2026-10-26 ~23:00:
-//    "when I'm scrubbing, I would expect the audio to stop playing because
-//    I'm no longer at the scrub position. And then it wouldn't start
-//    playing until I commit by dropping the thumb"): a LIVE transport is
-//    paused at the press (GuiScoreViewer::pause, the key reading
-//    PLAY while held) and the lift PLAYS ON FROM THE DROPPED COLUMN
+//    page under the thumb"); under the soundtrack the page is the one holding
+//    the column's frame. THE LIFT COMMITS: on the page road the position
+//    written once (write_page_position) where the shown page differs from the
+//    page the press found, the thumb then resting at the shown page's column
+//    (score_scrub_x_of) — the step; under the soundtrack THE SEEK AT THE LIFT
+//    to the column the motion last painted the thumb at (architect
+//    2026-10-26, "no scrubbing": audio jumping under the drag is not
+//    helpful), the position written with it, the seek's page the page the
+//    drag showed (the same column, the same frame, the same page), so
+//    nothing changes at the drop. THE SOUND PAUSES WHILE THE SCRUB IS HELD
+//    (architect 2026-10-26 ~23:00: "when I'm scrubbing, I would expect the
+//    audio to stop playing because I'm no longer at the scrub position. And
+//    then it wouldn't start playing until I commit by dropping the thumb"): a
+//    LIVE transport is paused at the press (GuiScoreViewer::pause, the key
+//    reading PLAY while held) and the lift PLAYS ON FROM THE DROPPED COLUMN
 //    (GuiScoreViewer::play_from, architect 2026-10-27: the live seek's clamp,
 //    never the PLAY key's end rule), so a drop at the range's end reaches
 //    the natural end and rests there (architect 2026-10-26 ~23:55: "it stops
 //    dead where it is"), never the PLAY key's replay from the start; a
 //    motionless tap on the thumb of a live transport pauses at the press and
 //    plays on from the pause's cursor at the lift, nothing seeked, a no-op in
-//    effect. THE ONE RULE OF BOTH SCRUBS (architect 2026-10-26 ~23:15, the
-//    render player's scrub taking it: "we should make them both the same";
-//    the play-scrub's block head). --
+//    effect. A HARD END COMMITS NOTHING on either face: the page the press
+//    found is shown again, nothing written, seeked or played. NOTHING ELSE
+//    MOVES THE PAGE UNDER A HELD SCRUB: the tick's page follow runs only
+//    while LIVE, which the press ended, and the keyboard belongs to the
+//    gesture (the score viewer's key gate, input_handler.cpp). THE ONE RULE
+//    OF BOTH SCRUBS (architect 2026-10-26 ~23:15, the render player's scrub
+//    taking it: "we should make them both the same"; the play-scrub's block
+//    head) holds for the sound; the picture is the score's own. --
 
 bool GuiInputHandler::claim_score_scrub_press(int x, int y,
                                               GuiInputState mods) {
@@ -5363,23 +5373,25 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     drag.on_thumb = on_thumb;
     drag.grab_dx  = on_thumb ? x - marker_x : 0;
     drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
-    drag.press_page = app.score_viewer.page;
     if (media) {
         // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live
         // transport paused here, the cursor read into the resting position
-        // and written as a pause writes it; a paused one arms as it stands.
+        // and written as a pause writes it, its page shown; a paused one
+        // arms as it stands.
         drag.was_live = app.score_viewer.transport ==
                         AppState::ScoreViewer::Transport::Live;
         if (drag.was_live) score_viewer->pause();
-        viewport.invalidate_rect(track);
-        return true;
     }
-    // THE PAGE ROAD: an off-thumb press shows the page under the column the
-    // thumb jumped to (a press on the thumb takes it at the shown page,
-    // nothing to show); the page the press found is kept for the lift's
-    // comparison and a lost lift's return.
+    // THE PAGE THE PRESS FOUND — after the pause, which shows the page
+    // holding the paused cursor — kept for the page road's lift comparison
+    // and a lost lift's return on both faces. An off-thumb press then shows
+    // the page under the column the thumb jumped to, display only (a press
+    // on the thumb takes it at the shown page, nothing to show: under the
+    // soundtrack its painted column's frame may round across a page edge
+    // from the cursor's own).
+    drag.press_page = app.score_viewer.page;
     if (!on_thumb)
-        score_viewer->display_page(score_scrub_page_at(app, drag.marker_x));
+        score_viewer->display_page(score_scrub_page_under(app, drag.marker_x));
     viewport.invalidate_rect(track);
     return true;
 }
@@ -5394,11 +5406,10 @@ void GuiInputHandler::update_score_scrub_motion(int x) {
     drag.marker_x = mx;
     drag.moved    = true;
     viewport.invalidate_rect(track);
-    // THE PAGE ROAD SHOWS THE PAGE UNDER THE CARRIED COLUMN (the block head),
-    // nothing written until the lift; a column inside the shown page's step
-    // changes nothing but the thumb.
-    if (!score_viewer_has_soundtrack(app))
-        score_viewer->display_page(score_scrub_page_at(app, mx));
+    // THE PAGE UNDER THE CARRIED COLUMN IS SHOWN (the block head), display
+    // only on both faces — nothing written, nothing seeked until the lift; a
+    // column inside the shown page changes nothing but the thumb.
+    score_viewer->display_page(score_scrub_page_under(app, mx));
 }
 
 bool GuiInputHandler::finish_score_scrub_release() {
@@ -5425,7 +5436,11 @@ bool GuiInputHandler::finish_score_scrub_release() {
     // THE LIFT IS THE SEEK otherwise (architect 2026-10-26, "no scrubbing"):
     // to the column the motion last painted the thumb at (ON SCREEN IS AS
     // PAINTED; the painter draws the armed drag's marker_x), the position
-    // written with it.
+    // written with it. THE DROP SHOWS NOTHING NEW: the seek's page follows
+    // the frame at that column, which is the frame whose page the press or
+    // the last motion showed (score_scrub_page_under) — play_from's clamp to
+    // one short of the range's end moving it only inside the range's last
+    // page — and a motionless tap showed nothing and seeks nothing.
     const bool seeks = !(ended.on_thumb && !ended.moved);
     // THE SOUND PLAYS ON FROM THE DROP where the press paused a live
     // soundtrack (the block head): play_from, the soundtrack LIVE again from
@@ -5452,14 +5467,14 @@ void GuiInputHandler::clear_score_scrub_drag() {
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     if (!drag.armed) return;
     // A LOST LIFT IS NOT A COMMIT (architect 2026-10-26 ~23:00, the
-    // deliberate choice): under the soundtrack nothing seeked and nothing
-    // played — a live soundtrack the press paused stays PAUSED where the
-    // press left it, the key reading PLAY; on the page road the page the
-    // press found is shown again, nothing written (2026-10-27).
+    // deliberate choice): on both faces the page the press found is shown
+    // again, nothing written (2026-10-27); under the soundtrack nothing
+    // seeked and nothing played — a live soundtrack the press paused stays
+    // PAUSED where the press left it, the key reading PLAY, its page the one
+    // the press found.
     const AppState::ScoreViewer::ScrubDrag ended = drag;
     drag = AppState::ScoreViewer::ScrubDrag{};
-    if (score_viewer != nullptr && !score_viewer_has_soundtrack(app))
-        score_viewer->display_page(ended.press_page);
+    if (score_viewer != nullptr) score_viewer->display_page(ended.press_page);
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
 }
@@ -7484,7 +7499,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
 // marker drag, which joined this body 2026-08-28 through their own hard-end
 // clears — and THE SCORE VIEWER'S PAGE SCRUB (2026-10-26), its own clear,
-// which commits nothing: the page road shows the press's page again, nothing
+// which commits nothing: both faces show the press's page again, nothing
 // written, and the soundtrack's face seeks nothing. (THE
 // POPUP LIST'S SCROLL HOLD was a twelfth 2026-10-08 to
 // 2026-10-14, the choice editor's list's, the color picker's gesture and its
@@ -9536,8 +9551,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // THE SCORE VIEWER'S MOTION (2026-10-26): a standing scrub carries its
-    // thumb (the page road showing the page under it in steps, 2026-10-27),
-    // and otherwise the player's two walks.
+    // thumb (the page under it shown live on both faces, 2026-10-27), and
+    // otherwise the player's two walks.
     if (app.score_viewer.active) {
         if (app.score_viewer.scrub.armed) {
             if (!mods.primary_button_held) {
