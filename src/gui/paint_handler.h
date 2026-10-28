@@ -1167,8 +1167,7 @@ private:
     // list panel, Windows' list view on a sunken field (2026-10-06) — folder
     // and wav rows with their glyphs, the pickers' glyph-less rows, the
     // settings page's group rows in the dead key's print (2026-10-28), the
-    // highlight band, the pressed face, the ring's focus outline,
-    // and the transport glyph on the playing item's row, all under the band's
+    // highlight band and the pressed face, all under the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
     // and then on its own exposure per row, as the keyboard is. It publishes
     // no geometry: the press router walks the same row table through the same

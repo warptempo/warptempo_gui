@@ -4892,8 +4892,8 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // left to mean.
 //
 // ONE PRESS ROUTER, FOUR CONTENTS. The claim below stands ABOVE the two mode
-// veils (the player's and the picker's, the picker's serving both its
-// contents), each of which admits exactly the band and its own modal row, and
+// veils (the player's and the picker's, the picker's serving all three of
+// its contents), each of which admits exactly the band and its own modal row, and
 // BELOW the prompt gate, which outranks every surface as it always has. What
 // the OPEN means is the owner's, and the two forks below are the whole of it
 // for the rows: nothing else in this file asks which content fills them (the

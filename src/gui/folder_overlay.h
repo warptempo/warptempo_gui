@@ -402,8 +402,8 @@ inline bool scroll_row_centered(AppState& a, int index) {
 //
 // THE DAMAGE IS THE CALLER'S: each of the movers answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
-// no include of one — the player damages through its own helper, the two
-// pickers through the input handler's. Nothing else about the highlight lives
+// no include of one — the player damages through its own helper, the
+// picker's three contents through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 

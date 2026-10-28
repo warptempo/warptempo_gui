@@ -873,18 +873,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              which act the chord is, so the gate asks the
     //                              mode bit the dispatch below asks. INSIDE the
     //                              view the chord is the LOAD and stays blocked
-    //   - ; (no mods)            → the settings editor (2026-10-21): the lock
-    //                              governs the keys, not the editor — its
-    //                              engine-key commits refuse inside it, the
-    //                              device keys and the band commit
+    //   - ; (no mods)            → the settings page (2026-10-21, the page
+    //                              2026-10-28): the lock governs the keys, not
+    //                              the surface — a row opens the settings
+    //                              editor (or the preset picker), whose
+    //                              engine-key commits refuse on a locked tab,
+    //                              the device keys and the band commit
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `i`, `'` in the `h` view, the
     // phase-reset propagate's copy and pastes (bare P, Ctrl+P, Ctrl+Shift+P),
     // and undo/redo (Ctrl+Z / Ctrl+Shift+Z) all drop here. (`;`, THE SETTINGS
-    // EDITOR, IS ADMITTED since 2026-10-21 — the lock governs the keys, not
-    // the editor, the 2026-09-04 rule: its engine-key commits refuse inside
-    // it.) This gate is the ONLY read-only
+    // PAGE, IS ADMITTED since 2026-10-21 — the lock governs the keys, not
+    // the surface, the 2026-09-04 rule: a row opens the settings editor (or
+    // the preset picker), and the editor's engine-key commits refuse on a
+    // locked tab.) This gate is the ONLY read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
     // POINTER path too has gone, the trim band's gate having been deleted with
     // the reclassification. The surviving deeper checks each cover a

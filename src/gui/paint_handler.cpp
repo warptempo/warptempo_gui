@@ -5686,7 +5686,7 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
     // THE LIST BIT is modal face state too (2026-08-28): whether the ring's
-    // -1 means the folder overlay's list, under both of the overlay's
+    // -1 means the folder overlay's list, under every one of the overlay's
     // contents alike (the ring's own record, input_key_dispatch.cpp).
     // It dies on the same edges — a prompt raised over the player and
     // answered leaves the ring off the list, as a fresh open does.

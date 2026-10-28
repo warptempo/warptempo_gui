@@ -918,10 +918,10 @@ void GuiSettingsEditor::commit() {
     // under a lit lamp, because the lock governs the KEYS and not the surface.
     // The sentence forks at the one composer (authoring_lock_card,
     // notifications.h) because this site knows its act and needs no chord in
-    // it. (The editor opens under either lock — `;` and the Settings
-    // button since 2026-10-21, the Settings dropdown's rows until then — so
-    // this arm is where a locked tab's engine key refuses, the open's
-    // account.)
+    // it. (The editor opens under either lock — bare `;` and the SETUP
+    // key open the settings page, which both locks admit, and a row opens
+    // the editor (2026-10-28) — so this arm is where a locked tab's engine
+    // key refuses, the open's account.)
     if (authoring_locked(app)) {
         const char* card = authoring_lock_card(app);
         text_editor::refuse(app.settings_editor);
