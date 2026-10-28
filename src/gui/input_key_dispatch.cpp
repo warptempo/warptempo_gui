@@ -8479,7 +8479,8 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // analogy doesn't quite work — this isn't a playhead, this is audio
             // playback"): the next wav of the TRANSPORT ITEM's folder from its
             // start, whatever the Repeat one
-            // lamp says, live or paused or idle alike; at the folder's last
+            // lamp says, live or paused alike (IDLE has no item, the wall's
+            // first term); at the folder's last
             // wav it is a silent walled no-op, nothing looping, and the button
             // greys on that same wall.
             // IT WAS THE TRACK'S OWN END from 2026-08-30 to

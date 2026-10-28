@@ -5237,23 +5237,19 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     // that the plain press works, and a chord on a slider is not an act
     // anyone spelled.
     if (mods.ctrl || mods.shift || mods.alt) return true;
-    // THE TWO STATE REFUSALS ARE SILENT (architect 2026-08-31): they are
-    // the seek's own two, met here instead of at seek_to because the press
-    // must not ARM the thumb drag either, and they went silent with seek_to's
-    // — a slider resting at the left end under a zeroed clock IS the state
-    // both name, so a sentence only repeated what the press was already
-    // looking at (the retirement record is at render_player.h, where the two
-    // shared sentences used to be spelled). The thumb STANDS there with no
-    // item since 2026-10-25 (render.h's scrub block), painted at frame 0; a
-    // press on it or on the channel is consumed here and seeks nothing.
+    // THE NO-ITEM REFUSAL IS SILENT (architect 2026-08-31): it is the seek's
+    // own, met here instead of at seek_to because the press must not ARM the
+    // thumb drag either, and it went silent with seek_to's — a slider resting
+    // at the left end under a zeroed clock IS the state it names, so a
+    // sentence only repeated what the press was already looking at (the
+    // retirement record is at render_player.h, where the shared sentences
+    // used to be spelled). The thumb STANDS there with no item since
+    // 2026-10-25 (render.h's scrub block), painted at frame 0; a press on it
+    // or on the channel is consumed here and seeks nothing. IT IS ALSO THE
+    // SCRUB'S REST WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
+    // Audacious's own slider — dead while stopped), IDLE being no item bound
+    // (the invariant at AppState::RenderPlayer::transport).
     if (app.render_player.frames <= 0 || app.render_player.item.empty())
-        return true;
-    // THE SCRUB RESTS WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
-    // Audacious's own slider — dead while stopped): the press seeks nothing
-    // and arms no thumb drag, and the painter keeps drawing the thumb at the
-    // resting point. LIVE and PAUSED are unchanged.
-    if (app.render_player.transport ==
-        AppState::RenderPlayer::Transport::Idle)
         return true;
     // THE THUMB IS RESOLVED WHERE IT IS PAINTED (ON SCREEN IS AS PAINTED,
     // the displayed-not-live rule displayed_or_live_target_map states,

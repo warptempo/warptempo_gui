@@ -37,11 +37,12 @@
 // previous-track window, which an idle transport refuses in silence.
 //
 // A BENIGN REFUSAL ALREADY AT ITS STATE SAYS
-// NOTHING: the modal row IS the state both name — an empty transport and an
-// idle one rest with the clock at zero and the slider at its left end — so the
-// row is the answer and a sentence only repeats it. THE REFUSALS THEMSELVES
-// ARE UNCHANGED: an idle seek still refuses (the dead slider of 2026-08-29),
-// which is what keeps `resume_frame` 0 at every idle rest by construction.
+// NOTHING: the modal row IS the state both name — an idle transport, which is
+// an empty one (IDLE is no item bound, the invariant at
+// AppState::RenderPlayer::transport), rests with the clock at zero and the
+// slider at its left end — so the row is the answer and a sentence only
+// repeats it. THE REFUSAL ITSELF IS UNCHANGED: a seek with no item still
+// refuses, and that is the dead slider of 2026-08-29.
 //
 // THE ITEM FOLDER'S TWO ENDS went silent earlier that same day, on the same
 // reasoning: NOTHING LOOPS, so an end is still an end, but the highlighted row
@@ -61,9 +62,10 @@
 // a position window makes a SECOND press "previous" at any press speed at all,
 // since the first one landed the cursor at 0.
 //
-// IT IS ASKED IN EVERY TRANSPORT STATE by home(), an idle rest being at frame 0
-// by construction, so an idle press with a file before this one steps back to
-// it — and the seek arm under it keeps its silent idle refusal. THE CAR'S
+// IT IS ASKED IN EVERY TRANSPORT STATE by home() — at IDLE there is no item
+// and so no file before it (the invariant at AppState::RenderPlayer::
+// transport), and the seek arm under it is seek_to's silent no-item
+// refusal. THE CAR'S
 // PREVIOUS ASKS IT ONCE MORE, under a LIVE transport alone, to decide its own
 // up-a-folder exit (car_previous()), which is why the question is a predicate
 // of its own: render_player_inside_previous_window (app_state.h), which
@@ -127,10 +129,9 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // THE TRANSPORT HAS THREE STATES AND THE BUTTONS ANSWER THEM (architect
 // 2026-08-28). THE STATE IS STORED, in
 // `AppState::RenderPlayer::transport` (that field's block owns the reasons,
-// the writer set and the readers) — IDLE (nothing to resume: no item bound, a
-// fresh open's or an unload's — THE UP ACT IS THE ONE USER ROAD INTO IT since
-// 2026-09-04; the natural end rests PAUSED at the item's end since
-// 2026-10-26, so no idle rest carries an item), LIVE,
+// the writer set and the readers) — IDLE (nothing to resume: no item bound,
+// the invariant at that field, a fresh open's or an unload's — THE UP ACT IS
+// THE ONE USER ROAD INTO IT since 2026-09-04), LIVE,
 // PAUSED (an item the transport parked, AT WHATEVER FRAME — a pause at frame 0
 // is PAUSED, which no reading of the resume point could say — the natural
 // end's rest at the item's end included) — and the table is at
@@ -442,7 +443,7 @@ struct GuiRenderPlayer {
     // arm).
     // THE HIGHLIGHT LEADS AND THE TRANSPORT FOLLOWS (architect 2026-08-31,
     // narrowing the rule "it never reads the highlight, in any state" of two
-    // days before). ONE FORK IN FOUR ARMS, in this order:
+    // days before). ONE FORK, in this order:
     //
     //   HIGHLIGHT on a FOLDER row               -> open it (the row's own act).
     //   HIGHLIGHT on a WAV that is NOT the
@@ -451,24 +452,14 @@ struct GuiRenderPlayer {
     //   otherwise the TRANSPORT, whose three states are STORED in
     //   AppState::RenderPlayer::transport — LIVE the sounding one, PAUSED an
     //   item the transport parked AT WHATEVER FRAME (a pause that caught the
-    //   cursor at 0 answers PAUSED here and resumes its own item), IDLE
-    //   everything with nothing to resume:
+    //   cursor at 0 answers PAUSED here and resumes its own item), IDLE no
+    //   item bound (the invariant at the field):
     //     LIVE    -> pause it.
     //     PAUSED  -> resume it — at the item's end (the natural end's rest)
     //                the next wav of its folder where one exists, this item
     //                from its start otherwise or under a lit REPEAT ONE
     //                (resume()'s end rule, architect 2026-10-26 ~23:55).
-    //     IDLE with an item -> the item from ITS START, ALWAYS (architect
-    //                        2026-08-29 ~01:40, Audacious: Play when idle
-    //                        starts literally) — the folder's end included
-    //                        since 2026-08-31. A seek while idle is a consumed
-    //                        no-op (seek_to's own head, the one owner), so
-    //                        `resume_frame` is always 0 at an idle rest. NO
-    //                        PRODUCER LEAVES AN ITEM IDLE since the natural
-    //                        end rests PAUSED at the item's end (2026-10-26):
-    //                        every idle rest is a fresh open's or an
-    //                        unload's, with nothing bound.
-    //     IDLE with no item -> nothing.
+    //     IDLE    -> nothing.
     //
     // THE THREE ROW ARMS RUN open_row, the row click's and Enter's own body,
     // so the acts have ONE owner and this fork walks no listing of its own;
@@ -487,8 +478,8 @@ struct GuiRenderPlayer {
     void play_button_act();
     // THE TRANSPORT'S OWN TOGGLE — play_button_act's tail PAST the highlight
     // fork, in a body of its own since 2026-08-31 (the round-B conversion). It
-    // is the three-arm table above (LIVE pause / PAUSED resume / IDLE the item
-    // from its start, and nothing with no item) and reads no highlight at all.
+    // is the three-arm table above (LIVE pause / PAUSED resume / IDLE
+    // nothing) and reads no highlight at all.
     //
     // THREE CALLERS, re-grepped 2026-09-12: play_button_act calls it as its
     // tail, so Space, the Play button and the car's own toggle past its LIVE
@@ -555,10 +546,11 @@ struct GuiRenderPlayer {
     // row for the lamp and touches no transport.
     void toggle_repeat_one();
     // Seek by `delta_frames` from the current position, clamped into the
-    // item; a no-op with no item. A live transport reseeks in place, a paused
-    // one moves its resume point, and an IDLE one is a consumed no-op
-    // (seek_to's own head, architect 2026-08-29 ~01:40 — Audacious's stopped
-    // slider).
+    // item; a no-op with no item. A live transport reseeks in place and a
+    // paused one moves its resume point; an IDLE one has no item (the
+    // invariant at AppState::RenderPlayer::transport), so the no-item no-op
+    // is its consumed answer
+    // (architect 2026-08-29 ~01:40 — Audacious's stopped slider).
     void seek_by(int64_t delta_frames);
     void seek_to(int64_t frame);
     // -- THE TWO SKIPS (the modal row's outer transport buttons) -------------
@@ -576,17 +568,18 @@ struct GuiRenderPlayer {
     //   plays THAT ENTRY from its start (the window at the constant above, the
     //   fork's one owner render_player_home_takes_previous, app_state.h, which
     //   the button's hint reads too); everywhere else it seeks the item's own
-    //   start and takes every refusal seek_to owns. AN IDLE TRANSPORT TAKES
-    //   THE WINDOW LIKE ANY OTHER — `resume_frame` is 0 at every idle rest by
-    //   construction, so an idle press with a file before this one steps back
-    //   and PLAYS it, while the seek arm under it stays the idle road's silent
-    //   refusal. IT NEVER LEAVES A FOLDER: going up is the Up button, Backspace
-    //   and the car's Previous, and nothing else.
+    //   start and takes every refusal seek_to owns. AT IDLE there is no item
+    //   (the invariant at AppState::RenderPlayer::transport), so there is no
+    //   previous entry and the
+    //   seek is seek_to's silent no-item refusal. IT NEVER LEAVES A FOLDER:
+    //   going up is the Up button, Backspace and the car's Previous, and
+    //   nothing else.
     // next_track() — THE NEXT TRACK (architect 2026-09-04, "Next should always
     //   skip to the next song. The home/end analogy doesn't quite work — this
     //   isn't a playhead, this is audio playback"): the next wav of the
     //   TRANSPORT ITEM'S OWN FOLDER as that folder was listed when the item was
-    //   played, from its start, live or paused or idle alike, through
+    //   played, from its start, live or paused alike (IDLE has no item, the
+    //   wall's first term), through
     //   advance_to_next_in_item_folder — the body the natural end's
     //   auto-advance shares. IT OUTRANKS REPEAT ONE and reads the lamp nowhere:
     //   the lamp governs what a file does when it REACHES ITS END, and a press
@@ -625,7 +618,7 @@ struct GuiRenderPlayer {
     //   silence takes over the display on the publish — and anything else
     //   takes play_button_act WHOLE, the tablet's Play button: a highlighted
     //   folder opens, a highlighted other wav plays, and the item's own row
-    //   resumes or starts from its start.
+    //   resumes.
     // car_previous() — REWIND: at REST (paused and idle alike) it walks the
     //   band UP one row, and AT THE BAND'S FIRST ROW it goes UP A FOLDER (up()
     //   whole: the item unloaded, the sound stopped, the band seated on the

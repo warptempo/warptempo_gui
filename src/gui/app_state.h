@@ -6078,8 +6078,7 @@ struct AppState {
     // superfluous is the row it now matches: Home already puts the playing file
     // back at its beginning, and the highlight-driven Space (2026-08-31)
     // reaches any file from its start with one press. The IDLE transport state
-    // stays — open(), the natural end and close() still produce it — but no
-    // user act writes it any more.
+    // stays, as no item bound (the invariant at RenderPlayer::transport).
     //
     // THE TWO SKIPS ARE HOME AND END ON THE KEYS (architect 2026-08-31): "the
     // transport keys are mapped to Home and End in the media player just like
@@ -8950,7 +8949,15 @@ struct AppState {
     //              three states of 2026-08-28; the table is at
     //              GuiRenderPlayer::play_button_act): IDLE — nothing to
     //              resume, which is no item bound (a fresh open, an
-    //              unload); LIVE — sounding; PAUSED — an item the transport
+    //              unload). IDLE <=> NO ITEM BOUND, AND THAT IS THE RULE
+    //              EVERY READER LEANS ON (2026-10-28): IDLE's two writers,
+    //              open()'s reset and the unload body (unload_item), each
+    //              clear the item with it, and the item is bound in one
+    //              body alone, play_wav, which writes LIVE in the same
+    //              stretch — so no state carries an item at IDLE, and no
+    //              reader keeps an arm for one. The invariant is by
+    //              construction; nothing asserts it. LIVE — sounding;
+    //              PAUSED — an item the transport
     //              parked, AT WHATEVER FRAME, the natural end's rest AT THE
     //              ITEM'S END included (architect 2026-10-26 ~23:55: it
     //              continues if there is a next track and stops dead where
@@ -8983,15 +8990,13 @@ struct AppState {
     //              the cursor (0 after a fresh bind or an unload, the item's
     //              `frames` after a natural end that rests);
     //              a seek moves it on a PAUSED transport and the play moves it
-    //              on a live one. A SEEK WHILE IDLE IS A CONSUMED NO-OP
-    //              (architect 2026-08-29, seek_to's own head, the one owner),
-    //              so THIS FIELD IS ALWAYS 0 AT AN IDLE REST, BY
-    //              CONSTRUCTION — nothing else can move it there, which is
-    //              what lets play_button_act's IDLE arm read it as "the
-    //              item's start" without asking the state again — and, since
-    //              2026-08-31, what lets the Home skip's FACE decide the
-    //              previous-track window with no position term at all
-    //              (render_player_button_enabled);
+    //              on a live one. It is 0 at every IDLE rest because IDLE's
+    //              two writers reset it with the item (the invariant at
+    //              `transport` above), and nothing reads it there. OFF LIVE
+    //              IT IS THE POSITION, which is what lets the Home skip's
+    //              FACE decide the previous-track window with no position
+    //              term of its own (render_player_button_enabled, since
+    //              2026-08-31);
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
     //   `scrub`    the play-scrub THUMB DRAG's arm: armed by EVERY press on
@@ -9017,9 +9022,11 @@ struct AppState {
     //              drops it, seeks nowhere and resumes nothing, the item left
     //              PAUSED. THE SCRUB RESTS WHILE THE
     //              TRANSPORT IS IDLE (architect 2026-08-29, Audacious's own
-    //              slider, dead while stopped): a press on the track or on the
-    //              handle then is a consumed no-op — no seek and no arm — and
-    //              the painter still draws the handle at the resting point;
+    //              slider, dead while stopped), which is no item bound (the
+    //              invariant at `transport`): a press on the track or on the
+    //              handle then is a consumed no-op at the press's no-item
+    //              gate — no seek and no arm — and the painter still draws
+    //              the handle at the resting point;
     //   `repeat_one` ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
     //              2026-08-28; the other is the car's loop of the trim
     //              on the project transport, 2026-09-17): a two-state toggle — off, or repeat the
@@ -9402,8 +9409,9 @@ inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
 // It composes play_button_act's own two forks in the act's own order — the
 // highlight's arm first (render_player_highlight_act_row: a FOLDER row opens,
 // a wav that is not the transport's item plays), then the transport's
-// (transport_toggle_act: LIVE pauses, PAUSED resumes, IDLE plays the item
-// from its start) — so the face, the word and the act cannot disagree. TWO
+// (transport_toggle_act: LIVE pauses, PAUSED resumes, IDLE — no item bound,
+// the invariant at RenderPlayer::transport — does nothing, the PLAY face then
+// greyed) — so the face, the word and the act cannot disagree. TWO
 // FACES AND OPEN (architect 2026-10-26: play / pause only, "keep it
 // simple"): PAUSE where the press pauses, PLAY wherever it plays — a paused
 // transport's resume from its resume point wearing PLAY — and OPEN over a
@@ -9723,12 +9731,14 @@ int render_player_highlight_act_row(const AppState& a);
 //   plain act AND the shifted twin would both change nothing:
 //     THE LEFT SKIP (home) is the act's own leading refusals — no item at
 //     all, then a LIVE transport (which always acts, the reseek re-landing
-//     the item's start), then a PAUSED one away from frame 0 — ORed with
+//     the item's start), then a PAUSED one away from frame 0 (past the
+//     no-item term the transport is LIVE or PAUSED, IDLE having no item —
+//     the invariant at RenderPlayer::transport) — ORed with
 //     render_player_first_in_item_folder_actionable, which is BOTH the twin's
-//     wall and the previous-track window's own answer off LIVE: the position
-//     off LIVE is `resume_frame`, 0 at every idle rest by construction, so
-//     "the window" collapses into "is there a previous entry" there and no
-//     arm reads a position.
+//     wall and the previous-track window's own answer at a PAUSED frame 0:
+//     the position there is `resume_frame`, 0 and inside the window, so
+//     "the window" collapses into "is there a previous entry" and no arm
+//     reads a position.
 //     THE RIGHT SKIP (next_track) is render_player_next_track_actionable and
 //     nothing else: the plain press plays the item folder's NEXT wav and the
 //     shifted twin its LAST, and each acts exactly where a next entry exists,
@@ -9740,16 +9750,16 @@ int render_player_highlight_act_row(const AppState& a);
 //   PLAY/PAUSE mirrors play_button_act's forks in their own order: THE
 //   HIGHLIGHT'S OWN ARM FIRST (2026-08-31 — a folder or another wav under the
 //   band is always an act, whatever the transport is doing), then a live or
-//   paused transport, then an idle one on its resting item; only an idle
-//   transport with no item and no usable highlight is the consumed no-op.
+//   paused transport; an IDLE one — no item bound, the invariant at
+//   RenderPlayer::transport — with no usable highlight is the consumed no-op.
 //   (toggle_pause's frames < 2 belt is not mirrored: it is unreachable from
 //   a bound item, that arm's own record.)
 //   AND THE DEVICE IS A TERM OF EVERY ARM THAT SOUNDS (architect 2026-09-02,
 //   closing the asymmetry with the roster's own
 //   Play face): a device that NEVER CAME UP plays nothing on any road, so
 //   !playback.device_absent() joins the highlight's WAV arm and the whole
-//   transport tail — a paused transport RESUMES, an idle one with an item
-//   PLAYS — while the highlight's FOLDER arm keeps no term at all, open_row
+//   transport tail — a paused transport RESUMES — while the highlight's
+//   FOLDER arm keeps no term at all, open_row
 //   entering a listing without sounding anything, which is the
 //   truthful-buttons rule read exactly: a face greys iff the act would be a
 //   no-op, and going into a folder is not one. The fork is open_row's own,
@@ -9904,8 +9914,8 @@ bool render_player_next_track_actionable(const AppState& a);
 // render_player_home_takes_previous below, the file step's own fork (which
 // bare Home, its button and the Home hint share), and the CAR'S Previous,
 // whose LIVE arm asks the same window direct to decide whether to LEAVE THE
-// FOLDER instead. An idle transport asks it through the first of those and is
-// inside it by construction, every idle rest sitting at frame 0.
+// FOLDER instead. Neither reaches it at IDLE, which has no item (the
+// invariant at RenderPlayer::transport).
 // Defined in render_player.cpp beside home().
 bool render_player_inside_previous_window(const AppState& a,
                                           const GuiPlayback& playback,
@@ -9921,8 +9931,9 @@ bool render_player_inside_previous_window(const AppState& a,
 // makes the Home hint's shift line a DESTINATION compare rather than
 // the twin's wall alone: inside the window the plain press plays the previous
 // entry, which on the folder's second item IS the file the shifted press names.
-// IT IS ASKED IN EVERY TRANSPORT STATE, an idle rest being at frame 0 by
-// construction, so an idle press with a file before this one steps back to it.
+// IT IS ASKED IN EVERY TRANSPORT STATE, and answers false at IDLE on its own
+// no-item term (IDLE is no item bound, the invariant at
+// RenderPlayer::transport).
 // Defined in render_player.cpp beside home().
 bool render_player_home_takes_previous(const AppState& a,
                                        const GuiPlayback& playback,

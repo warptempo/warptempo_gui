@@ -548,18 +548,19 @@ bool render_player_button_enabled(const AppState& a,
         // THE TWO SKIPS' FACES ARE HOME'S AND NEXT TRACK'S (2026-08-31 and
         // 2026-09-04), each the act's own leading refusals ORed with its
         // shifted twin's under the twin rule. NEITHER READS A POSITION: a LIVE
-        // transport always acts (the reseek re-lands its window), and off LIVE
-        // the position IS `resume_frame` — 0 at every idle rest by
-        // construction — so the previous-track window's test collapses into
-        // "is there a previous entry", which is also exactly when the shifted
-        // first-jump acts — and so is read as that twin's own owner
-        // (2026-09-01). (Both arms were the car's playlist walls for the one
-        // day of 2026-09-12, when these two acts walked the band at rest.)
+        // transport always acts (the reseek re-lands its window), and past
+        // the no-item term the only other state is PAUSED (IDLE has no item,
+        // the invariant at AppState::RenderPlayer::transport), whose position
+        // IS `resume_frame` — away from 0 the reseek acts, and at 0 the
+        // previous-track window's test collapses into "is there a previous
+        // entry", which is also exactly when the shifted first-jump acts — and
+        // so is read as that twin's own owner (2026-09-01). (Both arms were
+        // the car's playlist walls for the one day of 2026-09-12, when these
+        // two acts walked the band at rest.)
         case AppState::PlayerButtonAct::Home:
             if (rp.item.empty() || rp.frames <= 0) return false;
             if (rp.transport == Transport::Live) return true;
-            if (rp.transport == Transport::Paused && rp.resume_frame != 0)
-                return true;
+            if (rp.resume_frame != 0) return true;
             return render_player_first_in_item_folder_actionable(a);
         case AppState::PlayerButtonAct::NextTrack:
             // ONE WALL CARRIES BOTH HALVES (2026-09-04, the plain act being
@@ -588,14 +589,14 @@ bool render_player_button_enabled(const AppState& a,
             }
             // THE TRANSPORT TAIL, EVERY ACT OF WHICH SOUNDS
             // (transport_toggle_act: a live transport pauses, a paused one
-            // RESUMES, an idle one with an item PLAYS it) — so the
+            // RESUMES; an IDLE one has no item, the invariant at
+            // AppState::RenderPlayer::transport, and does nothing) — so the
             // never-came-up device greys the whole tail. It is not
             // device_unavailable: the player's road reaches play(), which
             // reopens a dead stream at its head, so a route that dropped
             // mid-session is exactly what a press repairs.
             if (playback.device_absent()) return false;
-            if (rp.transport != Transport::Idle) return true;
-            return !rp.item.empty();
+            return rp.transport != Transport::Idle;
         }
         // THE HIGHLIGHT PAIR (architect 2026-10-10): the band walk's own
         // question, through the step's one owner, so the face and the bare
@@ -853,38 +854,13 @@ void GuiRenderPlayer::transport_toggle_act() {
             toggle_pause();
             return;
         case Transport::Idle:
-            break;
+            // IDLE IS NO ITEM BOUND (the invariant at the field), so there is
+            // nothing to toggle: a consumed no-op, SILENT because a player
+            // resting with nothing bound shows that state on its own row, the
+            // clock at zero and the slider at its left end (architect
+            // 2026-08-31, the one-dimensional rule).
+            return;
     }
-    // IDLE. THE FOLDER-END RESTART IS RETIRED (architect 2026-08-31 — "we
-    // simplify — play on last file means play last file"), and this is where
-    // its arm stood: from 2026-08-28 a Play at a rest the natural end had left
-    // on the item folder's LAST wav started the folder's FIRST file instead
-    // (the car's Play at the end of a playlist), off the one bit
-    // `ended_at_folder_end`. The bit, its writer at the natural end and its
-    // seven clears are deleted with the arm; a folder-end rest is now the
-    // PAUSED rest at the last item's end (2026-10-26), and the car's Play
-    // there replays that last track from its start (resume()'s end rule) —
-    // which is also where the band is resting.
-    //
-    // ELSE THE ITEM FROM ITS START, ALWAYS (architect 2026-08-29 ~01:40:
-    // "Play when idle should start literally"): `resume_frame` is 0 at every
-    // idle rest by construction — seek_to's own head refuses an idle seek, so
-    // nothing can have moved it since the fresh open or the unload — and
-    // toggle_pause's resume arm reads exactly that field. Every idle rest has
-    // nothing bound since the natural end rests PAUSED (2026-10-26), so this
-    // arm meets the no-item guard below.
-    //
-    // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (its resume
-    // arm's, resume(); architect 2026-08-31 — the one-dimensional rule): a
-    // player resting with nothing bound shows that state on its own row, the
-    // clock at zero and the slider at its left end, so a sentence only
-    // repeats what is painted. This body carried a carded guard of its own
-    // from 2026-08-30 as the OUTERMOST site with the reason — the button,
-    // bare Space and the car's toggle all arrive here — and with the card
-    // gone it was a second copy of the predicate behind it, so it is deleted
-    // rather than silenced: the resume below is the consumed no-op, on
-    // `item.empty()` and on the `frames <= 0` an item cannot reach alike.
-    toggle_pause();
 }
 
 void GuiRenderPlayer::toggle_repeat_one() {
@@ -1052,27 +1028,17 @@ void GuiRenderPlayer::seek_by(int64_t delta_frames) {
 
 void GuiRenderPlayer::seek_to(int64_t frame) {
     AppState::RenderPlayer& rp = app.render_player;
-    // NO ITEM IS A SILENT CONSUME (architect 2026-08-31, with the idle arm
-    // below): a player with nothing bound rests with its clock at zero and its
-    // slider at the left end, so the row already says what a sentence would.
+    // NO ITEM IS A SILENT CONSUME (architect 2026-08-31): a player with
+    // nothing bound rests with its clock at zero and its slider at the left
+    // end, so the row already says what a sentence would. IT IS THE IDLE
+    // TRANSPORT'S WHOLE ANSWER, IDLE being no item bound (the invariant at
+    // AppState::RenderPlayer::transport) — the dead slider of 2026-08-29
+    // (Audacious's own stopped slider) is this guard. THE ONE OWNER: every
+    // road that can move the point (Left / Right, Home, the car's absolute
+    // SeekTo) shares it, neither moving `resume_frame` nor damaging
+    // anything; the scrub's press refuses to arm at its own gate, silent one
+    // road over on the same term.
     if (rp.item.empty() || rp.frames <= 0) return;
-    // A SEEK WHILE IDLE IS A CONSUMED NO-OP (architect 2026-08-29 ~01:40,
-    // Audacious's own stopped slider): Play when idle starts the item from
-    // its start, so an idle transport must not be nudgeable to some other
-    // rest first. THE ONE OWNER — every road that can move the point (Left /
-    // Right, Home, the car's absolute SeekTo; the scrub's press already
-    // refuses to arm at its own gate for the same reason) shares this
-    // refusal, neither moving `resume_frame` nor damaging anything. LIVE and
-    // PAUSED are unchanged below, and this is why `resume_frame` is always 0
-    // at an idle rest, by construction (the field's own comment,
-    // app_state.h).
-    // AND IT SAYS NOTHING (architect 2026-08-31, reversing 2026-08-30's
-    // "and it says so"): the refusal is unchanged and only the card leaves —
-    // an idle transport is a one-dimensional state the row itself shows, the
-    // slider resting and the clock at zero, so the sentence repeated what was
-    // already painted. The scrub's own gate is silent one road over for the
-    // same reason.
-    if (rp.transport == Transport::Idle) return;
     const int64_t target = std::clamp<int64_t>(frame, 0, rp.frames);
     if (rp.transport == Transport::Live) {
         // A LIVE RESEEK IS play() OVER THE LIVE SESSION (the main view's
@@ -1097,7 +1063,8 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         publish_media_state();
         return;
     }
-    // PAUSED (the only state left, Idle having returned above): a seek moves
+    // PAUSED (the only state left, an IDLE transport having no item and so
+    // having returned above): a seek moves
     // the point, not the state — the transport stays paused at its new
     // point, where the next Play resumes it.
     if (rp.resume_frame != target) {
@@ -1119,16 +1086,12 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
 // carries the reason (a head unit's buttons are slower than any double-press
 // window).
 //
-// AN IDLE TRANSPORT TAKES THE WINDOW LIKE ANY OTHER, and that is deliberate
-// rather than an oversight of the idle rule: `resume_frame` is 0 at every idle
-// rest by construction, so an idle press with a previous entry steps back and
-// PLAYS it — while the
-// seek arm underneath keeps the idle road's silent refusal for the first
-// entry, where there is nothing to step back to. The idle rule is about not
-// NUDGING a resting transport to some other point in the item it would not
-// resume from; a track change is not a nudge. (The folder's end rests PAUSED
-// at the item's end since 2026-10-26, outside the window, so Home there seeks
-// the item's start and a second press inside the window steps back.)
+// NEITHER READER ASKS IT AT IDLE, which has no item (the invariant at
+// AppState::RenderPlayer::transport): the file step's fork answers false on
+// its own no-item term ahead of this, and the car's reader is LIVE alone. The
+// folder's end rests PAUSED at the item's end since 2026-10-26, outside the
+// window, so Home there seeks the item's start and a second press inside the
+// window steps back.
 //
 // TWO READERS ASK IT: render_player_home_takes_previous below, the file step's
 // own fork (which home() and the Home button's hint share), and the CAR'S
@@ -1213,7 +1176,7 @@ void GuiRenderPlayer::next_track() {
 // keeps its resume point — the silence track takes over the display at the
 // pause's own push — and anything else takes the tablet's Play button WHOLE,
 // the highlight arm included, so a highlighted folder opens, a highlighted
-// other wav plays, and the item's own row resumes or starts from its start.
+// other wav plays, and the item's own row resumes.
 //
 // NO STATE GATE AND NO RE-PUBLISH: a gate existed to keep a "play" said to a
 // live transport from pausing it, and a re-publish to correct a display that
@@ -1556,9 +1519,9 @@ void GuiRenderPlayer::unload_item(UnloadTail tail) {
     playback_lifecycle.stop_playback_if_playing();
     // IDLE OVER THE FORK'S PAUSED: the stop body's player fork parks every
     // LIVE transport at PAUSED, and an unloaded transport has nothing to
-    // resume — so this write lands after that fork, exactly as open()'s reset
-    // and the natural end's rest do (the state's whole writer set is at the
-    // field, app_state.h).
+    // resume — so this write lands after that fork. It is one of IDLE's two
+    // writers, open()'s reset the other, and like it clears the item below
+    // (IDLE <=> no item bound, the invariant at the field, app_state.h).
     rp.transport      = Transport::Idle;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
@@ -1741,8 +1704,9 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // step a head unit's Stop back a TRACK inside a file's first three
             // seconds. `rp` is a reference, so the second arm reads the state
             // the first one just wrote: LIVE pauses and then seeks, an already
-            // PAUSED transport only seeks, and an IDLE one or a player with no
-            // item does nothing at all (seek_to's own two silent refusals).
+            // PAUSED transport only seeks, and an IDLE one — no item bound,
+            // the invariant at AppState::RenderPlayer::transport — meets
+            // neither gate and does nothing at all.
             // THE ACCORD HAS NO STOP BUTTON; the arm stands for any console
             // that has one.
             if (rp.transport == Transport::Live) transport_toggle_act();
