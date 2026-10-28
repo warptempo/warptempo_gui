@@ -16,13 +16,25 @@
 // as a load in flight is), and THE LAMP FOLLOWS THE NO-AUTO-RECOVER RULE
 // (architect 2026-10-28, the iPhone's Background Sounds the precedent: its
 // toggle goes off when the route changes): a route drop (a headphone
-// connected or taken off) DARKENS the lamp at the next tick and resets the
-// voice, lit or not (gui_main's poll beside tick(), GuiPlayback::stream_dead,
-// GuiNoise::reset_on_dead_stream) — a lit LED says the noise plays, and on a
-// dead stream it does not. Nothing reopens by itself, the error callback's
-// "nothing recovers by itself" whole for the bed as for the music; the next
-// lit press is an ordinary one and keeps asking the launch press's device
-// question.
+// connected or taken off) DARKENS the lamp and resets the voice, lit or not,
+// at THE FIRST MAIN-THREAD ACT THAT READS THE DROP'S LATCH — a lit LED says
+// the noise plays, and on a dead stream it does not. THE RESET'S TWO ROADS
+// (2026-10-28, one body, noise_voice_reset_on_dead_stream below):
+//   1. THE POLL — gui_main's beside tick() (GuiPlayback::stream_dead,
+//      GuiNoise::reset_on_dead_stream), for the press-less drop, the one
+//      road that reads the latch without reopening;
+//   2. EVERY REOPEN — reopen_stream_if_dead's dead arm, and launch_window's
+//      post-publish dead arm (playback_aaudio.cpp), ahead of the
+//      close_stream that clears the latch: a press that reaches the device
+//      before the tick (on Android input drains ahead of the tick) — a Play
+//      press, an audition start, the NOISE key's own lit press, THE CAR'S
+//      PLAY at a Bluetooth connect — darkens the lamp there, so a lit lamp
+//      never resumes its old sequence on the new stream (at a connect the
+//      lamp goes dark, the iPhone's behavior), and a dark lamp's fade tail
+//      never plays after the reopen.
+// Nothing reopens by itself, the error callback's "nothing recovers by
+// itself" whole for the bed as for the music; the next lit press is an
+// ordinary one and keeps asking the launch press's device question.
 //
 // THE SOUND IS A FOLDER UNDER `noise/` BESIDE THE DEVICE CONFIG, named by the
 // `noise` device key (device_config_path()'s parent / "noise" / the key's
@@ -137,11 +149,14 @@ struct GuiNoiseBank {
 // audio thread ever touches these fields, the hand-off ordered by the device
 // close and the thread start.
 // THE FIRST EXCEPTION — THE MAIN THREAD ON A DEAD STREAM (2026-10-28,
-// GuiNoise::reset_on_dead_stream): on a dead AAudio stream NO FILL RUNS — the
-// framework retires the data callback thread BEFORE the error callback runs,
-// and the latch is published (release) from that error callback — so a main
-// thread that has read the latch (acquire, through GuiPlayback::stream_dead)
-// is the ONE thread that can touch these fields until a reopen starts a new
+// noise_voice_reset_on_dead_stream; its callers the poll's
+// GuiNoise::reset_on_dead_stream and the reopen's reset in
+// playback_aaudio.cpp, the head's two roads): on a dead AAudio stream NO FILL
+// RUNS — the framework retires the data callback thread BEFORE the error
+// callback runs, and the latch is published (release) from that error
+// callback — so a main thread that has read the latch (acquire, through
+// GuiPlayback::stream_dead or the reopen's own load of `stream_dead`) is the
+// ONE thread that can touch these fields until a reopen starts a new
 // callback thread; and every reopen is the main thread's own
 // (reopen_stream_if_dead, playback_aaudio.cpp), ordered after that write by
 // program order and before the new thread by its start. JACK has no latch,
@@ -197,6 +212,20 @@ void noise_mix_block(GuiNoiseVoice& voice, float* const* channel_buffers,
                      int64_t stride, int64_t frame_count, int channel_count,
                      uint32_t output_rate);
 
+// THE VOICE RESET ON A DEAD STREAM, THE ONE BODY (2026-10-28; the head's two
+// roads): `target` stored false (release) and the audio-thread-private fields
+// to the no-sequence state noise_mix_block's idle arm reads (noise.cpp's
+// reset_voice_sequence) — so the next lit press starts a fresh random segment
+// with the fade-in from silence. PRECONDITION: THE STREAM IS DEAD, READ
+// THROUGH THE LATCH ON THIS THREAD JUST BEFORE THE CALL; no fill runs, and
+// the reopen that follows is this thread's own — the first exception at
+// GuiNoiseVoice. Idempotent. Two callers: GuiNoise::reset_on_dead_stream (the
+// poll) and playback_aaudio.cpp's reset ahead of a dead stream's close (the
+// reopen). NOT at every close_stream: a project switch and the shutdown close
+// a live stream, and the lamp survives those (the thread note's last
+// paragraph).
+void noise_voice_reset_on_dead_stream(GuiNoiseVoice& voice);
+
 // THE MAIN THREAD'S OBJECT — ONE FOR THE APP, owned by gui_main (main.cpp),
 // constructed after the device config is read and shut down after the project
 // loop, every engine down by then. AppState::noise reaches it by pointer.
@@ -236,9 +265,9 @@ public:
     // bank neither loaded nor loading, THE LOADER starts; on the DARK edge
     // nothing else — the audio thread fades out and ends the sequence. The
     // device question of the lit edge is the `w` case's, ahead of this call
-    // (input_key_dispatch.cpp); a lamp the poll darkened at a route drop
-    // (reset_on_dead_stream) or a key change darkened (change_folder) comes
-    // back only through this lit edge.
+    // (input_key_dispatch.cpp); a lamp a route drop darkened
+    // (noise_voice_reset_on_dead_stream, the poll's or a reopen's) or a key
+    // change darkened (change_folder) comes back only through this lit edge.
     void toggle();
 
     // THE PER-TICK POLL (main.cpp's tick, every tick): a load that failed
@@ -250,23 +279,26 @@ public:
     // not here.
     void tick();
 
-    // THE VOICE RESET ON A DEAD STREAM (architect 2026-10-28, the
-    // no-auto-recover rule at the head), LIT OR NOT: `target` stored false
-    // (release) and the audio-thread-private fields reset to the no-sequence
-    // state noise_mix_block's idle arm reads (reset_sequence) — so the next
-    // lit press starts a fresh random segment with the fade-in from silence.
-    // WITHOUT THE RESET the stale voice would run a fade-out blip at the next
-    // Play press's reopen, the mixer finishing the dark edge it never got to
-    // run on the dead stream — whether the lamp was lit at the drop or a dark
-    // press by hand fell within the 40 ms fade-out just before it (why the
-    // poll asks no lamp). PRECONDITION: THE STREAM IS DEAD, READ THROUGH THE
-    // LATCH (GuiPlayback::stream_dead true on this thread, just before the
-    // call) — the first exception to the voice's one-audio-thread rule,
-    // stated at GuiNoiseVoice. ONE CALLER: gui_main's poll beside tick()
-    // (main.cpp), every tick the stream stands dead; the writes are
-    // idempotent, so the repeat costs nothing. JACK's stream_dead is always
-    // false, so it is never called on the laptop. Nothing is damaged here:
-    // the roster's per-tick comparator carries the NOISE key's face edge.
+    // THE POLL'S VOICE RESET ON A DEAD STREAM (architect 2026-10-28, the
+    // no-auto-recover rule at the head), LIT OR NOT: the one body,
+    // noise_voice_reset_on_dead_stream, on this object's voice — the lamp
+    // dark and the sequence ended, so the next lit press starts a fresh
+    // random segment with the fade-in from silence. WITHOUT THE RESET the
+    // stale voice would run a fade-out blip at the next Play press's reopen,
+    // the mixer finishing the dark edge it never got to run on the dead
+    // stream — whether the lamp was lit at the drop or a dark press by hand
+    // fell within the 40 ms fade-out just before it (why the poll asks no
+    // lamp). PRECONDITION: THE STREAM IS DEAD, READ THROUGH THE LATCH
+    // (GuiPlayback::stream_dead true on this thread, just before the call) —
+    // the first exception to the voice's one-audio-thread rule, stated at
+    // GuiNoiseVoice. ONE CALLER OF THIS METHOD: gui_main's poll beside tick()
+    // (main.cpp), every tick the stream stands dead, for the press-less drop;
+    // the writes are idempotent, so the repeat costs nothing. A press that
+    // reopens before the tick resets through the free function itself, ahead
+    // of the close that clears the latch (the head's second road,
+    // playback_aaudio.cpp). JACK's stream_dead is always false, so it is
+    // never called on the laptop. Nothing is damaged here: the roster's
+    // per-tick comparator carries the NOISE key's face edge.
     void reset_on_dead_stream();
 
     // THE KEY CHANGE, LIVE (architect 2026-10-28: "whatever's in memory is
@@ -292,10 +324,11 @@ public:
     //      fill, a few ms at most; on a dead or suspended stream no fill runs
     //      and in_fill is false at once.
     //   5. The audio-thread-private fields reset to no-sequence
-    //      (reset_sequence) — the second exception at GuiNoiseVoice, step 4's
-    //      wait its proof: no fill is inside its body, and every later one
-    //      returns before reading them until a new bank lands, whose publish
-    //      orders these writes before the next fill that reads them.
+    //      (reset_voice_sequence, noise.cpp) — the second exception at
+    //      GuiNoiseVoice, step 4's wait its proof: no fill is inside its
+    //      body, and every later one returns before reading them until a new
+    //      bank lands, whose publish orders these writes before the next fill
+    //      that reads them.
     //   6. bank_ freed (the memory dumped), `status_` stored Idle (a prior
     //      Failed does not stick to the new folder), the file list cleared,
     //      then probe(folder_name): the next lit press loads the new folder.
@@ -335,12 +368,6 @@ private:
     // read in 8 MB chunks (the stop token asked between them), then the one
     // publish; any failure one stderr line, nothing published, Failed.
     void load(std::stop_token stop);
-    // THE NO-SEQUENCE STATE of the audio-thread-private fields — `env` 0,
-    // `cur` and `nxt` -1, both positions 0, `xf_len` 0 — written on the main
-    // thread. Two callers, each stating its own proof that no fill runs:
-    // reset_on_dead_stream (the dead-stream exception) and change_folder (the
-    // in_fill fence).
-    void reset_sequence();
 
     GuiNoiseVoice     voice_;
     // Written by probe() on the main thread while no loader exists.

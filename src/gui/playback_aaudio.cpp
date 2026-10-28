@@ -291,10 +291,12 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // road through play()'s own head (reopen_stream_if_dead, one body for
     // both). The user presses play again — the same answer the product gives
     // every other rare, loud fault. THE NOISE LAMP FOLLOWS THIS RULE TOO
-    // (architect 2026-10-28): gui_main's poll on GuiPlayback::stream_dead
-    // darkens the lamp and resets the voice, lit or not, at the next tick
-    // (noise.h), and the next lit press is a launch press for the device
-    // question.
+    // (architect 2026-10-28): the lamp darkens and the voice resets, lit or
+    // not, at the first main-thread act that reads this latch — gui_main's
+    // poll on GuiPlayback::stream_dead at the next tick, or, a press reaching
+    // the device first, the reopen's own close of the dead stream
+    // (close_dead_stream) — and the next lit press is a launch press for the
+    // device question (noise.h's head, the two roads).
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
     impl->stream_dead.store(true, std::memory_order_release);
@@ -527,6 +529,24 @@ bool open_stream(GuiPlayback::Impl& impl) {
     return true;
 }
 
+// THE DEAD STREAM'S CLOSE, the two sites that read the latch true on the main
+// thread and close what it names: reopen_stream_if_dead's dead arm and
+// launch_window's post-publish dead arm. THE NOISE VOICE IS RESET HERE, AHEAD
+// OF close_stream, which clears the latch: the latch was read true on this
+// thread just before (each caller's own acquire load), no fill runs on a dead
+// stream, and the reopen that follows is this thread's own — the precondition
+// of noise_voice_reset_on_dead_stream (noise.h, the first exception at
+// GuiNoiseVoice). NOT in close_stream itself: a project switch (init's
+// shutdown) and the app's shutdown close a LIVE stream, and the lamp survives
+// those (noise.h's thread note). The voice is attached before the device opens
+// (GuiPlaybackState::noise, run_project's first act on its engine); the null
+// test is that field's own contract, null mixing nothing.
+void close_dead_stream(GuiPlayback::Impl& impl) {
+    if (impl.state.noise != nullptr)
+        noise_voice_reset_on_dead_stream(*impl.state.noise);
+    close_stream(impl);
+}
+
 // THE DEAD-STREAM REOPEN, ONE BODY FOR TWO CALLERS (the disconnect rule at the
 // error callback): a dead stream is closed and a dead or null one reopened
 // HERE, on the main thread, at the new device's own granted rate. Answers
@@ -541,9 +561,15 @@ bool open_stream(GuiPlayback::Impl& impl) {
 // reopen leaves playback disabled until the next press — no retry, no timer —
 // and, with `device_ready` still true, is exactly the "no stream standing"
 // shape device_unavailable reads.
+// THE DEAD ARM RESETS THE NOISE VOICE FIRST (2026-10-28, the no-auto-recover
+// rule's second road, noise.h's head): close_dead_stream below, ahead of the
+// close that clears the latch, so a press that reaches here before gui_main's
+// poll has read the drop — a Play press, an audition start, the NOISE key's
+// lit press, the car's Play at a Bluetooth connect — darkens the lamp and
+// ends the old sequence instead of resuming it on the new stream.
 bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
     if (impl.stream_dead.load(std::memory_order_acquire)) {
-        close_stream(impl);
+        close_dead_stream(impl);
     }
     if (!impl.stream && !open_stream(impl)) return false;
     return true;
@@ -692,8 +718,10 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
     // precedes this one — then the latch store, sequenced before the
     // callback's fence, is visible to this load, and the bit is lowered
     // here. Either way the published bit comes down, and the road taken is
-    // the failed start's own: lower the bit, close the dead stream, and the
-    // next press reopens. THE THIRD LEG, which the fences do not cover: the
+    // the failed start's own: lower the bit, close the dead stream — through
+    // close_dead_stream, so the noise voice is reset as at the head's reopen
+    // (this load read the latch true; noise.h's head, the second road) — and
+    // the next press reopens. THE THIRD LEG, which the fences do not cover: the
     // callback stores the latch, fences, and is preempted BEFORE its
     // fetch_and while this call sees the latch at its head, closes, reopens
     // and publishes the fresh generation — the late fetch_and would then
@@ -707,7 +735,7 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
     if (impl_->stream_dead.load(std::memory_order_acquire)) {
         impl_->state.session.fetch_and(~kSessionPlayingBit,
                                        std::memory_order_release);
-        close_stream(*impl_);
+        close_dead_stream(*impl_);
         return;
     }
 

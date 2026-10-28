@@ -2554,7 +2554,8 @@ enum class RedesignButton {
     // device config that the `noise` key names, the `tiles/` shape: present
     // plays, absent greys, no card) and DARKENS ITSELF if the load fails
     // (GuiNoise::tick, the key greying from then on), at a route drop
-    // (GuiNoise::reset_on_dead_stream) and when the `noise` key names
+    // (noise_voice_reset_on_dead_stream, the poll's or a reopen's — noise.h's
+    // head) and when the `noise` key names
     // another folder (GuiNoise::change_folder). It is
     // DEVICE STATE, NOT THE PIECE: admitted on a locked tab and under grid
     // iterations (bare `w` on the read-only allowlist, which the iteration
@@ -16780,7 +16781,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // bare `w` flips (noise.h) — so the LED lights at the press, before
         // the load lands and the fade-in begins, and the lit face and the lamp
         // cannot drift. A failed load (GuiNoise::tick), a route drop
-        // (reset_on_dead_stream) and a key change (change_folder) darken it
+        // (noise_voice_reset_on_dead_stream, at the poll or a reopen) and a
+        // key change (change_folder) darken it
         // off the press; the per-tick comparator carries those edges.
         case RedesignButton::IconNoise:
             return a.noise != nullptr && a.noise->lit();

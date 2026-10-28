@@ -1032,7 +1032,12 @@ struct GuiInputHandler {
     //     stop side (GuiPlaybackLifecycle::toggle_playback), Shift+Space
     //     routes into the stop body from GuiAbAudition::start (the toggle) —
     //     so they end it themselves, and ending it ahead of them would turn
-    //     Space into a launch and Shift+Space into a restart. The roster's
+    //     Space into a launch and Shift+Space into a restart. THE EXEMPT
+    //     ROADS STOP ON EVERY PHASE (2026-10-28), OtherFirst waiting on an
+    //     unrendered preview included: bare Space's target-preview readiness
+    //     guard (on_key's play/pause arm) is a launch gate and yields to a
+    //     standing act, and Shift+Space meets no gate ahead of start's stop.
+    //     The roster's
     //     synthesized chords (the chrome lift, the hold-repeat burst) pass
     //     here too and find the act already ended by their pointer press.
     //   * on_button_press, above every claim (the cards', the on-screen

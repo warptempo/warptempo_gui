@@ -1383,7 +1383,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // branch has no is_updating gate and deactivates it on its own.
         // THE PREDICATE IS GuiTargetRender::preview_ready (2026-08-26), the
         // one owner both this edge and the A/B audition's gate read.
-        if (app.active_audio_view == 'T' &&
+        // A LAUNCH GATE ALONE (2026-10-28, Sol's finding of that day): a
+        // STANDING A/B AUDITION is transport-live (the hands-off rule at
+        // end_audition_for_press's declaration, which exempts this key so
+        // that its own dispatch stops the act) and passes this gate to
+        // toggle_playback's stop fork, in every phase — a rest, a live play,
+        // or OtherFirst waiting on the other tab's unrendered preview, where
+        // nothing plays and the preview is not ready. The readiness question
+        // is a launch's alone; without the term the press (or the PLAY key's
+        // plain lift, which synthesizes it) would return here silently and
+        // the act would go on when the preview landed.
+        if (!audition_sequence_standing(app) &&
+            app.active_audio_view == 'T' &&
             !playback.is_playing() &&
             !target_render.preview_ready()) {
             // The refusal is silent (architect 2026-09-04): row 8's state

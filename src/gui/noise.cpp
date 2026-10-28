@@ -102,6 +102,20 @@ inline void read_frame(const GuiNoiseBank::Segment& seg, double pos,
     }
 }
 
+// THE NO-SEQUENCE STATE of the audio-thread-private fields — `env` 0, `cur`
+// and `nxt` -1, both positions 0, `xf_len` 0 — written on the main thread.
+// Two callers, each stating its own proof that no fill runs:
+// noise_voice_reset_on_dead_stream (the dead-stream exception at
+// GuiNoiseVoice) and GuiNoise::change_folder (the in_fill fence).
+void reset_voice_sequence(GuiNoiseVoice& v) {
+    v.env     = 0.0;
+    v.cur     = -1;
+    v.pos_cur = 0.0;
+    v.nxt     = -1;
+    v.pos_nxt = 0.0;
+    v.xf_len  = 0;
+}
+
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -375,21 +389,16 @@ void GuiNoise::tick() {
     }
 }
 
-void GuiNoise::reset_sequence() {
-    voice_.env     = 0.0;
-    voice_.cur     = -1;
-    voice_.pos_cur = 0.0;
-    voice_.nxt     = -1;
-    voice_.pos_nxt = 0.0;
-    voice_.xf_len  = 0;
-}
-
-void GuiNoise::reset_on_dead_stream() {
+void noise_voice_reset_on_dead_stream(GuiNoiseVoice& v) {
     // The lamp first; then the voice's private fields, written on this thread
     // under the dead-stream exception (GuiNoiseVoice's thread note): no fill
     // runs until a reopen, which is this thread's own and comes after.
-    voice_.target.store(false, std::memory_order_release);
-    reset_sequence();
+    v.target.store(false, std::memory_order_release);
+    reset_voice_sequence(v);
+}
+
+void GuiNoise::reset_on_dead_stream() {
+    noise_voice_reset_on_dead_stream(voice_);
 }
 
 void GuiNoise::change_folder(const std::string& folder_name) {
@@ -408,7 +417,7 @@ void GuiNoise::change_folder(const std::string& folder_name) {
         std::this_thread::yield();
     // 5. The private fields to no-sequence, behind the fence (the second
     // exception at GuiNoiseVoice).
-    reset_sequence();
+    reset_voice_sequence(voice_);
     // 6. The memory dumped, the state afresh, the new folder probed.
     bank_.reset();
     status_.store(kIdle, std::memory_order_release);

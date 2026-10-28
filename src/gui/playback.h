@@ -382,11 +382,18 @@ public:
     // under a live stream until the first reopen attempt closes that stream.
     // AAudio: `impl_ && impl_->stream_dead` (acquire). JACK: false, this
     // backend having no latch (the reason at device_unavailable's JACK
-    // definition). ONE READER: gui_main's per-tick poll beside noise.tick()
-    // (main.cpp), which, while the latch stands, LIT OR NOT, DARKENS the
-    // NOISE lamp and resets its voice (GuiNoise::reset_on_dead_stream,
-    // idempotent, so the per-tick repeat over the dead interval costs
-    // nothing) and reopens nothing. A pure read; main thread only.
+    // definition). THE LATCH HAS TWO MAIN-THREAD READERS THAT RESET THE
+    // NOISE VOICE (2026-10-28, noise.h's head, the two roads): (1) THIS
+    // MEMBER, whose one caller is gui_main's per-tick poll beside
+    // noise.tick() (main.cpp), which, while the latch stands, LIT OR NOT,
+    // DARKENS the NOISE lamp and resets its voice
+    // (GuiNoise::reset_on_dead_stream, idempotent, so the per-tick repeat
+    // over the dead interval costs nothing) and reopens nothing; (2) the
+    // AAudio backend's own load of the latch at a reopen (reopen_stream_if_dead
+    // and launch_window's post-publish arm, through close_dead_stream,
+    // playback_aaudio.cpp), which resets the voice ahead of the close that
+    // clears the latch, so a press that reaches the device before the tick
+    // consumes no drop unseen. A pure read; main thread only.
     // NOT device_unavailable: the latch alone, not the null stream, so the
     // reset runs only over the interval a drop opened, and a refused
     // reopen's null stream is the press's to answer — a lit press refused
@@ -430,13 +437,15 @@ public:
     // lights). No road reopens without a press. JACK
     // answers `!device_unavailable()` and touches nothing (this backend has no
     // latch to clear — the mid-play loss is not recorded, the reason at
-    // device_unavailable's definition). AAudio closes a dead stream and
-    // reopens a dead or null one at the head — play()'s own first two lines,
-    // hoisted here so a route that dropped on the tablet (a headphone pulled,
-    // a Bluetooth route gone) comes back at the NEXT PRESS instead of leaving
-    // every main-window launch road carding forever behind a read that never
-    // reopened — AND THEN STARTS IT, because the question a launch gate asks
-    // is whether this device will SOUND, not whether a stream object stands: a
+    // device_unavailable's definition). AAudio closes a dead stream — the
+    // noise voice reset first, its lamp dark (close_dead_stream, noise.h's
+    // head) — and reopens a dead or null one at the head — play()'s own
+    // first two lines, hoisted here so a route that dropped on the tablet (a
+    // headphone pulled, a Bluetooth route gone) comes back at the NEXT PRESS
+    // instead of leaving every main-window launch road carding forever
+    // behind a read that never reopened — AND THEN STARTS IT, because the
+    // question a launch gate asks is whether this device will SOUND, not
+    // whether a stream object stands: a
     // reopened stream is stopped, and an init whose start was refused leaves a
     // non-null stopped one, neither of which device_unavailable can see. Left
     // to play()'s own start — which runs AFTER the publish — a refused start

@@ -2373,7 +2373,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // neither the stream nor the latch, so every tick below still reads
         // the drop exactly as it did. The latch stands until a press reopens,
         // so this calls again on every tick of the dead interval, its writes
-        // idempotent and no fill running. JACK has no latch: on the laptop
+        // idempotent and no fill running. THIS IS THE PRESS-LESS DROP'S ROAD
+        // ALONE (noise.h's head, the two roads): on Android input drains
+        // ahead of this tick, and a press that reopens first — Play, an
+        // audition start, the lit NOISE press, the car's Play at a connect —
+        // clears the latch before this read, so the reopen resets the voice
+        // itself ahead of its close (close_dead_stream, playback_aaudio.cpp)
+        // and this tick then reads no drop. JACK has no latch: on the laptop
         // this is one read and the method is never called.
         if (playback.stream_dead()) noise.reset_on_dead_stream();
 

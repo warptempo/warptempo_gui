@@ -9505,8 +9505,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // this press has already ended any standing A/B audition at on_key's
         // head (GuiInputHandler::end_audition_for_press) before this arm runs,
         // so no act can read the reopened stream under the lowered playing
-        // bit as its play's natural end and go on by itself. (A later drop
-        // darkens the lamp and resets the voice at gui_main's poll, noise.h.)
+        // bit as its play's natural end and go on by itself. A DROP NOT YET
+        // POLLED NEEDS NOTHING HERE (2026-10-28): the device question runs
+        // BEFORE toggle(), so a dead stream's reopen resets the voice first
+        // (close_dead_stream, playback_aaudio.cpp — `target` false, the
+        // sequence ended), and toggle() then reads a dark lamp and seeds and
+        // lights afresh: a fresh segment, the fade-in. (A later drop darkens
+        // the lamp and resets the voice at gui_main's poll or at the next
+        // reopen, noise.h's head.)
         if (app.noise != nullptr) {
             if (app.noise->available() && !app.noise->lit() &&
                 !playback.ensure_device_available_for_play()) {

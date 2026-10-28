@@ -69,7 +69,11 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
             // that same reason, so both car roads answer a connect alike. The
             // answer is IGNORED: a console key is not a deliberate press at
             // the glass, so a failed reopen raises no card; the next real
-            // press meets the launch gates and cards there.
+            // press meets the launch gates and cards there. A dead stream's
+            // reopen here DARKENS A LIT NOISE LAMP (2026-10-28, the
+            // iPhone's behavior at a connect; close_dead_stream,
+            // playback_aaudio.cpp, noise.h's head): the bed does not resume
+            // by itself on the new route.
             (void)playback.ensure_device_available_for_play();
             return;
         case Kind::Pause:
@@ -117,11 +121,15 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
 // ready the press is a silent refusal — row 8's process line already carries
 // the preview render's `Updating...`, the one-dimensional class
 // (notifications.h's silent list). The stop arm never meets it:
-// `!playback.is_playing()` is the gate's own term.
+// `!playback.is_playing()` is the gate's own term, and a STANDING A/B
+// AUDITION passes it to car_toggle_playback's stop fork in every phase,
+// OtherFirst waiting on an unrendered preview included — the readiness
+// question a launch's alone, as at on_key's twin (2026-10-28).
 void GuiCarTransport::car_toggle() {
     if (!admits()) return;
     if (input_handler.car_play_refused_by_key_gates()) return;
-    if (app.active_audio_view == 'T' && !playback.is_playing() &&
+    if (!audition_sequence_standing(app) &&
+        app.active_audio_view == 'T' && !playback.is_playing() &&
         !target_render.preview_ready()) {
         return;
     }
