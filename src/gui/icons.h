@@ -12,7 +12,9 @@
 // (load_set, below) — and rasterised lazily per (drawing, device px) into an
 // ARGB32 surface that a draw copies at an integer device px, no resample.
 // THE INKS ARE THE DRAWINGS' OWN, never a theme role, and no drawing is ever
-// shown disabled.
+// shown disabled; a drawing's SHADOW (draw_boxed_shadow, the logo lane's
+// quaver, 2026-10-28) is the palette's cue shadow through the raster's
+// alpha, never a recolored drawing.
 //
 // NO CURSOR IS AN ICON: every cursor the product shows is a NAMED
 // CURSOR FROM THE USER'S OWN XCURSOR THEME (architect 2026-08-03), so the
@@ -135,7 +137,8 @@ std::optional<std::string> load_set();
 // rasters are converted for the window as they are made, svg_icon.h): the
 // cache refills lazily at the new sizes and in the new conversion; the
 // parsed drawings stay. (No color pick drops anything: no glyph wears a
-// role, the head's rule.)
+// role, the head's rule, and a shadow's color is its paint's source, never
+// the raster's.)
 void drop_rasters();
 
 // A BOXED GLYPH (THE BOXED GLYPHS, above) in its box: `box_h` device px
@@ -145,6 +148,22 @@ void drop_rasters();
 // of the box's edge. Cairo state is saved and restored. Cannot fail: the
 // launch's load parsed every drawing.
 void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h);
+
+// A BOXED GLYPH'S SHADOW (architect 2026-10-28: the logo lane's quaver
+// wears the cue label's shadow, materials.h's INKS), painted BEFORE
+// draw_boxed at the same box: the live raster draw_boxed copies, ITS ALPHA
+// ALONE as a mask (cairo_mask_surface) under the flat `shadow`, one label
+// quantum right and one down (render.h's cue_label_shadow_offset_px). The
+// raster's colors are the window's already (svg_icon::convert_to_display,
+// which keeps alpha), so the mask reads nothing the conversion changed, and
+// `shadow` goes through the window's display transform as every chrome ink
+// does (set_palette_source) — sRGB in, the window's bytes out, so a True
+// Colors flip or a palette pick reaches it at the next paint with no raster
+// dropped. The shadow is ink, never extent: the box's placement and
+// boxed_ink never read it. Cairo state is saved and restored. Its one
+// reader is the logo lane's painter (paint_handler.cpp's paint_logo_lane).
+void draw_boxed_shadow(cairo_t* cr, Icon icon, int box_x, int box_y,
+                       int box_h, GuiColor shadow);
 
 // A BOXED GLYPH'S INK at `box_h` (architect 2026-10-24, the logo lane's
 // quaver: "the glyph flush with the icons"): its lit columns and rows

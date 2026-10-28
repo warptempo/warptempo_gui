@@ -1139,7 +1139,14 @@ constexpr int kMinWindowHeightPx = 480;
 // strips' pads: no hit, no tooltip, no gesture (the band's ground falls
 // through to nothing, input_pointer.cpp). paint_handler.cpp's
 // paint_logo_lane paints it, every length below skin_px, rounded at the
-// element:
+// element, and EVERYTHING ON IT WEARS THE CUE LABEL'S SHADOW (architect
+// 2026-10-28; materials.h's INKS, the rule's one site): `ce_cue_shadow` one
+// label quantum right and one down (cue_label_shadow_offset_px), painted
+// first, the bone over it — the brand and the legend's runs through
+// show_ce_label, the quaver through icons::draw_boxed_shadow, the glyph its
+// path filled twice. The shadow is ink, never extent: every placement below
+// is the bone's; only the legend's damage rect grows by it
+// (logo_legend_extent, paint_handler.cpp):
 //   ON THE LEFT, THE QUAVER: Icon::Quaver through the boxed-glyph road
 //     (icons::draw_boxed), its ink kLogoQuaverInkAt300 = 21 px tall (the
 //     retired caption's icon's: the box icon_box_px(21), 31 at
@@ -1625,7 +1632,10 @@ inline int cue_label_unit_px() {
 // cue label's one text painter (show_cue_label, render.cpp), ROW 8'S TAB
 // NAME AND STATE LINE, which wear the cue label's shadow ("with the same
 // shadow for the tab/git/etc text", architect 2026-10-26 ~11:30;
-// show_ce_label, cool_edit_paint.cpp), and SINCE 2026-10-26 ~13:05 EVERY
+// show_ce_label, cool_edit_paint.cpp), THE LOGO LANE since 2026-10-28 (its
+// words through show_ce_label, the quaver's icons::draw_boxed_shadow, the
+// glyph's second fill and the legend's damage, paint_handler.cpp's
+// paint_logo_lane and logo_legend_layout), and SINCE 2026-10-26 ~13:05 EVERY
 // TRIANGLE'S SHADOW — the cue's, the split one's, the playhead head's — the
 // label's own offset, one rule (architect: the triangle's shadow becomes
 // one label quantum right and down; CueTrianglePass, its extent

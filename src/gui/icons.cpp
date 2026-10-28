@@ -105,6 +105,20 @@ void draw_boxed(cairo_t* cr, Icon icon, int box_x, int box_y, int box_h) {
     cairo_restore(cr);
 }
 
+// THE SHADOW, the same raster's alpha as a mask under a flat source: the
+// mask is the cell draw_boxed copies, at the same whole-px offset plus the
+// shadow's, so no resample either.
+void draw_boxed_shadow(cairo_t* cr, Icon icon, int box_x, int box_y,
+                       int box_h, GuiColor shadow) {
+    if (box_h <= 0) return;
+    const int t = cue_label_shadow_offset_px();
+    cairo_save(cr);
+    set_palette_source(cr, shadow);
+    cairo_mask_surface(cr, faces_for(icon, box_h).live.get(),
+                       box_x + boxed_cell_dx(box_h) + t, box_y + t);
+    cairo_restore(cr);
+}
+
 BoxedInk boxed_ink(Icon icon, int box_h) {
     if (box_h <= 0) return BoxedInk{};
     Faces& f = faces_for(icon, box_h);

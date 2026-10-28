@@ -180,7 +180,9 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth, GuiKeyLed led);
 // time_field_* accessors own the 40-px height and the 12-px pads).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field, GuiColor dark,
                          GuiColor light);
-// A PANEL LABEL — row 8's tab name and state line, its readers: `run` in
+// A PANEL LABEL — row 8's tab name and state line and, since 2026-10-28,
+// the logo lane's brand and legend runs (paint_logo_lane), its readers, the
+// one painter of the chrome words' bone-over-shadow pair: `run` in
 // the bone kBoneInk OVER THE CUE LABEL'S SHADOW, its offset and its color
 // (architect 2026-10-26 ~11:30: "the bottom left timestamp and
 // tab/github/etc text should take 26 as well, with the same shadow for the

@@ -177,15 +177,20 @@ struct AppState;
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend alone. NO WORD
-// WEARS A SHADOW but the cue labels and row 8's tab name and state line,
-// over a shadow in the cue triangle's own shadow color, ONE LABEL QUANTUM
+// WEARS A SHADOW but the cue labels, row 8's tab name and state line, and
+// THE LOGO LANE — the brand, the legend's percent and clock runs, and with
+// them the lane's two drawings, the quaver and the bolt / battery glyph
+// (architect 2026-10-28, his later-list item) — over a shadow in the cue
+// triangle's own shadow color, ONE LABEL QUANTUM
 // RIGHT AND ONE DOWN, 3 and 3 device px at 300 % and scaled, the
 // triangle's own offset since 2026-10-26 ~13:05 (architect 2026-10-26
 // ~10:50, "be GUI scaled"; ~11:30, "shadow on", "the same
 // shadow for the tab/git/etc text"; render.h's cue_label_shadow_offset_px,
 // show_cue_label and show_ce_label, render.h's marker lane's label
-// paragraph): the skin draws none elsewhere, the clocks' digits and the
-// ruler's digits included (2026-10-25). Of the lines,
+// paragraph; the logo lane's painter paint_logo_lane, its quaver through
+// icons::draw_boxed_shadow): the skin draws none elsewhere — the keys'
+// legends, every text on a black field (the clocks' digits, the editors)
+// and the ruler's digits included (2026-10-25). Of the lines,
 // the ruler's ticks alone wear one, one device px of black at (+1, +1)
 // (render.h's ruler block).
 

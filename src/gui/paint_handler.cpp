@@ -1482,7 +1482,8 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // of the clock run's first ink, its right edge rounded to a whole column,
 // its rows centered on the cap's center (the cap rounded to whole rows); the
 // percent run's last ink one space advance left of the cell; the extent the
-// lane's rows from the first ink column through the ring's right column.
+// lane's rows from the first ink column through the ring's right column and
+// the shadow's offset past it (2026-10-28).
 namespace {
 struct LogoLegendLayout {
     GuiRect lane{0, 0, 0, 0};
@@ -1525,7 +1526,19 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
         first = std::min(first, static_cast<int>(std::floor(
             l.percent_x + text_shape::ink_left_px(*l.percent))));
     }
-    l.extent = GuiRect{first, l.lane.y, std::max(0, ring.end - first),
+    // THE EXTENT COVERS THE SHADOW (paint_logo_lane, 2026-10-28): the
+    // clock's shadow reaches cue_label_shadow_offset_px past the ring's
+    // column, so the columns run that far further (still inside the band,
+    // which spans the window: the ring's column margin is wider). Its rows
+    // stay the lane's, no clamp: the lowest ink plus the shadow stands well
+    // inside it — the face's descent (gui_font_descent_px, about .21 em, an
+    // upper bound for the clock's '|', the legend's one descender) and the
+    // offset under the cap-centered baseline end about 51 rows down the
+    // 72-row lane at 300 %, 34 of 48 at 200 %, 22 of 33 at 138 %; the
+    // glyph cell, one row below the baseline, less.
+    l.extent = GuiRect{first, l.lane.y,
+                       std::max(0, ring.end + cue_label_shadow_offset_px() -
+                                       first),
                        l.lane.h};
     return l;
 }
@@ -1538,18 +1551,28 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend) {
 void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // THE LOGO LANE (render.h's logo lane block, every length skin_px):
     // the quaver, the brand, the legend and its glyph, on the band's ground
-    // paint_icon_row already put down — nothing else on the lane.
+    // paint_icon_row already put down — nothing else on the lane. EVERY
+    // ONE WEARS THE CUE LABEL'S SHADOW (materials.h's INKS, architect
+    // 2026-10-28): `ce_cue_shadow` one label quantum right and one down
+    // (cue_label_shadow_offset_px), painted first, the bone over it — the
+    // words through show_ce_label, the quaver through
+    // icons::draw_boxed_shadow, the glyph its own path filled twice. The
+    // shadow is ink, never extent: no placement below reads it. Each item's
+    // shadow lands in the gap after it, never on a neighbor's bone (the
+    // brand gap 10 and a space advance against the offset 3 at 300 %; 5,
+    // about 3 and 1 at 138 %).
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, logo_lane_h_px())};
     if (lane.w <= 0 || lane.h <= 0) return;
     const ProgramRingColumns ring = program_ring_columns(app);
     const GuiColor bone = hex(kBoneInk);
+    const GuiColor shadow = palette().ce_cue_shadow;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
     // THE QUAVER: its first ink column on the ring's outer left column and
     // its ink rows centered on the lane, both off the raster's own alpha
-    // (icons::boxed_ink), in the file's own bone.
+    // (icons::boxed_ink), in the file's own bone over its shadow.
     const int box_h = icons::icon_box_px(kLogoQuaverInkAt300);
     const icons::BoxedInk ink = icons::boxed_ink(icons::Icon::Quaver, box_h);
     const int box_x = ring.x - ink.left;
@@ -1557,10 +1580,13 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
         lane.y +
         static_cast<int>(std::nearbyint((lane.h - (ink.bottom - ink.top)) * 0.5)) -
         ink.top;
+    icons::draw_boxed_shadow(cr, icons::Icon::Quaver, box_x, box_y, box_h,
+                             shadow);
     icons::draw_boxed(cr, icons::Icon::Quaver, box_x, box_y, box_h);
 
     // THE BRAND, a constant: its first ink the gap past the quaver's last
-    // ink column, its cap band centered on the lane, the bone.
+    // ink column, its cap band centered on the lane, the bone over the
+    // shadow.
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
         const text_shape::SharedRun brand =
@@ -1568,64 +1594,79 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
         const double x = static_cast<double>(box_x + ink.right +
                                              skin_px(kLogoBrandGapAt300)) -
                          text_shape::ink_left_px(*brand);
-        set_palette_source(cr, bone);
-        text_shape::show_shaped_run(
-            cr, *brand, x,
-            redesign_baseline(bold, static_cast<double>(lane.y),
-                              static_cast<double>(lane.h)));
+        show_ce_label(cr, *brand, x,
+                      redesign_baseline(bold, static_cast<double>(lane.y),
+                                        static_cast<double>(lane.h)));
     }
 
     // THE LEGEND (logo_legend_layout): the clock run, the glyph in its cell,
-    // the percent run — published as painted for the tick's damage.
+    // the percent run, each the bone over the shadow — published as painted
+    // for the tick's damage (the extent covers the shadow).
     const LogoLegendLayout l = logo_legend_layout(app, app.logo_legend);
     app.logo_legend_rect = l.extent;
-    set_palette_source(cr, bone);
-    text_shape::show_shaped_run(cr, *l.clock, l.clock_x, l.baseline);
-    if (l.percent)
-        text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
+    show_ce_label(cr, *l.clock, l.clock_x, l.baseline);
+    if (l.percent) show_ce_label(cr, *l.percent, l.percent_x, l.baseline);
 
-    // THE GLYPH, artwork filled in the bone with cairo's own antialiasing.
-    cairo_new_path(cr);
+    // THE GLYPH, artwork filled with cairo's own antialiasing: ONE PATH
+    // traced twice, first one label quantum right and down in the shadow,
+    // then in place in the bone.
     const double cx = static_cast<double>(l.cell.x);
     const double cy = static_cast<double>(l.cell.y);
     const double cw = static_cast<double>(l.cell.w);
     const double ch = static_cast<double>(l.cell.h);
-    if (app.logo_legend.glyph == GuiLogoGlyph::Bolt) {
-        // THE BOLT: kLogoBolt over the cell's unit box.
-        cairo_move_to(cr, cx + kLogoBolt[0].x * cw, cy + kLogoBolt[0].y * ch);
-        for (std::size_t i = 1; i < std::size(kLogoBolt); ++i)
-            cairo_line_to(cr, cx + kLogoBolt[i].x * cw,
-                          cy + kLogoBolt[i].y * ch);
-        cairo_close_path(cr);
-    } else {
-        // THE BATTERY: its box centered in the cell (the spare columns
-        // halved, the odd one on the right — the floor;
-        // the rows centered on the cap's center), the nub up.
-        const int bw = skin_px(kLogoBatteryWAt300, 1);
-        const int bh = skin_px(kLogoBatteryHAt300, 1);
-        const double bx = static_cast<double>(l.cell.x + (l.cell.w - bw) / 2);
-        const double by = static_cast<double>(l.cap_center - (bh - 1) / 2);
-        const double w = static_cast<double>(bw);
-        const double h = static_cast<double>(bh);
-        const double nub = kLogoBatteryNubH * h;
-        cairo_rectangle(cr, bx + kLogoBatteryNubX0 * w, by,
-                        (kLogoBatteryNubX1 - kLogoBatteryNubX0) * w,
-                        nub + static_cast<double>(hairline_px()));
-        const double x0 = bx + kLogoBatteryBodyX0 * w;
-        const double x1 = bx + kLogoBatteryBodyX1 * w;
-        const double y0 = by + nub;
-        const double y1 = by + h;
-        const double r = static_cast<double>(skin_px(kLogoBatteryRadiusAt300, 1));
-        constexpr double kPi = 3.14159265358979323846;
-        cairo_new_sub_path(cr);
-        cairo_arc(cr, x1 - r, y0 + r, r, -kPi / 2, 0.0);
-        cairo_arc(cr, x1 - r, y1 - r, r, 0.0, kPi / 2);
-        cairo_arc(cr, x0 + r, y1 - r, r, kPi / 2, kPi);
-        cairo_arc(cr, x0 + r, y0 + r, r, kPi, 3 * kPi / 2);
-        cairo_close_path(cr);
-    }
-    set_palette_source(cr, bone);
+    const auto trace_glyph = [&] {
+        cairo_new_path(cr);
+        if (app.logo_legend.glyph == GuiLogoGlyph::Bolt) {
+            // THE BOLT: kLogoBolt over the cell's unit box.
+            cairo_move_to(cr, cx + kLogoBolt[0].x * cw,
+                          cy + kLogoBolt[0].y * ch);
+            for (std::size_t i = 1; i < std::size(kLogoBolt); ++i)
+                cairo_line_to(cr, cx + kLogoBolt[i].x * cw,
+                              cy + kLogoBolt[i].y * ch);
+            cairo_close_path(cr);
+        } else {
+            // THE BATTERY: its box centered in the cell (the spare columns
+            // halved, the odd one on the right — the floor;
+            // the rows centered on the cap's center), the nub up.
+            const int bw = skin_px(kLogoBatteryWAt300, 1);
+            const int bh = skin_px(kLogoBatteryHAt300, 1);
+            const double bx =
+                static_cast<double>(l.cell.x + (l.cell.w - bw) / 2);
+            const double by = static_cast<double>(l.cap_center - (bh - 1) / 2);
+            const double w = static_cast<double>(bw);
+            const double h = static_cast<double>(bh);
+            const double nub = kLogoBatteryNubH * h;
+            cairo_rectangle(cr, bx + kLogoBatteryNubX0 * w, by,
+                            (kLogoBatteryNubX1 - kLogoBatteryNubX0) * w,
+                            nub + static_cast<double>(hairline_px()));
+            const double x0 = bx + kLogoBatteryBodyX0 * w;
+            const double x1 = bx + kLogoBatteryBodyX1 * w;
+            const double y0 = by + nub;
+            const double y1 = by + h;
+            const double r =
+                static_cast<double>(skin_px(kLogoBatteryRadiusAt300, 1));
+            constexpr double kPi = 3.14159265358979323846;
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, x1 - r, y0 + r, r, -kPi / 2, 0.0);
+            cairo_arc(cr, x1 - r, y1 - r, r, 0.0, kPi / 2);
+            cairo_arc(cr, x0 + r, y1 - r, r, kPi / 2, kPi);
+            cairo_arc(cr, x0 + r, y0 + r, r, kPi, 3 * kPi / 2);
+            cairo_close_path(cr);
+        }
+    };
     cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+    {
+        // The path traced under the translation lands t right and t down.
+        const double t = static_cast<double>(cue_label_shadow_offset_px());
+        cairo_save(cr);
+        cairo_translate(cr, t, t);
+        trace_glyph();
+        set_palette_source(cr, shadow);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+    trace_glyph();
+    set_palette_source(cr, bone);
     cairo_fill(cr);
 
     cairo_restore(cr);
@@ -7631,7 +7672,8 @@ static bool floating_surface_stands(const AppState& app) {
 //   * THE LOGO LANE (paint_logo_lane, the band's upper pad since
 //     2026-10-24): the legend the tick composed (AppState::logo_legend);
 //     the quaver, the brand, the ring's columns and the lane's rect are the
-//     globals' and the band's;
+//     globals' and the band's, the shadow's color (`ce_cue_shadow`) and
+//     offset the palette's and the scale's (2026-10-28);
 //   * THE TOOLBAR BAND (paint_icon_row): its lane (the strip pad among the
 //     lane's inputs, its rect moving with it); the `h` view; the standing
 //     members in the walk's order and their runs (icon_row_walk, the right

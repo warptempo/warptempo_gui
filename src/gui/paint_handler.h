@@ -64,7 +64,8 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app);
 // THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
 // logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
 // layout): the lane's rows from the legend's first ink column through the
-// program ring's outer right column. The tick's damage for a changed legend
+// program ring's outer right column and the shadow's offset past it (the
+// clock's shadow, 2026-10-28). The tick's damage for a changed legend
 // (main.cpp's refresh_logo_legend) is this rect united with the one the
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
