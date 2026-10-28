@@ -5470,13 +5470,15 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
 }
 
 // THE SCORE VIEWER'S MEDIA PLAYER ROW (architect 2026-10-26 night, the
-// soundtrack's face, score_viewer.h's head): PLAY / PAUSE at the row's left,
-// the scrub after the group space, THE CLOCK — the render player's two time
+// soundtrack's face, score_viewer.h's head): BACK, PLAY / PAUSE and FWD
+// abutting at the row's left (the skips architect 2026-10-27, the render
+// player's three transport seats), the scrub after the group space, THE
+// CLOCK — the render player's two time
 // fields, measured and spaced as its are (player_row_layout) — and RESET,
 // START, END and CLOSE abutting flush right, the scrub taking what is left,
 // floored at two thumbs as the player's is.
 struct ScoreMediaRowLayout {
-    std::array<int, 5> x{};
+    std::array<int, 7> x{};
     int field_pad = 0, field_w = 0, field_gap = 0;
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
@@ -5489,14 +5491,16 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     const int clock_w = l.field_w + l.field_gap + l.field_w;
     const int bw  = seats.case_w;
     const int cx0 = seats.left_x;
-    l.x[0] = cx0;                          // PLAY / PAUSE
-    l.scrub_x0 = cx0 + bw + group;
+    l.x[0] = cx0;                          // BACK
+    l.x[1] = cx0 + bw;                     // PLAY / PAUSE
+    l.x[2] = cx0 + 2 * bw;                 // FWD
+    l.scrub_x0 = cx0 + 3 * bw + group;
     const int words_x0 = std::max(cx0, seats.cases_right - 4 * bw);
     l.scrub_w = words_x0 - (group + clock_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    for (int i = 0; i < 4; ++i) l.x[1 + i] = words_x0 + i * bw;  // RESET .. CLOSE
+    for (int i = 0; i < 4; ++i) l.x[3 + i] = words_x0 + i * bw;  // RESET .. CLOSE
     return l;
 }
 
@@ -5636,12 +5640,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     const uint64_t prev_session = dlg.session;
     // THE OUTGOING ENABLED BITS, AS PAINTED — read before the reset clears the
-    // stash, for the player row's as-painted publication at the button walk
-    // below (the rule is there).
-    std::vector<std::pair<AppState::PlayerButtonAct, bool>> prev_enabled;
+    // stash, for the player's and the score viewer's rows' as-painted
+    // publication at the button walk below (the rule is there).
+    struct PrevFace {
+        AppState::PlayerButtonAct player_act;
+        AppState::ScoreButtonAct  score_act;
+        bool                      enabled;
+    };
+    std::vector<PrevFace> prev_enabled;
     prev_enabled.reserve(dlg.buttons.size());
     for (const AppState::ModalDialogButton& pb : dlg.buttons)
-        prev_enabled.emplace_back(pb.player_act, pb.enabled);
+        prev_enabled.push_back(PrevFace{pb.player_act, pb.score_act,
+                                        pb.enabled});
     // THE OUTGOING THUMB COLUMN AND TRACK, AS PAINTED, for the same reason:
     // a frame whose clip misses the track carries them (the scrub, below).
     const int     prev_thumb_x = dlg.scrub_thumb_x;
@@ -5822,9 +5832,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         PlayerPlayFace play_face = PlayerPlayFace::Play;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. ONE OWNER READS IT, re-greped 2026-09-30: the player's nine
-        // through render_player_button_enabled; true on every other owner's
-        // buttons.
+        // below. TWO OWNERS WRITE IT, re-grepped 2026-10-27: the player's
+        // nine through render_player_button_enabled and the score viewer's
+        // keys through score_viewer_button_enabled; true on every other
+        // owner's buttons.
         bool        enabled      = true;
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
@@ -5984,7 +5995,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else if (score_up) {
         // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order, ON
         // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night): the page
-        // road's PREV and NEXT, or the media player's PLAY / PAUSE — its
+        // road's PREV and NEXT, or the media player's BACK, PLAY / PAUSE and
+        // FWD — a deck's order, the render player's transport triple (Home,
+        // PlayPause, NextTrack above), the skips architect 2026-10-27, each
+        // with its modifier line (score_viewer_button_shift_hint); PLAY's
         // legend and its word the render player's Play key's by the face
         // (score_viewer_play_face) — then (the scrub and the page cell or the
         // clock between, laid out in the branch below) RESET, START, END and
@@ -5999,10 +6013,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.play_face = face;
             b.enabled   = score_viewer_button_enabled(app, playback, act);
             b.tooltip   = score_viewer_button_hint(act, face);
+            b.tooltip2  = score_viewer_button_shift_hint(app, playback, act);
             plan.push_back(std::move(b));
         };
         if (score_viewer_has_soundtrack(app)) {
+            key(Act::SkipBack);
             key(Act::PlayPause);
+            key(Act::SkipForward);
         } else {
             key(Act::PrevPage);
             key(Act::NextPage);
@@ -6463,8 +6480,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
 
         if (media) {
-            // -- THE MEDIA PLAYER'S ROW (2026-10-26 night): PLAY / PAUSE,
-            //    the scrub over the range's frames, the clock — the render
+            // -- THE MEDIA PLAYER'S ROW (2026-10-26 night): BACK, PLAY /
+            //    PAUSE and FWD (2026-10-27), the scrub over the range's
+            //    frames, the clock — the render
             //    player's items, painted by its own helpers and rules — and
             //    the four keys flush right. --
             const ScoreMediaRowLayout ml = score_media_row_layout(seats);
@@ -6922,17 +6940,23 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // was last painted with (same session, same slot, same act), and
         // with no such paint to keep it is false — nothing painted, nothing
         // clickable — which the comparator sees as drift and repaints within
-        // a tick. Every other owner's buttons publish a constant true and
-        // need no gate. THE COVERAGE IS THE KEY AND ITS LEGEND
-        // (key_legend_layout's extent, 2026-10-23): the legend wears the bit
-        // (dimmed when dead), so a clip that missed it must keep the bit.
-        if (player_up &&
+        // a tick. THE SCORE VIEWER'S ROW TAKES THE SAME GATE (2026-10-27):
+        // its skips' faces move with the cursor, and its clock and scrub
+        // damage at the tick's cadence while the soundtrack plays — a BACK
+        // greyed at the range's first frame must not be published live by a
+        // frame that repainted the clock alone. Every other owner's buttons
+        // publish a constant true and need no gate. THE COVERAGE IS THE KEY
+        // AND ITS LEGEND (key_legend_layout's extent, 2026-10-23): the legend
+        // wears the bit (dimmed when dead), so a clip that missed it must
+        // keep the bit.
+        if ((player_up || score_up) &&
             !clip_covers_drawable(
                 cr, app, key_legend_layout(r, legend, legend_access).extent)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
-                               prev_enabled[i].first == out.player_act;
-            out.enabled = carry && prev_enabled[i].second;
+                               prev_enabled[i].player_act == out.player_act &&
+                               prev_enabled[i].score_act == out.score_act;
+            out.enabled = carry && prev_enabled[i].enabled;
         }
         // THE HINT: a word button's is THE ACT'S NAME ALONE, its word
         // (architect 2026-10-10, Windows strict — the underline carries the
@@ -6944,7 +6968,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                               : plan[i].tooltip;
         // THE MODIFIER LINE (2026-08-28), published beside it and empty on
         // every button with no shifted twin — the roster hint's `line2` over
-        // this surface, and its one producer is the player's plan above.
+        // this surface, its producers the player's plan and the score
+        // viewer's (its skips, 2026-10-27) above.
         out.tooltip2 = plan[i].tooltip2;
         dlg.buttons.push_back(out);
     }

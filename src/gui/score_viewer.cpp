@@ -347,26 +347,32 @@ void GuiScoreViewer::play_live_from(int64_t from) {
 
 void GuiScoreViewer::seek_to(int64_t frame) {
     AppState::ScoreViewer& sv = app.score_viewer;
-    if (!sv.active || !app.score || !score_viewer_has_soundtrack(app)) return;
-    const ScoreFrameRange fr = score_viewer_frame_range(app);
-    const int64_t target = std::clamp(frame, fr.begin, fr.end);
+    // THE LANDING IS score_viewer_seek_landing's (the clamp, the live arm's
+    // one-short stop, the refusals), the one body the skips' face reads.
+    const std::optional<int64_t> landing =
+        score_viewer_seek_landing(app, frame);
+    if (!landing) return;
     int64_t& rest = active_view_state(app).score_position;
     if (sv.transport == Transport::Live) {
         // A LIVE RESEEK IS play() OVER THE LIVE SESSION (the render player's
         // seek_to): no stop-and-restart, the window still the range's; a
         // target in its last frame stops one short so the natural end takes
         // over.
-        const int64_t live_target = std::min(target, fr.end - 2);
-        if (live_target < fr.begin) return;
         sv.painted_cursor = -1;
-        playback.play(live_target, fr.end);
-        rest = live_target;
-    } else {
-        rest = target;
+        playback.play(*landing, score_viewer_frame_range(app).end);
     }
+    rest = *landing;
     follow_cursor(rest);
     damage_row();
     write_score_viewer_file(app);
+}
+
+void GuiScoreViewer::skip(bool forward, bool long_form) {
+    // THE FORM'S OWN WALL, the face's term (by the clamp's monotony the two
+    // forms move or stand together, so the face's OR and this agree).
+    if (!score_viewer_skip_actionable(app, playback, forward, long_form))
+        return;
+    seek_to(*score_viewer_skip_landing(app, playback, forward, long_form));
 }
 
 bool GuiScoreViewer::follow_cursor(int64_t pos) {

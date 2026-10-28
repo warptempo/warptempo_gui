@@ -1713,10 +1713,11 @@ struct GuiInputHandler {
     // controls row's keys (the modal ring); Esc and bare `m` close; bare
     // backslash is the tooltip lamp. ON ITS TWO FACES (score_viewer.h's
     // head): under the soundtrack Space plays and pauses, Home / End seek the
-    // range's first / last frame and Left / Right have no act; on the page
-    // road Left / Right are PREV / NEXT, Home / End the range's first / last
-    // page and Space has no act. Every other key, Ctrl+Tab among them, is
-    // consumed in silence. Returns true when consumed.
+    // range's first / last frame and Left / Right are BACK / FWD, the skips,
+    // Shift+Left / Shift+Right their 10 s form (architect 2026-10-27); on
+    // the page road Left / Right are PREV / NEXT, Home / End the range's
+    // first / last page and Space has no act. Every other key, Ctrl+Tab
+    // among them, is consumed in silence. Returns true when consumed.
     bool route_score_viewer_key(GuiKey key, GuiInputState mods);
     // THE SCRUB'S POINTER HALF (the bodies' block, input_pointer.cpp): a
     // plain press on the published item ARMS the drag — on the thumb it is
@@ -4405,8 +4406,9 @@ private:
     bool arm_modal_dialog_press(int x, int y, bool shift = false);
     int  take_modal_dialog_release(int x, int y);
     bool modal_dialog_press_shifted() const;
-    // `shifted` reaches only the buttons player_button_shift_admits names
-    // (app_state.h); every other act ignores it, so a held Play is a plain
+    // `shifted` reaches only the buttons player_button_shift_admits and
+    // score_button_shift_admits name (app_state.h); every other act ignores
+    // it, so a held Play is a plain
     // Play exactly as a held roster button with no twin is its plain act. The
     // KEYBOARD's own release passes the default: a ring-focused button's Enter
     // or Space is bare by the strict-modifier rule.

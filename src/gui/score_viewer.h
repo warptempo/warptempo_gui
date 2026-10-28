@@ -41,9 +41,14 @@
 // like the render player's. The page numbers should not be included at all
 // if there's audio. Everything — the playback, the scrub — should be frame
 // and/or time based. No pages. Pages are only kept in the background"):
-//   * THE MEDIA PLAYER'S, with the soundtrack: PLAY / PAUSE at the left (the
-//     render player's transport seat, its key and its legend —
-//     score_viewer_play_face), THE SCRUB (the render player's, its domain
+//   * THE MEDIA PLAYER'S, with the soundtrack: BACK, PLAY / PAUSE and FWD
+//     at the left, a deck's order (the render player's transport seats, PLAY
+//     its key and its legend — score_viewer_play_face — in the second as the
+//     player's stands between its two skips), THE SKIPS (architect
+//     2026-10-27): BACK and FWD skip the soundtrack 3 s back / forward at its
+//     own rate, their Shift-press or long press 10 s (score_viewer_skip_
+//     landing, the one landing the act and the face ask) — each a seek_to,
+//     Home / End's class; THE SCRUB (the render player's, its domain
 //     the viewing range's FRAMES: the thumb at the cursor, a press off the
 //     thumb jumping it, a drag CARRYING it and seeking nothing, the page
 //     holding the frame under it SHOWN LIVE, display only — architect
@@ -57,7 +62,8 @@
 //     verbatim: the elapsed time within the range and the range's length,
 //     unmoved under a held scrub), then RESET, START, END and CLOSE flush
 //     right. Space plays and pauses, Home / End seek the range's first /
-//     last frame, Left / Right do nothing (no pages).
+//     last frame, Left / Right are BACK / FWD and Shift+Left / Shift+Right
+//     their 10 s forms (architect 2026-10-27).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
 //     pages.txt — always so on the PDF road, tools/score_extract.py's PDF
 //     input, 2026-10-27): PREV and NEXT (the render player's
@@ -236,6 +242,7 @@
 #include "viewport.h"
 
 #include <cstdint>
+#include <optional>
 
 // THE VIEWING RANGE, RESOLVED: page INDICES into `score->pages`, `first` to
 // `last` inclusive, never crossing. A stored 0 is the edge (the first page,
@@ -337,8 +344,74 @@ inline PlayerPlayFace score_viewer_play_face(const AppState& a) {
                : PlayerPlayFace::Play;
 }
 
+// THE SEEK'S LANDING — where GuiScoreViewer::seek_to(frame) leaves the
+// cursor, or nullopt where it refuses (no viewer, no score, no soundtrack;
+// LIVE, a range shorter than two frames): `frame` clamped into the range,
+// and LIVE no further than one short of the range's last frame (the render
+// player's rule, so the natural end takes over). The act and the skips' face
+// read this one body, so the face cannot promise a landing the act refuses.
+inline std::optional<int64_t> score_viewer_seek_landing(const AppState& a,
+                                                        int64_t frame) {
+    if (!a.score_viewer.active || !a.score || !score_viewer_has_soundtrack(a))
+        return std::nullopt;
+    const ScoreFrameRange fr = score_viewer_frame_range(a);
+    const int64_t target = std::clamp(frame, fr.begin, fr.end);
+    if (a.score_viewer.transport != AppState::ScoreViewer::Transport::Live)
+        return target;
+    const int64_t live_target = std::min(target, fr.end - 2);
+    if (live_target < fr.begin) return std::nullopt;
+    return live_target;
+}
+
+// THE SKIPS' TWO STEPS (architect 2026-10-27): a press 3 s, its Shift-press
+// or long press 10 s, in seconds at THE SOUNDTRACK'S OWN RATE
+// (GuiScoreAudio::rate, valid while the soundtrack is present — loaded or
+// loading, the media face's condition), nothing converted. The tooltips
+// (score_viewer_button_hint, score_viewer_button_shift_hint) spell the two.
+inline constexpr int kScoreSkipSeconds     = 3;
+inline constexpr int kScoreSkipLongSeconds = 10;
+
+// WHERE A SKIP LANDS — `forward` FWD over BACK, `long_form` the 10 s form:
+// the seek's landing (score_viewer_seek_landing) from the cursor
+// (score_viewer_position) plus or minus the step. THE EDGE IS seek_to's
+// CLAMP: within the last step of the range a resting FWD lands on the
+// range's end (the natural end's rest, PLAY there playing the range from its
+// start) and a LIVE one one short of the last frame, the natural end taking
+// over at once; within the first step BACK lands on the range's first frame.
+inline std::optional<int64_t> score_viewer_skip_landing(
+        const AppState& a, const GuiPlayback& playback, bool forward,
+        bool long_form) {
+    if (!a.score_viewer.active || !a.score || !score_viewer_has_soundtrack(a))
+        return std::nullopt;
+    const int64_t step =
+        static_cast<int64_t>(long_form ? kScoreSkipLongSeconds
+                                       : kScoreSkipSeconds) *
+        static_cast<int64_t>(a.score_audio.rate());
+    const int64_t pos = score_viewer_position(a, playback);
+    return score_viewer_seek_landing(a, forward ? pos + step : pos - step);
+}
+
+// WOULD THIS FORM OF THE SKIP MOVE THE CURSOR, in its own direction: a
+// landing past the cursor for FWD, short of it for BACK. The direction is the
+// LIVE arm's term: in the range's last two frames a live FWD's landing (one
+// short of the last frame) lies behind the cursor, which is no forward skip.
+// At rest the clamp is monotone, so "moves" and "moves its way" agree.
+inline bool score_viewer_skip_actionable(const AppState& a,
+                                         const GuiPlayback& playback,
+                                         bool forward, bool long_form) {
+    const std::optional<int64_t> landing =
+        score_viewer_skip_landing(a, playback, forward, long_form);
+    if (!landing) return false;
+    const int64_t pos = score_viewer_position(a, playback);
+    return forward ? *landing > pos : *landing < pos;
+}
+
 // EACH BUTTON'S TRUTHFUL FACE (the roster's rule: a button greys whenever
-// its act would be a no-op): PREV and NEXT at the range's edges; PLAY / PAUSE
+// its act would be a no-op): PREV and NEXT at the range's edges; BACK and FWD
+// where NEITHER form would move the cursor (the roster skips' twin rule,
+// playhead_end_jump_actionable asked of both forms) — BACK at the range's
+// first frame, FWD at its end (LIVE, its last two frames) — and with no
+// soundtrack, Home / End's own refusals (seek_to's); PLAY / PAUSE
 // until the soundtrack is loaded, on a device that never came up
 // (GuiPlayback::device_absent, the render player's own term: a press reopens
 // one that went away), and while the engine is not yet the viewer's under a
@@ -355,6 +428,12 @@ inline bool score_viewer_button_enabled(const AppState& a,
     switch (act) {
         case Act::PrevPage: return p > r.first;
         case Act::NextPage: return p < r.last;
+        case Act::SkipBack:
+        case Act::SkipForward: {
+            const bool forward = act == Act::SkipForward;
+            return score_viewer_skip_actionable(a, playback, forward, false) ||
+                   score_viewer_skip_actionable(a, playback, forward, true);
+        }
         case Act::PlayPause:
             if (!a.score_audio.ready() || playback.device_absent()) return false;
             return a.score_viewer.transport !=
@@ -376,11 +455,15 @@ inline bool score_viewer_button_enabled(const AppState& a,
 // THE KEYS' PRINTED LEGENDS (the hi-fi skin's, in capitals under the key).
 // PLAY / PAUSE's is the render player's Play key's, by its face
 // (render_player_button_legend, paint_handler.cpp, which the painter asks).
+// The skips print BACK and FWD (architect 2026-10-27), one print for both
+// forms, as the roster's START / END do.
 inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
     using Act = AppState::ScoreButtonAct;
     switch (act) {
         case Act::PrevPage:  return "PREV";
         case Act::NextPage:  return "NEXT";
+        case Act::SkipBack:    return "BACK";
+        case Act::SkipForward: return "FWD";
         case Act::PlayPause: return "PLAY";
         case Act::Reset:     return "RESET";
         case Act::SetStart:  return "START";
@@ -393,13 +476,17 @@ inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
 
 // THE TOOLTIPS: the act's name, Title Case, and the key it binds in the
 // roster's and the player's own form (render_player_button_hint); PLAY /
-// PAUSE names its face as the player's does; the range keys bind none.
+// PAUSE names its face as the player's does; the skips name their 3 s
+// step and the bare arrow, their 10 s form the modifier line's
+// (score_viewer_button_shift_hint); the range keys bind none.
 inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
                                             PlayerPlayFace face) {
     using Act = AppState::ScoreButtonAct;
     switch (act) {
         case Act::PrevPage: return "Previous Page (Left)";
         case Act::NextPage: return "Next Page (Right)";
+        case Act::SkipBack:    return "Skip Back 3 s (Left)";
+        case Act::SkipForward: return "Skip Forward 3 s (Right)";
         case Act::PlayPause:
             switch (face) {
                 case PlayerPlayFace::Pause:      return "Pause (Space)";
@@ -412,6 +499,39 @@ inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
         case Act::SetEnd:   return "Set as End";
         case Act::Close:    return "Close (Esc)";
         case Act::None:     break;
+    }
+    return "";
+}
+
+// THE MODIFIER LINE (the roster's form, "Press Shift ..."; the player's
+// render_player_button_shift_hint): non-empty on exactly the buttons
+// score_button_shift_admits names (app_state.h) — the two skips, "Press
+// Shift to skip 10 s." — and DROPPING WHERE THE TWO FORMS LAND ON ONE FRAME,
+// the roster skips' rule (redesign_button_tooltip's stateful overload): the
+// range's last 3 s for FWD, its first 3 s for BACK, and a greyed skip. The
+// first line never forks.
+inline const char* score_viewer_button_shift_hint(
+        const AppState& a, const GuiPlayback& playback,
+        AppState::ScoreButtonAct act) {
+    using Act = AppState::ScoreButtonAct;
+    switch (act) {
+        case Act::SkipBack:
+        case Act::SkipForward: {
+            const bool forward = act == Act::SkipForward;
+            if (score_viewer_skip_landing(a, playback, forward, false) ==
+                score_viewer_skip_landing(a, playback, forward, true))
+                return "";
+            return "Press Shift to skip 10 s.";
+        }
+        case Act::PrevPage:
+        case Act::NextPage:
+        case Act::PlayPause:
+        case Act::Reset:
+        case Act::SetStart:
+        case Act::SetEnd:
+        case Act::Close:
+        case Act::None:
+            break;
     }
     return "";
 }
@@ -627,11 +747,22 @@ struct GuiScoreViewer {
     // from there (a target in the range's last frame stops one short of it,
     // the render player's rule, so the natural end takes over), at rest the
     // cursor moves; the page follows either way; the position written
-    // through. Its callers are Home / End and the scrub's lift where the
-    // press found the soundtrack paused (architect 2026-10-26, "no
-    // scrubbing": the drag carries the thumb and seeks nothing; a lift that
-    // plays on is play_from's).
+    // through. The landing is score_viewer_seek_landing's, the one body the
+    // skips' face asks too. Its callers are Home / End, the skips and the
+    // scrub's lift where the press found the soundtrack paused (architect
+    // 2026-10-26, "no scrubbing": the drag carries the thumb and seeks
+    // nothing; a lift that plays on is play_from's).
     void seek_to(int64_t frame);
+    // THE SKIPS (architect 2026-10-27) — BACK / FWD and Left / Right, their
+    // Shift-press, long press and Shift+Left / Shift+Right `long_form`: the
+    // cursor 3 s back (`forward` false) or forward, 10 s in the long form, at
+    // the soundtrack's own rate, through seek_to — Home / End's class, so
+    // LIVE plays on from the landing and at rest the cursor moves, the page
+    // following and the position written. Refused, silent, where this form
+    // would not move the cursor its way (score_viewer_skip_actionable, the
+    // face's own term); the end rule, the held scrub's pause and the natural
+    // end's rest are untouched.
+    void skip(bool forward, bool long_form);
 
     // -- The range ------------------------------------------------------------
     // START / END: the range's first / last bound set to the shown page —

@@ -2744,8 +2744,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE SCORE VIEWER'S ROW, the same comparator (2026-10-26 night):
         // its PLAY key's face (score_viewer_button_enabled) moves with the
-        // soundtrack's load landing, the device and a render run ending, none
-        // of which damages the row.
+        // soundtrack's load landing, the device and a render run ending, and
+        // its skips' faces (2026-10-27) with the playing cursor, whose frames
+        // damage the clock and the scrub alone — none of which damages the
+        // keys (the painter carries their bits as painted).
         if (app.score_viewer.active && app.modal_dialog.valid &&
             app.modal_dialog.owner == AppState::ModalDialogOwner::Score &&
             app.modal_dialog.session == app.score_viewer.session) {

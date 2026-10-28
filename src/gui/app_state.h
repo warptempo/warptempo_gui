@@ -6112,11 +6112,15 @@ struct AppState {
     // THE SCORE VIEWER'S BUTTONS (architect 2026-10-26), its dispatch
     // vocabulary beside the player's, in the row's order on its two faces:
     // the page road's PREV / NEXT pair at the left, or the media player's
-    // PLAY / PAUSE key (2026-10-26 night); then RESET, START, END and CLOSE
-    // flush right (score_viewer.h owns each act; dispatch_modal_dialog_button
+    // BACK, PLAY / PAUSE and FWD (2026-10-26 night; THE SKIPS, architect
+    // 2026-10-27: 3 s back / forward, their Shift-press or long press 10 s —
+    // GuiScoreViewer::skip, the row's shift-admitting pair,
+    // score_button_shift_admits); then RESET, START, END and CLOSE flush
+    // right (score_viewer.h owns each act; dispatch_modal_dialog_button
     // reads it under the Score owner).
     enum class ScoreButtonAct {
-        None, PrevPage, NextPage, PlayPause, Reset, SetStart, SetEnd, Close
+        None, PrevPage, NextPage, SkipBack, PlayPause, SkipForward, Reset,
+        SetStart, SetEnd, Close
     };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
@@ -6133,7 +6137,9 @@ struct AppState {
         // arm and the painter's disabled rung all read it, and the dispatch
         // re-asks no live predicate — a face painted live dispatches and its
         // act answers for itself. The per-tick comparator (main.cpp) holds
-        // it against the live predicate and repaints the row on drift. Every
+        // it against the live predicate and repaints the row on drift. THE
+        // SCORE VIEWER'S ROW publishes it the same way, from
+        // score_viewer_button_enabled, under the same comparator. Every
         // other owner's builder leaves it true — a prompt's, a picker's and
         // an editor's buttons are always live while their dialog stands.
         bool        enabled      = true;
@@ -6145,9 +6151,11 @@ struct AppState {
         GuiKey      access_key   = 0;
         // THE MODIFIER LINE, empty on every button that admits no modified
         // press — the roster tooltip's `line2` over this surface (2026-08-28).
-        // Its ONE producer is the player's two skips, and it says the
-        // same thing their shift-click and their long press do; the painter
-        // shows a second line exactly when this is non-empty.
+        // Its producers are the player's shift-admitting buttons
+        // (render_player_button_shift_hint) and the score viewer's two skips
+        // (score_viewer_button_shift_hint), and it says the same thing their
+        // shift-click and their long press do; the painter shows a second
+        // line exactly when this is non-empty.
         std::string tooltip2;
     };
     struct ModalDialogGeometry {
@@ -9615,6 +9623,33 @@ static_assert(
     "the player's shift-admitting set is the two skips and Delete, and the "
     "hint's second line exists on exactly them (dropping only where the "
     "shifted press would reach what the plain one reaches)");
+
+// THE SCORE VIEWER ROW'S SHIFT-ADMITTING BUTTONS (architect 2026-10-27),
+// player_button_shift_admits one owner over and for its reason: THE TWO
+// SKIPS, whose shift-click on plastic and long press on glass (the hold
+// delay, chrome_shift_hold_ms) skip 10 s for the plain press's 3 s — the
+// keys' Shift+Left / Shift+Right. Every other key on the row keeps its plain
+// act however long it is held. THE SAME THREE READERS as the player's: the
+// press claim (arm_modal_dialog_press: a shift press on a non-admitting key
+// is a consumed nothing), the lift's dispatch (dispatch_modal_dialog_button's
+// score arm) and the modifier line (score_viewer_button_shift_hint,
+// score_viewer.h, whose arms are exactly these).
+inline constexpr bool score_button_shift_admits(AppState::ScoreButtonAct act) {
+    return act == AppState::ScoreButtonAct::SkipBack ||
+           act == AppState::ScoreButtonAct::SkipForward;
+}
+static_assert(
+    score_button_shift_admits(AppState::ScoreButtonAct::SkipBack) &&
+    score_button_shift_admits(AppState::ScoreButtonAct::SkipForward) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::PrevPage) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::NextPage) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::PlayPause) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::Reset) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::SetStart) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::SetEnd) &&
+    !score_button_shift_admits(AppState::ScoreButtonAct::Close),
+    "the score viewer's shift-admitting set is the two skips, and the "
+    "hint's second line exists on exactly them");
 
 // THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
 // the highlight is a tmp/ batch cell carrying a recipe. THE ONE KIND LEFT TO

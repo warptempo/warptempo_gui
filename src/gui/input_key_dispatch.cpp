@@ -4583,13 +4583,16 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // close being acts and the button press being the modal's own
     // press-and-hold. A prompt over the picker is the prompt's own answer.
     if (app.score_viewer.active && !app.prompt.active) {
-        // THE SCORE VIEWER (2026-10-26): the ring's walk and, on the page
-        // road, the page step repeat, a held arrow turning pages; Home / End
+        // THE SCORE VIEWER (2026-10-26): the ring's walk and the arrows'
+        // steps repeat — on the page road the page step, a held arrow
+        // turning pages; under the soundtrack the skips in both forms
+        // (2026-10-27), a held arrow walking 3 s or, shifted, 10 s a repeat
+        // to the range's wall, the render player's held seek — Home / End
         // land once, Space is one-shot (the soundtrack's toggle).
         if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
-        return !score_viewer_has_soundtrack(app) && !mods.ctrl &&
-               !mods.shift && !mods.alt &&
-               (key == GuiKeys::Left || key == GuiKeys::Right);
+        if (mods.ctrl || mods.alt) return false;
+        if (key != GuiKeys::Left && key != GuiKeys::Right) return false;
+        return score_viewer_has_soundtrack(app) || !mods.shift;
     }
     if (app.picker.active && !app.prompt.active) {
         if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
@@ -6563,7 +6566,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     const bool list_up = !prompt_up &&
                          (app.render_player.active || app.picker.active);
     // THE SCORE VIEWER'S ARROWS ARE ITS ROUTER'S (2026-10-26), whatever the
-    // focus — its pages on the page road, nothing under the soundtrack — the
+    // focus — its pages on the page road, the skips under the soundtrack — the
     // list owners' answer below, with no list in its ring.
     const bool pages_up = !prompt_up && app.score_viewer.active;
     const bool on_list = list_up && app.folder_overlay.list_focused;
@@ -8516,19 +8519,31 @@ bool GuiInputHandler::route_score_viewer_key(GuiKey key, GuiInputState mods) {
 
     // THE RING: Tab / Shift+Tab walk the controls row's keys, Enter and Space
     // press a ring-focused one (the modal's own rule; Left / Right are the
-    // pages' whatever the focus, the list owners' answer at the ring router).
+    // pages' or the skips' whatever the focus, the list owners' answer at the
+    // ring router).
     if (route_modal_dialog_focus_key(key, mods)) return true;
+
+    const bool media = score_viewer_has_soundtrack(app);
+
+    // THE SKIPS' 10 s FORM (architect 2026-10-27): Shift+Left / Shift+Right
+    // on the media face, the BACK / FWD keys' shift-click and long press;
+    // ahead of the blanket below, which consumes every other shifted
+    // spelling — on the page road these two among them, as before.
+    if (shift && !ctrl && !alt && media &&
+        (key == GuiKeys::Left || key == GuiKeys::Right)) {
+        score_viewer->skip(key == GuiKeys::Right, /*long_form=*/true);
+        return true;
+    }
 
     // EVERY MODIFIED CHORD: CONSUMED, SILENTLY (the unbound-keys ruling) —
     // Ctrl+Tab among them, so the active tab is the viewer's for its life.
     if (!bare) return true;
 
     // THE TWO FACES' KEYS (score_viewer.h's head): under the soundtrack Space
-    // plays and pauses and Left / Right have no act (no pages); on the page
-    // road Left / Right are PREV / NEXT and Space has none. Home / End are
-    // the range's first / last page there, its first / last frame here
-    // (first_page / last_page fork on the face).
-    const bool media = score_viewer_has_soundtrack(app);
+    // plays and pauses and Left / Right are the skips, BACK / FWD's 3 s; on
+    // the page road Left / Right are PREV / NEXT and Space has none. Home /
+    // End are the range's first / last page there, its first / last frame
+    // here (first_page / last_page fork on the face).
     switch (key) {
         case GuiKeys::Escape:
         case GuiKeys::M:
@@ -8538,10 +8553,12 @@ bool GuiInputHandler::route_score_viewer_key(GuiKey key, GuiInputState mods) {
             if (media && !mods.synthesized_repeat) score_viewer->toggle_play();
             return true;
         case GuiKeys::Left:
-            if (!media) score_viewer->step(-1);
+            if (media) score_viewer->skip(/*forward=*/false, false);
+            else       score_viewer->step(-1);
             return true;
         case GuiKeys::Right:
-            if (!media) score_viewer->step(+1);
+            if (media) score_viewer->skip(/*forward=*/true, false);
+            else       score_viewer->step(+1);
             return true;
         case GuiKeys::Home:
             score_viewer->first_page();

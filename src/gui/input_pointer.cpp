@@ -3778,7 +3778,8 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
 // veil consumes it either way).
 //
 // `shift` IS THE PRESS-TIME MODIFIER (2026-08-28), and only the player's claim
-// ever passes true — every other claim admits a plain press alone. A SHIFT
+// and the score viewer's (2026-10-27, its skips) ever pass true — every other
+// claim admits a plain press alone. A SHIFT
 // PRESS ON A BUTTON WITH NO SHIFTED TWIN IS A CONSUMED NOTHING, never the
 // unshifted act: the roster's own rule (arm_redesign_press), and a silent
 // unshifted act would be a lie about what the modifier did. THE CLOCK IS
@@ -3794,14 +3795,15 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // CLAIM READS THE PAINTED FACE (architect 2026-09-24, strictly
     // as-painted), the per-tick comparator (main.cpp) keeping it honest, and
     // a face painted live dispatches, its act answering for itself. THE
-    // PLAYER'S NINE ARE THE ONLY
-    // BUTTONS THAT PUBLISH IT (re-greped 2026-09-30), so this line is inert
-    // off every other owner's row.
-    if (!app.modal_dialog.buttons[static_cast<size_t>(hit)].enabled)
-        return true;
-    if (shift &&
-        !player_button_shift_admits(
-            app.modal_dialog.buttons[static_cast<size_t>(hit)].player_act))
+    // PLAYER'S AND THE SCORE VIEWER'S KEYS ARE THE ONLY BUTTONS THAT PUBLISH
+    // IT (re-grepped 2026-10-27), so this line is inert off those two rows.
+    // THE SHIFT ADMISSION is the row's own: a button carries one owner's act
+    // and None for the other, which admits nothing.
+    const AppState::ModalDialogButton& hb =
+        app.modal_dialog.buttons[static_cast<size_t>(hit)];
+    if (!hb.enabled) return true;
+    if (shift && !player_button_shift_admits(hb.player_act) &&
+        !score_button_shift_admits(hb.score_act))
         return true;
     if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
         app.modal_dialog_pressed = hit;
@@ -4081,12 +4083,21 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     }
     // THE SCORE VIEWER'S ROW (2026-10-26): the published face decides, as
     // the player's does — a key painted dead is consumed — and each act is
-    // the viewer's own (score_viewer.h).
+    // the viewer's own (score_viewer.h). THE SKIPS ARE THE ROW'S
+    // SHIFT-ADMITTING PAIR (architect 2026-10-27, score_button_shift_admits):
+    // `shifted` — a Shift+click, or a press held past the hold delay — is
+    // the 10 s form; every other arm ignores it.
     if (app.score_viewer.active) {
         if (!b.enabled || score_viewer == nullptr) return true;
         switch (b.score_act) {
             case AppState::ScoreButtonAct::PrevPage: score_viewer->step(-1);     return true;
+            case AppState::ScoreButtonAct::SkipBack:
+                score_viewer->skip(/*forward=*/false, shifted);
+                return true;
             case AppState::ScoreButtonAct::PlayPause: score_viewer->toggle_play(); return true;
+            case AppState::ScoreButtonAct::SkipForward:
+                score_viewer->skip(/*forward=*/true, shifted);
+                return true;
             case AppState::ScoreButtonAct::NextPage: score_viewer->step(+1);     return true;
             case AppState::ScoreButtonAct::Reset:    score_viewer->raise_reset(); return true;
             case AppState::ScoreButtonAct::SetStart: score_viewer->set_start();   return true;
@@ -5726,9 +5737,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
 
     // THE SCORE VIEWER'S VEIL (2026-10-26), the player's: the band's press
-    // (its one live key the SCORE key), the page scrub's, a plain press on a
-    // row key; every other press — the page itself among them, which takes
-    // no gesture — is consumed.
+    // (its one live key the SCORE key), the page scrub's, a plain or SHIFT
+    // press on a row key (architect 2026-10-27: the skips' shift-click, the
+    // arm body applying the admission, score_button_shift_admits); every
+    // other press — the page itself among them, which takes no gesture — is
+    // consumed.
     if (app.score_viewer.active) {
         if (button != GuiMouseButton::Left) return;
         if (rect_contains(top_icon_row_area(app), x, y)) {
@@ -5736,9 +5749,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
         if (claim_score_scrub_press(x, y, mods)) return;
-        if (!mods.ctrl && !mods.shift && !mods.alt &&
-            modal_dialog_stash_current()) {
-            arm_modal_dialog_press(x, y);
+        if (!mods.ctrl && !mods.alt && modal_dialog_stash_current()) {
+            arm_modal_dialog_press(x, y, mods.shift);
         }
         return;
     }
@@ -7256,7 +7268,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 return;
             }
             if (finish_score_scrub_release()) return;
-            dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
+            // The shifted-twin verdict before the take, as the player's.
+            const bool shifted = modal_dialog_press_shifted();
+            dispatch_modal_dialog_button(take_modal_dialog_release(x, y),
+                                         shifted);
         }
         return;
     }
