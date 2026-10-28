@@ -196,12 +196,20 @@ struct GuiCanvasPrimitive {
 //     ones aside, in THE FEED'S ORDER (the shown page, its neighbors in the
 //     cache's order, then the rest of the range), each named by its serial
 //     (GuiScoreGrayPage::serial, unique for the process's life) with its
-//     size and its shared, immutable bytes — no copy.
+//     size and its shared, immutable bytes — no copy — UNTIL THE TEXTURE IS
+//     HELD (architect 2026-10-27, the memory fix): once the report lists a
+//     serial the viewer's feed lets the store's bytes go and this record's
+//     with them (GuiScoreViewer::settle_gray_on_gpu, which writes the
+//     request's bytes in the tick), so a held page's record carries no
+//     bytes and the reconciliation, which uploads only an unheld page,
+//     never needs them.
 //   * THE REPORT — written by GuiGlCanvas::present_frame: the serials it
 //     holds as textures, ascending, and, at each present that drew the page,
 //     the session it drew for and the page it put on screen (-1 the field
 //     ground alone). THE TEXTURES MIRROR THE WANTED LIST, so the store's
-//     scope (the range, the box, the score, the project) is theirs; the
+//     scope (the range, the box, the score, the project) is theirs, and a
+//     texture that goes while its released store entry stands takes the
+//     entry with it at the viewer's next feed (settle_gray_on_gpu); the
 //     page's draw is THE SHOWN PAGE'S TEXTURE WHERE IT IS HELD, ELSE THE
 //     LAST PAINTED PAGE'S, ELSE THE FIELD GROUND — and the field alone for a
 //     shown page whose decode failed (it is then the page on screen).

@@ -2415,6 +2415,10 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // motion to the frame boundary anyway (one delivery per logical
             // frame, whatever the sensor rate), so replaying them would cost
             // work to produce the same single delivery.
+            // NOR IS ANY POSITION PREDICTED (architect 2026-10-27): what is
+            // delivered is the pen's or the finger's last reported position,
+            // never an extrapolation ahead of it (Android's MotionPredictor),
+            // so the playhead and both scrub thumbs are carried there.
             for (size_t i = 0; i < count; ++i) {
                 input_.touch_motion(AMotionEvent_getPointerId(event, i),
                                     px(i), py(i));

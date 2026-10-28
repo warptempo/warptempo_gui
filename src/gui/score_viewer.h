@@ -172,7 +172,17 @@
 //     box, 310 MB for all of K.550, about 80 MB for a delineated movement):
 //     each page of the range at the fit box, one byte a pixel, keyed by page
 //     and box and not by the conversion bit (the bytes are the authored sRGB
-//     page).
+//     page). UNDER THE GL CANVAS ITS RAM BYTES LIVE ONLY UNTIL THE PAGE'S
+//     TEXTURE IS HELD (architect 2026-10-27, the memory fix): once the GL
+//     canvas's report lists an entry's serial, the entry lets its bytes go
+//     and stands on, released (GuiScoreGrayPage; settle_gray_on_gpu), so the
+//     RAM price is the pages decoded and not yet uploaded — while the page
+//     stands about one upload's worth, the uploads (one a present) outrunning
+//     the decoder; the pages decoded while it does not stand, which nothing
+//     uploads, until it stands again — and the GPU's the range's. An entry
+//     whose texture goes leaves the store with it, and the feed decodes that
+//     page again. The cpu canvas's store keeps its bytes (the cache's
+//     expansions read them).
 //     From the open, and whenever it lacks a page of the range, the feed
 //     queues the missing pages AFTER THE CACHE'S WANTS, in the likely order
 //     reaching the whole range. THE RANGE SCOPES IT ("start and end reset
@@ -210,8 +220,8 @@
 // THE PAGE THE LAST PRESENT PUT ON SCREEN, read off the GL canvas's report at
 // every tick (take_gpu_page_report) — so the owed position write's gate
 // (painted_page == page) waits for the page's own swap; while the store holds
-// a page the GPU does not, the tick asks a frame (the uploads go one a
-// present).
+// the bytes of a page the GPU does not, the tick asks a frame (the uploads go
+// one a present).
 
 // Every job prints its timing line and the store's completion one more
 // (score_page_worker.h's THE TIMING LINE, note_gray_complete).
@@ -494,9 +504,10 @@ inline bool score_viewer_page_stands(const AppState& a) {
 // the page stands, the session, the field word, the shown page and the last
 // painted page by their store entries' serials, and the store's pages at the
 // interior's box in THE FEED'S ORDER (feed_decoder's) as the wanted
-// textures — none while the store's box is not the interior's (a resize the
-// feed has not caught up with), so the textures go with the store. Never
-// called on the cpu canvas.
+// textures, a released entry's with no bytes (it is held:
+// settle_gray_on_gpu) — none while the store's box is not the interior's (a
+// resize the feed has not caught up with), so the textures go with the
+// store. Never called on the cpu canvas.
 struct GuiCanvasPage;
 void score_viewer_publish_gpu_page(const AppState& app, GuiCanvasPage& out);
 
@@ -670,17 +681,18 @@ private:
     // THE GL CANVAS'S PAGE REPORT (GuiCanvasPage, canvas_sink.h; the GL build
     // alone): painted_page set to the page the last present put on screen
     // for this session, and, while the page stands, a frame asked
-    // (request_frame) while the store at the interior's box holds a page the
-    // GPU does not — each present uploads at most one, so the asks run until
-    // the range is resident.
+    // (request_frame) while the store at the interior's box holds the bytes
+    // of a page the GPU does not — each present uploads at most one, so the
+    // asks run until the range is resident.
     void take_gpu_page_report();
     // ONE FRAME ASKED with no CPU pixel to repaint: one device px of the
     // interior, the GL canvas's hole while the page stands (the CPU clears it
     // and the upload leaves it out), so the frame costs the CPU one clipped
     // pass and the GPU its swap.
     void request_frame();
-    // The gray store at the interior's box (dropped whole at a change) and
-    // inside the range (scope_gray_to_range), the cache trimmed to the shown
+    // The gray store at the interior's box (dropped whole at a change),
+    // inside the range (scope_gray_to_range) and, under the GL canvas,
+    // settled against the GPU (settle_gray_on_gpu), the cache trimmed to the shown
     // page's neighborhood at the current box and conversion (the last painted
     // page kept while the shown one is absent), and the decoder handed the
     // work: the cache's wants in order, then the store's.
@@ -689,6 +701,14 @@ private:
     // stands dropped. Its callers are the feed, every time, and the drain
     // ahead of its completion measure (the head's THE GRAY STORE).
     void scope_gray_to_range();
+    // THE GRAY STORE AGAINST THE GPU (the GL build alone; the head's TWO
+    // HOLDINGS, architect 2026-10-27, the memory fix), read off the GL
+    // canvas's report: an entry whose serial is held lets go of its RAM
+    // bytes — the store's copy and the request's (GuiCanvasPage::want) —
+    // and stays, RELEASED (GuiScoreGrayPage); a released entry whose texture
+    // is no longer held leaves the store, so the feed decodes it again from
+    // the file. Its caller is the feed, every time, after the range scope.
+    void settle_gray_on_gpu();
     // The gray store measured against the range: short, the asking time
     // stamped where unstamped; whole with a stamp, the completion's timing
     // line printed and the stamp cleared.

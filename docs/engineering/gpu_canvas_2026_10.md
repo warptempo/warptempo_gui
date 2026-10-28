@@ -307,6 +307,24 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
     10.8, 90th percentile 12.3), the 311 that did not 11.3 ms — the
     page-change frame no longer costs a frame.
 
+    THE MEMORY RULE (architect 2026-10-27, the memory fix): a page is held
+    ONCE, not twice. Under the GL canvas the gray store's RAM bytes live
+    only until the page's texture is held: once the report lists a store
+    entry's serial, the viewer's feed lets the bytes go — the store's copy
+    and the request's, their last two owners, no job carrying them under
+    this canvas — and the entry stands on, RELEASED (still the page had,
+    so nothing is asked twice and the store's completeness, its scope and
+    `painted_page` are unchanged), its request record carrying no bytes.
+    The RAM price is the pages decoded and not yet uploaded, the GPU's the
+    range's. An entry whose texture goes leaves the store with it — the
+    roads are the interior leaving the store's box and coming back with no
+    feed clearing the store in between: the viewer closed, or an interior
+    too small to feed (the feed's empty-box return) — and the feed decodes
+    that page again from the file. The cpu canvas keeps
+    its bytes: the cache's expansions read them. Owners:
+    `GuiScoreGrayPage` (`score_page_worker.h`),
+    `GuiScoreViewer::settle_gray_on_gpu` (`score_viewer.cpp`).
+
 ## 4. The milestones
 
 1. P4, then the EGL surface with the WHOLE backbuffer uploaded as one texture

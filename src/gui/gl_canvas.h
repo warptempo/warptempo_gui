@@ -127,7 +127,11 @@ private:
     // burst and a scrub over a resident range uploads nothing. The list is
     // the gray store's, so the textures go with the store's pages — the
     // range, the box, the score folder, the project — and survive the
-    // viewer's close as the store does. No upload runs while the page does
+    // viewer's close as the store does. A HELD TEXTURE IS THE PAGE'S ONE
+    // PICTURE (architect 2026-10-27, the memory fix): the store lets its RAM
+    // bytes go once the report lists the serial, and the request then
+    // carries the page with no bytes, so an upload's source lives only until
+    // the upload. No upload runs while the page does
     // not stand (the waveform's frames never pay one). forget() forgets the
     // names; the context's destruction frees the textures.
     struct PageTexture {

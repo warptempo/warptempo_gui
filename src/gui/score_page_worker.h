@@ -97,13 +97,24 @@ struct GuiScorePageKey {
 // page index and the fit box it was made for — NOT the conversion bit: the
 // bytes are the page as authored, sRGB, the window's form being the cache's — and
 // its fit-size pixels, one byte each, row-major, w x h, shared (immutable
-// once made) so a job carries them to the worker without a copy. No bytes is
-// a decode that failed under this page and box, never asked for again while
-// they stand. `serial` NAMES THE BYTES FOR THE GL CANVAS (2026-10-27, the GPU
-// page: GuiCanvasPage, canvas_sink.h): minted when the entry enters the store
+// once made) so a job carries them to the worker without a copy. `serial`
+// NAMES THE BYTES FOR THE GL CANVAS (2026-10-27, the GPU page: GuiCanvasPage,
+// canvas_sink.h): minted when the entry enters the store
 // (GuiScoreViewer::drain_decoder) from a counter the process never resets, so
 // one serial is one immutable buffer for the process's life and the texture
 // made from it is never stale; 0 before the store takes it.
+// THREE STATES, by `bytes` and `released`:
+//   * HELD IN RAM — bytes, not released: the cpu canvas's entries always, the
+//     GL canvas's until the page's texture is held;
+//   * RELEASED — no bytes, `released` (THE GL CANVAS ALONE, architect
+//     2026-10-27, the memory fix): the GL canvas's report listed the serial as
+//     held, so the RAM copy, which then has no reader, was let go
+//     (GuiScoreViewer::settle_gray_on_gpu). The entry still stands — the page
+//     is had, w x h its size — and the texture is its picture; an entry whose
+//     texture goes leaves the store with it, so a released entry is always a
+//     held texture;
+//   * FAILED — no bytes, not released: a decode that failed under this page
+//     and box, never asked for again while they stand.
 struct GuiScoreGrayPage {
     int page  = -1;
     int box_w = 0;
@@ -111,8 +122,9 @@ struct GuiScoreGrayPage {
     int w     = 0;
     int h     = 0;
     std::shared_ptr<const std::vector<uint8_t>> bytes;
-    uint64_t serial = 0;
-    bool failed() const { return bytes == nullptr; }
+    uint64_t serial   = 0;
+    bool     released = false;
+    bool failed() const { return bytes == nullptr && !released; }
 };
 
 // WHAT A JOB DOES (the head's THREE KINDS), its identity in the queue and in

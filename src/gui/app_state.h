@@ -9108,7 +9108,9 @@ struct AppState {
     //              every page of the viewing range at `gray_box_w` x
     //              `gray_box_h`, one byte a pixel, shared with the jobs that
     //              expand it and, under the GL canvas, with the page
-    //              textures' uploads (GuiCanvasPage::want, canvas_sink.h),
+    //              textures' uploads (GuiCanvasPage::want, canvas_sink.h)
+    //              until the texture is held, the RAM bytes then released
+    //              (GuiScoreGrayPage; architect 2026-10-27, the memory fix),
     //              each entry named by its serial — kept across the close,
     //              dropped outside a new range at once, whole at a box
     //              change, a score folder change and with the AppState;

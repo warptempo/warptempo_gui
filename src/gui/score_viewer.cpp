@@ -581,6 +581,39 @@ void GuiScoreViewer::scope_gray_to_range() {
     });
 }
 
+void GuiScoreViewer::settle_gray_on_gpu() {
+    AppState::ScoreViewer& sv = app.score_viewer;
+    GuiCanvasPage& gp = gui_canvas_frame().page;
+    // THE REPORT'S HELD SERIALS (ascending, GuiGlCanvas::reconcile_pages) are
+    // the textures as the last present left them: a serial leaves the list
+    // only when that present deleted its texture, so a released entry absent
+    // from it has no picture anywhere.
+    const auto held = [&](uint64_t serial) {
+        return std::binary_search(gp.held.begin(), gp.held.end(), serial);
+    };
+    // THE ENTRY AND THE TEXTURE LEAVE TOGETHER (the head's TWO HOLDINGS): a
+    // released entry whose texture went — the request stopped naming it
+    // while the store stood: the interior left the store's box and came
+    // back with no feed clearing the store between, the viewer closed or
+    // the interior empty (the feed's early return) — goes, and the feed
+    // asks its page from the file again.
+    std::erase_if(sv.gray, [&](const GuiScoreGrayPage& g) {
+        return g.released && !held(g.serial);
+    });
+    // THE BYTES GO ONCE THE TEXTURE IS HELD: the store's copy and the
+    // request's, the two owners left (under the GL canvas no job carries the
+    // bytes: the feed asks only file jobs, no expansion), so the buffer is
+    // freed here; the request's next publish carries the entry with no bytes,
+    // which the reconciliation skips, the texture being held.
+    for (GuiScoreGrayPage& g : sv.gray) {
+        if (!g.bytes || !held(g.serial)) continue;
+        for (GuiCanvasPageTexture& w : gp.want)
+            if (w.serial == g.serial) w.bytes.reset();
+        g.bytes.reset();
+        g.released = true;
+    }
+}
+
 void GuiScoreViewer::note_gray_complete() {
     AppState::ScoreViewer& sv = app.score_viewer;
     if (!app.score || sv.gray_box_w <= 0 || sv.gray_box_h <= 0) return;
@@ -597,14 +630,16 @@ void GuiScoreViewer::note_gray_complete() {
     }
     if (!sv.gray_asked_at) return;
     // THE COMPLETION'S TIMING LINE (architect 2026-10-26 ~22:10): the pages
-    // held (a failed decode holds none), their bytes in decimal megabytes,
-    // the seconds since the store found itself short.
+    // held (a failed decode holds none), their bytes in decimal megabytes —
+    // w x h a page, the gray page's size wherever it is held, so a page the
+    // GL canvas's store has released to its texture (settle_gray_on_gpu)
+    // still counts — the seconds since the store found itself short.
     int         held  = 0;
     std::size_t bytes = 0;
     for (const GuiScoreGrayPage& g : sv.gray) {
         if (g.failed()) continue;
         ++held;
-        bytes += g.bytes->size();
+        bytes += static_cast<std::size_t>(g.w) * static_cast<std::size_t>(g.h);
     }
     std::fprintf(stderr,
                  "warptempo_gui: score pages %d held as gray, %.1f MB, %.1f s "
@@ -651,6 +686,7 @@ void GuiScoreViewer::feed_decoder() {
         sv.gray_asked_at.reset();
     }
     scope_gray_to_range();
+    if constexpr (kGuiCanvasDrawList) settle_gray_on_gpu();
     note_gray_complete();
     // THE CACHE'S REACH (the head's THE CACHE): an entry made for another
     // box, under the other conversion, or outside the shown page's reach
@@ -774,8 +810,10 @@ void GuiScoreViewer::take_gpu_page_report() {
     if (!score_viewer_page_stands(app)) return;
     const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
     if (box.w != sv.gray_box_w || box.h != sv.gray_box_h) return;
+    // Only an entry with bytes can be uploaded: a failed one has none, and a
+    // released one is held (settle_gray_on_gpu).
     for (const GuiScoreGrayPage& g : sv.gray) {
-        if (g.failed()) continue;
+        if (!g.bytes) continue;
         if (!std::binary_search(gp.held.begin(), gp.held.end(), g.serial)) {
             request_frame();
             return;
