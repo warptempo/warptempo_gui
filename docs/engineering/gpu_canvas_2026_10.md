@@ -331,6 +331,30 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
     screencaps identical before and after, and against the cpu reference,
     but the clock's minute.
 
+    THE PEN'S LAG (measured 2026-10-27 on d8536170's build): the picture
+    trails the pen by a delay that grows with speed and closes at a stop,
+    the same on the playhead's head and on both score sliders, and THE APP
+    ADDS NOTHING TO IT that an ordinary Android view does not. THE ROAD:
+    injected `input swipe`s (1.4 px/ms, about 14 cm/s, and about 4 px/ms)
+    recorded by adb screenrecord with Android's own pointer-location
+    overlay on — a system window drawn by the framework's renderer, the
+    reference an ordinary app gets — and, frame by frame, its crosshair
+    against the app's object (the playhead's dots, the slider's thumb).
+    THE FIGURES (trail along the motion, median): the playhead's head
+    under the crosshair on 180 of 204 frames, the 21 frames where the two
+    part ±1 px slow; the PDF's thumb at 16, 45 and 98 pages and the video's
+    thumb all within the grab offset (−1 to +8 px, the same at both speeds:
+    an offset, not a delay). Right after an open,
+    while the gray store fills, the app still keeps the crosshair's pace
+    (the overlay itself stutters then), and SurfaceFlinger's timestats over
+    four swipes from the open count 8 of 335 frames over a vsync at 98
+    pages and 3 of 331 at 45, against 1 and 2 once the store is full —
+    nearly all frames 11 ms either way. What remains is the road outside
+    the app: the pen's sampling and the touch driver, input dispatch,
+    SurfaceFlinger's composition and the panel's scanout, which an
+    injected swipe does not see (it starts at dispatch). Pen motion
+    prediction is ruled out (`closed_questions.md`).
+
 ## 4. The milestones
 
 1. P4, then the EGL surface with the WHOLE backbuffer uploaded as one texture
