@@ -53,9 +53,11 @@ struct GuiRenderPlayer;
 // 2026-09-02): each PRESS site (the three launch sites, the car's Play, the
 // rain lamp's lit press) reopens a dead AAudio stream before it asks, and
 // cards only when that reopen failed, JACK answering its unchanged read. The
-// reads: the TWO TICKS keep device_unavailable — the
-// render player's (a dead stream mid-play must pause) and the A/B audition's
-// (a dead stream mid-act must end the act, the fourth site above) — and the
+// reads: the THREE TICKS keep device_unavailable (re-grepped 2026-10-28) — the
+// render player's (a dead stream mid-play must pause), the A/B audition's
+// (a dead stream mid-act must end the act, the fourth site above) and the
+// score viewer's (a dead stream under a playing soundtrack pauses it and
+// cards this sentence) — and the
 // two PLAY-face predicates (space_launch_would_play,
 // ab_audition_preflight_ok) read device_absent, the never-came-up half alone
 // — a face is a read, never a reopen, and it must not grey what the press

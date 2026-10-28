@@ -361,12 +361,17 @@ public:
     // NOTHING ELSE: it reopens nothing, so on Android a dead stream stays dead
     // to it until a LAUNCH PRESS reopens through
     // ensure_device_available_for_play below (or the render player's own play
-    // road reaches play(), which reopens at its head). TWO READERS, re-grepped
-    // 2026-09-04, and both are TICKS: the render player's (a dead stream
-    // mid-play must PAUSE, not advance) and — since that day's ruling — the
-    // A/B audition's, GuiAbAudition::fire_if_due, which ends the whole act
+    // road reaches play(), which reopens at its head, or, under a lit RAIN
+    // lamp, gui_main's poll on stream_dead, the contract two members below,
+    // lamp-only). THREE READERS, re-grepped
+    // 2026-10-28, and all are TICKS: the render player's (a dead stream
+    // mid-play must PAUSE, not advance), the A/B audition's,
+    // GuiAbAudition::fire_if_due, which ends the whole act
     // through the one stop body and cards
-    // kPlaybackDeviceUnavailableCard. Plus the reopen's own post-reopen read
+    // kPlaybackDeviceUnavailableCard, and the score viewer's
+    // (GuiScoreViewer::tick, Live transport), which pauses the held cursor
+    // and cards the same sentence for a dropped soundtrack. Plus the
+    // reopen's own post-reopen read
     // inside ensure_device_available_for_play. A tick is where this belongs
     // and a press is not: a press reopens.
     // The launch FACES do not read it — they read device_absent below, the
@@ -403,12 +408,15 @@ public:
     // identical to device_unavailable there (this backend has no latch).
     // AAudio: `!impl_ || !impl_->device_ready` — the `stream_dead` latch and
     // the null stream are NOT terms, being exactly what the press reopens.
-    // THREE READERS, re-grepped 2026-09-02: the two PLAY-face predicates
-    // space_launch_would_play and ab_audition_preflight_ok, and — since that
-    // day — the render player's modal
+    // FOUR READERS, re-grepped 2026-10-28: the two PLAY-face predicates
+    // space_launch_would_play and ab_audition_preflight_ok, the render
+    // player's modal
     // Play/Pause face, whose arm in render_player_button_enabled takes this
     // as its LEADING term (the player's own road reaches play(), which
-    // reopens, so the latch is exactly what a press repairs there too).
+    // reopens, so the latch is exactly what a press repairs there too), and
+    // the score viewer's Play face, the PlayPause arm of
+    // score_viewer_button_enabled (score_viewer.h), which greys the key when
+    // the soundtrack is not ready or this answers true.
     // Main thread only; a pure read.
     bool    device_absent() const;
 

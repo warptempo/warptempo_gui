@@ -3288,8 +3288,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the act stands and ends the WHOLE act through the one stop body on a
         // card. That stop lowers the scanner flag, so the guard returns and
         // this branch is never reached: the act ends once, with one sentence.
-        // The reopen is still the press's and never the tick's — the
-        // audition's arm reads the latch, as the render player's tick does.
+        // The reopen is still the press's and never the tick's for the MUSIC
+        // (2026-10-28) — the audition's arm reads the latch, as the render
+        // player's tick does; only the lit RAIN lamp's poll on stream_dead
+        // (above, in the loop body) reopens from a tick, for the bed alone,
+        // after every tick here has read the drop.
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);
