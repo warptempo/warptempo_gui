@@ -367,23 +367,28 @@ static void clamp_dims(int& w, int& h) {
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
-// LANE IN BOTH STRIPS is an authored Windows-px length on the GUI-SCALE axis,
-// a composite of its rounded parts (icon_row_h_px(), the
-// canvas column's four — trim_lane_h_px(), ruler_lane_h_px(),
-// marker_lane_h_px(), canvas_top_frame_h_px() — canvas_bottom_frame_h_px()
-// and bottom_row_h_px()). The lanes' rulings are at those accessors'
-// declarations in render.h.
+// LANE IN BOTH STRIPS BUT THE CANVAS'S TWO FRAME ROWS is an authored length on
+// the GUI-SCALE axis, a composite of its rounded parts (icon_row_h_px(), the
+// canvas column's first three — trim_lane_h_px(), ruler_lane_h_px(),
+// marker_lane_h_px() — and bottom_row_h_px()); THE TWO FRAME ROWS
+// (canvas_top_frame_h_px(), canvas_bottom_frame_h_px()) are ONE DEVICE PX at
+// every scale, the hairline itself (hairline_px; 2026-10-28, render.h's
+// canvas-frame block — one scaled W until then). The lanes' rulings are at
+// those accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE TOOLBAR
 // BAND, the logo lane, the case, the
 // strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
 // canvas column's four lanes Cool Edit's view bar,
-// ruler, marker lane and canvas's top frame row, 7 + 12 + 17 + 1 W (the view
-// bar's field 15 device px at 300 %, 2026-10-24; render.h's
-// canvas column lanes), the canvas's BOTTOM FRAME ROW one line
-// (canvas_bottom_frame_h_px), and the UNIFIED BOTTOM ROW the strip again
-// (bottom_row_h_px; the simple layout, 2026-10-22).
+// ruler, marker lane and canvas's top frame row — the view bar a line, its
+// field (15 device px at 300 %, 2026-10-24) and a line, the ruler 11 W of
+// ground and its line, the marker lane 12 W and five label quanta, the frame
+// row one device px (render.h's canvas column lanes): 21 + 36 + 51 + 1 = 109
+// device rows at 300 %, 14 + 24 + 34 + 1 = 73 at 200 % — the canvas's
+// BOTTOM FRAME ROW one device px too (canvas_bottom_frame_h_px), and the
+// UNIFIED BOTTOM ROW the strip again (bottom_row_h_px; the simple layout,
+// 2026-10-22).
 constexpr int kTopLaneCount    = 5;
 constexpr int kBottomLaneCount = 2;
 // THE FIRST PROGRAM LANE, the band, AT THE WINDOW'S TOP on both devices
@@ -2701,7 +2706,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //
             // THE OWNER'S GLYPH DRIFT IS THE SAME TEST ONE TICK EARLIER: two
             // hints read the button's PAINTED glyph rather than live state —
-            // Render's Cancel and Save's Pull — so their live words move only
+            // Render's Cancel and Save's Pull and Check — so their live words
+            // move only
             // once the frame that repaints the button republishes the glyph,
             // and that frame paints the box under the strip's clip, which does
             // not cover it. Damaging the box on the owner's glyph drift puts

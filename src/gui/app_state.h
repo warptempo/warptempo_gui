@@ -5697,7 +5697,8 @@ struct AppState {
         bool    enabled       = true;
         bool    selected      = false;
         // The painted glyph's index (redesign_button_glyph: 0 the table
-        // glyph, 1 the second, 2 Save's third) — the third stashed term.
+        // glyph, 1 the second, 2 and 3 Save's Pull and Check) — the third
+        // stashed term.
         int     glyph         = 0;
         // THE PAINTED LEGEND AND ITS EXTENT (2026-10-25: the legend names
         // the key's next press, redesign_button_legend's stateful overload)
@@ -8319,7 +8320,8 @@ struct AppState {
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
     // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
-    // button's face in the view (its grey, and the Pull glyph while Behind —
+    // button's face in the view (its grey, the Pull glyph while Behind and
+    // the Check glyph where the chord asks again —
     // history_checkpoint_actionable, history_pull_actionable,
     // history_github_recheck_actionable, redesign_button_glyph) and by
     // the publish chord's act in either view (run_publish_chord, since
@@ -13858,9 +13860,12 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // else — row 8 reads `checking...` and then the answer, and the next press
 // acts on it (Behind puts the Pull face up). The face is live on these terms
 // (a face that advertises an act dispatches it) and greys under Checking like
-// every other status in flight. Read by Save's face; the act answers the same
-// status at its own fork (run_publish_chord), below the no-clone and
-// in-flight refusals this restates.
+// every other status in flight, and it names the act (2026-10-28): Save's
+// fourth glyph (redesign_button_glyph), so the key's legend reads CHECK and
+// its hint "Check GitHub (Ctrl+Shift+S)" on exactly these terms. Read by
+// Save's face and its glyph; the act answers the same status at its own fork
+// (run_publish_chord), below the no-clone and in-flight refusals this
+// restates.
 inline bool history_github_recheck_actionable(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
            !a.history_checkpoint_in_flight &&
@@ -16831,7 +16836,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
 // neither of the other two bits and is cleared by an async completion with no
 // top-strip damage, so this term is the one repaint of that edge.
 //
-// EVERY SUBJECT BUT SAVE IS BINARY — two glyphs, one bit (Save's three are
+// EVERY SUBJECT BUT SAVE IS BINARY — two glyphs, one bit (Save's four are
 // the glyph index below).
 //
 // A NAMED LIST WITH A `default`, deliberately, and not the exhaustive shape
@@ -16842,22 +16847,31 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
 // 2026-10-21 and Switch Tab's tab-B glyph 2026-10-12 to 2026-10-18), so the honest
 // default for a new button is "wears its table icon".
 //
-// SAVE HAS THREE GLYPHS SINCE 2026-09-27, the one wider subject, so the
-// answer is a GLYPH INDEX and the stash (RedesignButtonFace::glyph) holds it:
-// 0 is the table glyph, 1 the button's second, 2 its third — Save's Pull
-// alone. redesign_button_glyph_swapped below is the binary reading every
-// two-glyph button's reader asks.
+// SAVE HAS FOUR GLYPHS (the third since 2026-09-27, the fourth since
+// 2026-10-28), the one wider subject, so the answer is a GLYPH INDEX and the
+// stash (RedesignButtonFace::glyph) holds it: 0 is the table glyph, 1 the
+// button's second, 2 and 3 Save's Pull and Check alone.
+// redesign_button_glyph_swapped below is the binary reading every two-glyph
+// button's reader asks.
 inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
     switch (b) {
         // SAVE wears the commit glyph in the history view (where its lift is
         // the publish chord, Ctrl+Shift+S since 2026-10-10) and while a
-        // checkpoint publishes — and the PULL glyph in the view while the
-        // GitHub status reads Behind, where the chord pulls
-        // (history_save_is_pull).
+        // checkpoint publishes — the PULL glyph in the view while the GitHub
+        // status reads Behind, where the chord pulls (history_save_is_pull),
+        // and the CHECK glyph where the chord asks GitHub again
+        // (history_github_recheck_actionable: Offline on either role, and Up
+        // to Date on a mirror; 2026-10-28 — the face read COMMIT there from
+        // 2026-09-28, naming an act its press did not run). The order is the
+        // precedence, the pull's test first, then the recheck, then the
+        // commit; no checkpoint publishing is a term of the first two (the
+        // recheck's predicate carries it), so a publishing checkpoint wears
+        // the commit glyph whatever the status reads.
         case RedesignButton::Save:
             if (!a.history_checkpoint_in_flight && history_save_is_pull(a)) {
                 return 2;
             }
+            if (history_github_recheck_actionable(a)) return 3;
             return (a.history_checkpoint_in_flight || a.history_mode.active)
                        ? 1 : 0;
         // RENDER WEARS THE CANCEL GLYPH WHILE AN EXPLICIT RENDER ACT IS LIVE
@@ -17394,7 +17408,8 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // collapsed-stack sentence and the two skips' "At the trim start/end".
 //
 // WHAT SURVIVES IN THE OVERLOAD IS TWO THINGS AND NO THIRD: (1) a fork that
-// NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit" and "Pull",
+// NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit", "Pull" and
+// "Check GitHub",
 // Render's "Cancel" and "Render Grid Iterations", Play's "Stop", Full Zoom
 // Out's and Center's landing names, the bound-step and hop names and Toggle
 // Inherit's tie names — and (2) the DROPPING of a modifier line where the modified press does
@@ -18056,15 +18071,19 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 //   Play Renders' enabled arm takes for the same modal;
 //   SAVE reads PULL where its press is the pull (redesign_button_glyph's
 //   Save arm at its third glyph — history_save_is_pull, the `h` view with
-//   GitHub behind and no checkpoint publishing) and COMMIT elsewhere in the
-//   `h` view, where its press is the save-and-commit (the tooltip's own
-//   fork on history_mode.active, "Save and Commit") (architect 2026-10-25,
-//   "agree"); SAVE outside the view, a checkpoint publishing there
-//   included (the press is the plain save).
+//   GitHub behind and no checkpoint publishing), CHECK where its press asks
+//   GitHub again (the arm's fourth glyph, 2026-10-28 —
+//   history_github_recheck_actionable, Offline on either role and Up to
+//   Date on a mirror) and COMMIT elsewhere in the `h` view, where its press
+//   is the save-and-commit (the tooltip's own fork on history_mode.active,
+//   "Save and Commit") (architect 2026-10-25, "agree"); SAVE outside the
+//   view, a checkpoint publishing there included (the press is the plain
+//   save).
 // Every word fits its key at 300 / 200 / 150 % (CANCEL and COMMIT about 57
 // of 69, 37 of 46, 28 of 36 device px in the 14-px legend face, the keys
 // icon_case_w_px's sums of separately rounded parts; RECALL about 54 / 35 /
-// 27; PAUSE on the player's key about 46 / 30 / 23), so none is shortened.
+// 27; CHECK about 49 / 33 / 25; PAUSE on the player's key about 46 / 30 /
+// 23), so none is shortened.
 // THE REPAINT: the word rides the face's stash (RedesignButtonFace::legend,
 // held by main.cpp's per-tick comparator beside the glyph) and the painted
 // extent with it (RedesignButtonFace::painted, whose union with the new one
@@ -18084,6 +18103,7 @@ inline const char* redesign_button_legend(const AppState& a,
             break;
         case RedesignButton::Save:
             if (redesign_button_glyph(a, b) == 2) return "PULL";
+            if (redesign_button_glyph(a, b) == 3) return "CHECK";
             if (a.history_mode.active) return "COMMIT";
             break;
         case RedesignButton::IconZoomFitBest:
@@ -18118,9 +18138,10 @@ inline const char* redesign_button_legend(const AppState& a,
 // Render's idle meanings, "the context makes it clear"). WHAT SAYS STATE
 // ON THE ROW NOW is the printed LEGEND (architect 2026-10-25: the word names
 // the act the key's next press runs — the stateful redesign_button_legend
-// overload above, Save's COMMIT / PULL and Render's CANCEL among it); the
-// keys draw no glyph since the hi-fi skin (2026-10-23), so the GLYPH INDEX
-// (Save's commit / pull, Render's cancel — redesign_button_glyph) is the
+// overload above, Save's COMMIT / PULL / CHECK and Render's CANCEL among
+// it); the keys draw no glyph since the hi-fi skin (2026-10-23), so the GLYPH
+// INDEX (Save's commit / pull / check, Render's cancel —
+// redesign_button_glyph) is the
 // stash's index the press, the tooltip and the legend read, never a painted
 // face. The one hint string that still
 // carries the words reads "Save and Commit"; "Render
@@ -18188,7 +18209,8 @@ inline const char* redesign_button_legend(const AppState& a,
 // things, and every fork below is one of them:
 //
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
-//   "Save and Commit (Ctrl+Shift+S)" in the `h` view, Render reads "Cancel" while a
+//   "Save and Commit (Ctrl+Shift+S)" in the `h` view ("Pull" and "Check
+//   GitHub" where the chord pulls or asks again), Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
 //   Play reads "Stop (Space)" while the transport is live, Zoom to Fit reads "Back to
 //   Previous View (0)" while its whole-song state stands and "Back to Working
@@ -18281,13 +18303,16 @@ inline RedesignTooltipText redesign_button_tooltip(
     // the whole class left this overload: a greyed button states no reason,
     // and the two keys' cards, which append the clone-specific clause a
     // constant line could not carry, are where the fact is said.)
-    // THE PULL (architect 2026-09-27): while the button is PAINTED as Pull
-    // (its stashed glyph, the Render hint's as-painted rule) the hint names
-    // that act.
-    if (b == RedesignButton::Save &&
-        a.redesign_buttons[static_cast<size_t>(RedesignButton::Save)].glyph ==
-            2) {
-        return {"Pull (Ctrl+Shift+S)", nullptr};
+    // THE PULL (architect 2026-09-27) AND THE CHECK (2026-10-28): while the
+    // button is PAINTED as Pull or as Check (its stashed glyph, the Render
+    // hint's as-painted rule) the hint names that act — the check being the
+    // publish chord's ask of GitHub (history_github_recheck_actionable), one
+    // line like the pull's.
+    if (b == RedesignButton::Save) {
+        const int glyph =
+            a.redesign_buttons[static_cast<size_t>(RedesignButton::Save)].glyph;
+        if (glyph == 2) return {"Pull (Ctrl+Shift+S)", nullptr};
+        if (glyph == 3) return {"Check GitHub (Ctrl+Shift+S)", nullptr};
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
         return {"Save and Commit (Ctrl+Shift+S)", nullptr};

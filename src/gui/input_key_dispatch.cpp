@@ -3344,7 +3344,9 @@ void GuiInputHandler::run_publish_chord() {
         // The press asks again through the check's one dispatcher and does
         // nothing else: in the view row 8 turns to `checking...` and then
         // the answer, and the next press acts on it (Behind puts the Pull
-        // face up). No card in the view — row 8 shows the asking, which the
+        // face up; the Save key reads CHECK on these terms in the view,
+        // redesign_button_glyph's fourth glyph, 2026-10-28). No card in the
+        // view — row 8 shows the asking, which the
         // screen already shows truthfully; OUTSIDE IT row 8 carries no
         // GitHub word, so the press says what it did (2026-10-10, the
         // head delta's asymmetry above, for its reason).
