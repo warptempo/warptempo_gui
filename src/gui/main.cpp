@@ -1851,11 +1851,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
     bool initial_load_done = false;
-    // THE RAIN'S DROP, SEEN ONCE (2026-10-28; the poll beside rain.tick() in
-    // the tick body owns the rule): true from the first tick that finds the
-    // dead stream under a lit lamp until the next tick, which reopens; false
-    // whenever that condition does not hold.
-    bool rain_drop_seen = false;
     // THE LOAD HAS RETURNED, SUCCEEDED (its one writer, the startup tick's
     // load branch): the open's release waits on it (the tick's release
     // block; platform.h's head).
@@ -2349,63 +2344,35 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE RAIN'S POLL, ON EVERY TICK for the same reason (2026-10-28,
         // rain.h): the bed plays under every mode a return below stands for,
-        // so its one per-tick question — a load that failed under a lit lamp
-        // darkens the lamp and greys the key (GuiRain::tick) — is asked ahead
-        // of all of them. Nothing is damaged here: the roster's per-tick
-        // comparator below carries the RAIN key's face edge.
+        // so its two per-tick questions are asked ahead of all of them — a
+        // load that failed under a lit lamp darkens the lamp and greys the
+        // key (GuiRain::tick), and a dead stream under a lit lamp darkens it
+        // (the block below). Nothing is damaged here: the roster's per-tick
+        // comparator below carries the RAIN key's face edge, for both.
         rain.tick();
 
-        // THE LIT LAMP REOPENS THE DEAD STREAM BY ITSELF (architect
-        // 2026-10-28): a route drop under a lit RAIN lamp (headphones
-        // connected or taken off) kills the AAudio stream, and the bed sounds
-        // only through the running stream's callback, so the loop takes the
-        // launch press's own road — GuiPlayback::ensure_device_available_for_
-        // play, the reopen AND the start (the rain runs on the silence arm, so
-        // the stream must run, not merely stand) — and the bed resumes where
-        // the drop left it (GuiRainVoice's thread note, rain.h). THE ONE
-        // EXCEPTION to the error callback's "nothing recovers by itself",
-        // LAMP-ONLY: the music still waits for a launch press. The read is
-        // GuiPlayback::stream_dead, the latch alone, set once per drop and
-        // cleared by the first reopen attempt, so this asks ONCE PER DROP,
-        // refused or not, with no retry timer; the answer is NOT carded (no
-        // press stands to answer): a refusal leaves the lamp lit and silent
-        // until the next launch press or a dark press and a lit press (the `w`
-        // case). Nothing is damaged: the RAIN key's face does not change. JACK
-        // has no latch, so on the laptop this is two reads.
-        //
-        // THE GRACE OF ONE TICK: the reopen fires on the SECOND consecutive
-        // tick that finds the latch under a lit lamp. Every other reader of
-        // the drop is a tick BELOW this line in the same body — the render
-        // player's (render_player.tick: a dead device PAUSES), the score
-        // viewer's (score_viewer.tick: it pauses and cards), the A/B
-        // audition's (ab_audition.fire_if_due: it ends the act and cards) and
-        // the main window's natural-end teardown (stop_playback_if_playing
-        // at the foot) — and each must digest the drop BEFORE a stream stands
-        // again: a reopened stream under the lowered playing bit would read to
-        // the render player or the score viewer as a NATURAL END (the player
-        // advancing its folder) and to the audition as a live device, the
-        // music resuming by itself, which the ruling forbids. One tick's grace
-        // puts a whole body below this line between the latch's first
-        // sighting here and the reopen, however the drop raced the tick. THE
-        // EARLY RETURNS BELOW DO NOT BREAK IT (verified 2026-10-28): the
-        // startup load's two (nothing has played before the first load), the
-        // loading / no-audio guard (the load is synchronous inside the
-        // startup tick, so no tick meets `loading`, and no act stands without
-        // audio), the render player's and the score viewer's forks (each
-        // returns AFTER its own tick has read the device, and neither
-        // overlay lets a main-window act stand under it), and the
-        // playing-only guard (nothing playing, nothing to digest).
-        {
-            const bool drop = rain.lit() && playback.stream_dead();
-            if (!drop) {
-                rain_drop_seen = false;
-            } else if (!rain_drop_seen) {
-                rain_drop_seen = true;
-            } else {
-                rain_drop_seen = false;
-                (void)playback.ensure_device_available_for_play();
-            }
-        }
+        // THE LAMP FOLLOWS THE NO-AUTO-RECOVER RULE (architect 2026-10-28,
+        // "we should follow the rule, iPhone does this also": the iPhone's
+        // Background Sounds toggle goes off when the route changes). A route
+        // drop under a lit RAIN lamp (headphones connected or taken off) kills
+        // the AAudio stream, and the bed sounds only through the running
+        // stream's callback, so a lit LED would say the rain plays while
+        // nothing does. ONE QUESTION per tick — the latch
+        // (GuiPlayback::stream_dead) under a lit lamp — and the answer DARKENS
+        // the lamp and SILENCES the voice (GuiRain::darken_on_dead_stream,
+        // whose precondition is this very read): no grace, no reopen, no card.
+        // The drop is a loud fault the music already answers with "the next
+        // play press reopens the device" (the error callback's "nothing
+        // recovers by itself", playback_aaudio.cpp); the lamp answers the same
+        // way, dark, and the next RAIN press is an ordinary lit press — a
+        // fresh random segment, the fade-in, and the `w` case's own reopen or
+        // card. The call touches neither the stream nor the latch, so every
+        // tick below still reads the drop exactly as it did. The latch stands
+        // until a press reopens, so this asks again on every tick of the dead
+        // interval and finds the lamp already dark. JACK has no latch: on the
+        // laptop this is two reads and the method is never called.
+        if (rain.lit() && playback.stream_dead())
+            rain.darken_on_dead_stream();
 
         // Startup file load, deferred out of pre-run() to the first tick on a
         // configured window (the compositor's initial configure only lands
@@ -3288,11 +3255,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the act stands and ends the WHOLE act through the one stop body on a
         // card. That stop lowers the scanner flag, so the guard returns and
         // this branch is never reached: the act ends once, with one sentence.
-        // The reopen is still the press's and never the tick's for the MUSIC
-        // (2026-10-28) — the audition's arm reads the latch, as the render
-        // player's tick does; only the lit RAIN lamp's poll on stream_dead
-        // (above, in the loop body) reopens from a tick, for the bed alone,
-        // after every tick here has read the drop.
+        // The reopen is still the press's and never the tick's — the
+        // audition's arm reads the latch, as the render player's tick does,
+        // and the lit RAIN lamp's poll on stream_dead (above, in the loop
+        // body) DARKENS the lamp at a drop and reopens nothing (2026-10-28).
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);

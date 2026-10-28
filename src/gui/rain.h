@@ -5,23 +5,25 @@
 // plays CONTINUOUSLY as A SECOND VOICE mixed under everything the playback
 // engine plays — work playback, the A/B audition, the render player, the
 // score's soundtrack — and over its silence between plays, AT ONE LEVEL,
-// NEVER DUCKED and never paused by any of them; only the lamp or closing the
-// app silences it. The lamp is OFF AT EVERY LAUNCH: no device key holds it
-// (his "iPhone requires enabling each time"). THE BED SOUNDS ONLY THROUGH THE
+// NEVER DUCKED and never paused by any of them; only the lamp, a route drop
+// (which darkens it, below) or closing the app silences it. The lamp is OFF
+// AT EVERY LAUNCH: no device key holds it (his "iPhone requires enabling each
+// time"). THE BED SOUNDS ONLY THROUGH THE
 // RUNNING STREAM'S CALLBACK, so the device question is the lamp's too
 // (architect 2026-10-28): the LIT PRESS asks the launch press's reopen
 // (GuiPlayback::ensure_device_available_for_play, at the `w` case of
 // input_key_dispatch.cpp — a refusal cards and still lights the lamp, silent
-// as a load in flight is), and THE BED SURVIVES A ROUTE DROP UNDER A LIT LAMP
-// (a headphone connected or taken off): the main loop sees the dead stream
-// under the lit lamp and reopens the device at its next-but-one tick
-// (gui_main's poll beside tick(), GuiPlayback::stream_dead), the bed
-// resuming where it was — the one exception to the error callback's "nothing
-// recovers by itself", lamp-only; the music still waits for a launch press.
-// A dark press during the dead interval needs nothing: the latch stays for
-// the next launch press as before. RAIN is committed as THE ONE
-// SOUND; the folder's name is the hook for a later sound choice, which is not
-// built.
+// as a load in flight is), and THE LAMP FOLLOWS THE NO-AUTO-RECOVER RULE
+// (architect 2026-10-28, the iPhone's Background Sounds the precedent: its
+// toggle goes off when the route changes): a route drop under a lit lamp (a
+// headphone connected or taken off) DARKENS the lamp at the next tick and
+// silences the voice (gui_main's poll beside tick(), GuiPlayback::stream_dead,
+// GuiRain::darken_on_dead_stream) — a lit LED says the rain plays, and on a
+// dead stream it does not. Nothing reopens by itself, the error callback's
+// "nothing recovers by itself" whole for the bed as for the music; the next
+// lit press is an ordinary one and keeps asking the launch press's device
+// question. RAIN is committed as THE ONE SOUND; the folder's name is the hook
+// for a later sound choice, which is not built.
 //
 // THE SOUND IS A FOLDER BESIDE THE DEVICE CONFIG, `sounds/rain/`
 // (device_config_path()'s parent — the `tiles/` precedent, materials.h:
@@ -122,12 +124,17 @@ struct GuiRainBank {
 // AAudioStream_close — each returns only after its callback thread has left)
 // before the new engine's init starts a new callback thread, so exactly one
 // audio thread ever touches these fields, the hand-off ordered by the device
-// close and the thread start. THE SAME HAND-OFF ORDERS THE REOPEN AFTER A
-// ROUTE DROP (the head's lamp paragraph): the framework retires the dead
-// stream's callback thread before its error callback runs, and
-// AAudioStream_close returns only after it is gone, so the reopened stream's
-// thread is again the one audio thread and finds these fields as the drop
-// left them — no fill runs on a dead stream, so the bed resumes where it was.
+// close and the thread start.
+// THE ONE EXCEPTION — THE MAIN THREAD ON A DEAD STREAM (2026-10-28,
+// GuiRain::darken_on_dead_stream): on a dead AAudio stream NO FILL RUNS — the
+// framework retires the data callback thread BEFORE the error callback runs,
+// and the latch is published (release) from that error callback — so a main
+// thread that has read the latch (acquire, through GuiPlayback::stream_dead)
+// is the ONE thread that can touch these fields until a reopen starts a new
+// callback thread; and every reopen is the main thread's own
+// (reopen_stream_if_dead, playback_aaudio.cpp), ordered after that write by
+// program order and before the new thread by its start. JACK has no latch,
+// so the exception never arises on the laptop.
 // THE LAMP SURVIVES A PROJECT SWITCH (device state; the planner's call,
 // architect agreed 2026-10-28): the bed gaps for the device's reopen (one
 // AAudio stream stop and start on the tablet) and resumes where it was, no
@@ -192,16 +199,36 @@ public:
     // keyboard's half of that rule). Flips `target`: on the LIT edge the seed
     // (steady_clock ns, nonzero) is stored before `target` (release) and, the
     // bank neither loaded nor loading, THE LOADER starts; on the DARK edge
-    // nothing else — the audio thread fades out and ends the sequence.
+    // nothing else — the audio thread fades out and ends the sequence. The
+    // device question of the lit edge is the `w` case's, ahead of this call
+    // (input_key_dispatch.cpp); a lamp the poll darkened at a route drop
+    // (darken_on_dead_stream) comes back only through this lit edge.
     void toggle();
 
     // THE PER-TICK POLL (main.cpp's tick, every tick): a load that failed
     // under a lit lamp darkens the lamp and leaves the key grey from then on
     // (available() reads the failure); the roster's per-tick comparator
     // repaints. Nothing else: the dead stream under a lit lamp is gui_main's
-    // poll beside this call (2026-10-28), because the playback object is
-    // there and not here.
+    // poll beside this call (2026-10-28, darken_on_dead_stream below),
+    // because the playback object is there and not here.
     void tick();
+
+    // THE LAMP DARKENED AT A ROUTE DROP (architect 2026-10-28, the
+    // no-auto-recover rule at the head): `target` stored false (release) and
+    // the audio-thread-private fields reset to the no-sequence state
+    // rain_mix_block's idle arm reads — `env` 0, `cur` and `nxt` -1, both
+    // positions 0, `xf_len` 0 — so the next lit press starts a fresh random
+    // segment with the fade-in from silence. WITHOUT THE RESET the stale
+    // voice would run a 40 ms fade-out blip at the next Play press's reopen,
+    // the mixer finishing the dark edge it never got to run on the dead
+    // stream. PRECONDITION: THE STREAM IS DEAD, READ THROUGH THE LATCH
+    // (GuiPlayback::stream_dead true on this thread, just before the call) —
+    // the one exception to the voice's one-audio-thread rule, stated at
+    // GuiRainVoice. ONE CALLER: gui_main's poll beside tick() (main.cpp),
+    // under a lit lamp. JACK's stream_dead is always false, so it is never
+    // called on the laptop. Nothing is damaged here: the roster's per-tick
+    // comparator carries the RAIN key's face edge.
+    void darken_on_dead_stream();
 
     // THE TWO DEVICE KEYS, LIVE: the level's linear gain read by the audio
     // thread at its next fill, the crossfade read at the next transition's

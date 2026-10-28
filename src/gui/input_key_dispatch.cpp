@@ -9496,10 +9496,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // connected with the app open) is reopened and started here instead
         // of leaving the lit lamp silent until a Play press. A FALSE cards
         // the launch gates' sentence and STILL toggles: the lamp lights and
-        // stays silent, the load-in-flight shape, until gui_main's poll or
-        // the next launch press reopens. The DARK edge asks nothing. The
-        // ordinary press makes no device call (the start is idempotent on a
-        // running stream; JACK answers its plain read).
+        // stays silent, the load-in-flight shape, until the next launch press
+        // reopens. The DARK edge asks nothing. The ordinary press makes no
+        // device call (the start is idempotent on a running stream; JACK
+        // answers its plain read). THE IMMEDIATE REOPEN IS SAFE UNDER THE
+        // HANDS-OFF RULE (2026-10-28, Sol's finding of that day closed by it):
+        // this press has already ended any standing A/B audition at on_key's
+        // head (GuiInputHandler::end_audition_for_press) before this arm runs,
+        // so no act can read the reopened stream under the lowered playing
+        // bit as its play's natural end and go on by itself. (A lit lamp
+        // under a later drop darkens at gui_main's poll, rain.h.)
         if (app.rain != nullptr) {
             if (app.rain->available() && !app.rain->lit() &&
                 !playback.ensure_device_available_for_play()) {

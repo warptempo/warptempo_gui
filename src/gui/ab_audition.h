@@ -151,6 +151,12 @@ struct GuiInputHandler;
 // would. An act INTERRUPTED on the other tab therefore leaves that tab's own
 // preview bound, exactly as a Ctrl+Tab would have.
 //
+// THE ACT IS HANDS-OFF (architect 2026-10-28): any press on the window ends
+// it ahead of the press's own dispatch — a bound chord, a pointer or touch
+// press, the wheel, a touch pan, pinch or region hold — bare Space and
+// Shift+Space (and the PLAY key whose lift is one of them) excepted, their
+// own dispatch forking on the act to end it (the entries at
+// GuiInputHandler::end_audition_for_press).
 // INTERRUPTION ends the whole act and leaves the tab where it is — the user is
 // already acting, so no return to the starting tab. A REST IS INTERRUPTED
 // EXACTLY AS A PLAY IS: no clearing owner tests for live playback on the way
@@ -167,8 +173,9 @@ struct GuiInputHandler;
 // which is what makes "the resting playhead cannot move under a standing act"
 // structural rather than a list of routes — while a TRANSLATION and a RESTORE
 // are not, which is what lets the act's own two tab switches run inside it.
-// Bare Esc is NOT one of them — its eight bindings are closed (the card
-// dismissal joined them on 2026-08-31; the enumeration is input_handler.cpp's).
+// Bare Esc ends it AS A PRESS (2026-10-28, the hands-off rule), not as an Esc
+// binding — its eight bindings are closed and unchanged (the card dismissal
+// joined them on 2026-08-31; the enumeration is input_handler.cpp's).
 // AND A DEVICE LOST MID-ACT IS AN INTERRUPT LIKE ANY OTHER (architect
 // 2026-09-04): fire_if_due asks GuiPlayback::device_unavailable on every tick
 // the act stands, in a play as in a rest, and ends it through that same one

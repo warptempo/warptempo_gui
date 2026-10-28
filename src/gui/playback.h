@@ -361,9 +361,8 @@ public:
     // NOTHING ELSE: it reopens nothing, so on Android a dead stream stays dead
     // to it until a LAUNCH PRESS reopens through
     // ensure_device_available_for_play below (or the render player's own play
-    // road reaches play(), which reopens at its head, or, under a lit RAIN
-    // lamp, gui_main's poll on stream_dead, the contract two members below,
-    // lamp-only). THREE READERS, re-grepped
+    // road reaches play(), which reopens at its head): a dead stream waits for
+    // a launch press. THREE READERS, re-grepped
     // 2026-10-28, and all are TICKS: the render player's (a dead stream
     // mid-play must PAUSE, not advance), the A/B audition's,
     // GuiAbAudition::fire_if_due, which ends the whole act
@@ -378,24 +377,18 @@ public:
     // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
 
-    // THE DROP ITSELF (architect 2026-10-28, the rain lamp's reopen): the
+    // THE DROP ITSELF (architect 2026-10-28, the rain lamp's darkening): the
     // error callback's `stream_dead` latch ALONE — true from a route drop
     // under a live stream until the first reopen attempt closes that stream.
     // AAudio: `impl_ && impl_->stream_dead` (acquire). JACK: false, this
     // backend having no latch (the reason at device_unavailable's JACK
     // definition). ONE READER: gui_main's per-tick poll beside rain.tick()
-    // (main.cpp), which reopens the device through
-    // ensure_device_available_for_play when the latch stands under a lit
-    // RAIN lamp. A pure read; main thread only.
-    // NOT device_unavailable, which is also true on a NULL stream — what a
-    // FAILED reopen leaves behind (reopen_stream_if_dead closes the dead
-    // stream, clearing the latch, then fails to open) — so a poll on it would
-    // ask open_stream again on every tick after one refusal: an open storm.
-    // The latch is set once per drop and cleared by the first reopen attempt,
-    // so a poll on it asks ONCE PER DROP, refused or not, with no retry timer
-    // (his ruling): a refused reopen leaves the lamp lit and silent, and the
-    // next launch press (play()'s head opens a null stream), or a dark press
-    // and a lit press, is the way back.
+    // (main.cpp), which DARKENS a lit RAIN lamp and silences its voice when
+    // the latch stands (GuiRain::darken_on_dead_stream) and reopens nothing.
+    // A pure read; main thread only.
+    // NOT device_unavailable: the latch alone, not the null stream, so a lamp
+    // already darkened is not darkened again and a refused reopen's null
+    // stream is the press's to answer.
     bool    stream_dead() const;
 
     // WHAT A FACE READS (architect 2026-09-02, the truthful-buttons rule over
@@ -431,9 +424,7 @@ public:
     // 2026-10-28, the `w` case of input_key_dispatch.cpp: the bed sounds only
     // through the running stream's callback, so the lit press is a launch
     // press for the device question; a FALSE cards and the lamp still
-    // lights); and by gui_main's lit-lamp poll (main.cpp, beside rain.tick(),
-    // on stream_dead above: the one road that reopens with no press, the
-    // answer uncarded). JACK
+    // lights). No road reopens without a press. JACK
     // answers `!device_unavailable()` and touches nothing (this backend has no
     // latch to clear — the mid-play loss is not recorded, the reason at
     // device_unavailable's definition). AAudio closes a dead stream and

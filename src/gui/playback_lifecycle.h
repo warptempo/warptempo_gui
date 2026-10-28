@@ -44,9 +44,7 @@ struct GuiRenderPlayer;
 // input_key_dispatch.cpp): the bed sounds only through the running stream's
 // callback, so the lit press asks this same reopen as a launch press does,
 // cards this sentence when it answers false and still lights the lamp, which
-// stays silent until a reopen stands. The lit lamp's own reopen after a drop
-// (gui_main's poll on GuiPlayback::stream_dead) raises no card: no press
-// stands to answer.
+// stays silent until a reopen stands.
 // It lives here rather than in notifications.h
 // because the fact is this cluster's: the question is GuiPlayback::
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect

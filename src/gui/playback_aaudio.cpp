@@ -47,8 +47,8 @@
 // three sites that call it — init's own, the launch gate's
 // (ensure_device_available_for_play, where a reopened stream's start is what
 // the gate's answer rests on — the launch gates', the car's Play, the rain
-// lamp's lit press and its reopen after a drop, the callers at its
-// declaration) and play()'s retry for the roads that reach it ungated — are
+// lamp's lit press, the callers at its declaration) and play()'s retry for
+// the roads that reach it ungated — are
 // one road and an ordinary play makes no device call at all.
 //
 // THE RULING HAS NO NARROWING, and one stood for eight days. From 2026-09-04
@@ -91,8 +91,7 @@
 //     spike used a detached thread to do its closing; this backend needs no
 //     detached thread because it does not close there at all — the next
 //     launch press (ensure_device_available_for_play) or play() closes the
-//     dead stream on the main thread and reopens, or, under a lit RAIN lamp,
-//     the main loop's poll does (the error callback's one exception).
+//     dead stream on the main thread and reopens.
 
 namespace {
 
@@ -290,17 +289,10 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // gates through ensure_device_available_for_play, the render player's
     // road through play()'s own head (reopen_stream_if_dead, one body for
     // both). The user presses play again — the same answer the product gives
-    // every other rare, loud fault.
-    // THE ONE EXCEPTION, LAMP-ONLY (architect 2026-10-28): under a lit RAIN
-    // lamp the main loop reopens the stream at its next-but-one tick through
-    // ensure_device_available_for_play (gui_main's poll on
-    // GuiPlayback::stream_dead, main.cpp, beside rain.tick()), so the bed —
-    // which sounds only through this stream's callback — resumes where the
-    // drop left it. The music still waits for a launch press: the poll's one
-    // tick of grace lets every tick that reads this drop digest it first
-    // (the argument at the poll), and the reopened stream runs the silence
-    // arm under the lowered bit. The stderr line below stays true for the
-    // music.
+    // every other rare, loud fault. THE RAIN LAMP FOLLOWS THIS RULE TOO
+    // (architect 2026-10-28): gui_main's poll on GuiPlayback::stream_dead
+    // darkens a lit lamp at the next tick and silences its voice (rain.h),
+    // and the next lit press is a launch press for the device question.
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
     impl->stream_dead.store(true, std::memory_order_release);
@@ -540,15 +532,13 @@ bool open_stream(GuiPlayback::Impl& impl) {
 // (launch_window, which play() and play_loop() both forward to) — the
 // render player's road, which reaches play() with no gate ahead of it — and
 // by ensure_device_available_for_play, the main window's three launch gates'
-// question (architect 2026-09-02) and its other callers — the car's Play,
-// the rain lamp's lit press and the lit lamp's reopen after a drop (the list
-// at its declaration, playback.h): before it the gates READ the latch ahead
-// of play() and so never let play() reopen, leaving the tablet mute behind
-// the card after every route drop. A failed reopen leaves playback disabled
-// until the next press — no retry, no timer — and, with `device_ready` still
-// true, is exactly the "no stream standing" shape device_unavailable reads;
-// it has cleared the latch, so the lit lamp's poll (GuiPlayback::stream_dead)
-// does not ask again.
+// question (architect 2026-09-02) and its other callers — the car's Play and
+// the rain lamp's lit press (the list at its declaration, playback.h): before
+// it the gates READ the latch ahead of play() and so never let play() reopen,
+// leaving the tablet mute behind the card after every route drop. A failed
+// reopen leaves playback disabled until the next press — no retry, no timer —
+// and, with `device_ready` still true, is exactly the "no stream standing"
+// shape device_unavailable reads.
 bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
     if (impl.stream_dead.load(std::memory_order_acquire)) {
         close_stream(impl);

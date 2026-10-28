@@ -116,6 +116,13 @@ struct AtScopeExit {
 // and Settings titles' press from 2026-10-10 — went with the menu row,
 // 2026-10-21; menu_title_access_key with them.)
 
+// THE HANDS-OFF END (the rule and its entries at the declaration): one enum
+// compare when no act stands, which is nearly every press.
+void GuiInputHandler::end_audition_for_press() {
+    if (!audition_sequence_standing(app)) return;
+    playback_lifecycle.stop_playback_if_playing();
+}
+
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The dispatch's own repeat scope, first statement so it covers the whole
     // body (the ruling and the reasoning are at the guard above).
@@ -133,6 +140,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
     // (the same clear at its own entry).
     app.double_click = DoubleClickCandidate{};
+    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
+    // end_audition_for_press's declaration): a bound chord ends a standing act
+    // here, ahead of every gate below, bare Esc among them. THE TWO
+    // EXCEPTIONS are bare Space and Shift+Space, the only bound Space chords
+    // (chord_is_bound): their own dispatch forks on the standing act and
+    // takes its stop side — toggle_playback reading `phase != Idle` as
+    // transport-live, GuiAbAudition::start routing into the stop body — so
+    // ending it here would turn Space into a launch and Shift+Space into a
+    // restart.
+    if (key != GuiKeys::Space &&
+        chord_is_bound(key, mods, app.history_mode.active))
+        end_audition_for_press();
     // KEYS DO NOT HIDE THE HOVER TOOLTIP (architect 2026-10-06, Windows 95's
     // tooltip control, which processes mouse messages alone — the model is at
     // AppState::RedesignTooltip): a hint standing while the user types stays.
@@ -3472,6 +3491,11 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // after accumulating sub-detent remainder itself, so every call here is a
     // completed detent frame, matching on_key's unconditional placement.
     app.double_click = DoubleClickCandidate{};
+    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
+    // end_audition_for_press's declaration): a wheel frame ends a standing
+    // act ahead of the context test, wherever it lands — the zoom and the
+    // stepped pan it drives no longer leave the act standing.
+    end_audition_for_press();
     // A WHEEL DISMISSES THE TOOLTIP, before the context test so the
     // dismissal happens on the very frame the wheel arrives. (It closed the
     // Settings dropdown too, until the popup retired, 2026-10-21.)

@@ -2968,6 +2968,12 @@ double GuiInputHandler::rebind_zoom_pivot_into_waveform(
 // One delivered frame = at most one placement through the strip-drag family's
 // own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
+    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
+    // end_audition_for_press's declaration): the pan and the pinch deliver no
+    // button press, so their frames are a press entry of their own — the
+    // first frame of a gesture ends a standing act, every later one finds it
+    // ended (one enum compare).
+    end_audition_for_press();
     // THE FRAME'S MEANING, three and only three: TWO fingers are the PINCH;
     // ONE finger under the ctrl bit is THE ONE-FINGER ZOOM (2026-09-25, the S
     // Pen's side button — the nav drag's own live-ctrl fork, ScrollDragState,
@@ -3486,6 +3492,11 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
 // anywhere.
 
 void GuiInputHandler::begin_touch_region(int x, int y) {
+    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
+    // end_audition_for_press's declaration): the region hold delivers no
+    // button press, so its begin is a press entry of its own, ahead of the
+    // gates below.
+    end_audition_for_press();
     // The press path's own gates, restated because this gesture never passes
     // through on_button_press (the shift former's claim sits below every one
     // of these): a prompt or modal editor owns the input, unloaded audio has no columns to span, and a live
@@ -5586,6 +5597,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // below with its four siblings.)
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
+
+    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
+    // end_audition_for_press's declaration): a press ends a standing act
+    // ABOVE EVERY CLAIM BELOW — the CLAIM ranks above every veil, so this
+    // ranks above the claims, and no claim can turn the press into a gesture
+    // under a standing act — every button, every place on the window. THE ONE
+    // EXCEPTION is a LEFT press that lands on the PLAY key (either rect, the
+    // clock's field included) and not on a card over it: its lift dispatches
+    // bare Space, or Shift+Space shifted or held, through on_key — the two
+    // chords whose own dispatch forks on the act and takes its stop side — so
+    // ending the act at this press would make that lift a launch or a restart.
+    const bool play_key_press =
+        button == GuiMouseButton::Left &&
+        notification_card_at(app, x, y) == 0 &&
+        redesign_button_hit(app, RedesignButton::TransportPlayStop, x, y);
+    if (!play_key_press) end_audition_for_press();
 
     // THE NOTIFICATION CARDS, ABOVE EVERY GATE AND EVERY VEIL (architect
     // 2026-08-29): a press on a published card is consumed whole — moves

@@ -382,7 +382,7 @@ bool GuiPlayback::device_absent() const {
 
 // NO LATCH ON THIS BACKEND (contract at the declaration; the mid-play loss is
 // not recorded, device_unavailable's definition above): there is no drop to
-// report, so the rain lamp's poll never reopens anything on the laptop.
+// report, so the rain lamp's poll never darkens the lamp on the laptop.
 bool GuiPlayback::stream_dead() const {
     return false;
 }

@@ -351,6 +351,19 @@ void GuiRain::tick() {
     }
 }
 
+void GuiRain::darken_on_dead_stream() {
+    // The lamp first; then the voice's private fields, written on this thread
+    // under the dead-stream exception (GuiRainVoice's thread note): no fill
+    // runs until a reopen, which is this thread's own and comes after.
+    voice_.target.store(false, std::memory_order_release);
+    voice_.env     = 0.0;
+    voice_.cur     = -1;
+    voice_.pos_cur = 0.0;
+    voice_.nxt     = -1;
+    voice_.pos_nxt = 0.0;
+    voice_.xf_len  = 0;
+}
+
 void GuiRain::set_level_db(int db) {
     voice_.gain.store(static_cast<float>(std::pow(10.0, db / 20.0)),
                       std::memory_order_relaxed);

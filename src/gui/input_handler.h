@@ -1005,6 +1005,60 @@ struct GuiInputHandler {
     // (AppState::ChromePress), and a continuous viewport gesture reading ctrl
     // live is outside its scope, not an exception to it.
     void on_key(GuiKey key, GuiInputState mods);
+    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28, "pretty much any
+    // interaction with gui should kill it"): a standing act
+    // (audition_sequence_standing) ends at ANY PRESS ON THE WINDOW, ahead of
+    // the press's own dispatch, through THE ONE STOP BODY
+    // (GuiPlaybackLifecycle::stop_playback_if_playing — clearing owner (1) at
+    // GuiAuditionSequence, app_state.h; each entry below is a CALLER of it,
+    // not a fifth owner). No card: it is a user press, not a lost device, and
+    // the tab stays where the act had it (the interruption rule,
+    // ab_audition.h). So no press can do its own work under a standing act —
+    // the lamps (Follow, Magnification, Tooltips, RAIN), zoom, pan and the
+    // camera keys, which left it standing until that day, end it like
+    // everything else, and the RAIN lamp's lit press can no longer reopen a
+    // dead stream under an act that would read it as a natural end (Sol's
+    // finding of 2026-10-28). A press in the sub-tick window between a play's
+    // natural end and the tick that observes it finds the phase standing and
+    // ends the act exactly as bare Space does there.
+    // THE ENTRIES, whole (re-derived 2026-10-28 by reading main.cpp's hook
+    // wiring and input_core.cpp's touch roads), each calling this at its head:
+    //   * on_key, directly after the double-click clear — for a BOUND chord
+    //     (chord_is_bound: an unbound press is silent by its own rule and ends
+    //     nothing; a bare modifier is no chord), bare Esc among them (a press,
+    //     not an Esc binding; Esc's own inventory is unchanged), EXCEPT BARE
+    //     SPACE AND SHIFT+SPACE: their own dispatch FORKS on the standing act
+    //     — bare Space reads `phase != Idle` as transport-live and takes its
+    //     stop side (GuiPlaybackLifecycle::toggle_playback), Shift+Space
+    //     routes into the stop body from GuiAbAudition::start (the toggle) —
+    //     so they end it themselves, and ending it ahead of them would turn
+    //     Space into a launch and Shift+Space into a restart. The roster's
+    //     synthesized chords (the chrome lift, the hold-repeat burst) pass
+    //     here too and find the act already ended by their pointer press.
+    //   * on_button_press, above every claim (the cards', the on-screen
+    //     keyboard's, the veils', the bands') — every button, every place on
+    //     the window, EXCEPT A LEFT PRESS THAT LANDS ON THE PLAY KEY (either of
+    //     its rects, the clock's field included, and not under a card): its
+    //     lift dispatches bare Space or, shifted or held, Shift+Space through
+    //     on_key, the two excepted chords, so the press leaves the act to the
+    //     stop side its lift takes; a left press there that arms nothing (a
+    //     refused modifier) or lifts off the key ends nothing, the unbound
+    //     chord's own answer. A touch
+    //     resolved to the pointer — off the pan zone on contact, a tap on the
+    //     waveform at its lift — arrives here as the platform's button press.
+    //   * on_wheel, at its head (every detent frame, every place).
+    //   * THE TWO TOUCH ROADS THAT DELIVER NO PRESS (input_core.cpp): a finger
+    //     or the pen down on the waveform (the pan zone) opens a window that
+    //     resolves to the phone-model PAN or the PINCH (apply_touch_nav_update,
+    //     at its head — every frame asks, the first one ends the act) or to
+    //     the REGION HOLD (begin_touch_region, at its head). The caret drag's
+    //     begin needs no call: it runs only under an editor, a modal no act
+    //     stands under.
+    // Not presses: pointer and pen motion (hover), key release, the
+    // compositor's close (its prompt is a modal, whose open stops), and the
+    // car's head unit, whose own transport ends the act (its play through
+    // owner (2), its stop through owner (1)).
+    void end_audition_for_press();
     // THE KEY RELEASE, and the ONE thing in this product that acts on one
     // (2026-08-13): bare Enter / bare Space on a focused DIALOG BUTTON press it
     // down at the press and commit it here, the keyboard's own act-at-release

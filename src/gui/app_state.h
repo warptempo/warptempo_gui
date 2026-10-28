@@ -4373,7 +4373,22 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         ahead of its waiting and deadline tests, so a play stalled on a dead
 //         stream ends the act exactly as a rest does, on a card carrying the
 //         launch gate's own sentence. That arm is a CALLER here, like
-//         Shift+Space's own stop edge, and not a fifth owner.
+//         Shift+Space's own stop edge, and not a fifth owner. AND — since
+//         2026-10-28, THE HANDS-OFF RULE (architect: "pretty much any
+//         interaction with gui should kill it") — THE PRESS ENTRIES, each
+//         at its head and ahead of the press's own dispatch, through
+//         GuiInputHandler::end_audition_for_press (input_handler.h, whose
+//         declaration holds the entries whole): on_key for every BOUND
+//         chord, bare Esc among them, EXCEPT bare Space and Shift+Space,
+//         whose own dispatch forks on the standing act and takes the stop
+//         edges named above (ending it ahead of them would turn Space into a
+//         launch and Shift+Space into a restart); on_button_press above
+//         every claim, a LEFT press on the PLAY key excepted for the same
+//         reason (its lift is one of those two chords); on_wheel; and the
+//         two touch roads that deliver no press, the pan and pinch frames
+//         and the region hold's begin. So the lamps, zoom, pan and the
+//         camera keys, which left the act standing until that day, end it
+//         like every other press. CALLERS, not a fifth owner.
 //     (2) THE USER LAUNCH ENTRIES — GuiPlaybackLifecycle::launch_playback_from,
 //         the view-end entry, and since 2026-09-17 car_play_playback, the
 //         head unit's play with the render player closed (the clear sits in
