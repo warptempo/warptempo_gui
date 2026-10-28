@@ -1188,7 +1188,7 @@ void GuiPlatform::destroy_gl() {
 
 // THE GL CANVAS'S FRAME, named (the declaration; read at present under the
 // gl build alone).
-void GuiPlatform::set_canvas_frame(const GuiCanvasDrawList* frame) {
+void GuiPlatform::set_canvas_frame(GuiCanvasDrawList* frame) {
     canvas_frame_ = frame;
 }
 

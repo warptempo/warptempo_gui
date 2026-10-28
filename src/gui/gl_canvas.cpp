@@ -19,7 +19,9 @@
 // canvas's identity proof (docs/engineering/gpu_canvas_2026_10.md §5) holds
 // across the move by construction. One reduction since, pixel-neutral by its
 // key: the plate's bounds texture is re-sent only when its key moved
-// (upload_list, 2026-10-14).
+// (upload_list, 2026-10-14). One addition: the score viewer's page drawn by
+// the GPU (2026-10-27, the page program and its textures; the design record's
+// §3.13).
 
 namespace {
 
@@ -150,6 +152,44 @@ constexpr const char* kListFragmentShader =
     "    o_color = word_color(v_words.x);\n"
     "}\n";
 
+// THE PAGE PROGRAM (architect 2026-10-27, "1 a"; GuiCanvasPage,
+// canvas_sink.h): the texture triangle's vertex shader over the whole
+// viewport under the scissor to the box's interior (the list's clip), and at
+// each fragment's own integer pixel — the column int(gl_FragCoord.x), the row
+// H − 1 − int(gl_FragCoord.y), u_height the surface's height — THE PAGE'S
+// TEXEL where the pixel lies inside u_rect (x, y, w, h in surface px, row 0
+// the top: the page's place, gui_page_place), fetched by integer coordinate
+// from the R8 texture on unit 2 (its row 0 the page's top row, as uploaded)
+// and written (g, g, g, 1) — an 8-bit UNORM texel round-trips to its byte,
+// the texture triangle's own argument — and THE FIELD'S WORD elsewhere,
+// written as the list's words are (word_color: k / 255 per channel, alpha
+// 1). An empty u_rect (no page held) writes the field alone.
+constexpr const char* kPageFragmentShader =
+    "#version 300 es\n"
+    "precision highp float;\n"
+    "precision highp int;\n"
+    "uniform highp sampler2D u_page;\n"
+    "uniform int u_height;\n"
+    "uniform ivec4 u_rect;\n"
+    "uniform uint u_field;\n"
+    "out vec4 o_color;\n"
+    "void main() {\n"
+    "    ivec2 q = ivec2(int(gl_FragCoord.x), u_height - 1 - int(gl_FragCoord.y))\n"
+    "            - u_rect.xy;\n"
+    "    if (q.x >= 0 && q.y >= 0 && q.x < u_rect.z && q.y < u_rect.w) {\n"
+    "        float g = texelFetch(u_page, q, 0).r;\n"
+    "        o_color = vec4(g, g, g, 1.0);\n"
+    "        return;\n"
+    "    }\n"
+    "    o_color = vec4(float((u_field >> 16u) & 255u),\n"
+    "                   float((u_field >> 8u) & 255u),\n"
+    "                   float(u_field & 255u), 255.0) / 255.0;\n"
+    "}\n";
+
+// AT MOST ONE PAGE UPLOADED A PRESENT (the page textures' rule,
+// gl_canvas.h): about 2.2 MB at the tablet's box.
+constexpr int kPageUploadsPerPresent = 1;
+
 // One list record as the instance attributes read it: the rect (location
 // 0), {kind, period, origin, phase} (location 1), {word, word2} (location 2),
 // every coordinate in surface px (the GUI's own px: the app paints no window
@@ -220,7 +260,7 @@ void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_SCISSOR_TEST);
 }
 
-// THE TWO PROGRAMS, built at the first make current and kept with the
+// THE THREE PROGRAMS, built at the first make current and kept with the
 // context.
 void GuiGlCanvas::ensure_programs() {
     if (!program_) {
@@ -279,6 +319,18 @@ void GuiGlCanvas::ensure_programs() {
         columns_uploaded_ = false;
         glActiveTexture(GL_TEXTURE0);
     }
+    // THE PAGE PROGRAM (2026-10-27; kPageFragmentShader's head): the texture
+    // triangle's vertex shader, its sampler on unit 2.
+    if (!page_program_) {
+        const GLuint prog =
+            link_canvas_program(host_, kCanvasVertexShader, kPageFragmentShader);
+        glUseProgram(prog);
+        glUniform1i(glGetUniformLocation(prog, "u_page"), 2);
+        page_height_uniform_ = glGetUniformLocation(prog, "u_height");
+        page_rect_uniform_   = glGetUniformLocation(prog, "u_rect");
+        page_field_uniform_  = glGetUniformLocation(prog, "u_field");
+        page_program_ = prog;
+    }
 }
 
 // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER: one GL_RGBA8 texture of its
@@ -323,9 +375,10 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // rect goes up again.
 // LESS THE CANVAS (2026-10-13, the canvas sink, canvas_sink.h): each
 // damage rect goes up MINUS the frame's canvas clip (the list's clip,
-// the GUI's waveform_area ∩ waveform_paint_area — the platform computes
-// no GUI geometry), split into up to four rects, because the backbuffer
-// holds nothing there but zeros the texture already holds. THE WHOLE
+// the GUI's waveform_area ∩ waveform_paint_area — or the modal box's
+// interior while the score viewer's page stands, 2026-10-27 — the platform
+// computes no GUI geometry), split into up to four rects, because the
+// backbuffer holds nothing there but zeros the texture already holds. THE WHOLE
 // RECT GOES UP instead while the list's floater bit stands or stood at
 // the last walk (a floating surface's pixels over the canvas, and the
 // zeros it leaves when it goes, ride containing rects), when the clip
@@ -333,6 +386,11 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // went, and texels it uploaded now lie inside the clip), and at the
 // first walk on a remade texture (no texel is known yet). So every texel
 // inside the clip is the backbuffer's: 0 where no overlay stands.
+//
+// THE PAGE TEXTURES (2026-10-27; gl_canvas.h's rule, reconcile_pages): after
+// the walk, the request's wanted list reconciled — the textures it no longer
+// names deleted, and while the page stands the first one not yet held
+// uploaded — and the report's held serials written.
 //
 // THE DRAW: the canvas list first, then the texture over it. THE LIST
 // (kListVertexShader's head; GuiCanvasPrimitive, canvas_sink.h): its
@@ -349,6 +407,10 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // would otherwise hold a recycled buffer's bytes, though by the
 // invariant none exists (the list's first record is the canvas's ground,
 // over the whole clip, and every texel outside it is opaque).
+// WHILE THE SCORE VIEWER'S PAGE STANDS the clip is the box's interior and
+// THE PAGE draws there in the list's stead (draw_page), under the same
+// scissor: the field's word and the held page's gray bytes, the cpu road's
+// bytes by GuiCanvasPage's proof.
 // THE PICTURE IS THE BACKBUFFER'S BYTES EXACTLY outside the clip and
 // under every overlay: an 8-bit UNORM texel
 // fetched without a filter round-trips to the same 8-bit value in the
@@ -358,7 +420,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // road's bytes by the sink's construction.
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
-                                const GuiCanvasDrawList* list,
+                                GuiCanvasDrawList* list,
                                 int surface_w, int surface_h) {
     if (!texture_) return false;
     const int stride_px = cairo_image_surface_get_stride(back) / 4;
@@ -421,6 +483,8 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     upload_floater_ = floater;
     upload_seeded_  = true;
 
+    if (list) reconcile_pages(list->page);
+
     glViewport(0, 0, surface_w, surface_h);
     // THE CLEAR IS OPAQUE BLACK. (The restored laptop window's invisible
     // sizing band cleared to transparency, 2026-10-23 to 2026-10-24, went
@@ -428,7 +492,9 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (list && clip[2] > 0) {
+    if (list && clip[2] > 0 && list->page.stands) {
+        draw_page(list->page, clip);
+    } else if (list && clip[2] > 0) {
         if (!list_uploaded_ || list->generation != list_generation_)
             upload_list(*list);
         if (list_instances_ > 0) {
@@ -478,7 +544,115 @@ void GuiGlCanvas::forget() {
     columns_uploaded_    = false;
     columns_revision_    = 0;
     columns_spans_.clear();
+    page_program_        = 0;
+    page_height_uniform_ = -1;
+    page_rect_uniform_   = -1;
+    page_field_uniform_  = -1;
+    pages_.clear();
     upload_seeded_       = false;
+}
+
+// THE PAGE TEXTURES' RECONCILIATION (2026-10-27; the rule at gl_canvas.h's
+// PageTexture block): every texture whose serial the wanted list no longer
+// names deleted; while the page stands, the wanted pages not yet held
+// uploaded in the list's order — the feed's, the shown page first — at most
+// kPageUploadsPerPresent of them, each one immutable R8 level of its
+// size, NEAREST both ways (texelFetch reads no filter), its rows tight
+// (GL_UNPACK_ALIGNMENT 1: a row is the page's width in bytes); then the
+// report's held serials, ascending. A serial names one immutable buffer for
+// the process's life (GuiScoreGrayPage::serial), so a held texture is never
+// stale.
+void GuiGlCanvas::reconcile_pages(GuiCanvasPage& page) {
+    const auto wanted = [&](uint64_t serial) {
+        return std::any_of(page.want.begin(), page.want.end(),
+                           [&](const GuiCanvasPageTexture& w) {
+                               return w.serial == serial;
+                           });
+    };
+    const auto held = [&](uint64_t serial) {
+        return std::any_of(pages_.begin(), pages_.end(),
+                           [&](const PageTexture& t) {
+                               return t.serial == serial;
+                           });
+    };
+    std::erase_if(pages_, [&](const PageTexture& t) {
+        if (wanted(t.serial)) return false;
+        glDeleteTextures(1, &t.name);
+        return true;
+    });
+    if (page.stands) {
+        int budget = kPageUploadsPerPresent;
+        for (const GuiCanvasPageTexture& w : page.want) {
+            if (budget <= 0) break;
+            if (held(w.serial) || !w.bytes || w.w <= 0 || w.h <= 0) continue;
+            assert(w.bytes->size() ==
+                   static_cast<size_t>(w.w) * static_cast<size_t>(w.h));
+            PageTexture t;
+            t.serial = w.serial;
+            t.page   = w.page;
+            t.w      = w.w;
+            t.h      = w.h;
+            glGenTextures(1, &t.name);
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, t.name);
+            glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, w.w, w.h);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w.w, w.h, GL_RED,
+                            GL_UNSIGNED_BYTE, w.bytes->data());
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+            glActiveTexture(GL_TEXTURE0);
+            pages_.push_back(t);
+            --budget;
+        }
+    }
+    page.held.clear();
+    for (const PageTexture& t : pages_) page.held.push_back(t.serial);
+    std::sort(page.held.begin(), page.held.end());
+}
+
+// THE PAGE'S DRAW (2026-10-27; GuiCanvasPage's rule, canvas_sink.h): the
+// page on screen chosen — the field alone for a shown page whose decode
+// failed (it is the page on screen); else the shown page's texture where it
+// is held; else the last painted page's where it is held; else the field
+// alone — placed in the clip, the box's interior, by gui_page_place, and
+// drawn by the page program under the scissor to that interior. The report
+// takes the session and the page now on screen (-1: none).
+void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
+    const auto find = [&](uint64_t serial) -> const PageTexture* {
+        if (serial == 0) return nullptr;
+        for (const PageTexture& t : pages_)
+            if (t.serial == serial) return &t;
+        return nullptr;
+    };
+    const PageTexture* t = nullptr;
+    int on_screen = -1;
+    if (page.shown_failed) {
+        on_screen = page.shown_page;
+    } else if ((t = find(page.shown_serial)) != nullptr) {
+        on_screen = page.shown_page;
+    } else if ((t = find(page.last_serial)) != nullptr) {
+        on_screen = page.last_page;
+    }
+    GuiRect at{0, 0, 0, 0};
+    if (t != nullptr)
+        at = gui_page_place(GuiRect{clip[0], clip[1], clip[2], clip[3]}, t->w,
+                            t->h);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(clip[0], texture_h_ - (clip[1] + clip[3]), clip[2], clip[3]);
+    glUseProgram(page_program_);
+    glUniform1i(page_height_uniform_, texture_h_);
+    glUniform4i(page_rect_uniform_, at.x, at.y, at.w, at.h);
+    glUniform1ui(page_field_uniform_, page.field);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, t != nullptr ? t->name : 0);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glActiveTexture(GL_TEXTURE0);
+    glDisable(GL_SCISSOR_TEST);
+    page.drawn_session = page.session;
+    page.drawn_page    = on_screen;
 }
 
 // THE LIST'S UPLOAD (2026-10-13; present_frame's draw): every record one

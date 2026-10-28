@@ -5537,9 +5537,11 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
 
 
 // THE MODAL FAMILY'S BOX'S PAINTER (defined with the folder overlay's
-// painter below, its other caller).
+// painter below, its other caller; `hole` the GL canvas's page hole, the
+// definition's head).
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            int keyboard_h);
+                            int keyboard_h,
+                            const GuiRect& hole = GuiRect{0, 0, 0, 0});
 
 namespace {
 
@@ -5708,8 +5710,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const GuiMaterialScope ground(GuiMaterialRegion::Ground);
 
     // THE BOX, for a prompt and a dialog editor (the surface block above):
-    // laid first, the controls after it on the row it leaves.
-    if (boxed) paint_modal_box(cr, app, kb_h);
+    // laid first, the controls after it on the row it leaves. UNDER THE GL
+    // CANVAS THE SCORE VIEWER'S INTERIOR IS THE FRAME'S HOLE (architect
+    // 2026-10-27, the GPU page: the clip on_redraw's canvas block chose at
+    // the frame's first rect, GuiCanvasPage::stands — the score branch's own
+    // condition, score_viewer_page_stands), which the box clears.
+    GuiRect page_hole{0, 0, 0, 0};
+    if constexpr (kGuiCanvasDrawList) {
+        const GuiCanvasDrawList& frame = gui_canvas_frame();
+        assert(frame.page.stands == score_up);
+        if (frame.page.stands) page_hole = frame.clip;
+    }
+    if (boxed) paint_modal_box(cr, app, kb_h, page_hole);
 
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
@@ -6353,40 +6365,50 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner = AppState::ModalDialogOwner::Score;
         const bool media = score_viewer_has_soundtrack(app);
 
-        // THE PAGE (score_viewer.h's head): the shown page's surface, made
-        // by the page decoder at the interior's fit size (score_page_worker.h:
-        // the smaller of the two ratios, cairo's GOOD filter, the window's
-        // conversion), BLITTED 1:1 and centered on both axes at whole device
-        // px, the rest of the interior the field ground paint_modal_box laid.
-        // A page whose decode failed leaves the field ground. A page NOT YET
-        // DELIVERED shows THE LAST PAINTED PAGE (ScoreViewer::painted_page,
-        // its entry kept by the feed's trim) until the decoder's delivery
-        // damages the interior; nothing painted yet, the field ground.
-        // painted_page is also the tick's gate on a page turn's owed position
-        // write: a frame whose clip covers the interior and finds the shown
-        // page's entry drew that page whole, or its field ground.
-        const AppState::ScoreViewer::Cached* c =
-            score_viewer_cached(app, app.score_viewer.page, interior);
-        if (c != nullptr) {
-            if (clip_covers_drawable(cr, app, interior))
-                app.score_viewer.painted_page = app.score_viewer.page;
-        } else if (app.score_viewer.painted_page >= 0) {
-            c = score_viewer_cached(app, app.score_viewer.painted_page,
-                                    interior);
-        }
-        if (c != nullptr && c->surface != nullptr && interior.w > 0 &&
-            interior.h > 0) {
-            const int dw = cairo_image_surface_get_width(c->surface);
-            const int dh = cairo_image_surface_get_height(c->surface);
-            const int dx = interior.x + (interior.w - dw) / 2;
-            const int dy = interior.y + (interior.h - dh) / 2;
-            const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-            cairo_save(cr);
-            cairo_rectangle(cr, dx, dy, dw, dh);
-            cairo_clip(cr);
-            cairo_set_source_surface(cr, c->surface, dx, dy);
-            cairo_paint(cr);
-            cairo_restore(cr);
+        // THE PAGE (score_viewer.h's head), ON THE CPU CANVAS: the shown
+        // page's surface, made by the page decoder at the interior's fit size
+        // (score_page_worker.h: the smaller of the two ratios, cairo's GOOD
+        // filter, the window's conversion), BLITTED 1:1 and centered on both
+        // axes at whole device px (gui_page_place, canvas_sink.h), the rest
+        // of the interior the field ground paint_modal_box laid. A page whose
+        // decode failed leaves the field ground. A page NOT YET DELIVERED
+        // shows THE LAST PAINTED PAGE (ScoreViewer::painted_page, its entry
+        // kept by the feed's trim) until the decoder's delivery damages the
+        // interior; nothing painted yet, the field ground. painted_page is
+        // also the tick's gate on a page turn's owed position write: a frame
+        // whose clip covers the interior and finds the shown page's entry
+        // drew that page whole, or its field ground.
+        // ON THE GL CANVAS (architect 2026-10-27, "1 a", THE GPU PAGE) NOTHING
+        // OF THE PAGE IS PAINTED HERE: the interior is the frame's hole,
+        // cleared by paint_modal_box above, and the GPU draws the field and
+        // the page there at every swap from the gray store's bytes by the
+        // same rule (GuiCanvasPage, canvas_sink.h; the request published at
+        // the frame's first rect, score_viewer_publish_gpu_page) — and
+        // painted_page is the GL canvas's report of the page it put on
+        // screen, which the tick reads (GuiScoreViewer::take_gpu_page_report).
+        if constexpr (!kGuiCanvasDrawList) {
+            const AppState::ScoreViewer::Cached* c =
+                score_viewer_cached(app, app.score_viewer.page, interior);
+            if (c != nullptr) {
+                if (clip_covers_drawable(cr, app, interior))
+                    app.score_viewer.painted_page = app.score_viewer.page;
+            } else if (app.score_viewer.painted_page >= 0) {
+                c = score_viewer_cached(app, app.score_viewer.painted_page,
+                                        interior);
+            }
+            if (c != nullptr && c->surface != nullptr && interior.w > 0 &&
+                interior.h > 0) {
+                const GuiRect at = gui_page_place(
+                    interior, cairo_image_surface_get_width(c->surface),
+                    cairo_image_surface_get_height(c->surface));
+                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                cairo_save(cr);
+                cairo_rectangle(cr, at.x, at.y, at.w, at.h);
+                cairo_clip(cr);
+                cairo_set_source_surface(cr, c->surface, at.x, at.y);
+                cairo_paint(cr);
+                cairo_restore(cr);
+            }
         }
 
         if (media) {
@@ -7104,6 +7126,28 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     else if (keyboard) paint_onscreen_keyboard(cr, exposed);
 }
 
+namespace {
+// `r` less `hole` as up to four rects — the rows above the hole, the rows
+// below it, and beside it on its own rows the parts left and right — or `r`
+// whole where the two do not meet (an empty hole included).
+template <typename F>
+void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
+    const int x0 = std::max(r.x, hole.x);
+    const int y0 = std::max(r.y, hole.y);
+    const int x1 = std::min(r.x + r.w, hole.x + hole.w);
+    const int y1 = std::min(r.y + r.h, hole.y + hole.h);
+    if (x1 <= x0 || y1 <= y0) {
+        f(r);
+        return;
+    }
+    if (y0 > r.y) f(GuiRect{r.x, r.y, r.w, y0 - r.y});
+    if (r.y + r.h > y1) f(GuiRect{r.x, y1, r.w, r.y + r.h - y1});
+    if (x0 > r.x) f(GuiRect{r.x, y0, x0 - r.x, y1 - y0});
+    if (r.x + r.w > x1) f(GuiRect{x1, y0, r.x + r.w - x1, y1 - y0});
+}
+
+} // namespace
+
 // -- THE MODAL FAMILY'S BOX (architect 2026-10-14) -------------------------
 //
 // The shape and every rect are modal_box.h's: THE PANEL in the program's
@@ -7119,14 +7163,36 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // picker never stand with the keyboard and pass 0 (paint_folder_overlay);
 // the prompts and the dialog editors pass the live lift
 // (paint_modal_dialog). Publishes nothing.
+// THE GPU PAGE'S HOLE (architect 2026-10-27, "1 a"; canvas_sink.h's
+// TRANSPARENCY INVARIANT): `hole`, the box's interior while the score
+// viewer's page stands under the GL canvas (the frame's clip; empty
+// otherwise), takes neither the panel's ground nor the field — both laid
+// under one clip of the panel less the hole — and is CLEARED to alpha 0,
+// erasing what the lanes painted there under the box (on_redraw's paint
+// order, step 12); the ring stands outside it. So every CPU pixel inside the
+// hole is 0 until a floater paints over it, and the GPU's field and page
+// show there.
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            int keyboard_h) {
+                            int keyboard_h, const GuiRect& hole) {
     const GuiRect panel = modal_panel_rect(app, keyboard_h);
     if (panel.w <= 0 || panel.h <= 0) return;
     const GuiRect box = modal_box_rect(app, keyboard_h);
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    const bool holed = hole.w > 0 && hole.h > 0;
+    if (holed) {
+        cairo_save(cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+        cairo_rectangle(cr, hole.x, hole.y, hole.w, hole.h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+        cairo_save(cr);
+        for_each_part_outside(panel, hole, [&](const GuiRect& part) {
+            cairo_rectangle(cr, part.x, part.y, part.w, part.h);
+        });
+        cairo_clip(cr);
+    }
     {
         // THE HI-FI SKIN (architect 2026-10-23): THE PANEL'S MARGINS
         // AND THE LIFTED CONTROLS ROW the brushed GROUND; THE BOX ONE SUNKEN
@@ -7139,7 +7205,10 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
         if (box.w > 0 && box.h > 0) {
             const GuiMaterialScope flat(GuiMaterialRegion::Flat);
             paint_cell_rect(cr, box, hex(kFieldGround));
+            if (holed) cairo_restore(cr);   // the ring outside the hole
             paint_hairline_frame(cr, box, p.ce_dark, p.ce_hilight);
+        } else if (holed) {
+            cairo_restore(cr);
         }
         if (keyboard_h > 0)
             paint_cell_rect(cr, modal_controls_row_rect(app, keyboard_h),
@@ -7356,25 +7425,6 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // on_redraw clears for the GPU; null on the cairo road, the face and the
 // rings whole, render_canvas laying the area over them.
 namespace {
-// `r` less `hole` as up to four rects — the rows above the hole, the rows
-// below it, and beside it on its own rows the parts left and right — or `r`
-// whole where the two do not meet (an empty hole included).
-template <typename F>
-void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
-    const int x0 = std::max(r.x, hole.x);
-    const int y0 = std::max(r.y, hole.y);
-    const int x1 = std::min(r.x + r.w, hole.x + hole.w);
-    const int y1 = std::min(r.y + r.h, hole.y + hole.h);
-    if (x1 <= x0 || y1 <= y0) {
-        f(r);
-        return;
-    }
-    if (y0 > r.y) f(GuiRect{r.x, r.y, r.w, y0 - r.y});
-    if (r.y + r.h > y1) f(GuiRect{r.x, y1, r.w, r.y + r.h - y1});
-    if (x0 > r.x) f(GuiRect{r.x, y0, x0 - r.x, y1 - y0});
-    if (r.x + r.w > x1) f(GuiRect{x1, y0, r.x + r.w - x1, y1 - y0});
-}
-
 void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
                                const GuiRect* hole) {
     const GuiRect area = waveform_area(app);
@@ -7464,7 +7514,10 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // upload with nothing damaging them again. (The settings choice editor's
 // dropped list was a fourth term, its own `list_open`, 2026-10-07 to
 // 2026-10-14; it went with the list. THE MODAL FAMILY'S BOX IS NO FLOATER:
-// it empties the canvas's paint area outright, waveform_paint_area.)
+// it empties the canvas's paint area outright, waveform_paint_area — and
+// while the score viewer's page stands its interior IS the GL frame's hole,
+// the clip, which the box itself clears, 2026-10-27: the floater bit's two
+// terms are the surfaces that can paint over it, as over the canvas.)
 static bool floating_surface_stands(const AppState& app) {
     return app.redesign_tooltip.visible || !app.notifications.cards.empty();
 }
@@ -7831,6 +7884,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // frame's first rect whatever it meets, so the platform's scissor and
     // upload rule follow a paint area that shrank or emptied under no
     // canvas damage (the keyboard rising, the modal family's box standing).
+    // THE SAME FIRST RECT PUBLISHES THE GPU PAGE'S REQUEST (architect
+    // 2026-10-27, "1 a"; GuiCanvasPage, canvas_sink.h) and, while the score
+    // viewer's page stands, makes THE BOX'S INTERIOR the clip: the canvas
+    // paint area is empty then, the GPU draws the interior whole, and
+    // paint_modal_box clears it — after the lanes that paint under the box —
+    // so the known-clear record below stays the canvas's alone.
     GuiCairoCanvasSink cairo_sink(cr);
     const GuiRect exposed_rect{x, y, w, h};
     const GuiRect canvas_paint =
@@ -7841,7 +7900,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         GuiCanvasDrawList& frame = gui_canvas_frame();
         if (!canvas_frame_seen) {
             canvas_frame_seen = true;
-            frame.clip    = canvas_paint_whole ? canvas_paint : GuiRect{0, 0, 0, 0};
+            // THE GPU PAGE'S REQUEST (architect 2026-10-27, "1 a";
+            // GuiCanvasPage, canvas_sink.h), and with it THE HOLE'S TENANT:
+            // the canvas paint area, or — while the score viewer's page
+            // stands, the box having emptied the canvas paint area — the
+            // box's interior, which the GPU draws whole and paint_modal_box
+            // clears (canvas_sink.h's THE HOLE IS ONE RECT).
+            score_viewer_publish_gpu_page(app, frame.page);
+            const GuiRect page_hole =
+                frame.page.stands ? modal_box_interior_rect(app, 0)
+                                  : GuiRect{0, 0, 0, 0};
+            assert(!(canvas_paint_whole && frame.page.stands));
+            frame.clip    = canvas_paint_whole ? canvas_paint : page_hole;
             frame.floater = floating_surface_stands(app);
             gui.set_canvas_frame(&frame);
             // THE KNOWN-CLEAR RECORD'S FOLD AND THE FRAME'S DECISION (the
@@ -8171,7 +8241,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      2026-10-14 here, the modal family's box for a prompt or a
         //      dialog editor over everything from the view bar's top row
         //      down, which the waveform's painted rect leaves out, and every
-        //      modal's controls row), then the flag editor's box, then THE
+        //      modal's controls row; under the GL canvas the score viewer's
+        //      interior CLEARED there, the GPU's page hole, 2026-10-27), then
+        //      the flag editor's box, then THE
         //      NOTIFICATION CARDS (paint_notifications, 2026-08-29 — the
         //      top-right stack, above every lane, the keyboard slot and the
         //      modal's box) — the floating surfaces, after

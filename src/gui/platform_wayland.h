@@ -277,13 +277,15 @@ public:
 #endif
     // THE GL CANVAS'S FRAME (the seam's contract at platform.h's loop
     // contract). Under the gl canvas (2026-10-14) paint_one_frame's present
-    // reads the list it names — its records drawn under a scissor to its
-    // clip, its clip left out of every upload unless a floater stands —
-    // until the next call names another, Android's body. Under the cpu
+    // reads the list it names — its records, or the score viewer's page
+    // while it stands, drawn under a scissor to its clip, its clip left out
+    // of every upload unless a floater stands — and writes its page's report
+    // (GuiCanvasPage, canvas_sink.h), until the next call names another,
+    // Android's body. Under the cpu
     // canvas A NO-OP: the cairo sink paints the canvas whole into the shm
     // buffers (canvas_sink.h), the call never comes, and the member exists
     // because on_redraw compiles against either road.
-    void set_canvas_frame(const GuiCanvasDrawList* frame);
+    void set_canvas_frame(GuiCanvasDrawList* frame);
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);
@@ -830,7 +832,7 @@ private:
     // The GL canvas's frame (set_canvas_frame): the GUI's one process-wide
     // list (gui_canvas_frame, canvas_sink.h), null until the first frame
     // names it.
-    const GuiCanvasDrawList* canvas_frame_ = nullptr;
+    GuiCanvasDrawList* canvas_frame_ = nullptr;
     void ensure_gl();
     void destroy_gl();
     // THE FRAME'S PRESENT: GuiGlCanvas::present_frame over damage_ and the

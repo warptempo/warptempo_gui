@@ -63,9 +63,11 @@
 // under a gl build (CMakeLists.txt's WARPTEMPO_CANVAS, both platforms since
 // 2026-10-14), after which the backend reads the list at that frame's
 // present and at every later one until the next call — GuiGlCanvas's frame
-// (gl_canvas.h), which both backends drive alike: the records drawn under a
-// scissor to the clip, the clip left out of every upload unless the floater
-// bit stands. The list outlives every project set (it is the process's), so
+// (gl_canvas.h), which both backends drive alike: the records — or the score
+// viewer's page while it stands (2026-10-27) — drawn under a scissor to the
+// clip, the clip left out of every upload unless the floater bit stands, and
+// the page's report written back into the list (GuiCanvasPage,
+// canvas_sink.h). The list outlives every project set (it is the process's), so
 // a run stop strands no pointer. Under a cpu build no list is ever built and
 // the call never comes: the Android cpu build's body stores the pointer and
 // reads nothing, the Wayland cpu build's is a no-op (its canvas the cairo

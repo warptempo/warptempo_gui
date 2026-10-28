@@ -3,6 +3,7 @@
 
 #include <cairo/cairo.h>
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <vector>
 
@@ -65,6 +66,19 @@
 // its own ground alone, design record §2). A partial alpha there is a design
 // violation — a translucent or non-rectangular overlay would have to
 // composite on the CPU — and the screencap harness is its detector.
+// THE HOLE IS ONE RECT, ITS TENANT THE CANVAS OR THE PAGE (architect
+// 2026-10-27, "1 a", the GPU page; design record §3.13): the list's clip is
+// the canvas paint area, or — while the score viewer's page stands
+// (score_viewer_page_stands), the modal family's box having emptied the
+// canvas paint area — THE BOX'S INTERIOR, which the GPU draws whole (the
+// field ground and the page, GuiCanvasPage below) and which
+// paint_modal_box CLEARS at every rect that meets it, after every pass that
+// paints under the box (the lanes paint their exposure under it and the box
+// covered them on the cpu road, on_redraw's paint-order block step 12). The
+// invariant is the same inside it: alpha 0, or an opaque overlay's 255 (the
+// tooltip and the cards, the floater bit's two). The two tenants never stand
+// together, so the scissor, the rect every upload leaves out and the floater
+// bit's whole-walk rule are one rule for both.
 //
 // WHERE IDENTITY RESTS, the three claims:
 //   * THE CPU CANVAS AGAINST THE TREE BEFORE THE SINK: the cairo
@@ -86,6 +100,16 @@
 //     the cairo road's paint order; the scissor is the cpu road's clip
 //     (the canvas paint area, the plate's area clip containing it); and the
 //     texture over it places every overlay pixel exactly (Milestone 1).
+//   * THE GPU PAGE AGAINST THE CPU PAGE (2026-10-27; GuiCanvasPage below):
+//     the field's word is the flat fill's (argb32_opaque_word of
+//     display_color, the rects' own claim); the page's texel is the gray
+//     byte g, written as g, and the cpu road's blitted pixel is FF g g g
+//     under either conversion bit (expand_gray's proof); the place is
+//     gui_page_place on the same interior and the same page size; the page
+//     chosen is the cpu painter's rule (the shown page, else the last
+//     painted, else the field). Where the two roads may differ in TIME, never
+//     in bytes: the cpu road shows a page when its ARGB surface lands, the
+//     GPU when its texture is held.
 //   * WHAT IS NOT IDENTICAL BY CONSTRUCTION: the list is rebuilt WHOLE from
 //     the frame's state where the cairo road repaints only the damaged part
 //     of a persistent backbuffer, so a canvas change some route forgot to
@@ -126,7 +150,9 @@ struct GuiCanvasPrimitive {
 // THE FRAME'S CANVAS (2026-10-13): the records in paint order, the plate
 // bands' columns behind them, and what the platform needs to place them —
 // the clip (waveform_area ∩ waveform_paint_area: the GL draw's scissor and
-// the rect every upload leaves out) and whether a floating surface stands
+// the rect every upload leaves out; the modal box's interior instead while
+// the score viewer's page stands, `page` below, 2026-10-27) and whether a
+// floating surface stands
 // (floating_surface_stands, paint_handler.cpp: its changes ride containing
 // rects, so every damage rect uploads whole). The keyboard slot needs no
 // bit: its tenants stand outside the clip (the keyboard and a dialog on it
@@ -144,6 +170,73 @@ struct GuiCanvasPrimitive {
 // the copy a rebuild would make. The list's Plate records, when it has any,
 // draw that plate, and the platform re-uploads its bounds texture only when
 // the revision or the records' spans moved (GuiGlCanvas::upload_list).
+// THE GPU PAGE (architect 2026-10-27, "1 a": THE PICTURE FOLLOWS THE THUMB,
+// THE SOUND WAITS FOR THE LIFT; design record §3.13). Under the GL canvas the
+// score viewer's page is not blitted into the backbuffer: the box's interior
+// is the frame's hole (the list's clip) and the GPU draws it whole at every
+// swap — THE FIELD GROUND (`field`, the word the cpu road's flat fill
+// stores: argb32_opaque_word of display_color, the list sink's identity) and
+// over it THE PAGE, one R8 texture of THE GRAY STORE's bytes
+// (GuiScoreGrayPage, score_page_worker.h), texelFetched at integer
+// coordinates and written (g, g, g, 1) at gui_page_place's rect, the cpu
+// painter's centering. NO COLOR TABLE: the cpu road's page is FF g g g under
+// either conversion bit (expand_gray's proof, score_page_worker.cpp: sRGB ->
+// P3 is the identity on every neutral word, all 256 re-checked 2026-10-27),
+// so the gray byte is the window's byte on both roads.
+// TWO HALVES, the GUI's and the GL owner's:
+//   * THE REQUEST — written by the GUI at every frame's first damage rect
+//     (score_viewer_publish_gpu_page, score_viewer.cpp): whether the page
+//     stands (the clip is then the interior), the viewer's session, the
+//     field word, THE SHOWN PAGE (its index, its store entry's serial — 0
+//     where the store lacks it — and whether its decode failed), THE LAST
+//     PAINTED PAGE (ScoreViewer::painted_page, the page on screen, by its
+//     index and serial; -1 and 0 where it is the shown page, is none, or the
+//     store lacks it or holds it failed), and
+//     THE WANTED TEXTURES: the store's pages at the interior's box, failed
+//     ones aside, in THE FEED'S ORDER (the shown page, its neighbors in the
+//     cache's order, then the rest of the range), each named by its serial
+//     (GuiScoreGrayPage::serial, unique for the process's life) with its
+//     size and its shared, immutable bytes — no copy.
+//   * THE REPORT — written by GuiGlCanvas::present_frame: the serials it
+//     holds as textures, ascending, and, at each present that drew the page,
+//     the session it drew for and the page it put on screen (-1 the field
+//     ground alone). THE TEXTURES MIRROR THE WANTED LIST, so the store's
+//     scope (the range, the box, the score, the project) is theirs; the
+//     page's draw is THE SHOWN PAGE'S TEXTURE WHERE IT IS HELD, ELSE THE
+//     LAST PAINTED PAGE'S, ELSE THE FIELD GROUND — and the field alone for a
+//     shown page whose decode failed (it is then the page on screen).
+struct GuiCanvasPageTexture {
+    uint64_t serial = 0;
+    int      page   = -1;
+    int      w      = 0;
+    int      h      = 0;
+    std::shared_ptr<const std::vector<uint8_t>> bytes;
+};
+struct GuiCanvasPage {
+    // The request.
+    bool     stands       = false;
+    uint64_t session      = 0;
+    uint32_t field        = 0;
+    int      shown_page   = -1;
+    uint64_t shown_serial = 0;
+    bool     shown_failed = false;
+    int      last_page    = -1;
+    uint64_t last_serial  = 0;
+    std::vector<GuiCanvasPageTexture> want;
+    // The report.
+    std::vector<uint64_t> held;
+    uint64_t drawn_session = 0;
+    int      drawn_page    = -1;
+};
+
+// THE PAGE'S PLACE IN THE BOX (the score viewer's, score_viewer.h's head):
+// a w x h page centered on both axes at whole device px, the integer
+// halves of the slack — the cpu painter's blit and the GPU page's draw read
+// this one arithmetic.
+inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
+    return GuiRect{box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h};
+}
+
 struct GuiCanvasDrawList {
     GuiRect  clip{};
     bool     floater = false;
@@ -151,6 +244,9 @@ struct GuiCanvasDrawList {
     uint64_t plate_revision = 0;
     std::vector<GuiCanvasPrimitive>  prims;
     std::vector<WaveformColumnRows>  columns;
+    // THE GPU PAGE (above): while `page.stands` the clip is the box's
+    // interior and the page draws there in the records' stead.
+    GuiCanvasPage page;
 };
 GuiCanvasDrawList& gui_canvas_frame();
 

@@ -142,10 +142,25 @@
 // THE PAGES ARE DECODED OFF THE MAIN THREAD (architect 2026-10-26 night: "if
 // there's going to be an additional visual lag on the page turning on top of
 // the Bluetooth lag, that's not going to work"): the page decoder
-// (score_page_worker.h) decodes a page, scales it ONCE to the box's fit size
-// and converts it for the window, and the painter blits it 1:1 — NEVER A
-// SYNCHRONOUS DECODE, the open's included; the main thread never decodes,
-// scales or expands. TWO HOLDINGS, both the decoder's to fill:
+// (score_page_worker.h) decodes a page and scales it ONCE to the box's fit
+// size — NEVER A SYNCHRONOUS DECODE, the open's included; the main thread
+// never decodes, scales or expands. WHAT PAINTS IT IS THE CANVAS ROAD'S (the
+// build's WARPTEMPO_CANVAS, canvas_sink.h's kGuiCanvasDrawList):
+//   * THE CPU CANVAS: the decoder also converts the page for the window and
+//     the painter BLITS the cache's surface 1:1 into the backbuffer
+//     (paint_modal_dialog's score branch).
+//   * THE GL CANVAS — THE GPU PAGE (architect 2026-10-27, "1 a": THE PICTURE
+//     FOLLOWS THE THUMB, THE SOUND WAITS FOR THE LIFT; the measurement and
+//     the design at docs/engineering/gpu_canvas_2026_10.md §3.13): the box's
+//     interior is the frame's hole, cleared on the CPU, and the GPU draws the
+//     field ground and the page there at every swap from THE GRAY STORE'S
+//     BYTES, one R8 texture a page (GuiCanvasPage, canvas_sink.h; the
+//     textures' lifetime at gl_canvas.h): no blit and no canvas upload, so a
+//     page change costs a frame and nothing more once the range is resident.
+//     THE CACHE IS NOT KEPT under it: the feed asks the decoder for the gray
+//     bytes alone, in the cache's order (feed_decoder), and nothing is
+//     converted or expanded.
+// TWO HOLDINGS, both the decoder's to fill:
 //   * THE GRAY STORE (AppState::ScoreViewer::gray; architect 2026-10-26
 //     ~22:10: every page of the viewing range "decoded once", held in RAM as
 //     8-bit gray — about 2.2 MB a page fit to 1975 x 1111 in the tablet's
@@ -166,7 +181,8 @@
 //     (gui_scale) and with the score folder and the project. No backstop for
 //     memory: a failed allocation is std::bad_alloc, the rare non-silent
 //     fault.
-//   * THE CACHE (AppState::ScoreViewer::cache), the PAINTED pages: the shown
+//   * THE CACHE (AppState::ScoreViewer::cache; the cpu canvas's alone), the
+//     PAINTED pages: the shown
 //     page and up to three either side of it in the range — at the tablet's
 //     box about 9 MB a page — each made FROM THE STORE where the store holds
 //     it (the decoder expands the gray bytes, a few ms against a JPEG decode)
@@ -183,6 +199,15 @@
 // painted yet — the open's first frame, a score change — the interior is the
 // field ground. A page whose decode fails is one stderr line, the interior the
 // field ground, and that page is not asked for again under the same key.
+// UNDER THE GL CANVAS THE SAME RULE IS THE GPU'S: the shown page's texture
+// where it is held, else the last painted page's, else the field ground, the
+// field alone for a failed page (GuiGlCanvas's draw), and painted_page is
+// THE PAGE THE LAST PRESENT PUT ON SCREEN, read off the GL canvas's report at
+// every tick (take_gpu_page_report) — so the owed position write's gate
+// (painted_page == page) waits for the page's own swap; while the store holds
+// a page the GPU does not, the tick asks a frame (the uploads go one a
+// present).
+
 // Every job prints its timing line and the store's completion one more
 // (score_page_worker.h's THE TIMING LINE, note_gray_complete).
 
@@ -434,10 +459,33 @@ inline int64_t score_scrub_frame_at(const AppState& a, int x) {
                           t * static_cast<double>(fr.length())));
 }
 
-// THE PAGE THE PAINTER BLITS: the cache's entry for `page` at the fit box
-// `box` (the modal box's interior) under the window's conversion bit as it
-// stands, or null — not delivered yet; an entry marked failed answers too,
-// with no surface (the painter's one read of the cache).
+// THE PAGE STANDS: the viewer stands with a score loaded and is THE LIVE
+// MODAL SURFACE — no prompt over it (RESET's question takes the box), read
+// through the one ranking (AppState::modal_dialog_live_session) — which is
+// paint_modal_dialog's score branch's condition exactly. Under the GL canvas
+// it is when the box's interior is the frame's hole and the GPU draws the
+// page (GuiCanvasPage::stands, canvas_sink.h).
+inline bool score_viewer_page_stands(const AppState& a) {
+    return a.score_viewer.active && a.score.has_value() &&
+           a.modal_dialog_live_session() == a.score_viewer.session;
+}
+
+// THE GPU PAGE'S REQUEST (the GL canvas's, 2026-10-27; GuiCanvasPage's
+// rule, canvas_sink.h), written at every frame's first damage rect
+// (on_redraw's canvas block) from the viewer's state as it stands: whether
+// the page stands, the session, the field word, the shown page and the last
+// painted page by their store entries' serials, and the store's pages at the
+// interior's box in THE FEED'S ORDER (feed_decoder's) as the wanted
+// textures — none while the store's box is not the interior's (a resize the
+// feed has not caught up with), so the textures go with the store. Never
+// called on the cpu canvas.
+struct GuiCanvasPage;
+void score_viewer_publish_gpu_page(const AppState& app, GuiCanvasPage& out);
+
+// THE PAGE THE PAINTER BLITS (the cpu canvas's): the cache's entry for
+// `page` at the fit box `box` (the modal box's interior) under the window's
+// conversion bit as it stands, or null — not delivered yet; an entry marked
+// failed answers too, with no surface (the painter's one read of the cache).
 inline const AppState::ScoreViewer::Cached* score_viewer_cached(
         const AppState& a, int page, const GuiRect& box) {
     const GuiScorePageKey key{page, box.w, box.h, display_transform::active()};
@@ -566,7 +614,9 @@ struct GuiScoreViewer {
 
     // THE RUN LOOP'S TICK (main.cpp's on_tick, every tick, the viewer standing
     // or not): the decoder's results drained into the cache; and while the
-    // viewer stands, the soundtrack's arrival or failure repainting the face,
+    // viewer stands, the GL canvas's page report taken
+    // (take_gpu_page_report; the GL build alone), the soundtrack's arrival
+    // or failure repainting the face,
     // the LIVE transport's dead device, natural end, page follow and clock /
     // scrub damage (the render player's tick's shape), a page turn's owed
     // position written once the turn is painted, and the decoder asked for
@@ -596,6 +646,18 @@ private:
     // The decoder's results into the cache and the gray store; the shown
     // page's arrival damages the interior.
     void drain_decoder();
+    // THE GL CANVAS'S PAGE REPORT (GuiCanvasPage, canvas_sink.h; the GL build
+    // alone): painted_page set to the page the last present put on screen
+    // for this session, and, while the page stands, a frame asked
+    // (request_frame) while the store at the interior's box holds a page the
+    // GPU does not — each present uploads at most one, so the asks run until
+    // the range is resident.
+    void take_gpu_page_report();
+    // ONE FRAME ASKED with no CPU pixel to repaint: one device px of the
+    // interior, the GL canvas's hole while the page stands (the CPU clears it
+    // and the upload leaves it out), so the frame costs the CPU one clipped
+    // pass and the GPU its swap.
+    void request_frame();
     // The gray store at the interior's box (dropped whole at a change) and
     // inside the range (scope_gray_to_range), the cache trimmed to the shown
     // page's neighborhood at the current box and conversion (the last painted
@@ -611,7 +673,10 @@ private:
     // line printed and the stamp cleared.
     void note_gray_complete();
     // Damage: the modal family's whole area, the box's interior, the
-    // controls row.
+    // controls row. UNDER THE GL CANVAS, WHILE THE PAGE STANDS, THE INTERIOR'S
+    // DAMAGE IS A FRAME (request_frame): its pixels are the GPU's, redrawn
+    // whole at every swap from the state the frame publishes, and the CPU's
+    // share of them is alpha 0, so a page change owes the CPU nothing.
     void damage();
     void damage_interior();
     void damage_row();

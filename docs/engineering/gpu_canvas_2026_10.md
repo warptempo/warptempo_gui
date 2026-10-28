@@ -259,6 +259,54 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
     option, never a device key (`WARPTEMPO_CANVAS`, `gl` the
     product, `cpu` the reference), nothing the user picks.
 
+13. **The page** (architect 2026-10-27, "1 a", the GPU page; his rule
+    across the three surfaces: THE PICTURE FOLLOWS THE THUMB, THE SOUND
+    WAITS FOR THE LIFT). MEASURED on the tablet 2026-10-27 over the PDF
+    page scrub (4f953b52, tmp/scrub_rec/): frames that do not change the
+    page came every 11 ms (90 Hz); every frame that changed it took
+    25-30 ms and the thumb lurched 8-12 px. The pages were already in
+    memory (an expansion is about 3 ms, off the main thread); the cost was
+    THE CANVAS UPLOAD — the page blitted into the backbuffer and its ~9 MB
+    box interior then uploaded by damage rect, §1's milestone-1 hazard for
+    the waveform. THE PAGE LEAVES THE UPLOAD AS THE CANVAS DID: while the
+    score viewer's page stands, the list's clip is THE MODAL BOX'S INTERIOR
+    (the box empties the canvas paint area, so the hole has one tenant at a
+    time and the scissor, the rect every walk leaves out and the floater
+    bit's whole-walk rule are unchanged); `paint_modal_box` clears it to
+    alpha 0 after the lanes that paint under the box; and the GPU draws the
+    whole interior at every swap with one program — the field ground's word
+    and, over it, the page from an R8 texture of the gray store's bytes,
+    `texelFetch`ed at integer coordinates and written (g, g, g, 1) at the
+    cpu painter's centered rect (`gui_page_place`). No color table: the cpu
+    road's page is FF g g g under either conversion bit (`expand_gray`'s
+    proof, re-checked over all 256 neutrals). THE TEXTURES MIRROR THE GRAY
+    STORE (the GUI's request names its pages by a process-unique serial in
+    the feed's order; `GuiGlCanvas` deletes what the request no longer
+    names and, while the page stands, uploads at most one page a present,
+    ~2.2 MB at the tablet's box), so the range scopes GPU memory as it
+    scopes RAM, and once the range is resident a scrub uploads nothing. The
+    GPU shows the shown page's texture where it is held, else the last
+    painted page's, else the field ground — the cpu painter's rule — and
+    reports the page it put on screen, which becomes `painted_page` at the
+    next tick (the owed position write's gate). Under the GL canvas the
+    ARGB cache is not kept: the feed asks the gray bytes alone, in the
+    cache's order. The request and the report: `GuiCanvasPage`
+    (`canvas_sink.h`); the lifecycle: `gl_canvas.h`; the GUI's half:
+    `score_viewer.h`'s head. THE PROOF (2026-10-27, on the tablet, the 550 -
+    2 PDF score, its 45-page range): §5's method, the cpu APK against the gl
+    APK from the same viewer file, ten states each with True Colors on and
+    off — the launch, the viewer's open, NEXT, NEXT, PREV, a scrub held at
+    two columns (`input motionevent` DOWN / MOVE, captured before the UP),
+    the lift, the close, the reopen — every pair byte-identical over the
+    whole frame but the logo lane's clock digits when the minute turned
+    between the two runs; the cpu APK of the tree before the change
+    identical to the new cpu APK the same way. THE RECORDED SCRUB (adb
+    screenrecord over two injected swipes along the scrub, ~35 pages each
+    way, the frames' presentation times and a per-frame page-change score):
+    the 82 frames that changed the page came 11.4 ms apart on mean (median
+    10.8, 90th percentile 12.3), the 311 that did not 11.3 ms — the
+    page-change frame no longer costs a frame.
+
 ## 4. The milestones
 
 1. P4, then the EGL surface with the WHOLE backbuffer uploaded as one texture

@@ -1796,7 +1796,7 @@ void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
 
 #if WARPTEMPO_CANVAS_GL
 // THE GL CANVAS'S FRAME, named (the declaration; read at present).
-void GuiPlatform::set_canvas_frame(const GuiCanvasDrawList* frame) {
+void GuiPlatform::set_canvas_frame(GuiCanvasDrawList* frame) {
     canvas_frame_ = frame;
 }
 #else
@@ -1810,7 +1810,7 @@ GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_buffer() {
 // The GL canvas's frame has no reader under the cpu canvas (the
 // declaration): the cairo sink paints this backend's canvas whole, and the
 // call never comes.
-void GuiPlatform::set_canvas_frame(const GuiCanvasDrawList* /*frame*/) {}
+void GuiPlatform::set_canvas_frame(GuiCanvasDrawList* /*frame*/) {}
 #endif
 
 // ---------------------------------------------------------------------------

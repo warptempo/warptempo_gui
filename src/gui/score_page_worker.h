@@ -6,9 +6,10 @@
 // the Bluetooth lag, that's not going to work") — ONE std::jthread, held by
 // the viewer's state (AppState::ScoreViewer::decoder), that turns a page's
 // JPEG (tools/score_extract.py's grayscale page, 2026-10-26) into the
-// surface the painter blits 1:1 and the gray bytes the viewer's store holds,
-// so NO PAGE IS EVER DECODED, SCALED OR EXPANDED ON THE MAIN THREAD, the
-// open's included.
+// surface the cpu canvas's painter blits 1:1 and the gray bytes the viewer's
+// store holds (the GL canvas's page textures, 2026-10-27: under it no job
+// asks for the surface, score_viewer.h's head), so NO PAGE IS EVER DECODED,
+// SCALED OR EXPANDED ON THE MAIN THREAD, the open's included.
 //
 // A JOB is a page at a FIT BOX (the modal box's interior, its w x h,
 // modal_box_interior_rect) and the window's conversion bit as the GUI thread
@@ -98,7 +99,11 @@ struct GuiScorePageKey {
 // its fit-size pixels, one byte each, row-major, w x h, shared (immutable
 // once made) so a job carries them to the worker without a copy. No bytes is
 // a decode that failed under this page and box, never asked for again while
-// they stand.
+// they stand. `serial` NAMES THE BYTES FOR THE GL CANVAS (2026-10-27, the GPU
+// page: GuiCanvasPage, canvas_sink.h): minted when the entry enters the store
+// (GuiScoreViewer::drain_decoder) from a counter the process never resets, so
+// one serial is one immutable buffer for the process's life and the texture
+// made from it is never stale; 0 before the store takes it.
 struct GuiScoreGrayPage {
     int page  = -1;
     int box_w = 0;
@@ -106,6 +111,7 @@ struct GuiScoreGrayPage {
     int w     = 0;
     int h     = 0;
     std::shared_ptr<const std::vector<uint8_t>> bytes;
+    uint64_t serial = 0;
     bool failed() const { return bytes == nullptr; }
 };
 

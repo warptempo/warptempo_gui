@@ -266,10 +266,12 @@ public:
     int painting_target() const { return 0; }
     // THE GL CANVAS'S FRAME (2026-10-13; the seam's contract at platform.h's
     // loop contract): under the gl build present() reads the list it names —
-    // its records drawn under a scissor to its clip, its clip left out of
-    // every upload unless a floater stands — until the next call names
-    // another; the cpu build stores it and reads nothing.
-    void set_canvas_frame(const GuiCanvasDrawList* frame);
+    // its records, or the score viewer's page while it stands, drawn under a
+    // scissor to its clip, its clip left out of every upload unless a
+    // floater stands — and writes its page's report (GuiCanvasPage,
+    // canvas_sink.h), until the next call names another; the cpu build
+    // stores it and reads nothing.
+    void set_canvas_frame(GuiCanvasDrawList* frame);
 
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
@@ -624,7 +626,7 @@ private:
     // The GL canvas's frame (set_canvas_frame): the GUI's one process-wide
     // list (gui_canvas_frame, canvas_sink.h), null until the first frame
     // names it.
-    const GuiCanvasDrawList* canvas_frame_ = nullptr;
+    GuiCanvasDrawList* canvas_frame_ = nullptr;
 
     // -- Window state --
     // THE SURFACE IS THE WINDOW (architect 2026-10-01, with full screen):

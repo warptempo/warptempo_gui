@@ -1,5 +1,7 @@
 #include "score_viewer.h"
 
+#include "canvas_sink.h"        // the GPU page: GuiCanvasPage, kGuiCanvasDrawList
+#include "materials.h"          // kFieldGround, the page's field
 #include "notifications.h"
 #include "score_viewer_file.h"  // the write-through
 #include "text_editor.h"   // next_session_id (the one modal counter)
@@ -22,7 +24,100 @@ constexpr const char* kNoScoreCard = "This piece has no score";
 // box.
 constexpr int kCacheReach = 3;
 
+// THE LIKELY ORDER (the feed's, and the GPU page's uploads in the same
+// order): `p` first, then forward first while `ahead` (the soundtrack
+// sounds, or after NEXT), both ways otherwise, `reach` pages each side.
+std::vector<int> likely_order(int p, int reach, bool ahead) {
+    std::vector<int> order{p};
+    if (ahead) {
+        for (int d = 1; d <= reach; ++d) order.push_back(p + d);
+        for (int d = 1; d <= reach; ++d) order.push_back(p - d);
+    } else {
+        for (int d = 1; d <= reach; ++d) {
+            order.push_back(p + d);
+            order.push_back(p - d);
+        }
+    }
+    return order;
+}
+
+// THE FEED'S WHOLE ORDER over the range (feed_decoder's two passes, the GPU
+// page's wanted list): the cache's reach in the likely order, then the rest
+// of the range in it, each page once — the second pass reaching the whole
+// score, so a shown page left outside a range typed while the viewer was
+// closed still orders every page of it.
+std::vector<int> feed_order(const AppState& app) {
+    const AppState::ScoreViewer& sv = app.score_viewer;
+    const ScoreViewerRange r = score_viewer_range(app);
+    const int  p     = sv.page;
+    const bool ahead = sv.transport == Transport::Live || sv.forward;
+    std::vector<int>  out;
+    std::vector<char> seen(static_cast<std::size_t>(app.score->count()), 0);
+    const auto take = [&](int i) {
+        if (i < r.first || i > r.last) return;
+        char& s = seen[static_cast<std::size_t>(i)];
+        if (s) return;
+        s = 1;
+        out.push_back(i);
+    };
+    for (const int i : likely_order(p, kCacheReach, ahead)) take(i);
+    for (const int i : likely_order(p, app.score->count(), ahead)) take(i);
+    return out;
+}
+
+// THE GRAY STORE'S SERIALS (GuiScoreGrayPage::serial): the main thread's
+// counter, never reset, so a serial is unique for the process's life.
+uint64_t next_gray_serial() {
+    static uint64_t serial = 0;
+    return ++serial;
+}
+
 }  // namespace
+
+void score_viewer_publish_gpu_page(const AppState& app, GuiCanvasPage& out) {
+    const AppState::ScoreViewer& sv = app.score_viewer;
+    out.stands       = score_viewer_page_stands(app);
+    out.session      = sv.session;
+    out.field        = argb32_opaque_word(display_color(hex(kFieldGround)));
+    out.shown_page   = sv.page;
+    out.shown_serial = 0;
+    out.shown_failed = false;
+    out.last_page    = -1;
+    out.last_serial  = 0;
+    out.want.clear();
+    if (!app.score) return;
+    // THE STORE AT THE INTERIOR'S BOX, or nothing (the declaration).
+    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    if (box.w <= 0 || box.h <= 0 || box.w != sv.gray_box_w ||
+        box.h != sv.gray_box_h)
+        return;
+    const std::size_t n = static_cast<std::size_t>(app.score->count());
+    std::vector<const GuiScoreGrayPage*> gray_at(n, nullptr);
+    for (const GuiScoreGrayPage& g : sv.gray)
+        if (g.page >= 0 && static_cast<std::size_t>(g.page) < n)
+            gray_at[static_cast<std::size_t>(g.page)] = &g;
+    const auto at = [&](int page) -> const GuiScoreGrayPage* {
+        if (page < 0 || static_cast<std::size_t>(page) >= n) return nullptr;
+        return gray_at[static_cast<std::size_t>(page)];
+    };
+    if (const GuiScoreGrayPage* g = at(sv.page)) {
+        if (g->failed()) out.shown_failed = true;
+        else             out.shown_serial = g->serial;
+    }
+    if (sv.painted_page != sv.page) {
+        if (const GuiScoreGrayPage* g = at(sv.painted_page);
+            g != nullptr && !g->failed()) {
+            out.last_page   = sv.painted_page;
+            out.last_serial = g->serial;
+        }
+    }
+    for (const int i : feed_order(app)) {
+        const GuiScoreGrayPage* g = at(i);
+        if (g == nullptr || g->failed()) continue;
+        out.want.push_back(
+            GuiCanvasPageTexture{g->serial, g->page, g->w, g->h, g->bytes});
+    }
+}
 
 void score_folder_changed(AppState& app) {
     AppState::ScoreViewer& sv = app.score_viewer;
@@ -371,6 +466,7 @@ void GuiScoreViewer::tick() {
     AppState::ScoreViewer& sv = app.score_viewer;
     drain_decoder();
     if (!sv.active || !app.score) return;
+    if constexpr (kGuiCanvasDrawList) take_gpu_page_report();
 
     // THE SOUNDTRACK'S ARRIVAL OR FAILURE repaints the face it decides: the
     // PLAY key lights, or a load that failed takes the page road's face.
@@ -456,6 +552,7 @@ void GuiScoreViewer::drain_decoder() {
                 GuiScoreGrayPage g = std::move(r.gray);
                 if (g.failed())
                     g = GuiScoreGrayPage{k.page, k.box_w, k.box_h, 0, 0, {}};
+                g.serial = next_gray_serial();
                 std::erase_if(sv.gray, [&](const GuiScoreGrayPage& e) {
                     return e.page == k.page;
                 });
@@ -572,22 +669,9 @@ void GuiScoreViewer::feed_decoder() {
         if (shown_absent && c.key.page == sv.painted_page) return false;
         return !in_reach(c.key.page);
     });
-    // THE LIKELY ORDER: the shown page, then forward first while the
-    // soundtrack sounds or after NEXT, both ways otherwise.
+    // THE LIKELY ORDER (likely_order): the shown page, then forward first
+    // while the soundtrack sounds or after NEXT, both ways otherwise.
     const bool ahead = sv.transport == Transport::Live || sv.forward;
-    const auto likely_order = [&](int reach) {
-        std::vector<int> order{p};
-        if (ahead) {
-            for (int d = 1; d <= reach; ++d) order.push_back(p + d);
-            for (int d = 1; d <= reach; ++d) order.push_back(p - d);
-        } else {
-            for (int d = 1; d <= reach; ++d) {
-                order.push_back(p + d);
-                order.push_back(p - d);
-            }
-        }
-        return order;
-    };
     // The store by page (one entry a page, at the store's box: the head).
     const std::size_t n = static_cast<std::size_t>(app.score->count());
     std::vector<const GuiScoreGrayPage*> gray_at(n, nullptr);
@@ -599,9 +683,21 @@ void GuiScoreViewer::feed_decoder() {
     // THE CACHE'S WANTS FIRST: a page the store holds is EXPANDED from its
     // bytes, one it lacks read from the file for both (score_page_worker.h's
     // THREE KINDS); a page whose store entry failed is marked failed here,
-    // never asked for again.
-    for (const int i : likely_order(kCacheReach)) {
+    // never asked for again. UNDER THE GL CANVAS (the head's THE GPU PAGE) no
+    // cache is kept: the same pages in the same order are asked for THE GRAY
+    // ALONE where the store lacks them, so the order the store fills in —
+    // and the GPU page's uploads, which follow it — is the cpu road's.
+    for (const int i : likely_order(p, kCacheReach, ahead)) {
         if (!in_reach(i)) continue;
+        if constexpr (kGuiCanvasDrawList) {
+            if (gray_at[static_cast<std::size_t>(i)] != nullptr) continue;
+            queued[static_cast<std::size_t>(i)] = 1;
+            works.push_back(
+                GuiScorePageWork{GuiScorePageKey{i, box.w, box.h, false},
+                                 /*surface=*/false, /*gray=*/true,
+                                 /*expand=*/false});
+            continue;
+        }
         const GuiScorePageKey key{i, box.w, box.h, convert};
         const bool held = std::any_of(
             sv.cache.begin(), sv.cache.end(),
@@ -622,7 +718,7 @@ void GuiScoreViewer::feed_decoder() {
     }
     // THEN THE STORE'S: every page of the range it lacks, in the same likely
     // order reaching the whole range, read from the file for the gray alone.
-    for (const int i : likely_order(r.count())) {
+    for (const int i : likely_order(p, r.count(), ahead)) {
         if (i < r.first || i > r.last) continue;
         const std::size_t at = static_cast<std::size_t>(i);
         if (queued[at] || gray_at[at] != nullptr) continue;
@@ -654,7 +750,37 @@ void GuiScoreViewer::damage() {
 }
 
 void GuiScoreViewer::damage_interior() {
+    if constexpr (kGuiCanvasDrawList) {
+        if (score_viewer_page_stands(app)) {
+            request_frame();
+            return;
+        }
+    }
     viewport.invalidate_rect(modal_box_interior_rect(app, /*keyboard_h=*/0));
+}
+
+void GuiScoreViewer::request_frame() {
+    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    if (box.w <= 0 || box.h <= 0) return;
+    viewport.invalidate_rect(GuiRect{box.x, box.y, 1, 1});
+}
+
+void GuiScoreViewer::take_gpu_page_report() {
+    AppState::ScoreViewer& sv = app.score_viewer;
+    const GuiCanvasPage& gp = gui_canvas_frame().page;
+    // THE PAGE ON SCREEN (the head's UNDER THE GL CANVAS): the last present's
+    // for this session; a report from before the open is another session's.
+    if (gp.drawn_session == sv.session) sv.painted_page = gp.drawn_page;
+    if (!score_viewer_page_stands(app)) return;
+    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    if (box.w != sv.gray_box_w || box.h != sv.gray_box_h) return;
+    for (const GuiScoreGrayPage& g : sv.gray) {
+        if (g.failed()) continue;
+        if (!std::binary_search(gp.held.begin(), gp.held.end(), g.serial)) {
+            request_frame();
+            return;
+        }
+    }
 }
 
 void GuiScoreViewer::damage_row() {

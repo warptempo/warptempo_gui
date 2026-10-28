@@ -9050,6 +9050,9 @@ struct AppState {
     //              the field ground of a failed decode), -1 at the open; a
     //              shown page not yet delivered leaves it naming the page
     //              blitted in its stead (score_viewer.h's head, THE CACHE).
+    //              UNDER THE GL CANVAS the page the last present put on
+    //              screen, the GL canvas's report read at every tick
+    //              (GuiScoreViewer::take_gpu_page_report, 2026-10-27).
     //              The tick owes a page turn's position write until the turn
     //              is on screen (`position_owed`);
     //   `scrub`    the scrub's drag arm, on both faces the render player's
@@ -9089,7 +9092,8 @@ struct AppState {
     //   `forward`  the decoder's bias: the last page step was forward (NEXT)
     //              or the transport sounds, so the neighbors ahead come first;
     //   `cache`    THE PAINTED PAGES (score_viewer.h's head, THE CACHE;
-    //              trimmed by GuiScoreViewer::feed_decoder): the shown page
+    //              trimmed by GuiScoreViewer::feed_decoder; the cpu canvas's
+    //              alone, empty under the GL canvas): the shown page
     //              and up to three either side of it in the range — and the
     //              last painted page while the shown page's is absent — each
     //              at the fit box and conversion it was made for, owned here
@@ -9099,9 +9103,11 @@ struct AppState {
     //   `gray`     THE GRAY STORE (score_viewer.h's head, THE GRAY STORE):
     //              every page of the viewing range at `gray_box_w` x
     //              `gray_box_h`, one byte a pixel, shared with the jobs that
-    //              expand it — kept across the close, dropped outside a new
-    //              range at once, whole at a box change, a score folder
-    //              change and with the AppState;
+    //              expand it and, under the GL canvas, with the page
+    //              textures' uploads (GuiCanvasPage::want, canvas_sink.h),
+    //              each entry named by its serial — kept across the close,
+    //              dropped outside a new range at once, whole at a box
+    //              change, a score folder change and with the AppState;
     //   `gray_box_w`, `gray_box_h` the fit box the store is filled for (the
     //              feed's, the interior's), 0 before the first open;
     //   `gray_asked_at` when the store last found itself short of the range
