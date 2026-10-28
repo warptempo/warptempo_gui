@@ -1,6 +1,6 @@
 # Warptempo GUI
 
-Custom C++23 in-process PGHI phase-vocoder GUI (Arch / labwc / Wayland / JACK, plus an Android build for one tablet) for time-warping audio toward historically-informed tempos. Single developer and user (the architect); one laptop, one tablet. THE PROJECT IS NEAR FEATURE COMPLETE (architect 2026-10-25): what remains is palette updates, a background-sound function, small bug fixes and layout refinement. THE DESIGN IS SETTLED: one look, the hi-fi panel; no other visual theme, icon set or chrome vocabulary will ever be built or proposed.
+Custom C++23 in-process PGHI phase-vocoder GUI (Arch / labwc / Wayland / JACK, plus an Android build for one tablet) for time-warping audio toward historically-informed tempos. Single developer and user (the architect); one laptop, one tablet. THE PROJECT IS NEAR FEATURE COMPLETE (architect 2026-10-25): what remains is palette updates, small bug fixes and layout refinement (the background sound landed 2026-10-28 as the NOISE lamp, `src/gui/noise.h`). THE DESIGN IS SETTLED: one look, the hi-fi panel; no other visual theme, icon set or chrome vocabulary will ever be built or proposed.
 
 THE CODE IS THE AUTHORITY. Every rule and its reason lives in a comment at the symbol that owns it; when this file, a doc or a memory disagrees with the code, the code wins — read it before asserting anything. `docs/engineering/closed_questions.md` lists, one line each, every question the architect has closed: never re-propose one (its lines about retired looks are moot, not open). `docs/INSTALL.md` is the runbook, `docs/HELP.md` the user's concepts, the tooltips the interface's own words.
 
@@ -71,7 +71,7 @@ There is NO automated test suite and that is a constraint: Wayland exposes no in
 | The faces and sizes | `src/gui/gui_font.h`, `text_shape.{h,cpp}`, `fonts/README.md` |
 | The drawings and their renderer | `src/gui/icons.h`, `svg_icon.h`, `assets/icons/README.md` |
 | The waveform palette: roles, presets, the `waveform` key, the preset picker | `src/gui/palette_file.h`, `render.h`'s palette block, `cool_edit_derive.h`, `chrome_derive.h`, `theme_file.h`, `tools/theme_catalog/`, `folder_overlay.h` |
-| Device config (seven required keys: `gui_scale`, `projects_repo`, `projects_path`, `last_project`, `waveform`, `true_colors`, `role`; no optional key), settings, the editors | `src/gui/device_config.{h,cpp}`, `src/parser/settings_file.{h,cpp}`, `src/gui/settings_editor.{h,cpp}`, `settings_io.cpp`'s head |
+| Device config (ten required keys: `gui_scale`, `projects_repo`, `projects_path`, `last_project`, `waveform`, `true_colors`, `role`, `noise`, `noise_level`, `noise_crossfade_ms`; no optional key), settings, the editors | `src/gui/device_config.{h,cpp}`, `src/parser/settings_file.{h,cpp}`, `src/gui/settings_editor.{h,cpp}`, `settings_io.cpp`'s head |
 | Authored positions, tempo cents, value brackets, sidecar grammar, the load walls | `src/parser/frame_format.h`, `value_format.h`, `warpmarkers_parse.h`, `marker_store_validate.h`; `snap_authored_frame` |
 | Resolver normalization, trim store, undo coalescing | `resolve_warp_markers_for_render`; `TrimState` (`app_state.h`), `input_trim.cpp`'s head; `src/gui/undo.{h,cpp}` |
 | Zoom, viewport, the sixteenth-frame grid, cameras, the hold, walk and restore landings | `src/gui/viewport.{h,cpp}`, `painter_quantized_spp`, `working_column_frames`, `AppState::camera_hold` |
@@ -84,6 +84,7 @@ There is NO automated test suite and that is a constraint: Wayland exposes no in
 | Projects, the picker, the project loop | `src/gui/project_model.h`'s head, `gui_main`, `GuiCloseTarget` |
 | Render pipeline: compilation, phase-reset lead-in, trim, dispatch / cancel / reuse, sweeps | `src/parser/phase_reset_frame_map_build.h`, `plan_trim` (`src/prepost/trimmer.cpp`), `src/gui/target_render.{h,cpp}`, `input_render_dispatch.cpp` |
 | Playback, Follow, the A/B audition | `src/gui/playback.{h,cpp}`, `playback_common.h`, `playback_aaudio.cpp`'s head, `ab_audition.h` |
+| The background sound: the NOISE lamp (bare `w`), the `noise/<folder>/` beside the config and its `noise` key, the resident bank and its live release, the voice's thread rules, the tablet's mirror | `src/gui/noise.h` (the head, `GuiNoiseVoice`, `change_folder`), `noise.cpp`, `is_noise_folder_name` (`device_config.h`), the `noise` arm and `complete_noise_value` (`settings_editor.cpp`), `scripts/warptempo_sync`'s `mirror_noise` |
 | The modal box, folder overlay, render player, car MediaSession | `src/gui/modal_box.h`, `folder_overlay.h`, `render_player.{h,cpp}`, `car_transport.h` |
 | GitHub: the history view, diff lane, checkpoint, pull, libgit2 | `run_publish_chord`, `src/gui/history_diff.{h,cpp}`, `git_repo.h`, `history_commit_worker.h`, `history_prefetch.h` |
 | Touch, the S Pen, pan, pinch, the hold | `src/gui/input_core.{h,cpp}`, `platform_android.cpp` (`pen_report_in_plane`) |
