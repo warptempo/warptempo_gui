@@ -7,8 +7,8 @@
 // bottom new border remaining"; "use a similar bevel inset as the main GUI
 // window, so the modal/overlay isn't flush against the border"). EVERY MODAL
 // STANDS IN IT: the render player and the project picker (the folder
-// overlay's contents, folder_overlay.h, the preset picker the third since
-// 2026-10-25; and THE SCORE VIEWER since 2026-10-26, score_viewer.h, its
+// overlay's contents, folder_overlay.h, with the settings page and the
+// preset picker it swaps in; and THE SCORE VIEWER since 2026-10-26, score_viewer.h, its
 // page the box's interior), and since the same day's second
 // ruling THE PROMPTS AND THE DIALOG EDITORS (his progress and settings-keyboard mocks: the taskbar dialog laid over the window's
 // foot, 2026-10-10 to 2026-10-14, is retired — "we should stop doing that"),
@@ -104,7 +104,7 @@
 // (AppState::dialog_editor_session's set, the settings editor and the BPM
 // bracket editor) or THE PROGRESS MODAL (AppState::BatchProgress, a batch's
 // "Rendering X of Y..." from its Render press to its terminal). Their box is
-// paint_modal_dialog's; the folder overlay's three contents paint their own
+// paint_modal_dialog's; the folder overlay's four contents paint their own
 // (paint_folder_overlay). (The taskbar dialog's standing predicate,
 // chrome_tenant_owns_bottom_row, 2026-10-10 to 2026-10-14, named the prompt
 // and the editors less a prompt over the player or the picker, which stood

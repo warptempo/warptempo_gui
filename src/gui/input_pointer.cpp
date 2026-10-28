@@ -377,15 +377,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false},   // bare o
     // SETTINGS (architect 2026-09-29), between the padlock and the
     // tooltip lamp since 2026-10-01: bare
-    // `;`, the settings prompt, through on_key like every row, so the `h`
-    // view refuses the lift exactly as it refuses the key, the face greying
-    // there first (redesign_button_enabled); a locked tab and grid
+    // `;`, the settings page (2026-10-28), through on_key like every row, so
+    // the `h` view refuses the lift exactly as it refuses the key, the face
+    // greying there first (redesign_button_enabled); a locked tab and grid
     // iterations admit both since 2026-10-21 (the lock governs the keys, not
-    // the editor — read_only_key_blocked). No repeat. ITS SHIFT-CLICK AND
-    // LONG PRESS ARE SHIFT+;, THE PRESET PICKER, since 2026-10-25
-    // (redesign_button_shift_admits; the row's own shift bit stays false),
-    // and the key sits lit while that picker stands, both its lifts the
-    // picker's close (redesign_button_selected, route_picker_key).
+    // the editor — read_only_key_blocked). No repeat, NO MODIFIER (architect
+    // 2026-10-28: "plain press only. retire long press"). The key sits lit
+    // while the page or the preset picker it swaps in stands, its lift the
+    // close (redesign_button_selected, route_picker_key).
     {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false}, // bare ;
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's
     // last since 2026-10-01, behind Settings: the bare BACKSLASH, a TOGGLE with a lamp (AppState::
@@ -4892,7 +4891,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // edge that can tell a click from a drag, and a second press has nothing
 // left to mean.
 //
-// ONE PRESS ROUTER, THREE CONTENTS. The claim below stands ABOVE the two mode
+// ONE PRESS ROUTER, FOUR CONTENTS. The claim below stands ABOVE the two mode
 // veils (the player's and the picker's, the picker's serving both its
 // contents), each of which admits exactly the band and its own modal row, and
 // BELOW the prompt gate, which outranks every surface as it always has. What
@@ -4911,6 +4910,7 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
             render_player.set_highlight(index);
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
+        case AppState::FolderOverlay::Owner::SettingsPage:
         case AppState::FolderOverlay::Owner::PresetPicker:
             picker_set_highlight(index);
             return;
@@ -4919,9 +4919,11 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 
 // THE OPEN ACT (the row click's own second half and Enter on the highlight).
 // Under the player a folder enters and a wav plays; under the project picker
-// the row's project is reopened; under the preset picker (2026-10-25) the
-// row's preset is installed and kept and the picker closes — one body per
-// content, which the click and Enter both reach.
+// the row's project is reopened; under the settings page (2026-10-28) the
+// page closes and the settings editor opens prefilled on the row's line, or
+// the `waveform` row swaps the preset picker in; under the preset picker
+// (2026-10-25) the row's preset is installed and kept and the picker closes —
+// one body per content, which the click and Enter both reach.
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -4931,6 +4933,9 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
             open_project_commit(index);
+            return;
+        case AppState::FolderOverlay::Owner::SettingsPage:
+            settings_page_commit(index);
             return;
         case AppState::FolderOverlay::Owner::PresetPicker:
             preset_picker_commit(index);
@@ -5045,10 +5050,14 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
     // its start, a folder is entered and `..` goes up; in the Open project
     // picker the row's project opens, refusals and all, exactly as Enter's
     // does). The band moves first, so what the act runs on is what the user
-    // can see it named. A lift elsewhere is a consumed nothing.
+    // can see it named. A lift elsewhere is a consumed nothing, and so is a
+    // lift on an INERT row (folder_overlay::row_is_inert, the settings page's
+    // group rows, architect 2026-10-28): neither half, the row being no
+    // choice.
     // NOTHING IS SEEDED HERE ANY MORE: the row's double-click surface went
     // with the ruling, no second meaning being left for a second press.
     if (folder_overlay::row_at(app, x, y) != press.row) return true;
+    if (folder_overlay::row_is_inert(app, press.row)) return true;
     folder_overlay_highlight_row(press.row);
     folder_overlay_open_row(press.row);
     return true;
@@ -5769,9 +5778,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Play Renders toggle one overlay over): the icon row's press reaches the
     // roster's arm, whose painted-bit gate consumes every button but the one
     // the face leaves live (redesign_button_enabled's overlay arm), and the
-    // lift is that key's chord — Ctrl+O under the project picker, `;` or
-    // Shift+; under the preset picker — which the picker's router answers
-    // with its close.
+    // lift is that key's chord — Ctrl+O under the project picker, `;` under
+    // the settings page and the preset picker — which the picker's router
+    // answers with its close.
     if (app.picker.active) {
         if (button != GuiMouseButton::Left) return;
         if (rect_contains(top_icon_row_area(app), x, y)) {
@@ -7293,7 +7302,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // THE PICKER'S RELEASE (2026-08-28), its press block's mirror: the modal
     // row's armed Cancel through the one shared dispatch, and every
     // other lift consumed — the veil's answer — but the opener's arm (Open
-    // Project, or Settings under the preset picker), the one roster button
+    // Project, or Settings under the settings page and the preset picker),
+    // the one roster button
     // the picker leaves live (2026-10-25), lifted through the chrome act's
     // own body as the player's Play Renders arm is.
     if (app.picker.active) {
@@ -8246,8 +8256,8 @@ void GuiInputHandler::finish_chrome_press_release(
     // reach-through's own buttons; with that retired the veil is blanket
     // again, and its whole job here is the editor OPENED MID-HOLD — a key
     // press deliberately does not end a pointer hold (main.cpp's set_on_key
-    // hook), so a key that raises an editor dialog (bare `;`, the settings
-    // editor) does so under a standing arm, and an arm taken before the dialog rose must not fire into
+    // hook), so a key that raises an editor dialog does so under a standing
+    // arm, and an arm taken before the dialog rose must not fire into
     // it. IT SITS ABOVE THE KIND SWITCH because the rule is every arm's and
     // none has an exception to it. (Carried per-branch it once was on the
     // roster's and missing from the deleted walk-tab kind's, so arming a
@@ -8258,13 +8268,14 @@ void GuiInputHandler::finish_chrome_press_release(
     // gate returns unconditionally above this call, so no arm reaches this
     // body while one stands — and neither does THE RENDER PLAYER's or THE
     // PICKER's, whose release blocks return above this call the same way; the
-    // term below is the editor OPENED MID-HOLD's, and any of the three
-    // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
+    // term below is the editor OPENED MID-HOLD's, and any overlay opened
+    // mid-hold (bare `l`, Ctrl+O, bare `;` or `'` typed under a held button)
     // takes the same refusal through it — and so does THE PROGRESS MODAL
     // (2026-10-14), a batch's render chord typed under a held button.
     // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
     // for Play Renders under the player, 2026-10-25 for Open Project under the
-    // project picker and Settings under the preset picker — the tag's answer,
+    // project picker, 2026-10-28 for Settings under the settings page and the
+    // preset picker it swaps in — the tag's answer,
     // is_folder_overlay_opener): that button, lit under its overlay, is the
     // one roster arm the overlay's veil admits and its lift is the overlay's
     // close; any other arm is the mid-hold case above and stays refused.

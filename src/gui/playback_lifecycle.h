@@ -188,7 +188,7 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-25 — TEN
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-28 — ELEVEN
     // sites (the color picker's open was another 2026-10-07..14): THE
     // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
     // input_render_dispatch.cpp, 2026-10-14, the batch's Render press);
@@ -198,9 +198,11 @@ struct GuiPlaybackLifecycle {
     // was this caller before it), the `m`
     // bpm editor (handle_mode_keys), the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
-    // 2026-08-28), the PRESET PICKER (open_preset_picker, 2026-10-25, the
-    // picker's second content) and the PULL confirmation (run_history_pull_press,
-    // OK / Cancel); the TWO
+    // 2026-08-28), THE SETTINGS PAGE (open_settings_page, 2026-10-28, the
+    // picker's second content, whose `waveform` row swaps the preset picker
+    // in under the stop already taken) and the PULL confirmation
+    // (run_history_pull_press, OK / Cancel); THE SCORE VIEWER's open
+    // (GuiScoreViewer::open, score_viewer.cpp, 2026-10-26); the TWO
     // prompt opens (prompt.cpp: unsaved, and Revert's confirmation —
     // the error notice's was a third until that prompt kind retired whole on
     // 2026-08-30); THE RENDER PLAYER's open
@@ -228,8 +230,9 @@ struct GuiPlaybackLifecycle {
     // refusal left the opener on 2026-09-04 (the lock governs the keys now —
     // GuiSettingsEditor::open): one owner for the two doors is the shape to
     // keep whether or not the opener can refuse. (The dropdown door retired
-    // with the Settings popup, 2026-10-21; the `;` key and the band's
-    // Settings button, its chord, are the editor's one door since.)
+    // with the Settings popup, 2026-10-21; the settings page's rows are the
+    // editor's one door since 2026-10-28, the page's own open a caller of
+    // its own, so a row's editor open finds playback already stopped.)
     // The count had held across the day's earlier change by coincidence: the
     // commit-title editor replaced the history commit confirmation, so one
     // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.
@@ -252,8 +255,9 @@ struct GuiPlaybackLifecycle {
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
     //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
-    //     and the progress modal — and THE TWO OVERLAYS, the picker (both
-    //     its contents, the project and the preset picker) and the
+    //     and the progress modal — and THE TWO OVERLAYS, the picker (all
+    //     three of its contents, the project picker, the settings page and
+    //     the preset picker it swaps in) and the
     //     render player (whose own transport begins where the project's
     //     audition ends), and THE SCORE VIEWER (2026-10-26, whose own
     //     soundtrack, since 2026-10-26 night, likewise begins where the

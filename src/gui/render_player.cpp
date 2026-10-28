@@ -384,8 +384,9 @@ void GuiRenderPlayer::open_row(int index) {
             play_wav(row.path, wavs, wi);
             return;
         }
-        case Row::Kind::Preset:
-            return;   // the preset picker's kind; no player listing carries it
+        case Row::Kind::Plain:
+        case Row::Kind::Group:
+            return;   // the pickers' kinds; no player listing carries them
     }
 }
 
@@ -486,8 +487,9 @@ int render_player_highlight_act_row(const AppState& a) {
             return ov.highlight_row;
         case Row::Kind::Wav:
             return r.path == a.render_player.item ? -1 : ov.highlight_row;
-        case Row::Kind::Preset:
-            return -1;   // the preset picker's kind; no player listing carries it
+        case Row::Kind::Plain:
+        case Row::Kind::Group:
+            return -1;   // the pickers' kinds; no player listing carries them
     }
     return -1;
 }

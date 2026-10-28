@@ -39,6 +39,7 @@
 #include <filesystem>
 #include <iterator>
 #include <optional>
+#include <span>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -454,21 +455,17 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // lit exactly as it leaves both chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
-    // BARE `;`, THE SETTINGS EDITOR (2026-10-21, the header's ruling): the
-    // opener authors nothing, and the editor's own commit arms carry the lock
-    // per key. Bare-exact, the dispatch arm's own spelling. THE ITERATION
-    // LOCK INHERITS THE ADMISSION (iteration_lock_key_blocked falls through
-    // to this list), its three typed refusals inside the editor (the column,
-    // the audio view's `S`, the active tab's lock) and the engine-key arm
-    // answering per key.
-    const bool is_settings_editor =
+    // BARE `;`, THE SETTINGS PAGE (2026-10-21 for the editor it then opened,
+    // the header's ruling; the page since 2026-10-28): the page authors
+    // nothing, its rows open the settings editor, whose own commit arms carry
+    // the lock per key, and its `waveform` row's preset picker writes a
+    // device key, never the piece. Bare-exact, the dispatch arm's own
+    // spelling. THE ITERATION LOCK INHERITS THE ADMISSION
+    // (iteration_lock_key_blocked falls through to this list), its three
+    // typed refusals inside the editor (the column, the audio view's `S`,
+    // the active tab's lock) and the engine-key arm answering per key.
+    const bool is_settings_page =
         (key == GuiKeys::Semicolon && !ctrl && !shift && !alt);
-    // SHIFT+;, THE PRESET PICKER (architect 2026-10-25), admitted with its
-    // bare twin and for its reason: the list authors nothing in the piece,
-    // and its pick writes the `waveform` device key, which the typed road
-    // commits on a locked tab too. Through the shared predicate the dispatch
-    // arm reads; the iteration lock inherits it.
-    const bool is_preset_picker = is_preset_picker_key(key, mods);
     // THE TOOLTIP LAMP, bare backslash (architect 2026-09-29): a chrome
     // posture — whether the resting pointer raises hints — authoring nothing
     // the lock protects, so it is admitted on a locked tab and under the
@@ -548,7 +545,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_play_renders ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
-             is_settings_editor || is_preset_picker ||
+             is_settings_page ||
              is_tooltip_lamp || is_score_viewer || is_noise ||
              is_iteration_off_edge);
 }
@@ -7028,8 +7025,10 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 
 // -- THE PICKER (the contract is at the declaration) --------------------------
 //
-// Two openers, two list builders, two open acts, and the machinery both
-// contents share: the highlight, the close and the key router.
+// Two openers (the project picker's and the settings page's, whose
+// `waveform` row opens the preset picker), three list builders, three open
+// acts, and the machinery the three contents share: the highlight, the
+// close and the key router.
 
 // The Open project picker's opener. Every guard returns without touching
 // playback (a refused open never interrupts a listening session); the shared
@@ -7268,21 +7267,21 @@ void GuiInputHandler::open_project_commit(int index) {
     prompt.request_close(GuiCloseTarget::Reopen);
 }
 
-// -- THE PRESET PICKER (architect 2026-10-25; the contract is at the
+// -- THE SETTINGS PAGE (architect 2026-10-28; the contract is at the
 //    declaration) ---------------------------------------------------------------
 //
 // The picker's second content: the opener, its list and its open act. The
 // highlight, the close and the key router are the picker's shared machinery
-// below, unchanged but for the router's opener arms.
+// below.
 
-// THE OPENER — Shift+; (is_preset_picker_key), and the Settings button's
-// shift-click and long press, which dispatch that chord at the lift. The
-// project picker's own guards, for its reasons: a prompt veils everything, a
-// standing picker is what is already on screen (its router answers both
-// openers' chords before this body is reached), and a load has no window to
-// paint a pick into. The shared modal stop runs once the open is certain
-// (the overlays STOP, the decision table at stop_playback_for_modal_open).
-void GuiInputHandler::open_preset_picker() {
+// THE OPENER — bare `;`, and the Settings button's plain press, which
+// dispatches that chord at the lift. The project picker's own guards, for its
+// reasons: a prompt veils everything, a standing picker is what is already on
+// screen (its router answers `;` with the close before this body is reached),
+// and a load has no window to paint a page into. The shared modal stop runs
+// once the open is certain (the overlays STOP, the decision table at
+// stop_playback_for_modal_open).
+void GuiInputHandler::open_settings_page() {
     if (app.prompt.active) return;
     if (picker_active()) return;
     if (app.loading) return;
@@ -7290,13 +7289,83 @@ void GuiInputHandler::open_preset_picker() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.picker.active  = true;
     app.picker.session = text_editor::next_session_id();
-    build_preset_picker_rows();
+    build_settings_page_rows();
     viewport.invalidate_all();
 }
 
+// THE LIST: kSettingsEditorKeys exactly (architect 2026-10-28: the per-tab
+// keys and every key with a GUI lever stay off — "I won't set it
+// manually"), the DEVICE keys first and the PIECE keys after (the mock he
+// verified), each group under its inert Group row, every key a Plain row
+// whose text is THE LINE THE EDITOR WOULD OPEN WITH
+// (GuiSettingsEditor::setting_line, the recall's one owner). The seat is
+// THE FIRST KEY ROW, row 1, through the one set_highlight, and the open's
+// landing centers it as far as the listing's top allows
+// (scroll_row_centered), which is the top.
+void GuiInputHandler::build_settings_page_rows() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    ov       = AppState::FolderOverlay{};
+    ov.owner = AppState::FolderOverlay::Owner::SettingsPage;
+    const auto group = [&](const char* heading,
+                           std::span<const char* const> keys) {
+        AppState::FolderOverlayRow head;
+        head.kind = AppState::FolderOverlayRow::Kind::Group;
+        head.name = heading;
+        ov.rows.push_back(std::move(head));
+        for (const char* key : keys) {
+            AppState::FolderOverlayRow row;
+            row.kind = AppState::FolderOverlayRow::Kind::Plain;
+            row.name = settings_editor.setting_line(key);
+            ov.rows.push_back(std::move(row));
+        }
+    };
+    const std::span<const char* const> keys(kSettingsEditorKeys);
+    group("DEVICE", keys.subspan(kSettingsEditorPieceKeyCount));
+    group("PIECE", keys.first(kSettingsEditorPieceKeyCount));
+    folder_overlay::clamp_scroll(app);
+    folder_overlay::set_highlight(app, 1);
+    folder_overlay::scroll_row_centered(app, ov.highlight_row);
+}
+
+// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
+// press-and-lift) and Enter on the highlight, one body. AN INERT ROW OPENS
+// NOTHING (its lift never reaches here and the highlight never stands on
+// it; the guard states the rule). THE ROW'S KEY is its line's text up to the
+// first `=` (a key carries none). On the `waveform` row THE PRESET PICKER IS
+// SWAPPED IN, in place, under this same picker session
+// (build_preset_picker_rows), which then commits or closes as it does
+// standing alone. On every other row THE PAGE CLOSES (close_picker — the
+// overlay and the on-screen keyboard never both stand, and the editor is a
+// modal in the same box) AND THE SETTINGS EDITOR OPENS PREFILLED WITH THE
+// ROW'S LINE as painted, the caret at its end (GuiSettingsEditor::open).
+// Nothing reopens the page after that editor's OK or Cancel.
+void GuiInputHandler::settings_page_commit(int index) {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::SettingsPage) return;
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
+    if (index < 0 || index >= n) return;
+    if (folder_overlay::row_is_inert(app, index)) return;
+    const std::string line =
+        app.folder_overlay.rows[static_cast<size_t>(index)].name;
+    if (line.substr(0, line.find('=')) == "waveform") {
+        build_preset_picker_rows();
+        viewport.invalidate_all();
+        return;
+    }
+    close_picker();
+    settings_editor.open(line);
+}
+
+// -- THE PRESET PICKER (architect 2026-10-25; the contract is at the
+//    declaration) ---------------------------------------------------------------
+//
+// The picker's third content, the settings page's `waveform` row's: its list
+// and its open act. Its opener is that row (settings_page_commit).
+
 // THE LIST: kGuiBuiltinPalettes in the include's order (the program's
 // twenty, their text's order: alphabetical by display name, Default among
-// the names, architect 2026-10-27), one glyph-less Preset row each, its text the
+// the names, architect 2026-10-27), one glyph-less Plain row each, its text the
 // preset's DISPLAY NAME (architect 2026-10-25: memorable names, never the
 // key). A ROW'S INDEX IS ITS PRESET'S INDEX in that table, so the row carries
 // no key and the commit reads the table. The band opens on THE LIVE PRESET —
@@ -7313,7 +7382,7 @@ void GuiInputHandler::build_preset_picker_rows() {
         if (app.device_config->waveform == preset.key)
             live = static_cast<int>(ov.rows.size());
         AppState::FolderOverlayRow row;
-        row.kind = AppState::FolderOverlayRow::Kind::Preset;
+        row.kind = AppState::FolderOverlayRow::Kind::Plain;
         row.name = preset.display_name;
         ov.rows.push_back(std::move(row));
     }
@@ -7458,8 +7527,9 @@ void GuiInputHandler::picker_open_highlight() {
         // with no rows at all — every folder under projects_path refused by
         // the model, or none there. Enter on an empty band would otherwise
         // read as a dead key over a panel that is plainly standing. THE
-        // PROJECT PICKER'S ALONE: the preset picker's listing is the
-        // compiled-in table, never empty, its highlight always seated.
+        // PROJECT PICKER'S ALONE: the settings page's listing is the
+        // editor's key table and the preset picker's the compiled-in
+        // presets, never empty, their highlights always seated.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Choose a project first");
         return;
@@ -7534,15 +7604,18 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // session-wide set dies in the catch-all any more.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
-    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25, the preset picker's
-    // arrival): the two pickers share this router and the overlay's tag says
-    // whose opener a chord is, so each content's opener chords act under it
-    // alone and are the catch-all's consumed nothing under the other — the
-    // other picker's opener key greys there (redesign_button_enabled's
-    // overlay arm), and a chord with no button behind it is silent the same.
+    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25): the three picker
+    // contents share this router and the overlay's tag says whose opener a
+    // chord is, so each content's opener chords act under it alone and are
+    // the catch-all's consumed nothing under the others — the other opener
+    // key greys there (redesign_button_enabled's overlay arm), and a chord
+    // with no button behind it is silent the same. The settings page and
+    // the preset picker it swaps in share ONE opener, the Settings key
+    // (is_folder_overlay_opener, 2026-10-28).
     const bool project_picker =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::ProjectPicker;
-    const bool preset_picker =
+    const bool settings_opener =
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::SettingsPage ||
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::PresetPicker;
 
     // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
@@ -7558,21 +7631,19 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `;` AND SHIFT+; CLOSE THE PRESET PICKER (architect 2026-10-25, the
-    // same rule one content over): the Settings key's two lifts under the
-    // picker — its tap, bare `;`, and its shift-click or long press, Shift+;
-    // (is_preset_picker_key), the opener's own chord — both run the one
-    // close body, so "a press on it closes the picker" holds however the
-    // key is pressed. The typed editor does not open over a standing picker.
-    if (preset_picker &&
-        (is_preset_picker_key(key, mods) ||
-         (bare && key == GuiKeys::Semicolon))) {
+    // BARE `;` CLOSES THE SETTINGS PAGE AND THE PRESET PICKER (architect
+    // 2026-10-25 for the picker, 2026-10-28 for the page, the same rule one
+    // content over): the Settings key's lift under either, the opener's own
+    // chord, runs the one close body — the swapped-in picker closing the
+    // whole session, the page with it. Shift+; is unbound (chord_is_bound),
+    // the catch-all's nothing below.
+    if (settings_opener && bare && key == GuiKeys::Semicolon) {
         close_picker();
         return true;
     }
 
     // CTRL+ALT+O RUNS REVERT UNDER THE PROJECT PICKER (architect
-    // 2026-10-25; under the preset picker the catch-all's nothing): the
+    // 2026-10-25; under the other two contents the catch-all's nothing): the
     // same body the ordinary dispatch's arm calls, with the same (default)
     // question_asked, and the long press on the Open Project key under the
     // picker, whose lift turns its Shift into this chord

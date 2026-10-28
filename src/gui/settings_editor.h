@@ -8,7 +8,9 @@
 #include "playback_lifecycle.h"
 #include "viewport.h"
 
+#include <cstddef>
 #include <string>
+#include <string_view>
 
 struct Undo;
 struct GuiTargetRender;
@@ -16,9 +18,13 @@ struct GuiInputHandler;
 
 // THE SETTINGS EDITOR — THE ONE ROAD TO EVERY SETTING (architect 2026-10-21
 // ~21:05, with the menu row's removal: "settings could gain a tab autocomplete
-// for the keys, making the dropdown less useful" — "yes"). The band's Settings
-// button and its chord, bare `;`, open it EMPTY — an empty line, the caret at
-// column 0 — and the line is `key=value`, typed by hand. It is the flag
+// for the keys, making the dropdown less useful" — "yes"). IT OPENS FROM THE
+// SETTINGS PAGE (architect 2026-10-28): the band's Settings button and its
+// chord, bare `;`, raise the page, the folder overlay's list of
+// kSettingsEditorKeys below, one `key=value` row each
+// (GuiInputHandler::open_settings_page), and a row's tap closes the page and
+// opens this editor PREFILLED WITH THAT ROW'S LINE, the caret at its end —
+// the line still `key=value`, edited by hand and Tab. It is the flag
 // editor's primitive (text_editor::State, kind-dispatched keyboard
 // vocabulary, the whole text selected and a card on a refusal) painted IN THE
 // MODAL FAMILY'S BOX (architect 2026-10-14, modal_box.h: the box is the edit
@@ -27,21 +33,21 @@ struct GuiInputHandler;
 // the controls row under it, NO LABEL — "Setting:" removed, "pointless that
 // far away"), the on-screen keyboard standing inside the frame under it on
 // the glass as under every dialog editor. OK or Enter commits the line, Esc
-// or Cancel closes it. (THE SETTINGS POPUP — a pull-down hanging from the
-// Settings button, one row per key opening this editor PREFILLED with
-// `<key>=<value>`, and the "True Colors" command row — stood 2026-07-31 to
-// 2026-10-21 and is retired whole: its rows' keys are kSettingsEditorKeys
-// below, and True Colors is the `true_colors` device key.)
+// or Cancel closes it, and nothing reopens the page after either. (THE
+// SETTINGS POPUP — a pull-down hanging from the Settings button — and its
+// "True Colors" command row stood 2026-07-31 to 2026-10-21; True Colors is
+// the `true_colors` device key, and the page is the popup's list in the
+// folder overlay.)
 //
 // TAB COMPLETES, IN THREE STAGES, under the ONE AUTOCOMPLETE MODEL
 // (route_modal_editor_key, input_key_dispatch.cpp: a Tab that advanced the
 // buffer is consumed, one that did not walks the dialog's focus ring onto
 // OK and Cancel — so a second Tab, or a Tab on a prefix that completes to
-// nothing, is the walk; Tab shows no list, the popups being gone — THE ONE
-// LIST is the PRESET PICKER since 2026-10-25, the `waveform` key's presets by
-// name in the folder overlay, opened by the Settings button's shift twin
-// (Shift+;, the glass long press), never by Tab, its pick committing through
-// this editor's own apply, apply_waveform_preset):
+// nothing, is the walk; Tab shows no list, the popups being gone — THE LISTS
+// are the settings page's keys and the PRESET PICKER since 2026-10-25, the
+// `waveform` key's presets by name in the folder overlay, opened by the
+// page's `waveform` row, never by Tab, its pick committing through this
+// editor's own apply, apply_waveform_preset):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
 //      `=` yet, a COMPLETE key — any key this editor recalls, the thirteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
@@ -148,10 +154,10 @@ struct GuiInputHandler;
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
 //    the device keys and the band — commit on a locked tab. The opener
 //    refuses no lock; the account is at GuiSettingsEditor::open. (Its road
-//    onto a locked tab is bare `;` and the Settings button since 2026-10-21,
-//    both on the read-only allowlist the iteration gate inherits — the
-//    Settings popup's rows were that road until they retired the same day —
-//    so the commit arms' lock refusals are where a locked key refuses.)
+//    onto a locked tab is the settings page's rows, the page opened by bare
+//    `;` and the Settings button, both on the read-only allowlist the
+//    iteration gate inherits, so the commit arms' lock refusals are where a
+//    locked key refuses.)
 //
 // NO CHOICE EDITOR (architect 2026-10-14, ~12:25: "we can remove dropdowns
 // for chrome/caption and leave the autocomplete as the only help. dropdowns
@@ -165,8 +171,10 @@ struct GuiInputHandler;
 // architect reversing this for it: "we rejected drop downs because it was
 // too much work to make them Windows identical, but now we don't have the
 // responsibility". It is no choice editor and no drop-down: the preset
-// picker, the folder overlay's third content, whose row tap commits at once
-// — apply_waveform_preset, this editor's own road.)
+// picker, the folder overlay's content behind the settings page's
+// `waveform` row, whose row tap commits at once — apply_waveform_preset,
+// this editor's own road. THE SETTINGS PAGE IS NO CHOICE EDITOR EITHER
+// (2026-10-28): its rows commit nothing, each opening this line editor.)
 //
 // THE KEYS TAB COMPLETES — ONE TABLE, THE THIRTEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
@@ -181,12 +189,27 @@ struct GuiInputHandler;
 // the view and per-tab band keys, the score's range and positions, which
 // the score viewer writes) are typed whole, Tab recalling their
 // values once complete; a key added to the product's editable set joins this
-// table by hand.
+// table by hand. THE TABLE IS ALSO THE SETTINGS PAGE'S ROSTER, EXACTLY
+// (architect 2026-10-28: the per-tab keys stay off, "I won't set it
+// manually", and so does every key with a GUI lever — follow, read-only, the
+// view keys, and `scale` / `bpm`, which the BPM key writes):
+// GuiInputHandler::build_settings_page_rows lists the device keys under a
+// "DEVICE" group row and then the piece keys under a "PIECE" one, each group
+// in this table's order, the split at kSettingsEditorPieceKeyCount.
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
     "noise", "noise_level", "noise_crossfade_ms",
 };
+// THE PIECE KEYS' COUNT — the table's first five; the rest are the device
+// config's. The page's two groups split the table here, and the asserts pin
+// the boundary to its two names so a key added on the wrong side fails the
+// build.
+inline constexpr std::size_t kSettingsEditorPieceKeyCount = 5;
+static_assert(std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount - 1]) ==
+                  "score_path" &&
+              std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount]) ==
+                  "gui_scale");
 
 struct GuiSettingsEditor {
     AppState&             app;
@@ -207,8 +230,8 @@ struct GuiSettingsEditor {
     // read-only lock says its own at the engine-key commit arm (it stood at
     // open() from 2026-08-30 until 2026-09-04, when the lock moved to the
     // keys). (The Settings dropdown's item clicks were the road onto a
-    // locked tab's editor until the popup retired, 2026-10-21; bare `;` and
-    // the Settings button are since, admitted by the lock.)
+    // locked tab's editor until the popup retired, 2026-10-21; the settings
+    // page's rows are since 2026-10-28, its opener admitted by the lock.)
     GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this editor by reference, so the
@@ -238,12 +261,20 @@ struct GuiSettingsEditor {
           playback_lifecycle(playback_lifecycle_),
           notifications(notifications_) {}
 
-    // THE ONE OPEN (the head): an empty line, the caret at column 0. The band's
-    // Settings button and bare `;` reach it, the button by synthesizing the
-    // chord. (open_prefilled, the Settings popup's row click seeding
-    // `<key>=<value>`, retired with the popup, 2026-10-21; Tab's stages 1 and
-    // 2 are its typed spelling.)
-    void open();
+    // THE ONE OPEN (the head, architect 2026-10-28): the editor on `line`,
+    // the settings page's row as painted (GuiInputHandler::
+    // settings_page_commit, its one caller, after the page's close), landed
+    // as every Tab advance lands — through text_editor::replace_selection,
+    // the one incoming filter, the caret at the LINE'S END and nothing
+    // selected.
+    void open(const std::string& line);
+    // THE LINE THE EDITOR WOULD OPEN WITH for `key`: `key=` and the key's
+    // current value as the recall gives it (recall_setting_value,
+    // settings_editor.cpp — Tab's stage 2 and this one owner). Read by the
+    // settings page's builder for each of kSettingsEditorKeys, every one of
+    // which recalls by construction (the head's roads); a key that recalls
+    // nothing is a program bug and asserts.
+    std::string setting_line(const std::string& key) const;
     void exit_no_commit();
     void commit();
     // THE COMPLETION, run on BARE TAB with the focus in the field — the head's

@@ -844,10 +844,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Digit3: case GuiKeys::Digit4:
             return bare;
 
-        // The settings editor and, shifted, THE PRESET PICKER (architect
-        // 2026-10-25, is_preset_picker_key); the load in place / render
-        // player, bare alone.
-        case GuiKeys::Semicolon: return bare || sh;
+        // THE SETTINGS PAGE (architect 2026-10-28: "plain press only"; its
+        // shifted twin, Shift+;, is unbound and silent); the load in place /
+        // render player, bare alone.
+        case GuiKeys::Semicolon: return bare;
         case GuiKeys::Apostrophe: return bare;
         // Toggle Waveform Magnification (architect 2026-09-22), on the
         // bare BACKTICK since 2026-09-23 (architect: the bracket sits on the
@@ -1595,24 +1595,6 @@ inline bool is_phase_reset_state_paste_key(GuiKey key, GuiInputState mods) {
 // catch-all), outside the main dispatch this predicate serves.
 inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
-}
-
-// True for the chord that opens THE PRESET PICKER (architect 2026-10-25, "I
-// don't like having to type it in every time"): SHIFT+; exactly — no ctrl, no
-// alt — arriving as the level-0 keysym (GuiKeys::Semicolon) with the shift
-// bit, so a US layout's `:` is this chord. It is bare `;`'s shifted twin, the
-// Settings button's shift-click and glass long press
-// (redesign_button_shift_admits), its list the waveform presets the typed
-// `waveform=` line names by key. THREE READERS: on_key's dispatch arm
-// (input_handler.cpp, beside bare `;`'s), the read-only allowlist
-// (read_only_key_blocked, which ADMITS it beside bare `;` — the pick writes a
-// device key, never the piece — and the grid-iterations lock's gate falls
-// through to that list) and the picker's router (route_picker_key), where it
-// is the preset picker's close, the opener's chord the way out. The `h`
-// view's allowlist does not admit it, as it does not admit bare `;`. One-shot
-// (a held chord opens once and the router's close is no repeat key).
-inline bool is_preset_picker_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::Semicolon && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 enum class GuiMouseButton {

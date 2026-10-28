@@ -353,8 +353,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-08-28): the
-    // field-less Open project picker over the folder
-    // overlay, at the player's rank (the two never stand together) and with
+    // field-less picker over the folder overlay (the project picker, the
+    // settings page and the preset picker it swaps in), at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road's exit), Ctrl+S consumed by the router
@@ -362,7 +362,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Alt+O as Revert (2026-10-25, whose question stands over the
     // picker — the prompt gate above then owns every key, so its Esc is the
     // question's Cancel and a second Esc the picker's close), under the
-    // preset picker `;` and Shift+; as the close (2026-10-25), and
+    // settings page and the preset picker it swaps in bare `;` as the close
+    // (2026-10-28), and
     // Ctrl+Shift+S (the publish chord, 2026-10-10)
     // as a consumed nothing — the pull's question must not open over a
     // picker. The gesture clause is the player's
@@ -2131,38 +2132,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `;` opens the settings prompt as a modal on the bottom row.
-    // Keyboard-only (no click analogue). The active-editor block at the top of
-    // on_key routes subsequent keystrokes; opening here just primes the State.
-    // The settings editor is a modal DIALOG surface, so its open takes the
-    // shared modal stop (stop_playback_for_modal_open — the decision table and
-    // the flag editor's exemption live at its declaration). THE STOP IS THE
-    // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
-    // refusal that day (a locked tab authors no engine settings), so the stop
-    // moved inside GuiSettingsEditor::open past that gate, the `h` view's
-    // load raise being the same shape (history_load_in_place). That refusal
-    // left the opener again on 2026-09-04, the lock now governing the keys at
-    // their own commit arms rather than the surface, and the stop stayed
-    // where it is: the two openers share one owner rather than one of them
-    // keeping a private copy. THE KEY REACHES THE OPENER ON A LOCKED TAB AND
-    // UNDER GRID ITERATIONS since 2026-10-21 (read_only_key_blocked's
-    // is_settings_editor, which the iteration gate inherits): the lock
-    // governs the keys, not the editor (the 2026-09-04 rule), and the one
-    // editor is the only road to the device keys since the Settings popup
-    // retired, so the commit arms' own lock refusals are the typed road's
-    // defense (settings_editor.cpp).
+    // BARE `;` OPENS THE SETTINGS PAGE (architect 2026-10-28), the Settings
+    // button's plain press dispatching the same chord: the editor's keys as
+    // `key=value` rows in the folder overlay, a row opening the settings
+    // editor prefilled on its line (open_settings_page, the contract at the
+    // declaration). The overlay's open takes the shared modal stop at its
+    // own body, past its guards. THE KEY REACHES THE OPENER ON A LOCKED TAB
+    // AND UNDER GRID ITERATIONS (read_only_key_blocked's is_settings_page,
+    // which the iteration gate inherits): the lock governs the keys, not the
+    // surface (the 2026-09-04 rule), and the page is the only road to the
+    // device keys, so the editor's commit arms' own lock refusals are the
+    // defense (settings_editor.cpp). The `h` view's allowlist refuses it.
+    // Shift+; binds nothing (chord_is_bound), silent.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
-        settings_editor.open();
-        return;
-    }
-    // SHIFT+; OPENS THE PRESET PICKER (architect 2026-10-25), bare `;`'s
-    // shifted twin and the Settings button's shift-click and long press: the
-    // waveform presets as a list in the folder overlay, a tap installing and
-    // keeping one (open_preset_picker; the chord's readers are at
-    // is_preset_picker_key). The lock gates above admit it with bare `;`; the
-    // `h` view's allowlist refuses it with bare `;`.
-    if (is_preset_picker_key(key, mods)) {
-        open_preset_picker();
+        open_settings_page();
         return;
     }
 

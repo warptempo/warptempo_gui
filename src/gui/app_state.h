@@ -2497,21 +2497,20 @@ enum class RedesignButton {
     IconReadOnly,
     // SETTINGS (architect 2026-09-29), right after the padlock and AHEAD of
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
-    // bare `;`, the bare settings prompt, wearing Settings. The
-    // button IS the key, so it greys exactly where
+    // bare `;`, THE SETTINGS PAGE (architect 2026-10-28: the editor's keys
+    // as `key=value` rows in the folder overlay, a row opening the settings
+    // editor prefilled on its line — open_settings_page), wearing Settings.
+    // The button IS the key, its plain press alone ("plain press only.
+    // retire long press"), so it greys exactly where
     // `;` refuses — the `h` view (off that mode's allowlist, through the
     // derived partition) and nowhere else: A LOCKED TAB AND GRID ITERATIONS
-    // ADMIT IT since 2026-10-21 (read_only_key_blocked's is_settings_editor,
-    // which the iteration gate inherits — the lock governs the keys, not the
-    // editor, the 2026-09-04 rule, and this editor is the device keys' one
-    // road; it greyed under both locks from 2026-09-29 until then) — and a
-    // dialog editor already standing is the veil's, the press never reaching
-    // it. It is the
-    // typed road's pointer spelling (the menu row's Settings anchor, whose
-    // rows each prefilled one key, went with the row 2026-10-21, and the
-    // popup that hung from this case after it the same evening — the editor
-    // opens empty and Tab completes the key names, settings_editor.h). An
-    // act, not a mode: no lamp.
+    // ADMIT IT (read_only_key_blocked's is_settings_page, which the
+    // iteration gate inherits — the lock governs the keys, not the editor,
+    // the 2026-09-04 rule, and the page's editor is the device keys' one
+    // road) — and a dialog editor already standing is the veil's, the press
+    // never reaching it. It is lit while the page or the preset picker it
+    // swaps in stands, its press the close (the overlay openers'
+    // pattern, redesign_button_selected).
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
     // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
@@ -8333,18 +8332,20 @@ struct AppState {
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
     // allowing free-form typing there; the preview doesn't use a text field
-    // and it works fine". TWO CONTENTS: the OPEN PROJECT PICKER (the Open
+    // and it works fine". THREE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
-    // REOPEN through gui_main's loop) and since 2026-10-25 the PRESET PICKER
-    // (the Settings button's shift twin, Shift+; and the glass long press;
-    // the built-in waveform presets as rows, the open act the `waveform`
-    // key's install and persist, then the close). A third stood for one day —
-    // the `h` view's history picker, retired 2026-08-29 as overengineered,
-    // that view's `'` raising its load confirmation on the viewed member with
-    // no list at all — and the struct kept its shape rather than folding into
-    // the overlay's tag, the two saying different things: this one that A
-    // PICKER STANDS (the modal owner), the tag WHOSE ROWS the band carries
-    // (ProjectPicker or PresetPicker). It is the
+    // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
+    // 2026-10-28: the Settings button and bare `;`; the thirteen keys the
+    // settings editor recalls, one `key=value` row each under two inert group
+    // rows, the open act the editor opened PREFILLED on the row's line once
+    // the page has closed — or, on the `waveform` row, the preset picker
+    // swapped in under the same session); and the PRESET PICKER (2026-10-25,
+    // reached through the page's `waveform` row alone since 2026-10-28; the
+    // built-in waveform presets as rows, the open act the `waveform` key's
+    // install and persist, then the close). The struct keeps its shape rather
+    // than folding into the overlay's tag, the two saying different things:
+    // this one that A PICKER STANDS (the modal owner), the tag WHOSE ROWS the
+    // band carries (ProjectPicker, SettingsPage or PresetPicker). It is the
     // FOURTH ModalDialogOwner (Picker), never an
     // editor: no buffer, no caret, no keyboard-modal gate — the router
     // GuiInputHandler::route_picker_key is its whole plastic vocabulary, and
@@ -8357,8 +8358,9 @@ struct AppState {
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
     // GuiInputHandler::close_picker (Esc, Cancel, the opener's chord —
-    // Ctrl+O, or `;` and Shift+; under the preset picker — Ctrl+Q's road, the
-    // same-project no-op and the preset pick all pass through it; a reopen
+    // Ctrl+O under the project picker, `;` under the settings page and the
+    // preset picker — Ctrl+Q's road, the same-project no-op, the preset pick
+    // and the page's row open ahead of its editor all pass through it; a reopen
     // ends the session with the picker standing, the whole AppState going
     // with it), which
     // resets the overlay with it — so "the band leaves with the picker" is a
@@ -8368,7 +8370,8 @@ struct AppState {
     //   `session`  its modal session id from the one counter
     //              (text_editor::next_session_id), minted at every open.
     // It authors nothing by itself: no undo, no dirty, legal on a read-only
-    // tab (the preset pick writes a device key, never the piece).
+    // tab (the preset pick writes a device key, never the piece, and the
+    // page's rows open the editor, whose commit arms carry the lock per key).
     struct Picker {
         bool     active  = false;
         uint64_t session = 0;
@@ -8863,13 +8866,15 @@ struct AppState {
     // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // fills it. FOUR CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
-    // valid project folders under `projects_path`; and since 2026-10-25 the
+    // valid project folders under `projects_path`; THE SETTINGS PAGE
+    // (architect 2026-10-28), with the settings editor's thirteen keys as
+    // `key=value` lines under two group rows; and since 2026-10-25 the
     // PRESET PICKER, with the twenty built-in waveform presets by
     // display name (architect: "maybe a drop down would make it quicker,
     // because I don't like having to type it in every time" — "brief it as a
-    // scrolling list", "Yes"). (The AV Sync Stats panel's text lines stood
+    // scrolling list", "Yes"), the page's `waveform` row's content. (The AV Sync Stats panel's text lines stood
     // 2026-09-03..30 and were deleted with the panel; the `h` view's history
     // picker stood for one day, retired 2026-08-29: "overengineered; I don't
     // really need it", the view's `'` raising its confirmation on the viewed
@@ -8881,7 +8886,8 @@ struct AppState {
     //                 hit site, wheel context and greying arm asks that one
     //                 function). The player writes Player at its open and
     //                 None at its close; the picker writes ProjectPicker or
-    //                 PresetPicker at its open (the two picker contents, one
+    //                 SettingsPage at its open and PresetPicker at the page's
+    //                 `waveform` row (the three picker contents, one
     //                 AppState::Picker each time) and None at every close
     //                 path (all of them through close_picker; a reopen
     //                 ends the session with it standing, and the AppState
@@ -8892,11 +8898,14 @@ struct AppState {
     //                 (going UP is the row's act no longer: since 2026-09-01
     //                 the listings carry no `..` row and Up is a button and
     //                 Backspace), under the project picker reopens the row's
-    //                 project and under the preset picker installs and
-    //                 persists the row's preset, then closes
-    //                 (preset_picker_commit); the lift's highlight is every
-    //                 owner's alike (a picker's band IS its whole state —
-    //                 there is no field to feed);
+    //                 project, under the settings page opens the settings
+    //                 editor prefilled on the row's line or swaps in the
+    //                 preset picker (settings_page_commit), and under the
+    //                 preset picker installs and persists the row's preset,
+    //                 then closes (preset_picker_commit); the lift's
+    //                 highlight is every owner's alike (a picker's band IS
+    //                 its whole state — there is no field to feed), an inert
+    //                 row taking neither half (folder_overlay::row_is_inert);
     //   `rows`        the listing, rebuilt WHOLE at every folder entry and
     //                 never kept fresh (a render completing meanwhile shows on
     //                 the next entry of its folder);
@@ -8928,8 +8937,10 @@ struct AppState {
     //                 under a PICKER it is THE WHOLE STATE — what Enter
     //                 opens, with no field beside it. The project picker
     //                 seats it on the CURRENT project's row at the open, the
-    //                 preset picker on the LIVE preset's (the `waveform`
-    //                 device key's);
+    //                 settings page on its FIRST KEY ROW, the preset picker
+    //                 on the LIVE preset's (the `waveform` device key's).
+    //                 IT NEVER STANDS ON AN INERT ROW (folder_overlay.h's
+    //                 set_highlight and its walk);
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
     //                 nothing at all (false, the open state). IT PAINTS
     //                 NOTHING since 2026-10-23 (the focus frame round the
@@ -8957,10 +8968,16 @@ struct AppState {
     //                 no act. No hold and no modifier
     //                 rides it: a shift or ctrl press on a row is a consumed
     //                 no-op, and nothing on a row reads kHoldBeatMs.
-    // A ROW'S KIND decides its glyph: Folder wears the folder glyph, Wav
-    // the wav glyph, and PRESET NONE (architect 2026-10-25: the row is the
-    // preset's memorable DISPLAY NAME, "Midnight Blues", never its
-    // key, its text starting where a Folder row's name starts). A KIND EXISTS
+    // A ROW'S KIND decides its glyph, its ink and whether it acts: Folder
+    // wears the folder glyph, Wav the wav glyph, PLAIN NONE (architect
+    // 2026-10-25: a preset row is the preset's memorable DISPLAY NAME,
+    // "Midnight Blues", never its key; 2026-10-28: a settings page row is
+    // the line the editor opens with, `waveform=default`; the text starting
+    // where a Folder row's name starts), and GROUP NONE, AND IT IS INERT
+    // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
+    // highlighted, never opened, stepped over by the walk, its text in the
+    // dead key's print (kDimInk). The kind says what a row IS; what its open
+    // MEANS is the owner's (folder_overlay_open_row). A KIND EXISTS
     // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:
     //   * UP — the `..` row, the folder glyph over the parent — went on
     //     2026-09-01, when the player moved inside `tmp/` and going up became a
@@ -8968,14 +8985,18 @@ struct AppState {
     //     listing. It has no producer and is not here.
     //   * TEXT — no glyph, no act — carried the one-day history picker's rows
     //     (to 2026-08-29) and then the AV Sync Stats panel's lines
-    //     (2026-09-03..30), and went with the panel. Preset is glyph-less as
-    //     it was, but a row with an act.
-    // (The project picker produces Folder rows alone, the preset picker
-    // Preset rows alone: kGuiBuiltinPalettes in the include's order, so a
-    // row's index IS its preset's index there and the row carries no key —
-    // `path` and `entry` stay empty.)
+    //     (2026-09-03..30), and went with the panel. Plain is glyph-less as
+    //     it was, but a row with an act; Group is a heading, not a line of
+    //     output.
+    // THE PRODUCERS: the render player Folder and Wav rows; the project
+    // picker Folder rows alone; the SETTINGS PAGE Group and Plain rows (its
+    // two headings and its thirteen key lines, build_settings_page_rows);
+    // the preset picker Plain rows alone, kGuiBuiltinPalettes in the
+    // include's order, so a row's index IS its preset's index there and the
+    // row carries no key. A Plain or Group row's `path` and `entry` stay
+    // empty.
     struct FolderOverlayRow {
-        enum class Kind { Folder, Wav, Preset };
+        enum class Kind { Folder, Wav, Plain, Group };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;
@@ -8991,13 +9012,14 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
-        // THE THREE CONTENTS. The tag IS the standing predicate
+        // THE FOUR CONTENTS. The tag IS the standing predicate
         // (folder_overlay_stands, below), and it is the one thing the open act
-        // forks on — and, between the two picker contents, the router's
+        // forks on — and, between the three picker contents, the router's
         // opener arms and the opener key's lit face (is_folder_overlay_opener).
         // Everything else about the panel — the band, the scroll, the walk —
         // is the widget's and knows nothing about which content fills it.
-        enum class Owner { None, Player, ProjectPicker, PresetPicker };
+        enum class Owner { None, Player, ProjectPicker, SettingsPage,
+                           PresetPicker };
         Owner              owner         = Owner::None;
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
@@ -9439,8 +9461,10 @@ inline bool folder_overlay_stands(const AppState& a) {
 // IS `b` THE STANDING CONTENT'S OPENER KEY? (architect 2026-10-25: "that
 // button should be usable as a way of getting out also"), ONE ANSWER PER
 // OWNER, the tag deciding: PLAY RENDERS under the player, OPEN PROJECT under
-// the project picker, SETTINGS under the preset picker (its shift twin's
-// content). It is the one roster key a standing overlay leaves live and lit
+// the project picker, SETTINGS under the settings page AND under the preset
+// picker (architect 2026-10-28: the page's `waveform` row swaps the preset
+// picker in under the same key, so the key that opened the page closes
+// either). It is the one roster key a standing overlay leaves live and lit
 // (redesign_button_enabled's overlay arm, redesign_button_selected) and the
 // one roster arm its veil lifts (finish_chrome_press_release's head); false
 // with nothing standing.
@@ -9452,6 +9476,7 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
             return b == RedesignButton::IconListen;
         case AppState::FolderOverlay::Owner::ProjectPicker:
             return b == RedesignButton::OpenProject;
+        case AppState::FolderOverlay::Owner::SettingsPage:
         case AppState::FolderOverlay::Owner::PresetPicker:
             return b == RedesignButton::IconSettings;
     }
@@ -15229,10 +15254,11 @@ inline bool redesign_button_enabled(const AppState& a,
     // predicate, input_handler.h). This is the one record of the rule.
     //
     // THE THREE CLASSES (architect 2026-10-25): THE MODALS above; THE
-    // OVERLAYS, the render player and the picker's two contents (the project
-    // picker, and the preset picker since 2026-10-25), which end at a
-    // pick or a load and also leave on Esc and on THEIR OPENER KEY — Play
-    // Renders, Open Project and Settings, lit and live under them (the overlay arm
+    // OVERLAYS, the render player and the picker's three contents (the
+    // project picker, the settings page and the preset picker it swaps in),
+    // which end at a pick, a row's open or a load and also leave on Esc and
+    // on THEIR OPENER KEY — Play Renders, Open Project and Settings (the
+    // page's and the preset picker's both), lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey and the
     // hint dwell suppressed ("overlays don't show hints … the only reason
     // they still show the one button lit is that you can exit by pressing
@@ -15296,9 +15322,9 @@ inline bool redesign_button_enabled(const AppState& a,
     // is Ctrl+O, which the picker's router answers with close_picker, the
     // act its Cancel key runs — and its shifted press, the long press on the
     // glass, is Ctrl+Alt+O, which that router answers with Revert
-    // (2026-10-25); while the PRESET PICKER stands (2026-10-25), Settings
-    // stays live and both its lifts — bare `;` and its shifted press or long
-    // press, Shift+; — are answered by the picker's router with close_picker.
+    // (2026-10-25); while the SETTINGS PAGE or the PRESET PICKER it swaps in
+    // stands (2026-10-28), Settings stays live and its lift, bare `;`, is
+    // answered by the picker's router with close_picker.
     // Each key toggles exactly as its chord does and
     // sits lit while its overlay stands (redesign_button_selected). The other
     // overlays' openers stay grey (a press would open one overlay over
@@ -15834,15 +15860,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // the engine-key commit and the iteration lock's three typed keys
         // refuse inside it (settings_editor.cpp). It greyed under both locks
         // from 2026-09-29 until then, the popup's rows being the locked tab's
-        // road. The opener itself (GuiSettingsEditor::open) refuses nothing —
+        // road. THE KEY OPENS THE SETTINGS PAGE since 2026-10-28
+        // (open_settings_page), whose own refusals (a prompt, a standing
+        // picker, a load) are states this face is already grey or veiled in;
         // an editor already standing is the veil's, whose press never reaches
-        // this button. ITS SHIFT TWIN, THE PRESET PICKER (Shift+;,
-        // 2026-10-25), greys and lights with it: the same `h` refusal, the
-        // same two locks admitting it (it writes a device key, never the
-        // piece), and the picker's own opener refusals (a prompt, a standing
-        // picker, a load) are states this face is already grey or veiled in.
-        // While the preset picker stands the overlay arm above answers first
-        // and keeps this key live, its press the picker's close.
+        // this button. While the page or the preset picker it swaps in
+        // stands, the overlay arm above answers first and keeps this key
+        // live, its press the picker's close.
         case RedesignButton::IconSettings:
             return true;
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
@@ -16815,14 +16839,15 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // reading the bit its own press flips — PLAY RENDERS the render
         // player's (bare `l`, toggle_render_player: the mode's own closer),
         // OPEN PROJECT the project picker's (Ctrl+O, whose picker arm is the
-        // picker's Cancel, route_picker_key), SETTINGS the preset picker's
-        // (2026-10-25: Shift+; opens it, and `;` and Shift+; close it). So
+        // picker's Cancel, route_picker_key), SETTINGS the settings page's
+        // and the preset picker's it swaps in (2026-10-28: `;` opens the
+        // page and closes either). So
         // the key sits down at the
         // checked depth with its LED lit while its overlay stands — the
         // history opener's face over its view — the one key the overlay
         // leaves live (redesign_button_enabled's overlay arm). The per-tick
         // comparator carries the edge. (All three were momentary, no lamp,
-        // until that day.) The two picker contents share the picker's bit,
+        // until that day.) The three picker contents share the picker's bit,
         // so the tag says whose key is lit (is_folder_overlay_opener).
         case RedesignButton::IconListen:
         case RedesignButton::OpenProject:
@@ -16875,9 +16900,10 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         case RedesignButton::IconFlatten:
         case RedesignButton::IconLoadInPlace:
         // (THE SETTINGS BUTTON WAS MOMENTARY 2026-09-29 to 2026-10-25, the
-        // editor's own session the state; it lights under the preset picker
-        // since, with the overlay openers above. Under the typed editor it
-        // stays dark: the editor is a modal, not an overlay.)
+        // editor's own session the state; it lights under the settings page
+        // and the preset picker since, with the overlay openers above. Under
+        // the typed editor it stays dark: the editor is a modal, not an
+        // overlay.)
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
         // it is an ACT, not a mode — it runs once and closes the view — so
         // there is no bit for a lamp to read. Its ENABLED face greys with no
@@ -17245,15 +17271,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // alone runs, so the twin term is not composed and a clean piece's greyed
 // Save refuses its long press too — the publish is then the key's, or the
 // `h` view's Save.)
-// (SETTINGS JOINED 2026-10-25 with SHIFT+;, THE PRESET PICKER (architect:
-// "I don't like having to type it in every time" — a scrolling list of the
-// waveform presets, the folder overlay's third content): its row is bare `;`,
-// the typed editor, and its shift-click and long press dispatch the row's
-// key under shift, Shift+;, with no translation. The lift under the standing
-// picker is its close, both forms (route_picker_key).)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
-           b == RedesignButton::IconSettings ||
            b == RedesignButton::Save ||
            b == RedesignButton::Render ||
            b == RedesignButton::IconZoomIn ||
@@ -17733,17 +17752,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // modifier.
         case RedesignButton::IconNoise:
             return {"Noise (W)", nullptr};
-        // SETTINGS (architect 2026-09-29): bare `;` opens the settings
-        // prompt. The accelerator names the cap, the table's punctuation
-        // rule. The name is the retired menu anchor's own word (2026-10-21),
-        // the act being that menu's bare prompt. ITS SECOND LINE NAMES THE
-        // SHIFT TWIN since 2026-10-25, the preset picker (Shift+;, the long
-        // press on the glass) — the act and the modifier and not a key, this
-        // table's form for second lines; one line until then, the button
-        // admitting no modifier.
+        // SETTINGS (architect 2026-09-29), one line: bare `;` opens the
+        // settings page (2026-10-28). The accelerator names the cap, the
+        // table's punctuation rule. The name is the retired menu anchor's own
+        // word (2026-10-21), the act being that menu's list again. The button
+        // admits no modifier (plain press only, architect 2026-10-28).
         case RedesignButton::IconSettings:
-            return {"Settings (;)",
-                    "Press Shift to choose a waveform preset."};
+            return {"Settings (;)", nullptr};
         // THE HISTORY VIEW'S TOGGLE, one line: the key toggles and there is
         // no shifted twin. The text names the toggle (the lamp rule at this
         // table's head); it read "History (H)", the word the manual then

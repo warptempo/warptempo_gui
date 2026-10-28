@@ -875,7 +875,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconReadOnly},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
-    // `;`, the settings prompt — the typed road's pointer spelling, one box and one 2px gap onto the walk
+    // `;`, the settings page (2026-10-28) — the key's pointer spelling, one box and one 2px gap onto the walk
     // and no separator moving.
     {RedesignButton::IconSettings},
     // ENABLE TOOLTIPS (architect 2026-09-29, evening), CLOSING the
@@ -7365,8 +7365,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // THE LIST PANEL (2026-08-28; the modal family's box since 2026-10-14),
 // ONE PAINTER FOR EVERY CONTENT —
 // the render player's folders and wavs, the Open project picker's project
-// folders and the preset picker's waveform presets (2026-10-25, glyph-less
-// rows by display name). Contract and gate are at the declaration; the geometry, the scroll
+// folders, the settings page's `key=value` lines under its dim group rows
+// (2026-10-28) and the preset picker's waveform presets (2026-10-25,
+// glyph-less rows by display name). Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. EVERY ROW IS A LIST ROW in the redesign's SANS
@@ -7438,7 +7439,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_rectangle(cr, content.x, content.y, content.w, content.h);
     cairo_clip(cr);
 
-    // THE FACE: every content lists NAMES — files, projects and presets — and take the
+    // THE FACE: every content lists NAMES — files, projects, settings lines and presets — and take the
     // redesign's sans at the redesign's size like every other row in the
     // product. THE SANS-FOR-LISTINGS RULING IS HIS, AND IT IS A REVERSAL OF
     // HIS OWN (2026-09-03): the player's and the picker's listings took the
@@ -7465,9 +7466,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             if (!rects_intersect(content, r)) return;
 
             const bool highlighted = index == ov.highlight_row;
-            const bool pressed     = ov.press.armed &&
-                                     ov.press.row == index &&
-                                     ov.press.inside && !ov.press.scrolling;
+            // AN INERT ROW IS NEVER LIT (folder_overlay::row_is_inert, the
+            // settings page's group rows, architect 2026-10-28): its press
+            // arms the scroll drag alone and promises no highlight, and the
+            // highlight never stands on it.
+            const bool inert   = folder_overlay::row_is_inert(app, index);
+            const bool pressed = !inert && ov.press.armed &&
+                                 ov.press.row == index &&
+                                 ov.press.inside && !ov.press.scrolling;
             // THE FACE (the block above): LIT — the highlight, or a live
             // press arm promising it — is the flat selected fill; a row that
             // is neither takes NO FILL and the band's field shows through it.
@@ -7498,12 +7504,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // the icon set's glyphs at Windows' small 16-px seat 2026-08-28
             // to 2026-10-23, Play swapped in on the item's row, are git
             // history.)
-            // A PRESET ROW WEARS NO GLYPH (architect 2026-10-25, the preset
-            // picker: the row is the preset's display name) and its name
+            // A PLAIN ROW AND A GROUP ROW WEAR NO GLYPH (architect
+            // 2026-10-25, the preset picker: the row is the preset's display
+            // name; 2026-10-28, the settings page: the row is its
+            // `key=value` line, the group row its heading) and their text
             // starts at the same kListNameXAt300 as every other row's, so
-            // the picker's names stand in the project picker's name column.
+            // the pickers' names stand in the project picker's name column.
             const int x0 = modal_box_rect(app, 0).x;
-            if (row.kind != AppState::FolderOverlayRow::Kind::Preset) {
+            if (row.kind == AppState::FolderOverlayRow::Kind::Folder ||
+                row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                 const int gh = icons::icon_box_px(kListGlyphInkAt300);
                 icons::draw_boxed(
                     cr,
@@ -7532,9 +7541,13 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            // The row's text pair (surface_text, render.h).
-            set_palette_source(cr, surface_text(lit ? GuiSurface::ListRowLit
-                                                    : GuiSurface::ListRow));
+            // The row's text pair (surface_text, render.h); A GROUP ROW in
+            // THE DEAD KEY'S PRINT, kDimInk (materials.h's inks, architect
+            // 2026-10-28: "DEVICE" and "PIECE" dim headings, never lit).
+            set_palette_source(
+                cr, inert ? hex(kDimInk)
+                          : surface_text(lit ? GuiSurface::ListRowLit
+                                             : GuiSurface::ListRow));
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);

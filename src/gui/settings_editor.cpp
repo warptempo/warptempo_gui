@@ -205,7 +205,8 @@ std::string closed_list_advance(const std::string& typed,
 // key's through format_engine_setting_value, every other settable key's
 // through recall_gui_setting_value), or nothing for a key this editor does
 // not know. autocomplete_value reads it for a complete key (whether the
-// line names a key it knows) and for an empty value side (the value).
+// line names a key it knows) and for an empty value side (the value), and
+// GuiSettingsEditor::setting_line for the settings page's rows (2026-10-28).
 std::optional<std::string> recall_setting_value(const AppState& app,
                                                 const std::string& key) {
     std::optional<std::string> cur =
@@ -239,18 +240,15 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 // 2026-08-07 — owe no read-only gate here either.
 //
 // THE OPENER IS LIVE UNDER EITHER LOCK, ONE LEVEL UP TOO (2026-10-21, the
-// planner's ruling by the 2026-09-04 rule): bare `;` is on the read-only
-// allowlist (read_only_key_blocked's is_settings_editor), which the
-// iteration gate inherits, and the band's Settings button — the chord's
-// pointer spelling — stays lit under both. From 2026-09-04 until 2026-10-21
-// the Settings popup's rows opened this editor on a locked tab, each
-// prefilling its key, the field free text (a self-unlock typed as
-// `tab_X_read_only=false` among what it admitted), while `;` and the button
-// were refused under either lock; the popup retired that evening for this
-// one editor, which for the hours until this admission left a locked ACTIVE
-// tab no road to the device keys at all. THE LOCK ARMS BELOW ARE THE KEYS'
-// OWN RULE and are reached again: the engine-key arm's, and the iteration
-// lock's three.
+// planner's ruling by the 2026-09-04 rule): bare `;` — the SETTINGS PAGE's
+// opener since 2026-10-28, whose rows are this editor's one road
+// (GuiInputHandler::settings_page_commit) — is on the read-only allowlist
+// (read_only_key_blocked's is_settings_page), which the iteration gate
+// inherits, and the band's Settings button — the chord's pointer spelling —
+// stays lit under both, so a locked ACTIVE tab keeps its road to the device
+// keys. The line opened is free text (a self-unlock typed as
+// `tab_X_read_only=false` among what it admits). THE LOCK ARMS BELOW ARE THE
+// KEYS' OWN RULE: the engine-key arm's, and the iteration lock's three.
 //
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
@@ -291,9 +289,10 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 // here can spell it (bare `k` was a second such chord until 2026-09-19 and
 // had no key here either). A change to that delta needs a hand edit
 // here.
-void GuiSettingsEditor::open() {
+void GuiSettingsEditor::open(const std::string& line) {
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
-    // answer — a second `;` asks for what is already there.
+    // answer. (Its one caller is the settings page's row, which no press
+    // reaches under the editor's veil; the arm is the opener's own shape.)
     if (text_editor::is_active(app.settings_editor)) return;
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
@@ -307,11 +306,23 @@ void GuiSettingsEditor::open() {
                        /*target=*/0,
                        /*initial_pending=*/"",
                        text_editor::Kind::SettingsAssignment);
+    // THE PREFILL LANDS AS EVERY TAB ADVANCE LANDS (the head): through the
+    // one incoming filter at the empty line's end, so the caret stands at
+    // the line's end with nothing selected. Its over-capacity refusal is
+    // silent for the recall's reason (the text is the product's own recall,
+    // autocomplete_value's account).
+    (void)text_editor::replace_selection(app.settings_editor, line);
     // A MODAL OPEN damages the whole window: the modal's rect does not exist
     // before its first paint (the stash is the painter's), so the status-row
     // owner's modal rider cannot cover it here. Every later repaint of the
     // session rides that owner (viewport.cpp).
     viewport.invalidate_all();
+}
+
+std::string GuiSettingsEditor::setting_line(const std::string& key) const {
+    const std::optional<std::string> value = recall_setting_value(app, key);
+    assert(value && "a settings page key recalls nothing");
+    return key + "=" + *value;
 }
 
 void GuiSettingsEditor::exit_no_commit() {
@@ -691,8 +702,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // did not raise on a locked ACTIVE tab, so the arm was reached only by
         // typing `tab_X_read_only=false` from an unlocked tab about the other
         // one. The Settings dropdown raised the editor on a locked tab from
-        // then until it retired, 2026-10-21, and bare `;` does since (the
-        // open's account), so a self-unlock can be typed here — the
+        // then until it retired, 2026-10-21, and the settings page's rows do
+        // since (the open's account), so a self-unlock can be typed here — the
         // `tab_X_read_only=false` of the locked active tab — beside the
         // remote route. This key is band, not authored content,
         // navigation-class on the read-only allowlist's own reading, and the

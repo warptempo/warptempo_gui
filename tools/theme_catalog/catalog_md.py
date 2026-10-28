@@ -42,10 +42,10 @@ def head(default_name, default_key):
         'and its canvas, the grid and center lines, the markers, the playhead and the scanner, and the keys\' lit lamps '
         'take the hue of its waveform color; the rest of the window is the program\'s black hi-fi panel, which no preset '
         'changes.', '',
-        'To choose one, press the toolbar\'s Settings button and type `waveform=` and a key from the list below (Tab '
-        'completes a typed beginning, and a Tab right after `waveform=` adds the key in use), then press OK or Enter: it '
-        'applies at once and is kept for the next launch. Cancel or Esc leaves the colors as they were. A word that is '
-        'no preset\'s key is refused.', '',
+        'To choose one, press the toolbar\'s Settings button and tap the `waveform` line: the presets are listed by '
+        'name, the one in use chosen; a tap on one applies it at once and keeps it for the next launch, and Cancel or '
+        'Esc leaves the colors as they were. A preset\'s key, in the list below, is what the device config\'s '
+        '`waveform=` line holds.', '',
         f'The default: {default_name} (`{default_key}`).',
         '']
 

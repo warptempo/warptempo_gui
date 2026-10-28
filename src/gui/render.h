@@ -308,7 +308,8 @@ struct TrimRange {
 // THE DISABLED FACES (the hi-fi skin, 2026-10-23): a dead key DIMS ITS
 // PRINTED LEGEND (kDimInk, paint_key_legend), its key the face its state
 // gives; a CUE'S inert label is the faded tone (the
-// marker-lane paragraph). Nothing else dims. (Windows' word emboss —
+// marker-lane paragraph); the settings page's inert GROUP ROWS wear the dead
+// key's print (kDimInk, paint_folder_overlay, 2026-10-28). Nothing else dims. (Windows' word emboss —
 // DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
 // under its Shadow copy, show_embossed_run, 2026-10-03 — retired with no
 // disabled word left, 2026-10-23.)

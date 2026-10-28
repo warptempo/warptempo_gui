@@ -2,10 +2,13 @@
 
 // THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28; the
 // keyboard slot's band until 2026-10-14, the modal family's box since,
-// modal_box.h). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, the OPEN PROJECT PICKER's valid project folders, and since
-// 2026-10-25 the PRESET PICKER's twenty built-in waveform presets by
-// display name (architect: "it would be nice to have some presets, and maybe
+// modal_box.h). ONE WIDGET, FOUR CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
+// SETTINGS PAGE's thirteen keys as `key=value` lines under two group rows
+// (architect 2026-10-28, on a mock he verified on the glass: "yes" to the
+// list, "keep" to the group rows), and since 2026-10-25 the PRESET PICKER's
+// twenty built-in waveform presets by display name, the page's `waveform`
+// row's content (architect: "it would be nice to have some presets, and maybe
 // a drop down would make it quicker, because I don't like having to type it
 // in every time. We rejected drop downs because it was too much work to make
 // them Windows identical, but now we don't have the responsibility" — "brief
@@ -27,8 +30,11 @@
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
-// icon and a name, and since 2026-10-25 the preset picker's glyph-less PRESET
-// rows, a name alone in the names' column (a glyph-less TEXT kind went with
+// icon and a name; glyph-less PLAIN rows, a name alone in the names' column
+// (the preset picker's presets since 2026-10-25, the settings page's key
+// lines since 2026-10-28); and the page's INERT GROUP rows, a heading in the
+// dead key's print, which the highlight never stands on (row_is_inert, the
+// walk below) (a glyph-less TEXT kind went with
 // the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
 // until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
@@ -47,7 +53,8 @@
 // 2026-10-21, Quit the window manager's close on the laptop, Android's Back on the tablet, and Ctrl+Q): every icon-row button —
 // the view pairs' four included — greys through redesign_button_enabled's
 // first arm (each content's opener key excepted, its own closer:
-// Play Renders 2026-10-13, Open Project and Settings 2026-10-25 —
+// Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
+// over the page and the preset picker it swaps in 2026-10-28 —
 // is_folder_overlay_opener). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
@@ -113,7 +120,7 @@
 // edge round the keyboard slot's band before it). IT COVERS EVERY CONTENT,
 // this one widget being every
 // Windows list in the product (the player's folders and wavs, the project
-// picker's projects, the preset picker's presets); the controls row under it — the transport, the scrub,
+// picker's projects, the settings page's keys, the preset picker's presets); the controls row under it — the transport, the scrub,
 // the buttons — stands on the face. A
 // resting row paints no fill at all, and the highlighted row is a flat fill
 // in the theme's selected pair (render.h's palette block), focused or not.
@@ -132,9 +139,14 @@
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
 // highlights under every owner — the picker has no field beside the band):
 // under the PLAYER an open enters a folder or plays a wav; under
-// the PROJECT PICKER it reopens the row's project; under the PRESET PICKER
+// the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
+// it closes the page and opens the settings editor prefilled on the row's
+// line, or on the `waveform` row swaps the preset picker in
+// (settings_page_commit, 2026-10-28); under the PRESET PICKER
 // it installs and keeps the row's preset and closes the picker
-// (preset_picker_commit, 2026-10-25). Enter on the highlight is
+// (preset_picker_commit, 2026-10-25). AN INERT ROW HAS NO OPEN and no
+// highlight: its motionless lift is a consumed nothing
+// (finish_folder_overlay_release asks row_is_inert). Enter on the highlight is
 // the keyboard's own click and reaches the same fork, which is at
 // the press router and the key routers, never here — the panel knows rows,
 // not projects.
@@ -177,8 +189,8 @@ inline constexpr double kRowGapPx = 1.0;
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
 // first hours), the panel's row gap, the row's boxed glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then). A folder row wears
-// icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a preset row
-// (2026-10-25) wears none, its name in the same column. (The glyph-less
+// icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a plain row and
+// a group row wear none, their text in the same column. (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
 // which wore the folder glyph because it named a folder, with the player's
 // move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while
@@ -254,8 +266,8 @@ inline int content_height_px(const AppState& a) {
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — no content can stand empty anyway (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
-// always lists at least the project that is open, the preset picker the
-// compiled-in twenty).
+// always lists at least the project that is open, the settings page its
+// fifteen rows, the preset picker the compiled-in twenty).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {
@@ -366,9 +378,11 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // offset that puts row `index`'s center on the band's center, the
 // difference rounded at the element, then the one clamp — so a row near
 // either end of the listing lands as close to center as the ends allow, and a
-// listing shorter than the band never scrolls. The three open-time seats
-// call it after their seat (the project picker's and the preset picker's
-// builds, the render player's every rebuild, each a fresh listing); the
+// listing shorter than the band never scrolls. The four open-time seats
+// call it after their seat (the project picker's, the settings page's and
+// the preset picker's builds, the render player's every rebuild, each a
+// fresh listing — the page's first key row, row 1, lands at the band's top,
+// the clamp ruling a centered row 1 out); the
 // keyboard walk and the pointer's seats keep scroll_row_into_view's
 // least-move rule (an arrow step scrolls by one row, every list widget's
 // rule). Returns whether the offset moved.
@@ -386,20 +400,39 @@ inline bool scroll_row_centered(AppState& a, int index) {
 
 // -- The highlight and the scroll, the mechanics every content drives --------
 //
-// THE DAMAGE IS THE CALLER'S: each of the three answers whether the band's
+// THE DAMAGE IS THE CALLER'S: each of the movers answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
 // no include of one — the player damages through its own helper, the two
 // pickers through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 
+// IS ROW `index` INERT? (architect 2026-10-28, the settings page's group
+// rows: "keep") — a Group row, THE ONE PREDICATE every refusal of the
+// highlight and the open asks: set_highlight below will not seat one, the
+// walk steps over them (move_highlight_target), and the row press's
+// motionless lift on one is a consumed nothing
+// (finish_folder_overlay_release). Its press still arms, the same press
+// being the band's scroll drag; the painter keeps it unlit
+// (paint_folder_overlay). False outside the listing.
+inline bool row_is_inert(const AppState& a, int index) {
+    const int n = static_cast<int>(a.folder_overlay.rows.size());
+    if (index < 0 || index >= n) return false;
+    return a.folder_overlay.rows[static_cast<size_t>(index)].kind ==
+           AppState::FolderOverlayRow::Kind::Group;
+}
+
 // Seat the highlight on `index`, clamped into the listing (-1 for an empty
 // one), scrolling the band to keep it visible. Returns whether the band
-// changed.
+// changed. AN INERT ROW IS NEVER SEATED (row_is_inert): a seat on one is
+// refused whole, the band unchanged — every seat names an actionable row
+// by construction (the builders' seats, the walk's landing, a lift on an
+// acting row), so the refusal is the rule's statement, not a road.
 inline bool set_highlight(AppState& a, int index) {
     AppState::FolderOverlay& ov = a.folder_overlay;
     const int n  = static_cast<int>(ov.rows.size());
     const int to = n <= 0 ? -1 : std::clamp(index, 0, n - 1);
+    if (row_is_inert(a, to)) return false;
     bool changed = false;
     if (to != ov.highlight_row) {
         ov.highlight_row = to;
@@ -431,10 +464,25 @@ inline int walk_origin_row(const AppState& a) {
 // THE ROW A WALK OF `delta` ROWS LANDS ON, or -1 for an empty listing (the
 // step's one owner: move_highlight below seats it, and
 // move_highlight_actionable asks whether it would change the highlight).
+// THE INERT ROWS' ONE SKIP (architect 2026-10-28, the settings page's group
+// rows): a landing on an inert row (row_is_inert) steps on past it in the
+// walk's direction (a zero delta stepping down) to the first acting row;
+// where none lies that way the walk is CLAMPED AT THE ACTING ROWS' END,
+// stepping back from the landing to the nearest acting row — so Up from the
+// page's first key row stays there, its group row above it never seated.
+// A content with no inert row lands where the clamp lands, unchanged. A
+// listing of inert rows alone has no producer and answers -1, as an empty
+// one does.
 inline int move_highlight_target(const AppState& a, int delta) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return -1;
-    return std::clamp(walk_origin_row(a) + delta, 0, n - 1);
+    const int landing = std::clamp(walk_origin_row(a) + delta, 0, n - 1);
+    const int step    = delta < 0 ? -1 : +1;
+    for (int to = landing; to >= 0 && to < n; to += step)
+        if (!row_is_inert(a, to)) return to;
+    for (int to = landing - step; to >= 0 && to < n; to -= step)
+        if (!row_is_inert(a, to)) return to;
+    return -1;
 }
 
 // Move the highlight by `delta` rows, clamped; an empty listing has nothing
@@ -451,7 +499,10 @@ inline bool move_highlight(AppState& a, int delta) {
 // differs from the row the highlight stands on. False on an empty listing and
 // at the wall the walk clamps to; a -1 highlight is actionable, the walk
 // starting FROM row 0 (walk_origin_row) and applying its delta exactly as the
-// arrow keys do: Down lands on row 1, Up on row 0. The band's scroll-into-view
+// arrow keys do: Down lands on row 1, Up on row 0. It reads the one landing
+// owner, so it agrees with the walk about the inert rows: a step that the
+// skip clamps back onto the highlight's own row (Up from the settings page's
+// first key row) is no step. The band's scroll-into-view
 // alone (a highlight already on the wall row but partly out of view) is not
 // asked: that is a repaint of the band, not a step of the highlight.
 inline bool move_highlight_actionable(const AppState& a, int delta) {

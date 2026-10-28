@@ -176,7 +176,9 @@ struct AppState;
 // and on the keyboard's caps in their keys face (24 px at 300 %, 2026-10-24)
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
-// 6A6A6E, a disabled key's legend alone. NO WORD
+// 6A6A6E, a disabled key's legend and, in that dead print, the settings
+// page's inert group rows (architect 2026-10-28, paint_folder_overlay).
+// NO WORD
 // WEARS A SHADOW but the cue labels, row 8's tab name and state line, and
 // THE LOGO LANE — the brand, the legend's percent and clock runs, and with
 // them the lane's two drawings, the quaver and the bolt / battery glyph
