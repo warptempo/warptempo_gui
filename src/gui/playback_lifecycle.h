@@ -135,7 +135,8 @@ struct GuiPlaybackLifecycle {
     //     number and not the class. The BOUND arm still stops nothing, being
     //     iteration state (the bullet above).
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
-    //     PageUp/PageDown, the zoom gestures — they move the window onto the audio,
+    //     PageUp/PageDown, the zoom gestures and the zoom step (`=` / `-`,
+    //     2026-10-27) — they move the window onto the audio,
     //     not the audio. `0`'s RESTORE (architect 2026-09-23) puts the stamped
     //     playhead back and so stops as Home / End do, only when that playhead
     //     differs from the resting one; at a ceiling nothing stamped `0` is a

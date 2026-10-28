@@ -263,6 +263,11 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt) ||
         is_trim_frame_key(key, mods);
+    // THE ZOOM STEP, `=` / `-` bare and shifted (architect 2026-10-27,
+    // through the shared predicate the dispatch reads): the camera about the
+    // viewport's centre, writing no store, so it is admitted here and under
+    // the grid-iterations lock, whose gate falls through to this list.
+    const bool is_zoom_step = is_zoom_step_key(key, mods);
     // WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22;
     // on the backtick since 2026-09-23): a display
     // posture about the picture, authoring nothing the lock protects, so it
@@ -524,7 +529,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
              is_home_end || is_page_updown ||
-             is_zero ||
+             is_zoom_step || is_zero ||
              is_waveform_magnification ||
              is_center || is_follow ||
              is_view_selector ||
@@ -3006,6 +3011,10 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // is not named: trim is frozen in here, so the view cards it.
     const bool is_zero  = (key == GuiKeys::Digit0 && bare) ||
                           is_trim_frame_key(key, mods);
+    // THE ZOOM STEP (`=` / `-`, bare and shifted; architect 2026-10-27): the
+    // camera, as the Ctrl+drag zoom the view already admits is — so the Zoom
+    // In and Zoom Out keys stand live in the view by the derived partition.
+    const bool is_zoom_step = is_zoom_step_key(key, mods);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
@@ -3182,7 +3191,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
-    return !(is_zero || is_page_updown || is_play_renders ||
+    return !(is_zoom_step || is_zero || is_page_updown || is_play_renders ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_ctrl_q || is_open_project ||
@@ -4728,9 +4737,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // silent at the dispatch arm (input_handler.cpp).
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
-    // `=` / `-` AND CTRL+0 ARE DELIBERATELY ABSENT because they bind
-    // nothing at all (the stepped zoom was removed 2026-09-25: zoom is on
-    // every surface) — and an unbound chord has no repeat to ask about.
+    // THE ZOOM STEP'S `=` / `-` ARE DELIBERATELY ABSENT, bare and shifted
+    // (architect 2026-10-27): the step is one-shot like Home / End, and its
+    // two keys on the band take no repeat either, their long press being the
+    // shift (is_zoom_step_key, gui_input.h). CTRL+0 is absent because it
+    // binds nothing at all — and an unbound chord has no repeat to ask about.
     return false;
 }
 

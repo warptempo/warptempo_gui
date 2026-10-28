@@ -239,6 +239,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     // reads a mismatch here as the layout's truth; that truth is the
     // painter's kIconRowButtons, with each group's leader at
     // redesign_button_opens_icon_group (app_state.h).
+    // ZOOM IN AND ZOOM OUT (architect 2026-10-27, the pair's return in
+    // front of Zoom to Fit): bare `=` and bare `-`, the zoom step one level
+    // about the viewport's centre (Viewport::zoom_step), two momentary
+    // navigation chords. EACH ADMITS SHIFT (redesign_button_shift_admits):
+    // its shift-click and long press dispatch Shift+= / Shift+-, the
+    // two-level step; a ctrl press is refused at the band gate. NEITHER
+    // REPEATS: the `repeats` column is unset, so the long press is the shift
+    // (START / END's shape). Both stay LIVE in the `h` view and under both
+    // locks — the chords are on all three allowlists (is_zoom_step_key) — so
+    // the derived partition answers live with nothing hand-listed.
+    {RedesignButton::IconZoomIn,
+     GuiKeys::Equal,  false, false, false},                             // bare = (+Shift: Shift+=)
+    {RedesignButton::IconZoomOut,
+     GuiKeys::Minus,  false, false, false},                             // bare - (+Shift: Shift+-)
     // ZOOM TO FIT (2026-08-12, the grand relayout, as Full Zoom Out; renamed
     // 2026-10-24): a momentary
     // navigation chord, the command's pointer home, click face like
@@ -246,10 +260,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // are on the mode's allowlist — which the derived partition answers with nothing
     // hand-listed. (CENTER, bare `c`, stood beside it as the zoom pair until
     // 2026-09-29, when its row moved to the bottom row's, below.)
-    // THE STEPPED ZOOM BUTTONS
-    // (bare `=` / `-`) WERE REMOVED 2026-09-25 (architect): zoom is on every
-    // surface — the Ctrl+drag on the waveform, the two-finger pinch, the S
-    // Pen's button-held drag. IT ADMITS SHIFT AND THE PAIR since 2026-10-24
+    // IT ADMITS SHIFT AND THE PAIR since 2026-10-24
     // (redesign_button_shift_admits / redesign_button_ctrl_shift_admits; Zoom
     // to Fit since that day): its shift-click or long press dispatches
     // Shift+0, FRAME THE TRIM (the trim bar's double-click), and its
@@ -1375,6 +1386,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
+//   ZOOM IN AND ZOOM OUT (2026-10-27; `=` / `-` and their shifted forms on
+//   the allowlist through is_zoom_step_key),
 //   ZOOM TO FIT (Full Zoom Out until 2026-10-24) AND CENTER since the
 //   2026-08-12 relayout (bare `0` is the allowlist's own zoom admission,
 //   Shift+0's frame beside it, and bare `c` is the mode's vocabulary —

@@ -931,10 +931,10 @@ private:
     void paint_ruler_row(cairo_t* cr);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
     // 2026-10-21) — the ICON ROW (top lane 1 since 2026-10-22, row 4: the
-    // twenty-five view/mode/action buttons (re-counted 2026-10-26 off
+    // twenty-eight view/mode/action buttons (re-counted 2026-10-27 off
     // kIconRowButtons, the four stand-ins and the right run), no border of its
-    // own since 2026-10-01, twenty-one standing outside the `h` view and
-    // fifteen inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
+    // own since 2026-10-01, twenty-four standing outside the `h` view and
+    // seventeen inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the border
     // under row 8 on the window's foot: the clock cell and the STATE

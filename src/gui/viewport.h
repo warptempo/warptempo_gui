@@ -395,13 +395,15 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // TWO callers (re-greped 2026-09-25):
+    // THREE callers (re-greped 2026-10-27):
     // the nav drag's zoom phase apply_nav_zoom_at
-    // (pure zoom about the seated pivot — the viewport arrives unpanned) and
+    // (pure zoom about the seated pivot — the viewport arrives unpanned),
     // the two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the song frame the pan seated, placed at the current
-    // fractional finger centroid, 2026-10-22). Both pre-clamp the level; this
+    // fractional finger centroid, 2026-10-22) and the zoom step zoom_step
+    // (the viewport's centre frame held at the centre column, one final
+    // event per press). All pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport
@@ -414,6 +416,17 @@ struct Viewport {
     // synchronous rebuild plus the predictor resync so the rest state is exact.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final);
+    // THE ZOOM STEP (architect 2026-10-27: bare `=` / `-` and the band's
+    // Zoom In / Zoom Out keys one level, Shift+= / Shift+- and the keys'
+    // shift press or long press two): `levels` whole levels from the current
+    // one (negative deeper — zoom_step_levels, gui_input.h), saturating at
+    // the map's live bounds (zoom_step_level, app_state.h), ZOOMING ABOUT THE
+    // VIEWPORT'S CENTRE — the frame at the waveform's centre column stays
+    // there. A silent no-op where the step would move nothing
+    // (zoom_step_actionable, whose verdict the keys' faces read too). In
+    // every effect a zoom like the Ctrl+drag and the pinch, whose applier it
+    // runs (contract at the definition, viewport.cpp).
+    void zoom_step(double levels);
     // Zoom-to-span apply: set the level AND the viewport start EXPLICITLY (the
     // start is a framed span's left edge, NOT a playhead recenter — the sole
     // difference from apply_zoom_change), then funnel both through the clamp

@@ -773,10 +773,19 @@ constexpr IconRowDef kIconRowButtons[] = {
     // region button itself — bare `[`, wearing tool-rect-selection — was
     // deleted on 2026-09-22 (the tablet's pen reaches the trim bar), one box
     // and one 2px gap
-    // off the walk, no separator moving; ZOOM TO FIT (Full Zoom Out until
-    // 2026-10-24) leads the group. What
-    // the group collects is the VIEWPORT CLASS — Zoom to Fit, the
-    // magnification lamp and FOLLOW — at the head of the band's second run.
+    // off the walk, no separator moving; ZOOM IN leads the group (the step
+    // pair in front of Zoom to Fit since 2026-10-27). What
+    // the group collects is the VIEWPORT CLASS — Zoom In, Zoom Out, Zoom to
+    // Fit, the magnification lamp and FOLLOW — at the head of the band's
+    // second run.
+    // ZOOM IN AND ZOOM OUT (architect 2026-10-27, "the zoom in and out to the
+    // left of FIT ... including the position in the toolbar"): bare `=` and
+    // bare `-`, one level about the viewport's centre, the shift press and
+    // the long press two (RedesignButton::IconZoomIn's record), legends IN
+    // and OUT. Two cases onto the walk at the second run's head, no run
+    // moving; Zoom In is the group's and the run's leader.
+    {RedesignButton::IconZoomIn},
+    {RedesignButton::IconZoomOut},
     // THIS TABLE IS THE ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
     // plus the group's and the run's leaders in
@@ -789,11 +798,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // and Ctrl+Shift+0 Reset Trim on its ctrl+shift press (2026-10-24;
     // Shift+0 the reset from 2026-09-22), the command's pointer home (the
     // Navigation dropdown that duplicated it was deleted 2026-08-15; the
-    // record is at kFilePopupItems, app_state.h). The stepped zoom buttons in
-    // front of it and their keys `=` / `-` were removed 2026-09-25
-    // (architect: zoom is on every surface — the Ctrl+drag, the pinch, the S
-    // Pen's button-held drag), two boxes and two 2px gaps off the walk and no
-    // separator moving. WORKING-ZOOM CENTER (bare `c`) stood
+    // record is at kFilePopupItems, app_state.h). The step pair stands in
+    // front of it (above). WORKING-ZOOM CENTER (bare `c`) stood
     // behind it until 2026-09-29, when the architect moved it to the bottom
     // row (kTransportNudgePlayGroup since 2026-10-18) — one box and one 2px gap off
     // this walk, no separator moving.
@@ -909,8 +915,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // is the mode's vocabulary or on its allowlist): UNDO'S (Undo, Redo, Copy
 // Phase Resets, Render — Ctrl+Z, Ctrl+Shift+Z, the `p` family, Ctrl+Alt+R)
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
-// refused whole in the view: the zoom group keeps Zoom to Fit (bare `0`)
-// and the render-entry group Play Renders (bare `l`, admitted 2026-10-25)
+// refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
+// to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders (bare `l`, admitted 2026-10-25)
 // and the tooltip lamp (bare backslash).
 //
 // THE SLOTS: UNDO'S FOUR (Undo, Redo, Copy Phase Resets and Render, since
@@ -923,9 +929,10 @@ constexpr IconRowDef kIconRowButtons[] = {
 // (architect 2026-10-11 ~02:40; they stood in Undo's and Redo's slots from
 // 2026-10-05): they take the Left / Right arrows' seats in the
 // nudge-and-play group there, the row's per-seat stand-ins
-// (kTransportHistoryStandIns). The zoom group stands on the two members the
-// view does not refuse in every session (Zoom to Fit and, since 2026-10-12,
-// Waveform Magnification) and the render-entry group on two (Play Renders,
+// (kTransportHistoryStandIns). The zoom group stands on the four members the
+// view does not refuse in every session (Zoom In and Zoom Out since
+// 2026-10-27, Zoom to Fit and, since 2026-10-12, Waveform Magnification) and
+// the render-entry group on two (Play Renders,
 // since 2026-10-25, and Enable Tooltips), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the view pairs are right-anchored and do not move
@@ -1012,14 +1019,14 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the clip
 // covers it whole — so a press, a hover and a tooltip land on exactly the
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
-// band holds every run down to 541 Windows px of window width outside the
-// `h` view and 403 inside it (the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-26 with the reading group in the view, plus
-// the ring's inset at each window edge), so neither host reaches the rule at its
-// scale: the tablet's 2304 device px hold the row in both states up to about
-// 425 % and the laptop's 1920 up to about 355 % (the W arithmetic over the
-// device width; each element's own rounding moves the edge by a pixel or
-// so).
+// band holds every run down to about 610 Windows px of window width outside
+// the `h` view and 449 inside it (the width math at paint_icon_row, its one
+// statement, re-derived 2026-10-27 with the zoom step pair, plus the ring's
+// inset at each window edge, about 13 W), so neither host reaches the rule
+// at its scale: the tablet's 2304 device px hold the row in both states up
+// to about 375 % and the laptop's 1920 up to about 315 % (the W arithmetic
+// over the device width; each element's own rounding moves the edge by a
+// pixel or so).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource},
      {RedesignButton::ViewTarget}},
@@ -1629,14 +1636,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the plain wood, the left members in
-    // THREE RUNS and the right five in ONE — TWENTY-TWO members outside the
-    // `h` view and FIFTEEN inside it (2026-10-26, the SCORE key joining the
-    // third run), RE-COUNTED off the roster enum, the
+    // THREE RUNS and the right five in ONE — TWENTY-FOUR members outside the
+    // `h` view and SEVENTEEN inside it (2026-10-27, ZOOM IN and ZOOM OUT
+    // joining the second run's head), RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
     // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in
-    // the first run; FULL
-    // ZOOM OUT, THE WAVEFORM MAGNIFICATION LAMP and FOLLOW (the viewport
+    // the first run; ZOOM IN, ZOOM OUT, ZOOM TO FIT, THE WAVEFORM
+    // MAGNIFICATION LAMP and FOLLOW (the viewport
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
     // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS and, since 2026-10-26, the
@@ -1653,8 +1660,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the view refuses whole (the companions publish empty rects outside the
     // view, the replaced members inside it), and inside the view every other
     // member whose chord it refuses in EVERY session is not painted
-    // (history_mode_hides_button, input_pointer.cpp) — Follow behind Full
-    // Zoom Out and the magnification lamp (which the view admits since
+    // (history_mode_hides_button, input_pointer.cpp) — Follow behind Zoom
+    // In, Zoom Out, Zoom to Fit and the magnification lamp (which the view
+    // admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
     // the padlock and Settings between Play Renders (admitted 2026-10-25)
     // and Enable Tooltips, and the Score key after it (2026-10-26) — its
@@ -1671,22 +1679,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-23): in Windows px, from the program ring's outer left column,
     // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
     // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
-    // seventeen members in three runs (re-derived 2026-10-26, the SCORE key
-    // closing the third),
-    //   17·23 + 2·15 = 421,
-    // and inside it ten in three (Open, Save, Revert, Load in Place | Zoom
-    // to Fit, the lamp, Cumulative, Session | Play Renders, Enable Tooltips —
-    // re-derived 2026-10-26, the reading group back), 10·23 + 2·15 = 260;
+    // nineteen members in three runs (re-derived 2026-10-27, Zoom In and Zoom
+    // Out heading the second),
+    //   19·23 + 2·15 = 467,
+    // and inside it twelve in three (Open, Save, Revert, Load in Place | Zoom
+    // In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
+    // Renders, Enable Tooltips — re-derived 2026-10-27), 12·23 + 2·15 = 306;
     // with one run gap of wood before the right run the band holds every
     // run at
-    //   421 + 15 + 115 = 551
-    // Windows px outside the view (390 inside it) — the ring's 754 W on the
-    // tablet at 300 % with 203 W of wood between the left runs and the right
+    //   467 + 15 + 115 = 597
+    // Windows px outside the view (436 inside it) — the ring's 754 W on the
+    // tablet at 300 % with 157 W of wood between the left runs and the right
     // run. IN DEVICE PX, off the painted walk (each case its rounded parts,
     // the gap its own scaled_px, the ends program_ring_columns'): at the
     // tablet's 300 % (cases 69, the ring 21 .. 2283) the left runs on x
-    // 21..1283, the right run 1938..2282; at the laptop's 138 % (cases 31,
-    // the gap 21, the ring 15 .. 1905) the left runs on x 15..583, the right
+    // 21..1421, the right run 1938..2282; at the laptop's 138 % (cases 31,
+    // the gap 21, the ring 15 .. 1905) the left runs on x 15..645, the right
     // run 1750..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
@@ -1792,12 +1800,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // terms (below), the walk lamp on a visit with no clone (its own
         // arm, redesign_button_enabled); what the view refuses in EVERY session does not
         // stand in it since 2026-10-07 (history_mode_hides_button: the zoom
-        // group behind Zoom to Fit and the magnification lamp, Listen, the
-        // read-only toggle, Settings), and the two groups it consumes WHOLE,
+        // group behind Zoom In, Zoom Out, Zoom to Fit and the magnification
+        // lamp, the read-only toggle, Settings, the Score key), and the two
+        // groups it consumes WHOLE,
         // Undo's and the iteration group, have the history companions
         // standing in their slots (since 2026-10-05; the iteration group's
-        // again since 2026-10-26, kIconRowHistoryStandIns). The view pairs, Zoom to Fit, the
-        // magnification lamp, the tooltip lamp and the history opener stay live, as do the history
+        // again since 2026-10-26, kIconRowHistoryStandIns). The view pairs, Zoom In,
+        // Zoom Out, Zoom to Fit, the magnification lamp, the tooltip lamp and
+        // the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
         // bare `g`, `u`, `,` and `.` are the mode's own VOCABULARY and answer live

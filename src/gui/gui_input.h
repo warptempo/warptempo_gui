@@ -852,6 +852,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // until the magnification level markers column's deletion 2026-09-23;
         // the lamp was on bare `]` for its first hours, then on bare `[`.)
         case GuiKeys::Grave: return bare;
+        // THE ZOOM STEP (architect 2026-10-27, Zoom In and Zoom Out returned):
+        // `=` deeper and `-` shallower, bare one level and SHIFTED two
+        // (is_zoom_step_key below, the dispatch's and both allowlists' one
+        // predicate). Ctrl and alt spell nothing on either key.
+        case GuiKeys::Equal: case GuiKeys::Minus: return bare || sh;
         // Toggle Value Drag (architect 2026-10-11), the bare LEFT BRACKET,
         // bound in both modes as `k` is: the one-shot lamp arming the flag's
         // value drag (AppState::value_drag_lamp), the `h` view's allowlist
@@ -1030,10 +1035,22 @@ static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
               "bare `0` is Zoom to Fit, Shift+0 frames the trim and "
               "Ctrl+Shift+0 resets it (2026-10-24); no other decoration of "
               "`0` binds");
-static_assert(!chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::Minus, GuiInputState{}, false),
-              "`=` and `-` are unbound: the stepped zoom and its buttons were "
-              "removed 2026-09-25, zoom being on every surface");
+static_assert(chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Minus, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Equal,
+                                 GuiInputState{false, true, false}, false) &&
+                  chord_is_bound(GuiKeys::Minus,
+                                 GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Equal,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Minus,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Equal,
+                                  GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Minus,
+                                  GuiInputState{false, false, true}, false),
+              "bare `=` / `-` step the zoom one level in / out and Shift+= / "
+              "Shift+- two (2026-10-27); no ctrl or alt form binds");
 // `l` binds bare only since 2026-09-30, when Shift+L went with the AV Sync
 // Stats panel, so its anchor witnesses the "only" whole: the one positive,
 // then EVERY non-bare combination of the three modifiers as a negative — the
@@ -1425,6 +1442,42 @@ inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
 // (redesign_button_shift_admits).
 inline bool is_trim_frame_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Digit0 && mods.shift && !mods.ctrl && !mods.alt;
+}
+
+// True for the chords that STEP THE ZOOM (architect 2026-10-27, item (e):
+// Zoom In and Zoom Out "basically as they used to be ... and then add the
+// Shift version, which instead of going 2x goes 4x"): `=` zooms in and `-`
+// out, BARE ONE LEVEL and SHIFTED TWO (the step sizes below) — no ctrl, no
+// alt. Both arrive as their level-0 keysyms on Wayland
+// (GuiPlatform::key_from_keycode), so on a US layout Shift+= is the `=` key
+// with the shift bit and never `+`, and Shift+- never `_`; the Android
+// backend produces keys only through synthesize_key, the GuiKey and the
+// bits the same way. A CAMERA ACT about the viewport's centre
+// (Viewport::zoom_step), writing no store, no trim and no playhead, so the
+// read-only allowlist (read_only_key_blocked, which the grid-iterations lock
+// falls through to) and the `h` view's (history_mode_key_blocked) both ADMIT
+// it, as the view admits the Ctrl+drag zoom. ONE-SHOT, key and button alike
+// (repeat_eligible names neither key; the buttons' long press is their
+// shift, START / END's shape). THREE READERS: on_key's dispatch arm
+// (input_handler.cpp) and the two allowlists; the Zoom In / Zoom Out keys
+// reach the first through on_key, their shift-click and long press the
+// shifted chord (redesign_button_shift_admits).
+inline bool is_zoom_step_key(GuiKey key, GuiInputState mods) {
+    return (key == GuiKeys::Equal || key == GuiKeys::Minus) && !mods.ctrl &&
+           !mods.alt;
+}
+// THE STEP'S SIZES, in zoom levels: the map is spp(level) = column ×
+// 2^(level − 2) (kWorkingZoomLevel's block, app_state.h), so one level is ×2
+// — "the steps were doubles" — and the shifted step's two are ×4.
+inline constexpr double kZoomStepLevels      = 1.0;
+inline constexpr double kZoomStepShiftLevels = 2.0;
+// THE SIGNED STEP a chord is_zoom_step_key admits asks for: `=` deeper
+// (negative, a smaller level being more zoomed in), `-` shallower; the
+// shift picks the size. Read by the dispatch arm alone; the two keys' faces
+// ask both sizes by name (redesign_button_enabled's arms).
+inline constexpr double zoom_step_levels(GuiKey key, GuiInputState mods) {
+    const double n = mods.shift ? kZoomStepShiftLevels : kZoomStepLevels;
+    return key == GuiKeys::Equal ? -n : n;
 }
 
 // THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the

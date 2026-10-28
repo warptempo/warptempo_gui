@@ -738,9 +738,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // out the hold and suspends a following play's paging
     // (AppState::camera_hold, AppState::follow_suspended); follow has no
     // exemption here, so a zoom during a following play suspends its paging.
-    // `level_changed` reports a real move, not a request: BOTH callers — the
-    // nav drag's zoom phase (apply_nav_zoom_at) and the two-finger touch-nav
-    // body (apply_touch_nav_update) — pre-clamp new_level into the same [effective_min_zoom_level, effective_max_zoom_level]
+    // `level_changed` reports a real move, not a request: ALL THREE callers —
+    // the nav drag's zoom phase (apply_nav_zoom_at), the two-finger touch-nav
+    // body (apply_touch_nav_update) and the zoom step (zoom_step) — pre-clamp
+    // new_level into the same [effective_min_zoom_level, effective_max_zoom_level]
     // window clamp_viewport_start re-applies, so the pre-assignment compare
     // cannot read a wall-saturated no-op as movement.
 
@@ -765,6 +766,43 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // way whichever axis moved.
     if (final && playback.is_playing()) playback.resync_predictor();
     kick_waveform_sync();
+}
+
+// THE ZOOM STEP ZOOMS ABOUT THE VIEWPORT'S CENTRE (architect 2026-09-22,
+// kept when the pair returned 2026-10-27): the frame painted at the
+// waveform's centre column before the step is placed at that same column
+// after it, through the strip-drag family's applier — the pinch's and the
+// Ctrl+drag's own "hold this frame at this column" placement, here with the
+// column fixed at the centre and one terminating event per press, the frame
+// read on the painted grid the applier places on (painter_samples_per_pixel).
+// No playhead and no scanner term: the step is a camera act about what the
+// user is looking at. clamp_viewport_start, inside the applier, still wins —
+// near the song's ends the centre frame slides off the centre column, and at
+// the ceiling the whole song is visible.
+//
+// IT IS A ZOOM LIKE EVERY OTHER, WITH NO EXEMPTION SPELLED HERE (architect
+// 2026-10-27, keeping 2026-09-25's "every zoom clears the camera hold"): the
+// applier pays what every zoom pays (the synchronous rebuild, the damage, the
+// predictor resync while playing), the chokepoint's compare puts the HOLD
+// out and suspends a following play's paging (AppState::camera_hold,
+// follow_suspended), and a level move clears Zoom to Fit's whole-song state
+// (ViewState::whole_song_visible), so a step taken while FIT stands drops
+// the recall exactly as a Ctrl+drag zoom there does — the next `0` zooms out
+// again, stamping the stepped view. A step never writes the recall stamp,
+// so steps taken before FIT leave the view FIT returns to as FIT stamped it.
+// THE LEADING RETURN IS THE ONE OWNER the two keys' faces read
+// (zoom_step_actionable, app_state.h): at its wall the step is a consumed,
+// silent no-op and the key greys there.
+void Viewport::zoom_step(double levels) {
+    if (!zoom_step_actionable(app, audio, levels)) return;
+    const GuiRect wf_area = waveform_area(app);
+    const double spp = painter_samples_per_pixel(app, audio, wf_area);
+    if (wf_area.w <= 0 || spp <= 0.0) return;
+    const double centre_col = static_cast<double>(wf_area.w) / 2.0;
+    const double centre_frame =
+        static_cast<double>(app.viewport_start_sample) + centre_col * spp;
+    apply_strip_drag_zoom(zoom_step_level(app, audio, levels), centre_frame,
+                          centre_col, /*final=*/true);
 }
 
 // WOULD THE APPLIER BELOW MOVE THE CAMERA — the contract and the two readers

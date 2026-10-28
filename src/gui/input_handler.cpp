@@ -1537,6 +1537,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // THE ZOOM STEP ON `=` AND `-` (architect 2026-10-27, Zoom In and Zoom
+    // Out returned): `=` steps the horizontal ZOOM in and `-` out, ONE LEVEL
+    // bare and TWO shifted (is_zoom_step_key / zoom_step_levels, gui_input.h),
+    // ABOUT THE VIEWPORT'S CENTRE (Viewport::zoom_step, whose head owns what
+    // the step does to the hold, follow and Zoom to Fit's recall). Ctrl, alt
+    // and the keypad's KP_Add / KP_Subtract bind nothing, one spelling per
+    // act. Each is a SILENT consumed no-op at its wall — `=` at the floor,
+    // `-` at the fit, the benign one-dimensional refusal — and its key greys
+    // there (zoom_step_actionable, the act's own leading return). A pure
+    // viewport move: it stops nothing and writes no selection. One-shot.
+    if (is_zoom_step_key(key, mods)) {
+        viewport.zoom_step(zoom_step_levels(key, mods));
+        return;
+    }
+
     // Bare 0 is A TOGGLE (run_overview_command — architect 2026-09-23): full
     // zoom out stamping the view it leaves, then the restore of that zoom
     // level, playhead and viewport start, no centring, in the audio view the
@@ -3234,8 +3249,8 @@ void GuiInputHandler::run_span_framing_command() {
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
 // caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
-// its keys `0` and `c` (the stepped zoom on bare `=` / `-` was removed
-// 2026-09-25: zoom is on every surface).
+// its keys `=` / `-` (the zoom step, back 2026-10-27, one level bare and
+// two shifted), `0` and `c`.
 //
 // Every OTHER combination is a swallowed no-op (strict modifier validation):
 // ctrl, alt, shift and every mixed chord alike. Pure viewport move otherwise:

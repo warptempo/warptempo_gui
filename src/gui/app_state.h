@@ -47,8 +47,10 @@ struct GuiTargetRender;
 // The zoom level is a real-valued exponent resting anywhere in the ONE
 // continuous domain [kMinZoom, kMaxZoom] (Ableton-style free rest). The level
 // moves under the continuous zoom gestures (below), the two absolute commands
-// `0` and `c` (the stepped zoom on bare `=` / `-` was removed 2026-09-25:
-// zoom is on every surface), and every write saturates
+// `0` and `c`, and THE ZOOM STEP on `=` / `-` (architect 2026-10-27: whole
+// levels from the current, possibly fractional, level — one bare, two
+// shifted — about the viewport's centre, Viewport::zoom_step), and every
+// write saturates
 // at the per-file effective ceiling (effective_max_zoom_level), where full
 // zoom-out rests at whole-song-visible. There is no fit-file mode and no
 // sentinel level. Bare-digit keys are unbound
@@ -70,7 +72,8 @@ struct GuiTargetRender;
 // is effective_min_zoom_level (main.cpp): kMinZoom, one step finer than
 // kWorkingZoomLevel, the fine-tuning rest point `c` lands on, unless this
 // device's column would paint finer than kDeepestZoomMinFramesPerPx there
-// (below). A continuous zoom gesture rests where it ends.
+// (below); the zoom step saturates there too. A continuous zoom gesture
+// rests where it ends.
 //
 // THE ZOOM MAP IS DEVICE-RELATIVE (architect 2026-09-27: "level 2 is the
 // working level on this device; everything works off it"): spp(level) =
@@ -2050,8 +2053,8 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (47 chord
-// rows = 47 = kRedesignButtonCount since 2026-10-26, the count's own
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (49 chord
+// rows = 49 = kRedesignButtonCount since 2026-10-27, the count's own
 // statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -2086,11 +2089,11 @@ enum class RedesignButton {
     // 2026-08-12 grand relayout dissolving that lane until Open Project took
     // the head — same chords, same face
     // machinery, the FACE now a glyph in the toolbar case and the old labels
-    // living on as the tooltips), THE VIEWPORT-CLASS GROUP — the Show trim
-    // region button leading the zoom buttons (2026-08-12, the architect's live
-    // placement "after the trim"; the Show trim region button gone 2026-09-22
-    // and the stepped zoom pair 2026-09-25, so Zoom to Fit leads; CENTER
-    // left for the bottom row's walk group 2026-09-29), the three
+    // living on as the tooltips), THE VIEWPORT-CLASS GROUP — ZOOM IN, ZOOM
+    // OUT AND ZOOM TO FIT leading it (the zoom buttons since 2026-08-12, the
+    // architect's live placement "after the trim"; Zoom In at the head, the
+    // step pair back in front of Zoom to Fit 2026-10-27; CENTER
+    // left for the bottom row's walk group 2026-09-29), the
     // lamps behind them (Follow, the middle one, was out
     // for the hours of 2026-09-23), the last of which arrived
     // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
@@ -2225,8 +2228,32 @@ enum class RedesignButton {
     // that the toggle showed at rest was a finger's accommodation no longer
     // wanted. Its shift
     // admission was Reset Trim's pointer road, which is Zoom to Fit's
-    // ctrl+shift press now (its shift press 2026-09-22 to 2026-10-24). FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
-    // front of it the same evening.)
+    // ctrl+shift press now (its shift press 2026-09-22 to 2026-10-24).)
+    // ZOOM IN AND ZOOM OUT, legends IN and OUT (architect 2026-10-27 late,
+    // re-opening his 2026-09-25 removal: "resurrect what was in the code
+    // earlier, the zoom in and out to the left of FIT ... basically as they
+    // used to be, including the position in the toolbar, and then add the
+    // Shift version, which instead of going 2x goes 4x") — THE ZOOM STEP:
+    // bare `=` and bare `-`, ONE LEVEL deeper or shallower (×2, the map's
+    // own step), their SHIFT-CLICK AND LONG PRESS Shift+= and Shift+-, TWO
+    // LEVELS (×4; is_zoom_step_key and the step sizes, gui_input.h), each
+    // ABOUT THE VIEWPORT'S CENTRE (Viewport::zoom_step) and saturating at the
+    // map's live bounds — Zoom In at the floor, Zoom Out at the fit. THEY
+    // SEAT BEFORE ZOOM TO FIT, Zoom In leading the group and the band's
+    // second run, in the order they stood in 2026-09-22 to 2026-09-25. Zoom
+    // stays on every surface beside them (the Ctrl+drag on the waveform, the
+    // two-finger pinch, the S Pen's button-held drag), and the step is a zoom
+    // like those in every effect: it puts the camera hold out and drops Zoom
+    // to Fit's recall where it moves the level (the rule at the act). NEITHER
+    // REPEATS: the long press is the shift, START / END's shape. Both are
+    // momentary navigation acts, LIVE on a locked tab, under the
+    // grid-iterations lock and in the `h` view (both chords on both
+    // allowlists, so the derived partition answers live with nothing
+    // hand-listed). EACH GREYS WHERE NEITHER OF ITS TWO SIZES WOULD MOVE THE
+    // LEVEL (zoom_step_actionable, the twin rule; redesign_button_enabled's
+    // arms), and with no piece both grey on the roster's no-piece head term.
+    // No lamp: an act.
+    IconZoomIn, IconZoomOut,
     // ZOOM TO FIT, legend FIT (architect 2026-10-24; FULL ZOOM OUT, legend
     // ZOOM 0, from 2026-08-12, the grand relayout's roster commit, until
     // then): bare `0`, whose second press restores the view the first left.
@@ -2240,10 +2267,8 @@ enum class RedesignButton {
     // is the consumed nothing (finish_chrome_press_release). It
     // stood beside WORKING-ZOOM CENTER (bare `c`) as the zoom pair until
     // 2026-09-29, when Center moved to the bottom row's walk group (its roster
-    // entry is there now). THE STEPPED ZOOM BUTTONS AND
-    // `=` / `-` WERE REMOVED 2026-09-25 (architect): zoom is on every surface
-    // — the Ctrl+drag on the waveform, the two-finger pinch and the S Pen's
-    // button-held drag. It does not hold-repeat. It is a momentary
+    // entry is there now); the step pair stands in front of it (above). It
+    // does not hold-repeat. It is a momentary
     // navigation act and LIVE in the `h` view (`0` and Shift+0 are on the
     // mode's allowlist, so the derived partition answers live with nothing
     // hand-listed). It GREYS ONLY WHERE NONE OF ITS THREE PRESSES WOULD
@@ -3090,19 +3115,20 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-26):
-// TWENTY-EIGHT in row 4's enum block and NINETEEN in the bottom row's — 47
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-27):
+// THIRTY in row 4's enum block and NINETEEN in the bottom row's — 49
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
 // moving up to the band 2026-10-25; Toggle Session History and Toggle
-// Cumulative returned 2026-10-26, and the Score key came the same day).
-// PAINTED, the split is 26 + 21: HistoryOlder and HistoryNewer, enumerated
+// Cumulative returned 2026-10-26, and the Score key came the same day; Zoom
+// In and Zoom Out returned 2026-10-27).
+// PAINTED, the split is 28 + 21: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 49;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3238,8 +3264,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 //
 // THE GROUPS, in the left walk's order: OPEN PROJECT AND SAVE, then UNDO,
 // REDO, COPY PHASE RESETS (since 2026-10-25) AND RENDER (the group the
-// history stand-ins replace, Revert and Load in Place), then the zoom group (Zoom to Fit, the magnification lamp,
-// Follow), the iteration group (the BPM opener, grid iterations, Flatten —
+// history stand-ins replace, Revert and Load in Place), then the zoom group
+// (Zoom In, Zoom Out, Zoom to Fit, the magnification lamp, Follow), the
+// iteration group (the BPM opener, grid iterations, Flatten —
 // the group the walk lamp and Cumulative replace, since 2026-10-26 again)
 // and the render-entry group (Play Renders .. the Score key). The right
 // run's leaders — the history opener and the view pairs' Source and Warp —
@@ -3254,9 +3281,10 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // since 2026-10-25): the group the `h` view's stand-ins replace
         // (kIconRowHistoryStandIns), so Save stays outside the swap.
         case RedesignButton::Undo:
-        // ZOOM TO FIT LEADS THE ZOOM GROUP (Full Zoom Out until 2026-10-24),
-        // and so ends Undo's group's replacement in the `h` view.
-        case RedesignButton::IconZoomFitBest:
+        // ZOOM IN LEADS THE ZOOM GROUP (since the step pair's return in
+        // front of Zoom to Fit, 2026-10-27), and so ends Undo's group's
+        // replacement in the `h` view.
+        case RedesignButton::IconZoomIn:
         // THE BPM OPENER LEADS THE ITERATION GROUP (since 2026-09-04): the
         // group the walk lamp and Cumulative replace in the `h` view
         // (kIconRowHistoryStandIns), which Listen's lead ends.
@@ -3278,8 +3306,9 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // and run_gap_px of wood between two (program_spec.h), each opened by its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
 // Save and Undo / Redo / Render merged, Copy Phase Resets between Redo and
-// Render since 2026-10-25), Zoom to Fit (Zoom to Fit ..
-// Flatten: the zoom and iteration groups merged) and Play Renders (Play
+// Render since 2026-10-25), Zoom In (Zoom In .. Flatten: the zoom and
+// iteration groups merged, the step pair at their head since 2026-10-27)
+// and Play Renders (Play
 // Renders .. Enable Tooltips, the render-entry group as it stood). THE
 // GROUPS ABOVE STAY THE UNIT of the `h` view's stand-in swap and hide
 // (icon_row_walk, paint_handler.cpp); a run is the picture's unit alone, so
@@ -3289,7 +3318,7 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // here.
 inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
-           b == RedesignButton::IconZoomFitBest ||
+           b == RedesignButton::IconZoomIn ||
            b == RedesignButton::IconListen;
 }
 
@@ -4686,7 +4715,9 @@ struct AppState {
     //     column's lead-in drop) first holds the column the cursor painted in
     //     before the drop, as the restore does. A dark bit drops as before.
     //   * CLEARED by every other camera change (the chokepoint above: the
-    //     pans, the drags, the pointer zooms, `0`'s both presses (the second
+    //     pans, the drags, the pointer zooms and the zoom step (`=` / `-`,
+    //     Zoom In / Zoom Out, 2026-10-27 — every zoom clears the hold, the
+    //     step with no exemption), `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), follow's
     //     page-in — a camera move not on the subject — the landing owner's
     //     page-in, the span framer, the tab switch at the chokepoint, which
@@ -4748,7 +4779,8 @@ struct AppState {
     // project play runs; its value at rest is never read.
     //   * SET by every CHANGED CAMERA at the chokepoint above
     //     (clamp_viewport_start) — the pans (PageUp/PageDown, the plain wheel,
-    //     touchpad scroll, the grab-pan), the pointer zooms, `0`,
+    //     touchpad scroll, the grab-pan), the pointer zooms, the zoom step,
+    //     `0`,
     //     the undo restore's camera, the tab and view switches, a resize that
     //     moves the camera. A PLACEMENT CLICK DURING A PLAY DOES NOT SET IT:
     //     the click moves the playhead, not the camera, and it stops the play
@@ -12304,6 +12336,32 @@ double  fit_zoom_level(double span_frames, int width_px, int64_t column_frames);
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
 
+// THE ZOOM STEP'S LANDING (architect 2026-10-27, the pair's return): `levels`
+// whole levels from the current (possibly fractional) one, negative deeper,
+// SATURATED by the one owner of the level-bounds pair — the live floor
+// (effective_min_zoom_level) and the per-file ceiling, the fit — never a
+// restated number. Read by the act (Viewport::zoom_step), by
+// zoom_step_actionable below, and by the Zoom In / Zoom Out tooltips, whose
+// modifier line drops where the two sizes land on one level.
+inline double zoom_step_level(const AppState& a, const GuiAudio& audio,
+                              double levels) {
+    return clamp_zoom_level(a, audio, a.zoom_level + levels);
+}
+// WOULD THE STEP MOVE THE LEVEL — false exactly where the saturation hands
+// the current level back (Zoom In at the floor, Zoom Out at the fit). The
+// live-frames term is clamp_zoom_level's own no-op branch made explicit:
+// with no live frames it returns the level untouched, and a step on a blank
+// piece is the consumed no-op on_key's loading guard already makes it. TWO
+// READERS: the act's leading return (Viewport::zoom_step) and the two keys'
+// faces (redesign_button_enabled), each key asking both of its sizes under
+// the twin rule. THE TWO KEYS ARE MIRRORS (architect 2026-09-22, kept
+// 2026-10-27: the step is a zoom and nothing else).
+inline bool zoom_step_actionable(const AppState& a, const GuiAudio& audio,
+                                 double levels) {
+    return live_total_frames(a, audio) > 0 &&
+           zoom_step_level(a, audio, levels) != a.zoom_level;
+}
+
 // IS THERE A VIEW FOR BARE `0` TO RETURN TO — THE ONE OWNER of "restorable"
 // (architect 2026-09-23): the active tab's whole-song state stands
 // (ViewState::whole_song_visible) AND its stamp was taken in the live audio
@@ -14506,10 +14564,12 @@ inline bool playback_launch_playable(const AppState& a,
 // on that effect. The effect this rule was written for is the undo-coalescing
 // stamp, and the three wall-refusing acts now run their wall test ahead of it
 // (the rule and its discriminator — the face, not the card — are at
-// Undo::coalesce_gesture). Of the zoom buttons, `c` stays lit because it
-// always acts, and `0` greys only where it has nothing to return to and
-// neither its shifted twin (the frame) nor its ctrl-shifted one (the reset)
-// would act (the twin rule below).
+// Undo::coalesce_gesture). Of the zoom buttons, the step pair grey at their
+// walls — Zoom In at the floor and Zoom Out at the fit, where neither size
+// of the step would move the level (zoom_step_actionable) — `c` stays lit
+// because it always acts, and `0` greys only where it has nothing to return
+// to and neither its shifted twin (the frame) nor its ctrl-shifted one (the
+// reset) would act (the twin rule below).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -14709,7 +14769,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the VIEW PAIRS' FOUR
-//     (bare 1/2/3/4), Zoom to Fit and Center, follow and the
+//     (bare 1/2/3/4), Zoom In and Zoom Out (2026-10-27), Zoom to Fit and
+//     Center, follow and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (THE TRIM
 //     SCISSORS were on this list, their chord being read-only-legal like every
@@ -15284,6 +15345,20 @@ inline bool redesign_button_enabled(const AppState& a,
                        OverviewCommandTarget::Arm::NoOp ||
                    span_framing_would_act(a, audio) ||
                    reset_trim_would_act(a, total_frames);
+        // ZOOM IN AND ZOOM OUT GREY WHERE NEITHER OF THEIR TWO PRESSES WOULD
+        // MOVE THE LEVEL (architect 2026-10-27, the twin rule): the plain
+        // press's one level and the shifted press's two, each asked of the
+        // act's own leading return (zoom_step_actionable over the map's live
+        // bounds) — Zoom In at the floor, Zoom Out at the fit, Zoom to Fit's
+        // standing whole-song state included (its level is the ceiling).
+        // With no piece both grey on the head term above. Both are admitted
+        // in the `h` view and under both locks, so no other term greys them.
+        case RedesignButton::IconZoomIn:
+            return zoom_step_actionable(a, audio, -kZoomStepLevels) ||
+                   zoom_step_actionable(a, audio, -kZoomStepShiftLevels);
+        case RedesignButton::IconZoomOut:
+            return zoom_step_actionable(a, audio, kZoomStepLevels) ||
+                   zoom_step_actionable(a, audio, kZoomStepShiftLevels);
         case RedesignButton::IconZoomOriginal:
             return true;
         // THE WAVEFORM MAGNIFICATION LAMP IS LIVE IN BOTH AUDIO VIEWS
@@ -16627,6 +16702,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // disable toggle deliberately carries no lamp either: it acts on the
         // SELECTION, whose members' own flags show the state per marker,
         // and a single lamp could not say which.
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconMarkerDrop:
@@ -16967,6 +17044,14 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // 2026-10-24 THE BUTTON IS ZOOM TO FIT and its shifted press is SHIFT+0,
 // FRAME THE TRIM (the trim bar's double-click), the reset moving to its
 // ctrl-shift press, Ctrl+Shift+0 (redesign_button_ctrl_shift_admits below).)
+// (ZOOM IN AND ZOOM OUT JOINED 2026-10-27 with SHIFT+= AND SHIFT+-, THE
+// TWO-LEVEL STEP (architect: "add the Shift version, which instead of going
+// 2x goes 4x"): their rows are bare `=` and bare `-`, and their
+// shift-click and long press dispatch the row's key under shift with no
+// translation — the drop's rule once more, a shift-enabled gesture whose bare
+// form has a button. Neither repeats, so the long press reaches the shift.
+// THE TWIN RULE DECIDES THE FACE AND IT ORS: each key greys only where
+// neither size would move the level (redesign_button_enabled).)
 // (Center admitted shift for the hours of 2026-09-23 that Shift+C armed the
 // chase posture; the posture, the chord and the admission were deleted that
 // evening when the follow lamp came back.)
@@ -17019,6 +17104,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconSettings ||
            b == RedesignButton::Save ||
            b == RedesignButton::Render ||
+           b == RedesignButton::IconZoomIn ||
+           b == RedesignButton::IconZoomOut ||
            b == RedesignButton::IconZoomFitBest ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
@@ -17217,6 +17304,15 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconZoomFitBest) &&
     "Zoom to Fit (bare 0) admits Shift, reaching Shift+0, Frame the Trim, and "
     "the pair, reaching Ctrl+Shift+0, Reset Trim; Ctrl alone binds nothing "
     "(architect 2026-10-24)");
+static_assert(redesign_button_shift_admits(RedesignButton::IconZoomIn) &&
+                  redesign_button_shift_admits(RedesignButton::IconZoomOut) &&
+                  !redesign_button_ctrl_admits(RedesignButton::IconZoomIn) &&
+                  !redesign_button_ctrl_admits(RedesignButton::IconZoomOut) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::IconZoomIn) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::IconZoomOut),
+    "Zoom In / Zoom Out (bare = / -) admit Shift alone, reaching Shift+= / "
+    "Shift+-, the two-level step; nothing binds under Ctrl (architect "
+    "2026-10-27)");
 static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
                   redesign_button_shift_admits(RedesignButton::TransportSkipForward) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportSkipBack) &&
@@ -17388,6 +17484,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // multi-form line stands while any of its forms is live, the
         // overload's head) and drops there where neither would (2026-10-25).
         // CENTER CARRIES NONE: it admits no modifier (2026-10-14).
+        // ZOOM IN AND ZOOM OUT (architect 2026-10-27, the pair's return
+        // under its 2026-09-22 names and keys): each a NAME and its bare key,
+        // its second line the shift admission's — the two-level step, ×4,
+        // in Zoom to Fit's sentence form. The overload drops the line where
+        // the two sizes land on one level.
+        case RedesignButton::IconZoomIn:
+            return {"Zoom In (=)", "Press Shift to zoom in four times."};
+        case RedesignButton::IconZoomOut:
+            return {"Zoom Out (-)", "Press Shift to zoom out four times."};
         case RedesignButton::IconZoomFitBest:
             return {"Zoom to Fit (0)",
                     "Press Shift to frame the trim, Ctrl+Shift to reset it."};
@@ -17826,6 +17931,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // is): the planner's words, named to the architect for renaming. SESSION
 // fits at about 62 of 69, 42 of 46, 31 of 36 device px (MAGNIFY, the
 // widest, 64 / 43 / 32); CUMUL about 50 / 33 / 25.
+// ZOOM IN AND ZOOM OUT READ IN AND OUT (architect 2026-10-27: "Zoom In /
+// Zoom Out, or In / Out if too long"): ZOOM OUT does not fit its key —
+// about 75 of 69, 50 of 46, 38 of 36 device px — and the pair is one shape,
+// so both take the short form though ZOOM IN would fit (about 60 / 40 / 30);
+// IN prints about 14 / 9 / 7, OUT 30 / 20 / 15.
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -17833,6 +17943,8 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::Undo:                      return "UNDO";
         case RedesignButton::Redo:                      return "REDO";
         case RedesignButton::Render:                    return "RENDER";
+        case RedesignButton::IconZoomIn:                return "IN";
+        case RedesignButton::IconZoomOut:               return "OUT";
         case RedesignButton::IconZoomFitBest:           return "FIT";
         case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
         case RedesignButton::IconFollow:                return "FOLLOW";
@@ -18280,6 +18392,22 @@ inline RedesignTooltipText redesign_button_tooltip(
             if (t.arm == OverviewCommandTarget::Arm::RestoreView)
                 return {"Back to Previous View (0)", line2};
             return {redesign_button_tooltip(b).line1, line2};
+        }
+        // ZOOM IN'S AND ZOOM OUT'S SHIFT LINE DROPS WHERE THE TWO SIZES LAND
+        // ON ONE LEVEL (architect 2026-10-27, the skips' shape below): the
+        // compare is the act's own landing (zoom_step_level, asked at one
+        // level and at two), so the line stands while the shifted press would
+        // go further than the plain one and drops within one level of the
+        // wall, the shifted press saturating where the plain one does — and
+        // at the wall itself, where the key greys. The first line never
+        // forks: the name is the name of the press.
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut: {
+            const double sign = b == RedesignButton::IconZoomIn ? -1.0 : 1.0;
+            if (zoom_step_level(a, audio, sign * kZoomStepLevels) ==
+                zoom_step_level(a, audio, sign * kZoomStepShiftLevels))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         }
         // THE TWO SKIPS' SHIFT LINE DROPS WHERE THE TWO FORMS LAND ON ONE
         // FRAME (2026-10-24, the buttons' return; their rule of 2026-08-30):
