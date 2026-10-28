@@ -4825,6 +4825,43 @@ struct AppState {
     };
     CameraPostureIdentity camera_posture_identity;
 
+    // THE ZOOM STEP'S HELD PIVOT (architect 2026-10-28) — Viewport::zoom_step
+    // its ONE reader and ONE writer (the rule's consequences are at its
+    // definition, viewport.cpp). The step zooms about the song frame at the
+    // waveform's centre column; that frame is SEATED AT THE FIRST PRESS OF A
+    // RUN and REUSED while the live camera still rests exactly where the
+    // step's applier left it and the waveform area keeps its width,
+    // re-seated otherwise. WHY: every rest snaps the
+    // start to its level's grid (resting_viewport_start), so a press lands
+    // its pivot within half a column of the centre; re-read from that rest at
+    // each press, every earlier press's half column rode along and was
+    // magnified by each deeper level — seven presses in from FIT left the
+    // frame that stood at the centre tens of px off it, and IN then OUT was
+    // no round trip. A run of presses is one gesture, as the pinch and the
+    // Ctrl+drag hold one song frame for theirs (TouchNavZoomState,
+    // ScrollDragState's anchor), its lift any other camera move. `frame` is
+    // the pivot song frame (start + centre column × the painted grid's
+    // samples per pixel, fractional by nature); `left` the four camera fields
+    // AS THE APPLIER LEFT THEM, post-clamp — the step's OWN copy, compared
+    // against the live viewport_start_sample, zoom_level, active_tab_view and
+    // active_audio_view; camera_posture_identity above stays the chokepoint's
+    // alone. Any other camera writer between presses (a pan, Center, FIT, a
+    // tab switch, an S/T flip) moves those fields and so ends the run, with no
+    // hook at the chokepoint. `width` is the waveform area's width the step
+    // read: a window resize moves the centre column itself, so it ends the
+    // run too and the next press zooms about the frame centred now. Per
+    // project, invalid at every project open
+    // (run_project builds this AppState fresh, so the default IS the reset —
+    // a held frame belongs to the song it was seated in); in no settings
+    // vocabulary, never serialized, never in the undo domain.
+    struct ZoomStepPivot {
+        bool                  valid = false;
+        double                frame = 0.0;
+        CameraPostureIdentity left;
+        int                   width = 0;
+    };
+    ZoomStepPivot zoom_step_pivot;
+
     // WAVEFORM MAGNIFICATION — the lamp on the bare backtick (architect
     // 2026-09-22; the backtick since 2026-09-23; reversed and universal
     // 2026-09-24), the only exceptions road to the derived gain. A session

@@ -770,8 +770,9 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 
 // THE ZOOM STEP ZOOMS ABOUT THE VIEWPORT'S CENTRE (architect 2026-09-22,
 // kept when the pair returned 2026-10-27): the frame painted at the
-// waveform's centre column before the step is placed at that same column
-// after it, through the strip-drag family's applier — the pinch's and the
+// waveform's centre column before the run's first press (below) is placed at
+// that same column after each press of the run, through the strip-drag
+// family's applier — the pinch's and the
 // Ctrl+drag's own "hold this frame at this column" placement, here with the
 // column fixed at the centre and one terminating event per press, the frame
 // read on the painted grid the applier places on (painter_samples_per_pixel).
@@ -793,16 +794,45 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // THE LEADING RETURN IS THE ONE OWNER the two keys' faces read
 // (zoom_step_actionable, app_state.h): at its wall the step is a consumed,
 // silent no-op and the key greys there.
+//
+// THE PIVOT IS SEATED ONCE PER RUN OF PRESSES (architect 2026-10-28; the
+// record and its reason are at AppState::zoom_step_pivot): the first press
+// reads the centre frame off the rest, and each following press reuses that
+// same frame while the live camera (start, level, tab, audio view) still
+// rests exactly where the previous press left it and the waveform area is
+// still the width it had. So each press lands the held frame within half a
+// column of the centre column — the grid snap's own error, never the sum of
+// the run's — and IN then OUT returns to the exact prior rest wherever
+// neither press met a wall or a level bound (a whole-level step off the
+// bounds is exact in the level's double, and the prior start is on its
+// level's grid already). A pan, Center, FIT, a tab switch, an S/T flip or
+// any other camera writer between presses moves the compared fields and
+// ends the run; the next press seats afresh. A window resize ends the run
+// too, since the centre column itself moved: the next press zooms about
+// the frame centred now. Near a wall the clamp slides the held frame off
+// the centre column and the run keeps that same frame, so the run is
+// reversible off the walls as the Ctrl+drag's anchor is.
 void Viewport::zoom_step(double levels) {
     if (!zoom_step_actionable(app, audio, levels)) return;
     const GuiRect wf_area = waveform_area(app);
     const double spp = painter_samples_per_pixel(app, audio, wf_area);
     if (wf_area.w <= 0 || spp <= 0.0) return;
     const double centre_col = static_cast<double>(wf_area.w) / 2.0;
-    const double centre_frame =
-        static_cast<double>(app.viewport_start_sample) + centre_col * spp;
-    apply_strip_drag_zoom(zoom_step_level(app, audio, levels), centre_frame,
+    const AppState::CameraPostureIdentity live{
+        app.viewport_start_sample, app.zoom_level,
+        app.active_tab_view, app.active_audio_view};
+    const AppState::ZoomStepPivot& held = app.zoom_step_pivot;
+    const double pivot_frame =
+        (held.valid && held.left == live && held.width == wf_area.w)
+            ? held.frame
+            : static_cast<double>(app.viewport_start_sample) +
+                  centre_col * spp;
+    apply_strip_drag_zoom(zoom_step_level(app, audio, levels), pivot_frame,
                           centre_col, /*final=*/true);
+    app.zoom_step_pivot = {true, pivot_frame,
+                           {app.viewport_start_sample, app.zoom_level,
+                            app.active_tab_view, app.active_audio_view},
+                           wf_area.w};
 }
 
 // WOULD THE APPLIER BELOW MOVE THE CAMERA — the contract and the two readers

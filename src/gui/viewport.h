@@ -422,7 +422,12 @@ struct Viewport {
     // one (negative deeper — zoom_step_levels, gui_input.h), saturating at
     // the map's live bounds (zoom_step_level, app_state.h), ZOOMING ABOUT THE
     // VIEWPORT'S CENTRE — the frame at the waveform's centre column stays
-    // there. A silent no-op where the step would move nothing
+    // there, SEATED ONCE PER RUN OF PRESSES and held while the camera rests
+    // where the last press left it (architect 2026-10-28,
+    // AppState::zoom_step_pivot), so the run accumulates no grid error and IN
+    // then OUT is a round trip off the walls and the level bounds; any other
+    // camera move ends the run. A
+    // silent no-op where the step would move nothing
     // (zoom_step_actionable, whose verdict the keys' faces read too). In
     // every effect a zoom like the Ctrl+drag and the pinch, whose applier it
     // runs (contract at the definition, viewport.cpp).
