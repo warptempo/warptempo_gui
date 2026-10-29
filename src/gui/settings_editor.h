@@ -236,10 +236,11 @@ inline bool settings_key_has_value_list(std::string_view key) {
 }
 
 // ONE ROW OF A VALUE LIST: `value`, the key's own spelling, which the tap
-// commits; `text`, what the row shows — the value with its unit where the
-// key has one (`-9 dB`, `4 s`), the preset's display name for `waveform`
-// (architect 2026-10-25: memorable names, never the key), the word or the
-// folder's name plain otherwise.
+// commits; `text`, what the row shows — the preset's display name for
+// `waveform` (architect 2026-10-25: memorable names, never the key), and for
+// every other key the value itself, unitless (value_choices's account). The
+// pair stands for `waveform` alone, the one key whose row text is not its
+// value.
 struct GuiSettingValueChoice {
     std::string value;
     std::string text;
@@ -324,7 +325,7 @@ struct GuiSettingsEditor {
     // directories through a link, no dot-directory) that the key's grammar
     // admits (is_noise_folder_name), so every row commits; no folder there,
     // or no config home, is a list with no rows; `noise_level` 0 down to -30
-    // in 1 dB steps; `noise_crossfade_s` 1 up to 30 seconds. Every value is
+    // in steps of 1; `noise_crossfade_s` 1 up to 30. Every value is
     // the key's writer spelling (format_noise_level, format_noise_crossfade_s),
     // so the seat compares it with setting_value byte for byte. Listed afresh
     // at each call; nothing is cached.

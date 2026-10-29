@@ -350,7 +350,13 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 // its key's own domain owner read whole — the presets' table, the switch's
 // words, the folder listing the noise completer reads, the two integer
 // grammars' ranges — with every value in the writer's spelling, so the row
-// the tap commits is a line the typed commit would take byte for byte.
+// the tap commits is a line the typed commit would take byte for byte. A
+// row's text carries NO UNIT (architect 2026-10-28 night: "the units are not
+// present in the setup main page, so let's remove it from the lists.
+// consistent with linux unitless values (ffmpeg, etc)"): it is the value as
+// the config and the page's own `key=value` row spell it, `-9`, `4`, the unit
+// living in the key's name and its grammar alone; only `waveform` shows a
+// text other than its value, the preset's display name.
 std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
         const std::string& key) const {
     std::vector<GuiSettingValueChoice> out;
@@ -372,12 +378,12 @@ std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
     } else if (key == "noise_level") {
         for (int db = kNoiseLevelMaxDb; db >= kNoiseLevelMinDb; --db) {
             const std::string v = format_noise_level(db);
-            out.push_back({v, v + " dB"});
+            out.push_back({v, v});
         }
     } else if (key == "noise_crossfade_s") {
         for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s) {
             const std::string v = format_noise_crossfade_s(s);
-            out.push_back({v, v + " s"});
+            out.push_back({v, v});
         }
     } else {
         assert(false && "a key with no value list");

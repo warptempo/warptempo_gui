@@ -8986,8 +8986,8 @@ struct AppState {
     // 2026-10-25: a preset row is the preset's memorable DISPLAY NAME,
     // "Midnight Blues", never its key; 2026-10-28: a settings page row is
     // the line the editor opens with, `waveform=default`, and a value list's
-    // other rows the value with its unit, `-9 dB`, `4 s`; the text starting
-    // where a Folder row's name starts), and GROUP NONE, AND IT IS INERT
+    // other rows the value as the config spells it, `-9`, `4`; the text
+    // starting where a Folder row's name starts), and GROUP NONE, AND IT IS INERT
     // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
     // highlighted, never opened, stepped over by the walk, its text in the
     // dead key's print (kDimInk). The kind says what a row IS; what its open

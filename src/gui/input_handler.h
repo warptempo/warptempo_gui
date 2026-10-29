@@ -2945,10 +2945,10 @@ private:
     //   lit opener and closer, as over the page.
     //     build_value_list_rows: the key's values
     //       (GuiSettingsEditor::value_choices), one glyph-less Plain row each,
-    //       its text what it shows (`-9 dB`, `4 s`, a preset's DISPLAY NAME,
-    //       the word or the folder plain) and its `value` what it commits;
-    //       the key recorded on the overlay (`value_key`); the band opens on
-    //       the LIVE value's row, centered in the band
+    //       its text what it shows (a preset's DISPLAY NAME, every other
+    //       key's value as written, `-9`, `4`) and its `value` what it
+    //       commits; the key recorded on the overlay (`value_key`); the band
+    //       opens on the LIVE value's row, centered in the band
     //       (folder_overlay::scroll_row_centered, 2026-10-26).
     //     value_list_commit: THE OPEN ACT on row `index` — a tap, a click
     //       or Enter: the row's value committed through the typed line's one

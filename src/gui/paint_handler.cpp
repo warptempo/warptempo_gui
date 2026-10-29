@@ -7368,7 +7368,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // folders, the settings page's `key=value` lines under its dim group rows
 // (2026-10-28) and the value list's values (2026-10-25 the waveform presets,
 // 2026-10-28 night four keys more; glyph-less rows, a preset by display
-// name, a number with its unit). Contract and gate are at the declaration; the geometry, the scroll
+// name, a number as the config spells it). Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. EVERY ROW IS A LIST ROW in the redesign's SANS
