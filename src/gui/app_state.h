@@ -8352,7 +8352,8 @@ struct AppState {
     // (2026-10-25 for `waveform`, 2026-10-28 night for `true_colors`,
     // `noise`, `noise_level` and `noise_crossfade_s`; reached through the
     // page's row for its key alone; the key's values as rows, the open act
-    // the value's commit through the typed line's own body, then the close).
+    // the value's commit through the typed line's own body, then the return
+    // to the page, as its Cancel and Esc return — a sub-page of the page).
     // The struct keeps its shape rather
     // than folding into the overlay's tag, the two saying different things:
     // this one that A PICKER STANDS (the modal owner), the tag WHOSE ROWS the
@@ -8368,10 +8369,12 @@ struct AppState {
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
-    // GuiInputHandler::close_picker (Esc, Cancel, the opener's chord —
+    // GuiInputHandler::close_picker (Esc and Cancel, the opener's chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
-    // value list — Ctrl+Q's road, the same-project no-op, the value list's pick
-    // and the page's row open ahead of its editor all pass through it; a reopen
+    // value list — Ctrl+Q's road, the same-project no-op and the page's row
+    // open ahead of its editor all pass through it, but under a value list
+    // Esc and Cancel return to the page, as its commit does,
+    // GuiInputHandler::return_to_settings_page; a reopen
     // ends the session with the picker standing, the whole AppState going
     // with it), which
     // resets the overlay with it — so "the band leaves with the picker" is a
@@ -8900,7 +8903,8 @@ struct AppState {
     //                 function). The player writes Player at its open and
     //                 None at its close; the picker writes ProjectPicker or
     //                 SettingsPage at its open and ValueList at the page's
-    //                 row for a listed key (the three picker contents, one
+    //                 row for a listed key, SettingsPage again at the
+    //                 list's return (the three picker contents, one
     //                 AppState::Picker each time) and None at every close
     //                 path (all of them through close_picker; a reopen
     //                 ends the session with it standing, and the AppState
@@ -8915,7 +8919,7 @@ struct AppState {
     //                 editor prefilled on the row's line or swaps in the
     //                 key's value list (settings_page_commit), and under the
     //                 value list commits the row's value to the listed key,
-    //                 then closes (value_list_commit); the lift's
+    //                 then returns to the page (value_list_commit); the lift's
     //                 highlight is every owner's alike (a picker's band IS
     //                 its whole state — there is no field to feed), an inert
     //                 row taking neither half (folder_overlay::row_is_inert);
@@ -8950,7 +8954,8 @@ struct AppState {
     //                 under a PICKER it is THE WHOLE STATE — what Enter
     //                 opens, with no field beside it. The project picker
     //                 seats it on the CURRENT project's row at the open, the
-    //                 settings page on its FIRST KEY ROW, the value list
+    //                 settings page on its FIRST KEY ROW (and, at a value
+    //                 list's return, on that key's row), the value list
     //                 on the LIVE value's (the listed device key's).
     //                 IT NEVER STANDS ON AN INERT ROW (folder_overlay.h's
     //                 set_highlight and its walk);

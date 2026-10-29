@@ -4111,10 +4111,18 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     }
     // THE PICKER'S ONE BUTTON (architect 2026-08-29): its row is **Cancel**
     // alone, because a click on a row is the open act now — so this arm reads
-    // no bit and runs the one close body. (Enter on the list is still the open
-    // act, through picker_open_highlight, the keyboard's own click.)
+    // no bit. Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
+    // the list's key, nothing applied (return_to_settings_page, architect
+    // 2026-10-28 night: the list is the page's sub-page); under every other
+    // content it runs the one close body. Esc is the same fork
+    // (route_picker_key). (Enter on the list is still the open act, through
+    // picker_open_highlight, the keyboard's own click.)
     if (app.picker.active) {
-        close_picker();
+        if (app.folder_overlay.owner ==
+            AppState::FolderOverlay::Owner::ValueList)
+            return_to_settings_page(app.folder_overlay.value_key);
+        else
+            close_picker();
         return true;
     }
     // THE SCORE VIEWER'S ROW (2026-10-26): the published face decides, as
@@ -4923,8 +4931,8 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // page closes and the settings editor opens prefilled on the row's line, or
 // the row of a key with a value list swaps that list in; under the value
 // list (2026-10-25, four keys more 2026-10-28 night) the row's value is
-// committed to the listed key and the picker closes — one body per content,
-// which the click and Enter both reach.
+// committed to the listed key and the settings page returns, seated on that
+// key's row — one body per content, which the click and Enter both reach.
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:

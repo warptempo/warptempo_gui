@@ -40,6 +40,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -7289,7 +7290,7 @@ void GuiInputHandler::open_settings_page() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.picker.active  = true;
     app.picker.session = text_editor::next_session_id();
-    build_settings_page_rows();
+    build_settings_page_rows({});
     viewport.invalidate_all();
 }
 
@@ -7298,14 +7299,17 @@ void GuiInputHandler::open_settings_page() {
 // manually"), the DEVICE keys first and the PIECE keys after (the mock he
 // verified), each group under its inert Group row, every key a Plain row
 // whose text is THE LINE THE EDITOR WOULD OPEN WITH
-// (GuiSettingsEditor::setting_line, the recall's one owner). The seat is
-// THE FIRST KEY ROW, row 1, through the one set_highlight, and the open's
-// landing centers it as far as the listing's top allows
-// (scroll_row_centered), which is the top.
-void GuiInputHandler::build_settings_page_rows() {
+// (GuiSettingsEditor::setting_line, the recall's one owner). THE SEAT is
+// `seat_key`'s row — a value list's return (return_to_settings_page) seats
+// the key it was showing — and, with no seat key (the open), THE FIRST KEY
+// ROW, row 1; either through the one set_highlight, the landing centering
+// it as far as the listing's ends allow (scroll_row_centered), which for
+// row 1 is the top.
+void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::SettingsPage;
+    int seat = 1;
     const auto group = [&](const char* heading,
                            std::span<const char* const> keys) {
         AppState::FolderOverlayRow head;
@@ -7313,6 +7317,8 @@ void GuiInputHandler::build_settings_page_rows() {
         head.name = heading;
         ov.rows.push_back(std::move(head));
         for (const char* key : keys) {
+            if (!seat_key.empty() && seat_key == key)
+                seat = static_cast<int>(ov.rows.size());
             AppState::FolderOverlayRow row;
             row.kind = AppState::FolderOverlayRow::Kind::Plain;
             row.name = settings_editor.setting_line(key);
@@ -7323,8 +7329,28 @@ void GuiInputHandler::build_settings_page_rows() {
     group("DEVICE", keys.subspan(kSettingsEditorPieceKeyCount));
     group("PIECE", keys.first(kSettingsEditorPieceKeyCount));
     folder_overlay::clamp_scroll(app);
-    folder_overlay::set_highlight(app, 1);
+    folder_overlay::set_highlight(app, seat);
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
+}
+
+// THE RETURN FROM A VALUE LIST (architect 2026-10-28 night: "the cancel
+// button should return to the main setup panel … otherwise it's assumed i
+// am editing one key only. setting a value should also return to the main
+// page"): the list is a SUB-PAGE of the settings page. Its three roads —
+// Cancel (dispatch_modal_dialog_button), Esc (route_picker_key) and a
+// value's commit (value_list_commit's tail) — all land here: THE PAGE'S
+// ROWS ARE REBUILT under the SAME picker session (no new session, no modal
+// stop again, the Settings key lit throughout), SEATED ON `seat_key`'s ROW,
+// the key the list was showing, whose text is its line as it now stands.
+// The way out of the whole panel is the opener's, bare `;` and the Settings
+// key's lift (route_picker_key). The key is taken by value: the rebuild
+// resets the overlay that holds the list's own `value_key`.
+void GuiInputHandler::return_to_settings_page(std::string seat_key) {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::ValueList) return;
+    build_settings_page_rows(seat_key);
+    viewport.invalidate_all();
 }
 
 // THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
@@ -7334,13 +7360,14 @@ void GuiInputHandler::build_settings_page_rows() {
 // first `=` (a key carries none). On the row of a key with a value list
 // (settings_key_has_value_list — `waveform`, `true_colors`, `noise`,
 // `noise_level`, `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
-// in place, under this same picker session (build_value_list_rows), which
-// then commits or closes as its own content. On every other row THE PAGE
+// in place, under this same picker session (build_value_list_rows), a
+// sub-page whose commit, Cancel and Esc return to this page
+// (return_to_settings_page). On every other row THE PAGE
 // CLOSES (close_picker — the overlay and the on-screen keyboard never both
 // stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
 // OPENS PREFILLED WITH THE ROW'S LINE as painted, the caret at its end
 // (GuiSettingsEditor::open). Nothing reopens the page after that editor's OK
-// or Cancel, nor after a value list's pick.
+// or Cancel.
 void GuiInputHandler::settings_page_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -7365,7 +7392,8 @@ void GuiInputHandler::settings_page_commit(int index) {
 //
 // The picker's third content, the settings page's row for a key with a value
 // list: its list and its open act. Its opener is that row
-// (settings_page_commit).
+// (settings_page_commit), and every exit but the opener key's returns to
+// that page (return_to_settings_page).
 
 // THE LIST: the key's values (GuiSettingsEditor::value_choices, the five
 // domains' one owner), one glyph-less Plain row each, its text what the row
@@ -7405,9 +7433,11 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
 // (GuiSettingsEditor::apply_device_setting — the grammar, the live apply,
 // the device-config write, and a failure carding as the typed commit's; the
 // row already live is its unchanged no-op and commits nothing), THEN THE
-// PICKER CLOSES whatever the outcome (architect 2026-10-25: the box covers
-// the waveform, and the change is the answer — the colors, the sound, the
-// NOISE key's face — no card on success).
+// SETTINGS PAGE RETURNS whatever the outcome, seated on the key's row, its
+// line now carrying the value (return_to_settings_page, architect
+// 2026-10-28 night: "setting a value should also return to the main page").
+// No card on success (architect 2026-10-25): the change is the answer — the
+// colors, the sound, the NOISE key's face, the row's own text.
 void GuiInputHandler::value_list_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -7418,7 +7448,7 @@ void GuiInputHandler::value_list_commit(int index) {
     const std::string value =
         app.folder_overlay.rows[static_cast<size_t>(index)].value;
     (void)settings_editor.apply_device_setting(key, value);
-    close_picker();
+    return_to_settings_page(key);
 }
 
 // REVERT (the contract is at the declaration, input_handler.h). THE
@@ -7648,9 +7678,11 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // BARE `;` CLOSES THE SETTINGS PAGE AND THE VALUE LIST (architect
     // 2026-10-25 for the list, 2026-10-28 for the page, the same rule one
     // content over): the Settings key's lift under either, the opener's own
-    // chord, runs the one close body — the swapped-in list closing the
-    // whole session, the page with it. Shift+; is unbound (chord_is_bound),
-    // the catch-all's nothing below.
+    // chord, runs the one close body — under the swapped-in list too, the
+    // whole panel closing with nothing applied, the opener key being the way
+    // out of the panel where Esc and Cancel return to the page (architect
+    // 2026-10-28 night: "setup button still should close the whole panel").
+    // Shift+; is unbound (chord_is_bound), the catch-all's nothing below.
     if (settings_opener && bare && key == GuiKeys::Semicolon) {
         close_picker();
         return true;
@@ -7691,7 +7723,16 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 
     switch (key) {
         case GuiKeys::Escape:
-            close_picker();
+            // Esc is the box's Cancel (dispatch_modal_dialog_button's picker
+            // arm, the same fork): under a value list it RETURNS TO THE
+            // SETTINGS PAGE, seated on the list's key, nothing applied
+            // (return_to_settings_page, architect 2026-10-28 night); under
+            // every other content it closes the picker.
+            if (app.folder_overlay.owner ==
+                AppState::FolderOverlay::Owner::ValueList)
+                return_to_settings_page(app.folder_overlay.value_key);
+            else
+                close_picker();
             return true;
         case GuiKeys::Return:
         case GuiKeys::KpEnter:

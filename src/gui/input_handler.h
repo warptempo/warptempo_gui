@@ -40,6 +40,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 struct GuiPaintHandler;
@@ -2922,13 +2923,16 @@ private:
     //       the PIECE keys under a "PIECE" one; each key a glyph-less Plain
     //       row whose text is the line the editor would open with,
     //       `key=value` (GuiSettingsEditor::setting_line), each group row
-    //       inert (folder_overlay::row_is_inert). The band opens on the
-    //       FIRST KEY ROW, at the top (scroll_row_centered's clamp).
+    //       inert (folder_overlay::row_is_inert). THE SEAT is
+    //       `seat_key`'s row, centered as far as the listing's ends allow
+    //       (scroll_row_centered); with no seat key — the open — the FIRST
+    //       KEY ROW, at the top (that clamp).
     //     settings_page_commit: THE OPEN ACT on row `index` — a tap, a click
     //       or Enter: on the row of a key with a value list
     //       (settings_key_has_value_list, settings_editor.h) THAT KEY'S VALUE
     //       LIST is swapped in, in place, under the same picker session
-    //       (build_value_list_rows); on every other row close_picker and
+    //       (build_value_list_rows), a sub-page returning here; on every
+    //       other row close_picker and
     //       then GuiSettingsEditor::open prefilled with the row's line, the
     //       caret at its end — the overlay and the keyboard never both
     //       stand, so the page closes before the editor opens, and nothing
@@ -2940,9 +2944,13 @@ private:
     //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
     //   night for `true_colors`, `noise`, `noise_level` and
     //   `noise_crossfade_s`, the same shape) — THE SETTINGS PAGE'S ROW'S
-    //   CONTENT for a key of kSettingsValueListKeys, its one road. It writes
-    //   that device key and nothing of the piece; the Settings key stays its
-    //   lit opener and closer, as over the page.
+    //   CONTENT for a key of kSettingsValueListKeys, its one road, and A
+    //   SUB-PAGE OF THE SETTINGS PAGE (architect 2026-10-28 night: "the
+    //   cancel button should return to the main setup panel, no? setup
+    //   button still should close the whole panel. otherwise it's assumed i
+    //   am editing one key only"). It writes that device key and nothing of
+    //   the piece; the Settings key stays lit throughout, and its press (bare
+    //   `;`) closes the whole panel, as over the page.
     //     build_value_list_rows: the key's values
     //       (GuiSettingsEditor::value_choices), one glyph-less Plain row each,
     //       its text what it shows (a preset's DISPLAY NAME, every other
@@ -2954,8 +2962,14 @@ private:
     //       or Enter: the row's value committed through the typed line's one
     //       body (GuiSettingsEditor::apply_device_setting — the grammar, the
     //       live apply, the write, its failure card the typed road's), then
-    //       close_picker — no card on success, the change being the answer;
-    //       the live row commits nothing and just closes.
+    //       return_to_settings_page — no card on success, the change being
+    //       the answer; the live row commits nothing and returns the same.
+    //     return_to_settings_page: THE LIST'S RETURN, one body for its three
+    //       roads — Cancel, Esc and the commit's tail: the page's rows
+    //       rebuilt under the SAME picker session (no new session, no modal
+    //       stop), seated on the listed key's row (build_settings_page_rows),
+    //       its line the key's value as it now stands. A no-op unless a
+    //       value list stands.
     //
     //   (THE `h` VIEW HAD ANOTHER PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
@@ -2971,13 +2985,15 @@ private:
     //       highlight mechanics (folder_overlay.h) with the picker's damage —
     //       the row click's first half (folder_overlay_highlight_row's picker
     //       arm) and bare Up / Down's walk.
-    //     close_picker: THE ONE CLOSE BODY — Esc, the Cancel button,
-    //       Ctrl+O (the Open Project key's lift) under the project picker,
+    //     close_picker: THE ONE CLOSE BODY — Esc and the Cancel button
+    //       under the project picker and the settings page (under a value
+    //       list both return to the page, return_to_settings_page), Ctrl+O
+    //       (the Open Project key's lift) under the project picker,
     //       `;` (the Settings key's lift) under the settings page and the
     //       value list, Ctrl+Q's and the
     //       compositor's close road (GuiPrompt::request_close, at its head
-    //       beside the player's close, on the exit road alone), the value
-    //       list's pick, the page's row open ahead of its editor and the
+    //       beside the player's close, on the exit road alone), the page's
+    //       row open ahead of its editor and the
     //       same-project no-op all pass through it (a reopen ends the
     //       session with the picker standing, and the picker with it); the
     //       overlay leaves with
@@ -2993,12 +3009,14 @@ private:
     //       with none focused, OPENS the highlight; Space presses a focused
     //       button only; Up / Down walk the highlight (repeat-eligible,
     //       scrolling to keep it visible); bare `\` toggles the tooltip lamp
-    //       (set_show_tooltips, the player's arm); Esc closes; the
+    //       (set_show_tooltips, the player's arm); Esc closes (under a
+    //       value list it returns to the settings page, as Cancel does); the
     //       CONTENT'S OPENER CHORDS (2026-10-25, the opener key the way out;
     //       each the catch-all's nothing under the other content): under the
     //       project picker Ctrl+O closes and Ctrl+Alt+O runs Revert
     //       (revert_project, its question standing over the picker), under
-    //       the settings page and the value list `;` closes; Ctrl+S saves with the
+    //       the settings page and the value list `;` closes the whole
+    //       panel; Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
@@ -3029,10 +3047,11 @@ private:
     void build_project_picker_rows();
     void open_project_commit(int index);
     void open_settings_page();
-    void build_settings_page_rows();
+    void build_settings_page_rows(std::string_view seat_key);
     void settings_page_commit(int index);
     void build_value_list_rows(const std::string& key);
     void value_list_commit(int index);
+    void return_to_settings_page(std::string seat_key);
     // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
     // history. It never meets open_project_commit's

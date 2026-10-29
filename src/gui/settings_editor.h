@@ -220,8 +220,9 @@ static_assert(std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount 
 // for one of these swaps the folder overlay's content to THE KEY'S VALUES
 // (GuiInputHandler::build_value_list_rows, its rows from
 // GuiSettingsEditor::value_choices below), and a row's tap commits that value
-// at once through apply_device_setting, the typed line's own body, then closes
-// the session. Every other page row opens the line editor. Each is a device
+// at once through apply_device_setting, the typed line's own body, then
+// returns to the page on that key's row (the list a sub-page of the page,
+// 2026-10-28 night). Every other page row opens the line editor. Each is a device
 // key with a short domain the list can show whole: the twenty presets, the
 // two words, the folders under `noise/`, the level's 31 whole dB and the
 // crossfade's 30 whole seconds. The typed line still names every one of
@@ -369,8 +370,9 @@ struct GuiSettingsEditor {
     // device config is written (persist_device_config: a failure cards, the
     // live value standing for the session), with a card on success for
     // `projects_path` alone. THE EDITOR IS NOT TOUCHED HERE: the line's door
-    // refuses or closes its field on the outcome, and the list's door closes
-    // its session whatever the outcome. NotDeviceKey for any other key.
+    // refuses or closes its field on the outcome, and the list's door
+    // returns to the settings page whatever the outcome. NotDeviceKey for
+    // any other key.
     enum class DeviceSettingOutcome { NotDeviceKey, Refused, Unchanged, Applied };
     DeviceSettingOutcome apply_device_setting(const std::string& key,
                                               const std::string& value);

@@ -15,7 +15,10 @@
 // we don't have the responsibility" — "brief it as a scrolling list", "Yes";
 // this widget as it stands, no new chrome), and since 2026-10-28 night the
 // same for `true_colors`, `noise`, `noise_level` and `noise_crossfade_s`
-// (kSettingsValueListKeys, settings_editor.h).
+// (kSettingsValueListKeys, settings_editor.h) — a SUB-PAGE of the settings
+// page, whose Cancel, Esc and commit return to the page on that key's row
+// and whose opener key closes the whole panel (architect 2026-10-28 night,
+// GuiInputHandler::return_to_settings_page).
 // (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
 // with the panel; the `h` view's history picker for one day, retired
 // 2026-08-29 as overengineered, that view's `'` raising its confirmation on
@@ -146,8 +149,9 @@
 // it closes the page and opens the settings editor prefilled on the row's
 // line, or on the row of a key with a value list swaps that list in
 // (settings_page_commit, 2026-10-28); under the VALUE LIST
-// it commits the row's value to the listed key and closes the picker
-// (value_list_commit, 2026-10-25, four keys more 2026-10-28 night). AN
+// it commits the row's value to the listed key and returns to the settings
+// page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night; the
+// return 2026-10-28 night). AN
 // INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
 // (finish_folder_overlay_release asks row_is_inert). Enter on the highlight is
@@ -387,7 +391,8 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // call it after their seat (the project picker's, the settings page's and
 // the value list's builds, the render player's every rebuild, each a
 // fresh listing — the page's first key row, row 1, lands at the band's top,
-// the clamp ruling a centered row 1 out); the
+// the clamp ruling a centered row 1 out, and a value list's return seats the
+// page on that key's row); the
 // keyboard walk and the pointer's seats keep scroll_row_into_view's
 // least-move rule (an arrow step scrolls by one row, every list widget's
 // rule). Returns whether the offset moved.
