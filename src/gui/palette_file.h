@@ -62,11 +62,13 @@
 // selected cue label and the flag editor's field and selection band, the
 // chrome's selected pair). So the palette's program roles are exactly the
 // TEN below: the waveform's canvas, ink and lit outline; THE CANVAS'S
-// GRID AND CENTER LINE, `grid` and `center`; THE CUES' TWO COLORS, `cue` and
-// `range` (architect 2026-10-09 ~11:50–12:00, Cool Edit's cues; every cue's,
-// the coincident marker's and the `h` view's removed half among them, since
-// THE INVALID COLOR, a role of its own, retired 2026-10-26 ~15:30 — "It's very
-// odd having anything but red mean invalid": the STRIKE is the mark,
+// GRID AND CENTER LINE, `grid` and `center`; THE CUES' TWO COLORS, `cue` the
+// warp markers' and `range` the phase resets', each kind's triangle and
+// dots (architect 2026-10-09 ~11:50–12:00, Cool Edit's cues, "red+blue for
+// warp and phase"; one per kind since 2026-10-29, "warp = cue and phase =
+// range"; the coincident marker and the `h` view's halves wearing their
+// axis's, since THE INVALID COLOR, a role of its own, retired 2026-10-26
+// ~15:30 — "It's very odd having anything but red mean invalid": the STRIKE is the mark,
 // render.h's marker-lane paragraph, the table at render.cpp's
 // resolve_flag_face); the playhead's `playhead_stem` — its head and its dots
 // alone — and the `scanner`, the white of the stems that belong to the
@@ -117,7 +119,8 @@
 // GrdL, `center` its Cntr (the default's dark red, A90404), `cue` its CueM
 // (the default's red, F34B58) and `range` its RngM (its blue, 4B82F3) —
 // Cool Edit's two cue colors, the flag in red and the range in blue
-// (architect 2026-10-26: "the default Cool Edit markers contrast well") —
+// (architect 2026-10-26: "the default Cool Edit markers contrast well"), a
+// warp marker's and a phase reset's since 2026-10-29 —
 // `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on every built-in but
 // CEPro 1.2's FFFF6C),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
@@ -219,9 +222,9 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // each frame — the canvas, its grid and its center lines (render_canvas),
 // the cues' dots (paint_marker_stems), the playhead's
 // head and dots, the open flag editor (render_flag_editor_box), the lead-in
-// ring's dots and the `h` view's nudged-pair ring runs (a stem's pair through
-// live_cue_stem_dots, the colors read live), the zoom anchor's stem and the
-// scanner.
+// ring's dots (a reset's stem pair through phase_reset_stem_dots) and the
+// `h` view's nudged-pair ring runs (each run's published pair), the colors
+// read live, the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
 // THE BUILT-IN PALETTES (the head) — the program's twenty in their

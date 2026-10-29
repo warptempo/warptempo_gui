@@ -1590,13 +1590,19 @@ static CueSegmentBoxes cue_segment_boxes(const int (&w)[3],
     return b;
 }
 
-// THE FLAG'S KIND: WARP and PHASE RESET, co-equal, the authoring columns'
-// cues by their column, and the `h` view's ADDED and REMOVED diff halves.
-// No kind colors a cue (architect 2026-10-26 ~15:30, the invalid color
-// retired): warp against phase reset reads from the label alone (his
-// one-label rule), and ADDED against REMOVED from THE STRIKE alone — a
-// removed half's label struck (resolve_flag_face's table).
-enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
+// THE FLAG'S KIND IS ITS AXIS: WARP and PHASE RESET, co-equal, and THE
+// KIND COLORS THE CUE (architect 2026-10-29: "let's do triangle and dots —
+// warp = cue and phase = range"): a warp marker the `cue`, a phase reset
+// the `range`. The authoring columns' cues take their column's kind; the
+// `h` view's diff halves take the kind of the column the lane lists
+// (render_history_diff_flags' `markers_view`), so a half wears what a live
+// marker of its axis wears.
+enum class GuiFlagKind { Warp, PhaseReset };
+// THE FLAG'S SIDE: a live lane's cue, or one of the `h` view's ADDED and
+// REMOVED diff halves. No side colors a cue (architect 2026-10-26 ~15:30,
+// the invalid color retired): ADDED against REMOVED reads from THE STRIKE
+// alone — a removed half's label struck (resolve_flag_face's table).
+enum class GuiFlagSide { Live, Added, Removed };
 
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
 // render.h, owns the look): the triangle's color and its shadow's, the dots
@@ -1607,22 +1613,30 @@ enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 struct FlagFace {
     GuiColor  triangle;
     GuiColor  shadow;
-    GuiCueDot cue_phase_dots;
-    GuiCueDot range_phase_dots;
+    GuiCueDot phase_a_dots;
+    GuiCueDot phase_b_dots;
     bool      struck;
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
-// diff flags (architect 2026-10-09 ~11:50–12:00, Cool Edit's two cue colors;
-// 2026-10-26 ~15:10–15:30, THE STRIKE: "It's very odd having anything but
-// red mean invalid. So I think what we should do is have coincident markers
-// be shown as a strike through, which is actually effective because that's
-// what happens to them. They become one"; "Two, agree" — the history's
-// removed half struck, in the cue colors). THE TABLE, the ladder read top to
+// diff flags (architect 2026-10-09 ~11:50–12:00, Cool Edit's two cue colors,
+// "red+blue for warp and phase"; 2026-10-26 ~15:10–15:30, THE STRIKE: "It's
+// very odd having anything but red mean invalid. So I think what we should
+// do is have coincident markers be shown as a strike through, which is
+// actually effective because that's what happens to them. They become
+// one"; "Two, agree" — the history's removed half struck; 2026-10-29, on
+// the split mocks in his gallery, THE KIND'S COLOR: "let's do triangle and
+// dots — warp = cue and phase = range", the alternation of both colors on
+// every cue's two dot phases retired). THE TABLE, the ladder read top to
 // bottom, the first matching row wins:
-//   flag                     triangle  dots (red's phase | blue's phase)   label
-//   DISABLED (any kind)      faded     none                            faded, struck as below
-//   any live kind            cue red   cue red | range blue            bone, struck as below
+//   flag                  triangle      dots (phase a | phase b)     label
+//   DISABLED warp         faded `cue`   none                        faded, struck as below
+//   DISABLED phase reset  faded `range` none                        faded, struck as below
+//   live warp             `cue`         `cue` | `cue`               bone, struck as below
+//   live phase reset      `range`       `range` | `range`           bone, struck as below
+// — whatever the side (a live lane's cue or either `h` half, the half
+// taking its lane's axis). On the six presets whose CueM and RngM are one
+// color the two kinds paint alike.
 // THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
 // warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
 // coincident run, and on the warp column a label ref the render falls back
@@ -1630,22 +1644,26 @@ struct FlagFace {
 // label's text and its bar are the chrome's `label`, an inert one's the
 // faded label (CueSegment); the bar is part of the text, its shadow under
 // it (show_cue_label).
-// THE DISABLED ROW'S FADE (architect 2026-10-10 ~12:20, "the arrow needs to
+// THE DISABLED ROWS' FADE (architect 2026-10-10 ~12:20, "the arrow needs to
 // be legible for me, but the text doesn't … since it's disabled, it's inert"):
-// the triangle and its shadow are the `cue` red and `cue_shadow` BLENDED
-// 45 % TOWARD THE FACE, the label's rest tone 65 % toward it — derived solid
-// colors, "an opacity look … not actually opaque" (cool_edit_derive.h, the
-// members `ce_off_*`); the selected label stays the chrome's `label` so a
+// the triangle — the kind's own color, `cue` or `range` — and its shadow
+// `cue_shadow` BLENDED 45 % TOWARD THE FACE, the label's rest tone 65 %
+// toward it — derived solid colors, "an opacity look … not actually opaque"
+// (cool_edit_derive.h, the members `ce_off_*`: `ce_off_cue` and
+// `ce_off_range` the two triangles, one faded shadow and one faded label
+// for both kinds); the selected label stays the chrome's `label` so a
 // selection shows. Every INERT label — a disabled cue's segments and a tie
 // follower's cells — wears the faded label, one look for inert cue text
 // (the Windows emboss retired from cues 2026-10-10). A DISABLED COINCIDENT
 // CUE — the red set counts disabled rows (warp_red_flag_set_cached's (3)) —
 // is the faded cue with its faded label struck.
-// THE DOTS' ROWS, counted from the canvas's first row, are the red's phase
-// ≡ 7 and the blue's ≡ 3 (mod 8), the blue's first from the top — the
-// capture's absolute red y ≡ 3 / blue y ≡ 7 re-counted from Cool Edit's
-// canvas top at y = 108 ≡ 4 (mod 8) (program_spec.h's dot fields, the
-// derivation's owner); "bone" the bone (materials.h's kBoneInk, the words'
+// THE DOTS' ROWS, counted from the canvas's first row, are the two phases
+// ≡ 3 (phase a, the first from the top) and ≡ 7 (phase b) (mod 8), BOTH IN
+// THE MARKER'S ONE COLOR — Cool Edit's two (its blue on the first, its red
+// on the second, a point cue's range start and end superimposed) re-counted
+// from its canvas top at y = 108 ≡ 4 (mod 8) (program_spec.h's dot fields,
+// the derivation's owner), the rows kept when the colors split by kind
+// (2026-10-29); "bone" the bone (materials.h's kBoneInk, the words'
 // and the flags' one ink since 2026-10-22); the selected text the chrome's
 // `label` — Cool Edit's program text, EFEFEF on the default Face, dark past
 // its light-face swap (chrome_derive.h) — every label on the panel's face
@@ -1654,13 +1672,17 @@ struct FlagFace {
 // TEXT ALONE, the chrome's `label` on the panel's face, no fill (architect
 // 2026-10-09 ~23:30: "clicking on a flag to select it makes the text turn
 // white. That's it"), a struck label's bar with it.
-FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
+FlagFace resolve_flag_face(GuiFlagKind kind, GuiFlagSide side, bool disabled,
+                           bool red) {
     const GuiPalette& p = palette();
-    const bool struck = red || kind == GuiFlagKind::Removed;
+    const bool phase = kind == GuiFlagKind::PhaseReset;
+    const bool struck = red || side == GuiFlagSide::Removed;
     if (disabled)
-        return FlagFace{p.ce_off_cue, p.ce_off_cue_shadow, GuiCueDot::None,
-                        GuiCueDot::None, struck};
-    return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::Cue, GuiCueDot::Range,
+        return FlagFace{phase ? p.ce_off_range : p.ce_off_cue,
+                        p.ce_off_cue_shadow, GuiCueDot::None, GuiCueDot::None,
+                        struck};
+    const GuiCueDot dot = phase ? GuiCueDot::Range : GuiCueDot::Cue;
+    return FlagFace{phase ? p.range : p.cue, p.ce_cue_shadow, dot, dot,
                     struck};
 }
 
@@ -1982,25 +2004,26 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             if (label_on || r.tri_w > 0.0) out_hit_rects->push_back(r);
         }
         if (out_stems &&
-            (c.face.cue_phase_dots != GuiCueDot::None ||
-             c.face.range_phase_dots != GuiCueDot::None) &&
+            (c.face.phase_a_dots != GuiCueDot::None ||
+             c.face.phase_b_dots != GuiCueDot::None) &&
             stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(MarkerStem{c.index, static_cast<double>(c.col),
-                                            c.face.cue_phase_dots,
-                                            c.face.range_phase_dots});
+                                            c.face.phase_a_dots,
+                                            c.face.phase_b_dots});
     }
 }
 
 } // namespace
 
-// A LIVE CUE'S STEM PAIR (declaration in render.h), asked of the resolver
-// above, so the lead-in ring and the nudged pair's runs can never wear a dot
-// a stem would not. It stands outside the file's anonymous namespace so
+// A LIVE PHASE RESET'S STEM PAIR (declaration in render.h), asked of the
+// resolver above, so the lead-in ring can never wear a dot its reset's stem
+// would not. It stands outside the file's anonymous namespace so
 // paint_handler.cpp reaches it; the resolver it calls stays file-local.
-GuiStemDots live_cue_stem_dots() {
+GuiStemDots phase_reset_stem_dots() {
     const FlagFace f = resolve_flag_face(GuiFlagKind::PhaseReset,
+                                         GuiFlagSide::Live,
                                          /*disabled=*/false, /*red=*/false);
-    return GuiStemDots{f.cue_phase_dots, f.range_phase_dots};
+    return GuiStemDots{f.phase_a_dots, f.phase_b_dots};
 }
 
 namespace {
@@ -2032,8 +2055,8 @@ template <typename MarkerVec, typename LabelFn, typename DisabledFn,
           typename CellsFn>
 void render_flag_boxes_impl(
     cairo_t* cr,
-    // The column's flag kind (Warp or PhaseReset), every box of the pass its
-    // face pair's (resolve_flag_face).
+    // The column's flag kind (Warp or PhaseReset), every cue of the pass in
+    // its kind's color (resolve_flag_face).
     GuiFlagKind kind,
     GuiRect top_strip_area,
     FlagLaneRects lanes,
@@ -2131,7 +2154,7 @@ void render_flag_boxes_impl(
                 (i == suppressed.marker_index && bright == suppressed.cell) ||
                 cells.present;
             if (!bright_cell_shown) bright = MarkerCell::Payload;
-            c.face = resolve_flag_face(kind, dis, red);
+            c.face = resolve_flag_face(kind, GuiFlagSide::Live, dis, red);
 
             // THE SEGMENTS: the payload label (the column's composer, the cut
             // inside it), then the two bound cells where they paint — each
@@ -2299,6 +2322,7 @@ void render_history_diff_flags(
         FlagLaneRects lanes,
         int waveform_width,
         const std::vector<HistoryDiffFlag>& flags,
+        char markers_view,
         long long viewport_start_sample,
         long long viewport_end_sample,
         int focus_index,
@@ -2329,6 +2353,13 @@ void render_history_diff_flags(
     // it (gui_font.h).
     const GuiFont font = gui_font(GuiFace::Program);
     const int u = cue_label_unit_px();   // the label's quantum, scaled
+    // THE LANE'S AXIS, every half's kind (architect 2026-10-29, warp in
+    // `cue` and phase reset in `range`): the column the flags were built
+    // from, the active markers view (rebuild_history_diff_flags lists that
+    // column's half of the delta), so each half wears what a live marker of
+    // its axis wears.
+    const GuiFlagKind kind = markers_view == 'P' ? GuiFlagKind::PhaseReset
+                                                 : GuiFlagKind::Warp;
 
     // THE LEFT CULL'S BOUND, DERIVED FROM THIS COMMIT'S OWN TEXT rather than
     // from the marker lane's own worst case, because THESE LABELS ARE NOT CUT.
@@ -2435,22 +2466,22 @@ void render_history_diff_flags(
             const bool removed_disabled = f.then_effective_disabled;
             const bool added_disabled   = f.now_effective_disabled;
 
-            // ONE HALF'S SEGMENT: its text, its kind and its disabled bit.
+            // ONE HALF'S SEGMENT: its text, its side and its disabled bit.
             struct Half {
                 const std::string* text;
-                GuiFlagKind        kind;
+                GuiFlagSide        side;
                 bool               disabled;
             };
-            const Half removed_half{&f.removed_text, GuiFlagKind::Removed,
+            const Half removed_half{&f.removed_text, GuiFlagSide::Removed,
                                     removed_disabled};
-            const Half added_half{&f.added_text, GuiFlagKind::Added,
+            const Half added_half{&f.added_text, GuiFlagSide::Added,
                                   added_disabled};
             // ONE CUE at `col`, the flag's `half` for its hit rect, wearing
             // `face`, its label the given halves as segments in their order —
             // the box layout the live lane's one (cue_segment_boxes); every
             // segment the selected text when the flag is focused or
             // selected, no fill (render.h's SELECTED row), inert on its own
-            // half's bit, STRUCK on its own half's kind (resolve_flag_face's
+            // half's bit, STRUCK on its own half's side (resolve_flag_face's
             // table: the removed half's label alone).
             const auto push_cue = [&](int col, HistoryDiffHalf half,
                                       const FlagFace& face, const Half* halves,
@@ -2479,7 +2510,7 @@ void render_history_diff_flags(
                     seg.x1       = col + boxes.x1[s];
                     seg.selected = focused;
                     seg.inert    = halves[s].disabled;
-                    seg.struck   = resolve_flag_face(halves[s].kind,
+                    seg.struck   = resolve_flag_face(kind, halves[s].side,
                                                      /*disabled=*/false,
                                                      /*red=*/false)
                                        .struck;
@@ -2489,22 +2520,23 @@ void render_history_diff_flags(
 
             const int col_left = static_cast<int>(std::nearbyint(left_x));
             // A SINGLE FLAG through the live lane's one resolver
-            // (resolve_flag_face) by its half's kind — the plain cue, its
-            // label struck on a removed line; THE DOTS READ THE DISABLED
+            // (resolve_flag_face) by the lane's kind and its half's side —
+            // the plain cue in its axis's color, its label struck on a
+            // removed line; THE DOTS READ THE DISABLED
             // AXIS (architect 2026-08-22): a single half whose one side is
             // disabled publishes none and wears the faded triangle, the live
             // lane's rule.
             if (!f.added) {
                 push_cue(col_left, HistoryDiffHalf::Removed,
-                         resolve_flag_face(GuiFlagKind::Removed,
+                         resolve_flag_face(kind, GuiFlagSide::Removed,
                                            removed_disabled, /*red=*/false),
                          &removed_half, 1);
                 return;
             }
             if (!f.removed) {
                 push_cue(col_left, HistoryDiffHalf::Added,
-                         resolve_flag_face(GuiFlagKind::Added, added_disabled,
-                                           /*red=*/false),
+                         resolve_flag_face(kind, GuiFlagSide::Added,
+                                           added_disabled, /*red=*/false),
                          &added_half, 1);
                 return;
             }
@@ -2513,7 +2545,7 @@ void render_history_diff_flags(
             // EDIT being displayed, not a line in a switched-off state; the
             // label's segments carry each half's disabled bit.
             const FlagFace live = resolve_flag_face(
-                GuiFlagKind::Added, /*disabled=*/false, /*red=*/false);
+                kind, GuiFlagSide::Added, /*disabled=*/false, /*red=*/false);
             // A SAME-FRAME PAIR IS ONE CUE (architect 2026-10-26, "Three"):
             // its two halves as two segments, the removed (struck) first and
             // then the added, one triangle, one stem, no ring.
@@ -2542,7 +2574,8 @@ void render_history_diff_flags(
             // THE RING'S TOP AND BOTTOM between the two stems (MarkerStemRun,
             // render.h): published whenever any of it reaches the waveform's
             // columns and the stems stand on two columns, the painter
-            // clipping it there.
+            // clipping it there — in the pair's own stem dots (the live
+            // face's two phases), so the ring and its stems are one object.
             const int col_lo = std::min(then_col, now_col);
             const int col_hi = std::max(then_col, now_col);
             if (out_runs && col_hi > col_lo &&
@@ -2550,7 +2583,8 @@ void render_history_diff_flags(
                 col_lo < lanes.columns_x + waveform_width)
                 out_runs->push_back(MarkerStemRun{
                     i, static_cast<double>(col_lo),
-                    static_cast<double>(col_hi)});
+                    static_cast<double>(col_hi), live.phase_a_dots,
+                    live.phase_b_dots});
         });
 
     paint_cues(cr, lane, lanes.columns_x, waveform_width, cues, out_hit_rects,
@@ -2665,15 +2699,18 @@ void fill_program_palette(const GuiPaletteWords& w) {
     // The panel label's pair, swapping past its own threshold (2026-10-10).
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
-    // The disabled cue's faded triangle, shadow and label (2026-10-10): the
-    // label from the bone, ALL THREE MIXED TOWARD THE MARKER LANE'S FACE, the
-    // ground the cues stand on (architect 2026-10-22, truthful to the
-    // surface) — the lane flat in the ground's face since 2026-10-29
-    // (materials.h), so the one `face` above.
+    // The disabled cue's faded triangles, shadow and label (2026-10-10): a
+    // warp marker's off the `cue` and a phase reset's off the `range`
+    // (2026-10-29, each kind its own color), the label from the bone, ALL
+    // MIXED TOWARD THE MARKER LANE'S FACE, the ground the cues stand on
+    // (architect 2026-10-22, truthful to the surface) — the lane flat in the
+    // ground's face since 2026-10-29 (materials.h), so the one `face` above.
     {
         using namespace cool_edit_derive;
         static constexpr std::size_t kCue = palette_role_index("cue");
+        static constexpr std::size_t kRange = palette_role_index("range");
         g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], face));
+        g_palette.ce_off_range = hex(disabled_triangle(w[kRange], face));
         g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(face));
         g_palette.ce_off_label = hex(disabled_cue_label(kBoneInk, face));
     }

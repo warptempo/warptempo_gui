@@ -1530,6 +1530,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         render_history_diff_flags(
             ccr, local_top_strip, flag_lanes, wave_w,
             app.history_mode.flags,
+            // THE LANE'S AXIS (2026-10-29), the column the rebuild above
+            // listed — its halves wear that axis's color, warp the `cue`
+            // and phase reset the `range`; `mv` is a fingerprint field, so
+            // a view switch rebuilds the lane.
+            mv,
             vp_start, vp_end,
             history_focus,
             app.history_mode.selection,

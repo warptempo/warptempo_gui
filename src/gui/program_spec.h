@@ -251,28 +251,30 @@ struct ProgramSpec {
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
     // dotted_waveform_line_runs): THE PLAYHEAD'S every `dot_period`
-    // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
-    // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
-    // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
-    // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
-    // FIRST FROM THE TOP, every live cue's (render.cpp's resolve_flag_face
-    // owns which color each phase wears); the phase-reset lead-in
+    // rows on its phase; A CUE'S TWO PHASES each every `cue_dot_period` rows
+    // — `cue_dot_phase_a` 3 and `cue_dot_phase_b` 7, so a point cue's dots
+    // stand one every `dot_period` rows, PHASE A FIRST FROM THE TOP, BOTH IN
+    // THE MARKER'S ONE COLOR (architect 2026-10-29: a warp marker the `cue`,
+    // a phase reset the `range`; render.cpp's resolve_flag_face owns which
+    // color each phase wears; Cool Edit's two cue colors alternated on them
+    // 2026-10-09 ~11:50 to 2026-10-29); the phase-reset lead-in
     // ring's right side takes the same rows and its top and bottom runs the
     // same phases in device columns counted from the reset's own column
     // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE
     // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
-    // 2026-10-09): the capture gives the red at y ≡ 3 and the blue at
-    // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108
-    // ≡ 4 (mod 8), so from its own first row the red stands on rows ≡ 7 and
-    // the blue on rows ≡ 3 (its first dot, y = 111, canvas row 3, is blue);
-    // the playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
-    // ≡ 0 (mod 4). Every cue row is the playhead's period off the playhead's
-    // phase, so the two never share a row on one column.
+    // 2026-10-09): the capture gives Cool Edit's red at y ≡ 3 and its blue
+    // at y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at
+    // y = 108 ≡ 4 (mod 8), so from its own first row the red stands on rows
+    // ≡ 7 (phase b) and the blue on rows ≡ 3 (phase a; its first dot,
+    // y = 111, canvas row 3, is blue); the playhead's y ≡ 1 (mod 4) is canvas
+    // row ≡ 1 either way, 108 being ≡ 0 (mod 4). Every cue row is the
+    // playhead's period off the playhead's phase, so the two never share a
+    // row on one column.
     int  dot_period;
     int  playhead_dot_phase;
     int  cue_dot_period;
-    int  cue_dot_phase;
-    int  range_dot_phase;
+    int  cue_dot_phase_a;
+    int  cue_dot_phase_b;
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
@@ -301,8 +303,8 @@ inline constexpr ProgramSpec kProgramSpec = {
     .dot_period            = 4,
     .playhead_dot_phase    = 1,
     .cue_dot_period        = 8,
-    .cue_dot_phase         = 7,
-    .range_dot_phase       = 3,
+    .cue_dot_phase_a       = 3,
+    .cue_dot_phase_b       = 7,
 };
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
@@ -387,13 +389,13 @@ static_assert(kProgramSpec.cue_fill_px ==
 // (THE LABEL CLEARS THE TRIANGLE BY CONSTRUCTION: render.h's
 // cue_label_lead_px is the triangle's reach right — its rows and its
 // shadow's offset — plus the gap, never negative, at every scale.)
-// The cue's two colors alternate one dot every playhead period, and neither
+// The cue's two phases stand one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
-static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
+static_assert((kProgramSpec.cue_dot_phase_a - kProgramSpec.cue_dot_phase_b +
                kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==
               kProgramSpec.dot_period);
-static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=
+static_assert(kProgramSpec.cue_dot_phase_b % kProgramSpec.dot_period !=
               kProgramSpec.playhead_dot_phase);
 // (The label's text stands one pad quantum inside its fill — the fill's
 // lead and pad are the label's lead: render.h's cue_fill_lead_px.)

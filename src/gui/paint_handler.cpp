@@ -4444,21 +4444,23 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // THE RING IS DOTTED IN THE STEM'S OWN PATTERN, NEVER A SOLID LINE
 // (architect 2026-10-09 ~17:40: the ring is "made of the same stuff the
 // marker looks like"; "they're one unit", 2026-08-01): every cell one device
-// px (waveform_line_px, "on waveform → unscaled"), in the reset's own two dot
-// colors exactly as its stem wears them — live_cue_stem_dots asks the one
+// px (waveform_line_px, "on waveform → unscaled"), in the reset's own dots
+// exactly as its stem wears them — phase_reset_stem_dots asks the one
 // resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
-// cannot drift: the red `cue` and the blue `range` alternating, a
-// coincident reset's too (its struck label the mark, architect 2026-10-26;
-// the invalid color alone 2026-10-11 to 2026-10-26); resting whether the
-// reset is selected or not, as the stem is.
+// cannot drift: the `range` on both phases (architect 2026-10-29, a phase
+// reset the range color), a coincident reset's too (its struck label the
+// mark, 2026-10-26; the invalid color alone 2026-10-11 to 2026-10-26);
+// resting whether the reset is selected or not, as the stem is.
 //   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
 //     the reset's stem already stands there (paint_marker_stems, after this
 //     pass), and a playhead on the reset interleaves its yellow there as on
-//     any stem — "yellow, blue, yellow, red all the way around". A stem off
+//     any stem — "yellow, blue, yellow, red all the way around" (his words
+//     of the two-color stem; the reset's two phases one color since
+//     2026-10-29). A stem off
 //     the area's left edge leaves the clipped band with no left side.
 //   THE RIGHT SIDE on the band's last column, the stem's rule exactly
-//     (program_spec.h's dot fields: the blue on the canvas rows ≡
-//     range_dot_phase and the red on ≡ cue_dot_phase, mod cue_dot_period,
+//     (program_spec.h's dot fields: the canvas rows ≡ cue_dot_phase_a
+//     and ≡ cue_dot_phase_b, mod cue_dot_period,
 //     counted from the canvas's first row), down both wells and not across
 //     the stereo divider's rows (2026-10-16) — the dotted line's runs
 //     (dotted_waveform_line_runs, render.h), the stem's own rule. A band
@@ -4467,10 +4469,10 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //   THE TOP RUN on the canvas's first row and THE BOTTOM RUN on its last:
 //     the same two phases turned through the corners, counted in device
 //     columns from the reset's own column (band.stem_x, unclipped, so the
-//     run stays put on the song as the view pans): the blue on columns
-//     stem + range_dot_phase + k · cue_dot_period, the red on stem +
-//     cue_dot_phase + k · cue_dot_period — one dot every four columns,
-//     alternating, as down the stem. The corners carry whatever
+//     run stays put on the song as the view pans): phase a on columns
+//     stem + cue_dot_phase_a + k · cue_dot_period, phase b on stem +
+//     cue_dot_phase_b + k · cue_dot_period — one dot every four columns,
+//     as down the stem. The corners carry whatever
 //     cell the rules give them; a band one column wide is its stem alone.
 // PURE PALETTE BYTES (the palette composites nothing): aliased integer
 // cell rectangles, the stems' own form, no alpha and no half column. The
@@ -4497,7 +4499,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
     if (!band.valid) return;
 
-    const GuiStemDots dots = live_cue_stem_dots();
+    const GuiStemDots dots = phase_reset_stem_dots();
     const ProgramSpec& ps = kProgramSpec;
     const int t      = waveform_line_px();
     const int x0     = static_cast<int>(std::nearbyint(band.x0));
@@ -4526,10 +4528,10 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
                           side, static_cast<std::size_t>(n)),
                       color);
     };
-    if (dots.range_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
-    if (dots.cue_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.cue_phase_dots), ps.cue_dot_phase);
+    if (dots.phase_a_dots != GuiCueDot::None)
+        paint_dots(cue_dot_color(dots.phase_a_dots), ps.cue_dot_phase_a);
+    if (dots.phase_b_dots != GuiCueDot::None)
+        paint_dots(cue_dot_color(dots.phase_b_dots), ps.cue_dot_phase_b);
     sink.end();
 }
 
@@ -4694,19 +4696,20 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // exactly once, in the painter, and a stem can never land a pixel away from its
 // own triangle. Disabled markers are simply absent from the stash.
 //
-// THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
-// 2026-10-09; the two colors ~11:50; every cue's since 2026-10-26;
+// THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE'S COLOR (architect
+// 2026-10-09; the two colors ~11:50; one per kind since 2026-10-29;
 // render.h's marker-lane paragraph): one-device-px dots on the
 // CANVAS'S device rows counted from its top row (the canvas sink's
 // stem_dots, one run per well, waveform_well_rows) — none on the canvas's
 // frame row, none on the stereo divider's rows (2026-10-16) and none in the
 // lane — on
-// rows ≡ cue_dot_phase (the red's phase) and on rows ≡ range_dot_phase (the
-// blue's; mod cue_dot_period, program_spec.h), each phase in the role the
-// stash names for it (GuiCueDot, cue_dot_color; resolve_flag_face's table:
-// every live cue the red `cue` and the blue `range`, alternating one dot
-// every four rows, the history's two halves alike) — the playhead's dots on
-// rows ≡ 1 of 4, so neither color shares a row with them. (The solid stem
+// rows ≡ cue_dot_phase_a and on rows ≡ cue_dot_phase_b (mod
+// cue_dot_period, program_spec.h), each phase in the role the stash names
+// for it (GuiCueDot, cue_dot_color; resolve_flag_face's table: a warp
+// marker the `cue` on both phases and a phase reset the `range`, one dot
+// every four rows, the history's two halves their lane's axis's, architect
+// 2026-10-29) — the playhead's dots on rows ≡ 1 of 4, so neither phase
+// shares a row with them. (The solid stem
 // through the well's top lines between its flanks stood 2026-10-02 to
 // 2026-10-09; git history.)
 //
@@ -4784,12 +4787,12 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
         // the waveform.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        if (stem.cue_phase_dots != GuiCueDot::None)
-            dotted_stem(col, ps.cue_dot_phase,
-                        cue_dot_color(stem.cue_phase_dots));
-        if (stem.range_phase_dots != GuiCueDot::None)
-            dotted_stem(col, ps.range_dot_phase,
-                        cue_dot_color(stem.range_phase_dots));
+        if (stem.phase_a_dots != GuiCueDot::None)
+            dotted_stem(col, ps.cue_dot_phase_a,
+                        cue_dot_color(stem.phase_a_dots));
+        if (stem.phase_b_dots != GuiCueDot::None)
+            dotted_stem(col, ps.cue_dot_phase_b,
+                        cue_dot_color(stem.phase_b_dots));
     }
     sink.stems_end();
     sink.end();
@@ -4800,18 +4803,22 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // nudged pair's ring, on the canvas's first and last rows, between its two
 // cues' stems — THE PHASE-RESET LEAD-IN RING'S RUNS' FORM EXACTLY
 // (paint_phase_reset_overlay_ring, the model), IN THE STEM'S OWN PATTERN:
-// one device px a dot (waveform_line_px, "on waveform → unscaled"), the
-// `range` blue on columns left stem + range_dot_phase + k · cue_dot_period
-// and the `cue` red on left stem + cue_dot_phase + k · cue_dot_period (a
-// live cue's stem pair, live_cue_stem_dots — so the runs' density is a
-// stem's, architect 2026-10-26), through the right stem's column,
-// aliased integer cells, clipped to the area. Read as published, before
-// the stems paint their sides (paint_marker_stems), whose dots never share
-// a row with these (the stems' phases are rows 3 and 7 of 8).
-// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): each color's runs,
-// every pair's top and bottom, one dots call — one fill on the cairo road,
-// as before — the columns from the left stem's own (the phase's origin)
-// through the right stem's, cut to the area's columns.
+// one device px a dot (waveform_line_px, "on waveform → unscaled"), phase a
+// on columns left stem + cue_dot_phase_a + k · cue_dot_period and phase b
+// on left stem + cue_dot_phase_b + k · cue_dot_period, each in the role the
+// run carries for it (MarkerStemRun's `phase_a_dots` / `phase_b_dots`, the
+// pair's own stem dots as the history painter resolved them — the `cue` on
+// the Warp view, the `range` on the Phase Reset view, architect
+// 2026-10-29 — so the runs' density is a stem's, 2026-10-26), through the
+// right stem's column, aliased integer cells, clipped to the area. Read as
+// published, before the stems paint their sides (paint_marker_stems), whose
+// dots never share a row with these (the stems' phases are rows 3 and 7 of
+// 8).
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): each phase's runs of
+// one role, every pair's top and bottom, one dots call — one fill on the
+// cairo road, as before; one lane being one axis, a phase is one call — the
+// columns from the left stem's own (the phase's origin) through the right
+// stem's, cut to the area's columns.
 void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
                                              const GuiRect& area) {
     if (app.marker_stem_runs.empty()) return;
@@ -4825,9 +4832,13 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
     sink.begin(/*aliased=*/true);
     std::vector<GuiCanvasDotRun> runs;
     runs.reserve(2 * app.marker_stem_runs.size());
-    const auto paint_dots = [&](const GuiColor& color, int phase) {
+    // The runs whose role on `phase` is `role`, one dots call.
+    const auto paint_dots = [&](GuiCueDot role, bool phase_a) {
+        const int phase = phase_a ? ps.cue_dot_phase_a : ps.cue_dot_phase_b;
         runs.clear();
         for (const MarkerStemRun& run : app.marker_stem_runs) {
+            if ((phase_a ? run.phase_a_dots : run.phase_b_dots) != role)
+                continue;
             const int x0 = static_cast<int>(std::nearbyint(run.x0));
             const int x1 = static_cast<int>(std::nearbyint(run.x1));
             const int lo = std::max(x0, clip_lo);
@@ -4838,13 +4849,11 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
             runs.push_back(GuiCanvasDotRun{false, lo, y_bot, hi + 1 - lo,
                                            period, x0, phase});
         }
-        sink.dots(runs, color);
+        if (!runs.empty()) sink.dots(runs, cue_dot_color(role));
     };
-    const GuiStemDots dots = live_cue_stem_dots();
-    if (dots.range_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
-    if (dots.cue_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.cue_phase_dots), ps.cue_dot_phase);
+    for (const bool phase_a : {true, false})
+        for (const GuiCueDot role : {GuiCueDot::Cue, GuiCueDot::Range})
+            paint_dots(role, phase_a);
     sink.end();
 }
 
