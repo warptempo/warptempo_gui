@@ -3746,17 +3746,19 @@ enum class DialogTrigger {
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28 night,
     // the render player's delete's shape): "Delete '<name>'?" with Delete /
     // Cancel, raised by the list's Delete key and the Delete key on the
-    // highlighted preset, and "Overwrite '<name>' with the current trim?"
-    // with Overwrite / Cancel, raised by its Overwrite key — the subject
-    // parked at AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
+    // highlighted preset, and "Save the current trim as '<name>'?" with
+    // Save / Cancel, raised by its Save key on the highlighted preset (his
+    // glass on 852a28d9, Windows' dialog words: Save writes into the preset
+    // chosen, Save As names a new one) — the subject parked at
+    // AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
     // LIST as the player's stands over the player, and each is RAISED WITH
     // CANCEL FOCUSED (PromptInitialFocus::LastButton): trim has no undo, so a
     // bare Enter answers Cancel and only the answer's own press or its
     // letter acts. The answer runs the act and the list stays, re-listed
     // (GuiInputHandler::confirm_trim_preset_delete /
-    // confirm_trim_preset_overwrite, input_key_dispatch.cpp).
+    // confirm_trim_preset_save, input_key_dispatch.cpp).
     TRIM_PRESET_DELETE_CONFIRM,
-    TRIM_PRESET_OVERWRITE_CONFIRM,
+    TRIM_PRESET_SAVE_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE PROMPT STANDS IN
@@ -3881,9 +3883,9 @@ enum class DialogTrigger {
 //                 save-failed rung (Save / Discard / Cancel, Retry / Discard
 //                 / Cancel) — by the render player's Delete (its act destroys
 //                 files, DialogTrigger::DELETE_FOLDER_CONFIRM), by the trim
-//                 presets list's Delete and Overwrite (2026-10-28 night:
+//                 presets list's Delete and Save (2026-10-28 night:
 //                 trim has no undo, TRIM_PRESET_DELETE_CONFIRM and
-//                 TRIM_PRESET_OVERWRITE_CONFIRM) and by THE
+//                 TRIM_PRESET_SAVE_CONFIRM) and by THE
 //                 PULL CONFIRMATION (OK / Cancel since 2026-10-19, whose OK
 //                 discards the session). The three-ways and the pull
 //                 interpose a question the user did not raise — the pull's
@@ -3932,15 +3934,15 @@ inline constexpr PromptAnswer kPromptOkCancel[] = {
     {'o', "OK", -1}, {'\x1b', "Cancel", -1}};
 inline constexpr PromptAnswer kPromptDeleteCancel[] = {
     {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
-// THE TRIM PRESET'S OVERWRITE (architect 2026-10-28 night): its answer is the
-// act's own word, its letter O (TRIM_PRESET_OVERWRITE_CONFIRM).
-inline constexpr PromptAnswer kPromptOverwriteCancel[] = {
-    {'o', "Overwrite", 0}, {'\x1b', "Cancel", -1}};
+// THE TRIM PRESET'S SAVE (architect 2026-10-28 night): its answer is the
+// act's own word, its letter S (TRIM_PRESET_SAVE_CONFIRM).
+inline constexpr PromptAnswer kPromptSaveCancel[] = {
+    {'s', "Save", 0}, {'\x1b', "Cancel", -1}};
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
 // walks it. A table a raise passes must be listed here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
     kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
-    kPromptOkCancel, kPromptDeleteCancel, kPromptOverwriteCancel};
+    kPromptOkCancel, kPromptDeleteCancel, kPromptSaveCancel};
 // A TABLE IS WELL FORMED when every dispatch char is distinct, a marked
 // letter lies inside its word and IS its answer's key (folded, access_key_of),
 // no two marked letters coincide, and the last answer is the Esc one.
@@ -6294,18 +6296,25 @@ struct AppState {
     // THE TRIM PRESETS LIST'S BUTTONS (architect 2026-10-28 night, THE
     // PLAYER'S SHAPE, his word: "we would be breaking symmetry if we did it
     // differently"), its dispatch vocabulary beside the player's and the
-    // score viewer's, in the row's order: THE HIGHLIGHT PAIR at the left —
-    // the player's two keys, DOWN then UP, their legends and words the
-    // player's (render_player_button_legend, render_player_button_hint) and
-    // their act the band walk alone, no apply — then FOUR WORD BUTTONS flush
-    // right with the dialogs' underlined access keys, SAVE, OVERWRITE, DELETE
-    // and CLOSE (the Close word kModalCloseLabel's rule: the list asks
-    // nothing, an act returns to it, only the opener and Close leave). No
-    // Apply: a row's tap and Enter are the act. The acts are the input
-    // handler's (trim_presets_save, trim_presets_overwrite,
-    // trim_presets_delete, close_picker); the faces trim_presets_button_enabled's.
+    // score viewer's, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT
+    // (his glass on 852a28d9: "up/down are in the bottom right for the
+    // player, so they should be there for the trim presets also"): THE
+    // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their legends and
+    // words the player's (render_player_button_legend,
+    // render_player_button_hint) and their act the band walk alone, no apply
+    // — then FOUR WORD BUTTONS with the dialogs' underlined access keys,
+    // SAVE, SAVE AS, DELETE and CLOSE. THE WORDS ARE WINDOWS' DIALOG
+    // VOCABULARY (the same glass): SAVE writes the active tab's trim into
+    // THE HIGHLIGHTED preset, its name kept, after its question — and with no
+    // preset to save into it is Save As ("with no presets yet, both create a
+    // new preset") — SAVE AS names a new one, Save standing left of Save As;
+    // the Close word kModalCloseLabel's rule (the list asks nothing, an act
+    // returns to it, only the opener and Close leave). No Apply: a row's tap
+    // and Enter are the act. The acts are the input handler's
+    // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
+    // close_picker); the faces trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
-        None, HighlightDown, HighlightUp, Save, Overwrite, Delete, Close
+        None, HighlightDown, HighlightUp, Save, SaveAs, Delete, Close
     };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
@@ -8399,7 +8408,7 @@ struct AppState {
     // THE DIALOG LINE EDITOR'S ONE BUFFER, TWO KINDS since 2026-10-28 night:
     // Kind::SettingsAssignment, the settings editor's line, and
     // Kind::TrimPresetName, the trim preset's name (the trim presets list's
-    // Save, GuiInputHandler::open_trim_preset_name_editor) — the settings
+    // Save As, GuiInputHandler::trim_presets_save_as) — the settings
     // editor's shape and every road it rides (the paint, the blink, the
     // caret's click, the on-screen keyboard, the modal gate), the kind
     // forking the keys' route alone (handle_settings_editor_key). The two
@@ -8431,7 +8440,7 @@ struct AppState {
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim with the list standing, the player's
-    // controls row — the highlight pair, Save, Overwrite, Delete, Close).
+    // controls row — the highlight pair, Save, Save As, Delete, Close).
     // The struct keeps its shape rather
     // than folding into the overlay's tag, the two saying different things:
     // this one that A PICKER STANDS (the modal owner), the tag WHOSE ROWS the
@@ -8456,7 +8465,7 @@ struct AppState {
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
     // value list, `t` under the trim presets list — Ctrl+Q's road, the
-    // same-project no-op, Save's name editor ahead of its open and the page's row
+    // same-project no-op, Save As's name editor ahead of its open and the page's row
     // open ahead of its editor all pass through it — the editor's OK and
     // Cancel reopening the page or the trim list, handle_settings_editor_key — but under a
     // value list Esc and Cancel return to the page, as its commit does,
@@ -9112,7 +9121,7 @@ struct AppState {
     // in `value` the key's spelling the tap commits beside the `name` it
     // shows; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
-    // name and the span. A Plain or Group row's `path` and `entry` stay empty, and
+    // name and the bracketed span. A Plain or Group row's `path` and `entry` stay empty, and
     // `value` is set on a value list's rows alone.
     struct FolderOverlayRow {
         enum class Kind { Folder, Wav, Plain, Group };
@@ -9152,8 +9161,8 @@ struct AppState {
         // owner. Every change writes the whole vector to the file.
         std::vector<GuiTrimPreset> trim_presets;
         // THE PRESET A STANDING CONFIRMATION ASKS ABOUT — its row, parked at
-        // the raise of Delete's or Overwrite's question and read by the
-        // answer (TRIM_PRESET_DELETE_CONFIRM, TRIM_PRESET_OVERWRITE_CONFIRM);
+        // the raise of Delete's or Save's question and read by the
+        // answer (TRIM_PRESET_DELETE_CONFIRM, TRIM_PRESET_SAVE_CONFIRM);
         // -1 with no question standing.
         int                trim_pending  = -1;
         std::vector<FolderOverlayRow> rows;
@@ -10104,11 +10113,14 @@ bool render_player_button_enabled(const AppState& a,
 // button's act run now — the truthful-buttons rule on the list's controls
 // row, one arm per act: the HIGHLIGHT PAIR where its walk would move the
 // highlight (folder_overlay::move_highlight_actionable, the player's own
-// answer); SAVE always, while the list stands; OVERWRITE with a highlight
-// whose pair is not the active tab's trim (the no-op a tap leaves behind)
-// and DELETE with a highlight; CLOSE always. Defined beside the list's acts
-// (input_key_dispatch.cpp); Overwrite's and Delete's bodies ask it too, for
-// their roads that are not the painted face (the Delete key's card).
+// answer); SAVE with no highlight (an empty list, where it creates, Save
+// As's act) and with a highlight whose pair is not the active tab's trim,
+// GREYING only where the highlighted pair already is the tab's trim (the
+// no-op a tap leaves behind; his glass on 852a28d9, 2026-10-28 night); SAVE
+// AS always, while the list stands; DELETE with a highlight; CLOSE always.
+// Defined beside the list's acts (input_key_dispatch.cpp); Save's and
+// Delete's bodies ask it too, for their roads that are not the painted face
+// (the Delete key's card).
 // ITS READERS are the player's: the plan builder
 // (paint_modal_dialog, publishing the bit as painted) and main.cpp's
 // per-tick comparator, the press, the ring and the dispatch reading the

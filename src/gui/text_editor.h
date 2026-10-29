@@ -244,7 +244,8 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // DIALOG EDITORS (SettingsAssignment, BpmBracket, TrimPresetName); the two top-strip kinds (FlagPayload, IterBound) share the
 // flag editor's State and paint in the marker lane. TrimPresetName (architect
 // 2026-10-28 night) is THE TRIM PRESET'S NAME EDITOR, the trim presets list's
-// Save (GuiInputHandler::open_trim_preset_name_editor): it rides the settings
+// Save As (GuiInputHandler::trim_presets_save_as, which Save's press on an
+// empty list runs too): it rides the settings
 // editor's State (AppState::settings_editor, the dialog line editor's one
 // buffer), the settings editor's shape — the box its edit control, OK and
 // Cancel, the on-screen keyboard on the glass — opened empty, its commit the

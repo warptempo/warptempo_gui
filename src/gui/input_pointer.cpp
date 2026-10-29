@@ -4136,7 +4136,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // 2026-10-28 night): its published face decides as the player's does — a
     // key painted dead is consumed — and each act is the list's own: the
     // highlight pair the band walk alone (picker_move_highlight, bare Down /
-    // Up's call), Save, Overwrite and Delete their bodies, Close the one
+    // Up's call), Save, Save As and Delete their bodies, Close the one
     // close body. No member admits a modifier.
     if (app.picker.active &&
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets) {
@@ -4151,8 +4151,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::TrimPresetsButtonAct::Save:
                 trim_presets_save();
                 return true;
-            case AppState::TrimPresetsButtonAct::Overwrite:
-                trim_presets_overwrite();
+            case AppState::TrimPresetsButtonAct::SaveAs:
+                trim_presets_save_as();
                 return true;
             case AppState::TrimPresetsButtonAct::Delete:
                 trim_presets_delete();

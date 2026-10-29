@@ -20,10 +20,12 @@
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
 // GuiInputHandler::return_to_settings_page); and THE TRIM PRESETS LIST
 // (architect 2026-10-28 night), the piece's named trim windows
-// (trim_presets_file.h), a row's tap applying its pair to the active tab's
-// trim with the list standing, its controls row the render player's shape —
-// the highlight pair, Save, Overwrite, Delete and Close (his word: "we would
-// be breaking symmetry if we did it differently").
+// (trim_presets_file.h), each row the name and its bracketed span,
+// `<name>  [<begin> - <end>]` (build_trim_presets_rows), a row's tap applying
+// its pair to the active tab's trim and framing it with the list standing,
+// its controls row the render player's shape — the highlight pair, Save,
+// Save As, Delete and Close, one cluster flush right (his word: "we would be
+// breaking symmetry if we did it differently").
 // (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
 // with the panel; the `h` view's history picker for one day, retired
 // 2026-08-29 as overengineered, that view's `'` raising its confirmation on
@@ -284,7 +286,7 @@ inline int content_height_px(const AppState& a) {
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — two contents can stand empty: the `noise` key's value
 // list with no folder under `noise/`, and the trim presets list before its
-// first Save or over a file read as malformed (the player refuses with
+// first preset is saved or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
 // fifteen rows, and every other value list its key's whole domain).

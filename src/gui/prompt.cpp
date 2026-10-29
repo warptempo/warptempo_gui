@@ -25,7 +25,7 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::DELETE_FOLDER_CONFIRM:
     case DialogTrigger::SCORE_RESET_CONFIRM:
     case DialogTrigger::TRIM_PRESET_DELETE_CONFIRM:
-    case DialogTrigger::TRIM_PRESET_OVERWRITE_CONFIRM:
+    case DialogTrigger::TRIM_PRESET_SAVE_CONFIRM:
         // All seven are dispatched directly by activate_response, outside
         // proceed.
         break;
@@ -191,20 +191,20 @@ void GuiPrompt::activate_response(char k) {
     }
 
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28
-    // night): `d` Delete and `o` Overwrite run their act on the parked row
+    // night): `d` Delete and `s` Save run their act on the parked row
     // through the input handler, Escape drops it; the prompt closes first
     // either way, so the act runs with the list standing on the ordinary
     // modal state.
     if (trigger == DialogTrigger::TRIM_PRESET_DELETE_CONFIRM ||
-        trigger == DialogTrigger::TRIM_PRESET_OVERWRITE_CONFIRM) {
+        trigger == DialogTrigger::TRIM_PRESET_SAVE_CONFIRM) {
         const bool del =
             trigger == DialogTrigger::TRIM_PRESET_DELETE_CONFIRM;
-        if (k == (del ? 'd' : 'o')) {
+        if (k == (del ? 'd' : 's')) {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) {
                 if (del) input->confirm_trim_preset_delete();
-                else     input->confirm_trim_preset_overwrite();
+                else     input->confirm_trim_preset_save();
             }
             return;
         }

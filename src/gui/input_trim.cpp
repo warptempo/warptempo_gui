@@ -102,7 +102,11 @@
 //     tap or Enter writes BOTH bounds of the active tab's live trim from the
 //     preset at once and runs the tail once, with the setter's deselect, the
 //     list standing over the waveform as the typed road's editor does; the
-//     pair the tab already holds is its no-op, nothing written;
+//     pair the tab already holds is its no-op, nothing written. THEN IT
+//     FRAMES THE PRESET, on the no-op arm too (his glass on 852a28d9: "frame
+//     it like the long press on FIT") — the trim bar's double-click's
+//     framer, run_span_framing_command, after the tail: a camera move
+//     alone, the playhead resting where the park put it;
 //   * the CROSSED / COINCIDENT RESETS, with no arm of their own — a reset IS a
 //     trim write, to the full window, so reading the committed begin parks the
 //     playhead at frame 0 by construction;

@@ -1861,16 +1861,16 @@ struct GuiInputHandler {
     void cancel_render_player_delete();
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS' ANSWERS (architect
     // 2026-10-28 night), called by GuiPrompt when TRIM_PRESET_DELETE_CONFIRM
-    // or TRIM_PRESET_OVERWRITE_CONFIRM answers: Delete removes the parked
+    // or TRIM_PRESET_SAVE_CONFIRM answers: Delete removes the parked
     // preset (AppState::FolderOverlay::trim_pending) and seats the
     // highlight on the row that takes its place — the next, the new last
-    // when the last went, none when the list empties; Overwrite gives the
+    // when the last went, none when the list empties; Save gives the
     // parked preset the active tab's trim, its name kept. Each writes the
     // file whole and re-lists, the list standing. Cancel drops the parked
     // row and changes nothing. The raises are trim_presets_delete and
-    // trim_presets_overwrite.
+    // trim_presets_save.
     void confirm_trim_preset_delete();
-    void confirm_trim_preset_overwrite();
+    void confirm_trim_preset_save();
     void cancel_trim_preset_confirm();
     // THE PULL CONFIRMATION'S TWO ANSWERS (architect 2026-10-19), called by
     // GuiPrompt through its back-pointer when PULL_CONFIRM answers: OK runs
@@ -3003,16 +3003,18 @@ private:
     //   (the key's plain press dispatches it at the lift; no modifier). The
     //   piece's NAMED TRIM WINDOWS, read from `<project>/trim/presets.txt`
     //   at the open (trim_presets_file.h, device-local, never committed),
-    //   one Plain row each in the file's order, `<name>  <begin> - <end>`
-    //   in row 8's clock's spelling (format_timestamp). It writes the trim —
+    //   one Plain row each in the file's order, `<name>  [<begin> - <end>]`
+    //   in row 8's clock's spelling (format_timestamp), the brackets saying
+    //   the span is no part of the typed name (2026-10-28 night). It writes the trim —
     //   band, legal on a locked tab and under grid iterations (bare `t` on
     //   the read-only allowlist, which the iteration gate inherits) — and its
     //   own file, never the piece; the `h` view refuses `t`. THE PLAYER'S
     //   SHAPE (his word: "we would be breaking symmetry if we did it
     //   differently"): a row's tap and Enter APPLY with the list standing,
     //   the highlight pair walks without applying, and the controls row is
-    //   the pair, then Save, Overwrite, Delete and Close
-    //   (AppState::TrimPresetsButtonAct; the faces trim_presets_button_enabled).
+    //   ONE CLUSTER FLUSH RIGHT, the pair, then Save, Save As, Delete and
+    //   Close (AppState::TrimPresetsButtonAct; the faces
+    //   trim_presets_button_enabled).
     //     open_trim_presets: the opener, open_project_picker's own guards
     //       (a prompt, a standing picker, a load) and its modal stop; the
     //       file read into the overlay (AppState::FolderOverlay::
@@ -3031,9 +3033,13 @@ private:
     //       parked at the begin) with the setter's deselect, THE LIST
     //       STANDING (as the player stands when a wav plays). The pair the
     //       tab already holds is the store's own no-op, the tap still
-    //       highlighting. A member of the trim-write membership at
-    //       input_trim.cpp's head.
-    //     trim_presets_save: SAVE — the list closes (close_picker: the
+    //       highlighting. THEN THE PRESET IS FRAMED (2026-10-28 night, his
+    //       glass on 852a28d9), on the no-op arm too: the trim bar's
+    //       double-click's and Shift+0's one framer,
+    //       run_span_framing_command, landing under the standing box. A
+    //       member of the trim-write membership at input_trim.cpp's head.
+    //     trim_presets_save_as: SAVE AS, and SAVE's press on an empty list
+    //       — the list closes (close_picker: the
     //       overlay and the on-screen keyboard never both stand) and THE NAME
     //       EDITOR opens EMPTY on the dialog line editor's buffer
     //       (text_editor::Kind::TrimPresetName, the settings editor's
@@ -3049,15 +3055,20 @@ private:
     //       THE RETURN is handle_settings_editor_key's one hook, the line
     //       editor's own: OK and Cancel alike reopen the list
     //       (open_trim_presets), seated on the new row or, after Cancel, the
-    //       row Save was pressed on; the quit road never passes it.
-    //     trim_presets_overwrite / trim_presets_delete: OVERWRITE and DELETE
-    //       (the button, its letter, and for Delete the bare Delete key): each
+    //       row the editor was opened over; the quit road never passes it.
+    //     trim_presets_save / trim_presets_delete: SAVE and DELETE (the
+    //       button, its letter, and for Delete the bare Delete key): each
     //       raises its CONFIRMATION over the list on the highlighted preset
-    //       (TRIM_PRESET_OVERWRITE_CONFIRM, TRIM_PRESET_DELETE_CONFIRM,
-    //       Cancel focused), the row parked (AppState::FolderOverlay::
-    //       trim_pending). A greyed face's act is silent; the Delete key with
-    //       no highlight — an empty list — cards "There is no preset to
-    //       delete", the render player's own refusal one surface over.
+    //       (TRIM_PRESET_SAVE_CONFIRM, "Save the current trim as '<name>'?",
+    //       and TRIM_PRESET_DELETE_CONFIRM, Cancel focused), the row parked
+    //       (AppState::FolderOverlay::trim_pending); Save gives the preset
+    //       the active tab's trim, its name kept. WITH NO PRESET TO SAVE
+    //       INTO — an empty list, no highlight — SAVE IS SAVE AS (2026-10-28
+    //       night, his glass on 852a28d9: "with no presets yet, both create
+    //       a new preset"): the name editor, no question. A greyed face's
+    //       act is silent; the Delete key with no highlight — an empty list
+    //       — cards "There is no preset to delete", the render player's own
+    //       refusal one surface over.
     //
     //   (THE `h` VIEW HAD ANOTHER PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
@@ -3083,7 +3094,7 @@ private:
     //       compositor's close road (GuiPrompt::request_close, at its head
     //       beside the player's close, on the exit road alone), the page's
     //       row open ahead of its editor, the trim presets list's Close, Esc,
-    //       `t` (the TRIM key's lift) and Save ahead of its name editor, and the
+    //       `t` (the TRIM key's lift) and Save As ahead of its name editor, and the
     //       same-project no-op all pass through it (a reopen ends the
     //       session with the picker standing, and the picker with it); the
     //       overlay leaves with
@@ -3108,7 +3119,7 @@ private:
     //       the settings page and the value list `;` closes the whole
     //       panel, under the trim presets list `t` closes it; THE ACCESS
     //       LETTERS — the word buttons' underlined keys, bare or with Alt,
-    //       the trim presets list's S, O and D (the other contents' one word
+    //       the trim presets list's S, A and D (the other contents' one word
     //       carries none) — press their button through the modal row's one
     //       dispatch; the bare Delete key is the trim presets list's Delete;
     //       Ctrl+S saves with the
@@ -3151,19 +3162,19 @@ private:
     void build_trim_presets_rows(int highlight);
     void trim_presets_apply(int index);
     void trim_presets_save();
-    void trim_presets_overwrite();
+    void trim_presets_save_as();
     void trim_presets_delete();
     void commit_trim_preset_name();
-    // THE LIST'S FILE WRITE, one body for the three changes (Save's commit,
-    // the two confirmations' answers): the whole of `presets` through
+    // THE LIST'S FILE WRITE, one body for the three changes (the name
+    // editor's commit, the two confirmations' answers): the whole of `presets` through
     // write_trim_presets_file, a failure printed and carded (its two
     // clauses, failure.h). Answers whether the file was written.
     bool persist_trim_presets(const std::vector<GuiTrimPreset>& presets);
     // THE NAME EDITOR'S SESSION MEMORY (architect 2026-10-28 night): the list
-    // as it stood when Save was pressed, which the commit judges the name
-    // against and appends to, and the name the return seats the list on —
-    // the highlighted preset's at Save's press (Cancel's return), the new
-    // one's after a commit. Written by trim_presets_save and the commit
+    // as it stood when the name editor opened, which the commit judges the
+    // name against and appends to, and the name the return seats the list on
+    // — the highlighted preset's at the open (Cancel's return), the new
+    // one's after a commit. Written by trim_presets_save_as and the commit
     // alone; the editor is modal, so nothing changes them between.
     std::vector<GuiTrimPreset> trim_name_presets_;
     std::string                trim_name_seat_;

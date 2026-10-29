@@ -5598,23 +5598,24 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 }
 
 // THE TRIM PRESETS LIST'S ROW LAYOUT (architect 2026-10-28 night, THE
-// PLAYER'S SHAPE): THE HIGHLIGHT PAIR — the player's DOWN and UP keys —
-// abutting at the row's left seat, then the four word keys SAVE, OVERWRITE,
-// DELETE and CLOSE abutting FLUSH RIGHT, the last key's right edge the row's
-// (every word row's alignment rule), nothing between the two clusters. Every
-// key the row's square case (seats.case_w); on a row too narrow for both, the
-// words start right of the pair, the buttons whole (THE BUTTONS STAY WHOLE).
+// PLAYER'S SHAPE; his glass on 852a28d9: "up/down are in the bottom right for
+// the player, so they should be there for the trim presets also"): ONE
+// ABUTTING CLUSTER FLUSH RIGHT — THE HIGHLIGHT PAIR, the player's DOWN and UP
+// keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
+// key's right edge the row's (every word row's alignment rule), nothing at
+// the row's left, as the player seats its pair in its right cluster. Every
+// key the row's square case (seats.case_w); on a row too narrow for the six,
+// the cluster starts at the row's left seat, the buttons whole (THE BUTTONS
+// STAY WHOLE).
 struct TrimPresetsRowLayout {
     std::array<int, 6> x{};
 };
 static TrimPresetsRowLayout trim_presets_row_layout(const BottomRowSeats& seats) {
     TrimPresetsRowLayout l;
-    const int bw  = seats.case_w;
-    const int cx0 = seats.left_x;
-    l.x[0] = cx0;                          // DOWN (Highlight Next)
-    l.x[1] = cx0 + bw;                     // UP (Highlight Previous)
-    const int words_x0 = std::max(cx0 + 2 * bw, seats.cases_right - 4 * bw);
-    for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * bw;  // SAVE .. CLOSE
+    const int bw = seats.case_w;
+    const int n  = static_cast<int>(l.x.size());
+    const int x0 = std::max(seats.left_x, seats.cases_right - n * bw);
+    for (int i = 0; i < n; ++i) l.x[i] = x0 + i * bw;  // DOWN, UP, SAVE .. CLOSE
     return l;
 }
 
@@ -5941,8 +5942,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // has always had. The word kind is the other three owners' alone: a
     // prompt's answers, the dialog editors' OK / Cancel and the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
-    // the trim presets list, its four words SAVE, OVERWRITE, DELETE and
-    // CLOSE beside its two keys, the player's highlight pair. `lit` is
+    // the trim presets list, its four words SAVE, SAVE AS, DELETE and
+    // CLOSE after its two keys, the player's highlight pair. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
     // buttons.
@@ -6168,11 +6169,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             key(act);
     } else if (trim_up) {
         // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
-        // PLAYER'S SHAPE), in painted order: THE HIGHLIGHT PAIR — the
-        // player's DOWN and UP, its legends and its words, the band walk
-        // without applying — then FOUR WORD BUTTONS with the dialogs'
-        // underlined access keys, SAVE, OVERWRITE, DELETE and CLOSE (the
-        // Close word kModalCloseLabel's rule, no letter), CLOSE LAST, the
+        // PLAYER'S SHAPE), in painted order, one cluster flush right
+        // (trim_presets_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
+        // and UP, its legends and its words, the band walk without applying
+        // — then FOUR WORD BUTTONS with the dialogs' underlined access keys,
+        // SAVE (S), SAVE AS (A), DELETE (D) and CLOSE (the Close word
+        // kModalCloseLabel's rule, no letter), CLOSE LAST, the
         // escape sentinel by construction. No Apply: the row's tap and
         // Enter are the act. Each face is the act's own truthful answer
         // (trim_presets_button_enabled).
@@ -6195,7 +6197,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(b));
         };
         word(Act::Save, "Save", 0);
-        word(Act::Overwrite, "Overwrite", 0);
+        word(Act::SaveAs, "Save As", 5);
         word(Act::Delete, "Delete", 0);
         word(Act::Close, kModalCloseLabel, -1);
     } else {
@@ -6238,9 +6240,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     if (player_up || score_up) {
         for (DialogButtonPlan& b : plan) b.w = seats.case_w;
     } else if (trim_up) {
-        // THE TRIM PRESETS LIST'S ROW, laid out whole here (no item between
-        // its clusters for a branch below to place): the pair at the left,
-        // the words flush right (trim_presets_row_layout).
+        // THE TRIM PRESETS LIST'S ROW, laid out whole here (no item in it
+        // for a branch below to place): the pair and the words one cluster
+        // flush right (trim_presets_row_layout).
         const TrimPresetsRowLayout tl = trim_presets_row_layout(seats);
         assert(plan.size() == tl.x.size());
         for (std::size_t i = 0; i < plan.size(); ++i) {
@@ -6302,8 +6304,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
     // row — a prompt's answers, an editor's OK and Cancel, the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) and the
-    // trim presets list's four (its highlight pair at the row's left, the
-    // player's) — the last
+    // trim presets list's four (its highlight pair, the player's, directly
+    // before them in the one cluster) — the last
     // one's right edge the box's ring's outer edge (x 2280 at 300 %), today's button gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
@@ -6804,9 +6806,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (x 2280 at 300 %), as the player's Close ends there; the focus
         //    frame, when worn, stands in the face beside the ring.
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
-        //    shape instead — the highlight pair at the left, four words flush
-        //    right — laid out with the widths above (trim_presets_row_layout);
-        //    nothing stands between its clusters for this branch to paint. --
+        //    shape instead — the highlight pair and four words, one cluster
+        //    flush right — laid out with the widths above
+        //    (trim_presets_row_layout); nothing else stands on it for this
+        //    branch to paint. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
     } else {
         // -- The editor: THE BOX IS ITS EDIT CONTROL (architect 2026-10-14,
@@ -7118,7 +7121,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
             legend_access = plan[i].access;
             // THE WORD'S PRINT WEARS ITS BIT TOO since the trim presets list's
-            // Overwrite and Delete grey (2026-10-28 night); every other
+            // Save and Delete grey (2026-10-28 night); every other
             // owner's word publishes true.
             paint_key_legend(cr, r, legend, enabled, legend_access);
         }
