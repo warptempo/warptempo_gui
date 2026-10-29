@@ -7505,7 +7505,8 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
     ov.trim_presets = read_trim_presets_file(
         score_viewer_project_folder(app), audio.total_frames());
     // THE SEAT: the named preset (the return), else the preset whose pair is
-    // the active tab's trim — the window on screen named — else row 0.
+    // the active tab's trim — the window on screen named, the first in the
+    // list's order when two names share the pair — else row 0.
     int seat = 0;
     bool seated = false;
     for (std::size_t i = 0; i < ov.trim_presets.size() && !seated; ++i) {
@@ -7526,10 +7527,12 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
     viewport.invalidate_all();
 }
 
-// THE ROWS: one glyph-less Plain row per preset, in the list's order, the
-// text THE PRESET'S NAME ALONE (architect 2026-10-28 night, his glass on
-// 54e62064: "names are descriptive enough and the odd proportional spacing
-// looks bad") — no span; the list's open seat (the preset whose pair is the
+// THE ROWS: one glyph-less Plain row per preset, in the list's order — THE
+// MUSIC'S ORDER (trim_preset_before, trim_presets_file.h; architect
+// 2026-10-28 night), the overlay's presets kept sorted by the read and the
+// write road (persist_trim_presets) — the text THE PRESET'S NAME ALONE
+// (architect 2026-10-28 night, his glass on 54e62064: "names are descriptive
+// enough and the odd proportional spacing looks bad") — no span; the list's open seat (the preset whose pair is the
 // active tab's trim) is how a match shows. The highlight is seated through
 // the one set_highlight, clamped into the listing, -1 for an empty one.
 void GuiInputHandler::build_trim_presets_rows(int highlight) {
@@ -7634,7 +7637,9 @@ void GuiInputHandler::commit_trim_preset_name() {
     }
     trim_name_presets_.push_back(
         GuiTrimPreset{app.trim.begin_frame, app.trim.end_frame, name});
-    // A WRITE THAT FAILED cards its two clauses (persist_trim_presets) and
+    // The write road sorts the new preset into the list's order; the return
+    // reads the file and seats it BY NAME wherever it landed. A WRITE THAT
+    // FAILED cards its two clauses (persist_trim_presets) and
     // the return reads the file as it stands, the new row absent and the
     // seat the one the name editor was opened over (trim_presets_save_as).
     if (persist_trim_presets(trim_name_presets_)) trim_name_seat_ = name;
@@ -7733,8 +7738,20 @@ void GuiInputHandler::confirm_trim_preset_save() {
     GuiTrimPreset& p = ov.trim_presets[static_cast<std::size_t>(index)];
     p.begin = app.trim.begin_frame;
     p.end   = app.trim.end_frame;
+    const std::string saved = p.name;
     (void)persist_trim_presets(ov.trim_presets);
-    build_trim_presets_rows(index);
+    // THE HIGHLIGHT FOLLOWS THE PRESET, NOT THE INDEX (architect 2026-10-28
+    // night): the new pair may move it in the list's order (the write road's
+    // sort), so the saved preset is found BY NAME at its new row, the
+    // re-list's seat scrolling it into view (folder_overlay::set_highlight).
+    int seat = index;
+    for (std::size_t i = 0; i < ov.trim_presets.size(); ++i) {
+        if (ov.trim_presets[i].name == saved) {
+            seat = static_cast<int>(i);
+            break;
+        }
+    }
+    build_trim_presets_rows(seat);
     viewport.invalidate_all();
 }
 
@@ -7743,7 +7760,8 @@ void GuiInputHandler::cancel_trim_preset_confirm() {
 }
 
 bool GuiInputHandler::persist_trim_presets(
-        const std::vector<GuiTrimPreset>& presets) {
+        std::vector<GuiTrimPreset>& presets) {
+    std::ranges::sort(presets, trim_preset_before);
     const auto failure =
         write_trim_presets_file(score_viewer_project_folder(app), presets);
     if (failure) {

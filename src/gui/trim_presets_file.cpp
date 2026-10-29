@@ -6,6 +6,8 @@
 
 #include "frame_format.h"     // parse_authored_frame / format_authored_frame
 
+#include <algorithm>
+#include <cassert>
 #include <cstdio>
 #include <expected>
 #include <fstream>
@@ -93,6 +95,7 @@ std::vector<GuiTrimPreset> read_trim_presets_file(
             path.string().c_str(), parsed.error().c_str());
         return {};
     }
+    std::ranges::sort(out, trim_preset_before);
     return out;
 }
 
@@ -101,6 +104,7 @@ std::optional<GuiFailure> write_trim_presets_file(
         std::span<const GuiTrimPreset> presets) {
     static constexpr std::string_view kTag =
         "Trim presets write failed: could not write ";
+    assert(std::ranges::is_sorted(presets, trim_preset_before));
     const std::filesystem::path path = trim_presets_file_path(project_folder);
     std::string text;
     for (const GuiTrimPreset& p : presets) {

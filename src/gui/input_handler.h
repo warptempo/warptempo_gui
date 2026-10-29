@@ -3004,8 +3004,9 @@ private:
     //   (the key's plain press dispatches it at the lift; no modifier). The
     //   piece's NAMED TRIM WINDOWS, read from `<project>/trim/presets.txt`
     //   at the open (trim_presets_file.h, device-local, never committed),
-    //   one Plain row each in the file's order, the preset's name alone
-    //   (2026-10-28 night, his glass on 54e62064). It writes the trim —
+    //   one Plain row each IN THE MUSIC'S ORDER — by begin, then the
+    //   shorter first, then by name (trim_preset_before, 2026-10-28 night) —
+    //   the preset's name alone (2026-10-28 night, his glass on 54e62064). It writes the trim —
     //   band, legal on a locked tab and under grid iterations (bare `t` on
     //   the read-only allowlist, which the iteration gate inherits) — and its
     //   own file, never the piece; the `h` view refuses `t`. THE PLAYER'S
@@ -3050,8 +3051,9 @@ private:
     //       no edge space, the incoming filter's alphabet, unique), a refusal
     //       the editors' own shape (the whole text selected, the editor
     //       standing, the card "Preset name rejected: <reason>"); a name that
-    //       commits appends the active tab's trim under it, writes the file
-    //       whole and closes the editor, the return seating the new row.
+    //       commits adds the active tab's trim under it, writes the file
+    //       whole in the list's order and closes the editor, the return
+    //       seating the new row by name wherever the order put it.
     //       THE RETURN is handle_settings_editor_key's one hook, the line
     //       editor's own: OK and Cancel alike reopen the list
     //       (open_trim_presets), seated on the new row or, after Cancel, the
@@ -3062,13 +3064,15 @@ private:
     //       (TRIM_PRESET_SAVE_CONFIRM, "Save the current trim as '<name>'?",
     //       and TRIM_PRESET_DELETE_CONFIRM, Cancel focused), the row parked
     //       (AppState::FolderOverlay::trim_pending); Save gives the preset
-    //       the active tab's trim, its name kept. WITH NO PRESET TO SAVE
-    //       INTO — an empty list, no highlight — SAVE IS SAVE AS (2026-10-28
-    //       night, his glass on 852a28d9: "with no presets yet, both create
-    //       a new preset"): the name editor, no question. A greyed face's
-    //       act is silent; the Delete key with no highlight — an empty list
-    //       — cards "There is no preset to delete", the render player's own
-    //       refusal one surface over.
+    //       the active tab's trim, its name kept, THE HIGHLIGHT FOLLOWING THE
+    //       PRESET to its row in the list's order (found by name), and
+    //       Delete's answer seats the row that takes its place. WITH NO
+    //       PRESET TO SAVE INTO — an empty list, no highlight — SAVE IS SAVE
+    //       AS (2026-10-28 night, his glass on 852a28d9: "with no presets
+    //       yet, both create a new preset"): the name editor, no question.
+    //       A greyed face's act is silent; the Delete key with no
+    //       highlight — an empty list — cards "There is no preset to
+    //       delete", the render player's own refusal one surface over.
     //
     //   (THE `h` VIEW HAD ANOTHER PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
@@ -3166,10 +3170,13 @@ private:
     void trim_presets_delete();
     void commit_trim_preset_name();
     // THE LIST'S FILE WRITE, one body for the three changes (the name
-    // editor's commit, the two confirmations' answers): the whole of `presets` through
-    // write_trim_presets_file, a failure printed and carded (its two
-    // clauses, failure.h). Answers whether the file was written.
-    bool persist_trim_presets(const std::vector<GuiTrimPreset>& presets);
+    // editor's commit, the two confirmations' answers): `presets` SORTED IN
+    // PLACE into the list's order (trim_preset_before, the one sort's second
+    // caller; a no-op after Delete), then the whole of it through
+    // write_trim_presets_file, so the screen and the file never disagree; a
+    // failure printed and carded (its two clauses, failure.h). Answers
+    // whether the file was written.
+    bool persist_trim_presets(std::vector<GuiTrimPreset>& presets);
     // THE NAME EDITOR'S SESSION MEMORY (architect 2026-10-28 night): the list
     // as it stood when the name editor opened, which the commit judges the
     // name against and appends to, and the name the return seats the list on

@@ -9158,10 +9158,12 @@ struct AppState {
         // settings_editor.h), which its commit routes the row's value to;
         // empty under every other owner.
         std::string        value_key;
-        // THE TRIM PRESETS THE LIST SHOWS (architect 2026-10-28 night), in
-        // the file's order as read at the list's open and as each act leaves
-        // them (trim_presets_file.h), row i preset i; empty under every other
-        // owner. Every change writes the whole vector to the file.
+        // THE TRIM PRESETS THE LIST SHOWS (architect 2026-10-28 night), IN
+        // THE LIST'S ORDER (trim_preset_before, trim_presets_file.h — the
+        // music's order), sorted by the read at the list's open and by the
+        // write road at every change (GuiInputHandler::persist_trim_presets),
+        // row i preset i; empty under every other owner. Every change writes
+        // the whole vector to the file in that order.
         std::vector<GuiTrimPreset> trim_presets;
         // THE PRESET A STANDING CONFIRMATION ASKS ABOUT — its row, parked at
         // the raise of Delete's or Save's question and read by the

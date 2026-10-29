@@ -14,8 +14,9 @@
 // rule by construction — its walk reads regular files only (project_model.h's
 // head).
 //
-// THE GRAMMAR: one line per preset, LF-terminated, IN THE LIST'S ORDER (the
-// save order; nothing sorts them):
+// THE GRAMMAR: one line per preset, LF-terminated, IN THE LIST'S ORDER —
+// THE MUSIC'S ORDER (trim_preset_before), the file and the screen never
+// disagreeing:
 //   <begin> <end> <name>
 // begin and end in the canonical frame spelling (parse_authored_frame,
 // frame_format.h), one space after each, the NAME THE REST OF THE LINE
@@ -31,7 +32,9 @@
 // the score viewer's non-fatal road ("other users shouldn't need the exact
 // same file I use"):
 //   * ABSENT — an empty list, no stderr line, no file made.
-//   * PRESENT AND WELL-FORMED — its presets, in its order.
+//   * PRESENT AND WELL-FORMED — its presets, SORTED into the list's order
+//     (trim_preset_before): a file in another order (hand-edited) reads and
+//     shows sorted, no fault and no stderr line.
 //   * PRESENT AND MALFORMED (a line off the grammar, a last line with no LF,
 //     a pair outside [0, total-1] or not strictly begin < end, an empty,
 //     space-edged, filter-refused or duplicate name, an unreadable file) —
@@ -41,7 +44,9 @@
 //
 // THE WRITE (write_trim_presets_file): the whole list at every change —
 // the name editor's commit, Save's and Delete's answers — atomically, the `trim/`
-// folder made at the first write. Its failure is the caller's to card.
+// folder made at the first write, the list sorted first by its one caller
+// (GuiInputHandler::persist_trim_presets), so a preset Save moved is written
+// where the screen shows it. Its failure is the caller's to card.
 
 #include "failure.h"
 
@@ -60,12 +65,29 @@ struct GuiTrimPreset {
     std::string name;
 };
 
+// THE LIST'S ORDER (architect 2026-10-28 night, "agree": "chronological
+// order, and then by length, shortest first, to disambiguate") — THE MUSIC'S
+// ORDER, not the save order: BY BEGIN ASCENDING, THEN BY END ASCENDING (of
+// two presets beginning together the shorter first), THEN BY NAME in byte
+// order (std::string's compare) for two names on one pair. Names are unique
+// (trim_preset_name_refusal), so the order is total. ONE SORT, TWO CALLERS:
+// the read (read_trim_presets_file) and the write road
+// (GuiInputHandler::persist_trim_presets), every change sorting before it
+// writes.
+inline bool trim_preset_before(const GuiTrimPreset& a,
+                               const GuiTrimPreset& b) {
+    if (a.begin != b.begin) return a.begin < b.begin;
+    if (a.end != b.end)     return a.end < b.end;
+    return a.name < b.name;
+}
+
 // `<project_folder>/trim/presets.txt`.
 std::filesystem::path trim_presets_file_path(
     const std::filesystem::path& project_folder);
 
-// THE READ (the head's three outcomes) against the piece's `total_frames`;
-// the malformed outcome prints its one stderr line here and answers the empty
+// THE READ (the head's three outcomes) against the piece's `total_frames`,
+// the presets answered in the list's order (trim_preset_before); the
+// malformed outcome prints its one stderr line here and answers the empty
 // list, so the caller has one road.
 std::vector<GuiTrimPreset> read_trim_presets_file(
     const std::filesystem::path& project_folder, int64_t total_frames);
@@ -79,7 +101,8 @@ std::vector<GuiTrimPreset> read_trim_presets_file(
 std::optional<std::string> trim_preset_name_refusal(
     std::string_view name, std::span<const GuiTrimPreset> presets);
 
-// THE WRITE (the head): `presets`, the whole file, atomically (tmp + fsync +
+// THE WRITE (the head): `presets`, the whole file, IN THE LIST'S ORDER (the
+// caller sorted them, trim_preset_before; asserted), atomically (tmp + fsync +
 // rename, atomic_write_string_to_path), the `trim/` folder created first.
 // Answers the failure's two clauses (failure.h), the display naming the file
 // as the project's files are named (`trim/presets.txt`), or std::nullopt.
