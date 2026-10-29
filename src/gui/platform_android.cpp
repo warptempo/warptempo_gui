@@ -633,6 +633,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // laptop's template the same (device_config.h's head).
     cfg.osk_key_w         = kOskKeyWDefaultAt300;
     cfg.osk_key_h         = kOskKeyHDefaultAt300;
+    // THE ON-SCREEN KEYBOARD'S CAP SIZE (architect 2026-10-29 night, a
+    // tuning key), spelled: the face table's 24 device px at 300 % — the
+    // laptop's template the same (device_config.h's head).
+    cfg.osk_font_px       = kOskFontPxDefaultAt300;
     return cfg;
 }
 

@@ -159,7 +159,9 @@ std::string format_settings_text(
 // format_noise_level and format_noise_crossfade_s), or the key's height
 // (`key_height`, 2026-10-29, a tuning key, through format_key_height), or
 // the keyboard's key box (`osk_key_w`, `osk_key_h`, 2026-10-29, two tuning
-// keys, through format_osk_key_size), the
+// keys, through format_osk_key_size), or the keyboard's cap size
+// (`osk_font_px`, 2026-10-29 night, a tuning key, through
+// format_osk_font_px), the
 // same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is

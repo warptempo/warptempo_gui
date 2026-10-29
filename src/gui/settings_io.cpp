@@ -412,6 +412,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         return format_osk_key_size(app.device_config->osk_key_w);
     if (key == "osk_key_h" && app.device_config != nullptr)
         return format_osk_key_size(app.device_config->osk_key_h);
+    // THE KEYBOARD'S CAP SIZE (2026-10-29 night, a tuning key): through its
+    // one formatter (format_osk_font_px, device_config.h).
+    if (key == "osk_font_px" && app.device_config != nullptr)
+        return format_osk_font_px(app.device_config->osk_font_px);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

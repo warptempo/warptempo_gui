@@ -156,17 +156,21 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
 
 SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
     // The contract, the premise identity rests on and the clear's harmlessness
-    // are at the declaration. The key is the font's two fields' bytes, then
-    // the text's: the uses' faces differ in the first, so the ruler's
-    // timestamps, the cue labels and the keys' legends never collide.
+    // are at the declaration. The key is the font's three fields' bytes,
+    // then the text's: the uses' faces differ in the first, so the ruler's
+    // timestamps, the cue labels and the keys' legends never collide, and
+    // the size (the Keys face's live `osk_font_px`, 2026-10-29 night) keys a
+    // committed size's runs apart from the old size's.
     constexpr std::size_t kMemoCap = 4096;
     static std::unordered_map<std::string, SharedRun> memo;
     std::string key;
-    key.reserve(utf8.size() + 2 * sizeof(int));
+    key.reserve(utf8.size() + 2 * sizeof(int) + sizeof(double));
     const int face = static_cast<int>(font.face);
     key.append(reinterpret_cast<const char*>(&face), sizeof face);
     key.append(reinterpret_cast<const char*>(&font.percent),
                sizeof font.percent);
+    key.append(reinterpret_cast<const char*>(&font.px_at_300),
+               sizeof font.px_at_300);
     key.append(utf8);
     const auto it = memo.find(key);
     if (it != memo.end()) return it->second;

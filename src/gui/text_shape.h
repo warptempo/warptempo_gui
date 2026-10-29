@@ -14,7 +14,7 @@
 // kerning, GPOS mark placement and ligature substitution all change the
 // advance sum in ways no per-character sum reproduces.
 //
-// A RUN IS LAID OUT ON A GuiFont, the face owner's face at a scale
+// A RUN IS LAID OUT ON A GuiFont, the face owner's face at a scale and a size
 // (gui_font.h), and the run carries it, so show_shaped_run paints with
 // exactly the face that measured it — no caller can hand the painter a
 // different one. ONE ROAD AT EVERY SCALE (architect 2026-10-06): the whole
@@ -106,9 +106,10 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // its paint, a fixed vocabulary of a few dozen words). A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
-// and a GuiFont is its face and percent alone — so a run is looked up here by
-// the face, the percent and the text's bytes, and only a text not yet seen
-// under that font is shaped. IDENTITY RESTS ON THAT PREMISE: a hit returns
+// and a GuiFont is its face, percent and size alone (gui_font.h) — so a run
+// is looked up here by the face, the percent, the size and the text's
+// bytes, and only a text not yet seen under that font is shaped. IDENTITY
+// RESTS ON THAT PREMISE: a hit returns
 // the very run shape_text_run returned for the same font and bytes, so the
 // caller's show_shaped_run puts down the same glyphs at the same offsets as a
 // fresh shape would. THE ANSWER IS A HANDLE (SharedRun), so a hit hands out

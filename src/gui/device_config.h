@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Thirteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Fourteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -148,6 +148,20 @@
 //                            spell 48 and 60 (the laptop's too: the keyboard
 //                            never stands there, and one template shape
 //                            keeps the two files' schemas one)
+//   osk_font_px=<px>         THE ON-SCREEN KEYBOARD'S CAP SIZE (architect
+//                            2026-10-29 night, "font size osk config tmp
+//                            key"): the keys face's em (gui_font.h's
+//                            GuiFace::Keys) in DEVICE PX AT 300 %, scaled
+//                            with gui_scale like every table size, an
+//                            integer in [12, 48] in canonical spelling
+//                            (parse_osk_font_px below), live at the settings
+//                            editor's OK, the window repainted at once
+//                            (GuiInputHandler::apply_osk_font_px); A TUNING
+//                            KEY with a Settings row, REQUIRED like every key
+//                            while it stands, which settles into the face
+//                            table's constexpr once he rules the number
+//                            (kGuiFaceSizes), its key, grammar and row going
+//                            then; both templates spell 24
 //   (noise_crossfade_ms=<ms>, THE CROSSFADE IN MS, [100, 30000], a tuning
 //                            key 2026-10-28, RETIRED that day for the
 //                            seconds key above; an old line is the ordinary
@@ -228,7 +242,8 @@
 // that night, in its place at the end; the tuning key `key_height`
 // APPENDED after it 2026-10-29, the tuning keys keeping the end, and the
 // keyboard's two, `osk_key_w` and `osk_key_h`, after it the same
-// evening);
+// evening, and the keyboard's cap size `osk_font_px` after them that
+// night);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -404,7 +419,7 @@
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
 // `waveform`, `true_colors`, since 2026-10-28 `noise`, `noise_level`
 // and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
-// `osk_key_w` and `osk_key_h` among them
+// `osk_key_w` and `osk_key_h` and that night `osk_font_px` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -494,6 +509,10 @@ struct DeviceConfig {
     // below).
     int         osk_key_w         = 48;
     int         osk_key_h         = 60;
+    // THE ON-SCREEN KEYBOARD'S CAP SIZE in device px at 300 % (2026-10-29
+    // night, the head's list; a tuning key): required; the construction
+    // state is the templates' 24 (kOskFontPxDefaultAt300 below).
+    int         osk_font_px       = 24;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -781,6 +800,35 @@ inline std::optional<int> parse_osk_key_size(std::string_view v) {
     return n;
 }
 
+// THE osk_font_px GRAMMAR (architect 2026-10-29 night) — an integer in
+// [12, 48] DEVICE PX AT 300 % in canonical spelling, the keys face's em
+// (gui_font.h's GuiFace::Keys, scaled with gui_scale like every table size),
+// the one owner the reader, the writer, the settings editor's commit and its
+// recall read (format_osk_font_px, parse_osk_font_px). The default is the
+// face table's 24 (architect 2026-10-24, "C24"). The range: 12 is the
+// smallest em at which a cap stays legible at 300 % (the em the laptop's
+// 150 % paints the default at); 48 is the em at which even the short form
+// BKSP (64 px at em 24, so 128 at 48) first outgrows the default 2.5u key's
+// 127-px face, past which a larger cap only overhangs (onscreen_keyboard.h's
+// KEY IS WIDE ENOUGH paragraph; "Backspace" itself, 117 px at em 24, takes
+// BKSP from em 27 at the default key box). The settings page opens the LINE
+// EDITOR on it, not a value list (37 values is no short domain,
+// kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number, the
+// key, these functions and its Settings row go, and the value settles into
+// kGuiFaceSizes' Keys entry.
+inline constexpr int kOskFontPxMinAt300     = 12;
+inline constexpr int kOskFontPxMaxAt300     = 48;
+inline constexpr int kOskFontPxDefaultAt300 = 24;
+inline constexpr const char* kOskFontPxGrammarReason =
+    "must be an integer in [12, 48] in canonical spelling";
+std::string format_osk_font_px(int px);
+inline std::optional<int> parse_osk_font_px(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kOskFontPxMinAt300 || *n > kOskFontPxMaxAt300)
+        return std::nullopt;
+    return n;
+}
+
 // (THE waveform GRAMMAR is palette_file.h's is_builtin_palette_name and
 // kPaletteGrammarReason — a built-in's key alone since 2026-10-14; the
 // `caption` key's, is_builtin_scheme_name, left with the key 2026-10-21. The
@@ -924,13 +972,14 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves ten keys —
+// the settings editor's ONE device-key body, which serves eleven keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
 // `true_colors=`, and since 2026-10-28 the noise's three, `noise=`,
 // `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
 // keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
+// and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px)
 // (the
 // noise's latter two `rain_level=` and
 // `rain_crossfade_ms=` earlier that day and the crossfade
@@ -960,8 +1009,9 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // both stamp `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
 // `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
-// `key_height=33`, `osk_key_w=48` and `osk_key_h=60` (2026-10-29,
-// kKeyHeightDefaultAt300, kOskKeyWDefaultAt300, kOskKeyHDefaultAt300) and
+// `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`
+// (2026-10-29, kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,
+// kOskKeyHDefaultAt300, kOskFontPxDefaultAt300) and
 // no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —

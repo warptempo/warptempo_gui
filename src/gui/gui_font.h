@@ -45,7 +45,9 @@
 // the letters, the symbols page's characters and the word caps, "a separate
 // face"; architect 2026-10-24, "C24" off 22 / 24 / 26 / 28 on
 // his type sheet — the night's C34, off 22 / 28 / 34 / 40, stood
-// 2026-10-23 to 2026-10-24, the caps wearing the body's 22 before it). (The
+// 2026-10-23 to 2026-10-24, the caps wearing the body's 22 before it) BY
+// DEFAULT, THE ONE LIVE SIZE — the `osk_font_px` tuning key's (architect
+// 2026-10-29 night, GuiFont below). (The
 // three recorded Windows metric sets — MS Sans Serif 8's {11, 2, x 6} cell,
 // the ruler's six-row digit, Cool Edit's cue cap of 7 — and the ems derived
 // to stand their ink those rows tall, 2026-10-05 to 2026-10-23, are git
@@ -119,8 +121,15 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Program: the cues' labels, the lane's editors, row 8's
                  // clock and state line, the player's clocks, the tooltip
     {0, 14.0},   // Legend: the keys' legends
-    {0, 24.0},   // Keys: the on-screen keyboard's caps
+    {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
+                 // the LIVE size, the `osk_font_px` key's: GuiFont below)
 };
+
+// THE USE'S TABLE SIZE, its em in device px at 300 % — the one read of the
+// table's sizes, which GuiFont's default and render.h's gui_font(face) take.
+inline constexpr double gui_font_table_px(GuiFace face) {
+    return kGuiFaceSizes[static_cast<std::size_t>(face)].px_at_300;
+}
 
 struct GuiFontBytes {
     const uint8_t* data = nullptr;
@@ -143,20 +152,32 @@ struct GuiFontBytes {
 // build is a build defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
 
-// A FACE AT A SCALE: what every text consumer holds, the successor of a cairo
-// scaled font. `percent` is gui_scale (render.h's gui_font(face) builds one
-// at the live scale).
+// A FACE AT A SCALE AND A SIZE: what every text consumer holds, the
+// successor of a cairo scaled font. `percent` is gui_scale and `px_at_300`
+// the use's em in device px at 300 %. THE SIZE TRAVELS IN THE VALUE because
+// ONE USE'S SIZE IS LIVE: the Keys face's, the `osk_font_px` tuning key's
+// (architect 2026-10-29 night, "font size osk config tmp key"; render.h's
+// seat) — the table's 24 its default — so every cache keyed on a GuiFont
+// (the scaled font, gui_font_bundled.cpp's gui_outline_scaled_font, keyed on
+// the em; text_shape's run memo, keyed on the size's bytes) keys on the size
+// too, and a committed size re-shapes with no cache of its own to drop.
+// Every other use's size is the table's. THE ONE CONSTRUCTOR ROAD is
+// render.h's gui_font(face), which fills the size from the live seat for
+// Keys and from gui_font_table_px for every other face; nothing else builds
+// a GuiFont. The member defaults are the default face's own table size, so
+// even a default-constructed value is a truthful Body at 100 %, never a
+// wrong size. When he rules the number the size leaves the value again.
 struct GuiFont {
-    GuiFace face    = GuiFace::Body;
-    int     percent = 100;
+    GuiFace face      = GuiFace::Body;
+    int     percent   = 100;
+    double  px_at_300 = gui_font_table_px(GuiFace::Body);
 };
 
-// THE USE'S EM IN DEVICE PX at the font's scale: its table size times
+// THE USE'S EM IN DEVICE PX at the font's scale: its size at 300 % times
 // gui_scale over 300, rounded at the element, floored at one px.
 inline double gui_font_em_px(const GuiFont& f) {
     const double v = std::nearbyint(
-        kGuiFaceSizes[static_cast<std::size_t>(f.face)].px_at_300 *
-        static_cast<double>(f.percent) / 300.0);
+        f.px_at_300 * static_cast<double>(f.percent) / 300.0);
     return v < 1.0 ? 1.0 : v;
 }
 
@@ -259,8 +280,8 @@ inline double gui_sign_lift_px(const GuiFont& f, unsigned glyph) {
 
 // THE FACE'S CAIRO SCALED FONT at this scale (the use's file at its em,
 // SLIGHT, outlines only): borrowed, owned by the face owner and cached on
-// the scale; GUI thread only. text_shape shapes and paints every glyph on
-// it.
+// the em (the scale and the size, GuiFont above); GUI thread only.
+// text_shape shapes and paints every glyph on it.
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f);
 
 // THE TRACKING, in DEVICE px per glyph: 0 (the head; the mechanism stays,

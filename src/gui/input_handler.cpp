@@ -4271,6 +4271,14 @@ void GuiInputHandler::apply_osk_key_size(int w_at300, int h_at300) {
     relayout_window();
 }
 
+void GuiInputHandler::apply_osk_font_px(int px_at300) {
+    // The contract is at the declaration (input_handler.h): the push, then
+    // the whole window's damage, no relayout; the commit's arm owns the
+    // persist.
+    set_osk_font_px_at300(px_at300);
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::relayout_window() {
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);

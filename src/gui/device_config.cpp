@@ -20,10 +20,11 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (THIRTEEN keys since 2026-10-29 evening,
-// the keyboard's two tuning keys `osk_key_w` and `osk_key_h` appended at the
-// end; ELEVEN that morning, the tuning key `key_height` appended at the
-// end; TEN from 2026-10-28, the noise's
+// REQUIRED SET, every one of them (FOURTEEN keys since 2026-10-29 night,
+// the keyboard's cap size `osk_font_px` appended at the end; THIRTEEN that
+// evening, the keyboard's two tuning keys `osk_key_w` and `osk_key_h`
+// appended at the end; ELEVEN that morning, the tuning key `key_height`
+// appended at the end; TEN from 2026-10-28, the noise's
 // three after `role` — `noise`, `noise_level` and `noise_crossfade_s`, all
 // permanent, the crossfade the tuning key `noise_crossfade_ms` until that
 // night; NINE earlier that day, the level and
@@ -73,8 +74,9 @@ namespace {
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
 // `key_height` since 2026-10-29, and the on-screen keyboard's key box,
-// `osk_key_w` and `osk_key_h`, after it since that evening (none stood from
-// 2026-10-28 night,
+// `osk_key_w` and `osk_key_h`, after it since that evening, and the
+// keyboard's cap size, `osk_font_px`, after them since that night (none
+// stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
 // (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
@@ -99,6 +101,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "key_height",
     "osk_key_w",
     "osk_key_h",
+    "osk_font_px",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -137,6 +140,14 @@ std::string format_key_height(int px) {
 // The keyboard's key box's canonical spelling (2026-10-29), one for its two
 // keys: `%d`, the noise integers' road.
 std::string format_osk_key_size(int px) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", px);
+    return std::string(buf);
+}
+
+// The keyboard's cap size's canonical spelling (2026-10-29 night): `%d`,
+// the noise integers' road.
+std::string format_osk_font_px(int px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", px);
     return std::string(buf);
@@ -216,6 +227,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_osk_key_size(cfg.osk_key_w);
         } else if (k == "osk_key_h") {
             s += format_osk_key_size(cfg.osk_key_h);
+        } else if (k == "osk_font_px") {
+            // The keyboard's cap size's canonical integer
+            // (format_osk_font_px).
+            s += format_osk_font_px(cfg.osk_font_px);
         }
         s += '\n';
     }
@@ -385,6 +400,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kOskKeySizeGrammarReason);
             }
             (key == "osk_key_w" ? out.osk_key_w : out.osk_key_h) = *px;
+            return {};
+        }
+        // THE KEYBOARD'S CAP SIZE (2026-10-29 night, a tuning key): under its
+        // one grammar owner (parse_osk_font_px, device_config.h), required
+        // like every key; any other spelling the launch's hard fail.
+        if (key == "osk_font_px") {
+            const std::optional<int> px = parse_osk_font_px(value);
+            if (!px) {
+                return bad_value(ln, key, value, kOskFontPxGrammarReason);
+            }
+            out.osk_font_px = *px;
             return {};
         }
         return warptempo_parse::prefix_line_error(

@@ -2608,6 +2608,10 @@ namespace {
     // state.
     int    g_osk_key_w_at300 = kOskKeyWDefaultAt300;
     int    g_osk_key_h_at300 = kOskKeyHDefaultAt300;
+    // THE ON-SCREEN KEYBOARD'S CAP SIZE in device px at 300 % (render.h's
+    // `osk_font_px` seat), set by set_osk_font_px_at300 from the same two
+    // application points; the templates' value as construction state.
+    int    g_osk_font_px_at300 = kOskFontPxDefaultAt300;
 } // namespace
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
@@ -2621,6 +2625,8 @@ void   set_osk_key_size_at300(int w_at300, int h_at300) {
 }
 int    osk_key_w_at300() { return g_osk_key_w_at300; }
 int    osk_key_h_at300() { return g_osk_key_h_at300; }
+void   set_osk_font_px_at300(int px_at300) { g_osk_font_px_at300 = px_at300; }
+int    osk_font_px_at300() { return g_osk_font_px_at300; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

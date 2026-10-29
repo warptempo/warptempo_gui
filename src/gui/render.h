@@ -1065,11 +1065,30 @@ void set_osk_key_size_at300(int w_at300, int h_at300);
 int  osk_key_w_at300();
 int  osk_key_h_at300();
 
-// A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
-// asks for its text — each use at the face-size table's size, at the
-// current gui_scale.
+// THE ON-SCREEN KEYBOARD'S CAP SIZE, THE `osk_font_px` TUNING KEY'S SEAT
+// (architect 2026-10-29 night, "font size osk config tmp key"): the live em
+// of the Keys face (gui_font.h) in DEVICE PX AT 300 %, read by gui_font
+// below and nothing else. The key box seat's shape exactly — file-scope
+// state in render.cpp, pushed by gui_main's startup read of the device
+// config before the window exists and by the settings editor's
+// `osk_font_px=` commit (GuiInputHandler::apply_osk_font_px, which repaints
+// at once). The grammar and the range are device_config.h's
+// (parse_osk_font_px); the construction state is the templates' 24
+// (kOskFontPxDefaultAt300). It settles into the face table's Keys entry
+// once he rules the number, and this pair goes.
+void set_osk_font_px_at300(int px_at300);
+int  osk_font_px_at300();
+
+// A FACE AT THE LIVE SCALE AND SIZE (gui_font.h): what every painter and
+// every seat asks for its text — each use at the face-size table's size
+// (gui_font_table_px), the Keys face at the live `osk_font_px` seat's above
+// (2026-10-29 night), at the current gui_scale. THE ONE ROAD a GuiFont is
+// built by (GuiFont's own paragraph).
 inline GuiFont gui_font(GuiFace face) {
-    return GuiFont{face, gui_scale_percent()};
+    return GuiFont{face, gui_scale_percent(),
+                   face == GuiFace::Keys
+                       ? static_cast<double>(osk_font_px_at300())
+                       : gui_font_table_px(face)};
 }
 
 // One authored length in WINDOWS PX -> device pixels, the ONE conversion every

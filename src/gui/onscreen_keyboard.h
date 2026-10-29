@@ -16,7 +16,9 @@
 // digits and the flag grammar's operators, and SYMBOLS, the rest of printable
 // ASCII (the layout table below) — its key box authored at 300 % and scaled,
 // under tuning (the `osk_key_w` and `osk_key_h` device keys, the geometry
-// below), the block of keys CENTERED in a band that runs the window's width
+// below; its caps' size the `osk_font_px` key since 2026-10-29 night,
+// cap_word's paragraph), the block of keys CENTERED in a band that runs the
+// window's width
 // on the window's foot, in the brushed ground, nothing beside the block (the
 // placement block below), no line of its own, row 8 and the waveform area's
 // lower part under it and nothing moved — the waveform's own passes then not
@@ -386,9 +388,10 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 
 // WHAT A KEY WEARS, AND IT IS TEXT AND NOTHING ELSE (architect 2026-08-27, on
 // glass; "no glyphs", 2026-10-29): every cap is a WORD or a character on the
-// ONE sans face in the keys' own size (gui_font.h's GuiFace::Keys, 24 px at
-// 300 %, architect 2026-10-24, "C24"; "the glyph size is good", 2026-10-29),
-// shaped through the one chokepoint like every other label.
+// ONE sans face in the keys' own size (gui_font.h's GuiFace::Keys, the
+// `osk_font_px` tuning key's px at 300 %, 24 by default, architect
+// 2026-10-29 night; "C24", architect 2026-10-24; "the glyph size is good",
+// 2026-10-29), shaped through the one chokepoint like every other label.
 //
 // A FUNCTION KEY WEARS ITS NAME (planner 2026-09-01, under the capitalization
 // sweep's universal-rules spine; architect 2026-10-29, "Backspace and Return
@@ -404,22 +407,27 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // key's width is authored to hold its word in the keys face, measured
 // (Liberation Sans, HarfBuzz's unhinted advances, text_shape's road) against
 // the key's face inside its one-device-px outline at the defaults
-// (osk_key_w 48, osk_key_h 60): at 300 % "Backspace" 117 px in the 2.5u
-// key's 127, "Return" 72 in the 2u key's 100, "Space" 68 in the 4u key's
-// 208, "Paste" 61, "&123" and "Copy" 56, "ABC" 49, "Shift" 48 and "Esc" 40
-// in the 1.5u key's 73, and "Tab" 39 in the 1u key's 46; at 200 % (em 16)
-// and 150 % (em 12) every word fits as well, the key and the face scaling
-// together.
+// (osk_key_w 48, osk_key_h 60, osk_font_px 24): at 300 % "Backspace" 117 px
+// in the 2.5u key's 127, "Return" 72 in the 2u key's 100, "Space" 68 in the
+// 4u key's 208, "Paste" 61, "&123" and "Copy" 56, "ABC" 49, "Shift" 48 and
+// "Esc" 40 in the 1.5u key's 73, and "Tab" 39 in the 1u key's 46; at 200 %
+// (em 16) and 150 % (em 12) every word fits as well, the key and the face
+// scaling together.
 // A WORD THAT FAILS ITS KEY TAKES ITS SHORTENED FORM (architect 2026-10-29:
 // "ok to use smaller font and/or shortened forms for long words, but with
-// sizing that might not be needed"): only a tuning of osk_key_w below the
-// default can make a word fail, and the fallback is the keyboard's own
-// abbreviation in capitals, as keyboards print it, Backspace -> BKSP (64 px
-// at 300 %) and Return -> RET (48) — measured at paint against the key's
-// face, never a second face (cap_short_word; the painter's measure). At
-// 300 % with osk_key_h 60, Backspace falls back below osk_key_w 45 and
-// Return below 34. No other word has a short form ruled: "Tab", the first
-// to outgrow its key, overhangs it below osk_key_w 41.
+// sizing that might not be needed"): a tuning of osk_key_w below the
+// default or of osk_font_px above it (the cap size a tuning key since
+// 2026-10-29 night) can make a word fail, and the fallback is the
+// keyboard's own abbreviation in capitals, as keyboards print it, Backspace
+// -> BKSP (64 px at 300 % at em 24) and Return -> RET (48) — measured at
+// paint against the key's face in the live font, never a second face
+// (cap_short_word; the painter's measure). At 300 % with osk_key_h 60 and
+// osk_font_px 24, Backspace falls back below osk_key_w 45 and Return below
+// 34; at the default box, Backspace falls back from osk_font_px 27, Return
+// from 34, and BKSP itself overhangs its key from 48, the key's ceiling
+// (device_config.h's grammar). No other word has a short form ruled:
+// "Tab", the first to outgrow its key, overhangs it below osk_key_w 41, and
+// at the default box "Tab" and "Paste" overhang theirs from osk_font_px 29.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the key DOWN one device px, its

@@ -4170,6 +4170,23 @@ private:
     // exists (main.cpp).
     void apply_osk_key_size(int w_at300, int h_at300);
 
+    // THE KEYBOARD'S CAP SIZE'S ONE LIVE ACT (the `osk_font_px` tuning key,
+    // architect 2026-10-29 night; render.h's seat): push the em to the
+    // renderer (set_osk_font_px_at300), then invalidate the whole window —
+    // the caps are the keyboard band's alone (paint_onscreen_keyboard, the
+    // Keys face's one reader), but the full invalidate is the live acts'
+    // shared first step and the cheapest truthful one. NO RELAYOUT AND NO
+    // BAKE: the size moves no lane and no patch (the keyboard's geometry is
+    // the key box's alone, onscreen_keyboard.h; the key patches the
+    // materials bake are the bare faces, no cap among them, materials.h's
+    // KEYS paragraph — materials.cpp shapes no text at all), and every
+    // cache a cap's run passes through keys on the size (gui_font.h's
+    // GuiFont), so nothing is dropped. The settings editor's `osk_font_px=`
+    // commit is the sole caller; it gates the no-op, assigns the live config
+    // and persists it (apply_device_setting); the launch seeds the size
+    // before the window exists (main.cpp).
+    void apply_osk_font_px(int px_at300);
+
     // THE RELAYOUT TAIL, the three live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):
     // the full-window

@@ -2464,7 +2464,9 @@ constexpr double kTimeFieldGapPx = 3.0;
 // passes (ten digits and the specimen) of THE PROGRAM FACE, every time
 // field's (row 8's clock and the render player's two since 2026-10-26
 // ~12:10), that answer the same thing on every frame until the scale
-// moves — the widths are the face's own.
+// moves — the widths are the face's own. The scale is the whole key: the
+// Program face's size is the table's (gui_font.h; the one live size is the
+// Keys face's, 2026-10-29 night).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -7284,7 +7286,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // THE KEYS ARE THE HI-FI SKIN'S KEYS (architect 2026-10-23; the one painter
 // paint_key, cool_edit_paint.h): each key at rest on the band's brushed
 // ground, NO LED (a typing key carries no lamp), its cap PRINTED ON ITS
-// FACE in the bone in THE KEYS FACE, 24 px at 300 % (gui_font.h's type
+// FACE in the bone in THE KEYS FACE, the `osk_font_px` tuning key's size at
+// 300 %, 24 by default (architect 2026-10-29 night; gui_font.h's type
 // table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own
@@ -7361,8 +7364,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
         paint_cell_rect(cr, surf, palette().ground);
     }
 
-    // THE KEYS FACE (gui_font.h's type table, GuiFace::Keys: 24 px at 300 %,
-    // scaled with gui_scale; architect 2026-10-24, "C24"), selected through
+    // THE KEYS FACE (gui_font.h's type table, GuiFace::Keys: the
+    // `osk_font_px` tuning key's px at 300 %, 24 by default, architect
+    // 2026-10-29 night; scaled with gui_scale; architect 2026-10-24, "C24"),
+    // selected through
     // the one face owner and shaped through the one chokepoint (text_shape.h)
     // like every other label in the product. EVERY key on this surface takes
     // it — the character caps, the page key's words and the function keys'
@@ -7422,8 +7427,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             text_shape::ShapedRun run = text_shape::shape_text_run(font, cap);
             // A WORD THAT FAILS ITS KEY — wider than the key's face inside
             // its one-device-px outline — wears its shortened form where one
-            // is ruled (cap_word's rule, cap_short_word): only a tuning of
-            // osk_key_w below the default can make it so.
+            // is ruled (cap_word's rule, cap_short_word): a tuning of
+            // osk_key_w below the default or of osk_font_px above it
+            // (2026-10-29 night) can make it so, measured here against the
+            // live font.
             const char* short_word = onscreen_keyboard::cap_short_word(k);
             if (short_word != nullptr &&
                 run.width_px > r.w - 2 * hairline_px())

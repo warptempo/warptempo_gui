@@ -3725,6 +3725,11 @@ int gui_main(const char* argument) {
     // before the first layout; the other road is the settings editor's two
     // commits (GuiInputHandler::apply_osk_key_size).
     set_osk_key_size_at300(device_config.osk_key_w, device_config.osk_key_h);
+    // THE KEYBOARD'S CAP SIZE THE SAME (the `osk_font_px` tuning key,
+    // architect 2026-10-29 night; render.h's seat): seeded before the first
+    // paint; the other road is the settings editor's commit
+    // (GuiInputHandler::apply_osk_font_px).
+    set_osk_font_px_at300(device_config.osk_font_px);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an
