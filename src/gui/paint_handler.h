@@ -53,13 +53,13 @@ struct GuiTargetRender;
 // `h` VIEW (its hide and stand-ins move the band's left runs and row 8's
 // block), the controls row's key (the render player's nine and every
 // word button), the scrub's thumb and, on a platform with the on-screen
-// keyboard, every key of its three pages — each a seat of its size, its lamp
+// keyboard, every key of its two pages — each a seat of its size, its lamp
 // and the depths it can stand at, one seat a size, each row's own layout
 // function the painter reads too (paint_handler.cpp: icon_row_seats and
 // icon_row_walk, row8_block and row8_block_walk, modal_controls_seats,
-// onscreen_keyboard::for_each_key). A function of the client size and the
-// scale alone, which are in the bake's key; the sizes alone are read, never
-// a position.
+// onscreen_keyboard::for_each_key). A function of the client size, the
+// scale, the key's height and the keyboard's key box, which are in the
+// bake's key; the sizes alone are read, never a position.
 std::vector<GuiKeySeat> program_key_seats(const AppState& app);
 // THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
 // logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
@@ -1121,10 +1121,10 @@ private:
     // definition.
     void paint_modal_dialog(cairo_t* cr);
 
-    // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — across
-    // the program lanes inside the frame, standing on the frame's bottom row
-    // (2026-10-14, onscreen_keyboard.h's placement block), over row 8 and the
-    // waveform area's lower part. It paints AFTER every waveform pass and
+    // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
+    // band across the program lanes on the window's foot, its block of keys
+    // centered in it (onscreen_keyboard.h's placement block), over row 8 and
+    // the waveform area's lower part. It paints AFTER every waveform pass and
     // BEFORE the modal and the floating surfaces, which is where it sits in
     // the picture: the flag editor is above it in the marker lane, a dialog
     // editor's stack above it in the modal family's box, and the waveform
@@ -1136,7 +1136,7 @@ private:
     // platform term is false there.
     //
     // AND THEN ON ITS OWN EXPOSURE, exactly as the four redesigned rows are and
-    // for their reason: this pass shapes up to ten cap runs per row, which
+    // for their reason: this pass shapes up to thirteen cap runs per row, which
     // the outer Cairo clip would NOT elide, and a
     // narrow per-frame damage must not pay for them — the caret blink damages
     // the editor's box every half second, and the flag editor is the one

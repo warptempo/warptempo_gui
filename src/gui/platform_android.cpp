@@ -628,6 +628,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // "around 33" device px at 300 % — the laptop's template the same
     // (device_config.h's head).
     cfg.key_height        = kKeyHeightDefaultAt300;
+    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
+    // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 % — the
+    // laptop's template the same (device_config.h's head).
+    cfg.osk_key_w         = kOskKeyWDefaultAt300;
+    cfg.osk_key_h         = kOskKeyHDefaultAt300;
     return cfg;
 }
 
@@ -2745,7 +2750,7 @@ bool GuiPlatform::wants_onscreen_keyboard() {
 }
 
 void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
-                                 uint32_t codepoint) {
+                                 uint32_t codepoint, bool with_ctrl) {
     // Remember the character against the stable code BEFORE delivering, so the
     // core's codepoint probe can answer for a repeat synthesized off this
     // press. A release carries no character and must not erase the press's:
@@ -2760,7 +2765,7 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
     // press router, input_pointer.cpp), and nothing here re-derives a repeat's
     // character against the live lamp.
     if (pressed) key_codepoints_[stable_code] = codepoint;
-    input_.key_event(key, stable_code, pressed, codepoint);
+    input_.key_event(key, stable_code, pressed, codepoint, with_ctrl);
 }
 
 // THE HOST'S BATTERY (the declaration's contract): the atomic word the JNI

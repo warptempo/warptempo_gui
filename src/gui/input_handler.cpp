@@ -4264,13 +4264,20 @@ void GuiInputHandler::apply_key_height(int device_px_at_300) {
     relayout_window();
 }
 
+void GuiInputHandler::apply_osk_key_size(int w_at300, int h_at300) {
+    // The contract is at the declaration (input_handler.h): the push, then
+    // the relayout tail; the commit's arm owns the persist.
+    set_osk_key_size_at300(w_at300, h_at300);
+    relayout_window();
+}
+
 void GuiInputHandler::relayout_window() {
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
     // THE MATERIALS AT THE NEW GEOMETRY, AT ONCE (materials.h's BAKE RULE:
     // one act, one bake — the settle gate is a frame drag's alone); the
-    // bake's key carries the scale and the key's height, so either act
-    // bakes.
+    // bake's key carries the scale, the key's height and the keyboard's key
+    // box, so each act bakes.
     materials::ensure(app);
 }
 

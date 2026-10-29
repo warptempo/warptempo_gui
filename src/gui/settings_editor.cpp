@@ -929,7 +929,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The eight device keys other than the scale — one body, ahead of the
+    // 2. The ten device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1197,7 +1197,8 @@ void GuiSettingsEditor::commit() {
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it, `noise`, `noise_level` and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it, and the
-// tuning key `key_height` (2026-10-29) the same, its arm last
+// tuning keys `key_height` and the keyboard's `osk_key_w` and `osk_key_h`
+// (2026-10-29) the same, their arms last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1381,6 +1382,30 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
+    // keys; render.h's `osk_key_w` / `osk_key_h` seat): each an integer under
+    // the one grammar owner (parse_osk_key_size, device_config.h), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then the one live act
+    // (GuiInputHandler::apply_osk_key_size: the renderer's seat and the
+    // window re-laid-out at once, the band's height moving the modal stack
+    // that stands on it) — and persisted, so NO CARD: the keyboard standing
+    // under this very editor is the answer. The page opens the line editor
+    // on each (no value list, 137 values no short domain); Tab completes no
+    // value; stage 2's recall is the writer's spelling
+    // (recall_gui_setting_value).
+    if (key == "osk_key_w" || key == "osk_key_h") {
+        const std::optional<int> px = parse_osk_key_size(value);
+        if (!px) return reject(kOskKeySizeGrammarReason);
+        int& live = key == "osk_key_w" ? app.device_config->osk_key_w
+                                       : app.device_config->osk_key_h;
+        if (*px == live) return unchanged();
+        live = *px;
+        input->apply_osk_key_size(app.device_config->osk_key_w,
+                                  app.device_config->osk_key_h);
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1550,7 +1575,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's fourteen and
+        // one key does — any key the recall knows, the table's sixteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

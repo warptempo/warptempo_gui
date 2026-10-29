@@ -1049,6 +1049,22 @@ double gui_scale_factor();
 void set_key_height_at300(int device_px_at_300);
 int  key_height_at300();
 
+// THE ON-SCREEN KEYBOARD'S KEY BOX, THE `osk_key_w` AND `osk_key_h` TUNING
+// KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
+// like a phone … chiclets, taller than wide"): the live box in DEVICE PX AT
+// 300 % (skin_px's axis), read by onscreen_keyboard.h's geometry and nothing
+// else. The key_height seat's shape exactly — file-scope state in render.cpp,
+// pushed by gui_main's startup read of the device config before the window
+// exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
+// (GuiInputHandler::apply_osk_key_size, which re-lays-out at once). The
+// grammar and the range are device_config.h's (parse_osk_key_size); the
+// construction state is the templates' 48 x 60 (kOskKeyWDefaultAt300,
+// kOskKeyHDefaultAt300). It settles into two constexprs once he rules the
+// numbers, and these three go.
+void set_osk_key_size_at300(int w_at300, int h_at300);
+int  osk_key_w_at300();
+int  osk_key_h_at300();
+
 // A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
 // asks for its text — each use at the face-size table's size, at the
 // current gui_scale.

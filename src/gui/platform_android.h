@@ -517,6 +517,9 @@ public:
     // that produces no character — it is REMEMBERED against stable_code so the
     // core's codepoint probe can re-answer for a synthesized repeat, which is
     // the whole reason this is a method rather than a bare forward.
+    // `with_ctrl` is a ctrl the key carries itself — the painted Copy and
+    // Paste keys' (2026-10-29), handed to the core's key_event as is (its
+    // contract there): the S Pen's barrel stays the glass's tracked Ctrl.
     //
     // IT HAS A CONSUMER SINCE 2026-08-27 and that is why its Wayland twin
     // exists: the keyboard's press router calls it through the seam like any
@@ -524,7 +527,7 @@ public:
     // no consumer could call it — main.cpp compiles against both backends —
     // and it was reachable from inside this backend alone.)
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
-                        uint32_t codepoint);
+                        uint32_t codepoint, bool with_ctrl);
 
     // -- THE CAR'S TWO SEAM MEMBERS (contracts at platform_wayland.h, which
     // owns them; gui_media.h is the vocabulary). THIS IS THE BACKEND THAT HAS

@@ -406,6 +406,12 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_key_height, device_config.h), the writer's own spelling.
     if (key == "key_height" && app.device_config != nullptr)
         return format_key_height(app.device_config->key_height);
+    // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): through their
+    // one formatter (format_osk_key_size, device_config.h).
+    if (key == "osk_key_w" && app.device_config != nullptr)
+        return format_osk_key_size(app.device_config->osk_key_w);
+    if (key == "osk_key_h" && app.device_config != nullptr)
+        return format_osk_key_size(app.device_config->osk_key_h);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -78,12 +78,14 @@
 // implemented before"): the strip pad under the row's cases plus the
 // keyboard band's own edge pad above its first key row — by construction,
 // the row standing directly on the band with nothing between. At 300 %: 39
-// + 14 = 53 device rows (the row's cases end on 997, the first key row
-// starts on 1051), where the dock bar's border under the row made it 15 +
-// 18 + 14 = 47 until then. THE ROWS, at key_height 33 (2026-10-29): the
-// keyboard's band 1037–1439 (its first key row's top 1051), the controls
-// row 926–1036 (its case rows 965–997), the ring's bottom row 925, the
-// interior y 145..924.
+// + 14 = 53 device rows (at the defaults below the row's cases end on 1048
+// and the first key row starts on 1102), where the dock bar's border under
+// the row made it 15 + 18 + 14 = 47 until then. THE ROWS, at key_height 33
+// and the keyboard's defaults, osk_key_w 48 and osk_key_h 60 (2026-10-29,
+// the compact keyboard's band 352 rows where the full-width one's was 403,
+// so the box 51 rows taller): the keyboard's band 1088–1439 (its first key
+// row's top 1102), the controls row 977–1087 (its case rows 1016–1048), the
+// ring's bottom row 976, the interior y 145..975.
 //
 // THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (the hi-fi skin, above):
 // the lists, a dialog editor's line, a prompt's question and the progress

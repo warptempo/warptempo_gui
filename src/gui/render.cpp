@@ -2602,6 +2602,12 @@ namespace {
     // seat), set by set_key_height_at300 from the same two application
     // points; the templates' value as construction state.
     int    g_key_height_at300 = kKeyHeightDefaultAt300;
+    // THE ON-SCREEN KEYBOARD'S KEY BOX in device px at 300 % (render.h's
+    // `osk_key_w` / `osk_key_h` seat), set by set_osk_key_size_at300 from the
+    // same two application points; the templates' values as construction
+    // state.
+    int    g_osk_key_w_at300 = kOskKeyWDefaultAt300;
+    int    g_osk_key_h_at300 = kOskKeyHDefaultAt300;
 } // namespace
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
@@ -2609,6 +2615,12 @@ void   set_key_height_at300(int device_px_at_300) {
     g_key_height_at300 = device_px_at_300;
 }
 int    key_height_at300() { return g_key_height_at300; }
+void   set_osk_key_size_at300(int w_at300, int h_at300) {
+    g_osk_key_w_at300 = w_at300;
+    g_osk_key_h_at300 = h_at300;
+}
+int    osk_key_w_at300() { return g_osk_key_w_at300; }
+int    osk_key_h_at300() { return g_osk_key_h_at300; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

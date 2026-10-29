@@ -718,6 +718,12 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // "around 33" device px at 300 % — the tablet's template the same
     // (device_config.h's head).
     cfg.key_height        = kKeyHeightDefaultAt300;
+    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
+    // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 % — the
+    // tablet's template the same, though no keyboard stands here (one
+    // schema for the two files, device_config.h's head).
+    cfg.osk_key_w         = kOskKeyWDefaultAt300;
+    cfg.osk_key_h         = kOskKeyHDefaultAt300;
     return cfg;
 }
 
@@ -2794,7 +2800,8 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     if (!key_from_keycode(xkb_keycode, key)) key = 0;
     const uint32_t codepoint =
         pressed ? xkb_state_key_get_utf32(xkb_state_, xkb_keycode) : 0u;
-    input_.key_event(key, xkb_keycode, pressed, codepoint);
+    input_.key_event(key, xkb_keycode, pressed, codepoint,
+                     /*with_ctrl=*/false);
 }
 
 // THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS (contracts at the declarations).
@@ -2809,8 +2816,8 @@ bool GuiPlatform::wants_onscreen_keyboard() {
 }
 
 void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
-                                 uint32_t codepoint) {
-    input_.key_event(key, stable_code, pressed, codepoint);
+                                 uint32_t codepoint, bool with_ctrl) {
+    input_.key_event(key, stable_code, pressed, codepoint, with_ctrl);
 }
 
 // THE CAR'S TWO SEAM MEMBERS (contracts at the declarations, which this

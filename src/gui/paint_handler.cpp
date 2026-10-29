@@ -5725,8 +5725,8 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
     // THE SCRUB'S THUMB: at rest, no LED (paint_scrub_thumb).
     add(scrub_thumb_w_px(), scrub_thumb_h_px(), false, 0b001);
     // THE ON-SCREEN KEYBOARD'S KEYS, on a platform that has it: every key of
-    // the three pages at rest and held, the two lamps' keys (Shift, the
-    // symbol-mode key) armed too — no LED (paint_onscreen_keyboard).
+    // the two pages at rest and held, the two lamps' keys (Shift, the page
+    // key) armed too — no LED (paint_onscreen_keyboard).
     if (GuiPlatform::wants_onscreen_keyboard())
         for (int p = 0; p < onscreen_keyboard::kPageCount; ++p)
             onscreen_keyboard::for_each_key(
@@ -7293,8 +7293,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // (2026-10-23; key_depth):
 //   ARMED     — the CHECKED face, ONE DEVICE PX right and down, the band's
 //               checked case's. Worn by SHIFT
-//               while it is armed and by the SYMBOL-MODE key while a symbol
-//               page stands — the two lamps.
+//               while it is armed and by the PAGE KEY while the symbols page
+//               stands — the two lamps.
 //               IT IS ALL SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap
 //               is the word "Shift" in both states — that, and the letter
 //               caps, every one of which turns capital while the arm stands.
@@ -7308,9 +7308,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // pointer, so a hover has no producer and a hint has nowhere to hang.
 //
 // EVERY CAP IS TEXT (architect 2026-08-27, on glass — the Breeze glyphs the
-// function keys wore for a day read oversized beside the letter caps): the
-// function keys, Space and the two page keys say their words, the character
-// keys their characters (symbols 2/2's past ASCII too, UTF-8 encoded through
+// function keys wore for a day read oversized beside the letter caps; "no
+// glyphs", 2026-10-29): the function keys, Space and the page key say their
+// words, the character keys their characters (UTF-8 encoded through
 // text_editor::encode_utf8, the editors' own encoder), all on the one sans
 // face through the one shaping chokepoint. This surface draws no icon.
 //
@@ -7365,11 +7365,11 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // scaled with gui_scale; architect 2026-10-24, "C24"), selected through
     // the one face owner and shaped through the one chokepoint (text_shape.h)
     // like every other label in the product. EVERY key on this surface takes
-    // it — the character caps, the page keys' words and the function keys'
+    // it — the character caps, the page key's words and the function keys'
     // words alike — so there is no second way a cap can be drawn; a word too
-    // long for its key is SHORTENED, never the face shrunk (cap_word,
-    // onscreen_keyboard.h). A cap is one to nine glyphs, which are the
-    // cheapest runs there are.
+    // long for its key takes its SHORTENED form where one is ruled, never a
+    // smaller face (cap_word, onscreen_keyboard.h; the measure below). A cap
+    // is one to nine glyphs, which are the cheapest runs there are.
     const GuiFont font = gui_font(GuiFace::Keys);
 
     onscreen_keyboard::for_each_key(
@@ -7384,19 +7384,20 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // no other. That matters at the panel's tick rate:
             // the scanner's own damage is a column a few pixels wide, and
             // without this test every one of them painted every key on the
-            // page (thirty-five to thirty-seven).
+            // page (fifty-one).
             if (!rects_intersect(exposed, r)) return;
 
             const bool pressed = (static_cast<int>(index) == held);
             const bool armed   =
                 (k.role == Role::Shift      && shift_armed) ||
                 (k.role == Role::SymbolMode &&
-                 page != onscreen_keyboard::Page::Letters);
+                 page == onscreen_keyboard::Page::Symbols);
 
             // THE KEY (architect 2026-10-23; paint_key, cool_edit_paint.h):
             // the TWO DEPTHS by key_depth — the key under the finger HELD,
             // two device px, whatever its armed state; armed (Shift, the
-            // symbol page's key — a checked key) and not held CHECKED, one;
+            // page key on the symbols page — a checked key) and not held
+            // CHECKED, one;
             // NO LED — a typing key carries no lamp, so the depth goes to
             // paint_key_at_depth directly; the cap printed ON its face, so it
             // RIDES WITH THE FACE by the key's depth, right and down.
@@ -7406,7 +7407,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const double ride = static_cast<double>(depth * hairline_px());
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
-            // the function keys, Space and the page keys), or, where it
+            // the function keys, Space and the page key), or, where it
             // answers none, the character key's own character through the ONE
             // case derivation (shifted_char) — never a second uppercase table
             // — UTF-8 encoded by the editors' one encoder, so a cap is spelled
@@ -7418,8 +7419,15 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                     onscreen_keyboard::shifted_char(k.ch, shift_armed));
                 cap = one.c_str();
             }
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, cap);
+            text_shape::ShapedRun run = text_shape::shape_text_run(font, cap);
+            // A WORD THAT FAILS ITS KEY — wider than the key's face inside
+            // its one-device-px outline — wears its shortened form where one
+            // is ruled (cap_word's rule, cap_short_word): only a tuning of
+            // osk_key_w below the default can make it so.
+            const char* short_word = onscreen_keyboard::cap_short_word(k);
+            if (short_word != nullptr &&
+                run.width_px > r.w - 2 * hairline_px())
+                run = text_shape::shape_text_run(font, short_word);
             const double cap_x = std::nearbyint(
                 r.x + (r.w - run.width_px) * 0.5) + ride;
             const double baseline = redesign_baseline(

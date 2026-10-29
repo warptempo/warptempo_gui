@@ -77,7 +77,7 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its eleven keys, kDeviceConfigKeys, every one required). It is a PLATFORM FACT and lives on the seam for
+    // schema and its thirteen keys, kDeviceConfigKeys, every one required). It is a PLATFORM FACT and lives on the seam for
     // exactly that reason: the scale a panel wants and where on THIS device the
     // projects live are
     // answers only the backend has, and routing them through here is what keeps
@@ -620,7 +620,7 @@ public:
     // it rather than a stub, since a synthesized key on THIS platform would
     // mean exactly what it means on the other one.
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
-                        uint32_t codepoint);
+                        uint32_t codepoint, bool with_ctrl);
 
     // -- THE CAR'S TWO SEAM MEMBERS (architect design 2026-08-28 §3) --------
     //

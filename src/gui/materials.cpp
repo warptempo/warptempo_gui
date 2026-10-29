@@ -57,13 +57,16 @@ Tile make_tile(const GuiRect& r, Surface s) {
 
 // THE BAKE'S KEY (materials.h's BAKE RULE): the client size, the scale, the
 // key's height (the `key_height` tuning key since 2026-10-29, render.h's
-// seat: it moves every lane and every key patch as the scale does) and the
+// seat: it moves every lane and every key patch as the scale does), the
+// on-screen keyboard's key box (the `osk_key_w` and `osk_key_h` tuning keys
+// since 2026-10-29, the same seat's neighbor: it moves the keyboard's
+// patches and the controls row's seat on its band) and the
 // conversion (the strip pad a constant since 2026-10-23, the LED glow
 // since 2026-10-26) — every lane, every seat and so every tile's rect and
 // every key patch is a function of them, so a frame compares these and
 // never lays anything out.
 struct Key {
-    int  w = 0, h = 0, scale = 0, key_h = 0;
+    int  w = 0, h = 0, scale = 0, key_h = 0, osk_w = 0, osk_h = 0;
     bool converted = false;
     bool operator==(const Key&) const = default;
 };
@@ -76,7 +79,8 @@ constexpr int kLedGlowPx = 4;
 
 Key key_of(const AppState& app) {
     return Key{app.width, app.height, gui_scale_percent(),
-               key_height_at300(), display_transform::active()};
+               key_height_at300(), osk_key_w_at300(), osk_key_h_at300(),
+               display_transform::active()};
 }
 
 // THE WINDOW'S GEOMETRY A BAKE IS FOR — every tile's rect, laid out at the

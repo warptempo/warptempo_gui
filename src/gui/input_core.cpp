@@ -186,7 +186,7 @@ void GuiInputCore::forget_keyboard_state() {
 }
 
 void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
-                             uint32_t codepoint) {
+                             uint32_t codepoint, bool with_ctrl) {
     if (!pressed) {
         // Cancel repeat if the released key was the one repeating.
         if (stable_code == repeat_keycode_) {
@@ -264,6 +264,10 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
 
     GuiInputState mods = current_mods();
     mods.codepoint = codepoint;
+    // THE KEY'S OWN CTRL (the contract at the declaration): ORed in before
+    // the eligibility probe and the delivery read it, so both judge the
+    // chord the key IS.
+    if (with_ctrl) mods.ctrl = true;
     // Arm key repeat (last-key-wins). Eligibility is decided at press time by
     // the application probe under the pre-dispatch context (evaluated before
     // deliver_key runs, so a press that opens an editor is judged pre-open):
@@ -300,6 +304,7 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
         repeat_key_        = key;
         repeat_keycode_    = stable_code;
         repeat_editor_ctx_ = editor_ctx;
+        repeat_with_ctrl_  = with_ctrl;
         repeat_due_us_     = gui_monotonic_us() + repeat_delay_us_;
     } else {
         repeat_key_ = 0;
@@ -528,6 +533,8 @@ void GuiInputCore::maybe_fire_repeat() {
     // live keyboard state may have moved under the held key. The backend
     // answers for its own keymap (contract at set_codepoint_probe).
     if (codepoint_probe_) mods.codepoint = codepoint_probe_(repeat_keycode_);
+    // The armed press's own ctrl rides every fire (key_event's contract).
+    if (repeat_with_ctrl_) mods.ctrl = true;
     // Layer (2) of the repeat contract — layer (1), the event-edge disarms, has
     // already killed the hold at any intervening pointer-button press or
     // completed wheel emission and re-armed/disarmed it at any key press. Re-

@@ -6555,8 +6555,9 @@ struct AppState {
     // editor kinds does (stands()), on a backend that asks for one, and it
     // holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
-    // arm and the PAGE (letters, symbols 1/2, symbols 2/2; plasma-keyboard's
-    // three, onscreen_keyboard.h) — and both are SESSION-SCOPED: `lamp_session`
+    // arm and the PAGE (flags and symbols, the two pages of
+    // onscreen_keyboard.h's table, architect 2026-10-29) — and both are
+    // SESSION-SCOPED: `lamp_session`
     // is the text_editor_session() they were set in, and the ONE OWNER
     // onscreen_keyboard::reconcile_session clears the pair the moment the live
     // session has moved — at its own call sites, which its declaration names,
@@ -6578,9 +6579,9 @@ struct AppState {
     // is shared with the folder overlay since the render player, and one bit
     // describes the SLOT rather than either tenant.)
     // `pressed_keysym` is the key-up the held key OWES, or 0 for a held key
-    // that synthesizes nothing (the two page keys, the shift arm). It is
+    // that synthesizes nothing (the page key, the shift arm). It is
     // stored rather than re-derived from `pressed_key` because the press's own
-    // act may have moved the page under the index — the page keys are exactly
+    // act may have moved the page under the index — the page key is exactly
     // that — and a release must never resolve through a table that has
     // changed since the finger landed.
     //
@@ -6588,10 +6589,10 @@ struct AppState {
     // that header includes this one; it aliases the enum as
     // onscreen_keyboard::Page and owns everything the pages mean.
     struct OnscreenKeyboard {
-        enum class Page : uint8_t { Letters, Symbols1, Symbols2 };
+        enum class Page : uint8_t { Flags, Symbols };
         uint64_t lamp_session     = 0;
         bool     shift_armed      = false;
-        Page     page             = Page::Letters;
+        Page     page             = Page::Flags;
         int      pressed_key      = -1;
         GuiKey   pressed_keysym   = 0;
     };
@@ -8497,7 +8498,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the fourteen keys the
+    // 2026-10-28: the Settings button and bare `;`; the sixteen keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
@@ -9066,7 +9067,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's fourteen keys as
+    // (architect 2026-10-28), with the settings editor's sixteen keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and since 2026-10-25 the
     // VALUE LIST, one listed key's values — the twenty built-in waveform
@@ -9219,7 +9220,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its fourteen editable key lines and the two
+    // rows (its two headings, its sixteen editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows alone (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits beside the `name` it

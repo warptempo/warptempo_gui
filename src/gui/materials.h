@@ -58,17 +58,19 @@ struct AppState;
 // table, cairo into a 2304 x 1440 surface: a solid fill 0.016 ms, a 1:1
 // blit of a window-sized bake at identity with EXTEND_NONE and
 // FILTER_NEAREST 0.047 ms, an EXTEND_REFLECT pattern 1.73 ms): BAKE ONCE PER
-// WINDOW GEOMETRY — its key the client size, the gui_scale and the key's
-// height (the `key_height` tuning key since 2026-10-29), which move the
-// lanes and the key seats (the strip pad a constant since 2026-10-23,
+// WINDOW GEOMETRY — its key the client size, the gui_scale, the key's
+// height (the `key_height` tuning key since 2026-10-29) and the on-screen
+// keyboard's key box (the `osk_key_w` and `osk_key_h` tuning keys, the same
+// evening), which move the lanes and the key seats (the strip pad a
+// constant since 2026-10-23,
 // program_spec.h, and so the LED glow since 2026-10-26, materials.cpp's
 // kLedGlowPx), and True Colors (the bakes hold the window's bytes) — never
 // at a palette install, a project open or any other Settings OK. A frame
 // compares the key alone; the layout is read at the bake. The bake itself
 // takes tens of ms (the blur over the window), once. THE FIRST BAKE IS
 // IMMEDIATE, at the first frame's PRE-PAINT HOOK (materials::ensure_settled,
-// main.cpp); a gui_scale or key_height commit and True Colors bake at
-// once, one act one
+// main.cpp); a gui_scale, key_height, osk_key_w or osk_key_h commit and
+// True Colors bake at once, one act one
 // bake (materials::ensure). EVERY BAKE REINSTALLS
 // THE PALETTE off the new ground's mean, so the next pre-paint widens that
 // frame's damage to the whole client and rebuilds the flag cache in the
@@ -92,7 +94,7 @@ struct AppState;
 //           — the band's and row 8's in both states of the `h` view, the
 //           controls row's key (the render player's nine and every
 //           word button), the scrub's thumb and, on a platform with the
-//           on-screen keyboard, every key of its three pages): a lamp key's
+//           on-screen keyboard, every key of its two pages): a lamp key's
 //           RESTING patch (depth 0, the LED dead), its CHECKED patch (one
 //           device px down, lit) and its HELD patch (two, lit — architect
 //           2026-10-23, the two depths; cool_edit_paint.h's paint_key), the
@@ -109,15 +111,18 @@ struct AppState;
 //           is one blit at every depth, no blend computed at paint time. An
 //           accent change rebuilds the lit patches alone (set_accent); the
 //           rest stand.
-// RESIDENT at 300 % on 2304 x 1440 at key_height 33, 14 425 224 bytes (the
-// arithmetic off the geometry, 2026-10-29): the ground's tile 13.3 MB (rows
-// 0 .. 1440 window-wide, the band's top the surface's first row since
-// 2026-10-24); THE KEY PATCHES 1.16 MB, 13 of them — the one 69 x 33 lamp
-// key (the band, row 8 and the controls row)
-// at its three depths, the thumb's one 24 x 33 (the key's height since
-// 2026-10-29), and the on-screen keyboard's four sizes, 219 / 220 / 676 x
-// 87 at depths 0 and 2 and the 333 x 87 of Shift, Backspace, Enter and the
-// symbol-mode key at 1 too (nine patches, 1.12 MB). On the laptop's maximized 1920 x 1047 at 200 %,
+// RESIDENT at 300 % on 2304 x 1440 at key_height 33 and the keyboard's
+// defaults (osk_key_w 48, osk_key_h 60), 13 590 252 bytes (the arithmetic
+// off the geometry, 2026-10-29): the ground's tile 13.3 MB (rows 0 .. 1440
+// window-wide, the band's top the surface's first row since 2026-10-24);
+// THE KEY PATCHES 0.32 MB, 15 of them — the one 69 x 33 lamp key (the band,
+// row 8 and the controls row) at its three depths, the thumb's one 24 x 33
+// (the key's height since 2026-10-29), and the on-screen keyboard's FIVE
+// SIZES at one height, 60 rows (the compact keyboard's unit widths, 2026-10-29:
+// 1u 48, 2u 102, 2.5u 129 and 4u 210 at depths 0 and 2, and the 1.5u 75 —
+// Shift, the page key, Copy, Paste and Esc — at 1 too, Shift's and the page
+// key's armed face — eleven patches, 288 720 bytes). On the
+// laptop's maximized 1920 x 1047 at 200 %,
 // 8 054 512 bytes (no keyboard; the lamp key's three 46 x 22 patches and
 // the thumb's 16 x 22). materials::resident_bytes, which the trace line
 // prints at every bake with the patches' count and time, is the measure.
@@ -291,8 +296,8 @@ namespace materials {
 // repainted by the caller's damage, the whole surface by the next pre-paint
 // (take_bake_landed). A zero-sized client bakes nothing; a bake cannot
 // fail (the ground is procedural). Callers: the one-act roads,
-// GuiInputHandler::apply_gui_scale and apply_key_height (through their
-// shared relayout_window) and apply_true_colors.
+// GuiInputHandler::apply_gui_scale, apply_key_height and apply_osk_key_size
+// (through their shared relayout_window) and apply_true_colors.
 void ensure(const AppState& app);
 // THE BAKE BEHIND THE SETTLE GATE (the head's BAKE RULE): the first bake at
 // once; a changed key of a baked window only once the tick has armed it

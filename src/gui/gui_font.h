@@ -42,7 +42,7 @@
 // 2026-10-23 to 2026-10-24, the skin's first night 15), LEGEND 14
 // Regular (the keys' printed legends alone; the tooltip wore it the first
 // night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
-// the letters, the symbol pages' characters and the word caps, "a separate
+// the letters, the symbols page's characters and the word caps, "a separate
 // face"; architect 2026-10-24, "C24" off 22 / 24 / 26 / 28 on
 // his type sheet — the night's C34, off 22 / 28 / 34 / 40, stood
 // 2026-10-23 to 2026-10-24, the caps wearing the body's 22 before it). (The

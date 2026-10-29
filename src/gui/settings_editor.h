@@ -56,7 +56,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the fourteen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the sixteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -86,7 +86,7 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// NINE editable ones the per-device config carries — gui_scale and
+// ELEVEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
@@ -95,7 +95,9 @@ struct GuiInputHandler;
 // since 2026-10-21 true_colors (the popup's command row made a key), and
 // since 2026-10-28 (architect) the noise's folder noise, its noise_level and
 // its crossfade in seconds noise_crossfade_s, and since 2026-10-29
-// (architect) the tuning key key_height, the key case's height (the
+// (architect) the tuning key key_height, the key case's height, and the
+// same evening the on-screen keyboard's key box's two tuning keys osk_key_w
+// and osk_key_h (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, materials.cpp's kLedGlowPx; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
@@ -116,8 +118,8 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors, noise, noise_level, noise_crossfade_s and
-//    key_height — in ONE body,
+//    waveform, true_colors, noise, noise_level, noise_crossfade_s,
+//    key_height, osk_key_w and osk_key_h — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
@@ -134,7 +136,9 @@ struct GuiInputHandler;
 //    darkened and the resident recordings freed (GuiNoise::change_folder),
 //    no card (the NOISE key's face is the answer); the key's height at once,
 //    the window re-laid-out (GuiInputHandler::apply_key_height), no card
-//    (the keys on screen are the answer).
+//    (the keys on screen are the answer); the keyboard's key box the same
+//    (GuiInputHandler::apply_osk_key_size), no card (the keyboard standing
+//    under the editor is the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -189,15 +193,16 @@ struct GuiInputHandler;
 // PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
 // nothing, each opening this line editor.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE FOURTEEN (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE SIXTEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
-// tuning key `key_height` 2026-10-29, at the device keys' tail): the five
+// tuning key `key_height` 2026-10-29, at the device keys' tail, and the
+// keyboard's `osk_key_w` and `osk_key_h` after it that evening): the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's nine editable keys in that file's
+// CONFIG's eleven editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
 // `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
@@ -219,6 +224,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
     "noise", "noise_level", "noise_crossfade_s", "key_height",
+    "osk_key_w", "osk_key_h",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -277,7 +283,8 @@ static_assert(settings_page_piece_keys_pinned());
 // crossfade's 30 whole seconds. The typed line still names every one of
 // them, its arms and completers unchanged (the list is a second door).
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
-// are no short domain, so its row opens the line editor.)
+// are no short domain, so its row opens the line editor; nor are the
+// keyboard's `osk_key_w` and `osk_key_h`, 137 values each.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "waveform", "true_colors", "noise", "noise_level", "noise_crossfade_s",
 };
@@ -419,8 +426,9 @@ struct GuiSettingsEditor {
 
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
     // `waveform=`, `true_colors=`, `noise=`, `noise_level=`,
-    // `noise_crossfade_s=` and the tuning key `key_height=` (2026-10-29, the
-    // line's door alone, having no value list) — ONE BODY, TWO DOORS
+    // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`
+    // and `osk_key_h=` (2026-10-29, the line's door alone, having no value
+    // list) — ONE BODY, TWO DOORS
     // (architect 2026-10-25 for
     // the waveform key, 2026-10-28 night for the value lists' four more): the
     // typed line's commit (commit_device_setting, below, the editor's door)

@@ -311,8 +311,18 @@ public:
     // change mid-hold would break the match. `codepoint` is the UTF-32 value
     // the key resolves to under the live keyboard state, filled at the press
     // and re-filled per synthesized repeat through the codepoint probe.
+    // `with_ctrl` IS A CTRL THE KEY CARRIES ITSELF (architect 2026-10-29, the
+    // on-screen keyboard's Copy and Paste keys, the one producer): true ORs
+    // ctrl into the GuiInputState this press is delivered with — and into
+    // every synthesized repeat armed off it, so a held chord repeats as the
+    // chord, the way a physical Ctrl+key hold does — whatever the tracked
+    // modifiers say; a release ignores it, as a release carries no modifier
+    // state at all. It is a property of the KEY EVENT, never of the tracked
+    // state: set_modifiers is not touched, so no ctrl edge is announced and
+    // nothing else reads a ctrl that outlives the press. The Wayland backend
+    // passes false, its ctrl arriving through set_modifiers.
     void key_event(GuiKey key, uint32_t stable_code, bool pressed,
-                   uint32_t codepoint);
+                   uint32_t codepoint, bool with_ctrl);
 
     // THE FOUR TRACKED MODIFIERS, read out of the backend's keymap state at
     // every modifier event. The three modeled ones reach the application
@@ -324,7 +334,9 @@ public:
     // and nothing else. ON ANDROID IT IS THE S PEN'S SIDE BUTTON (architect
     // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl
     // modifier, hardware keyboards being out of scope there, bare `k`'s
-    // sticky ctrl being a lamp the flag press reads and not this bit): the
+    // sticky ctrl being a lamp the flag press reads and not this bit, and
+    // the painted Copy and Paste keys' ctrl riding their own key events,
+    // key_event's with_ctrl, not this bit either): the
     // backend calls this
     // with ctrl = the button held — for what the pen owns alone, its hover or
     // a gesture touch_owner_tool() reports as the pen's (an ignored pen
@@ -1149,9 +1161,13 @@ private:
     // a pointer-button press or a completed wheel emission clears repeat_key_ at
     // the platform input chokepoints — so no armed hold can straddle a target
     // change.
+    // repeat_with_ctrl_ is the armed press's own `with_ctrl` (key_event's
+    // contract), ORed into each fire's modifiers before the eligibility
+    // re-check, so a held carried chord repeats as itself.
     GuiKey        repeat_key_       = 0;
     uint32_t      repeat_keycode_   = 0;
     bool          repeat_editor_ctx_ = false;
+    bool          repeat_with_ctrl_  = false;
     uint64_t      repeat_due_us_    = 0;
     uint64_t      repeat_delay_us_  = 600'000;   // sensible defaults if the
     uint64_t      repeat_period_us_ = 33'000;    // platform is mute (600ms/30Hz)

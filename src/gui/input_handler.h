@@ -4155,8 +4155,23 @@ private:
     // seeds the height before the window exists (main.cpp).
     void apply_key_height(int device_px_at_300);
 
-    // THE RELAYOUT TAIL, the two live layout acts' shared last steps
-    // (apply_gui_scale, apply_key_height; 2026-10-29): the full-window
+    // THE KEYBOARD'S KEY BOX'S ONE LIVE ACT (the `osk_key_w` and `osk_key_h`
+    // tuning keys, architect 2026-10-29; render.h's seat): push the box to
+    // the renderer (set_osk_key_size_at300) and run the RELAYOUT TAIL
+    // (relayout_window below) — the box moves the keyboard's band, and with
+    // it the modal stack standing on the band, the waveform's painted rect
+    // and the key patches the materials bake (the bake's key carries the
+    // box), so the commit re-lays the window out at once, the key_height
+    // act's shape. The settings editor's `osk_key_w=` and `osk_key_h=`
+    // commits are the sole callers, each passing the live pair; each gates
+    // the no-op, assigns the live config and persists it
+    // (apply_device_setting); the launch seeds the box before the window
+    // exists (main.cpp).
+    void apply_osk_key_size(int w_at300, int h_at300);
+
+    // THE RELAYOUT TAIL, the three live layout acts' shared last steps
+    // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):
+    // the full-window
     // invalidate, the resize-path geometry-and-cache rebuild
     // (GuiPaintHandler::on_resize) and the materials' bake at once
     // (materials.h's BAKE RULE: one act, one bake — the settle gate is a
@@ -4672,8 +4687,9 @@ private:
     // types into the very editor raising the veil.
     //
     // THE PRESS CLAIMS THE WHOLE RECT and answers true for every press inside
-    // it, key or not: the gaps between keys, the outer margin and the letters'
-    // half-key inset all CONSUME: a finger that misses a key must not fall through to the
+    // it, key or not: the gaps between keys, the edge pad, a row's stagger
+    // and the ground beside the centered block all CONSUME: a finger that
+    // misses a key must not fall through to the
     // waveform's pan underneath. A key's
     // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole
     // ordinary key path — the keyboard-modal gate, route_modal_editor_key, the

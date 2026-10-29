@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eleven keys live here and nowhere else,
+// piece (architect 2026-08-27). Thirteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -128,6 +128,26 @@
 //                            constexpr once he rules the number (render.h's
 //                            icon_case_h_px), its key, grammar and row going
 //                            then; both templates spell 33
+//   osk_key_w=<px>           THE ON-SCREEN KEYBOARD'S KEY BOX (architect
+//   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
+//                            centered, like a phone … chiclets, taller than
+//                            wide", the FLAGS sheet's 48 x 60): the painted
+//                            keyboard's one-unit key's width and every key's
+//                            height in DEVICE PX AT 300 % (skin_px's axis),
+//                            each an integer in [24, 160] in canonical
+//                            spelling (parse_osk_key_size below), no
+//                            taller-than-wide constraint (his to tune),
+//                            live at the settings editor's OK, the window
+//                            re-laid-out at once
+//                            (GuiInputHandler::apply_osk_key_size); TWO
+//                            TUNING KEYS with Settings rows, REQUIRED like
+//                            every key while they stand, which settle into
+//                            constexprs once he rules the numbers
+//                            (onscreen_keyboard.h's geometry), their keys,
+//                            grammar and rows going then; both templates
+//                            spell 48 and 60 (the laptop's too: the keyboard
+//                            never stands there, and one template shape
+//                            keeps the two files' schemas one)
 //   (noise_crossfade_ms=<ms>, THE CROSSFADE IN MS, [100, 30000], a tuning
 //                            key 2026-10-28, RETIRED that day for the
 //                            seconds key above; an old line is the ordinary
@@ -206,7 +226,9 @@
 // `noise_crossfade_ms` the same day and `noise` placed after `role`, before
 // them; the crossfade made `noise_crossfade_s`, in seconds and permanent,
 // that night, in its place at the end; the tuning key `key_height`
-// APPENDED after it 2026-10-29, the tuning keys keeping the end);
+// APPENDED after it 2026-10-29, the tuning keys keeping the end, and the
+// keyboard's two, `osk_key_w` and `osk_key_h`, after it the same
+// evening);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -344,7 +366,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the thirteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -381,8 +403,8 @@
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
 // `waveform`, `true_colors`, since 2026-10-28 `noise`, `noise_level`
-// and `noise_crossfade_s` and since 2026-10-29 the tuning key `key_height`
-// among them
+// and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
+// `osk_key_w` and `osk_key_h` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -466,6 +488,12 @@ struct DeviceConfig {
     // tuning key): required; the construction state is the templates' 33
     // (kKeyHeightDefaultAt300 below).
     int         key_height        = 33;
+    // THE ON-SCREEN KEYBOARD'S KEY BOX in device px at 300 % (2026-10-29,
+    // the head's list; two tuning keys): required; the construction state is
+    // the templates' 48 x 60 (kOskKeyWDefaultAt300, kOskKeyHDefaultAt300
+    // below).
+    int         osk_key_w         = 48;
+    int         osk_key_h         = 60;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -642,12 +670,12 @@ inline constexpr const char* kDeviceRoleGrammarReason =
     "must be author or mirror";
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the two noise integers' shared
-// lexis, and since 2026-10-29 the key's height's): an optional `-`, then
-// digits with no leading zero, and no `-0` — exactly what `%d` prints, so
-// the reader admits back only the writer's spelling. At most nine digits,
-// which every range below sits far inside, so the accumulation cannot
-// overflow. The one lexer the three integer grammars read; each owns its
-// own range.
+// lexis, and since 2026-10-29 the key's height's and the keyboard's key
+// box's): an optional `-`, then digits with no leading zero, and no `-0` —
+// exactly what `%d` prints, so the reader admits back only the writer's
+// spelling. At most nine digits, which every range below sits far inside, so
+// the accumulation cannot overflow. The one lexer the four integer grammars
+// read; each owns its own range.
 inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     bool neg = false;
     if (!v.empty() && v.front() == '-') {
@@ -722,6 +750,33 @@ std::string format_key_height(int px);
 inline std::optional<int> parse_key_height(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
     if (!n || *n < kKeyHeightMinAt300 || *n > kKeyHeightMaxAt300)
+        return std::nullopt;
+    return n;
+}
+
+// THE osk_key_w AND osk_key_h GRAMMAR (architect 2026-10-29), ONE FOR THE
+// TWO — an integer in [24, 160] DEVICE PX AT 300 % in canonical spelling, the
+// one owner the reader, the writer, the settings editor's commit and its
+// recall read (format_osk_key_size, parse_osk_key_size). The defaults are
+// the FLAGS sheet's key box, 48 wide and 60 tall (tmp/kbmock's generator);
+// the range runs from half the default width to well past the height, wide
+// enough for him to try a key wider than tall, and its top keeps the widest
+// row (thirteen units) inside the tablet's 2304 (13 x (160 + 16) - 16 =
+// 2272). The settings page opens the LINE EDITOR on each, not a value list
+// (137 values is no short domain, kSettingsValueListKeys' rule). TWO TUNING
+// KEYS: when he rules the numbers, the keys, these functions and their
+// Settings rows go, and the values become constexprs behind
+// onscreen_keyboard.h's key_w_px and key_h_px.
+inline constexpr int kOskKeySizeMinAt300  = 24;
+inline constexpr int kOskKeySizeMaxAt300  = 160;
+inline constexpr int kOskKeyWDefaultAt300 = 48;
+inline constexpr int kOskKeyHDefaultAt300 = 60;
+inline constexpr const char* kOskKeySizeGrammarReason =
+    "must be an integer in [24, 160] in canonical spelling";
+std::string format_osk_key_size(int px);
+inline std::optional<int> parse_osk_key_size(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kOskKeySizeMinAt300 || *n > kOskKeySizeMaxAt300)
         return std::nullopt;
     return n;
 }
@@ -869,12 +924,14 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves eight keys —
+// the settings editor's ONE device-key body, which serves ten keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
 // `true_colors=`, and since 2026-10-28 the noise's three, `noise=`,
 // `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
-// key `key_height=` (its live act GuiInputHandler::apply_key_height) (the
+// keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
+// `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
+// (the
 // noise's latter two `rain_level=` and
 // `rain_crossfade_ms=` earlier that day and the crossfade
 // `noise_crossfade_ms=` until that night, `rain_fade_in_ms=` and
@@ -903,7 +960,9 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // both stamp `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
 // `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
-// `key_height=33` (2026-10-29, kKeyHeightDefaultAt300) and no role
+// `key_height=33`, `osk_key_w=48` and `osk_key_h=60` (2026-10-29,
+// kKeyHeightDefaultAt300, kOskKeyWDefaultAt300, kOskKeyHDefaultAt300) and
+// no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

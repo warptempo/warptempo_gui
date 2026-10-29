@@ -3720,6 +3720,11 @@ int gui_main(const char* argument) {
     // seat the first frame lays out; the other road is the settings editor's
     // `key_height=` commit (GuiInputHandler::apply_key_height).
     set_key_height_at300(device_config.key_height);
+    // THE KEYBOARD'S KEY BOX RIDES THE SAME ROAD (the `osk_key_w` and
+    // `osk_key_h` tuning keys, architect 2026-10-29; render.h's seat): seeded
+    // before the first layout; the other road is the settings editor's two
+    // commits (GuiInputHandler::apply_osk_key_size).
+    set_osk_key_size_at300(device_config.osk_key_w, device_config.osk_key_h);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

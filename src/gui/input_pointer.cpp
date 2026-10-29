@@ -4813,13 +4813,11 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
 
     using Role = onscreen_keyboard::Role;
 
-    // THE THREE PAGE / STATE CONTROLS — Shift, the symbol-mode key and the
-    // page key, the first two of which wear lamps (the page key's cap already
-    // says its page) — ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They still
-    // take the held index (so the finger sees the click face) with a keysym of
-    // 0, which is what the release reads as "this key owed no key-up".
-    if (def.role == Role::Shift || def.role == Role::SymbolMode ||
-        def.role == Role::SymbolPage) {
+    // THE TWO STATE CONTROLS — Shift and the page key, both wearing lamps —
+    // ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They still take the held
+    // index (so the finger sees the click face) with a keysym of 0, which is
+    // what the release reads as "this key owed no key-up".
+    if (def.role == Role::Shift || def.role == Role::SymbolMode) {
         app.onscreen_keyboard.pressed_key    = hit;
         app.onscreen_keyboard.pressed_keysym = 0;
         if (def.role == Role::Shift) {
@@ -4830,19 +4828,18 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
             // session-change owner (onscreen_keyboard.h).
             app.onscreen_keyboard.shift_armed = !shift_armed;
         } else {
-            // THE PAGE KEYS LEAVE A PENDING CAPITAL STANDING, like every other
+            // THE PAGE KEY LEAVES A PENDING CAPITAL STANDING, like every other
             // key that types no letter (the rule is stated whole at the
             // ordinary key's spend, below). It costs nothing to keep: the only
             // thing an arm can ever change is a LETTER, and every letter is on
-            // the letter page, so a round trip through the symbols and back
-            // finds the arm exactly where it was left — with the lamp lit
-            // again the moment the shift key is painted again. Where each key
-            // goes is the layout's own answer (page_after).
+            // the flags page, so a round trip through the symbols and back
+            // finds the arm exactly where it was left. Where the key goes is
+            // the layout's own answer (page_after).
             app.onscreen_keyboard.page =
                 onscreen_keyboard::page_after(def.role, page);
         }
-        // ALL THREE REPAINT THE WHOLE SURFACE: shift moves every letter cap's
-        // case and a page change moves every key.
+        // BOTH REPAINT THE WHOLE SURFACE: shift moves every letter cap's case
+        // and a page change re-letters every letter slot.
         viewport.invalidate_rect(surf);
         return true;
     }
@@ -4852,6 +4849,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // door with the key's PLACE as the core's stable per-key identity.
     GuiKey   keysym      = 0;
     uint32_t codepoint   = 0;
+    // Does the key carry its own ctrl? Copy and Paste alone (below).
+    bool     with_ctrl   = false;
     // Did this key SPEND the arm? Only a letter can (see the spend below).
     bool     capitalized = false;
     switch (def.role) {
@@ -4875,9 +4874,23 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
         // one autocomplete model, route_modal_editor_key) and the ring walks
         // on it where there is nothing to complete.
         case Role::Tab:       keysym = GuiKeys::Tab;       break;
+        // COPY AND PASTE ARE THE EDITORS' OWN CHORDS (architect 2026-10-29):
+        // the letter's keysym with the key's own ctrl riding the event
+        // (synthesize_key's `with_ctrl`, GuiInputCore::key_event's contract),
+        // so text_editor::handle_key's Ctrl+C and Ctrl+V arms answer them
+        // exactly as they answer the laptop's keys — a copy with no selection
+        // copying nothing — and every gate and repeat rule on the road reads
+        // the chord. A chord types no character, so the codepoint stays 0.
+        case Role::Copy:
+            keysym    = GuiKeys::C;
+            with_ctrl = true;
+            break;
+        case Role::Paste:
+            keysym    = GuiKeys::V;
+            with_ctrl = true;
+            break;
         case Role::Shift:
-        case Role::SymbolMode:
-        case Role::SymbolPage: return true;   // handled above; unreachable
+        case Role::SymbolMode: return true;   // handled above; unreachable
     }
 
     app.onscreen_keyboard.pressed_key    = hit;
@@ -4894,8 +4907,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // A SHIFT ARM IS SPENT BY THE LETTER IT CAPITALIZED AND BY NOTHING ELSE.
     // ONE-SHOT SHIFT MEANS THE NEXT LETTER (planner ruling 2026-08-27), so a
     // key that types no capital leaves the arm standing: the comma and the
-    // period, the space bar, backspace, Enter, Esc, Tab, the page keys and
-    // every digit and symbol on the symbol pages. Shift, comma, `q` types
+    // period, the space bar, backspace, Enter, Esc, Tab, Copy, Paste, the
+    // page key and every digit and symbol. Shift, comma, `q` types
     // `,Q`. The
     // test is the layout table's own case derivation moving this key's
     // character (`capitalized`, set at the Character arm above) rather than a
@@ -4921,7 +4934,7 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
 
     // THE ACT, at the press. Everything downstream is the ordinary key path.
     gui.synthesize_key(keysym, static_cast<uint32_t>(hit), /*pressed=*/true,
-                       codepoint);
+                       codepoint, with_ctrl);
     return true;
 }
 
@@ -4933,7 +4946,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     app.onscreen_keyboard.pressed_keysym = 0;
 
     // Un-press the face, on the page the INDEX names rather than the live one:
-    // a page key's own press moved the live page, and its key would be looked
+    // the page key's own press moved the live page, and its key would be looked
     // up on a page it is not on (the reason is at page_of_key_index).
     // The surface may be GONE altogether (the press's own Enter or Esc closed
     // the editor), in which case the rect is empty and this is a no-op — the
@@ -4947,10 +4960,12 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     // other key owes exactly this, and the core's repeat cancel is the reason
     // it may not be skipped (contract at GuiInputCore::key_event: the arm dies
     // on the matching stable code and on nothing else this path can reach).
-    // A release carries no character, exactly as a physical one does not.
+    // A release carries no character and no modifier, exactly as a physical
+    // one does not (Copy's and Paste's ctrl was the press's alone).
     if (keysym != 0) {
         gui.synthesize_key(keysym, static_cast<uint32_t>(held),
-                           /*pressed=*/false, /*codepoint=*/0);
+                           /*pressed=*/false, /*codepoint=*/0,
+                           /*with_ctrl=*/false);
     }
     return true;
 }
