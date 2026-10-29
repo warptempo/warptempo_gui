@@ -3851,9 +3851,10 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // whatever focus the dialog had, of either strength, and it is PASSIVE —
     // the user pointed at this button, which is not the deliberate keyboard
     // walk that earns the active strength. Every dialog's buttons arm here —
-    // the prompt's, the editors' OK / Cancel, the player's and the picker's
-    // Cancel — so this is the rule's one site. A refused press (the disabled
-    // player button and the unadmitted shift above) arms nothing and moves
+    // the prompt's, the editors' OK / Cancel, the player's closing key (Close)
+    // and the picker's one word (Cancel or Close by content,
+    // kModalCancelLabel's rule) — so this is the rule's one site. A refused
+    // press (the disabled player button and the unadmitted shift above) arms nothing and moves
     // nothing. A slide off the held button leaves the focus here and fires
     // nothing; a release away leaves the button passively focused.
     if (app.modal_dialog_focus != hit || app.modal_dialog_focus_active) {

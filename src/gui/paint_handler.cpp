@@ -5058,9 +5058,9 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its Cancel-alone row), THE PROGRESS MODAL (the
-// fifth, 2026-10-14: a batch's Cancel alone, AppState::BatchProgress) or any
-// dialog editor. The
+// (the fourth, the same day: its one-word row, Cancel or Close by content,
+// kModalCancelLabel's rule), THE PROGRESS MODAL (the fifth, 2026-10-14: a
+// batch's Cancel alone, AppState::BatchProgress) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional, a modal
 // since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
 // and it never takes this row (on the glass the keyboard's band covers it).
@@ -5887,9 +5887,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // glass), UP A FOLDER, LOAD IN PLACE (or DELETE at the root) and CLOSE —
     // while a word button keeps the label box every prompt and editor button
     // has always had. The word kind is the other three owners' alone: a
-    // prompt's answers, the dialog editors' OK / Cancel and the picker's
-    // Cancel. `lit` is the roster's SELECTED face — the row's one lamp,
-    // Repeat one, and no other button has a state to say. `player_act` is the
+    // prompt's answers, the dialog editors' OK / Cancel and the picker's one
+    // word (Cancel or Close by content, kModalCancelLabel's rule). `lit` is
+    // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
     // buttons.
     struct DialogButtonPlan {
@@ -6198,9 +6198,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // -- THE CONTROLS ROW'S LAYOUT (architect 2026-10-14, modal_box.h) --
     //
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
-    // row — a prompt's answers, an editor's OK and Cancel and the picker's
-    // Cancel — the last one's right edge the box's ring's outer edge (x 2280
-    // at 300 %), today's button gap between them; the render player's row
+    // row — a prompt's answers, an editor's OK and Cancel and the picker's one
+    // word (Cancel or Close by content, kModalCancelLabel's rule) — the last
+    // one's right edge the box's ring's outer edge (x 2280 at 300 %), today's button gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
     // editor's label and field sat FLUSH LEFT on the bottom row with their
