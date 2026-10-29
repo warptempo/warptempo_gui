@@ -2144,8 +2144,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     if (app.render_player.active) return GuiCursorKind::Arrow;
     if (app.score_viewer.active) return GuiCursorKind::Arrow;
     // AND SO IS THE PICKER (2026-08-28): its two pointer surfaces — the
-    // overlay's rows and the modal row's one Cancel button — are a list and a
-    // button, and it has no field to name the I-beam for.
+    // overlay's rows and the modal row's one button (Cancel, or Close under
+    // the settings page) — are a list and a button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
     // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
     // cursor in flag editor becomes the pointer during drag-to-highlight — it
@@ -4109,9 +4109,11 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         }
         return false;
     }
-    // THE PICKER'S ONE BUTTON (architect 2026-08-29): its row is **Cancel**
-    // alone, because a click on a row is the open act now — so this arm reads
-    // no bit. Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
+    // THE PICKER'S ONE BUTTON (architect 2026-08-29): its row is one button,
+    // because a click on a row is the open act now — so this arm reads no
+    // bit. Its word is what leaving does (kModalCancelLabel's rule,
+    // paint_handler.cpp, architect 2026-10-28 night): Cancel under the
+    // project picker and the value list, Close under the settings page. Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
     // the list's key, nothing applied (return_to_settings_page, architect
     // 2026-10-28 night: the list is the page's sub-page); under every other
     // content it runs the one close body. Esc is the same fork
@@ -4928,8 +4930,9 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // THE OPEN ACT (the row click's own second half and Enter on the highlight).
 // Under the player a folder enters and a wav plays; under the project picker
 // the row's project is reopened; under the settings page (2026-10-28) the
-// page closes and the settings editor opens prefilled on the row's line, or
-// the row of a key with a value list swaps that list in; under the value
+// page closes and the settings editor opens prefilled on the row's line (its
+// OK and Cancel reopening the page on that row, handle_settings_editor_key),
+// or the row of a key with a value list swaps that list in; under the value
 // list (2026-10-25, four keys more 2026-10-28 night) the row's value is
 // committed to the listed key and the settings page returns, seated on that
 // key's row — one body per content, which the click and Enter both reach.
@@ -5777,10 +5780,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE PICKER'S VEIL (2026-08-28), the player's shape one mode over: while
     // a picker stands the pointer has TWO targets, the overlay's rows
-    // (claimed above) and the modal row's one Cancel button (the arm every
+    // (claimed above) and the modal row's one button, Cancel or the settings
+    // page's Close (the arm every
     // dialog button takes; the app's caption a third, 2026-10-05 to
     // 2026-10-24), and EVERY OTHER PRESS IS CONSUMED. A ROW CLICK IS
-    // THE OPEN ACT, which is why the row carries no OK beside that Cancel. There is no field
+    // THE OPEN ACT, which is why the row carries no OK beside that button. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
     // THE OPENER KEY CLOSES IT (architect 2026-10-25, the player's own

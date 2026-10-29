@@ -2816,7 +2816,11 @@ private:
     // the bare-Tab hook: the value completion is Tab's under the one
     // autocomplete model (architect 2026-08-13 — completion first, the focus
     // ring when it did not advance; the typed-`=` trigger it wore for part of
-    // that day is reverted with the ruling).
+    // that day is reverted with the ruling). It is also THE EDITOR'S ONE
+    // RETURN HOOK (architect 2026-10-28 night): an editor the key closed —
+    // OK applied or unchanged, Cancel, Esc — reopens the settings page seated
+    // on the key the editor was opened from (open_settings_page with
+    // GuiSettingsEditor::page_key); a refusal leaves the editor standing.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
     // (THE CHOICE EDITOR'S KEYS AND POINTER — handle_settings_choice_key,
     // claim_settings_choice_press, finish_settings_choice_release and
@@ -2832,8 +2836,10 @@ private:
     // and it works fine". The state is AppState::Picker (one bit and a
     // session id; the overlay's owner tag says WHICH content stands), the
     // fourth ModalDialogOwner and never an editor: the band is the whole
-    // state, the row is **Cancel** alone since 2026-08-29 (a click on a row is
-    // the open act), and route_picker_key below is its whole
+    // state, the row is one button since 2026-08-29 (a click on a row is
+    // the open act), Cancel under the project picker and the value list and
+    // Close under the settings page (a button's word says what leaving does,
+    // kModalCancelLabel, paint_handler.cpp, architect 2026-10-28 night), and route_picker_key below is its whole
     // plastic vocabulary. THREE CONTENTS — the project picker, the settings
     // page (2026-10-28) and the value list (2026-10-25 for `waveform`,
     // 2026-10-28 night for four keys more), the page's row for a listed key:
@@ -2917,7 +2923,10 @@ private:
     //   allowlist admits `;` and the iteration lock inherits it; the `h`
     //   view refuses it.
     //     open_settings_page: the opener, open_project_picker's own guards
-    //       (a prompt, a standing picker, a load) and its modal stop.
+    //       (a prompt, a standing picker, a load) and its modal stop, seated
+    //       on `seat_key`'s row (build_settings_page_rows): none from `;`
+    //       and the Settings key, the editor's open key from the line
+    //       editor's return (handle_settings_editor_key).
     //     build_settings_page_rows: kSettingsEditorKeys exactly (settings_
     //       editor.h), the DEVICE keys under a "DEVICE" group row and then
     //       the PIECE keys under a "PIECE" one; each key a glyph-less Plain
@@ -2925,8 +2934,9 @@ private:
     //       `key=value` (GuiSettingsEditor::setting_line), each group row
     //       inert (folder_overlay::row_is_inert). THE SEAT is
     //       `seat_key`'s row, centered as far as the listing's ends allow
-    //       (scroll_row_centered); with no seat key — the open — the FIRST
-    //       KEY ROW, at the top (that clamp).
+    //       (scroll_row_centered) — a value list's or the line editor's
+    //       return seating the key it showed; with no seat key — `;` and the
+    //       Settings key — the FIRST KEY ROW, at the top (that clamp).
     //     settings_page_commit: THE OPEN ACT on row `index` — a tap, a click
     //       or Enter: on the row of a key with a value list
     //       (settings_key_has_value_list, settings_editor.h) THAT KEY'S VALUE
@@ -2935,9 +2945,10 @@ private:
     //       other row close_picker and
     //       then GuiSettingsEditor::open prefilled with the row's line, the
     //       caret at its end — the overlay and the keyboard never both
-    //       stand, so the page closes before the editor opens, and nothing
-    //       reopens it after the editor's OK or Cancel. An inert row opens
-    //       nothing.
+    //       stand, so the page closes before the editor opens, and the
+    //       editor's OK and Cancel reopen it on the row's key, the editor a
+    //       sub-page too (architect 2026-10-28 night,
+    //       handle_settings_editor_key). An inert row opens nothing.
     //
     //   THE VALUE LIST (architect 2026-10-25 for `waveform`: "maybe a drop
     //   down would make it quicker, because I don't like having to type it
@@ -2985,9 +2996,10 @@ private:
     //       highlight mechanics (folder_overlay.h) with the picker's damage —
     //       the row click's first half (folder_overlay_highlight_row's picker
     //       arm) and bare Up / Down's walk.
-    //     close_picker: THE ONE CLOSE BODY — Esc and the Cancel button
-    //       under the project picker and the settings page (under a value
-    //       list both return to the page, return_to_settings_page), Ctrl+O
+    //     close_picker: THE ONE CLOSE BODY — Esc and the one button
+    //       under the project picker (Cancel) and the settings page (Close;
+    //       under a value list Esc and Cancel return to the page,
+    //       return_to_settings_page), Ctrl+O
     //       (the Open Project key's lift) under the project picker,
     //       `;` (the Settings key's lift) under the settings page and the
     //       value list, Ctrl+Q's and the
@@ -3002,7 +3014,7 @@ private:
     //     route_picker_key: THE WHOLE PLASTIC VOCABULARY while a picker
     //       stands, in the render player's router's shape and at its rank in
     //       on_key (under the prompt gate, above every
-    //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, Cancel]
+    //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, button]
     //       through the one modal ring route (opening NOWHERE, the
     //       first Tab landing on the list); Enter presses a ring-focused
     //       button (press-at-press, commit-at-release, the modal's own) or,
@@ -3046,7 +3058,7 @@ private:
     void open_project_picker();
     void build_project_picker_rows();
     void open_project_commit(int index);
-    void open_settings_page();
+    void open_settings_page(std::string_view seat_key);
     void build_settings_page_rows(std::string_view seat_key);
     void settings_page_commit(int index);
     void build_value_list_rows(const std::string& key);

@@ -8361,19 +8361,24 @@ struct AppState {
     // FOURTH ModalDialogOwner (Picker), never an
     // editor: no buffer, no caret, no keyboard-modal gate — the router
     // GuiInputHandler::route_picker_key is its whole plastic vocabulary, and
-    // ITS ROW IS **Cancel** ALONE (architect 2026-08-29: a click on a row
+    // ITS ROW IS ONE BUTTON (architect 2026-08-29: a click on a row
     // opens it, so the row needs no OK — "if I'm using the picker my hand
-    // stays on the right", and the one button sits flush right). The opener
+    // stays on the right", and the one button sits flush right), its word
+    // what leaving does — Cancel under the project picker and the value
+    // list, Close under the settings page (kModalCancelLabel's rule,
+    // paint_handler.cpp, architect 2026-10-28 night). The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — the render player's arm is RETIRED
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
-    // GuiInputHandler::close_picker (Esc and Cancel, the opener's chord —
+    // GuiInputHandler::close_picker (Esc and the one button, the opener's
+    // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
     // value list — Ctrl+Q's road, the same-project no-op and the page's row
-    // open ahead of its editor all pass through it, but under a value list
-    // Esc and Cancel return to the page, as its commit does,
+    // open ahead of its editor all pass through it — the editor's OK and
+    // Cancel reopening the page, handle_settings_editor_key — but under a
+    // value list Esc and Cancel return to the page, as its commit does,
     // GuiInputHandler::return_to_settings_page; a reopen
     // ends the session with the picker standing, the whole AppState going
     // with it), which
@@ -8916,7 +8921,8 @@ struct AppState {
     //                 the listings carry no `..` row and Up is a button and
     //                 Backspace), under the project picker reopens the row's
     //                 project, under the settings page opens the settings
-    //                 editor prefilled on the row's line or swaps in the
+    //                 editor prefilled on the row's line (whose OK and
+    //                 Cancel reopen the page on that row) or swaps in the
     //                 key's value list (settings_page_commit), and under the
     //                 value list commits the row's value to the listed key,
     //                 then returns to the page (value_list_commit); the lift's

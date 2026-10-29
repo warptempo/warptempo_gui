@@ -147,8 +147,10 @@
 // under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
 // it closes the page and opens the settings editor prefilled on the row's
-// line, or on the row of a key with a value list swaps that list in
-// (settings_page_commit, 2026-10-28); under the VALUE LIST
+// line, whose OK and Cancel reopen the page on that row (2026-10-28 night,
+// GuiInputHandler::handle_settings_editor_key), or on the row of a key with
+// a value list swaps that list in (settings_page_commit, 2026-10-28); under
+// the VALUE LIST
 // it commits the row's value to the listed key and returns to the settings
 // page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night; the
 // return 2026-10-28 night). AN

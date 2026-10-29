@@ -311,6 +311,8 @@ void GuiSettingsEditor::open(const std::string& line) {
     // answer. (Its one caller is the settings page's row, which no press
     // reaches under the editor's veil; the arm is the opener's own shape.)
     if (text_editor::is_active(app.settings_editor)) return;
+    // THE ROW THE CLOSE RETURNS TO (page_key's contract, settings_editor.h).
+    page_key_ = line.substr(0, line.find('='));
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
     // when the modal actually opens, so a refused open leaves a listening

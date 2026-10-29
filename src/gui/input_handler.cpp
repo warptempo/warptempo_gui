@@ -2149,7 +2149,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // defense (settings_editor.cpp). The `h` view's allowlist refuses it.
     // Shift+; binds nothing (chord_is_bound), silent.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
-        open_settings_page();
+        open_settings_page({});
         return;
     }
 

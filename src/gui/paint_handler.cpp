@@ -373,7 +373,10 @@ KeyLegendSeat key_legend_seat(const GuiRect& key, double run_w) {
 // FOLDER LOAD CANCEL), by the act each key runs; the root's sixth slot,
 // Delete, its own word. THE REPEAT KEY READS REPEAT (architect 2026-10-23,
 // "player repeat btn is mislabeled refresh"): its act is Toggle Repeat One,
-// the mock's REFRESH a misprint.
+// the mock's REFRESH a misprint. THE LAST KEY READS CLOSE (architect
+// 2026-10-28 night, "agree all"): the player asks nothing, and a button's
+// word says what leaving does (the rule at kModalCancelLabel); its tooltip,
+// "Close (Esc)", says the same.
 const char* render_player_button_legend(AppState::PlayerButtonAct act) {
     using Act = AppState::PlayerButtonAct;
     switch (act) {
@@ -386,7 +389,7 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act) {
         case Act::Up:            return "FOLDER";
         case Act::LoadInPlace:   return "LOAD";
         case Act::Delete:        return "DELETE";
-        case Act::Close:         return "CANCEL";
+        case Act::Close:         return "CLOSE";
         case Act::None:          return "";
     }
     return "";
@@ -5368,11 +5371,23 @@ namespace {
 // (2026-10-09), kept as the player's own.
 constexpr double kPlayerGroupGapPx    = 8.0;
 
-// THE TWO WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel,
-// and the field-less owners' Cancel alone (the picker's, the progress
-// modal's) — the painter's plans read these.
+// THE WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel, and
+// the field-less owners' one button (the picker's, the progress modal's) —
+// the painter's plans read these.
+// A BUTTON'S WORD SAYS WHAT LEAVING DOES (architect 2026-10-28 night, "agree
+// all"). CANCEL leaves a question unanswered: the PROJECT PICKER and the
+// VALUE LIST ask for a choice and Cancel declines it, and the PROGRESS
+// MODAL's Cancel cancels the render. OK AND CANCEL belong to the EDITORS,
+// where a typed line is pending. CLOSE leaves a surface that asked nothing:
+// the SETTINGS PAGE, whose rows pend nothing, and the RENDER PLAYER (its
+// last key's legend, render_player_button_legend). Esc is the key of Cancel
+// and Close alike, and neither word carries an access letter (Esc is the
+// dialogs' way out, Windows strict, the underline rule at access_key_of);
+// the word buttons' layout reads their count alone (modal_word_buttons), so
+// the word changes no geometry.
 constexpr std::string_view kModalOkLabel     = "OK";
 constexpr std::string_view kModalCancelLabel = "Cancel";
+constexpr std::string_view kModalCloseLabel  = "Close";
 
 // THE WORD BUTTONS' LAYOUT — ONE FOR THE PAINTER AND THE PRESS: on `seats`
 // (the controls row's, modal_controls_seats) the words `labels`, in painted
@@ -6095,15 +6110,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
         // claim), button-is-its-chord.
-        // THE PICKER'S ROW IS **Cancel** ALONE (architect 2026-08-29): a click
-        // on a row opens it, so there is nothing for an OK to add — Enter on
-        // the list is the same act from the keyboard. Its one-day OK, named by
-        // the act it ran, went with the row-click ruling; Cancel is untouched
-        // and stays LAST, which on a one-button row makes it the escape
-        // sentinel by construction. The hint composer's "OK (Return)" /
-        // "Cancel (Esc)" follows for free, those being the two routers'
-        // own keys under the product's one spelling (spell_chord's head,
-        // gui_input.h).
+        // THE PICKER'S ROW IS ONE BUTTON (architect 2026-08-29): a click on a
+        // row opens it, so there is nothing for an OK to add — Enter on the
+        // list is the same act from the keyboard. Its one-day OK, named by
+        // the act it ran, went with the row-click ruling; the one button
+        // stays LAST, which on a one-button row makes it the escape sentinel
+        // by construction. ITS WORD IS WHAT LEAVING DOES (the rule at
+        // kModalCancelLabel, architect 2026-10-28 night): CANCEL under the
+        // project picker and the value list, CLOSE under the settings page —
+        // the act the same body by content (dispatch_modal_dialog_button's
+        // picker arm), the word alone moving.
         // THE PROGRESS MODAL'S ROW IS **Cancel** ALONE TOO (architect
         // 2026-10-14): the batch's one act a user owns is stopping it, and its
         // lift is the batch's cancel road (dispatch_modal_dialog_button's
@@ -6115,7 +6131,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(ok));
         }
         DialogButtonPlan last;
-        last.label = std::string(kModalCancelLabel);
+        last.label = std::string(
+            picker_up && app.folder_overlay.owner ==
+                             AppState::FolderOverlay::Owner::SettingsPage
+                ? kModalCloseLabel
+                : kModalCancelLabel);
         plan.push_back(std::move(last));
     }
     // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at row 8's width
@@ -6662,8 +6682,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
-        //    2026-08-29): **Cancel** and NOTHING ELSE — no label, no field,
-        //    no OK. The list in the
+        //    2026-08-29): **Cancel**, or **Close** under the settings page
+        //    (kModalCancelLabel's rule, 2026-10-28 night), and NOTHING ELSE —
+        //    no label, no field, no OK. The list in the
         //    band above is the whole question, a click on a row is the answer,
         //    and the prompt's `<projects_path>/` prefix went with the field it
         //    labelled.

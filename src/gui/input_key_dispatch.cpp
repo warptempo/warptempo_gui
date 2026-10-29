@@ -6618,8 +6618,9 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // either way, and what else the landing decides is what a bare Enter
     // means. Left/Right are NOT the ring's here: they are the seeks, the car's
     // rewind and fast-forward, on a button or off it. THE PICKER'S RING IS THE
-    // SAME SHAPE, one member shorter (its row is Cancel alone since
-    // 2026-08-29): [list, Cancel], opening nowhere, and Left/Right are not
+    // SAME SHAPE, one member shorter (its row is one button since
+    // 2026-08-29, Cancel or the settings page's Close): [list, button],
+    // opening nowhere, and Left/Right are not
     // its either — its router consumes them, the list's walk being Up/Down —
     // so the two list-bearing owners share one arm.
     const bool list_up = !prompt_up &&
@@ -6997,6 +6998,10 @@ bool GuiInputHandler::route_modal_editor_key(
 // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half — the contract and
 // the one caller are at the declaration (input_handler.h).
 //
+// THE SETTINGS EDITOR'S TEARDOWN HERE REOPENS NO PAGE: its return to the
+// settings page is the editor's key route's (handle_settings_editor_key),
+// which this road never passes, an exit having no page to return to.
+//
 // THE STEP LIVES ON THE CLOSE ROAD AND NOT ON THE KEYBOARD'S SIDE OF IT
 // (2026-08-28): Ctrl+Q used to tear its own editor down through a per-editor
 // hook on the shared modal route, and the COMPOSITOR'S CLOSE — which arrives
@@ -7276,13 +7281,15 @@ void GuiInputHandler::open_project_commit(int index) {
 // below.
 
 // THE OPENER — bare `;`, and the Settings button's plain press, which
-// dispatches that chord at the lift. The project picker's own guards, for its
-// reasons: a prompt veils everything, a standing picker is what is already on
-// screen (its router answers `;` with the close before this body is reached),
-// and a load has no window to paint a page into. The shared modal stop runs
-// once the open is certain (the overlays STOP, the decision table at
-// stop_playback_for_modal_open).
-void GuiInputHandler::open_settings_page() {
+// dispatches that chord at the lift, both with no seat key (the page's FIRST
+// KEY ROW); and THE LINE EDITOR'S RETURN, seated on the key the editor was
+// opened from (handle_settings_editor_key, architect 2026-10-28 night). The
+// project picker's own guards, for its reasons: a prompt veils everything, a
+// standing picker is what is already on screen (its router answers `;` with
+// the close before this body is reached), and a load has no window to paint
+// a page into. The shared modal stop runs once the open is certain (the
+// overlays STOP, the decision table at stop_playback_for_modal_open).
+void GuiInputHandler::open_settings_page(std::string_view seat_key) {
     if (app.prompt.active) return;
     if (picker_active()) return;
     if (app.loading) return;
@@ -7290,7 +7297,7 @@ void GuiInputHandler::open_settings_page() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.picker.active  = true;
     app.picker.session = text_editor::next_session_id();
-    build_settings_page_rows({});
+    build_settings_page_rows(seat_key);
     viewport.invalidate_all();
 }
 
@@ -7301,10 +7308,11 @@ void GuiInputHandler::open_settings_page() {
 // whose text is THE LINE THE EDITOR WOULD OPEN WITH
 // (GuiSettingsEditor::setting_line, the recall's one owner). THE SEAT is
 // `seat_key`'s row — a value list's return (return_to_settings_page) seats
-// the key it was showing — and, with no seat key (the open), THE FIRST KEY
-// ROW, row 1; either through the one set_highlight, the landing centering
-// it as far as the listing's ends allow (scroll_row_centered), which for
-// row 1 is the top.
+// the key it was showing, the line editor's return (open_settings_page from
+// handle_settings_editor_key) the key it was opened with — and, with no seat
+// key (`;` and the Settings key), THE FIRST KEY ROW, row 1; either through
+// the one set_highlight, the landing centering it as far as the listing's
+// ends allow (scroll_row_centered), which for row 1 is the top.
 void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
@@ -7366,8 +7374,9 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // CLOSES (close_picker — the overlay and the on-screen keyboard never both
 // stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
 // OPENS PREFILLED WITH THE ROW'S LINE as painted, the caret at its end
-// (GuiSettingsEditor::open). Nothing reopens the page after that editor's OK
-// or Cancel.
+// (GuiSettingsEditor::open), a sub-page too: its OK and Cancel reopen this
+// page on the row's key (handle_settings_editor_key, architect 2026-10-28
+// night).
 void GuiInputHandler::settings_page_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -7556,7 +7565,7 @@ void GuiInputHandler::history_load_in_place() {
 // one row-act fork (folder_overlay_open_row, input_pointer.cpp, which the row
 // click's motionless lift reaches too). A -1 highlight is a consumed no-op.
 // The row's own OK button went with the ruling that a click activates: the
-// picker's row is Cancel alone.
+// picker's row is one button, Cancel (Close under the settings page).
 void GuiInputHandler::picker_open_highlight() {
     if (!app.picker.active) return;
     const int highlight = app.folder_overlay.highlight_row;
@@ -7704,7 +7713,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
+    // THE RING: Tab / Shift+Tab walk [list, Cancel or Close] through the one
+    // modal
     // ring route, whose list arm the player and the picker share. A
     // RING-FOCUSED BUTTON takes Enter and Space as its own press
     // (press-at-press, commit-at-release — the route above already armed it
@@ -7723,8 +7733,9 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 
     switch (key) {
         case GuiKeys::Escape:
-            // Esc is the box's Cancel (dispatch_modal_dialog_button's picker
-            // arm, the same fork): under a value list it RETURNS TO THE
+            // Esc is the box's one button, Cancel or the settings page's
+            // Close (dispatch_modal_dialog_button's picker arm, the same
+            // fork): under a value list it RETURNS TO THE
             // SETTINGS PAGE, seated on the list's key, nothing applied
             // (return_to_settings_page, architect 2026-10-28 night); under
             // every other content it closes the picker.
@@ -9826,12 +9837,34 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // the Tab after the value's recall: the first Tab on a key stops at its `=`,
 // the second recalls the value, the third steps — and an unknown key) are
 // exactly the Tabs that step.
+//
+// THE EDITOR'S CLOSE RETURNS TO THE SETTINGS PAGE (architect 2026-10-28
+// night, "1 yes": "otherwise it's assumed I am editing one key only" — the
+// line editor a sub-page of the page, as the value lists are), and THIS IS
+// ITS ONE HOOK: every road that closes the editor without leaving the
+// program passes through this route — Enter and Esc in the field, the OK and
+// Cancel buttons' lifts and the ring's Enter / Space on them
+// (dispatch_modal_dialog_editor_act synthesizes the field's Return or Esc
+// here), the on-screen keyboard's Enter and Esc caps — so an editor standing
+// before the key and gone after it is OK applied, OK unchanged, Cancel or
+// Esc, and the page reopens through its own open road
+// (open_settings_page: its guards, a fresh session, its modal stop a no-op
+// with playback already stopped for the editor), seated on the row the
+// editor was opened from (GuiSettingsEditor::page_key — the open's key, not
+// a retyped one). A REFUSED commit leaves the editor standing and reopens
+// nothing. THE EXIT ROAD does not come here (GuiPrompt::request_close tears
+// the editor down through close_modal_editors_no_commit, the picker already
+// closed for the quit): a quit reopens no page.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
-    return route_modal_editor_key(
+    const bool was_active = text_editor::is_active(app.settings_editor);
+    const bool consumed = route_modal_editor_key(
         app.settings_editor, key, mods,
         [this] { return settings_editor.autocomplete_value(); },
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { viewport.invalidate_dialog_editor_box(); });
+    if (was_active && !text_editor::is_active(app.settings_editor))
+        open_settings_page(settings_editor.page_key());
+    return consumed;
 }

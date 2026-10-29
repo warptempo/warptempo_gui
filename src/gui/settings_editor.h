@@ -34,7 +34,12 @@ struct GuiInputHandler;
 // the controls row under it, NO LABEL — "Setting:" removed, "pointless that
 // far away"), the on-screen keyboard standing inside the frame under it on
 // the glass as under every dialog editor. OK or Enter commits the line, Esc
-// or Cancel closes it, and nothing reopens the page after either. (THE
+// or Cancel closes it, and EITHER WAY THE PAGE COMES BACK, seated on the row
+// the editor was opened from (architect 2026-10-28 night: "otherwise it's
+// assumed I am editing one key only" — the editor a sub-page of the page, as
+// the value lists are; GuiInputHandler::handle_settings_editor_key, the one
+// return hook); a refused commit leaves the editor standing and reopens
+// nothing. (THE
 // SETTINGS POPUP — a pull-down hanging from the Settings button — and its
 // "True Colors" command row stood 2026-07-31 to 2026-10-21; True Colors is
 // the `true_colors` device key, and the page is the popup's list in the
@@ -302,8 +307,17 @@ struct GuiSettingsEditor {
     // settings_page_commit, its one caller, after the page's close), landed
     // as every Tab advance lands — through text_editor::replace_selection,
     // the one incoming filter, the caret at the LINE'S END and nothing
-    // selected.
+    // selected. It RECORDS THE LINE'S KEY (page_key, below), the row the
+    // page reopens on when this editor closes.
     void open(const std::string& line);
+    // THE ROW THE PAGE RETURNS TO (architect 2026-10-28 night, the editor a
+    // sub-page of the settings page): the key `line` named at the open, the
+    // text before its first `=`, recorded by open() and read by the one
+    // return hook (GuiInputHandler::handle_settings_editor_key) when the
+    // editor closes. It is THE OPEN'S key, not the typed one: a line whose
+    // key was retyped into another key still returns to the row it came
+    // from, the row he tapped.
+    const std::string& page_key() const { return page_key_; }
     // THE LINE THE EDITOR WOULD OPEN WITH for `key`: `key=` and the key's
     // current value as the recall gives it (recall_setting_value,
     // settings_editor.cpp — Tab's stage 2 and this one owner). Read by the
@@ -466,4 +480,6 @@ private:
     // commit() falls through to the engine-key path. Each apply routes through
     // the key's own gesture chokepoint — no parallel state writer.
     bool commit_gui_setting(const std::string& key, const std::string& value);
+    // The open's key (page_key above); written by open() alone.
+    std::string page_key_;
 };
