@@ -1098,23 +1098,6 @@ bool point_on_nav_surface(const AppState& app, const GuiPlatform& gui, int x,
            !point_on_waveform_divider(waveform_area(app), y);
 }
 
-// WHERE A LANE EDITOR'S OUTSIDE PRESS CLOSES IT (architect 2026-10-26
-// ~11:30, "a tap outside OSK (in waveform + marker/time/trim lane only) to
-// close"; the rule at on_button_press's veil): THE VIEW BAR, THE RULER, THE
-// MARKER LANE — each lane's own rect, the window's width — and THE
-// WAVEFORM AS PAINTED (point_on_nav_surface: waveform_area less what the
-// keyboard's band covers, less the stereo divider's chrome rows). The
-// canvas's frame rows and the column's margins are chrome and answer
-// nothing, as everywhere; the band above and row 8 below stay veiled. ONE
-// READER: the veil's last word in on_button_press.
-bool lane_editor_closing_press_at(const AppState& app, const GuiPlatform& gui,
-                                  int x, int y) {
-    return rect_contains(top_trim_row_area(app), x, y) ||
-           rect_contains(top_ruler_row_area(app), x, y) ||
-           rect_contains(top_marker_row_area(app), x, y) ||
-           point_on_nav_surface(app, gui, x, y);
-}
-
 // Active-domain playhead frame at click column `col`: the single-rounding
 // display grid (displayed_grid_position_at_column via painter q) in BOTH views,
 // so a click, a 1px step and the marker commits agree on ONE lattice per view
@@ -2116,9 +2099,9 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      one thing a press can reach, and a button carries no cursor cue);
 //   2. EVERY EDITOR'S veil (since 2026-10-25, the lane editors with the
 //      dialogs), which consumes every press outside the editor's own field
-//      and a dialog's buttons — a lane editor's press in the lanes closing
-//      it as Esc does (2026-10-26), a close and no zone's act, so the Arrow
-//      — the shared predicate is
+//      and a dialog's buttons and closes nothing (the pure modal whole again
+//      since 2026-10-29), so no zone's act and the Arrow — the shared
+//      predicate is
 //      keyboard_modal_editor_active, whose membership is
 //      AppState::text_editor_session's (all five kinds); the blanket's
 //      field is the dialog's edit control or the lane editor's box;
@@ -3453,9 +3436,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // the field's own press — the third ruled divergence,
     // begin_touch_caret_drag's declaration — and a finger on a RIDING box
     // beside the field resolves to the pointer translation like any lane
-    // press, where the editor's modal veil consumes it and closes the editor
-    // as Esc does (the lane editor's outside press, 2026-10-26,
-    // on_button_press's veil).)
+    // press, where the editor's modal veil consumes it and closes nothing
+    // (every editor a pure modal, architect 2026-10-29, on_button_press's
+    // veil).)
     // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27), for the flag
     // box carve-out's reason exactly: the keyboard paints over the waveform's lower
     // part, the whole waveform is the pan zone, and a finger landing on a key
@@ -6092,60 +6075,36 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 return;
             }
             // A PRESS OUTSIDE THE FIELD falls to THE VEIL'S LAST WORD below,
-            // which consumes it — and closes a lane editor where it lands in
-            // the lanes the keyboard leaves visible (the arm there).
+            // which consumes it and closes nothing.
         }
     }
 
     // THE VEIL'S LAST WORD: any editor still standing here swallows the
     // press — every button, every modifier, every surface: the band and row
-    // 8 (their keys dead and ungreyed behind it), the marker lane (no press
-    // on another flag), the waveform (no pan, scrub, placement, marker or
-    // strip drag). It asks THE ONE PREDICATE for "a keyboard-taking modal
-    // stands" (keyboard_modal_editor_active, input_handler.h, whose
-    // declaration names its readers) rather than spelling the editors again,
-    // so a new editor is veiled here by existing rather than by an edit (the
+    // 8 (their keys dead and ungreyed behind it), the view bar, the ruler,
+    // the marker lane (no press on another flag), the waveform (no pan,
+    // scrub, placement, marker or strip drag) — and CLOSES NOTHING. It asks
+    // THE ONE PREDICATE for "a keyboard-taking modal stands"
+    // (keyboard_modal_editor_active, input_handler.h, whose declaration
+    // names its readers) rather than spelling the editors again, so a new
+    // editor is veiled here by existing rather than by an edit (the
     // architect's words, 2026-10-25: "once I've done that pop-up modal, I
-    // can't do anything else in the window behind it"). An editor ends
-    // through its own keys — Esc, Return — and a dialog's Cancel and OK; on
-    // the glass the on-screen keyboard's own Esc and Enter, whose claim ranks
-    // above every gate; AND A LANE EDITOR BY THE ONE PRESS BELOW.
-    // THE LANE EDITOR'S OUTSIDE PRESS CLOSES IT, AS ESC DOES (architect
-    // 2026-10-26 ~11:30: "the OSK does not close by tapping outside it when a
-    // flag editor is open — by my ruling, but it should be reversed.
-    // Currently no pan or any other movement outside OSK is possible, and I
-    // think that should remain, except for a tap outside OSK (in waveform +
-    // marker/time/trim lane only) to close. On modals, that would not apply
-    // as the trim-to-bottom-of-waveform area is not visible"): while a LANE
-    // EDITOR stands — the flag editor, the iteration bound editor, the
-    // editors that paint in the marker lane (keyboard_modal_editor_active
-    // and not modal_dialog_editor_active) — a LEFT press in the lanes the
-    // keyboard leaves visible (lane_editor_closing_press_at: the view bar,
-    // the ruler, the marker lane and the canvas's painted part) runs the
-    // editor's own Esc (handle_top_flag_editor_key, the cancel road a
-    // dialog's Cancel takes through dispatch_modal_dialog_editor_act):
-    // uncommitted, nothing else acts, the press consumed — it arms nothing,
-    // so its lift lands nothing. Everything else stays veiled: any other
-    // button, the band's keys, row 8, and every gesture (the wheel, the pan,
-    // the pinch and the region hold refuse in their own roads; a drag begun
-    // in a lane closes at its press and drags nothing). The press inside the
-    // field keeps its act (the caret block above). THE DIALOG EDITORS ARE
-    // UNTOUCHED: their box covers these lanes, so no such press reaches them.
-    // THE RULE IS THE LANE EDITOR'S, NOT THE KEYBOARD'S: the laptop, which
-    // has no on-screen keyboard, takes the same press the same way
-    // (symmetry). ON GLASS a tap reaches here on both of the touch roads —
-    // off the pan zone (the view bar, the ruler, the marker lane) as the
-    // pointer on contact, and on the waveform, the pan zone, as the tap's
-    // whole burst at the lift (input_core.cpp's touch_up); a pan, a pinch or
-    // a hold there delivers no press.
-    if (keyboard_modal_editor_active()) {
-        if (button == GuiMouseButton::Left &&
-            !modal_dialog_editor_active() &&
-            lane_editor_closing_press_at(app, gui, x, y)) {
-            handle_top_flag_editor_key(GuiKeys::Escape, GuiInputState{});
-        }
-        return;
-    }
+    // can't do anything else in the window behind it"). EVERY EDITOR IS A
+    // PURE MODAL, the lane editors (the flag editor, the iteration bound
+    // editor) with the dialogs: an editor ends through its own keys alone —
+    // Esc, Return — and a dialog's Cancel and OK; on the glass the on-screen
+    // keyboard's own Esc and Return, whose claim ranks above every gate. THE
+    // SAME ON BOTH DEVICES (symmetry): the laptop's hardware keys, the
+    // glass's keyboard keys, and no press outside the field on either. The
+    // press inside the field keeps its act (the caret block above). (A LANE
+    // EDITOR'S ONE EXCEPTION, a left press in the lanes the keyboard left
+    // visible — the view bar, the ruler, the marker lane, the waveform as
+    // painted — closing it as Esc does, stood 2026-10-26 to 2026-10-29; it
+    // is undone, architect 2026-10-29: "I think we can reverse that,
+    // because the escape key should be at a very convenient position on the
+    // keyboard" — the keyboard's Esc sits lower right since the compact
+    // keyboard of the same day.)
+    if (keyboard_modal_editor_active()) return;
 
     // THE FOUR REDESIGNED BUTTON ROWS (top lanes 1..2 plus the bottom strip's
     // transport row, whose claim closes the block — the toolbar row's own

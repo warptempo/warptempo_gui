@@ -2197,10 +2197,11 @@ struct GuiInputHandler {
     }
 
     // THE PLAIN WHEEL OVER A FLAG CELL (architect 2026-09-14): on_wheel's
-    // context 5. A standing marker-lane editor closes as an outside press
-    // closes it; then the flag under (x, y) is SELECTED exactly as a plain
-    // click selects it (run_marker_plain_select — no prior selection needed,
-    // every audio view and column) and THAT CELL takes THE VALUE STEP as
+    // context 5, which no editor reaches (wheel_context swallows the wheel
+    // under every editor, 2026-10-25). The flag under (x, y) is SELECTED
+    // exactly as a plain click selects it (run_marker_plain_select — no
+    // prior selection needed, every audio view and column) and THAT CELL
+    // takes THE VALUE STEP as
     // Up / Down would — the tempo or a bound, a phase reset's payload stepping nothing — one step per detent, up =
     // increase, through the same bodies. The step asks the key's two lock
     // gates first; EVERY REFUSAL IS SILENT; synthesized_repeat is false, so a
@@ -4366,22 +4367,17 @@ private:
     // wheel detent and touch gesture is consumed, silently, and nothing
     // behind it changes face (dead and ungreyed — redesign_button_enabled's
     // record of the classes). The way out is Esc (cancel) and Return
-    // (commit), the on-screen keyboard's own two keys on the glass, a
-    // dialog's Cancel and OK — AND FOR A LANE EDITOR (the flag editor, the
-    // iteration bound editor: this predicate and not
-    // modal_dialog_editor_active) A LEFT PRESS IN THE LANES THE KEYBOARD
-    // LEAVES VISIBLE — the view bar, the ruler, the marker lane, the
-    // waveform as painted — which closes it AS ESC DOES and acts on nothing
-    // else (architect 2026-10-26 ~11:30: "the OSK does not close by tapping
-    // outside it when a flag editor is open — by my ruling, but it should be
-    // reversed. Currently no pan or any other movement outside OSK is
-    // possible, and I think that should remain, except for a tap outside OSK
-    // (in waveform + marker/time/trim lane only) to close"); the wheel, the
-    // pan, the pinch, the hold and every other press stay consumed. THE RULE
-    // IS THE LANE EDITOR'S, NOT THE KEYBOARD'S: the laptop takes the same
-    // press the same way. The dialog editors' box covers those lanes, so the
-    // press never reaches them. (The rule's one owner is on_button_press's
-    // veil, input_pointer.cpp.)
+    // (commit) alone — the hardware's on the laptop, the on-screen
+    // keyboard's own two keys on the glass (its Esc lower right since
+    // 2026-10-29) — and a dialog's Cancel and OK. A PRESS OUTSIDE THE FIELD
+    // CLOSES NOTHING, for the lane editors (the flag editor, the iteration
+    // bound editor) as for the dialogs, on both devices: every editor is a
+    // pure modal (architect 2026-10-29, undoing the lane editors' one
+    // exception of 2026-10-26, a press in the lanes the keyboard left
+    // visible closing them as Esc did: "I think we can reverse that,
+    // because the escape key should be at a very convenient position on the
+    // keyboard"). (The press's owner is on_button_press's veil,
+    // input_pointer.cpp.)
     // THE READERS, re-derived by grep 2026-10-25 — EVERY "a modal editor
     // stands" question asks this, and the few that mean the DIALOG alone ask
     // modal_dialog_editor_active below, each saying why at its site:
@@ -4390,9 +4386,8 @@ private:
     //     history_load_in_place's guard, and the car's two roads onto the
     //     key gates (run_undo_redo_without_key, car_play_refused_by_key_gates,
     //     silent belts behind GuiCarTransport::admits, which is a reader too);
-    //   POINTER — on_button_press's veil (the press outside the field, and
-    //     the lane editor's closing press in the lanes), the
-    //     chrome lift's re-ask (finish_chrome_press_release, the editor
+    //   POINTER — on_button_press's veil (the press outside the field),
+    //     the chrome lift's re-ask (finish_chrome_press_release, the editor
     //     opened mid-hold), on_motion's editors' branch, pointer_cursor_kind's
     //     blanket (the Arrow but the field's I-beam), the roster hover walk's
     //     veil (recompute_redesign_button_hover), tooltip_dwell_suppressed,
