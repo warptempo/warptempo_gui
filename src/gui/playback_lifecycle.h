@@ -199,8 +199,8 @@ struct GuiPlaybackLifecycle {
     // bpm editor (handle_mode_keys), the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
     // 2026-08-28), THE SETTINGS PAGE (open_settings_page, 2026-10-28, the
-    // picker's second content, whose `waveform` row swaps the preset picker
-    // in under the stop already taken) and the PULL confirmation
+    // picker's second content, whose rows for the listed keys swap a value
+    // list in under the stop already taken) and the PULL confirmation
     // (run_history_pull_press, OK / Cancel); THE SCORE VIEWER's open
     // (GuiScoreViewer::open, score_viewer.cpp, 2026-10-26); the TWO
     // prompt opens (prompt.cpp: unsaved, and Revert's confirmation —
@@ -257,7 +257,7 @@ struct GuiPlaybackLifecycle {
     //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
     //     and the progress modal — and THE TWO OVERLAYS, the picker (all
     //     three of its contents, the project picker, the settings page and
-    //     the preset picker it swaps in) and the
+    //     the value list it swaps in) and the
     //     render player (whose own transport begins where the project's
     //     audition ends), and THE SCORE VIEWER (2026-10-26, whose own
     //     soundtrack, since 2026-10-26 night, likewise begins where the

@@ -354,7 +354,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-08-28): the
     // field-less picker over the folder overlay (the project picker, the
-    // settings page and the preset picker it swaps in), at the player's rank (the two never stand together) and with
+    // settings page and the value list it swaps in), at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road's exit), Ctrl+S consumed by the router
@@ -362,7 +362,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Alt+O as Revert (2026-10-25, whose question stands over the
     // picker — the prompt gate above then owns every key, so its Esc is the
     // question's Cancel and a second Esc the picker's close), under the
-    // settings page and the preset picker it swaps in bare `;` as the close
+    // settings page and the value list it swaps in bare `;` as the close
     // (2026-10-28), and
     // Ctrl+Shift+S (the publish chord, 2026-10-10)
     // as a consumed nothing — the pull's question must not open over a
@@ -876,7 +876,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - ; (no mods)            → the settings page (2026-10-21, the page
     //                              2026-10-28): the lock governs the keys, not
     //                              the surface — a row opens the settings
-    //                              editor (or the preset picker), whose
+    //                              editor (or a value list), whose
     //                              engine-key commits refuse on a locked tab,
     //                              the device keys and the band commit
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
@@ -886,8 +886,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and undo/redo (Ctrl+Z / Ctrl+Shift+Z) all drop here. (`;`, THE SETTINGS
     // PAGE, IS ADMITTED since 2026-10-21 — the lock governs the keys, not
     // the surface, the 2026-09-04 rule: a row opens the settings editor (or
-    // the preset picker), and the editor's engine-key commits refuse on a
-    // locked tab.) This gate is the ONLY read-only
+    // a value list, whose rows write device keys alone), and the editor's
+    // engine-key commits refuse on a locked tab.) This gate is the ONLY
+    // read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
     // POINTER path too has gone, the trim band's gate having been deleted with
     // the reclassification. The surviving deeper checks each cover a

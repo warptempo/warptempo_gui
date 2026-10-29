@@ -111,23 +111,14 @@ std::string common_prefix_on_codepoint_boundary(
     return lcp;
 }
 
-// THE FOLDER-NAME MATCH — the path completer's and the noise completer's one
-// listing body (2026-10-28, factored out of complete_path_value; the rules at
-// their declarations): `dir` LISTED AFRESH AT EVERY TAB, with an error_code,
-// so a directory that is not there, not readable or not a directory — or a
-// listing error midway — is no match, and a Tab that completes nothing walks
-// the ring (the one autocomplete model). The matches are the DIRECTORIES
-// whose names start with `tail` (byte compare — the key names a folder); the
-// answer is their count and the ADVANCE past `tail`, their longest common
-// prefix on a codepoint boundary less the tail (empty when the boundary cut
-// took it to the tail or below: the matches diverge inside one character, or
-// a single match is the tail already). Each caller decides what a single
-// match takes after it.
-struct FolderNameAdvance {
-    std::size_t count = 0;
-    std::string append;
-};
-FolderNameAdvance folder_name_advance(const std::filesystem::path& dir,
+// THE FOLDER-NAME LISTING — the path completer's, the noise completer's and
+// the noise value list's one listing body (2026-10-28, factored out of
+// complete_path_value; the rules at their declarations): `dir` LISTED AFRESH
+// AT EVERY CALL, with an error_code, so a directory that is not there, not
+// readable or not a directory — or a listing error midway — lists nothing.
+// The names are the DIRECTORIES whose names start with `tail` (byte compare
+// — the key names a folder), in the listing's own order.
+std::vector<std::string> folder_names(const std::filesystem::path& dir,
                                       const std::string& tail) {
     std::error_code ec;
     std::filesystem::directory_iterator it(dir, ec);
@@ -155,6 +146,23 @@ FolderNameAdvance folder_name_advance(const std::filesystem::path& dir,
             name.compare(0, tail.size(), tail) != 0) continue;
         matches.push_back(name);
     }
+    return matches;
+}
+
+// THE FOLDER-NAME MATCH — the two completers' one advance over that listing:
+// a Tab that completes nothing walks the ring (the one autocomplete model).
+// The answer is the matches' count and the ADVANCE past `tail`, their longest
+// common prefix on a codepoint boundary less the tail (empty when the
+// boundary cut took it to the tail or below: the matches diverge inside one
+// character, or a single match is the tail already). Each caller decides what
+// a single match takes after it.
+struct FolderNameAdvance {
+    std::size_t count = 0;
+    std::string append;
+};
+FolderNameAdvance folder_name_advance(const std::filesystem::path& dir,
+                                      const std::string& tail) {
+    const std::vector<std::string> matches = folder_names(dir, tail);
     if (matches.empty()) return {};
     FolderNameAdvance out;
     out.count = matches.size();
@@ -164,6 +172,15 @@ FolderNameAdvance folder_name_advance(const std::filesystem::path& dir,
     // the matches diverge inside one character and there is nothing to add.
     if (lcp.size() > tail.size()) out.append = lcp.substr(tail.size());
     return out;
+}
+
+// THE NOISE'S FOLDERS' HOME — `noise/` beside the device config
+// (GuiNoise::probe's own composition, noise.h), read by the noise completer
+// and the noise value list; empty with no config home, which lists nothing.
+std::filesystem::path noise_home() {
+    const std::filesystem::path config = device_config_path();
+    if (config.empty()) return {};
+    return config.parent_path() / "noise";
 }
 
 // THE BUFFER'S ADVANCE, the four completers' shared tail: `append` lands at
@@ -320,9 +337,52 @@ void GuiSettingsEditor::open(const std::string& line) {
 }
 
 std::string GuiSettingsEditor::setting_line(const std::string& key) const {
+    return key + "=" + setting_value(key);
+}
+
+std::string GuiSettingsEditor::setting_value(const std::string& key) const {
     const std::optional<std::string> value = recall_setting_value(app, key);
     assert(value && "a settings page key recalls nothing");
-    return key + "=" + *value;
+    return *value;
+}
+
+// THE VALUE LISTS' ROWS (the five domains at the declaration). Each arm is
+// its key's own domain owner read whole — the presets' table, the switch's
+// words, the folder listing the noise completer reads, the two integer
+// grammars' ranges — with every value in the writer's spelling, so the row
+// the tap commits is a line the typed commit would take byte for byte.
+std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
+        const std::string& key) const {
+    std::vector<GuiSettingValueChoice> out;
+    if (key == "waveform") {
+        for (const GuiBuiltinPalette& preset : kGuiBuiltinPalettes)
+            out.push_back({preset.key, preset.display_name});
+    } else if (key == "true_colors") {
+        for (const char* word : kTrueColorsWords) out.push_back({word, word});
+    } else if (key == "noise") {
+        const std::filesystem::path home = noise_home();
+        if (!home.empty()) {
+            std::vector<std::string> names = folder_names(home, "");
+            std::sort(names.begin(), names.end());
+            for (std::string& name : names) {
+                if (!is_noise_folder_name(name)) continue;
+                out.push_back({name, name});
+            }
+        }
+    } else if (key == "noise_level") {
+        for (int db = kNoiseLevelMaxDb; db >= kNoiseLevelMinDb; --db) {
+            const std::string v = format_noise_level(db);
+            out.push_back({v, v + " dB"});
+        }
+    } else if (key == "noise_crossfade_s") {
+        for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s) {
+            const std::string v = format_noise_crossfade_s(s);
+            out.push_back({v, v + " s"});
+        }
+    } else {
+        assert(false && "a key with no value list");
+    }
+    return out;
 }
 
 void GuiSettingsEditor::exit_no_commit() {
@@ -1127,7 +1187,7 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it, and `noise`, `noise_level` and `noise_crossfade_ms`
+// its arm after it, and `noise`, `noise_level` and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
@@ -1135,41 +1195,63 @@ void GuiSettingsEditor::commit() {
 // 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
-// with its key.) The commit is the OK's or Enter's (the choice rows' list
-// rows, which showed a value and committed nothing, went with the choice
-// editor, 2026-10-14).
+// with its key.) The commit is the OK's or Enter's, and for the five keys
+// with a value list (kSettingsValueListKeys, settings_editor.h) also a
+// list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
+// the choice rows' list rows of 2026-10-07..10-14, which showed a value and
+// committed nothing, went with the choice editor).
+//
+// THE LINE'S DOOR (the contract at the declaration): the one body decides,
+// and this door does to the field what the outcome says — the refused field
+// with its text selected, or the editor closed.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
-    // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
-    // `gui_scale` arm's sentence exactly (the reason after the tag and no key
-    // name, the field on screen already showing which key): the refusal
-    // sentence is built once and read by the stderr line and by the card, the
-    // refused field saying nothing of why.
-    auto reject = [&](const char* reason) {
+    switch (apply_device_setting(key, value)) {
+    case DeviceSettingOutcome::NotDeviceKey:
+        return false;
+    case DeviceSettingOutcome::Refused:
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_dialog_editor_box();
+        return true;
+    case DeviceSettingOutcome::Unchanged:
+    case DeviceSettingOutcome::Applied:
+        viewport.invalidate_modal_dialog_area();
+        text_editor::deactivate(app.settings_editor);
+        return true;
+    }
+    return true;
+}
+
+GuiSettingsEditor::DeviceSettingOutcome
+GuiSettingsEditor::apply_device_setting(const std::string& key,
+                                        const std::string& value) {
+    // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
+    // `gui_scale` arm's sentence exactly (the reason after the tag and no key
+    // name, the field on screen — or the list's row — already showing which
+    // key): the refusal sentence is built once and read by the stderr line
+    // and by the card, the refused field saying nothing of why.
+    auto reject = [&](const char* reason) {
         const std::string refusal =
             std::string("Settings edit rejected: ") + reason;
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
+        return DeviceSettingOutcome::Refused;
     };
     auto unchanged = [&]() {
         std::fprintf(stderr,
             "warptempo_gui: Setting unchanged: %s=%s\n",
             key.c_str(), value.c_str());
-        viewport.invalidate_modal_dialog_area();
-        text_editor::deactivate(app.settings_editor);
+        return DeviceSettingOutcome::Unchanged;
     };
     // The write is advisory in the ruling's sense: it may fail, the live value
     // stands either way, and the failure is the press's answer on a card
-    // (persist_device_config, the one body the preset picker's pick shares).
+    // (persist_device_config).
     auto persist = [&]() -> bool { return persist_device_config(); };
     auto applied = [&]() {
         std::fprintf(stderr,
             "warptempo_gui: Setting applied: %s=%s\n",
             key.c_str(), value.c_str());
-        viewport.invalidate_modal_dialog_area();
-        text_editor::deactivate(app.settings_editor);
+        return DeviceSettingOutcome::Applied;
     };
 
     // THE COLOR KEY (architect 2026-10-14, "remove picker and preset file
@@ -1181,8 +1263,8 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // and like the font of 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT,
     // which in this editor is the OK's (or
     // Enter's), never a list row's (architect 2026-10-14, "OK alone";
-    // settings_editor.h's head; the preset picker's row tap, 2026-10-25, is
-    // the key's other door, through the same apply_waveform_preset): the
+    // settings_editor.h's head; the value list's row tap, 2026-10-25, is
+    // the key's other door, through this same arm): the
     // preset is installed and the screen
     // repainted (install_waveform_preset), so NO CARD — the color is on
     // screen, the answer; this key and the tuning keys apply at the commit,
@@ -1191,14 +1273,13 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // failed. A pick that leaves
     // the file as it stands is the unchanged no-op.
     if (key == "waveform") {
-        if (!is_builtin_palette_name(value)) {
-            reject(kPaletteGrammarReason);
-            return true;
-        }
-        if (value == app.device_config->waveform) { unchanged(); return true; }
-        apply_waveform_preset(value);
-        applied();
-        return true;
+        if (!is_builtin_palette_name(value))
+            return reject(kPaletteGrammarReason);
+        if (value == app.device_config->waveform) return unchanged();
+        app.device_config->waveform = value;
+        install_waveform_preset(palette_record(value));
+        (void)persist();
+        return applied();
     }
 
     // TRUE COLORS (architect 2026-10-21, the Settings popup's "True Colors"
@@ -1210,15 +1291,12 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // answer.
     if (key == "true_colors") {
         const std::optional<bool> on = parse_true_colors(value);
-        if (!on) { reject(kTrueColorsGrammarReason); return true; }
-        if (*on == app.device_config->true_colors) {
-            unchanged(); return true;
-        }
+        if (!on) return reject(kTrueColorsGrammarReason);
+        if (*on == app.device_config->true_colors) return unchanged();
         app.device_config->true_colors = *on;
         input->apply_true_colors(*on);
         (void)persist();
-        applied();
-        return true;
+        return applied();
     }
 
     // THE NOISE'S FOLDER (architect 2026-10-28; noise.h owns the sound): one
@@ -1236,52 +1314,43 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // (complete_noise_value); stage 2's recall is the name verbatim
     // (recall_gui_setting_value).
     if (key == "noise") {
-        if (!is_noise_folder_name(value)) {
-            reject(kNoiseFolderGrammarReason);
-            return true;
-        }
-        if (value == app.device_config->noise) { unchanged(); return true; }
+        if (!is_noise_folder_name(value))
+            return reject(kNoiseFolderGrammarReason);
+        if (value == app.device_config->noise) return unchanged();
         app.device_config->noise = value;
         if (app.noise != nullptr) app.noise->change_folder(value);
         (void)persist();
-        applied();
-        return true;
+        return applied();
     }
 
     // THE NOISE'S LEVEL AND ITS CROSSFADE (architect 2026-10-28; noise.h owns
     // the sound): each an integer under its one grammar owner
-    // (parse_noise_level, parse_noise_crossfade_ms, device_config.h), APPLIED
+    // (parse_noise_level, parse_noise_crossfade_s, device_config.h), APPLIED
     // LIVE AT THE COMMIT — the live struct, then the one GuiNoise's setter
     // (the level's gain read by the audio thread at its next fill, the
-    // crossfade at the next transition's draw) — and persisted, so NO CARD:
-    // the sound is the answer. A commit with the lamp dark takes effect at
-    // the next lit press. Neither key has a closed domain or a folder, so Tab
-    // completes no value for either (complete_closed_value and
-    // complete_noise_value name neither); stage 2's recall is the writer's
-    // spelling (recall_gui_setting_value).
+    // crossfade, in the key's seconds, at the next transition's draw) — and
+    // persisted, so NO CARD: the sound is the answer. A commit with the lamp
+    // dark takes effect at the next lit press. Tab completes no value for
+    // either (complete_closed_value and complete_noise_value name neither:
+    // a number is typed, or picked from the value list); stage 2's recall is
+    // the writer's spelling (recall_gui_setting_value).
     if (key == "noise_level") {
         const std::optional<int> db = parse_noise_level(value);
-        if (!db) { reject(kNoiseLevelGrammarReason); return true; }
-        if (*db == app.device_config->noise_level) {
-            unchanged(); return true;
-        }
+        if (!db) return reject(kNoiseLevelGrammarReason);
+        if (*db == app.device_config->noise_level) return unchanged();
         app.device_config->noise_level = *db;
         if (app.noise != nullptr) app.noise->set_level_db(*db);
         (void)persist();
-        applied();
-        return true;
+        return applied();
     }
-    if (key == "noise_crossfade_ms") {
-        const std::optional<int> ms = parse_noise_crossfade_ms(value);
-        if (!ms) { reject(kNoiseCrossfadeGrammarReason); return true; }
-        if (*ms == app.device_config->noise_crossfade_ms) {
-            unchanged(); return true;
-        }
-        app.device_config->noise_crossfade_ms = *ms;
-        if (app.noise != nullptr) app.noise->set_crossfade_ms(*ms);
+    if (key == "noise_crossfade_s") {
+        const std::optional<int> s = parse_noise_crossfade_s(value);
+        if (!s) return reject(kNoiseCrossfadeGrammarReason);
+        if (*s == app.device_config->noise_crossfade_s) return unchanged();
+        app.device_config->noise_crossfade_s = *s;
+        if (app.noise != nullptr) app.noise->set_crossfade_s(*s);
         (void)persist();
-        applied();
-        return true;
+        return applied();
     }
 
     std::string* live    = nullptr;
@@ -1296,11 +1365,11 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         grammar = &is_projects_path;
         reason  = kProjectsPathGrammarReason;
     } else {
-        return false;
+        return DeviceSettingOutcome::NotDeviceKey;
     }
 
-    if (!grammar(value)) { reject(reason); return true; }
-    if (value == *live) { unchanged(); return true; }
+    if (!grammar(value)) return reject(reason);
+    if (value == *live) return unchanged();
     *live = value;
     // The live field every reader of the repository reads (the rationale at
     // AppState::projects_repo); the path key has no field beside the
@@ -1313,12 +1382,11 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // relaunch, with the second one topmost. On failure the device-config card
     // is the whole answer.
     const bool written = persist();
-    applied();
     if (key == "projects_path" && written) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kProjectsPathAppliesCard);
     }
-    return true;
+    return applied();
 }
 
 bool GuiSettingsEditor::persist_device_config() {
@@ -1330,12 +1398,6 @@ bool GuiSettingsEditor::persist_device_config() {
                              failure->display);
     }
     return !failure;
-}
-
-void GuiSettingsEditor::apply_waveform_preset(const std::string& name) {
-    app.device_config->waveform = name;
-    install_waveform_preset(palette_record(name));
-    (void)persist_device_config();
 }
 
 void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
@@ -1384,17 +1446,15 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
 }
 
 bool GuiSettingsEditor::complete_noise_value(const std::string& value) {
-    // The folder the noise's names live in: `noise/` beside the device
-    // config (GuiNoise::probe's own composition, noise.h). No config home
+    // The folder the noise's names live in (noise_home). No config home
     // completes nothing.
-    const std::filesystem::path config = device_config_path();
-    if (config.empty()) return false;
+    const std::filesystem::path home = noise_home();
+    if (home.empty()) return false;
     // The value side is the name's PREFIX whole — a name has no head — and a
     // single match is completed WITH NO TRAILING `/`: the value is a name,
     // not a path. A typed `/` matches no folder's name, so it completes
     // nothing, as the commit would refuse it.
-    const FolderNameAdvance found =
-        folder_name_advance(config.parent_path() / "noise", value);
+    const FolderNameAdvance found = folder_name_advance(home, value);
     if (found.count == 0 || found.append.empty()) return false;
     return append_at_line_end(app, viewport, found.append);
 }

@@ -709,11 +709,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // hand adds `role=mirror` here (GuiDeviceRole, device_config.h).
     // THE NOISE'S THREE (architect 2026-10-28), spelled: the folder `rain`
     // under noise/ beside the config, the level -9 dB, his "the rain is a
-    // masker", and the tuning crossfade's starting 4000 ms — the tablet's
+    // masker", and the crossfade 4 s — the tablet's
     // template the same (device_config.h's head).
-    cfg.noise              = "rain";
-    cfg.noise_level        = -9;
-    cfg.noise_crossfade_ms = 4000;
+    cfg.noise             = "rain";
+    cfg.noise_level       = -9;
+    cfg.noise_crossfade_s = 4;
     return cfg;
 }
 

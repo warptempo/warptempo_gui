@@ -8,7 +8,7 @@
 // window, so the modal/overlay isn't flush against the border"). EVERY MODAL
 // STANDS IN IT: the render player and the project picker (the folder
 // overlay's contents, folder_overlay.h, with the settings page and the
-// preset picker it swaps in; and THE SCORE VIEWER since 2026-10-26, score_viewer.h, its
+// value list it swaps in; and THE SCORE VIEWER since 2026-10-26, score_viewer.h, its
 // page the box's interior), and since the same day's second
 // ruling THE PROMPTS AND THE DIALOG EDITORS (his progress and settings-keyboard mocks: the taskbar dialog laid over the window's
 // foot, 2026-10-10 to 2026-10-14, is retired — "we should stop doing that"),

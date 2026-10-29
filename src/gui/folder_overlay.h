@@ -6,13 +6,16 @@
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
 // SETTINGS PAGE's thirteen keys as `key=value` lines under two group rows
 // (architect 2026-10-28, on a mock he verified on the glass: "yes" to the
-// list, "keep" to the group rows), and since 2026-10-25 the PRESET PICKER's
-// twenty built-in waveform presets by display name, the page's `waveform`
-// row's content (architect: "it would be nice to have some presets, and maybe
-// a drop down would make it quicker, because I don't like having to type it
-// in every time. We rejected drop downs because it was too much work to make
-// them Windows identical, but now we don't have the responsibility" — "brief
-// it as a scrolling list", "Yes"; this widget as it stands, no new chrome).
+// list, "keep" to the group rows), and THE VALUE LIST, one listed key's
+// values, the page's row for that key's content — since 2026-10-25 the
+// twenty built-in waveform presets by display name (architect: "it would be
+// nice to have some presets, and maybe a drop down would make it quicker,
+// because I don't like having to type it in every time. We rejected drop
+// downs because it was too much work to make them Windows identical, but now
+// we don't have the responsibility" — "brief it as a scrolling list", "Yes";
+// this widget as it stands, no new chrome), and since 2026-10-28 night the
+// same for `true_colors`, `noise`, `noise_level` and `noise_crossfade_s`
+// (kSettingsValueListKeys, settings_editor.h).
 // (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
 // with the panel; the `h` view's history picker for one day, retired
 // 2026-08-29 as overengineered, that view's `'` raising its confirmation on
@@ -31,7 +34,7 @@
 //
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
 // icon and a name; glyph-less PLAIN rows, a name alone in the names' column
-// (the preset picker's presets since 2026-10-25, the settings page's key
+// (the value list's values since 2026-10-25, the settings page's key
 // lines since 2026-10-28); and the page's INERT GROUP rows, a heading in the
 // dead key's print, which the highlight never stands on (row_is_inert, the
 // walk below) (a glyph-less TEXT kind went with
@@ -54,7 +57,7 @@
 // the view pairs' four included — greys through redesign_button_enabled's
 // first arm (each content's opener key excepted, its own closer:
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
-// over the page and the preset picker it swaps in 2026-10-28 —
+// over the page and the value list it swaps in 2026-10-28 —
 // is_folder_overlay_opener). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
@@ -120,7 +123,7 @@
 // edge round the keyboard slot's band before it). IT COVERS EVERY CONTENT,
 // this one widget being every
 // Windows list in the product (the player's folders and wavs, the project
-// picker's projects, the settings page's keys, the preset picker's presets); the controls row under it — the transport, the scrub,
+// picker's projects, the settings page's keys, the value list's values); the controls row under it — the transport, the scrub,
 // the buttons — stands on the face. A
 // resting row paints no fill at all, and the highlighted row is a flat fill
 // in the theme's selected pair (render.h's palette block), focused or not.
@@ -141,10 +144,11 @@
 // under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
 // it closes the page and opens the settings editor prefilled on the row's
-// line, or on the `waveform` row swaps the preset picker in
-// (settings_page_commit, 2026-10-28); under the PRESET PICKER
-// it installs and keeps the row's preset and closes the picker
-// (preset_picker_commit, 2026-10-25). AN INERT ROW HAS NO OPEN and no
+// line, or on the row of a key with a value list swaps that list in
+// (settings_page_commit, 2026-10-28); under the VALUE LIST
+// it commits the row's value to the listed key and closes the picker
+// (value_list_commit, 2026-10-25, four keys more 2026-10-28 night). AN
+// INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
 // (finish_folder_overlay_release asks row_is_inert). Enter on the highlight is
 // the keyboard's own click and reaches the same fork, which is at
@@ -264,10 +268,11 @@ inline int content_height_px(const AppState& a) {
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
-// rows in it — no content can stand empty anyway (the player refuses with
+// rows in it — one content alone can stand empty: the `noise` key's value
+// list with no folder under `noise/` (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
-// fifteen rows, the preset picker the compiled-in twenty).
+// fifteen rows, and every other value list its key's whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {
@@ -380,7 +385,7 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // either end of the listing lands as close to center as the ends allow, and a
 // listing shorter than the band never scrolls. The four open-time seats
 // call it after their seat (the project picker's, the settings page's and
-// the preset picker's builds, the render player's every rebuild, each a
+// the value list's builds, the render player's every rebuild, each a
 // fresh listing — the page's first key row, row 1, lands at the band's top,
 // the clamp ruling a centered row 1 out); the
 // keyboard walk and the pointer's seats keep scroll_row_into_view's

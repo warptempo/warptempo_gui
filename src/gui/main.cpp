@@ -3676,7 +3676,7 @@ int gui_main(const char* argument) {
     GuiNoise noise;
     noise.probe(device_config.noise);
     noise.set_level_db(device_config.noise_level);
-    noise.set_crossfade_ms(device_config.noise_crossfade_ms);
+    noise.set_crossfade_s(device_config.noise_crossfade_s);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

@@ -430,8 +430,8 @@ void GuiNoise::set_level_db(int db) {
                       std::memory_order_relaxed);
 }
 
-void GuiNoise::set_crossfade_ms(int ms) {
-    voice_.crossfade_ms.store(static_cast<int32_t>(ms),
+void GuiNoise::set_crossfade_s(int seconds) {
+    voice_.crossfade_ms.store(static_cast<int32_t>(seconds) * 1000,
                               std::memory_order_relaxed);
 }
 

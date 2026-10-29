@@ -60,7 +60,8 @@
 //                            two lowercase words and nothing else, any other
 //                            word the launch's hard fail; REQUIRED, read at
 //                            launch to seed the switch and applied LIVE at
-//                            the settings editor's OK (the apply shape,
+//                            the settings editor's OK and at the settings
+//                            page's value list's tap (the apply shape,
 //                            GuiInputHandler::apply_true_colors); both
 //                            templates and both installs `on`. (The row's
 //                            toggle, 2026-10-08..10-21, persisted nothing:
@@ -84,32 +85,40 @@
 //                            one folder under `noise/` beside this file,
 //                            exactly one non-empty path component
 //                            (is_noise_folder_name below); live at the
-//                            settings editor's OK, the lamp darkening and
+//                            settings editor's OK and at the settings
+//                            page's value list's tap, the lamp darkening and
 //                            the resident recordings freed
-//                            (GuiNoise::change_folder); Tab completes it
-//                            against the folders there. PERMANENT and
+//                            (GuiNoise::change_folder); the list shows and
+//                            Tab completes the folders there. PERMANENT and
 //                            REQUIRED; both templates spell `rain`. A name
 //                            with no folder LOADS and greys the NOISE key
 //                            (the absent-folder rule, noise.h) — only the
 //                            shape is the grammar's
 //   noise_level=<dB>         THE BACKGROUND SOUND'S LEVEL (architect
 //                            2026-10-28; noise.h owns the sound): an integer
-//                            in [-60, 0] in canonical spelling, dB applied
+//                            in [-30, 0] in canonical spelling, dB applied
 //                            to the files as they are — one level, never
-//                            ducked, live at the settings editor's OK;
+//                            ducked, live at the settings editor's OK and
+//                            at the settings page's value list's tap;
 //                            PERMANENT and REQUIRED, device-level (he retunes
 //                            it by hand per piece); both templates spell -9
 //                            (his "the rain is a masker, the default should
 //                            be higher than -18")
-//   noise_crossfade_ms=<ms>  THE NOISE'S CROSSFADE between two segments, in
-//                            ms (architect 2026-10-28): an integer in
-//                            [100, 30000] in canonical spelling, live at the
-//                            settings editor's OK (read at the next
-//                            transition); A TUNING KEY with a Settings row,
-//                            REQUIRED like every key while it stands, which
-//                            becomes a constexpr in noise.h when he settles
-//                            it (the tuning rule, the LED glow's road); both
-//                            templates spell 4000
+//   noise_crossfade_s=<s>    THE NOISE'S CROSSFADE between two segments, in
+//                            whole SECONDS (architect 2026-10-28): an integer
+//                            in [1, 30] in canonical spelling, live at the
+//                            settings editor's OK and at the settings
+//                            page's value list's tap (read at the next
+//                            transition); PERMANENT and REQUIRED — the
+//                            crossfade is a recording's relationship to
+//                            itself, so a later sound may want another
+//                            value; both templates spell 4
+//   (noise_crossfade_ms=<ms>, THE CROSSFADE IN MS, [100, 30000], a tuning
+//                            key 2026-10-28, RETIRED that day for the
+//                            seconds key above; an old line is the ordinary
+//                            unknown-key hard fail, the planner editing both
+//                            devices' configs at the install and the sync
+//                            script's setup removing it on the tablet)
 //   (rain_level=<dB>, rain_crossfade_ms=<ms>, THE TWO KEYS ABOVE UNDER
 //                            THEIR FIRST NAMES, 2026-10-28, RENAMED
 //                            `noise_level` and `noise_crossfade_ms` the same
@@ -177,11 +186,11 @@
 // paint_ce_cue_triangle, gui_font.h's Program size; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together; the level APPENDED after `role` 2026-10-28, `role`'s
-// own road, and the tuning key the crossfade after it, the tuning keys
-// keeping the end — the two fade tuning keys after it for part of that day,
-// gone the same day; the two renamed `noise_level` and `noise_crossfade_ms`
-// the same day and `noise` placed after `role`, before them, the permanent
-// keys' end);
+// own road, and the crossfade after it — the two fade tuning keys after it
+// for part of that day, gone the same day; the two renamed `noise_level` and
+// `noise_crossfade_ms` the same day and `noise` placed after `role`, before
+// them; the crossfade made `noise_crossfade_s`, in seconds and permanent,
+// that night, in its place at the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -356,7 +365,7 @@
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
 // `waveform`, `true_colors` and, since 2026-10-28, `noise`, `noise_level`
-// and `noise_crossfade_ms` among them
+// and `noise_crossfade_s` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -430,12 +439,12 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
-    // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in ms
+    // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in seconds
     // (2026-10-28, the head's list): required; the construction state is the
-    // templates' values (`rain`, -9, 4000).
-    std::string noise              = "rain";
-    int         noise_level        = -9;
-    int         noise_crossfade_ms = 4000;
+    // templates' values (`rain`, -9, 4).
+    std::string noise             = "rain";
+    int         noise_level       = -9;
+    int         noise_crossfade_s = 4;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -634,15 +643,17 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     return neg ? -n : n;
 }
 
-// THE noise_level GRAMMAR (architect 2026-10-28) — an integer in [-60, 0] dB
+// THE noise_level GRAMMAR (architect 2026-10-28) — an integer in [-30, 0] dB
 // in canonical spelling; the one owner the reader, the writer, the settings
-// editor's commit and its recall read (format_noise_level,
-// parse_noise_level). 0 is the files as they are, -60 near silence; the level
-// is applied to the segments as they lie, no equalizing (noise.h's head).
-inline constexpr int kNoiseLevelMinDb = -60;
+// editor's commit and its recall, and the settings page's value list read
+// (format_noise_level, parse_noise_level; the list's 31 rows are this range
+// in 1 dB steps, architect 2026-10-28 night: "1 dB, 0 to -30"). 0 is the
+// files as they are, -30 a faint bed; the level is applied to the segments
+// as they lie, no equalizing (noise.h's head).
+inline constexpr int kNoiseLevelMinDb = -30;
 inline constexpr int kNoiseLevelMaxDb = 0;
 inline constexpr const char* kNoiseLevelGrammarReason =
-    "must be an integer in [-60, 0] in canonical spelling";
+    "must be an integer in [-30, 0] in canonical spelling";
 std::string format_noise_level(int db);
 inline std::optional<int> parse_noise_level(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
@@ -651,19 +662,21 @@ inline std::optional<int> parse_noise_level(std::string_view v) {
     return n;
 }
 
-// THE noise_crossfade_ms GRAMMAR (architect 2026-10-28) — an integer in
-// [100, 30000] ms in canonical spelling, the one owner the same four read
-// (format_noise_crossfade_ms, parse_noise_crossfade_ms). A TUNING KEY: when
-// he settles the length the key, this grammar and its Settings row go, and
-// the value becomes a constexpr in noise.h (the head's list).
-inline constexpr int kNoiseCrossfadeMinMs = 100;
-inline constexpr int kNoiseCrossfadeMaxMs = 30000;
+// THE noise_crossfade_s GRAMMAR (architect 2026-10-28) — an integer in
+// [1, 30] SECONDS in canonical spelling, the one owner the same five read
+// (format_noise_crossfade_s, parse_noise_crossfade_s; the value list's 30
+// rows are this range in whole seconds). Seconds because the crossfade is a
+// recording's relationship to itself, chosen per sound and never finer than
+// a second; the voice converts at its one setter (GuiNoise::set_crossfade_s,
+// noise.h).
+inline constexpr int kNoiseCrossfadeMinS = 1;
+inline constexpr int kNoiseCrossfadeMaxS = 30;
 inline constexpr const char* kNoiseCrossfadeGrammarReason =
-    "must be an integer in [100, 30000] in canonical spelling";
-std::string format_noise_crossfade_ms(int ms);
-inline std::optional<int> parse_noise_crossfade_ms(std::string_view v) {
+    "must be an integer in [1, 30] in canonical spelling";
+std::string format_noise_crossfade_s(int s);
+inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kNoiseCrossfadeMinMs || *n > kNoiseCrossfadeMaxMs)
+    if (!n || *n < kNoiseCrossfadeMinS || *n > kNoiseCrossfadeMaxS)
         return std::nullopt;
     return n;
 }
@@ -734,8 +747,10 @@ inline bool is_last_project_name(const std::string& v) {
 }
 
 // THE noise GRAMMAR (architect 2026-10-28) — the ONE owner the reader, the
-// settings editor's commit and the sync script's mirror (its own respelling,
-// scripts/warptempo_sync's mirror_noise) read: exactly ONE path component and
+// settings editor's commit, the settings page's value list (its rows the
+// folders under `noise/` this admits) and the sync script's mirror (its own
+// respelling, scripts/warptempo_sync's mirror_noise) read: exactly ONE path
+// component and
 // NON-EMPTY — is_last_project_name's clauses (no `/`, not `.` or `..`, no
 // `\n` or `\r` anywhere, no leading or trailing config whitespace) with the
 // empty arm REFUSED: the key names a sound, the templates spell `rain`, and a
@@ -745,8 +760,10 @@ inline bool is_last_project_name(const std::string& v) {
 // and a line separator cannot be serialized. THE ABSENT FOLDER IS NOT THE
 // GRAMMAR'S: a well-shaped name whose folder does not exist LOADS, and the
 // NOISE key greys (noise.h's head). CLOSED (closed_questions.md, this its
-// owner): an empty `noise=` line, and a choice of sound from inside the app
-// (a picker) — the key names one folder and Tab completes it.
+// owner): an empty `noise=` line. THE CHOICE OF SOUND FROM INSIDE THE APP is
+// the settings page's `noise` row (architect 2026-10-28 night): a value list
+// of the folders there, a tap committing the name through the typed line's
+// own commit; Tab still completes the typed name.
 inline constexpr const char* kNoiseFolderGrammarReason =
     "must be one folder name under noise/, not empty and not a path";
 inline bool is_noise_folder_name(const std::string& v) {
@@ -811,8 +828,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
 // `true_colors=`, and since 2026-10-28 the noise's three, `noise=`,
-// `noise_level=` and `noise_crossfade_ms=` (the latter two `rain_level=` and
-// `rain_crossfade_ms=` earlier that day, `rain_fade_in_ms=` and
+// `noise_level=` and `noise_crossfade_s=` (the latter two `rain_level=` and
+// `rain_crossfade_ms=` earlier that day and the crossfade
+// `noise_crossfade_ms=` until that night, `rain_fade_in_ms=` and
 // `rain_fade_out_ms=` beside them; `bevel_light=` and `bevel_dark=`
 // 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
@@ -837,7 +855,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
-// `noise=rain`, `noise_level=-9` and `noise_crossfade_ms=4000` (2026-10-28)
+// `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28)
 // and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —

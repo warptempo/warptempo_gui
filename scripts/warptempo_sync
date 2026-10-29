@@ -181,7 +181,7 @@ shopt -s nocaseglob
 #      (waveform=default) where the file has neither -- every key is
 #      required since 2026-10-14; a line already there is kept --, the
 #      true_colors=on line (2026-10-21), the noise=rain, noise_level=-9 and
-#      noise_crossfade_ms=4000 lines (2026-10-28; the last a tuning key) the
+#      noise_crossfade_s=4 lines (2026-10-28) the
 #      same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
@@ -190,9 +190,11 @@ shopt -s nocaseglob
 #      fortepiano chrome, strip_pad, settled the same day at a constant, the
 #      cues' tuning keys, settled 2026-10-26, the lit LED's glow key,
 #      settled the same day, the noise's two fade keys, settled 2026-10-28
-#      at 200 and 40 ms, and rain_level and rain_crossfade_ms, renamed
-#      noise_level and noise_crossfade_ms the same day (RETIRED_KEYS below;
-#      src/gui/device_config.h); every other line is kept.
+#      at 200 and 40 ms, rain_level and rain_crossfade_ms, renamed
+#      noise_level and noise_crossfade_ms the same day, and
+#      noise_crossfade_ms, made noise_crossfade_s in seconds that night
+#      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
+#      kept.
 #   6. THE NOISE FOLDER (2026-10-28; src/gui/noise.h owns the sound): the
 #      laptop's noise/ mirrored to the tablet's files/warptempo_gui/noise/,
 #      exactly as tt does it (the noise paragraph above, mirror_noise). The
@@ -243,9 +245,9 @@ WAVEFORM_LINE="waveform=default"
 # key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
 # required key since 2026-10-21 (the Settings menu's True Colors row made a
 # key), on on both devices; and THE NOISE'S THREE, required since 2026-10-28 —
-# the sound's folder, rain, the level, -9 dB, and the crossfade, a tuning key
-# starting at 4000 ms (src/gui/device_config.h records each).
-ADDED_LINES="true_colors=on noise=rain noise_level=-9 noise_crossfade_ms=4000"
+# the sound's folder, rain, the level, -9 dB, and the crossfade, 4 s
+# (src/gui/device_config.h records each).
+ADDED_LINES="true_colors=on noise=rain noise_level=-9 noise_crossfade_s=4"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -267,13 +269,14 @@ ADDED_LINES="true_colors=on noise=rain noise_level=-9 noise_crossfade_ms=4000"
 # device px and a constant in the program since (src/gui/materials.cpp);
 # the noise's two fade tuning keys of 2026-10-28, rain_fade_in_ms and
 # rain_fade_out_ms, settled the same day at 200 and 40 ms and constants in
-# the program since (src/gui/noise.h); and rain_level and rain_crossfade_ms
+# the program since (src/gui/noise.h); rain_level and rain_crossfade_ms
 # (retired 2026-10-28, renamed noise_level and noise_crossfade_ms the same
-# day). A TUNED LEVEL DOES NOT TRAVEL THROUGH setup: the old line is deleted
-# and ADDED_LINES' noise_level=-9 takes its place, so the planner renames the
-# two lines by hand at the install, on both devices, the program not running.
-# The tuning key setup DOES write is ADDED_LINES' crossfade line above,
-# leaving this list's way when it settles.
+# day); and noise_crossfade_ms (retired that night for noise_crossfade_s, the
+# crossfade in whole seconds). A TUNED LEVEL DOES NOT TRAVEL THROUGH setup:
+# the old line is deleted and ADDED_LINES' noise_level=-9 takes its place,
+# so the planner renames the two lines by hand at the install, on both
+# devices, the program not running; a crossfade in ms comes back as
+# ADDED_LINES' noise_crossfade_s=4 the same way.
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected
@@ -283,7 +286,8 @@ RETIRED_KEYS=(sync_path theme_level
               cue_shadow cue_triangle_rows cue_triangle_aa cue_text
               cue_lead led_glow
               rain_fade_in_ms rain_fade_out_ms
-              rain_level rain_crossfade_ms)
+              rain_level rain_crossfade_ms
+              noise_crossfade_ms)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE key reads.
@@ -1221,11 +1225,12 @@ apply_setup() {
     # 5. THE SETTINGS FILE: projects_repo and role made right, a chrome line
     # renamed waveform (its value kept; dropped where a waveform line stands),
     # waveform given its default where neither stands, true_colors, noise,
-    # noise_level and noise_crossfade_ms their lines where absent
+    # noise_level and noise_crossfade_s their lines where absent
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
-    # keys, the LED glow's, the noise's two fades and the level's and the
-    # crossfade's first names, RETIRED_KEYS), the rest kept.
+    # keys, the LED glow's, the noise's two fades, the level's and the
+    # crossfade's first names and the crossfade's ms key, RETIRED_KEYS), the
+    # rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
     # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
@@ -1255,7 +1260,7 @@ apply_setup() {
                                 if (had_role == 0) print role
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, noise, noise_level and noise_crossfade_ms and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, noise, noise_level and noise_crossfade_s and has no chrome line and no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"

@@ -6,7 +6,7 @@
 # provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is); the value grammar and the
 # outline's lightness below are Cool Edit's.
 # THE ORDER IS ALPHABETICAL BY DISPLAY NAME, case-insensitive (str.lower()), Default sorted among the names (architect
-# 2026-10-27): the text's order is the include's and so the preset picker's, and a name line out of that order is the
+# 2026-10-27): the text's order is the include's and so the waveform value list's, and a name line out of that order is the
 # run's hard fail, the first such row named — the text is reordered by hand, never sorted here.
 # Each row a KEY, a DISPLAY NAME and THE TEN PROGRAM ROLES (kGuiPaletteRoles, read off palette_file.h and checked
 # against ROLE_ORDER) under the one transcription below.

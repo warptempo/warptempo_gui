@@ -58,15 +58,16 @@
 // THE SEGMENTS PLAY IN RANDOM ORDER, never the same twice in a row (but for a
 // folder of one), joined by an EQUAL-POWER CROSSFADE (√(1−t) and √t,
 // a² + b² = 1: the right curve for two uncorrelated noise beds; his "a must")
-// of `noise_crossfade_ms`, a tuning device key; a lit press starts a fresh
+// of `noise_crossfade_s` whole seconds, a permanent device key (architect
+// 2026-10-28 night: the crossfade is a recording's relationship to itself, so
+// a later sound may want another value); a lit press starts a fresh
 // random segment from its start (his "random start = the segment road, no
 // mid-segment offset"). The bed FADES IN over kNoiseFadeInMs at the lit press
 // — from when the load lands, the LED lighting at once — and OUT over
 // kNoiseFadeOutMs at the dark press, both linear amplitude ramps; a press
 // during either fade reverses from the current level, no restart. The two
 // fades are SETTLED (architect 2026-10-28, on the glass, after one day as
-// tuning keys); the crossfade alone is still a tuning key and becomes a
-// constexpr here when he settles it (the tuning rule). The level is the
+// tuning keys), the lamp's own and the same for every sound. The level is the
 // permanent device key `noise_level` in dB, applied to the files as they are:
 // NATURAL LOUDNESS VARIATION KEPT, no per-segment equalizing (his ruling).
 //
@@ -132,7 +133,8 @@ struct GuiNoiseBank {
 // the audio thread: `bank` (null until the load lands, then the one published
 // bank; null again from a key change until the next load lands), `target`
 // (the lamp: true lit), `gain` (linear, 10^(noise_level/20)), `crossfade_ms`
-// (read at each transition's draw) and `seed` (written at every lit press
+// (the `noise_crossfade_s` key in ms, set_crossfade_s's one conversion; read
+// at each transition's draw) and `seed` (written at every lit press
 // BEFORE `target`'s release store; read when a sequence starts, so the
 // target's acquire load orders it). Written by the audio thread and read by
 // the main thread: `in_fill` (below).
@@ -303,7 +305,7 @@ public:
 
     // THE KEY CHANGE, LIVE (architect 2026-10-28: "whatever's in memory is
     // dumped if we change the subfolder name"; the planner's protocol).
-    // Called by the settings editor's `noise` arm (commit_device_setting) on
+    // Called by the settings editor's `noise` arm (apply_device_setting) on
     // the main thread with the new name, while an engine may be running and
     // its callback filling. THE PROTOCOL, in order:
     //   1. `target` stored false (release): the lamp darkens (the roster's
@@ -345,9 +347,12 @@ public:
     // THE TWO DEVICE KEYS, LIVE: the level's linear gain read by the audio
     // thread at its next fill, the crossfade read at the next transition's
     // draw. Seeded by gui_main from the config, written by the settings
-    // editor's two arms (commit_device_setting).
+    // editor's two arms (apply_device_setting, the typed line's and the value
+    // list's one body). THE CROSSFADE TAKES THE KEY'S SECONDS and this setter
+    // is the ONE conversion to the voice's milliseconds (the voice's lengths,
+    // the two fades among them, are ms).
     void set_level_db(int db);
-    void set_crossfade_ms(int ms);
+    void set_crossfade_s(int seconds);
 
     // THE VOICE every project's engine mixes (GuiPlayback::attach_noise).
     GuiNoiseVoice* voice() { return &voice_; }

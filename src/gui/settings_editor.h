@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <vector>
 
 struct Undo;
 struct GuiTargetRender;
@@ -44,10 +45,10 @@ struct GuiInputHandler;
 // buffer is consumed, one that did not walks the dialog's focus ring onto
 // OK and Cancel — so a second Tab, or a Tab on a prefix that completes to
 // nothing, is the walk; Tab shows no list, the popups being gone — THE LISTS
-// are the settings page's keys and the PRESET PICKER since 2026-10-25, the
-// `waveform` key's presets by name in the folder overlay, opened by the
-// page's `waveform` row, never by Tab, its pick committing through this
-// editor's own apply, apply_waveform_preset):
+// are the settings page's keys and THE VALUE LISTS, a listed key's values in
+// the folder overlay (kSettingsValueListKeys below), opened by the page's
+// row for that key, never by Tab, a pick committing through this editor's
+// own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
 //      `=` yet, a COMPLETE key — any key this editor recalls, the thirteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
@@ -87,7 +88,7 @@ struct GuiInputHandler;
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
 // since 2026-10-21 true_colors (the popup's command row made a key), and
 // since 2026-10-28 (architect) the noise's folder noise, its noise_level and
-// its tuning key noise_crossfade_ms (the
+// its crossfade in seconds noise_crossfade_s (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, materials.cpp's kLedGlowPx; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
@@ -108,9 +109,10 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors, noise, noise_level and noise_crossfade_ms — in
+//    waveform, true_colors, noise, noise_level and noise_crossfade_s — in
 //    ONE body,
-//    commit_device_setting: the key's own grammar
+//    apply_device_setting (commit_device_setting the line's door onto it,
+//    the value list the other): the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -167,14 +169,16 @@ struct GuiInputHandler;
 // stood and its list dropping over the well — stood 2026-10-07 to 2026-10-14
 // and is removed whole; a closed domain's help is Tab (stage 3 above), and
 // the commit is OK's and Enter's — the screen changing at the commit, never
-// before. (THE `waveform` KEY ALONE HAS A LIST AGAIN since 2026-10-25, the
+// before. (FIVE KEYS HAVE A LIST AGAIN — `waveform` since 2026-10-25, the
 // architect reversing this for it: "we rejected drop downs because it was
 // too much work to make them Windows identical, but now we don't have the
-// responsibility". It is no choice editor and no drop-down: the preset
-// picker, the folder overlay's content behind the settings page's
-// `waveform` row, whose row tap commits at once — apply_waveform_preset,
-// this editor's own road. THE SETTINGS PAGE IS NO CHOICE EDITOR EITHER
-// (2026-10-28): its rows commit nothing, each opening this line editor.)
+// responsibility"; `true_colors`, `noise`, `noise_level` and
+// `noise_crossfade_s` since 2026-10-28 night, the same shape. A list is no
+// choice editor and no drop-down: the VALUE LIST, the folder overlay's
+// content behind the settings page's row for its key, whose row tap commits
+// at once — apply_device_setting, this editor's own road. THE SETTINGS
+// PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
+// nothing, each opening this line editor.)
 //
 // THE KEYS TAB COMPLETES — ONE TABLE, THE THIRTEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
@@ -199,7 +203,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "noise", "noise_level", "noise_crossfade_ms",
+    "noise", "noise_level", "noise_crossfade_s",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -210,6 +214,36 @@ static_assert(std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount 
                   "score_path" &&
               std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount]) ==
                   "gui_scale");
+
+// THE KEYS WITH A VALUE LIST — ONE TABLE, THE FIVE (architect 2026-10-25 for
+// `waveform`, 2026-10-28 night for the other four): the settings page's row
+// for one of these swaps the folder overlay's content to THE KEY'S VALUES
+// (GuiInputHandler::build_value_list_rows, its rows from
+// GuiSettingsEditor::value_choices below), and a row's tap commits that value
+// at once through apply_device_setting, the typed line's own body, then closes
+// the session. Every other page row opens the line editor. Each is a device
+// key with a short domain the list can show whole: the twenty presets, the
+// two words, the folders under `noise/`, the level's 31 whole dB and the
+// crossfade's 30 whole seconds. The typed line still names every one of
+// them, its arms and completers unchanged (the list is a second door).
+inline constexpr const char* kSettingsValueListKeys[] = {
+    "waveform", "true_colors", "noise", "noise_level", "noise_crossfade_s",
+};
+inline bool settings_key_has_value_list(std::string_view key) {
+    for (const char* k : kSettingsValueListKeys)
+        if (key == k) return true;
+    return false;
+}
+
+// ONE ROW OF A VALUE LIST: `value`, the key's own spelling, which the tap
+// commits; `text`, what the row shows — the value with its unit where the
+// key has one (`-9 dB`, `4 s`), the preset's display name for `waveform`
+// (architect 2026-10-25: memorable names, never the key), the word or the
+// folder's name plain otherwise.
+struct GuiSettingValueChoice {
+    std::string value;
+    std::string text;
+};
 
 struct GuiSettingsEditor {
     AppState&             app;
@@ -275,6 +309,26 @@ struct GuiSettingsEditor {
     // which recalls by construction (the head's roads); a key that recalls
     // nothing is a program bug and asserts.
     std::string setting_line(const std::string& key) const;
+    // THE KEY'S CURRENT VALUE as the recall gives it, the writer's spelling
+    // — setting_line's value side, and the value list's seat (the row whose
+    // value is this). Asserts for a key that recalls nothing, as
+    // setting_line does.
+    std::string setting_value(const std::string& key) const;
+    // THE VALUE LIST'S ROWS for `key`, one of kSettingsValueListKeys, in the
+    // list's order: `waveform` kGuiBuiltinPalettes in the include's order
+    // (alphabetical by display name, Default among them, architect
+    // 2026-10-27); `true_colors` kTrueColorsWords (`on`, `off`); `noise`
+    // the folders under `noise/` beside the device config, sorted by byte —
+    // the names the noise completer lists for an empty prefix
+    // (complete_noise_value's listing, settings_editor.cpp's folder_names:
+    // directories through a link, no dot-directory) that the key's grammar
+    // admits (is_noise_folder_name), so every row commits; no folder there,
+    // or no config home, is a list with no rows; `noise_level` 0 down to -30
+    // in 1 dB steps; `noise_crossfade_s` 1 up to 30 seconds. Every value is
+    // the key's writer spelling (format_noise_level, format_noise_crossfade_s),
+    // so the seat compares it with setting_value byte for byte. Listed afresh
+    // at each call; nothing is cached.
+    std::vector<GuiSettingValueChoice> value_choices(const std::string& key) const;
     void exit_no_commit();
     void commit();
     // THE COMPLETION, run on BARE TAB with the focus in the field — the head's
@@ -300,34 +354,38 @@ struct GuiSettingsEditor {
     // no-op answers false, so each is a Tab that walks.
     bool autocomplete_value();
 
-    // THE `waveform` KEY'S APPLY AND PERSIST — ONE ROAD, TWO DOORS (architect
-    // 2026-10-25): the typed Waveform row's commit (commit_device_setting's
-    // waveform arm, after its grammar and unchanged gates) and the PRESET
-    // PICKER's pick (GuiInputHandler::preset_picker_commit) both land here.
-    // The live key takes `name`, the preset is installed and the screen
-    // repainted (install_waveform_preset), and the device config is written
-    // (persist_device_config: a failure cards and the live colors stand for
-    // the session). No card on success — the colors are the answer.
-    // Precondition: is_builtin_palette_name(name), and `name` differs from
-    // the live key (each door asks its own no-op first).
-    void apply_waveform_preset(const std::string& name);
+    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
+    // `waveform=`, `true_colors=`, `noise=`, `noise_level=` and
+    // `noise_crossfade_s=` — ONE BODY, TWO DOORS (architect 2026-10-25 for
+    // the waveform key, 2026-10-28 night for the value lists' four more): the
+    // typed line's commit (commit_device_setting, below, the editor's door)
+    // and a VALUE LIST's pick (GuiInputHandler::value_list_commit) both land
+    // here, so the typed commit and the list's commit are one body per key
+    // (the head's item 1). The key's grammar decides, a refusal printed and
+    // carded ("Settings edit rejected: <reason>"); a value the key already
+    // holds is the unchanged no-op, a stderr line and nothing written;
+    // otherwise the live struct takes it, the key's live apply runs and the
+    // device config is written (persist_device_config: a failure cards, the
+    // live value standing for the session), with a card on success for
+    // `projects_path` alone. THE EDITOR IS NOT TOUCHED HERE: the line's door
+    // refuses or closes its field on the outcome, and the list's door closes
+    // its session whatever the outcome. NotDeviceKey for any other key.
+    enum class DeviceSettingOutcome { NotDeviceKey, Refused, Unchanged, Applied };
+    DeviceSettingOutcome apply_device_setting(const std::string& key,
+                                              const std::string& value);
 
 private:
     // THE DEVICE CONFIG'S WRITE, ADVISORY (the commit's persist): the whole
     // struct written (write_device_config, device_config.h); a failure prints
     // the diagnostic and cards the display, the live value standing either
-    // way. Returns whether the file was written. Its readers are every device
-    // key's commit (commit_device_setting's persist) and the waveform apply
-    // above.
+    // way. Returns whether the file was written. Its reader is every device
+    // key's commit (apply_device_setting's persist).
     bool persist_device_config();
-    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `noise=`, `noise_level=` and
-    // `noise_crossfade_ms=` — in one
-    // body (the head's
-    // item 1). Returns true when `key` is one of them, the commit then fully
-    // handled inside (applied + deactivated, no-op-deactivated, or
-    // refused with a card); false otherwise, so commit() goes on to the
-    // routers.
+    // THE LINE'S DOOR onto apply_device_setting (the head's item 1). Returns
+    // true when `key` is a device key, the commit then fully handled — the
+    // field refused and its text selected on a refusal, the editor closed on
+    // an applied or unchanged value; false otherwise, so commit() goes on to
+    // the routers.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
     // THE WAVEFORM ROW'S INSTALL (architect 2026-10-14; the color picker's

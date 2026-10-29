@@ -7366,8 +7366,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // ONE PAINTER FOR EVERY CONTENT —
 // the render player's folders and wavs, the Open project picker's project
 // folders, the settings page's `key=value` lines under its dim group rows
-// (2026-10-28) and the preset picker's waveform presets (2026-10-25,
-// glyph-less rows by display name). Contract and gate are at the declaration; the geometry, the scroll
+// (2026-10-28) and the value list's values (2026-10-25 the waveform presets,
+// 2026-10-28 night four keys more; glyph-less rows, a preset by display
+// name, a number with its unit). Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. EVERY ROW IS A LIST ROW in the redesign's SANS
@@ -7505,8 +7506,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // to 2026-10-23, Play swapped in on the item's row, are git
             // history.)
             // A PLAIN ROW AND A GROUP ROW WEAR NO GLYPH (architect
-            // 2026-10-25, the preset picker: the row is the preset's display
-            // name; 2026-10-28, the settings page: the row is its
+            // 2026-10-25, the value list: the row is the preset's display
+            // name or the value as shown; 2026-10-28, the settings page: the row is its
             // `key=value` line, the group row its heading) and their text
             // starts at the same kListNameXAt300 as every other row's, so
             // the pickers' names stand in the project picker's name column.

@@ -383,7 +383,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // iterations admit both since 2026-10-21 (the lock governs the keys, not
     // the editor — read_only_key_blocked). No repeat, NO MODIFIER (architect
     // 2026-10-28: "plain press only. retire long press"). The key sits lit
-    // while the page or the preset picker it swaps in stands, its lift the
+    // while the page or the value list it swaps in stands, its lift the
     // close (redesign_button_selected, route_picker_key).
     {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false}, // bare ;
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's
@@ -4911,7 +4911,7 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
         case AppState::FolderOverlay::Owner::SettingsPage:
-        case AppState::FolderOverlay::Owner::PresetPicker:
+        case AppState::FolderOverlay::Owner::ValueList:
             picker_set_highlight(index);
             return;
     }
@@ -4921,9 +4921,10 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // Under the player a folder enters and a wav plays; under the project picker
 // the row's project is reopened; under the settings page (2026-10-28) the
 // page closes and the settings editor opens prefilled on the row's line, or
-// the `waveform` row swaps the preset picker in; under the preset picker
-// (2026-10-25) the row's preset is installed and kept and the picker closes —
-// one body per content, which the click and Enter both reach.
+// the row of a key with a value list swaps that list in; under the value
+// list (2026-10-25, four keys more 2026-10-28 night) the row's value is
+// committed to the listed key and the picker closes — one body per content,
+// which the click and Enter both reach.
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -4937,8 +4938,8 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
         case AppState::FolderOverlay::Owner::SettingsPage:
             settings_page_commit(index);
             return;
-        case AppState::FolderOverlay::Owner::PresetPicker:
-            preset_picker_commit(index);
+        case AppState::FolderOverlay::Owner::ValueList:
+            value_list_commit(index);
             return;
     }
 }
@@ -5779,7 +5780,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // roster's arm, whose painted-bit gate consumes every button but the one
     // the face leaves live (redesign_button_enabled's overlay arm), and the
     // lift is that key's chord — Ctrl+O under the project picker, `;` under
-    // the settings page and the preset picker — which the picker's router
+    // the settings page and the value list — which the picker's router
     // answers with its close.
     if (app.picker.active) {
         if (button != GuiMouseButton::Left) return;
@@ -7302,7 +7303,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // THE PICKER'S RELEASE (2026-08-28), its press block's mirror: the modal
     // row's armed Cancel through the one shared dispatch, and every
     // other lift consumed — the veil's answer — but the opener's arm (Open
-    // Project, or Settings under the settings page and the preset picker),
+    // Project, or Settings under the settings page and the value list),
     // the one roster button
     // the picker leaves live (2026-10-25), lifted through the chrome act's
     // own body as the player's Play Renders arm is.
@@ -8275,7 +8276,7 @@ void GuiInputHandler::finish_chrome_press_release(
     // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
     // for Play Renders under the player, 2026-10-25 for Open Project under the
     // project picker, 2026-10-28 for Settings under the settings page and the
-    // preset picker it swaps in — the tag's answer,
+    // value list it swaps in — the tag's answer,
     // is_folder_overlay_opener): that button, lit under its overlay, is the
     // one roster arm the overlay's veil admits and its lift is the overlay's
     // close; any other arm is the mid-hold case above and stays refused.

@@ -393,15 +393,15 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         return std::string(format_true_colors(app.device_config->true_colors));
     // THE NOISE'S THREE (2026-10-28): the folder's name verbatim, as the
     // writer writes it, and the two integers each through its one formatter
-    // (format_noise_level, format_noise_crossfade_ms, device_config.h), the
+    // (format_noise_level, format_noise_crossfade_s, device_config.h), the
     // writer's own spelling.
     if (key == "noise" && app.device_config != nullptr)
         return app.device_config->noise;
     if (key == "noise_level" && app.device_config != nullptr)
         return format_noise_level(app.device_config->noise_level);
-    if (key == "noise_crossfade_ms" && app.device_config != nullptr)
-        return format_noise_crossfade_ms(
-            app.device_config->noise_crossfade_ms);
+    if (key == "noise_crossfade_s" && app.device_config != nullptr)
+        return format_noise_crossfade_s(
+            app.device_config->noise_crossfade_s);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

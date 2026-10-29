@@ -14,7 +14,7 @@
 # invalid"): a coincident marker's label is struck, in the cue colors (render.cpp's resolve_flag_face).
 # The default (palette_file.h's kGuiDefaultPaletteKey) is Default (architect 2026-10-26).
 # ORDER: ALPHABETICAL BY DISPLAY NAME, case-insensitive (Python's str.lower()), Default sorted among the names
-# (architect 2026-10-27); this file's order is the include's and the preset picker's, and gen_presets.py fails the run
+# (architect 2026-10-27); this file's order is the include's and the waveform value list's, and gen_presets.py fails the run
 # on the first name line out of that order.
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone — WvFg, WvBk,
 # Cntr, CueM, RngM, GrdL, Curs, Face — Cool Edit's other keys left out),

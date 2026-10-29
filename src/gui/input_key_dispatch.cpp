@@ -8,7 +8,6 @@
 #include "file_loader.h"     // source_load_dry_run (the Open project picker's act)
 #include "folder_overlay.h"  // the player's and the picker's key routers (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
-#include "palette_file.h"    // kGuiBuiltinPalettes (the preset picker's rows)
 #include "marker_store_validate.h"  // first_past_eof_wall_defect (the three
                                     // promote roads' shared wall guard)
 #include "project_model.h"   // resolve_project / enumerate_project_names
@@ -458,8 +457,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // BARE `;`, THE SETTINGS PAGE (2026-10-21 for the editor it then opened,
     // the header's ruling; the page since 2026-10-28): the page authors
     // nothing, its rows open the settings editor, whose own commit arms carry
-    // the lock per key, and its `waveform` row's preset picker writes a
-    // device key, never the piece. Bare-exact, the dispatch arm's own
+    // the lock per key, and its value lists write a device key, never the
+    // piece. Bare-exact, the dispatch arm's own
     // spelling. THE ITERATION LOCK INHERITS THE ADMISSION
     // (iteration_lock_key_blocked falls through to this list), its three
     // typed refusals inside the editor (the column, the audio view's `S`,
@@ -7026,10 +7025,10 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 
 // -- THE PICKER (the contract is at the declaration) --------------------------
 //
-// Two openers (the project picker's and the settings page's, whose
-// `waveform` row opens the preset picker), three list builders, three open
-// acts, and the machinery the three contents share: the highlight, the
-// close and the key router.
+// Two openers (the project picker's and the settings page's, whose rows for
+// the keys with a value list open that key's value list), three list
+// builders, three open acts, and the machinery the three contents share: the
+// highlight, the close and the key router.
 
 // The Open project picker's opener. Every guard returns without touching
 // playback (a refused open never interrupts a listening session); the shared
@@ -7332,14 +7331,16 @@ void GuiInputHandler::build_settings_page_rows() {
 // press-and-lift) and Enter on the highlight, one body. AN INERT ROW OPENS
 // NOTHING (its lift never reaches here and the highlight never stands on
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
-// first `=` (a key carries none). On the `waveform` row THE PRESET PICKER IS
-// SWAPPED IN, in place, under this same picker session
-// (build_preset_picker_rows), which then commits or closes as it does
-// standing alone. On every other row THE PAGE CLOSES (close_picker — the
-// overlay and the on-screen keyboard never both stand, and the editor is a
-// modal in the same box) AND THE SETTINGS EDITOR OPENS PREFILLED WITH THE
-// ROW'S LINE as painted, the caret at its end (GuiSettingsEditor::open).
-// Nothing reopens the page after that editor's OK or Cancel.
+// first `=` (a key carries none). On the row of a key with a value list
+// (settings_key_has_value_list — `waveform`, `true_colors`, `noise`,
+// `noise_level`, `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
+// in place, under this same picker session (build_value_list_rows), which
+// then commits or closes as its own content. On every other row THE PAGE
+// CLOSES (close_picker — the overlay and the on-screen keyboard never both
+// stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
+// OPENS PREFILLED WITH THE ROW'S LINE as painted, the caret at its end
+// (GuiSettingsEditor::open). Nothing reopens the page after that editor's OK
+// or Cancel, nor after a value list's pick.
 void GuiInputHandler::settings_page_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -7349,8 +7350,9 @@ void GuiInputHandler::settings_page_commit(int index) {
     if (folder_overlay::row_is_inert(app, index)) return;
     const std::string line =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
-    if (line.substr(0, line.find('=')) == "waveform") {
-        build_preset_picker_rows();
+    const std::string key = line.substr(0, line.find('='));
+    if (settings_key_has_value_list(key)) {
+        build_value_list_rows(key);
         viewport.invalidate_all();
         return;
     }
@@ -7358,33 +7360,38 @@ void GuiInputHandler::settings_page_commit(int index) {
     settings_editor.open(line);
 }
 
-// -- THE PRESET PICKER (architect 2026-10-25; the contract is at the
-//    declaration) ---------------------------------------------------------------
+// -- THE VALUE LIST (architect 2026-10-25 for `waveform`, 2026-10-28 night
+//    for four keys more; the contract is at the declaration) -----------------
 //
-// The picker's third content, the settings page's `waveform` row's: its list
-// and its open act. Its opener is that row (settings_page_commit).
+// The picker's third content, the settings page's row for a key with a value
+// list: its list and its open act. Its opener is that row
+// (settings_page_commit).
 
-// THE LIST: kGuiBuiltinPalettes in the include's order (the program's
-// twenty, their text's order: alphabetical by display name, Default among
-// the names, architect 2026-10-27), one glyph-less Plain row each, its text the
-// preset's DISPLAY NAME (architect 2026-10-25: memorable names, never the
-// key). A ROW'S INDEX IS ITS PRESET'S INDEX in that table, so the row carries
-// no key and the commit reads the table. The band opens on THE LIVE PRESET —
-// the `waveform` device key's row, seated by the one set_highlight and
-// centered in the band (scroll_row_centered, architect 2026-10-26). The key is a built-in's by the load wall's own grammar
-// (is_builtin_palette_name, the device config's reader), so the row is
-// always found; row 0 stands for the case the wall rules out.
-void GuiInputHandler::build_preset_picker_rows() {
+// THE LIST: the key's values (GuiSettingsEditor::value_choices, the five
+// domains' one owner), one glyph-less Plain row each, its text what the row
+// shows and its `value` what the tap commits; the overlay records THE KEY
+// (`value_key`), which the commit routes the value to. The band opens on THE
+// LIVE VALUE — the row whose value is the key's current one
+// (GuiSettingsEditor::setting_value, the writer's spelling, which every row
+// value shares), seated by the one set_highlight and centered in the band
+// (scroll_row_centered, architect 2026-10-26). Every listed key's live value
+// is in its list by the load wall's own grammars but `noise`'s, whose live
+// name may have no folder (the absent-folder rule, noise.h): row 0 stands
+// then, and a list with no rows seats nothing (set_highlight's -1).
+void GuiInputHandler::build_value_list_rows(const std::string& key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
-    ov       = AppState::FolderOverlay{};
-    ov.owner = AppState::FolderOverlay::Owner::PresetPicker;
+    ov           = AppState::FolderOverlay{};
+    ov.owner     = AppState::FolderOverlay::Owner::ValueList;
+    ov.value_key = key;
+    const std::string live_value = settings_editor.setting_value(key);
     int live = 0;
-    for (const GuiBuiltinPalette& preset : kGuiBuiltinPalettes) {
-        if (app.device_config->waveform == preset.key)
+    for (GuiSettingValueChoice& choice : settings_editor.value_choices(key)) {
+        if (choice.value == live_value)
             live = static_cast<int>(ov.rows.size());
         AppState::FolderOverlayRow row;
-        row.kind = AppState::FolderOverlayRow::Kind::Plain;
-        row.name = preset.display_name;
+        row.kind  = AppState::FolderOverlayRow::Kind::Plain;
+        row.name  = std::move(choice.text);
+        row.value = std::move(choice.value);
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);
@@ -7393,22 +7400,24 @@ void GuiInputHandler::build_preset_picker_rows() {
 }
 
 // THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
-// press-and-lift) and Enter on the highlight, one body: THE PRESET IS
-// INSTALLED AT ONCE AND PERSISTED through the typed Waveform row's own road
-// (GuiSettingsEditor::apply_waveform_preset — the live key, the install and
-// the device-config write, its failure carding as the typed commit's), THEN
-// THE PICKER CLOSES (architect 2026-10-25: the box covers the waveform, and
-// the new colors on it are the answer — no card on success). The row already
-// live commits nothing and just closes.
-void GuiInputHandler::preset_picker_commit(int index) {
+// press-and-lift) and Enter on the highlight, one body: THE ROW'S VALUE IS
+// COMMITTED AT ONCE through the typed line's own body for the listed key
+// (GuiSettingsEditor::apply_device_setting — the grammar, the live apply,
+// the device-config write, and a failure carding as the typed commit's; the
+// row already live is its unchanged no-op and commits nothing), THEN THE
+// PICKER CLOSES whatever the outcome (architect 2026-10-25: the box covers
+// the waveform, and the change is the answer — the colors, the sound, the
+// NOISE key's face — no card on success).
+void GuiInputHandler::value_list_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
-        AppState::FolderOverlay::Owner::PresetPicker) return;
-    constexpr int n = static_cast<int>(std::size(kGuiBuiltinPalettes));
+        AppState::FolderOverlay::Owner::ValueList) return;
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const std::string key = kGuiBuiltinPalettes[index].key;
-    if (key != app.device_config->waveform)
-        settings_editor.apply_waveform_preset(key);
+    const std::string key = app.folder_overlay.value_key;
+    const std::string value =
+        app.folder_overlay.rows[static_cast<size_t>(index)].value;
+    (void)settings_editor.apply_device_setting(key, value);
     close_picker();
 }
 
@@ -7529,10 +7538,14 @@ void GuiInputHandler::picker_open_highlight() {
         // the model, or none there. Enter on an empty band would otherwise
         // read as a dead key over a panel that is plainly standing. THE
         // PROJECT PICKER'S ALONE: the settings page's listing is the
-        // editor's key table and the preset picker's the compiled-in
-        // presets, never empty, their highlights always seated.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Choose a project first");
+        // editor's key table, never empty; a value list is empty only for
+        // `noise` with no folder under `noise/`, and Enter there is a
+        // consumed nothing — the empty band is the answer, and the card's
+        // sentence is the project picker's.
+        if (app.folder_overlay.owner ==
+            AppState::FolderOverlay::Owner::ProjectPicker)
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Choose a project first");
         return;
     }
     folder_overlay_open_row(highlight);
@@ -7611,13 +7624,13 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // the catch-all's consumed nothing under the others — the other opener
     // key greys there (redesign_button_enabled's overlay arm), and a chord
     // with no button behind it is silent the same. The settings page and
-    // the preset picker it swaps in share ONE opener, the Settings key
+    // the value list it swaps in share ONE opener, the Settings key
     // (is_folder_overlay_opener, 2026-10-28).
     const bool project_picker =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::ProjectPicker;
     const bool settings_opener =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::SettingsPage ||
-        app.folder_overlay.owner == AppState::FolderOverlay::Owner::PresetPicker;
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::ValueList;
 
     // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
     // opens an overlay is the way out of it, as bare `l` is the player's):
@@ -7632,10 +7645,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // BARE `;` CLOSES THE SETTINGS PAGE AND THE PRESET PICKER (architect
-    // 2026-10-25 for the picker, 2026-10-28 for the page, the same rule one
+    // BARE `;` CLOSES THE SETTINGS PAGE AND THE VALUE LIST (architect
+    // 2026-10-25 for the list, 2026-10-28 for the page, the same rule one
     // content over): the Settings key's lift under either, the opener's own
-    // chord, runs the one close body — the swapped-in picker closing the
+    // chord, runs the one close body — the swapped-in list closing the
     // whole session, the page with it. Shift+; is unbound (chord_is_bound),
     // the catch-all's nothing below.
     if (settings_opener && bare && key == GuiKeys::Semicolon) {

@@ -2834,8 +2834,8 @@ private:
     // state, the row is **Cancel** alone since 2026-08-29 (a click on a row is
     // the open act), and route_picker_key below is its whole
     // plastic vocabulary. THREE CONTENTS — the project picker, the settings
-    // page (2026-10-28) and the preset picker (2026-10-25), the page's
-    // `waveform` row's:
+    // page (2026-10-28) and the value list (2026-10-25 for `waveform`,
+    // 2026-10-28 night for four keys more), the page's row for a listed key:
     //
     //   THE OPEN PROJECT PICKER — Open Project and Ctrl+O, one chord
     //   (is_open_project_key, gui_input.h; on_key's arm dispatches it at the
@@ -2925,33 +2925,37 @@ private:
     //       inert (folder_overlay::row_is_inert). The band opens on the
     //       FIRST KEY ROW, at the top (scroll_row_centered's clamp).
     //     settings_page_commit: THE OPEN ACT on row `index` — a tap, a click
-    //       or Enter: on the `waveform` row the PRESET PICKER is swapped in,
-    //       in place, under the same picker session
-    //       (build_preset_picker_rows); on every other row close_picker and
+    //       or Enter: on the row of a key with a value list
+    //       (settings_key_has_value_list, settings_editor.h) THAT KEY'S VALUE
+    //       LIST is swapped in, in place, under the same picker session
+    //       (build_value_list_rows); on every other row close_picker and
     //       then GuiSettingsEditor::open prefilled with the row's line, the
     //       caret at its end — the overlay and the keyboard never both
     //       stand, so the page closes before the editor opens, and nothing
     //       reopens it after the editor's OK or Cancel. An inert row opens
     //       nothing.
     //
-    //   THE PRESET PICKER (architect 2026-10-25: "maybe a drop down would
-    //   make it quicker, because I don't like having to type it in every
-    //   time" — "brief it as a scrolling list", "Yes") — THE SETTINGS PAGE'S
-    //   `waveform` ROW'S CONTENT, its one road since 2026-10-28. It writes
-    //   the `waveform` device key and nothing of the piece; the Settings key
-    //   stays its lit opener and closer, as over the page.
-    //     build_preset_picker_rows: kGuiBuiltinPalettes in the include's
-    //       order, one glyph-less Plain row each by DISPLAY NAME, a row's
-    //       index its preset's index; the band opens on the LIVE preset's
-    //       row (the `waveform` key's), centered in the band
+    //   THE VALUE LIST (architect 2026-10-25 for `waveform`: "maybe a drop
+    //   down would make it quicker, because I don't like having to type it
+    //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
+    //   night for `true_colors`, `noise`, `noise_level` and
+    //   `noise_crossfade_s`, the same shape) — THE SETTINGS PAGE'S ROW'S
+    //   CONTENT for a key of kSettingsValueListKeys, its one road. It writes
+    //   that device key and nothing of the piece; the Settings key stays its
+    //   lit opener and closer, as over the page.
+    //     build_value_list_rows: the key's values
+    //       (GuiSettingsEditor::value_choices), one glyph-less Plain row each,
+    //       its text what it shows (`-9 dB`, `4 s`, a preset's DISPLAY NAME,
+    //       the word or the folder plain) and its `value` what it commits;
+    //       the key recorded on the overlay (`value_key`); the band opens on
+    //       the LIVE value's row, centered in the band
     //       (folder_overlay::scroll_row_centered, 2026-10-26).
-    //     preset_picker_commit: THE OPEN ACT on row `index` — a tap, a click
-    //       or Enter: the row's preset installed and persisted through the
-    //       typed Waveform row's one road
-    //       (GuiSettingsEditor::apply_waveform_preset, its persist-failure
-    //       card the typed road's), then close_picker — no card on success,
-    //       the colors being the answer; the live row commits nothing and
-    //       just closes.
+    //     value_list_commit: THE OPEN ACT on row `index` — a tap, a click
+    //       or Enter: the row's value committed through the typed line's one
+    //       body (GuiSettingsEditor::apply_device_setting — the grammar, the
+    //       live apply, the write, its failure card the typed road's), then
+    //       close_picker — no card on success, the change being the answer;
+    //       the live row commits nothing and just closes.
     //
     //   (THE `h` VIEW HAD ANOTHER PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
@@ -2970,10 +2974,10 @@ private:
     //     close_picker: THE ONE CLOSE BODY — Esc, the Cancel button,
     //       Ctrl+O (the Open Project key's lift) under the project picker,
     //       `;` (the Settings key's lift) under the settings page and the
-    //       preset picker, Ctrl+Q's and the
+    //       value list, Ctrl+Q's and the
     //       compositor's close road (GuiPrompt::request_close, at its head
-    //       beside the player's close, on the exit road alone), the preset
-    //       pick, the page's row open ahead of its editor and the
+    //       beside the player's close, on the exit road alone), the value
+    //       list's pick, the page's row open ahead of its editor and the
     //       same-project no-op all pass through it (a reopen ends the
     //       session with the picker standing, and the picker with it); the
     //       overlay leaves with
@@ -2994,7 +2998,7 @@ private:
     //       each the catch-all's nothing under the other content): under the
     //       project picker Ctrl+O closes and Ctrl+Alt+O runs Revert
     //       (revert_project, its question standing over the picker), under
-    //       the settings page and the preset picker `;` closes; Ctrl+S saves with the
+    //       the settings page and the value list `;` closes; Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
@@ -3014,20 +3018,21 @@ private:
     // no-second-road doctrine's stated exception for the Open prompt
     // (2026-08-28, one afternoon: GLASS NEEDS A ROAD THAT IS NOT TYPING) is
     // SPENT rather than kept — the list is now the only road on both
-    // backends, and a row's click and Enter are one act on it. THE PRESET
-    // PICKER IS A SECOND ROAD ONTO ONE KEY BY RULING (architect 2026-10-25):
-    // the typed `waveform=` line and its Tab completion stand unchanged, and
-    // both roads commit through the one apply
-    // (GuiSettingsEditor::apply_waveform_preset), so they cannot drift. THE
-    // SETTINGS PAGE IS NO SECOND ROAD: its rows open the one editor.
+    // backends, and a row's click and Enter are one act on it. THE VALUE
+    // LIST IS A SECOND ROAD ONTO ITS KEY BY RULING (architect 2026-10-25 for
+    // `waveform`, 2026-10-28 night for four keys more): the typed `key=`
+    // line and its Tab completion stand unchanged, and both roads commit
+    // through the one body (GuiSettingsEditor::apply_device_setting), so
+    // they cannot drift. THE SETTINGS PAGE IS NO SECOND ROAD: its rows open
+    // the one editor or a value list.
     void open_project_picker();
     void build_project_picker_rows();
     void open_project_commit(int index);
     void open_settings_page();
     void build_settings_page_rows();
     void settings_page_commit(int index);
-    void build_preset_picker_rows();
-    void preset_picker_commit(int index);
+    void build_value_list_rows(const std::string& key);
+    void value_list_commit(int index);
     // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
     // history. It never meets open_project_commit's

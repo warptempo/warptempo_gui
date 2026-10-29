@@ -563,7 +563,7 @@ inline constexpr const char* kCheckpointPublishing =
 // from the settings editor rewrites the device config and changes nothing on
 // screen — the open project stays open on its absolute paths — while File →
 // Open project and the next launch read the new folder at once (the whole
-// account is at GuiSettingsEditor::commit_device_setting,
+// account is at GuiSettingsEditor::apply_device_setting,
 // settings_editor.cpp). A press whose result nothing paints says where it
 // applies; one clause. It is raised only when the config write succeeded
 // (2026-09-04): the next launch reads the file, so a failed write makes that

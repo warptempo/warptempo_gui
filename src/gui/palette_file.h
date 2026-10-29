@@ -88,8 +88,8 @@
 // set (architect 2026-10-26: "I am quite sure that I want to just trim down
 // to just the cool edit themes"), ALPHABETICAL BY DISPLAY NAME,
 // case-insensitive, Default among the names (architect 2026-10-27; the
-// generator checks the text's order, and the preset picker lists the table
-// in it).
+// generator checks the text's order, and the waveform value list shows the
+// table in it).
 // Each a KEY (the display name in the key grammar, no prefix, architect
 // 2026-10-27 — the `waveform` key's word for it), a DISPLAY NAME (Cool
 // Edit's own) and THE TEN. THE DEFAULT PALETTE is "Default" (`default`,
@@ -267,8 +267,8 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 
 // (THE PRESETS' ORDER IS THE TABLE'S OWN — alphabetical by display name,
 // Default among the names, architect 2026-10-27 (the head) — with no
-// separate menu order: the preset picker lists the table in it, and the
-// key's Tab completion matches the built-in names in it,
+// separate menu order: the waveform value list shows the table in it, and
+// the key's Tab completion matches the built-in names in it,
 // GuiSettingsEditor::complete_closed_value.)
 
 // THE ACTIVE PRESET THE INSTALL TAKES IS THE DEVICE CONFIG'S KEY AS WRITTEN

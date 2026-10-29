@@ -471,7 +471,8 @@ GuiColor surface_text(GuiSurface surface);
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
 // `waveform` key names THE ACTIVE PRESET and gives the words at launch; the
 // Settings Waveform row's commit installs a preset's words live and writes
-// its key (GuiSettingsEditor::commit_device_setting, architect 2026-10-14).
+// its key (GuiSettingsEditor::apply_device_setting, architect 2026-10-14,
+// the typed line and the value list its two doors).
 // This resolves and never refuses. It bumps palette_generation below, the
 // flag cache's fingerprint term, and the plate's two baked inks
 // (waveform_plate_inks) move with it. The words type is palette_file.h's.
