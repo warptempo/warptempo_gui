@@ -6440,8 +6440,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             }
             {
                 // THE THUMB — the key-shaped block (render.h's scrub block:
-                // a key at rest, no LED, no legend, 8 x 16 W), centered on the
-                // column and on the channel, its box inside the item at
+                // a key at rest, no LED, no legend, 8 W by the key's height,
+                // 2026-10-29), centered on the column and on the channel —
+                // the track's whole band, its rows the case's — its box
+                // inside the item at
                 // every column of the travel. No hover face: its painted rect
                 // is the press's business (render_player_scrub_handle_hit)
                 // and the cursor its cue.

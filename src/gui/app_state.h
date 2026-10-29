@@ -10343,14 +10343,15 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
 //
-// THE BAND IS THE PAINTED THUMB (architect 2026-10-23, the thumb grown to
-// 8 x 16 W — on screen is as painted; the thumb's box widened to the 14-W
-// handle box, 2026-10-02 to 2026-10-23, retired), its overhanging half at
-// either end of the channel included (the item covers it, 2026-10-25): the
-// thumb's own rows
-// (scrub_thumb_h_px, centred in the track's band exactly as the painter
-// centres it) by its own columns (scrub_thumb_w_px, from handle_x − w / 2,
-// the painter's own left edge), HALF-OPEN on both
+// THE BAND IS THE PAINTED THUMB (architect 2026-10-23, on screen is as
+// painted; the thumb's box widened to the 14-W handle box, 2026-10-02 to
+// 2026-10-23, retired), its overhanging half at either end of the channel
+// included (the item covers it, 2026-10-25): the thumb's own rows
+// (scrub_thumb_h_px, the key's height since 2026-10-29, centred in the
+// track's band exactly as the painter centres it — the track's band is the
+// controls row's case rows, so the rows are the track's whole height) by its
+// own columns (scrub_thumb_w_px, 8 W, from handle_x − w / 2, the painter's
+// own left edge), HALF-OPEN on both
 // axes like every other
 // pixel-cell test in the product (a pixel x covers [x, x+1), containing_pixel's
 // rule). A press outside it but on the item makes the thumb JUMP there

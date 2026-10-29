@@ -109,17 +109,17 @@ struct AppState;
 //           is one blit at every depth, no blend computed at paint time. An
 //           accent change rebuilds the lit patches alone (set_accent); the
 //           rest stand.
-// RESIDENT at 300 % on 2304 x 1440 at key_height 33, 14 426 664 bytes (the
+// RESIDENT at 300 % on 2304 x 1440 at key_height 33, 14 425 224 bytes (the
 // arithmetic off the geometry, 2026-10-29): the ground's tile 13.3 MB (rows
 // 0 .. 1440 window-wide, the band's top the surface's first row since
 // 2026-10-24); THE KEY PATCHES 1.16 MB, 13 of them — the one 69 x 33 lamp
 // key (the band, row 8 and the controls row)
-// at its three depths, the thumb's one 24 x 48, and the on-screen
-// keyboard's four sizes, 219 / 220 / 676 x 87 at depths 0 and 2 and the
-// 333 x 87 of Shift, Backspace, Enter and the symbol-mode key at 1 too
-// (nine patches, 1.12 MB). On the laptop's maximized 1920 x 1047 at 200 %,
-// 8 055 152 bytes (no keyboard; the lamp key's three 46 x 22 patches and
-// the thumb's 16 x 32). materials::resident_bytes, which the trace line
+// at its three depths, the thumb's one 24 x 33 (the key's height since
+// 2026-10-29), and the on-screen keyboard's four sizes, 219 / 220 / 676 x
+// 87 at depths 0 and 2 and the 333 x 87 of Shift, Backspace, Enter and the
+// symbol-mode key at 1 too (nine patches, 1.12 MB). On the laptop's maximized 1920 x 1047 at 200 %,
+// 8 054 512 bytes (no keyboard; the lamp key's three 46 x 22 patches and
+// the thumb's 16 x 22). materials::resident_bytes, which the trace line
 // prints at every bake with the patches' count and time, is the measure.
 //
 // THE REGIONS — WHICH GROUND A SURFACE IS (GuiMaterialRegion, a scope the

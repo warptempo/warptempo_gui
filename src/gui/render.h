@@ -1528,14 +1528,16 @@ inline int program_run_gap_px() {
 // scrub fits"; the record above is the Windows thumb it replaced): THE
 // CHANNEL a ONE-DEVICE-PX light line over a one-device-px dark line, the
 // two ring tones, across the scrub's span (kScrubChannelLines hairlines);
-// THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx x kScrubThumbHeightPx W,
-// 8 x 16 since 2026-10-23 (architect, on the installed player: "too tiny.
-// The trough is okay at 1 pixel, but the thumb itself should be larger"; his
-// pick, row 2 of his thumb sheet off 4 x 8 /
-// 8 x 16 / 12 x 20 / 15 x 23 — the earlier 4 x 8 until then),
-// painted by the key painter with no LED and no legend, centred on the
-// channel; ITS HIT ZONE ITS PAINTED RECT (render_player_scrub_handle_hit:
-// on screen is as painted).
+// THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx = 8 W wide (architect
+// 2026-10-23, on the installed player: "too tiny. The trough is okay at 1
+// pixel, but the thumb itself should be larger"; his pick, row 2 of his
+// thumb sheet) and THE KEY'S HEIGHT (architect 2026-10-29: "Shrink it to the
+// height of the key."; scrub_thumb_h_px is icon_case_h_px, following the
+// `key_height` tuning key live, so the thumb fills the controls row's case
+// band the channel stands centered in — 33 device px at 300 % at
+// key_height 33), painted by the key painter with no LED and no legend,
+// centred on the channel; ITS HIT ZONE ITS PAINTED RECT
+// (render_player_scrub_handle_hit: on screen is as painted).
 // THE THUMB ALWAYS STANDS (architect 2026-10-25, "agreed"): whenever the
 // channel has a width, at frame 0 while no item is loaded — the clock's own
 // zeros — so the player opens with its thumb at the channel's left end
@@ -1556,9 +1558,8 @@ inline int program_run_gap_px() {
 // leftover of the pointed Windows thumb — stood 2026-10-02 to 2026-10-25.)
 inline constexpr int    kScrubChannelLines  = 2;
 inline constexpr double kScrubThumbWidthPx  = 8.0;
-inline constexpr double kScrubThumbHeightPx = 16.0;
 // The thumb's width floors at three device px (its outline and one column
-// of face), its height at five.
+// of face); its height is the case's, floored there (scrub_thumb_h_px).
 inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
 // THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px): a key,
 // at rest, no LED.
@@ -1978,15 +1979,17 @@ static_assert(chrome_stack_authored_h() == 75);
 // left edge four device px left of its column), so a marker just past the last
 // column shows the left half of its triangle there, and no dots (the stem
 // stash is gated to [0, w)).
-// THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because they count relief
-// lines (the slider's block, with its constants, is above): the channel its
-// four lines, the thumb its rows above the channel, the channel and its rows
-// below — each part rounded on its own.
+// THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because the channel
+// counts hairlines (the slider's block, with its constants, is above): the
+// channel its kScrubChannelLines one-device-px lines; the thumb THE KEY'S
+// HEIGHT (architect 2026-10-29, "Shrink it to the height of the key."),
+// icon_case_h_px itself, so it fills the controls row's case band exactly
+// and follows `key_height` live.
 inline int scrub_channel_h_px() {
     return kScrubChannelLines * hairline_px();
 }
 inline int scrub_thumb_h_px() {
-    return scaled_px(kScrubThumbHeightPx, 5);
+    return icon_case_h_px();
 }
 // The thumb's rows above the channel: the thumb centred on it.
 inline int scrub_thumb_above_px() {
