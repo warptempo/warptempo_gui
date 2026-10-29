@@ -1193,22 +1193,16 @@ struct ActiveEditorText {
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
-    // THE TWO DIALOG EDITORS share ONE publication — only one of them is
-    // ever open, and paint_modal_dialog fills it from whichever editor it
-    // actually painted. An invalid publication (nothing painted yet, or an
-    // editor the dialog's precedence hides — a prompt is up) leaves this
-    // invalid, exactly as the flag
-    // editor's does: what is not on screen takes no clicks.
+    // THE DIALOG LINE EDITOR's ONE PUBLICATION, which paint_modal_dialog
+    // fills from the buffer it actually painted. An invalid publication
+    // (nothing painted yet, or an editor the dialog's precedence hides — a
+    // prompt is up) leaves this invalid, exactly as the flag editor's does:
+    // what is not on screen takes no clicks.
     const AppState::DialogEditorText& be = app.dialog_editor_text;
-    const bool dialog_open =
-        text_editor::is_active(app.settings_editor) ||
-        (text_editor::is_active(app.top_flag_editor) &&
-         app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
+    const bool dialog_open = text_editor::is_active(app.settings_editor);
     if (dialog_open) {
         if (!be.valid) return g;
-        g.ed = text_editor::is_active(app.settings_editor)
-                   ? &app.settings_editor
-                   : &app.top_flag_editor;
+        g.ed = &app.settings_editor;
         g.wrap         = &be;
         g.byte_x       = &be.byte_x;
         g.dialog       = true;
@@ -3847,12 +3841,12 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // CLAIM READS THE PAINTED FACE (architect 2026-09-24, strictly
     // as-painted), the per-tick comparator (main.cpp) keeping it honest, and
     // a face painted live dispatches, its act answering for itself. THE
-    // PLAYER'S, THE SCORE VIEWER'S AND THE TRIM PRESETS LIST'S BUTTONS ARE
-    // THE ONLY ONES THAT PUBLISH IT (re-grepped 2026-10-28 night), so this
-    // line is inert off those three rows.
+    // PLAYER'S, THE SCORE VIEWER'S, THE TRIM PRESETS LIST'S AND THE BPM
+    // FORM'S BUTTONS ARE THE ONLY ONES THAT PUBLISH IT (re-grepped
+    // 2026-10-29), so this line is inert off those four rows.
     // THE SHIFT ADMISSION is the row's own: a button carries one owner's act
     // and None for the others, which admits nothing (the trim list's acts
-    // admit none).
+    // and the BPM form's acts admit none).
     const AppState::ModalDialogButton& hb =
         app.modal_dialog.buttons[static_cast<size_t>(hit)];
     if (!hb.enabled) return true;
@@ -3875,7 +3869,8 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // the prompt's, the editors' OK / Cancel, the player's closing key (Close)
     // and the picker's one word (Cancel or Close by content,
     // kModalCancelLabel's rule) or, under the trim presets list, its pair
-    // and four words — so this is the rule's one site. A refused
+    // and four words, under the BPM form its two words — so this is the
+    // rule's one site. A refused
     // press (the disabled player button and the unadmitted shift above) arms nothing and moves
     // nothing. A slide off the held button leaves the focus here and fires
     // nothing; a release away leaves the button passively focused.
@@ -4176,6 +4171,25 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         }
         return false;
     }
+    // THE BPM FORM'S ROW (architect 2026-10-29), the trim list's shape: its
+    // published face decides — a key painted dead is consumed — RENDER its
+    // body (bpm_form_render), CANCEL the form's close with the mode
+    // (close_bpm_form). No member admits a modifier.
+    if (app.picker.active &&
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::BpmForm) {
+        if (!b.enabled) return true;
+        switch (b.bpm_act) {
+            case AppState::BpmFormButtonAct::Render:
+                bpm_form_render();
+                return true;
+            case AppState::BpmFormButtonAct::Cancel:
+                close_bpm_form();
+                return true;
+            case AppState::BpmFormButtonAct::None:
+                return false;
+        }
+        return false;
+    }
     if (app.picker.active) {
         if (app.folder_overlay.owner ==
             AppState::FolderOverlay::Owner::ValueList)
@@ -4244,12 +4258,8 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
     const GuiKey        key = ok ? GuiKeys::Return : GuiKeys::Escape;
     const GuiInputState mods{};
     return_modal_focus_to_field();
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        handle_top_flag_editor_key(key, mods);
-    } else if (text_editor::is_active(app.settings_editor)) {
+    if (text_editor::is_active(app.settings_editor))
         handle_settings_editor_key(key, mods);
-    }
 }
 
 // THE FOCUS GOES BACK TO THE FIELD (the declaration names the three roads).
@@ -4958,8 +4968,8 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // edge that can tell a click from a drag, and a second press has nothing
 // left to mean.
 //
-// ONE PRESS ROUTER, FIVE CONTENTS. The claim below stands ABOVE the two mode
-// veils (the player's and the picker's, the picker's serving all four of
+// ONE PRESS ROUTER, SIX CONTENTS. The claim below stands ABOVE the two mode
+// veils (the player's and the picker's, the picker's serving all five of
 // its contents), each of which admits exactly the band and its own modal row, and
 // BELOW the prompt gate, which outranks every surface as it always has. What
 // the OPEN means is the owner's, and the two forks below are the whole of it
@@ -4980,6 +4990,7 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
         case AppState::FolderOverlay::Owner::SettingsPage:
         case AppState::FolderOverlay::Owner::ValueList:
         case AppState::FolderOverlay::Owner::TrimPresets:
+        case AppState::FolderOverlay::Owner::BpmForm:
             picker_set_highlight(index);
             return;
     }
@@ -4994,8 +5005,10 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // list (2026-10-25, four keys more 2026-10-28 night) the row's value is
 // committed to the listed key and the settings page returns, seated on that
 // key's row; under the trim presets list (2026-10-28 night) the row's preset
-// becomes the active tab's trim, the list standing — one body per content,
-// which the click and Enter both reach.
+// becomes the active tab's trim, the list standing; under the BPM form
+// (2026-10-29) the form closes and the line editor opens prefilled on the
+// row's line (its OK and Cancel reopening the form on that row) — one body
+// per content, which the click and Enter both reach.
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -5014,6 +5027,9 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
             return;
         case AppState::FolderOverlay::Owner::TrimPresets:
             trim_presets_apply(index);
+            return;
+        case AppState::FolderOverlay::Owner::BpmForm:
+            bpm_form_commit(index);
             return;
     }
 }
@@ -5932,7 +5948,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // that same button runs the editor's own Enter or Esc through the one
     // modal key route (dispatch_modal_dialog_editor_act, from
     // on_button_release's mirror of this gate) — button-is-its-chord, so a
-    // refusal, the BPM commit's render sweep and every teardown are
+    // refusal, the BPM field's return to its form and every teardown are
     // the keyboard's own bodies. A PROMPT's buttons are claimed in the prompt
     // gate above, not here.
     // THE STASH'S IDENTITY IS THIS CLAIM'S GATE (2026-08-13, exact since
@@ -8345,13 +8361,14 @@ void GuiInputHandler::finish_chrome_press_release(
     // body while one stands — and neither does THE RENDER PLAYER's or THE
     // PICKER's, whose release blocks return above this call the same way; the
     // term below is the editor OPENED MID-HOLD's, and any overlay opened
-    // mid-hold (bare `l`, Ctrl+O, bare `;`, bare `t` or `'` typed under a held button)
+    // mid-hold (bare `l`, Ctrl+O, bare `;`, bare `t`, Ctrl+B or `'` typed under a held button)
     // takes the same refusal through it — and so does THE PROGRESS MODAL
     // (2026-10-14), a batch's render chord typed under a held button.
     // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
     // for Play Renders under the player, 2026-10-25 for Open Project under the
     // project picker, 2026-10-28 for Settings under the settings page and the
-    // value list it swaps in, that night for Trim Presets under its list —
+    // value list it swaps in, that night for Trim Presets under its list,
+    // 2026-10-29 for BPM under its form —
     // the tag's answer,
     // is_folder_overlay_opener): that button, lit under its overlay, is the
     // one roster arm the overlay's veil admits and its lift is the overlay's

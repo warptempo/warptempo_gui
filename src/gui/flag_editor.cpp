@@ -81,8 +81,8 @@ bool parse_signed_hops(const std::string& v, int& out) {
 // Flag-editor cluster: the marker lane's two editors (the flag's
 // canonical-line editor and the iteration bound editor — text_editor::Kind's
 // FlagPayload and IterBound) —
-// their enter / commit / exit paths — and the bpm-bracket editor session,
-// reaching undo and viewport through the struct's reference members. The
+// their enter / commit / exit paths — and the BPM form's field commit and
+// RENDER gate, reaching undo and viewport through the struct's reference members. The
 // eligibility and flag-text helpers (iter_bracket_carrier,
 // iter_popup_eligible_marker, bpm_popup_eligible_marker, ...) live in
 // warpmarkers.h alongside effective_disabled, so this TU sees them via
@@ -97,12 +97,11 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     viewport.invalidate_top_strip();
 }
 
-// Shared core for the enter-editor flows. Wrappers below
-// (enter_top_flag_edit, enter_bpm_edit) own the kind-specific eligibility
-// gates and seed-text builders, then delegate here. The live open routes
-// are: Enter on the focused marker with the payload addressed, the flag
-// box's double-click (both -> enter_top_flag_edit), and the BPM editor
-// open (enter_bpm_edit). Every route opens the editor with its
+// Shared core for the enter-editor flows. The wrapper below
+// (enter_top_flag_edit) owns the kind-specific eligibility gates and
+// seed-text builder, then delegates here. The live open routes are: Enter
+// on the focused marker with the payload addressed and the flag box's
+// double-click (both -> enter_top_flag_edit). Every route opens the editor with its
 // SEEDED content fully selected (open-selected) — typing replaces
 // wholesale, bare Left/Right collapse to the extremes — so there is no
 // clicked-glyph caret to seat; a specific caret spot is a click inside the
@@ -922,14 +921,14 @@ void GuiFlagEditor::wipe_iter_state() {
 // Wipe every marker's session-only bpm state — owner flag, beats, bracket
 // bounds, and span endpoint back to their defaults. Runs on every bpm-mode
 // exit (the single chokepoint exit_bpm_mode, which the sweep's dispatch and
-// every editor close reach), so a bracket exists only while the mode is live;
-// re-entering bpm mode always seeds an EMPTY field. Its one other caller is
+// every road out of the BPM form reach), so a value exists only while the
+// mode is live; re-entering bpm mode always opens a BLANK form. Its one other caller is
 // the load in place (apply_recipe_in_place), where the mode is off by
 // construction and the call is a statement over a set that already carries
 // defaults — never a mode exit.
 //
 // History-less on purpose: bpm values are session-only with no undo of their
-// own (see commit_bpm_edit), so no undo entry is pushed, and undo can never
+// own (see commit_bpm_field), so no undo entry is pushed, and undo can never
 // resurrect bpm state — the bpm session is modal, so no snapshot-taking op can
 // run while a marker carries live bpm fields, and outside the session every
 // marker is already wiped. THE ITER WIPE IS THE SAME SHAPE SINCE 2026-09-10
@@ -946,192 +945,157 @@ void GuiFlagEditor::wipe_bpm_state() {
     }
 }
 
-// Open the BPM editor on `idx` — a modal on the bottom row from 2026-08-13,
-// in the modal family's box since 2026-10-14 (modal_box.h). Seed pending is
-// the
-// current bracket text (EMPTY when blank, else `"<beats>@[<lo>,<hi>]"`) — a
-// fresh open is a blank field the whole value is typed into
-// (format_bpm_bracket_text, warpmarkers.h, carries that ruling).
-// Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
-// swaps to digits + `@`/`,`/`[`/`]`; the box shows the bracket line alone,
-// no label (the Settings editor's shape), so the buffer holds the bracket
-// text alone.
-void GuiFlagEditor::enter_bpm_edit(int idx) {
-    if (idx < 0) return;
-    if (!app.bpm_mode_enabled) return;
-    const auto& mv = app.warpmarkers.markers();
-    if (idx >= static_cast<int>(mv.size())) return;
-    if (!bpm_popup_eligible_marker(mv[idx])) return;
-    this->enter_text_edit(
-        idx,
-        text_editor::Kind::BpmBracket,
-        format_bpm_bracket_text(mv[idx]));
-    // enter_text_edit's tail invalidates the top strip, but the BPM editor
-    // draws in the modal family's box, whose rect does not exist before its
-    // first paint — so a MODAL OPEN damages the whole window (the settings
-    // opener carries the rule).
-    viewport.invalidate_all();
+// THE BPM FORM'S FIELD COMMIT (the contract is at the declaration). The
+// refusal is the editors' one shape and the settings editor's words' shape:
+// the whole line selected, the editor standing, one composed sentence on
+// stderr and the card.
+void GuiFlagEditor::commit_bpm_field() {
+    if (!text_editor::is_active(app.settings_editor) ||
+        app.settings_editor.kind != text_editor::Kind::BpmField)
+        return;
+    const int owner = bpm_owner_index(app.warpmarkers.markers());
+    const int field = app.settings_editor.target;
+    const std::string& line = app.settings_editor.pending;
+    auto reject = [&](const std::string& reason) {
+        text_editor::refuse(app.settings_editor);
+        viewport.invalidate_dialog_editor_box();
+        const std::string refusal = "BPM edit rejected: " + reason;
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+            refusal.c_str(), line.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+    };
+    // THE KEY IS THE ROW'S OWN: a line retyped to another key (`beat=`,
+    // `high=` on the beats row) or with its `=` gone is one class, one
+    // sentence naming the key the row edits.
+    const std::string key  = kBpmFieldKeys[field];
+    const std::string head = key + "=";
+    if (line.compare(0, head.size(), head) != 0) {
+        reject("this line must begin with '" + head + "'");
+        return;
+    }
+    const std::string value = line.substr(head.size());
+    GuiWarpMarker& m = app.warpmarkers.markers_mut()[owner];
+    switch (static_cast<GuiBpmField>(field)) {
+        case GuiBpmField::Beats: {
+            int beats = 0;
+            if (!value.empty() && !read_bpm_beats(value, beats)) {
+                reject("beats must be a whole number from 1 to " +
+                       std::to_string(kBpmBeatsMax));
+                return;
+            }
+            m.bpm_beats = beats;
+            break;
+        }
+        case GuiBpmField::Low:
+        case GuiBpmField::High: {
+            double bpm = 0.0;
+            if (!value.empty() && !read_bpm_tempo(value, bpm)) {
+                reject(key + " must be a tempo from " +
+                       format_value_double(kBpmMin, 0) + " to " +
+                       format_value_double(kBpmMax, 0) +
+                       " bpm, with no trailing zeros");
+                return;
+            }
+            (field == static_cast<int>(GuiBpmField::Low) ? m.bpm_lo
+                                                          : m.bpm_hi) = bpm;
+            break;
+        }
+    }
+    // The editor's close is the box's damage; the form the close hook
+    // reopens damages the whole window (open_bpm_form).
+    viewport.invalidate_modal_dialog_area();
+    text_editor::deactivate(app.settings_editor);
 }
 
-// Commit the BPM editor's pending buffer. Strict syntax via
-// parse_bpm_bracket, then the derived-tempo bracket gate below. On
-// refusal the editor stays open with its text selected and a card, and
-// false is returned; on success the parsed values are stored
-// on the marker (the marker is already the BPM owner), the editor closes,
-// and true is returned. No undo entry — BPM values are session-only,
-// treated like view state. The Enter dispatch fires render_bpm_sweep()
-// when this returns true.
-bool GuiFlagEditor::commit_bpm_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return false;
-    if (app.top_flag_editor.kind !=
-            text_editor::Kind::BpmBracket) return false;
-    const int idx = app.top_flag_editor.target;
-    const auto& mv_const = app.warpmarkers.markers();
-    if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
-        text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_modal_dialog_area();
-        return false;
-    }
-    const std::string& s = app.top_flag_editor.pending;
-    int    beats = 0;
-    double lo = 0.0, hi = 0.0;
-    if (!parse_bpm_bracket(s, beats, lo, hi)) {
-        text_editor::refuse(app.top_flag_editor);
-        viewport.invalidate_dialog_editor_box();
-        const std::string refusal = "BPM edit rejected: invalid syntax";
-        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-            refusal.c_str(), s.c_str());
+// THE BPM FORM'S RENDER GATE (the contract is at the declaration). Every
+// sweep cell carries a derived base tempo into its cell markers, a derived
+// scale into its cell .settings, and — since 2026-08-26 — a rescaled tempo
+// into every effectively ENABLED owning marker outside the span (a disabled
+// one is invisible to the act since 2026-08-29, in the span and out of it,
+// so it can neither be rescaled nor refuse a bracket); the derivation
+// (compute_base_tempo_scale) is monotone in bpm and the rescale rides it, so
+// the bracket ends bound every cell: if either endpoint bpm refuses — the
+// derived base tempo lands outside [kTempoMinCents, kTempoMaxCents], the
+// derived scale outside [kScaleMin, kScaleMax], or any rescaled marker
+// outside the tempo bracket — the press refuses with its card. Never clamp:
+// a clamped derivation would silently mistune the span. Gated on a
+// well-formed span (owner before endpoint, positive duration); without one,
+// render_bpm_sweep early-bails and derives nothing. The form and its field
+// editor are modal to the store — no authoring act runs while either stands
+// — so n here equals the store size the Ctrl+B gate recorded bpm_endpoint
+// against.
+bool GuiFlagEditor::bpm_sweep_bracket_admits() {
+    const auto& mv = app.warpmarkers.markers();
+    const int idx = bpm_owner_index(mv);
+    if (idx < 0) return false;
+    const GuiWarpMarker& o = mv[idx];
+    const int endpoint_idx = o.bpm_endpoint;
+    const int n = static_cast<int>(mv.size());
+    // The span-end frame is the boundary marker's time when one exists — the
+    // NEXT EFFECTIVELY-ENABLED marker after the last selected one, which is
+    // what bpm_endpoint names (warpmarkers.h) — else the song end
+    // (bpm_endpoint == n is the song-end sentinel).
+    if (audio.sample_rate() <= 0 || endpoint_idx <= idx || endpoint_idx > n)
+        return true;
+    const int64_t span_end_frame =
+        (endpoint_idx < n) ? mv[endpoint_idx].time_frame
+                           : audio.total_frames();
+    const double duration_seconds =
+        (span_end_frame - o.time_frame) /
+        static_cast<double>(audio.sample_rate());
+    if (!(duration_seconds > 0.0)) return true;
+    const auto refuse = [&](const std::string& refusal) {
+        std::fprintf(stderr, "warptempo_gui: %s: %d at [%s, %s]\n",
+            refusal.c_str(), o.bpm_beats,
+            format_value_double(o.bpm_lo, 0).c_str(),
+            format_value_double(o.bpm_hi, 0).c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
         return false;
+    };
+    const auto at_lo =
+        compute_base_tempo_scale(duration_seconds, o.bpm_beats, o.bpm_lo);
+    const auto at_hi =
+        compute_base_tempo_scale(duration_seconds, o.bpm_beats, o.bpm_hi);
+    if (!at_lo || !at_hi) {
+        return refuse(
+            "BPM edit rejected: derived tempo or scale outside "
+            "its bracket (tempo [" +
+            format_tempo_cents(kTempoMinCents) + ", " +
+            format_tempo_cents(kTempoMaxCents) + "], scale [" +
+            format_value_double(kScaleMin, 4) + ", " +
+            format_value_double(kScaleMax, 4) + "])");
     }
-    // Derived-value bracket gate. Every sweep cell carries a derived base
-    // tempo into its cell markers, a derived scale into its cell .settings,
-    // and — since 2026-08-26 — a rescaled tempo into every effectively
-    // ENABLED owning marker outside the span (a disabled one is invisible to
-    // the act since 2026-08-29, in the span and out of it, so it can neither
-    // be rescaled nor refuse a bracket); the derivation
-    // (compute_base_tempo_scale) is
-    // monotone in bpm and the rescale rides it, so the bracket ends bound
-    // every cell: if either endpoint bpm refuses — the derived base tempo
-    // lands outside [kTempoMinCents, kTempoMaxCents], the derived scale
-    // outside [kScaleMin, kScaleMax], or any rescaled marker outside the
-    // tempo bracket — the commit refuses with its card like any invalid
-    // editor value. Never clamp: a clamped
-    // derivation would silently mistune the span. Gated on a well-formed
-    // span (owner before endpoint, positive duration); without one,
-    // render_bpm_sweep early-bails and derives nothing. The bpm editor is
-    // modal, so the store cannot change between `m` and this commit — n here
-    // equals the store size the `m` gate recorded bpm_endpoint against.
-    {
-        const int endpoint_idx = mv_const[idx].bpm_endpoint;
-        const int n = static_cast<int>(mv_const.size());
-        // The span-end frame is the boundary marker's time when one exists
-        // — the NEXT EFFECTIVELY-ENABLED marker after the last selected
-        // one, which is what bpm_endpoint names (warpmarkers.h) — else the
-        // song end (bpm_endpoint == n is the song-end sentinel). Guarded on
-        // endpoint_idx > idx and endpoint_idx <= n.
-        if (audio.sample_rate() > 0 &&
-            endpoint_idx > idx &&
-            endpoint_idx <= n) {
-            const int64_t span_end_frame =
-                (endpoint_idx < n) ? mv_const[endpoint_idx].time_frame
-                                   : audio.total_frames();
-            const double duration_seconds =
-                (span_end_frame - mv_const[idx].time_frame) /
-                static_cast<double>(audio.sample_rate());
-            if (duration_seconds > 0.0) {
-                const auto at_lo =
-                    compute_base_tempo_scale(duration_seconds, beats, lo);
-                const auto at_hi =
-                    compute_base_tempo_scale(duration_seconds, beats, hi);
-                if (!at_lo || !at_hi) {
-                    text_editor::refuse(app.top_flag_editor);
-                    viewport.invalidate_dialog_editor_box();
-                    const std::string refusal =
-                        "BPM edit rejected: derived tempo or scale outside "
-                        "its bracket (tempo [" +
-                        format_tempo_cents(kTempoMinCents) + ", " +
-                        format_tempo_cents(kTempoMaxCents) + "], scale [" +
-                        format_value_double(kScaleMin, 4) + ", " +
-                        format_value_double(kScaleMax, 4) + "])";
-                    std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                        refusal.c_str(), s.c_str());
-                    notifications.notify(
-                        AppState::NotificationClass::Normal, refusal);
-                    return false;
-                }
-                // The RESCALED MAP's arm of the same gate (2026-08-26): the
-                // sweep rescales every effectively enabled owning marker
-                // outside the span by
-                // the owner's change (bpm_cell_warp_markers, input_handler.h
-                // — the sweep's own per-cell rewrite, run here at the two
-                // ends the derivation's monotonicity makes sufficient), and
-                // a marker whose rescaled tempo would leave the bracket
-                // refuses the commit exactly like an out-of-bracket
-                // derivation — never clamped, which would deform the shape
-                // the rescale preserves.
-                if (!bpm_cell_warp_markers(mv_const, idx, endpoint_idx,
-                                           at_lo->base_tempo_cents) ||
-                    !bpm_cell_warp_markers(mv_const, idx, endpoint_idx,
-                                           at_hi->base_tempo_cents)) {
-                    text_editor::refuse(app.top_flag_editor);
-                    viewport.invalidate_dialog_editor_box();
-                    const std::string refusal =
-                        "BPM edit rejected: a marker outside the span would "
-                        "leave the tempo bracket [" +
-                        format_tempo_cents(kTempoMinCents) + ", " +
-                        format_tempo_cents(kTempoMaxCents) +
-                        "] once rescaled";
-                    std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                        refusal.c_str(), s.c_str());
-                    notifications.notify(
-                        AppState::NotificationClass::Normal, refusal);
-                    return false;
-                }
-            }
-        }
+    // The RESCALED MAP's arm of the same gate (2026-08-26): the sweep
+    // rescales every effectively enabled owning marker outside the span by
+    // the owner's change (bpm_cell_warp_markers, input_handler.h — the
+    // sweep's own per-cell rewrite, run here at the two ends the
+    // derivation's monotonicity makes sufficient), and a marker whose
+    // rescaled tempo would leave the bracket refuses the press exactly like
+    // an out-of-bracket derivation — never clamped, which would deform the
+    // shape the rescale preserves.
+    if (!bpm_cell_warp_markers(mv, idx, endpoint_idx,
+                               at_lo->base_tempo_cents) ||
+        !bpm_cell_warp_markers(mv, idx, endpoint_idx,
+                               at_hi->base_tempo_cents)) {
+        return refuse(
+            "BPM edit rejected: a marker outside the span would "
+            "leave the tempo bracket [" +
+            format_tempo_cents(kTempoMinCents) + ", " +
+            format_tempo_cents(kTempoMaxCents) + "] once rescaled");
     }
-    // Single-owner invariant: clear bpm_owner on every other marker before
-    // stamping this one. The toggle handler maintains the invariant on mode
-    // entry, but the editor can target a different marker than the one
-    // originally stamped, so reassert it here.
-    std::vector<GuiWarpMarker> proposed = mv_const;
-    for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {
-        if (i == idx) continue;
-        if (proposed[i].bpm_owner) {
-            proposed[i].bpm_owner = false;
-            proposed[i].bpm_beats = 0;
-            proposed[i].bpm_lo    = 0;
-            proposed[i].bpm_hi    = 0;
-            proposed[i].bpm_endpoint = -1;
-        }
-    }
-    proposed[idx].bpm_owner = true;
-    proposed[idx].bpm_beats = beats;
-    proposed[idx].bpm_lo    = lo;
-    proposed[idx].bpm_hi    = hi;
-    app.warpmarkers.markers_mut() = std::move(proposed);
-    text_editor::deactivate(app.top_flag_editor);
-    // ONE SURFACE, ONE OWNER since 2026-08-29: the dialog editor just came
-    // down, which is the BOTTOM row's damage, and that is all this commit
-    // moves. (It was TWO — the stamped marker becomes a bpm OWNER, a class the
-    // RESOLVED READOUT had nothing to resolve for, so the state lane changed
-    // with it; that readout retired whole with the one-day status bar and the
-    // second call went with it.)
-    viewport.invalidate_modal_dialog_area();
     return true;
 }
 
 // Full mode-on transition for BPM mode. Validates the activation gate,
 // maintains the single-owner invariant, and marks the
 // FIRST selected marker as the BPM owner (mode exit wipes the bpm state, so a
-// fresh entry always opens on a blank field), then flips the mode flag. The
+// fresh entry always opens a blank form), then flips the mode flag. The
 // span endpoint is explicit — supplied by the `m` handler and recorded on the
 // owner's bpm_endpoint (section-based, architect 2026-07-23) — so this does not
 // auto-select an endpoint cue. The full section gate (non-empty, contiguous,
 // ref-free) lives in the `m` handler; this route re-checks only that at least
-// one marker is selected and the owner is eligible. The `m` handler calls this
-// and then opens the BPM editor on the owner.
+// one marker is selected and the owner is eligible. The Ctrl+B handler calls
+// this and then opens the BPM form (GuiInputHandler::open_bpm_form).
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
     if (app.active_markers_view != 'W') return;
@@ -1163,10 +1127,10 @@ void GuiFlagEditor::enter_bpm_mode() {
         }
     }
     // Tag owner with bpm_owner=true if not already set. Sentinel-zero
-    // values stay zero; format_bpm_bracket_text renders the EMPTY string for
-    // that state, which seeds the BPM dialog editor. Every prior mode exit
-    // wiped the bpm state, so a fresh entry always finds an untagged owner
-    // and opens on a blank field.
+    // values stay zero; bpm_field_text spells each as the EMPTY value, so the
+    // BPM form opens on three blank lines. Every prior mode exit wiped the
+    // bpm state, so a fresh entry always finds an untagged owner and opens a
+    // blank form.
     if (!mv[owner].bpm_owner) {
         mv[owner].bpm_owner = true;
         mv[owner].bpm_beats          = 0;
@@ -1189,8 +1153,8 @@ void GuiFlagEditor::enter_bpm_mode() {
 // The single bpm-mode-off chokepoint: every route that turns bpm mode off
 // funnels here. Wipes the session-only bpm state (mode exit IS the clear, so
 // no marker carries bpm state once the mode is down) and repaints both the
-// top strip and the MODAL's own lane — the bottom row, which is where the bpm
-// editor's pixels are while it stands.
+// top strip and the MODAL's own lane — the controls row, where the BPM
+// form's keys and its field editor stand.
 void GuiFlagEditor::exit_bpm_mode() {
     if (!app.bpm_mode_enabled) return;
     app.bpm_mode_enabled = false;

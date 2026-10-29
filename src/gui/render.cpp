@@ -2218,9 +2218,9 @@ SuppressedBox suppressed_flag_box(const AppState& app) {
             // that names it (iter_bound_editor_side, app_state.h).
             s.cell = iter_bound_editor_side(ed); break;
         default:
-            // Every other kind edits somewhere else entirely (the BpmBracket
-            // and the dialog fields paint in the bottom row's modal), so the
-            // marker lane suppresses nothing for them.
+            // Every other kind edits somewhere else entirely (the dialog
+            // kinds ride the settings editor's buffer and paint in the modal
+            // box), so the marker lane suppresses nothing for them.
             return SuppressedBox{};
     }
     s.marker_index = ed.target;
@@ -2826,8 +2826,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // CELL as the field. In every case the edited box yields in the cached pass, the field is the
     // width of its own content, the boxes LEFT of it stand exactly where they
     // rest and the boxes RIGHT of it ride the field's edge (SuppressedBox,
-    // render.h — the whole ruling). The BpmBracket kind paints in the bottom
-    // row's modal instead and returns here.
+    // render.h — the whole ruling).
     const bool bound_kind   = (ed.kind == text_editor::Kind::IterBound);
     const bool payload_kind = (ed.kind == text_editor::Kind::FlagPayload);
     if (!payload_kind && !bound_kind) return;

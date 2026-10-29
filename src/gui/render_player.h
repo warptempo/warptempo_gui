@@ -425,7 +425,7 @@ struct GuiRenderPlayer {
     void delete_batch_folders(const std::vector<std::filesystem::path>& folders);
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
-    // overlay's other four contents drive the same mechanics through their own
+    // overlay's other five contents drive the same mechanics through their own
     // damage): move the highlight by
     // `delta` rows, seat it on `index` — the click's first half, the open
     // being its second — and scroll the band by `rows` rows, the wheel's

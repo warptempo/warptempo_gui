@@ -16,7 +16,7 @@ struct GuiTargetRender;
 // Flag-editor cluster. Covers the marker lane's TWO editors — the flag's
 // canonical-line editor (the warp column's alone) and the
 // iteration bound editor (the warp and phase-reset columns') — the
-// BPM dialog editor, and the
+// BPM form's field commit and its RENDER gate (architect 2026-10-29), and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 //
 // AN OPEN IS WINDOWS' EDIT FIELD (architect 2026-10-09, every chrome): the
@@ -47,7 +47,8 @@ struct GuiFlagEditor {
     // the marker is a marker mutation and stops a live play (the keyboard stop
     // rule at stop_playback_if_playing's declaration). Its one reader is
     // commit_top_flag_edit; the opens keep their recorded exemption, and the
-    // bound and BPM commits write session-only state outside the class.
+    // bound commit and the BPM form's field commit write session-only state
+    // outside the class.
     GuiPlaybackLifecycle& playback_lifecycle;
 
     GuiFlagEditor(AppState&             app_,
@@ -108,12 +109,29 @@ struct GuiFlagEditor {
     // every path except the refusal.
     void commit_iter_bound_edit();
 
-    void enter_bpm_edit(int idx);
-    // Returns true iff the pending buffer parsed and committed (editor
-    // closed). False on parse failure (editor stays open, its text selected, and a card
-    // names which of the three bpm refusals it was) or an invalid target. The
-    // caller fires render_bpm_sweep() on true.
-    bool commit_bpm_edit();
+    // THE BPM FORM'S FIELD COMMIT (architect 2026-10-29): the dialog line
+    // editor's pending line on a BpmField session (AppState::settings_editor,
+    // `target` the field, GuiBpmField) judged and written onto the BPM
+    // owner's field. The line must begin with THE ROW'S OWN KEY and its `=`
+    // (kBpmFieldKeys); an EMPTY value CLEARS the field (zero, its unset
+    // sentinel); any other value is judged by THE FIELD'S OWN READER
+    // (read_bpm_beats, read_bpm_tempo — warpmarkers.h). A refusal leaves the
+    // editor standing, its line selected whole, one sentence on stderr and
+    // the card — three classes: the key, the beats grammar, the tempo
+    // grammar (the low / high order is the RENDER key's grey, not a field's
+    // refusal). On success the field is written — session-only, no undo, no
+    // dirty, as every bpm value — and the editor closes; its route's close
+    // hook returns to the form (handle_settings_editor_key).
+    void commit_bpm_field();
+    // THE BPM FORM'S RENDER GATE (the derived-value bracket gate, at the
+    // RENDER press since 2026-10-29): with the three fields set and in order
+    // (the key's face, bpm_form_button_enabled), true iff the sweep's two
+    // ends derive in bracket — the base tempo and scale
+    // (compute_base_tempo_scale) and every rescaled marker outside the span
+    // (bpm_cell_warp_markers). False cards which wall refused and changes
+    // nothing: the form stands. A refusal is not a no-op, so the key does not
+    // grey for it.
+    bool bpm_sweep_bracket_admits();
     void enter_bpm_mode();
     void exit_bpm_mode();
     // Wipe BOTH stores' session-only iter brackets AND THEIR TIES

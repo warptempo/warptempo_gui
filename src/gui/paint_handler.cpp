@@ -133,11 +133,12 @@
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // DIED 2026-08-12 when the editors became dialogs: the settings, load,
 // commit-title and BPM editors painted as a label + dark inset field + OK/Cancel
-// buttons in paint_modal_dialog (the two left since: the settings and BPM), and
+// buttons in paint_modal_dialog (one buffer left since 2026-10-29, the
+// settings editor's), and
 // the prompt's text-plus-labels line became a message + real buttons. The
 // one-run prefix+pending shaping died with it, the pending run shaping alone
 // and the published click-to-caret geometry (AppState::DialogEditorText) the
-// editor's own. Since 2026-10-14 the two editors' line stands in the modal
+// editor's own. Since 2026-10-14 the editor's line stands in the modal
 // family's box with no label and the prompt's question on its first row
 // (modal_box.h); row 8 YIELDS WHOLE to the modal, which is no tenant of it.)
 
@@ -5091,9 +5092,6 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 static text_editor::State* dialog_editor_to_paint(AppState& app) {
     if (text_editor::is_active(app.settings_editor))
         return &app.settings_editor;
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
-        return &app.top_flag_editor;
     return nullptr;
 }
 
@@ -5102,7 +5100,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 // (the fourth, the same day: its one-word row, Cancel or Close by content,
 // kModalCancelLabel's rule — under the trim presets list since 2026-10-28
 // night the player's shape, the highlight pair and four words ending in
-// Close), THE PROGRESS MODAL (the fifth, 2026-10-14: a
+// Close, under the BPM form since 2026-10-29 RENDER and Cancel), THE PROGRESS MODAL (the fifth, 2026-10-14: a
 // batch's Cancel alone, AppState::BatchProgress) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional, a modal
 // since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
@@ -5330,7 +5328,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   the whole pending line on the box's flat field in the field's text,
 //   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
 //   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
-//   (the Settings and BPM editors share one shape);
+//   (every kind on the settings editor's buffer shares one shape);
 //   then OK and Cancel flush right on the controls row, Cancel's right edge
 //   the ring's outer edge and OK one button gap before it. The line is the
 //   existing text_editor machinery — selection, caret, click-to-caret,
@@ -5418,8 +5416,9 @@ constexpr double kPlayerGroupGapPx    = 8.0;
 // the field-less owners' one button (the picker's, the progress modal's) —
 // the painter's plans read these.
 // A BUTTON'S WORD SAYS WHAT LEAVING DOES (architect 2026-10-28 night, "agree
-// all"). CANCEL leaves a question unanswered: the PROJECT PICKER and the
-// VALUE LIST ask for a choice and Cancel declines it, and the PROGRESS
+// all"). CANCEL leaves a question unanswered: the PROJECT PICKER, the
+// VALUE LIST and THE BPM FORM (2026-10-29, its RENDER the answer, its Cancel
+// the mode's end) ask for a choice and Cancel declines it, and the PROGRESS
 // MODAL's Cancel cancels the render. OK AND CANCEL belong to the EDITORS,
 // where a typed line is pending. CLOSE leaves a surface that asked nothing:
 // the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER (its
@@ -5635,19 +5634,19 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
 // the row's left, as the player seats its pair in its right cluster. Every
-// key the row's case (seats.case_w); on a row too narrow for the six,
+// key the row's case (seats.case_w); on a row too narrow for the keys,
 // the cluster starts at the row's left seat, the buttons whole (THE BUTTONS
 // STAY WHOLE).
-struct TrimPresetsRowLayout {
-    std::array<int, 6> x{};
-};
-static TrimPresetsRowLayout trim_presets_row_layout(const BottomRowSeats& seats) {
-    TrimPresetsRowLayout l;
+// THE BPM FORM'S ROW (architect 2026-10-29) is the same cluster of two,
+// RENDER and CANCEL — one layout for both rows, `n` keys abutting flush
+// right (key_cluster_row_layout).
+static std::vector<int> key_cluster_row_layout(const BottomRowSeats& seats,
+                                               int n) {
+    std::vector<int> x(static_cast<std::size_t>(n));
     const int bw = seats.case_w;
-    const int n  = static_cast<int>(l.x.size());
     const int x0 = std::max(seats.left_x, seats.cases_right - n * bw);
-    for (int i = 0; i < n; ++i) l.x[i] = x0 + i * bw;  // DOWN, UP, SAVE .. CLOSE
-    return l;
+    for (int i = 0; i < n; ++i) x[static_cast<std::size_t>(i)] = x0 + i * bw;
+    return x;
 }
 
 // THE TRIM PRESETS LIST'S HIGHLIGHT PAIR IS THE PLAYER'S (2026-10-28 night):
@@ -5803,13 +5802,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         AppState::PlayerButtonAct      player_act;
         AppState::ScoreButtonAct       score_act;
         AppState::TrimPresetsButtonAct trim_act;
+        AppState::BpmFormButtonAct     bpm_act;
         bool                           enabled;
     };
     std::vector<PrevFace> prev_enabled;
     prev_enabled.reserve(dlg.buttons.size());
     for (const AppState::ModalDialogButton& pb : dlg.buttons)
         prev_enabled.push_back(PrevFace{pb.player_act, pb.score_act,
-                                        pb.trim_act, pb.enabled});
+                                        pb.trim_act, pb.bpm_act, pb.enabled});
     // THE OUTGOING THUMB COLUMN AND TRACK, AS PAINTED, for the same reason:
     // a frame whose clip misses the track carries them (the scrub, below).
     const int     prev_thumb_x = dlg.scrub_thumb_x;
@@ -5861,6 +5861,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const bool trim_up = picker_up &&
                          app.folder_overlay.owner ==
                              AppState::FolderOverlay::Owner::TrimPresets;
+    // THE BPM FORM (2026-10-29): a picker content whose controls row is two
+    // word keys in the trim list's cluster, RENDER and CANCEL.
+    const bool bpm_up = picker_up &&
+                        app.folder_overlay.owner ==
+                            AppState::FolderOverlay::Owner::BpmForm;
     text_editor::State* ed =
         (prompt_up || progress_up || player_up || picker_up || score_up)
             ? nullptr : dialog_editor_to_paint(app);
@@ -5974,7 +5979,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // prompt's answers, the dialog editors' OK / Cancel and the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
     // the trim presets list, its four words SAVE, SAVE AS, DELETE and
-    // CLOSE after its two keys, the player's highlight pair. `lit` is
+    // CLOSE after its two keys, the player's highlight pair, or under the
+    // BPM form its two, RENDER and CANCEL. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
     // buttons.
@@ -5995,6 +6001,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // buttons.
         AppState::TrimPresetsButtonAct trim_act =
             AppState::TrimPresetsButtonAct::None;
+        // The BPM form's (2026-10-29): two word buttons.
+        AppState::BpmFormButtonAct bpm_act = AppState::BpmFormButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
         // The player's Play key's face (render_player_play_face), its
@@ -6002,11 +6010,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         PlayerPlayFace play_face = PlayerPlayFace::Play;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. THREE OWNERS WRITE IT, re-grepped 2026-10-28 night: the
+        // below. FOUR OWNERS WRITE IT, re-grepped 2026-10-29: the
         // player's nine through render_player_button_enabled, the score
-        // viewer's keys through score_viewer_button_enabled and the trim
-        // presets list's six through trim_presets_button_enabled; true on
-        // every other owner's buttons.
+        // viewer's keys through score_viewer_button_enabled, the trim
+        // presets list's six through trim_presets_button_enabled and the
+        // BPM form's two through bpm_form_button_enabled; true on every
+        // other owner's buttons.
         bool        enabled      = true;
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
@@ -6201,7 +6210,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else if (trim_up) {
         // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
         // PLAYER'S SHAPE), in painted order, one cluster flush right
-        // (trim_presets_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
+        // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
         // and UP, its legends and its words, the band walk without applying
         // — then FOUR WORD BUTTONS with the dialogs' underlined access keys,
         // SAVE (S), SAVE AS (A), DELETE (D) and CLOSE (the Close word
@@ -6231,6 +6240,26 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         word(Act::SaveAs, "Save As", 5);
         word(Act::Delete, "Delete", 0);
         word(Act::Close, kModalCloseLabel, -1);
+    } else if (bpm_up) {
+        // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
+        // trim list's cluster flush right (key_cluster_row_layout): RENDER
+        // (R), which greys until the three fields are set and low <= high,
+        // and CANCEL (kModalCancelLabel's rule, the form asking for a
+        // choice; no letter), CANCEL LAST, the escape sentinel by
+        // construction. No OK: a row's tap is the edit, RENDER the answer.
+        // Each face is the act's own truthful answer
+        // (bpm_form_button_enabled).
+        using Act = AppState::BpmFormButtonAct;
+        const auto word = [&](Act act, std::string_view label, int access) {
+            DialogButtonPlan b;
+            b.bpm_act = act;
+            b.label   = std::string(label);
+            b.access  = access;
+            b.enabled = bpm_form_button_enabled(app, act);
+            plan.push_back(std::move(b));
+        };
+        word(Act::Render, "Render", 0);
+        word(Act::Cancel, kModalCancelLabel, -1);
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
@@ -6270,14 +6299,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // by modal_word_buttons, the one layout the painter and the press read.
     if (player_up || score_up) {
         for (DialogButtonPlan& b : plan) b.w = seats.case_w;
-    } else if (trim_up) {
-        // THE TRIM PRESETS LIST'S ROW, laid out whole here (no item in it
-        // for a branch below to place): the pair and the words one cluster
-        // flush right (trim_presets_row_layout).
-        const TrimPresetsRowLayout tl = trim_presets_row_layout(seats);
-        assert(plan.size() == tl.x.size());
+    } else if (trim_up || bpm_up) {
+        // THE TRIM PRESETS LIST'S ROW AND THE BPM FORM'S, laid out whole
+        // here (no item in either for a branch below to place): the keys one
+        // cluster flush right (key_cluster_row_layout).
+        const std::vector<int> x =
+            key_cluster_row_layout(seats, static_cast<int>(plan.size()));
         for (std::size_t i = 0; i < plan.size(); ++i) {
-            plan[i].x = tl.x[i];
+            plan[i].x = x[i];
             plan[i].w = seats.case_w;
         }
     } else {
@@ -6336,7 +6365,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // row — a prompt's answers, an editor's OK and Cancel, the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) and the
     // trim presets list's four (its highlight pair, the player's, directly
-    // before them in the one cluster) — the last
+    // before them in the one cluster) and the BPM form's two — the last
     // one's right edge the box's ring's outer edge (x 2280 at 300 %), today's button gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
@@ -6841,8 +6870,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above
-        //    (trim_presets_row_layout); nothing else stands on it for this
-        //    branch to paint. --
+        //    (key_cluster_row_layout), and THE BPM FORM'S (2026-10-29) the
+        //    same cluster of two, RENDER and CANCEL; nothing else stands on
+        //    either for this branch to paint. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
     } else {
         // -- The editor: THE BOX IS ITS EDIT CONTROL (architect 2026-10-14,
@@ -6895,8 +6925,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // the 1024-byte cap keeps a real line inside it.
             // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14: the Settings
             // editor's "Setting:" and the BPM editor's "BPM:" both removed,
-            // architect "drop"): the two editors share one shape, the line
-            // starting at the pen on every row.
+            // architect "drop"): the line starts at the pen on every row.
             const int line_x0 = text_x0;
             const int line_w = std::max(0, text_w);
             // THE CARET ONE DEVICE PX WIDE (render.h's line rule, the
@@ -7094,12 +7123,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the key DOWN one device px for Repeat One's lit lamp and two for
         // a press (the two depths, 2026-10-23), NO HOT FACE
         // (program_spec.h's case_hot_face) — and no separators.
-        // THE DISABLED RUNG, on the three rows that publish a stateful bit
+        // THE DISABLED RUNG, on the four rows that publish a stateful bit
         // (AppState::ModalDialogButton::enabled, the one statement of its
-        // owners; re-grepped 2026-10-28 night): the PLAYER's buttons
+        // owners; re-grepped 2026-10-29): the PLAYER's buttons
         // (architect 2026-08-30, render_player_button_enabled), the SCORE
-        // VIEWER's keys (score_viewer_button_enabled) and the TRIM PRESETS
-        // LIST's pair and words (trim_presets_button_enabled) — every other
+        // VIEWER's keys (score_viewer_button_enabled), the TRIM PRESETS
+        // LIST's pair and words (trim_presets_button_enabled) and the BPM
+        // FORM's two words (bpm_form_button_enabled) — every other
         // owner's buttons are always live while their dialog stands and
         // publish enabled=true. The legend dimmed (kDimInk, paint_key_legend,
         // 2026-10-23), the key the face its state gives, the roster's rule
@@ -7155,8 +7185,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
             legend_access = plan[i].access;
             // THE WORD'S PRINT WEARS ITS BIT TOO since the trim presets list's
-            // Save and Delete grey (2026-10-28 night); every other
-            // owner's word publishes true.
+            // Save and Delete grey (2026-10-28 night), and the BPM form's
+            // Render (2026-10-29); every other owner's word publishes true.
             paint_key_legend(cr, r, legend, enabled, legend_access);
         }
         AppState::ModalDialogButton out;
@@ -7170,6 +7200,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.player_act   = plan[i].player_act;
         out.score_act    = plan[i].score_act;
         out.trim_act     = plan[i].trim_act;
+        out.bpm_act      = plan[i].bpm_act;
         out.enabled      = plan[i].enabled;
         // THE PLAYER'S ENABLED BIT IS PUBLISHED AS PAINTED (architect
         // 2026-09-24, strictly as-painted): the claim reads this bit and the
@@ -7190,18 +7221,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // ROW TAKES THE SAME GATE (2026-10-28 night): its faces move with the
         // highlight and the trim, whose acts damage the row, but a frame
         // whose clip missed a key must still not publish a bit it did not
-        // paint. THE COVERAGE IS THE KEY
+        // paint. THE BPM FORM'S ROW TAKES IT TOO (2026-10-29), its RENDER
+        // face moving with the fields. THE COVERAGE IS THE KEY
         // AND ITS LEGEND (key_legend_layout's extent, 2026-10-23): the legend
         // wears the bit (dimmed when dead), so a clip that missed it must
         // keep the bit.
-        if ((player_up || score_up || trim_up) &&
+        if ((player_up || score_up || trim_up || bpm_up) &&
             !clip_covers_drawable(
                 cr, app, key_legend_layout(r, legend, legend_access).extent)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
                                prev_enabled[i].player_act == out.player_act &&
                                prev_enabled[i].score_act == out.score_act &&
-                               prev_enabled[i].trim_act == out.trim_act;
+                               prev_enabled[i].trim_act == out.trim_act &&
+                               prev_enabled[i].bpm_act == out.bpm_act;
             out.enabled = carry && prev_enabled[i].enabled;
         }
         // THE HINT: a word button's is THE ACT'S NAME ALONE, its word
@@ -7644,8 +7677,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // an empty space for an icon that doesn't exist. shouldn't we tighten up
     // the padding?" — "agree all"): A LISTING IN WHICH NO ROW WEARS A GLYPH
     // (every row Plain, Group or Disabled: the settings page, every value
-    // list, the
-    // trim presets list) starts its text at kListGlyphXAt300, the column the
+    // list, the trim presets list, the BPM form) starts its text at kListGlyphXAt300, the column the
     // glyph's box would begin at, the group rows moving with their key lines
     // so the page stays aligned within itself; a listing with glyph rows (the
     // render player's and the project picker's, which carry Folder and Wav

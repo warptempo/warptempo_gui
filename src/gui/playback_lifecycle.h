@@ -213,8 +213,9 @@ struct GuiPlaybackLifecycle {
     // GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
-    // was this caller before it), the `m`
-    // bpm editor (handle_mode_keys), the OPEN PROJECT PICKER
+    // was this caller before it), THE BPM FORM (open_bpm_form, 2026-10-29,
+    // the Ctrl+B arm's tail and its line editor's return, whose open rides
+    // the stop already taken), the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
     // 2026-08-28), THE SETTINGS PAGE (open_settings_page, 2026-10-28, the
     // picker's second content, whose rows for the listed keys swap a value
@@ -274,9 +275,10 @@ struct GuiPlaybackLifecycle {
     // instead of an absence:
     //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
     //     and the progress modal — and THE TWO OVERLAYS, the picker (all
-    //     four of its contents, the project picker, the settings page and
-    //     the value list it swaps in, and the trim presets list, whose name
-    //     editor's open finds playback already stopped) and the
+    //     five of its contents, the project picker, the settings page and
+    //     the value list it swaps in, the trim presets list, whose name
+    //     editor's open finds playback already stopped, and the BPM form,
+    //     whose line editor's likewise) and the
     //     render player (whose own transport begins where the project's
     //     audition ends), and THE SCORE VIEWER (2026-10-26, whose own
     //     soundtrack, since 2026-10-26 night, likewise begins where the

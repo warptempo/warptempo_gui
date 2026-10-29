@@ -2,7 +2,7 @@
 
 // THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28; the
 // keyboard slot's band until 2026-10-14, the modal family's box since,
-// modal_box.h). ONE WIDGET, FIVE CONTENTS: the RENDER PLAYER's output folders
+// modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
 // SETTINGS PAGE's fourteen keys as `key=value` lines under two group rows
 // (architect 2026-10-28, on a mock he verified on the glass: "yes" to the
@@ -26,7 +26,12 @@
 // its pair to the active tab's trim and framing it with the list standing,
 // its controls row the render player's shape — the highlight pair, Save,
 // Save As, Delete and Close, one cluster flush right (his word: "we would be
-// breaking symmetry if we did it differently").
+// breaking symmetry if we did it differently"); and THE BPM FORM (architect
+// 2026-10-29: "since settings has a multiline page, we should make bpm a
+// form like settings"), the settings page's shape — one group row and the
+// sweep's three `key=value` lines, `beats=`, `low=` and `high=`, a row's tap
+// opening the line editor on it — its controls row RENDER and Cancel in the
+// trim list's cluster.
 // (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
 // with the panel; the `h` view's history picker for one day, retired
 // 2026-08-29 as overengineered, that view's `'` raising its confirmation on
@@ -46,10 +51,11 @@
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
 // icon and a name; glyph-less PLAIN rows, a name alone (the value list's
 // values since 2026-10-25, the settings page's key lines since 2026-10-28,
-// the trim presets since 2026-10-28 night); and the page's INERT rows in the
-// dead key's print, which the highlight never stands on (row_is_inert, the
-// walk below): its GROUP rows, a heading each, and its DISABLED rows, the
-// `scale` and `bpm` lines (architect 2026-10-29). A LISTING IN WHICH NO ROW WEARS A GLYPH
+// the trim presets since 2026-10-28 night, the BPM form's three lines since
+// 2026-10-29); and the INERT rows in the dead key's print, which the
+// highlight never stands on (row_is_inert, the walk below): the page's and
+// the BPM form's GROUP rows, a heading each, and the page's DISABLED rows,
+// the `scale` and `bpm` lines (architect 2026-10-29). A LISTING IN WHICH NO ROW WEARS A GLYPH
 // starts its text at the glyph's own column, not past an empty icon column
 // (architect 2026-10-28 night; the painter's names' column,
 // paint_folder_overlay) (a glyph-less TEXT kind went with
@@ -73,7 +79,8 @@
 // first arm (each content's opener key excepted, its own closer:
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
 // over the page and the value list it swaps in 2026-10-28, Trim Presets over
-// its list 2026-10-28 night — is_folder_overlay_opener). The waveform's own
+// its list 2026-10-28 night, BPM over its form 2026-10-29 —
+// is_folder_overlay_opener). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
@@ -168,7 +175,9 @@
 // page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night; the
 // return 2026-10-28 night); under the TRIM PRESETS LIST it applies the row's
 // preset to the active tab's trim, the list standing (trim_presets_apply,
-// 2026-10-28 night). AN
+// 2026-10-28 night); under the BPM FORM it opens the line editor prefilled
+// on the row's line, the form closing until the editor's return
+// (bpm_form_commit, 2026-10-29). AN
 // INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
 // (finish_folder_overlay_release asks row_is_inert). Enter on the highlight is
@@ -296,7 +305,8 @@ inline int content_height_px(const AppState& a) {
 // first preset is saved or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
-// sixteen rows, and every other value list its key's whole domain).
+// sixteen rows, the BPM form its four, and every other value list its key's
+// whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {
@@ -407,9 +417,9 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // offset that puts row `index`'s center on the band's center, the
 // difference rounded at the element, then the one clamp — so a row near
 // either end of the listing lands as close to center as the ends allow, and a
-// listing shorter than the band never scrolls. The five open-time seats
-// call it after their seat (the project picker's, the settings page's and
-// the value list's builds, the trim presets list's open, the render
+// listing shorter than the band never scrolls. The six open-time seats
+// call it after their seat (the project picker's, the settings page's, the
+// value list's and the BPM form's builds, the trim presets list's open, the render
 // player's every rebuild, each a
 // fresh listing — the page's first key row, row 1, lands at the band's top,
 // the clamp ruling a centered row 1 out, and a value list's return seats the
@@ -434,7 +444,7 @@ inline bool scroll_row_centered(AppState& a, int index) {
 // THE DAMAGE IS THE CALLER'S: each of the movers answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
 // no include of one — the player damages through its own helper, the
-// picker's four contents through the input handler's. Nothing else about the highlight lives
+// picker's five contents through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 

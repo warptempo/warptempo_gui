@@ -54,8 +54,9 @@ struct GuiPaintHandler;
 // -- BPM-sweep math primitive -------------------------------------------
 //
 // Promoted out of main.cpp's anonymous namespace so input_handler.cpp can
-// reach it. Two callers: render_bpm_sweep() per cell, and commit_bpm_edit()
-// at the bracket's two ends (the derivation is monotone in bpm). The cell's
+// reach it. Two callers: render_bpm_sweep() per cell, and the BPM form's
+// RENDER gate (GuiFlagEditor::bpm_sweep_bracket_admits) at the bracket's two
+// ends (the derivation is monotone in bpm). The cell's
 // marker rewrite below shares the same two callers.
 //
 // Given a span's measured duration (seconds), the user-asserted beat count
@@ -95,7 +96,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
     // silently mistune the span. The bracket check runs on the rounded
     // cents count BEFORE the int64 cast, so a non-finite or overflowing
     // cents value can never reach the cast (in-bracket doubles convert
-    // exactly). The BPM editor commit checks the bracket's two ends through
+    // exactly). The BPM form's RENDER press checks the bracket's two ends through
     // this refusal (the derivation is monotone in bpm), and the sweep's
     // per-cell loop rejects any refused cell to stderr.
     const double cents_d = std::nearbyint(ratio * 100.0);
@@ -129,12 +130,12 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 //
 // THE ONE OWNER of a sweep cell's marker vector (architect 2026-08-26: "the
 // selected markers determine the BPM, but the shape of the tempo map should
-// remain"). render_bpm_sweep calls it once per cell; commit_bpm_edit calls it
-// at the bracket's two ends — the derivation is monotone in bpm, so the ends
-// bound every cell's rescaled values exactly as they bound the derived base
-// tempo, and the editor refuses (a card) what the sweep would otherwise
-// have to
-// reject cell by cell.
+// remain"). render_bpm_sweep calls it once per cell; the BPM form's RENDER
+// gate (GuiFlagEditor::bpm_sweep_bracket_admits) calls it at the bracket's two
+// ends — the derivation is monotone in bpm, so the ends bound every cell's
+// rescaled values exactly as they bound the derived base tempo, and the press
+// refuses (a card) what the sweep would otherwise have to reject cell by
+// cell.
 //
 // A DISABLED MARKER IS INVISIBLE TO THIS ACT, IN THE SPAN AND OUT OF IT
 // (architect 2026-08-29: "`m` should disregard disabled markers — it should
@@ -2251,9 +2252,9 @@ struct GuiInputHandler {
 
     // True when ANY text editor is consuming printable keys — the settings
     // editor or the top-strip flag editor in ANY of
-    // its kinds (unlike modal_dialog_editor_active, which names the two
-    // DIALOG-hosted surfaces — the settings editor and the flag editor's
-    // BpmBracket kind — and omits
+    // its kinds (unlike modal_dialog_editor_active, which names the
+    // DIALOG-hosted surface — the settings editor's buffer in its three
+    // kinds — and omits
     // the FlagPayload and IterBound kinds, both of which paint in the marker
     // lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
@@ -2535,14 +2536,15 @@ private:
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source parent>/tmp/<N>_bpm/`. The
     // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
-    // gate; it is now fired by Enter in the BPM editor (after
-    // a successful commit). Returns true if the batch was accepted —
+    // gate; it is fired by the BPM form's RENDER (bpm_form_render, past
+    // the key's face and the derived-value bracket gate, the form already
+    // closed). Returns true if the batch was accepted —
     // dispatched, or (when the worker was busy) parked behind the killed
     // render's drain via kill_running_render_and_park; false on any guard
     // bail (wrong view / mode off / no owner / blank values /
     // zero-duration span / no valid cells / batch-folder creation failure)
-    // — the Enter dispatch exits bpm mode on a bail, since the editor
-    // already closed on commit and the mode is exactly its editor session.
+    // — the RENDER press exits bpm mode on a bail, since the form already
+    // closed and the mode is exactly the form's session.
     bool render_bpm_sweep();
 
     // F2.1: end an in-flight editor-text drag (motion-with-lost-button and
@@ -2783,9 +2785,9 @@ private:
 
     // Shared key route for EVERY keyboard-modal editor — all five
     // text_editor::Kind kinds: the settings editor, the trim preset's name
-    // editor (on the settings editor's buffer), the bpm bracket editor
-    // and the marker lane's flag editor (architect 2026-07-28) and iteration
-    // bound editor. The modal contract is stated once
+    // editor and the BPM form's line editor (all three on the settings
+    // editor's buffer), and the marker lane's flag editor (architect
+    // 2026-07-28) and iteration bound editor. The modal contract is stated once
     // at the definition; it returns true for every key — NO HATCH since
     // 2026-10-25: the on_key gate admits the editor's own keys and a
     // dialog's ring alone, so no Ctrl+Q reaches it to fall through.
@@ -2820,12 +2822,10 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true for every key
     // (on_key then returns): NO HATCH since 2026-10-25, no Ctrl+Q reaching
-    // it to fall through. ALL THREE kinds this editor state carries take
-    // route_modal_editor_key: the bpm
-    // bracket editor as ever, the FlagPayload flag editor since it became
-    // keyboard-modal, and the
-    // IterBound editor since 2026-09-05 — they differ only in their commit/cancel bodies and in which area
-    // they repaint. There is no longer a tail that cancels an edit to let an
+    // it to fall through. BOTH kinds this editor state carries take
+    // route_modal_editor_key: the FlagPayload flag editor since it became
+    // keyboard-modal, and the IterBound editor since 2026-09-05 — they
+    // differ only in their commit/cancel bodies. There is no longer a tail that cancels an edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
@@ -2858,11 +2858,13 @@ private:
     // the open act), Cancel under the project picker and the value list and
     // Close under the settings page (a button's word says what leaving does,
     // kModalCancelLabel, paint_handler.cpp, architect 2026-10-28 night) —
-    // the trim presets list's row the player's shape instead — and route_picker_key below is its whole
-    // plastic vocabulary. FOUR CONTENTS — the project picker, the settings
+    // the trim presets list's row the player's shape instead, the BPM
+    // form's RENDER and Cancel in that cluster — and route_picker_key below is its whole
+    // plastic vocabulary. FIVE CONTENTS — the project picker, the settings
     // page (2026-10-28), the value list (2026-10-25 for `waveform`,
     // 2026-10-28 night for four keys more), the page's row for a listed key,
-    // and the trim presets list (2026-10-28 night):
+    // the trim presets list (2026-10-28 night) and the BPM form
+    // (2026-10-29):
     //
     //   THE OPEN PROJECT PICKER — Open Project and Ctrl+O, one chord
     //   (is_open_project_key, gui_input.h; on_key's arm dispatches it at the
@@ -3080,6 +3082,43 @@ private:
     //       highlight — an empty list — cards "There is no preset to
     //       delete", the render player's own refusal one surface over.
     //
+    //   THE BPM FORM (architect 2026-10-29, "number three is a go": "since
+    //   settings has a multiline page, we should make bpm a form like
+    //   settings. then we make @ and [] not necessary") — the BPM key and
+    //   Ctrl+B, past the sweep's ten-arm ladder and enter_bpm_mode (the
+    //   Ctrl+B arm, input_key_dispatch.cpp). THE SETTINGS PAGE'S SHAPE: one
+    //   inert Group row "BPM" and three Plain rows, `beats=`, `low=` and
+    //   `high=` with the value each holds — BLANK at every open, the mode's
+    //   entry and exit wiping the owner. THE BPM MODE IS EXACTLY THE FORM'S
+    //   SESSION (AppState::bpm_mode_enabled): the form standing, or the line
+    //   editor one of its rows opened.
+    //     open_bpm_form: the opener — the Ctrl+B arm's tail and the field
+    //       editor's return (handle_settings_editor_key), SEATED on `seat`'s
+    //       row; a fresh picker session, the shared modal stop (a no-op at
+    //       the return, playback stopped at the first open). NO GUARDS OF ITS
+    //       OWN: the Ctrl+B arm is reached with no prompt, picker, editor or
+    //       load standing (the keyboard gate, the picker's router, the
+    //       loading gate), and the return runs on a closed editor — and a
+    //       refused open here would leave the mode resting without its form.
+    //     build_bpm_form_rows: the rows from the owner's three fields
+    //       (bpm_field_text, warpmarkers.h), the highlight seated on `seat`.
+    //     bpm_form_commit: THE OPEN ACT on row `index` — a tap, a click or
+    //       Enter: the form closes (close_picker, the mode STANDING — the
+    //       overlay and the on-screen keyboard never both stand) and THE
+    //       LINE EDITOR opens PREFILLED with the row's line, the caret at its
+    //       end, on the dialog line editor's buffer (text_editor::Kind::
+    //       BpmField, `target` the field). Its commit is
+    //       GuiFlagEditor::commit_bpm_field; its OK and Cancel return to the
+    //       form seated on that row (handle_settings_editor_key's hook).
+    //     bpm_form_render: RENDER (the button, its letter): with the face
+    //       live (bpm_form_button_enabled) the derived-value bracket gate
+    //       runs (GuiFlagEditor::bpm_sweep_bracket_admits, a refusal carding
+    //       with the form standing); past it the form closes (close_picker)
+    //       and the sweep is dispatched (render_bpm_sweep, which takes the
+    //       mode down on its success; its bail takes it down here).
+    //     close_bpm_form: Cancel, Esc and Ctrl+B (the BPM key's lift) under
+    //       the form — the one close body, then exit_bpm_mode.
+    //
     //   (THE `h` VIEW HAD ANOTHER PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
     //   "overengineered; I don't really need it": that key raises the load
@@ -3104,7 +3143,9 @@ private:
     //       compositor's close road (GuiPrompt::request_close, at its head
     //       beside the player's close, on the exit road alone), the page's
     //       row open ahead of its editor, the trim presets list's Close, Esc,
-    //       `t` (the TRIM key's lift) and Save As ahead of its name editor, and the
+    //       `t` (the TRIM key's lift) and Save As ahead of its name editor,
+    //       the BPM form's close_bpm_form, its row open ahead of its line
+    //       editor and its RENDER ahead of the sweep, and the
     //       same-project no-op all pass through it (a reopen ends the
     //       session with the picker standing, and the picker with it); the
     //       overlay leaves with
@@ -3127,10 +3168,12 @@ private:
     //       project picker Ctrl+O closes and Ctrl+Alt+O runs Revert
     //       (revert_project, its question standing over the picker), under
     //       the settings page and the value list `;` closes the whole
-    //       panel, under the trim presets list `t` closes it; THE ACCESS
+    //       panel, under the trim presets list `t` closes it, under the
+    //       BPM form Ctrl+B closes it and the mode (close_bpm_form, as its
+    //       Esc does); THE ACCESS
     //       LETTERS — the word buttons' underlined keys, bare or with Alt,
-    //       the trim presets list's S, A and D (the other contents' one word
-    //       carries none) — press their button through the modal row's one
+    //       the trim presets list's S, A and D and the BPM form's R (the
+    //       other contents' one word carries none) — press their button through the modal row's one
     //       dispatch; the bare Delete key is the trim presets list's Delete;
     //       Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
@@ -3175,6 +3218,11 @@ private:
     void trim_presets_save_as();
     void trim_presets_delete();
     void commit_trim_preset_name();
+    void open_bpm_form(GuiBpmField seat);
+    void build_bpm_form_rows(GuiBpmField seat);
+    void bpm_form_commit(int index);
+    void bpm_form_render();
+    void close_bpm_form();
     // THE LIST'S FILE WRITE, one body for the three changes (the name
     // editor's commit, the two confirmations' answers): `presets` SORTED IN
     // PLACE into the list's order (trim_preset_before, the one sort's second
@@ -4293,7 +4341,8 @@ private:
     // responding, and even the waveform stops the pan and drag, that would
     // be okay. When I have the editor open, I want to be sure I'm editing
     // exactly what I'm looking at and nothing else"). True while ANY editor
-    // stands — the settings and BPM dialog editors, the flag editor and the
+    // stands — the dialog line editor (the settings line, the trim preset's
+    // name, the BPM form's line), the flag editor and the
     // iteration bound editor (AppState::text_editor_session, the one
     // membership; any_text_editor_active is the same expression under its
     // platform name). Such a modal ADMITS ITS OWN VOCABULARY ALONE: its

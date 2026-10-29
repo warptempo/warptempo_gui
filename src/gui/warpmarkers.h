@@ -144,12 +144,14 @@ struct GuiWarpMarker : WarpMarker {
     // sits; the `m` gate's one-tempo
     // rule over the selected run is what makes the owner's change the span's).
     // At most one marker at a time has bpm_owner=true (invariant
-    // maintained by the `m` toggle handler). "Committed" is
-    // implicit: bpm_beats > 0 means the owner has authored a value (parser
-    // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
-    // The value form is "<beats>@[<lo>,<hi>]" — beats a positive integer
-    // (metronomes count integer beats, capped at kBpmBeatsMax), lo/hi
-    // doubles within the bpm bracket [kBpmMin, kBpmMax], lo <= hi.
+    // maintained by the `m` toggle handler). THE THREE VALUES ARE THE BPM
+    // FORM'S THREE FIELDS (architect 2026-10-29), each written alone by its
+    // own line's commit and each UNSET AT ZERO, a value no field reader
+    // admits: beats a positive integer (metronomes count integer beats,
+    // capped at kBpmBeatsMax), lo/hi doubles within the bpm bracket
+    // [kBpmMin, kBpmMax] (read_bpm_beats / read_bpm_tempo below). lo <= hi is
+    // not a field's rule but the form's RENDER key's (bpm_form_button_enabled,
+    // app_state.h), which greys until the three are set in order.
     bool   bpm_owner = false;
     int    bpm_beats = 0;
     double bpm_lo    = 0.0;
@@ -658,102 +660,78 @@ inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty() && !m.disabled;
 }
 
-// BPM mode: format the bracket-editor text for marker `m`.
-// EMPTY when this marker is not the BPM owner, or when it is the owner with
-// bpm_beats == 0 (owner-but-blank, set by the `m`-toggle-on transition before
-// any commit; bpm_beats > 0 is the implicit "committed" sentinel — the parser
-// sets all three of bpm_beats/bpm_lo/bpm_hi together, mirroring iter's NaN
-// convention). THE BLANK FORM IS THE EMPTY STRING RATHER THAN "[]" (architect
-// 2026-08-24): there is no bracket to fill here — the whole value
-// `<beats>@[<lo>,<hi>]` is typed from nothing, so a seeded "[]" is a fragment
-// the user has to edit around. Iter's "[]" is a different thing entirely: a
-// real token of its own grammar, and the two forms deliberately no longer
-// match. The non-empty form is the strict syntax `<beats>@[<lo>,<hi>]`.
-inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
-    if (!m.bpm_owner || m.bpm_beats == 0) {
-        return "";
+// THE BPM FORM'S THREE FIELDS (architect 2026-10-29: "since settings has a
+// multiline page, we should make bpm a form like settings. then we make @ and
+// [] not necessary"), in the form's row order — each its own `key=value`
+// line on the folder overlay's BpmForm content and its own commit on the
+// dialog line editor (text_editor::Kind::BpmField, whose session's `target`
+// is the field's index here). The keys are the lines' spellings and the one
+// table both the rows and the commit's key test read.
+enum class GuiBpmField { Beats = 0, Low = 1, High = 2 };
+inline constexpr int kBpmFieldCount = 3;
+inline constexpr const char* kBpmFieldKeys[kBpmFieldCount] = {
+    "beats", "low", "high"};
+
+// THE OWNER'S VALUE FOR ONE FIELD, as its line spells it: EMPTY while the
+// field is unset (zero, the sentinel no reader admits — a fresh form opens
+// blank, the mode's entry and exit wiping the owner), else the reader's one
+// canonical spelling — beats in plain decimal, lo/hi in the bpm writer's
+// shortest round-trip form (format_value_double at 0 decimals: "72" stays
+// "72", "72.5" stays "72.5").
+inline std::string bpm_field_text(const GuiWarpMarker& m, GuiBpmField f) {
+    switch (f) {
+        case GuiBpmField::Beats:
+            return m.bpm_beats > 0 ? std::to_string(m.bpm_beats) : "";
+        case GuiBpmField::Low:
+            return m.bpm_lo > 0.0 ? format_value_double(m.bpm_lo, 0) : "";
+        case GuiBpmField::High:
+            return m.bpm_hi > 0.0 ? format_value_double(m.bpm_hi, 0) : "";
     }
-    // lo/hi print as bpm values: plain shortest round-trip form
-    // (min_decimals 0 — "72" stays "72", "72.5" stays "72.5").
-    std::string out = std::to_string(m.bpm_beats);
-    out += "@[";
-    out += format_value_double(m.bpm_lo, 0);
-    out += ',';
-    out += format_value_double(m.bpm_hi, 0);
-    out += ']';
-    return out;
+    return "";
 }
 
-// BPM mode: strict parser for "<beats>@[<lo>,<hi>]". beats must be a
-// positive integer (metronomes count integer beats) capped at
-// kBpmBeatsMax and written WITHOUT PADDING; lo/hi are doubles
-// (parse_value_double strictness) within the bpm bracket [kBpmMin, kBpmMax]
-// (value_format.h) with lo <= hi (degenerate lo=hi is valid), each pinned to
-// ONE canonical spelling — the bpm writer's form (format_value_double, min 0
-// decimals), so "210" and "210.5" commit while "210.0" and "210.50" refuse;
-// no whitespace, no missing fields, no alternate forms. EVERY FIELD OF THE
-// GRAMMAR THEREFORE HAS ONE SPELLING PER VALUE, which is what lets the
-// editor's byte cap be derived rather than chosen (kMaxPendingCharsBpm,
-// text_editor.h). On failure returns false and leaves out-params unchanged;
-// the one caller (commit_bpm_edit, flag_editor.cpp) turns every refusal here
-// into the same refused field and the same `BPM edit rejected: invalid syntax`
-// card, whichever field was the offender.
-inline bool parse_bpm_bracket(const std::string& s,
-                              int& beats, double& lo, double& hi) {
-    if (s.empty()) return false;
-    const auto at_pos = s.find('@');
-    if (at_pos == std::string::npos) return false;
-    if (s.find('@', at_pos + 1) != std::string::npos) return false;
-    const std::string left  = s.substr(0, at_pos);
-    const std::string right = s.substr(at_pos + 1);
-    if (left.empty() || right.empty()) return false;
-    if (right.front() != '[' || right.back() != ']') return false;
-    const std::string inner = right.substr(1, right.size() - 2);
-    if (inner.empty()) return false;
-    const auto comma = inner.find(',');
-    if (comma == std::string::npos) return false;
-    if (inner.find(',', comma + 1) != std::string::npos) return false;
-    const std::string lo_s = inner.substr(0, comma);
-    const std::string hi_s = inner.substr(comma + 1);
-    if (lo_s.empty() || hi_s.empty()) return false;
-    auto digits_only = [](const std::string& v) {
-        for (char c : v) {
-            if (c < '0' || c > '9') return false;
-        }
-        return !v.empty();
-    };
-    if (!digits_only(left)) return false;
-    // ONE SPELLING PER BEATS COUNT (architect 2026-09-06, on the leading
-    // zeros this arm used to swallow: "make it more strict"). A beats count
-    // is a positive decimal integer written without padding, so a leading
-    // zero refuses outright: `0` and `000` were always refused by the
-    // positivity test below — a zero beats count is no metronome reading —
-    // and `0210` / `000210`, which used to commit the very same 210 the
-    // canonical spelling commits, refuse with them now. The lo/hi arms below
-    // have pinned one spelling each since the bracket was written; this is
-    // that same discipline on the one field of the grammar that lacked it.
-    // `digits_only` has already run, so the string is non-empty digits.
-    auto parse_pos_int = [](const std::string& v, int& out) -> bool {
-        if (v.front() == '0') return false;
-        long long acc = 0;
-        for (char c : v) {
-            acc = acc * 10 + (c - '0');
-            if (acc > kBpmBeatsMax) return false;
-        }
-        if (acc <= 0) return false;
-        out = static_cast<int>(acc);
-        return true;
-    };
-    int    b = 0;
-    double l = 0.0, h = 0.0;
-    if (!parse_pos_int(left, b))                  return false;
-    if (!parse_value_double(lo_s, l) || l < kBpmMin || l > kBpmMax ||
-        format_value_double(l, 0) != lo_s) return false;
-    if (!parse_value_double(hi_s, h) || h < kBpmMin || h > kBpmMax ||
-        format_value_double(h, 0) != hi_s) return false;
-    if (l > h) return false;
-    beats = b;
-    lo    = l;
-    hi    = h;
+// THE BEATS FIELD'S READER: a positive decimal integer capped at
+// kBpmBeatsMax and written WITHOUT PADDING — ONE SPELLING PER BEATS COUNT
+// (architect 2026-09-06, "make it more strict"): `0` and `000` are no
+// metronome reading, and `0210` refuses rather than committing the 210 the
+// canonical spelling commits. No sign, no whitespace. False leaves `out`
+// unchanged. Its one caller is the field's commit
+// (GuiFlagEditor::commit_bpm_field), which reads an EMPTY value as the
+// field's clear before asking here.
+inline bool read_bpm_beats(const std::string& v, int& out) {
+    if (v.empty() || v.front() == '0') return false;
+    long long acc = 0;
+    for (char c : v) {
+        if (c < '0' || c > '9') return false;
+        acc = acc * 10 + (c - '0');
+        if (acc > kBpmBeatsMax) return false;
+    }
+    out = static_cast<int>(acc);
     return true;
+}
+
+// THE LOW AND HIGH FIELDS' READER: a double (parse_value_double strictness)
+// inside the bpm bracket [kBpmMin, kBpmMax] (value_format.h), PINNED TO ONE
+// CANONICAL SPELLING — the bpm writer's own (format_value_double at 0
+// decimals), so "210" and "210.5" commit while "210.0" and "210.50" refuse.
+// EVERY FIELD THEREFORE HAS ONE SPELLING PER VALUE, which is what lets the
+// editor's byte cap be derived per field rather than chosen
+// (kMaxPendingCharsBpmField, text_editor.h). The ORDER of the two is no
+// field's rule: the RENDER key greys until low <= high
+// (bpm_form_button_enabled). False leaves `out` unchanged.
+inline bool read_bpm_tempo(const std::string& v, double& out) {
+    double d = 0.0;
+    if (!parse_value_double(v, d) || d < kBpmMin || d > kBpmMax ||
+        format_value_double(d, 0) != v) return false;
+    out = d;
+    return true;
+}
+
+// THE BPM OWNER'S INDEX in `mv` — the one marker carrying bpm_owner (the
+// single-owner invariant, enter_bpm_mode) — or -1 with none: the mode
+// down, every marker wiped.
+inline int bpm_owner_index(const std::vector<GuiWarpMarker>& mv) {
+    for (int i = 0; i < static_cast<int>(mv.size()); ++i)
+        if (mv[i].bpm_owner) return i;
+    return -1;
 }

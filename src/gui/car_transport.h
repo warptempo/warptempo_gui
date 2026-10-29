@@ -99,8 +99,9 @@ struct GuiInputHandler;
 // picker — the player is forked ahead at the hook, so its owner tag never
 // reaches this test), while THE SCORE VIEWER stands (2026-10-26: its open
 // stopped playback and nothing plays under it), under ANY EDITOR (keyboard_modal_editor_active, the
-// one predicate for a keyboard-taking modal: the settings and BPM dialog
-// editors and, since 2026-10-25, the flag and iteration bound editors — a
+// one predicate for a keyboard-taking modal: the dialog line editor (the
+// settings line, the trim preset's name, the BPM form's line) and, since
+// 2026-10-25, the flag and iteration bound editors — a
 // modal admits its own vocabulary alone) and in the `h` history view
 // (playback is removed from the view whole and bare Space is consumed
 // there).

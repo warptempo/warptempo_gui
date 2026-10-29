@@ -612,7 +612,7 @@ struct Viewport {
     //
     //   * THE CLOSERS — every commit / abandon that deactivates a dialog
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
-    //     and flag_editor's BPM commit and exit_bpm_mode), and the settings
+    //     and flag_editor's BPM field commit and exit_bpm_mode), and the settings
     //     editor's prefill, part of its open.
     //   * THE RENDER PLAYER'S ROW (2026-08-28), which paints into the same
     //     lane and damages it through the same owner — TWO sites:
@@ -675,7 +675,7 @@ struct Viewport {
     // handlers (input_key_dispatch) and the settings editor's three
     // completers (settings_editor); THE CARET BLINK — main.cpp's per-tick
     // transitions, one per dialog editor; THE REFUSAL — every refused commit
-    // in settings_editor and the BPM commit's three (flag_editor), the text
+    // in settings_editor and the BPM field commit's three (flag_editor), the text
     // selected whole; THE POINTER'S TEXT DRAG — input_pointer's `g.dialog`
     // sites (the glass's caret drag, click-to-caret, the shift extend, the
     // double-click word select, the drag's motion and its release).

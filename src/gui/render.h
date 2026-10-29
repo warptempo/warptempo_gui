@@ -2124,10 +2124,11 @@ inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 // ±kIterDeltaMaxCents). The width bound below charges two of these while
 // iteration mode is on; nothing is laid out against the number.
 //
-// THE BPM BRACKET NEEDS NO SUCH TERM, and the symmetry question is answered
-// rather than skipped: format_bpm_bracket_text (warpmarkers.h) is a different
-// composer feeding a different surface — it seeds the DIALOG-HOSTED BpmBracket
-// editor and never reaches a flag box — so no flag width depends on it.
+// THE BPM FORM'S VALUES NEED NO SUCH TERM, and the symmetry question is
+// answered rather than skipped: bpm_field_text (warpmarkers.h) is a different
+// composer feeding a different surface — the BPM form's rows and its
+// DIALOG-HOSTED line editor (architect 2026-10-29) — and never reaches a flag
+// box, so no flag width depends on it.
 inline constexpr size_t kIterCellGlyphs = 5;
 // (IT IS THE WARP TOKEN'S WIDTH AND IT BOUNDS BOTH COLUMNS. A phase-reset
 // cell's token is a sign and one digit — `+9` at the widest, the single-digit

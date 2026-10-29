@@ -2880,6 +2880,25 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
 
+        // THE BPM FORM'S ROW, the same comparator (2026-10-29): RENDER's
+        // face (bpm_form_button_enabled) reads the owner's three fields,
+        // moved only by the line editor's commits, each returning to a
+        // freshly built form — so this holds the as-painted bits against the
+        // live predicate as the trim list's row is held.
+        if (app.picker.active && app.modal_dialog.valid &&
+            app.folder_overlay.owner ==
+                AppState::FolderOverlay::Owner::BpmForm &&
+            app.modal_dialog.owner == AppState::ModalDialogOwner::Picker &&
+            app.modal_dialog.session == app.picker.session) {
+            for (const AppState::ModalDialogButton& b :
+                 app.modal_dialog.buttons) {
+                if (b.enabled != bpm_form_button_enabled(app, b.bpm_act)) {
+                    viewport.invalidate_modal_dialog_area();
+                    break;
+                }
+            }
+        }
+
         // A STANDING DIALOG HINT IS A FACE TOO (2026-09-29; the
         // roster's words test above, one surface over): a modal
         // button's words are recomposed onto the stash by every paint of the
@@ -2987,17 +3006,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // would be reading belongs to whatever dialog is up over it.
         const bool dialog_field_focused = app.modal_dialog_focus < 0;
         if (text_editor::is_active(app.top_flag_editor)) {
-            const bool is_dialog =
-                app.top_flag_editor.kind == text_editor::Kind::BpmBracket;
             const bool now_visible =
-                (!is_dialog || dialog_field_focused) &&
                 text_editor::cursor_visible_now(app.top_flag_editor);
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
-                if (is_dialog)
-                    invalidate_dialog_editor_box();
-                else
-                    invalidate_top_strip();
+                invalidate_top_strip();
             }
         }
         // Same shape for the settings prompt (a dialog editor); a dialog

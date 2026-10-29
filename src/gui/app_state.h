@@ -2371,10 +2371,10 @@ enum class RedesignButton {
     // card that names a mode read the same words, and the marker's own payload
     // keeps its own ("iteration bracket", "iteration ranges").
     //
-    // THE BPM OPENER IS A MOMENTARY ACT, not a mode: Ctrl+B (bare `m` until
-    // 2026-09-15) opens the BPM
-    // sweep's editor over the selected run, so there is no bit for a lamp and
-    // the button carries none. ITS FACE READS THE SWEEP'S OWN VERDICT
+    // THE BPM OPENER IS AN OVERLAY'S OPENER since 2026-10-29: Ctrl+B (bare
+    // `m` until 2026-09-15) opens the BPM FORM over the selected run, and the
+    // key sits lit while the form stands and closes it, the overlay openers'
+    // rule (is_folder_overlay_opener). ITS FACE READS THE SWEEP'S OWN VERDICT
     // (bpm_sweep_plan, below) — the whole ten-arm ladder the chord refuses on,
     // extracted rather than mirrored so the face and the card are one
     // decision — under the READ-ONLY LOCK, which drops the chord, and, since
@@ -6083,7 +6083,7 @@ struct AppState {
     FlagEditorBox flag_editor_box;
 
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
-    // geometry contract for the settings and BPM editors (the load and
+    // geometry contract for the dialog line editor in its three kinds (the load and
     // commit-title editors stood among them until 2026-08-28 and 2026-10-10),
     // which paint THEIR LINE IN THE MODAL FAMILY'S BOX since 2026-10-14 — the
     // box is the edit control (architect: the whole `key=value` line from the
@@ -6198,8 +6198,8 @@ struct AppState {
     // one EDITOR session from the next). What is and is not reachable, stated
     // exactly: TWO DIALOG EDITORS ARE NEVER LIVE TOGETHER — every opener
     // refuses while another editor owns the keyboard — but a CLOSE AND AN OPEN
-    // FIT IN ONE DISPATCH BATCH (Esc closes the settings editor, `m` opens
-    // the bpm bracket, no paint in between), and across that edge every face
+    // FIT IN ONE DISPATCH BATCH (Esc closes one editor, the next key opens
+    // another, no paint in between), and across that edge every face
     // index, both arms and the whole published geometry still carried an
     // `Editor` tag that matched the NEW session. A held Enter released into
     // that state dispatched the old editor's OK at an unseen dialog. THE
@@ -6379,6 +6379,16 @@ struct AppState {
     enum class TrimPresetsButtonAct {
         None, HighlightDown, HighlightUp, Save, SaveAs, Delete, Close
     };
+    // THE BPM FORM'S BUTTONS (architect 2026-10-29), its dispatch
+    // vocabulary, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT as
+    // the trim presets list's (key_cluster_row_layout, paint_handler.cpp):
+    // RENDER, a word button with its underlined access key, which renders
+    // the sweep and closes the form (GuiInputHandler::bpm_form_render), and
+    // CANCEL, no letter, Esc's, which closes the form and the mode with it
+    // (close_bpm_form) — the Cancel word kModalCancelLabel's rule, the form
+    // asking for a choice. No OK: a row's tap is the edit and RENDER the
+    // answer. The faces are bpm_form_button_enabled's.
+    enum class BpmFormButtonAct { None, Render, Cancel };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
@@ -6386,6 +6396,7 @@ struct AppState {
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
         ScoreButtonAct  score_act  = ScoreButtonAct::None;   // the score viewer's
         TrimPresetsButtonAct trim_act = TrimPresetsButtonAct::None;  // the trim list's
+        BpmFormButtonAct     bpm_act  = BpmFormButtonAct::None;      // the BPM form's
         // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
         // transport keys are their own class), published per frame exactly
         // as the rects are, from render_player_button_enabled (whose
@@ -6398,9 +6409,10 @@ struct AppState {
         // it against the live predicate and repaints the row on drift. THE
         // SCORE VIEWER'S ROW publishes it the same way, from
         // score_viewer_button_enabled, under the same comparator, and so
-        // does THE TRIM PRESETS LIST'S (2026-10-28 night, the picker's one
-        // content with a stateful row), from trim_presets_button_enabled.
-        // Every other owner's builder leaves it true — a prompt's, the other
+        // does THE TRIM PRESETS LIST'S (2026-10-28 night), from
+        // trim_presets_button_enabled, and THE BPM FORM'S (2026-10-29), from
+        // bpm_form_button_enabled — the picker's two contents with a
+        // stateful row. Every other owner's builder leaves it true — a prompt's, the other
         // picker contents' and an editor's buttons are always live while
         // their dialog stands.
         bool        enabled      = true;
@@ -6469,29 +6481,25 @@ struct AppState {
     ModalDialogGeometry modal_dialog;
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the TWO DIALOG-HOSTED editors (the
-    // settings editor — whose buffer carries the trim preset's name editor
-    // too since 2026-10-28 night, Kind::TrimPresetName — and the bpm bracket
-    // editor — the commit-title editor
-    // was the third from 2026-08-07 until its retirement 2026-10-10;
-    // the top-strip flag
-    // editor is deliberately not one of them in ANY of its non-bracket
-    // kinds — FlagPayload or IterBound, both of
-    // which paint in the top strip; the `h` view's load editor and the Open project editor were the
-    // fifth and sixth until 2026-08-28, when both became the field-less
-    // PICKER, which is a modal owner and not an editor — AppState::Picker).
+    // THE AUTHORITATIVE MEMBERSHIP of the DIALOG-HOSTED editors: ONE BUFFER
+    // since the BPM form (architect 2026-10-29), the settings editor's, which
+    // carries the settings line, the trim preset's name (Kind::TrimPresetName,
+    // 2026-10-28 night) and the BPM form's line (Kind::BpmField). (The bpm
+    // bracket editor, Kind::BpmBracket on the flag editor's State, was the
+    // second member until that day; the commit-title editor was one from
+    // 2026-08-07 until its retirement 2026-10-10; the `h` view's load editor
+    // and the Open project editor until 2026-08-28, when both became the
+    // field-less PICKER, which is a modal owner and not an editor —
+    // AppState::Picker.) The top-strip flag editor is deliberately not one in
+    // either of its kinds — FlagPayload or IterBound, both of which paint in
+    // the top strip.
     // The predicate GuiInputHandler::modal_dialog_editor_active is this id
     // being non-zero, and ITS declaration is the authoritative statement of
-    // what that predicate is FOR and who calls it; this is where the two are
-    // NAMED, so the set cannot drift between the two. At most one can be
-    // active at a time (every opener refuses while another owns the
-    // keyboard), so the order below is free.
+    // what that predicate is FOR and who calls it; this is where the set is
+    // NAMED, so it cannot drift between the two.
     uint64_t dialog_editor_session() const {
         if (text_editor::is_active(settings_editor))
             return settings_editor.session;
-        if (text_editor::is_active(top_flag_editor) &&
-            top_flag_editor.kind == text_editor::Kind::BpmBracket)
-            return top_flag_editor.session;
         return 0;
     }
     // THE SESSION THAT OWNS INPUT RIGHT NOW, 0 when no modal stands. The
@@ -8448,13 +8456,11 @@ struct AppState {
     // re-detect gesture fires while a confirmation is required.
     PromptState prompt;
 
-    // Shared text-editor state for FIVE editors distinguished by Kind: the
+    // Shared text-editor state for TWO editors distinguished by Kind: the
     // top-strip flag editor (Kind::FlagPayload — active when editing a warp
     // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
-    // marker's own box, which the flag pass therefore skips), the BPM editor
-    // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other two dialog editors (2026-08-13), and the
+    // marker's own box, which the flag pass therefore skips) and the
     // ITERATION BOUND editor (Kind::IterBound, since 2026-09-05), which
     // paints over its bound cell in the top strip and carries no stem flash
     // either. The editor owns the keyboard while active.
@@ -8468,15 +8474,16 @@ struct AppState {
     // MODAL (2026-08-13); separate from top_flag_editor so the two paint
     // regions stay independent (the in-practice mutual exclusion comes from the
     // flag editor swallowing all keys while active).
-    // THE DIALOG LINE EDITOR'S ONE BUFFER, TWO KINDS since 2026-10-28 night:
-    // Kind::SettingsAssignment, the settings editor's line, and
-    // Kind::TrimPresetName, the trim preset's name (the trim presets list's
-    // Save As, GuiInputHandler::trim_presets_save_as) — the settings
+    // THE DIALOG LINE EDITOR'S ONE BUFFER, THREE KINDS:
+    // Kind::SettingsAssignment, the settings editor's line;
+    // Kind::TrimPresetName, the trim preset's name (2026-10-28 night, the
+    // trim presets list's Save As, GuiInputHandler::trim_presets_save_as);
+    // and Kind::BpmField, one line of the BPM form (architect 2026-10-29,
+    // GuiInputHandler::bpm_form_commit, `target` the field) — the settings
     // editor's shape and every road it rides (the paint, the blink, the
     // caret's click, the on-screen keyboard, the modal gate), the kind
-    // forking the keys' route alone (handle_settings_editor_key). The two
-    // never stand together: each opens on a closed picker and the buffer is
-    // one.
+    // forking the keys' route alone (handle_settings_editor_key). No two
+    // stand together: each opens on a closed picker and the buffer is one.
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
     // (THE SETTINGS EDITOR AS A CHOICE EDITOR — AppState::SettingsChoice,
@@ -8487,7 +8494,7 @@ struct AppState {
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
     // allowing free-form typing there; the preview doesn't use a text field
-    // and it works fine". FOUR CONTENTS: the OPEN PROJECT PICKER (the Open
+    // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
     // 2026-10-28: the Settings button and bare `;`; the fourteen keys the
@@ -8504,11 +8511,17 @@ struct AppState {
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim with the list standing, the player's
-    // controls row — the highlight pair, Save, Save As, Delete, Close).
+    // controls row — the highlight pair, Save, Save As, Delete, Close);
+    // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
+    // the sweep's ladder; one inert group row and the three `key=value`
+    // lines `beats=`, `low=` and `high=`, the open act the line editor
+    // opened PREFILLED on the row's line once the form has closed, its
+    // controls row RENDER · Cancel, BpmFormButtonAct).
     // The struct keeps its shape rather
     // than folding into the overlay's tag, the two saying different things:
     // this one that A PICKER STANDS (the modal owner), the tag WHOSE ROWS the
-    // band carries (ProjectPicker, SettingsPage, ValueList or TrimPresets). It is the
+    // band carries (ProjectPicker, SettingsPage, ValueList, TrimPresets or
+    // BpmForm). It is the
     // FOURTH ModalDialogOwner (Picker), never an
     // editor: no buffer, no caret, no keyboard-modal gate — the router
     // GuiInputHandler::route_picker_key is its whole plastic vocabulary, and
@@ -8528,10 +8541,13 @@ struct AppState {
     // GuiInputHandler::close_picker (Esc and the one button, the opener's
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
-    // value list, `t` under the trim presets list — Ctrl+Q's road, the
-    // same-project no-op, Save As's name editor ahead of its open and the page's row
-    // open ahead of its editor all pass through it — the editor's OK and
-    // Cancel reopening the page or the trim list, handle_settings_editor_key — but under a
+    // value list, `t` under the trim presets list, Ctrl+B under the BPM form
+    // — Ctrl+Q's road, the same-project no-op, Save As's name editor ahead
+    // of its open and the page's and the form's row opens ahead of their
+    // editor all pass through it — the editor's OK and Cancel reopening the
+    // page, the trim list or the form, handle_settings_editor_key; every
+    // road that LEAVES the BPM form takes the BPM mode down with it
+    // (close_bpm_form, and the exit road's close_modal_editors_no_commit) — but under a
     // value list Esc and Cancel return to the page, as its commit does,
     // GuiInputHandler::return_to_settings_page; a reopen
     // ends the session with the picker standing, the whole AppState going
@@ -8546,7 +8562,8 @@ struct AppState {
     // tab (the preset pick writes a device key, never the piece, and the
     // page's rows open the editor, whose commit arms carry the lock per key;
     // the trim presets list writes the trim, which is band, and its own
-    // device-local file, never the piece).
+    // device-local file, never the piece; the BPM form writes the owner's
+    // session-only bpm fields and renders, never the piece).
     struct Picker {
         bool     active  = false;
         uint64_t session = 0;
@@ -9007,12 +9024,17 @@ struct AppState {
     // until that ruling, enter_bpm_mode running the iteration wipe on its way
     // in; that block is deleted and bare `i` is grid iterations' one exit.
     //
-    // THE MODE IS EXACTLY ITS EDITOR SESSION, which is what makes the pair's
-    // OTHER direction need no arm at all: this bit is set by enter_bpm_mode,
-    // whose one caller opens the BPM editor in the same press, and cleared by
-    // exit_bpm_mode, which every close road reaches — so while it stands a
-    // modal dialog editor stands with it and owns the keyboard, and no bare
-    // key, `i` included, reaches any dispatch. Session-only. The BPM owner is
+    // THE MODE IS EXACTLY ITS FORM'S SESSION (architect 2026-10-29, the
+    // BPM FORM: the folder overlay's BpmForm content, or the line editor one
+    // of its rows opened), which is what makes the pair's OTHER direction
+    // need no arm at all: this bit is set by enter_bpm_mode, whose one caller
+    // opens the form in the same press, and cleared by exit_bpm_mode, which
+    // every road out of the form reaches — its Cancel, Esc and the BPM key
+    // (close_bpm_form), RENDER (render_bpm_sweep's success, or its bail's
+    // exit), and the quit road (close_modal_editors_no_commit) — so while it
+    // stands the form's picker router or the field's modal editor owns the
+    // keyboard, and no bare key, `i` included, reaches any dispatch.
+    // Session-only. The BPM owner is
     // identified at runtime
     // by walking markers for bpm_owner=true; at most one marker holds
     // the flag at a time, maintained as an invariant by the entry.
@@ -9041,7 +9063,7 @@ struct AppState {
     // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. FIVE CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
     // (architect 2026-10-28), with the settings editor's fourteen keys as
@@ -9054,7 +9076,11 @@ struct AppState {
     // `true_colors`'s two words, the folders under `noise/`, the 31 levels
     // and the 30 crossfades — the page's row for that key's content; and
     // since 2026-10-28 night THE TRIM PRESETS LIST, the piece's named trim
-    // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's. (The AV Sync Stats panel's text lines stood
+    // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's; and
+    // since 2026-10-29 THE BPM FORM, the sweep's three values as `key=value`
+    // lines under one group row, the BPM key's (architect: "since settings
+    // has a multiline page, we should make bpm a form like settings. then we
+    // make @ and [] not necessary"). (The AV Sync Stats panel's text lines stood
     // 2026-09-03..30 and were deleted with the panel; the `h` view's history
     // picker stood for one day, retired 2026-08-29: "overengineered; I don't
     // really need it", the view's `'` raising its confirmation on the viewed
@@ -9069,8 +9095,9 @@ struct AppState {
     //                 SettingsPage at its open and ValueList at the page's
     //                 row for a listed key, SettingsPage again at the
     //                 list's return, or TrimPresets at the TRIM key's open
-    //                 and the name editor's return (the four picker
-    //                 contents, one AppState::Picker each time) and None at every close
+    //                 and the name editor's return, or BpmForm at the BPM
+    //                 key's open and the field editor's return (the five
+    //                 picker contents, one AppState::Picker each time) and None at every close
     //                 path (all of them through close_picker; a reopen
     //                 ends the session with it standing, and the AppState
     //                 holding it dies with run_project's frame). ONE ROW
@@ -9088,7 +9115,10 @@ struct AppState {
     //                 then returns to the page (value_list_commit), and
     //                 under the trim presets list applies the row's preset
     //                 to the active tab's trim, the list standing
-    //                 (trim_presets_apply); the lift's
+    //                 (trim_presets_apply), and under the BPM form opens
+    //                 the line editor prefilled on the row's line (whose
+    //                 OK and Cancel reopen the form on that row,
+    //                 bpm_form_commit); the lift's
     //                 highlight is every owner's alike (a picker's band IS
     //                 its whole state — there is no field to feed), an inert
     //                 row taking neither half (folder_overlay::row_is_inert);
@@ -9128,7 +9158,9 @@ struct AppState {
     //                 on the LIVE value's (the listed device key's), the
     //                 trim presets list on the preset whose pair is the
     //                 active tab's trim, else on row 0 (at the name
-    //                 editor's return, on the named row).
+    //                 editor's return, on the named row), the BPM form on
+    //                 its `beats=` row (at the field editor's return, on
+    //                 that field's row).
     //                 IT NEVER STANDS ON AN INERT ROW (folder_overlay.h's
     //                 set_highlight and its walk);
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
@@ -9193,7 +9225,9 @@ struct AppState {
     // in `value` the key's spelling the tap commits beside the `name` it
     // shows; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
-    // preset's name alone (architect 2026-10-28 night). A Plain or Group
+    // preset's name alone (architect 2026-10-28 night); the BPM form a Group
+    // row and three Plain rows (build_bpm_form_rows), row f + 1 the field f
+    // (GuiBpmField), its text the field's line. A Plain or Group
     // row's `path` and `entry` stay empty, as a Disabled row's do, and
     // `value` is set on a value list's rows alone.
     struct FolderOverlayRow {
@@ -9214,15 +9248,15 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
-        // THE FIVE CONTENTS. The tag IS the standing predicate
+        // THE SIX CONTENTS. The tag IS the standing predicate
         // (folder_overlay_stands, below), and it is the one thing the open act
-        // forks on — and, between the four picker contents, the router's
+        // forks on — and, between the five picker contents, the router's
         // opener arms, the controls row and the opener key's lit face
         // (is_folder_overlay_opener).
         // Everything else about the panel — the band, the scroll, the walk —
         // is the widget's and knows nothing about which content fills it.
         enum class Owner { None, Player, ProjectPicker, SettingsPage,
-                           ValueList, TrimPresets };
+                           ValueList, TrimPresets, BpmForm };
         Owner              owner         = Owner::None;
         // THE KEY A VALUE LIST LISTS (kSettingsValueListKeys,
         // settings_editor.h), which its commit routes the row's value to;
@@ -9684,7 +9718,8 @@ inline bool folder_overlay_stands(const AppState& a) {
 // list (architect 2026-10-28: the page's row for a listed key swaps that
 // key's value list in under the same key, so the key that opened the page
 // closes either), TRIM PRESETS under the trim presets list (2026-10-28
-// night). It is the one roster key a standing overlay leaves live and lit
+// night), BPM under the BPM form (2026-10-29). It is the one roster key a
+// standing overlay leaves live and lit
 // (redesign_button_enabled's overlay arm, redesign_button_selected) and the
 // one roster arm its veil lifts (finish_chrome_press_release's head); false
 // with nothing standing.
@@ -9701,6 +9736,8 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
             return b == RedesignButton::IconSettings;
         case AppState::FolderOverlay::Owner::TrimPresets:
             return b == RedesignButton::IconTrimPresets;
+        case AppState::FolderOverlay::Owner::BpmForm:
+            return b == RedesignButton::IconBpm;
     }
     return false;
 }
@@ -10205,6 +10242,24 @@ bool render_player_button_enabled(const AppState& a,
 // whole-window damage).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act);
+
+// THE BPM FORM'S CONTROLS ROW FACES (architect 2026-10-29), THE TRUTHFUL
+// GREY's owner for that row: RENDER LIVE EXACTLY WHEN ITS PRESS COULD RENDER
+// — the owner's three fields set (each non-zero, the unset sentinel no field
+// reader admits) and low <= high (the order no single field's commit can
+// judge, each line committing alone) — and greyed otherwise, a press that
+// would do nothing; CANCEL always, while the form stands. The derived-value
+// bracket gate is NOT a term (GuiFlagEditor::bpm_sweep_bracket_admits): it
+// runs at the press and refuses with its card, a refusal not being a no-op.
+// Defined beside the form's acts (input_key_dispatch.cpp); RENDER's body asks
+// it too, for its roads that are not the painted face (Enter on a focused
+// button reads the published bit; the body states the rule). ITS READERS are
+// the trim row's: the plan builder (paint_modal_dialog, publishing the bit
+// as painted) and main.cpp's per-tick comparator, the press, the ring and the
+// dispatch reading the published bit. Its edges are the field commits, each
+// returning to a freshly built form (whole-window damage).
+bool bpm_form_button_enabled(const AppState& a,
+                             AppState::BpmFormButtonAct act);
 
 // IS THERE A FOLDER TO GO UP TO — THE UP WALL'S ONE OWNER (architect
 // 2026-09-01, with the player's move inside `tmp/`): false at the root, which
@@ -14794,7 +14849,7 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // with the read-only lock. Defined in warpmarkers_ops.cpp beside
 // tempo_cent_step_group_actionable, the other const owner over this store.
 enum class BpmSweepRefusal {
-    None,             // the editor would open on `owner`
+    None,             // the form would open on `owner`
     WrongColumn,      // the phase-reset column carries no tempo to sweep
     OffHomeView,      // warp's home is source view
     NothingSelected,  // no marker selected
@@ -15532,12 +15587,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // predicate, input_handler.h). This is the one record of the rule.
     //
     // THE THREE CLASSES (architect 2026-10-25): THE MODALS above; THE
-    // OVERLAYS, the render player and the picker's four contents (the
-    // project picker, the settings page and the value list it swaps in, and
-    // the trim presets list), which end at a pick, a row's open or a load
-    // and also leave on Esc and
+    // OVERLAYS, the render player and the picker's five contents (the
+    // project picker, the settings page and the value list it swaps in, the
+    // trim presets list and the BPM form), which end at a pick, a row's open
+    // or a load and also leave on Esc and
     // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
-    // page's and the value list's both) and Trim Presets, lit and live under them (the overlay arm
+    // page's and the value list's both), Trim Presets and BPM, lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey and the
     // hint dwell suppressed ("overlays don't show hints … the only reason
     // they still show the one button lit is that you can exit by pressing
@@ -15605,7 +15660,9 @@ inline bool redesign_button_enabled(const AppState& a,
     // stands (2026-10-28), Settings stays live and its lift, bare `;`, is
     // answered by the picker's router with close_picker; while the TRIM
     // PRESETS LIST stands (2026-10-28 night), Trim Presets stays live and its
-    // lift, bare `t`, is answered the same way.
+    // lift, bare `t`, is answered the same way; while the BPM FORM stands
+    // (2026-10-29), BPM stays live and its lift, Ctrl+B, is answered with the
+    // form's close (close_bpm_form, the mode going with it).
     // Each key toggles exactly as its chord does and
     // sits lit while its overlay stands (redesign_button_selected). The other
     // overlays' openers stay grey (a press would open one overlay over
@@ -17152,18 +17209,20 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // picker's Cancel, route_picker_key), SETTINGS the settings page's
         // and the value list's it swaps in (2026-10-28: `;` opens the
         // page and closes either), TRIM PRESETS the trim presets list's
-        // (2026-10-28 night: bare `t` opens and closes it). So
+        // (2026-10-28 night: bare `t` opens and closes it), BPM the BPM
+        // form's (2026-10-29: Ctrl+B opens and closes it). So
         // the key sits down at the
         // checked depth with its LED lit while its overlay stands — the
         // history opener's face over its view — the one key the overlay
         // leaves live (redesign_button_enabled's overlay arm). The per-tick
         // comparator carries the edge. (All three were momentary, no lamp,
-        // until that day.) The four picker contents share the picker's bit,
+        // until that day.) The five picker contents share the picker's bit,
         // so the tag says whose key is lit (is_folder_overlay_opener).
         case RedesignButton::IconListen:
         case RedesignButton::OpenProject:
         case RedesignButton::IconSettings:
         case RedesignButton::IconTrimPresets:
+        case RedesignButton::IconBpm:
             return is_folder_overlay_opener(a, b);
         // THE SCORE KEY, the same pattern over the score viewer's own bit
         // (architect 2026-10-26): lit while the viewer stands, its press the
@@ -17200,15 +17259,11 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // COPY PHASE RESETS IS MOMENTARY (2026-10-24): a copy completes and
         // so do its two pastes; the clipboard shows nothing on screen.
         case RedesignButton::IconCopyPhaseResets:
-        // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
-        // 2026-09-04): it opens an editor and the editor's own session is the
-        // state. FLATTEN IS MOMENTARY
-        // TOO (2026-09-19, arriving in the same group): the terms go or they
+        // FLATTEN IS MOMENTARY (2026-09-19): the terms go or they
         // collapse, and the marker's own flag is where the result shows.
-        // TWO OF THE GROUP'S THREE ARE ACTS AND THE MIDDLE ONE IS A LAMP —
-        // the opener raises a dialog, the flatten completes, and only grid
-        // iterations has a bit that stays true for a face to report.
-        case RedesignButton::IconBpm:
+        // (THE BPM OPENER WAS MOMENTARY 2026-08-01 to 2026-10-29, its
+        // editor's own session the state; it lights under the BPM form since,
+        // with the overlay openers above.)
         case RedesignButton::IconFlatten:
         case RedesignButton::IconLoadInPlace:
         // (THE SETTINGS BUTTON WAS MOMENTARY 2026-09-29 to 2026-10-25, the
@@ -18024,7 +18079,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and the qualifier saying which axis is swept — and the render
         // button's iteration hint, the batches' counted nouns and the cards
         // that name a mode all read the same words. THE BPM OPENER'S LINE IS A
-        // NAME because the act completes (the editor is the state), while the
+        // NAME because it opens an overlay (the form is the state, its lit
+        // face the overlay openers' rule), while the
         // MODE'S reads "Toggle <Mode>", the lamp rule at this table's head:
         // "Grid Iterations" alone would lie on the lit face. The accelerators
         // are bare letters and so uppercase, this table's rule and the

@@ -103,10 +103,10 @@
 // THE BOX'S DIALOG MEMBERS STAND (architect 2026-10-14): A PROMPT — over any
 // surface, the render player's and the picker's lists included, its question
 // taking the box for as long as it is asked — A DIALOG EDITOR
-// (AppState::dialog_editor_session's set, the settings editor and the BPM
-// bracket editor) or THE PROGRESS MODAL (AppState::BatchProgress, a batch's
+// (AppState::dialog_editor_session's set, the settings editor's buffer in
+// its three kinds) or THE PROGRESS MODAL (AppState::BatchProgress, a batch's
 // "Rendering X of Y..." from its Render press to its terminal). Their box is
-// paint_modal_dialog's; the folder overlay's five contents paint their own
+// paint_modal_dialog's; the folder overlay's six contents paint their own
 // (paint_folder_overlay). (The taskbar dialog's standing predicate,
 // chrome_tenant_owns_bottom_row, 2026-10-10 to 2026-10-14, named the prompt
 // and the editors less a prompt over the player or the picker, which stood

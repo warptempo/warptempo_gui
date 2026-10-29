@@ -354,7 +354,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-08-28): the
     // field-less picker over the folder overlay (the project picker, the
-    // settings page and the value list it swaps in, the trim presets list), at the player's rank (the two never stand together) and with
+    // settings page and the value list it swaps in, the trim presets list,
+    // the BPM form), at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road's exit), Ctrl+S consumed by the router
@@ -364,7 +365,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // question's Cancel and a second Esc the picker's close), under the
     // settings page and the value list it swaps in bare `;` as the close
     // (2026-10-28), under the trim presets list bare `t` (2026-10-28
-    // night), and
+    // night), under the BPM form Ctrl+B as the close with the mode
+    // (2026-10-29), and
     // Ctrl+Shift+S (the publish chord, 2026-10-10)
     // as a consumed nothing — the pull's question must not open over a
     // picker. The gesture clause is the player's
@@ -476,9 +478,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the
-    // single-State dialog one (settings; the commit title stood beside it
-    // 2026-08-07 to 2026-10-10), the bpm bracket (a
-    // dialog too), and the top-strip flag editor
+    // single-State dialog one (the settings line, the trim preset's name and
+    // the BPM form's line; the commit title stood beside it 2026-08-07 to
+    // 2026-10-10), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes (typing, its motion keys, Esc and Return)
     // and a dialog's ring get through (modal_editor_key_blocked); everything
@@ -509,7 +511,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // The top-flag editor owns the keyboard while active. Only its own editor
-    // keys (and a dialog's ring, for the BPM bracket) pass the gate above, so
+    // keys pass the gate above, so
     // this block cannot see a command, and it consumes every key it is handed
     // (route_modal_editor_key answers true throughout since 2026-10-25, when
     // its Ctrl+Q fall-through to the close road went with the hatch). Routes

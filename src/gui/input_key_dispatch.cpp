@@ -108,7 +108,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // keyboard chord was the only save route the lock ever stopped.
 // WHAT STAYS BLOCKED, the authoring vocabulary, dropped here at the gate rather
 // than admitted for a deeper owner refusal: the marker drop / status-toggle /
-// position-nudge / Delete chords, the flag and BPM editors' openers, `i`,
+// position-nudge / Delete chords, the flag editor's and the BPM form's openers, `i`,
 // undo/redo (Ctrl+Z / Ctrl+Shift+Z), the three propagate commands (the COPY,
 // bare P, explicitly — a copy is non-mutating, but it arms a paste that
 // is not, and the family travels together; the two PASTES, Ctrl+P and
@@ -4452,15 +4452,16 @@ void GuiInputHandler::run_history_revert() {
 // and every other chord was a ruled silence — RETIRED 2026-10-21 with the
 // Settings popup.)
 
-// The DIALOG editors alone (the settings editor and the BPM bracket editor,
-// top_flag_editor reused with Kind::BpmBracket) — the membership is
-// AppState::dialog_editor_session's and nothing here restates it. It answers
+// The DIALOG editors alone (the settings editor's buffer in its three kinds,
+// the settings line, the trim preset's name and the BPM form's line) — the
+// membership is AppState::dialog_editor_session's and nothing here restates
+// it. It answers
 // a dialog's own questions (its field, its buttons, its ring); modality is
 // keyboard_modal_editor_active's since 2026-10-25, when the lane editors
 // became modals too. The readers and the record are at the declaration, in
 // input_handler.h.
 bool GuiInputHandler::modal_dialog_editor_active() const {
-    // The two are NAMED at AppState::dialog_editor_session, which hands back
+    // The set is NAMED at AppState::dialog_editor_session, which hands back
     // the live one's session id — one membership serving both questions.
     return app.dialog_editor_session() != 0;
 }
@@ -4833,8 +4834,8 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // THE RING'S WHOLE TAB FAMILY, admitted while any DIALOG editor stands
     // (2026-08-13) — a superset of what this gate admitted before: the one
     // editor that HAS a completion, SETTINGS (its value recall), keeps the
-    // FORWARD key as its first meaning, while the BPM editor lets it walk the
-    // ring from the first press
+    // FORWARD key as its first meaning, while the trim preset's name and the
+    // BPM form's line let it walk the ring from the first press
     // (route_modal_editor_key owns which of the two a given forward Tab is,
     // under the one autocomplete model), and the REVERSE shapes walk
     // backwards for both, completing nothing anywhere. The top-strip FLAG
@@ -5759,9 +5760,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
 
-    // The BPM sweep render fires from render_bpm_sweep(), triggered by Enter
-    // in the BPM dialog editor after a successful commit; there is no
-    // key-dispatch handler for it here.
+    // The BPM sweep render fires from render_bpm_sweep(), triggered by the
+    // BPM form's RENDER (bpm_form_render); there is no key-dispatch handler
+    // for it here.
 
     return false;
 }
@@ -5847,8 +5848,8 @@ void GuiInputHandler::apply_recipe_in_place(
     // THE BPM SCRATCH WIPE STAYS, and it is scratch, not mode: the fields it
     // clears are about the markers this body replaced, and it writes no mode
     // bit — exit_bpm_mode stays the mode's one off-chokepoint. bpm mode is
-    // exactly its editor session (close_modal_editors_no_commit), and no
-    // load-in-place road runs beside an editor, so the mode is off here and
+    // exactly the BPM form's session (AppState::bpm_mode_enabled), and no
+    // load-in-place road runs beside the form or an editor, so the mode is off here and
     // every vector the three roads hand in already carries default bpm fields
     // (the sidecar has no bpm field either; every timeline snapshot carries
     // defaults — the argument at wipe_bpm_state). The call finds nothing by
@@ -6770,8 +6771,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 
 // Shared key route for EVERY keyboard-modal editor — all five
 // text_editor::Kind kinds: the settings editor, the trim preset's name editor
-// (on the settings editor's buffer), the bpm bracket editor, and the marker
-// lane's flag editor and iteration bound editor.
+// and the BPM form's line editor (all three on the settings editor's buffer),
+// and the marker lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys and a dialog's ring — NO HATCH since
 // 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate (they were this route's
@@ -6979,9 +6980,10 @@ bool GuiInputHandler::route_modal_editor_key(
 // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half — the contract and
 // the one caller are at the declaration (input_handler.h).
 //
-// THE SETTINGS EDITOR'S TEARDOWN HERE REOPENS NO PAGE: its return to the
-// settings page is the editor's key route's (handle_settings_editor_key),
-// which this road never passes, an exit having no page to return to.
+// THE SETTINGS EDITOR'S TEARDOWN HERE REOPENS NO PAGE, LIST OR FORM: its
+// return to the settings page, the trim presets list or the BPM form is the
+// editor's key route's (handle_settings_editor_key), which this road never
+// passes, an exit having nothing to return to.
 //
 // THE STEP LIVES ON THE CLOSE ROAD AND NOT ON THE KEYBOARD'S SIDE OF IT
 // (2026-08-28): Ctrl+Q used to tear its own editor down through a per-editor
@@ -6999,23 +7001,23 @@ bool GuiInputHandler::route_modal_editor_key(
 // the player's line, one close body each (a reopen or a revert asked from the
 // picker leaves it standing under its question, GuiPrompt::request_close).
 void GuiInputHandler::close_modal_editors_no_commit() {
-    // THE BPM MODE GOES WITH ITS EDITOR, and the kind is read BEFORE the exit
-    // that clears it: the bracket session IS its editor, so mode-without-editor
-    // stays unreachable (the mode's one off-chokepoint is exit_bpm_mode).
-    const bool bpm_bracket =
-        text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::BpmBracket;
     flag_editor.exit_top_flag_edit_no_commit();
-    if (bpm_bracket) flag_editor.exit_bpm_mode();
     settings_editor.exit_no_commit();
+    // THE BPM MODE GOES WITH ITS FORM (architect 2026-10-29): the mode is
+    // exactly the form's session — the form standing, which the close road
+    // took down one line earlier through close_picker, or its line editor,
+    // just abandoned above — so mode-without-form stays unreachable. The
+    // exit is the mode's one off-chokepoint and a no-op with the mode down.
+    flag_editor.exit_bpm_mode();
 }
 
 // -- THE PICKER (the contract is at the declaration) --------------------------
 //
-// Three openers (the project picker's, the settings page's, whose rows for
-// the keys with a value list open that key's value list, and the trim presets
-// list's), four list builders, four open acts, and the machinery the four
-// contents share: the highlight, the close and the key router.
+// Four openers (the project picker's, the settings page's, whose rows for
+// the keys with a value list open that key's value list, the trim presets
+// list's and the BPM form's), five list builders, five open acts, and the
+// machinery the five contents share: the highlight, the close and the key
+// router.
 
 // The Open project picker's opener. Every guard returns without touching
 // playback (a refused open never interrupts a listening session); the shared
@@ -7774,6 +7776,138 @@ bool trim_presets_button_enabled(const AppState& a,
     return false;
 }
 
+// -- THE BPM FORM (architect 2026-10-29; the contract is at the
+//    declaration) ---------------------------------------------------------------
+//
+// The picker's fifth content: the opener, its rows, its open act (the line
+// editor), RENDER and the close. The highlight and the key router are the
+// picker's shared machinery below; the field's commit is the flag editor
+// cluster's (GuiFlagEditor::commit_bpm_field), beside the mode it serves.
+
+// THE OPENER — the Ctrl+B arm's tail, seated on `beats=`, and the line
+// editor's return, seated on its field (handle_settings_editor_key). No
+// guards of its own (the declaration says why); the shared modal stop, a
+// no-op at the return.
+void GuiInputHandler::open_bpm_form(GuiBpmField seat) {
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.picker.active  = true;
+    app.picker.session = text_editor::next_session_id();
+    build_bpm_form_rows(seat);
+    viewport.invalidate_all();
+}
+
+// THE ROWS: the settings page's shape — one inert Group row, "BPM", then one
+// Plain row per field in GuiBpmField's order, its text THE LINE THE EDITOR
+// WOULD OPEN WITH, `<key>=<value>` (bpm_field_text: an unset field the
+// empty value, `beats=`), so row f + 1 is field f. THE SEAT is `seat`'s row,
+// through the one set_highlight, landed centered as far as the listing's
+// ends allow (scroll_row_centered), the settings page's landing.
+void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    ov       = AppState::FolderOverlay{};
+    ov.owner = AppState::FolderOverlay::Owner::BpmForm;
+    AppState::FolderOverlayRow head;
+    head.kind = AppState::FolderOverlayRow::Kind::Group;
+    head.name = "BPM";
+    ov.rows.push_back(std::move(head));
+    const auto& mv = app.warpmarkers.markers();
+    const GuiWarpMarker& owner = mv[bpm_owner_index(mv)];
+    for (int f = 0; f < kBpmFieldCount; ++f) {
+        AppState::FolderOverlayRow row;
+        row.kind = AppState::FolderOverlayRow::Kind::Plain;
+        row.name = std::string(kBpmFieldKeys[f]) + "=" +
+                   bpm_field_text(owner, static_cast<GuiBpmField>(f));
+        ov.rows.push_back(std::move(row));
+    }
+    folder_overlay::clamp_scroll(app);
+    folder_overlay::set_highlight(app, static_cast<int>(seat) + 1);
+    folder_overlay::scroll_row_centered(app, ov.highlight_row);
+}
+
+// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
+// press-and-lift) and Enter on the highlight, one body: THE FORM CLOSES
+// (close_picker, the mode standing) AND THE LINE EDITOR OPENS PREFILLED WITH
+// THE ROW'S LINE as painted, the caret at its end — the settings editor's
+// open (GuiSettingsEditor::open): an empty session, then the line through
+// the one incoming filter, silent on capacity (the text is the product's own
+// recall, within its field's cap by the reader's own spelling). The inert
+// group row opens nothing. The editor's modal stop is a no-op, playback
+// stopped at the form's open; it is spelled for the opener's shape
+// (trim_presets_save_as's).
+void GuiInputHandler::bpm_form_commit(int index) {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::BpmForm) return;
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
+    if (index < 0 || index >= n) return;
+    if (folder_overlay::row_is_inert(app, index)) return;
+    const std::string line =
+        app.folder_overlay.rows[static_cast<size_t>(index)].name;
+    close_picker();
+    playback_lifecycle.stop_playback_for_modal_open();
+    text_editor::enter(app.settings_editor,
+                       /*target=*/index - 1,
+                       /*initial_pending=*/"",
+                       text_editor::Kind::BpmField);
+    (void)text_editor::replace_selection(app.settings_editor, line);
+    // A MODAL OPEN damages the whole window (the settings editor's open
+    // carries the rule).
+    viewport.invalidate_all();
+}
+
+// RENDER (the declaration's contract). The greyed face's road is silent —
+// the button's press never arms and its letter dispatches through the
+// painted bit — so the face's predicate here is that same rule stated for
+// the body. The form closes BEFORE the dispatch: the batch's progress
+// modal never stands beside it.
+void GuiInputHandler::bpm_form_render() {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::BpmForm) return;
+    if (!bpm_form_button_enabled(app, AppState::BpmFormButtonAct::Render))
+        return;
+    if (!flag_editor.bpm_sweep_bracket_admits()) return;
+    close_picker();
+    // render_bpm_sweep owns the mode teardown on its success path: after the
+    // batch is built and accepted (dispatched, or parked behind a killed
+    // render's drain — a busy worker no longer bails) it wipes the
+    // session-only bpm state and exits bpm mode, so an accepted sweep leaves
+    // no marker carrying bpm state. A guard-bail (false) is an environmental
+    // backstop — batch-folder creation failure, no valid cells; the
+    // stale-endpoint class is unreachable because the form freezes the store
+    // between mode entry and this press — and the form is already down, so
+    // the bail exits the mode here: mode-without-form stays unreachable.
+    if (!render_bpm_sweep()) flag_editor.exit_bpm_mode();
+}
+
+// THE FORM'S CLOSE — Cancel, Esc and Ctrl+B (the BPM key's lift): the one
+// close body, then the mode's one off-chokepoint, which wipes the owner's
+// fields (the next open is blank).
+void GuiInputHandler::close_bpm_form() {
+    close_picker();
+    flag_editor.exit_bpm_mode();
+}
+
+// THE FORM'S ROW FACES (the contract is at the declaration, app_state.h).
+bool bpm_form_button_enabled(const AppState& a,
+                             AppState::BpmFormButtonAct act) {
+    using Act = AppState::BpmFormButtonAct;
+    switch (act) {
+        case Act::Render: {
+            const auto& mv = a.warpmarkers.markers();
+            const GuiWarpMarker& m =
+                mv[static_cast<std::size_t>(bpm_owner_index(mv))];
+            return m.bpm_beats > 0 && m.bpm_lo > 0.0 && m.bpm_hi > 0.0 &&
+                   m.bpm_lo <= m.bpm_hi;
+        }
+        case Act::Cancel:
+            return true;
+        case Act::None:
+            return false;
+    }
+    return false;
+}
+
 // REVERT (the contract is at the declaration, input_handler.h). THE
 // PICKER'S SAME-PROJECT NO-OP IS NOT ON THIS ROAD: that arm lives inside
 // open_project_commit, and this act never passes through it — it seats the
@@ -7984,7 +8118,7 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // session-wide set dies in the catch-all any more.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
-    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25): the four picker
+    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25): the five picker
     // contents share this router and the overlay's tag says whose opener a
     // chord is, so each content's opener chords act under it alone and are
     // the catch-all's consumed nothing under the others — the other opener
@@ -7999,6 +8133,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::ValueList;
     const bool trim_presets =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets;
+    const bool bpm_form =
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::BpmForm;
 
     // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
     // opens an overlay is the way out of it, as bare `l` is the player's):
@@ -8035,6 +8171,16 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
+    // CTRL+B CLOSES THE BPM FORM AND THE MODE WITH IT (architect 2026-10-29,
+    // the same rule one content over): the BPM key's lift under the form,
+    // the opener's own chord, runs the form's close (close_bpm_form), as its
+    // Cancel and Esc do. Every other `b` chord binds nothing here, the
+    // catch-all's nothing below.
+    if (bpm_form && ctrl && !shift && !alt && key == GuiKeys::B) {
+        close_bpm_form();
+        return true;
+    }
+
     // CTRL+ALT+O RUNS REVERT UNDER THE PROJECT PICKER (architect
     // 2026-10-25; under the other two contents the catch-all's nothing): the
     // same body the ordinary dispatch's arm calls, with the same (default)
@@ -8065,9 +8211,9 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // with Alt, the case-folded key, off the published row, ON SCREEN IS AS
     // PAINTED): a word button's underlined letter presses it through the
     // row's one dispatch, its painted face deciding — the trim presets
-    // list's Save, Save As and Delete (2026-10-28 night). The other
-    // contents' one word carries none (Cancel and Close are Esc's), so this
-    // arm answers under the trim list alone. One-shot: no letter repeats
+    // list's Save, Save As and Delete (2026-10-28 night) and the BPM form's
+    // Render (2026-10-29). The other contents' one word carries none (Cancel
+    // and Close are Esc's), so this arm answers under those two alone. One-shot: no letter repeats
     // under a picker (repeat_eligible).
     if (const int access =
             modal_dialog_access_button(key, mods, /*field_focused=*/false);
@@ -8092,11 +8238,14 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
             // fork): under a value list it RETURNS TO THE
             // SETTINGS PAGE, seated on the list's key, nothing applied
             // (return_to_settings_page, architect 2026-10-28 night); under
-            // every other content — the trim presets list's Close among
-            // them — it closes the picker.
+            // the BPM form it closes the form and the mode (close_bpm_form,
+            // its Cancel's act, 2026-10-29); under every other content — the
+            // trim presets list's Close among them — it closes the picker.
             if (app.folder_overlay.owner ==
                 AppState::FolderOverlay::Owner::ValueList)
                 return_to_settings_page(app.folder_overlay.value_key);
+            else if (bpm_form)
+                close_bpm_form();
             else
                 close_picker();
             return true;
@@ -8491,7 +8640,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // Ctrl+B: open the BPM editor on the FIRST of a contiguous
+    // Ctrl+B: open the BPM form on the FIRST of a contiguous
     // run of selected markers whose sections define the sweep span. Warp
     // view only, and the P column is answered on a card. MUTUAL EXCLUSION WITH
     // GRID ITERATIONS IS A REFUSAL AND NOT A SWAP since 2026-09-10 (architect:
@@ -8524,19 +8673,19 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // bpm_cell_warp_markers, input_handler.h); a disabled OWNER is rejected
     // (bpm_popup_eligible_marker excludes disabled — a disabled owner was a
     // render-inert rewrite).
-    // There is no toggle-off branch: the bpm editor is a modal dialog
-    // surface, so while it is open Ctrl+B never reaches this dispatch — `b`
-    // is just a typed character the bracket grammar rejects — and bpm mode
-    // never rests without its editor (the mode's only exits are the editor's
-    // own: Esc, and Enter's dispatch tail).
+    // There is no toggle-off branch: while the BPM FORM stands Ctrl+B is its
+    // router's close (route_picker_key, close_bpm_form), while its line
+    // editor stands the chord is consumed at the modal gate, and bpm mode
+    // never rests without one of the two (AppState::bpm_mode_enabled names
+    // every road out).
     if (key == GuiKeys::B && ctrl && !shift && !alt) {
         // EVERY ARM OF THIS GATE NAMES THE RULE IT BROKE (architect
         // 2026-08-30, the strictness ruling). The ladder is ten tests deep and
         // its whole answer used to be one indistinguishable non-response — the
         // state a card exists for. Each arm now returns on its own sentence, so
         // ONE press raises ONE card carrying the FIRST rule the selection
-        // failed; the sweep's own later refusals (the commit gate's bracket
-        // walls) belong to the editor and are untouched.
+        // failed; the sweep's own later refusals (the RENDER gate's bracket
+        // walls) belong to the form and are untouched.
         //
         // THE LADDER ITSELF LEFT THIS BODY ON 2026-09-04, when the BPM
         // ITERATIONS BUTTON came back to the icon row and its face needed the
@@ -8553,7 +8702,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                 notifications.notify(AppState::NotificationClass::Normal,
                                      "BPM iterations work on warp markers");
                 return true;
-            // The bpm editor is DELIBERATELY OMITTED from the warp
+            // The BPM form is DELIBERATELY OMITTED from the warp
             // status/value family admitted in W+target on 2026-08-24
             // (architect: "add the ones we can, and omit the ones we must
             // omit"; the inventory is at active_column_authoring_allowed,
@@ -8620,7 +8769,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // to ONE synthetic 1.00 owner, so a span owned from inside such a
             // run renders at 1.00 in every cell whatever the editor derived —
             // and when the coincident partner is the boundary itself the
-            // span's duration is zero, the commit gate has nothing to measure
+            // span's duration is zero, the RENDER gate has nothing to measure
             // and the sweep derives nothing, closing the mode on an empty
             // batch. The verdict is the classifier's,
             // warp_coincident_collapse_members (warp_frame_map_build.h — the
@@ -8667,9 +8816,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // W column, an empty selection, an out-of-range owner and
         // bpm_popup_eligible_marker — every one of them re-asked from the
         // ladder above, which has already carded it — plus a bpm mode already
-        // standing, which cannot be: the mode never rests without its editor,
-        // and while that editor stands `m` is a typed character that never
-        // reaches this dispatch. So there is no state in which this fires and
+        // standing, which cannot be: the mode never rests without its form,
+        // and while the form stands Ctrl+B is its router's close and while
+        // its line editor stands a consumed chord, neither reaching this
+        // dispatch. So there is no state in which this fires and
         // no sentence to invent for it; it stays a defensive belt.
         if (!app.bpm_mode_enabled) return true;
         {
@@ -8677,30 +8827,31 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             mvw[owner].bpm_endpoint = boundary;
         }
         const std::set<int> span_selection = app.selected_markers;
-        // The bpm editor is a modal dialog surface, so its open takes the
-        // shared modal stop (stop_playback_for_modal_open). Position is
-        // load-bearing: every refusal in the guard ladder above — the authoring
-        // gate, the span's contiguity / label_ref / eligibility tests, and
-        // enter_bpm_mode's own bail — returns before reaching here, so a refused
-        // `m` leaves a listening session running. Space is inside the modal
-        // blocked set, so playback cannot restart until the editor closes.
-        playback_lifecycle.stop_playback_for_modal_open();
-        flag_editor.enter_bpm_edit(owner);
-        // The playhead land rides enter_text_edit (the shared open chokepoint):
-        // it lands on `owner`, the EARLIEST selected, while the focus that built
-        // this span sits wherever the multi-select click left it (those clicks
-        // land on their focus — land_playhead_on_marker, input_pointer.cpp). The
-        // open also collapsed the selection to {owner} on the way through. The
-        // re-insert below restores the MEMBERSHIP only — std::set::insert leaves
+        // THE BPM FORM OPENS (architect 2026-10-29), an overlay, so its open
+        // takes the shared modal stop (stop_playback_for_modal_open, inside
+        // open_bpm_form). Position is load-bearing: every refusal in the
+        // guard ladder above — the authoring gate, the span's contiguity /
+        // label_ref / eligibility tests, and enter_bpm_mode's own bail —
+        // returns before reaching here, so a refused Ctrl+B leaves a
+        // listening session running. Space is the picker router's consumed
+        // nothing and the line editor's typed character, so playback cannot
+        // restart until the form closes.
+        open_bpm_form(GuiBpmField::Beats);
+        // The open SINGLE-SELECTS the owner and LANDS the playhead on it —
+        // the marker lane owns the playhead (land_playhead_on_marker,
+        // input_pointer.cpp), and the open hands the lane a new focus: the
+        // EARLIEST selected, while the focus that built this span sits
+        // wherever the multi-select click left it. The re-insert below
+        // restores the MEMBERSHIP only — std::set::insert leaves
         // last_selected_marker alone — so the focus stays `owner`. NOTHING
-        // re-derives a region here any more (the extent re-derive died with the
-        // SPAN FORM, architect 2026-07-30): the group's cue is its members'
-        // brightened flags plus the visible cursor on `owner`. No second land.
-        bool restored = false;
-        for (int s : span_selection) {
-            if (app.selected_markers.insert(s).second) restored = true;
-        }
-        if (restored) viewport.invalidate_top_strip();
+        // re-derives a region here (the extent re-derive died with the SPAN
+        // FORM, architect 2026-07-30): the group's cue is its members'
+        // brightened flags plus the visible cursor on `owner`. No second
+        // land.
+        selection.set_single_selection(owner);
+        land_playhead_on_marker(app, audio, viewport, owner);
+        // The open's whole-window damage covers the strip.
+        for (int s : span_selection) app.selected_markers.insert(s);
         return true;
     }
 
@@ -10117,65 +10268,17 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 }
 
 // Top-flag editor key routing. See the declaration for the consumed/command
-// contract. ALL THREE kinds take the shared modal route (architect 2026-07-28)
-// and differ only in their commit / cancel bodies and their repaint area: the
-// bpm bracket editor draws in the MODAL DIALOG on the bottom row (like the
-// settings editor; its damage is that row's own lane owner) and commits into a
-// render sweep, the FlagPayload editor draws in the TOP strip and commits the
-// flag's own payload, and the IterBound editor draws over its bound
-// cell in the TOP strip and commits that bound. None passes a bare-Tab hook,
-// having no vocabulary to complete: in the BPM editor, a DIALOG, bare Tab
-// walks the modal's focus ring from the first press, while for the two
-// top-strip kinds it never reaches this route at all — the on_key gate
-// swallows it, a flag editor publishing no dialog and so no ring
-// (route_modal_editor_key). For all three, Esc / Enter are the session's
-// only exits: NO HATCH since 2026-10-25, Ctrl+S and Ctrl+Q consumed at the
-// gate like every other chord.
+// contract. BOTH kinds take the shared modal route (architect 2026-07-28)
+// and differ only in their commit / cancel bodies: the FlagPayload editor
+// commits the flag's own payload and the IterBound editor commits its bound,
+// both drawing in the TOP strip. Neither passes a bare-Tab hook, having no
+// vocabulary to complete, and a bare Tab never reaches this route at all —
+// the on_key gate swallows it, a flag editor publishing no dialog and so no
+// ring (route_modal_editor_key). Esc / Enter are the session's only exits:
+// NO HATCH since 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate like
+// every other chord.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
-    if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        return route_modal_editor_key(
-            app.top_flag_editor, key, mods,
-            /*autocomplete=*/nullptr,
-            [this] {
-                // Enter commits + renders + closes in one action.
-                // A successful commit stores the values on the owner and
-                // closes the editor; only then does the BPM sweep fire. A
-                // parse failure leaves the editor open (its text selected,
-                // a card saying why) and renders nothing.
-                if (flag_editor.commit_bpm_edit()) {
-                    // render_bpm_sweep owns the mode teardown on its success
-                    // path: after the batch is built and accepted (dispatched,
-                    // or parked behind a killed render's drain — a busy worker
-                    // no longer bails) it wipes the session-only bpm state and
-                    // exits bpm mode, so an accepted sweep leaves no marker
-                    // carrying bpm state and the next M on this marker seeds
-                    // []. A guard-bail (return false) is an environmental
-                    // backstop — batch-folder creation failure, no valid
-                    // cells; the stale-endpoint class is
-                    // unreachable because the modal bpm session freezes the
-                    // store between mode entry and this dispatch. The commit
-                    // already closed the editor, and bpm mode is exactly its
-                    // editor session, so a bail exits the mode here —
-                    // mode-without-editor stays unreachable.
-                    if (!render_bpm_sweep()) {
-                        flag_editor.exit_bpm_mode();
-                    }
-                } else if (!text_editor::is_active(app.top_flag_editor)) {
-                    // commit_bpm_edit closed the editor without committing
-                    // (the invalid-target backstop): take the mode down with
-                    // it. A refusal leaves the editor open and
-                    // deliberately does not land here.
-                    flag_editor.exit_bpm_mode();
-                }
-            },
-            [this] {
-                flag_editor.exit_top_flag_edit_no_commit();
-                flag_editor.exit_bpm_mode();
-                viewport.invalidate_modal_dialog_area();
-            },
-            [this] { viewport.invalidate_dialog_editor_box(); });
-    }
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
         // The ITERATION BOUND editor: the payload editor's route — the same
         // modal route, the same top-strip repaint, its whole surface (a
@@ -10240,28 +10343,56 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // REOPENS (open_trim_presets) seated on the name the commit or Save As
 // left (trim_name_seat_), the settings page's return one content over; a refused
 // name leaves the editor standing and reopens nothing.
+// THE BPM FORM'S LINE EDITOR RIDES IT THE SAME WAY (architect 2026-10-29):
+// Kind::BpmField, read before the route like the name's, forks the route
+// and the return — no completion (a Tab walks the ring), the field's commit
+// (GuiFlagEditor::commit_bpm_field), and on the close THE BPM FORM REOPENS
+// (open_bpm_form) seated on the field's row, the session's target, read
+// before the close resets it; a refused field leaves the editor standing
+// and reopens nothing. The BPM mode stands across the edit: the form's
+// session is the form or this editor.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     const bool was_active = text_editor::is_active(app.settings_editor);
-    const bool trim_name =
-        app.settings_editor.kind == text_editor::Kind::TrimPresetName;
-    const bool consumed =
-        trim_name
-            ? route_modal_editor_key(
-                  app.settings_editor, key, mods,
-                  /*autocomplete=*/nullptr,
-                  [this] { commit_trim_preset_name(); },
-                  [this] { settings_editor.exit_no_commit(); },
-                  [this] { viewport.invalidate_dialog_editor_box(); })
-            : route_modal_editor_key(
-                  app.settings_editor, key, mods,
-                  [this] { return settings_editor.autocomplete_value(); },
-                  [this] { settings_editor.commit(); },
-                  [this] { settings_editor.exit_no_commit(); },
-                  [this] { viewport.invalidate_dialog_editor_box(); });
+    const text_editor::Kind kind = app.settings_editor.kind;
+    const int target = app.settings_editor.target;
+    const bool consumed = [&] {
+        switch (kind) {
+            case text_editor::Kind::TrimPresetName:
+                return route_modal_editor_key(
+                    app.settings_editor, key, mods,
+                    /*autocomplete=*/nullptr,
+                    [this] { commit_trim_preset_name(); },
+                    [this] { settings_editor.exit_no_commit(); },
+                    [this] { viewport.invalidate_dialog_editor_box(); });
+            case text_editor::Kind::BpmField:
+                return route_modal_editor_key(
+                    app.settings_editor, key, mods,
+                    /*autocomplete=*/nullptr,
+                    [this] { flag_editor.commit_bpm_field(); },
+                    [this] { settings_editor.exit_no_commit(); },
+                    [this] { viewport.invalidate_dialog_editor_box(); });
+            default:
+                return route_modal_editor_key(
+                    app.settings_editor, key, mods,
+                    [this] { return settings_editor.autocomplete_value(); },
+                    [this] { settings_editor.commit(); },
+                    [this] { settings_editor.exit_no_commit(); },
+                    [this] { viewport.invalidate_dialog_editor_box(); });
+        }
+    }();
     if (was_active && !text_editor::is_active(app.settings_editor)) {
-        if (trim_name) open_trim_presets(trim_name_seat_);
-        else           open_settings_page(settings_editor.page_key());
+        switch (kind) {
+            case text_editor::Kind::TrimPresetName:
+                open_trim_presets(trim_name_seat_);
+                break;
+            case text_editor::Kind::BpmField:
+                open_bpm_form(static_cast<GuiBpmField>(target));
+                break;
+            default:
+                open_settings_page(settings_editor.page_key());
+                break;
+        }
     }
     return consumed;
 }

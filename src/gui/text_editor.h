@@ -59,9 +59,10 @@ namespace text_editor {
 // whose cap is wider than what it can legally commit advertises longer typing
 // than it allows, which is the truthfulness defect the roster answers. THREE
 // CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
-// iteration bound, and, since 2026-09-06, the BPM bracket, whose
-// beats field stopped admitting leading zeros and so gained a widest spelling
-// like every other field of that grammar. THE SETTINGS VALUE IS A POLICY
+// iteration bound, and the BPM form's three fields (architect 2026-10-29;
+// the bracket line they replace took its tight bound 2026-09-06, when the
+// beats field stopped admitting leading zeros and so gained a widest
+// spelling like every other field of that grammar). THE SETTINGS VALUE IS A POLICY
 // CEILING and says so where it stands: FREE TEXT, with no widest spelling to
 // be tight against (the commit title was the second, until its editor
 // retired 2026-10-10).
@@ -169,11 +170,14 @@ constexpr int kMaxPendingCharsIterBound = 5;
 static_assert(kIterHopMax < 10,
               "a hop bound's magnitude no longer fits one digit");
 constexpr int kMaxPendingCharsIterHop = 2;
-// BPM popup, `<beats>@[<lo>,<hi>]` (parse_bpm_bracket, warpmarkers.h — the
-// grammar's one owner):
+// THE BPM FORM'S FIELDS (architect 2026-10-29), ONE CAP PER FIELD, the
+// session's `target` naming the field (GuiBpmField, warpmarkers.h — the
+// line's key and its reader there are the grammar's one owner). Each line
+// is `<key>=<value>`, the key the row's own, so each cap is its key, the
+// `=` and its value's widest spelling:
 //   BEATS  4 bytes, a positive integer with no leading zeros, capped at
 //          kBpmBeatsMax — so `9999` is the widest there is.
-//   LO/HI  18 bytes each. Each is pinned by an equality test to the bpm
+//   LOW / HIGH  18 bytes each. Each is pinned by an equality test to the bpm
 //          writer's own spelling (format_value_double at 0 decimals, i.e.
 //          to_chars' shortest round-trip form) inside [kBpmMin, kBpmMax] =
 //          [10, 400]. A shortest round-trip double never needs more than
@@ -185,21 +189,21 @@ constexpr int kMaxPendingCharsIterHop = 2;
 //          bound is attained, at `10.000000000000002` — the double one ulp
 //          above 10, whose rounding interval (half an ulp, 2^-50 wide) holds
 //          no sixteen-digit decimal.
-// 4 + 2 + 18 + 1 + 18 + 1 = 44, and the whole 44 is attained together:
-// `9999@[10.000000000000002,10.000000000000004]` is in bracket, in order and
-// spelled canonically throughout.
-//
-// A TIGHT BOUND SINCE 2026-09-06, when the beats arm stopped admitting
-// leading zeros (architect: "make it more strict") and the grammar gained one
-// spelling per value in every field. It was a POLICY 60 until then — sized
-// for a ten-digit beats count and two 23-byte doubles — because a field
-// whose widest legal spelling was `however many bytes the field will hold`
-// had no tight bound to be derived.
+// So `beats=` + 4 = 10, `low=` + 18 = 22, `high=` + 18 = 23, each attained.
+// PER FIELD AND NOT THE WIDEST OF THE THREE because each session edits one
+// field whose spellings are known: a shared 23 would let a beats line grow
+// thirteen bytes past anything its commit admits, the advertised-typing
+// defect this module's head rules out. A line retyped to ANOTHER field's
+// key is refused at the commit whatever its length (the key is the row's).
 static_assert(kBpmBeatsMax < 10000,
               "a beats count no longer fits four digits");
 static_assert(kBpmMin >= 1.0 && kBpmMax < 1000.0,
               "a bpm bound no longer fits three significant integer digits");
-constexpr int kMaxPendingCharsBpm = 44;
+constexpr int kMaxPendingCharsBpmField[3] = {
+    6 + 4,    // beats=9999
+    4 + 18,   // low=10.000000000000002
+    5 + 18,   // high=10.000000000000002
+};
 // Settings prompt. A POLICY CEILING — free text has no widest spelling to be
 // tight against. Sized for the free-text provenance fields (url, notes),
 // which are generous for a typical URL or note. The scalar keys are still
@@ -229,8 +233,9 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // edit different payload shapes; the kind now selects only the length cap
 // (handle_key accepts any character-bearing key and defers grammar to the
 // commit-time validator). The flag editor uses FlagPayload (the plain
-// canonical payload — tempo, scale, labels, never a bracket); the BPM popup
-// uses BpmBracket; the settings-prompt editor uses SettingsAssignment
+// canonical payload — tempo, scale, labels, never a bracket); the BPM
+// form's line editor uses BpmField (one `key=value` line of the form's
+// three); the settings-prompt editor uses SettingsAssignment
 // (`key=value`); the trim preset's name editor uses TrimPresetName (free
 // text, the name); and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
@@ -241,8 +246,16 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
 // they name. THERE ARE FIVE KINDS AND THREE OF THEM ARE
-// DIALOG EDITORS (SettingsAssignment, BpmBracket, TrimPresetName); the two top-strip kinds (FlagPayload, IterBound) share the
-// flag editor's State and paint in the marker lane. TrimPresetName (architect
+// DIALOG EDITORS (SettingsAssignment, TrimPresetName, BpmField), ALL THREE
+// ON THE SETTINGS EDITOR'S BUFFER (AppState::settings_editor) since the BPM
+// form, architect 2026-10-29; the two top-strip kinds (FlagPayload,
+// IterBound) share the flag editor's State and paint in the marker lane.
+// BpmField (architect 2026-10-29) is THE BPM FORM'S LINE EDITOR, a row's tap
+// on the form (GuiInputHandler::bpm_form_commit): opened prefilled with the
+// row's line, `target` the field (GuiBpmField, warpmarkers.h), its commit
+// the field's (GuiFlagEditor::commit_bpm_field), its close returning to the
+// form; it retired the bracket line `<beats>@[<lo>,<hi>]` and the kind that
+// edited it on the flag editor's State, BpmBracket. TrimPresetName (architect
 // 2026-10-28 night) is THE TRIM PRESET'S NAME EDITOR, the trim presets list's
 // Save As (GuiInputHandler::trim_presets_save_as, which Save's press on an
 // empty list runs too): it rides the settings
@@ -270,14 +283,14 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // modality predicate (GuiInputHandler::keyboard_modal_editor_active) reads
 // AppState::text_editor_session, which covers all five kinds;
 // AppState::dialog_editor_session names the three DIALOG kinds
-// (SettingsAssignment and TrimPresetName, both on the settings editor's
-// buffer, and BpmBracket on its own) for the questions only a dialog has.
+// (SettingsAssignment, TrimPresetName and BpmField, all on the settings
+// editor's buffer) for the questions only a dialog has.
 enum class Kind {
     FlagPayload,
-    BpmBracket,
     SettingsAssignment,
     IterBound,
     TrimPresetName,
+    BpmField,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,
@@ -312,7 +325,10 @@ uint64_t next_session_id();
 // State for a single editable rect.
 struct State {
     // Identifier of the entity being edited. -1 means "not editing".
-    // The caller decides what this means (a marker index for the flag editor).
+    // The caller decides what this means (a marker index for the flag
+    // editor; 0 for the settings line and the trim preset's name; the field,
+    // GuiBpmField's value, for a BpmField session, whose byte cap reads it —
+    // kMaxPendingCharsBpmField).
     int target = -1;
 
     // THIS EDITING SESSION'S ID, taken from next_session_id() above at every
