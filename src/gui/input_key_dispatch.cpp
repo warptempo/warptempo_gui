@@ -4775,7 +4775,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
 // dropped. It serves EVERY editor kind (text_editor::Kind is the list) — the
-// settings prompt, the bpm bracket, the ITERATION BOUND editor (2026-09-05)
+// settings prompt (with the trim preset's name and the BPM form's field on
+// the same buffer), the ITERATION BOUND editor (2026-09-05)
 // and (architect 2026-07-28) the
 // top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can

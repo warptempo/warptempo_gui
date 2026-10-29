@@ -273,7 +273,7 @@ struct GuiPlaybackLifecycle {
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
+    //   * THE MODAL FAMILY'S SURFACES — the one dialog editor, the prompts
     //     and the progress modal — and THE TWO OVERLAYS, the picker (all
     //     five of its contents, the project picker, the settings page and
     //     the value list it swaps in, the trim presets list, whose name

@@ -1122,11 +1122,11 @@ bool GuiInputHandler::render_bpm_sweep() {
         // the derived base tempo, the span's enabled markers passed, and
         // EVERY ENABLED OWNING MARKER OUTSIDE THE SPAN rescaled by the
         // owner's own change so the map keeps its shape — a disabled marker
-        // is untouched wherever it sits. The editor commit already ran the
-        // same rewrite at
-        // both bracket ends (monotone in bpm), so in practice every cell
-        // rescales in-bracket; the refusal here is the per-cell backstop,
-        // reported like a refused derivation.
+        // is untouched wherever it sits. The RENDER gate (bpm_form_render,
+        // through GuiFlagEditor::bpm_sweep_bracket_admits) already ran the
+        // same rewrite at both bracket ends (monotone in bpm), so in
+        // practice every cell rescales in-bracket; the refusal here is the
+        // per-cell backstop, reported like a refused derivation.
         auto cell_warp_markers = bpm_cell_warp_markers(
             base_warp_markers, bpm_owner_idx, endpoint_idx,
             computed->base_tempo_cents);

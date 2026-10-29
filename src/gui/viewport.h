@@ -604,7 +604,7 @@ struct Viewport {
     // progress modal stands or was last painted (2026-10-14, modal_box.h — the box over the canvas
     // column and its controls row; the taskbar dialog's overlay to the
     // window's foot 2026-10-10 to 2026-10-14 — the definition says why). ITS CALLERS,
-    // re-greped 2026-10-14, are the TWO DIALOG EDITORS' closers plus the
+    // re-greped 2026-10-14, are the DIALOG EDITOR's closers plus the
     // RENDER PLAYER's three, the player being the row's third owner (A
     // STANDING EDITOR'S EDITS — typing, the completions, the caret blink, a
     // refusal, the pointer's text drag — take the box's interior alone since

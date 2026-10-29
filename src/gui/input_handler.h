@@ -4415,11 +4415,12 @@ private:
 public:
     bool keyboard_modal_editor_active() const;
 
-    // THE DIALOG EDITORS ALONE — the settings editor and the BPM bracket
-    // editor, the editors that paint in the MODAL FAMILY'S BOX with a field,
-    // a ring and OK / Cancel buttons (modal_box.h); the membership is
-    // AppState::dialog_editor_session, which names them once and hands back
-    // the live one's session id. It answers the questions only a DIALOG has
+    // THE DIALOG EDITOR ALONE — the settings editor's buffer, in its three
+    // kinds (Kind::SettingsAssignment, TrimPresetName, BpmField), the editor
+    // that paints in the MODAL FAMILY'S BOX with a field, a ring and OK /
+    // Cancel buttons (modal_box.h); the membership is
+    // AppState::dialog_editor_session, which names it once and hands back
+    // the live session id. It answers the questions only a DIALOG has
     // — its own surfaces — and nothing about modality, which is
     // keyboard_modal_editor_active's (above). ITS READERS, re-derived by grep
     // 2026-10-25, each the dialog's own:

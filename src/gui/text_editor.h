@@ -336,7 +336,7 @@ struct State {
     // it alone — `target` is what says "not editing", and a dead session's id
     // must not be reusable). The TOP-STRIP FLAG editor takes one too and
     // nothing ever reads it: it publishes no dialog, so it has no geometry to
-    // validate. What the two DIALOG editors' ids are for is at
+    // validate. What the DIALOG editor's id is for is at
     // AppState::ModalDialogGeometry.
     uint64_t session = 0;
 

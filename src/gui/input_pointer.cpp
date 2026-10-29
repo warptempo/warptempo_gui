@@ -1147,8 +1147,8 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = one of the two DIALOG editors' boxes (settings, which also hosts the
-    // trim preset's name, / BPM, painting in the
+    // true = the DIALOG editor's box (settings, which also hosts the
+    // trim preset's name and the BPM form's field, painting in the
     // modal family's box since 2026-10-14 — in the bottom row's modal from
     // 2026-08-13, centered for the one day from 2026-08-12, and the field
     // was `bottom_strip` while they lived on the status lane); false = the
@@ -9765,7 +9765,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // F2.1: editor-text drag motion. Handled before the dialog-editor branch
-    // (which returns) so the gesture reaches the two dialog editors' fields,
+    // (which returns) so the gesture reaches the dialog editor's field,
     // and before the trim / playhead branches. A lost button finalizes like
     // release, mirroring those handlers.
     if (app.editor_text_drag.active) {

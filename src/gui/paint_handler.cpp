@@ -5282,8 +5282,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // THE MODAL SURFACE — THE BOTTOM ROW (architect 2026-08-13, scrapping the
 // centered box he ratified the day before: "it looks sloppy — no compositor
 // drop shadow, and faking one wouldn't work"). It hosts the PROMPTS and the
-// TWO modal editors (settings / BPM; the commit-title editor was the third
-// until its retirement 2026-10-10); the top-strip
+// ONE dialog editor, the settings editor's buffer in its three kinds
+// (settings line, trim preset name, BPM form field; the commit-title editor
+// was a second until its retirement 2026-10-10); the top-strip
 // FLAG editor is deliberately NOT a dialog — it is positional, editing the
 // marker where it stands, the unrolled flag (render_flag_editor_box), a
 // modal since 2026-10-25 by its veil alone (keyboard_modal_editor_active).
