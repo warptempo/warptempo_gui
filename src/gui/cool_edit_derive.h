@@ -60,7 +60,7 @@
 // the panel label's pair (the label's swap below, its two members filled by
 // label_ink / label_shadow rather than the table); the render player's time
 // fields the field's two lines; THE CANVAS COLUMN (2026-10-09) the mid (the
-// ruler's ground), the hilight (the brass's light lines, the program ring's
+// ruler's ground), the hilight (the ring tones' light line, the program ring's
 // light column and row), the dark (the ring's dark column and rows) and the
 // cue shadow. THE TWO TONES OFF THE WAVEFORM'S INK, Cool Edit's view bar
 // span bevels (ToneSource::Ink below, their proof over its five presets),
@@ -68,7 +68,8 @@
 // trio): their shadow's lightness is THE WAVEFORM OUTLINE'S RULE
 // (palette_file.cpp's proof, the generator). The band's recess, its panes' mid lines, the dock
 // bar and the tab strip's four Organizer tones are records since the
-// simple layout (2026-10-22): the band and row 8 plain wood, the strip gone.
+// simple layout (2026-10-22): the band and row 8 on the bare ground, the
+// strip gone.
 //
 // THE BUTTON CASE FOLLOWS FACE TOO (architect 2026-10-10, reopening
 // 2026-10-09's "the buttons did not change color with the preset": the fit's
@@ -236,7 +237,7 @@ struct Tone {
 // Each with where Cool Edit draws it.
 inline constexpr Tone kTones[] = {
     // the dock's recess and the band's stretch where no pane stands (a
-    // record since 2026-10-22: the band is plain wood, the simple layout)
+    // record since 2026-10-22: the band is the bare ground, the simple layout)
     {"recess",        0x4E5662, 0.798,  0.000, nullptr},
     // a pane's bottom and right line, a groove's left column, the end bar's
     // and the gripper's mid lines, the time field's ground
@@ -569,8 +570,8 @@ inline constexpr CaseTone kCaseShadowFirst = {-0.00100, 0.37000, 0.08200, 0x5D5E
 inline constexpr CaseTone kCaseShadowLast  = {0.00650, 0.29850, 0.08200, 0x4C4D4D};
 inline constexpr CaseTone kCaseCorner      = {0.00450, 0.29500, 0.08100, 0x4B4C4C};
 // (The GuiPalette members the case filled, its ramp's array and four lines
-// off the panel's Face, left 2026-10-21: the case is the ebony's,
-// materials.h's CASE, which takes its stop count from this ramp's.)
+// off the panel's Face, left 2026-10-21: the key's face is materials.h's THE
+// KEY.)
 
 constexpr bool within_two(uint32_t x, uint32_t y) {
     for (int shift = 0; shift <= 16; shift += 8) {

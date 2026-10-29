@@ -324,7 +324,7 @@ namespace {
 // keyboard's keys and a PUSH button's PLAIN ones on the dialogs' word
 // buttons, raised at rest, sunken pressed and sunken over the Hilight dither
 // checked — stood from 2026-10-02 until its last two wearers became the
-// ebony case, 2026-10-22: architect, "buttons in ebony — yes". Its face
+// roster's keys, 2026-10-22. Its face
 // answer, ButtonBoxFace and the glyph's shift it carried, went 2026-10-23:
 // no roster key carries anything on its face.)
 
@@ -692,7 +692,7 @@ AppState::RedesignButtonFace& publish_button_face(
 // meant anything to the walk, First and Gap taking the same branch. The row's
 // GROUP BOUNDARIES are redesign_button_opens_icon_group's (app_state.h), the
 // unit of the `h` view's stand-in swap, and its RUN BOUNDARIES — the run gap
-// of wood, the band's one spacing since the simple layout (2026-10-22) —
+// of bare ground, the band's one spacing since the simple layout (2026-10-22) —
 // redesign_button_opens_icon_run's.
 struct IconRowDef {
     RedesignButton id;
@@ -1690,7 +1690,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 0, at the window's top; row 4 of the
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
-    // pad, the cases, the strip pad on the plain wood, the left members in
+    // pad, the cases, the strip pad on the bare ground, the left members in
     // THREE RUNS and the right five in ONE — TWENTY-SIX members outside the
     // `h` view and EIGHTEEN inside it (2026-10-28 night, the Trim Presets key
     // closing the zoom group, hidden in the view), RE-COUNTED off the roster enum, the
@@ -1744,7 +1744,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // Renders, Enable Tooltips, Noise — the Trim Presets key hidden there
     // with Follow),
     // 13·23 + 2·15 = 329;
-    // with one run gap of wood before the right run the band holds every
+    // with one run gap of bare ground before the right run the band holds every
     // run at
     //   513 + 15 + 115 = 643
     // Windows px outside the view (459 inside it) — the ring's 2258 device
@@ -2000,7 +2000,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE CLOCK in Cool Edit's dark TIME FIELD in its ring (the simple
 //   layout, 2026-10-22, program_spec.h; the field's shape, face and fixed
 //   width at kTimeShape's block below) — with THE ACTIVE TAB'S NAME on the
-//   wood past it and THE STATE LINE past the name in the panel label's
+//   ground past it and THE STATE LINE past the name in the panel label's
 //   shadowed pair, clipped short of the right block (architect 2026-10-03
 //   for the line);
 //
@@ -2067,7 +2067,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the other icon buttons", bigger finger targets without stealing waveform
 // height): the program's 23-W case round Cool Edit's 20-W seat — read from
 // the band's own accessors (render.h's program block) so the rows cannot
-// drift apart — on THE ROW'S OWN WOOD, the strip pad above the case and
+// drift apart — on THE ROW'S OWN GROUND, the strip pad above the case and
 // below it (the simple layout, 2026-10-22; Cool Edit's row 8 under its dock
 // bar, 4 W above and 5 below, 2026-10-09 to then). (Row 8's kdenlive
 // transport metrics, its 26-px boxes and
@@ -2145,7 +2145,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // 2026-10-23). The render
 // player's modal row in this lane takes the same case at the same seat
 // (modal_controls_seats) and stands its items its own eight W apart on the
-// row's wood (paint_modal_dialog's player branch).
+// row's ground (paint_modal_dialog's player branch).
 
 // The painter's half of the row's roster: four groups, all in the right
 // block and painted left to right in the order the body lays them (the two
@@ -2663,7 +2663,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_h     = seats.case_h;
     const int btn_y     = seats.case_y;
     // THE GROUPS ARE PLAIN RUNS (the simple layout, 2026-10-22): the cases
-    // abutting inside a group, the run gap of wood between two (row8_block;
+    // abutting inside a group, the run gap of bare ground between two
+    // (row8_block;
     // the bars between groups 2026-10-21 to 2026-10-22, Cool Edit's grippers
     // and end bars before).
     const Row8Lengths lengths = row8_lengths();
@@ -2774,7 +2775,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // clip too and cannot put the clock back on top mid-play. At a width
     // where nothing overlaps the order changes no byte: the clock and the
     // clipped line lie wholly left of the block, and the block's fresh
-    // ground is paint_bottom_strip's own wood over the same span.
+    // ground is paint_bottom_strip's own brushed ground over the same span.
     // THE FOUR GROUPS IN PAINTED ORDER, each read off its own table, so a
     // box joining or leaving moves the block with no second edit.
     // IN THE `h` VIEW the nudge pair's seats are the walk's two steps
@@ -2861,7 +2862,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             redesign_baseline(font, static_cast<double>(clock_field.y),
                               static_cast<double>(clock_field.h));
         // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes,
-        // "Tab A" / "Tab B" on the plain wood right of the clock): its FIRST
+        // "Tab A" / "Tab B" on the bare ground right of the clock): its FIRST
         // INK the name's air (5 W) past the ring's light column, the run's
         // origin its own left bearing short of that; the program face in THE
         // BONE INK over THE CUE LABEL'S SHADOW (show_ce_label; architect
@@ -2902,7 +2903,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             field_x + field_w + scaled_px(kProgramSpec.tab_name_air_px);
         const double name_origin =
             static_cast<double>(name_x) - text_shape::ink_left_px(name_run);
-        // THE STATE LINE: on the row's free wood, no panel, ITS FIRST INK the
+        // THE STATE LINE: on the row's free ground, no panel, ITS FIRST INK the
         // state air (5 W) past the name's advance — AT the advance, no air,
         // where the name's run ends in the separator (the `h` view, the
         // block above; 2026-10-25): the clip starts there and the run's
@@ -2985,7 +2986,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     tab/git/etc text"; the engraved pair past the label threshold,
         //     2026-10-10, is unread for this line: the one pair stands on
         //     every ground),
-        //     straight on the row's wood, ON THE CLOCK'S OWN BASELINE
+        //     straight on the row's ground, ON THE CLOCK'S OWN BASELINE
         //     (architect 2026-10-07: "whichever one is right, the other
         //     should be centred to behave like it", and the field is right).
         //     The larger face is the architect's (2026-10-03): "I don't
@@ -3092,8 +3093,8 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
     // top row and left column, light on the bottom row and right column,
     // mitred (paint_hairline_frame; render.h's line rule). A card keeps its
     // own height rule; its pad is the spec's (tooltip_pad_px). (The one-line
-    // square `card_frame` border of Windows 2000's tooltip on the Face, then
-    // the wood, 2026-10-04 to 2026-10-23, is git history.)
+    // square `card_frame` border of Windows 2000's tooltip on the Face,
+    // 2026-10-04 to 2026-10-23, is git history.)
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
     paint_cell_rect(cr, r, palette().card_ground);
     paint_hairline_frame(cr, r, palette().ce_dark, palette().ce_hilight);
@@ -3750,7 +3751,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ring's (paint_canvas_column_frame); THE RULER'S FOOT LINE one device px
     // of the ring's light tone on its one-W slot's last row
     // (program_line_px), the slot's other rows the ruler's ground. (The
-    // wood, the brass's flat ruler and its strip, the ring a scaled line,
+    // earlier flat ruler and its strip, the ring a scaled line,
     // 2026-10-21 to 2026-10-23, are git history.)
     const GuiPalette& pal = palette();
     const int ground_h = ruler_ground_h_px();
@@ -5137,8 +5138,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE BRUSHED
-    // GROUND (materials.h's GROUND, 2026-10-23; the plain wood of the simple
-    // layout 2026-10-22, Cool Edit's dock bar before), the
+    // GROUND (materials.h's GROUND, 2026-10-23; bare in the simple layout
+    // 2026-10-22, Cool Edit's dock bar before), the
     // lane the window's width on its foot. The row's tenants are the
     // program's (row 8, and the modal family's controls row — every modal's,
     // modal_box.h, 2026-10-14), so this lane never changes for them. The
@@ -5326,8 +5327,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // legend printed under it (paint_key_legend: a word button's word in
 // capitals with its access key underlined, a player key its own legend).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
-// architect 2026-10-23). No hover face. (Windows' push buttons 2026-10-02 to
-// 2026-10-22, the ebony case 2026-10-22 to 2026-10-23.)
+// architect 2026-10-23). No hover face. (Windows' push buttons, 2026-10-02 to
+// 2026-10-22, are git history.)
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
 // lift"), which is what makes the click face real: a press ARMS the button
@@ -5712,8 +5713,8 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
 }
 
 // (THE WORD BUTTONS AND THE KEYS AT THIS GEOMETRY — word_and_key_case_rects,
-// the ebony's patches for every answer set's cluster and every keyboard
-// page's keys, 2026-10-22 to 2026-10-23 — went with the ebony; the key
+// patches for every answer set's cluster and every keyboard
+// page's keys, 2026-10-22 to 2026-10-23 — went with that chrome; the key
 // patches seat their sizes again, program_key_seats above.)
 
 
@@ -5866,7 +5867,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     // THE MODAL'S SURFACE IS THE MODAL FAMILY'S (architect 2026-10-14,
     // modal_box.h): every owner's controls stand on THE CONTROLS ROW — row
-    // 8's rows under the box, on the row's own wood,
+    // 8's rows under the box, on the row's own ground,
     // which paint_bottom_strip lays on every frame class; or, under a dialog
     // editor on the glass, the same row lifted onto the on-screen keyboard's
     // band (`kb_h`, onscreen_keyboard::modal_keyboard_h_px), its face the
@@ -7048,8 +7049,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // from the keyboard — TWO device px whatever the checked state (the
         // two depths, key_depth, 2026-10-23), the legend under the key
         // unmoved. (Windows'
-        // push button 2026-10-02 to 2026-10-22, the ebony case 2026-10-22 to
-        // 2026-10-23.) THE FOCUS IS NOT PAINTED (below): the two focus
+        // push button 2026-10-02 to 2026-10-22 is git history.) THE FOCUS IS
+        // NOT PAINTED (below): the two focus
         // strengths stay in the state (AppState::modal_dialog_focus_active),
         // where the keyboard's walk reads them. NO
         // HOVER FACE but on the player's row (below): the pointer walk
@@ -7237,7 +7238,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //               key goes deeper, as on the band's checked cases.
 // (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
 // Hilight dither armed, the cap in the theme's label — 2026-10-02 to
-// 2026-10-22; the ebony case 2026-10-22 to 2026-10-23.)
+// 2026-10-22 — is git history.)
 // NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
 // pointer, so a hover has no producer and a hint has nowhere to hang.
 //

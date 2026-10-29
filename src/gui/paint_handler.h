@@ -69,8 +69,7 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app);
 // (main.cpp's refresh_logo_legend) is this rect united with the one the
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
-// (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, read by the
-// bake for their ebony patches 2026-10-21 to 2026-10-22, went with the
+// (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, went with the
 // caption, 2026-10-24.)
 
 // -- Constants used by paint code ----------------------------------------
@@ -987,7 +986,7 @@ private:
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
     // 2026-10-09): the clock in its dark time field (2026-10-05) in a
-    // ring at the left, the active tab's name and THE STATE LINE on the wood
+    // ring at the left, the active tab's name and THE STATE LINE on the ground
     // past it (architect 2026-10-03: the `h` walk line or the render's
     // progress line at the normal face, clipped short of the right block),
     // then the right block packed against the program ring's right edge
@@ -1027,8 +1026,7 @@ private:
     // THE CARD FACE every floating surface draws, the period's tooltip
     // (architect 2026-10-04): `card_ground` with a thin `card_frame` line on
     // all four sides (the tooltip and the notification cards; the sides
-    // 2026-10-06; Cool Edit's colors 2026-10-10; the brass 2026-10-21; the
-    // wood 2026-10-22;
+    // 2026-10-06; Cool Edit's colors 2026-10-10;
     // render.h's palette block). (Its MENU face, the dropdown's plain raised
     // panel, went with the Settings popup, 2026-10-21.)
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r);

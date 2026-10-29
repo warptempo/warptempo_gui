@@ -40,9 +40,7 @@
 //                                          tooltip, the modal box)
 //   selected_fill                        = THE CONSTANT kSelectionFill,
 //                                          3E4044, the grey bar (architect
-//                                          2026-10-23: "the grey everywhere";
-//                                          the brass 9C7B3A of 2026-10-21
-//                                          retired)
+//                                          2026-10-23: "the grey everywhere")
 //   selected_text                        = THE CONSTANT kSelectionText, the
 //                                          bone
 namespace chrome_derive {

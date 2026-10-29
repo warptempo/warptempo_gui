@@ -31,8 +31,7 @@
 //     the static_asserts alone.
 //   THE CAPTION IS labwc's (render.h's caption note, 2026-10-24): the
 //     app paints none (one flat ground and two title inks as constants
-//     2026-10-23 to 2026-10-24; the walnut, then the flat ebony,
-//     2026-10-21 to 2026-10-23). The
+//     2026-10-23 to 2026-10-24). The
 //     caption's six colors and the
 //     second kind of preset that set them — the `caption` device key, its
 //     Settings Caption row, the product's flat `default` (9B4B2C, the

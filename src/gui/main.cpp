@@ -799,7 +799,8 @@ GuiRect bottom_canvas_frame_area(const AppState& a) {
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each a plain run of cases,
-// run_gap_px of wood between two. It is BOTTOM LANE 0, on the window's foot
+// run_gap_px of bare ground between two. It is BOTTOM LANE 0, on the window's
+// foot
 // under the canvas's bottom frame row (lane 1, bottom_canvas_frame_area
 // above), the window's whole width, whatever stands over it (the modal
 // family's controls row on its rows and the on-screen keyboard's band over

@@ -423,8 +423,8 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the key DOWN one device px, its
 // checked depth (paint_key,
-// 2026-10-23; the ebony case's checked face 2026-10-22 to 2026-10-23,
-// Windows' soft sunken face over the Hilight dither before), which this key and
+// 2026-10-23; Windows' soft sunken face over the Hilight dither before),
+// which this key and
 // the symbol-mode key (while a symbol page stands) wear off their lamps — and
 // the letter caps themselves, every one of which turns capital while the arm
 // stands. The page key wears no lamp: its cap already says the page.
@@ -559,8 +559,8 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT;
 // it carries its edge pad on all four sides (edge_pad_px) and NO LINE OF ITS
 // OWN. ITS GROUND IS THE BRUSHED GROUND, ITS KEYS THE HI-FI SKIN'S KEYS WITH
-// NO LED, THE CAP PRINTED ON THE FACE (architect 2026-10-23; the wood and the
-// ebony case 2026-10-22 to 2026-10-23) — paint_onscreen_keyboard,
+// NO LED, THE CAP PRINTED ON THE FACE (architect 2026-10-23) —
+// paint_onscreen_keyboard,
 // materials.h's GROUND and KEY. Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit
 // and the controls row lifted onto the band, the space between the row's

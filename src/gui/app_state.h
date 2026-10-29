@@ -2495,7 +2495,7 @@ enum class RedesignButton {
     // IT IS NOT THE BAND'S LAST GROUP: the HISTORY OPENER stands right of it
     // in the band's right run (kIconRowHistoryOpener). IconListen leads the
     // render-entry group (redesign_button_opens_icon_group) and its run, the
-    // band's third, the run gap of wood before it
+    // band's third, the run gap of bare ground before it
     // (redesign_button_opens_icon_run).
     IconListen,
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
@@ -3297,8 +3297,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // THE BAND'S GROUPS — true for the button that OPENS each group of the
 // roster's order. SINCE THE SIMPLE LAYOUT (2026-10-22) A GROUP PAINTS
 // NOTHING: the band's picture is its RUNS, the cases abutting inside a run
-// and run_gap_px of wood between two (redesign_button_opens_icon_run below
-// and program_spec.h's run_gap_px, the spacing's owners). What a group still
+// and run_gap_px of bare ground between two (redesign_button_opens_icon_run
+// below and program_spec.h's run_gap_px, the spacing's owners). What a group
+// still
 // is, is THE UNIT OF THE `h` VIEW'S STAND-IN SWAP: icon_row_walk
 // (paint_handler.cpp), this predicate's one reader, swaps a group named by
 // its leader in kIconRowHistoryStandIns for the stand-in members and skips
@@ -3348,7 +3349,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // THE BAND'S RUNS (architect 2026-10-22, the simple layout, on his layout mocks:
 // "push all icons together … add a spacing after render, and after
 // flatten"): the left members stand in THREE PLAIN RUNS, the cases abutting
-// and run_gap_px of wood between two (program_spec.h), each opened by its
+// and run_gap_px of bare ground between two (program_spec.h), each opened by
+// its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
 // Save and Undo / Redo / Render merged, Copy Phase Resets between Redo and
 // Render since 2026-10-25), Zoom In (Zoom In .. Flatten: the zoom and

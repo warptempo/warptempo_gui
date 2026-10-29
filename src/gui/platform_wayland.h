@@ -598,8 +598,8 @@ public:
     // knows whether the machine it runs on has keys; a preference would let
     // the laptop grow a surface with no reason to exist, and the glass has no
     // choice to offer. STATIC (2026-10-22): a fact of the backend compiled
-    // in (the materials' bake asked it for the keys' ebony patches,
-    // 2026-10-22 to 2026-10-23).
+    // in (the materials' bake once asked it for the keys' patches,
+    // 2026-10-22 to 2026-10-23, and no longer does).
     static bool wants_onscreen_keyboard();
 
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD — the road

@@ -197,8 +197,8 @@ inline constexpr uint32_t kDimInk    = 0x6A6A6E;
 inline constexpr uint32_t kRulerGround     = 0x0E0E10;
 inline constexpr uint32_t kFieldGround     = 0x0A0A0C;
 inline constexpr uint32_t kTimeFieldGround = 0x000000;
-// THE SELECTION PAIR (architect 2026-10-23: "the grey everywhere"; the brass
-// pair retired): a flat grey bar under the bone — the lists' lit row, the
+// THE SELECTION PAIR (architect 2026-10-23: "the grey everywhere"): a flat
+// grey bar under the bone — the lists' lit row, the
 // flag editor's and the dialog editors' selected substring.
 inline constexpr uint32_t kSelectionFill = 0x3E4044;
 inline constexpr uint32_t kSelectionText = kBoneInk;

@@ -44,8 +44,8 @@
 // prompt's question included ("the user shouldn't be typing on a non-flat
 // color"); EVERY BUTTON A SQUARE KEY with its legend under it, the word
 // buttons' words in capitals (paint_handler.cpp's modal_word_buttons and
-// paint_key_legend) (paint_modal_box). (The wood, the ebony word buttons and
-// a prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
+// paint_key_legend) (paint_modal_box). (The earlier word buttons and a
+// prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the main window's ring: the box IS the ring's rect. At the
 // tablet's 2304 x 1440, 300 % and the strip pad's 13 W (re-derived

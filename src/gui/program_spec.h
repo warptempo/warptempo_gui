@@ -145,7 +145,7 @@ struct ProgramSpec {
     // still its reserved cell plus the pad each side, no least width —
     // architect 2026-10-10, the 85-W floor round row 8's clock removed.)
     // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes, "Tab
-    // A" / "Tab B" stands on the plain wood right of the clock): its first
+    // A" / "Tab B" stands on the bare ground right of the clock): its first
     // ink this far past the clock ring's light column. THE STATE LINE'S AIR:
     // its first ink this far past the name's advance (the pad that stood
     // after the clock group's closing bar, 2026-10-21).

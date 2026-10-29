@@ -160,7 +160,7 @@ struct TrimRange {
 // 400 % the pattern is four times finer than a 96-dpi screen's and the eye
 // blends it as it blended the original. NO DITHER IS DRAWN TODAY: the last,
 // Windows' checked face, went 2026-10-22 when its last wearers became the
-// ebony case (the popup lists' scroll track 2026-10-14, the trim track's
+// flat keys (the popup lists' scroll track 2026-10-14, the trim track's
 // checker with the view bar 2026-10-09). THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT; every other chrome length stays in Windows px (scaled_px).
 //
@@ -295,7 +295,7 @@ struct TrimRange {
 // settled 2026-10-26; the legend face its first night) in the bone
 // kBoneInk like the cards' words (2026-10-23 night; the legend ink
 // kLegendInk until then). (Windows 2000's one-W `card_frame`
-// border, square, on the Face, then the wood, 2026-10-04 to 2026-10-23.)
+// border, square, on the Face, 2026-10-04 to 2026-10-23, is git history.)
 // THIS PARAGRAPH IS THE RULE'S ONE STATEMENT.
 // THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
 // canvas, the same under every chrome): a ring of the panel's tones round
@@ -425,8 +425,8 @@ struct GuiPalette {
     // (THE BAND'S RECESS AND THE TAB STRIP'S FOUR EDGE TONES left 2026-10-22
     // with the band's void and the strip, the simple layout;
     // THE BUTTON CASE's twenty-four members, its ramp, highlight, shadow ends
-    // and corner off the Face 2026-10-10..10-21, the ebony's, materials.h's
-    // CASE.)
+    // and corner off the Face 2026-10-10..10-21, replaced by materials.h's
+    // THE KEY.)
     // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
     // disabled_* mixes toward the Face): the triangle of the `cue` red, the
     // cue shadow, and the resting label.
@@ -467,7 +467,7 @@ GuiColor surface_text(GuiSurface surface);
 // it with palette_record, palette_file.h) — and THE CHROME'S, DERIVED FROM
 // THE PANEL'S FACE AND THE INK (2026-10-10, the chrome inherits Cool Edit;
 // the Face a material's once the materials are baked, 2026-10-21, the
-// wood's since 2026-10-22;
+// brushed ground's mean since 2026-10-23;
 // live_chrome_words, chrome_derive.h).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
 // `waveform` key names THE ACTIVE PRESET and gives the words at launch; the
@@ -1854,12 +1854,13 @@ ProgramRingColumns program_ring_columns(const AppState& a);
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12): the clock in
 // its ringed time field, the active tab's name and the state line on the
-// wood beside it at the left (architect 2026-10-02 / 2026-10-03 /
+// ground beside it at the left (architect 2026-10-02 / 2026-10-03 /
 // 2026-10-05; the name 2026-10-22), and the skips (Go to Start, Go to End;
 // 2026-10-24), the MARKER-VERB GROUP, the step and
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
 // (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
-// 2026-10-18) packed right, each a plain run of cases, run_gap_px of wood
+// 2026-10-18) packed right, each a plain run of cases, run_gap_px of bare
+// ground
 // between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
 // membership), all one lane ON THE WINDOW'S FOOT.
 //
@@ -1867,7 +1868,7 @@ ProgramRingColumns program_ring_columns(const AppState& a);
 // PAD, the program's case (the band's own, read from its accessors above so
 // the rows cannot drift apart), THE STRIP PAD — strip_h_px, 147 device rows
 // at 300 % and the pad's 13 (the band's own height until 2026-10-24, when
-// its upper pad became the logo lane) — on the plain wood, no
+// its upper pad became the logo lane) — on the bare ground, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.

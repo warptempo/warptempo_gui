@@ -269,7 +269,7 @@ inline int content_height_px(const AppState& a) {
 }
 
 // THE BAND: THE MODAL FAMILY'S PANEL (architect 2026-10-14, modal_box.h —
-// the box wearing the program ring and its wood margins, from the view
+// the box wearing the program ring and its margins of ground, from the view
 // bar's top row to the controls row's top), a FIXED height
 // whatever the listing's length (2026-08-28, the ruling above). Like the
 // keyboard's own accessor it does not ask whether the panel stands.

@@ -22,7 +22,7 @@
 // LED, the inks, the fields) and the two ring tones off the ground's mean
 // (materials::ring_light / ring_dark, the palette's `ce_hilight` and
 // `ce_dark`); every line a ring or a key draws is ONE DEVICE PX
-// (hairline_px, render.h's line rule). (The ebony case with Cool Edit's
+// (hairline_px, render.h's line rule). (The button case with Cool Edit's
 // ramp, its rings and its glyph, 2026-10-09 to 2026-10-23, is git history.)
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as

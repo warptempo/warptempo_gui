@@ -1211,8 +1211,8 @@ void render_trim_flags(cairo_t* cr,
     // the marker lane's columns (paint_ruler_row) into the canvas ring's own
     // (paint_canvas_column_frame) — and ITS FOOT LINE, the ruler's light line
     // over, the light tone on its slot's LAST row, against the ruler. (The
-    // wood's ring and the brass's foot line of 2026-10-22, three px a line at
-    // 300 %, are git history.)
+    // earlier ring and foot line of 2026-10-22, three px a line at 300 %, are
+    // git history.)
     const GuiPalette& pal = palette();
     const int lw = program_line_px();
     const int cw = canvas_frame_column_w_px();
