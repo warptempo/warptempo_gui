@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cool_edit_derive.h" // the HLS round trip the ring tones take
+#include "cool_edit_derive.h" // the HLS round trip the ring tones and the accent take
 #include "render.h"           // GuiRect, GuiColor, the chokepoints
 
 #include <cairo/cairo.h>
@@ -197,14 +197,10 @@ inline constexpr uint32_t kDimInk    = 0x6A6A6E;
 inline constexpr uint32_t kRulerGround     = 0x0E0E10;
 inline constexpr uint32_t kFieldGround     = 0x0A0A0C;
 inline constexpr uint32_t kTimeFieldGround = 0x000000;
-// THE SELECTION PAIR — the lists' lit row, the flag editor's and the dialog
-// editors' selected substring: THE FILL IS THE WAVEFORM PRESET'S OWN
-// `selection`, Cool Edit's _Sel as it is (architect 2026-10-29, his
-// judgment aid: "just make selection fill take the cool edit color so I can
-// judge if it's worth it — ok if it breaks other themes"; chrome_derive.h's
-// selected_fill), and THE TEXT ON IT THE BONE, kSelectionText, on every
-// preset — no lightness swap, no derived tone, so on the near-white fills
-// (Default's F6F6FF among them) the bone will not read, which is his to see.
+// THE SELECTION PAIR (architect 2026-10-23: "the grey everywhere"): a flat
+// grey bar under the bone — the lists' lit row, the
+// flag editor's and the dialog editors' selected substring.
+inline constexpr uint32_t kSelectionFill = 0x3E4044;
 inline constexpr uint32_t kSelectionText = kBoneInk;
 
 // THE KEY (architect 2026-10-23): a flat face, a one-device-px black outline, a light top
@@ -228,10 +224,8 @@ inline constexpr uint32_t kKeyTopLight    = 0x767678;
 inline constexpr uint32_t kKeyFoot        = 0x0E0E10;
 inline constexpr uint32_t kKeyOutline     = 0x000000;
 inline constexpr uint32_t kLedUnlit       = 0x232325;
-// THE LED'S LIT TONE OF RECORD (the approved mock's 46DC6E): the accent
-// before the first palette install (materials.cpp's State, construction
-// state no frame paints — gui_main installs the palette before the window
-// exists); every install sets the preset's own (THE ACCENT, below).
+// THE LED'S LIT TONE OF RECORD (the mock's 46DC6E): its HLS saturation and
+// lightness are the accent's, the hue the waveform ink's (accent_of_ink).
 inline constexpr uint32_t kLedLitRecord   = 0x46DC6E;
 
 // THE RING TONES OFF A GROUND'S MEAN (the head's TONE RULE): light L + .16
@@ -253,7 +247,7 @@ static_assert(ring_light_of(0x212123) == 0x49494D &&
 // and its bottom row and right column kSpanDark, THE TONE RULE's light and
 // dark off the body (ring_light_of / ring_dark_of above). His reason: the
 // span's light bevel was the one place a LIGHT version of the waveform's
-// ink showed; the ink lives on the waveform alone. No
+// ink showed; the ink lives on the waveform (and the LEDs' hue) alone. No
 // preset touches the trio (render_trim_flags paints it, render.h's view
 // bar block).
 inline constexpr uint32_t kSpanFace  = 0x505053;
@@ -264,6 +258,15 @@ static_assert(kSpanLight == 0x78787C && kSpanDark == 0x202021);
 // long): the base under the gradient's mean, 1 − .12 / 3.
 inline constexpr uint32_t kGroundMeanEstimate = 0x212123;
 
+// THE ACCENT OF AN INK (architect 2026-10-23, "agree to all"): the ink's
+// HUE under the LED's fixed HLS saturation and lightness (kLedLitRecord's),
+// so the default's green 4BF3A7 lands at 46DC98, each preset's ink an
+// equally bright lamp of its own hue. Worn by the lit LEDs alone; no device key.
+inline constexpr cool_edit_derive::Hls kLedLitHls =
+    cool_edit_derive::hls_of(kLedLitRecord);
+constexpr uint32_t accent_of_ink(uint32_t ink) {
+    return cool_edit_derive::tone(ink, 0.0, kLedLitHls.l, 0.0, kLedLitHls.s);
+}
 // ONE KEY SIZE THE BAKE MAKES PATCHES FOR (the head's KEYS;
 // program_key_seats, paint_handler.h): its size, whether it carries a lamp
 // (its LED then dead at depth 0 and lit at 1 and 2, cool_edit_paint.h's
@@ -321,12 +324,8 @@ uint32_t face();
 uint32_t ring_light();
 uint32_t ring_dark();
 
-// THE ACCENT IS THE WAVEFORM PRESET'S OWN LED COLOR, its `led` word, Cool
-// Edit's _LED AS IT IS (architect 2026-10-29: "just use the color" — not its
-// hue under a fixed lightness; the default's FF0000, Grape, Lime, and
-// Tangerine's 10E0FE): worn by the lit LEDs and their glow alone, no device
-// key. Set at every palette install from the live words (render.cpp's
-// fill_program_palette): where it moved,
+// THE ACCENT (accent_of_ink), set at every palette install from the live
+// waveform preset's ink (render.cpp's fill_program_palette): where it moved,
 // the lit keys' patches — a lamp key's checked and held, whose LED and glow
 // carry it — are rebuilt, the resting and the lampless patches standing, so
 // a waveform pick relights every lamp at once. accent_color() is its one reader's road.

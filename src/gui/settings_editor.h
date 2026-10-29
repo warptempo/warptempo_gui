@@ -406,7 +406,7 @@ private:
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
     // THE WAVEFORM ROW'S INSTALL (architect 2026-10-14; the color picker's
-    // install_live_words until that day, its shape kept): the words
+    // install_live_words until that day, its shape kept): the ten
     // installed (install_program_palette, palette_file.h), then the apply
     // shape run once, as install_program_palette's declaration states it —
     // the plate kicked when its inks moved, else the flag cache refreshed,
