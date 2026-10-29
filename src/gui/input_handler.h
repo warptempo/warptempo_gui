@@ -2554,15 +2554,18 @@ private:
     void finalize_editor_text_drag();
 
     // Clipboard: handle a Copy/Cut/Paste editor action against editor `s` and
-    // report whether it handled one. THE CLIPBOARD IS THE SYSTEM ONE (the
-    // Wayland CLIPBOARD selection, GuiPlatform::clipboard_set_text /
-    // clipboard_get_text), and the PLATFORM HOLDS THE ONLY COPY of the payload:
-    // copy and cut hand the selected text straight to the compositor and keep
-    // nothing here (THE CUT DELETES ONLY ON A TRUE VERDICT, and cards its
-    // refusal otherwise — the reasoning is at the case); paste takes whatever
-    // the system clipboard holds — our own payload while we still own the selection,
-    // another application's otherwise — and inserts it, doing NOTHING at all
-    // when there is nothing to paste. Returns false for any other action so the
+    // report whether it handled one. THE PLATFORM HOLDS THE ONLY COPY of the
+    // payload (GuiPlatform::clipboard_set_text / clipboard_get_text): on the
+    // laptop the clipboard is the system one (the Wayland CLIPBOARD
+    // selection) and copy and cut hand the selected text straight to the
+    // compositor; on the tablet the copy stays in the program's own process
+    // (architect 2026-10-29, Android 13+'s "Copied" chip; platform_android.h).
+    // Nothing is kept here (THE CUT DELETES ONLY ON A TRUE VERDICT, and cards
+    // its refusal otherwise — the reasoning is at the case); paste takes what
+    // the platform answers — on the laptop our own payload while we still own
+    // the selection and another application's otherwise, on the tablet the
+    // newer of the program's copy and the system clip — and inserts it, doing
+    // NOTHING at all when there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.
     //
     // This and Ctrl+Shift+J's value copy (copy_focused_marker_value,
@@ -2946,10 +2949,13 @@ private:
     //       editor's return (handle_settings_editor_key).
     //     build_settings_page_rows: kSettingsEditorKeys exactly (settings_
     //       editor.h), the DEVICE keys under a "DEVICE" group row and then
-    //       the PIECE keys under a "PIECE" one; each key a glyph-less Plain
-    //       row whose text is the line the editor would open with,
-    //       `key=value` (GuiSettingsEditor::setting_line), each group row
-    //       inert (folder_overlay::row_is_inert). THE SEAT is
+    //       the PIECE rows under a "PIECE" one (kSettingsPagePieceKeys, with
+    //       `scale` and `bpm` shown as DISABLED rows, architect
+    //       2026-10-29); each key a glyph-less row whose text is the line
+    //       the editor would open with, `key=value`
+    //       (GuiSettingsEditor::setting_line), Plain for an editable key,
+    //       each group row and disabled row inert
+    //       (folder_overlay::row_is_inert). THE SEAT is
     //       `seat_key`'s row, centered as far as the listing's ends allow
     //       (scroll_row_centered) — a value list's or the line editor's
     //       return seating the key it showed; with no seat key — `;` and the

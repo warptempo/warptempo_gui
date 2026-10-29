@@ -173,7 +173,7 @@
 //   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
 //     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+Shift+J)
 //     and "Copied the selected markers' phase resets" (bare P); a refused
-//     system-clipboard write cards through card_clipboard_refusal ("The
+//     laptop clipboard write cards through card_clipboard_refusal ("The
 //     clipboard did not take the copy" / "…the cut" — the editors' Ctrl+X,
 //     the one editor clipboard chord that cards, and only there); and the
 //     phase copy that captured nothing, "No labeled, enabled markers are

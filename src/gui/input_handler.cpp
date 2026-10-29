@@ -3631,15 +3631,15 @@ bool GuiInputHandler::apply_editor_clipboard(
         // clipboard_get_text hands that payload back only while
         // clipboard_we_own_ stands, and a refusal never raises that bit (the
         // failed-source arm clears it), so the paste falls through to whatever
-        // another application is offering. Android reads the system store
-        // outright once its road is open; clipboard_text_ is the ROAD-ABSENT
-        // fallback alone, and the road-absent arm answers false as well — the
-        // one case where a refusal DOES leave the text pastable in-app.
-        // THE ONE OTHER SUB-CASE where a false verdict still leaves the bytes
+        // another application is offering. The tablet's copy stays in its own
+        // process and always answers true (architect 2026-10-29, the rule at
+        // platform_android.h's clipboard_set_text), so its cut always erases,
+        // the bytes pastable in the program until something newer is copied.
+        // THE ONE SUB-CASE where a false verdict still leaves the bytes
         // reachable is a Wayland refusal UNDER A CLAIM WE ALREADY HOLD (an
         // earlier copy's source still answers `send` from the updated store).
-        // Both are refused all the same: the verdict is the one thing this
-        // side can ask, and over a DELETION the conservative answer — keep the
+        // It is refused all the same: the verdict is the one thing this side
+        // can ask, and over a DELETION the conservative answer — keep the
         // text, say so — is the right one to be wrong with.
         case text_editor::KeyAction::CopyRequested:
             (void)gui.clipboard_set_text(text_editor::selected_text(s));
@@ -3655,10 +3655,12 @@ bool GuiInputHandler::apply_editor_clipboard(
             return true;
         case text_editor::KeyAction::PasteRequested: {
             // The bytes come from the SYSTEM clipboard, so a URL copied in a
-            // browser pastes straight into a settings field. GuiPlatform
-            // short-circuits to our own last-published payload while we still
-            // hold the selection, so a copy-then-paste inside this process
-            // never touches the pipe.
+            // browser pastes straight into a settings field. On the laptop
+            // GuiPlatform short-circuits to our own last-published payload
+            // while we still hold the selection, so a copy-then-paste inside
+            // this process never touches the pipe; on the tablet the paste
+            // takes the newer of the program's own copy and the system clip
+            // (architect 2026-10-29, platform_android.h).
             //
             // AN EMPTY ANSWER IS A CONSUMED NO-OP: no offer, no text mime on
             // the offer, or a failed read all mean there is nothing to paste,

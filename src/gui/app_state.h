@@ -8492,7 +8492,8 @@ struct AppState {
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
     // 2026-10-28: the Settings button and bare `;`; the fourteen keys the
     // settings editor recalls, one `key=value` row each under two inert group
-    // rows, the open act the editor opened PREFILLED on the row's line once
+    // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
+    // open act the editor opened PREFILLED on the row's line once
     // the page has closed — or, on the row of a key with a value list, that
     // list swapped in under the same session); and the VALUE LIST
     // (2026-10-25 for `waveform`, 2026-10-28 night for `true_colors`,
@@ -9044,7 +9045,8 @@ struct AppState {
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
     // (architect 2026-10-28), with the settings editor's fourteen keys as
-    // `key=value` lines under two group rows; and since 2026-10-25 the
+    // `key=value` lines under two group rows and `scale` and `bpm` as
+    // disabled lines (2026-10-29); and since 2026-10-25 the
     // VALUE LIST, one listed key's values — the twenty built-in waveform
     // presets by display name (architect: "maybe a drop down would make it
     // quicker, because I don't like having to type it in every time" —
@@ -9167,7 +9169,11 @@ struct AppState {
     // NONE, AND IT IS INERT
     // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
     // highlighted, never opened, stepped over by the walk, its text in the
-    // dead key's print (kDimInk). The kind says what a row IS; what its open
+    // dead key's print (kDimInk); and DISABLED NONE, INERT AS GROUP IS
+    // (architect 2026-10-29, the settings page's `scale` and `bpm`: "bpm and
+    // scale should be viewable but disabled. they are useful for notes"):
+    // a key line in the dead key's print, never highlighted, never opened,
+    // stepped over by the walk. The kind says what a row IS; what its open
     // MEANS is the owner's (folder_overlay_open_row). A KIND EXISTS
     // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:
     //   * UP — the `..` row, the folder glyph over the parent — went on
@@ -9180,17 +9186,18 @@ struct AppState {
     //     it was, but a row with an act; Group is a heading, not a line of
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
-    // picker Folder rows alone; the SETTINGS PAGE Group and Plain rows (its
-    // two headings and its fourteen key lines, build_settings_page_rows);
+    // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
+    // rows (its two headings, its fourteen editable key lines and the two
+    // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows alone (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits beside the `name` it
     // shows; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
     // preset's name alone (architect 2026-10-28 night). A Plain or Group
-    // row's `path` and `entry` stay empty, and
+    // row's `path` and `entry` stay empty, as a Disabled row's do, and
     // `value` is set on a value list's rows alone.
     struct FolderOverlayRow {
-        enum class Kind { Folder, Wav, Plain, Group };
+        enum class Kind { Folder, Wav, Plain, Group, Disabled };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;

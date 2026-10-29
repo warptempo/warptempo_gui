@@ -7284,10 +7284,15 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 
 // THE LIST: kSettingsEditorKeys exactly (architect 2026-10-28: the per-tab
 // keys and every key with a GUI lever stay off — "I won't set it
-// manually"), the DEVICE keys first and the PIECE keys after (the mock he
-// verified), each group under its inert Group row, every key a Plain row
-// whose text is THE LINE THE EDITOR WOULD OPEN WITH
-// (GuiSettingsEditor::setting_line, the recall's one owner). THE SEAT is
+// manually") EXCEPT the two the BPM key writes, `scale` and `bpm`, listed
+// as DISABLED rows (architect 2026-10-29: "bpm and scale should be viewable
+// but disabled. they are useful for notes"); the DEVICE keys first and the
+// PIECE rows after (the mock he verified), these in the settings file's
+// order (kSettingsPagePieceKeys, settings_editor.h), each group under its
+// inert Group row. Every key's text is THE LINE THE EDITOR WOULD OPEN WITH
+// (GuiSettingsEditor::setting_line, the recall's one owner), an editable
+// key's on a Plain row, a disabled one's on an inert Disabled row, which is
+// never seated and opens nothing (folder_overlay::row_is_inert). THE SEAT is
 // `seat_key`'s row — a value list's return (return_to_settings_page) seats
 // the key it was showing, the line editor's return (open_settings_page from
 // handle_settings_editor_key) the key it was opened with — and, with no seat
@@ -7306,17 +7311,19 @@ void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
         head.name = heading;
         ov.rows.push_back(std::move(head));
         for (const char* key : keys) {
-            if (!seat_key.empty() && seat_key == key)
+            const bool editable = is_settings_editor_key(key);
+            if (editable && !seat_key.empty() && seat_key == key)
                 seat = static_cast<int>(ov.rows.size());
             AppState::FolderOverlayRow row;
-            row.kind = AppState::FolderOverlayRow::Kind::Plain;
+            row.kind = editable ? AppState::FolderOverlayRow::Kind::Plain
+                                : AppState::FolderOverlayRow::Kind::Disabled;
             row.name = settings_editor.setting_line(key);
             ov.rows.push_back(std::move(row));
         }
     };
     const std::span<const char* const> keys(kSettingsEditorKeys);
     group("DEVICE", keys.subspan(kSettingsEditorPieceKeyCount));
-    group("PIECE", keys.first(kSettingsEditorPieceKeyCount));
+    group("PIECE", kSettingsPagePieceKeys);
     folder_overlay::clamp_scroll(app);
     folder_overlay::set_highlight(app, seat);
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
@@ -8131,14 +8138,14 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 // (2026-09-03, first at the AV Sync Stats panel's copy button, deleted with
 // the panel 2026-09-30; the editor's CUT joined the copies later that same
 // day): clipboard_set_text answers a VERDICT —
-// whether a claim another program can read went out (the contract at the
-// seam, platform_wayland.h / platform_android.h) — and a success card on a
-// false verdict would lie. IT IS ONE SENTENCE AND NO LONGER A FORK: it
-// carried a second clause for backends whose clipboard reached no other
-// program, and that half died the same day the tablet's ClipboardManager road
-// landed — both backends publish, so what can refuse is the per-press write
-// alone (Wayland: no data device, no source, no input-event serial to ride;
-// Android: a missing Java method or setPrimaryClip's own refusal).
+// whether the copy can be pasted (the contract at the seam,
+// platform_wayland.h / platform_android.h) — and a success card on a false
+// verdict would lie. IT IS ONE SENTENCE AND NOT A FORK. ITS PRODUCERS ARE
+// THE LAPTOP'S ALONE: the Wayland claim can refuse per press (no data
+// device, no source, no input-event serial to ride), while the tablet's copy
+// stays in its own process and always answers true (architect 2026-10-29,
+// Android 13+'s "Copied" chip; the rule at platform_android.h's
+// clipboard_set_text), so neither verb ever cards there.
 //
 // THE VERB IS THE ONE VARIABLE and the sentence is not: "copy" for the
 // resolved value's copy (Ctrl+Shift+J in the main window), "cut" for the editor's, so the reader is told which act the
@@ -9205,9 +9212,11 @@ void GuiInputHandler::copy_focused_marker_value() {
         return;
     }
     // THE WRITE'S VERDICT DECIDES THE CARD (2026-09-03): a refused claim —
-    // a Wayland claim with nothing to ride, or the tablet's Java road missing
-    // or refusing — says so instead of "Copied". The button's face reads no
-    // half of this question; it is the press's own answer, on both roads.
+    // a Wayland claim with nothing to ride — says so instead of "Copied"; the
+    // tablet's in-process copy never refuses (architect 2026-10-29, the rule
+    // at platform_android.h's clipboard_set_text), so there this card is the
+    // copy's one confirmation, no system chip beside it. The button's face
+    // reads no half of this question; it is the press's own answer.
     if (!gui.clipboard_set_text(payload)) {
         card_clipboard_refusal(notifications, "copy");
         return;

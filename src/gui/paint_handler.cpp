@@ -7643,7 +7643,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // glass on 54e62064: "all lists that don't have the player's icons hold
     // an empty space for an icon that doesn't exist. shouldn't we tighten up
     // the padding?" — "agree all"): A LISTING IN WHICH NO ROW WEARS A GLYPH
-    // (every row Plain or Group: the settings page, every value list, the
+    // (every row Plain, Group or Disabled: the settings page, every value
+    // list, the
     // trim presets list) starts its text at kListGlyphXAt300, the column the
     // glyph's box would begin at, the group rows moving with their key lines
     // so the page stays aligned within itself; a listing with glyph rows (the
@@ -7674,7 +7675,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 
             const bool highlighted = index == ov.highlight_row;
             // AN INERT ROW IS NEVER LIT (folder_overlay::row_is_inert, the
-            // settings page's group rows, architect 2026-10-28): its press
+            // settings page's group rows, architect 2026-10-28, and its
+            // disabled `scale` and `bpm` lines, 2026-10-29): its press
             // arms the scroll drag alone and promises no highlight, and the
             // highlight never stands on it.
             const bool inert   = folder_overlay::row_is_inert(app, index);
@@ -7712,10 +7714,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // the icon set's glyphs at Windows' small 16-px seat 2026-08-28
             // to 2026-10-23, Play swapped in on the item's row, are git
             // history.)
-            // A PLAIN ROW AND A GROUP ROW WEAR NO GLYPH (architect
+            // A PLAIN, A GROUP AND A DISABLED ROW WEAR NO GLYPH (architect
             // 2026-10-25, the value list: the row is the preset's display
             // name or the value as shown; 2026-10-28, the settings page: the row is its
-            // `key=value` line, the group row its heading); their text
+            // `key=value` line, the group row its heading; 2026-10-29, a
+            // disabled row its `key=value` line too); their text
             // starts at the listing's one names' column (text_x_at300,
             // above): the glyph's own column, kListGlyphXAt300, where no row
             // of the listing wears a glyph.
@@ -7750,9 +7753,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            // The row's text pair (surface_text, render.h); A GROUP ROW in
+            // The row's text pair (surface_text, render.h); AN INERT ROW in
             // THE DEAD KEY'S PRINT, kDimInk (materials.h's inks, architect
-            // 2026-10-28: "DEVICE" and "PIECE" dim headings, never lit).
+            // 2026-10-28: "DEVICE" and "PIECE" dim headings, never lit;
+            // 2026-10-29: the disabled `scale` and `bpm` lines the same).
             set_palette_source(
                 cr, inert ? hex(kDimInk)
                           : surface_text(lit ? GuiSurface::ListRowLit

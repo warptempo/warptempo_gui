@@ -962,7 +962,8 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome,
 }
 
 // Human-readable provenance descriptor for a BPM cell,
-// e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats is an
+// e.g. "36 beats at 220 bpm from 00:32.008 to 00:46.562" — "at" spelled out,
+// never "@" (architect 2026-10-29). Beats is an
 // integer; bpm is a double printed in plain shortest round-trip form
 // ("220" stays "220", "220.5" stays "220.5"); the two timestamps are the
 // span's owner time and its END (the boundary marker's time, or the song
@@ -976,11 +977,13 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome,
 // this string — it is a sidecar value that also feeds the render fingerprint
 // (render_cache.cpp's EngineField::Bpm arm), so its " bpm " stays lowercase
 // where the display label capitalizes the acronym, and capitalizing it would
-// move sidecar bytes and mint fresh cache keys.
+// move sidecar bytes and mint fresh cache keys. A sidecar carrying the older
+// "@" spelling is free text and loads unchanged: nothing parses this string,
+// so no reader and no migration exist for it.
 static std::string format_bpm_descriptor(int beats, double bpm,
                                          double start_seconds,
                                          double end_seconds) {
-    return std::to_string(beats) + " beats @ " +
+    return std::to_string(beats) + " beats at " +
            format_value_double(bpm, 0) + " bpm from " +
            format_timestamp(start_seconds) + " to " +
            format_timestamp(end_seconds);

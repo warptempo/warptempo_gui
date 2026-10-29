@@ -6,7 +6,8 @@
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
 // SETTINGS PAGE's fourteen keys as `key=value` lines under two group rows
 // (architect 2026-10-28, on a mock he verified on the glass: "yes" to the
-// list, "keep" to the group rows), and THE VALUE LIST, one listed key's
+// list, "keep" to the group rows), `scale` and `bpm` among the piece's lines
+// as disabled rows (architect 2026-10-29), and THE VALUE LIST, one listed key's
 // values, the page's row for that key's content — since 2026-10-25 the
 // twenty built-in waveform presets by display name (architect: "it would be
 // nice to have some presets, and maybe a drop down would make it quicker,
@@ -45,9 +46,10 @@
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
 // icon and a name; glyph-less PLAIN rows, a name alone (the value list's
 // values since 2026-10-25, the settings page's key lines since 2026-10-28,
-// the trim presets since 2026-10-28 night); and the page's INERT GROUP rows,
-// a heading in the dead key's print, which the highlight never stands on
-// (row_is_inert, the walk below). A LISTING IN WHICH NO ROW WEARS A GLYPH
+// the trim presets since 2026-10-28 night); and the page's INERT rows in the
+// dead key's print, which the highlight never stands on (row_is_inert, the
+// walk below): its GROUP rows, a heading each, and its DISABLED rows, the
+// `scale` and `bpm` lines (architect 2026-10-29). A LISTING IN WHICH NO ROW WEARS A GLYPH
 // starts its text at the glyph's own column, not past an empty icon column
 // (architect 2026-10-28 night; the painter's names' column,
 // paint_folder_overlay) (a glyph-less TEXT kind went with
@@ -212,8 +214,8 @@ inline constexpr double kRowGapPx = 1.0;
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
 // first hours), the panel's row gap, the row's boxed glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then). A folder row wears
-// icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a plain row and
-// a group row wear none, and a listing of them alone starts its text at the
+// icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a plain, a group
+// and a disabled row wear none, and a listing of them alone starts its text at the
 // glyph's column (paint_folder_overlay's names' column, 2026-10-28 night).
 // (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
@@ -437,8 +439,9 @@ inline bool scroll_row_centered(AppState& a, int index) {
 // here.
 
 // IS ROW `index` INERT? (architect 2026-10-28, the settings page's group
-// rows: "keep") — a Group row, THE ONE PREDICATE every refusal of the
-// highlight and the open asks: set_highlight below will not seat one, the
+// rows: "keep"; 2026-10-29, its disabled `scale` and `bpm` lines) — a Group
+// or a Disabled row, THE ONE PREDICATE every refusal of the highlight and
+// the open asks: set_highlight below will not seat one, the
 // walk steps over them (move_highlight_target), and the row press's
 // motionless lift on one is a consumed nothing
 // (finish_folder_overlay_release). Its press still arms, the same press
@@ -447,8 +450,10 @@ inline bool scroll_row_centered(AppState& a, int index) {
 inline bool row_is_inert(const AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return false;
-    return a.folder_overlay.rows[static_cast<size_t>(index)].kind ==
-           AppState::FolderOverlayRow::Kind::Group;
+    const AppState::FolderOverlayRow::Kind kind =
+        a.folder_overlay.rows[static_cast<size_t>(index)].kind;
+    return kind == AppState::FolderOverlayRow::Kind::Group ||
+           kind == AppState::FolderOverlayRow::Kind::Disabled;
 }
 
 // Seat the highlight on `index`, clamped into the listing (-1 for an empty

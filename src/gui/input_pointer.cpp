@@ -5127,8 +5127,8 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
     // does). The band moves first, so what the act runs on is what the user
     // can see it named. A lift elsewhere is a consumed nothing, and so is a
     // lift on an INERT row (folder_overlay::row_is_inert, the settings page's
-    // group rows, architect 2026-10-28): neither half, the row being no
-    // choice.
+    // group rows, architect 2026-10-28, and its disabled `scale` and `bpm`
+    // lines, 2026-10-29): neither half, the row being no choice.
     // NOTHING IS SEEDED HERE ANY MORE: the row's double-click surface went
     // with the ruling, no second meaning being left for a second press.
     if (folder_overlay::row_at(app, x, y) != press.row) return true;

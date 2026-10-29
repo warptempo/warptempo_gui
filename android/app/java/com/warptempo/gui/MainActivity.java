@@ -3,6 +3,7 @@ package com.warptempo.gui;
 import android.app.NativeActivity;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
@@ -64,10 +65,12 @@ import java.nio.charset.StandardCharsets;
  * are INNER classes of this one and are not second classes in that sense:
  * each is its framework's own listener shape and can be nothing else). THREE
  * HAVE LANDED: the car's MediaSession (the block at the end of this comment),
- * on 2026-09-03 THE SYSTEM CLIPBOARD -- clipboardSet / clipboardGet,
- * ClipboardManager being a Java object with no NDK surface, so copy and paste
- * reach every other app on the tablet over the same JNI road the session
- * opened -- and on 2026-10-24 THE BATTERY, the sticky ACTION_BATTERY_CHANGED
+ * on 2026-09-03 THE SYSTEM CLIPBOARD'S READ -- clipboardGet, and since
+ * 2026-10-29 clipboardTime, ClipboardManager being a Java object with no NDK
+ * surface, so a paste reads what every other app on the tablet copied over
+ * the same JNI road the session opened (the copy itself stays in the native
+ * process since 2026-10-29, the reason at clipboardGet) -- and on 2026-10-24
+ * THE BATTERY, the sticky ACTION_BATTERY_CHANGED
  * broadcast handed down through nativeBatteryState for the logo lane's legend
  * (the block at batteryReceiver). A FOURTH, 2026-10-07,
  * is no new method: onDestroy's last act ENDS THE PROCESS, so every launch is
@@ -772,24 +775,29 @@ public class MainActivity extends NativeActivity {
         session.setActive(active);
     }
 
-    // THE SYSTEM CLIPBOARD, THE SECOND JNI ROAD UP (architect 2026-09-03,
-    // "if it's cheap, let's go ahead and build it"): ClipboardManager is a
-    // Java object with no NDK surface, so these two methods are what the
-    // native clipboard_set_text / clipboard_get_text call
+    // THE SYSTEM CLIPBOARD'S READ, THE SECOND JNI ROAD UP (architect
+    // 2026-09-03, "if it's cheap, let's go ahead and build it"):
+    // ClipboardManager is a Java object with no NDK surface, so these two
+    // methods are what the native clipboard_get_text calls
     // (src/gui/platform_android.cpp), on the native loop's thread, exactly as
-    // mediaState is called. setPrimaryClip and getPrimaryClip are binder
-    // calls and are legal from any attached thread; neither needs the UI
-    // thread and neither is posted to a Looper.
+    // mediaState is called. getPrimaryClip and getPrimaryClipDescription are
+    // binder calls and are legal from any attached thread; neither needs the
+    // UI thread and neither is posted to a Looper.
     //
-    // THE PAYLOAD IS BYTES, NOT A String, ON BOTH ROADS. JNI's NewStringUTF /
-    // GetStringUTFChars speak MODIFIED UTF-8 -- a supplementary character as
-    // two three-byte surrogate halves, U+0000 as C0 80 -- and the product's
-    // text is UTF-8 verbatim and round-trips byte-identically (the text
-    // ruling in CLAUDE.md; text_editor::replace_selection is the one incoming
-    // filter). So the array crosses raw and the decode and encode happen
-    // here, in real UTF-8. A byte[] the decoder cannot read yields U+FFFD
-    // rather than an exception, which is the same "nothing here refuses"
-    // posture the head unit's title takes.
+    // THERE IS NO WRITE (architect 2026-10-29): Android 13 and later show a
+    // system "Copied" chip on every setPrimaryClip, which no app can turn
+    // off, and he does not want it. The program's copy stays in the native
+    // process with a wall-clock stamp, and the paste takes whichever was
+    // copied later, that copy or the system clip (clipboardTime is the
+    // system side's stamp; the rule at clipboard_set_text's declaration,
+    // src/gui/platform_android.h).
+    //
+    // THE PAYLOAD IS BYTES, NOT A String. JNI's GetStringUTFChars speaks
+    // MODIFIED UTF-8 -- a supplementary character as two three-byte surrogate
+    // halves, U+0000 as C0 80 -- and the product's text is UTF-8 verbatim and
+    // round-trips byte-identically (the text ruling in CLAUDE.md;
+    // text_editor::replace_selection is the one incoming filter). So the
+    // array crosses raw and the encode happens here, in real UTF-8.
     //
     // NO synchronized, AND THAT IS DELIBERATE: mediaState takes `this`
     // because it touches the session, the focus request and `released`, all
@@ -809,22 +817,22 @@ public class MainActivity extends NativeActivity {
     // clip from being encoded and crossing JNI at all.
     private static final int MAX_CLIPBOARD_BYTES = 1024 * 1024;
 
-    // FALSE ON ANY THROWABLE is the verdict the native side hands back to the
-    // GUI, which cards "The clipboard did not take the copy" on it: some OEM
-    // builds refuse setPrimaryClip with a SecurityException, and a copy that
-    // did not happen must not be announced as one.
-    public boolean clipboardSet(byte[] utf8) {
-        if (utf8 == null) return false;
+    // THE SYSTEM CLIP'S STAMP, ms since the epoch in System.currentTimeMillis'
+    // base (ClipDescription.getTimestamp, API 26; minSdk is 30) -- the base
+    // the native copy's own stamp is taken in, so the two compare directly.
+    // 0 with no clip, no description or a throwable: 0 loses to any copy the
+    // program made, which is what an unreadable stamp should do.
+    public long clipboardTime() {
         try {
             final ClipboardManager clip =
                     (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            if (clip == null) return false;
-            clip.setPrimaryClip(ClipData.newPlainText(
-                    "warptempo", new String(utf8, StandardCharsets.UTF_8)));
-            return true;
+            if (clip == null) return 0L;
+            final ClipDescription desc = clip.getPrimaryClipDescription();
+            if (desc == null) return 0L;
+            return desc.getTimestamp();
         } catch (Throwable t) {
-            Log.w(TAG, "clipboard copy refused", t);
-            return false;
+            Log.w(TAG, "clipboard stamp refused", t);
+            return 0L;
         }
     }
 

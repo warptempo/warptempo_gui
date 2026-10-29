@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <initializer_list>
 #include <cassert>
 #include <cerrno>
@@ -809,10 +810,12 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // then drops or falls back with this line already written.
     //
     // THE THREE IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
-    // mediaState (2026-08-28) and the clipboard's pair (2026-09-03).
+    // mediaState (2026-08-28) and the paste's read pair, clipboardGet
+    // (2026-09-03) and clipboardTime (2026-10-29; the copy writes no system
+    // clipboard since, the rule at clipboard_set_text's declaration).
     // (Activity's own moveTaskToBack, the caption's Minimise, was a fourth
     // 2026-10-05 to 2026-10-24 and went with the caption.) Each is
-    // independent — a missing clipboardSet leaves the head unit's display
+    // independent — a missing clipboardTime leaves the head unit's display
     // working and vice versa — so each has its own arm and its own line.
     if (app_->activity && app_->activity->vm) {
         JNIEnv* env = nullptr;
@@ -834,17 +837,6 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
                              "found; the head unit's display will show "
                              "nothing\n");
             }
-            clipboard_set_method_ =
-                env->GetMethodID(cls, "clipboardSet", "([B)Z");
-            if (!clipboard_set_method_) {
-                if (env->ExceptionCheck()) {
-                    env->ExceptionDescribe();
-                    env->ExceptionClear();
-                }
-                std::fprintf(stderr,
-                             "warptempo_gui: MainActivity.clipboardSet not "
-                             "found; copies stay inside this process\n");
-            }
             clipboard_get_method_ =
                 env->GetMethodID(cls, "clipboardGet", "()[B");
             if (!clipboard_get_method_) {
@@ -857,12 +849,24 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
                              "found; pastes read this process's own copies "
                              "only\n");
             }
+            clipboard_time_method_ =
+                env->GetMethodID(cls, "clipboardTime", "()J");
+            if (!clipboard_time_method_) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                std::fprintf(stderr,
+                             "warptempo_gui: MainActivity.clipboardTime not "
+                             "found; pastes read this process's own copies "
+                             "only\n");
+            }
             env->DeleteLocalRef(cls);
         } else {
             std::fprintf(stderr,
                          "warptempo_gui: AttachCurrentThread failed; the "
-                         "head unit's display will show nothing and the "
-                         "clipboard stays inside this process\n");
+                         "head unit's display will show nothing and "
+                         "pastes read this process's own copies only\n");
         }
     }
 
@@ -1275,11 +1279,11 @@ void GuiPlatform::shutdown() {
     if (jni_attached_ && app_ && app_->activity && app_->activity->vm) {
         app_->activity->vm->DetachCurrentThread();
     }
-    jni_attached_         = false;
-    jni_env_              = nullptr;
-    media_state_method_   = nullptr;
-    clipboard_set_method_ = nullptr;
-    clipboard_get_method_ = nullptr;
+    jni_attached_          = false;
+    jni_env_               = nullptr;
+    media_state_method_    = nullptr;
+    clipboard_get_method_  = nullptr;
+    clipboard_time_method_ = nullptr;
     if (timerfd_ >= 0) {
         unwatch_fd(timerfd_);
         close(timerfd_);
@@ -2826,77 +2830,64 @@ void GuiPlatform::publish_media_state(const GuiMediaState& state) {
 }
 
 // ---------------------------------------------------------------------------
-// The system clipboard (contract at the declaration)
+// The clipboard: the program's own copy, and the system clipboard's read
+// (contract at the declaration)
 // ---------------------------------------------------------------------------
 
-// THE SECOND JNI ROAD UP (architect 2026-09-03, "if it's cheap, let's go
-// ahead and build it"), the car's mediaState being the first and this one
-// riding exactly its shape: the glue thread's env, an id looked up once in
-// init(), a local frame per call, an exception described, cleared and
-// swallowed. ClipboardManager is a Java object with no NDK surface, so
-// MainActivity.clipboardSet / .clipboardGet are the whole mechanism and the
-// reasoning that belongs to Java — the UTF-8 decode, the throwable arm, the
-// empty answer — lives at those two methods.
+// THE PASTE'S JNI ROAD UP (architect 2026-09-03, "if it's cheap, let's go
+// ahead and build it"; the write left it 2026-10-29), the car's mediaState
+// being the first and this one riding exactly its shape: the glue thread's
+// env, ids looked up once in init(), a local frame per call, an exception
+// described, cleared and swallowed. ClipboardManager is a Java object with no
+// NDK surface, so MainActivity.clipboardGet / .clipboardTime are the whole
+// mechanism and the reasoning that belongs to Java — the UTF-8 decode, the
+// throwable arm, the empty answer, the zero stamp — lives at those methods.
 bool GuiPlatform::clipboard_road_open() const {
-    return app_ && app_->activity && jni_env_ && clipboard_set_method_ &&
-           clipboard_get_method_;
+    return app_ && app_->activity && jni_env_ && clipboard_get_method_ &&
+           clipboard_time_method_;
 }
 
-// THE BYTES CROSS RAW. NewStringUTF speaks MODIFIED UTF-8 and would mangle
-// exactly the text this product promises to round-trip byte-identically, so
-// the payload goes over as a byte[] and Java does the decode; CheckJNI, live
-// in this debuggable build, aborts the process on a four-byte sequence handed
-// to NewStringUTF, which is the same fault from the other side.
-//
-// THE VERDICT IS JAVA'S: setPrimaryClip's own success. FALSE where the road
-// is absent (a failed attach or lookup, the line already logged at init) and
-// the text then goes into this process's own one payload, so the editors'
-// in-app paste keeps working while a carded copy refuses truthfully. A
-// throwable out of the call — an OEM build's SecurityException — is caught on
-// the Java side and comes back as false; the ExceptionCheck here is the
-// belt-and-braces arm for anything the call itself raises (an OOM off
-// NewByteArray).
+// THE COPY NEVER LEAVES THE PROCESS (architect 2026-10-29: Android 13+'s
+// "Copied" chip, the rule at the declaration): the payload and its stamp, and
+// a true verdict, since the copy is pastable here from this moment.
 bool GuiPlatform::clipboard_set_text(const std::string& text) {
-    if (!clipboard_road_open()) {
-        clipboard_text_ = text;
-        return false;
-    }
+    clipboard_text_     = text;
+    clipboard_stamp_ms_ =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+    return true;
+}
+
+// THE SYSTEM CLIP'S STAMP, ms since the epoch: ClipDescription's
+// getTimestamp, 0 with no clip, no description or a throw — and 0 loses to
+// any copy made here, which is what an unreadable stamp should do. Called
+// only with the road open; no local reference is made, so no frame is
+// pushed.
+int64_t GuiPlatform::clipboard_system_stamp_ms() {
     JNIEnv* env = jni_env_;
-    if (env->PushLocalFrame(4) != 0) {
-        env->ExceptionClear();
-        return false;
-    }
-    bool published = false;
-    jbyteArray bytes = env->NewByteArray(static_cast<jsize>(text.size()));
-    if (bytes) {
-        if (!text.empty()) {
-            env->SetByteArrayRegion(
-                bytes, 0, static_cast<jsize>(text.size()),
-                reinterpret_cast<const jbyte*>(text.data()));
-        }
-        published = env->CallBooleanMethod(app_->activity->clazz,
-                                           clipboard_set_method_,
-                                           bytes) == JNI_TRUE;
-    }
+    const jlong stamp = env->CallLongMethod(app_->activity->clazz,
+                                            clipboard_time_method_);
     if (env->ExceptionCheck()) {
         env->ExceptionDescribe();
         env->ExceptionClear();
-        published = false;
         std::fprintf(stderr,
-                     "warptempo_gui: MainActivity.clipboardSet threw; the "
-                     "copy did not reach the system clipboard\n");
+                     "warptempo_gui: MainActivity.clipboardTime threw; the "
+                     "paste reads this process's own copy\n");
+        return 0;
     }
-    env->PopLocalFrame(nullptr);
-    return published;
+    return static_cast<int64_t>(stamp);
 }
 
+// THE NEWER OF THE TWO (architect 2026-10-29): the process's payload when it
+// is set and its stamp is >= the system clip's, else the system clipboard's
+// text. An empty payload — nothing copied here yet, or an empty copy — falls
+// to the system road; with the road absent the payload is the whole answer.
+//
 // THE EMPTY STRING IS THE EMPTY ANSWER — no clip, no text in it, a system
 // that withholds it, a payload past the bound, or a throw — and every caller
 // already reads that as "nothing to paste" (a paste of nothing must not
-// delete the selection). There is no self-paste short circuit and none is
-// needed: Android's clipboard is a system-owned store, so our own copy reads
-// straight back out of it, where the Wayland twin would have to read its own
-// pipe and deadlock.
+// delete the selection).
 //
 // AND THE PAYLOAD IS BOUNDED HERE AS IT IS ON WAYLAND (2026-09-03):
 // kClipboardMaxBytes (gui_input.h) is the seam's one number and this is its
@@ -2908,6 +2899,10 @@ bool GuiPlatform::clipboard_set_text(const std::string& text) {
 // the two numbers live in different builds.
 std::string GuiPlatform::clipboard_get_text() {
     if (!clipboard_road_open()) return clipboard_text_;
+    if (!clipboard_text_.empty() &&
+        clipboard_stamp_ms_ >= clipboard_system_stamp_ms()) {
+        return clipboard_text_;
+    }
     JNIEnv* env = jni_env_;
     if (env->PushLocalFrame(4) != 0) {
         env->ExceptionClear();

@@ -722,8 +722,12 @@ consumer, and the seam has no addition at all — §13.3.)*
   600, the latter being `kHoldBeatMs` itself (575 for both until 2026-09-29).
   The rate read 30 until 2026-09-02, which was nobody's convention.
 
-Stubs, each with its Wayland twin named at the site: the **clipboard** is one
-stored string (ClipboardManager is a Java surface with no NDK door); **pointer
+Stubs, each with its Wayland twin named at the site: the **clipboard's copy** is
+one stored string in the process with a wall-clock stamp, never a system
+clipboard write (architect 2026-10-29: Android 13+ chips every such write and
+no app can turn it off), and the paste takes the newer of that string and the
+system clip, read through `MainActivity.clipboardGet` / `clipboardTime`
+(ClipboardManager is a Java surface with no NDK door); **pointer
 capture** is a pair of no-ops (no cursor to hide, no pointer to lock, no
 relative stream — the same degraded path a compositor without the two optional
 protocols takes); **`set_cursor_kind`** still runs the core's policy and applies
@@ -1274,6 +1278,9 @@ the port's ONE Java home and **every later Java need joins it as a method, never
 as a second class** — the SAF picker's `onActivityResult` (which is the reason a
 subclass is structurally required at all: `NativeActivity` never forwards it,
 §5.2 of the research doc) and the system clipboard are the two already known.
+(The clipboard landed 2026-09-03 as a read and a write; the write retired
+2026-10-29, the copy staying in the native process — `platform_android.h`'s
+`clipboard_set_text` has the rule.)
 
 **No product source changed.** Nothing under `src/` knows this class exists: the
 manifest's `android.app.lib_name` still names `warptempo_gui`, `NativeActivity`'s

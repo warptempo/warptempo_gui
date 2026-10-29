@@ -209,35 +209,41 @@ public:
     void present_held_frame();
     void release_presentation();
 
-    // THE CLIPBOARD IS THE SYSTEM CLIPBOARD HERE TOO (architect 2026-09-03,
-    // ending the process-local stub): ClipboardManager is a Java object with
-    // no NDK surface, so both roads go up the MediaSession's own JNI road to
-    // MainActivity.clipboardSet / .clipboardGet — the glue thread's env, two
-    // method ids looked up once beside mediaState's (the init block), a local
-    // frame per call, an exception described, cleared and swallowed. THE
-    // PAYLOAD CROSSES AS BYTES, never as a jstring: JNI strings are MODIFIED
-    // UTF-8 and the product's text is UTF-8 verbatim (the Java side carries
-    // the whole reasoning). The Wayland twin's wl_data_device machinery — the
-    // selection claim, the offer bookkeeping, the bounded pipe read — still
-    // has no counterpart: Android's clipboard is a system-owned store, so a
-    // set is a write to it and a get is a read of it, with no ownership to
-    // hold and no self-paste short circuit to need. The bytes are not
+    // THE COPY STAYS IN THIS PROCESS AND THE PASTE TAKES THE NEWER
+    // (architect 2026-10-29): Android 13 and later show a system "Copied"
+    // chip on every write to the system clipboard, which no app can turn
+    // off, and he does not want it. So clipboard_set_text NEVER WRITES THE
+    // SYSTEM CLIPBOARD: it stores the text in clipboard_text_, this process's
+    // one payload, with a wall-clock stamp (clipboard_stamp_ms_, ms since the
+    // epoch — std::chrono::system_clock, the base Android's ClipDescription
+    // timestamps use), and answers TRUE: the copy is pastable here at once,
+    // and no road on this backend refuses it, so the card "Copied the
+    // resolved value '…'" is the one confirmation and the editor's cut always
+    // erases. clipboard_get_text answers WHICHEVER WAS COPIED LATER: the
+    // process's payload when it is set and its stamp is >= the system clip's
+    // own (MainActivity.clipboardTime), else the system clipboard's text
+    // (MainActivity.clipboardGet), so text copied in another app — a URL in a
+    // browser into a settings field — still pastes. An empty payload falls
+    // to the system road. A copy made here never reaches another app.
+    //
+    // THE SYSTEM ROAD: ClipboardManager is a Java object with no NDK surface,
+    // so the read goes up the MediaSession's own JNI road — the glue
+    // thread's env, two method ids looked up once beside mediaState's (the
+    // init block), a local frame per call, an exception described, cleared
+    // and swallowed. THE PAYLOAD CROSSES AS BYTES, never as a jstring: JNI
+    // strings are MODIFIED UTF-8 and the product's text is UTF-8 verbatim
+    // (the Java side carries the whole reasoning). The Wayland twin's
+    // wl_data_device machinery has no counterpart. The bytes are not
     // filtered here for the Wayland twin's reason:
     // text_editor::replace_selection is the boundary that validates them.
-    //
-    // THE VERDICT IS JAVA'S (the twin's contract: true only when a claim
-    // another program can read has been issued) — setPrimaryClip's own
-    // success, false on a throwable, which some OEM builds produce. FALSE IS
-    // ALSO THE ROAD-ABSENT ANSWER: with the attach or a lookup failed there is
-    // no road at all, and the pair then falls back to clipboard_text_, this
-    // process's own one payload, so the editors' in-app paste still works
-    // while a carded copy refuses truthfully — and, since the cut hangs its
-    // erase on the verdict (apply_editor_clipboard), an editor's Ctrl+X on
-    // that road refuses and keeps its text rather than trusting a store no
-    // other program can read. `get` answers the empty string where there is
-    // nothing to paste, the legal cold answer every caller already handles,
-    // and a clip past kClipboardMaxBytes (gui_input.h, the seam's one bound,
-    // mirrored in MainActivity so the bytes never cross) is one more of them.
+    // WITH THE ROAD ABSENT (a failed attach or lookup, the line logged at
+    // init) the paste reads the process's payload alone. `get` answers the
+    // empty string where there is nothing to paste, the legal cold answer
+    // every caller already handles, and a system clip past kClipboardMaxBytes
+    // (gui_input.h, the seam's one bound, mirrored in MainActivity so the
+    // bytes never cross) is one more of them. A clock set backwards between
+    // a copy here and one elsewhere picks the wrong one of the two; nothing
+    // guards it (no backstops for adversarial use).
     bool        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
 
@@ -764,14 +770,16 @@ private:
     // `struct` pointers so no JNI header reaches this file.
     // THREE IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
     // independent of the others: the car's mediaState (2026-08-28) and the
-    // clipboard's pair (2026-09-03) — clipboard_road_open() is the one
-    // predicate both clipboard roads ask. (Activity's own moveTaskToBack, the
+    // clipboard's read pair, clipboardGet (2026-09-03) and clipboardTime
+    // (2026-10-29; the copy writes no system clipboard, the rule at
+    // clipboard_set_text) — clipboard_road_open() is the one predicate the
+    // paste's system road asks. (Activity's own moveTaskToBack, the
     // caption's Minimise, 2026-10-05 to 2026-10-24, went with the caption.)
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
     struct _jmethodID* media_state_method_   = nullptr;
-    struct _jmethodID* clipboard_set_method_ = nullptr;
-    struct _jmethodID* clipboard_get_method_ = nullptr;
+    struct _jmethodID* clipboard_get_method_  = nullptr;
+    struct _jmethodID* clipboard_time_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The tick: a periodic timerfd (bionic has them), exactly the Wayland
@@ -812,12 +820,12 @@ private:
     int  history_prefetch_completion_fd_ = -1;
     std::function<void()> on_history_prefetch_ready_;
 
-    // -- The clipboard's ROAD-ABSENT payload (see clipboard_set_text) --
-    // Written and read ONLY while clipboard_road_open() is false — a failed
-    // attach or a missing method id, where the system clipboard cannot be
-    // reached at all. With the road open the system store IS the store and
-    // nothing is kept here.
+    // -- The program's own copy (the rule at clipboard_set_text) --
+    // Every copy's payload and its wall-clock stamp in ms since the epoch,
+    // the base the system clip's ClipDescription timestamp uses; the paste
+    // compares the two and takes the newer. Empty until the first copy.
     std::string clipboard_text_;
+    int64_t     clipboard_stamp_ms_ = 0;
 
     // -- The synthesized keyboard's codepoint table --
     // stable_code -> codepoint, written by synthesize_key and read by the
@@ -847,10 +855,15 @@ private:
     PrePaintCallback     on_pre_paint_;
 
     // -- Internal helpers --
-    // Whether the Java clipboard road exists at all: the glue thread's env
-    // and both method ids. False means a failed attach or lookup, and both
-    // clipboard members then fall back to clipboard_text_ (their contract).
+    // Whether the paste's Java road exists at all: the glue thread's env and
+    // both read ids (clipboardGet, clipboardTime). False means a failed
+    // attach or lookup, and the paste then reads clipboard_text_ alone (the
+    // contract at clipboard_set_text).
     bool clipboard_road_open() const;
+    // The system clip's own stamp, ms since the epoch, through
+    // MainActivity.clipboardTime; 0 for no clip or a throw. Asked only with
+    // clipboard_road_open() true, by the paste's newer-of-two test.
+    int64_t clipboard_system_stamp_ms();
 
     // Take the glue's current ANativeWindow as ours: the surface geometry
     // (re-read every time — it is the window, width_'s rule), the backbuffer,

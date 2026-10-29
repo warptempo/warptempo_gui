@@ -19,7 +19,7 @@ struct EngineSettings {
     std::string title;
     double      scale                    = 1.0;
     std::string bpm;   // BPM render descriptor, e.g.
-                       // "36 beats @ 220 bpm from 00:32.008 to 00:46.562".
+                       // "36 beats at 220 bpm from 00:32.008 to 00:46.562".
                        // Empty when no BPM render is the current baseline.
                        // Informational — never read by the engine; like every
                        // engine-settings field it participates in the render

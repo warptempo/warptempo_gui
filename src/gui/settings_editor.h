@@ -22,8 +22,9 @@ struct GuiInputHandler;
 // for the keys, making the dropdown less useful" — "yes"). IT OPENS FROM THE
 // SETTINGS PAGE (architect 2026-10-28): the band's Settings button and its
 // chord, bare `;`, raise the page, the folder overlay's list of
-// kSettingsEditorKeys below, one `key=value` row each
-// (GuiInputHandler::open_settings_page), and a row's tap closes the page and
+// kSettingsEditorKeys below, one `key=value` row each, `scale` and `bpm`
+// shown beside them as disabled rows (kSettingsPagePieceKeys, architect
+// 2026-10-29) (GuiInputHandler::open_settings_page), and an editable row's tap closes the page and
 // opens this editor PREFILLED WITH THAT ROW'S LINE, the caret at its end —
 // the line still `key=value`, edited by hand and Tab. It is the flag
 // editor's primitive (text_editor::State, kind-dispatched keyboard
@@ -202,13 +203,18 @@ struct GuiInputHandler;
 // the view and per-tab band keys, the score's range and positions, which
 // the score viewer writes) are typed whole, Tab recalling their
 // values once complete; a key added to the product's editable set joins this
-// table by hand. THE TABLE IS ALSO THE SETTINGS PAGE'S ROSTER, EXACTLY
-// (architect 2026-10-28: the per-tab keys stay off, "I won't set it
+// table by hand. THE TABLE IS ALSO THE SETTINGS PAGE'S EDITABLE ROSTER,
+// EXACTLY (architect 2026-10-28: the per-tab keys stay off, "I won't set it
 // manually", and so does every key with a GUI lever — follow, read-only, the
-// view keys, and `scale` / `bpm`, which the BPM key writes):
+// view keys — EXCEPT `scale` and `bpm`, which the BPM key writes: the page
+// SHOWS those two as DISABLED rows, architect 2026-10-29, "bpm and scale
+// should be viewable but disabled. they are useful for notes", and they stay
+// out of this table, so neither Tab nor the page's rows ever offer them to
+// the line editor; kSettingsPagePieceKeys below):
 // GuiInputHandler::build_settings_page_rows lists the device keys under a
-// "DEVICE" group row and then the piece keys under a "PIECE" one, each group
-// in this table's order, the split at kSettingsEditorPieceKeyCount.
+// "DEVICE" group row in this table's order, the split at
+// kSettingsEditorPieceKeyCount, and then the PIECE group's rows in
+// kSettingsPagePieceKeys' order.
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
@@ -223,6 +229,40 @@ static_assert(std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount 
                   "score_path" &&
               std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount]) ==
                   "gui_scale");
+
+// IS `key` ONE OF kSettingsEditorKeys — a key the line editor's Tab offers
+// and the settings page lists as an editable row?
+inline constexpr bool is_settings_editor_key(std::string_view key) {
+    for (const char* k : kSettingsEditorKeys)
+        if (key == k) return true;
+    return false;
+}
+
+// THE SETTINGS PAGE'S PIECE ROWS, IN THE SETTINGS FILE'S ORDER (kSettingsOrder,
+// settings_io.cpp; architect 2026-10-29): the five piece keys above and,
+// after `title`, the two the BPM key writes, `scale` and `bpm`, SHOWN
+// DISABLED — "bpm and scale should be viewable but disabled. they are useful
+// for notes". A key here that is not one of kSettingsEditorKeys is a
+// DISABLED row (AppState::FolderOverlayRow::Kind::Disabled): its line as
+// GuiSettingsEditor::setting_line spells it, in the dead key's print, never
+// seated and taking no press (folder_overlay::row_is_inert). The assert pins
+// the table's editable keys to the editor table's piece keys, in order, so
+// the page and Tab cannot drift apart.
+inline constexpr const char* kSettingsPagePieceKeys[] = {
+    "title", "scale", "bpm", "notes", "url", "cover", "score_path",
+};
+consteval bool settings_page_piece_keys_pinned() {
+    std::size_t editable = 0;
+    for (const char* k : kSettingsPagePieceKeys) {
+        if (!is_settings_editor_key(k)) continue;
+        if (editable >= kSettingsEditorPieceKeyCount ||
+            std::string_view(k) != kSettingsEditorKeys[editable])
+            return false;
+        ++editable;
+    }
+    return editable == kSettingsEditorPieceKeyCount;
+}
+static_assert(settings_page_piece_keys_pinned());
 
 // THE KEYS WITH A VALUE LIST — ONE TABLE, THE FIVE (architect 2026-10-25 for
 // `waveform`, 2026-10-28 night for the other four): the settings page's row
@@ -327,9 +367,10 @@ struct GuiSettingsEditor {
     // THE LINE THE EDITOR WOULD OPEN WITH for `key`: `key=` and the key's
     // current value as the recall gives it (recall_setting_value,
     // settings_editor.cpp — Tab's stage 2 and this one owner). Read by the
-    // settings page's builder for each of kSettingsEditorKeys, every one of
-    // which recalls by construction (the head's roads); a key that recalls
-    // nothing is a program bug and asserts.
+    // settings page's builder for each of kSettingsEditorKeys and for the
+    // page's disabled `scale` and `bpm` (kSettingsPagePieceKeys, engine keys
+    // the recall formats), every one of which recalls by construction (the
+    // head's roads); a key that recalls nothing is a program bug and asserts.
     std::string setting_line(const std::string& key) const;
     // THE KEY'S CURRENT VALUE as the recall gives it, the writer's spelling
     // — setting_line's value side, and the value list's seat (the row whose

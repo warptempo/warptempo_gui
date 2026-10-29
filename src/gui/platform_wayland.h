@@ -198,14 +198,19 @@ public:
     // wire), which is why every input event that can trigger a copy caches
     // its serial (last_input_serial_).
     //
-    // THERE IS NO STATIC HALF ANY MORE (2026-09-03, the same day it was
-    // introduced): `clipboard_publishes()` asked whether a backend can put
-    // text where another program reads it, and both backends now answer yes —
-    // the Android sliver's ClipboardManager road landed the same evening — so
-    // the capability, its AppState mirror and the face arms that read it were
-    // deleted rather than left standing with no producer. Whether a
-    // particular copy landed is the per-press verdict's alone, and it CARDS;
-    // no face reads it.
+    // THE TABLET'S TWIN DIFFERS ON THE WRITE (architect 2026-10-29): Android
+    // 13 and later chip every system-clipboard write, so the tablet's copy
+    // stays in its own process, its verdict always true, and its paste takes
+    // the newer of that copy and the system clip (platform_android.h, at the
+    // same pair). THIS BACKEND IS UNCHANGED: the system clipboard alone.
+    //
+    // THERE IS NO STATIC HALF (2026-09-03, the same day it was introduced):
+    // `clipboard_publishes()` asked whether a backend can put text where
+    // another program reads it; it was deleted rather than left standing with
+    // no face to read it, and the tablet's in-process copy (2026-10-29) wants
+    // none either — a copy there is pastable in the program, which is all a
+    // carded success claims. Whether a particular copy landed is the
+    // per-press verdict's alone, and it CARDS; no face reads it.
     //
     // clipboard_get_text answers with that stored payload while WE hold
     // the selection (the self-paste short circuit — a same-thread
