@@ -4,14 +4,15 @@
 #   push.sh <png...>             each file in NAME ORDER: pushed, touched there (Gallery orders by the file's time),
 #                                announced to the media scanner, then two seconds before the next, so the sheets
 #                                land in Gallery in their names' order
-#   push.sh --delete <name...>   each superseded sheet removed from /sdcard/Download (a base name, no path) and the
-#                                media scanner told, so Gallery drops it
+#   push.sh --delete <name.png...>  each superseded sheet removed from /sdcard/Download (its base name WITH the
+#                                extension, no path) and the media scanner told, so Gallery drops it; a name with no
+#                                such file there is said and exits 1 (a base name without its .png matches nothing)
 set -euo pipefail
 DEVICE=${WARPTEMPO_ADB_DEVICE:-192.168.1.87:5555}
 DEST=/sdcard/Download
 SCAN=android.intent.action.MEDIA_SCANNER_SCAN_FILE
 
-usage() { echo "usage: $0 <png...> | $0 --delete <name...>" >&2; exit 2; }
+usage() { echo "usage: $0 <png...> | $0 --delete <name.png...>" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 
 if [ "$1" = "--delete" ]; then
@@ -19,6 +20,7 @@ if [ "$1" = "--delete" ]; then
     [ $# -ge 1 ] || usage
     for name in "$@"; do
         case "$name" in */*|'') echo "push.sh: --delete takes base names, not '$name'" >&2; exit 2;; esac
+        adb -s "$DEVICE" shell test -f "$DEST/$name" || { echo "push.sh: no such sheet: $DEST/$name" >&2; exit 1; }
         adb -s "$DEVICE" shell rm -f "$DEST/$name"
         adb -s "$DEVICE" shell am broadcast -a "$SCAN" -d "file://$DEST/$name" >/dev/null
         echo "deleted $DEST/$name"

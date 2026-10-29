@@ -19,7 +19,8 @@
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED, THE BUTTON CASE INCLUDED — its 20-W glyph seat, the case 23 (1
-// highlight + 20 + 1 shadow + 1 black), the cases' pitch 23. THE REASON: the
+// highlight + 20 + 1 shadow + 1 black) wide, the cases' pitch 23 (its
+// height the `key_height` tuning key since 2026-10-29). THE REASON: the
 // program is Cool Edit, not a chrome — the 24-W seat is ReactOS's large
 // toolbar glyph, the base's seat for a chrome vocabulary (chrome_spec.h's
 // head, where it stays the chrome's rule), and the program takes no
@@ -95,7 +96,10 @@ struct ProgramSpec {
     // left, the glyph seat, one shadow row and column and one black row and
     // column on the right and bottom; cases abut, so the case is the pitch.
     // The glyph's seat is (+1, +1) at rest and (+2, +2) pressed or checked
-    // (the shift is one line, cool_edit_paint.h).
+    // (the shift is one line, cool_edit_paint.h). THE FOUR SUM THE CASE'S
+    // WIDTH ALONE since 2026-10-29 (architect): its height is the
+    // `key_height` tuning key's device px at 300 % (render.h's
+    // icon_case_h_px).
     int  case_light_px;
     int  glyph_px;
     int  case_shadow_px;
@@ -309,21 +313,28 @@ inline constexpr ProgramSpec kProgramSpec = {
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
 // chrome_stack_authored_h sums them under every chrome).
+// THE CASE'S WIDTH, A WIDTH (render.h's icon_case_w_px): the W sum. THE
+// CASE'S HEIGHT IS NO W TERM since 2026-10-29 (architect): it is the
+// `key_height` tuning key's device px at 300 % (render.h's icon_case_h_px),
+// on the logo lane's road, so the strip and band sums below hold their pads
+// alone and the key's rows stand outside them as the logo lane's do.
 constexpr int program_case_authored_px(const ProgramSpec& p) {
     return p.case_light_px + p.glyph_px + p.case_shadow_px + p.case_outer_px;
 }
-// ROW 8 (2026-10-22, the simple layout): the strip pad, the case, the
-// strip pad (strip_pad_px's field, 13 since 2026-10-23).
+// ROW 8'S AUTHORED PART (2026-10-22, the simple layout; the case's height
+// out of it since 2026-10-29): the strip pad above the key and the strip
+// pad under it (strip_pad_px's field, 13 since 2026-10-23).
 constexpr int program_strip_authored_h(const ProgramSpec& p) {
-    return p.strip_pad_px + program_case_authored_px(p) + p.strip_pad_px;
+    return p.strip_pad_px + p.strip_pad_px;
 }
-// THE BAND'S AUTHORED PART (architect 2026-10-24): the case and the strip
-// pad under it. Its upper pad is THE LOGO LANE, authored in device px at
-// 300 % like the skin's other lengths (render.h's logo lane block, logo_lane_h_px), so
-// it is not a Windows-px term here (the band was row 8's strip 2026-10-22
-// to 2026-10-24).
+// THE BAND'S AUTHORED PART (architect 2026-10-24; the case's height out of
+// it since 2026-10-29): the strip pad under the key. Its upper pad is THE
+// LOGO LANE, authored in device px at 300 % like the skin's other lengths
+// (render.h's logo lane block, logo_lane_h_px), and its key the
+// `key_height` key's device px at 300 %, so neither is a Windows-px term
+// here (the band was row 8's strip 2026-10-22 to 2026-10-24).
 constexpr int program_band_authored_h(const ProgramSpec& p) {
-    return program_case_authored_px(p) + p.strip_pad_px;
+    return p.strip_pad_px;
 }
 // The canvas column's lanes above the canvas (the head): the view bar a
 // line, its field (authored at 300 %, its W the device px over 3) and a line; the ruler its ground and its bottom line; the
@@ -349,11 +360,12 @@ constexpr int program_column_authored_h(const ProgramSpec& p) {
 constexpr int program_stereo_divider_authored_h(const ProgramSpec& p) {
     return 1 + p.stereo_divider_face_px + 1;
 }
+// THE CASE'S WIDTH 23 W.
 static_assert(program_case_authored_px(kProgramSpec) == 23);
-// THE STRIPS: 13 + 23 + 13; the band's
-// authored part under its logo lane 23 + 13.
-static_assert(program_strip_authored_h(kProgramSpec) == 49);
-static_assert(program_band_authored_h(kProgramSpec) == 36);
+// THE STRIPS' W PARTS: row 8's two pads 13 + 13; the band's under its
+// logo lane and its key the pad's 13.
+static_assert(program_strip_authored_h(kProgramSpec) == 26);
+static_assert(program_band_authored_h(kProgramSpec) == 13);
 // ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
 // the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
 static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);

@@ -1031,6 +1031,22 @@ int    gui_scale_percent();
 // since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
+// THE KEY'S HEIGHT, THE `key_height` TUNING KEY'S SEAT (architect
+// 2026-10-29, on five mock sheets varying only the keys' height: the case's
+// height "around 33" device px at 300 %, its width unchanged): the live
+// value in DEVICE PX AT 300 % (skin_px's axis), read by icon_case_h_px and
+// nothing else. It is the scale's shape — render.h's accessors are free
+// functions with no AppState, so the value lives as file-scope state in
+// render.cpp, pushed by the same TWO application points: gui_main's startup
+// read of the device config, before the window exists and so before the
+// first layout, and the settings editor's `key_height=` commit
+// (GuiInputHandler::apply_key_height, which re-lays-out at once). The
+// grammar and the range are device_config.h's (parse_key_height); the
+// construction state is the templates' 33 (kKeyHeightDefaultAt300). It
+// settles into a constexpr once he rules the number, and this pair goes.
+void set_key_height_at300(int device_px_at_300);
+int  key_height_at300();
+
 // A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
 // asks for its text — each use at the face-size table's size, at the
 // current gui_scale.
@@ -1362,15 +1378,24 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
 // takes the accessors below, so the three rows cannot drift apart.
 //
-// THE CASE (Cool Edit's whole, its own 20-W seat since 2026-10-09
+// THE CASE'S WIDTH (Cool Edit's whole, its own 20-W seat since 2026-10-09
 // ~10:25): one highlight line, the glyph, one shadow line, one black line —
-// 23 W square, the buttons abutting at that pitch; A COMPOSITE OF ITS
-// ROUNDED PARTS (scaled_px's rule), each old line's slot one W and the glyph
-// scaled_px(20): 69 device px at 300 %, 84 at 360 % (the glyph 72, the
-// slots 4 each), 31 at the laptop's 138 % — AN AREA since the hi-fi skin,
-// THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one device
-// px and whose down face rides one device px right and down checked, two
-// held, 2026-10-23).
+// 23 W, the buttons abutting at that pitch; A COMPOSITE OF ITS ROUNDED
+// PARTS (scaled_px's rule), each old line's slot one W and the glyph
+// scaled_px(20): 69 device px at 300 %, 46 at 200 %, 84 at 360 % (the glyph
+// 72, the slots 4 each), 31 at the laptop's 138 % — AN AREA since the hi-fi
+// skin, THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one
+// device px and whose down face rides one device px right and down checked,
+// two held, 2026-10-23).
+// THE CASE'S HEIGHT IS NO LONGER THE WIDTH (architect 2026-10-29, on five
+// mock sheets varying only the height: "around 33" at 300 %, everything
+// else the same): THE `key_height` TUNING KEY, device px at 300 % through
+// skin_px (key_height_at300, its seat above) — at key_height 33, 33 device
+// px at 300 %, 22 at 200 %, 16 at 150 %, 15 at 138 %, 40 at 360 %. The
+// width stays the W sum. THE KEY KEEPS ITS LED AT THE OUTLINE'S BOTTOM ROW
+// (key_led_rect's anchor; the mocks cut interior rows from the middle):
+// across the key's range [21, 99] at 300 %, 200 %, 150 % and 138 % the LED
+// always fits, so no key in range loses it.
 // No key wears a glyph in the skin (2026-10-23): the old glyph seat is the
 // key's middle slot alone.
 //
@@ -1378,9 +1403,9 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, its block
 // above), the case, THE STRIP PAD on the brushed ground — no line on its
 // first row (the laptop's caption line went with the caption, 2026-10-24),
-// the keys' legends in its bottom pad (2026-10-23) — 72 + 69 + 39 = 180 device
-// rows at 300 % (147 under the strip pad above the case, 2026-10-22 to
-// 2026-10-24). Its runs
+// the keys' legends in its bottom pad (2026-10-23) — at key_height 33,
+// 72 + 33 + 39 = 144 device rows at 300 % (180 under the square 69-px case,
+// 2026-10-24 to 2026-10-29). Its runs
 // are paint_icon_row's walk (icon_row_seats: the keys abutting inside a
 // run, run_gap_px of ground between runs). The hit target is the key; the
 // ground between, the legends' included, is inert for input.
@@ -1410,8 +1435,10 @@ inline int icon_case_w_px() {
     return scaled_px(p.case_light_px, 1) + scaled_px(p.glyph_px) +
            scaled_px(p.case_shadow_px, 1) + scaled_px(p.case_outer_px, 1);
 }
+// THE CASE'S HEIGHT, the `key_height` tuning key's live value (its seat
+// above; the case paragraph): skin_px, floored at one device px.
 inline int icon_case_h_px() {
-    return icon_case_w_px();
+    return skin_px(key_height_at300(), 1);
 }
 // THE STRIP PAD (architect 2026-10-22, the simple layout; a constant since
 // 2026-10-23, program_spec.h's strip_pad_px, 13 W — its ruling there): row
@@ -1877,8 +1904,10 @@ ProgramRingColumns program_ring_columns(const AppState& a);
 //
 // THE ROW IS THE STRIP (architect 2026-10-22, the simple layout): THE STRIP
 // PAD, the program's case (the band's own, read from its accessors above so
-// the rows cannot drift apart), THE STRIP PAD — strip_h_px, 147 device rows
-// at 300 % and the pad's 13 (the band's own height until 2026-10-24, when
+// the rows cannot drift apart), THE STRIP PAD — strip_h_px, at key_height
+// 33 111 device rows at 300 % (39 + 33 + 39; 147 under the square 69-px
+// case until 2026-10-29) and the pad's 13 W (the band's own height until
+// 2026-10-24, when
 // its upper pad became the logo lane) — on the bare ground, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
@@ -1911,29 +1940,35 @@ inline int bottom_row_h_px() {
 // below the well (the frame's two sides where a vocabulary's frame stood on
 // the maximised window, window_frame_maximized, left 2026-10-24 with the
 // app's sizing frame): THE PROGRAM'S (program_spec.h; the simple layout
-// 2026-10-22): the band under its logo lane (the key, the pad), the canvas
+// 2026-10-22): the band's pad under its logo lane and its key, the canvas
 // column's 36 above the canvas (the view bar 7 — its field the 15 px at
 // 300 % over 3, program_spec.h — the ruler 12, the marker lane 17) and row
-// 8 (the pad, the key, the pad) under it, the strip pad program_spec.h's
+// 8's two pads round its key under it, the strip pad program_spec.h's
 // constant (strip_pad_px). THE LOGO LANE IS NOT IN IT: its height is the
 // skin's device px at 300 % (logo_lane_h_px, 72 there; the app's caption,
-// 40 there, stood over it on the laptop until 2026-10-24). NOR ARE THE
-// CANVAS'S TWO FRAME ROWS since 2026-10-28: each is one device px at every
-// scale (the canvas-frame block above), one W each in this sum until then.
+// 40 there, stood over it on the laptop until 2026-10-24). NOR IS THE
+// KEY'S HEIGHT since 2026-10-29, on the logo lane's road: it is the
+// `key_height` tuning key's device px at 300 % (icon_case_h_px, the case
+// paragraph above; 23 W in this sum, the band's and row 8's, until then).
+// NOR ARE THE CANVAS'S TWO FRAME ROWS since 2026-10-28: each is one device
+// px at every scale (the canvas-frame block above), one W each in this sum
+// until then.
 constexpr int chrome_stack_authored_h() {
     return program_band_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
            program_strip_authored_h(kProgramSpec);
 }
-// THE STACK AT THE STRIP PAD'S 13 W: 72 above (the band's case and pad 36,
-// the column 36) and row 8's 49 below, 121 W, 363 device rows at 300 % —
-// with the logo lane's 72, the two frame rows' one device px each and no
-// caption the tablet's well 1003 rows of the surface's 1440 (2026-10-28:
+// THE STACK AT THE STRIP PAD'S 13 W: 49 above (the band's pad 13, the
+// column 36) and row 8's two pads' 26 below, 75 W, 225 device rows at
+// 300 % — with the logo lane's 72, the two keys' 33 each at key_height 33,
+// the two frame rows' one device px each and no caption the tablet's well
+// 1075 rows of the surface's 1440 (2026-10-29: the key's 36 rows off each
+// strip gave it 72; 1003 under the square 69-px case from 2026-10-28, when
 // the frame rows' slots gave it 4 rows; 999 from 2026-10-24, when the trim
 // field's 15 px gave it 3; 996 under the 18-px field, 989 under the 40-row
 // caption over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's lane
 // table the record of each scale, the laptop's among them.
-static_assert(chrome_stack_authored_h() == 121);
+static_assert(chrome_stack_authored_h() == 75);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2558,13 +2593,13 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // one run per well (waveform_well_rows), its dots keeping the rows they
 // stand on, counted from the canvas's first row as ever (Cool Edit's own
 // dotted cursor keeps its phase across its divider on the capture: rows
-// 517, then 525). At 300 % on the tablet the canvas is 1003 rows, 289-1291
-// (main.cpp's lane table, re-derived 2026-10-28 for the frame rows' one
-// device px), between the ring's top hairline on row 288 and its bottom one
-// on 1292: the upper well's band 500 rows (289-788), the divider 789-791
-// (the light line, the ground row, the dark line, one device px each) and
-// the lower well's band 500 rows (792-1291), no spare row (1003 less the
-// divider's 3 is even).
+// 517, then 525). At 300 % on the tablet at key_height 33 the canvas is
+// 1075 rows, 253-1327 (main.cpp's lane table, re-derived 2026-10-29 for the
+// key's height), between the ring's top hairline on row 252 and its bottom
+// one on 1328: the upper well's band 536 rows (253-788), the divider
+// 789-791 (the light line, the ground row, the dark line, one device px
+// each) and the lower well's band 536 rows (792-1327), no spare row (1075
+// less the divider's 3 is even).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot

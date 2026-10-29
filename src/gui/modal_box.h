@@ -42,25 +42,26 @@
 // ONE SUNKEN FLAT FIELD, kFieldGround, under a ONE-DEVICE-PX RING in the
 // ring tones on its outer edge (render.h's line rule) — every member's, a
 // prompt's question included ("the user shouldn't be typing on a non-flat
-// color"); EVERY BUTTON A SQUARE KEY with its legend under it, the word
+// color"); EVERY BUTTON A KEY with its legend under it, the word
 // buttons' words in capitals (paint_handler.cpp's modal_word_buttons and
 // paint_key_legend) (paint_modal_box). (The earlier word buttons and a
 // prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the main window's ring: the box IS the ring's rect. At the
-// tablet's 2304 x 1440, 300 % and the strip pad's 13 W (re-derived
-// 2026-10-28, the canvas's frame columns and rows one hairline): the ring's
-// top slot 180–182 (the view bar's, directly under the band's rows 0–179,
-// the logo lane 0–71, with no caption, 2026-10-24), its bottom row 1292 and
+// tablet's 2304 x 1440, 300 %, the strip pad's 13 W and key_height 33
+// (re-derived 2026-10-29, the key's height a tuning key; 2026-10-28 the
+// canvas's frame columns and rows one hairline): the ring's
+// top slot 144–146 (the view bar's, directly under the band's rows 0–143,
+// the logo lane 0–71, with no caption, 2026-10-24), its bottom row 1328 and
 // its columns 23 and 2280 (the canvas's frame row and columns, the hairline
-// itself), the one-device-px ring on rows 180 and 1292 and columns 23 and
+// itself), the one-device-px ring on rows 144 and 1328 and columns 23 and
 // 2280, the interior x 24..2279 — the main canvas's own columns — and y
-// 181..1291 (THE RING IS THE ONLY MARGIN, below; the main canvas's own rows
-// 289–1291); the controls row 1293–1439, its case rows 1332–1400, its first
+// 145..1327 (THE RING IS THE ONLY MARGIN, below; the main canvas's own rows
+// 253–1327); the controls row 1329–1439, its case rows 1368–1400, its first
 // case's columns 23–91 and its last 2212–2280. A DIALOG'S TEXT (THE TEXT
 // INSIDE THE BOX, below) 12 px of plain field inside the ring on both axes:
-// its pen on column 36, its ascender line on row 193, its first baseline at
-// y 209 (the "l" 15.9 px tall), its wrap ending one past column 2267.
+// its pen on column 36, its ascender line on row 157, its first baseline at
+// y 173 (the "l" 15.9 px tall), its wrap ending one past column 2267.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -79,9 +80,10 @@
 // the row standing directly on the band with nothing between. At 300 %: 39
 // + 14 = 53 device rows (the row's cases end on 997, the first key row
 // starts on 1051), where the dock bar's border under the row made it 15 +
-// 18 + 14 = 47 until then. THE ROWS: the keyboard's band 1037–1439 (its
-// first key row's top 1051), the controls row 890–1036 (its case rows
-// 929–997), the ring's bottom row 889, the interior y 181..888.
+// 18 + 14 = 47 until then. THE ROWS, at key_height 33 (2026-10-29): the
+// keyboard's band 1037–1439 (its first key row's top 1051), the controls
+// row 926–1036 (its case rows 965–997), the ring's bottom row 925, the
+// interior y 145..924.
 //
 // THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (the hi-fi skin, above):
 // the lists, a dialog editor's line, a prompt's question and the progress

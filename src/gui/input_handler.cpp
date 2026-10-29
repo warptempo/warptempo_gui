@@ -4209,10 +4209,23 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     gui.set_touch_slop_px(drag_moved_threshold_px());
     // The stillness radius rides the same road (set_touch_stillness_px).
     gui.set_touch_stillness_px(scaled_px(kDefaultTouchStillnessPx, 1));
+    relayout_window();
+}
+
+void GuiInputHandler::apply_key_height(int device_px_at_300) {
+    // The contract is at the declaration (input_handler.h): the push, then
+    // the scale's relayout tail; the commit's arm owns the persist.
+    set_key_height_at300(device_px_at_300);
+    relayout_window();
+}
+
+void GuiInputHandler::relayout_window() {
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
-    // THE MATERIALS AT THE NEW SCALE, AT ONCE (materials.h's BAKE RULE: one
-    // act, one bake — the settle gate is a frame drag's alone).
+    // THE MATERIALS AT THE NEW GEOMETRY, AT ONCE (materials.h's BAKE RULE:
+    // one act, one bake — the settle gate is a frame drag's alone); the
+    // bake's key carries the scale and the key's height, so either act
+    // bakes.
     materials::ensure(app);
 }
 

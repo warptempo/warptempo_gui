@@ -79,7 +79,8 @@
 namespace {
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
-// the authored gui_scale row heights (icon_row_h_px(),
+// the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
+// row 8's, the `key_height` tuning key's since 2026-10-29 —
 // the canvas column's four, its bottom frame row, plus bottom_row_h_px() —
 // the unified bottom row), kRowGapPx and kFlagBottomLiftPx (see the
 // geometry helpers below); nothing is window-proportional, and since row 7
@@ -152,7 +153,9 @@ namespace {
 // surface, the tablet has none; render.h's caption note): THE TOOLBAR BAND
 // (THE LOGO LANE — the band's upper pad, 72
 // device px at 300 % since 2026-10-24, render.h's logo lane block — the
-// 23-W key, the strip pad on the brushed ground — render.h's program block),
+// key, 23 W wide and the `key_height` tuning key's device px at 300 % tall
+// since 2026-10-29, the strip pad on the brushed ground — render.h's
+// program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
 // BLOCK's four, THE PROGRAM'S CANVAS COLUMN inside the program ring
 // (architect 2026-10-09, the program is Cool Edit; program_spec.h, render.h's
@@ -233,29 +236,35 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-28 rather than adjusted (the canvas's frame rows one device px,
-// render.h's canvas-frame block; before that 2026-10-22, and the laptop's
-// 2026-10-24, its caption gone and its inspection scale 200 %), AT THE
-// STRIP PAD'S 13 W (a constant since 2026-10-23, program_spec.h's
-// strip_pad_px), the waveform the whole leftover and both gaps 0
+// 2026-10-29 rather than adjusted (the key's height a tuning key; before
+// that 2026-10-28, the canvas's frame rows one device px, render.h's
+// canvas-frame block, 2026-10-22, and the laptop's 2026-10-24, its caption
+// gone and its inspection scale 200 %), AT THE STRIP PAD'S 13 W (a
+// constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
+// key_height 33 (the templates' value; a tune moves the band's and row 8's
+// case rows and the well by their difference), the waveform the whole
+// leftover and both gaps 0
 // in every stack (the rule above). Every lane is its own composite of
 // rounded parts (scaled_px's rule), so the device rows below are read off
 // the lane accessors, never off a Windows total times the factor — in
 // particular a lane's line slot is one quantum, program_line_px(), not a share of
 // scaled_px of a total, so a lane can differ from a naive total at a
-// fractional gui_scale. THE PROGRAM'S TOP STACK IS 72 WINDOWS PX, 49 BELOW
-// (render.h's chrome_stack_authored_h): the band's case and pad 36 (23 +
-// 13) and the canvas column 36 above the canvas (the view bar 7, its field
-// the 15 device px at 300 % over 3 since 2026-10-24, the ruler 12, the
-// marker lane 17); row 8 49 below — AND OVER IT THE LOGO LANE, the band's
-// upper pad, 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px),
-// SCALED WITH gui_scale (the laptop's caption, 40 device px at 300 %, stood
-// over it until the same day), AND THE CANVAS'S TWO FRAME ROWS, ONE DEVICE
-// PX EACH AT EVERY SCALE (2026-10-28, hairline_px). THE WELL — THE CANVAS'S
-// INTERIOR — AT THE BASE'S 300 % IS 1003 DEVICE ROWS (999 under the frame
-// rows' 3-px slots, 2026-10-24 to 2026-10-28; 996 under the 18-px trim
-// field, 989 under the 40-row caption over the strip pad, 2026-10-23 to
-// 2026-10-24; the rule at centered_leftover_h below), AND ITS
+// fractional gui_scale. THE PROGRAM'S TOP STACK IS 49 WINDOWS PX, 26 BELOW
+// (render.h's chrome_stack_authored_h): the band's pad 13 and the canvas
+// column 36 above the canvas (the view bar 7, its field the 15 device px
+// at 300 % over 3 since 2026-10-24, the ruler 12, the marker lane 17); row
+// 8's two pads 26 below — AND OVER IT THE LOGO LANE, the band's upper pad,
+// 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px), SCALED WITH
+// gui_scale (the laptop's caption, 40 device px at 300 %, stood over it
+// until the same day), THE TWO KEYS' ROWS, THE `key_height` KEY'S DEVICE
+// PX AT 300 % (2026-10-29: icon_case_h_px, skin_px; 23 W each in the sums
+// until then), SCALED WITH gui_scale, AND THE CANVAS'S TWO FRAME ROWS, ONE
+// DEVICE PX EACH AT EVERY SCALE (2026-10-28, hairline_px). THE WELL — THE
+// CANVAS'S INTERIOR — AT THE BASE'S 300 % AND key_height 33 IS 1075 DEVICE
+// ROWS (1003 under the square 69-px case, 2026-10-28 to 2026-10-29; 999
+// under the frame rows' 3-px slots, 2026-10-24 to 2026-10-28; 996 under
+// the 18-px trim field, 989 under the 40-row caption over the strip pad,
+// 2026-10-23 to 2026-10-24; the rule at centered_leftover_h below), AND ITS
 // WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
 // (waveform_area: the margin and the canvas's frame column, 19 px, and half
 // the flooring's leftover, 5). Per scale the canvas column above the canvas
@@ -272,13 +281,13 @@ namespace {
 //   1920 x H AT 200 %, THE LAPTOP (its inspection scale since 2026-10-23;
 //   maximised under labwc, H the 1080 rows less labwc's title bar, which
 //   stands outside the surface — the theme's to say, never the app's): the
-//   lanes are 120 band (the logo lane 48, the case 46, the pad 26, rows
-//   0–119, the cases 48–93) + 14 trim + 24 ruler + 34 marker + 1 frame =
-//   193 above (120 the band, 73 the block) and 99 below (the bottom frame
-//   row 1 and row 8's 26 + 46 + 26), leftover H − 292: the waveform H − 292
-//   (its two wells (H − 292 − 3) / 2 rows each, floored, round the
-//   divider's 3, the spare row the canvas's last), both gaps 0 — 120 / 0 /
-//   73 / H − 292 / 0 / 99; the waveform 1888 wide, 16 px in (the margin
+//   lanes are 96 band (the logo lane 48, the case 22, the pad 26, rows
+//   0–95, the cases 48–69) + 14 trim + 24 ruler + 34 marker + 1 frame =
+//   169 above (96 the band, 73 the block) and 75 below (the bottom frame
+//   row 1 and row 8's 26 + 22 + 26), leftover H − 244: the waveform H − 244
+//   (its two wells (H − 244 − 3) / 2 rows each, floored, round the
+//   divider's 3, the spare row the canvas's last), both gaps 0 — 96 / 0 /
+//   73 / H − 244 / 0 / 75; the waveform 1888 wide, 16 px in (the margin
 //   and the frame column, 13, and half the flooring's 6), the ring's outer
 //   columns 15 and 1905. (At 138 % under the caption,
 //   2026-10-23 to 2026-10-24: 18 caption + 82 band + 49 above, 68 below, the
@@ -286,30 +295,30 @@ namespace {
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
-//   tablet value since 2026-10-06): the lanes are 180 band (72
-//   + 69 + 39, rows 0–179, the logo lane 0–71, the cases 72–140) + 21 trim
-//   + 36 ruler + 51 marker + 1 frame = 289 above (180 the band, 109 the
-//   block; the frame row 288) and 148 below (the bottom frame row 1292 and
-//   row 8 on 1293–1439, its cases 1332–1400), leftover 1003: the waveform
-//   1003 on rows 289–1291 (its two wells 500 rows each round the divider's
+//   tablet value since 2026-10-06): the lanes are 144 band (72
+//   + 33 + 39, rows 0–143, the logo lane 0–71, the cases 72–104) + 21 trim
+//   + 36 ruler + 51 marker + 1 frame = 253 above (144 the band, 109 the
+//   block; the frame row 252) and 112 below (the bottom frame row 1328 and
+//   row 8 on 1329–1439, its cases 1368–1400), leftover 1075: the waveform
+//   1075 on rows 253–1327 (its two wells 536 rows each round the divider's
 //   3 on 789–791, no spare row, render.h's waveform_divider), both gaps 0 —
-//   180 / 0 / 109 / 1003 / 0 / 148; the waveform 2256 wide, 24 px in
+//   144 / 0 / 109 / 1075 / 0 / 112; the waveform 2256 wide, 24 px in
 //   (columns 24–2279), the ring's outer columns 23 and 2281 (one past
 //   2280).
-//   2304x1440 AT gui_scale 360 (same surface; every relief line 4 here, so
-//   the case is 84 where it is 69 at 300, the pad 47, the logo lane 86):
-//   the lanes are 217 band (86 + 84 + 47) + 26 trim + 44 ruler
-//   + 63 marker + 1 frame = 351 above (217 and 134) and 179 below (1 +
-//   178), leftover 910: the waveform 910, both gaps 0 — 217 / 0 / 134 /
-//   910 / 0 / 179; the waveform 2256 wide, 24 px in.
+//   2304x1440 AT gui_scale 360 (same surface; the key 40 tall where it is
+//   33 at 300, the pad 47, the logo lane 86):
+//   the lanes are 173 band (86 + 40 + 47) + 26 trim + 44 ruler
+//   + 63 marker + 1 frame = 307 above (173 and 134) and 135 below (1 +
+//   134), leftover 998: the waveform 998, both gaps 0 — 173 / 0 / 134 /
+//   998 / 0 / 135; the waveform 2256 wide, 24 px in.
 //   2304x1440 AT gui_scale 400 (same surface): the lanes are
-//   240 band (96 + 92 + 52) + 28 trim + 48 ruler + 68 marker + 1 frame = 385
-//   above (240 and 145) and 197 below (1 + 196), leftover 858: the waveform
-//   858, both gaps 0 — 240 / 0 / 145 / 858 / 0 / 197; the waveform 2240
+//   192 band (96 + 44 + 52) + 28 trim + 48 ruler + 68 marker + 1 frame = 337
+//   above (192 and 145) and 149 below (1 + 148), leftover 954: the waveform
+//   954, both gaps 0 — 192 / 0 / 145 / 954 / 0 / 149; the waveform 2240
 //   wide, 32 px in.
 //   1024x600 AT 200 %, A SHORT WINDOW ON THE LAPTOP (kept as a worked case;
-//   no host runs this geometry): leftover 308 -> the waveform 308, both
-//   gaps 0 — 120 / 0 / 73 / 308 / 0 / 99.
+//   no host runs this geometry): leftover 356 -> the waveform 356, both
+//   gaps 0 — 96 / 0 / 73 / 356 / 0 / 75.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -378,7 +387,8 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE TOOLBAR
-// BAND, the logo lane, the case, the
+// BAND, the logo lane, the case (its height the `key_height` tuning key,
+// 2026-10-29), the
 // strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
 // canvas column's four lanes Cool Edit's view bar,
 // ruler, marker lane and canvas's top frame row — the view bar a line, its
@@ -466,11 +476,13 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300 and the strip pad's 13 W the lanes leave 1440 − 289 − 148 =
-// 1003 device rows (no caption, the 72-row logo lane and the 15-px trim
-// field, 2026-10-24, the frame rows one device px, 2026-10-28; 989 under
-// the hi-fi skin's 40-row caption, 2026-10-23). A COLOR moves no lane: the
-// 1003 rows hold under every waveform preset. May
+// gui_scale 300, the strip pad's 13 W and key_height 33 the lanes leave
+// 1440 − 253 − 112 = 1075 device rows (no caption, the 72-row logo lane and
+// the 15-px trim field, 2026-10-24, the frame rows one device px,
+// 2026-10-28, the key's 33 rows, 2026-10-29; 1003 under the square 69-px
+// case, 989 under the hi-fi skin's 40-row caption, 2026-10-23). A COLOR
+// moves no lane: the 1075 rows hold under every waveform preset (the key's
+// height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -3655,6 +3667,12 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
+    // THE KEY'S HEIGHT RIDES THE SCALE'S ROAD (the `key_height` tuning key,
+    // architect 2026-10-29; render.h's seat): seeded here, before gui.init()
+    // and so before the first layout, the case's height in every lane and
+    // seat the first frame lays out; the other road is the settings editor's
+    // `key_height=` commit (GuiInputHandler::apply_key_height).
+    set_key_height_at300(device_config.key_height);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

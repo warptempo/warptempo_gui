@@ -402,6 +402,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "noise_crossfade_s" && app.device_config != nullptr)
         return format_noise_crossfade_s(
             app.device_config->noise_crossfade_s);
+    // THE KEY'S HEIGHT (2026-10-29, a tuning key): through its one formatter
+    // (format_key_height, device_config.h), the writer's own spelling.
+    if (key == "key_height" && app.device_config != nullptr)
+        return format_key_height(app.device_config->key_height);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

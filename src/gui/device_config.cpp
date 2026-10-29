@@ -20,7 +20,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TEN keys since 2026-10-28, the noise's
+// REQUIRED SET, every one of them (ELEVEN keys since 2026-10-29, the tuning
+// key `key_height` appended at the end; TEN from 2026-10-28, the noise's
 // three after `role` — `noise`, `noise_level` and `noise_crossfade_s`, all
 // permanent, the crossfade the tuning key `noise_crossfade_ms` until that
 // night; NINE earlier that day, the level and
@@ -68,9 +69,10 @@ namespace {
 // `role`'s own road, the folder before its loudness and its crossfade.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
-// keys have always stood, each leaving when he settles its value; none
-// stands since 2026-10-28 night (`noise_crossfade_ms`, the crossfade's
-// tuning key that day, made the permanent seconds key above).
+// keys have always stood, each leaving when he settles its value:
+// `key_height` since 2026-10-29, alone (none stood from 2026-10-28 night,
+// when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
+// the permanent seconds key above).
 // (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
 // 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
 // kNoiseFadeOutMs; the LED glow's stood there 2026-10-23 to 2026-10-26,
@@ -90,6 +92,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "noise",
     "noise_level",
     "noise_crossfade_s",
+    "key_height",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -114,6 +117,14 @@ std::string format_noise_level(int db) {
 std::string format_noise_crossfade_s(int s) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", s);
+    return std::string(buf);
+}
+
+// The key's height's canonical spelling (2026-10-29): `%d`, the noise
+// integers' road.
+std::string format_key_height(int px) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", px);
     return std::string(buf);
 }
 
@@ -182,6 +193,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "noise_crossfade_s") {
             // The crossfade's canonical integer (format_noise_crossfade_s).
             s += format_noise_crossfade_s(cfg.noise_crossfade_s);
+        } else if (k == "key_height") {
+            // The tuning key's canonical integer (format_key_height).
+            s += format_key_height(cfg.key_height);
         }
         s += '\n';
     }
@@ -329,6 +343,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                                  kNoiseCrossfadeGrammarReason);
             }
             out.noise_crossfade_s = *s;
+            return {};
+        }
+        // THE KEY'S HEIGHT (2026-10-29, a tuning key): under its one grammar
+        // owner (parse_key_height, device_config.h), required like every key;
+        // any other spelling the launch's hard fail.
+        if (key == "key_height") {
+            const std::optional<int> px = parse_key_height(value);
+            if (!px) {
+                return bad_value(ln, key, value, kKeyHeightGrammarReason);
+            }
+            out.key_height = *px;
             return {};
         }
         return warptempo_parse::prefix_line_error(

@@ -8429,7 +8429,7 @@ struct AppState {
     // and it works fine". FOUR CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the thirteen keys the
+    // 2026-10-28: the Settings button and bare `;`; the fourteen keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, the open act the editor opened PREFILLED on the row's line once
     // the page has closed — or, on the row of a key with a value list, that
@@ -8982,7 +8982,7 @@ struct AppState {
     // fills it. FIVE CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's thirteen keys as
+    // (architect 2026-10-28), with the settings editor's fourteen keys as
     // `key=value` lines under two group rows; and since 2026-10-25 the
     // VALUE LIST, one listed key's values — the twenty built-in waveform
     // presets by display name (architect: "maybe a drop down would make it
@@ -9120,7 +9120,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group and Plain rows (its
-    // two headings and its thirteen key lines, build_settings_page_rows);
+    // two headings and its fourteen key lines, build_settings_page_rows);
     // the value list Plain rows alone (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits beside the `name` it
     // shows; the trim presets list Plain rows alone

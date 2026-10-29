@@ -2598,9 +2598,17 @@ namespace {
     // settings editor's gui_scale commit). EVERY painted pixel quantity in the product reads it
     // through gui_scale_factor().
     int    g_gui_scale_percent = 100;
+    // THE KEY'S HEIGHT in device px at 300 % (render.h's `key_height`
+    // seat), set by set_key_height_at300 from the same two application
+    // points; the templates' value as construction state.
+    int    g_key_height_at300 = kKeyHeightDefaultAt300;
 } // namespace
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
+void   set_key_height_at300(int device_px_at_300) {
+    g_key_height_at300 = device_px_at_300;
+}
+int    key_height_at300() { return g_key_height_at300; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

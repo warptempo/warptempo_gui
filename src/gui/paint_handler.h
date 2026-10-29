@@ -51,7 +51,7 @@ struct GuiTargetRender;
 // key sizes the KEY PATCHES are baked for, materials.h's KEYS): every key
 // size the geometry lays out — the band's and row 8's IN BOTH STATES OF THE
 // `h` VIEW (its hide and stand-ins move the band's left runs and row 8's
-// block), the controls row's square key (the render player's nine and every
+// block), the controls row's key (the render player's nine and every
 // word button), the scrub's thumb and, on a platform with the on-screen
 // keyboard, every key of its three pages — each a seat of its size, its lamp
 // and the depths it can stand at, one seat a size, each row's own layout

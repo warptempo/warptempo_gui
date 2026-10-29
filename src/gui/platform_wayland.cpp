@@ -714,6 +714,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.noise             = "rain";
     cfg.noise_level       = -9;
     cfg.noise_crossfade_s = 4;
+    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: his
+    // "around 33" device px at 300 % — the tablet's template the same
+    // (device_config.h's head).
+    cfg.key_height        = kKeyHeightDefaultAt300;
     return cfg;
 }
 

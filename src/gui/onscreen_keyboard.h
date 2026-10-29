@@ -468,6 +468,9 @@ inline constexpr Page page_after(Role role, Page page) {
 // (about 4.3) at 150 %; the gaps a tenth of the key's height at every scale.
 // IN WINDOWS PX since the unit's change (architect 2026-10-02): the laptop
 // pixel's 40 / 4 / 4 re-authored to the device sizes they had on the tablet.
+// THE KEYBOARD'S KEYS KEEP THEIR OWN HEIGHT (architect 2026-10-29): they do
+// not follow the program key's `key_height` tuning key (render.h's
+// icon_case_h_px).
 inline constexpr double kKeyHeightPx = 29.0;   // one row's key box
 inline constexpr double kKeyGapPx    = 3.0;    // between adjacent keys, both axes
 inline constexpr double kPadPx       = 3.0;    // the rows' inset across; + half a gap = the edge pad
@@ -581,9 +584,10 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 //     0..1919. Row 8 is under it and unreachable: the keyboard's press claim
 //     takes the band (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; at 300 % and the strip pad's 13 W
-//     the controls row 890–1036, its cases 929–997, the box 180–889, its top
-//     under the band's rows 0–179 with the 72-row logo lane, 2026-10-24).
+//     arithmetic at modal_box.h's head; at 300 %, the strip pad's 13 W and
+//     key_height 33 the controls row 926–1036, its cases 965–997, the box
+//     144–925, its top under the band's rows 0–143 with the 72-row logo
+//     lane, 2026-10-24).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press, a cursor
 // zone or the touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),

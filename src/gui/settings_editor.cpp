@@ -929,7 +929,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The seven device keys other than the scale — one body, ahead of the
+    // 2. The eight device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1195,8 +1195,9 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it, and `noise`, `noise_level` and `noise_crossfade_s`
-// (2026-10-28) the same, at once and no card, their arms after it
+// its arm after it, `noise`, `noise_level` and `noise_crossfade_s`
+// (2026-10-28) the same, at once and no card, their arms after it, and the
+// tuning key `key_height` (2026-10-29) the same, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1357,6 +1358,25 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (*s == app.device_config->noise_crossfade_s) return unchanged();
         app.device_config->noise_crossfade_s = *s;
         if (app.noise != nullptr) app.noise->set_crossfade_s(*s);
+        (void)persist();
+        return applied();
+    }
+
+    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key; render.h's
+    // `key_height` seat): an integer under its one grammar owner
+    // (parse_key_height, device_config.h), APPLIED LIVE AT THE COMMIT — the
+    // live struct, then the one live act (GuiInputHandler::apply_key_height:
+    // the renderer's seat and the window re-laid-out at once, the scale's
+    // relayout tail) — and persisted, so NO CARD: the keys on screen are the
+    // answer. The page opens the line editor on it (no value list, its 79
+    // values no short domain); Tab completes no value (a number is typed);
+    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    if (key == "key_height") {
+        const std::optional<int> px = parse_key_height(value);
+        if (!px) return reject(kKeyHeightGrammarReason);
+        if (*px == app.device_config->key_height) return unchanged();
+        app.device_config->key_height = *px;
+        input->apply_key_height(*px);
         (void)persist();
         return applied();
     }
@@ -1530,7 +1550,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's thirteen and
+        // one key does — any key the recall knows, the table's fourteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

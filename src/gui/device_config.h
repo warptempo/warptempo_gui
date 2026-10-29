@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Ten keys live here and nowhere else,
+// piece (architect 2026-08-27). Eleven keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -113,6 +113,21 @@
 //                            crossfade is a recording's relationship to
 //                            itself, so a later sound may want another
 //                            value; both templates spell 4
+//   key_height=<px>          THE KEY'S HEIGHT (architect 2026-10-29, on five
+//                            mock sheets varying only the keys' height: the
+//                            case "around 33" device px at 300 %, its width
+//                            unchanged): the program's key case's height in
+//                            DEVICE PX AT 300 % (skin_px's axis, the logo
+//                            lane's unit), an integer in [21, 99] in
+//                            canonical spelling (parse_key_height below),
+//                            live at the settings editor's OK, the window
+//                            re-laid-out at once
+//                            (GuiInputHandler::apply_key_height); A TUNING
+//                            KEY with a Settings row, REQUIRED like every
+//                            key while it stands, which settles into a
+//                            constexpr once he rules the number (render.h's
+//                            icon_case_h_px), its key, grammar and row going
+//                            then; both templates spell 33
 //   (noise_crossfade_ms=<ms>, THE CROSSFADE IN MS, [100, 30000], a tuning
 //                            key 2026-10-28, RETIRED that day for the
 //                            seconds key above; an old line is the ordinary
@@ -190,7 +205,8 @@
 // for part of that day, gone the same day; the two renamed `noise_level` and
 // `noise_crossfade_ms` the same day and `noise` placed after `role`, before
 // them; the crossfade made `noise_crossfade_s`, in seconds and permanent,
-// that night, in its place at the end);
+// that night, in its place at the end; the tuning key `key_height`
+// APPENDED after it 2026-10-29, the tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -328,7 +344,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the ten
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -364,8 +380,9 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors` and, since 2026-10-28, `noise`, `noise_level`
-// and `noise_crossfade_s` among them
+// `waveform`, `true_colors`, since 2026-10-28 `noise`, `noise_level`
+// and `noise_crossfade_s` and since 2026-10-29 the tuning key `key_height`
+// among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
@@ -445,6 +462,10 @@ struct DeviceConfig {
     std::string noise             = "rain";
     int         noise_level       = -9;
     int         noise_crossfade_s = 4;
+    // THE KEY'S HEIGHT in device px at 300 % (2026-10-29, the head's list; a
+    // tuning key): required; the construction state is the templates' 33
+    // (kKeyHeightDefaultAt300 below).
+    int         key_height        = 33;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -621,11 +642,12 @@ inline constexpr const char* kDeviceRoleGrammarReason =
     "must be author or mirror";
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the two noise integers' shared
-// lexis): an optional `-`, then digits with no leading zero, and no `-0` —
-// exactly what `%d` prints, so the reader admits back only the writer's
-// spelling. At most nine digits, which every range below sits far inside, so
-// the accumulation cannot overflow. The one lexer the two noise integer
-// grammars read; each owns its own range.
+// lexis, and since 2026-10-29 the key's height's): an optional `-`, then
+// digits with no leading zero, and no `-0` — exactly what `%d` prints, so
+// the reader admits back only the writer's spelling. At most nine digits,
+// which every range below sits far inside, so the accumulation cannot
+// overflow. The one lexer the three integer grammars read; each owns its
+// own range.
 inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     bool neg = false;
     if (!v.empty() && v.front() == '-') {
@@ -677,6 +699,29 @@ std::string format_noise_crossfade_s(int s);
 inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
     if (!n || *n < kNoiseCrossfadeMinS || *n > kNoiseCrossfadeMaxS)
+        return std::nullopt;
+    return n;
+}
+
+// THE key_height GRAMMAR (architect 2026-10-29) — an integer in [21, 99]
+// DEVICE PX AT 300 % in canonical spelling, the one owner the reader, the
+// writer, the settings editor's commit and its recall read
+// (format_key_height, parse_key_height). The range brackets the mocks'
+// series round his "around 33" with room both ways: 21 a third of the
+// square case's 69, 99 past it. The settings page opens the LINE EDITOR on
+// it, not a value list (79 values is no short domain, kSettingsValueListKeys'
+// rule). A TUNING KEY: when he rules the number, the key, these functions
+// and its Settings row go, and the value becomes a constexpr behind
+// render.h's icon_case_h_px.
+inline constexpr int kKeyHeightMinAt300     = 21;
+inline constexpr int kKeyHeightMaxAt300     = 99;
+inline constexpr int kKeyHeightDefaultAt300 = 33;
+inline constexpr const char* kKeyHeightGrammarReason =
+    "must be an integer in [21, 99] in canonical spelling";
+std::string format_key_height(int px);
+inline std::optional<int> parse_key_height(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kKeyHeightMinAt300 || *n > kKeyHeightMaxAt300)
         return std::nullopt;
     return n;
 }
@@ -824,11 +869,13 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves seven keys —
+// the settings editor's ONE device-key body, which serves eight keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
 // `true_colors=`, and since 2026-10-28 the noise's three, `noise=`,
-// `noise_level=` and `noise_crossfade_s=` (the latter two `rain_level=` and
+// `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
+// key `key_height=` (its live act GuiInputHandler::apply_key_height) (the
+// noise's latter two `rain_level=` and
 // `rain_crossfade_ms=` earlier that day and the crossfade
 // `noise_crossfade_ms=` until that night, `rain_fade_in_ms=` and
 // `rain_fade_out_ms=` beside them; `bevel_light=` and `bevel_dark=`
@@ -855,8 +902,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // 300 % and its external files dir's `projects/`;
 // both stamp `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
-// `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28)
-// and no role
+// `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
+// `key_height=33` (2026-10-29, kKeyHeightDefaultAt300) and no role
 // line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

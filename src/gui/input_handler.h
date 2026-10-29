@@ -4089,6 +4089,27 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
+    // THE KEY'S HEIGHT'S ONE LIVE ACT (the `key_height` tuning key, architect
+    // 2026-10-29; render.h's seat): push the height to the renderer
+    // (set_key_height_at300) and run the scale's RELAYOUT TAIL
+    // (relayout_window below) — the case's height moves every strip
+    // boundary and the waveform area as a scale does, so the commit re-lays
+    // the whole window out at once. The icon rasters and the touch slop are
+    // the scale's alone and do not move. The settings editor's
+    // `key_height=` commit is the sole caller; it gates the no-op, assigns
+    // the live config and persists it (apply_device_setting); the launch
+    // seeds the height before the window exists (main.cpp).
+    void apply_key_height(int device_px_at_300);
+
+    // THE RELAYOUT TAIL, the two live layout acts' shared last steps
+    // (apply_gui_scale, apply_key_height; 2026-10-29): the full-window
+    // invalidate, the resize-path geometry-and-cache rebuild
+    // (GuiPaintHandler::on_resize) and the materials' bake at once
+    // (materials.h's BAKE RULE: one act, one bake — the settle gate is a
+    // frame drag's alone). Run after the new length is pushed to the
+    // renderer, which every step reads.
+    void relayout_window();
+
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to

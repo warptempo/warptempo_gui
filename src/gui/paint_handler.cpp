@@ -2338,8 +2338,11 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // dark on the top and left, light on the bottom and right, the digits THE
 // BONE (E6D5A8, the clocks' own 2026-10-21 to 2026-10-23, retired: "the
 // font color should not be this yellowish color") — 40 DEVICE PX TALL at
-// 300 % (time_field_h_px, scaled with gui_scale), CENTRED ON THE CASE'S ROWS
-// (a half-row tie toward the top, the cap rule's own), its run in THE
+// 300 % (time_field_h_px, scaled with gui_scale; it does not follow the
+// key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
+// toward the top, the cap rule's own; taller than the case at key_height
+// 33, it stands over the strip pads either side, time_field_rect), its
+// run in THE
 // PROGRAM FACE, 22 px at 300 %, in every time field (row 8's clock,
 // architect 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to
 // symmetry; gui_font.h's table), its cap band centred in the field by
@@ -2431,6 +2434,10 @@ static std::string clock_time_text(const AppState& app,
 // gui_scale (skin_px; the amendment of the same night) — 18 and 6 at 138 %.
 // (17 W tall with a 5-W pad, scaled_px, 2026-10-09 to 2026-10-23: Cool
 // Edit's field, then the dialog field's pad; git history.)
+// THE FIELD STANDS AT 40 WHATEVER THE KEY'S HEIGHT (architect 2026-10-29):
+// it does not shrink with the `key_height` tuning key, so at 33 it is the
+// taller of the two, centred on the case's rows over the pads
+// (time_field_rect).
 constexpr double kTimeFieldHeightAt300 = 40.0;
 constexpr double kTimeFieldPadAt300    = 12.0;
 static int time_field_h_px() {
@@ -2633,10 +2640,19 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 }
 
 // ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
-// case's rows [case_y, case_y + case_h).
+// case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
+// either way (the offset FLOORED: since 2026-10-29 the field, 40 at 300 %,
+// stands TALLER than the case at key_height 33, the offset negative, and
+// truncation would have sent the tie down). Taller, it stands over the
+// strip pads either side of the case — 4 rows above and 3 below at 300 %,
+// 3 and 2 at 200 % — and inside row 8's and the controls row's rows at
+// every key height in the key's range, the overhang at most 10 rows where
+// the pads are 39 at 300 %.
 static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     const int h = time_field_h_px();
-    return GuiRect{x, case_y + (case_h - h) / 2, w, h};
+    const int d = case_h - h;
+    const int off = d >= 0 ? d / 2 : -((1 - d) / 2);
+    return GuiRect{x, case_y + off, w, h};
 }
 // A FIELD'S WIDTH round a reserved cell `cell_w` wide: the cell ceiled and
 // the pad either side (no least width since 2026-10-10, kTimeShape's block).
@@ -5329,7 +5345,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // (update_modal_dialog_hover), and as everywhere no wait starts under a held
 // press (the model is at AppState::RedesignTooltip).
 //
-// THE BUTTONS ARE THE HI-FI SKIN'S KEYS (architect 2026-10-23): square, the
+// THE BUTTONS ARE THE HI-FI SKIN'S KEYS (architect 2026-10-23): the
 // program's case, laid out by modal_word_buttons and player_row_layout, each
 // painted by the roster's key painter (paint_roster_case) — at rest, down
 // under a live press, its LED lit for the row's one checked button — and its
@@ -5381,7 +5397,7 @@ namespace {
 // (THE WORD BUTTONS' WINDOWS METRICS — the 6-W button gap, Windows' 75 x
 // 23-W push button sized to its label between the spec's pads, the editor's
 // one-row field's 23-W height and 5-W pad — stood 2026-10-02 to 2026-10-23;
-// every word button is the program's square key since, modal_word_buttons
+// every word button is the program's key since, modal_word_buttons
 // below. Git history holds their derivations.)
 // (THE FOCUS FRAME — kModalFocusFramePx, one relief line outside the
 // keyboard-focused button, Windows' default-button frame, 2026-10-02 to
@@ -5416,7 +5432,7 @@ constexpr std::string_view kModalCloseLabel  = "Close";
 // THE WORD BUTTONS' LAYOUT — ONE FOR THE PAINTER AND THE PRESS: on `seats`
 // (the controls row's, modal_controls_seats) the words `labels`, in painted
 // order. IN THE HI-FI SKIN (architect 2026-10-23) EVERY WORD BUTTON IS A
-// SQUARE KEY — the program's case at the case's seat (seats.case_*), its
+// KEY — the program's case at the case's seat (seats.case_*), its
 // word printed under it in capitals as a legend (paint_key_legend's one
 // seat) — the keys ABUTTING as the player's and the band's do, THE CLUSTER
 // FLUSH RIGHT, its last key's right edge the row's right seat (the box's
@@ -5445,7 +5461,7 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 } // namespace
 
 // THE RENDER PLAYER'S ROW LAYOUT (2026-10-21: lifted out of the modal
-// painter's player branch; the key patches read the controls row's square
+// painter's player branch; the key patches read the controls row's
 // key alone, program_key_seats below): each of the nine cases' left
 // column in the plan's order, the clock's two fields and the scrub's span,
 // on the controls row's seats (modal_controls_seats). The row's arrangement
@@ -5494,7 +5510,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 
     // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
     // was Load in place · Close as WORDS, measured runs in label boxes):
-    // both are the box's own square now, so the cluster is two abutting
+    // both are the program's key now, so the cluster is two abutting
     // boxes — right-flushed where THE CONTROLS ROW'S
     // CASES END, the last box's right edge the box's ring's outer edge
     // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
@@ -5614,7 +5630,7 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
 // the row's left, as the player seats its pair in its right cluster. Every
-// key the row's square case (seats.case_w); on a row too narrow for the six,
+// key the row's case (seats.case_w); on a row too narrow for the six,
 // the cluster starts at the row's left seat, the buttons whole (THE BUTTONS
 // STAY WHOLE).
 struct TrimPresetsRowLayout {
@@ -5643,11 +5659,11 @@ static AppState::PlayerButtonAct trim_presets_pair_twin(
 // THE KEYS AT THIS GEOMETRY (the declaration, paint_handler.h): every key
 // the rows lay out, in both states of the `h` view, each the layout's own
 // (icon_row_seats with icon_row_walk, row8_block with row8_block_walk,
-// modal_controls_seats' square key, the scrub's thumb,
+// modal_controls_seats' key, the scrub's thumb,
 // onscreen_keyboard::for_each_key) — the painters read the same.
 std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
     std::vector<GuiKeySeat> out;
-    // A size seen twice (every roster key, the controls row's square key,
+    // A size seen twice (every roster key, the controls row's key,
     // the keyboard's equal keys) is one seat, its depths the union.
     const auto add = [&](int w, int h, bool lamp, uint8_t depths) {
         if (w <= 0 || h <= 0) return;
@@ -5693,10 +5709,10 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
                 },
                 [](const TransportRowDef&) {});
     }
-    // THE CONTROLS ROW'S SQUARE KEY, on the row's seats with no keyboard
+    // THE CONTROLS ROW'S KEY, on the row's seats with no keyboard
     // and with one: the render player's nine (its lamp, Repeat One, at all
     // three depths with the rest; the player never stands over the
-    // keyboard) and every word button, every one the row's square key
+    // keyboard) and every word button, every one the row's key
     // (modal_word_buttons; never checked: rest and held).
     for (const int keyboard_h : {0, onscreen_keyboard::surface_height_px()}) {
         const BottomRowSeats ps = modal_controls_seats(app, keyboard_h);
@@ -5937,7 +5953,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // `btn_y` and `btn_h` are the one band the walk and the scrub read.
     const BottomRowSeats seats = modal_controls_seats(app, kb_h);
     // EVERY OWNER'S BUTTON IS THE KEY since 2026-10-23 (the word buttons
-    // square keys, modal_word_buttons), so one band for all.
+    // the keys, modal_word_buttons), so one band for all.
     const int btn_h = seats.case_h;
 
     // -- The buttons' words and widths, shaped up front (the layout needs the

@@ -92,7 +92,7 @@ enum class GuiKeyLed { None, Unlit, Lit };
 GuiRect key_led_rect(const GuiRect& r, int depth);
 
 // ONE KEY on `r`, w x h (the band's, row 8's and the render player's
-// icon_case_w_px square; a word button's or a keyboard key's own box) —
+// icon_case_w_px by icon_case_h_px; a word button's or a keyboard key's own box) —
 // BLANK, NO GLYPH (architect 2026-10-23: "there's no icons in these
 // consoles … just a little label underneath"). THE KEY'S EDGES ARE DEVICE
 // PX BY DESIGN, never inherited Windows px (architect 2026-10-23, checked
