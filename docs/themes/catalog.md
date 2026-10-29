@@ -1,6 +1,6 @@
 # Waveform presets
 
-A **waveform preset** is one of the program's built-in color presets, listed below. It colors the waveform and its canvas, the grid and center lines, the markers, the playhead and the scanner, and the keys' lit lamps take the hue of its waveform color; the rest of the window is the program's black hi-fi panel, which no preset changes.
+A **waveform preset** is one of the program's built-in color presets, listed below. It colors the waveform and its canvas, the grid and center lines, the markers, the playhead and the scanner, and the keys' lit lamps take its LED color, Cool Edit's own; the rest of the window is the program's black hi-fi panel, which no preset changes.
 
 To choose one, press the toolbar's Settings button and tap the `waveform` line: the presets are listed by name, the one in use chosen; a tap on one applies it at once and keeps it for the next launch, and Cancel or Esc leaves the colors as they were. A preset's key, in the list below, is what the device config's `waveform=` line holds.
 

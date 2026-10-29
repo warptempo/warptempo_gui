@@ -2630,7 +2630,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the ten as
+    // THE LIVE WORDS (render.h's program_palette_words): the words as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
 } // namespace
@@ -2656,7 +2656,7 @@ WaveformPlateInks waveform_plate_inks() {
 const GuiPaletteWords& program_palette_words() { return g_program_words; }
 
 namespace {
-// THE PROGRAM'S TEN into the installed struct and the plate's two baked
+// THE PROGRAM'S WORDS into the installed struct and the plate's two baked
 // inks off the same words — the install family's first shared half (the
 // chrome's members, derived from the same Face, are the other's; the
 // generation is each member's own bump) — with THE PANEL'S FACE THE
@@ -2692,10 +2692,12 @@ void fill_program_palette(const GuiPaletteWords& w) {
     g_palette.ce_field_light = hex(ring_light_of(face));
     g_palette.ce_field_dark  = hex(ring_dark_of(face));
     g_palette.ce_mid         = hex(kRulerGround);
-    // THE ACCENT (materials.h's accent_of_ink, architect 2026-10-23): the
-    // live preset's ink's hue under the LED's own lightness and saturation,
-    // the lit lamps' one tone, their glow patches rebuilt with it.
-    materials::set_accent(accent_of_ink(w[kInk]));
+    // THE ACCENT IS THE PRESET'S `led`, COOL EDIT'S _LED AS IT IS (architect
+    // 2026-10-29: "just use the color"; materials.h's THE ACCENT): the lit
+    // lamps' one tone, their glow patches rebuilt with it.
+    static constexpr std::size_t kLed = palette_role_index("led");
+    static_assert(kLed < kGuiPaletteRoleCount);
+    materials::set_accent(w[kLed]);
     // The panel label's pair, swapping past its own threshold (2026-10-10).
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));

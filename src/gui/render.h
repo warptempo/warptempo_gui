@@ -103,8 +103,9 @@ struct TrimRange {
 // the canvas's grid and center line, the cues' two colors, the playhead and
 // the scanner, and Cool Edit's panel face as its
 // record; palette_file.h's head owns the rule that parts program from
-// chrome) — the WAVEFORM PRESET, the one choice of color left, its ink's hue
-// also THE ACCENT of the lit LEDs (materials.h's accent_of_ink); THE PANEL'S
+// chrome) — the WAVEFORM PRESET, the one choice of color left, its `led`
+// also THE ACCENT of the lit LEDs (Cool Edit's LED color verbatim, architect
+// 2026-10-29; materials.h's THE ACCENT, the rule's one exception); THE PANEL'S
 // FACE is the brushed ground's mean (materials.h's TONE RULE), and THE
 // CHROME'S ROLES are the skin's constants and the two ring tones off that
 // mean (chrome_derive.h's head, the per-role table; Cool Edit's tones off
@@ -124,7 +125,7 @@ struct TrimRange {
 // (2026-10-26). There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
 // (2026-10-08). The app computes no color but THE SKIN'S RULES: the ring
-// tones and the accent (materials.h) and Cool Edit's tones off the Face for
+// tones (materials.h) and Cool Edit's tones off the Face for
 // what the program still derives (cool_edit_derive.h, the COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
@@ -132,7 +133,8 @@ struct TrimRange {
 // ruler's ticks and digits, and the black shadow under the ticks) — or THE
 // HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
 // the bone, legend and dim inks, the ruler's and the fields' grounds, the
-// selection pair, the key's face, edges and LED, the accent, and the baked
+// selection pair, the key's face, edges and LED, the accent (the preset's
+// `led`, materials::accent_color), and the baked
 // brushed grounds through set_surface_source) — or THE ICONS' OWN INKS
 // (architect 2026-10-06): the drawings' colors as each file names them
 // (icons.h), artwork, not roles, so a drawing is never recolored by a
@@ -264,8 +266,8 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's TEN (palette_file.h, 2026-10-07; ten
-//                 since 2026-10-26): the waveform's canvas, ink and outline
+//   THE PALETTE   the program's roles (palette_file.h, 2026-10-07): the
+//                 waveform's canvas, ink and outline
 //                 (ROW 6, below; the view bar's span wears none of them,
 //                 materials.h's neutral trio since 2026-10-25); THE
 //                 CANVAS'S TWO LINES, Cool
@@ -281,7 +283,10 @@ struct TrimRange {
 //                 the canvas, nothing else (THE PLAYHEAD, below); the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
-//                 (architect 2026-10-09); and THE
+//                 (architect 2026-10-09); `led`, THE LIT LEDS' ACCENT,
+//                 Cool Edit's LED color as it is (architect 2026-10-29,
+//                 "just use the color"; materials::set_accent, the lit key
+//                 patches baking it); and THE
 //                 PANEL'S `face` (2026-10-09: the program's band, row 8
 //                 and the canvas column's lanes — Cool Edit's — every
 //                 other panel tone derived from it, the COOL EDIT BLOCK,
@@ -393,6 +398,10 @@ struct GuiPalette {
     GuiColor range;
     GuiColor playhead_stem;
     GuiColor scanner;
+    // THE LIT LEDS' ACCENT, Cool Edit's `_LED` as it is (architect
+    // 2026-10-29): the record of the words handed to materials::set_accent,
+    // whose baked key patches carry it; no painter reads the member.
+    GuiColor led;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
     // Cool Edit's Face, the ground of the toolbar band and row 8 — THE
     // BRUSHED GROUND'S MEAN since 2026-10-23 (materials.h's TONE RULE; its
@@ -465,7 +474,7 @@ enum class GuiSurface {
 GuiColor surface_text(GuiSurface surface);
 
 // Install every color: THE PROGRAM'S off `program`, the waveform preset's
-// ten (2026-10-07; the device config's `waveform` key names the preset
+// words (2026-10-07; the device config's `waveform` key names the preset
 // at launch — a built-in's key, is_builtin_palette_name, gui_main resolving
 // it with palette_record, palette_file.h) — and THE CHROME'S, DERIVED FROM
 // THE PANEL'S FACE AND THE INK (2026-10-10, the chrome inherits Cool Edit;
@@ -483,21 +492,21 @@ GuiColor surface_text(GuiSurface surface);
 // (The caption's six were a picked scheme's — a `caption` key, its row and
 // a second argument here, with install_chrome_pick and live_chrome_pick
 // beside — 2026-10-08..10-21.)
-void install_palette(const std::array<uint32_t, 10>& program);
+void install_palette(const std::array<uint32_t, 11>& program);
 
-// THE LIVE WORDS AS INSTALLED — the program's ten the install family
+// THE LIVE WORDS AS INSTALLED — the program's words the install family
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 10 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 11 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not — so a reopen
 // keeps them. ITS READER: the materials' re-install at a bake
 // (materials.cpp's bake_now, the panel's Face moving under the same words).
-const std::array<uint32_t, 10>& program_palette_words();
+const std::array<uint32_t, 11>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// program's ten alone, the Waveform row's live road — is declared in
+// program's words alone, the Waveform row's live road — is declared in
 // palette_file.h beside the words it takes and defined in render.cpp beside
 // install_palette.)
 

@@ -13,7 +13,7 @@
 // THE COLORS ARE COMPILED IN, AND ONE KIND OF PRESET REMAINS (architect
 // 2026-10-21, "ok to delete other captions"; the fortepiano chrome,
 // materials.h):
-//   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S TEN
+//   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S ROLES
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
 //     presets (kGuiBuiltinPalettes, the program's own twenty), the
 //     `waveform` device key (named
@@ -23,8 +23,9 @@
 //     completes a typed prefix against the built-in names
 //     (GuiSettingsEditor::complete_closed_value) and whose commit installs
 //     the preset live (install_program_palette below). It sets THE
-//     WAVEFORM'S ROLES ALONE, and its ink's hue THE LIT LEDS' ACCENT
-//     (materials.h's accent_of_ink, 2026-10-23): no chrome surface reads its
+//     WAVEFORM'S ROLES ALONE, and with its `led` THE LIT LEDS' ACCENT
+//     (Cool Edit's own LED color verbatim, architect 2026-10-29; render.cpp's
+//     fill_program_palette): no chrome surface reads its
 //     `face` — the panel's Face is the brushed ground's mean (render.cpp's
 //     panel_face, materials.h's TONE RULE) — so the role stands in the table
 //     and the generated rows as the record of each preset's Face, read by
@@ -60,8 +61,10 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
-// chrome's selected pair). So the palette's program roles are exactly the
-// TEN below: the waveform's canvas, ink and lit outline; THE CANVAS'S
+// chrome's selected pair) — ONE EXCEPTION, the lamps' accent (`led`, below:
+// chrome, but Cool Edit's preset records it, architect 2026-10-29). So the
+// palette's program roles are exactly the role table's below: the
+// waveform's canvas, ink and lit outline; THE CANVAS'S
 // GRID AND CENTER LINE, `grid` and `center`; THE CUES' TWO COLORS, `cue` the
 // warp markers' and `range` the phase resets', each kind's triangle and
 // dots (architect 2026-10-09 ~11:50–12:00, Cool Edit's cues, "red+blue for
@@ -74,8 +77,12 @@
 // alone — and the `scanner`, the white of the stems that belong to the
 // controls: the playback line and the zoom anchor's stem, Cool Edit's own
 // constant white (the role table's paragraph below; architect 2026-10-09:
-// "the playhead is yellow"); and THE PANEL'S FACE, Cool Edit's (the record,
-// above). (The four flag kinds' faces and selected faces, the one flag
+// "the playhead is yellow"); THE LAMPS' ACCENT `led`, Cool Edit's LED color,
+// worn verbatim by the lit LEDs and their glow (architect 2026-10-29: "just
+// use the color"; render.cpp's fill_program_palette hands it to
+// materials::set_accent, the key patches baking it — no painter reads the
+// member); and THE PANEL'S FACE, Cool Edit's (the record, above). (The
+// four flag kinds' faces and selected faces, the one flag
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
@@ -93,7 +100,7 @@
 // table in it).
 // Each a KEY (the display name in the key grammar, no prefix, architect
 // 2026-10-27 — the `waveform` key's word for it), a DISPLAY NAME (Cool
-// Edit's own) and THE TEN. THE DEFAULT PALETTE is "Default" (`default`,
+// Edit's own) and ITS WORDS, one per role. THE DEFAULT PALETTE is "Default" (`default`,
 // kGuiDefaultPaletteKey; architect 2026-10-26) — the one both first-run
 // templates spell (`waveform=default`; every device key required,
 // architect 2026-10-14).
@@ -106,7 +113,7 @@
 // the lookups' key, palette_role_index) and the
 // GuiPalette member it fills (render.h's palette block owns what each
 // paints). THE TABLE CARRIES NO VALUES (2026-10-09): every built-in palette's
-// ten, the default's among them, are the generated rows of
+// words, the default's among them, are the generated rows of
 // kGuiBuiltinPalettes below, one source.
 //
 // WHAT EACH ROLE TAKES FROM A PRESET, recorded in Cool Edit Pro 2.1's value
@@ -122,7 +129,8 @@
 // (architect 2026-10-26: "the default Cool Edit markers contrast well"), a
 // warp marker's and a phase reset's since 2026-10-29 —
 // `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on every built-in but
-// CEPro 1.2's FFFF6C),
+// CEPro 1.2's FFFF6C), `led` its _LED (Cool Edit's LED color, the default's
+// red FF0000, worn as it is; architect 2026-10-29, "just use the color"),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in the default: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
@@ -148,8 +156,9 @@
 // THE TABLE'S ORDER (the color picker's chooser's, 2026-10-07..14): the
 // waveform's three, the canvas's two lines, the cues' two colors, then the
 // two lines that cross the well (the playhead, the scanner), then the
-// panel's face. The generator reads the names off this
-// table and refuses to run when they are not its own order.
+// lamps' accent, then the panel's face, the record, last. The generator
+// reads the names off this table and refuses to run when they are not its
+// own order.
 struct GuiPaletteRole {
     const char*            name;
     GuiColor GuiPalette::* member;
@@ -164,6 +173,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"range",                     &GuiPalette::range},
     {"playhead_stem",             &GuiPalette::playhead_stem},
     {"scanner",                   &GuiPalette::scanner},
+    {"led",                       &GuiPalette::led},
     {"face",                      &GuiPalette::face},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
@@ -172,12 +182,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // install_program_palette takes, a built-in palette holds and palette_record
 // answers.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 10>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 11>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
-// pinned to the table here.
+// pinned to the table here — the one place the roles are counted.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 10> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 11> must be GuiPaletteWords");
 
 // The index of the role named `name` in the table, or kGuiPaletteRoleCount —
 // the reader's one lookup, and install_palette's for the plate's two baked
@@ -188,14 +198,14 @@ constexpr std::size_t palette_role_index(std::string_view name) {
     return kGuiPaletteRoleCount;
 }
 
-// INSTALL THE PROGRAM'S TEN (2026-10-07; the install family's second
+// INSTALL THE PROGRAM'S WORDS (2026-10-07; the install family's second
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED (chrome_derive.h's live_chrome_words: the
 // skin's constants and the ring tones off the ground's mean, so no chrome
 // role moves with a preset; the waveform's and the program's roles do, the
-// view bar's ink-derived tones among them, and the lit LEDs' accent,
-// materials::set_accent)
+// view bar's ink-derived tones among them, and the lit LEDs' accent, the
+// `led` word, materials::set_accent)
 // and palette_generation bumped. THE LIVE ROAD is the Settings Waveform
 // row's commit (GuiSettingsEditor's install_waveform_preset,
 // settings_editor.cpp, which calls this and then runs the apply shape once;
@@ -207,13 +217,14 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
 // (the grid, the center line, a cue color, the playhead,
-// the scanner: no plate render), the flag cache alone, synchronously
+// the scanner, the lamps' accent: no plate render), the flag cache alone, synchronously
 // (Viewport::refresh_flag_cache, so a frame callback served before the tick
 // cannot blit flags in the old colors); then Viewport::invalidate_all, so
 // the swap is one frame (the whole surface, which is the GUI's geometry since
 // 2026-10-24: labwc owns the border outside it).
-// WHY THAT IS ENOUGH (re-read 2026-10-09): the ten bake into two
-// cached things alone — the waveform plate, keyed by its two inks
+// WHY THAT IS ENOUGH (re-read 2026-10-09): the words bake into two
+// cached things alone besides the lit key patches (`led`, rebuilt by
+// materials::set_accent inside the install) — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,
 // keyed by the generation (FlagCache::fp_palette_generation), whose rebuild
 // also stages the stem stash (AppState::staged_marker_stems, swapped in at
@@ -229,7 +240,7 @@ void install_program_palette(const GuiPaletteWords& words);
 
 // THE BUILT-IN PALETTES (the head) — the program's twenty in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
-// name and the ten in the role table's order. palette_file.cpp asserts
+// name and its words in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the
 // default a row and every lit outline the generator's rule off its ink.
 struct GuiBuiltinPalette {
@@ -255,7 +266,7 @@ constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
         if (name == b.key) return &b;
     return nullptr;
 }
-// THE DEFAULT PALETTE'S TEN (the derivation checks' and the install
+// THE DEFAULT PALETTE'S WORDS (the derivation checks' and the install
 // family's base).
 inline constexpr const GuiPaletteWords& default_palette_words() {
     return builtin_palette(kGuiDefaultPaletteKey)->words;
@@ -284,7 +295,7 @@ inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in waveform preset's key "
     "(default, xp-blue, ...)";
 
-// The ten the built-in palette `name` names. Precondition:
+// The words the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses
 // (install_palette at launch; the Waveform row's commit).
 GuiPaletteWords palette_record(std::string_view name);
