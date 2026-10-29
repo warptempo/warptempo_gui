@@ -614,10 +614,10 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
 // of the program's words so a new Face or `cue` moves
 // them live; render.cpp's fill_program_palette). THE FACE HERE IS THE MARKER
-// LANE'S since 2026-10-22 (architect: truthful to the surface — the cues
-// stand on the marker lane): materials::face(GuiMaterial::Marker), the
-// brighter brushed strip's mean in the hi-fi skin (2026-10-23; the brass's
-// 2026-10-22 to 2026-10-23), never the panel's GROUND Face:
+// LANE'S (architect 2026-10-22: truthful to the surface — the cues stand on
+// the marker lane), and the lane is flat in the ground's face since
+// 2026-10-29 (materials.h's head), so it is the one number
+// materials::face(), the baked ground's mean:
 //   the TRIANGLE   the live triangle's color, the `cue` red (every cue's
 //                  since 2026-10-26), 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;

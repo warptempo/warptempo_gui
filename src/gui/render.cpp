@@ -1879,11 +1879,12 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
         // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
         // changing color.
-        // THE BOX IS THE LANE'S BRUSHED GROUND AS DRAWN (materials.h's
-        // MARKER, 2026-10-23): the strip's own pixels at their place and
-        // phase, so the box masks earlier text exactly.
+        // THE BOX IS THE LANE'S FLAT FACE (materials.h's marker lane rule,
+        // 2026-10-29): the Flat scope fills the palette's `face` flat, the
+        // one color of every pixel of the lane, so the box masks earlier
+        // text exactly.
         {
-            const GuiMaterialScope marker(GuiMaterialRegion::Marker);
+            const GuiMaterialScope flat(GuiMaterialRegion::Flat);
             for (const auto& sp : spans)
                 paint_cell_rect(cr,
                                 GuiRect{sp.first, lane.y, sp.second - sp.first,
@@ -2632,7 +2633,7 @@ uint32_t panel_face(const GuiPaletteWords&) {
     // THE GROUND'S MEAN (materials.h's TONE RULE, 2026-10-23), its estimate
     // before the first bake; the preset's own `face` is read by the
     // static_asserts alone.
-    return materials::face(GuiMaterial::Ground);
+    return materials::face();
 }
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
@@ -2665,12 +2666,12 @@ void fill_program_palette(const GuiPaletteWords& w) {
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
     // The disabled cue's faded triangle, shadow and label (2026-10-10): the
-    // label from the bone, ALL THREE MIXED TOWARD THE MARKER LANE'S MEAN, the
+    // label from the bone, ALL THREE MIXED TOWARD THE MARKER LANE'S FACE, the
     // ground the cues stand on (architect 2026-10-22, truthful to the
-    // surface).
+    // surface) — the lane flat in the ground's face since 2026-10-29
+    // (materials.h), so the one `face` above.
     {
         using namespace cool_edit_derive;
-        const uint32_t face = materials::face(GuiMaterial::Marker);
         static constexpr std::size_t kCue = palette_role_index("cue");
         g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], face));
         g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(face));
@@ -3213,8 +3214,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // only by what is typed.
     //
     // Each segment wears its resting look — its box in the panel face (the
-    // lane's brushed strip over the canvas's columns, the panel's ground past
-    // them), the text
+    // lane's flat face over the canvas's columns, the panel's brushed ground
+    // past them), the text
     // in the bone or the faded inert label, struck on a coincident marker —
     // and none takes
     // the selected look while the field stands, each open having seated the
@@ -3286,22 +3287,22 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int x0 = cursor_x + gap;
             const int w  = pad_l + seg_w + pad_r;
             // The face box over the gap and the segment, as the resting
-            // label's one box covers its gaps — the lane's brushed ground as
-            // drawn (paint_cues' box, materials.h's MARKER) over the canvas's
-            // columns, THE PANEL'S GROUND past them (the run is not clipped,
-            // so a ride near the right edge reaches the margin, materials.h's
-            // REGIONS).
+            // label's one box covers its gaps — the lane's flat face
+            // (paint_cues' box, materials.h's marker lane rule) over the
+            // canvas's columns, THE PANEL'S BRUSHED GROUND past them (the run
+            // is not clipped, so a ride near the right edge reaches the
+            // margin, materials.h's REGIONS).
             const int fx = std::max(cursor_x, face_x0);
             const int fx1 = x0 + w;
-            const int brass1 = std::clamp(canvas_cols.x + canvas_cols.w, fx, std::max(fx, fx1));
-            if (brass1 > fx) {
-                const GuiMaterialScope marker(GuiMaterialRegion::Marker);
-                paint_cell_rect(cr, GuiRect{fx, lane.y, brass1 - fx, fill_h},
+            const int lane1 = std::clamp(canvas_cols.x + canvas_cols.w, fx, std::max(fx, fx1));
+            if (lane1 > fx) {
+                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+                paint_cell_rect(cr, GuiRect{fx, lane.y, lane1 - fx, fill_h},
                                 pal.face);
             }
-            if (fx1 > brass1) {
+            if (fx1 > lane1) {
                 const GuiMaterialScope ground(GuiMaterialRegion::Ground);
-                paint_cell_rect(cr, GuiRect{brass1, lane.y, fx1 - brass1, fill_h},
+                paint_cell_rect(cr, GuiRect{lane1, lane.y, fx1 - lane1, fill_h},
                                 pal.face);
             }
             const double tx = static_cast<double>(x0 + pad_l);

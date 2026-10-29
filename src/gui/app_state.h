@@ -2568,8 +2568,8 @@ enum class RedesignButton {
     // engine plays, at one level, never ducked). Its press is
     // GuiNoise::toggle, the chokepoint bare `w` reaches too. It GREYS WITH NO
     // FOLDER (GuiNoise::available — the folder under `noise/` beside the
-    // device config that the `noise` key names, the `tiles/` shape: present
-    // plays, absent greys, no card) and DARKENS ITSELF if the load fails
+    // device config that the `noise` key names: present plays, absent
+    // greys, no card) and DARKENS ITSELF if the load fails
     // (GuiNoise::tick, the key greying from then on), at a route drop
     // (noise_voice_reset_on_dead_stream, the poll's or a reopen's — noise.h's
     // head) and when the `noise` key names

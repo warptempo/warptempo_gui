@@ -27,7 +27,8 @@
 //   * AN EXPANSION — a page the cache wants and the store holds: the store's
 //     bytes carried to this thread by their shared owner, never copied, and
 //     no file read.
-// THE FILE'S ROAD: the decode through the materials' road at k = 1
+// THE FILE'S ROAD: the decode at the page's own size through svg_icon.h's
+// raster road
 // (svg_icon::raster_info and raster_regions, which any thread may run:
 // svg_icon.h's THREADS block), the scale to the page's FIT SIZE — the page
 // scaled uniformly by the smaller of the box's two ratios, each side rounded

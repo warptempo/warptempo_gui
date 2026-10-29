@@ -19,8 +19,8 @@
 # (to -Dpng=enabled plus a staged libpng, ~200 KB) if anything here bites.
 #
 # Nothing in the product asks CAIRO to decode a PNG: the icons are resvg's
-# (svg_icon.cpp), and the pictures the product does decode -- a PNG or JPEG
-# in the `tiles/` folder beside the device config (materials.h) -- are decoded
+# (svg_icon.cpp), and the pictures the product does decode -- the score
+# viewer's page images, PNG or JPEG (score_page_worker.h) -- are decoded
 # by resvg's own raster-images feature (85_resvg.sh), so the Android backend
 # asks cairo for nothing but the image surface and cairo-ft.
 #

@@ -15,7 +15,7 @@ code: `fonts/README.md` and `assets/icons/README.md` (the four icon SVGs, the la
 
 | Library | Version | Licence |
 |---|---|---|
-| resvg's C API (`resvg-capi`, `src/gui/svg_icon.cpp`: the renderer of the four icon SVGs and the decoder of a PNG or JPEG ground picture in the `tiles/` folder beside the device config), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
+| resvg's C API (`resvg-capi`, `src/gui/svg_icon.cpp`: the renderer of the four icon SVGs and the decoder of the score viewer's page images, the grayscale JPEG pages `tools/score_extract.py` writes), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
 | its 37 crates (below) | Cargo.lock at the pin | MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Zlib, 0BSD, Unlicense, each crate's own |
 | the Rust standard library inside `libresvg.a` (core, alloc, std and their crates) | rustc 1.99.0 | MIT OR Apache-2.0 |
 

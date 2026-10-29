@@ -39,9 +39,9 @@
 // THE SOUND IS A FOLDER UNDER `noise/` BESIDE THE DEVICE CONFIG, named by the
 // `noise` device key (device_config_path()'s parent / "noise" / the key's
 // value — `noise/rain/` for the first run's `noise=rain`;
-// is_noise_folder_name, device_config.h, owns the name's grammar). The
-// `tiles/` precedent (materials.h) stands: present plays, AN ABSENT FOLDER IS
-// THE ORDINARY STATE and greys the key with no card and no line. Every
+// is_noise_folder_name, device_config.h, owns the name's grammar). Present
+// plays; AN ABSENT FOLDER IS THE ORDINARY STATE and greys the key with no
+// card and no line. Every
 // regular file whose name ends `.wav` (lowercase, exact) is a SEGMENT. THE
 // ADMITTED SHAPE: PCM16, two channels, at least one frame, every file at THE
 // FIRST FILE'S RATE (one rate per folder), each element count passing

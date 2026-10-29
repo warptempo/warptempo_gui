@@ -151,8 +151,8 @@ cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
 # (THE BUNDLED MATERIALS -- the fortepiano chrome's three covers under
 # assets/tiles/, 2026-10-21 to 2026-10-23 -- are no longer packed: the hi-fi
-# skin's ground is procedural, baked at launch (materials.h's head); a
-# `tiles/` folder beside the device config is the one image road.)
+# skin's ground is procedural, baked at launch (materials.h's head), and no
+# picture replaces it.)
 
 # --- 2/3. configure + build ----------------------------------------------
 # WT_CANVAS is in the environment, so configure.sh reads the same canvas and

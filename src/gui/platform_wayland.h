@@ -104,11 +104,6 @@ public:
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
 
-    // (THE BUNDLED MATERIALS — bundled_tile_names / bundled_tile_bytes, the
-    // fortepiano chrome's assets/tiles/ read by name, 2026-10-21 to
-    // 2026-10-23 — are retired with the bundle: the hi-fi skin's ground is
-    // procedural, materials.h's head.)
-
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
     // is private below so the composition cannot be bypassed by an inline string

@@ -332,9 +332,10 @@ struct TrimRange {
 // outside render.cpp's bodies): set_palette_source for the chrome's INK —
 // every word, glyph cell and mark, and every surface of the flat chrome —
 // set_surface_source for the chrome's SURFACES ON A GROUND (2026-10-21; the
-// hi-fi skin's grounds 2026-10-23, materials.h: under a painter's Ground or
-// Marker scope the palette's `face` is that ground's baked tile, and any
-// other color, or any color outside a scope, flat through
+// hi-fi skin's ground 2026-10-23, materials.h: under a painter's Ground
+// scope the palette's `face` is the ground's baked tile, and any other
+// color, or any color under the Flat scope (the marker lane's face among
+// them), flat through
 // set_palette_source), CALLED WITH THE FILL'S PATH ALREADY BUILT (the
 // tile is the one under the path) — the cell fills and every relief
 // line (paint_cell_rect, paint_hairline_frame and their family) — and
@@ -535,7 +536,8 @@ void install_true_colors(bool on);
 // directly under the band, THE CANVAS under them in its frame (row 6's
 // canvas paragraph), all four inside the program ring 6 W in from each side
 // on the brushed ground (the simple layout, 2026-10-22; the hi-fi skin
-// 2026-10-23). Its colors are
+// 2026-10-23), the marker lane inside the ring flat in the ground's face
+// (materials.h's head, 2026-10-29). Its colors are
 // the ring tones and the skin's constants, the waveform's ink,
 // the cues' two colors and the playhead's color
 // (the palette), and the painter constants Cool Edit draws whatever its
@@ -643,7 +645,8 @@ void install_true_colors(bool on);
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
 // THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09; the lengths program_spec.h's,
-// the drawing render_flag_boxes_impl's): on the lane's PANEL FACE, THE
+// the drawing render_flag_boxes_impl's): on the lane's PANEL FACE (the
+// lane flat in the ground's face, materials.h's head, 2026-10-29), THE
 // TRIANGLE — COOL EDIT'S STAIRCASE IN WHOLE DEVICE CELLS, ITS ROWS SCALED
 // (architect 2026-10-26, paint_ce_cue_triangle's head; cue_triangle_rows: 8
 // at 300 %, 5 at 200 %, Cool Edit's 9 by 5) on the lane's last rows, Cool

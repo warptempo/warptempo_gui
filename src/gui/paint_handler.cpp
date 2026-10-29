@@ -2133,7 +2133,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // since 2026-10-07 (history_mode_hides_button). Those are the partition's
 // own answers and no part of the always-on ruling, which is about the
 // RESTING face.)
-// THE LANE'S GROUND IS THE PLAIN WOOD (the simple layout, 2026-10-22): the
+// THE LANE'S GROUND IS THE BRUSHED GROUND (materials.h's REGIONS): the
 // lane's chrome is paint_bottom_strip's, which lays it and calls the body
 // below onto it.
 
@@ -3738,11 +3738,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
 
     cairo_save(cr);
-    // THE HI-FI SKIN'S LANES (architect 2026-10-23: "brighter marker lane,
-    // darker timestamp lane"; materials.h's REGIONS): the lanes' margins
-    // beside the program ring the brushed GROUND; the ruler's ground THE FLAT
-    // kRulerGround (the palette's `ce_mid`); the marker lane THE BRIGHTER
-    // BRUSHED STRIP (the Marker tile, at the lane's phase) between the ring's
+    // THE HI-FI SKIN'S LANES (architect 2026-10-23; materials.h's REGIONS):
+    // the lanes' margins beside the program ring the brushed GROUND; the
+    // ruler's ground THE FLAT kRulerGround (the palette's `ce_mid`); the
+    // marker lane FLAT IN THE GROUND'S FACE (the palette's `face`, the Flat
+    // scope; materials.h's marker lane rule, 2026-10-29) between the ring's
     // outer columns; THE PROGRAM RING's two columns ONE DEVICE PX, the
     // canvas's frame columns (render.h's program_ring_columns, the hairline
     // itself since 2026-10-28), the dark one left and the light one right,
@@ -3778,7 +3778,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                 pal.face);
         }
         if (in1 > in0) {
-            const GuiMaterialScope lane_ground(GuiMaterialRegion::Marker);
+            const GuiMaterialScope lane_face(GuiMaterialRegion::Flat);
             paint_cell_rect(cr, GuiRect{in0, marker.y, in1 - in0, marker.h},
                             pal.face);
         }
@@ -7793,7 +7793,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
         });
         cairo_clip(cr);
     }
-    materials::paint_rect(cr, face, GuiMaterial::Ground);
+    materials::paint_rect(cr, face);
     // THE TWO WELLS' RINGS (the stereo divider, render.h's waveform_divider;
     // architect 2026-10-16): the upper from the top frame row through its
     // light bottom line, the divider's first row; the lower from its dark

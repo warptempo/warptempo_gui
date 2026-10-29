@@ -159,7 +159,7 @@ struct ProgramSpec {
     // client area to the program ring's column, the column one device px,
     // the hairline itself (render.h's canvas_frame_column_w_px, 2026-10-28),
     // then the column's interior — the view bar's field, the ruler's ground, the
-    // marker lane's brighter strip and the canvas.
+    // marker lane's flat face and the canvas.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each

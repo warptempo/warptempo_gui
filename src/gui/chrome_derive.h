@@ -123,16 +123,17 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE SKIN ON THE SHIPPED GROUND'S MEAN OF RECORD (about
-// 1F1F21): the rings about 48484B and 0C0C0D, the constants as listed.
+// THE SKIN ON THE SHIPPED GROUND'S MEAN (about 212123, materials.h's TONE
+// RULE): the rings 49494D and 0D0D0E (pinned beside ring_light_of), the
+// constants as listed.
 inline constexpr GuiThemeWords kDefaultCheck = [] {
     GuiPaletteWords p = default_palette_words();
-    p[palette_role_index("face")] = 0x1F1F21;
+    p[palette_role_index("face")] = 0x212123;
     return derive_chrome(p);
 }();
-static_assert(kDefaultCheck[theme_role_index("ground")] == 0x1F1F21);
-static_assert(kDefaultCheck[theme_role_index("hilight")] == ring_light_of(0x1F1F21));
-static_assert(kDefaultCheck[theme_role_index("shadow")] == ring_dark_of(0x1F1F21));
+static_assert(kDefaultCheck[theme_role_index("ground")] == 0x212123);
+static_assert(kDefaultCheck[theme_role_index("hilight")] == ring_light_of(0x212123));
+static_assert(kDefaultCheck[theme_role_index("shadow")] == ring_dark_of(0x212123));
 static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
 static_assert(kDefaultCheck[theme_role_index("label")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x0A0A0C);
@@ -140,11 +141,11 @@ static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x3E4044);
 static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x0A0A0C);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == ring_dark_of(0x1F1F21));
-// The ring tones of record (on 1F1F21), each within a
-// byte of the mock's 48484B / 0C0C0D.
-static_assert(cool_edit_derive::within_two(ring_light_of(0x1F1F21), 0x48484B));
-static_assert(cool_edit_derive::within_two(ring_dark_of(0x1F1F21), 0x0C0C0D));
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == ring_dark_of(0x212123));
+// The ring tones' provenance: on 212123 each within two per channel of the
+// approved mock's 48484B / 0C0C0D, the frames the rule was fitted to.
+static_assert(cool_edit_derive::within_two(ring_light_of(0x212123), 0x48484B));
+static_assert(cool_edit_derive::within_two(ring_dark_of(0x212123), 0x0C0C0D));
 } // namespace chrome_derive
 
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install family reads

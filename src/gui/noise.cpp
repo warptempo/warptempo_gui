@@ -292,7 +292,7 @@ void GuiNoise::probe(const std::string& folder_name) {
     const std::filesystem::path folder =
         config.parent_path() / "noise" / folder_name_;
     std::error_code ec;
-    // NO FOLDER IS THE ORDINARY STATE (the `tiles/` shape): silent.
+    // NO FOLDER IS THE ORDINARY STATE (noise.h's head): silent.
     if (!std::filesystem::is_directory(folder, ec)) return;
     std::vector<std::filesystem::path> wavs;
     std::filesystem::directory_iterator it(folder, ec);

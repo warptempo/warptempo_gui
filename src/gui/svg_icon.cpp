@@ -9,7 +9,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <numbers>
 #include <vector>
 
 namespace svg_icon {
@@ -30,7 +29,7 @@ void rgba_bytes_to_argb_words(unsigned char* data, int n) {
     }
 }
 
-// Standard base64 (RFC 4648, padded), for a material's data URL.
+// Standard base64 (RFC 4648, padded), for a raster's data URL.
 std::string base64(std::string_view in) {
     static constexpr char kAlphabet[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -64,64 +63,6 @@ uint32_t be32(std::string_view b, size_t at) {
            (static_cast<uint32_t>(static_cast<uint8_t>(b[at + 1])) << 16) |
            (static_cast<uint32_t>(static_cast<uint8_t>(b[at + 2])) << 8) |
            static_cast<uint32_t>(static_cast<uint8_t>(b[at + 3]));
-}
-
-// PIL's Lanczos-3 (its sinc_filter / lanczos_filter): sinc(x)·sinc(x / 3)
-// on [-3, 3), 0 outside.
-double lanczos3(double x) {
-    if (!(x >= -3.0 && x < 3.0)) return 0.0;
-    const auto sinc = [](double t) {
-        if (t == 0.0) return 1.0;
-        t *= std::numbers::pi;
-        return std::sin(t) / t;
-    };
-    return sinc(x) * sinc(x / 3.0);
-}
-
-// One axis of the area filter: for each of `side` destination pixels, the
-// first source index of its window and its weights, normalised to sum 1 over
-// the whole window.
-struct AxisTaps {
-    std::vector<int>    first;     // per destination pixel
-    std::vector<int>    count;     // per destination pixel
-    std::vector<double> weights;   // `count` each, destination after destination
-    std::vector<size_t> offset;    // into `weights`
-};
-
-// A MATERIAL REGION'S AXIS (svg_icon.h's raster_regions): the taps for the
-// destination pixels [first, first + side) of an image drawn at k — pixel
-// first + i's center maps to c = (first + i + 0.5) / k, the kernel stretched
-// by the reduction (PIL's filterscale, max(1 / k, 1)), its support
-// 3 · filterscale source px each side, the weight of source pixel s
-// lanczos3((s + 0.5 − c) / filterscale) — the source
-// indices unclamped (the caller clamps them into the image: a material has no
-// transparent margin to fade into, so past its border the filter reads the
-// border's own pixels). Never called at k = 1 exactly: there the regions are
-// copied out of the decode (raster_regions' first arm).
-AxisTaps region_taps(int first, int side, double k) {
-    AxisTaps t;
-    t.first.resize(static_cast<size_t>(side));
-    t.count.resize(static_cast<size_t>(side));
-    t.offset.resize(static_cast<size_t>(side));
-    const double scale = std::max(1.0 / k, 1.0);
-    const double support = 3.0 * scale;
-    for (int i = 0; i < side; ++i) {
-        const size_t at = t.weights.size();
-        t.offset[static_cast<size_t>(i)] = at;
-        const double c = (first + i + 0.5) / k;
-        const int lo = static_cast<int>(std::floor(c - support - 0.5));
-        const int hi = static_cast<int>(std::ceil(c + support - 0.5));
-        double sum = 0.0;
-        for (int s = lo; s <= hi; ++s) {
-            const double w = lanczos3((s + 0.5 - c) / scale);
-            t.weights.push_back(w);
-            sum += w;
-        }
-        for (size_t j = at; j < t.weights.size(); ++j) t.weights[j] /= sum;
-        t.first[static_cast<size_t>(i)] = lo;
-        t.count[static_cast<size_t>(i)] = hi - lo + 1;
-    }
-    return t;
 }
 
 // A 2-byte big-endian integer at `at` (a JPEG segment's own byte order).
@@ -213,181 +154,58 @@ std::expected<RasterInfo, std::string> raster_info(std::string_view bytes) {
 }
 
 std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
-    std::string_view bytes, const RasterInfo& info, double k,
+    std::string_view bytes, const RasterInfo& info,
     std::span<const RasterRegion> regions) {
-    assert(k > 0.0 && info.w > 0 && info.h > 0);
+    assert(info.w > 0 && info.h > 0);
     const int iw = static_cast<int>(info.w);
     const int ih = static_cast<int>(info.h);
     const char* mime = info.jpeg ? "image/jpeg" : "image/png";
     std::vector<cairo_surface_t*> out;
     if (regions.empty()) return out;
 
-    // AT k = 1 THE REGIONS ARE THE DECODED PIXELS THEMSELVES (a bundled
-    // cover's bake, materials.h): the regions' union span decoded once and
-    // each region's rows COPIED out of the pixmap — resvg's premultiplied
-    // RGBA bytes swizzled to cairo's ARGB32 word, the alpha forced opaque (a
-    // material's alpha is not read) — no taps, no doubles (2026-10-21). Every
-    // region lies inside the image at k = 1 (the caller's crop).
-    if (k == 1.0) {
-        int ux0 = iw, uy0 = ih, ux1 = 0, uy1 = 0;
-        for (const RasterRegion& r : regions) {
-            assert(r.w > 0 && r.h > 0 && r.x0 >= 0 && r.y0 >= 0 &&
-                   r.x0 + r.w <= iw && r.y0 + r.h <= ih);
-            ux0 = std::min(ux0, r.x0);
-            uy0 = std::min(uy0, r.y0);
-            ux1 = std::max(ux1, r.x0 + r.w);
-            uy1 = std::max(uy1, r.y0 + r.h);
-        }
-        const int uw = ux1 - ux0;
-        const int uh = uy1 - uy0;
-        auto wrapper =
-            parse(image_wrapper(bytes, mime, info.w, info.h, info.w, info.h));
-        if (!wrapper) return std::unexpected(wrapper.error());
-        std::vector<unsigned char> src(static_cast<size_t>(uw) * uh * 4, 0);
-        const resvg_transform at{1.0f, 0.0f, 0.0f, 1.0f,
-                                 -static_cast<float>(ux0),
-                                 -static_cast<float>(uy0)};
-        resvg_render(wrapper->tree.get(), at, static_cast<uint32_t>(uw),
-                     static_cast<uint32_t>(uh),
-                     reinterpret_cast<char*>(src.data()));
-        wrapper->tree.reset();
-        for (const RasterRegion& r : regions) {
-            cairo_surface_t* s =
-                cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
-            cairo_surface_flush(s);
-            unsigned char* ddata = cairo_image_surface_get_data(s);
-            const int dstride = cairo_image_surface_get_stride(s);
-            for (int y = 0; y < r.h; ++y) {
-                const unsigned char* p =
-                    src.data() +
-                    (static_cast<size_t>(r.y0 - uy0 + y) * uw + (r.x0 - ux0)) * 4;
-                auto* drow = reinterpret_cast<uint32_t*>(ddata + y * dstride);
-                for (int x = 0; x < r.w; ++x, p += 4)
-                    drow[x] = 0xFF000000u | (static_cast<uint32_t>(p[0]) << 16) |
-                              (static_cast<uint32_t>(p[1]) << 8) |
-                              static_cast<uint32_t>(p[2]);
-            }
-            cairo_surface_mark_dirty(s);
-            out.push_back(s);
-        }
-        return out;
-    }
-
-    // EACH REGION'S TAPS and their clamped source span; the decode covers the
-    // spans' union, rendered ONCE.
-    struct Axis {
-        AxisTaps x, y;
-    };
-    std::vector<Axis> axes;
-    axes.reserve(regions.size());
-    int sx0 = iw, sx1 = 0, sy0 = ih, sy1 = 0;
-    const auto widen = [](const AxisTaps& t, int n, int& lo, int& hi) {
-        for (size_t i = 0; i < t.first.size(); ++i) {
-            lo = std::min(lo, std::clamp(t.first[i], 0, n - 1));
-            hi = std::max(hi, std::clamp(t.first[i] + t.count[i] - 1, 0, n - 1) + 1);
-        }
-    };
+    // THE REGIONS ARE THE DECODED PIXELS THEMSELVES: the regions' union span
+    // decoded once (image_wrapper at the identity translated by the span's
+    // corner, every sample on a pixel center) and each region's rows COPIED
+    // out of the pixmap — resvg's premultiplied RGBA bytes swizzled to
+    // cairo's ARGB32 word, the alpha forced opaque (a raster's alpha is not
+    // read). Every region lies inside the image (the caller's crop).
+    int ux0 = iw, uy0 = ih, ux1 = 0, uy1 = 0;
     for (const RasterRegion& r : regions) {
-        assert(r.w > 0 && r.h > 0);
-        axes.push_back(Axis{region_taps(r.x0, r.w, k), region_taps(r.y0, r.h, k)});
-        widen(axes.back().x, iw, sx0, sx1);
-        widen(axes.back().y, ih, sy0, sy1);
+        assert(r.w > 0 && r.h > 0 && r.x0 >= 0 && r.y0 >= 0 &&
+               r.x0 + r.w <= iw && r.y0 + r.h <= ih);
+        ux0 = std::min(ux0, r.x0);
+        uy0 = std::min(uy0, r.y0);
+        ux1 = std::max(ux1, r.x0 + r.w);
+        uy1 = std::max(uy1, r.y0 + r.h);
     }
-    const int sw = sx1 - sx0;
-    const int sh = sy1 - sy0;
-
-    // THE SOURCE SPAN, decoded: the wrapper at the image's own size, rendered
-    // at the identity translated by the span's corner, so every sample lands
-    // on a pixel center (image_wrapper's reasoning). The decode is resvg's and
-    // its buffer is freed before the resample's rows are kept.
+    const int uw = ux1 - ux0;
+    const int uh = uy1 - uy0;
     auto wrapper =
         parse(image_wrapper(bytes, mime, info.w, info.h, info.w, info.h));
     if (!wrapper) return std::unexpected(wrapper.error());
-    std::vector<unsigned char> src(static_cast<size_t>(sw) * sh * 4, 0);
-    const resvg_transform at{1.0f, 0.0f, 0.0f, 1.0f, -static_cast<float>(sx0),
-                             -static_cast<float>(sy0)};
-    resvg_render(wrapper->tree.get(), at, static_cast<uint32_t>(sw),
-                 static_cast<uint32_t>(sh), reinterpret_cast<char*>(src.data()));
+    std::vector<unsigned char> src(static_cast<size_t>(uw) * uh * 4, 0);
+    const resvg_transform at{1.0f, 0.0f, 0.0f, 1.0f,
+                             -static_cast<float>(ux0),
+                             -static_cast<float>(uy0)};
+    resvg_render(wrapper->tree.get(), at, static_cast<uint32_t>(uw),
+                 static_cast<uint32_t>(uh),
+                 reinterpret_cast<char*>(src.data()));
     wrapper->tree.reset();
-
-    for (std::size_t ri = 0; ri < regions.size(); ++ri) {
-        const RasterRegion& r = regions[ri];
-        const AxisTaps& tx = axes[ri].x;
-        const AxisTaps& ty = axes[ri].y;
-        // EACH HORIZONTAL TAP'S BYTE OFFSET in a span row, its index clamped
-        // into the image once (the weights' own order).
-        std::vector<size_t> tap_at(tx.weights.size());
-        for (int i = 0; i < r.w; ++i)
-            for (int j = 0; j < tx.count[static_cast<size_t>(i)]; ++j)
-                tap_at[tx.offset[static_cast<size_t>(i)] + static_cast<size_t>(j)] =
-                    static_cast<size_t>(
-                        std::clamp(tx.first[static_cast<size_t>(i)] + j, 0, iw - 1) -
-                        sx0) * 4;
-        // THE HORIZONTAL PASS ON DEMAND: a source row filtered into r.w x 3
-        // doubles the first time a destination row's taps reach it, kept in a
-        // window that slides down with the destination rows (their taps never
-        // move up), so the intermediate is a handful of rows, not the span.
-        std::vector<std::vector<double>> window;
-        int window_first = 0;
-        const auto filtered = [&](int src_row) -> const double* {
-            if (window.empty()) window_first = src_row;
-            while (window_first + static_cast<int>(window.size()) <= src_row) {
-                const int y = window_first + static_cast<int>(window.size());
-                std::vector<double> row(static_cast<size_t>(r.w) * 3, 0.0);
-                const unsigned char* srow =
-                    src.data() + static_cast<size_t>(y - sy0) * sw * 4;
-                for (int i = 0; i < r.w; ++i) {
-                    const int cnt = tx.count[static_cast<size_t>(i)];
-                    const size_t off = tx.offset[static_cast<size_t>(i)];
-                    const double* wt = tx.weights.data() + off;
-                    const size_t* at_px = tap_at.data() + off;
-                    double acc[3] = {0.0, 0.0, 0.0};
-                    for (int j = 0; j < cnt; ++j)
-                        for (int c = 0; c < 3; ++c)
-                            acc[c] += wt[j] * static_cast<double>(
-                                                  srow[at_px[j] + static_cast<size_t>(c)]);
-                    for (int c = 0; c < 3; ++c)
-                        row[static_cast<size_t>(i) * 3 + static_cast<size_t>(c)] = acc[c];
-                }
-                window.push_back(std::move(row));
-            }
-            return window[static_cast<size_t>(src_row - window_first)].data();
-        };
-        cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
+    for (const RasterRegion& r : regions) {
+        cairo_surface_t* s =
+            cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h);
         cairo_surface_flush(s);
         unsigned char* ddata = cairo_image_surface_get_data(s);
         const int dstride = cairo_image_surface_get_stride(s);
-        std::vector<const double*> tap_rows;
         for (int y = 0; y < r.h; ++y) {
-            const int lo = ty.first[static_cast<size_t>(y)];
-            const int cnt = ty.count[static_cast<size_t>(y)];
-            const double* wt = ty.weights.data() + ty.offset[static_cast<size_t>(y)];
-            // Rows above this destination row's first clamped tap leave the
-            // window.
-            const int first_needed = std::clamp(lo, 0, ih - 1);
-            while (!window.empty() && window_first < first_needed) {
-                window.erase(window.begin());
-                ++window_first;
-            }
-            tap_rows.resize(static_cast<size_t>(cnt));
-            for (int j = 0; j < cnt; ++j)
-                tap_rows[static_cast<size_t>(j)] =
-                    filtered(std::clamp(lo + j, 0, ih - 1));
+            const unsigned char* p =
+                src.data() +
+                (static_cast<size_t>(r.y0 - uy0 + y) * uw + (r.x0 - ux0)) * 4;
             auto* drow = reinterpret_cast<uint32_t*>(ddata + y * dstride);
-            for (int x = 0; x < r.w; ++x) {
-                double acc[3] = {0.0, 0.0, 0.0};
-                for (int j = 0; j < cnt; ++j) {
-                    const double* m =
-                        tap_rows[static_cast<size_t>(j)] + static_cast<size_t>(x) * 3;
-                    for (int c = 0; c < 3; ++c) acc[c] += wt[j] * m[c];
-                }
-                uint32_t word = 0xFF000000u;
-                for (int c = 0; c < 3; ++c)
-                    word |= static_cast<uint32_t>(std::clamp(
-                                std::nearbyint(acc[c]), 0.0, 255.0))
-                            << (16 - 8 * c);
-                drow[x] = word;
-            }
+            for (int x = 0; x < r.w; ++x, p += 4)
+                drow[x] = 0xFF000000u | (static_cast<uint32_t>(p[0]) << 16) |
+                          (static_cast<uint32_t>(p[1]) << 8) |
+                          static_cast<uint32_t>(p[2]);
         }
         cairo_surface_mark_dirty(s);
         out.push_back(s);

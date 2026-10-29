@@ -25,7 +25,7 @@
 #include "device_config.h"
 #include "palette_file.h"  // palette_record: the `waveform` key's preset at launch
 #include "icons.h"         // the icon set's launch load
-#include "materials.h"     // the materials' launch check and the pre-paint bake
+#include "materials.h"     // the pre-paint bake
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -3456,9 +3456,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // bake's palette install moves every chrome tone in it; nothing of
         // the window stands outside it since 2026-10-24, labwc's decorations
         // aside), and the flag cache is rebuilt at once
-        // from the new palette's generation and tiles, so this frame's cue
-        // face boxes copy the new bake rather than waiting a tick for the
-        // cache to notice. Before the owed plate rebuild below, whose tail
+        // from the new palette's generation, so this frame's cue face boxes
+        // wear the new bake's face rather than waiting a tick for the cache
+        // to notice. Before the owed plate rebuild below, whose tail
         // reaches the same flag cache.
         materials::ensure_settled(app);
         if (materials::take_bake_landed()) {
@@ -3654,15 +3654,6 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE IMAGE ROAD IS CHECKED AT LAUNCH (materials.h's head, 2026-10-23):
-    // a `Ground` or `Marker` file in the `tiles/` folder beside the config
-    // that is neither a PNG nor a JPEG is the blunt terminal line naming
-    // the file, and no window. The bake waits for the window's size
-    // (materials::ensure_settled, the first frame's pre-paint hook).
-    if (const std::optional<std::string> err = materials::check()) {
-        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-        return 1;
-    }
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an
@@ -3671,8 +3662,8 @@ int gui_main(const char* argument) {
     // handed to the install explicitly — render.h's install_palette), every
     // chrome color derived by Cool Edit's tones (live_chrome_words,
     // chrome_derive.h); installed here and again at the materials' first
-    // bake, whose metal Face the panel's face and the chrome's roles become
-    // (materials.h's BAKE RULE). (The `caption` key's scheme, a second
+    // bake, whose ground's Face, its baked tile's mean, the panel's face
+    // becomes, the chrome's roles derived off it (materials.h's BAKE RULE). (The `caption` key's scheme, a second
     // argument, 2026-10-08..10-21, left with the captions.)
     // Every painter reads it through palette() (render.h's palette block).
     install_palette(palette_record(device_config.waveform));

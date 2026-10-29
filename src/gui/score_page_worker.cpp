@@ -1,7 +1,7 @@
 #include "score_page_worker.h"
 
 #include "display_transform.h"   // p3_premultiplied, the job's bit's transform
-#include "svg_icon.h"            // the materials' road: raster_info, raster_regions
+#include "svg_icon.h"            // the raster road: raster_info, raster_regions
 
 #include <algorithm>
 #include <chrono>
@@ -78,7 +78,7 @@ void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
     const svg_icon::RasterRegion whole{0, 0, static_cast<int>(info->w),
                                        static_cast<int>(info->h)};
     auto decoded =
-        svg_icon::raster_regions(bytes, *info, 1.0, std::span(&whole, 1));
+        svg_icon::raster_regions(bytes, *info, std::span(&whole, 1));
     if (!decoded) return fail(decoded.error());
     if (decoded->empty() || (*decoded)[0] == nullptr) return fail("no pixels");
     cairo_surface_t* src = (*decoded)[0];
@@ -103,7 +103,7 @@ void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
         // THE IDENTITY (2026-10-26): a page already at the fit size — the
         // tool's pre-sized page, tools/score_extract.py's --fit — runs no
         // scale pass; the decode's surface, a new opaque ARGB32 surface this
-        // thread owns (raster_regions' contract at k = 1), is the result.
+        // thread owns (raster_regions' contract), is the result.
         out = src;
     } else {
         out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, dw, dh);

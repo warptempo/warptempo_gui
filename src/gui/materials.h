@@ -6,8 +6,6 @@
 #include <cairo/cairo.h>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
-#include <string>
 
 struct AppState;
 
@@ -31,51 +29,30 @@ struct AppState;
 // and unit standard deviation, times kGroundStrength (.05), applied
 // multiplicatively to the base kGroundBase (34, 34, 36) under the vertical
 // gradient (1 − .12 y²) with y running −1 .. 1 over the WINDOW's rows; each
-// channel rounded and clipped. THE MARKER LANE'S BRIGHTER BRUSHED (his
-// "brighter marker lane, darker timestamp lane"): base kMarkerBase (48, 48,
-// 50), seed 31, the same strength, NO vertical gradient, drawn at the lane's
-// own rows of the seed's window-sized field (the stream entered at the
-// lane's first row, so the strip is the mock's rows) and baked as a strip
-// the lane's rows tall.
+// channel rounded and clipped. NOTHING REPLACES IT (architect 2026-10-29:
+// "I've settled on the design … keep it simple and not give myself
+// options"): the program reads no picture for its panel and consults no
+// folder beside the device config.
 //
-// THE LOOP (architect 2026-10-22, kept): THE LANE'S GROUND PANS WITH THE
-// CUES. (1) THE STRIP IS MADE SEAMLESS AT THE BAKE by GIMP's tile-seamless
-// method — out(x) = (1 − w(x))·A(x) + w(x)·A((x + W/2) mod W), w(x) =
-// |2x/W − 1|, per channel, rounded — so its two ends meet with no seam,
-// whether the strip is the procedural one or a dropped image. (2) THE
-// PHASE: the lane's ground stands at a horizontal phase that MOVES WITH THE
-// CONTENT AT CONSTANT ZOOM AND HOLDS ACROSS A ZOOM: at every change of THE
-// DISPLAYED BASIS — the plate's published span, the basis the cues are
-// painted on — where spp is unchanged the phase advances by the content's
-// travel in device px, (old vp − new vp) / spp, accumulated in a double, and
-// where spp moved (a zoom) it stands (follow_displayed_basis, at the plate's
-// two publish sites, waveform_cache.cpp; every publish damages the marker
-// lane, so a moved phase is always repainted). THE PERIOD IS THE TILE'S
-// WIDTH, the window's. (3) THE BLIT stays the bake rule's 1:1 nearest copy at
-// identity, EXTEND_NONE: the lane's tile is baked TWICE ITS WIDTH, so the
-// phased copy is one read out of the doubled surface, and the phase enters at
-// set_source's Marker Face — the lane's ground and the cue labels' face boxes
-// move together at nearbyint(phase) mod W.
-//
-// THE IMAGE ROAD (his "we could also allow images to be slotted in as bg
-// later"): A FOLDER `tiles/` BESIDE THE DEVICE CONFIG (device_config_path's
-// folder — on the tablet under `adb shell run-as com.warptempo.gui`, on the
-// laptop beside its config) with TWO NAMES, kGuiMaterialNames: `Ground.png`
-// or `Ground.jpg` (the window's ground under THE COVER RULE: scaled by ONE
-// factor s = max(W / w, H / h) to fit the client window W x H exactly and
-// centered, the overhang cropped) and `Marker.png` or `Marker.jpg` (the
-// lane's strip under THE STRIP RULE: scaled by ONE factor s = W / w to the
-// window's width, its center rows the lane's rows; a picture too short for
-// the lane at that factor is the bake's hard fail, never a stretch), THE PNG
-// WINNING where both stand. A present file replaces the procedural source
-// for that role at the bake; absent, the procedural ground; no key, no row,
-// no card; every other name in the folder is ignored. Decoded by resvg's
-// one road (svg_icon::raster_regions, its Lanczos-3 area filter).
-// A FILE OF EITHER NAME THAT IS NEITHER A PNG NOR A JPEG IS THE LAUNCH'S
-// HARD FAIL naming the file (materials::check, which reads its first 64 KiB).
-// (The pre-rendered covers `<Name>-<W>x<H>.png` and the bundled
-// assets/tiles/ are no longer read: with no master to decode at launch
-// their reason is gone.)
+// THE MARKER LANE IS FLAT IN THE GROUND'S FACE (architect 2026-10-29, on
+// mocks in his gallery, reversing the looping strip of 2026-10-22):
+// between the program ring's columns every pixel of the lane is the one
+// FACE, the baked ground's mean (the TONE RULE below; the palette's `face`)
+// — no brushing, no brighter strip, no phase, ON EVERY PRESET ("brushing
+// goes always"; "no tint or canvas color") — and the ring round it stands
+// as it was, its one-device-px columns and rows in the two ring tones, the
+// ruler's foot line above and the canvas's dark top row below. His reasons:
+// "the marker plane is supposed to scroll infinitely left and right, and
+// then you have a frame that's ground, and there's a bevel there … if you
+// leave the bevel, then ground is scrolling under ground. Doesn't make
+// sense. So maybe what we can do is just remove the brushing and leave the
+// color, the ground color, and leave the bevel as it is"; and the brushing
+// "was already causing a weird effect with the bevel, where some parts that
+// touched a darker or lighter would look different. So the bevel looked
+// curved because of the brushing." The cue labels' face boxes on the lane
+// are the same flat face (render.cpp's paint_cues), and the disabled cue's
+// faded tones mix toward it (cool_edit_derive.h's DISABLED CUE'S FADED
+// LOOK).
 //
 // THE BAKE RULE (architect 2026-10-21: "absolutely has to be"; the cost
 // table, cairo into a 2304 x 1440 surface: a solid fill 0.016 ms, a 1:1
@@ -92,15 +69,15 @@ struct AppState;
 // main.cpp); a gui_scale commit and True Colors bake at once, one act one
 // bake (materials::ensure). EVERY BAKE REINSTALLS
 // THE PALETTE off the new ground's mean, so the next pre-paint widens that
-// frame's damage to the whole client and rebuilds the flag cache from the
-// new tiles (take_bake_landed). A CHANGE OF SIZE OF A BAKED WINDOW WAITS ON
+// frame's damage to the whole client and rebuilds the flag cache in the
+// new face (take_bake_landed). A CHANGE OF SIZE OF A BAKED WINDOW WAITS ON
 // THE SETTLE GATE (the laptop's frame drag, a configure per motion): no
 // resize bakes (on_resize only stamps its arrival, materials::note_resize),
 // and a paint that finds the size moved bakes nothing until kBakeSettle (150
 // ms) has passed with no further size change — the tick then arms the bake
 // and damages the client (materials::settle_due), and that frame's pre-paint
 // hook bakes. Meanwhile the painters draw from the LAST BAKE'S TILES where
-// one still holds the fill, the material's flat mean where none does, and
+// one still holds the fill, the ground's flat mean where none does, and
 // never a stale tile's pixel outside the new client. EVERY GROUND FILL IS A
 // 1:1 COPY FROM A BAKE AT THE SAME RECTANGLE; every line, ring, key and word
 // a solid fill. THE BAKED TILES:
@@ -108,8 +85,6 @@ struct AppState;
 //           (the whole surface since the app's caption above it went,
 //           2026-10-24, render.h's caption note): the band, the canvas column's margins, row 8, the
 //           keyboard's band and every modal's controls row stand on it.
-//   MARKER  ONE TILE, THE MARKER LANE'S ROWS, window-wide, its surface twice
-//           the window's width (the LOOP).
 //   KEYS    THE KEY PATCHES: ONE PER KEY SIZE, PER DEPTH, PER LAMP — every
 //           size the geometry lays out (paint_handler.h's program_key_seats
 //           — the band's and row 8's in both states of the `h` view, the
@@ -132,41 +107,44 @@ struct AppState;
 //           is one blit at every depth, no blend computed at paint time. An
 //           accent change rebuilds the lit patches alone (set_accent); the
 //           rest stand.
-// RESIDENT at 300 % on 2304 x 1440, 15 396 504 bytes (the arithmetic off
-// the geometry, 2026-10-25): the ground's tile 13.3 MB (rows 0 .. 1440
+// RESIDENT at 300 % on 2304 x 1440, 14 456 472 bytes (the arithmetic off
+// the geometry, 2026-10-29): the ground's tile 13.3 MB (rows 0 .. 1440
 // window-wide, the band's top the surface's first row since 2026-10-24);
-// the lane's 0.94 MB, 2304 x 51 doubled; THE KEY PATCHES 1.19 MB, 13 of
-// them — the one 69 x 69 lamp key (the band, row 8 and the controls row)
+// THE KEY PATCHES 1.19 MB, 13 of them — the one 69 x 69 lamp key (the band, row 8 and the controls row)
 // at its three depths, the thumb's one 24 x 48, and the on-screen
 // keyboard's four sizes, 219 / 220 / 676 x 87 at depths 0 and 2 and the
 // 333 x 87 of Shift, Backspace, Enter and the symbol-mode key at 1 too
 // (nine patches, 1.12 MB). On the laptop's maximized 1920 x 1047 at 200 %,
-// 8 590 640 bytes (no keyboard; the lamp key's three 46 x 46 patches and
+// 8 068 400 bytes (no keyboard; the lamp key's three 46 x 46 patches and
 // the thumb's 16 x 32). materials::resident_bytes, which the trace line
 // prints at every bake with the patches' count and time, is the measure.
 //
 // THE REGIONS — WHICH GROUND A SURFACE IS (GuiMaterialRegion, a scope the
 // painter names): GROUND the brushed panel — the band and row 8 under and
-// between their keys, the canvas column's side margins, the keyboard's
-// band, the modal family's controls row; MARKER the marker lane's ground
-// between the program ring's columns and the cue labels' face boxes on it;
-// FLAT everything else — the ruler's flat ground, the view bar's
-// field, the fields, the modal box, the cards and the tooltip, every key
-// (a solid fill on every pixel, baked into its patch).
+// between their keys, the canvas column's side margins (the lanes' beside
+// the program ring included), the keyboard's band, the modal family's
+// controls row; FLAT everything else — THE MARKER LANE between the program
+// ring's columns and the cue labels' face boxes on it, flat in the face
+// (the lane's rule above, 2026-10-29: a box masks earlier text exactly
+// because every pixel of the lane is that one color), the ruler's flat
+// ground, the view bar's field, the fields, the modal box, the cards and
+// the tooltip, every key (a solid fill on every pixel, baked into its
+// patch).
 // UNTOUCHED: the well and everything the palette draws (the canvas, the
 // cues' triangles and dots, the playhead) and the view bar's span (a flat
 // fill of THE SPAN's own grey trio, below).
 //
 // THE TONE RULE: THE GROUND'S FACE IS ITS BAKED TILE'S MEAN COLOR
-// (materials::face; about 1F1F21 on the shipped ground), and the chrome's
-// ONLY RING, LINE AND EDGE TONES ARE THE TWO RING TONES OFF IT
-// (ring_light / ring_dark below): light = HLS with
-// L + .16 and S × .9, dark = L × .40 — about 48484B and 0C0C0D (the app's
+// (materials::face; about 212123 on the shipped ground — the base under the
+// gradient's mean, 1 − .12 / 3, and the tablet's capture measures 33, 33,
+// 35), and the chrome's ONLY RING, LINE AND EDGE TONES ARE THE TWO RING
+// TONES OFF IT (ring_light / ring_dark below): light = HLS with L + .16 and
+// S × .9, dark = L × .40 — 49494D and 0D0D0E off 212123 (the app's
 // old hilight rule, L' = .492 L + .5, lands at L .5+ on any dark ground, the
 // "too bright" he saw). THE SURFACE CHOKEPOINT knows the Face by its bytes:
-// under a Ground or Marker scope a fill in the Face is that ground's tile
-// under the fill's own extents, any other color flat (set_source). NO
-// PAINT-TIME ALPHA.
+// under the Ground scope a fill in the Face is the ground's tile under the
+// fill's own extents, any other color flat; under the Flat scope the Face
+// too is flat — the marker lane's fill (set_source). NO PAINT-TIME ALPHA.
 //
 // THE INKS (constants all; 0xRRGGBB, sRGB): THE BONE kBoneInk F0F0F0 on
 // every word and digit the chrome prints at the body size — the logo
@@ -196,21 +174,13 @@ struct AppState;
 // the ruler's ticks alone wear one, one device px of black at (+1, +1)
 // (render.h's ruler block).
 
-enum class GuiMaterial { Ground, Marker };
-inline constexpr int kGuiMaterialCount = 2;
-// THE IMAGE ROAD'S NAMES (the head), the files' stems, in the enum's order.
-inline constexpr const char* kGuiMaterialNames[kGuiMaterialCount] = {
-    "Ground", "Marker"};
-
 // THE REGION A SURFACE STANDS IN (the head's map), the current one a scope's
 // (GuiMaterialScope). Flat the default.
-enum class GuiMaterialRegion { Flat, Ground, Marker };
+enum class GuiMaterialRegion { Flat, Ground };
 
-// THE PROCEDURAL GROUNDS (the head; the brushed ground's arguments).
+// THE PROCEDURAL GROUND (the head; the brushed ground's arguments).
 inline constexpr uint32_t kGroundBase     = 0x222224;
-inline constexpr uint32_t kMarkerBase     = 0x303032;
 inline constexpr uint32_t kGroundSeed     = 21;
-inline constexpr uint32_t kMarkerSeed     = 31;
 inline constexpr double   kGroundStrength = 0.05;
 inline constexpr double   kGroundVGrad    = 0.12;
 // PIL's GaussianBlur((9, 0.4)): the streaks' sigma along x and down y.
@@ -266,6 +236,9 @@ constexpr uint32_t ring_light_of(uint32_t mean) {
 constexpr uint32_t ring_dark_of(uint32_t mean) {
     return cool_edit_derive::tone(mean, 0.40, 0.0);
 }
+// THE TWO TONES OFF THE SHIPPED GROUND'S MEAN (the head's TONE RULE).
+static_assert(ring_light_of(0x212123) == 0x49494D &&
+              ring_dark_of(0x212123) == 0x0D0D0E);
 // THE VIEW BAR'S SPAN (architect 2026-10-25, on the evening's mocks: "the
 // trim bar should be a neutral gray", "sort of like the button color, maybe
 // a little different so it doesn't blend in"): a raised block of a NEUTRAL
@@ -306,21 +279,14 @@ struct GuiKeySeat {
 
 namespace materials {
 
-// THE LAUNCH'S CHECK (the head's IMAGE ROAD): every file of the `tiles/`
-// folder beside the device config named for a role (Ground or Marker, .png
-// or .jpg) is a PNG or a JPEG. Answers the first error, prefixed `tiles: `
-// and naming the file — gui_main's hard fail. An absent folder answers
-// nothing.
-std::optional<std::string> check();
-
 // THE BAKE, AT ONCE (the head's BAKE RULE): when the key `app` gives
-// differs from the baked one, every ground is baked again and the palette
+// differs from the baked one, the ground and the key patches are baked
+// again and the palette
 // reinstalled off the new mean (install_palette, render.h — its generation
 // rebuilds every cached surface the tiles were painted into) — the client
 // repainted by the caller's damage, the whole surface by the next pre-paint
-// (take_bake_landed). A zero-sized client bakes nothing. A FAILURE is an
-// image of the road's that will not decode (check passed its header): its
-// stderr line and the hard fail. Callers: the one-act roads,
+// (take_bake_landed). A zero-sized client bakes nothing; a bake cannot
+// fail (the ground is procedural). Callers: the one-act roads,
 // GuiInputHandler::apply_gui_scale and apply_true_colors.
 void ensure(const AppState& app);
 // THE BAKE BEHIND THE SETTLE GATE (the head's BAKE RULE): the first bake at
@@ -351,8 +317,9 @@ bool trace_enabled();
 // Whether a bake has landed (construction state paints flat).
 bool baked();
 // THE GROUND'S FACE, its baked tile's mean, 0xRRGGBB sRGB
-// (kGroundMeanEstimate before the first bake).
-uint32_t face(GuiMaterial m);
+// (kGroundMeanEstimate before the first bake) — the marker lane's flat fill
+// too (the head).
+uint32_t face();
 // THE TWO RING TONES OFF THE GROUND'S FACE (the head's TONE RULE), sRGB.
 uint32_t ring_light();
 uint32_t ring_dark();
@@ -365,26 +332,17 @@ uint32_t ring_dark();
 void     set_accent(uint32_t accent);
 uint32_t accent_color();
 
-// THE MARKER LANE'S PHASE (the brass's 2026-10-22 to 2026-10-23) FOLLOWS THE
-// DISPLAYED BASIS (the head's LOOP): called at every publish of the plate's
-// displayed fingerprint (the two sites in waveform_cache.cpp, the async swap
-// and the synchronous rebuild) with its span and width — the phase advanced
-// by the content's travel in device px, (old vp − new vp) / spp, where spp
-// is unchanged, and held where it moved.
-void follow_displayed_basis(int64_t vp_start, int64_t vp_end, int area_w);
-
 // THE SURFACE CHOKEPOINT'S ROAD (render.h's set_surface_source), called with
 // the fill's PATH ALREADY BUILT: `c` THE FACE (the palette's `face`, the
-// ground's mean) under a Ground or Marker scope is that ground's baked tile
-// under the path's extents where they meet the client (the tile holding the
-// visible part; the mean where no one tile holds that) — set as the source,
-// true; false for any other color, the Flat scope or before a bake, the
-// caller then setting it flat.
+// ground's mean) under the Ground scope is the ground's baked tile under
+// the path's extents where they meet the client (the tile holding the
+// visible part; the mean where it does not) — set as the source, true;
+// false for any other color, the Flat scope (the marker lane's face among
+// its fills) or before a bake, the caller then setting it flat.
 bool set_source(cairo_t* cr, GuiColor c);
-// ONE RECT OF A GROUND AS DRAWN, split over its tiles (client coordinates,
-// the client's pixels alone): each part the tile, a part no tile holds the
-// ground's flat mean.
-void paint_rect(cairo_t* cr, const GuiRect& r, GuiMaterial m);
+// ONE RECT OF THE GROUND AS DRAWN (client coordinates, the client's pixels
+// alone): the part the tile holds the tile, the rest the ground's flat mean.
+void paint_rect(cairo_t* cr, const GuiRect& r);
 
 // A KEY'S BAKED PATCH (the head's KEYS): the patch for a key of `r`'s size
 // at `depth` device px down (0 at rest, 1 checked, 2 held; key_depth),
