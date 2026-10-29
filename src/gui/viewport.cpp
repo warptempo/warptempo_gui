@@ -288,34 +288,57 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // are the nudge, which
 // keeps the bit across its whole act, the undo/redo singleton restore
 // under the hold, which holds the column after its land and re-arms the bit,
-// and the marker drop (seat_playhead_on_drop, below); the rule is at
-// AppState::camera_hold.
+// and the marker drop where the walk it lands by does not center
+// (seat_playhead_on_drop, below; at the working zoom that walk arms the bit
+// itself, architect 2026-10-29); the rule is at AppState::camera_hold.
 void Viewport::move_playhead_to(int64_t new_sample) {
     clear_audition_sequence(app);
     app.camera_hold = false;
     reseat_playhead_to(new_sample);
 }
 
-// THE DROP'S SEAT, THE HOLD POSTURE'S THIRD EXEMPTION (architect 2026-10-12,
-// "if the playhead has a hold bit and a new marker is dropped, it inherits the
-// hold bit": a drop under the hold is authored on the held column), the rule's
-// one owner for every drop body (GuiWarpMarkersOps::drop_marker,
-// GuiPhaseResetMarkersOps::drop_phase_reset_at_position). The bit, the cursor
-// and the AS-PAINTED item basis are read BEFORE the seat, which puts the bit
-// out as every movement does; a bit that stood is then re-armed. A seat that
-// moved the cursor (the P column's lead-in drop seats the playhead
-// kPhaseResetLeadInSamples before where it stood) first holds the column the
-// cursor painted in before the drop, the undo singleton restore's precedent
+// THE DROP'S SEAT AND ITS CAMERA, the one owner for every drop body
+// (GuiWarpMarkersOps::drop_marker,
+// GuiPhaseResetMarkersOps::drop_phase_reset_at_position).
+// THE SEAT is the movement owner's (move_playhead_to), which puts the hold
+// out as every movement does.
+// THE DROP THEN LANDS AS TAB DOES (architect 2026-10-29, "drop should be
+// another action that centers when you're at working zoom … like Tab"): the
+// landing owner's walk (land_subject, LandingKind::Walk) over the playhead
+// AFTER the seat — the new marker, and on the P column's lead-in drop the
+// reset itself, the playhead seated back onto it. AT THE WORKING ZOOM AS
+// PAINTED (the walk's own term) the marker is CENTERED, on screen or not, and
+// the hold ARMED by the walk; at every other zoom, finer or coarser, an
+// on-screen marker moves nothing and an off-screen one is paged in by the
+// walk's own rule. Working zoom only, not every zoom (closed_questions.md).
+// A single sample always fits, so the verdict is dropped, as the walk's other
+// callers drop it.
+// THE HOLD POSTURE'S THIRD EXEMPTION (architect 2026-10-12, "if the playhead
+// has a hold bit and a new marker is dropped, it inherits the hold bit": a
+// drop under the hold is authored on the held column) STANDS WHERE THE WALK
+// DID NOT CENTER. The walk asks first and its centering supersedes the
+// exemption: at the working zoom the center becomes the held column and the
+// walk's own arm the bit, so a bit standing after the walk is that arm (the
+// seat having put it out) and the exemption asks nothing — no column is held
+// only to be centered over. Off the working zoom the hold stands only on a
+// file too short for it (`c`'s clamped level, AppState::camera_hold), the
+// walk does not center there, and the exemption runs as ruled: the bit, the
+// cursor and the AS-PAINTED item basis are read BEFORE the seat; a seat that
+// moved the cursor (the lead-in drop seats the playhead
+// kPhaseResetLeadInSamples before where it stood) holds the column the cursor
+// painted in before the drop, the undo singleton restore's precedent
 // (restore_history_entry, undo.cpp), so the bit stays truthful
-// (hold_derived_on_arrival): the playhead paints in the held column. A seat
+// (hold_derived_on_arrival): the playhead paints in the held column; a seat
 // that moved nothing (the warp drop, any same-sample re-affirm) only re-arms.
-// A dark bit leaves the plain movement.
+// A dark bit off the working zoom leaves the movement and the walk's answer.
 void Viewport::seat_playhead_on_drop(int64_t new_sample) {
     const bool held = app.camera_hold;
     const int64_t cursor_before = app.playhead_cursor_sample;
     const ItemViewportBasis painted = item_viewport_basis(app, audio);
     move_playhead_to(new_sample);
-    if (!held) return;
+    (void)land_subject(app.playhead_cursor_sample, app.playhead_cursor_sample,
+                       LandingKind::Walk);
+    if (!held || app.camera_hold) return;
     if (painted.spp > 0.0 && app.playhead_cursor_sample != cursor_before)
         hold_subject_column_after_nudge(displayed_column_at(
             static_cast<double>(cursor_before), painted.vp_start, painted.spp));
@@ -1125,11 +1148,14 @@ void Viewport::invalidate_all() {
 //     reach the paint handler's plate basis), both read at the restore's head
 //     before any of its writes; it calls this only when the restore moved
 //     the cursor, in place of the landing owner's Restore.
-//   * THE MARKER DROP'S SEAT (Viewport::seat_playhead_on_drop, below;
+//   * THE MARKER DROP'S SEAT (Viewport::seat_playhead_on_drop, above;
 //     architect 2026-10-12) calls it when a drop under the hold moved the
-//     cursor (the P column's lead-in drop), passing the column the cursor
-//     painted in before the drop on the item basis, read before the seat,
-//     and then re-arms the bit like the restore.
+//     cursor (the P column's lead-in drop) and the walk the drop lands by did
+//     not center it (off the working zoom, a file too short for it; at the
+//     working zoom the walk's centering supersedes the held column, architect
+//     2026-10-29), passing the column the cursor painted in before the drop
+//     on the item basis, read before the seat, and then re-arms the bit like
+//     the restore.
 // A held arrow's repeats and a held arrow button's fires reach the first two
 // through the same act bodies, so the hold runs at every step. The write
 // below changes the camera, so the chokepoint puts the posture out; the nudge
@@ -1145,7 +1171,8 @@ void Viewport::invalidate_all() {
 // reaches this body only under the hold, which stands only at the working
 // zoom (architect 2026-09-28, the rule at Viewport::land_subject), where q is
 // the whole-frame working column and the held offset is a whole number of
-// frames.
+// frames — or, on a file too short for it, at `c`'s clamped level, the one
+// level the drop's seat reaches this body at (architect 2026-10-29).
 void Viewport::hold_subject_column_after_nudge(int prior_column) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
@@ -1237,8 +1264,9 @@ void Viewport::follow_scroll_if_needed() {
 // zoom-derived picture did during a zoom gesture (the rule at nudge_camera's
 // neighbour, app_state.h). THE ZOOM IS NEVER WRITTEN HERE.
 //
-// WALK — the Tab walk, always a single frame (the paired march's steps came
-// here until 2026-09-26, when each took bare `c`'s act instead):
+// WALK — the Tab walk and the marker drop's landing (architect 2026-10-29,
+// the drop lands as Tab does), always a single frame (the paired march's
+// steps came here until 2026-09-26, when each took bare `c`'s act instead):
 //   * AT THE WORKING ZOOM, AS PAINTED (architect 2026-09-28: the painted
 //     step q EQUALS the working column, audio.working_column(); `c`'s level
 //     2.0 paints q = column exactly, and a rest a hair either side of it
@@ -1327,12 +1355,14 @@ void Viewport::follow_scroll_if_needed() {
 //     centres at the working zoom alone, so the hold stands only there
 //     (architect 2026-09-28).
 //
-// ITS READERS, re-grepped 2026-09-25:
+// ITS READERS, re-grepped 2026-10-29:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
 //     (input_handler.cpp — bare Tab / Shift+Tab / IsoLeftTab through
-//     cycle_marker_focus), and cycle_history_diff_flag_focus's Land arm
-//     (input_key_dispatch.cpp — the `h` view's Tab); each lands the cursor
-//     it has just seated (lo == hi), so the verdict is dropped;
+//     cycle_marker_focus), cycle_history_diff_flag_focus's Land arm
+//     (input_key_dispatch.cpp — the `h` view's Tab), and the marker drop's
+//     seat (seat_playhead_on_drop, above — every drop body, architect
+//     2026-10-29); each lands the cursor it has just seated (lo == hi), so
+//     the verdict is dropped;
 //   * RESTORE: restore_history_entry's singleton arm (undo.cpp) on the cursor
 //     just landed, WITH THE HOLD DARK or ACROSS A TAB OR AUDIO-VIEW SWITCH
 //     (otherwise the arm holds the column instead, 2026-09-25; a crossed

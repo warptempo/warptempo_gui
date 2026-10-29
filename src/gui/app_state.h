@@ -177,7 +177,8 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //     and at a PageIn launch: an offscreen target lands the margin in from
 //     the LEFT edge;
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
-//     audio views, the undo/redo restore): its fit test
+//     audio views and the marker drop's landing, the undo/redo restore):
+//     its fit test
 //     asks whether the range is at most 1 − 2 × margin of the window at the
 //     live zoom (else its one caller that can meet the verdict, the group
 //     restore, zooms out through the framer's margin arm below), and the
@@ -4738,12 +4739,16 @@ struct AppState {
     //     2026-09-23's "the act ignores the hold posture": the act ends armed
     //     on the tab it centred last), and THE WALK'S CENTRING BY THE LANDING OWNER
     //     (Viewport::land_subject's LandingKind::Walk at the working zoom as
-    //     painted, on screen or not: the Tab walk in both audio views). A
+    //     painted, on screen or not: the Tab walk in both audio views, and
+    //     THE MARKER DROP, which lands as Tab does — architect 2026-10-29,
+    //     Viewport::seat_playhead_on_drop — so a drop at the working zoom
+    //     arms the hold from dark as a Tab step does). A
     //     centring act that cannot centre (a wall) still arms: the bit means
     //     "hold the column the subject is in", not "the subject is at the
     //     centre". EVERY ARM IS AT THE WORKING ZOOM (architect 2026-09-28):
-    //     `c`, the march, the audition and Ctrl+J write it, the walk centres
-    //     only there, the tab switch derives it only there, and
+    //     `c`, the march, the audition and Ctrl+J write it, the walk (the
+    //     drop's included) centers only there, the tab switch derives it
+    //     only there, and
     //     a zoom write that moves the level is a changed camera at the
     //     chokepoint, which clears the bit — so THE HOLD STANDS ONLY AT THE
     //     WORKING ZOOM (on a file too short for it, `c`'s clamped level, the
@@ -4774,7 +4779,7 @@ struct AppState {
     //     middle, so its derivation answers what that tab's picture already
     //     says.
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     a drop, a click, an S/T flip — the 2026-09-24 reason above stands
+    //     a click, an S/T flip — the 2026-09-24 reason above stands
     //     for every road but the tab switch), by THE UNDO / REDO RESTORE from a dark bit in any
     //     arm (its singleton centring of an off-screen marker included: the
     //     landing owner's LandingKind::Restore never arms), by the walk's
@@ -4804,15 +4809,22 @@ struct AppState {
     //     column. A restore that moved no cursor moves no camera and keeps
     //     the bit. (2026-09-23 to 2026-09-25: the restore kept the bit across
     //     its land and let the landing owner decide.)
-    //     AND BY THE MARKER DROP (architect 2026-10-12, "if the playhead has a
-    //     hold bit and a new marker is dropped, it inherits the hold bit"),
-    //     the third exemption, a drop under the hold being authored on the
-    //     held column: its seat of the playhead on the new marker is a
-    //     movement owner too, so Viewport::seat_playhead_on_drop reads the
-    //     bit before the seat and re-arms it after — a seat that moved no
-    //     cursor (the warp drop) only re-arms, a seat that moved it (the P
-    //     column's lead-in drop) first holds the column the cursor painted in
-    //     before the drop, as the restore does. A dark bit drops as before.
+    //     AND BY THE MARKER DROP OFF THE WORKING ZOOM (architect 2026-10-12,
+    //     "if the playhead has a hold bit and a new marker is dropped, it
+    //     inherits the hold bit"), the third exemption, a drop under the hold
+    //     being authored on the held column: its seat of the playhead on the
+    //     new marker is a movement owner too, so
+    //     Viewport::seat_playhead_on_drop reads the bit before the seat and,
+    //     where the walk it then lands by did not center, re-arms it — a seat
+    //     that moved no cursor (the warp drop) only re-arms, a seat that moved
+    //     it (the P column's lead-in drop) first holds the column the cursor
+    //     painted in before the drop, as the restore does. AT THE WORKING
+    //     ZOOM THE WALK'S CENTERING SUPERSEDES IT (architect 2026-10-29): the
+    //     center becomes the held column and the walk arms the bit, so the
+    //     exemption covers what the walk leaves — off the working zoom the
+    //     hold stands only on a file too short for it (`c`'s clamped level,
+    //     above), where the walk does not center and the exemption is
+    //     unchanged. A dark bit there drops as before.
     //   * CLEARED by every other camera change (the chokepoint above: the
     //     pans, the drags, the pointer zooms and the zoom step (`=` / `-`,
     //     Zoom In / Zoom Out, 2026-10-27 — every zoom clears the hold, the
@@ -4835,7 +4847,8 @@ struct AppState {
     //     the marker under the playhead (Enter, the flag double-click, a
     //     bound cell, `m`) keeps the hold, and so do a marker click, a Tab
     //     step or a collapse landing on that marker; move_playhead_to clears
-    //     at every call (but the drop's seat, seat_playhead_on_drop). THE
+    //     at every call (the drop's seat, seat_playhead_on_drop, then arming
+    //     through its walk or re-arming by the third exemption). THE
     //     SELECTION DOES NOT ENTER INTO IT (architect
     //     2026-09-26): the hold is a camera posture on the playhead's column,
     //     so no selection write sets or clears the bit — a click that forms a

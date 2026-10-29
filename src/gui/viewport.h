@@ -14,7 +14,8 @@ class GuiPlayback;
 // SUBJECT (architect 2026-09-24). A REQUIRED argument with no default, the
 // same discipline as MarkerLandingFrame (app_state.h), so a new caller cannot
 // compile without saying which answers it means:
-//   * `Walk` — the Tab walk in both audio views, live and `h`: centred at
+//   * `Walk` — the Tab walk in both audio views, live and `h`, and the
+//     marker drop's landing (architect 2026-10-29): centered at
 //     the working zoom, as painted, whether on screen or not; at every other
 //     zoom, finer or coarser, nothing on screen and paged in off screen (the
 //     paired march does not come
@@ -367,8 +368,10 @@ struct Viewport {
     // (viewport.cpp). UNCONDITIONAL — a write onto the frame the cursor already
     // holds still ends the act.
     void move_playhead_to(int64_t new_sample);
-    // A marker drop's seat of the playhead: move_playhead_to that keeps a
-    // standing hold (the posture's third exemption; the rule and body are at
+    // A marker drop's seat of the playhead: move_playhead_to, then the
+    // landing owner's walk over the seated playhead (the drop lands as Tab
+    // does, architect 2026-10-29), keeping a standing hold where the walk did
+    // not center (the posture's third exemption; the rule and body are at
     // the definition, viewport.cpp).
     void seat_playhead_on_drop(int64_t new_sample);
     // THE RESEAT — the identical write with NO audition end, for the callers whose write
