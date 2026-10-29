@@ -1154,7 +1154,8 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = one of the two DIALOG editors (settings / BPM, painting in the
+    // true = one of the two DIALOG editors' boxes (settings, which also hosts the
+    // trim preset's name, / BPM, painting in the
     // modal family's box since 2026-10-14 — in the bottom row's modal from
     // 2026-08-13, centered for the one day from 2026-08-12, and the field
     // was `bottom_strip` while they lived on the status lane); false = the
@@ -2115,7 +2116,7 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      it as Esc does (2026-10-26), a close and no zone's act, so the Arrow
 //      — the shared predicate is
 //      keyboard_modal_editor_active, whose membership is
-//      AppState::text_editor_session's (all four kinds); the blanket's
+//      AppState::text_editor_session's (all five kinds); the blanket's
 //      field is the dialog's edit control or the lane editor's box;
 //   3. (the open dropdown, which owned the pointer, until 2026-10-21);
 //   4. the loading / empty-audio return, above the whole waveform band. The four

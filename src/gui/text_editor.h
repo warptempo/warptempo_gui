@@ -268,9 +268,10 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // which is a modal owner and not an editor. THIS ENUM IS THE AUTHORITATIVE
 // LIST of the editors, and EVERY ONE IS A MODAL since 2026-10-25: the
 // modality predicate (GuiInputHandler::keyboard_modal_editor_active) reads
-// AppState::text_editor_session, which covers all four kinds;
-// AppState::dialog_editor_session names the two DIALOG kinds (Settings and
-// the BPM bracket) for the questions only a dialog has.
+// AppState::text_editor_session, which covers all five kinds;
+// AppState::dialog_editor_session names the three DIALOG kinds
+// (SettingsAssignment and TrimPresetName, both on the settings editor's
+// buffer, and BpmBracket on its own) for the questions only a dialog has.
 enum class Kind {
     FlagPayload,
     BpmBracket,

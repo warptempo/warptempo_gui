@@ -6457,7 +6457,7 @@ struct AppState {
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL FOUR editor kinds, 0 when
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL FIVE editor kinds, 0 when
     // none stands — the accessor above widened by the two top-strip kinds it
     // names as deliberate non-members. It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
@@ -6480,7 +6480,7 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the four
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the five
     // editor kinds does (stands()), on a backend that asks for one, and it
     // holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift

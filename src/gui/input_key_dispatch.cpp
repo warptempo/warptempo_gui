@@ -6632,9 +6632,11 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // either way, and what else the landing decides is what a bare Enter
     // means. Left/Right are NOT the ring's here: they are the seeks, the car's
     // rewind and fast-forward, on a button or off it. THE PICKER'S RING IS THE
-    // SAME SHAPE, one member shorter (its row is one button since
-    // 2026-08-29, Cancel or the settings page's Close): [list, button],
-    // opening nowhere, and Left/Right are not
+    // SAME SHAPE over its own row: one word under the project picker, the
+    // settings page and the value list (since 2026-08-29, Cancel or Close),
+    // the trim presets list's six (the pair and four words, the grey ones
+    // skipped by the walk) — [list, the row's live buttons in painted
+    // order], opening nowhere, and Left/Right are not
     // its either — its router consumes them, the list's walk being Up/Down —
     // so the two list-bearing owners share one arm.
     const bool list_up = !prompt_up &&
@@ -6802,9 +6804,10 @@ void GuiInputHandler::on_key_release(GuiKey key) {
     dispatch_modal_dialog_button(armed);
 }
 
-// Shared key route for EVERY keyboard-modal editor — all four
-// text_editor::Kind kinds: the settings editor, the bpm bracket editor, and
-// the marker lane's flag editor and iteration bound editor.
+// Shared key route for EVERY keyboard-modal editor — all five
+// text_editor::Kind kinds: the settings editor, the trim preset's name editor
+// (on the settings editor's buffer), the bpm bracket editor, and the marker
+// lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys and a dialog's ring — NO HATCH since
 // 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate (they were this route's
@@ -8069,9 +8072,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // THE RING: Tab / Shift+Tab walk [list, Cancel or Close] through the one
-    // modal
-    // ring route, whose list arm the player and the picker share. A
+    // THE RING: Tab / Shift+Tab walk [list, the row's live buttons] through
+    // the one modal ring route (the picker's row is one word, Cancel or Close,
+    // except under the trim presets list's six; the route holds the shape),
+    // whose list arm the player and the picker share. A
     // RING-FOCUSED BUTTON takes Enter and Space as its own press
     // (press-at-press, commit-at-release — the route above already armed it
     // and returned true); reaching the switch below with the focus on a

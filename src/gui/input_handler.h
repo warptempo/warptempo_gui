@@ -2778,8 +2778,9 @@ private:
     // sends down the piece's-ends arm.
     void run_playhead_end_jump(bool forward, bool whole_piece);
 
-    // Shared key route for EVERY keyboard-modal editor — all four
-    // text_editor::Kind kinds: the settings editor, the bpm bracket editor
+    // Shared key route for EVERY keyboard-modal editor — all five
+    // text_editor::Kind kinds: the settings editor, the trim preset's name
+    // editor (on the settings editor's buffer), the bpm bracket editor
     // and the marker lane's flag editor (architect 2026-07-28) and iteration
     // bound editor. The modal contract is stated once
     // at the definition; it returns true for every key — NO HATCH since
@@ -2787,11 +2788,11 @@ private:
     // dialog's ring alone, so no Ctrl+Q reaches it to fall through.
     // `autocomplete` is the ONLY OPTIONAL hook — the FORWARD-Tab one (the
     // reverse walk never completes), passed by
-    // the SETTINGS and LOAD editors and returning whether it ADVANCED the
+    // the SETTINGS editor and returning whether it ADVANCED the
     // buffer, which is what decides between consuming the key and letting it
     // walk the focus ring (THE ONE AUTOCOMPLETE MODEL, architect 2026-08-13,
-    // stated in full at the definition). The bpm and flag editors
-    // have nothing to complete and pass an empty hook; for the flag editor bare
+    // stated in full at the definition). The bpm, flag and trim preset's name
+    // editors have nothing to complete and pass an empty hook; for the flag editor bare
     // Tab never arrives at all, the on_key gate swallowing it before this route
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
     // cancel are the per-editor bodies, and `repaint` is the
@@ -3103,8 +3104,8 @@ private:
     //     route_picker_key: THE WHOLE PLASTIC VOCABULARY while a picker
     //       stands, in the render player's router's shape and at its rank in
     //       on_key (under the prompt gate, above every
-    //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, button]
-    //       through the one modal ring route (opening NOWHERE, the
+    //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, the row's
+    //       live buttons in painted order] through the one modal ring route (opening NOWHERE, the
     //       first Tab landing on the list); Enter presses a ring-focused
     //       button (press-at-press, commit-at-release, the modal's own) or,
     //       with none focused, OPENS the highlight; Space presses a focused
@@ -4341,7 +4342,7 @@ private:
     // shape and input routing like it (it judges no data): true when
     // key+mods should be dropped while a keyboard-modal editor stands. It
     // admits only the keys the active editor consumes (text_editor::Kind, the
-    // four kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S and
+    // five kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S and
     // Ctrl+Q consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
     // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
     // gap these editors have always had, which is also why a refused

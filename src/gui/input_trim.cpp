@@ -362,7 +362,7 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     // Viewport::move_playhead_to, viewport.cpp).
 }
 
-// The shared trim commit tail — contract, the four callers and the one
+// The shared trim commit tail — contract, the callers and the one
 // deliberate non-caller at the declaration (input_handler.h).
 void GuiInputHandler::commit_trim_mutation() {
     auto_clear_crossed_trim();

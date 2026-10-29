@@ -7091,10 +7091,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // one seat): a glyph button's the player's own legend
         // (render_player_button_legend, the Play key's naming its next press,
         // 2026-10-25 — its repaint the row's one damage owner, the play
-        // face's writers damaging the row whole), dimmed when dead; a word button's
-        // its word IN CAPITALS, its access key underlined (the Windows-strict
-        // keys unchanged, only the drawing) — always live while its dialog
-        // stands.
+        // face's writers damaging the row whole), dimmed when dead; a word
+        // button prints its word IN CAPITALS, its access key underlined (the
+        // Windows-strict keys unchanged, only the drawing), and wears the
+        // enabled bit as the glyph buttons do (THE DISABLED RUNG above owns
+        // the bit and which owners publish it).
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
         paint_roster_case(cr, r, plan[i].lit, pressed);
         std::string legend;
