@@ -269,6 +269,25 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     launch_playback_from(launch_pos);
 }
 
+// THE RESTRICT GATE'S QUESTION (architect 2026-10-29, AppState::restrict):
+// is the active-domain launch position `frame` on the window AS PAINTED —
+// displayed_frame_on_screen (warp_frame_map_view.h), the cameras' one
+// visibility test, asked on the ITEM basis (item_viewport_basis, the promoted
+// mirror of what the last frame painted; this cluster sees no GuiPaintHandler,
+// and the mirror equals the plate basis the playheads draw through at every
+// committed frame; cold, the live viewport by the basis's own contract, as
+// the scrub's click converts). A waveform with no columns has no window to be
+// off, so nothing is. TWO READERS, the act and its face: the
+// view-end launch entry's gate below and space_launch_would_play's term.
+static bool launch_frame_on_painted_window(const AppState& a,
+                                           const GuiAudio& audio,
+                                           int64_t frame) {
+    const ItemViewportBasis b = item_viewport_basis(a, audio);
+    if (b.spp <= 0.0 || b.area_w <= 0) return true;
+    return displayed_frame_on_screen(static_cast<double>(frame), b.vp_start,
+                                     b.spp, b.area_w);
+}
+
 // WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR (architect 2026-08-30;
 // the contract and the one reader — the PLAY face — are at the declaration,
 // app_state.h). It is the press above asked WITHOUT acting, each term the
@@ -280,7 +299,9 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // argument), and the one launch predicate on the launch position the act
 // would actually form — cursor plus phase_reset_lead_in_launch_offset, the
 // lead-in included, which is what makes the face and the key read ONE
-// launch position. It sits here beside toggle_playback so the composition
+// launch position. RESTRICT'S START GATE (2026-10-29) is the last term, on
+// that same position, as the view-end entry asks it. It sits here beside
+// toggle_playback so the composition
 // and the act read as one; a gate added to the press must be added here.
 // THE DEVICE TERM IS A READ, NEVER A REOPEN, AND THE READ IS THE
 // NEVER-CAME-UP HALF (2026-09-02, the truthful-buttons rule): the press asks
@@ -289,20 +310,25 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // that never came up, the one state a press cannot change — and AGREES with
 // the act: a dropped route on the tablet leaves Play lit, and its press
 // reopens and plays exactly as Space does.
-bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
+bool space_launch_would_play(const AppState& a, const GuiAudio& audio,
+                             const GuiPlayback& playback,
                              const GuiTargetRender& target_render,
                              int64_t total_frames) {
     if (playback.device_absent()) return false;
+    int64_t launch_pos = a.playhead_cursor_sample;
     if (a.active_audio_view == 'T') {
         if (!target_preview_ready(target_render)) return false;
         const int64_t offset = phase_reset_lead_in_launch_offset(a, playback);
         if (a.playhead_cursor_sample >= playback.domain_end() - offset - 1)
             return false;
-        return playback_launch_playable(a, playback, total_frames,
-                                        a.playhead_cursor_sample + offset);
+        launch_pos = a.playhead_cursor_sample + offset;
     }
-    return playback_launch_playable(a, playback, total_frames,
-                                    a.playhead_cursor_sample);
+    if (!playback_launch_playable(a, playback, total_frames, launch_pos))
+        return false;
+    // RESTRICT'S START GATE, the view-end entry's own term on the same launch
+    // position (architect 2026-10-29), so the PLAY face greys where the press
+    // would only card.
+    return !a.restrict || launch_frame_on_painted_window(a, audio, launch_pos);
 }
 
 // The audition launch entry, the scrub act's launch (which always follows its
@@ -371,11 +397,35 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // which entry a launch reached it through. The edge inventory is at
     // GuiAuditionSequence (app_state.h), owner (2).
     clear_audition_sequence(app);
+    // RESTRICT'S START GATE (architect 2026-10-29, AppState::restrict): under
+    // the lit lamp a launch position off the painted window is REFUSED ON A
+    // CARD — the play would start where RESTRICT says no play runs — and the
+    // page-in below never rescues it. Ahead of the body, so the refusal
+    // writes no scanner and no camera; behind the clear above, so a refused
+    // launch still ends a standing act as every user launch does. Space's
+    // play edge asked the device first (toggle_playback), so a dead device is
+    // still told as itself. THE SCRUB NEVER TRIPS IT: it launches from the
+    // column just clicked, a frame on the window by construction. The face
+    // asks the same term (space_launch_would_play). The card is one clause
+    // and names no key (notifications.h's head).
+    if (app.restrict &&
+        !launch_frame_on_painted_window(app, audio, launch_pos)) {
+        restrictable_play = false;
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Playhead is off screen");
+        return false;
+    }
     // PageIn: Space launches from the cursor and the scrub from a clicked
     // column, so both roads start on screen except when the cursor has been
-    // left offscreen by a pan — which is exactly what the page-in rescues.
-    return launch_playback_window(launch_pos, active_view_play_end(),
-                                  kPlaybackNoLoop, LaunchCamera::PageIn);
+    // left offscreen by a pan — which is exactly what the page-in rescues
+    // for the unrestricted play (the restricted one was refused above).
+    // THIS ENTRY'S PLAY IS THE RESTRICTABLE ONE (restrictable_play, the
+    // contract at the declaration).
+    restrictable_play = launch_playback_window(launch_pos,
+                                               active_view_play_end(),
+                                               kPlaybackNoLoop,
+                                               LaunchCamera::PageIn);
+    return restrictable_play;
 }
 
 // THE CAR'S SPACE (contract and the ruling at the declaration; architect
@@ -436,6 +486,9 @@ void GuiPlaybackLifecycle::car_play_playback() {
     // this reaches the sub-tick window alone, as the view-end entry's clear
     // does.)
     clear_audition_sequence(app);
+    // THE CAR'S LOOP IS NEVER RESTRICTED (restrictable_play's exemptions):
+    // it starts off screen by design and loops forever.
+    restrictable_play = false;
     // A trim under two frames refuses inside the body — playback_launch_
     // playable on the begin — and the publish's own loop belt refuses the same
     // window one layer down; both silent, the benign one-dimensional class.
@@ -479,6 +532,9 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     // every user launch takes is the two user entries' (launch_playback_from
     // and, since 2026-09-17, car_toggle_playback), the roads into the body
     // that are not the act's.
+    // THE AUDITION IS NEVER RESTRICTED (restrictable_play's exemptions): each
+    // play is framed by its own `c` and ends at its own span.
+    restrictable_play = false;
     // PageIn: each of the act's four plays is framed by its own `c`
     // (GuiAbAudition), so the start is centred by construction and the term
     // is a no-op here — stated, not defaulted, because the body takes no
@@ -686,6 +742,10 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
 void GuiPlaybackLifecycle::toggle_follow() {
     app.follow = !app.follow;
     if (!app.follow) return;
+    // THE RADIO (architect 2026-10-29, AppState::follow): FOLLOW lit puts
+    // RESTRICT out — with both lit the page below would carry the scanner
+    // away before RESTRICT's stop at the right edge could fire.
+    app.restrict = false;
     // THE LIT EDGE RESUMES THE PAGING AT ONCE: whatever suspended the play in
     // flight is forgiven, and during a play the predictor re-anchors (as
     // every discrete camera move does) and the scanner is paged back into
@@ -698,6 +758,17 @@ void GuiPlaybackLifecycle::toggle_follow() {
         playback.resync_predictor();
         viewport.follow_scroll_if_needed();
     }
+}
+
+// The restrict key's one chokepoint (contract at the header declaration),
+// shared by bare `r` and the icon-row button that synthesizes that chord.
+void GuiPlaybackLifecycle::toggle_restrict() {
+    app.restrict = !app.restrict;
+    if (!app.restrict) return;
+    // THE RADIO (architect 2026-10-29, AppState::restrict): RESTRICT lit puts
+    // FOLLOW out, so the autopager stops paging the play in flight and the
+    // tick's stop at the right edge governs it from the next frame.
+    app.follow = false;
 }
 
 // (set_playback_speed IS GONE — architect 2026-08-27, with the

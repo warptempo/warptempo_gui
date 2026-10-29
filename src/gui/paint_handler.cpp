@@ -842,8 +842,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // that evening: one box and one 2px gap onto the walk, no separator
     // moving.
     {RedesignButton::IconFollow},
+    // RESTRICT (architect 2026-10-29): bare `r`, the lamp that keeps the
+    // user's play inside the window, behind Follow, its radio partner. One
+    // case onto the second run, no run and no separator moving.
+    {RedesignButton::IconRestrict},
     // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's TAIL
-    // behind Follow: bare `t`, the trim presets list's opener and, while it
+    // behind Restrict: bare `t`, the trim presets list's opener and, while it
     // stands, its closer (RedesignButton::IconTrimPresets). One case onto the
     // second run, no run and no separator moving (the iteration group's
     // stays BPM's).
@@ -1033,12 +1037,12 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the clip
 // covers it whole — so a press, a hover and a tooltip land on exactly the
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
-// band holds every run down to about 656 Windows px of window width outside
+// band holds every run down to about 679 Windows px of window width outside
 // the `h` view and 472 inside it (the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-28 night with the Trim Presets key, plus the
+// statement, re-derived 2026-10-29 with the Restrict lamp, plus the
 // ring's inset at each window edge, about 13 W), so neither host reaches the
 // rule at its scale: the tablet's 2304 device px hold the row in both states
-// up to about 350 % and the laptop's 1920 up to about 290 % (the W arithmetic
+// up to about 340 % and the laptop's 1920 up to about 280 % (the W arithmetic
 // over the device width; each element's own rounding moves the edge by a
 // pixel or so).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
@@ -1691,14 +1695,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the bare ground, the left members in
-    // THREE RUNS and the right five in ONE — TWENTY-SIX members outside the
-    // `h` view and EIGHTEEN inside it (2026-10-28 night, the Trim Presets key
-    // closing the zoom group, hidden in the view), RE-COUNTED off the roster enum, the
+    // THREE RUNS and the right five in ONE — TWENTY-SEVEN members outside the
+    // `h` view and EIGHTEEN inside it (2026-10-29, the Restrict lamp behind
+    // Follow, hidden in the view), RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
     // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in
     // the first run; ZOOM IN, ZOOM OUT, ZOOM TO FIT, THE WAVEFORM
-    // MAGNIFICATION LAMP, FOLLOW and TRIM PRESETS (the viewport
+    // MAGNIFICATION LAMP, FOLLOW, RESTRICT and TRIM PRESETS (the viewport
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
     // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS, since 2026-10-26 the
@@ -1715,8 +1719,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the view refuses whole (the companions publish empty rects outside the
     // view, the replaced members inside it), and inside the view every other
     // member whose chord it refuses in EVERY session is not painted
-    // (history_mode_hides_button, input_pointer.cpp) — Follow and Trim
-    // Presets behind Zoom
+    // (history_mode_hides_button, input_pointer.cpp) — Follow, Restrict and
+    // Trim Presets behind Zoom
     // In, Zoom Out, Zoom to Fit and the magnification lamp (which the view
     // admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
@@ -1736,28 +1740,28 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-23): in Windows px, from the program ring's outer left column,
     // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
     // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
-    // twenty-one members in three runs (re-derived 2026-10-28 night, the Trim
-    // Presets key closing the zoom group in the second),
-    //   21·23 + 2·15 = 513,
+    // twenty-two members in three runs (re-derived 2026-10-29, the Restrict
+    // lamp behind Follow in the second),
+    //   22·23 + 2·15 = 536,
     // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
-    // Renders, Enable Tooltips, Noise — the Trim Presets key hidden there
-    // with Follow),
+    // Renders, Enable Tooltips, Noise — Restrict and the Trim Presets key
+    // hidden there with Follow),
     // 13·23 + 2·15 = 329;
     // with one run gap of bare ground before the right run the band holds every
     // run at
-    //   513 + 15 + 115 = 643
+    //   536 + 15 + 115 = 666
     // Windows px outside the view (459 inside it) — the ring's 2258 device
-    // px on the tablet at 300 % (752⅔ W) with 329 px (109⅔ W) of ground
+    // px on the tablet at 300 % (752⅔ W) with 260 px (86⅔ W) of ground
     // between the left runs and the right run beyond the run gap. IN DEVICE
     // PX, off the painted
     // walk (each case its rounded parts, the gap its own scaled_px, the ends
     // program_ring_columns'; re-derived 2026-10-28, the ring's columns the
-    // canvas's frame hairlines, and again that night with the Trim Presets
-    // key): at
+    // canvas's frame hairlines, and again 2026-10-29 with the Restrict
+    // lamp): at
     // the tablet's 300 % (cases 69, the gap 45, the ring 23 .. 2281) the left
-    // runs on x 23..1561, the right run 1936..2280; at the laptop's 138 %
-    // (cases 31, the gap 21, the ring 15 .. 1905) the left runs on x 15..707,
+    // runs on x 23..1630, the right run 1936..2280; at the laptop's 138 %
+    // (cases 31, the gap 21, the ring 15 .. 1905) the left runs on x 15..738,
     // the right run 1750..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused

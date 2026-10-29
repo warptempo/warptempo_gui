@@ -841,8 +841,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Undo, and redo on the one meaningful shift bit. Bare `z` and
         // Shift+Z are unbound.
         case GuiKeys::Z: return cl || cs;
-        // The render pair: the dispatch and the archival one.
-        case GuiKeys::R: return ca || cas;
+        // THE LETTER CARRIES THREE ACTS: bare `r` is the RESTRICT LAMP in the
+        // main window (architect 2026-10-29, GuiPlaybackLifecycle::
+        // toggle_restrict; the `h` view's allowlist refuses it there, its
+        // bound refusal), and Ctrl+Alt+R / Ctrl+Alt+Shift+R are the render
+        // pair, the dispatch and the archival one. Inside the render player
+        // bare `r` is REPEAT ONE, routed by the player's own router ahead of
+        // every reader of this predicate. Shift+R and Ctrl+R bind nothing.
+        case GuiKeys::R: return bare || ca || cas;
 
         // Zoom to Fit, on its shifted form FRAME THE TRIM, and on its
         // ctrl+shift form RESET TRIM (architect 2026-10-24; Shift+0 the
@@ -1138,6 +1144,26 @@ static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
                                   GuiInputState{true, true, true}, false),
               "`w` binds bare only — the NOISE lamp — and none of the "
               "seven modifier combinations spells anything");
+// `r` binds bare — the RESTRICT lamp (2026-10-29) — in both modes, and the
+// render pair's two Ctrl+Alt spellings; no other modifier spells anything.
+static_assert(chord_is_bound(GuiKeys::R, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::R, GuiInputState{}, true) &&
+                  chord_is_bound(GuiKeys::R,
+                                 GuiInputState{true, false, true}, false) &&
+                  chord_is_bound(GuiKeys::R,
+                                 GuiInputState{true, true, true}, false) &&
+                  !chord_is_bound(GuiKeys::R,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::R,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::R,
+                                  GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::R,
+                                  GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::R,
+                                  GuiInputState{false, true, true}, false),
+              "`r` binds bare — the RESTRICT lamp — and the render pair "
+              "alone");
 // `t` binds bare only — the Trim Presets list (2026-10-28 night) — in both
 // modes, and no modifier spells anything on it.
 static_assert(chord_is_bound(GuiKeys::T, GuiInputState{}, false) &&

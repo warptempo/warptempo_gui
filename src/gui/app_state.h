@@ -2055,8 +2055,8 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (51 chord
-// rows = 51 = kRedesignButtonCount since 2026-10-28 night, the count's own
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (52 chord
+// rows = 52 = kRedesignButtonCount since 2026-10-29, the count's own
 // statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -2312,8 +2312,19 @@ enum class RedesignButton {
     // `f`, through the derived partition; it does NOT grey on a locked tab or
     // under the grid-iterations lock, bare `f` being navigation.
     IconFollow,
+    // RESTRICT (bare `r`, architect 2026-10-29), directly after Follow and
+    // ahead of Trim Presets — the same VIEWPORT CLASS, Follow's other half: a
+    // plain per-project session lamp (AppState::restrict) under which the
+    // user's own play stays inside the window — it stops when the scanner
+    // reaches the window's right edge and does not start from a playhead off
+    // the window. A RADIO WITH FOLLOW: lighting either puts the other out.
+    // It wears a lamp, reading the live bit its own chord flips; it GREYS AND
+    // HIDES IN THE `h` VIEW with Follow, whose allowlist names neither, through
+    // the derived partition, and stays live on a locked tab and under the
+    // grid-iterations lock, bare `r` being navigation.
+    IconRestrict,
     // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's TAIL,
-    // directly after Follow and ahead of the iteration group (no new
+    // directly after Restrict and ahead of the iteration group (no new
     // separator: the iteration group's stays BPM's): BARE `t`, wearing TRIM,
     // opens THE TRIM PRESETS LIST — the piece's named trim windows, the
     // folder overlay's fifth content (folder_overlay.h; the file
@@ -3161,21 +3172,21 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-28
-// night): THIRTY-TWO in row 4's enum block and NINETEEN in the bottom row's — 51
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-29):
+// THIRTY-THREE in row 4's enum block and NINETEEN in the bottom row's — 52
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
 // moving up to the band 2026-10-25; Toggle Session History and Toggle
 // Cumulative returned 2026-10-26, and the Score key came the same day; Zoom
 // In and Zoom Out returned 2026-10-27; the NOISE lamp came 2026-10-28 and
-// the Trim Presets key that night).
-// PAINTED, the split is 30 + 21: HistoryOlder and HistoryNewer, enumerated
+// the Trim Presets key that night; the RESTRICT lamp 2026-10-29).
+// PAINTED, the split is 31 + 21: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 51;
+inline constexpr int kRedesignButtonCount = 52;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -4631,7 +4642,7 @@ struct AppState {
 
     // Live working copy of the active view's state — exactly the three view
     // fields immediately below, playhead / zoom / viewport (the hold posture
-    // and the follow lamp after them are session state, not per-tab mirrors). The SELECTION is NOT one of
+    // and the follow and restrict lamps after them are session state, not per-tab mirrors). The SELECTION is NOT one of
     // them: it lives here alone and is parked nowhere, see selected_markers.
     // This is an INTENTIONAL cache of the active view's per-view slot, not
     // accidental duplication: the paint path and the input handlers touch
@@ -4853,11 +4864,44 @@ struct AppState {
     // audition and the render player ignore it — the autopager asks the
     // audition's phase and returns under the player.
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
-    //     `f` and its icon-row button share. Nothing else lights or darkens
-    //     it: no stop, no launch, no pan, no placement click, no load in
-    //     place. Refused in the `h` view (off that mode's allowlist);
+    //     `f` and its icon-row button share — and RESTRICT's lit edge
+    //     (toggle_restrict), which puts it out. Nothing else lights or
+    //     darkens it: no stop, no launch, no pan, no placement click, no load
+    //     in place. Refused in the `h` view (off that mode's allowlist);
     //     admitted under both locks (navigation).
+    //   * A RADIO WITH RESTRICT (architect 2026-10-29): lighting either lamp
+    //     puts the other out, so one camera posture stands at a time — with
+    //     both lit the autopager would page the scanner before RESTRICT's stop
+    //     at the right edge could fire. Putting a lamp out touches the other
+    //     not at all.
     bool    follow                 = false;
+
+    // RESTRICT — THE `r` LAMP (architect 2026-10-29: "I can scrub on the lower
+    // left hand and then the playhead would stop once it reaches the right
+    // side of the window"). A PLAIN LAMP like FOLLOW above and in its family:
+    // per project, DARK AT EVERY PROJECT OPEN by the same construction
+    // (run_project builds this AppState fresh), outside undo, not carried by
+    // `'`, in no sidecar and no settings vocabulary. Lit, the user's own play
+    // stays inside the window AS PAINTED:
+    //   * THE STOP: the pre-paint hook (main.cpp's pre_paint_advance) stops a
+    //     RESTRICTABLE play (GuiPlaybackLifecycle::restrictable_play — Space's
+    //     and the scrub's) through the one stop body once the scanner's painted
+    //     column has passed the window's right edge — the edge itself, not
+    //     follow's early margin — and the playhead rests where the stop leaves
+    //     it, as at every stop edge.
+    //   * THE START GATE: the view-end launch entry
+    //     (GuiPlaybackLifecycle::launch_playback_from) refuses a launch
+    //     position off the painted window on a card, with no page-in, and the
+    //     PLAY face greys for it (space_launch_would_play).
+    // The car's loop, the A/B audition, the render player and the score
+    // viewer are never restricted (the exemptions at restrictable_play). At
+    // rest the lamp does nothing.
+    //   * ONE WRITER: GuiPlaybackLifecycle::toggle_restrict, the chokepoint
+    //     bare `r` and its icon-row button share — and FOLLOW's lit edge
+    //     (toggle_follow), which puts it out: THE RADIO, stated at follow
+    //     above. Refused in the `h` view (off that mode's allowlist);
+    //     admitted under both locks (navigation).
+    bool    restrict               = false;
 
     // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
     // 2026-07-30, "every pan suppresses", kept for the reinstated lamp
@@ -5343,10 +5387,11 @@ struct AppState {
     // consumes what was built. That is bare `f`'s posture exactly
     // (AppState::follow): the session lamps are one family, in no settings
     // vocabulary, never serialized, and per-project state for as long as the
-    // project stays open. `follow` is written by its own toggle alone; this
-    // bit took a COMPANION WRITE, the act class
-    // below (selection_consumed), a USE CASE ending rather than one lamp's
-    // toggle reaching across to another. (Bare `x`'s VALUE DRAG lamp was the
+    // project stays open. `follow` and `restrict` are written by their two
+    // toggles alone, each lit edge putting the other out (the radio,
+    // 2026-10-29); this bit took a COMPANION WRITE, the act class
+    // below (selection_consumed), a USE CASE ending rather than a radio
+    // partner's toggle. (Bare `x`'s VALUE DRAG lamp was the
     // family's third member from 2026-09-10 until 2026-09-13, when the
     // architect deleted it for a posture derived from the view; bare `[`'s
     // VALUE DRAG LAMP is its third member again since 2026-10-11, its off
@@ -7391,7 +7436,7 @@ struct AppState {
     //   then; Ctrl+Return / Ctrl+Shift+Return, 2026-10-21 to 2026-10-24; bare
     //   P / Ctrl+P / Ctrl+Shift+P since, the Copy Phase Resets key, hidden in
     //   the view),
-    //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
+    //   the bpm opener (`m`), iteration (`i`), follow (`f`), restrict (`r`, 2026-10-29), listen (`l`), and
     //   the SETTINGS button (bare `;`; the menu row's Settings anchor until
     //   2026-10-21).
     //   LIT — the view pairs' four (bare 1/2/3/4), the
@@ -15408,10 +15453,13 @@ bool phase_reset_copy_actionable(const AppState& a);
 // composition of the plain launch's own gates in the act's own order (the
 // device, the dispatch arm's target-preview gate, toggle_playback's
 // overflow-ordered end gate, playback_launch_playable on the offset launch
-// position), defined in playback_lifecycle.cpp beside toggle_playback so the
+// position, and under a lit RESTRICT the view-end entry's on-window gate on
+// that same position, 2026-10-29 — the reason it takes the audio), defined in
+// playback_lifecycle.cpp beside toggle_playback so the
 // composition and the act read as one. ONE READER: the PLAY button's face
 // (redesign_button_enabled), its plain term under the twin rule.
-bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
+bool space_launch_would_play(const AppState& a, const GuiAudio& audio,
+                             const GuiPlayback& playback,
                              const GuiTargetRender& target_render,
                              int64_t total_frames);
 
@@ -15742,6 +15790,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // is the `h` view's, whose allowlist does not name `f`, and the
         // derived partition above greys it there.
         case RedesignButton::IconFollow:
+            return true;
+        // RESTRICT MIRRORS NOTHING, FOLLOW'S ARM (architect 2026-10-29): bare
+        // `r` flips the lamp on any loaded piece, at rest and during a play
+        // alike, both locks admitting it; its one refusal is the `h` view's,
+        // greyed (and hidden) there by the derived partition above.
+        case RedesignButton::IconRestrict:
             return true;
         // THE TRIM PRESETS KEY MIRRORS NOTHING (architect 2026-10-28 night):
         // bare `t` opens the list on any loaded piece, both locks admitting
@@ -16881,7 +16935,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // A/B audition's press-time preflight would let the shift twin run.
         case RedesignButton::TransportPlayStop:
             if (transport_session_live(a)) return true;
-            if (space_launch_would_play(a, playback, target_render,
+            if (space_launch_would_play(a, audio, playback, target_render,
                                         total_frames))
                 return true;
             return ab_audition_preflight_ok(a, audio, playback,
@@ -16986,6 +17040,11 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // that play's paging with the lamp still lit (AppState::follow).
         case RedesignButton::IconFollow:
             return a.follow;
+        // RESTRICT'S LAMP (architect 2026-10-29): the same toggle pattern,
+        // reading the live bit bare `r` flips; the radio with Follow means
+        // at most one of the two is ever lit.
+        case RedesignButton::IconRestrict:
+            return a.restrict;
         // The Waveform Magnification lamp (architect 2026-09-22, reversed
         // 2026-09-24): the same toggle pattern, reading the live bit the bare
         // backtick flips — lit is the magnified picture, in both audio views.
@@ -17927,6 +17986,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and has no shifted twin; the name is the toggle's.
         case RedesignButton::IconFollow:
             return {"Toggle Follow (F)", nullptr};
+        // THE RESTRICT LAMP (architect 2026-10-29), one line: bare `r`
+        // toggles and has no shifted twin; the name is the toggle's.
+        case RedesignButton::IconRestrict:
+            return {"Toggle Restrict (R)", nullptr};
         // THE TRIM PRESETS (architect 2026-10-28 night), one line: an
         // overlay's opener NAMED, as Settings and Score are — the press under
         // the standing list being the same key's close — and bare `t`
@@ -18374,6 +18437,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // about 75 of 69, 50 of 46, 38 of 36 device px — and the pair is one shape,
 // so both take the short form though ZOOM IN would fit (about 60 / 40 / 30);
 // IN prints about 14 / 9 / 7, OUT 30 / 20 / 15.
+// RESTRICT READS RESTR (architect 2026-10-29, "defer to your measurement"):
+// at the legend face's 14 px em (kGuiFaceSizes, gui_font.h) RESTRICT runs
+// 70.0 px against the 69 px case and would leave about 4.5 px to FOLLOW's
+// legend beside it (59.1 px), under a word space, where today's tightest
+// pair, MAGNIFY (63.8) beside FOLLOW, keeps 7.5 px; RESTR runs 47.5 px.
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -18386,6 +18454,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:           return "FIT";
         case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
         case RedesignButton::IconFollow:                return "FOLLOW";
+        case RedesignButton::IconRestrict:              return "RESTR";
         case RedesignButton::IconTrimPresets:           return "TRIM";
         case RedesignButton::IconBpm:                   return "BPM";
         case RedesignButton::IconIter:                  return "GRID";

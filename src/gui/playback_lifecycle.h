@@ -11,7 +11,7 @@
 // (both stop edges and every gesture stop), the modal-open stop that names it,
 // toggle play/stop, the audition launch, the bounded audition the A/B sequence
 // plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
-// the one play) and the follow lamp's toggle.
+// the one play) and the follow and restrict lamps' toggles.
 // AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
@@ -85,6 +85,24 @@ struct GuiPlaybackLifecycle {
     // GuiRenderPlayer::publish_media_state). Null until wired; the fork tests
     // it.
     GuiRenderPlayer*  render_player = nullptr;
+    // IS THE PLAY IN FLIGHT ONE RESTRICT GOVERNS? (architect 2026-10-29,
+    // AppState::restrict.) RESTRICT stops and gates THE USER'S OWN PLAY OF THE
+    // WAVEFORM — Space's play edge and the scrub's — and nothing else, and
+    // which ENTRY a launch came through is what says so (the launch body's
+    // structural rule: the body branches by no act). Written by the three
+    // entries into the one launch body: SET by launch_playback_from (the
+    // view-end entry Space and the scrub ride) to whether its launch
+    // succeeded; CLEARED by car_play_playback and launch_bounded_audition
+    // ahead of their launches. THE TWO EXEMPT: the CAR'S LOOP of the trim
+    // starts off screen by design (its begin a fixed point screens upstream
+    // of the passage under work) and loops forever, so a stop at the edge
+    // would end the console's play the first time it reached it; the A/B
+    // AUDITION's four bounded plays are each framed by their own `c` and
+    // already end at their span. (The render player and the score viewer play
+    // their own buffers and never reach the launch body.) ONE READER: the
+    // stop in main.cpp's pre_paint_advance. Meaningful only while a project
+    // play runs; its value at rest is never read.
+    bool restrictable_play = false;
 
     GuiPlaybackLifecycle(AppState&         app_,
                          const GuiAudio&   audio_,
@@ -448,7 +466,21 @@ struct GuiPlaybackLifecycle {
     // the page left it. The face repaints through the per-tick comparator,
     // so this mutator owes no damage. Refused in the `h` view by the
     // dispatch (bare `f` is off that mode's allowlist), never here.
+    // THE RADIO (architect 2026-10-29): the lit edge also puts RESTRICT out
+    // (AppState::restrict = false); the dark edge leaves it alone.
     void toggle_follow();
+    // THE RESTRICT KEY'S ONE CHOKEPOINT (architect 2026-10-29), shared by bare
+    // `r` and the icon-row button that synthesizes that chord — the lamp
+    // AppState::restrict's one writer beside toggle_follow's lit edge. It
+    // flips the lamp; THE RADIO: the lit edge puts FOLLOW out
+    // (AppState::follow = false), the dark edge writes nothing else. Lit
+    // during a restrictable play whose scanner already stands past the
+    // window's right edge, the next pre-paint stops it — the lamp says the
+    // play stays in the window, and the stop is the tick's alone. The face
+    // repaints through the per-tick comparator, so this mutator owes no
+    // damage. Refused in the `h` view by the dispatch (bare `r` is off that
+    // mode's allowlist), never here.
+    void toggle_restrict();
 
 private:
     // The active view's PLAY END — the song's end in source view, the bound
@@ -473,6 +505,10 @@ private:
     //     (Viewport::follow_scroll_if_needed, follow's own page-in). Every
     //     GUI launch road starts ON SCREEN by construction, so
     //     this is a no-op on the ordinary press and a rescue on the rare one.
+    //     THE RESCUE IS THE UNRESTRICTED PLAY'S (architect 2026-10-29): under
+    //     a lit RESTRICT the view-end entry refuses an offscreen launch
+    //     position on a card before the body is reached, so no page-in ever
+    //     follows the playhead out of the window there.
     //   * `Leave` — the launch writes no camera at all.
     // NO DEFAULT ARGUMENT: every caller states its own, as MarkerLandingFrame
     // is stated at cycle_marker_focus (MarkerLandingFrame's precedent — a

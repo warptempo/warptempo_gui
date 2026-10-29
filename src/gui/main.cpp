@@ -744,11 +744,11 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the ICON row, at the window's top on both devices since
 // 2026-10-24 (the app's caption, lane 0 from 2026-10-05, removed: labwc
-// draws the laptop's title bar outside the surface), the logo lane over its keys (the thirty
+// draws the laptop's title bar outside the surface), the logo lane over its keys (the thirty-one
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
-// count's authority; twenty-six stand outside the `h` view and eighteen
-// inside it, re-counted 2026-10-28 night with the Trim Presets key), the toolbar band. Lane 1 is the
+// count's authority; twenty-seven stand outside the `h` view and eighteen
+// inside it, re-counted 2026-10-29 with the Restrict lamp), the toolbar band. Lane 1 is the
 // TRIM lane (Cool Edit's view bar: the span and its two ends, every trim
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
@@ -3414,6 +3414,40 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // that via its in_pre_paint_ flag).
         invalidate_playhead_columns(old_px, new_px);
         invalidate_clock_area();
+        // RESTRICT'S STOP (architect 2026-10-29, AppState::restrict): under the
+        // lit lamp a RESTRICTABLE play — Space's or the scrub's, the entry's
+        // own bit (GuiPlaybackLifecycle::restrictable_play), so the car's loop
+        // and the A/B audition never stop here — ends through the one stop
+        // body the moment the scanner's painted column has passed the
+        // window's RIGHT EDGE: the edge itself, not follow's early margin
+        // (kViewportEdgeMarginFraction). ON SCREEN IS AS PAINTED: the column
+        // is displayed_column_at's one rounding of the continuous position
+        // the line is drawn from (scanner_pixel_x), on the PLATE basis it is
+        // drawn through, against the waveform area's width the line is
+        // clipped to — so the play stops at the first frame whose line would
+        // no longer show, the scanner then up to one frame's advance past the
+        // edge. OFF SCREEN TO THE RIGHT ALONE: these plays never run the
+        // scanner backward, so off screen to the LEFT can only be a camera
+        // the user moved past it (a pan during the play), and that play runs
+        // on into the window and stops at its edge like any other. THE
+        // CURSOR IS NOT WRITTEN: the stop body moves no cursor (its contract,
+        // playback_lifecycle.cpp), so the playhead rests where it stood before
+        // the play, every stop edge's rule — after a Space play the point the
+        // start gate admitted on the window, so the next Space plays the same
+        // stretch again unless the camera has moved. The return skips the autopager
+        // below, which the radio has put out anyway (follow dark while
+        // RESTRICT is lit).
+        if (app.restrict && playback_lifecycle.restrictable_play &&
+            pb.spp > 0.0) {
+            const int    w    = waveform_area(app).w;
+            const double scan = app.playhead_scanner_precise;
+            if (w > 0 &&
+                !displayed_frame_on_screen(scan, pb.vp_start, pb.spp, w) &&
+                displayed_column_at(scan, pb.vp_start, pb.spp) >= w) {
+                playback_lifecycle.stop_playback_if_playing();
+                return;
+            }
+        }
         // FOLLOW NEVER PAGES UNDER A LIVE AIM (the two refusal terms
         // below). Follow's page is the product's one AUTONOMOUS viewport mover: it
         // fires from the clock rather than from an event, and every aiming

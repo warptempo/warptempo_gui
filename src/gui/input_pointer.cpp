@@ -288,8 +288,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // and under the grid-iterations lock (navigation), DEAD in the `h` view,
     // whose allowlist does not name it.
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false},   // bare f
+    // RESTRICT (architect 2026-10-29) — bare `r`, a TOGGLE with a lamp
+    // (AppState::restrict), behind Follow, its radio partner. Live on a
+    // locked tab and under the grid-iterations lock (navigation), DEAD in
+    // the `h` view, whose allowlist does not name it. No modifier, no repeat.
+    {RedesignButton::IconRestrict, GuiKeys::R, false, false, false},   // bare r
     // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's tail
-    // behind Follow: bare `t`, the trim presets list's opener through on_key
+    // behind Restrict: bare `t`, the trim presets list's opener through on_key
     // like every row, so the `h` view refuses the lift as it refuses the key
     // (the face hidden there by the derived partition) while a locked tab
     // and grid iterations admit both (read_only_key_blocked, trim being

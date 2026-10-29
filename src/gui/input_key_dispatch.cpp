@@ -288,6 +288,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // admitted on a locked tab and under the grid-iterations lock.
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
+    // RESTRICT, bare `r` (architect 2026-10-29): Follow's radio partner, a
+    // session lamp about where the user's play may run, authoring nothing
+    // the lock protects, so it is admitted on a locked tab and under the
+    // grid-iterations lock, whose gate falls through to this list.
+    const bool is_restrict =
+        (key == GuiKeys::R && !ctrl && !shift && !alt);
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
@@ -546,7 +552,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_home_end || is_page_updown ||
              is_zoom_step || is_zero ||
              is_waveform_magnification ||
-             is_center || is_follow ||
+             is_center || is_follow || is_restrict ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
@@ -9963,6 +9969,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // legal on a locked tab and under the grid-iterations lock; refused in
         // the `h` view at that mode's allowlist.
         playback_lifecycle.toggle_follow();
+        break;
+    case GuiKeys::R:
+        // Toggle the restrict lamp (architect 2026-10-29), Follow's radio
+        // partner. The whole body lives in GuiPlaybackLifecycle::
+        // toggle_restrict, shared with the icon-row button's synthesized
+        // chord and with nothing else. History-less, legal on a locked tab and
+        // under the grid-iterations lock; refused in the `h` view at that
+        // mode's allowlist. Inside the render player bare `r` is Repeat One,
+        // taken by the player's router before this dispatch is reached.
+        playback_lifecycle.toggle_restrict();
         break;
     case GuiKeys::W:
         // Toggle the NOISE lamp (architect 2026-10-28), the background sound.

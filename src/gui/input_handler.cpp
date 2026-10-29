@@ -822,6 +822,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              working zoom centered on the playhead;
     //                              arms the hold posture
     //   - f (no mods)            → toggle the follow lamp (toggle_follow)
+    //   - r (no mods)            → toggle the restrict lamp (toggle_restrict),
+    //                              follow's radio partner
     //   - 1/2/3/4 (no mods)      → the absolute selectors, one axis each
     //                              (Source / Target / Warp / Phase Reset), the
     //                              ONE road onto the two view axes: 1 / 2 the
