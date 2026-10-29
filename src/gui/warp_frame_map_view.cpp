@@ -121,9 +121,13 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 
     // Pass 2 — the label-ref 1.00 fallback: marker_effective is the silent
     // per-marker resolution the display surfaces use; it reports the render's
-    // normalization fallback as source_idx == -1 with a reason. Two cases
-    // redden: a dangling label ref (reason UndefinedLabel) and an
-    // extreme-ratio label ref (reason ExtremeRatio). NO PASS reddens here: the
+    // normalization fallback as source_idx == -1 with a reason. Three cases
+    // redden: a dangling label ref (reason UndefinedLabel — a disabled
+    // definition's references among them, participation being each marker's
+    // own flag since 2026-10-29),
+    // a reference to a label two live definitions hold (reason
+    // AmbiguousLabel, 2026-10-29) and an extreme-ratio label ref (reason
+    // ExtremeRatio). NO PASS reddens here: the
     // inheritance walk skips label refs to the owner behind them (architect
     // 2026-09-13, resolve_inherited_tempo), so no pass normalizes; a pass that
     // inherits from a synthetic prior (the frame-0 seed or a collapsed-group
@@ -136,8 +140,22 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
         const MarkerEffective me = marker_effective(mv, k, total_frames);
         if (me.source_idx != -1) continue;
         if (me.reason == MarkerEffective::NormalizedReason::UndefinedLabel ||
+            me.reason == MarkerEffective::NormalizedReason::AmbiguousLabel ||
             me.reason == MarkerEffective::NormalizedReason::ExtremeRatio)
             c.red.insert(k);
+    }
+
+    // Pass 2b — THE AMBIGUOUS LABEL'S DEFINITIONS (architect 2026-10-29: "now
+    // they both get struck, as do all the label references. I think that's
+    // the sane fallback"): every live, un-collapsed definition whose label
+    // another such definition holds, warp_ambiguous_label_defs' verdict
+    // (warp_frame_map_build.h) — the same projection and the same definition
+    // count the resolver's stage 5 reads, so the strike on the definitions
+    // and the render's refusal to honor them cannot drift. A disabled
+    // definition is never marked: it fades, it does not strike.
+    const std::vector<char> ambiguous = warp_ambiguous_label_defs(mv);
+    for (int k = 0; k < n; ++k) {
+        if (ambiguous[static_cast<size_t>(k)]) c.red.insert(k);
     }
 
     // Pass 3 — participation-blind coincidence: every row of a run of 2+ rows

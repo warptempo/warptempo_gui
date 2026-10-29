@@ -748,8 +748,10 @@ void install_true_colors(bool on);
 //             red, a phase reset's the `range` blue — the label in the
 //             bone (materials.h's kBoneInk);
 //   STRUCK    the red-flag class (warp_red_flag_set_cached and its
-//             phase-reset twin — the coincident run, and a warp label ref
-//             the render falls back from) and the history's REMOVED half:
+//             phase-reset twin — the coincident run, a warp label ref
+//             the render falls back from, and the definitions of a label
+//             two live definitions hold, 2026-10-29) and the history's
+//             REMOVED half:
 //             THE PLAIN CUE, ITS LABEL STRUCK — the bar part of the text,
 //             in its ink and over its shadow, in every look below (the
 //             faded label's, the selected text's);
@@ -3861,13 +3863,10 @@ GuiStemDots phase_reset_stem_dots();
 // reverts that row and not the run's first.
 //
 // THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
-// 2026-08-22, deepened the same day it landed: the axis shipped reading each
-// line's LOCAL '#' bit, which dropped the label cascade — a label ref with no
-// '#' whose definition is disabled on the same side painted full-strength
-// while its live marker dimmed). The PAINT bits are the two
-// `*_effective_disabled` fields — each half's cascade verdict resolved within
-// its OWN side's commit (GuiHistoryWarpEntry::effective_disabled owns the
-// resolution contract; phase resets have no cascade, so their local bit fills
+// 2026-08-22). The PAINT bits are the two `*_effective_disabled` fields —
+// each half's participation verdict resolved within its OWN side's commit
+// (GuiHistoryWarpEntry::effective_disabled owns the resolution contract; the
+// verdict is the line's own flag since 2026-10-29, and phase resets fill
 // these verbatim) — each meaningful exactly when its own half's bool is set.
 // `then_disabled` stays the VERBATIM LOCAL byte and is back to the revert's
 // field alone: the revert act reconstitutes the then line from it, and the
@@ -3979,9 +3978,9 @@ struct HistoryDiffFlag {
 // closing a state-axis gap the view shipped with: a `#` line and a live one
 // painted the same flag, so the delta showed the position and hid the state).
 // A HALF whose line is EFFECTIVELY disabled within ITS OWN side's commit — the
-// local '#' or, same-day deepening, the label cascade resolved over that
-// side's full warp set (the effective pair at HistoryDiffFlag above; the '#'
-// in the TEXT stays the local byte) — paints its segment in the LIVE LANE'S
+// participation verdict resolved over that side's full warp set (the
+// effective pair at HistoryDiffFlag above, the own flag since 2026-10-29; the
+// '#' in the TEXT stays the local byte) — paints its segment in the LIVE LANE'S
 // FADED INERT LABEL, and a single disabled half's triangle the faded one
 // (resolve_flag_face). IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes
 // its own bit, so a disable TOGGLE paints one faded half beside one live

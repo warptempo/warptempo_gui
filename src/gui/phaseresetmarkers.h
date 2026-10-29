@@ -175,8 +175,7 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // bracket displaces a POSITION, and every reset has one — there is no pass, no
 // label ref and no tempo to own, so the warp column's structural half
 // (iter_bracket_carrier) has no counterpart here and the verdict is the
-// disabled bit alone. Nor is there a cascade to ask: this column carries no
-// labels, so the flag pass reads the plain bool and so does this.
+// disabled bit alone, the flag pass's plain bool.
 //
 // A DISABLED RESET CARRIES NO BRACKET and needs no clear to (2026-09-10):
 // disabling one is an act the iteration lock refuses, so no reset can lose its

@@ -41,7 +41,8 @@
 // result is the authored (undisplaced) source-frame intermediate consumed by
 // target-view display (the phase-reset overlay) and by derive_phase_reset_frame_map below, which
 // compiles it into the engine-domain artifact and engine input. There is no
-// resolver cascade sibling to resolve_warp_markers_for_render because phase
+// normalization-pipeline sibling (architect approval 2026-10-29, comment
+// only) to resolve_warp_markers_for_render because phase
 // reset markers carry no inheritance, labels, or references — a timestamp
 // and a disabled flag are the whole grammar.
 std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(

@@ -10,7 +10,7 @@
 #include "history_prefetch.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
-// marker_effectively_disabled, the one label-cascade owner — a header template
+// marker_effectively_disabled, the one participation owner — a header template
 // over the parser marker shape, so reading it here touches no frozen .cpp.
 #include "warp_frame_map_build.h"
 #include "warpmarkers.h"
@@ -315,18 +315,16 @@ bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
 }
 
 // ONE SIDE'S EFFECTIVE-DISABLED VERDICTS, resolved within that side's own
-// commit (architect 2026-08-22, the disabled axis carried one layer deeper: a
-// label ref with no '#' of its own whose DEFINITION is disabled on the same
-// side is effectively disabled there, and until this landed its history flag
-// painted full-strength while the same side's live marker dimmed). The side's
+// commit (architect 2026-08-22; the verdict is the line's own flag since
+// 2026-10-29, a ref under a disabled definition being live). The side's
 // marker lines are parsed IN FILE ORDER into parser-domain WarpMarkers — index
 // i of the vector is the i-th marker line — and each index resolves through
-// the ONE cascade owner, marker_effectively_disabled (warp_frame_map_build.h).
+// the ONE participation owner, marker_effectively_disabled (warp_frame_map_build.h).
 //
 // THE ANSWER IS KEYED BY LINE TEXT because the diff hands the entry loops
 // LINES, not indices — and a first-match by text is EXACT even for
-// byte-identical duplicate lines (coincident stacks are legal): the cascade
-// reads only fields the bytes determine (disabled, label_ref, label_def)
+// byte-identical duplicate lines (coincident stacks are legal): the owner
+// reads only fields the bytes determine
 // against the same side vector, so two identical lines carry identical
 // verdicts by construction, and which duplicate a lookup lands on cannot
 // matter. Empty lines are skipped (split_lines yields one for the trailing
@@ -1935,12 +1933,12 @@ GuiHistoryCommitDelta compute_commit_delta(
     // THE DISABLED AXIS SPLITS INTO TEXT AND FACE HERE (architect 2026-08-22),
     // the live lane's own split carried into the delta: the DIM the painter
     // shows is each line's EFFECTIVE verdict resolved within its own side's
-    // FULL warp set (warp_side_effective_disabled above — the cascade, so a
-    // label ref dims when its same-side definition is disabled), while the
+    // FULL warp set (warp_side_effective_disabled above — the participation
+    // owner, the line's own flag since 2026-10-29), while the
     // TEXT's '#' and the revert's reconstituted line stay the VERBATIM local
     // byte (`disabled`). Each entry looks its own line up in its OWN side's
     // map — added lines in the now side's, removed in the then side's. Phase
-    // resets have no cascade, so their local bit IS the effective verdict and
+    // resets carry no labels, so their local bit IS the effective verdict and
     // their loops below carry nothing extra (the ruling is at
     // GuiHistoryPhaseResetEntry).
     const std::map<std::string, bool> then_warp_effective =

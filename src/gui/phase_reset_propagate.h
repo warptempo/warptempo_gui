@@ -58,8 +58,8 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
 
 // WOULD copy_from_selection CAPTURE ANYTHING — true iff the selection holds a
 // marker that warp_marker_propagates (in range, LABELED and EFFECTIVELY
-// ENABLED — a disabled def, or a ref whose def the cascade disables, captures
-// nothing), which is the copy loop's own membership through the same one
+// ENABLED — a disabled def or ref captures nothing; a ref under a disabled
+// def is enabled and captures its section, 2026-10-29), which is the copy loop's own membership through the same one
 // predicate. Each such marker contributes one block whether or not any phase
 // reset falls inside its section (a block with no placements is a real
 // capture: its paste clears the matched destination block), so "captures

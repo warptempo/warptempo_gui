@@ -2870,8 +2870,9 @@ enum class RedesignButton {
     //
     // THE DROP ADMITS SHIFT (architect 2026-08-28), the first of the verb
     // group's members to — Toggle inherit's Ctrl+Shift+N (THE TIE) landed
-    // 2026-09-19, and Jump to Defining Marker's Ctrl+Shift+J (THE COPY)
-    // 2026-10-14. The membership is
+    // 2026-09-19, Jump to Defining Marker's Ctrl+Shift+J (THE COPY)
+    // 2026-10-14, and DELETE's Shift+Delete and DISABLE's Ctrl+Shift+D, a
+    // label definition's references carried with it, 2026-10-29. The membership is
     // redesign_button_shift_admits' alone, never a count restated here. Its
     // own twin is SHIFT+S, THE PHASE-RESET DROP FROM THE WARP COLUMN, so a
     // shift-click or a LONG PRESS switches to the P column in the standing
@@ -2896,7 +2897,9 @@ enum class RedesignButton {
     // empty-selection refusals stayed consumed no-ops behind a lit face):
     // DELETE and DISABLE grey on an empty selection in every column
     // (marker_selection_verb_actionable, the arms' own refusal — the P
-    // column has no off-home arm, authoring in both audio views),
+    // column has no off-home arm, authoring in both audio views; their
+    // shifted presses' no-definition refusal does not grey them, the twin
+    // rule, and cards at the arms),
     // TOGGLE INHERIT greys in the P view and with no selection or
     // focus (inherit_toggle_actionable, the op's own leading return). THE
     // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
@@ -10819,7 +10822,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // warp arm alone; the phase-reset arm carried the home-view gate until the P
 // column opened to both views and needed no exception after),
 // Ctrl+N (toggle_inherits), Delete (delete_selected_marker — again the warp
-// arm alone) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
+// arm alone; Ctrl+Shift+D and Shift+Delete, 2026-10-29, ride the Ctrl+D and
+// Delete bodies and so the same membership) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
 // routes, bare Return / KpEnter and the flag double-click (bracket authoring
 // had been source-only only because the editor was; the bracket's own grammar
 // left this surface on 2026-09-05 for the bound cells' editor).
@@ -12183,7 +12187,8 @@ inline bool horizontal_arrow_step_lock_admits(const AppState& app) {
 }
 
 // THE BATCH VERBS' REFUSAL (architect 2026-08-30): Delete and the DISABLE
-// toggle (Ctrl+D) act on the whole selection, so an EMPTY one is their one
+// toggle (Ctrl+D), and their shifted forms ahead of their own refusal below
+// (2026-10-29), act on the whole selection, so an EMPTY one is their one
 // refusal — in every column and every view the column exists in. IT LOST
 // ITS VIEW TERM when the P column opened to both audio views (2026-08-30,
 // and both again since S+P's return, 2026-10-12): the warp arms
@@ -12204,6 +12209,33 @@ inline bool horizontal_arrow_step_lock_admits(const AppState& app) {
 // selection atom under a name that says whose refusal it is.
 inline bool marker_selection_verb_actionable(const AppState& app) {
     return marker_selection_standing(app);
+}
+
+// THE SHIFTED BATCH VERBS' REFUSAL (architect 2026-10-29): Shift+Delete
+// (delete_selected_with_references) and Ctrl+Shift+D
+// (toggle_disabled_with_references) carry a label definition's references
+// with it, so they act only where SOME LIVE SELECTED MEMBER IS A LABEL
+// DEFINITION — "Shift delete should be disabled unless one member of the
+// selected group is a label definition", "Shift Ctrl+D only works if one of
+// the group is a label definition". A mixed selection qualifies, its
+// non-definitions treated as the plain verb treats them. The P column fails
+// it by grammar (a phase reset carries no label), so the two arms' one
+// no-definition card answers there too. READERS: the two dispatch arms
+// (input_handler.cpp), which card the refusal after the empty selection's
+// own card, the two ops' silent leading belts (warpmarkers_ops.cpp), and the
+// DELETE / DISABLE tooltips' modifier line, which drops where this is false.
+// NOT THE FACE: the buttons stay lit on the plain verb's weaker predicate
+// above (the twin rule — a face cannot fork per chord), so a shifted press
+// with no definition reaches its arm's card. A stale index is skipped, the
+// selection layer keeping them live.
+inline bool marker_selection_holds_label_definition(const AppState& app) {
+    if (app.active_markers_view != 'W') return false;
+    const auto& mv = app.warpmarkers.markers();
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(mv.size())) continue;
+        if (!mv[static_cast<size_t>(idx)].label_def.empty()) return true;
+    }
+    return false;
 }
 
 // THE INHERIT TOGGLE'S REFUSAL, composed (architect 2026-08-30): Ctrl+N is
@@ -13341,7 +13373,7 @@ inline int64_t active_marker_time_frame(const AppState& a, int idx) {
 // walk direction — exactly as the act seeds, a playhead resting on no marker
 // included. Frames compare in the ACTIVE domain (source_frame_to_active_
 // domain), disabled markers are skipped as if absent (the warp side through
-// effective_disabled's cascade), trim bounds are not stops. Defined in
+// effective_disabled, the one participation owner), trim bounds are not stops. Defined in
 // app_state.cpp. TWO READERS: Selection::cycle_selection, whose whole
 // landing decision this IS, and marker_walk_step below — the MARKER half of
 // one Tab step, wrapped since 2026-09-10 in the cell walk that may come to
@@ -13842,8 +13874,9 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
 //           the two drops hint their inserted row on the LIVE side (their
 //           snapshot side is empty by construction — the row does not exist
 //           there — and takes the removal arm), the two deletes
-//           (delete_selected_marker, delete_selected_phase_reset) hint their
-//           deleted rows on the SNAPSHOT side (their live side is empty for the
+//           (delete_selected_marker, delete_selected_phase_reset — the warp
+//           body serving Shift+Delete too, its carried references among the
+//           hinted rows, 2026-10-29) hint their deleted rows on the SNAPSHOT side (their live side is empty for the
 //           same reason), and the propagate placement paste
 //           (PhaseResetPropagate::paste_apply) hints its materialized
 //           rows on the LIVE side. Shift+S's lead-in drop and the `s` drop are
@@ -15939,6 +15972,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // empty selection — the one refusal left in every column and every
         // view the column exists in — through
         // marker_selection_verb_actionable, which the two dispatch arms read.
+        // THEIR SHIFTED PRESSES' SECOND REFUSAL IS NOT HERE (2026-10-29, the
+        // twin rule): Shift+Delete and Ctrl+Shift+D also want a selected
+        // label definition (marker_selection_holds_label_definition), a
+        // condition stronger than the plain one, so the face stays lit on the
+        // plain predicate and a shifted press without a definition reaches the
+        // arm's card.
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
             return !active_view_state(a).read_only &&
@@ -17465,6 +17504,19 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // alone runs, so the twin term is not composed and a clean piece's greyed
 // Save refuses its long press too — the publish is then the key's, or the
 // `h` view's Save.)
+// (DELETE AND DISABLE JOINED 2026-10-29 with SHIFT+DELETE and CTRL+SHIFT+D
+// (architect: "for symmetry, give it a shift form"): the plain acts touch the
+// selected markers alone, and the shifted twins carry every reference to
+// every selected label definition with it — the delete removing them, the
+// toggle writing them to the definition's new state. Delete's row is bare
+// Delete and Disable's Ctrl+D, so the shift-click and the long press
+// dispatch the row's key with the shift added (Toggle Inherit's shape on the
+// ctrl row); neither repeats, so the long press reaches the shift. THE FACE
+// CANNOT FORK PER CHORD: both buttons stay lit on the plain verb's empty-
+// selection predicate (the twin rule — the plain condition is the weaker),
+// so a shifted press with no label definition selected reaches its arm's
+// card ("Select a label definition to …"), and the tooltip's modifier line
+// drops there.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
            b == RedesignButton::Save ||
@@ -17478,6 +17530,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportSkipBack ||
            b == RedesignButton::TransportSkipForward ||
            b == RedesignButton::IconMarkerDrop ||
+           b == RedesignButton::IconMarkerDelete ||
+           b == RedesignButton::IconMarkerDisable ||
            b == RedesignButton::IconMarkerInherit ||
            b == RedesignButton::IconJumpToDefiningMarker ||
            b == RedesignButton::IconFlatten ||
@@ -18095,8 +18149,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // 2026-08-30), TOGGLE INHERIT since 2026-09-19 (FLATTEN, whose
         // shifted press is the collapse, is the icon row's iteration group's
         // since the same day) and JUMP TO DEFINING MARKER since 2026-10-14,
-        // whose shifted press is the copy — while DELETE and TOGGLE DISABLED
-        // take one line each. The admissions are
+        // whose shifted press is the copy, and DELETE and TOGGLE DISABLED
+        // since 2026-10-29, whose shifted presses carry a label definition's
+        // references. The admissions are
         // redesign_button_shift_admits',
         // never a count restated here. They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
@@ -18121,16 +18176,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconMarkerDrop:
             return {"Drop Marker (S)",
                     "Press Shift to drop a phase reset."};
+        // DELETE'S SECOND LINE (2026-10-29) names Shift+Delete's act, the
+        // references carried with a selected definition — the act and the
+        // modifier and not a key, this table's rule.
         case RedesignButton::IconMarkerDelete:
-            return {"Delete Markers (Del)", nullptr};
+            return {"Delete Markers (Del)",
+                    "Press Shift to delete a definition's references with it."};
         // TOGGLE DISABLED, Toggle inherit's own shape (architect 2026-09-01,
         // the truthful-tooltips ruling): the act flips `disabled` PER MEMBER
         // (warpmarkers_ops.cpp / phaseresetmarkers_ops.cpp), so on a disabled
         // selection the press ENABLES and on a mixed one it goes both ways in
         // one press — "Disable markers", its text from 2026-08-12, named one
         // direction of a toggle.
+        // ITS SECOND LINE (2026-10-29) names Ctrl+Shift+D, the definition
+        // toggled with its references; the plain press toggles each marker
+        // alone.
         case RedesignButton::IconMarkerDisable:
-            return {"Toggle Disabled (Ctrl+D)", nullptr};
+            return {"Toggle Disabled (Ctrl+D)",
+                    "Press Shift to toggle a definition's references with it."};
         // TOGGLE INHERIT, two-line since 2026-09-19: the plain act converts
         // the selection between owning and inheriting its tempo, and the
         // shifted twin TIES the selected markers into one axis of the grid
@@ -18876,6 +18939,18 @@ inline RedesignTooltipText redesign_button_tooltip(
             if (!tempo_flatten_actionable(a, TempoFlattenKind::Collapse))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
+        // DELETE'S AND DISABLE'S REFERENCE LINE DROPS WHERE THE SHIFTED PRESS
+        // WOULD REFUSE (2026-10-29), the jump's and the flatten's shape: with
+        // no label definition selected — the P column by grammar —
+        // Shift+Delete and Ctrl+Shift+D card their refusal, so the line would
+        // promise an act the chord does not run. The condition is the arms'
+        // own predicate (marker_selection_holds_label_definition), restated
+        // nowhere.
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+            if (!marker_selection_holds_label_definition(a))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         // TOGGLE INHERIT NAMES THE HALF THE STATE ADMITS (2026-09-19), the
         // stateful overload's own licence to fork a NAME on the predicate the
         // FACE already reads (Render → "Render Grid Iterations" is the
@@ -19513,9 +19588,9 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // don't) — AND that value is the one the render applies. Requires warp view;
 // always NoResolvedValue in phase reset view (no pass concept). The terms, in
 // the order asked (the body, app_state.cpp): the focus and the column, the
-// cascade through the ONE owner effective_disabled (warpmarkers.h — a
-// disabled marker and a ref to a disabled definition alike, the render's
-// drops), the pass-or-ref test, and then the COLLAPSED STACK: a member of a
+// disabled test through the ONE owner effective_disabled (warpmarkers.h — the
+// marker's own flag, the render's drop; a ref under a disabled definition is
+// live and reads out as its 1.00 normalization, 2026-10-29), the pass-or-ref test, and then the COLLAPSED STACK: a member of a
 // coincident-collapsed group refuses CollapsedStack (the group tempo step's
 // precedent, read from the red-flag cache's own `collapsed` subset), because
 // the composer resolves a group member against the raw store — the ruled

@@ -32,7 +32,7 @@
 //     kPhaseResetLaneToken, render.h). A new pipeline surface ships both
 //     columns or records its asymmetry in a comment at its site. The
 //     recorded asymmetries, each stated at its own site: scale is warp-only;
-//     the resolver cascade (resolve_warp_markers_for_render) is warp-only,
+//     the resolver's normalization pipeline (resolve_warp_markers_for_render) is warp-only,
 //     a phase reset's whole normalization being the exact-equal collapse; the
 //     trimmer keeps a connected warp map but range-filters phase resets
 //     (plan_trim); derive_phase_reset_frame_map has no warp sibling; the
@@ -227,29 +227,28 @@ public:
 // this instant, with no file anywhere.
 std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 
-// IS THIS LABEL DEFINITION ALREADY TAKEN? — the warp column's
-// duplicate-label-definition rule in ONE owner. True when some row of `mv`
-// other than `except` already defines `def`; an empty `def` is never taken
-// (a marker that defines nothing collides with nothing), and `except` may be
-// -1 for a caller judging a definition that belongs to no row yet.
+// IS THIS LABEL DEFINITION ALREADY TAKEN? — the flag editor's label rule in
+// ONE owner (architect 2026-10-29). A LABEL IS TAKEN ONLY BY AN ENABLED
+// DEFINITION: true when some row of `mv` other than `except` defines `def`
+// and is not disabled (its own flag). A label only disabled definitions hold
+// is free — "setting it when one already exists that's disabled should be
+// allowed" — which is how a second definition takes over a disabled one's
+// label elsewhere in the piece. Two ENABLED definitions of one label are
+// still reachable, by re-enabling the first beside its successor (Ctrl+D),
+// and that state is LEGAL: it loads (the loader asks no label uniqueness,
+// warpmarkers_parse.cpp) and renders with both definitions and every reference to the label
+// struck, the render honoring neither (warp_ambiguous_label_defs and stage
+// 5's ambiguous arm, warp_frame_map_build.h) — "the sane fallback", the strike
+// the whole signal. An empty `def` is never taken (a marker that defines
+// nothing collides with nothing), and `except` may be -1 for a caller judging
+// a definition that belongs to no row yet.
 //
-// THIS IS THE LOADER'S RULE, RESTATED ON THIS SIDE OF THE BOUNDARY. A
-// `.warpmarkers` file that defines one label twice is LOAD-FATAL in both
-// binaries (parse_warpmarkers_file's seen_def set, warpmarkers_parse.cpp), so
-// a GUI act that wrote one would make its own saved work unloadable. The
-// second statement is justified twice: the loader cannot catch it cleanly (by
-// then it refuses the user's own saved work, not the act that wrote it), and
-// only a producer can NAME the label and refuse the act. THE
-// DISABLE BIT IS NOT ASKED, exactly as the loader does not ask it: a disabled
-// row's definition still occupies the name.
-//
-// TWO CALLERS, both producers that can write a definition:
-//   * GuiFlagEditor::commit_top_flag_edit — the candidate line's own def
-//     against the rest of the column, the edited row excepted; a hit
-//     refuses (the field's whole text selected, and a card) and commits nothing.
-//   * GuiInputHandler::run_history_revert — every def of the store the act
-//     PROPOSES, each row excepting itself; a hit refuses the whole act on a
-//     card.
+// ONE CALLER: GuiFlagEditor::commit_top_flag_edit — the candidate line's own
+// def against the rest of the column, the edited row excepted; a hit refuses
+// (the field's whole text selected, and the "duplicate label definition"
+// card) and commits nothing. The history revert asks nothing of labels: it
+// is fully manual and always forces, and no label state it can build is
+// unloadable.
 // The phase reset column carries no labels at all, so it owes no counterpart
 // here (the recorded asymmetry the naming rule asks for).
 inline bool label_def_taken(const std::vector<GuiWarpMarker>& mv,
@@ -257,15 +256,16 @@ inline bool label_def_taken(const std::vector<GuiWarpMarker>& mv,
     if (def.empty()) return false;
     for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
         if (i == except) continue;
-        if (mv[static_cast<size_t>(i)].label_def == def) return true;
+        const GuiWarpMarker& m = mv[static_cast<size_t>(i)];
+        if (m.label_def == def && !m.disabled) return true;
     }
     return false;
 }
 
-// True if the marker at `idx` should render as disabled. `disabled` is allowed
-// on any marker — a locally set flag always counts. For an active
-// (non-locally-disabled) `label_ref`, the cascade rule applies: the ref
-// inherits its target label_def's disabled state.
+// True if the marker at `idx` should render as disabled: its OWN `disabled`
+// flag, allowed on any marker, and nothing else (architect 2026-10-29). A
+// label ref under a disabled definition is NOT disabled — it stays live,
+// dangling, and paints struck while the render plays it as recorded.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 
 // THE SECTION RULE'S ONE OWNER (architect 2026-07-23; in its EFFECTIVE-
@@ -293,11 +293,9 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 // tempo, wrong whenever a disabled marker sat at the edge. The index form is
 // the owner and the frame form calls it, so the two cannot drift.
 //
-// effective_disabled re-scans the store for a disabled def on every label-ref
-// query, so this forward scan is worst-case O(n^2) across a whole walk. That is
-// the deliberate choice over a per-walk keep-mask: both readers are discrete
-// commands over tens-to-hundreds of markers, and one shared expression is worth
-// more here than callers each carrying their own cached mask.
+// effective_disabled is the marker's own flag (architect 2026-10-29), so
+// this forward scan is linear; it asks the one owner rather than the field so
+// the participation verdict is spelled once.
 inline int section_end_index(const std::vector<GuiWarpMarker>& mv, int i) {
     const int n = static_cast<int>(mv.size());
     for (int j = i + 1; j < n; ++j) {
@@ -450,23 +448,19 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 }
 
 // Iteration mode: which markers THE SWEEP READS — a carrier that is not
-// effectively disabled. The disabled verdict is asked of the ONE cascade owner
-// (effective_disabled above, the resolver's own keep mask) so the sweep can
-// never count a marker the render drops: for a carrier the cascade reduces to
-// the marker's own bit today (a label ref, the only marker the cascade
-// reaches, is no carrier), and it is asked through the vector/index form all
-// the same so that a change to the cascade lands here for free and no caller
-// can hand a bare marker and lose it — which is why this is the ONE spelling
-// and the single-marker form above carries a different name. ITS DISABLED TERM
-// IS A BELT WITH NO PRODUCER, and is kept as one: no marker that carries a
-// bracket can BECOME disabled (the lock refuses every disabling act while one
-// stands), and the CASCADE reaches label refs alone, which the structural half
-// has already refused for being no carrier — so the term cannot decide the
-// answer for a bracketed marker today. It costs one call and it is what makes
-// this predicate a statement about the SWEEP's own input rather than about the
-// bracket's writers, which is why it stays. (A 2026-09-09 reading claimed a
-// cascade-disabled marker was the reachable case the term existed for; that
-// was impossible even then, a ref being no carrier.)
+// effectively disabled. The disabled verdict is asked of the ONE owner
+// (effective_disabled above, the resolver's own keep mask — the marker's own
+// bit since 2026-10-29) so the sweep can never count a marker the render
+// drops, and it is asked through the vector/index form so that a change to
+// the participation verdict lands here for free and no caller can hand a bare
+// marker and lose it — which is why this is the ONE spelling and the
+// single-marker form above carries a different name. ITS DISABLED TERM IS A
+// BELT WITH NO PRODUCER, and is kept as one: no marker that carries a bracket
+// can BECOME disabled (the lock refuses every disabling act while one
+// stands), so the term cannot decide the answer for a bracketed marker today.
+// It costs one call and it is what makes this predicate a statement about the
+// SWEEP's own input rather than about the bracket's writers, which is why it
+// stays.
 // SEVEN READERS since 2026-09-19 (the tie's verdict owner joined them —
 // iter_tie_toggle_verdict, app_state.h, which refuses a member the sweep does
 // not read, so a tie can never hold a marker whose cells do not paint),
@@ -656,11 +650,10 @@ inline void strip_iter_fields(std::vector<GuiWarpMarker>& v) {
 // authored a tempo onto a marker whose disabled state drops it from the
 // resolved map) — and since 2026-09-02 both carry it, the iteration
 // sweep's through the vector/index form above. THIS ONE KEEPS THE PLAIN
-// FLAG, the recorded asymmetry: for an OWNING marker (the other two
-// conjuncts) raw disabled equals effective disabled — the effective-disabled
-// cascade only reaches refs, which are excluded here — so no marker-vector/
-// index threading is owed, and the bpm owner is asked of a marker the `m`
-// gate already holds by value.
+// FLAG, the recorded asymmetry: raw disabled equals effective disabled for
+// every marker (effective_disabled is the own flag, architect 2026-10-29), so
+// no marker-vector/index threading is owed, and the bpm owner is asked of a
+// marker the `m` gate already holds by value.
 inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty() && !m.disabled;
 }

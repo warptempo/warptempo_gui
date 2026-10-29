@@ -1904,8 +1904,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.flatten_tempo_deviations(kind);
         return;
     }
-    // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.
-    if (key == GuiKeys::D && ctrl && !alt && !shift) {
+    // Ctrl+D: toggle disabled (warp + phase reset), each selected marker its
+    // own flag alone; Ctrl+Shift+D (architect 2026-10-29): the carrying form,
+    // a label definition toggled with its references (warp only). Plain `d`
+    // and Shift+D are unbound.
+    if (key == GuiKeys::D && ctrl && !alt) {
         // THE TWO COLUMNS ANSWER DIFFERENTLY SINCE 2026-08-24. The WARP arm
         // takes NO home-view gate: a disable toggle is a STATUS edit, not a
         // placement, so it is a member of the fifth ruled exception to the
@@ -1929,15 +1932,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 "Select a marker to enable or disable");
             return;
         }
+        // THE SHIFTED FORM'S OWN REFUSAL, SECOND (architect 2026-10-29: "Shift
+        // Ctrl+D only works if one of the group is a label definition"): past
+        // the empty selection's shared card, a selection with no live label
+        // definition cards this one — ONE CARD PER PRESS. The P column fails
+        // the predicate by grammar (marker_selection_holds_label_definition,
+        // app_state.h), so the same card answers there. The Disable button's
+        // face stays on the plain predicate above (the twin rule), so its
+        // shifted lift reaches this card.
+        if (shift && !marker_selection_holds_label_definition(app)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Select a label definition to toggle with its references");
+            return;
+        }
         // THE SELECTION IS SPENT, ON BOTH COLUMNS (architect 2026-09-12): the
-        // line stands past the carded refusal and AHEAD of the column fork, so
+        // line stands past the carded refusals and AHEAD of the column fork, so
         // a disable is a disable whichever store it writes — the co-equal axes
         // rule — and neither op spells the lamp (selection_consumed,
         // app_state.h).
         selection_consumed(app);
-        // ONE ARM PER COLUMN.
+        // ONE ARM PER COLUMN; the shifted form is the warp column's alone,
+        // the refusal above having answered every P press.
         if (app.active_markers_view == 'P') {
             phase_resets.toggle_phase_reset_disabled();
+            return;
+        }
+        if (shift) {
+            warpops.toggle_disabled_with_references();
             return;
         }
         warpops.toggle_disabled();
@@ -1976,7 +1998,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         run_playhead_end_jump(key == GuiKeys::End, /*whole_piece=*/true);
         return;
     }
-    if (key == GuiKeys::Delete && !ctrl && !alt && !shift) {
+    // Delete, and Shift+Delete (architect 2026-10-29): the carrying form,
+    // every selected marker plus every reference to every selected label
+    // definition (warp only).
+    if (key == GuiKeys::Delete && !ctrl && !alt) {
         // Delete acts on the active marker store. No read-only check here:
         // Delete drops at the read-only gate above, which is the keyboard
         // path's single guard, and no pointer path reaches the delete routines.
@@ -2005,13 +2030,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 "Select a marker to delete");
             return;
         }
+        // THE SHIFTED FORM'S OWN REFUSAL, SECOND, the Ctrl+Shift+D arm's twin
+        // (architect 2026-10-29: "Shift delete should be disabled unless one
+        // member of the selected group is a label definition") — one card
+        // per press, the P column answered by the same card.
+        if (shift && !marker_selection_holds_label_definition(app)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Select a label definition to delete with its references");
+            return;
+        }
         // THE SELECTION IS SPENT, ON BOTH COLUMNS (architect 2026-09-12), the
-        // Ctrl+D arm's twin above: past the carded refusal, ahead of the column
+        // Ctrl+D arm's twin above: past the carded refusals, ahead of the column
         // fork, and spelled at neither op (selection_consumed, app_state.h).
         selection_consumed(app);
         // ONE ARM PER COLUMN, the Ctrl+D arm's twin.
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
+            return;
+        }
+        if (shift) {
+            warpops.delete_selected_with_references();
             return;
         }
         warpops.delete_selected_marker();

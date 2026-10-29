@@ -546,7 +546,9 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 // Validate `pending` as a single canonical line and, on success, write
 // the parsed marker's fields back onto markers_[idx]. Cascade-renames
 // label_def changes onto every other marker that referenced the old
-// name. Pushes one undo entry covering all touched markers.
+// name when the edited row is the definition those references bind (the
+// rule at the rename below). Pushes one undo entry covering all touched
+// markers.
 //
 // On failure: selects the whole pending text (text_editor::refuse), cards
 // the reason, leaves the editor active. The refusal CALLS the loader's own line predicate, no
@@ -591,11 +593,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
 
     // Cross-marker check (edit target excluded), through the rule's ONE owner
-    // label_def_taken (warpmarkers.h), which the history revert asks of its own
-    // proposed store. A dangling label_ref is deliberately not gated here — the
-    // parser resolver normalizes a dangling ref to a plain 1.00 owner at
-    // render/preview time (one stderr line per timestamp); def uniqueness is a
-    // load rule, so the editor still gates it.
+    // label_def_taken (warpmarkers.h): a label an ENABLED definition holds is
+    // refused on this card, and a label only disabled definitions hold is
+    // accepted (architect 2026-10-29). A dangling label_ref is deliberately
+    // not gated here — the parser resolver normalizes a dangling ref to a
+    // plain 1.00 owner at render/preview time (one stderr line per timestamp),
+    // and an ambiguous one (two enabled definitions, reached by re-enabling)
+    // the same way.
     if (ok && label_def_taken(mv_const, parsed.label_def, idx)) {
         ok = false;
         err = "duplicate label definition: " + parsed.label_def;
@@ -676,8 +680,30 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // parser rejects on reload. Dangling refs, by contrast, load fine and
     // normalize to a plain 1.00 owner at the render boundary — so the
     // refs are left pointing at the removed name.
+    // THE RENAME CARRIES THE REFERENCES ONLY FROM THE DEFINITION THEY BIND
+    // (2026-10-29, the label rule at label_def_taken, where two definitions
+    // of one label became legal): the label's ONE ENABLED definition, or,
+    // with none enabled, its one definition at all — the raw-store tier
+    // marker_effective's ref branch reads (warp_frame_map_build.h). Renaming
+    // the live successor of a disabled definition carries the references with
+    // it; renaming the disabled one leaves them with the live one rather than
+    // dragging them into a struck label; with two live definitions (the
+    // ambiguous label, every reference struck) neither rename carries them,
+    // and the definition left behind takes them over, honored again.
+    const auto edited_row_binds_old = [&]() {
+        int enabled = 0;
+        int total   = 0;
+        for (const GuiWarpMarker& r : mv_const) {
+            if (r.label_def != old_def) continue;
+            ++total;
+            if (!r.disabled) ++enabled;
+        }
+        return mv_const[idx].disabled ? (enabled == 0 && total == 1)
+                                      : enabled == 1;
+    };
     int n_refs_renamed = 0;
-    if (!old_def.empty() && !new_def.empty() && old_def != new_def) {
+    if (!old_def.empty() && !new_def.empty() && old_def != new_def &&
+        edited_row_binds_old()) {
         for (int i = 0; i < static_cast<int>(proposed.size()); ++i) {
             if (i == idx) continue;
             if (proposed[i].label_ref == old_def) {

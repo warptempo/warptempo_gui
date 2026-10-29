@@ -97,9 +97,14 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // (marker_effectively_disabled for the enabled test, matching the render's
 // survivor filter), every member reddened, so a coincident stack reads as one
 // red flag mirroring the render's single stderr line; (2) a LABEL-REF fallback
-// via marker_effective — a dangling label ref or an extreme-ratio label ref,
-// both of which resolve to source_idx == -1 (a pass never normalizes: its walk
-// skips refs to the owner behind them, architect 2026-09-13); (3) the PARTICIPATION-BLIND COINCIDENCE
+// via marker_effective — a dangling label ref (a disabled definition's refs
+// included, participation being each marker's own flag since 2026-10-29), a ref to an
+// AMBIGUOUS label (two live definitions, 2026-10-29) or an extreme-ratio label
+// ref, all of which resolve to source_idx == -1 (a pass never normalizes: its
+// walk skips refs to the owner behind them, architect 2026-09-13), and with
+// them the ambiguous label's DEFINITIONS themselves
+// (warp_ambiguous_label_defs, warp_frame_map_build.h — "now they both get
+// struck, as do all the label references", architect 2026-10-29); (3) the PARTICIPATION-BLIND COINCIDENCE
 // (architect 2026-09-13: coincident markers are never intentional, always
 // accidental, so the red stays) — every row of a run of 2+ rows at one frame,
 // DISABLED ROWS COUNTED, so disabling one of two coincident markers does not

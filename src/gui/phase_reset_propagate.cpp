@@ -272,10 +272,8 @@ void PhaseResetPropagate::copy_from_selection() {
         // phase_reset_copy_captures asks ahead, so a copy that reaches here
         // captures at least one block — through the one
         // predicate rather than a second spelling of it: labeled AND
-        // EFFECTIVE-enabled. Unlike the bpm owner predicate (which tests a raw
-        // owning marker, where raw == effective), a copy-eligible marker may be
-        // a labeled DEF whose enabled state the cascade can reach, so the
-        // effective_disabled cascade inside that predicate matters here.
+        // EFFECTIVE-enabled, through the one participation owner inside that
+        // predicate (the marker's own flag since 2026-10-29).
         if (!warp_marker_propagates(mv, i)) continue;
         const std::string& name = warp_marker_label_name(mv[i]);
         const int64_t start = mv[i].time_frame;

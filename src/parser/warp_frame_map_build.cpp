@@ -64,8 +64,45 @@ double label_ref_implied_effective_tempo(int64_t def_base_cents,
            static_cast<double>(def_dist_frames);
 }
 
-// marker_effectively_disabled (the shared cascade template in
-// warp_frame_map_build.h) is the participation verdict:
+// THE LABEL'S DEFINITION SEARCH, ONE OWNER (architect approval 2026-10-29):
+// the definitions of `label` on `basis` — non-ref markers whose label_def is
+// `label`, own-flag-enabled ones alone when `enabled_only` — COUNTED, never
+// broken off at the first. A label is honored only through EXACTLY ONE
+// definition: `index` names it when `count == 1` and is -1 otherwise, so
+// `count == 0` is the dangling verdict and `count >= 2` THE AMBIGUOUS LABEL
+// (two enabled definitions of one label load and render — the loader asks
+// no label uniqueness, warpmarkers_parse.cpp — and neither is honored: every
+// reference normalizes to the plain 1.00 owner). Every reader of
+// the verdict calls this: the resolver's stage 5 over its post-collapse
+// intermediate, marker_effective's two label-ref branches (the projection,
+// and the raw-store carve-out asking enabled definitions first), and
+// warp_ambiguous_label_defs over the same projection — so the render, the
+// readouts and the GUI's strike cannot drift.
+struct LabelDefinitionSearch {
+    int index = -1;  // the one definition's index on the basis, or -1
+    int count = 0;   // how many definitions of the label the basis holds
+};
+LabelDefinitionSearch label_definition_search(
+    const std::vector<WarpMarker>& basis, const std::string& label,
+    bool enabled_only) {
+    LabelDefinitionSearch s;
+    int first = -1;
+    for (size_t j = 0; j < basis.size(); ++j) {
+        const WarpMarker& d = basis[j];
+        if (!d.label_ref.empty() || d.label_def.empty() ||
+            d.label_def != label)
+            continue;
+        if (enabled_only && d.disabled) continue;
+        if (first < 0) first = static_cast<int>(j);
+        ++s.count;
+    }
+    if (s.count == 1) s.index = first;
+    return s;
+}
+
+// marker_effectively_disabled (the shared template in
+// warp_frame_map_build.h, own flag alone since architect approval
+// 2026-10-29) is the participation verdict:
 // warp_markers_render_keep_mask publishes it per index (and
 // resolve_warp_markers_for_render filters through that mask via the shared
 // projection below), and marker_effective consumes it three ways — the
@@ -133,9 +170,11 @@ std::vector<WarpMarker> normalized_surviving_markers(
     const double sr_d = static_cast<double>(sample_rate);
 
     // Stage 1 — filter to the survivors of warp_markers_render_keep_mask
-    // (the participation verdict's single owner): disabled markers, and
-    // refs whose def is disabled, are dropped. Everything below operates on
-    // the survivors-only intermediate — all enabled, cascade applied.
+    // (the participation verdict's single owner): disabled markers are
+    // dropped, each by its own flag alone — a ref whose def is disabled
+    // survives and goes dangling for stage 5 (architect approval
+    // 2026-10-29). Everything below operates on the survivors-only
+    // intermediate — all enabled.
     const std::vector<bool> keep = warp_markers_render_keep_mask(src);
     std::vector<WarpMarker> norm;
     std::vector<int>        raw;
@@ -155,9 +194,11 @@ std::vector<WarpMarker> normalized_surviving_markers(
     // is a run of adjacent equal frames. A group of 2+ survivors is
     // ambiguous wholesale — no member's tempo outranks another's — and is
     // replaced by ONE plain enabled 1.00 owner with no labels: a label def
-    // inside a collapsed group dies with it, and refs to it go dangling,
-    // which stage 5 then normalizes with their own stderr line — a
-    // deterministic cascade rather than a guess at which member to keep.
+    // inside a collapsed group dies with it, and refs to it go dangling
+    // (unless another surviving def holds the label, which they then bind —
+    // architect approval 2026-10-29), which stage 5 then normalizes with
+    // their own stderr line — a deterministic consequence rather than a
+    // guess at which member to keep.
     //
     // The collapse verdict comes from warp_coincident_collapse_members,
     // the rule's one owner (architect approval 2026-07-30; the site record
@@ -210,8 +251,7 @@ std::vector<WarpMarker> normalized_surviving_markers(
     // Stage 3 — first-marker seed, mandatory correctness: when no SURVIVING
     // marker sits at exactly frame 0, prepend a plain enabled 1.00 owner
     // there. The surviving list is the basis by ruling — a disabled marker
-    // at frame 0, or an enabled ref whose def is disabled, does not count
-    // as existing — because build_warp_frame_map never reads
+    // at frame 0 does not count as existing — because build_warp_frame_map never reads
     // markers[0].time_frame: it seeds the map at {0,0} and attributes the
     // opening segment to the first resolved marker wherever it sits, so
     // without this seed a filtered-away frame-0 marker would silently
@@ -229,6 +269,28 @@ std::vector<WarpMarker> normalized_surviving_markers(
 }
 
 }  // namespace
+
+std::vector<char> warp_ambiguous_label_defs(
+    const std::vector<WarpMarker>& markers) {
+    // Contract in warp_frame_map_build.h (architect approval 2026-10-29).
+    // The silent projection is stage 5's basis before materialization, and
+    // stage 4 changes no label_def, so the definitions counted here are the
+    // ones stage 5 counts; label_definition_search is the one count. A
+    // synthetic projection entry carries no label and is never asked.
+    std::vector<char> out(markers.size(), 0);
+    std::vector<int> raw_index;
+    const std::vector<WarpMarker> proj = normalized_surviving_markers(
+        markers, /*sample_rate=*/0, /*emit_stderr=*/false, &raw_index);
+    for (size_t k = 0; k < proj.size(); ++k) {
+        const WarpMarker& d = proj[k];
+        if (!d.label_ref.empty() || d.label_def.empty()) continue;
+        if (label_definition_search(proj, d.label_def,
+                                    /*enabled_only=*/false).count < 2)
+            continue;
+        if (raw_index[k] >= 0) out[static_cast<size_t>(raw_index[k])] = 1;
+    }
+    return out;
+}
 
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
@@ -290,11 +352,16 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
     // passes are concrete). Each ref is checked independently: normalizing
     // one replaces it in place with a plain 1.00 owner at its own frame,
     // changing no positions and no label defs, hence no other ref's
-    // geometry or resolvability. The def search mirrors
-    // build_warp_frame_map's pass-1 label cache (defs on non-ref markers;
-    // duplicate defs are load-fatal, so a match is the one definition),
-    // which is what makes the builder's pass-2 dangling-lookup tripwire
-    // unreachable from here. The implied effective tempo is the exact
+    // geometry or resolvability. The def search is label_definition_search,
+    // the verdict's one owner (architect approval 2026-10-29): defs on
+    // non-ref markers, COUNTED — no def normalizes the ref as dangling, and
+    // two or more (an ambiguous label, which loads: the loader asks no
+    // label uniqueness) normalize it too, each ref with its own line, so
+    // every ref that survives this stage names exactly one definition. That
+    // is what makes the builder's pass-2 dangling-lookup tripwire
+    // unreachable from here, and what keeps its pass-1 label cache (last
+    // def of a label wins there) from ever being read for an ambiguous
+    // label. The implied effective tempo is the exact
     // build/hover quantity with the settings scale excluded (it cancels —
     // see the envelope constants above): the def's effective tempo times
     // the segment-distance ratio, where each distance runs to the NEXT
@@ -310,22 +377,22 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             if (norm[i].label_ref.empty()) continue;
             const std::string name = norm[i].label_ref;
 
-            size_t def_idx = norm.size();
-            for (size_t j = 0; j < norm.size(); ++j) {
-                if (norm[j].label_ref.empty() &&
-                    !norm[j].label_def.empty() &&
-                    norm[j].label_def == name) {
-                    def_idx = j;
-                    break;
-                }
-            }
+            const LabelDefinitionSearch def =
+                label_definition_search(norm, name, /*enabled_only=*/false);
 
             bool        normalize = false;
             const char* reason    = nullptr;
-            if (def_idx == norm.size()) {
+            if (def.count == 0) {
                 normalize = true;
                 reason    = "has no label definition";
+            } else if (def.count >= 2) {
+                // THE AMBIGUOUS LABEL (architect approval 2026-10-29: "now
+                // they both get struck, as do all the label references. I
+                // think that's the sane fallback").
+                normalize = true;
+                reason    = "has more than one label definition";
             } else {
+                const size_t def_idx = static_cast<size_t>(def.index);
                 const WarpMarker& d = norm[def_idx];
                 // The shared classification helper IS this stage's band
                 // value, in this site's historical operation order —
@@ -377,8 +444,8 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 }
 
 // Contract: the backward walk stops at the nearest non-disabled owner.
-// Passes, disabled markers and EVERY label ref — enabled, disabled or
-// cascade-disabled — stay transparent (architect approval 2026-09-13: "pass
+// Passes, disabled markers and EVERY label ref — enabled or disabled — stay
+// transparent (architect approval 2026-09-13: "pass
 // should ignore label ref and pass and go back to prior tempo owner"; until
 // then a surviving enabled ref terminated the walk at the 1.00 fallback).
 // This walk is the total display-time resolution: no geometry enters it, so
@@ -420,17 +487,22 @@ std::optional<double> resolve_inherited_tempo_scale(
 
 namespace {
 
-// Dangling ref: the render resolver normalizes it to the plain 1.00 owner,
-// so the display reports the same exact literal — base 100, no scale, no
-// visible source (the value is a fallback, not taken from anywhere). Shared
-// verbatim by both marker_effective paths (projection def-search and
-// raw-store def-search) when the def cannot be found.
-MarkerEffective undefined_label_readout() {
+// Dangling or ambiguous ref: the render resolver normalizes it to the plain
+// 1.00 owner, so the display reports the same exact literal — base 100, no
+// scale, no visible source (the value is a fallback, not taken from
+// anywhere) — with the reason the search gave (UndefinedLabel for no
+// definition, AmbiguousLabel for two or more, architect approval
+// 2026-10-29). Shared verbatim by both marker_effective paths (projection
+// def-search and raw-store def-search) when no single def is found.
+MarkerEffective label_fallback_readout(
+    const LabelDefinitionSearch& search) {
     MarkerEffective r;
     r.base_cents = 100;
     r.scale.reset();
     r.source_idx = -1;
-    r.reason = MarkerEffective::NormalizedReason::UndefinedLabel;
+    r.reason = search.count == 0
+                   ? MarkerEffective::NormalizedReason::UndefinedLabel
+                   : MarkerEffective::NormalizedReason::AmbiguousLabel;
     return r;
 }
 
@@ -590,18 +662,15 @@ MarkerEffective marker_effective(
             return r;
         }
 
-        // Label ref against the projection: the def search mirrors the
-        // resolver's stage-5 lookup exactly, so a def that died in a
-        // collapse is dangling here — the render's own verdict.
-        int def_k = -1;
-        for (size_t j = 0; j < proj.size(); ++j) {
-            if (proj[j].label_ref.empty() && !proj[j].label_def.empty() &&
-                proj[j].label_def == m.label_ref) {
-                def_k = static_cast<int>(j);
-                break;
-            }
-        }
-        if (def_k < 0) return undefined_label_readout();
+        // Label ref against the projection: the def search IS the
+        // resolver's stage-5 lookup (label_definition_search, architect
+        // approval 2026-10-29), so a def that died in a collapse or is
+        // disabled is dangling here and two surviving defs are ambiguous —
+        // the render's own verdicts.
+        const LabelDefinitionSearch search = label_definition_search(
+            proj, m.label_ref, /*enabled_only=*/false);
+        if (search.count != 1) return label_fallback_readout(search);
+        const int def_k = search.index;
 
         // Segment distances over the projection, each running to the NEXT
         // projection marker or to total_frames for the last — the
@@ -639,9 +708,10 @@ MarkerEffective marker_effective(
         // the visible source of the inherited value, not necessarily the
         // owning marker if there is a chain of passes. Every label ref is
         // skipped as the walk skips it (architect approval 2026-09-13): a
-        // cascade-disabled ref is render-inert, and a surviving one carries
-        // its implied rate rather than the literal the pass copied, so
-        // neither can be the visible source.
+        // disabled ref is render-inert by its own flag (architect approval
+        // 2026-10-29), and a surviving one carries its implied rate rather
+        // than the literal the pass copied, so neither can be the visible
+        // source.
         for (int i = idx - 1; i >= 0; --i) {
             if (!mv[static_cast<size_t>(i)].label_ref.empty()) continue;
             if (!marker_effectively_disabled(mv, static_cast<size_t>(i))) {
@@ -653,20 +723,24 @@ MarkerEffective marker_effective(
     }
 
     // Label ref (the only remaining kind: owners returned at the top, passes
-    // just above), resolved against the raw store.
-    int def_idx = -1;
-    for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
-        if (mv[i].label_def == m.label_ref) {
-            def_idx = i;
-            break;
-        }
-    }
-    if (def_idx < 0) return undefined_label_readout();
+    // just above), resolved against the raw store through the one search
+    // (architect approval 2026-10-29): the ENABLED definitions first — the
+    // ones the ref would bind were it to render — and the disabled ones only
+    // when no enabled definition exists, so a disabled ref beside its
+    // disabled definition still reads out against it; two or more on the
+    // tier asked are ambiguous.
+    LabelDefinitionSearch search =
+        label_definition_search(mv, m.label_ref, /*enabled_only=*/true);
+    if (search.count == 0)
+        search = label_definition_search(mv, m.label_ref,
+                                         /*enabled_only=*/false);
+    if (search.count != 1) return label_fallback_readout(search);
+    const int def_idx = search.index;
 
     // Render measures each segment to the next marker that survives into
     // the resolved list, so the reference and definition distances must run
     // to the next surviving successor, not the raw adjacent marker: a
-    // disabled marker (or a cascade-disabled ref) parked immediately after
+    // disabled marker parked immediately after
     // either endpoint would otherwise skew the implied multiplier while
     // leaving the frame map untouched.
     auto next_surviving = [&](int from) -> int {
@@ -890,6 +964,11 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             double delta_src = src_frame - src_f_prev;
             double delta_tgt = delta_src / divisor;
 
+            // Last definition of a label wins the entry. Only a
+            // hand-assembled list can make that matter: the resolver leaves
+            // no ref naming a label two definitions hold (architect approval
+            // 2026-10-29, stage 5's ambiguous arm), so no ref reads such an
+            // entry.
             if (!m.label_def.empty()) {
                 label_cache[m.label_def] = LabelCacheEntry{delta_tgt};
             }
@@ -920,8 +999,11 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // refs — a breach would surface as a raw failed map-lookup
             // (undefined behavior), not a loud refusal — so this guard buys
             // deterministic loudness for hand-assembled marker lists reaching
-            // the build directly. Definition uniqueness is load-enforced, so
-            // a found entry is the one definition.
+            // the build directly. Definition uniqueness is NOT load-enforced
+            // (architect approval 2026-10-29: two definitions of one label
+            // load), but the resolver normalizes every ref to an ambiguous
+            // label ahead of the build exactly as it normalizes a dangling
+            // one, so from the resolver a found entry is the one definition.
             const auto lbl_it = label_cache.find(m.label_ref);
             if (lbl_it == label_cache.end()) {
                 return std::unexpected("Label ref has no matching label def: '"

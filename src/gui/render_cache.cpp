@@ -382,7 +382,7 @@ std::vector<uint8_t> render_fingerprint(
     // fields build_warp_frame_map reads (frame, resolved owning tempo cents,
     // typed scale, label def/ref), after resolve_warp_markers_for_render's
     // filter/collapse/seed/materialize/normalize pipeline. Raw disabled
-    // markers, cascade-dropped refs, collapsed duplicates, and fields
+    // markers, collapsed duplicates, and fields
     // materialization discards never reach this list, so edits that cannot
     // change engine input cannot move the key. All survivors are enabled by
     // the resolver's output invariants — no disabled flag exists here.

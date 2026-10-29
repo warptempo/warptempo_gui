@@ -1,4 +1,5 @@
-// Dead includes removed under grant (architect approval 2026-08-02).
+// Dead includes removed under grant (architect approval 2026-08-02; <set>
+// with the duplicate-definition wall, architect approval 2026-10-29).
 #include "warpmarkers_parse.h"
 
 #include "frame_format.h"
@@ -7,7 +8,6 @@
 
 #include <expected>
 #include <fstream>
-#include <set>
 
 namespace {
 
@@ -197,9 +197,10 @@ bool parse_tempo_with_scale(const std::string& s, WarpMarker& m,
 
 // Parse a new-format payload (the part after the pipe) into a partly-
 // populated WarpMarker base — sets tempo/label fields only. Cross-marker
-// checks (label_def uniqueness, time ordering) are the caller's job;
-// label_ref resolvability is not checked at load at all — it is a render
-// boundary verdict (build_warp_frame_map).
+// checks (time ordering) are the caller's job; neither label_def uniqueness
+// (architect approval 2026-10-29) nor label_ref resolvability is checked at
+// load at all — both are render boundary verdicts
+// (resolve_warp_markers_for_render's stage 5).
 //
 // On success, returns true and the WarpMarker carries the parsed payload.
 // On failure, returns false and `error_out` is set.
@@ -289,9 +290,9 @@ namespace warpmarkers_internal {
 // --- single-line parser -----------------------------------------------------
 //
 // Parses one canonical line into a WarpMarker, doing line-local validation
-// only. Cross-marker checks (label_def uniqueness, time ordering) are left
-// to the caller; label_ref resolvability is a render boundary verdict, not
-// a load check.
+// only. Cross-marker checks (time ordering) are left to the caller;
+// label_def uniqueness (architect approval 2026-10-29) and label_ref
+// resolvability are render boundary verdicts, not load checks.
 //
 // THE MEASURE COMMENT LEFT THE GRAMMAR (architect approval 2026-09-16): a
 // warp line is the canonical line whole; a line carrying ` //` is adversarial
@@ -397,9 +398,6 @@ parse_warpmarkers_file(const std::string& path,
     // proceeds.
     int64_t last_time = -1;
 
-    // Track which labels have been defined (for duplicate-definition errors).
-    std::set<std::string> seen_def;
-
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
         // Marker lines are byte-exact canonical whole: no BOM, blank, or
@@ -454,13 +452,16 @@ parse_warpmarkers_file(const std::string& path,
         // a matching definition is likewise authorable now (the GUI permits
         // deleting a definition its refs outlive), loads intact, and the
         // resolver normalizes the dangling ref to a plain 1.00 owner at its
-        // own frame, with its own line.
-        if (!m.label_def.empty()) {
-            if (seen_def.count(m.label_def))
-                return fail(line_number,
-                    "duplicate label definition: " + m.label_def);
-            seen_def.insert(m.label_def);
-        }
+        // own frame, with its own line. TWO DEFINITIONS OF ONE LABEL LOAD
+        // too (architect approval 2026-10-29, under the two-category rule,
+        // marker_store_validate.h's head: a state the GUI can commit always
+        // loads): the GUI commits it
+        // — a definition disabled, a second one typed while it is disabled
+        // (the flag editor refuses only a label an ENABLED definition holds),
+        // the first re-enabled — and the resolver honors neither, normalizing
+        // every reference to the label to a plain 1.00 owner with its own
+        // line (resolve_warp_markers_for_render's stage 5). So no
+        // cross-marker label rule remains at load.
 
         // pass markers carry inert defaults (set by parse_new_payload). No
         // cache: their effective tempo is resolved live via walk-backward

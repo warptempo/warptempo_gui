@@ -1083,14 +1083,14 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // delta entry here, so the flag cannot show one thing and restore another.
     //
     // THE DISABLED AXIS IS FILLED PER HALF, TEXT AND FACE APART (architect
-    // 2026-08-22, the cascade deepening the axis the same day it landed): the
+    // 2026-08-22): the
     // LABEL's '#' composes from each side's VERBATIM LOCAL bit and the revert's
     // `then_disabled` carries that same byte, while the PAINT bits —
     // `then_effective_disabled` on every flag with a REMOVED half,
     // `now_effective_disabled` on every flag with an ADDED one — take the
-    // delta's per-side EFFECTIVE verdicts (the cascade resolved within each
-    // side's own commit; on the phase column local IS effective, no cascade
-    // existing there). Text, revert byte and dim all come off the SAME delta
+    // delta's per-side EFFECTIVE verdicts (the participation owner resolved
+    // within each side's own commit — the line's own flag since 2026-10-29;
+    // on the phase column local IS effective). Text, revert byte and dim all come off the SAME delta
     // entry, so they can never describe different lines — they simply answer
     // the line's two different questions, its bytes and its live-lane face. A
     // half a flag does not

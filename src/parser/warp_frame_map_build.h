@@ -17,8 +17,11 @@
 // Minimal POD the warp_frame_map math needs. The GUI's `GuiWarpMarker` resolves into
 // this: tempo_inherits markers are walked back to their nearest owning
 // ancestor and their effective tempo_cents / tempo_scale are copied forward.
-// Disabled markers (and any references to disabled-defined labels) are
-// filtered out BEFORE conversion.
+// Disabled markers are filtered out BEFORE conversion, and a label ref the
+// resolver cannot honor (a dangling one, an ambiguous label, an extreme
+// implied ratio) arrives as a plain 1.00 owner (architect approval
+// 2026-10-29: a marker is disabled by its own flag alone, so a disabled
+// definition's refs arrive here dangling and normalized).
 struct MarkerForRender {
     // Authored position: a whole source frame in int64_t (see WarpMarker).
     // Consumers that divide or accumulate convert to double inside their
@@ -37,12 +40,16 @@ struct MarkerForRender {
 // fed to the render path). See marker_effective() below.
 struct MarkerEffective {
     // Why a label ref resolved to the normalized 1.00 fallback (source_idx
-    // -1): the popup picks its parenthetical from this instead of
-    // re-searching the raw store, which would name the wrong case for a
-    // def that died in a coincidence collapse (present raw, dangling in
-    // the projection). None for every non-fallback result and for every
-    // pass.
-    enum class NormalizedReason { None, UndefinedLabel, ExtremeRatio };
+    // -1): the GUI's red-flag set (warp_red_flag_set_cached) reads this
+    // instead of re-searching the raw store, which would name the wrong case
+    // for a def that died in a coincidence collapse (present raw, dangling
+    // in the projection). AmbiguousLabel is a label two or more surviving
+    // definitions hold (architect approval 2026-10-29): no reference honors
+    // either, label_definition_search's verdict in warp_frame_map_build.cpp.
+    // None for every non-fallback result and for every pass.
+    enum class NormalizedReason {
+        None, UndefinedLabel, AmbiguousLabel, ExtremeRatio
+    };
 
     int64_t     base_cents = 0;     // integer tempo cents; 0 means "could
                                     // not resolve"
@@ -97,7 +104,8 @@ struct MarkerEffective {
 // non-finite target the emission finiteness arm below refuses first, and
 // neither downstream refusal could NAME the tempo), a label ref with no
 // matching label def (Pass 2; unreachable from the resolver, which normalizes
-// dangling refs first; kept because the engine never consumes refs, so a
+// dangling and ambiguous refs first, architect approval 2026-10-29; kept
+// because the engine never consumes refs, so a
 // breach would be a raw failed map-lookup rather than a loud refusal — the
 // guard buys deterministic loudness), and — last, at the Pass 2 emission
 // chokepoint — a non-finite target anchor (the builder's own emission
@@ -117,30 +125,26 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                      double scale, long sample_rate, long total_frames);
 
 // Single source of truth for "does this raw marker survive into the
-// render list". A marker is silenced either by its own disabled flag or,
-// for an enabled label ref, by the referenced label being defined by a
-// disabled marker — the cascade, because the definition supplies the
-// duration the ref imposes, so a silenced definition leaves the ref with
-// nothing to reproduce. Templated over the marker shape (disabled,
-// label_ref, label_def) so the parser's WarpMarker walks and the GUI's
-// GuiWarpMarker surfaces (paint, selection, hover, nudge) consume the ONE
-// cascade definition without a per-call slice copy — the GUI callers sit
-// inside paint loops. Duplicate label definitions are load-fatal, so "any
-// disabled marker defining the label" and "the defining marker's flag"
-// are the same verdict.
+// render list": A MARKER IS EFFECTIVELY DISABLED BY ITS OWN FLAG ALONE
+// (architect approval 2026-10-29: "make Ctrl+D the default of disabling only
+// the single marker"). A label ref whose definition is disabled is NOT
+// silenced with it: the ref survives, finds no definition among the
+// survivors, and the resolver's stage 5 normalizes it to the plain 1.00
+// owner at its own frame with its own stderr line — the dangling ref's
+// treatment exactly, so it plays as recorded — while the GUI strikes it
+// (warp_red_flag_set_cached). Re-enabling the definition restores every such
+// ref with no flag residue, a ref's state being its own flag. The carrying
+// form, a definition toggled together with its references, is an authoring
+// act that writes each ref's own flag (Ctrl+Shift+D,
+// toggle_disabled_with_references, warpmarkers_ops.cpp), never a render
+// rule. Templated over the marker shape so the parser's WarpMarker walks and
+// the GUI's GuiWarpMarker surfaces (paint, selection, hover, nudge) consume
+// the ONE definition without a per-call slice copy — the GUI callers sit
+// inside paint loops. The name and the vector/index form stay so every
+// caller keeps asking the one owner.
 template <typename MarkerT>
 bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
-    const MarkerT& g = mv[idx];
-    if (g.disabled) return true;
-    if (!g.label_ref.empty()) {
-        for (const auto& d : mv) {
-            if (d.disabled && !d.label_def.empty() &&
-                d.label_def == g.label_ref) {
-                return true;
-            }
-        }
-    }
-    return false;
+    return mv[idx].disabled;
 }
 
 // Per-index render-participation mask over parser-domain markers: keep[i]
@@ -148,8 +152,8 @@ bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
 // (the marker_effectively_disabled verdict above, per index). Single
 // owner of the participation verdict: resolve_warp_markers_for_render's
 // filter, which every render path funnels through. Warp-only as part of
-// the resolver cascade — phase reset markers carry no labels or
-// references.
+// the resolver's normalization pipeline — phase reset markers carry no
+// labels or references.
 std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 
@@ -168,6 +172,27 @@ std::vector<bool> warp_markers_render_keep_mask(
 std::vector<char> warp_coincident_collapse_members(
     const std::vector<WarpMarker>& markers);
 
+// THE AMBIGUOUS LABEL'S DEFINITIONS as a pure classifier over the RAW
+// authored store (architect approval 2026-10-29), in
+// warp_coincident_collapse_members' shape: out[i] is true iff raw index i is
+// a surviving, un-collapsed label definition (it reaches the resolver's
+// post-collapse intermediate) whose label at least one OTHER surviving,
+// un-collapsed definition also defines. Two enabled definitions of one label
+// are legal — the editor refuses only a label an ENABLED definition holds,
+// and re-enabling a disabled definition beside its successor builds the
+// state — and the resolver honors neither: every reference to the label
+// normalizes to the plain 1.00 owner (stage 5's "has more than one label
+// definition"). Built on the SAME silent projection and the same definition
+// search the stage-5 lookup reads (label_definition_search, internal to
+// warp_frame_map_build.cpp), so the GUI's strike on the definitions and the
+// render's verdict on the references cannot drift. Consumed by the GUI's
+// red-flag set (warp_red_flag_set_cached), which strikes both definitions
+// and, through marker_effective's AmbiguousLabel, every reference. A
+// disabled definition never counts and is never marked: it fades, it does
+// not strike.
+std::vector<char> warp_ambiguous_label_defs(
+    const std::vector<WarpMarker>& markers);
+
 // Resolve each WarpMarker to a MarkerForRender — the normalization
 // chokepoint every render path passes through before build_warp_frame_map
 // (both the engine-bound render pipeline and the target view's
@@ -182,7 +207,7 @@ std::vector<char> warp_coincident_collapse_members(
 // on every recompute, the intended signal). The staged pipeline:
 //   1. filter to the survivors of warp_markers_render_keep_mask above —
 //      the participation verdict's single owner — dropping disabled
-//      markers and cascade-disabled refs;
+//      markers (each by its own flag alone, architect approval 2026-10-29);
 //   2. collapse each group of 2+ survivors sharing one exact time_frame
 //      (positions are whole int64 frames, so exact equality is the whole
 //      coincidence predicate) into ONE plain enabled 1.00 owner with no
@@ -192,15 +217,19 @@ std::vector<char> warp_coincident_collapse_members(
 //   4. materialize each pass through resolve_inherited_tempo(_scale)'s
 //      walk below, which skips label refs to the nearest prior owner
 //      (architect approval 2026-09-13) — silent, no line;
-//   5. normalize label refs: a dangling ref (no def among the survivors)
-//      or a ref whose implied effective tempo lies outside the authored
-//      per-marker envelope [0.125, 8.0] becomes a plain 1.00 owner at its
-//      own frame, each with a line;
+//   5. normalize label refs: a dangling ref (no def among the survivors —
+//      a disabled def included, architect approval 2026-10-29), an
+//      AMBIGUOUS one (two or more defs of its label among the survivors,
+//      architect approval 2026-10-29: neither is honored), or a ref whose
+//      implied effective tempo lies outside the authored per-marker
+//      envelope [0.125, 8.0] becomes a plain 1.00 owner at its own frame,
+//      each with a line;
 //   6. emit MarkerForRender.
 // Output invariants: non-empty; strictly increasing whole frames; the
 // first element sits at exactly frame 0 and is enabled (a plain 1.00 owner
-// when seeded); every surviving label_ref is resolvable and its implied
-// tempo in-band. Input that normalizes to itself — no coincident
+// when seeded); every surviving label_ref is resolvable to exactly one
+// definition (architect approval 2026-10-29) and its implied tempo in-band.
+// Input that normalizes to itself — no coincident
 // survivors, a survivor at frame 0, every ref
 // resolvable and in-band — yields the identical resolved list the
 // pre-normalization filter produced, so build_warp_frame_map's output is
@@ -316,8 +345,13 @@ std::optional<double> resolve_inherited_tempo_scale(
 // {base_cents 100, scale nullopt, source_idx -1} — no visible source,
 // because the value is a fallback, not inherited from anywhere:
 //   - a label ref with no definition on its resolution basis (projection
-//     path: a def that died in a coincidence collapse is dangling, the
-//     render's own verdict) — reason UndefinedLabel;
+//     path: a def that died in a coincidence collapse, or a disabled one,
+//     is dangling, the render's own verdict) — reason UndefinedLabel;
+//   - a label ref whose label two or more definitions hold on its
+//     resolution basis (architect approval 2026-10-29; on the raw-store
+//     path the ENABLED definitions are asked first and the disabled ones
+//     only when no enabled one exists, so a disabled ref reads out against
+//     the definition it would bind if enabled) — reason AmbiguousLabel;
 //   - a label ref whose implied effective tempo lies outside the authored
 //     per-marker envelope [0.125, 8.0] (the shared classification helper,
 //     resolver operation order) — reason ExtremeRatio.
@@ -352,9 +386,9 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // it counting as none, architect approval 2026-09-13 — a visible prior that is a
 // SYNTHETIC projection marker — a collapsed group's replacement 1.00 owner or
 // the frame-0 seed), a pass whose visible prior does not itself resolve, and a
-// ref the render normalizes (an undefined label, or an implied effective tempo
-// outside the [0.125, 8.0] envelope — both spell the 1.00 literal and have no
-// source).
+// ref the render normalizes (an undefined label, an ambiguous one — architect
+// approval 2026-10-29 — or an implied effective tempo outside the
+// [0.125, 8.0] envelope — all spell the 1.00 literal and have no source).
 //
 // Returns "" when the marker does not qualify — owning, malformed, or a
 // carve-out ref (a group member or an effectively-disabled ref) whose raw walk

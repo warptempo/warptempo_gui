@@ -79,19 +79,14 @@ inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
 //
 // Both terms are load-bearing and neither is an efficiency filter. The LABEL is
 // what the paste's lockstep matches on, so an unlabeled marker has nothing to
-// align and is skipped on both sides. EFFECTIVE-DISABLED (the label_ref cascade,
-// not the raw bit) is skipped because a disabled marker is dropped before the
+// align and is skipped on both sides. EFFECTIVE-DISABLED (the participation
+// verdict's one owner, the own flag alone since 2026-10-29) is skipped because a disabled marker is dropped before the
 // warp map is built — it neither owns a section nor bounds one — so admitting it
 // on one side and not the other would open a lockstep gap.
 //
 // IT IS EXTRACTED RATHER THAN RESTATED because "the two sides must filter
 // identically" is the paste's whole correctness premise, and a premise held by
-// discipline across separate loops is the kind that drifts. `effective_disabled`
-// re-scans the store for a disabled def on every label-ref query, so a whole
-// walk through here is worst-case O(n^2) — the deliberate choice over a cached
-// keep-mask, propagate being a discrete command over tens-to-hundreds of
-// markers (the reasoning is stated in full at section_end_index,
-// warpmarkers.h).
+// discipline across separate loops is the kind that drifts.
 inline bool warp_marker_propagates(const std::vector<GuiWarpMarker>& mv,
                                    int                              i) {
     if (i < 0 || i >= static_cast<int>(mv.size())) return false;

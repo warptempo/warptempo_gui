@@ -286,13 +286,14 @@ struct GuiHistoryWarpEntry {
     int         ordinal  = 0;
     std::string tempo_token;
     bool        disabled = false;
-    // THE CASCADE VERDICT, RESOLVED WITHIN THIS ENTRY'S OWN SIDE (architect
+    // THE EFFECTIVE VERDICT, RESOLVED WITHIN THIS ENTRY'S OWN SIDE (architect
     // 2026-08-22). `disabled` above is the line's own local '#' byte — the
     // revert's and the label text's verbatim truth — while this is the live
     // lane's effective answer computed over the side's FULL warp set through
-    // the one cascade owner (marker_effectively_disabled,
-    // warp_frame_map_build.h), so a label ref whose definition is disabled in
-    // the same commit reads disabled here exactly as its live marker does.
+    // the one participation owner (marker_effectively_disabled,
+    // warp_frame_map_build.h). Since 2026-10-29 that owner reads the line's
+    // own flag alone (a ref under a disabled definition is live), so the two
+    // bits agree; the field stays so the lane keeps asking the owner.
     // The PAINT is its reader; nothing reconstitutes a line from it.
     bool        effective_disabled = false;
 };
@@ -320,7 +321,7 @@ struct GuiHistoryWarpChange {
     std::string now_tempo_token;
     bool        then_disabled = false;
     bool        now_disabled  = false;
-    // The entry's cascade pair carried through the pairing (2026-08-22): each
+    // The entry's effective pair carried through the pairing (2026-08-22): each
     // half's effective verdict within its OWN side's commit, beside the local
     // pair above — the local bits stay the revert's and the label text's
     // bytes, these two drive the paint (GuiHistoryWarpEntry's field owns the
@@ -331,8 +332,7 @@ struct GuiHistoryWarpChange {
 
 // One phase reset line. The grammar is `[#]<frame position>` — the frame and
 // the disable prefix (phaseresetmarkers_parse.h). Phase resets carry no labels
-// or references, so there is no cascade and the local `disabled` bit IS the
-// effective verdict — the warp entry's `effective_disabled` field deliberately
+// or references, so the local `disabled` bit IS the effective verdict — the warp entry's `effective_disabled` field deliberately
 // has no twin on this column (2026-08-22).
 struct GuiHistoryPhaseResetEntry {
     int64_t     frame    = 0;

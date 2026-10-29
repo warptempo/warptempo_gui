@@ -618,8 +618,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // gates rather than the row's, so they are what makes this row's
     // otherwise-unconditional face policy have an exception at all.
     {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false}, // bare s
-    {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false}, // Delete
-    {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false}, // Ctrl+D
+    // DELETE AND DISABLE ADMIT SHIFT (architect 2026-10-29,
+    // redesign_button_shift_admits): the shift-click and the long press
+    // dispatch SHIFT+DELETE and CTRL+SHIFT+D, the label definition's
+    // references carried with it. Their faces cannot fork per chord, so the
+    // shifted lift with no definition selected reaches its arm's card.
+    {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false}, // Delete (+Shift: Shift+Delete)
+    {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false}, // Ctrl+D (+Shift: Ctrl+Shift+D)
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false}, // Ctrl+N
     // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's FIFTH:
     // CTRL+J, the jump to the marker the focused value came from on the other

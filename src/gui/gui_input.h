@@ -822,8 +822,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // mode-only letters above), so the ctrl spelling binds nothing again
         // and takes the unbound silence.
         case GuiKeys::H: return bare;
-        // Toggle disabled / quit.
-        case GuiKeys::D: case GuiKeys::Q: return cl;
+        // Toggle disabled, each marker's own flag alone, and on Ctrl+Shift
+        // (architect 2026-10-29) the carrying form, a label definition
+        // toggled with its references — the Disable button's shift-click and
+        // long press (redesign_button_shift_admits). Plain `d`, Shift+D and
+        // every alt spelling bind nothing.
+        case GuiKeys::D: return cl || cs;
+        // Quit.
+        case GuiKeys::Q: return cl;
         // Toggle inherit, and THE TIE since 2026-09-19: Ctrl+Shift+N makes
         // one axis of the grid iteration sweep out of the selected markers,
         // or unties them again. The shifted form is the plain act's twin on a
@@ -906,7 +912,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // since 2026-10-24: its ctrl forms carried the phase-reset propagate
         // pair from 2026-10-21 until the family moved to the letter P.
         case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
-        case GuiKeys::Delete: return bare;
+        // DELETE the selected markers, and SHIFT+DELETE (architect
+        // 2026-10-29) them with every reference to every selected label
+        // definition — the Delete button's shift-click and long press. The
+        // ctrl and alt forms bind nothing.
+        case GuiKeys::Delete: return bare || sh;
         // The marker walk (bare forward, shift back; its landing camera is
         // the landing owner's, Viewport::land_subject), the A/B tab switch
         // and the paired march. No Alt spelling of Tab binds (the Alt walk

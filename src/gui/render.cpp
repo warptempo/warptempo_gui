@@ -1640,7 +1640,8 @@ struct FlagFace {
 // THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
 // warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
 // coincident run, and on the warp column a label ref the render falls back
-// from) and the history's REMOVED half; an ADDED half never. A selected
+// from and the definitions of a label two live definitions hold, 2026-10-29)
+// and the history's REMOVED half; an ADDED half never. A selected
 // label's text and its bar are the chrome's `label`, an inert one's the
 // faded label (CueSegment); the bar is part of the text, its shadow under
 // it (show_cue_label).
@@ -2048,7 +2049,7 @@ static constexpr int kFlagBoxRankNone = 3;
 
 // The one body both columns' painters call. `label_of(i)` composes the
 // marker's display text and `disabled_of(i)` answers its column's disabled
-// question (the warp side's label_ref cascade, the phase-reset side's bare
+// question (the warp side's effective_disabled, the phase-reset side's bare
 // bool); the lambdas survive because the
 // columns hold different marker types.
 template <typename MarkerVec, typename LabelFn, typename DisabledFn,
@@ -2253,7 +2254,8 @@ void render_flags(cairo_t* cr,
         // bounds are the two cells beside it. The editor seeds from the UNCUT
         // sibling, flag_text, so nothing a commit reads passes through here.
         [&](int i) { return flag_display_text(markers, i); },
-        // The warp column's disabled verdict follows the label_ref cascade.
+        // The warp column's disabled verdict is the one participation owner's
+        // (the marker's own flag since 2026-10-29).
         [&](int i) { return effective_disabled(markers, i); },
         // The two bound cells, on exactly the markers the sweep reads
         // (warp_iter_cells above), and none outside the mode.
@@ -2291,7 +2293,7 @@ void render_phase_reset_flags(cairo_t* cr,
         // whole: the shared byte cap is gone (2026-09-19) and this column has
         // nothing to cut — the token is five bytes by ruling.
         [&](int) { return std::string(kPhaseResetLaneToken); },
-        // No label_ref cascade on this column — the bool is the whole verdict.
+        // The bool is the whole verdict on this column.
         [&](int i) { return phase_resets[i].disabled; },
         // THE TWO BOUND CELLS, on exactly the resets the sweep reads
         // (phase_iter_cells above), and none outside the mode. The bracket is
@@ -2449,16 +2451,14 @@ void render_history_diff_flags(
             if (!f.removed && !f.added) return;
 
             // THE DISABLED AXIS, ONE EFFECTIVE BIT PER COMMIT SIDE (architect
-            // 2026-08-22, the cascade joining the same day the axis landed).
-            // Each half asks its OWN side's EFFECTIVE verdict — the removed
-            // half `then_effective_disabled`, the added half
+            // 2026-08-22). Each half asks its OWN side's EFFECTIVE verdict —
+            // the removed half `then_effective_disabled`, the added half
             // `now_effective_disabled`, each resolved within its own side's
-            // full warp set at the delta (phase resets have no cascade, so
-            // their local bit filled these verbatim) — so the DIM is the live
-            // lane's truth per commit: a label ref whose same-side definition
-            // is disabled dims here exactly as its live marker does, while the
-            // '#' in the LABEL text stays the line's verbatim local byte (the
-            // text/face split at HistoryDiffFlag). A disable TOGGLE paints
+            // full warp set at the delta through the one participation owner
+            // (the line's own flag since 2026-10-29; phase resets fill theirs
+            // verbatim) — so the DIM is the live lane's truth per commit,
+            // while the '#' in the LABEL text stays the line's verbatim local
+            // byte (the text/face split at HistoryDiffFlag). A disable TOGGLE paints
             // one faded half beside one live one and the direction of the
             // toggle reads straight off the label. Each bit is meaningful
             // exactly when its half is painted, so a bit resting at false on

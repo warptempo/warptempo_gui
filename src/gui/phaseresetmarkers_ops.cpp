@@ -262,9 +262,10 @@ GuiOpRefusal GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     return std::nullopt;
 }
 
-// Delete every selected phase reset. No label/cascade rules — phase resets
-// don't have labels. Any selected phase reset is deletable, including one
-// that happens to sit at time 0 — frame-0 phase alignment is implicit
+// Delete every selected phase reset. No label rules — phase resets don't have
+// labels, so there is no Shift+Delete arm on this column (2026-10-29). Any
+// selected phase reset is deletable, including one that happens to sit at
+// time 0 — frame-0 phase alignment is implicit
 // and needs no marker to assert it.
 void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     // The subject refusal reads its one owner (marker_selection_standing,
@@ -316,10 +317,11 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
 }
 
 // Toggle the disabled flag on each selected phase reset, each its own flag
-// alone — this column carries no labels, so it owes nothing like the warp
-// column's carry, where a label definition's toggle clears its references'
-// own flags (architect 2026-10-10, at toggle_disabled, warpmarkers_ops.cpp:
-// the recorded asymmetry). This mutates each marker in place via marker_mut,
+// alone — Ctrl+D's rule on both columns (architect 2026-10-29, at
+// toggle_disabled, warpmarkers_ops.cpp). This column carries no labels, so it
+// has no Ctrl+Shift+D carrying form (the warp column's
+// toggle_disabled_with_references; the dispatch arm's no-definition card
+// answers a P press: the recorded asymmetry). This mutates each marker in place via marker_mut,
 // whereas the warp column's toggle_disabled builds a proposed vector and
 // swaps it in; for an unlabeled selection the two behave alike and the style
 // split is a cosmetic mirror divergence, accepted.

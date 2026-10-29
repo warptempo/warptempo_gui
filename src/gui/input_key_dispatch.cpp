@@ -4265,10 +4265,10 @@ void GuiInputHandler::run_history_revert() {
 
     // THE PROPOSED STORE, BUILT WHOLE BEFORE ANYTHING IS INSTALLED (2026-09-06).
     // The apply below writes THESE copies and the live stores are untouched
-    // until the install at the tail, which is what lets the grammar check
-    // between the two judge the finished state and refuse the act with nothing
-    // to undo — and, since 2026-09-16, what lets every flag resolve against the
-    // PRE-ACT rows (apply_history_revert_column). Both columns are copied
+    // until the install at the tail, which is what lets `changed` judge the
+    // finished state against the pre-act's with nothing to undo — and, since
+    // 2026-09-16, what lets every flag resolve against the PRE-ACT rows
+    // (apply_history_revert_column). Both columns are copied
     // and the act writes exactly one; the other copy is a vector's worth
     // of allocation on a keypress and is discarded.
     GuiWarpMarkers       proposed_warp  = app.warpmarkers;
@@ -4339,56 +4339,16 @@ void GuiInputHandler::run_history_revert() {
               : format_warpmarkers_text(proposed_warp.markers()) !=
                     format_warpmarkers_text(warp_pre);
 
-    // THE GRAMMAR'S OWN UNIQUENESS RULE, ASKED ONCE ON THE PROPOSED STORE AND
-    // REFUSING THE WHOLE ACT (architect 2026-09-06). A label
-    // definition may stand at exactly ONE row of the warp column, and a
-    // `.warpmarkers` file that defines one twice is LOAD-FATAL in both binaries
-    // (parse_warpmarkers_file's seen_def set). A REMOVED flag's inverse
-    // re-inserts the definition the checkpoint carried, and the label may since
-    // have moved to another marker or been reassigned — so this act, alone
-    // among the store's writers, could commit GUI-authored work that the next
-    // load refuses. THE REFUSAL IS WHOLE on the past-EOF wall's own reasoning: a
-    // partially applied delta leaves a state the user did not ask for and cannot
-    // name. Nothing is installed, no undo entry is pushed, the view stays open
-    // and the selection stands, so the press costs the user nothing.
-    //
-    // THIS IS THE GRAMMAR, NOT A COHERENCE VETO, and the distinction is the
-    // whole rule: "fully manual and always forcing" still governs POSITIONAL
-    // coherence — walls, coincident frames, the red-flag normalizations — every
-    // one of which loads and renders and is the user's to author. A duplicate
-    // definition is not that: it is the same rule the flag editor's commit
-    // enforces at the other producer, and both ask the ONE owner
-    // label_def_taken (warpmarkers.h). A duplicate found here is this act's own
-    // by construction — the loader refuses one and the column's only other
-    // producer gates it, so the live store carried none.
-    //
-    // THE PHASE-RESET COLUMN IS CARVED OUT BY ITS GRAMMAR: a phase reset
-    // carries no label at all, so there is nothing to collide and no check to
-    // run.
-    if (!phase) {
-        const auto& pv = proposed_warp.markers();
-        for (int i = 0; i < static_cast<int>(pv.size()); ++i) {
-            const std::string& def = pv[static_cast<std::size_t>(i)].label_def;
-            if (!label_def_taken(pv, def, i)) continue;
-            // "<Act> refused: <reason>" is ONE sentence, so the appended reason
-            // is lowercase (the convention's owner is at paint_handler.cpp's
-            // capitalization block), and the label is DATA, quoted verbatim.
-            const std::string reason =
-                "label '" + def + "' is already defined at another marker";
-            std::fprintf(stderr,
-                "warptempo_gui: Revert refused: %s\n", reason.c_str());
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Revert refused: " + reason);
-            return;
-        }
-    }
-
     // THE MODE'S OWN STOP-UP-FRONT REGIME, unconditional and ahead of the
     // INSTALL — the shape its Tab cycle, its Home/End and its `c` all take, and
     // the load-in-place's reason besides (a store rewrite under a live
-    // audition). It sits BELOW the two refusals above because a refusal is not
+    // audition). It sits BELOW the wall refusal above because a refusal is not
     // the act, and below the loop because the loop writes only the proposed
-    // copies; nothing live has moved yet. NOT gated on anything this act finds:
+    // copies; nothing live has moved yet. NO LABEL CHECK STANDS HERE
+    // (2026-10-29): two definitions of one label load (the loader asks no
+    // label uniqueness), so the act can build no unloadable store and is
+    // fully manual, always forcing — an ambiguous label it
+    // re-creates renders struck like any other the user authors. NOT gated on anything this act finds:
     // the stop is refusal-gated at its own owner, and in this mode it is a
     // formality either way — the entry owner stops a session that was running
     // before `h` and nothing in the view can start one
@@ -4406,9 +4366,8 @@ void GuiInputHandler::run_history_revert() {
     // lane, where a lamp still lit would make his next plain flag click ADD to
     // a selection instead of replacing it — the surprise this rule exists to
     // prevent. THE PLACEMENT IS THE CLASS'S OWN (selection_consumed,
-    // app_state.h): past every refusal — the past-EOF wall and the duplicate-
-    // label grammar check both return above this line, and a refused act
-    // consumes nothing — and AHEAD of the changed-path test below, because a
+    // app_state.h): past every refusal — the past-EOF wall returns above
+    // this line, and a refused act consumes nothing — and AHEAD of the changed-path test below, because a
     // revert whose subject found the live state already carrying its then side
     // was still an act the user performed. It is owed no damage: the lamp
     // repaints on the per-tick face comparator, and close_history_mode below
@@ -9189,8 +9148,8 @@ void GuiInputHandler::confirm_score_reset() {
 // different markers.
 //
 // THE ELIGIBILITY IS THE ONE GATE, payload_eligibility (app_state.h): warp
-// view, an effectively enabled pass or ref (the cascade through
-// effective_disabled), and not a member of a coincident-collapsed stack — a
+// view, an effectively enabled pass or ref (effective_disabled, the own
+// flag), and not a member of a coincident-collapsed stack — a
 // THREE-WAY VERDICT, PayloadEligibility, since 2026-09-02 (architect),
 // because its two refusals card in different words. An ineligible
 // focus — an owner, a phase reset, a disabled marker, the `P` column, nothing

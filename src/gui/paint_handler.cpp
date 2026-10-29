@@ -2009,8 +2009,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE SKIPS (kTransportSkipGroup, back 2026-10-24) — GO TO START (bare
 //   Home) and GO TO END (bare End), their shifted presses the whole piece's
 //   ends;
-//   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
-//   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
+//   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete,
+//   its shifted press Shift+Delete since 2026-10-29), disable (Ctrl+D, its
+//   shifted press Ctrl+Shift+D since 2026-10-29), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
 //   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
 //   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands)
 //   and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while armed — the
@@ -4346,7 +4347,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         const auto& marker = markers[idx];
         // Skip a disabled focused reset — a disabled phase reset paints no
         // overlay, reading its `disabled` bool directly (phase resets carry no
-        // label cascade).
+        // labels).
         if (marker.disabled) return out;
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map

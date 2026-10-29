@@ -128,8 +128,17 @@ struct GuiWarpMarkersOps {
     // (kMarkerDropOffEdgeCard; GuiOpRefusal above), else std::nullopt.
     GuiOpRefusal drop_copy_previous_at_playhead();
     void delete_selected_marker();
+    // SHIFT+DELETE (architect 2026-10-29): the plain delete's body, plus
+    // every reference to every selected label definition, selected or not.
+    // Silent belt on marker_selection_holds_label_definition (app_state.h);
+    // the dispatch arm cards.
+    void delete_selected_with_references();
     void toggle_inherits();
     void toggle_disabled();
+    // CTRL+SHIFT+D (architect 2026-10-29): the plain toggle's body, each
+    // toggled DEFINITION's references, selected or not, written to its new
+    // state. Silent belt on marker_selection_holds_label_definition.
+    void toggle_disabled_with_references();
     // THE TWO FLATTEN COMMANDS, ONE BODY (architect 2026-09-19): Ctrl+F
     // CLEARS every warp marker's tempo deviation terms and Ctrl+Shift+F
     // COLLAPSES them to their one sum — the kind is TempoFlattenKind
@@ -196,6 +205,12 @@ struct GuiWarpMarkersOps {
                                         bool synthesized_repeat);
 
    private:
+    // The two batch verbs' ONE BODY EACH, the shifted form a flag on it
+    // (2026-10-29): the plain and the carrying act share the snapshot, the
+    // stop, the undo push and the target-view tail, so neither tail can
+    // drift from its twin.
+    void delete_selected_body(bool with_references);
+    void toggle_disabled_body(bool with_references);
     // Group tempo step (architect 2026-07-23, 2+ selection): all-or-nothing.
     // Every selected marker must be a steppable OWNER that can take the FULL
     // `delta_cents` without leaving the tempo bracket, or the whole press

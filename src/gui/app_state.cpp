@@ -350,8 +350,8 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
         return source_frame_to_active_domain(a, audio,
                                              active_marker_time_frame(a, i));
     };
-    // The warp side respects the label_ref cascade; a phase reset reads its
-    // own bit (the column has no labels).
+    // The warp side asks the one participation owner (effective_disabled); a
+    // phase reset reads its own bit (the column has no labels).
     auto is_disabled = [&](int i) -> bool {
         switch (a.active_markers_view) {
             case 'W': return effective_disabled(warp_vec, i);
@@ -476,8 +476,9 @@ PayloadEligibility payload_eligibility(const AppState& app,
     // of eligibility. NEITHER ACT MAY REPORT A TEMPO THE RENDER NEVER
     // APPLIES, and the render's three ways of not applying one are the
     // gate's three refusals past the focus and the column:
-    //   * the CASCADE — resolve_warp_markers_for_render drops a disabled
-    //     marker outright and drops a label ref whose definition is disabled
+    //   * the DISABLED marker — resolve_warp_markers_for_render drops it
+    //     outright (its own flag alone since 2026-10-29; a ref under a
+    //     disabled definition is live, normalized to 1.00 with no source)
     //     — asked of the one owner effective_disabled (warpmarkers.h), the
     //     same call the diff lane, the sweep and the group step read; the
     //     gate hand-rolled the walk beside it until 2026-09-02;

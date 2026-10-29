@@ -108,8 +108,9 @@ bool GuiWarpMarkers::save(const std::string& path,
 }
 
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
-    // Bounds-guarded GUI face of the ONE cascade definition,
-    // marker_effectively_disabled (warp_frame_map_build.h) — the same
+    // Bounds-guarded GUI face of the ONE participation verdict,
+    // marker_effectively_disabled (warp_frame_map_build.h; the marker's own
+    // flag alone since 2026-10-29) — the same
     // verdict the resolver's keep mask publishes, instantiated over
     // GuiWarpMarker so paint-loop callers pay no slice copy.
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;

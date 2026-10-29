@@ -28,11 +28,11 @@
 //      non-empty. `label_def` marks a label origin; `label_ref` cites one.
 //
 //   3. Disabled flag. Allowed on any marker. A disabled marker has its
-//      tempo contribution silenced. When the disabled marker is a
-//      `label_def`, all `label_ref` markers pointing to it are also
-//      treated as disabled (cascade). The cascade rule applies only to
-//      label_def markers; a disabled non-label-def is locally disabled
-//      and does not propagate.
+//      tempo contribution silenced, and the flag is the marker's OWN
+//      ALONE: nothing propagates (architect approval 2026-10-29). A
+//      `label_ref` whose `label_def` is disabled stays enabled, goes
+//      dangling, and the render resolver normalizes it to a plain 1.00
+//      owner (marker_effectively_disabled, warp_frame_map_build.h).
 struct WarpMarker {
     // Authored position: a whole source frame held in an int64_t — a
     // fractional authored position is unrepresentable (fractional position
@@ -118,9 +118,10 @@ namespace warpmarkers_internal {
 
 // Parse one canonical new-format line into a WarpMarker. Used by the GUI
 // editor's commit path (flag_editor). Line-local validation only —
-// cross-marker rules (label_def uniqueness, time ordering: non-decreasing
-// at load, exact-frame degeneracy collapsed to one 1.00 owner at the
-// render boundary) are the caller's.
+// cross-marker rules (time ordering: non-decreasing at load, exact-frame
+// degeneracy collapsed to one 1.00 owner at the render boundary; the
+// GUI's enabled-holder label rule, label_def_taken, architect approval
+// 2026-10-29) are the caller's.
 // On `pass`, tempo_cents/tempo_scale are
 // populated with inert defaults (100 / nullopt). Returns the marker on
 // success, or a one-line diagnostic on failure.

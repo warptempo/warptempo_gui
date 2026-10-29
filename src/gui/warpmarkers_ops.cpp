@@ -13,6 +13,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,7 +28,9 @@
 // THE WARP STATUS/VALUE FAMILY'S TARGET-VIEW TAIL (architect 2026-08-24), one
 // statement of a contract FOUR sites share: Ctrl+D (toggle_disabled), Ctrl+N
 // (toggle_inherits), Delete (delete_selected_marker) and the flag editor's
-// payload commit (flag_editor.cpp). They are the home-view binding's FIFTH
+// payload commit (flag_editor.cpp) — Ctrl+Shift+D and Shift+Delete running
+// the Ctrl+D and Delete bodies (toggle_disabled_body, delete_selected_body,
+// 2026-10-29). They are the home-view binding's FIFTH
 // ruled exception, and the split that admits them is POSITIONAL vs NOT: the
 // binding exists because a PLACEMENT edit in target view mutates the map the
 // view is displayed in, and a status, an existence or a value edit does not
@@ -81,10 +85,9 @@
 // app_state.h).
 
 // Index of the nearest marker strictly before `time_frame` that survives
-// into the render, or -1 if none. Uses the same cascade definition as render
-// resolution and hover (effective_disabled: a marker is out if its own
-// disabled flag is set, or it is an enabled label ref whose target def is
-// disabled), so copy-previous copies the previous render-visible tempo
+// into the render, or -1 if none. Uses the same participation verdict as
+// render resolution and hover (effective_disabled: a marker is out if its own
+// disabled flag is set, and by nothing else since 2026-10-29), so copy-previous copies the previous render-visible tempo
 // rather than attributing to a marker the render ignores. It answers the
 // nearest SURVIVOR, label refs included: stepping past a ref to the marker
 // behind it, as the pass walk does, is drop_copy_previous_at_playhead's own
@@ -246,9 +249,9 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // skipping marker_effective; the members' own hovers keep their authored
 // readouts (the ruled display split). The group predicate mirrors the
 // resolver's stage-2 collapse: 2+ SURVIVORS sharing one exact int64 frame
-// (effective_disabled is the shared cascade survival test; disabled and
-// cascade-disabled members do not count, and a disabled or cascade-disabled
-// ref is stepped over as the projection never held it). Every index the step
+// (effective_disabled is the shared survival test, the own flag alone;
+// disabled members do not count, and a disabled ref is stepped over as the
+// projection never held it). Every index the step
 // visits survives by construction (find_immediate_prior and the loop's own
 // survival test), so one OTHER surviving index at its frame makes the group.
 //
@@ -309,14 +312,36 @@ GuiOpRefusal GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
 // Deleting an owning marker lets downstream pass markers re-resolve to the
 // next earlier owner, the same live re-resolution that disabling an owner
 // already produces; no values are frozen on delete.
+//
+// PLAIN DELETE (architect 2026-10-29, kept as it was): each selected marker
+// goes and nothing else. A selected DEFINITION's references stay, go
+// dangling, play as recorded (the resolver's 1.00 normalization) and paint
+// struck. SHIFT+DELETE is the carrying form (delete_selected_with_references
+// below): every selected marker AND every reference to every selected label
+// definition, selected or not — "Shift delete should be disabled unless one
+// member of the selected group is a label definition" — a mixed selection's
+// non-definitions deleted as the plain delete deletes them.
 void GuiWarpMarkersOps::delete_selected_marker() {
+    delete_selected_body(/*with_references=*/false);
+}
+
+void GuiWarpMarkersOps::delete_selected_with_references() {
+    delete_selected_body(/*with_references=*/true);
+}
+
+void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
     // THE SUBJECT REFUSAL READS ITS ONE OWNER (marker_selection_standing,
     // app_state.h — 2026-08-30, when the Delete button's face began reading
     // the same fact through marker_selection_verb_actionable). SILENT, and
     // deliberately so: the Delete dispatch arm asks the composed predicate
     // ahead of this call and CARDS the refusal there (input_handler.cpp), so
     // this is the belt and a card here would be the second for one press.
+    // The shifted form's own refusal, no selected definition, is belted the
+    // same way on its own owner (marker_selection_holds_label_definition),
+    // the Shift+Delete arm carding it.
     if (!marker_selection_standing(app)) return;
+    if (with_references && !marker_selection_holds_label_definition(app))
+        return;
     const auto& mv = app.warpmarkers.markers();
 
     // THE STALE-INDEX BELT, ONE POLICY FOR EVERY VERB THAT ITERATES THE SELECTION
@@ -336,6 +361,28 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) continue;
         live_idx.push_back(idx);
+    }
+    // THE CARRIED REFERENCES (Shift+Delete): every row whose label_ref names
+    // a label a selected definition defines, selected or not, joins the
+    // deleted rows. The set stays ascending and duplicate-free, so the
+    // descending removal and the identity hint below read it as they read
+    // the plain selection. With two definitions of one label, one of them
+    // selected, the references still go: the act deletes the references to
+    // every selected definition's LABEL, which is what a reference names.
+    if (with_references) {
+        std::vector<std::string> labels;
+        for (int idx : live_idx) {
+            const std::string& def = mv[static_cast<size_t>(idx)].label_def;
+            if (!def.empty()) labels.push_back(def);
+        }
+        std::set<int> rows(live_idx.begin(), live_idx.end());
+        for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+            const std::string& ref = mv[static_cast<size_t>(i)].label_ref;
+            if (ref.empty()) continue;
+            if (std::find(labels.begin(), labels.end(), ref) != labels.end())
+                rows.insert(i);
+        }
+        live_idx.assign(rows.begin(), rows.end());
     }
     // Nothing live to delete: no snapshot, no undo entry, no damage — the
     // "only on real change" shape the sibling group verbs already have.
@@ -361,7 +408,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Delete in descending order so earlier indices stay valid (live_idx is
     // ascending — app.selected_markers is an ordered set and the skip above
-    // preserves its order).
+    // preserves its order; the shifted form's union is rebuilt from a set).
     for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
@@ -373,7 +420,8 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     selection.clear_selection();
     // THE IDENTITY HINT, AND A DELETE OWES ONE (the contract and the producer
     // enumeration are at restore_touched_indices, app_state.h). live_idx names
-    // the deleted rows in the PRE-delete store, which is precisely this entry's
+    // the deleted rows in the PRE-delete store — the carried references
+    // included on the shifted form — which is precisely this entry's
     // snapshot, so an undo re-selects the rows it just put back. It has to: a
     // deleted row need not be the LAST of a coincident group, and the diff
     // matcher's grown arm consumes by time_frame alone front-to-back, so it
@@ -552,56 +600,84 @@ void GuiWarpMarkersOps::toggle_inherits() {
     target_render.trigger();
 }
 
-// Ctrl+D: toggle the disabled flag on each selected marker. The flag is
-// allowed on any marker, and each selected marker flips its OWN flag — except
-// that A LABEL DEFINITION'S TOGGLE CARRIES ITS REFERENCES, BOTH WAYS
-// (architect 2026-10-10: "either the definition is enabled and the references
-// are all enabled, or the definition is disabled and the references are also
-// disabled" — they are structural). The references follow their definition
-// through the render-time cascade (marker_effectively_disabled, the one
-// definition, warp_frame_map_build.h: a ref is effectively disabled by its
-// own flag OR its definition's), so what this act owes them is to get their
-// OWN flags out of the cascade's way: every reference in the store naming a
-// toggled definition, selected or not, has its own flag CLEARED, in either
-// direction. Clearing rather than writing true on a disable keeps the sidecar
-// free of redundant per-reference flags, the cascade already disabling them;
-// before the ruling a reference carrying its own flag (flagged alone earlier,
-// or flipped false -> true when selected beside its definition for the
-// re-enable) stayed disabled after its definition came back. A selected
-// reference whose definition this same act toggles is therefore NOT flipped
-// on its own — its definition governs it. A reference toggled WITHOUT its
-// definition flips its own flag as every other marker does: the accepted
-// exception, a reference disabled alone under an enabled definition, which
-// the ruling keeps possible.
+// Ctrl+D: toggle the disabled flag on each selected marker — EACH SELECTED
+// MARKER FLIPS ITS OWN FLAG AND CARRIES NOTHING (architect 2026-10-29: "make
+// Ctrl+D the default of disabling only the single marker"). A DEFINITION
+// DISABLED ALONE leaves its references enabled, and the render cannot honor
+// them: a marker's participation is its own flag alone
+// (marker_effectively_disabled, warp_frame_map_build.h), so each reference
+// finds no definition among the survivors, plays as recorded (the
+// resolver's 1.00 normalization) and paints STRUCK — "isn't that what we already do for
+// delete?" Re-enabling the definition restores every reference with no flag
+// residue, a reference's state being its own flag, which this act never
+// touched. Re-enabling a definition beside a live successor of its label
+// (one typed while it was disabled, which the flag editor admits —
+// label_def_taken, warpmarkers.h) makes TWO ENABLED DEFINITIONS OF ONE
+// LABEL: legal, and the render honors neither — both definitions and every
+// reference to the label strike (warp_ambiguous_label_defs and stage 5's
+// ambiguous arm), "the sane fallback". The carrying form is Ctrl+Shift+D,
+// below.
 void GuiWarpMarkersOps::toggle_disabled() {
+    toggle_disabled_body(/*with_references=*/false);
+}
+
+// Ctrl+Shift+D: THE CARRYING FORM (architect 2026-10-29: "for symmetry, give
+// it a shift form"; "Shift Ctrl+D only works if one of the group is a label
+// definition"). Every selected marker flips its own flag as Ctrl+D's does,
+// and for each toggled DEFINITION every reference to its label in the store,
+// selected or not, is WRITTEN to the definition's new state — written, not
+// cleared, the reference's state being its own flag — so the definition and
+// its references go together, both ways. A selected reference whose
+// definition this same act toggles takes the definition's state rather than
+// flipping on its own; a mixed selection's other members flip as Ctrl+D
+// flips them. Two toggled definitions of one label ending in different
+// states (both selected, one disabled and one enabled before the press)
+// leave the label's references ENABLED: the label's live definition is the
+// one they would bind.
+void GuiWarpMarkersOps::toggle_disabled_with_references() {
+    toggle_disabled_body(/*with_references=*/true);
+}
+
+void GuiWarpMarkersOps::toggle_disabled_body(bool with_references) {
     // The subject refusal reads its one owner (marker_selection_standing,
     // app_state.h), the delete's shape — and, like the delete's, it is SILENT
     // because the Ctrl+D dispatch arm cards the composed refusal ahead of it.
+    // The shifted form's own refusal (no selected definition) is belted the
+    // same way, the Ctrl+Shift+D arm carding it.
     if (!marker_selection_standing(app)) return;
+    if (with_references && !marker_selection_holds_label_definition(app))
+        return;
     const auto& mv_const = app.warpmarkers.markers();
     // Any marker may be disabled, including the one at time 0. A disabled
     // first marker leaves frame 0 ownerless, and the parser resolver
     // normalizes that at render/preview time (the silent 1.00 seed takes
     // the frame-0 slot) — nothing gates this gesture.
     std::vector<GuiWarpMarker> proposed = mv_const;
-    // The labels of the definitions this act toggles (the stale-index belt's
-    // skip as in the flip loop below); label_def_taken keeps a label to one
-    // definition, so a label names one governing marker.
-    std::vector<std::string> toggled_defs;
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
-        if (!proposed[idx].label_def.empty())
-            toggled_defs.push_back(proposed[idx].label_def);
+    // The carried labels and the state their references take (the shifted
+    // form alone; the stale-index belt's skip as in the flip loop below):
+    // each toggled definition's NEW disabled bit, a label two toggled
+    // definitions share taking ENABLED if either ends enabled.
+    std::map<std::string, bool> carried;
+    if (with_references) {
+        for (int idx : app.selected_markers) {
+            if (idx < 0 || idx >= static_cast<int>(mv_const.size())) continue;
+            const GuiWarpMarker& d = mv_const[static_cast<size_t>(idx)];
+            if (d.label_def.empty()) continue;
+            const bool now_disabled = !d.disabled;
+            const auto [it, fresh] = carried.emplace(d.label_def, now_disabled);
+            if (!fresh) it->second = it->second && now_disabled;
+        }
     }
-    const auto governed = [&toggled_defs](const GuiWarpMarker& m) {
-        return !m.label_ref.empty()
-            && std::find(toggled_defs.begin(), toggled_defs.end(),
-                         m.label_ref) != toggled_defs.end();
+    const auto carried_state =
+        [&carried](const GuiWarpMarker& m) -> const bool* {
+        if (m.label_ref.empty()) return nullptr;
+        const auto it = carried.find(m.label_ref);
+        return it == carried.end() ? nullptr : &it->second;
     };
     bool changed = false;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
-        if (governed(proposed[idx])) continue;  // its definition's, below
+        if (carried_state(proposed[idx])) continue;  // its definition's, below
         proposed[idx].disabled = !proposed[idx].disabled;
         // (A BRACKET CLEAR RODE THIS LOOP for a few hours on 2026-09-10, so a
         // marker disabled under a lit lamp could not keep a bracket the flag
@@ -610,12 +686,13 @@ void GuiWarpMarkersOps::toggle_disabled() {
         // marker can be disabled while any bracket stands.)
         changed = true;
     }
-    // The definition's toggle carries its references (the ruling at the head
-    // of this function): every reference to a toggled definition, selected or
-    // not, sheds its own flag and follows the definition through the cascade.
+    // The carried references (Ctrl+Shift+D, the ruling above): every
+    // reference to a toggled definition's label, selected or not, is written
+    // to the label's carried state.
     for (GuiWarpMarker& m : proposed) {
-        if (!m.disabled || !governed(m)) continue;
-        m.disabled = false;
+        const bool* state = carried_state(m);
+        if (!state || m.disabled == *state) continue;
+        m.disabled = *state;
         changed = true;
     }
     if (!changed) return;
@@ -1636,9 +1713,7 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // pass and a label ref share one fact (no tempo of their own, so no bracket
 // to ride it), and a disabled owner's is that it has no range at all — no
 // disable road is admitted while a bracket can stand, and the mode's own wipe
-// clears every bracket before one is, so the two states never meet. The one
-// marker a CASCADE can disable without a toggle, a ref through a disabled
-// definition, is already answered by the first sentence.
+// clears every bracket before one is, so the two states never meet.
 const char* iter_bound_step_kind_refusal(const AppState& a) {
     // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
     // (there is no pass and no label ref on this column), so the only thing a
