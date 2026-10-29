@@ -489,20 +489,20 @@ inline constexpr const char* kDefaultProjectsRepo =
 // waveform is the zero height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below about 633
-// Windows px of window at 100 % (472 in the `h` view; re-derived 2026-10-28,
-// the NOISE lamp closing the third run)
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below about 656
+// Windows px of window at 100 % (472 in the `h` view; re-derived 2026-10-28
+// night, the Trim Presets key closing the zoom group)
 // the icon row — the
-// toolbar band, its twenty-five standing members in three left runs and one
+// toolbar band, its twenty-six standing members in three left runs and one
 // right run of the program's 23-W case (eighteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at
 // kIconRowViewPairs, paint_handler.cpp). The tablet's 2304-px panel holds
-// the row whole in both states up to about 360 % — the left runs on device
-// x 23..1492 and the right run on 1936..2280 at 300 % outside the view (the
+// the row whole in both states up to about 350 % — the left runs on device
+// x 23..1561 and the right run on 1936..2280 at 300 % outside the view (the
 // arithmetic is at paint_icon_row, paint_handler.cpp, its one statement,
-// re-derived 2026-10-28 with the NOISE lamp) — and past
+// re-derived 2026-10-28 night with the Trim Presets key) — and past
 // that ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at

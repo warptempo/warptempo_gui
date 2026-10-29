@@ -288,6 +288,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // and under the grid-iterations lock (navigation), DEAD in the `h` view,
     // whose allowlist does not name it.
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false},   // bare f
+    // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's tail
+    // behind Follow: bare `t`, the trim presets list's opener through on_key
+    // like every row, so the `h` view refuses the lift as it refuses the key
+    // (the face hidden there by the derived partition) while a locked tab
+    // and grid iterations admit both (read_only_key_blocked, trim being
+    // band). Under the standing list the key is lit and its lift is the
+    // picker router's close (route_picker_key). No modifier, no repeat.
+    {RedesignButton::IconTrimPresets, GuiKeys::T, false, false, false}, // bare t
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave the propagate commands the
     // new EDIT MENU as their one pointer home, so Ctrl+P and Ctrl+Alt+P reach
@@ -3828,10 +3836,12 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // CLAIM READS THE PAINTED FACE (architect 2026-09-24, strictly
     // as-painted), the per-tick comparator (main.cpp) keeping it honest, and
     // a face painted live dispatches, its act answering for itself. THE
-    // PLAYER'S AND THE SCORE VIEWER'S KEYS ARE THE ONLY BUTTONS THAT PUBLISH
-    // IT (re-grepped 2026-10-27), so this line is inert off those two rows.
+    // PLAYER'S, THE SCORE VIEWER'S AND THE TRIM PRESETS LIST'S BUTTONS ARE
+    // THE ONLY ONES THAT PUBLISH IT (re-grepped 2026-10-28 night), so this
+    // line is inert off those three rows.
     // THE SHIFT ADMISSION is the row's own: a button carries one owner's act
-    // and None for the other, which admits nothing.
+    // and None for the others, which admits nothing (the trim list's acts
+    // admit none).
     const AppState::ModalDialogButton& hb =
         app.modal_dialog.buttons[static_cast<size_t>(hit)];
     if (!hb.enabled) return true;
@@ -3853,7 +3863,8 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // walk that earns the active strength. Every dialog's buttons arm here —
     // the prompt's, the editors' OK / Cancel, the player's closing key (Close)
     // and the picker's one word (Cancel or Close by content,
-    // kModalCancelLabel's rule) — so this is the rule's one site. A refused
+    // kModalCancelLabel's rule) or, under the trim presets list, its pair
+    // and four words — so this is the rule's one site. A refused
     // press (the disabled player button and the unadmitted shift above) arms nothing and moves
     // nothing. A slide off the held button leaves the focus here and fires
     // nothing; a release away leaves the button passively focused.
@@ -4114,12 +4125,46 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // because a click on a row is the open act now — so this arm reads no
     // bit. Its word is what leaving does (kModalCancelLabel's rule,
     // paint_handler.cpp, architect 2026-10-28 night): Cancel under the
-    // project picker and the value list, Close under the settings page. Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
+    // project picker and the value list, Close under the settings page (the
+    // trim presets list's row is its own arm, below). Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
     // the list's key, nothing applied (return_to_settings_page, architect
     // 2026-10-28 night: the list is the page's sub-page); under every other
     // content it runs the one close body. Esc is the same fork
     // (route_picker_key). (Enter on the list is still the open act, through
     // picker_open_highlight, the keyboard's own click.)
+    // THE TRIM PRESETS LIST'S ROW IS THE PLAYER'S SHAPE (architect
+    // 2026-10-28 night): its published face decides as the player's does — a
+    // key painted dead is consumed — and each act is the list's own: the
+    // highlight pair the band walk alone (picker_move_highlight, bare Down /
+    // Up's call), Save, Overwrite and Delete their bodies, Close the one
+    // close body. No member admits a modifier.
+    if (app.picker.active &&
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets) {
+        if (!b.enabled) return true;
+        switch (b.trim_act) {
+            case AppState::TrimPresetsButtonAct::HighlightDown:
+                picker_move_highlight(+1);
+                return true;
+            case AppState::TrimPresetsButtonAct::HighlightUp:
+                picker_move_highlight(-1);
+                return true;
+            case AppState::TrimPresetsButtonAct::Save:
+                trim_presets_save();
+                return true;
+            case AppState::TrimPresetsButtonAct::Overwrite:
+                trim_presets_overwrite();
+                return true;
+            case AppState::TrimPresetsButtonAct::Delete:
+                trim_presets_delete();
+                return true;
+            case AppState::TrimPresetsButtonAct::Close:
+                close_picker();
+                return true;
+            case AppState::TrimPresetsButtonAct::None:
+                return false;
+        }
+        return false;
+    }
     if (app.picker.active) {
         if (app.folder_overlay.owner ==
             AppState::FolderOverlay::Owner::ValueList)
@@ -4902,8 +4947,8 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // edge that can tell a click from a drag, and a second press has nothing
 // left to mean.
 //
-// ONE PRESS ROUTER, FOUR CONTENTS. The claim below stands ABOVE the two mode
-// veils (the player's and the picker's, the picker's serving all three of
+// ONE PRESS ROUTER, FIVE CONTENTS. The claim below stands ABOVE the two mode
+// veils (the player's and the picker's, the picker's serving all four of
 // its contents), each of which admits exactly the band and its own modal row, and
 // BELOW the prompt gate, which outranks every surface as it always has. What
 // the OPEN means is the owner's, and the two forks below are the whole of it
@@ -4923,6 +4968,7 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
         case AppState::FolderOverlay::Owner::ProjectPicker:
         case AppState::FolderOverlay::Owner::SettingsPage:
         case AppState::FolderOverlay::Owner::ValueList:
+        case AppState::FolderOverlay::Owner::TrimPresets:
             picker_set_highlight(index);
             return;
     }
@@ -4936,7 +4982,9 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // or the row of a key with a value list swaps that list in; under the value
 // list (2026-10-25, four keys more 2026-10-28 night) the row's value is
 // committed to the listed key and the settings page returns, seated on that
-// key's row — one body per content, which the click and Enter both reach.
+// key's row; under the trim presets list (2026-10-28 night) the row's preset
+// becomes the active tab's trim, the list standing — one body per content,
+// which the click and Enter both reach.
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -4952,6 +5000,9 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
             return;
         case AppState::FolderOverlay::Owner::ValueList:
             value_list_commit(index);
+            return;
+        case AppState::FolderOverlay::Owner::TrimPresets:
+            trim_presets_apply(index);
             return;
     }
 }
@@ -8283,13 +8334,14 @@ void GuiInputHandler::finish_chrome_press_release(
     // body while one stands — and neither does THE RENDER PLAYER's or THE
     // PICKER's, whose release blocks return above this call the same way; the
     // term below is the editor OPENED MID-HOLD's, and any overlay opened
-    // mid-hold (bare `l`, Ctrl+O, bare `;` or `'` typed under a held button)
+    // mid-hold (bare `l`, Ctrl+O, bare `;`, bare `t` or `'` typed under a held button)
     // takes the same refusal through it — and so does THE PROGRESS MODAL
     // (2026-10-14), a batch's render chord typed under a held button.
     // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
     // for Play Renders under the player, 2026-10-25 for Open Project under the
     // project picker, 2026-10-28 for Settings under the settings page and the
-    // value list it swaps in — the tag's answer,
+    // value list it swaps in, that night for Trim Presets under its list —
+    // the tag's answer,
     // is_folder_overlay_opener): that button, lit under its overlay, is the
     // one roster arm the overlay's veil admits and its lift is the overlay's
     // close; any other arm is the mid-hold case above and stays refused.

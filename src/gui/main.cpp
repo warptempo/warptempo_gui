@@ -732,11 +732,11 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the ICON row, at the window's top on both devices since
 // 2026-10-24 (the app's caption, lane 0 from 2026-10-05, removed: labwc
-// draws the laptop's title bar outside the surface), the logo lane over its keys (the twenty-nine
+// draws the laptop's title bar outside the surface), the logo lane over its keys (the thirty
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
-// count's authority; twenty-five stand outside the `h` view and eighteen
-// inside it, re-counted 2026-10-28 with the NOISE lamp), the toolbar band. Lane 1 is the
+// count's authority; twenty-six stand outside the `h` view and eighteen
+// inside it, re-counted 2026-10-28 night with the Trim Presets key), the toolbar band. Lane 1 is the
 // TRIM lane (Cool Edit's view bar: the span and its two ends, every trim
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
@@ -2841,6 +2841,26 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                  app.modal_dialog.buttons) {
                 if (b.enabled != score_viewer_button_enabled(
                                      app, playback, b.score_act)) {
+                    viewport.invalidate_modal_dialog_area();
+                    break;
+                }
+            }
+        }
+
+        // THE TRIM PRESETS LIST'S ROW, the same comparator (2026-10-28
+        // night): its faces (trim_presets_button_enabled) read the highlight
+        // and the active tab's trim, both moved by the list's own acts, which
+        // damage the row — so this holds the as-painted bits against the
+        // live predicate for the edges a clipped frame carried, as the
+        // player's and the score viewer's rows are held.
+        if (app.picker.active && app.modal_dialog.valid &&
+            app.folder_overlay.owner ==
+                AppState::FolderOverlay::Owner::TrimPresets &&
+            app.modal_dialog.owner == AppState::ModalDialogOwner::Picker &&
+            app.modal_dialog.session == app.picker.session) {
+            for (const AppState::ModalDialogButton& b :
+                 app.modal_dialog.buttons) {
+                if (b.enabled != trim_presets_button_enabled(app, b.trim_act)) {
                     viewport.invalidate_modal_dialog_area();
                     break;
                 }

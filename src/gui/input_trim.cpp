@@ -60,6 +60,10 @@
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
 //     because a clamp is only meaningful where a bound is being pushed.
+//   THE TRIM PRESETS LIST'S APPLY HAS NO CLAMP EITHER (2026-10-28 night): it
+//     writes a stored pair whole, and its file's reader admits only a pair
+//     inside the walls with begin < end strictly (trim_presets_file.h), so
+//     the pair it writes is one a resting trim can hold.
 //   THE SWEEP HAS NO PARTNER TO CLAMP AT — it writes BOTH bounds from one
 //     anchor and one moving column — and needs none: it authors ANY span its
 //     two ends describe, down to nothing at all, and a COINCIDENT release
@@ -93,12 +97,18 @@
 //     uniformity: a typed commit is a commit, and the editor's own surface is
 //     the bottom row's modal, not the waveform. The INACTIVE-band arm parks nothing:
 //     it writes a PARKED pair, not the live window;
+//   * THE TRIM PRESETS LIST's APPLY (architect 2026-10-28 night,
+//     GuiInputHandler::trim_presets_apply, input_key_dispatch.cpp): a row's
+//     tap or Enter writes BOTH bounds of the active tab's live trim from the
+//     preset at once and runs the tail once, with the setter's deselect, the
+//     list standing over the waveform as the typed road's editor does; the
+//     pair the tab already holds is its no-op, nothing written;
 //   * the CROSSED / COINCIDENT RESETS, with no arm of their own — a reset IS a
 //     trim write, to the full window, so reading the committed begin parks the
 //     playhead at frame 0 by construction;
 //   * `Ctrl+Shift+0`, the maximizer (handle_trim_clear_both), inside its already-full
 //     identity guard, so a refused maximize moves nothing.
-// The first five reach it through the shared commit tail (commit_trim_mutation);
+// The first six reach it through the shared commit tail (commit_trim_mutation);
 // Ctrl+Shift+0, which is a non-caller of that tail by design, calls the park itself.
 // EVERY REFUSAL STAYS A REFUSAL: the strictly-inside consumed no-op and
 // Ctrl+Shift+0's identity guard both return above the park, so nothing moves. The
@@ -292,7 +302,8 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // drag, the sweep, the bridge and the typed routes all reach the whole-song
 // reset here rather than each spelling an escape of its own.
 // Every trim commit site — the SWEEP's release, the endcap/bridge drag release,
-// the bound-set click and the settings-editor `trim_*=` commit — calls this
+// the bound-set click, the settings-editor `trim_*=` commit and the trim
+// presets list's apply (whose preset pair is never crossed) — calls this
 // after its mutation and before its invalidations, so the repaint shows the
 // reset state. (The sweep took the retired set-from-region act's place in this
 // list on 2026-08-18; the per-route inventory is at the head of this file.)

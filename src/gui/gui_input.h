@@ -678,7 +678,8 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 5..9;
-// Backspace, and every letter the ladder never tests (A, E, T, X, Y — W
+// Backspace, and every letter the ladder never tests (A, E, X, Y — T
+// left the class 2026-10-28 night for the Trim Presets list's opener; W
 // left the class 2026-10-28 for the NOISE lamp's toggle; E
 // left the class 2026-10-10 for Alt+E, the Edit title's access key, and came
 // BACK 2026-10-21 with the menu row's removal; Y
@@ -806,6 +807,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // standing overlay its router consumes it (the inherited rule). Every
         // modified `w` binds nothing.
         case GuiKeys::W: return bare;
+        // BARE `t` OPENS THE TRIM PRESETS LIST (architect 2026-10-28 night,
+        // the TRIM key's chord; GuiInputHandler::open_trim_presets), in both
+        // modes: the `h` view's allowlist refuses it there (its bound
+        // refusal), and under the standing list
+        // the picker's router closes on it (route_picker_key, ranked above
+        // this predicate's every reader). Every modified `t` binds nothing.
+        case GuiKeys::T: return bare;
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven
@@ -1119,6 +1127,26 @@ static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::W,
                                   GuiInputState{true, true, true}, false),
               "`w` binds bare only — the NOISE lamp — and none of the "
+              "seven modifier combinations spells anything");
+// `t` binds bare only — the Trim Presets list (2026-10-28 night) — in both
+// modes, and no modifier spells anything on it.
+static_assert(chord_is_bound(GuiKeys::T, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::T, GuiInputState{}, true) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{true, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{false, true, true}, false) &&
+                  !chord_is_bound(GuiKeys::T,
+                                  GuiInputState{true, true, true}, false),
+              "`t` binds bare only — the Trim Presets list — and none of the "
               "seven modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
 // Ctrl+Alt Revert — and no shifted spelling of any of them. (Open

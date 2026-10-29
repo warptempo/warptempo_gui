@@ -18,6 +18,7 @@
 #include "score_audio.h"     // the score's soundtrack (AppState::score_audio)
 #include "score_page_worker.h"  // the page decoder (ScoreViewer::decoder)
 #include "score_pages.h"     // the score folder's table (AppState::score)
+#include "trim_presets_file.h"  // the trim presets list (AppState::FolderOverlay)
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
@@ -2054,8 +2055,8 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (50 chord
-// rows = 50 = kRedesignButtonCount since 2026-10-28, the count's own
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 (51 chord
+// rows = 51 = kRedesignButtonCount since 2026-10-28 night, the count's own
 // statement below): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -2096,7 +2097,8 @@ enum class RedesignButton {
     // left for the bottom row's walk group 2026-09-29), the
     // lamps behind them (Follow, the middle one, was out
     // for the hours of 2026-09-23), the last of which arrived
-    // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
+    // from the toolbar group later on 2026-09-04, and THE TRIM PRESETS KEY
+    // closing it since 2026-10-28 night — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
     // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
@@ -2310,6 +2312,22 @@ enum class RedesignButton {
     // `f`, through the derived partition; it does NOT grey on a locked tab or
     // under the grid-iterations lock, bare `f` being navigation.
     IconFollow,
+    // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's TAIL,
+    // directly after Follow and ahead of the iteration group (no new
+    // separator: the iteration group's stays BPM's): BARE `t`, wearing TRIM,
+    // opens THE TRIM PRESETS LIST — the piece's named trim windows, the
+    // folder overlay's fifth content (folder_overlay.h; the file
+    // trim_presets_file.h). IT IS AN OVERLAY'S OPENER (the three-classes
+    // rule): lit while the list stands and its press then CLOSES it
+    // (is_folder_overlay_opener), the one roster key the list leaves live.
+    // TRIM IS BAND (input_trim.cpp's head), so it stays LIVE on a locked tab
+    // and under the grid-iterations lock — bare `t` on the read-only
+    // allowlist, which the iteration gate inherits (iteration_lock_key_blocked
+    // falls through to it, as it does for Ctrl+Shift+0, the trim family's
+    // maximizer) — and it greys in the `h` view through the derived
+    // partition, bare `t` being on no allowlist of that mode (hidden there
+    // with Follow, history_mode_hides_button). No modifier, no repeat.
+    IconTrimPresets,
     // (The Center on next marker lamp on bare `n` stood here from 2026-09-04
     // to 2026-09-13, when the Tab walk's framing became a function of the zoom
     // at the landing, and the lamp, its chord and this box were deleted; the
@@ -3140,20 +3158,21 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-28):
-// THIRTY-ONE in row 4's enum block and NINETEEN in the bottom row's — 50
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-28
+// night): THIRTY-TWO in row 4's enum block and NINETEEN in the bottom row's — 51
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
 // moving up to the band 2026-10-25; Toggle Session History and Toggle
 // Cumulative returned 2026-10-26, and the Score key came the same day; Zoom
-// In and Zoom Out returned 2026-10-27; the NOISE lamp came 2026-10-28).
-// PAINTED, the split is 29 + 21: HistoryOlder and HistoryNewer, enumerated
+// In and Zoom Out returned 2026-10-27; the NOISE lamp came 2026-10-28 and
+// the Trim Presets key that night).
+// PAINTED, the split is 30 + 21: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE carries a
 // chord in kToolbarChords, which the chord table's own static_assert checks.
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 50;
+inline constexpr int kRedesignButtonCount = 51;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3290,7 +3309,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // THE GROUPS, in the left walk's order: OPEN PROJECT AND SAVE, then UNDO,
 // REDO, COPY PHASE RESETS (since 2026-10-25) AND RENDER (the group the
 // history stand-ins replace, Revert and Load in Place), then the zoom group
-// (Zoom In, Zoom Out, Zoom to Fit, the magnification lamp, Follow), the
+// (Zoom In, Zoom Out, Zoom to Fit, the magnification lamp, Follow, the Trim
+// Presets key since 2026-10-28 night), the
 // iteration group (the BPM opener, grid iterations, Flatten —
 // the group the walk lamp and Cumulative replace, since 2026-10-26 again)
 // and the render-entry group (Play Renders .. the NOISE lamp). The right
@@ -3723,6 +3743,20 @@ enum class DialogTrigger {
     // Cancel and only OK itself — a press, or a Tab onto it and Enter —
     // confirms.
     SCORE_RESET_CONFIRM,
+    // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28 night,
+    // the render player's delete's shape): "Delete '<name>'?" with Delete /
+    // Cancel, raised by the list's Delete key and the Delete key on the
+    // highlighted preset, and "Overwrite '<name>' with the current trim?"
+    // with Overwrite / Cancel, raised by its Overwrite key — the subject
+    // parked at AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
+    // LIST as the player's stands over the player, and each is RAISED WITH
+    // CANCEL FOCUSED (PromptInitialFocus::LastButton): trim has no undo, so a
+    // bare Enter answers Cancel and only the answer's own press or its
+    // letter acts. The answer runs the act and the list stays, re-listed
+    // (GuiInputHandler::confirm_trim_preset_delete /
+    // confirm_trim_preset_overwrite, input_key_dispatch.cpp).
+    TRIM_PRESET_DELETE_CONFIRM,
+    TRIM_PRESET_OVERWRITE_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE PROMPT STANDS IN
@@ -3846,7 +3880,10 @@ enum class DialogTrigger {
 //                 the three-way prompts — the unsaved-work prompt and its
 //                 save-failed rung (Save / Discard / Cancel, Retry / Discard
 //                 / Cancel) — by the render player's Delete (its act destroys
-//                 files, DialogTrigger::DELETE_FOLDER_CONFIRM) and by THE
+//                 files, DialogTrigger::DELETE_FOLDER_CONFIRM), by the trim
+//                 presets list's Delete and Overwrite (2026-10-28 night:
+//                 trim has no undo, TRIM_PRESET_DELETE_CONFIRM and
+//                 TRIM_PRESET_OVERWRITE_CONFIRM) and by THE
 //                 PULL CONFIRMATION (OK / Cancel since 2026-10-19, whose OK
 //                 discards the session). The three-ways and the pull
 //                 interpose a question the user did not raise — the pull's
@@ -3895,11 +3932,15 @@ inline constexpr PromptAnswer kPromptOkCancel[] = {
     {'o', "OK", -1}, {'\x1b', "Cancel", -1}};
 inline constexpr PromptAnswer kPromptDeleteCancel[] = {
     {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
+// THE TRIM PRESET'S OVERWRITE (architect 2026-10-28 night): its answer is the
+// act's own word, its letter O (TRIM_PRESET_OVERWRITE_CONFIRM).
+inline constexpr PromptAnswer kPromptOverwriteCancel[] = {
+    {'o', "Overwrite", 0}, {'\x1b', "Cancel", -1}};
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
 // walks it. A table a raise passes must be listed here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
     kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
-    kPromptOkCancel, kPromptDeleteCancel};
+    kPromptOkCancel, kPromptDeleteCancel, kPromptOverwriteCancel};
 // A TABLE IS WELL FORMED when every dispatch char is distinct, a marked
 // letter lies inside its word and IS its answer's key (folded, access_key_of),
 // no two marked letters coincide, and the last answer is the Esc one.
@@ -6250,12 +6291,29 @@ struct AppState {
         None, PrevPage, NextPage, SkipBack, PlayPause, SkipForward, Reset,
         SetStart, SetEnd, Close
     };
+    // THE TRIM PRESETS LIST'S BUTTONS (architect 2026-10-28 night, THE
+    // PLAYER'S SHAPE, his word: "we would be breaking symmetry if we did it
+    // differently"), its dispatch vocabulary beside the player's and the
+    // score viewer's, in the row's order: THE HIGHLIGHT PAIR at the left —
+    // the player's two keys, DOWN then UP, their legends and words the
+    // player's (render_player_button_legend, render_player_button_hint) and
+    // their act the band walk alone, no apply — then FOUR WORD BUTTONS flush
+    // right with the dialogs' underlined access keys, SAVE, OVERWRITE, DELETE
+    // and CLOSE (the Close word kModalCloseLabel's rule: the list asks
+    // nothing, an act returns to it, only the opener and Close leave). No
+    // Apply: a row's tap and Enter are the act. The acts are the input
+    // handler's (trim_presets_save, trim_presets_overwrite,
+    // trim_presets_delete, close_picker); the faces trim_presets_button_enabled's.
+    enum class TrimPresetsButtonAct {
+        None, HighlightDown, HighlightUp, Save, Overwrite, Delete, Close
+    };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
         ScoreButtonAct  score_act  = ScoreButtonAct::None;   // the score viewer's
+        TrimPresetsButtonAct trim_act = TrimPresetsButtonAct::None;  // the trim list's
         // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
         // transport keys are their own class), published per frame exactly
         // as the rects are, from render_player_button_enabled (whose
@@ -6267,9 +6325,12 @@ struct AppState {
         // act answers for itself. The per-tick comparator (main.cpp) holds
         // it against the live predicate and repaints the row on drift. THE
         // SCORE VIEWER'S ROW publishes it the same way, from
-        // score_viewer_button_enabled, under the same comparator. Every
-        // other owner's builder leaves it true — a prompt's, a picker's and
-        // an editor's buttons are always live while their dialog stands.
+        // score_viewer_button_enabled, under the same comparator, and so
+        // does THE TRIM PRESETS LIST'S (2026-10-28 night, the picker's one
+        // content with a stateful row), from trim_presets_button_enabled.
+        // Every other owner's builder leaves it true — a prompt's, the other
+        // picker contents' and an editor's buttons are always live while
+        // their dialog stands.
         bool        enabled      = true;
         std::string tooltip;            // the word alone; never empty
         // THE ACCESS KEY AS PAINTED (architect 2026-10-10, Windows strict;
@@ -6337,7 +6398,9 @@ struct AppState {
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
     // THE AUTHORITATIVE MEMBERSHIP of the TWO DIALOG-HOSTED editors (the
-    // settings editor and the bpm bracket editor — the commit-title editor
+    // settings editor — whose buffer carries the trim preset's name editor
+    // too since 2026-10-28 night, Kind::TrimPresetName — and the bpm bracket
+    // editor — the commit-title editor
     // was the third from 2026-08-07 until its retirement 2026-10-10;
     // the top-strip flag
     // editor is deliberately not one of them in ANY of its non-bracket
@@ -8299,8 +8362,10 @@ struct AppState {
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
     // pair in one stroke under no width rule at all; it replaced the
     // set-from-region arm when the region became the trim), the
-    // Ctrl+Shift+0 MAXIMIZER (writes the full window), and the settings editor's
-    // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
+    // Ctrl+Shift+0 MAXIMIZER (writes the full window), the settings editor's
+    // `:tab_X_trim_*=` commits and, since 2026-10-28 night, THE TRIM PRESETS
+    // LIST's apply (both bounds at once; the membership at input_trim.cpp's
+    // head) — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full
     // ruling is at the TrimState store.
     TrimState trim;
@@ -8331,6 +8396,15 @@ struct AppState {
     // MODAL (2026-08-13); separate from top_flag_editor so the two paint
     // regions stay independent (the in-practice mutual exclusion comes from the
     // flag editor swallowing all keys while active).
+    // THE DIALOG LINE EDITOR'S ONE BUFFER, TWO KINDS since 2026-10-28 night:
+    // Kind::SettingsAssignment, the settings editor's line, and
+    // Kind::TrimPresetName, the trim preset's name (the trim presets list's
+    // Save, GuiInputHandler::open_trim_preset_name_editor) — the settings
+    // editor's shape and every road it rides (the paint, the blink, the
+    // caret's click, the on-screen keyboard, the modal gate), the kind
+    // forking the keys' route alone (handle_settings_editor_key). The two
+    // never stand together: each opens on a closed picker and the buffer is
+    // one.
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
     // (THE SETTINGS EDITOR AS A CHOICE EDITOR — AppState::SettingsChoice,
@@ -8341,7 +8415,7 @@ struct AppState {
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
     // allowing free-form typing there; the preview doesn't use a text field
-    // and it works fine". THREE CONTENTS: the OPEN PROJECT PICKER (the Open
+    // and it works fine". FOUR CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
     // 2026-10-28: the Settings button and bare `;`; the thirteen keys the
@@ -8353,11 +8427,15 @@ struct AppState {
     // `noise`, `noise_level` and `noise_crossfade_s`; reached through the
     // page's row for its key alone; the key's values as rows, the open act
     // the value's commit through the typed line's own body, then the return
-    // to the page, as its Cancel and Esc return — a sub-page of the page).
+    // to the page, as its Cancel and Esc return — a sub-page of the page);
+    // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
+    // and bare `t`; the piece's named trim windows, a row's tap applying its
+    // pair to the active tab's trim with the list standing, the player's
+    // controls row — the highlight pair, Save, Overwrite, Delete, Close).
     // The struct keeps its shape rather
     // than folding into the overlay's tag, the two saying different things:
     // this one that A PICKER STANDS (the modal owner), the tag WHOSE ROWS the
-    // band carries (ProjectPicker, SettingsPage or ValueList). It is the
+    // band carries (ProjectPicker, SettingsPage, ValueList or TrimPresets). It is the
     // FOURTH ModalDialogOwner (Picker), never an
     // editor: no buffer, no caret, no keyboard-modal gate — the router
     // GuiInputHandler::route_picker_key is its whole plastic vocabulary, and
@@ -8366,7 +8444,9 @@ struct AppState {
     // stays on the right", and the one button sits flush right), its word
     // what leaving does — Cancel under the project picker and the value
     // list, Close under the settings page (kModalCancelLabel's rule,
-    // paint_handler.cpp, architect 2026-10-28 night). The opener
+    // paint_handler.cpp, architect 2026-10-28 night); THE TRIM PRESETS
+    // LIST'S ROW IS THE PLAYER'S SHAPE instead, the highlight pair and four
+    // words, its last Close (TrimPresetsButtonAct). The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — the render player's arm is RETIRED
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
@@ -8375,9 +8455,10 @@ struct AppState {
     // GuiInputHandler::close_picker (Esc and the one button, the opener's
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
-    // value list — Ctrl+Q's road, the same-project no-op and the page's row
+    // value list, `t` under the trim presets list — Ctrl+Q's road, the
+    // same-project no-op, Save's name editor ahead of its open and the page's row
     // open ahead of its editor all pass through it — the editor's OK and
-    // Cancel reopening the page, handle_settings_editor_key — but under a
+    // Cancel reopening the page or the trim list, handle_settings_editor_key — but under a
     // value list Esc and Cancel return to the page, as its commit does,
     // GuiInputHandler::return_to_settings_page; a reopen
     // ends the session with the picker standing, the whole AppState going
@@ -8390,7 +8471,9 @@ struct AppState {
     //              (text_editor::next_session_id), minted at every open.
     // It authors nothing by itself: no undo, no dirty, legal on a read-only
     // tab (the preset pick writes a device key, never the piece, and the
-    // page's rows open the editor, whose commit arms carry the lock per key).
+    // page's rows open the editor, whose commit arms carry the lock per key;
+    // the trim presets list writes the trim, which is band, and its own
+    // device-local file, never the piece).
     struct Picker {
         bool     active  = false;
         uint64_t session = 0;
@@ -8885,7 +8968,7 @@ struct AppState {
     // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. FOUR CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // fills it. FIVE CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
     // (architect 2026-10-28), with the settings editor's thirteen keys as
@@ -8895,7 +8978,9 @@ struct AppState {
     // quicker, because I don't like having to type it in every time" —
     // "brief it as a scrolling list", "Yes"), and since 2026-10-28 night
     // `true_colors`'s two words, the folders under `noise/`, the 31 levels
-    // and the 30 crossfades — the page's row for that key's content. (The AV Sync Stats panel's text lines stood
+    // and the 30 crossfades — the page's row for that key's content; and
+    // since 2026-10-28 night THE TRIM PRESETS LIST, the piece's named trim
+    // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's. (The AV Sync Stats panel's text lines stood
     // 2026-09-03..30 and were deleted with the panel; the `h` view's history
     // picker stood for one day, retired 2026-08-29: "overengineered; I don't
     // really need it", the view's `'` raising its confirmation on the viewed
@@ -8909,8 +8994,9 @@ struct AppState {
     //                 None at its close; the picker writes ProjectPicker or
     //                 SettingsPage at its open and ValueList at the page's
     //                 row for a listed key, SettingsPage again at the
-    //                 list's return (the three picker contents, one
-    //                 AppState::Picker each time) and None at every close
+    //                 list's return, or TrimPresets at the TRIM key's open
+    //                 and the name editor's return (the four picker
+    //                 contents, one AppState::Picker each time) and None at every close
     //                 path (all of them through close_picker; a reopen
     //                 ends the session with it standing, and the AppState
     //                 holding it dies with run_project's frame). ONE ROW
@@ -8925,7 +9011,10 @@ struct AppState {
     //                 Cancel reopen the page on that row) or swaps in the
     //                 key's value list (settings_page_commit), and under the
     //                 value list commits the row's value to the listed key,
-    //                 then returns to the page (value_list_commit); the lift's
+    //                 then returns to the page (value_list_commit), and
+    //                 under the trim presets list applies the row's preset
+    //                 to the active tab's trim, the list standing
+    //                 (trim_presets_apply); the lift's
     //                 highlight is every owner's alike (a picker's band IS
     //                 its whole state — there is no field to feed), an inert
     //                 row taking neither half (folder_overlay::row_is_inert);
@@ -8962,7 +9051,10 @@ struct AppState {
     //                 seats it on the CURRENT project's row at the open, the
     //                 settings page on its FIRST KEY ROW (and, at a value
     //                 list's return, on that key's row), the value list
-    //                 on the LIVE value's (the listed device key's).
+    //                 on the LIVE value's (the listed device key's), the
+    //                 trim presets list on the preset whose pair is the
+    //                 active tab's trim, else on row 0 (at the name
+    //                 editor's return, on the named row).
     //                 IT NEVER STANDS ON AN INERT ROW (folder_overlay.h's
     //                 set_highlight and its walk);
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
@@ -9018,7 +9110,9 @@ struct AppState {
     // two headings and its thirteen key lines, build_settings_page_rows);
     // the value list Plain rows alone (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits beside the `name` it
-    // shows. A Plain or Group row's `path` and `entry` stay empty, and
+    // shows; the trim presets list Plain rows alone
+    // (build_trim_presets_rows), row i the overlay's preset i, its text the
+    // name and the span. A Plain or Group row's `path` and `entry` stay empty, and
     // `value` is set on a value list's rows alone.
     struct FolderOverlayRow {
         enum class Kind { Folder, Wav, Plain, Group };
@@ -9038,19 +9132,30 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
-        // THE FOUR CONTENTS. The tag IS the standing predicate
+        // THE FIVE CONTENTS. The tag IS the standing predicate
         // (folder_overlay_stands, below), and it is the one thing the open act
-        // forks on — and, between the three picker contents, the router's
-        // opener arms and the opener key's lit face (is_folder_overlay_opener).
+        // forks on — and, between the four picker contents, the router's
+        // opener arms, the controls row and the opener key's lit face
+        // (is_folder_overlay_opener).
         // Everything else about the panel — the band, the scroll, the walk —
         // is the widget's and knows nothing about which content fills it.
         enum class Owner { None, Player, ProjectPicker, SettingsPage,
-                           ValueList };
+                           ValueList, TrimPresets };
         Owner              owner         = Owner::None;
         // THE KEY A VALUE LIST LISTS (kSettingsValueListKeys,
         // settings_editor.h), which its commit routes the row's value to;
         // empty under every other owner.
         std::string        value_key;
+        // THE TRIM PRESETS THE LIST SHOWS (architect 2026-10-28 night), in
+        // the file's order as read at the list's open and as each act leaves
+        // them (trim_presets_file.h), row i preset i; empty under every other
+        // owner. Every change writes the whole vector to the file.
+        std::vector<GuiTrimPreset> trim_presets;
+        // THE PRESET A STANDING CONFIRMATION ASKS ABOUT — its row, parked at
+        // the raise of Delete's or Overwrite's question and read by the
+        // answer (TRIM_PRESET_DELETE_CONFIRM, TRIM_PRESET_OVERWRITE_CONFIRM);
+        // -1 with no question standing.
+        int                trim_pending  = -1;
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
         int                highlight_row = -1;
@@ -9494,7 +9599,8 @@ inline bool folder_overlay_stands(const AppState& a) {
 // the project picker, SETTINGS under the settings page AND under the value
 // list (architect 2026-10-28: the page's row for a listed key swaps that
 // key's value list in under the same key, so the key that opened the page
-// closes either). It is the one roster key a standing overlay leaves live and lit
+// closes either), TRIM PRESETS under the trim presets list (2026-10-28
+// night). It is the one roster key a standing overlay leaves live and lit
 // (redesign_button_enabled's overlay arm, redesign_button_selected) and the
 // one roster arm its veil lifts (finish_chrome_press_release's head); false
 // with nothing standing.
@@ -9509,6 +9615,8 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
         case AppState::FolderOverlay::Owner::SettingsPage:
         case AppState::FolderOverlay::Owner::ValueList:
             return b == RedesignButton::IconSettings;
+        case AppState::FolderOverlay::Owner::TrimPresets:
+            return b == RedesignButton::IconTrimPresets;
     }
     return false;
 }
@@ -9991,6 +10099,25 @@ int render_player_highlight_act_row(const AppState& a);
 bool render_player_button_enabled(const AppState& a,
                                   const GuiPlayback& playback,
                                   AppState::PlayerButtonAct act);
+
+// THE TRIM PRESETS LIST'S ROW FACE (architect 2026-10-28 night): may this
+// button's act run now — the truthful-buttons rule on the list's controls
+// row, one arm per act: the HIGHLIGHT PAIR where its walk would move the
+// highlight (folder_overlay::move_highlight_actionable, the player's own
+// answer); SAVE always, while the list stands; OVERWRITE with a highlight
+// whose pair is not the active tab's trim (the no-op a tap leaves behind)
+// and DELETE with a highlight; CLOSE always. Defined beside the list's acts
+// (input_key_dispatch.cpp); Overwrite's and Delete's bodies ask it too, for
+// their roads that are not the painted face (the Delete key's card).
+// ITS READERS are the player's: the plan builder
+// (paint_modal_dialog, publishing the bit as painted) and main.cpp's
+// per-tick comparator, the press, the ring and the dispatch reading the
+// published bit. Its edges are the highlight's and the trim's, both moved by
+// the list's own acts, which damage the row (picker_set_highlight and
+// picker_move_highlight under the list, trim_presets_apply, the re-lists'
+// whole-window damage).
+bool trim_presets_button_enabled(const AppState& a,
+                                 AppState::TrimPresetsButtonAct act);
 
 // IS THERE A FOLDER TO GO UP TO — THE UP WALL'S ONE OWNER (architect
 // 2026-09-01, with the player's move inside `tmp/`): false at the root, which
@@ -15284,11 +15411,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // predicate, input_handler.h). This is the one record of the rule.
     //
     // THE THREE CLASSES (architect 2026-10-25): THE MODALS above; THE
-    // OVERLAYS, the render player and the picker's three contents (the
-    // project picker, the settings page and the value list it swaps in),
-    // which end at a pick, a row's open or a load and also leave on Esc and
-    // on THEIR OPENER KEY — Play Renders, Open Project and Settings (the
-    // page's and the value list's both), lit and live under them (the overlay arm
+    // OVERLAYS, the render player and the picker's four contents (the
+    // project picker, the settings page and the value list it swaps in, and
+    // the trim presets list), which end at a pick, a row's open or a load
+    // and also leave on Esc and
+    // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
+    // page's and the value list's both) and Trim Presets, lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey and the
     // hint dwell suppressed ("overlays don't show hints … the only reason
     // they still show the one button lit is that you can exit by pressing
@@ -15354,7 +15482,9 @@ inline bool redesign_button_enabled(const AppState& a,
     // glass, is Ctrl+Alt+O, which that router answers with Revert
     // (2026-10-25); while the SETTINGS PAGE or the PRESET PICKER it swaps in
     // stands (2026-10-28), Settings stays live and its lift, bare `;`, is
-    // answered by the picker's router with close_picker.
+    // answered by the picker's router with close_picker; while the TRIM
+    // PRESETS LIST stands (2026-10-28 night), Trim Presets stays live and its
+    // lift, bare `t`, is answered the same way.
     // Each key toggles exactly as its chord does and
     // sits lit while its overlay stands (redesign_button_selected). The other
     // overlays' openers stay grey (a press would open one overlay over
@@ -15559,6 +15689,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // is the `h` view's, whose allowlist does not name `f`, and the
         // derived partition above greys it there.
         case RedesignButton::IconFollow:
+            return true;
+        // THE TRIM PRESETS KEY MIRRORS NOTHING (architect 2026-10-28 night):
+        // bare `t` opens the list on any loaded piece, both locks admitting
+        // it (trim is band, input_trim.cpp's head; the read-only allowlist's
+        // is_trim_presets, which the iteration gate inherits), so a locked
+        // tab and a lit Grid Iterations lamp leave it live. Its refusals are
+        // the opener's own, states this face is already grey or veiled in (a
+        // prompt, a standing picker, a load), the `h` view's, whose
+        // allowlist does not name `t` (the derived partition above, which
+        // hides it there), and the overlays', whose arm above answers first —
+        // under the list itself keeping this key live, its press the close.
+        case RedesignButton::IconTrimPresets:
             return true;
         // PLAY RENDERS IGNORES THE LOCK (2026-08-28, when bare `l` became the
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
@@ -16871,17 +17013,19 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // OPEN PROJECT the project picker's (Ctrl+O, whose picker arm is the
         // picker's Cancel, route_picker_key), SETTINGS the settings page's
         // and the value list's it swaps in (2026-10-28: `;` opens the
-        // page and closes either). So
+        // page and closes either), TRIM PRESETS the trim presets list's
+        // (2026-10-28 night: bare `t` opens and closes it). So
         // the key sits down at the
         // checked depth with its LED lit while its overlay stands — the
         // history opener's face over its view — the one key the overlay
         // leaves live (redesign_button_enabled's overlay arm). The per-tick
         // comparator carries the edge. (All three were momentary, no lamp,
-        // until that day.) The three picker contents share the picker's bit,
+        // until that day.) The four picker contents share the picker's bit,
         // so the tag says whose key is lit (is_folder_overlay_opener).
         case RedesignButton::IconListen:
         case RedesignButton::OpenProject:
         case RedesignButton::IconSettings:
+        case RedesignButton::IconTrimPresets:
             return is_folder_overlay_opener(a, b);
         // THE SCORE KEY, the same pattern over the score viewer's own bit
         // (architect 2026-10-26): lit while the viewer stands, its press the
@@ -17709,6 +17853,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and has no shifted twin; the name is the toggle's.
         case RedesignButton::IconFollow:
             return {"Toggle Follow (F)", nullptr};
+        // THE TRIM PRESETS (architect 2026-10-28 night), one line: an
+        // overlay's opener NAMED, as Settings and Score are — the press under
+        // the standing list being the same key's close — and bare `t`
+        // admits no modifier.
+        case RedesignButton::IconTrimPresets:
+            return {"Trim Presets (T)", nullptr};
         // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
         // menu), one line each: neither chord has a shifted twin, so neither
         // carries a second line. THESE TWO STRINGS ARE THE VOCABULARY'S OWNER
@@ -18153,6 +18303,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:           return "FIT";
         case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
         case RedesignButton::IconFollow:                return "FOLLOW";
+        case RedesignButton::IconTrimPresets:           return "TRIM";
         case RedesignButton::IconBpm:                   return "BPM";
         case RedesignButton::IconIter:                  return "GRID";
         case RedesignButton::IconFlatten:               return "FLATTEN";

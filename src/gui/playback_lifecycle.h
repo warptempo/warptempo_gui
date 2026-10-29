@@ -256,8 +256,9 @@ struct GuiPlaybackLifecycle {
     // instead of an absence:
     //   * THE MODAL FAMILY'S SURFACES — the two dialog editors, the prompts
     //     and the progress modal — and THE TWO OVERLAYS, the picker (all
-    //     three of its contents, the project picker, the settings page and
-    //     the value list it swaps in) and the
+    //     four of its contents, the project picker, the settings page and
+    //     the value list it swaps in, and the trim presets list, whose name
+    //     editor's open finds playback already stopped) and the
     //     render player (whose own transport begins where the project's
     //     audition ends), and THE SCORE VIEWER (2026-10-26, whose own
     //     soundtrack, since 2026-10-26 night, likewise begins where the

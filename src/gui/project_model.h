@@ -54,8 +54,9 @@
 // title's wav and a parking spot for nothing else.
 // BOTH OUTPUT FOLDERS ARE INVISIBLE TO THE SOURCE RULE BY
 // CONSTRUCTION: the walk below reads regular files only, so a directory —
-// `render/`, `tmp/`, `peaks/`, `score/` — can never be a candidate and neither
-// folder needs an exclusion rule of its own.
+// `render/`, `tmp/`, `peaks/`, `score/`, `trim/` (the trim presets' file,
+// trim_presets_file.h, 2026-10-28 night) — can never be a candidate and
+// neither folder needs an exclusion rule of its own.
 //
 // A PROJECT'S NAME MUST BE ONE THE DEVICE CONFIG CAN CARRY. Validity is folder
 // SHAPE (above) AND a config-nameable NAME: every successful open writes the

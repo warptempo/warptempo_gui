@@ -1341,8 +1341,8 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
 // Edit from the toolbar down, the same under every chrome; program_spec.h's
 // head, where every length below is authored and its source named). The
-// roster's twenty-nine view/mode/action buttons stand in it (re-counted
-// 2026-10-28, the NOISE lamp) — the
+// roster's thirty view/mode/action buttons stand in it (re-counted
+// 2026-10-28 night, the Trim Presets key) — the
 // kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
 // stand-in tables are the count's one authority (paint_handler.cpp);
 // THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader

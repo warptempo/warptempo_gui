@@ -22,6 +22,9 @@
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
+#include "score_viewer_file.h"  // score_viewer_project_folder (the trim presets' file)
+#include "time_format.h"      // format_timestamp (the trim presets' rows)
+#include "trim_presets_file.h"
 #include "text_editor.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain (the diff-flag
                                   // cycle's playhead-anchored seed)
@@ -403,6 +406,15 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // 2026-10-24) a spelling change here. The trim
     // region toggle that was admitted beside it is deleted (2026-09-22).
     const bool is_trim_maximize = is_trim_maximize_key(key, mods);
+    // BARE `t`, THE TRIM PRESETS LIST (architect 2026-10-28 night): the
+    // list's acts write the TRIM, which is band (the header's 2026-08-07
+    // ruling, the maximizer's admission above), and the list's own
+    // device-local file, never the piece — so the opener is admitted on a
+    // locked tab and, the iteration gate falling through to this list, under
+    // grid iterations, the trim family's answer there too. Bare-exact, the
+    // dispatch arm's own spelling.
+    const bool is_trim_presets =
+        (key == GuiKeys::T && !ctrl && !shift && !alt);
     // ADD TO SELECTION (architect 2026-08-18), and it is admitted on the
     // header's own standard rather than a new one: the chord flips a session
     // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
@@ -540,7 +552,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
              is_save || is_publish || is_render || is_render_misc ||
-             is_trim_maximize ||
+             is_trim_maximize || is_trim_presets ||
              is_add_to_selection ||
              is_play_renders ||
              is_load_in_place_player ||
@@ -4638,7 +4650,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // nothing but where the band is — and the ring's Tab repeats as every
     // ring's does; Enter, Space and Esc are one-shot, the open act and the
     // close being acts and the button press being the modal's own
-    // press-and-hold. A prompt over the picker is the prompt's own answer.
+    // press-and-hold, and so are the trim presets list's access letters and
+    // its Delete key (2026-10-28 night), each an act or a question. A prompt
+    // over the picker is the prompt's own answer.
     if (app.score_viewer.active && !app.prompt.active) {
         // THE SCORE VIEWER (2026-10-26): the ring's walk and the arrows'
         // steps repeat — on the page road the page step, a held arrow
@@ -7031,10 +7045,10 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 
 // -- THE PICKER (the contract is at the declaration) --------------------------
 //
-// Two openers (the project picker's and the settings page's, whose rows for
-// the keys with a value list open that key's value list), three list
-// builders, three open acts, and the machinery the three contents share: the
-// highlight, the close and the key router.
+// Three openers (the project picker's, the settings page's, whose rows for
+// the keys with a value list open that key's value list, and the trim presets
+// list's), four list builders, four open acts, and the machinery the four
+// contents share: the highlight, the close and the key router.
 
 // The Open project picker's opener. Every guard returns without touching
 // playback (a refused open never interrupts a listening session); the shared
@@ -7460,6 +7474,296 @@ void GuiInputHandler::value_list_commit(int index) {
     return_to_settings_page(key);
 }
 
+// -- THE TRIM PRESETS LIST (architect 2026-10-28 night; the contract is at
+//    the declaration) ---------------------------------------------------------
+//
+// The picker's fourth content: the opener, its rows, its open act (the
+// apply), its controls row's three acts, the name editor's commit and the two
+// confirmations' answers. The highlight, the close and the key router are the
+// picker's shared machinery below.
+
+// THE OPENER — bare `t` and the TRIM key's plain press, with no seat name; and
+// THE NAME EDITOR'S RETURN, seated on the name it hands over
+// (handle_settings_editor_key). The project picker's own guards, for its
+// reasons, and the shared modal stop once the open is certain. THE FILE IS
+// READ HERE, at the list's open and nowhere else (trim_presets_file.h's three
+// outcomes against the piece's frame count); the acts keep the overlay's copy
+// and write it whole.
+void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
+    if (app.prompt.active) return;
+    if (picker_active()) return;
+    if (app.loading) return;
+
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.picker.active  = true;
+    app.picker.session = text_editor::next_session_id();
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    ov              = AppState::FolderOverlay{};
+    ov.owner        = AppState::FolderOverlay::Owner::TrimPresets;
+    ov.trim_presets = read_trim_presets_file(
+        score_viewer_project_folder(app), audio.total_frames());
+    // THE SEAT: the named preset (the return), else the preset whose pair is
+    // the active tab's trim — the window on screen named — else row 0.
+    int seat = 0;
+    bool seated = false;
+    for (std::size_t i = 0; i < ov.trim_presets.size() && !seated; ++i) {
+        if (!seat_name.empty() && ov.trim_presets[i].name == seat_name) {
+            seat   = static_cast<int>(i);
+            seated = true;
+        }
+    }
+    for (std::size_t i = 0; i < ov.trim_presets.size() && !seated; ++i) {
+        const GuiTrimPreset& p = ov.trim_presets[i];
+        if (p.begin == app.trim.begin_frame && p.end == app.trim.end_frame) {
+            seat   = static_cast<int>(i);
+            seated = true;
+        }
+    }
+    build_trim_presets_rows(seat);
+    folder_overlay::scroll_row_centered(app, ov.highlight_row);
+    viewport.invalidate_all();
+}
+
+// THE ROWS: one glyph-less Plain row per preset, in the list's order, the
+// text THE NAME AND ITS SPAN, `<name>  <begin> - <end>` — two spaces, an ASCII
+// hyphen between the two times — in row 8's clock's own spelling
+// (format_timestamp over the source's rate, the trim's whole source frames;
+// clock_time_text, paint_handler.cpp). The highlight is seated through the
+// one set_highlight, clamped into the listing, -1 for an empty one.
+void GuiInputHandler::build_trim_presets_rows(int highlight) {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    const int sr = audio.sample_rate();
+    const auto spelled = [sr](int64_t frame) {
+        return format_timestamp(sr > 0 ? static_cast<double>(frame) /
+                                             static_cast<double>(sr)
+                                       : 0.0);
+    };
+    ov.rows.clear();
+    for (const GuiTrimPreset& p : ov.trim_presets) {
+        AppState::FolderOverlayRow row;
+        row.kind = AppState::FolderOverlayRow::Kind::Plain;
+        row.name = p.name + "  " + spelled(p.begin) + " - " + spelled(p.end);
+        ov.rows.push_back(std::move(row));
+    }
+    folder_overlay::clamp_scroll(app);
+    folder_overlay::set_highlight(app, highlight);
+}
+
+// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
+// press-and-lift, whose first half already highlighted it) and Enter on the
+// highlight, one body: THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM and
+// THE LIST STAYS STANDING, the highlight on the row. Both bounds are written
+// and the trim family's one commit tail runs ONCE (commit_trim_mutation),
+// then the setter's deselect — the typed `trim_*=` arm's shape
+// (settings_editor.cpp), setting the pair rather than one bound. NO PLAYBACK
+// STOP OF ITS OWN: the list's open took the modal stop and nothing plays
+// under it. THE PAIR THE TAB ALREADY HOLDS is the store's own no-op, nothing
+// written, the tap still highlighting. The pair is in its walls by the read's
+// own rule (a pair past the source's last frame reads the file malformed),
+// strictly begin < end, so the tail's crossed reset never fires here. The
+// row's faces move with it (Overwrite greys on the applied row), so the
+// controls row is damaged with the highlight's own damage.
+void GuiInputHandler::trim_presets_apply(int index) {
+    if (!app.picker.active) return;
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.owner != AppState::FolderOverlay::Owner::TrimPresets) return;
+    const int n = static_cast<int>(ov.trim_presets.size());
+    if (index < 0 || index >= n) return;
+    picker_set_highlight(index);
+    const GuiTrimPreset p = ov.trim_presets[static_cast<std::size_t>(index)];
+    if (app.trim.begin_frame != p.begin || app.trim.end_frame != p.end) {
+        app.trim.begin_frame = p.begin;
+        app.trim.end_frame   = p.end;
+        commit_trim_mutation();
+        selection.clear_selection();
+    }
+    viewport.invalidate_modal_dialog_area();
+}
+
+// SAVE: the list closes and the name editor opens EMPTY (the declaration's
+// contract), the list and the highlighted name kept for the commit and the
+// return. The editor's modal stop is a no-op, playback stopped at the list's
+// open; it is spelled for the opener's shape (GuiSettingsEditor::open's).
+void GuiInputHandler::trim_presets_save() {
+    if (!app.picker.active) return;
+    const AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.owner != AppState::FolderOverlay::Owner::TrimPresets) return;
+    const int h = ov.highlight_row;
+    trim_name_seat_ =
+        h >= 0 && h < static_cast<int>(ov.trim_presets.size())
+            ? ov.trim_presets[static_cast<std::size_t>(h)].name
+            : std::string();
+    trim_name_presets_ = ov.trim_presets;
+    close_picker();
+    playback_lifecycle.stop_playback_for_modal_open();
+    text_editor::enter(app.settings_editor,
+                       /*target=*/0,
+                       /*initial_pending=*/"",
+                       text_editor::Kind::TrimPresetName);
+    // A MODAL OPEN damages the whole window (the settings editor's open
+    // carries the rule).
+    viewport.invalidate_all();
+}
+
+// THE NAME EDITOR'S COMMIT (the declaration's contract). The refusal is the
+// editors' own shape and the settings editor's words' shape — the whole text
+// selected, the editor standing, one composed sentence on stderr and the card.
+void GuiInputHandler::commit_trim_preset_name() {
+    if (!text_editor::is_active(app.settings_editor) ||
+        app.settings_editor.kind != text_editor::Kind::TrimPresetName)
+        return;
+    const std::string name = app.settings_editor.pending;
+    if (const auto why = trim_preset_name_refusal(name, trim_name_presets_)) {
+        text_editor::refuse(app.settings_editor);
+        viewport.invalidate_dialog_editor_box();
+        const std::string refusal = "Preset name rejected: " + *why;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+        return;
+    }
+    trim_name_presets_.push_back(
+        GuiTrimPreset{app.trim.begin_frame, app.trim.end_frame, name});
+    // A WRITE THAT FAILED cards its two clauses (persist_trim_presets) and
+    // the return reads the file as it stands, the new row absent and the
+    // seat the one Save was pressed on.
+    if (persist_trim_presets(trim_name_presets_)) trim_name_seat_ = name;
+    viewport.invalidate_modal_dialog_area();
+    text_editor::deactivate(app.settings_editor);
+}
+
+// OVERWRITE: its question over the list on the highlighted preset (the
+// declaration's contract). The greyed face's road is silent — the button's
+// press never arms and its letter dispatches through the painted bit — so
+// this guard is the face's own predicate, stated for the body's other road.
+void GuiInputHandler::trim_presets_overwrite() {
+    if (!app.picker.active || app.prompt.active) return;
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.owner != AppState::FolderOverlay::Owner::TrimPresets) return;
+    if (!trim_presets_button_enabled(
+            app, AppState::TrimPresetsButtonAct::Overwrite))
+        return;
+    ov.trim_pending = ov.highlight_row;
+    // THE QUESTION NAMES THE PRESET, single-quoted and spelled raw as the
+    // player's delete names its folder: nothing takes an overwrite back.
+    // Overwrite / Cancel, Cancel the Escape sentinel LAST and FOCUSED
+    // (PromptInitialFocus::LastButton), `o` Overwrite's letter.
+    app.prompt.present(
+        "Overwrite '" +
+            ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
+            "' with the current trim?",
+        kPromptOverwriteCancel,
+        DialogTrigger::TRIM_PRESET_OVERWRITE_CONFIRM,
+        PromptInitialFocus::LastButton);
+    viewport.invalidate_all();
+}
+
+// DELETE: the button, its letter and the bare Delete key. With no highlight
+// — an empty list, the button grey — the key cards, the render player's
+// "There is no folder to delete" one surface over.
+void GuiInputHandler::trim_presets_delete() {
+    if (!app.picker.active || app.prompt.active) return;
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.owner != AppState::FolderOverlay::Owner::TrimPresets) return;
+    if (!trim_presets_button_enabled(
+            app, AppState::TrimPresetsButtonAct::Delete)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "There is no preset to delete");
+        return;
+    }
+    ov.trim_pending = ov.highlight_row;
+    // Delete / Cancel, Cancel LAST and FOCUSED, `d` Delete's letter — the
+    // Delete key is no answer here, so the press that raised the question
+    // cannot also answer it (DELETE_FOLDER_CONFIRM's own reasoning).
+    app.prompt.present(
+        "Delete '" +
+            ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
+            "'?",
+        kPromptDeleteCancel,
+        DialogTrigger::TRIM_PRESET_DELETE_CONFIRM,
+        PromptInitialFocus::LastButton);
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::confirm_trim_preset_delete() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    const int index = ov.trim_pending;
+    ov.trim_pending = -1;
+    if (!app.picker.active ||
+        ov.owner != AppState::FolderOverlay::Owner::TrimPresets)
+        return;
+    const int n = static_cast<int>(ov.trim_presets.size());
+    if (index < 0 || index >= n) return;
+    ov.trim_presets.erase(ov.trim_presets.begin() + index);
+    (void)persist_trim_presets(ov.trim_presets);
+    // THE ROW THAT TAKES ITS PLACE: the next one at the same index, the new
+    // last when the last went (the clamp), none when the list empties.
+    build_trim_presets_rows(index);
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::confirm_trim_preset_overwrite() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    const int index = ov.trim_pending;
+    ov.trim_pending = -1;
+    if (!app.picker.active ||
+        ov.owner != AppState::FolderOverlay::Owner::TrimPresets)
+        return;
+    const int n = static_cast<int>(ov.trim_presets.size());
+    if (index < 0 || index >= n) return;
+    GuiTrimPreset& p = ov.trim_presets[static_cast<std::size_t>(index)];
+    p.begin = app.trim.begin_frame;
+    p.end   = app.trim.end_frame;
+    (void)persist_trim_presets(ov.trim_presets);
+    build_trim_presets_rows(index);
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::cancel_trim_preset_confirm() {
+    app.folder_overlay.trim_pending = -1;
+}
+
+bool GuiInputHandler::persist_trim_presets(
+        const std::vector<GuiTrimPreset>& presets) {
+    const auto failure =
+        write_trim_presets_file(score_viewer_project_folder(app), presets);
+    if (failure) {
+        std::fprintf(stderr, "warptempo_gui: %s\n",
+                     failure->diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure->display);
+    }
+    return !failure;
+}
+
+// THE LIST'S ROW FACES (the contract is at the declaration, app_state.h).
+bool trim_presets_button_enabled(const AppState& a,
+                                 AppState::TrimPresetsButtonAct act) {
+    using Act = AppState::TrimPresetsButtonAct;
+    const AppState::FolderOverlay& ov = a.folder_overlay;
+    const int h = ov.highlight_row;
+    const bool seated =
+        h >= 0 && h < static_cast<int>(ov.trim_presets.size());
+    switch (act) {
+        case Act::HighlightDown:
+            return folder_overlay::move_highlight_actionable(a, +1);
+        case Act::HighlightUp:
+            return folder_overlay::move_highlight_actionable(a, -1);
+        case Act::Save:
+        case Act::Close:
+            return true;
+        case Act::Overwrite: {
+            if (!seated) return false;
+            const GuiTrimPreset& p = ov.trim_presets[static_cast<std::size_t>(h)];
+            return p.begin != a.trim.begin_frame || p.end != a.trim.end_frame;
+        }
+        case Act::Delete:
+            return seated;
+        case Act::None:
+            return false;
+    }
+    return false;
+}
+
 // REVERT (the contract is at the declaration, input_handler.h). THE
 // PICKER'S SAME-PROJECT NO-OP IS NOT ON THIS ROAD: that arm lives inside
 // open_project_commit, and this act never passes through it — it seats the
@@ -7565,7 +7869,9 @@ void GuiInputHandler::history_load_in_place() {
 // one row-act fork (folder_overlay_open_row, input_pointer.cpp, which the row
 // click's motionless lift reaches too). A -1 highlight is a consumed no-op.
 // The row's own OK button went with the ruling that a click activates: the
-// picker's row is one button, Cancel (Close under the settings page).
+// picker's row is one button, Cancel (Close under the settings page), and
+// under the trim presets list the row is the player's shape, no OK among its
+// words either.
 void GuiInputHandler::picker_open_highlight() {
     if (!app.picker.active) return;
     const int highlight = app.folder_overlay.highlight_row;
@@ -7578,7 +7884,8 @@ void GuiInputHandler::picker_open_highlight() {
         // read as a dead key over a panel that is plainly standing. THE
         // PROJECT PICKER'S ALONE: the settings page's listing is the
         // editor's key table, never empty; a value list is empty only for
-        // `noise` with no folder under `noise/`, and Enter there is a
+        // `noise` with no folder under `noise/`, and the trim presets list
+        // before its first Save, and Enter there is a
         // consumed nothing — the empty band is the answer, and the card's
         // sentence is the project picker's.
         if (app.folder_overlay.owner ==
@@ -7592,17 +7899,27 @@ void GuiInputHandler::picker_open_highlight() {
 
 // The widget's two highlight mechanics (folder_overlay.h owns the clamps and
 // the scroll-into-view) with the picker's damage on top — the band as it
-// stands, which is the whole of what a moved highlight touches.
+// stands, which is the whole of what a moved highlight touches, and under the
+// TRIM PRESETS LIST the controls row too, whose faces read the highlight
+// (trim_presets_button_enabled: the pair's walls, Overwrite and Delete).
 void GuiInputHandler::picker_set_highlight(int index) {
     if (!app.picker.active) return;
-    if (folder_overlay::set_highlight(app, index))
+    if (folder_overlay::set_highlight(app, index)) {
         viewport.invalidate_rect(folder_overlay::surface_rect(app));
+        if (app.folder_overlay.owner ==
+            AppState::FolderOverlay::Owner::TrimPresets)
+            viewport.invalidate_modal_dialog_area();
+    }
 }
 
 void GuiInputHandler::picker_move_highlight(int delta) {
     if (!app.picker.active) return;
-    if (folder_overlay::move_highlight(app, delta))
+    if (folder_overlay::move_highlight(app, delta)) {
         viewport.invalidate_rect(folder_overlay::surface_rect(app));
+        if (app.folder_overlay.owner ==
+            AppState::FolderOverlay::Owner::TrimPresets)
+            viewport.invalidate_modal_dialog_area();
+    }
 }
 
 // THE ONE CLOSE BODY (the caller inventory is at the
@@ -7657,7 +7974,7 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // session-wide set dies in the catch-all any more.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
-    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25): the three picker
+    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25): the four picker
     // contents share this router and the overlay's tag says whose opener a
     // chord is, so each content's opener chords act under it alone and are
     // the catch-all's consumed nothing under the others — the other opener
@@ -7670,6 +7987,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     const bool settings_opener =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::SettingsPage ||
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::ValueList;
+    const bool trim_presets =
+        app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets;
 
     // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
     // opens an overlay is the way out of it, as bare `l` is the player's):
@@ -7693,6 +8012,15 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // 2026-10-28 night: "setup button still should close the whole panel").
     // Shift+; is unbound (chord_is_bound), the catch-all's nothing below.
     if (settings_opener && bare && key == GuiKeys::Semicolon) {
+        close_picker();
+        return true;
+    }
+
+    // BARE `t` CLOSES THE TRIM PRESETS LIST (architect 2026-10-28 night, the
+    // same rule one content over): the TRIM key's lift under the list, the
+    // opener's own chord, runs the one close body. Every modified `t` binds
+    // nothing, the catch-all's nothing below.
+    if (trim_presets && bare && key == GuiKeys::T) {
         close_picker();
         return true;
     }
@@ -7722,6 +8050,21 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // button means the key was not one of the ring's.
     if (route_modal_dialog_focus_key(key, mods)) return true;
 
+    // THE ACCESS LETTERS (Windows strict, the prompt's own match: bare or
+    // with Alt, the case-folded key, off the published row, ON SCREEN IS AS
+    // PAINTED): a word button's underlined letter presses it through the
+    // row's one dispatch, its painted face deciding — the trim presets
+    // list's Save, Overwrite and Delete (2026-10-28 night). The other
+    // contents' one word carries none (Cancel and Close are Esc's), so this
+    // arm answers under the trim list alone. One-shot: no letter repeats
+    // under a picker (repeat_eligible).
+    if (const int access =
+            modal_dialog_access_button(key, mods, /*field_focused=*/false);
+        access >= 0) {
+        (void)dispatch_modal_dialog_button(access);
+        return true;
+    }
+
     // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
     // 2026-08-30, the unbound-keys ruling — "bound keys either show an effect
     // or a card, so an unbound key is identified by its silence"), the
@@ -7733,12 +8076,13 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 
     switch (key) {
         case GuiKeys::Escape:
-            // Esc is the box's one button, Cancel or the settings page's
-            // Close (dispatch_modal_dialog_button's picker arm, the same
+            // Esc is the box's closing button, Cancel or Close
+            // (dispatch_modal_dialog_button's picker arm, the same
             // fork): under a value list it RETURNS TO THE
             // SETTINGS PAGE, seated on the list's key, nothing applied
             // (return_to_settings_page, architect 2026-10-28 night); under
-            // every other content it closes the picker.
+            // every other content — the trim presets list's Close among
+            // them — it closes the picker.
             if (app.folder_overlay.owner ==
                 AppState::FolderOverlay::Owner::ValueList)
                 return_to_settings_page(app.folder_overlay.value_key);
@@ -7757,6 +8101,14 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
             return true;
         case GuiKeys::Down:
             picker_move_highlight(+1);
+            return true;
+        case GuiKeys::Delete:
+            // THE TRIM PRESETS LIST'S DELETE (2026-10-28 night), the render
+            // player's key one content over: its question on the highlight,
+            // or the card with none (trim_presets_delete). One-shot. A
+            // consumed nothing under every other content.
+            if (trim_presets && !mods.synthesized_repeat)
+                trim_presets_delete();
             return true;
         case GuiKeys::Backslash:
             // The tooltip lamp, the render player's arm verbatim (the rule is
@@ -9855,16 +10207,38 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // nothing. THE EXIT ROAD does not come here (GuiPrompt::request_close tears
 // the editor down through close_modal_editors_no_commit, the picker already
 // closed for the quit): a quit reopens no page.
+// THE TRIM PRESET'S NAME EDITOR RIDES THIS ROUTE AND THIS HOOK (architect
+// 2026-10-28 night): the dialog line editor's buffer carries its kind
+// (Kind::TrimPresetName, AppState::settings_editor), so the same roads reach
+// here — Enter, Esc, OK, Cancel, the ring and the on-screen keyboard's caps —
+// and the KIND, read before the route (a close resets it), forks the route
+// and the return: no completion (a Tab walks the ring), the name's commit
+// (commit_trim_preset_name), and on the close THE TRIM PRESETS LIST
+// REOPENS (open_trim_presets) seated on the name the commit or Save left
+// (trim_name_seat_), the settings page's return one content over; a refused
+// name leaves the editor standing and reopens nothing.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     const bool was_active = text_editor::is_active(app.settings_editor);
-    const bool consumed = route_modal_editor_key(
-        app.settings_editor, key, mods,
-        [this] { return settings_editor.autocomplete_value(); },
-        [this] { settings_editor.commit(); },
-        [this] { settings_editor.exit_no_commit(); },
-        [this] { viewport.invalidate_dialog_editor_box(); });
-    if (was_active && !text_editor::is_active(app.settings_editor))
-        open_settings_page(settings_editor.page_key());
+    const bool trim_name =
+        app.settings_editor.kind == text_editor::Kind::TrimPresetName;
+    const bool consumed =
+        trim_name
+            ? route_modal_editor_key(
+                  app.settings_editor, key, mods,
+                  /*autocomplete=*/nullptr,
+                  [this] { commit_trim_preset_name(); },
+                  [this] { settings_editor.exit_no_commit(); },
+                  [this] { viewport.invalidate_dialog_editor_box(); })
+            : route_modal_editor_key(
+                  app.settings_editor, key, mods,
+                  [this] { return settings_editor.autocomplete_value(); },
+                  [this] { settings_editor.commit(); },
+                  [this] { settings_editor.exit_no_commit(); },
+                  [this] { viewport.invalidate_dialog_editor_box(); });
+    if (was_active && !text_editor::is_active(app.settings_editor)) {
+        if (trim_name) open_trim_presets(trim_name_seat_);
+        else           open_settings_page(settings_editor.page_key());
+    }
     return consumed;
 }

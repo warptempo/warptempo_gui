@@ -1507,22 +1507,23 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
-    // row's twenty-nine and row 8's twenty-one (row 1's three menu anchors
+    // row's thirty and row 8's twenty-one (row 1's three menu anchors
     // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-28, the NOISE lamp closing the third
-    // run):
-    //   THE ICON ROW, 20 + 4 + 1 + 4 = 29 — the left walk's twenty
+    // counts re-derived from them 2026-10-28 night, the Trim Presets key
+    // closing the zoom group):
+    //   THE ICON ROW, 21 + 4 + 1 + 4 = 30 — the left walk's twenty-one
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
     //   Resets and Render;
-    //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification and Follow;
+    //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow and
+    //   Trim Presets;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
     //   Tooltips, the Score key and the NOISE lamp), the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right behind it in one run (kIconRowViewPairs, Source /
-    //   Target and Warp / Phase Reset since 2026-10-14) — 25
+    //   Target and Warp / Phase Reset since 2026-10-14) — 26
     //   standing outside the `h` view (the four stand-ins publishing empty
     //   rects) and 18 inside it (the stand-ins in, Undo's group and the
     //   iteration group out, and the view's hide leaving Open Project and
@@ -1858,6 +1859,19 @@ struct GuiInputHandler {
     // render_player_delete.
     void confirm_render_player_delete();
     void cancel_render_player_delete();
+    // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS' ANSWERS (architect
+    // 2026-10-28 night), called by GuiPrompt when TRIM_PRESET_DELETE_CONFIRM
+    // or TRIM_PRESET_OVERWRITE_CONFIRM answers: Delete removes the parked
+    // preset (AppState::FolderOverlay::trim_pending) and seats the
+    // highlight on the row that takes its place — the next, the new last
+    // when the last went, none when the list empties; Overwrite gives the
+    // parked preset the active tab's trim, its name kept. Each writes the
+    // file whole and re-lists, the list standing. Cancel drops the parked
+    // row and changes nothing. The raises are trim_presets_delete and
+    // trim_presets_overwrite.
+    void confirm_trim_preset_delete();
+    void confirm_trim_preset_overwrite();
+    void cancel_trim_preset_confirm();
     // THE PULL CONFIRMATION'S TWO ANSWERS (architect 2026-10-19), called by
     // GuiPrompt through its back-pointer when PULL_CONFIRM answers: OK runs
     // the parked plan (AppState::pending_history_pull) through
@@ -2839,10 +2853,12 @@ private:
     // state, the row is one button since 2026-08-29 (a click on a row is
     // the open act), Cancel under the project picker and the value list and
     // Close under the settings page (a button's word says what leaving does,
-    // kModalCancelLabel, paint_handler.cpp, architect 2026-10-28 night), and route_picker_key below is its whole
-    // plastic vocabulary. THREE CONTENTS — the project picker, the settings
-    // page (2026-10-28) and the value list (2026-10-25 for `waveform`,
-    // 2026-10-28 night for four keys more), the page's row for a listed key:
+    // kModalCancelLabel, paint_handler.cpp, architect 2026-10-28 night) —
+    // the trim presets list's row the player's shape instead — and route_picker_key below is its whole
+    // plastic vocabulary. FOUR CONTENTS — the project picker, the settings
+    // page (2026-10-28), the value list (2026-10-25 for `waveform`,
+    // 2026-10-28 night for four keys more), the page's row for a listed key,
+    // and the trim presets list (2026-10-28 night):
     //
     //   THE OPEN PROJECT PICKER — Open Project and Ctrl+O, one chord
     //   (is_open_project_key, gui_input.h; on_key's arm dispatches it at the
@@ -2982,6 +2998,67 @@ private:
     //       its line the key's value as it now stands. A no-op unless a
     //       value list stands.
     //
+    //   THE TRIM PRESETS LIST (architect 2026-10-28 night, the design
+    //   discussion with the planner) — the TRIM key and bare `t`, one chord
+    //   (the key's plain press dispatches it at the lift; no modifier). The
+    //   piece's NAMED TRIM WINDOWS, read from `<project>/trim/presets.txt`
+    //   at the open (trim_presets_file.h, device-local, never committed),
+    //   one Plain row each in the file's order, `<name>  <begin> - <end>`
+    //   in row 8's clock's spelling (format_timestamp). It writes the trim —
+    //   band, legal on a locked tab and under grid iterations (bare `t` on
+    //   the read-only allowlist, which the iteration gate inherits) — and its
+    //   own file, never the piece; the `h` view refuses `t`. THE PLAYER'S
+    //   SHAPE (his word: "we would be breaking symmetry if we did it
+    //   differently"): a row's tap and Enter APPLY with the list standing,
+    //   the highlight pair walks without applying, and the controls row is
+    //   the pair, then Save, Overwrite, Delete and Close
+    //   (AppState::TrimPresetsButtonAct; the faces trim_presets_button_enabled).
+    //     open_trim_presets: the opener, open_project_picker's own guards
+    //       (a prompt, a standing picker, a load) and its modal stop; the
+    //       file read into the overlay (AppState::FolderOverlay::
+    //       trim_presets) and the rows built, SEATED on `seat_name`'s preset
+    //       when one is named (the name editor's return), else on the preset
+    //       whose pair IS the active tab's trim, else on row 0 — an empty
+    //       list seating nothing — centered as far as the ends allow.
+    //     build_trim_presets_rows: the rows from the overlay's presets,
+    //       rebuilt whole, the highlight seated on `highlight` (clamped into
+    //       the listing) — the open's and every act's re-list.
+    //     trim_presets_apply: THE OPEN ACT on row `index` — a tap, a click
+    //       or Enter: the row highlighted, then its pair written as BOTH
+    //       bounds of the active tab's LIVE trim and the trim family's one
+    //       commit tail run once (commit_trim_mutation — the crossed/equal
+    //       reset, the waveform's damage, the preview trigger, the playhead
+    //       parked at the begin) with the setter's deselect, THE LIST
+    //       STANDING (as the player stands when a wav plays). The pair the
+    //       tab already holds is the store's own no-op, the tap still
+    //       highlighting. A member of the trim-write membership at
+    //       input_trim.cpp's head.
+    //     trim_presets_save: SAVE — the list closes (close_picker: the
+    //       overlay and the on-screen keyboard never both stand) and THE NAME
+    //       EDITOR opens EMPTY on the dialog line editor's buffer
+    //       (text_editor::Kind::TrimPresetName, the settings editor's
+    //       shape), the list as it stood and its highlighted name kept for
+    //       the commit and the return.
+    //     commit_trim_preset_name: the name editor's OK and Enter: the name
+    //       judged by its one grammar (trim_preset_name_refusal — non-empty,
+    //       no edge space, the incoming filter's alphabet, unique), a refusal
+    //       the editors' own shape (the whole text selected, the editor
+    //       standing, the card "Preset name rejected: <reason>"); a name that
+    //       commits appends the active tab's trim under it, writes the file
+    //       whole and closes the editor, the return seating the new row.
+    //       THE RETURN is handle_settings_editor_key's one hook, the line
+    //       editor's own: OK and Cancel alike reopen the list
+    //       (open_trim_presets), seated on the new row or, after Cancel, the
+    //       row Save was pressed on; the quit road never passes it.
+    //     trim_presets_overwrite / trim_presets_delete: OVERWRITE and DELETE
+    //       (the button, its letter, and for Delete the bare Delete key): each
+    //       raises its CONFIRMATION over the list on the highlighted preset
+    //       (TRIM_PRESET_OVERWRITE_CONFIRM, TRIM_PRESET_DELETE_CONFIRM,
+    //       Cancel focused), the row parked (AppState::FolderOverlay::
+    //       trim_pending). A greyed face's act is silent; the Delete key with
+    //       no highlight — an empty list — cards "There is no preset to
+    //       delete", the render player's own refusal one surface over.
+    //
     //   (THE `h` VIEW HAD ANOTHER PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as
     //   "overengineered; I don't really need it": that key raises the load
@@ -3005,7 +3082,8 @@ private:
     //       value list, Ctrl+Q's and the
     //       compositor's close road (GuiPrompt::request_close, at its head
     //       beside the player's close, on the exit road alone), the page's
-    //       row open ahead of its editor and the
+    //       row open ahead of its editor, the trim presets list's Close, Esc,
+    //       `t` (the TRIM key's lift) and Save ahead of its name editor, and the
     //       same-project no-op all pass through it (a reopen ends the
     //       session with the picker standing, and the picker with it); the
     //       overlay leaves with
@@ -3028,7 +3106,12 @@ private:
     //       project picker Ctrl+O closes and Ctrl+Alt+O runs Revert
     //       (revert_project, its question standing over the picker), under
     //       the settings page and the value list `;` closes the whole
-    //       panel; Ctrl+S saves with the
+    //       panel, under the trim presets list `t` closes it; THE ACCESS
+    //       LETTERS — the word buttons' underlined keys, bare or with Alt,
+    //       the trim presets list's S, O and D (the other contents' one word
+    //       carries none) — press their button through the modal row's one
+    //       dispatch; the bare Delete key is the trim presets list's Delete;
+    //       Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
@@ -3064,6 +3147,26 @@ private:
     void build_value_list_rows(const std::string& key);
     void value_list_commit(int index);
     void return_to_settings_page(std::string seat_key);
+    void open_trim_presets(std::string_view seat_name);
+    void build_trim_presets_rows(int highlight);
+    void trim_presets_apply(int index);
+    void trim_presets_save();
+    void trim_presets_overwrite();
+    void trim_presets_delete();
+    void commit_trim_preset_name();
+    // THE LIST'S FILE WRITE, one body for the three changes (Save's commit,
+    // the two confirmations' answers): the whole of `presets` through
+    // write_trim_presets_file, a failure printed and carded (its two
+    // clauses, failure.h). Answers whether the file was written.
+    bool persist_trim_presets(const std::vector<GuiTrimPreset>& presets);
+    // THE NAME EDITOR'S SESSION MEMORY (architect 2026-10-28 night): the list
+    // as it stood when Save was pressed, which the commit judges the name
+    // against and appends to, and the name the return seats the list on —
+    // the highlighted preset's at Save's press (Cancel's return), the new
+    // one's after a commit. Written by trim_presets_save and the commit
+    // alone; the editor is modal, so nothing changes them between.
+    std::vector<GuiTrimPreset> trim_name_presets_;
+    std::string                trim_name_seat_;
     // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
     // history. It never meets open_project_commit's
@@ -3533,15 +3636,17 @@ private:
     // trim-SETTING commit runs the same acts in the same order
     // (auto_clear_crossed_trim, the waveform + status-chain repaints, the
     // target-render trigger, then the playhead park above), and this member is
-    // their one spelling. FOUR
-    // CALLERS (re-derived 2026-08-18, when the SET-FROM-REGION act retired and
-    // the sweep took its place)
+    // their one spelling. FIVE
+    // CALLERS (re-derived 2026-10-28 night, the trim presets list's apply
+    // joining)
     // — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
     // the drag release (commit_trim_drag) and the bound-set click
     // (set_trim_bound_at_click), the last two in
-    // input_trim.cpp, plus the settings editor's `trim_*=` active-tab arm
+    // input_trim.cpp, the settings editor's `trim_*=` active-tab arm
     // (settings_editor.cpp, reaching it through the friendship above; its
-    // status-chain repaint rides applied() as well, harmlessly twice).
+    // status-chain repaint rides applied() as well, harmlessly twice), and
+    // the trim presets list's apply (trim_presets_apply,
+    // input_key_dispatch.cpp, both bounds at once).
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:

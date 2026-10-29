@@ -284,6 +284,11 @@ set(WARPTEMPO_GUI_SOURCES
     # loader thread, and the second voice both playback devices sum under the
     # engine's (noise.h). GUI-only: the CLI plays nothing.
     src/gui/noise.cpp
+    # THE TRIM PRESETS (2026-10-28 night): the piece's named trim windows in
+    # a GUI-owned device-local file (trim/presets.txt), the TRIM key's list.
+    # GUI-only: the CLI reads no preset, the rendering trim being the
+    # sidecar's.
+    src/gui/trim_presets_file.cpp
     # THE CAR TRANSPORT (2026-09-17): the head unit's SECOND owner — the
     # cluster that drives the project's own transport while the render player
     # is closed, and publishes the console's three lines from the tab, the

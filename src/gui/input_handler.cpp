@@ -354,7 +354,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-08-28): the
     // field-less picker over the folder overlay (the project picker, the
-    // settings page and the value list it swaps in), at the player's rank (the two never stand together) and with
+    // settings page and the value list it swaps in, the trim presets list), at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road's exit), Ctrl+S consumed by the router
@@ -363,7 +363,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // picker — the prompt gate above then owns every key, so its Esc is the
     // question's Cancel and a second Esc the picker's close), under the
     // settings page and the value list it swaps in bare `;` as the close
-    // (2026-10-28), and
+    // (2026-10-28), under the trim presets list bare `t` (2026-10-28
+    // night), and
     // Ctrl+Shift+S (the publish chord, 2026-10-10)
     // as a consumed nothing — the pull's question must not open over a
     // picker. The gesture clause is the player's
@@ -2150,6 +2151,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Shift+; binds nothing (chord_is_bound), silent.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
         open_settings_page({});
+        return;
+    }
+
+    // BARE `t` OPENS THE TRIM PRESETS LIST (architect 2026-10-28 night), the
+    // TRIM key's plain press dispatching the same chord: the piece's named
+    // trim windows in the folder overlay, a row's tap applying one to the
+    // active tab's trim with the list standing (open_trim_presets, the
+    // contract at the declaration). THE KEY REACHES THE OPENER ON A LOCKED
+    // TAB AND UNDER GRID ITERATIONS (read_only_key_blocked's
+    // is_trim_presets, which the iteration gate inherits): trim is band. The
+    // `h` view's allowlist refuses it. Every modified `t` binds nothing
+    // (chord_is_bound), silent.
+    if (key == GuiKeys::T && !shift && !ctrl && !alt) {
+        open_trim_presets({});
         return;
     }
 

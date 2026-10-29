@@ -217,6 +217,13 @@ constexpr int kMaxPendingCharsBpm = 44;
 // keeps `view_offset_px` below, its minimal-travel rule the marker lane's
 // painter's.
 constexpr int kMaxPendingCharsSettings = 1024;
+// THE TRIM PRESET'S NAME (architect 2026-10-28 night). A POLICY CEILING like
+// the settings value's — a name is free text with no widest spelling — sized
+// for a few words in any script: 128 bytes. The name grammar's reader asks
+// the same filter and so the same cap (trim_preset_name_refusal,
+// trim_presets_file.h), so a name the file holds is a name this editor could
+// have committed.
+constexpr int kMaxPendingCharsTrimPresetName = 128;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -224,7 +231,8 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // commit-time validator). The flag editor uses FlagPayload (the plain
 // canonical payload — tempo, scale, labels, never a bracket); the BPM popup
 // uses BpmBracket; the settings-prompt editor uses SettingsAssignment
-// (`key=value`); and the ITERATION BOUND editor uses IterBound (the text of one of the two
+// (`key=value`); the trim preset's name editor uses TrimPresetName (free
+// text, the name); and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
 // State::iter_upper below — judged at its commit against the bracket's walls).
 // ONE KIND, TWO GRAMMARS SINCE 2026-09-09: a warp marker's cell holds a signed
@@ -232,9 +240,15 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
-// they name. THERE ARE FOUR KINDS AND TWO OF THEM ARE
-// DIALOG EDITORS (SettingsAssignment, BpmBracket); the two top-strip kinds (FlagPayload, IterBound) share the
-// flag editor's State and paint in the marker lane. (The color picker's
+// they name. THERE ARE FIVE KINDS AND THREE OF THEM ARE
+// DIALOG EDITORS (SettingsAssignment, BpmBracket, TrimPresetName); the two top-strip kinds (FlagPayload, IterBound) share the
+// flag editor's State and paint in the marker lane. TrimPresetName (architect
+// 2026-10-28 night) is THE TRIM PRESET'S NAME EDITOR, the trim presets list's
+// Save (GuiInputHandler::open_trim_preset_name_editor): it rides the settings
+// editor's State (AppState::settings_editor, the dialog line editor's one
+// buffer), the settings editor's shape — the box its edit control, OK and
+// Cancel, the on-screen keyboard on the glass — opened empty, its commit the
+// name's (trim_preset_name_refusal, trim_presets_file.h). (The color picker's
 // one field — its hex field and its name ask, two kinds — stood
 // 2026-10-07..14 and left with the picker. A fifth,
 // MagnificationLevelText, the magnification level markers column's one-digit
@@ -261,6 +275,7 @@ enum class Kind {
     BpmBracket,
     SettingsAssignment,
     IterBound,
+    TrimPresetName,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,

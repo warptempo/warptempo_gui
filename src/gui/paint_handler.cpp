@@ -842,6 +842,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // that evening: one box and one 2px gap onto the walk, no separator
     // moving.
     {RedesignButton::IconFollow},
+    // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's TAIL
+    // behind Follow: bare `t`, the trim presets list's opener and, while it
+    // stands, its closer (RedesignButton::IconTrimPresets). One case onto the
+    // second run, no run and no separator moving (the iteration group's
+    // stays BPM's).
+    {RedesignButton::IconTrimPresets},
     // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (bare `m`)
     // and grid iteration mode (bare `i`), back from the menu row behind a
     // separator of their own, just ahead of the render-entry pair. The
@@ -1027,12 +1033,12 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the clip
 // covers it whole — so a press, a hover and a tooltip land on exactly the
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
-// band holds every run down to about 633 Windows px of window width outside
+// band holds every run down to about 656 Windows px of window width outside
 // the `h` view and 472 inside it (the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-28 with the NOISE lamp, plus the ring's
-// inset at each window edge, about 13 W), so neither host reaches the rule
-// at its scale: the tablet's 2304 device px hold the row in both states up
-// to about 360 % and the laptop's 1920 up to about 300 % (the W arithmetic
+// statement, re-derived 2026-10-28 night with the Trim Presets key, plus the
+// ring's inset at each window edge, about 13 W), so neither host reaches the
+// rule at its scale: the tablet's 2304 device px hold the row in both states
+// up to about 350 % and the laptop's 1920 up to about 290 % (the W arithmetic
 // over the device width; each element's own rounding moves the edge by a
 // pixel or so).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
@@ -1685,14 +1691,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the strip
     // pad, the cases, the strip pad on the plain wood, the left members in
-    // THREE RUNS and the right five in ONE — TWENTY-FIVE members outside the
-    // `h` view and EIGHTEEN inside it (2026-10-28, the NOISE lamp closing the
-    // third run, standing in the view), RE-COUNTED off the roster enum, the
+    // THREE RUNS and the right five in ONE — TWENTY-SIX members outside the
+    // `h` view and EIGHTEEN inside it (2026-10-28 night, the Trim Presets key
+    // closing the zoom group, hidden in the view), RE-COUNTED off the roster enum, the
     // painter's tables and the run leaders rather than adjusted: OPEN
     // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
     // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in
     // the first run; ZOOM IN, ZOOM OUT, ZOOM TO FIT, THE WAVEFORM
-    // MAGNIFICATION LAMP and FOLLOW (the viewport
+    // MAGNIFICATION LAMP, FOLLOW and TRIM PRESETS (the viewport
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
     // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS, since 2026-10-26 the
@@ -1709,7 +1715,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the view refuses whole (the companions publish empty rects outside the
     // view, the replaced members inside it), and inside the view every other
     // member whose chord it refuses in EVERY session is not painted
-    // (history_mode_hides_button, input_pointer.cpp) — Follow behind Zoom
+    // (history_mode_hides_button, input_pointer.cpp) — Follow and Trim
+    // Presets behind Zoom
     // In, Zoom Out, Zoom to Fit and the magnification lamp (which the view
     // admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
@@ -1729,25 +1736,28 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-23): in Windows px, from the program ring's outer left column,
     // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
     // ending at the ring's right edge. Outside the `h` view the LEFT WALK is
-    // twenty members in three runs (re-derived 2026-10-28, the NOISE lamp
-    // closing the third),
-    //   20·23 + 2·15 = 490,
+    // twenty-one members in three runs (re-derived 2026-10-28 night, the Trim
+    // Presets key closing the zoom group in the second),
+    //   21·23 + 2·15 = 513,
     // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
-    // Renders, Enable Tooltips, Noise — re-derived 2026-10-28),
+    // Renders, Enable Tooltips, Noise — the Trim Presets key hidden there
+    // with Follow),
     // 13·23 + 2·15 = 329;
     // with one run gap of wood before the right run the band holds every
     // run at
-    //   490 + 15 + 115 = 620
+    //   513 + 15 + 115 = 643
     // Windows px outside the view (459 inside it) — the ring's 2258 device
-    // px on the tablet at 300 % (752⅔ W) with 398 px (132⅔ W) of ground
-    // between the left runs and the right run. IN DEVICE PX, off the painted
+    // px on the tablet at 300 % (752⅔ W) with 329 px (109⅔ W) of ground
+    // between the left runs and the right run beyond the run gap. IN DEVICE
+    // PX, off the painted
     // walk (each case its rounded parts, the gap its own scaled_px, the ends
     // program_ring_columns'; re-derived 2026-10-28, the ring's columns the
-    // canvas's frame hairlines, and again that day with the NOISE lamp): at
+    // canvas's frame hairlines, and again that night with the Trim Presets
+    // key): at
     // the tablet's 300 % (cases 69, the gap 45, the ring 23 .. 2281) the left
-    // runs on x 23..1492, the right run 1936..2280; at the laptop's 138 %
-    // (cases 31, the gap 21, the ring 15 .. 1905) the left runs on x 15..676,
+    // runs on x 23..1561, the right run 1936..2280; at the laptop's 138 %
+    // (cases 31, the gap 21, the ring 15 .. 1905) the left runs on x 15..707,
     // the right run 1750..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
@@ -5059,7 +5069,9 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
 // (the fourth, the same day: its one-word row, Cancel or Close by content,
-// kModalCancelLabel's rule), THE PROGRESS MODAL (the fifth, 2026-10-14: a
+// kModalCancelLabel's rule — under the trim presets list since 2026-10-28
+// night the player's shape, the highlight pair and four words ending in
+// Close), THE PROGRESS MODAL (the fifth, 2026-10-14: a
 // batch's Cancel alone, AppState::BatchProgress) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional, a modal
 // since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
@@ -5379,8 +5391,10 @@ constexpr double kPlayerGroupGapPx    = 8.0;
 // VALUE LIST ask for a choice and Cancel declines it, and the PROGRESS
 // MODAL's Cancel cancels the render. OK AND CANCEL belong to the EDITORS,
 // where a typed line is pending. CLOSE leaves a surface that asked nothing:
-// the SETTINGS PAGE, whose rows pend nothing, and the RENDER PLAYER (its
-// last key's legend, render_player_button_legend). Esc is the key of Cancel
+// the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER (its
+// last key's legend, render_player_button_legend) and THE TRIM PRESETS LIST
+// (2026-10-28 night: its acts return to it, only Close and its opener leave;
+// its last word button). Esc is the key of Cancel
 // and Close alike, and neither word carries an access letter (Esc is the
 // dialogs' way out, Windows strict, the underline rule at access_key_of);
 // the word buttons' layout reads their count alone (modal_word_buttons), so
@@ -5583,6 +5597,38 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     return l;
 }
 
+// THE TRIM PRESETS LIST'S ROW LAYOUT (architect 2026-10-28 night, THE
+// PLAYER'S SHAPE): THE HIGHLIGHT PAIR — the player's DOWN and UP keys —
+// abutting at the row's left seat, then the four word keys SAVE, OVERWRITE,
+// DELETE and CLOSE abutting FLUSH RIGHT, the last key's right edge the row's
+// (every word row's alignment rule), nothing between the two clusters. Every
+// key the row's square case (seats.case_w); on a row too narrow for both, the
+// words start right of the pair, the buttons whole (THE BUTTONS STAY WHOLE).
+struct TrimPresetsRowLayout {
+    std::array<int, 6> x{};
+};
+static TrimPresetsRowLayout trim_presets_row_layout(const BottomRowSeats& seats) {
+    TrimPresetsRowLayout l;
+    const int bw  = seats.case_w;
+    const int cx0 = seats.left_x;
+    l.x[0] = cx0;                          // DOWN (Highlight Next)
+    l.x[1] = cx0 + bw;                     // UP (Highlight Previous)
+    const int words_x0 = std::max(cx0 + 2 * bw, seats.cases_right - 4 * bw);
+    for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * bw;  // SAVE .. CLOSE
+    return l;
+}
+
+// THE TRIM PRESETS LIST'S HIGHLIGHT PAIR IS THE PLAYER'S (2026-10-28 night):
+// each key's twin in the player's vocabulary, whose legend
+// (render_player_button_legend) and word (render_player_button_hint) it
+// wears, so the pair reads the same on both rows.
+static AppState::PlayerButtonAct trim_presets_pair_twin(
+        AppState::TrimPresetsButtonAct act) {
+    return act == AppState::TrimPresetsButtonAct::HighlightDown
+               ? AppState::PlayerButtonAct::HighlightDown
+               : AppState::PlayerButtonAct::HighlightUp;
+}
+
 // THE KEYS AT THIS GEOMETRY (the declaration, paint_handler.h): every key
 // the rows lay out, in both states of the `h` view, each the layout's own
 // (icon_row_seats with icon_row_walk, row8_block with row8_block_walk,
@@ -5722,15 +5768,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // stash, for the player's and the score viewer's rows' as-painted
     // publication at the button walk below (the rule is there).
     struct PrevFace {
-        AppState::PlayerButtonAct player_act;
-        AppState::ScoreButtonAct  score_act;
-        bool                      enabled;
+        AppState::PlayerButtonAct      player_act;
+        AppState::ScoreButtonAct       score_act;
+        AppState::TrimPresetsButtonAct trim_act;
+        bool                           enabled;
     };
     std::vector<PrevFace> prev_enabled;
     prev_enabled.reserve(dlg.buttons.size());
     for (const AppState::ModalDialogButton& pb : dlg.buttons)
         prev_enabled.push_back(PrevFace{pb.player_act, pb.score_act,
-                                        pb.enabled});
+                                        pb.trim_act, pb.enabled});
     // THE OUTGOING THUMB COLUMN AND TRACK, AS PAINTED, for the same reason:
     // a frame whose clip misses the track carries them (the scrub, below).
     const int     prev_thumb_x = dlg.scrub_thumb_x;
@@ -5777,6 +5824,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const bool score_up = !prompt_up && !progress_up && !player_up &&
                           !picker_up && app.score_viewer.active &&
                           app.score.has_value();
+    // THE TRIM PRESETS LIST (2026-10-28 night): a picker content whose
+    // controls row is the player's shape, not the picker's one word.
+    const bool trim_up = picker_up &&
+                         app.folder_overlay.owner ==
+                             AppState::FolderOverlay::Owner::TrimPresets;
     text_editor::State* ed =
         (prompt_up || progress_up || player_up || picker_up || score_up)
             ? nullptr : dialog_editor_to_paint(app);
@@ -5888,7 +5940,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // while a word button keeps the label box every prompt and editor button
     // has always had. The word kind is the other three owners' alone: a
     // prompt's answers, the dialog editors' OK / Cancel and the picker's one
-    // word (Cancel or Close by content, kModalCancelLabel's rule). `lit` is
+    // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
+    // the trim presets list, its four words SAVE, OVERWRITE, DELETE and
+    // CLOSE beside its two keys, the player's highlight pair. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
     // buttons.
@@ -5904,6 +5958,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // The score viewer's dispatch vocabulary (2026-10-26); its keys are
         // `glyph` keys too, their legends score_viewer_button_legend's.
         AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
+        // The trim presets list's (2026-10-28 night): its highlight pair are
+        // `glyph` keys wearing the player's legends, its other four word
+        // buttons.
+        AppState::TrimPresetsButtonAct trim_act =
+            AppState::TrimPresetsButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
         // The player's Play key's face (render_player_play_face), its
@@ -5911,10 +5970,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         PlayerPlayFace play_face = PlayerPlayFace::Play;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. TWO OWNERS WRITE IT, re-grepped 2026-10-27: the player's
-        // nine through render_player_button_enabled and the score viewer's
-        // keys through score_viewer_button_enabled; true on every other
-        // owner's buttons.
+        // below. THREE OWNERS WRITE IT, re-grepped 2026-10-28 night: the
+        // player's nine through render_player_button_enabled, the score
+        // viewer's keys through score_viewer_button_enabled and the trim
+        // presets list's six through trim_presets_button_enabled; true on
+        // every other owner's buttons.
         bool        enabled      = true;
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
@@ -6106,6 +6166,38 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         for (const Act act : {Act::Reset, Act::SetStart, Act::SetEnd,
                               Act::Close})
             key(act);
+    } else if (trim_up) {
+        // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
+        // PLAYER'S SHAPE), in painted order: THE HIGHLIGHT PAIR — the
+        // player's DOWN and UP, its legends and its words, the band walk
+        // without applying — then FOUR WORD BUTTONS with the dialogs'
+        // underlined access keys, SAVE, OVERWRITE, DELETE and CLOSE (the
+        // Close word kModalCloseLabel's rule, no letter), CLOSE LAST, the
+        // escape sentinel by construction. No Apply: the row's tap and
+        // Enter are the act. Each face is the act's own truthful answer
+        // (trim_presets_button_enabled).
+        using Act = AppState::TrimPresetsButtonAct;
+        for (const Act act : {Act::HighlightDown, Act::HighlightUp}) {
+            DialogButtonPlan b;
+            b.trim_act = act;
+            b.glyph    = true;
+            b.enabled  = trim_presets_button_enabled(app, act);
+            b.tooltip  = render_player_button_hint(trim_presets_pair_twin(act),
+                                                   RenderPlayerHintState{});
+            plan.push_back(std::move(b));
+        }
+        const auto word = [&](Act act, std::string_view label, int access) {
+            DialogButtonPlan b;
+            b.trim_act = act;
+            b.label    = std::string(label);
+            b.access   = access;
+            b.enabled  = trim_presets_button_enabled(app, act);
+            plan.push_back(std::move(b));
+        };
+        word(Act::Save, "Save", 0);
+        word(Act::Overwrite, "Overwrite", 0);
+        word(Act::Delete, "Delete", 0);
+        word(Act::Close, kModalCloseLabel, -1);
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
@@ -6145,6 +6237,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // by modal_word_buttons, the one layout the painter and the press read.
     if (player_up || score_up) {
         for (DialogButtonPlan& b : plan) b.w = seats.case_w;
+    } else if (trim_up) {
+        // THE TRIM PRESETS LIST'S ROW, laid out whole here (no item between
+        // its clusters for a branch below to place): the pair at the left,
+        // the words flush right (trim_presets_row_layout).
+        const TrimPresetsRowLayout tl = trim_presets_row_layout(seats);
+        assert(plan.size() == tl.x.size());
+        for (std::size_t i = 0; i < plan.size(); ++i) {
+            plan[i].x = tl.x[i];
+            plan[i].w = seats.case_w;
+        }
     } else {
         std::vector<std::string_view> labels;
         for (const DialogButtonPlan& b : plan) labels.push_back(b.label);
@@ -6198,8 +6300,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // -- THE CONTROLS ROW'S LAYOUT (architect 2026-10-14, modal_box.h) --
     //
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
-    // row — a prompt's answers, an editor's OK and Cancel and the picker's one
-    // word (Cancel or Close by content, kModalCancelLabel's rule) — the last
+    // row — a prompt's answers, an editor's OK and Cancel, the picker's one
+    // word (Cancel or Close by content, kModalCancelLabel's rule) and the
+    // trim presets list's four (its highlight pair at the row's left, the
+    // player's) — the last
     // one's right edge the box's ring's outer edge (x 2280 at 300 %), today's button gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
@@ -6698,7 +6802,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
         //    ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S RING'S OUTER EDGE
         //    (x 2280 at 300 %), as the player's Close ends there; the focus
-        //    frame, when worn, stands in the face beside the ring. --
+        //    frame, when worn, stands in the face beside the ring.
+        //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
+        //    shape instead — the highlight pair at the left, four words flush
+        //    right — laid out with the widths above (trim_presets_row_layout);
+        //    nothing stands between its clusters for this branch to paint. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
     } else {
         // -- The editor: THE BOX IS ITS EDIT CONTROL (architect 2026-10-14,
@@ -6950,13 +7058,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the key DOWN one device px for Repeat One's lit lamp and two for
         // a press (the two depths, 2026-10-23), NO HOT FACE
         // (program_spec.h's case_hot_face) — and no separators.
-        // THE DISABLED RUNG, on the two rows that publish a stateful bit
+        // THE DISABLED RUNG, on the three rows that publish a stateful bit
         // (AppState::ModalDialogButton::enabled, the one statement of its
-        // owners; re-grepped 2026-10-28, Sol's round): the PLAYER's buttons
-        // (architect 2026-08-30, render_player_button_enabled) and the SCORE
-        // VIEWER's keys (score_viewer_button_enabled) — every other owner's
-        // buttons are always live while their dialog stands and publish
-        // enabled=true. The legend dimmed (kDimInk, paint_key_legend,
+        // owners; re-grepped 2026-10-28 night): the PLAYER's buttons
+        // (architect 2026-08-30, render_player_button_enabled), the SCORE
+        // VIEWER's keys (score_viewer_button_enabled) and the TRIM PRESETS
+        // LIST's pair and words (trim_presets_button_enabled) — every other
+        // owner's buttons are always live while their dialog stands and
+        // publish enabled=true. The legend dimmed (kDimInk, paint_key_legend,
         // 2026-10-23), the key the face its state gives, the roster's rule
         // (architect 2026-10-02 and 2026-10-09). The press face is gated on the bit rather than
         // trusted — a button can go dead UNDER a hold.
@@ -6997,6 +7106,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                      : plan[i].score_act != AppState::ScoreButtonAct::None
                          ? std::string(
                                score_viewer_button_legend(plan[i].score_act))
+                     : plan[i].trim_act != AppState::TrimPresetsButtonAct::None
+                         ? render_player_button_legend(
+                               trim_presets_pair_twin(plan[i].trim_act))
                          : render_player_button_legend(plan[i].player_act,
                                                        plan[i].play_face);
             paint_key_legend(cr, r, legend, enabled);
@@ -7005,7 +7117,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             for (char& ch : legend)
                 if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
             legend_access = plan[i].access;
-            paint_key_legend(cr, r, legend, true, legend_access);
+            // THE WORD'S PRINT WEARS ITS BIT TOO since the trim presets list's
+            // Overwrite and Delete grey (2026-10-28 night); every other
+            // owner's word publishes true.
+            paint_key_legend(cr, r, legend, enabled, legend_access);
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
@@ -7017,6 +7132,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
         out.score_act    = plan[i].score_act;
+        out.trim_act     = plan[i].trim_act;
         out.enabled      = plan[i].enabled;
         // THE PLAYER'S ENABLED BIT IS PUBLISHED AS PAINTED (architect
         // 2026-09-24, strictly as-painted): the claim reads this bit and the
@@ -7033,17 +7149,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // damage at the tick's cadence while the soundtrack plays — a BACK
         // greyed at the range's first frame must not be published live by a
         // frame that repainted the clock alone. Every other owner's buttons
-        // publish a constant true and need no gate. THE COVERAGE IS THE KEY
+        // publish a constant true and need no gate. THE TRIM PRESETS LIST'S
+        // ROW TAKES THE SAME GATE (2026-10-28 night): its faces move with the
+        // highlight and the trim, whose acts damage the row, but a frame
+        // whose clip missed a key must still not publish a bit it did not
+        // paint. THE COVERAGE IS THE KEY
         // AND ITS LEGEND (key_legend_layout's extent, 2026-10-23): the legend
         // wears the bit (dimmed when dead), so a clip that missed it must
         // keep the bit.
-        if ((player_up || score_up) &&
+        if ((player_up || score_up || trim_up) &&
             !clip_covers_drawable(
                 cr, app, key_legend_layout(r, legend, legend_access).extent)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
                                prev_enabled[i].player_act == out.player_act &&
-                               prev_enabled[i].score_act == out.score_act;
+                               prev_enabled[i].score_act == out.score_act &&
+                               prev_enabled[i].trim_act == out.trim_act;
             out.enabled = carry && prev_enabled[i].enabled;
         }
         // THE HINT: a word button's is THE ACT'S NAME ALONE, its word

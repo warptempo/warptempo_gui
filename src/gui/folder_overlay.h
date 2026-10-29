@@ -2,7 +2,7 @@
 
 // THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28; the
 // keyboard slot's band until 2026-10-14, the modal family's box since,
-// modal_box.h). ONE WIDGET, FOUR CONTENTS: the RENDER PLAYER's output folders
+// modal_box.h). ONE WIDGET, FIVE CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
 // SETTINGS PAGE's thirteen keys as `key=value` lines under two group rows
 // (architect 2026-10-28, on a mock he verified on the glass: "yes" to the
@@ -18,7 +18,12 @@
 // (kSettingsValueListKeys, settings_editor.h) — a SUB-PAGE of the settings
 // page, whose Cancel, Esc and commit return to the page on that key's row
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
-// GuiInputHandler::return_to_settings_page).
+// GuiInputHandler::return_to_settings_page); and THE TRIM PRESETS LIST
+// (architect 2026-10-28 night), the piece's named trim windows
+// (trim_presets_file.h), a row's tap applying its pair to the active tab's
+// trim with the list standing, its controls row the render player's shape —
+// the highlight pair, Save, Overwrite, Delete and Close (his word: "we would
+// be breaking symmetry if we did it differently").
 // (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
 // with the panel; the `h` view's history picker for one day, retired
 // 2026-08-29 as overengineered, that view's `'` raising its confirmation on
@@ -60,8 +65,8 @@
 // the view pairs' four included — greys through redesign_button_enabled's
 // first arm (each content's opener key excepted, its own closer:
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
-// over the page and the value list it swaps in 2026-10-28 —
-// is_folder_overlay_opener). The waveform's own
+// over the page and the value list it swaps in 2026-10-28, Trim Presets over
+// its list 2026-10-28 night — is_folder_overlay_opener). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
@@ -126,7 +131,8 @@
 // edge round the keyboard slot's band before it). IT COVERS EVERY CONTENT,
 // this one widget being every
 // Windows list in the product (the player's folders and wavs, the project
-// picker's projects, the settings page's keys, the value list's values); the controls row under it — the transport, the scrub,
+// picker's projects, the settings page's keys, the value list's values, the
+// trim presets); the controls row under it — the transport, the scrub,
 // the buttons — stands on the face. A
 // resting row paints no fill at all, and the highlighted row is a flat fill
 // in the theme's selected pair (render.h's palette block), focused or not.
@@ -153,7 +159,9 @@
 // the VALUE LIST
 // it commits the row's value to the listed key and returns to the settings
 // page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night; the
-// return 2026-10-28 night). AN
+// return 2026-10-28 night); under the TRIM PRESETS LIST it applies the row's
+// preset to the active tab's trim, the list standing (trim_presets_apply,
+// 2026-10-28 night). AN
 // INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
 // (finish_folder_overlay_release asks row_is_inert). Enter on the highlight is
@@ -274,8 +282,9 @@ inline int content_height_px(const AppState& a) {
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
-// rows in it — one content alone can stand empty: the `noise` key's value
-// list with no folder under `noise/` (the player refuses with
+// rows in it — two contents can stand empty: the `noise` key's value
+// list with no folder under `noise/`, and the trim presets list before its
+// first Save or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
 // fifteen rows, and every other value list its key's whole domain).
@@ -389,9 +398,10 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // offset that puts row `index`'s center on the band's center, the
 // difference rounded at the element, then the one clamp — so a row near
 // either end of the listing lands as close to center as the ends allow, and a
-// listing shorter than the band never scrolls. The four open-time seats
+// listing shorter than the band never scrolls. The five open-time seats
 // call it after their seat (the project picker's, the settings page's and
-// the value list's builds, the render player's every rebuild, each a
+// the value list's builds, the trim presets list's open, the render
+// player's every rebuild, each a
 // fresh listing — the page's first key row, row 1, lands at the band's top,
 // the clamp ruling a centered row 1 out, and a value list's return seats the
 // page on that key's row); the
@@ -415,7 +425,7 @@ inline bool scroll_row_centered(AppState& a, int index) {
 // THE DAMAGE IS THE CALLER'S: each of the movers answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
 // no include of one — the player damages through its own helper, the
-// picker's three contents through the input handler's. Nothing else about the highlight lives
+// picker's four contents through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 
