@@ -23,7 +23,6 @@
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "score_viewer_file.h"  // score_viewer_project_folder (the trim presets' file)
-#include "time_format.h"      // format_timestamp (the trim presets' rows)
 #include "trim_presets_file.h"
 #include "text_editor.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain (the diff-flag
@@ -7528,28 +7527,18 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
 }
 
 // THE ROWS: one glyph-less Plain row per preset, in the list's order, the
-// text THE NAME AND ITS BRACKETED SPAN, `<name>  [<begin> - <end>]` — two
-// spaces, then ASCII brackets round the two times with an ASCII hyphen
-// between them, the brackets saying the span is no part of the typed name
-// (architect 2026-10-28 night, his glass on 852a28d9: "the range should have
-// brackets to indicate it's not part of the name I typed") — the times in
-// row 8's clock's own spelling (format_timestamp over the source's rate, the
-// trim's whole source frames; clock_time_text, paint_handler.cpp). The highlight is seated through the
-// one set_highlight, clamped into the listing, -1 for an empty one.
+// text THE PRESET'S NAME ALONE (architect 2026-10-28 night, his glass on
+// 54e62064: "names are descriptive enough and the odd proportional spacing
+// looks bad") — no span; the list's open seat (the preset whose pair is the
+// active tab's trim) is how a match shows. The highlight is seated through
+// the one set_highlight, clamped into the listing, -1 for an empty one.
 void GuiInputHandler::build_trim_presets_rows(int highlight) {
     AppState::FolderOverlay& ov = app.folder_overlay;
-    const int sr = audio.sample_rate();
-    const auto spelled = [sr](int64_t frame) {
-        return format_timestamp(sr > 0 ? static_cast<double>(frame) /
-                                             static_cast<double>(sr)
-                                       : 0.0);
-    };
     ov.rows.clear();
     for (const GuiTrimPreset& p : ov.trim_presets) {
         AppState::FolderOverlayRow row;
         row.kind = AppState::FolderOverlayRow::Kind::Plain;
-        row.name = p.name + "  [" + spelled(p.begin) + " - " +
-                   spelled(p.end) + "]";
+        row.name = p.name;
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);

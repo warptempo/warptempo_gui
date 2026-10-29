@@ -23,10 +23,9 @@
 // source frames, inclusive [0, total-1], begin < end strictly (a resting trim
 // is never crossed or equal, input_trim.cpp's head). The name is THE NAME
 // GRAMMAR's (trim_preset_name_refusal below): a line the name editor could
-// have committed. The list's row shows the name and the span apart,
-// `<name>  [<begin> - <end>]` in row 8's clock's spelling, the brackets the
-// row's alone (build_trim_presets_rows) — the file holds neither them nor
-// the clock's times.
+// have committed. The list's row shows the name alone
+// (build_trim_presets_rows, architect 2026-10-28 night); the list's open seat
+// on the preset whose pair is the active tab's trim is how a match shows.
 //
 // THE READ'S THREE OUTCOMES, at the list's open (read_trim_presets_file),
 // the score viewer's non-fatal road ("other users shouldn't need the exact

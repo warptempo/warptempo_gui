@@ -20,8 +20,8 @@
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
 // GuiInputHandler::return_to_settings_page); and THE TRIM PRESETS LIST
 // (architect 2026-10-28 night), the piece's named trim windows
-// (trim_presets_file.h), each row the name and its bracketed span,
-// `<name>  [<begin> - <end>]` (build_trim_presets_rows), a row's tap applying
+// (trim_presets_file.h), each row the preset's name alone
+// (build_trim_presets_rows), a row's tap applying
 // its pair to the active tab's trim and framing it with the list standing,
 // its controls row the render player's shape — the highlight pair, Save,
 // Save As, Delete and Close, one cluster flush right (his word: "we would be
@@ -43,11 +43,14 @@
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
-// icon and a name; glyph-less PLAIN rows, a name alone in the names' column
-// (the value list's values since 2026-10-25, the settings page's key
-// lines since 2026-10-28); and the page's INERT GROUP rows, a heading in the
-// dead key's print, which the highlight never stands on (row_is_inert, the
-// walk below) (a glyph-less TEXT kind went with
+// icon and a name; glyph-less PLAIN rows, a name alone (the value list's
+// values since 2026-10-25, the settings page's key lines since 2026-10-28,
+// the trim presets since 2026-10-28 night); and the page's INERT GROUP rows,
+// a heading in the dead key's print, which the highlight never stands on
+// (row_is_inert, the walk below). A LISTING IN WHICH NO ROW WEARS A GLYPH
+// starts its text at the glyph's own column, not past an empty icon column
+// (architect 2026-10-28 night; the painter's names' column,
+// paint_folder_overlay) (a glyph-less TEXT kind went with
 // the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
 // until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
@@ -210,7 +213,9 @@ inline constexpr double kRowGapPx = 1.0;
 // first hours), the panel's row gap, the row's boxed glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then). A folder row wears
 // icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a plain row and
-// a group row wear none, their text in the same column. (The glyph-less
+// a group row wear none, and a listing of them alone starts its text at the
+// glyph's column (paint_folder_overlay's names' column, 2026-10-28 night).
+// (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
 // which wore the folder glyph because it named a folder, with the player's
 // move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while

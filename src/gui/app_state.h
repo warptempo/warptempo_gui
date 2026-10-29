@@ -9098,8 +9098,10 @@ struct AppState {
     // 2026-10-25: a preset row is the preset's memorable DISPLAY NAME,
     // "Midnight Blues", never its key; 2026-10-28: a settings page row is
     // the line the editor opens with, `waveform=default`, and a value list's
-    // other rows the value as the config spells it, `-9`, `4`; the text
-    // starting where a Folder row's name starts), and GROUP NONE, AND IT IS INERT
+    // other rows the value as the config spells it, `-9`, `4`; a listing
+    // with no glyph row starting its text at the glyph's own column,
+    // 2026-10-28 night, paint_folder_overlay's names' column), and GROUP
+    // NONE, AND IT IS INERT
     // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
     // highlighted, never opened, stepped over by the walk, its text in the
     // dead key's print (kDimInk). The kind says what a row IS; what its open
@@ -9121,7 +9123,8 @@ struct AppState {
     // in `value` the key's spelling the tap commits beside the `name` it
     // shows; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
-    // name and the bracketed span. A Plain or Group row's `path` and `entry` stay empty, and
+    // preset's name alone (architect 2026-10-28 night). A Plain or Group
+    // row's `path` and `entry` stay empty, and
     // `value` is set on a value list's rows alone.
     struct FolderOverlayRow {
         enum class Kind { Folder, Wav, Plain, Group };

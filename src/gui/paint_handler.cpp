@@ -7558,7 +7558,10 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // list of what a row looks like anywhere.
 // THE LIST ROWS' BOXED GLYPH AND NAME (architect 2026-10-23; the walk's
 // glyph block below): the glyph's ink height, its box's x and the name's x
-// past the modal box's outer left edge, device px at 300 % (skin_px).
+// past the modal box's outer left edge, device px at 300 % (skin_px) — the
+// name's x in a listing with glyph rows; a glyph-less listing's names stand
+// at the glyph's x (the names' column, paint_folder_overlay, 2026-10-28
+// night).
 static constexpr double kListGlyphInkAt300 = 27.0;
 static constexpr double kListGlyphXAt300   = 18.0;
 static constexpr double kListNameXAt300    = 64.0;
@@ -7603,6 +7606,30 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // above).
     const GuiPalette& pal = palette();
 
+    // THE NAMES' COLUMN, ONE PER LISTING (architect 2026-10-28 night, his
+    // glass on 54e62064: "all lists that don't have the player's icons hold
+    // an empty space for an icon that doesn't exist. shouldn't we tighten up
+    // the padding?" — "agree all"): A LISTING IN WHICH NO ROW WEARS A GLYPH
+    // (every row Plain or Group: the settings page, every value list, the
+    // trim presets list) starts its text at kListGlyphXAt300, the column the
+    // glyph's box would begin at, the group rows moving with their key lines
+    // so the page stays aligned within itself; a listing with glyph rows (the
+    // render player's and the project picker's, which carry Folder and Wav
+    // rows alone — no Plain row stands among them today) keeps
+    // kListNameXAt300 for every row. An empty icon column is the fault he
+    // named on the player's folder header 2026-10-14 ("it was icon padding
+    // but no icon", folder_overlay.h's content_rect). Derived here, once per
+    // paint, from the rows themselves; the painter is the column's one
+    // reader (the press router hit-tests whole rows).
+    const bool listing_wears_glyphs = std::any_of(
+        ov.rows.begin(), ov.rows.end(),
+        [](const AppState::FolderOverlayRow& row) {
+            return row.kind == AppState::FolderOverlayRow::Kind::Folder ||
+                   row.kind == AppState::FolderOverlayRow::Kind::Wav;
+        });
+    const double text_x_at300 =
+        listing_wears_glyphs ? kListNameXAt300 : kListGlyphXAt300;
+
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
                  const GuiRect& r) {
@@ -7644,7 +7671,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // = 27 px, .525 of the 51-px row, so its box icon_box_px(27) (40
             // px at 300 %), the box's rows centered on the row (rounded
             // down), its left edge kListGlyphXAt300 = 18 px past the box's
-            // outer left edge; the name at kListNameXAt300 = 64. THE PLAYING
+            // outer left edge; the name at kListNameXAt300 = 64 (the names'
+            // column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
             // renders row looks good now" — the clock and the scrub say
             // which item plays). (The paint_quaver vector of the morning, and
@@ -7654,9 +7682,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // A PLAIN ROW AND A GROUP ROW WEAR NO GLYPH (architect
             // 2026-10-25, the value list: the row is the preset's display
             // name or the value as shown; 2026-10-28, the settings page: the row is its
-            // `key=value` line, the group row its heading) and their text
-            // starts at the same kListNameXAt300 as every other row's, so
-            // the pickers' names stand in the project picker's name column.
+            // `key=value` line, the group row its heading); their text
+            // starts at the listing's one names' column (text_x_at300,
+            // above): the glyph's own column, kListGlyphXAt300, where no row
+            // of the listing wears a glyph.
             const int x0 = modal_box_rect(app, 0).x;
             if (row.kind == AppState::FolderOverlayRow::Kind::Folder ||
                 row.kind == AppState::FolderOverlayRow::Kind::Wav) {
@@ -7668,7 +7697,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                         : icons::Icon::FolderRow,
                     x0 + skin_px(kListGlyphXAt300), r.y + (r.h - gh) / 2, gh);
             }
-            const int text_x = x0 + skin_px(kListNameXAt300);
+            const int text_x = x0 + skin_px(text_x_at300);
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
             // the field text on a resting row (architect 2026-10-06, the

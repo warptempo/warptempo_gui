@@ -3004,9 +3004,8 @@ private:
     //   (the key's plain press dispatches it at the lift; no modifier). The
     //   piece's NAMED TRIM WINDOWS, read from `<project>/trim/presets.txt`
     //   at the open (trim_presets_file.h, device-local, never committed),
-    //   one Plain row each in the file's order, `<name>  [<begin> - <end>]`
-    //   in row 8's clock's spelling (format_timestamp), the brackets saying
-    //   the span is no part of the typed name (2026-10-28 night). It writes the trim —
+    //   one Plain row each in the file's order, the preset's name alone
+    //   (2026-10-28 night, his glass on 54e62064). It writes the trim —
     //   band, legal on a locked tab and under grid iterations (bare `t` on
     //   the read-only allowlist, which the iteration gate inherits) — and its
     //   own file, never the piece; the `h` view refuses `t`. THE PLAYER'S
