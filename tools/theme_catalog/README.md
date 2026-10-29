@@ -21,7 +21,8 @@ Default among the names (architect 2026-10-27); `gen_presets.py` fails the run o
 `gen_presets.py` transcribes each into the program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read
 off the header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never
 hand-edited. Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, Curs, _LED (the lamps'
-accent, as it is, architect 2026-10-29) and Face to their roles; THE LIT OUTLINE the ink at HLS
+accent, as it is, architect 2026-10-29), _Sel (the selection fill, as it is, the same day) and Face to their roles;
+THE LIT OUTLINE the ink at HLS
 lightness 0.3157, the lightness measured on Cool Edit Pro 2.1's view bar span shadows across five of its presets
 (2026-10-09; `src/gui/cool_edit_derive.h`'s `span_shadow`, ported operation for operation, `palette_file.cpp` proving
 every row against the C++ tone()); the scanner white in every preset. The keys are the display names in the key

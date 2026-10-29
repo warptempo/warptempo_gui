@@ -1416,8 +1416,10 @@ void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     // THE CLIENT ALONE (platform.h's damage pair): a preset moves no chrome
-    // role (the skin's constants and the ring tones off the ground's mean,
-    // chrome_derive.h), only the waveform's and the program's roles and THE
+    // role but the selection fill (the skin's constants and the ring tones
+    // off the ground's mean, `selected_fill` the preset's `selection`,
+    // chrome_derive.h), only the waveform's and the program's roles, the
+    // selection fill and THE
     // LIT LEDS' ACCENT (the preset's `led`, its patches rebuilt at the
     // install, materials::set_accent), which paint inside the client; the
     // restored laptop's border outside it wears the ring's light tone, which

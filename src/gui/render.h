@@ -105,10 +105,13 @@ struct TrimRange {
 // record; palette_file.h's head owns the rule that parts program from
 // chrome) — the WAVEFORM PRESET, the one choice of color left, its `led`
 // also THE ACCENT of the lit LEDs (Cool Edit's LED color verbatim, architect
-// 2026-10-29; materials.h's THE ACCENT, the rule's one exception); THE PANEL'S
+// 2026-10-29; materials.h's THE ACCENT) and its `selection` THE SELECTION
+// FILL (Cool Edit's selection color verbatim, the same day), the rule's two
+// exceptions; THE PANEL'S
 // FACE is the brushed ground's mean (materials.h's TONE RULE), and THE
 // CHROME'S ROLES are the skin's constants and the two ring tones off that
-// mean (chrome_derive.h's head, the per-role table; Cool Edit's tones off
+// mean, `selected_fill` the preset's `selection`
+// (chrome_derive.h's head, the per-role table; Cool Edit's tones off
 // the Face 2026-10-10 to 2026-10-23). The chrome's roles and their order are
 // the role table (kGuiThemeRoles, theme_file.h). THE APP PAINTS NO CAPTION
 // since 2026-10-24 (THE CAPTION's note, below): its six roles, the
@@ -133,7 +136,7 @@ struct TrimRange {
 // ruler's ticks and digits, and the black shadow under the ticks) — or THE
 // HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
 // the bone, legend and dim inks, the ruler's and the fields' grounds, the
-// selection pair, the key's face, edges and LED, the accent (the preset's
+// selection's text, the key's face, edges and LED, the accent (the preset's
 // `led`, materials::accent_color), and the baked
 // brushed grounds through set_surface_source) — or THE ICONS' OWN INKS
 // (architect 2026-10-06): the drawings' colors as each file names them
@@ -142,7 +145,9 @@ struct TrimRange {
 // DRAWS ONE since 2026-10-23, and no drawing is ever shown disabled.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role: the bone over the ground and the field, the legend ink under the
-// keys and in the tooltip, the bone over the selection's grey.
+// keys and in the tooltip, the bone over the selection fill — the
+// preset's `selection` since 2026-10-29, the bone kept on it with no swap
+// (architect: "ok if it breaks other themes", his judgment aid).
 // STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
 // never had one; the lists' lit rows are a selection, not a button face.
@@ -286,7 +291,10 @@ struct TrimRange {
 //                 (architect 2026-10-09); `led`, THE LIT LEDS' ACCENT,
 //                 Cool Edit's LED color as it is (architect 2026-10-29,
 //                 "just use the color"; materials::set_accent, the lit key
-//                 patches baking it); and THE
+//                 patches baking it); `selection`, THE SELECTION FILL,
+//                 Cool Edit's selection color as it is under the bone
+//                 (architect 2026-10-29, his judgment aid; the chrome's
+//                 `selected_fill` derived from it, chrome_derive.h); and THE
 //                 PANEL'S `face` (2026-10-09: the program's band, row 8
 //                 and the canvas column's lanes — Cool Edit's — every
 //                 other panel tone derived from it, the COOL EDIT BLOCK,
@@ -361,8 +369,9 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
 // The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
-// derived from the panel's Face since 2026-10-10, the selection pair a
-// constant since 2026-10-21 (chrome_derive.h) — and the active palette's program roles, one
+// derived from the panel's Face since 2026-10-10, the selection's fill the
+// preset's `selection` and its text the bone (chrome_derive.h, 2026-10-29)
+// — and the active palette's program roles, one
 // field each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
 // program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
 // derived from the program's `face` (cool_edit_derive.h's painted tones,
@@ -402,6 +411,11 @@ struct GuiPalette {
     // 2026-10-29): the record of the words handed to materials::set_accent,
     // whose baked key patches carry it; no painter reads the member.
     GuiColor led;
+    // THE SELECTION FILL, Cool Edit's `_Sel` as it is (architect
+    // 2026-10-29): the record of the word chrome_derive.h hands to the
+    // chrome's `selected_fill`, which every painter reads; no painter reads
+    // the member.
+    GuiColor selection;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
     // Cool Edit's Face, the ground of the toolbar band and row 8 — THE
     // BRUSHED GROUND'S MEAN since 2026-10-23 (materials.h's TONE RULE; its
@@ -492,18 +506,18 @@ GuiColor surface_text(GuiSurface surface);
 // (The caption's six were a picked scheme's — a `caption` key, its row and
 // a second argument here, with install_chrome_pick and live_chrome_pick
 // beside — 2026-10-08..10-21.)
-void install_palette(const std::array<uint32_t, 11>& program);
+void install_palette(const std::array<uint32_t, 12>& program);
 
 // THE LIVE WORDS AS INSTALLED — the program's words the install family
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 11 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 12 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not — so a reopen
 // keeps them. ITS READER: the materials' re-install at a bake
 // (materials.cpp's bake_now, the panel's Face moving under the same words).
-const std::array<uint32_t, 11>& program_palette_words();
+const std::array<uint32_t, 12>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
 // program's words alone, the Waveform row's live road — is declared in

@@ -3070,9 +3070,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // has to be legible"), and THE SELECTED SUBSTRING takes the chrome's
     // SELECTED PAIR, `selected_text` on `selected_fill`, the ordinary
     // highlight — the pair that exists "precisely to avoid this problem" —
-    // part of the chrome, as every selection in the product is: the program
-    // constant pair kSelectionFill / kSelectionText since 2026-10-21
-    // (chrome_derive.h's kChromeRoles). A COINCIDENT
+    // part of the chrome, as every selection in the product is: the
+    // preset's `selection` under the bone kSelectionText since 2026-10-29
+    // (materials.h's THE SELECTION PAIR, chrome_derive.h's kChromeRoles).
+    // A COINCIDENT
     // MARKER'S FIELD IS THE SAME FIELD, its text and caret the field's own,
     // unstruck; `struck` marks its riding segments alone.
     const GuiPalette& pal = palette();

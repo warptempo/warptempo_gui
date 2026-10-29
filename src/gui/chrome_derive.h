@@ -4,7 +4,7 @@
 #include "palette_file.h"      // GuiPaletteWords, palette_role_index, the
                                // default palette (the checks)
 #include "cool_edit_derive.h"  // the tones the chrome wears
-#include "materials.h"         // the selection pair's constants
+#include "materials.h"         // the skin's constants, the selection's text
 
 #include <array>
 #include <cstddef>
@@ -19,9 +19,11 @@
 // is A CONSTANT OF THE SKIN or ONE OF THE TWO RING TONES OFF THE GROUND'S
 // MEAN (materials.h's TONE RULE; render.cpp's panel_face hands the mean in as
 // the words' `face`), re-derived at every install of the palette
-// (render.cpp's install family). The palette's own `face` (Cool Edit's
-// preset text) is no source; the generated presets keep it for the
-// static_asserts. THE CAPTION HAS NO ROLE: the app paints none since
+// (render.cpp's install family) — but one, THE SELECTION FILL, the
+// preset's own `selection` word (Cool Edit's _Sel), read off the words as
+// the Face is (architect 2026-10-29, below). The palette's own `face`
+// (Cool Edit's preset text) is no source; the generated presets keep it for
+// the static_asserts. THE CAPTION HAS NO ROLE: the app paints none since
 // 2026-10-24 (render.h's caption note; labwc draws the laptop's).
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 15, each decided
@@ -38,15 +40,22 @@
 //   card_ground                          = THE FIELD kFieldGround 0A0A0C
 //                                          (every field, the cards, the
 //                                          tooltip, the modal box)
-//   selected_fill                        = THE CONSTANT kSelectionFill,
-//                                          3E4044, the grey bar (architect
-//                                          2026-10-23: "the grey everywhere")
+//   selected_fill                        = THE PRESET'S `selection`, Cool
+//                                          Edit's _Sel as it is (architect
+//                                          2026-10-29: "just make selection
+//                                          fill take the cool edit color so I
+//                                          can judge if it's worth it — ok if
+//                                          it breaks other themes"; the
+//                                          default's F6F6FF)
 //   selected_text                        = THE CONSTANT kSelectionText, the
-//                                          bone
+//                                          bone, on every preset's fill (no
+//                                          swap, the same ruling: on a
+//                                          near-white fill it will not read,
+//                                          his to see)
 namespace chrome_derive {
 
 enum class Source {
-    Face, RingLight, RingDark, Black, Bone, Field, SelectionFill,
+    Face, RingLight, RingDark, Black, Bone, Field, Selection,
     SelectionText,
 };
 struct ChromeRole {
@@ -60,7 +69,7 @@ inline constexpr ChromeRole kChromeRoles[] = {
     {"light_3d",                  Source::Face},
     {"shadow",                    Source::RingDark},
     {"dk_shadow",                 Source::Black},
-    {"selected_fill",             Source::SelectionFill},
+    {"selected_fill",             Source::Selection},
     {"selected_text",             Source::SelectionText},
     {"field_ground",              Source::Field},
     {"field_text",                Source::Bone},
@@ -95,12 +104,15 @@ constexpr bool every_chrome_role_decided() {
 }
 static_assert(every_chrome_role_decided());
 
-// THE DERIVATION: every role off the words' `face` (the ground's mean) and
-// the skin's constants.
+// THE DERIVATION: every role off the words' `face` (the ground's mean), the
+// words' `selection` (the preset's) and the skin's constants.
 constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
     constexpr std::size_t kFace = palette_role_index("face");
-    static_assert(kFace < kGuiPaletteRoleCount);
+    constexpr std::size_t kSelection = palette_role_index("selection");
+    static_assert(kFace < kGuiPaletteRoleCount &&
+                  kSelection < kGuiPaletteRoleCount);
     const uint32_t face = program[kFace] & 0xFFFFFFu;
+    const uint32_t selection = program[kSelection] & 0xFFFFFFu;
     GuiThemeWords w{};
     for (std::size_t i = 0; i < std::size(kChromeRoles); ++i) {
         uint32_t v = 0;
@@ -111,7 +123,7 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
             case Source::Black:         v = 0x000000u;          break;
             case Source::Bone:          v = kBoneInk;           break;
             case Source::Field:         v = kFieldGround;       break;
-            case Source::SelectionFill: v = kSelectionFill;     break;
+            case Source::Selection:     v = selection;          break;
             case Source::SelectionText: v = kSelectionText;     break;
         }
         w[kChromeRoleIndex[i]] = v & 0xFFFFFFu;
@@ -123,7 +135,7 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
 
 // THE SKIN ON THE SHIPPED GROUND'S MEAN (about 212123, materials.h's TONE
 // RULE): the rings 49494D and 0D0D0E (pinned beside ring_light_of), the
-// constants as listed.
+// selection fill the default preset's own F6F6FF, the constants as listed.
 inline constexpr GuiThemeWords kDefaultCheck = [] {
     GuiPaletteWords p = default_palette_words();
     p[palette_role_index("face")] = 0x212123;
@@ -136,7 +148,7 @@ static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
 static_assert(kDefaultCheck[theme_role_index("label")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x0A0A0C);
 static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xF0F0F0);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x3E4044);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0xF6F6FF);
 static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xF0F0F0);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x0A0A0C);
 static_assert(kDefaultCheck[theme_role_index("card_frame")] == ring_dark_of(0x212123));

@@ -125,8 +125,8 @@
 //
 // (THE SELECTED TEXT stood here 2026-10-16..10-21 — the program text's
 // other member over the waveform's ink — and retired for the fortepiano
-// chrome's constant pair, materials.h's kSelectionFill / kSelectionText,
-// architect 2026-10-21; closed_questions.md.)
+// chrome's own pair, materials.h's THE SELECTION PAIR, architect 2026-10-21;
+// closed_questions.md.)
 
 namespace cool_edit_derive {
 

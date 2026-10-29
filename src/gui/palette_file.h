@@ -23,9 +23,11 @@
 //     completes a typed prefix against the built-in names
 //     (GuiSettingsEditor::complete_closed_value) and whose commit installs
 //     the preset live (install_program_palette below). It sets THE
-//     WAVEFORM'S ROLES ALONE, and with its `led` THE LIT LEDS' ACCENT
+//     WAVEFORM'S ROLES ALONE, with its `led` THE LIT LEDS' ACCENT
 //     (Cool Edit's own LED color verbatim, architect 2026-10-29; render.cpp's
-//     fill_program_palette): no chrome surface reads its
+//     fill_program_palette) and with its `selection` THE CHROME'S SELECTION
+//     FILL (Cool Edit's own selection color verbatim, the same day;
+//     chrome_derive.h's selected_fill): no chrome surface reads its
 //     `face` — the panel's Face is the brushed ground's mean (render.cpp's
 //     panel_face, materials.h's TONE RULE) — so the role stands in the table
 //     and the generated rows as the record of each preset's Face, read by
@@ -61,8 +63,9 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
-// chrome's selected pair) — ONE EXCEPTION, the lamps' accent (`led`, below:
-// chrome, but Cool Edit's preset records it, architect 2026-10-29). So the
+// chrome's selected pair) — TWO EXCEPTIONS, the lamps' accent and the
+// selection fill (`led` and `selection`, below: chrome, but Cool Edit's
+// preset records them, architect 2026-10-29). So the
 // palette's program roles are exactly the role table's below: the
 // waveform's canvas, ink and lit outline; THE CANVAS'S
 // GRID AND CENTER LINE, `grid` and `center`; THE CUES' TWO COLORS, `cue` the
@@ -81,7 +84,14 @@
 // worn verbatim by the lit LEDs and their glow (architect 2026-10-29: "just
 // use the color"; render.cpp's fill_program_palette hands it to
 // materials::set_accent, the key patches baking it — no painter reads the
-// member); and THE PANEL'S FACE, Cool Edit's (the record, above). (The
+// member); THE SELECTION FILL `selection`, Cool Edit's selection color,
+// worn verbatim under the bone by every selection — the lists' lit row, the
+// flag editor's and the dialog editors' selected substring (architect
+// 2026-10-29, his judgment aid: "just make selection fill take the cool
+// edit color so I can judge if it's worth it — ok if it breaks other
+// themes"; chrome_derive.h derives the chrome's `selected_fill` from it, so
+// painters read that role and never the member); and THE PANEL'S FACE,
+// Cool Edit's (the record, above). (The
 // four flag kinds' faces and selected faces, the one flag
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
@@ -131,6 +141,8 @@
 // `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on every built-in but
 // CEPro 1.2's FFFF6C), `led` its _LED (Cool Edit's LED color, the default's
 // red FF0000, worn as it is; architect 2026-10-29, "just use the color"),
+// `selection` its _Sel (Cool Edit's selection color, the default's F6F6FF,
+// worn as it is under the bone; architect 2026-10-29),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in the default: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the
@@ -156,7 +168,8 @@
 // THE TABLE'S ORDER (the color picker's chooser's, 2026-10-07..14): the
 // waveform's three, the canvas's two lines, the cues' two colors, then the
 // two lines that cross the well (the playhead, the scanner), then the
-// lamps' accent, then the panel's face, the record, last. The generator
+// lamps' accent and the selection fill, then the panel's face, the record,
+// last. The generator
 // reads the names off this table and refuses to run when they are not its
 // own order.
 struct GuiPaletteRole {
@@ -174,6 +187,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"playhead_stem",             &GuiPalette::playhead_stem},
     {"scanner",                   &GuiPalette::scanner},
     {"led",                       &GuiPalette::led},
+    {"selection",                 &GuiPalette::selection},
     {"face",                      &GuiPalette::face},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
@@ -182,12 +196,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // install_program_palette takes, a built-in palette holds and palette_record
 // answers.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 11>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 12>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
 // pinned to the table here — the one place the roles are counted.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 11> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 12> must be GuiPaletteWords");
 
 // The index of the role named `name` in the table, or kGuiPaletteRoleCount —
 // the reader's one lookup, and install_palette's for the plate's two baked
@@ -203,7 +217,8 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED (chrome_derive.h's live_chrome_words: the
 // skin's constants and the ring tones off the ground's mean, so no chrome
-// role moves with a preset; the waveform's and the program's roles do, the
+// role moves with a preset but `selected_fill`, the `selection` word; the
+// waveform's and the program's roles do, the
 // view bar's ink-derived tones among them, and the lit LEDs' accent, the
 // `led` word, materials::set_accent)
 // and palette_generation bumped. THE LIVE ROAD is the Settings Waveform
@@ -217,7 +232,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
 // (the grid, the center line, a cue color, the playhead,
-// the scanner, the lamps' accent: no plate render), the flag cache alone, synchronously
+// the scanner, the lamps' accent, the selection fill: no plate render), the flag cache alone, synchronously
 // (Viewport::refresh_flag_cache, so a frame callback served before the tick
 // cannot blit flags in the old colors); then Viewport::invalidate_all, so
 // the swap is one frame (the whole surface, which is the GUI's geometry since

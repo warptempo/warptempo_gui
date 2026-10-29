@@ -197,10 +197,14 @@ inline constexpr uint32_t kDimInk    = 0x6A6A6E;
 inline constexpr uint32_t kRulerGround     = 0x0E0E10;
 inline constexpr uint32_t kFieldGround     = 0x0A0A0C;
 inline constexpr uint32_t kTimeFieldGround = 0x000000;
-// THE SELECTION PAIR (architect 2026-10-23: "the grey everywhere"): a flat
-// grey bar under the bone — the lists' lit row, the
-// flag editor's and the dialog editors' selected substring.
-inline constexpr uint32_t kSelectionFill = 0x3E4044;
+// THE SELECTION PAIR — the lists' lit row, the flag editor's and the dialog
+// editors' selected substring: THE FILL IS THE WAVEFORM PRESET'S OWN
+// `selection`, Cool Edit's _Sel as it is (architect 2026-10-29, his
+// judgment aid: "just make selection fill take the cool edit color so I can
+// judge if it's worth it — ok if it breaks other themes"; chrome_derive.h's
+// selected_fill), and THE TEXT ON IT THE BONE, kSelectionText, on every
+// preset — no lightness swap, no derived tone, so on the near-white fills
+// (Default's F6F6FF among them) the bone will not read, which is his to see.
 inline constexpr uint32_t kSelectionText = kBoneInk;
 
 // THE KEY (architect 2026-10-23): a flat face, a one-device-px black outline, a light top

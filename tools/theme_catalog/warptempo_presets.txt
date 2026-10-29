@@ -8,10 +8,11 @@
 # TWENTY PRESETS, Cool Edit's twenty and nothing else, each AS IT IS, under the display name its Settings > Colors >
 # Color Presets list shows ("(Default Scheme)" displayed "Default"), architect 2026-10-26: "I am quite sure that I want
 # to just trim down to just the cool edit themes", a full closed self-contained set; the names Cool Edit's own with no
-# prefix (architect 2026-10-27). Every key is Cool Edit's own — WvFg, WvBk, Cntr, CueM, RngM, GrdL, Curs, Face and
-# _LED, the last Cool Edit's LED color, worn verbatim as the lamps' accent (architect 2026-10-29, "just use the color";
-# its values read off the same registry that day); the one scheme recording no Face (Classic Cool) takes Default's
-# 626C7B.
+# prefix (architect 2026-10-27). Every key is Cool Edit's own — WvFg, WvBk, Cntr, CueM, RngM, GrdL, Curs, Face, _LED
+# and _Sel: _LED Cool Edit's LED color, worn verbatim as the lamps' accent (architect 2026-10-29, "just use the
+# color"), _Sel its selection color, worn verbatim as the selection fill under the bone (architect 2026-10-29, his
+# judgment aid: "just make selection fill take the cool edit color so I can judge if it's worth it"); both read off
+# the same registry that day. The one scheme recording no Face (Classic Cool) takes Default's 626C7B.
 # NO PRESET CARRIES AN INVALID COLOR (architect 2026-10-26 ~15:10, "It's very odd having anything but red mean
 # invalid"): a coincident marker's label is struck, in the cue colors (render.cpp's resolve_flag_face).
 # The default (palette_file.h's kGuiDefaultPaletteKey) is Default (architect 2026-10-26).
@@ -19,46 +20,46 @@
 # (architect 2026-10-27); this file's order is the include's and the waveform value list's, and gen_presets.py fails the run
 # on the first name line out of that order.
 # FORMAT: Cool Edit's value grammar (comma-separated key=value items, the transcription's keys alone — WvFg, WvBk,
-# Cntr, CueM, RngM, GrdL, Curs, Face, _LED — Cool Edit's other keys left out),
+# Cntr, CueM, RngM, GrdL, Curs, Face, _LED, _Sel — Cool Edit's other keys left out),
 # EACH VALUES LINE FOLLOWED BY ITS NAME LINE, the display name; the key is the name in the key grammar, no prefix.
 # Lines opening with '#' are this note and nothing else.
-WvFg=FE0D0D,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=2F1AEE,_LED=FF2B2B
+WvFg=FE0D0D,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=2F1AEE,_LED=FF2B2B,_Sel=1CFE0A
 3D
-WvFg=0DE0FE,WvBk=000000,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=292929,Curs=FFFF00,Face=C0C0C0,_LED=10E0FE
+WvFg=0DE0FE,WvBk=000000,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=292929,Curs=FFFF00,Face=C0C0C0,_LED=10E0FE,_Sel=FFFFFF
 Arctic Freeze
-WvFg=1BF0AB,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=042C4F,Curs=FFFF6C,Face=7088A0,_LED=F3FF11
+WvFg=1BF0AB,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=042C4F,Curs=FFFF6C,Face=7088A0,_LED=F3FF11,_Sel=FEFEFF
 CEPro 1.2
-WvFg=1AF0AB,WvBk=000000,Cntr=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=042C4F,Curs=FFFF00,Face=626C7B,_LED=1AFF1A
+WvFg=1AF0AB,WvBk=000000,Cntr=A53038,CueM=6F7BD2,RngM=DB73A9,GrdL=042C4F,Curs=FFFF00,Face=626C7B,_LED=1AFF1A,_Sel=FEFEFF
 Classic Cool
-WvFg=4BF3A7,WvBk=000000,Cntr=A90404,CueM=F34B58,RngM=4B82F3,GrdL=003500,Curs=FFFF00,Face=626C7B,_LED=FF0000
+WvFg=4BF3A7,WvBk=000000,Cntr=A90404,CueM=F34B58,RngM=4B82F3,GrdL=003500,Curs=FFFF00,Face=626C7B,_LED=FF0000,_Sel=F6F6FF
 Default
-WvFg=B2DCA8,WvBk=000000,Cntr=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=003500,Curs=FFFF00,Face=A8969C,_LED=F744D8
+WvFg=B2DCA8,WvBk=000000,Cntr=A90404,CueM=FDE1E1,RngM=D5E1FC,GrdL=003500,Curs=FFFF00,Face=A8969C,_LED=F744D8,_Sel=AFEFFD
 Dusty Rose
-WvFg=73BA51,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=003500,Curs=FFFF00,Face=626C7B,_LED=FF0000
+WvFg=73BA51,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=003500,Curs=FFFF00,Face=626C7B,_LED=FF0000,_Sel=C6FFFF
 Easy on the Eyes
-WvFg=FFCE0C,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=59041C,Curs=FFFF00,Face=8E283A,_LED=EFFF2B
+WvFg=FFCE0C,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=59041C,Curs=FFFF00,Face=8E283A,_LED=EFFF2B,_Sel=FFCD97
 Fire and Brick
-WvFg=83F4A2,WvBk=073C2F,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=555454,Curs=FFFF00,Face=ACA9D0,_LED=10E0FE
+WvFg=83F4A2,WvBk=073C2F,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=555454,Curs=FFFF00,Face=ACA9D0,_LED=10E0FE,_Sel=F88834
 Grape, Lime, and Tangerine
-WvFg=ED1EC9,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=8751CA,_LED=FF2BBF
+WvFg=ED1EC9,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=8751CA,_LED=FF2BBF,_Sel=F2DBE8
 Lipstick and Grapes
-WvFg=4FD8D1,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=102E4E,Curs=FFFF00,Face=272B6D,_LED=FF289E
+WvFg=4FD8D1,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=102E4E,Curs=FFFF00,Face=272B6D,_LED=FF289E,_Sel=FAFFA5
 Midnight
-WvFg=0C55FF,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F0459,Curs=FFFF00,Face=414141,_LED=3371FF
+WvFg=0C55FF,WvBk=000000,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=0F0459,Curs=FFFF00,Face=414141,_LED=3371FF,_Sel=0080FF
 Midnight Blues
-WvFg=C7A043,WvBk=000000,Cntr=804000,CueM=804000,RngM=804000,GrdL=371C00,Curs=FFFF00,Face=637461,_LED=FD8A35
+WvFg=C7A043,WvBk=000000,Cntr=804000,CueM=804000,RngM=804000,GrdL=371C00,Curs=FFFF00,Face=637461,_LED=FD8A35,_Sel=FFD280
 Nature Calls
-WvFg=3565D6,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=AEB6D2,_LED=64FFD5
+WvFg=3565D6,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=AEB6D2,_LED=64FFD5,_Sel=FFC1F9
 Periwinkle
-WvFg=D9B732,WvBk=3D2E20,Cntr=804000,CueM=804000,RngM=804000,GrdL=3C1E1E,Curs=FFFF00,Face=C1B791,_LED=FF5B0D
+WvFg=D9B732,WvBk=3D2E20,Cntr=804000,CueM=804000,RngM=804000,GrdL=3C1E1E,Curs=FFFF00,Face=C1B791,_LED=FF5B0D,_Sel=B3B366
 Safari So Good
-WvFg=576AB4,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=C7C8CF,_LED=2B55FF
+WvFg=576AB4,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,Curs=FFFF00,Face=C7C8CF,_LED=2B55FF,_Sel=F2DBE8
 Seattle Blues
-WvFg=13F774,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=010B63,Curs=FFFF00,Face=03040A,_LED=37FF3D
+WvFg=13F774,WvBk=000000,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=010B63,Curs=FFFF00,Face=03040A,_LED=37FF3D,_Sel=F2DBE8
 Stealth
-WvFg=22B893,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,Curs=FFFF00,Face=1C47C6,_LED=64FFD5
+WvFg=22B893,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,Curs=FFFF00,Face=1C47C6,_LED=64FFD5,_Sel=FFFFFF
 XP Blue
-WvFg=D8B264,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=491010,Curs=FFFF00,Face=9AA280,_LED=F37D4B
+WvFg=D8B264,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=491010,Curs=FFFF00,Face=9AA280,_LED=F37D4B,_Sel=FFFFFF
 XP Olive
-WvFg=22B893,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=313030,Curs=FFFF00,Face=7B7E8B,_LED=64FFD5
+WvFg=22B893,WvBk=000000,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=313030,Curs=FFFF00,Face=7B7E8B,_LED=64FFD5,_Sel=FFFFFF
 XP Silver
