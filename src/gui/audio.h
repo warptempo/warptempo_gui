@@ -99,6 +99,11 @@ public:
     // (raw) when the span is finer than the finest stride. Result is always a
     // valid argument for get_peak_range — clamped into [0, num_levels()-1].
     //
+    // THE LEVEL IS A COST CHOICE, NOT A PICTURE CHOICE (architect 2026-10-30):
+    // get_peak_range returns the exact extrema of its range at every level, so
+    // the level decides only how many words the read touches, never what the
+    // column shows.
+    //
     // This is the ONE level-choosing owner, so no caller needs to know the
     // stride ladder. Choosing from the column's own mapped SOURCE span (rather
     // than a viewport-wide estimate) is what bounds the per-column work in
@@ -109,9 +114,23 @@ public:
     //
     // THE RESULTING PER-COLUMN READ BOUND, per channel — UNCONDITIONAL, in
     // BOTH views, for every input the loader accepts:
-    //   - a cached level reads AT MOST 5 pairs. The level is chosen so
-    //     stride <= span < kReductionFactor*stride, and get_peak_range expands
-    //     to whole bins, so it touches ceil(span/stride)+1 <= 5 of them.
+    //   - a cached level L (1..13, stride s = 16 * 4^(L-1)) reads AT MOST
+    //     4 + 6(L-1) pairs and 30 raw samples. The level is chosen so
+    //     s <= span < kReductionFactor*s, and the caller rounds the two
+    //     endpoints INDEPENDENTLY, adding under one sample, so the integer
+    //     range is at most 4s wide. Its whole level-L bins: at most 4 (four
+    //     only when the range is 4s wide and aligned, leaving no edge, or at
+    //     the source's end, whose last bin is short; otherwise at most 3).
+    //     Each of the two partial edges is under s wide and aligned to a bin
+    //     boundary at one end, so at every finer cached level it holds at
+    //     most kReductionFactor-1 = 3 whole bins and one smaller remainder,
+    //     and the remainder under the finest stride is at most 15 raw
+    //     samples: per edge 3(L-1) pairs + 15 samples. A range holding no
+    //     whole level-L bin is under 2s wide and straddles at most one
+    //     level-L boundary, whose two sides are two such edges, so it costs
+    //     no more. Hence 4 + 2*3(L-1) pairs + 2*15 samples: 4 pairs and 30
+    //     samples at L = 1 (the working zoom's stride 16), 76 pairs and 30
+    //     samples at the top rung L = 13.
     //   - raw (level 0) reads AT MOST 16 samples — one more than the finest
     //     stride, NOT one less. Raw is selected for a span strictly below 16,
     //     but the caller rounds the two endpoints INDEPENDENTLY, which can
@@ -126,11 +145,24 @@ public:
     // the reach derivation at kStrides for the arithmetic.
     int level_for_span(double span_samples) const;
 
-    // Returns (min, max) over source-sample indices [start_sample, end_sample)
-    // on `channel`, read at pyramid `level`. Level 0 is raw samples; levels
-    // 1..kCacheLevels select cached min/max pairs on the powers-of-4 stride
-    // ladder (see kStrides in audio.cpp). Levels above the deepest cached level
-    // clamp to it. Inputs are clamped; an empty range returns (0, 0).
+    // Returns the EXACT (min, max) over source-sample indices
+    // [start_sample, end_sample) on `channel` — the answer a raw scan gives, up
+    // to the cached levels' int16 quantization — at every `level`. Level 0
+    // scans raw samples; levels 1..kCacheLevels pick a rung of the powers-of-4
+    // stride ladder (see kStrides in audio.cpp) whose WHOLE bins inside the
+    // range are reduced from that rung, the two partial edges resolved the
+    // same way at the next finer rung, down to raw samples under the finest
+    // stride. So the level is a cost choice only (the bound is at
+    // level_for_span). Levels above the deepest cached level clamp to it.
+    // Inputs are clamped; an empty range returns (0, 0).
+    //
+    // WHY EXACT (architect 2026-10-30): reading whole bins of the chosen rung
+    // widened each column by up to a stride on each side, an over-read of
+    // 1 + stride/span times the column that sawtoothed with the zoom (about 2x
+    // just past each rung, 1.25x just under the next) and popped the picture's
+    // density at every rung crossing. The picture must be a continuous
+    // function of the zoom: he aims at troughs and zero crossings, not
+    // thickness.
     std::pair<float,float> get_peak_range(int channel,
                                           int level,
                                           int64_t start_sample,

@@ -623,8 +623,10 @@ bool GuiPaintHandler::live_plate_published() const {
 //      many changes the frame's event drain carried — 1.76 touch events a
 //      frame on the tablet's pinch, measured 2026-10-13, each of which ran it
 //      inline before. Only frames no display ever showed are skipped. The pyramid
-//      bounds the peak read per-column cost unconditionally, in both views
-//      (the bound and its proof live at GuiAudio::level_for_span). A
+//      bounds the exact peak read's per-column cost unconditionally, in both
+//      views: at most 4 + 6(L-1) pairs and 30 raw samples at ladder level L,
+//      76 pairs at the top rung (the bound and its proof live at
+//      GuiAudio::level_for_span). A
 //      magnified plate also pays waveform_expander_multiplier_over
 //      (waveform_gain.cpp) per plate column, the largest multiplier over the
 //      working-zoom columns that column's source span covers — CONSTANT TIME

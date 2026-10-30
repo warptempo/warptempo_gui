@@ -507,15 +507,16 @@ bool render_waveform_columns(GuiRect area,
     // the legal local slope reaches 16x (tempo 4 * marker scale 2 * settings
     // scale 2) — so a tempo-compressed column could read a far finer level than
     // its span warranted, up to hundreds of samples in one column. Selecting
-    // from the column's own span restores the intended per-column bound (<=5
-    // pairs or <=16 raw samples, unconditionally — the statement and its proof
-    // live at GuiAudio::level_for_span) and is
-    // strictly MORE accurate than the global estimate it replaces.
+    // from the column's own span restores the intended per-column bound (at
+    // most 4 + 6(L-1) pairs and 30 raw samples at ladder level L, or at most
+    // 16 raw samples below the finest stride, unconditionally — the statement
+    // and its proof live at GuiAudio::level_for_span).
     //
-    // Consequence, accepted: where the map slope crosses a stride threshold,
-    // adjacent target-view columns may read different levels, a per-column
-    // statistics discontinuity — now confined to the one column that reads it,
-    // since no segment carries anything into a neighbour. Aesthetic only.
+    // The level is a COST choice only (architect 2026-10-30): get_peak_range
+    // reads the exact extrema of [s0, s1) at every level, so where the map
+    // slope crosses a stride threshold and adjacent target-view columns read
+    // different levels, the picture shows no seam, and a zoom across a rung
+    // changes nothing but the read's cost.
     const auto level_for_column = [&](double src_width) {
         return audio.level_for_span(warp_frame_map ? src_width
                                                    : samples_per_pixel);

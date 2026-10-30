@@ -96,18 +96,21 @@ constexpr int      kStreamFramesPerChunk  = 65536;
 constexpr uint32_t kMaxOwnerBytes         = 4096;
 
 // THE STRIDE LADDER — the single authoritative list. Powers of four, so each
-// level covers 4x its predecessor: the zoom texture changes in small steps
-// instead of the 32x jumps the old 32/1024/32768 ladder made, whose threshold
-// crossings visibly re-textured the waveform mid-zoom. Every level after the
-// first folds from the PREVIOUS level by kReductionFactor, so the ratio is the
-// reduction factor by construction.
+// level covers 4x its predecessor. Every level after the first folds from the
+// PREVIOUS level by kReductionFactor, so the ratio is the reduction factor by
+// construction. The ladder's density is purely a COST matter: get_peak_range
+// reads the exact extrema at every rung (architect 2026-10-30), so a rung
+// crossing changes nothing in the picture; a denser ladder only shortens the
+// whole-bin runs a read reduces, a sparser one only lengthens its edge walks.
 //
 // WHY IT REACHES 268435456 — the top rung is derived, not picked, and it closes
 // the per-column read bound for EVERY accepted input in BOTH views.
 //
-// A span stays inside the <=5-pair bound while it is under kReductionFactor x
-// the top stride (that PRODUCT is what must exceed the worst span, not the top
-// stride alone): 4 x 268435456 = 1073741824 = 2^30 frames.
+// A span stays inside the per-column bound (stated at level_for_span's
+// declaration) while it is under kReductionFactor x the top stride (that
+// PRODUCT is what must exceed the worst span, not the top stride alone):
+// 4 x 268435456 = 1073741824 = 2^30 frames. Past it the level would clamp to
+// the top rung and the read's whole top-rung bins would grow with the span.
 //
 // The worst span any read can present is bounded by the SOURCE total, because
 // get_peak_range CLAMPS end_sample to total_frames_ before touching a level. So
@@ -116,15 +119,9 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 // source is RIFF-bounded: the format accepting the most frames per byte is
 // 16-bit stereo at 4 bytes/frame, giving under 2^30 frames inside the 4 GiB
 // ceiling (strictly under, once headers are counted). Worst span < 2^30 = 4 x
-// top stride, hence ceil(span/top) <= 4 and reads stay <= 5 pairs — no view
-// scoping, no tempo caveat, no saturation case.
-//
-// THE STANDING NEXT KNOB: a level switch still changes both quantization and
-// bin alignment, so a crossing can still pop — 4x makes it small, it does not
-// make it impossible. If a pop is still visible on the glass, the next
-// step is min/max INTERPOLATION across a narrow log-span transition band
-// (blending the two levels' values); it is deliberately not built yet, since it
-// doubles the peak reads and the denser ladder may well be enough.
+// top stride, hence a column's range holds at most four top-rung bins and the
+// read stays inside the bound — no view scoping, no tempo caveat, no
+// saturation case.
 constexpr int      kNumLevels             = GuiAudio::kCacheLevels;
 constexpr int32_t  kStrides[kNumLevels]   = { 16, 64, 256, 1024, 4096, 16384,
                                               65536, 262144, 1048576, 4194304,
@@ -679,8 +676,10 @@ int GuiAudio::level_for_span(double span_samples) const {
     // Coarsest cached level whose stride still fits inside the span; below the
     // finest stride there is no useful cached level and the raw samples win.
     // Walking from the top means the first fit is the coarsest, which is what
-    // holds a column to at most 5 pair reads (or at most 16 raw samples below
-    // the finest stride — see the bound derivation at the declaration).
+    // holds a level-L column to at most 4 + 6(L-1) pairs and 30 raw samples
+    // (or at most 16 raw samples below the finest stride — see the bound
+    // derivation at the declaration). The level changes the read's cost only:
+    // get_peak_range's answer is the same at every level.
     int level = 0;
     for (int L = kNumLevels - 1; L >= 0; --L) {
         if (span_samples >= static_cast<double>(kStrides[L])) {
@@ -690,6 +689,54 @@ int GuiAudio::level_for_span(double span_samples) const {
     }
     if (level > nl - 1) level = nl - 1;
     return level;
+}
+
+// THE EXACT FOLD, get_peak_range's one worker (the rule and the bound are at
+// the declarations, audio.h): folds [a, b) on `channel` into the running
+// extrema — the WHOLE bins of cache level `ci` inside the range into
+// (qlo, qhi), still quantized, then the two partial edges at cache level
+// ci - 1, recursively, down to raw samples into (flo, fhi) once ci < 0. A
+// range holding no whole bin descends whole. A bin's real extent is
+// [i*stride, min((i+1)*stride, total)), so when b is the source's end the
+// last, short bin lies inside the range and counts as whole. Every boundary
+// of a rung is a boundary of each finer rung (powers of four), so each edge
+// piece is aligned at one end and the far edge it hands down is empty.
+// Recursion depth is at most kNumLevels + 1; nothing allocates.
+static void fold_exact_range(
+    const std::array<GuiAudio::PyramidLevel, GuiAudio::kCacheLevels>& levels,
+    const std::vector<float>& samples, int channels, int channel,
+    int64_t total, int ci, int64_t a, int64_t b,
+    int16_t& qlo, int16_t& qhi, float& flo, float& fhi) {
+    if (a >= b) return;
+    if (ci < 0) {
+        for (int64_t s = a; s < b; s++) {
+            const float v = samples[static_cast<size_t>(s * channels + channel)];
+            if (v < flo) flo = v;
+            if (v > fhi) fhi = v;
+        }
+        return;
+    }
+    const auto&   data   = levels[static_cast<size_t>(ci)];
+    const int64_t stride = data.stride;
+    const int64_t i0     = (a + stride - 1) / stride;
+    const int64_t i1     = (b == total) ? (b + stride - 1) / stride
+                                        : b / stride;
+    if (i0 >= i1) {
+        fold_exact_range(levels, samples, channels, channel, total, ci - 1,
+                         a, b, qlo, qhi, flo, fhi);
+        return;
+    }
+    const auto& pairs = data.pairs[static_cast<size_t>(channel)];
+    for (int64_t i = i0; i < i1; i++) {
+        const int16_t lo = pairs[static_cast<size_t>(2 * i)];
+        const int16_t hi = pairs[static_cast<size_t>(2 * i + 1)];
+        if (lo < qlo) qlo = lo;
+        if (hi > qhi) qhi = hi;
+    }
+    fold_exact_range(levels, samples, channels, channel, total, ci - 1,
+                     a, i0 * stride, qlo, qhi, flo, fhi);
+    fold_exact_range(levels, samples, channels, channel, total, ci - 1,
+                     std::min(i1 * stride, total), b, qlo, qhi, flo, fhi);
 }
 
 std::pair<float,float> GuiAudio::get_peak_range(int channel,
@@ -702,41 +749,34 @@ std::pair<float,float> GuiAudio::get_peak_range(int channel,
     if (start_sample < 0) start_sample = 0;
     if (end_sample > total_frames_) end_sample = total_frames_;
     if (end_sample <= start_sample) return empty;
+    if (!samples_) return empty;
 
-    if (level <= 0) {
-        if (!samples_) return empty;
-        float lo =  std::numeric_limits<float>::infinity();
-        float hi = -std::numeric_limits<float>::infinity();
-        for (int64_t s = start_sample; s < end_sample; s++) {
-            const float v = (*samples_)[s * channels_ + channel];
-            if (v < lo) lo = v;
-            if (v > hi) hi = v;
-        }
-        if (lo == std::numeric_limits<float>::infinity()) return empty;
-        return {lo, hi};
-    }
-
-    // level >= 1 picks cache level (level - 1); anything beyond the top
-    // cached level clamps to it.
+    // THE READ IS EXACT AT EVERY LEVEL (architect 2026-10-30; the rule at the
+    // declaration): level 0 is a raw scan; a cached level reduces its whole
+    // bins inside the range and resolves the partial edges at the finer rungs
+    // (fold_exact_range), so the level chooses the cost and never the answer.
+    // level >= 1 picks cache level (level - 1); anything beyond the top cached
+    // level clamps to it. The cached words fold quantized and dequantize once;
+    // the raw pieces fold as floats; the column's extrema are the min / max
+    // over both.
     int cache_idx = level - 1;
     if (cache_idx >= kNumLevels) cache_idx = kNumLevels - 1;
+    if (cache_idx >= 0 && levels_[static_cast<size_t>(cache_idx)].pair_count <= 0)
+        return empty;
 
-    const auto&   data    = levels_[cache_idx];
-    if (data.pair_count <= 0) return empty;
-    const int64_t stride  = data.stride;
-    const auto&   pairs   = data.pairs[channel];
-    int64_t i0 = start_sample / stride;
-    int64_t i1 = (end_sample + stride - 1) / stride;
-    if (i1 > data.pair_count) i1 = data.pair_count;
-    if (i1 <= i0) return empty;
+    int16_t qlo = std::numeric_limits<int16_t>::max();
+    int16_t qhi = std::numeric_limits<int16_t>::min();
+    float   flo =  std::numeric_limits<float>::infinity();
+    float   fhi = -std::numeric_limits<float>::infinity();
+    fold_exact_range(levels_, *samples_, channels_, channel, total_frames_,
+                     cache_idx, start_sample, end_sample, qlo, qhi, flo, fhi);
 
-    int16_t qlo = pairs[static_cast<size_t>(2 * i0)];
-    int16_t qhi = pairs[static_cast<size_t>(2 * i0 + 1)];
-    for (int64_t i = i0 + 1; i < i1; i++) {
-        const int16_t a = pairs[static_cast<size_t>(2 * i)];
-        const int16_t b = pairs[static_cast<size_t>(2 * i + 1)];
-        if (a < qlo) qlo = a;
-        if (b > qhi) qhi = b;
+    if (qlo <= qhi) {
+        const float dlo = dequantize_i16(qlo);
+        const float dhi = dequantize_i16(qhi);
+        if (dlo < flo) flo = dlo;
+        if (dhi > fhi) fhi = dhi;
     }
-    return { dequantize_i16(qlo), dequantize_i16(qhi) };
+    if (flo > fhi) return empty;
+    return {flo, fhi};
 }
