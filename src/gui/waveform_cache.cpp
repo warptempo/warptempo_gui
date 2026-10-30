@@ -540,8 +540,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 }
 
 // THE OPEN'S FIRST PICTURE (the declaration, paint_handler.h): the published
-// plate against the live inputs, field by field — the dirty-detect's own ten
-// (maybe_enqueue_waveform_render's compare), read here against the LIVE slot
+// plate against the live inputs, field by field — the dirty-detect's own members
+// (the fingerprint's roster in paint_handler.h; maybe_enqueue_waveform_render's compare), read here against the LIVE slot
 // fp_* rather than the pending one, since the question is what the glass
 // would be shown. THE GEOMETRY WITH NO WAVEFORM ROWS answers TRUE first
 // (2026-10-28, Sol's round): compute_waveform_render_inputs's empty-area arm

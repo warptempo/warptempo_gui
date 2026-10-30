@@ -2866,8 +2866,10 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // A bar whose interval is under a quarter row (B == T — digital silence at
 // the zero row is the archetype) TAKES ONE SUBROW, B = T + 1, T pulled down
 // one where it sat on the band's last edge so the subrow lies inside the
-// band; the disc dilation then makes a line of it — one full device row and
-// a soft neighbor, Ableton's measured silence line. Nothing can fade out or
+// band; the disc dilation then makes a line of it — five subrows, nonzero
+// coverage over two device rows and about one and a quarter device px of
+// summed coverage (20 of 16 subcells) at any tip phase, Ableton's measured
+// silence line. Nothing can fade out or
 // vanish. The floor is needed because an interval under a quarter row
 // holds no subrow center and would otherwise rasterize to nothing; the
 // contour needs none, since it only ever joins two bars that exist.

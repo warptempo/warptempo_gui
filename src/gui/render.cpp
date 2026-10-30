@@ -559,9 +559,11 @@ bool render_waveform_columns(GuiRect area,
     // docs/engineering/waveform_antialiasing_retired.md, none of it here.
     //
     // THE NEVER-FADE FLOOR IS A SUBROW (bar_tips, below): an interval under a
-    // quarter row takes one subrow, which the GPU's half-pixel grow makes a
-    // line of — one full device row and a soft neighbor — so flat or silent
-    // material draws a line instead of fading out.
+    // quarter row takes one subrow, which the GPU's half-pixel grow (the disc
+    // dilation, two subcells) makes a line of — nonzero coverage over two
+    // device rows, about one and a quarter device px of summed coverage (20
+    // of 16 subcells) whichever quarter-row phase the tip has — so flat or
+    // silent material draws a soft hairline instead of fading out.
 
     // Row bounds: this channel's band, intersected with the plate.
     int y_lo = area.y;
@@ -631,8 +633,10 @@ bool render_waveform_columns(GuiRect area,
     // B == T and an empty bar — digital silence at the zero row is the
     // archetype — and TAKES ONE SUBROW, B = T + 1, T pulled down one where it
     // sat on the band's last edge (T == 4 · y_hi) so the subrow lies inside
-    // the band; the GPU's half-pixel grow then makes a line of it (one full
-    // device row and a soft neighbor, Ableton's measured silence line).
+    // the band; the GPU's half-pixel grow then makes a line of it (five
+    // subrows, nonzero coverage over two device rows and about one and a
+    // quarter device px of summed coverage at any tip phase, Ableton's
+    // measured silence line).
     // Nothing can fade out or vanish, and it holds for both bars AT BOTH LANE
     // EDGES: a bar clamped whole to the top edge is the band's first subrow,
     // one clamped whole to the bottom edge (both tips at -1) its last. The

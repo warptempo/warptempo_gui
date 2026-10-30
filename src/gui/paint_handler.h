@@ -589,8 +589,8 @@ struct GuiPaintHandler {
     // VIEW'S — a worker completion or a synchronous rebuild has published
     // (fp_rendered), no rebuild is owed, and every fingerprint field of the
     // published plate equals what compute_waveform_render_inputs answers for
-    // the live state now (the same ten fields maybe_enqueue_waveform_render
-    // compares), so no plate is missing, stale or still on the worker. Its one
+    // the live state now (the fingerprint's members, the roster at the fp_ fields above, which
+    // maybe_enqueue_waveform_render compares), so no plate is missing, stale or still on the worker. Its one
     // caller is the loop's tick, asked only while the hold stands and only
     // once the project's load has returned (which applied the restored
     // camera, tab and views — the load's own tail); the caller pays an owed
