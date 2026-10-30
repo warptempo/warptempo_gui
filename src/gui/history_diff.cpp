@@ -2324,8 +2324,9 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
     // does my session differ". For a PAST member (index > R) and for the live
     // member itself that is then = this member, now = live, unchanged. For a
     // FUTURE member (index < R) THE SIDES SWAP — then = live, now = this member
-    // — because the future state is the NEWER of the two, and the newer side is
-    // green in both readings without an exception.
+    // — because the future state is the NEWER of the two, and the newer side's
+    // label is plain (the older side's struck) in both readings without an
+    // exception.
     const Member* then_side = member;
     const Member* now_side  = nullptr;
     if (compare == GuiHistoryCompare::Iterative) {

@@ -9117,11 +9117,13 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
                 app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the flag's and its stem's colours swap; the stem's column stays put),
+    // (the focused label's ink moves, the bone to the chrome's selected
+    // `label` and back; the triangle, the stem and its column stay put),
     // and none when it did
     // not — a re-click on the focused flag re-lands a playhead that is
     // already there, and the land owner is itself idempotent. A DROPPED
-    // SELECTION is that same face swap over more flags, so it damages too.
+    // SELECTION is that same label-ink change over more flags, so it damages
+    // too.
     if (was != app.history_mode.focus || had_selection) viewport.invalidate_all();
 }
 

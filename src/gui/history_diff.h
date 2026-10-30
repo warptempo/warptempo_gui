@@ -1059,10 +1059,10 @@ private:
 // THE CUMULATIVE READING IS "how does my session differ", so it measures
 // against THE LIVE MEMBER always — and for a FUTURE member THE SIDES SWAP: the
 // live state is the THEN side and the future state the NOW side, the future
-// state being the newer of the two. That is what keeps THE NEWER SIDE IS GREEN
-// one exceptionless colour rule across the whole timeline instead of a rule with
-// a redo exception. At the live member itself both sides are the same state, so
-// the lane is blank there in both readings.
+// state being the newer of the two. That is what keeps THE NEWER SIDE'S LABEL
+// PLAIN (the older side's struck) one exceptionless rule across the whole
+// timeline instead of a rule with a redo exception. At the live member itself
+// both sides are the same state, so the lane is blank there in both readings.
 //
 // (THE REDO STACK WAS DELIBERATELY EXCLUDED until 2026-08-08, on the reasoning
 // that a walk is what is BEHIND you and that including redo would need a second

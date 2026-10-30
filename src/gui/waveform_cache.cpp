@@ -1064,8 +1064,9 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // one accessor that forks on it (AppState::HistoryMode::displayed_delta):
     // the COMMIT walk or the LOCAL one, read iteratively forward against the
     // next-newer item or cumulatively against the frozen live now side. The
-    // lane's shapes, colours and text are identical in all four — green is the
-    // newer side everywhere — so nothing below this line knows which walk or
+    // lane's shapes, colors and text are identical in all four — the newer
+    // side's (ADDED) label plain and the older side's (REMOVED) struck
+    // everywhere — so nothing below this line knows which walk or
     // which reading it is drawing, nor that the two readings coincide at the
     // newest index of either.
     const GuiHistoryCommitDelta* d =

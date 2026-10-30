@@ -403,12 +403,14 @@ struct FlagCache {
     int       fp_gui_scale_percent   = -1;
     // THE PALETTE THESE PIXELS WERE PAINTED IN (palette_generation(),
     // render.h — architect 2026-10-03; the palette's roles since
-    // 2026-10-07): every flag pixel is a palette colour (the kind's face, its
-    // label, the outline, the ground of a disabled box), so an install (the
-    // Settings color rows' commit, install_program_palette) re-renders the
-    // surface BY FIELD, the scale's shape. (The KIND needs no field of
-    // its own: it is the column, which fp_active_markers_view keys, or the
-    // diff half, which the history fields key.)
+    // 2026-10-07): every flag pixel is a palette color (the cue triangle and
+    // its shadow, the faded triangle and shadow of a disabled cue, the label
+    // inks), so an install (the Settings color rows' commit,
+    // install_program_palette) re-renders the surface BY FIELD, the scale's
+    // shape. (No axis or side colors a cue, so no color needs a field beyond
+    // this generation: fp_active_markers_view keys the lane's CONTENT — which
+    // column's markers, and which column's half of the history delta — not a
+    // color.)
     uint64_t  fp_palette_generation  = 0;
 
     long long fp_warp_generation    = -1;
