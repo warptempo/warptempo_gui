@@ -12,8 +12,7 @@
 
      Two layers per density under res/mipmap-<density>/, BOTH RENDERED AT
      EVERY BUILD by apk/build_apk.sh's launcher step into its staged
-     copy of res/ (the Linux desktop icon is the same drawing bare, a link
-     into the repository, docs/INSTALL.md):
+     copy of res/:
        ic_launcher_background.png  the full 108 dp canvas flat in #141415;
        ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
                                    the viewBox's (44.2 dp for the quaver),

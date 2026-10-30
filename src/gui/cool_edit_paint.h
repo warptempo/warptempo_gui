@@ -79,8 +79,9 @@ enum class GuiKeyLed { None, Unlit, Lit };
 // left edge 2 W right of the key's left outline column and its bottom row 2
 // W above the outline's bottom row — rows y1 − 8 .. y1 − 6 and columns
 // x0 + 6 .. x0 + 11 at 300 %, rows y1 − 3 and columns x0 + 3 .. x0 + 5 at
-// the laptop's 138 % (x0, y1 the outline's left column and bottom row), the
-// mock's own place. `depth` the key's depth in device px, 0, 1 or 2
+// 138 % (x0, y1 the outline's left column and bottom row), the mock's own
+// place, drawn at the laptop's scale of the day. `depth` the key's depth in
+// device px, 0, 1 or 2
 // (key_depth; paint_key's CHECKED and HELD rows): THE LED RIDES WITH THE
 // FACE, `depth` device px right and down (hairline_px; architect 2026-10-23,
 // "the LED doesn't seem to be moving … that's not realistic") — at 300 %
@@ -225,7 +226,8 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // key left on the tablet (~13:05, "read the current setting and apply"),
 // rounded at the element like every length off the canvas
 // (render.h's cue_triangle_rows, the one accessor) — 8 rows at 300 %, 5 at
-// 200 % (Cool Edit's 9 by 5 at the laptop's inspection scale), 4 at 150 %
+// 200 % (Cool Edit's 9 by 5, observed at the laptop's 200 % inspection
+// scale), 4 at 150 %
 // and 138 %, 1 at the scale's floor of 50 %, the stem's own cell.
 //
 // DRAWN ALIASED, COOL EDIT'S HARD STAIRCASE (architect 2026-10-26 ~10:40,
@@ -255,10 +257,9 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // (2026-10-10, cool_edit_derive.h's faded look). TWO ROADS, ONE DRAWING
 // (CueTrianglePass below): the stamp writes the cells' words straight into
 // the target where direct_pixel_target takes it, else cairo fills the same
-// cells as whole-pixel rectangles, antialias NONE. On the cpu canvas and the
-// GL canvas alike the triangles paint on the CPU — into the flag cache's
-// surface and the ruler's cairo context — never through the canvas sink, so
-// the two canvases share the one drawing.
+// cells as whole-pixel rectangles, antialias NONE. The triangles paint on
+// the CPU — into the flag cache's surface and the ruler's cairo context —
+// never through the canvas sink.
 // One triangle alone (the playhead's head): a one-triangle CueTrianglePass.
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
                            GuiColor shadow);

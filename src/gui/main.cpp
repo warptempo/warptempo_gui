@@ -1346,7 +1346,7 @@ namespace {
 // when the session ends the process, and otherwise the NAME of the project to
 // reopen (empty = exit with `exit_status`). `exit_status` is 0 for a clean
 // quit and 1 for a FATAL IN-SESSION LOAD REFUSAL — the same status the loop's
-// own reopen refusal and startup's resolution refusal return, so one refusal
+// own reopen refusal and startup's no-project refusal return, so one refusal
 // class has one status on every road (the session's one writer is the
 // fatal-load bit in run_project).
 struct GuiProjectOutcome {
@@ -2481,7 +2481,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (arm_playback_timer, half the refresh period), armed whether or not
         // anything is playing and independent of input and of frame callbacks,
         // so the quiet is noticed within a tick of the window expiring even on a
-        // completely idle desktop. It is also where the product's other
+        // completely idle screen. It is also where the product's other
         // millisecond display timeouts already live (the button hover dwell
         // below). The settled hook was considered and refused: its documented
         // class is POINTER-DERIVED FACES whose inputs move with no pointer event
@@ -3597,7 +3597,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
 } // namespace
 
-int gui_main(const char* argument) {
+int gui_main() {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
     // (NO SIGCHLD DISPOSITION HERE, AND NO CHILD: the GUI spawns nothing
@@ -3731,13 +3731,12 @@ int gui_main(const char* argument) {
     noise.set_level_db(device_config.noise_level);
     noise.set_crossfade_s(device_config.noise_crossfade_s);
 
-    // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
-    // project_model.h): the argument, which must be a project's source under
-    // the config's projects path, or with none the remembered project and then
-    // the first valid one in name order. None is the blunt terminal line and
-    // exit 1: the app always has a project open, and there is no empty state
-    // to open a picker over.
-    auto first = startup_source(device_config, argument);
+    // WHICH PROJECT OPENS FIRST — the project model's question (startup_source,
+    // project_model.h): the remembered project and then the first valid one
+    // in name order. None is the blunt terminal line and exit 1: the app
+    // always has a project open, and there is no empty state to open a
+    // picker over.
+    auto first = startup_source(device_config);
     if (!first) {
         std::fprintf(stderr, "warptempo_gui: %s\n", first.error().c_str());
         return 1;

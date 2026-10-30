@@ -174,13 +174,13 @@
 //     answer, while a paste that paired blocks lands even byte-equal.
 //   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
 //     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+Shift+J)
-//     and "Copied the selected markers' phase resets" (bare P); a refused
-//     laptop clipboard write cards through card_clipboard_refusal ("The
-//     clipboard did not take the copy" / "…the cut" — the editors' Ctrl+X,
-//     the one editor clipboard chord that cards, and only there); and the
+//     and "Copied the selected markers' phase resets" (bare P); and the
 //     phase copy that captured nothing, "No labeled, enabled markers are
-//     selected, so nothing was copied". THE EDITORS' OWN Ctrl+C and Ctrl+V are
-//     silent: an editor is its own world with that world's conventions.
+//     selected, so nothing was copied". No clipboard write refuses (the copy
+//     stays in the program's process, platform_android.h's
+//     clipboard_set_text), so no refusal cards. THE EDITORS' OWN Ctrl+C,
+//     Ctrl+X and Ctrl+V are silent: an editor is its own world with that
+//     world's conventions.
 //   * THE GITHUB CARDS (2026-09-27), the publish chord (Ctrl+Shift+S since
 //     2026-10-10, in either view) forking on the status (run_publish_chord),
 //     each the KEY'S — in the `h` view the Save face
@@ -366,10 +366,10 @@
 // nothing (the chrome's slide-away cancel). A SHIFT-CLICK OR A LONG PRESS
 // DISMISSES EVERY CARD, criticals included — THE CHROME SHIFT LONG PRESS's
 // own pairing, one term at the lift: the press-time shift ORed with a hold
-// past chrome_shift_hold_ms(), with no visual announcement, on both machines
-// (finish_notification_release, input_pointer.cpp). THE REASON IS THE
-// TABLET'S: the laptop has bare Esc to clear every card at once and the
-// tablet has no keyboard, so the pen was ticking the stack down X by X. The
+// past chrome_shift_hold_ms(), with no visual announcement
+// (finish_notification_release, input_pointer.cpp). THE REASON: the tablet
+// has no hardware keyboard for bare Esc's clear-all, so the pen was ticking
+// the stack down X by X. The
 // X went with the ruling, its hover fade with it, and the card wears no
 // hover face and no pressed face. ONE RULE FOR FINGER AND MOUSE, as before:
 // the router cannot fork on tap versus click (no origin bit rides a press;
@@ -418,7 +418,7 @@
 // eight places, under every modal, so a standing surface takes the press for
 // its own close and the stack waits.
 //
-// THE PRESS IS CONSUMED WHOLE, on both backends and whatever the button: it
+// THE PRESS IS CONSUMED WHOLE, whatever the button: it
 // arms nothing else, moves nothing, lands no playhead and reaches nothing
 // underneath (a non-left press is the consumed nothing it always was, and
 // arms no card). The claim ranks ABOVE EVERY VEIL (the prompt's, the
@@ -743,7 +743,7 @@ inline std::string lowercase_initial(std::string_view s) {
 // answering for both.
 inline constexpr double kNotificationMinWidthPx = 198.0;
 
-// THE CARD'S CEILING IS THE LAPTOP'S OWN WIDTH, AUTHORED AND SCALED (architect
+// THE CARD'S CEILING, THE LAPTOP'S CARD WIDTH (its source), AUTHORED AND SCALED (architect
 // 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
 // 1920 px laptop, so this constant is that width made CANONICAL — the same
 // card at every window and, through `scaled_px`, the same card in millimetres

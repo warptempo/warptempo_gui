@@ -34,9 +34,9 @@
 // filesystem path names the FILE — its basename, a batch cell's
 // `N_tag/NN.wav` id, or the project folder and file — never the full path,
 // the subject being the row on screen and the card's clip the backstop. ONE
-// SENTENCE PER REASON AND NO ROAD FORK: the fatal roads that print the same
-// words (startup's resolve, gui_main's reopen) print the shortened sentence
-// too, the projects path being the device config's one setting. A frozen
+// SENTENCE PER REASON AND NO ROAD FORK: the fatal road that prints the same
+// words (gui_main's reopen) prints the shortened sentence too, the projects
+// path being the device config's one setting. A frozen
 // loader that bundles its path into its sentence publishes THE WORDS WITH NO
 // PATH beside it (path_free_reason, an optional out-parameter its open and
 // read arms alone write; its presence is the discriminator), so an appending

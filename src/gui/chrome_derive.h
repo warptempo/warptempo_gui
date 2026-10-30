@@ -22,7 +22,7 @@
 // (render.cpp's install family). The palette's own `face` (Cool Edit's
 // preset text) is no source; the generated presets keep it for the
 // static_asserts. THE CAPTION HAS NO ROLE: the app paints none since
-// 2026-10-24 (render.h's caption note; labwc draws the laptop's).
+// 2026-10-24 (render.h's caption note).
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 15, each decided
 // once — the build proves every role is listed exactly once):

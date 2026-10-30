@@ -103,7 +103,7 @@ void ValueDragOps::apply_motion(int mouse_y) {
     // ONE STEP PER kValueDragPxPerStep WINDOWS PX, through the product's
     // one scale conversion — a press-road LENGTH scales, exactly as the drag
     // gate, the double-click slack and the touch slop do, so the gesture asks
-    // the hand for the same travel on the laptop and on the tablet. Floored at 1: a
+    // the hand for the same travel at every scale. Floored at 1: a
     // degenerate factor must never make the step zero pixels wide.
     const int per_step = scaled_px(kValueDragPxPerStep, 1);
     // TRAVEL IS MEASURED FROM THE ORIGIN AND UP IS POSITIVE: the origin is

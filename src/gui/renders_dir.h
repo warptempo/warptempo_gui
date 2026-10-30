@@ -161,7 +161,7 @@ void prune_render_folder(const std::string& source_audio_path,
                          const EngineSettings& es);
 
 // THE ONE DELETION OF A BATCH FOLDER (architect 2026-09-29): PERMANENT — a
-// native remove_all, never the desktop trash — and BOUNDED: `folder` goes
+// native remove_all, never a trash — and BOUNDED: `folder` goes
 // only if it is a directory standing DIRECTLY under `batch_root` (the
 // project's `tmp/`, project_batch_root), so nothing outside `tmp/` and never
 // `tmp/` itself can go. The verdict says which way it went, and the callers

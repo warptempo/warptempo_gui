@@ -1281,7 +1281,7 @@ struct TrimDragState {
 // NAVIGATION SURFACE is the WHOLE waveform — BOTH HALVES since 2026-08-13, in
 // every view — AND NOTHING ELSE since 2026-09-25 (architect: the RULER and the
 // MARKER lane's empty stretches, the surface's lane members since 2026-08-12,
-// LEFT IT ON BOTH DEVICES — "out of both — we want symmetry as much as
+// LEFT IT — "out of both — we want symmetry as much as
 // possible; the horizontal zoom ... was designed to unify the motions for zoom
 // on both devices"). The two lanes are PLACEMENT SURFACES now: a press there
 // arms this same pending with `placement_only` set, so a motionless release
@@ -1330,12 +1330,9 @@ struct TrimDragState {
 //     NO playhead and clears NO selection, seeds nothing.
 // THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
-// IT AT ANY TIME — ctrl playing the second finger's part). THE TWO SURFACES
-// ARE CO-EQUAL, in the warp / phase-reset sense: the LAPTOP goes first ("way
-// more precise and much faster") and the TOUCH PANEL is the more natural one
-// and the one available on the go — neither is the model the other
-// translates, and asymmetry between them is ACCEPTED WHERE GENUINE, exactly
-// as warp markers carry information where phase resets carry only placement.
+// IT AT ANY TIME — ctrl playing the second finger's part; the S Pen's side
+// button is that ctrl on the glass). (The ruling's "two surfaces are
+// co-equal, the laptop goes first" is moot: one surface since 2026-10-30.)
 // This is ONE drag with
 // two phases, not two gestures, AND BOTH PHASES NOW READ THE SAME AXIS
 // (architect 2026-08-14, THE ROTATION — from the rig: "we should rotate the
@@ -1346,13 +1343,9 @@ struct TrimDragState {
 // BOTH. The vertical axis has left this drag entirely.
 // THE MODIFIER CHANGES WHAT HORIZONTAL TRAVEL MEANS rather than which axis is
 // live, and that is the whole argument: on glass ONE finger sliding sideways
-// pans and TWO fingers sliding sideways pinch, so the desk's plain-drag /
-// ctrl-drag pair reads as the same sentence the panel already speaks. THIS IS
-// A GENUINE CONVERGENCE, not a symmetry chased for its own sake — the standing
-// ruling is that asymmetry between the two surfaces is ACCEPTED WHERE GENUINE
-// (the co-equality paragraph above), and what happened here is that the
-// difference stopped being real: the same hand motion means the same thing on
-// both, so there is nothing left to except.
+// pans and TWO fingers sliding sideways pinch, so the drag's plain /
+// ctrl pair reads as the same sentence the fingers already speak: the same
+// hand motion means the same thing either way.
 // THE SIGN: RIGHT ZOOMS IN, LEFT ZOOMS OUT (`new_level = zoom_level -
 // dx/nav_zoom_px_per_level()`, and a smaller level is deeper in). THE
 // DERIVATION IS THE PINCH THIS DRAG STANDS IN FOR (architect 2026-08-14, from
@@ -1498,7 +1491,7 @@ struct ScrollDragState {
     bool   scrub_release = false;
     // The press landed on a PLACEMENT LANE — the ruler or the marker lane's
     // empty stretch (architect 2026-09-25, the lanes leaving the navigation
-    // surface on both devices). The pending is the same one, so the click act,
+    // surface). The pending is the same one, so the click act,
     // the empty-lane seed and the gesture's ownership of the held button are
     // unchanged, but NO DRAG EVER BEGINS: the crossing marks `moved` (a drag
     // that crossed the slop is not a click, so the release runs no act) and
@@ -3428,7 +3421,8 @@ inline constexpr GuiKey access_key_of(const char* label, int access) {
 // every other duration in the product, is untouched by the scale.
 //
 // THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 600 ms,
-// the architect's own labwc <repeatDelay> matched by convention (architect
+// the architect's own labwc <repeatDelay> on the laptop, its source, matched
+// by convention (architect
 // 2026-08-27, on the glass: "I'm definitely sure about the interval"; 575
 // until 2026-09-29, when the beat and the compositor moved to 600 together) —
 // and it STAYS ON THE BEAT while the holds read kHoldDelayMs (architect
@@ -5132,9 +5126,10 @@ struct AppState {
     //
     // IT IS A PER-DEVICE PREFERENCE, NOT A PROPERTY OF THE PIECE (architect
     // 2026-08-27): it left the `.settings` sidecar that day for the device
-    // config, because the same project wants 138 on the laptop and 300 on the
-    // tablet (100 and 225 in that day's laptop-pixel unit) and the sidecar
-    // travels between them. Ctrl+S does not carry it and
+    // config, because the same project wanted 138 on the laptop and 300 on
+    // the tablet while both ran the program (100 and 225 in that day's
+    // laptop-pixel unit), and the sidecar travels between devices. Ctrl+S
+    // does not carry it and
     // no load writes it — gui_main reads the config ONCE at startup, before the
     // window exists, and the editor commit rewrites the file at the moment it
     // changes. The member initializer below is construction state for the
@@ -7071,8 +7066,8 @@ struct AppState {
     //   the schedule while it is off and resumes on return (the scrollbar-button
     //   rule); a dead PAINTED enabled bit (RedesignButtonFace::enabled, the
     //   claim's own since 2026-09-24) PAUSES too (the disabled-press
-    //   consume's mirror); an advertised rate of 0 PAUSES (the desktop's key
-    //   repeat is off, and repeat_info can re-arrive); and repeat_eligible
+    //   consume's mirror); an advertised rate of 0 PAUSES (key repeat is
+    //   off, and repeat_info can re-arrive); and repeat_eligible
     //   going false DISARMS — a context that revoked the burst's eligibility
     //   ends it rather than parking it.
     //   ANY PHYSICAL KEY DELIVERY DISARMS — one edge, the platform's key
@@ -8864,7 +8859,8 @@ struct AppState {
     // stamp, the paste taking the newer, platform_android.h's
     // clipboard_set_text). A second copy in AppState was pure duplication
     // with drift risk — every reader it ever had was a pass-through handing it
-    // straight back to clipboard_set_text. The four copy sites compose their
+    // straight back to clipboard_set_text. The three copy sites (the
+    // editors' copy and cut, Ctrl+Shift+J's value copy) compose their
     // string and hand it over directly. The PHASE-RESET clipboard above is a
     // different concept and stays.)
 

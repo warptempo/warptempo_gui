@@ -215,10 +215,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // NO EXTENSION REFUSAL STANDS HERE, and none is wanted (2026-09-02): the
     // `.peaks` cache refusal that opened this body — from the era when a path
     // could be typed at the app — had no producer left once a project's source
-    // became `resolve_project`'s own composed `<stem>.wav` on all three roads
-    // (startup's remembered/first-valid folder, the argument road, which
-    // refuses anything that is not that resolved source, and the picker's
-    // reopen), so nothing could hand this function a peaks path. A stray
+    // became `resolve_project`'s own composed `<stem>.wav` on both roads
+    // (startup's remembered/first-valid folder and the picker's reopen), so
+    // nothing could hand this function a peaks path. A stray
     // `.samples` or `.peaks` file reaching a future road has no RIFF magic and
     // takes the generic unknown-magic refusal below — no special-cased handling.
     //

@@ -19,7 +19,7 @@
 #                       viewer shows (a PNG or JPEG, score_page_worker.h)
 #                       is DECODED through it (svg_icon.cpp's raster_regions
 #                       wraps the file in an <image> rendered at identity),
-#                       so the feature is load-bearing on both devices.
+#                       so the feature is load-bearing.
 #   --profile production  the workspace's own profile: LTO, codegen-units 1
 #                       (1.40 MB in the product's stripped .so against 2.93 MB
 #                       for --release). Rust never contracts a float multiply

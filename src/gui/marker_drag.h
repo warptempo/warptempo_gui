@@ -57,7 +57,7 @@ struct GuiTargetRender;
 // owner, and it carries NO map arithmetic at all: no bisection, no
 // hypothetical builds, no predecessor walk, no group seed. It lives in its own
 // unit (value_drag.{h,cpp}), where the whole contract is. His reason was the
-// hand: a flag drag moved the marker on both platforms and there was no
+// hand: a flag drag moved the marker and there was no
 // pointer road to the base tempo at all, which is why the Ctrl / Shift Up/Down
 // ladder is the only spelling and why it is cumbersome on glass.
 // NO Selection DEPENDENCY, deleted with the last write on 2026-08-15: the three

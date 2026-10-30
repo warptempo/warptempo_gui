@@ -31,7 +31,7 @@
 //
 // PRECONDITIONS (stated, not guarded — no error arm without a producer):
 //   - the faces are installed (gui_font_install_bundled, before the first
-//     paint on both backends).
+//     paint).
 //   - `utf8` is well-formed UTF-8. Free-text fields and the editors carry real
 //     UTF-8 (architect 2026-08-02); it arrives already filtered
 //     (text_editor::replace_selection is the one incoming boundary) or

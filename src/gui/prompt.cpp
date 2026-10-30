@@ -334,7 +334,7 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // cleared before the question is asked, so a Cancel leaves the ordinary
     // window rather than a player the user cannot see the prompt through. It
     // lives here rather than in the keyboard's own Ctrl+Q arm because the
-    // compositor's close (main.cpp's set_on_close) arrives without a key and
+    // platform's close (Back, main.cpp's set_on_close) arrives without a key and
     // must take the identical step — one road, one closer. A no-op when the
     // mode is down, which is every other close.
     render_player.close();
@@ -349,7 +349,7 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // so the question is the picker's own, painted over the list, and the
     // picker ends with its session when the reopen completes (AppState dies
     // with run_project's frame, main.cpp). An exit is no question of the
-    // picker's — Ctrl+Q and the compositor's close — and takes it down
+    // picker's — Ctrl+Q and the platform's close — and takes it down
     // before asking, as it takes the player.
     if (input != nullptr && target == GuiCloseTarget::Exit)
         input->close_picker();
@@ -361,8 +361,8 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     if (input != nullptr) input->close_score_viewer();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
     // identical reason and on the identical road: the keyboard's Ctrl+Q used
-    // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which
-    // carries no key — did not, so a WM close over a standing editor asked the
+    // to do this itself, editor by editor, and the PLATFORM'S CLOSE — which
+    // carries no key — did not, so a close over a standing editor asked the
     // unsaved-work question through it, back on screen at Cancel. The step is
     // the input handler's (each editor's own exit body, and at most one can
     // stand), stated once at close_modal_editors_no_commit and idempotent.

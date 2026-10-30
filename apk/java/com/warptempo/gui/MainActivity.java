@@ -808,8 +808,8 @@ public class MainActivity extends NativeActivity {
     private static final byte[] NO_BYTES = new byte[0];
 
     // THE PASTE'S ONE PAYLOAD BOUND, MIRRORED FROM THE NATIVE SIDE:
-    // kClipboardMaxBytes (src/gui/gui_input.h), the same number the Wayland
-    // read has always enforced. THE TWO ARE ONE NUMBER AND ARE EDITED IN ONE
+    // kClipboardMaxBytes (src/gui/gui_input.h), the number the native read
+    // enforces. THE TWO ARE ONE NUMBER AND ARE EDITED IN ONE
     // ACT -- the media command table's rule (gui_media.h) for the same reason
     // it applies there: the APK build compiles this file against no C++
     // header, so no assert can hold them together. The native reader checks
@@ -839,17 +839,17 @@ public class MainActivity extends NativeActivity {
     // AN EMPTY ARRAY IS THE EMPTY ANSWER, never null and never an exception:
     // no clip, an empty clip, a first item carrying no text, or a system that
     // withholds the clip all mean "there is nothing to paste", which is the
-    // consumed no-op the GUI already handles (the clipboard section of
-    // platform_wayland.cpp states the rule). On Android 10 and later
+    // consumed no-op the GUI already handles (the paste's arm,
+    // apply_editor_clipboard in src/gui/input_handler.cpp, states the rule).
+    // On Android 10 and later
     // getPrimaryClip answers null unless the
     // app has window focus; this one is a foreground kiosk, so the withheld
     // case is the same empty answer rather than a state to detect.
     //
-    // getText(), NOT coerceToText(): the Wayland twin accepts text/plain
-    // mimes and nothing else, so a clip whose first item is a URI or an
-    // Intent reads as nothing to paste here for the same reason -- and
-    // coerceToText would open a ContentResolver on the GUI loop's thread to
-    // find that out.
+    // getText(), NOT coerceToText(): the paste takes text and nothing else,
+    // so a clip whose first item is a URI or an Intent reads as nothing to
+    // paste -- and coerceToText would open a ContentResolver on the GUI
+    // loop's thread to find that out.
     public byte[] clipboardGet() {
         try {
             final ClipboardManager clip =

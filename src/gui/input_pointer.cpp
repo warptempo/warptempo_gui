@@ -581,9 +581,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the hold delay, a repeat delay being a cadence and not a hold —
     // so the button hold and the key hold cross their threshold on the same
     // beat) and
-    // every later fire at THE COMPOSITOR'S OWN advertised key-repeat interval,
-    // read per fire — a desktop with key repeat switched off gets no button
-    // repeat either. The burst rides the armed ChromePress and its whole edge
+    // every later fire at THE PLATFORM'S key-repeat interval
+    // (key_repeat_period_ms), read per fire — a repeat rate of 0 would stop
+    // the button repeat too. The burst rides the armed ChromePress and its whole edge
     // inventory is at that struct (app_state.h); the firing body is
     // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
     // throughout, repeat_eligible included — the arm SHARES that predicate
@@ -990,7 +990,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // the window's width since 2026-10-21, when the program frame's inert
 // columns beside every program lane went (strip_row_rect) — the canvas
 // column's inner margins, inside the rect, keeping their recorded answer in
-// on_button_press's ruler band). THEY LEFT THE NAVIGATION SURFACE ON BOTH DEVICES (architect
+// on_button_press's ruler band). THEY LEFT THE NAVIGATION SURFACE (architect
 // 2026-09-25: "out of both — we want symmetry as much as possible; the
 // horizontal zoom ... was designed to unify the motions for zoom on both
 // devices"): off a flag, a motionless click or tap there places the playhead
@@ -2128,7 +2128,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // button carries no cue anywhere in the product.
     if (notification_card_at(app, x, y) != 0) return GuiCursorKind::Arrow;
     // (THE SIZING FRAME's resize arrows, 2026-10-05 to 2026-10-24, went with
-    // the app's frame: labwc draws the borders and their cursors.)
+    // the app's frame.)
     if (app.prompt.active) return GuiCursorKind::Arrow;
     // AND SO IS THE PROGRESS MODAL (2026-10-14): one button, and everything
     // else behind its veil.
@@ -2365,7 +2365,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // release's act, which left the halves differing in that act alone. It is
     // the plain drag's PAN surface and the ctrl drag's ZOOM surface, and both
     // cues cover it whole. THE RULER AND THE MARKER LANE WEAR THE ARROW
-    // (architect 2026-09-25, the lanes leaving the surface on both devices):
+    // (architect 2026-09-25, the lanes leaving the surface):
     // they are PLACEMENT SURFACES now, a motionless click their one act and
     // no drag armed there, and a click carries no cue anywhere in this map —
     // so they fall to the top strip's plain Arrow below, with no term of
@@ -2652,8 +2652,8 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // PROMISES THEY AGREE: the stem is simply where the cursor was, not a
 // prediction of where it will go, so this is a difference and not an
 // inconsistency. It is ZERO PIXELS at any window width that is a multiple of
-// 16, which is every width either host runs (1920 and 1024, and 2560/3840
-// besides), so it is reachable only under a hand resize to an odd width. It is
+// 16, which the tablet's 2304 is (its window the whole panel), so it is
+// reachable only at a window width the tablet never takes. It is
 // NOT to be engineered around, and in particular the restore path takes no
 // waveform clamp: the gutter is a real place on the window even though it is
 // not a place on the waveform, and a pan-only release must be able to put the
@@ -3042,7 +3042,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // WHAT THE FRAME STILL ASKS IS STATE, NEVER PLACE — the wheel's modal
     // refusals, which can come to stand mid-gesture without the finger
     // choosing a surface: a prompt, the progress modal, a
-    // live pointer gesture (a mouse press on the laptop — no two writers), a
+    // live pointer gesture (a pen press — no two writers), a
     // dialog editor, loading or empty audio, and THE FOLDER OVERLAY, the
     // render player or the picker, standing whole (a complete batch swaps the
     // progress modal for the player; the wheel's context 4 there is the
@@ -3050,7 +3050,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // veil would otherwise be punched by a pan from under it). A refused
     // frame navigates nothing AND SEATS NOTHING; the gesture resumes when the
     // state clears. The `h` view refuses nothing, entered before the
-    // gesture or toggled under it (the laptop's bare `h`): the same
+    // gesture or toggled under it (bare `h`): the same
     // waveform navigates either way. EVERY EDITOR REFUSES since 2026-10-25
     // (keyboard_modal_editor_active, the one predicate the region hold reads
     // too): the lane editors took the veil, so a pan or pinch no longer
@@ -3341,12 +3341,11 @@ void GuiInputHandler::end_touch_nav() {
     // THE ONE END THAT KEEPS THE SEAT (architect 2026-09-27; contract at
     // TouchNavZoomState, app_state.h): the pen lifting with its side button
     // held leaves a ONE-FINGER seat standing, marked retained, so the next
-    // button-held landing zooms on about the same anchor — the laptop's Ctrl
-    // held while the mouse is lifted and set down. The pen facts are the
+    // button-held landing zooms on about the same anchor — as a Ctrl held
+    // while a mouse is lifted and set down would. The pen facts are the
     // platform's and it answers them here, true only inside the pen's own
-    // lift on the Android backend (GuiPlatform::pen_lift_keeps_zoom_anchor);
-    // the Wayland backend answers false, so the laptop clears at every end
-    // exactly as before. Nothing on screen changes at a retention, so it owes
+    // lift (GuiPlatform::pen_lift_keeps_zoom_anchor), so every other end
+    // clears. Nothing on screen changes at a retention, so it owes
     // no damage; the stem the seat gates simply stays.
     // THE PAN'S SEAT DIES AT EVERY END, the pen's retained lift included
     // (2026-10-22; its record at apply_touch_nav_update's one-finger arm): a
@@ -3396,7 +3395,7 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 //
 // AND THE WAVEFORM IS THE WHOLE PAN ZONE (architect 2026-09-25, "out of
 // both — we want symmetry as much as possible"): the ruler and the marker
-// lane left the navigation surface on both devices, so they left this zone
+// lane left the navigation surface, so they left this zone
 // through the owner with no clause here. A finger landing on either resolves
 // to the POINTER TRANSLATION, where the lanes' own press arms answer it: a
 // tap places the playhead (a double tap on the empty marker lane creates)
@@ -4861,7 +4860,7 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
         // the letter's keysym with the key's own ctrl riding the event
         // (synthesize_key's `with_ctrl`, GuiInputCore::key_event's contract),
         // so text_editor::handle_key's Ctrl+C and Ctrl+V arms answer them
-        // exactly as they answer the laptop's keys — a copy with no selection
+        // exactly as they answer any other key's chord — a copy with no selection
         // copying nothing — and every gate and repeat rule on the road reads
         // the chord. A chord types no character, so the codepoint stays 0.
         case Role::Copy:
@@ -5223,12 +5222,10 @@ void GuiInputHandler::finish_notification_release(
 // (THE CAPTION AND THE SIZING FRAME's claims — claim_caption_press,
 // finish_caption_release and claim_window_frame_press, the app's own title
 // bar's three buttons, its drag and double click and the restored window's
-// resize, 2026-10-05 — went 2026-10-24 with the caption and the frame:
-// labwc decorates the window and owns its acts.)
+// resize, 2026-10-05 — went 2026-10-24 with the caption and the frame.)
 
 void GuiInputHandler::on_window_close() {
-    // The window close (the compositor's: labwc's close button, its
-    // keybinding, the taskbar; the tablet's Back) routes
+    // The window close (Android's Back) routes
     // through the unsaved-work dialog when dirty, same as Ctrl+Q. END any
     // in-flight pointer
     // gesture before the prompt goes up, matching the Ctrl+Q
@@ -5246,7 +5243,7 @@ void GuiInputHandler::on_window_close() {
     // THE HINT GOES DOWN WITH IT, and this is the SAME RULE AS on_key's
     // MODAL-OPENING END rather than a new one: no floating hint stands over a
     // modal. Every KEYBOARD opener meets it at on_key's every return and every
-    // pointer opener at its press; the compositor's close is THE ONE modal
+    // pointer opener at its press; the platform's close is THE ONE modal
     // opener that arrives asynchronously — it carries no key and no pointer
     // event to hide with — so the rule needs its call here (a HARD end) or
     // the hint stands over the prompt until the tick's walk finds no owner
@@ -5721,7 +5718,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // card when shifted or held (the rule at notifications.h's hit section).
     // The router cannot fork on tap versus click (no origin bit rides a
     // press; GuiInputState carries modifiers alone), so the rule is one for
-    // both hosts. Any other button over a card is consumed in the veil's own
+    // every input. Any other button over a card is consumed in the veil's own
     // manner and arms nothing. It ranks above the veils because a card is
     // the message ABOUT the act a veil stands over, not a reach into the
     // veiled surface (the record at the retired reach-through's site above),
@@ -5741,17 +5738,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // its rect belongs to no other surface, so there is nothing below to
     // arbitrate with — and it MUST outrank the dialog editors' veil further
     // down, which would otherwise swallow the press that types into the very
-    // editor raising it. It stands only where a platform asks for one
-    // (false forever on the laptop, at GuiPlatform::wants_onscreen_keyboard),
-    // so this is one platform query and one integer compare everywhere else.
+    // editor raising it. It stands only where the platform asks for one
+    // (GuiPlatform::wants_onscreen_keyboard) and an editor owns it, so this is
+    // one platform query and one integer compare otherwise.
     // Its rect is opaque: a press inside it never reaches the waveform's
     // gestures underneath, key or gap. (Contract at the declaration; the act
     // runs at the PRESS, inside.)
     if (claim_onscreen_keyboard_press(button, x, y)) return;
 
     // (THE SIZING FRAME's claim, above every veil, 2026-10-05 to 2026-10-24,
-    // went with the app's frame: labwc's borders resize the window, outside
-    // the surface.)
+    // went with the app's frame.)
 
     // Prompt-modal input handling: while a prompt dialog is up, its BUTTONS
     // are the pointer's only targets — and since 2026-08-13 a plain left press
@@ -6092,11 +6088,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // can't do anything else in the window behind it"). EVERY EDITOR IS A
     // PURE MODAL, the lane editors (the flag editor, the iteration bound
     // editor) with the dialogs: an editor ends through its own keys alone —
-    // Esc, Enter — and a dialog's Cancel and OK; on the glass the on-screen
-    // keyboard's own Esc and Enter, whose claim ranks above every gate. THE
-    // SAME ON BOTH DEVICES (symmetry): the laptop's hardware keys, the
-    // glass's keyboard keys, and no press outside the field on either. The
-    // press inside the field keeps its act (the caret block above). (A LANE
+    // Esc, Enter — and a dialog's Cancel and OK: the on-screen keyboard's own
+    // Esc and Enter, whose claim ranks above every gate, and no press outside
+    // the field. The press inside the field keeps its act (the caret block
+    // above). (A LANE
     // EDITOR'S ONE EXCEPTION, a left press in the lanes the keyboard left
     // visible — the view bar, the ruler, the marker lane, the waveform as
     // painted — closing it as Esc does, stood 2026-10-26 to 2026-10-29; it
@@ -6378,8 +6373,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the individual membership toggle + land on the resulting focus (the
         // marker claim below). On the NAVIGATION SURFACE — the waveform, either
         // half, and nothing else (the RULER and the MARKER lane's empty
-        // stretches were on it from 2026-08-12 and left it on both devices
-        // 2026-09-25, a ctrl press there arming nothing) — it is THE ONE NAV
+        // stretches were on it from 2026-08-12 and left it 2026-09-25, a
+        // ctrl press there arming nothing) — it is THE ONE NAV
         // DRAG'S CTRL ENTRY since 2026-08-14
         // (arm_nav_zoom_press; the live-ctrl model at ScrollDragState): the
         // same drag the plain press arms, opened in the ZOOM phase with the
@@ -6491,7 +6486,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // geometry owner — the waveform, either half, and nothing else.
             // Anywhere else — the RULER and the MARKER lane's empty stretches
             // among them since 2026-09-25 (architect: the lanes left the
-            // navigation surface on both devices; a ctrl press there arms no
+            // navigation surface; a ctrl press there arms no
             // drag, and a ctrl click there never had a click act, the ctrl
             // entry arming none), the gap band, the inter-lane seams — the
             // strict no-op below. (The `h` view's ctrl press falls through to
@@ -6623,8 +6618,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // above); its own shift former is handle_history_mode_press's.
         //
         // THE LANES KEEP THE SHIFT CLICK'S PLACEMENT AND LOSE THE SWEEP
-        // (architect 2026-09-25, the lanes leaving the navigation surface on
-        // both devices): a shift press on the ruler or the marker lane's empty
+        // (architect 2026-09-25, the lanes leaving the navigation surface):
+        // a shift press on the ruler or the marker lane's empty
         // stretch arms the PLACEMENT pending (arm_placement_press), so a
         // motionless shift click deselects and places the playhead — the
         // former's own press half, run at the lift like every click on a
@@ -6666,7 +6661,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // (input_trim.cpp).
             // THE RULER BAND'S PLAIN PRESS IS THE PLACEMENT PENDING
             // (architect 2026-09-25: the ruler and the marker lane left the
-            // navigation surface on both devices — "out of both — we want
+            // navigation surface — "out of both — we want
             // symmetry as much as possible"). The press arms ScrollDragState
             // with placement_only (arm_placement_press) and does NOTHING ELSE;
             // a motionless release runs the deferred click act (deselect +
@@ -6808,7 +6803,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (in_flag_or_tri) {
                     // The empty marker-lane stretch — a PLACEMENT SURFACE
                     // since 2026-09-25 (architect: the lanes left the
-                    // navigation surface on both devices; the navigation
+                    // navigation surface; the navigation
                     // surface's lane member from 2026-08-12, the press-time
                     // parity placement of 2026-07-23 before that). Plain by construction
                     // here: shift was the former's claim far above, ctrl and
@@ -7012,7 +7007,7 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
 }
 
 // ARM A PLACEMENT LANE'S PRESS (architect 2026-09-25: the ruler and the marker
-// lane left the navigation surface on both devices) — the same pending, the
+// lane left the navigation surface) — the same pending, the
 // click act and the seed unchanged, with placement_only set so that no drag
 // ever begins (contract at ScrollDragState::placement_only, app_state.h).
 // FOUR CALLERS, by grep 2026-09-25: the live router's ruler band, its empty
@@ -8012,7 +8007,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // is swallowing. Forcing "no owner" here
     // rather than gating the tick keeps the wait's writer in one place; the
     // modal's OPEN edge is a hard end of its own (on_key's or the press's, or
-    // the compositor close's), which takes any standing box down at once.
+    // the platform close's), which takes any standing box down at once.
     // (THE DROPDOWN needed no term of its own here until it retired,
     // 2026-10-21: the hover zone refused the whole roster under it.)
     //
@@ -8602,15 +8597,15 @@ void GuiInputHandler::finish_chrome_press_release(
 //
 // THE SCHEDULE'S TWO NUMBERS COME FROM DIFFERENT OWNERS ON PURPOSE. The FIRST
 // fire is one kHoldBeatMs after the press — the product's FIXED beat, matched
-// to the architect's compositor delay, and DECOUPLED FROM THE HOLD DELAY on
-// both devices (architect 2026-09-29): a repeat delay measures the cadence of
+// to the architect's laptop compositor delay (its source), and DECOUPLED FROM
+// THE HOLD DELAY (architect 2026-09-29): a repeat delay measures the cadence of
 // a stream of repeats, as the double-click window and the tap coalesce
 // measure the gap between two presses, and none of them is a hand resting on
 // a thing until it changes meaning, which is what kHoldDelayMs times (the
 // readers' inventory is at kHoldBeatMs). Every
-// LATER fire is THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL
+// LATER fire is THE PLATFORM'S ADVERTISED KEY-REPEAT INTERVAL
 // (GuiPlatform::key_repeat_period_ms), read PER FIRE because repeat_info may be
-// re-sent at any time, and a compositor advertising rate 0 has key repeat
+// re-sent at any time, and a platform advertising rate 0 has key repeat
 // DISABLED — so the buttons stop repeating there too, which is the honest
 // mirror of the keyboard they stand in for.
 //
@@ -8655,7 +8650,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
     if (arm.repeat_due_ms == 0) return;
     const int64_t now = monotonic_ms();
     if (now < arm.repeat_due_ms) return;
-    // A COMPOSITOR ADVERTISING RATE 0 HAS KEY REPEAT DISABLED, so these buttons
+    // A PLATFORM ADVERTISING RATE 0 HAS KEY REPEAT DISABLED, so these buttons
     // do not repeat either — the honest mirror of the keyboard they stand in
     // for. It PAUSES rather than disarms: repeat_info may be re-sent at any
     // time, and the schedule, already due, resumes on the next tick if it is.
@@ -8725,7 +8720,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 // release like everywhere else), shift+drag = the view-local region former,
 // ctrl+drag = the strip-drag zoom. The RULER and the MARKER lane's empty
 // stretches are PLACEMENT SURFACES in here as outside (architect 2026-09-25,
-// the lanes leaving the navigation surface on both devices): a motionless
+// the lanes leaving the navigation surface): a motionless
 // plain or shift click lands the playhead through the mode's land, and every
 // drag there does nothing.
 //
@@ -9900,7 +9895,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             sd.moved = true;
             // A PLACEMENT LANE'S CROSSING ENDS THE CLICK AND BEGINS NOTHING
             // (architect 2026-09-25, the ruler and the marker lane leaving the
-            // navigation surface on both devices): `moved` is what tells the
+            // navigation surface): `moved` is what tells the
             // release the press was not a click, and no capture, pan or zoom
             // follows — the held button stays this pending's until the release.
             // THE ONE EXCEPTION IS THE HEAD DRAG (2026-10-09), whose crossing

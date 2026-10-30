@@ -301,14 +301,15 @@ void GuiTargetRender::stamp_updating() {
     // THE REPEAT-RUN TIMELINE (the HELD cent step in W+target, each repeat
     // killing and redispatching the render — the blink the hold exists for),
     // walked against the live windows (kUpdatingRunDetectMs /
-    // kUpdatingRunQuietMs, both 75) and labwc's repeat shape (600 ms delay, then
-    // one repeat every 40 ms):
+    // kUpdatingRunQuietMs, both 75) and the hold-repeat's shape (600 ms delay,
+    // then one repeat every 40 ms — labwc's numbers, platform_android.cpp's
+    // set_repeat_info):
     //   t=0     the physical press. No previous trigger: no run. The dispatch
     //           misses the reuse rungs and stamps here — label shows.
     //   t=40    that render completes; complete_successful_buffer clears the
     //           label immediately, exactly as it always did (no run stands, so
     //           nothing holds it). A single tap ends here, with no linger.
-    //   t=600   repeat 1, the compositor's repeat DELAY later. 600 is nowhere
+    //   t=600   repeat 1, the platform's repeat DELAY later. 600 is nowhere
     //           near the DETECT window, so this is still not a run: it takes the
     //           one-off lifecycle in full — stamp, then its own completion
     //           clear. THE ACCEPTED BLINKS ARE ALL BEFORE THIS POINT; nothing

@@ -58,7 +58,7 @@ int next_codepoint_boundary(const std::string& s, int pos) {
 // EXCEPT the C0 controls, DEL, the surrogate range, and anything past the
 // Unicode maximum. ASCII controls are dropped as they always were (Return and
 // Escape produce sub-0x20 codepoints and are session keys, not characters);
-// the rest of the exclusions describe values xkb_state_key_get_utf32 does not
+// the rest of the exclusions describe values the on-screen keyboard does not
 // produce and exist so `encode_utf8` below has a stated domain rather than an
 // unreachable failure arm. C1 (U+0080..U+009F) is deliberately NOT excluded —
 // no keyboard produces one, and adding a rule for a non-producer is the kind of
@@ -271,10 +271,10 @@ bool replace_selection(State& s, const std::string& raw) {
     // re-scan from the next, so a single bad byte never eats the good text after
     // it. THE MALFORMED ARM HAS A LIVE PRODUCER since the system clipboard
     // landed (2026-08-02): a Ctrl+V pastes another application's bytes in here
-    // unexamined — the platform reads the pipe and hands the payload over
-    // whole, deliberately, because this is the one boundary that judges
-    // incoming text. The typed path still produces nothing malformed (xkb emits
-    // only well-formed UTF-8), and neither does our own copy.
+    // unexamined — the platform hands the payload over whole, deliberately,
+    // because this is the one boundary that judges incoming text. The typed
+    // path still produces nothing malformed (the on-screen keyboard's keys
+    // carry whole codepoints), and neither does our own copy.
     std::string  clean;
     clean.reserve(raw.size());
     const size_t n = raw.size();
@@ -458,9 +458,9 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // Printable insertion: no Ctrl/Alt, and a character-bearing codepoint —
     // ASCII or otherwise (is_insertable_codepoint owns the range, and
     // handle_key's branch tests the SAME predicate so membership and effect
-    // cannot drift). The platform hands over a full Unicode codepoint
-    // (xkb_state_key_get_utf32), so a compose or dead-key sequence classifies
-    // here exactly as a letter does.
+    // cannot drift). The platform hands over a full Unicode codepoint (the
+    // on-screen keyboard's key carries its own, synthesize_key), so a
+    // non-ASCII character classifies here exactly as a letter does.
     if (!mods.ctrl && !mods.alt && is_insertable_codepoint(mods.codepoint))
         return KeyClass::PrintableKey;
     return KeyClass::NotEditorKey;
@@ -667,11 +667,11 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     }
 
     // Printable insertion, THROUGH THE ONE INCOMING FILTER. Accept any
-    // character-bearing key the keyboard produced. The platform resolved the
-    // effective codepoint (shift / layout / compose applied) via
-    // xkb_state_key_get_utf32 — a FULL Unicode codepoint, not a byte — so a
-    // compose or dead-key sequence arrives here whole and is UTF-8 encoded
-    // below, landing as one insertion of one to four bytes. Characters that are
+    // character-bearing key the keyboard produced. The key carries its
+    // effective codepoint (the on-screen keyboard's cap, shift applied;
+    // synthesize_key) — a FULL Unicode codepoint, not a byte — so a non-ASCII
+    // character arrives here whole and is UTF-8 encoded below, landing as
+    // one insertion of one to four bytes. Characters that are
     // invalid for this field are NOT filtered here — the commit-time validator
     // refuses the value (text_editor::refuse, and the owner's card) when Enter
     // is pressed. This replaces the

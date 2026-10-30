@@ -579,8 +579,8 @@ void MarkerDragOps::commit_drag() {
     //   2026-09-23).
     //   THE FLAGS ARE REFRESHED ON EVERY RELEASE: a drag-time rebuild keyed
     //   the flag bitmap to the drag overlay, and the reorder/remap and the
-    //   DragState reset above change what it must show, so a Wayland frame
-    //   callback served before the tick would blit drag-era flags against the
+    //   DragState reset above change what it must show, so a vsync frame
+    //   served before the tick would blit drag-era flags against the
     //   committed store. The release reaches the flag cache ALONE
     //   (Viewport::refresh_flag_cache — fingerprint-guarded, no plate render).
     viewport.refresh_flag_cache();

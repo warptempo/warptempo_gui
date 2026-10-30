@@ -157,8 +157,8 @@ void GuiAbAudition::start() {
     // QUESTION REOPENS IT (2026-09-02, architect: a dead AAudio stream
     // is closed and reopened at this press through
     // GuiPlayback::ensure_device_available_for_play, play()'s own head check
-    // hoisted, and the card comes only when that reopen failed; JACK answers
-    // its unchanged read). Ahead of both tab gates and ahead of the first
+    // hoisted, and the card comes only when that reopen failed). Ahead of
+    // both tab gates and ahead of the first
     // `c`: the act's four plays all end at the launch body's own device
     // check, so a dead device refuses the whole act — but it would refuse it
     // AFTER this body had zoomed one tab, switched to the other and zoomed
@@ -354,12 +354,8 @@ void GuiAbAudition::fire_if_due() {
     // stream is playing nothing and the natural end that would advance the act
     // may never come, and in a REST the launch the rest is waiting for could
     // only fail. The read is GuiPlayback::device_unavailable — the latch, not
-    // the reopen, a reopen being the press's alone (playback.h) — so in
-    // practice this arm is AAudio's: it fires on the tablet when a headphone
-    // is pulled or a Bluetooth route drops, while JACK's answer is
-    // `!client_active`, which never flips mid-run and so can only be true here
-    // if start() had already carded (it asks the same device question at the
-    // press and refuses the act).
+    // the reopen, a reopen being the press's alone (playback.h) — and it
+    // fires when a headphone is pulled or a Bluetooth route drops mid-act.
     //
     // THE END IS THE ONE STOP BODY, so this is a CALLER of clearing owner (1)
     // and not a fifth owner (the inventory at GuiAuditionSequence,

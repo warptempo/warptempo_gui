@@ -318,9 +318,8 @@ inline const Row& row_of(Page page, int row) {
 // it. GuiInputCore compares an incoming stable code against two fields that
 // rest at 0 when nothing is held — the armed repeat's code and the synthesized-
 // left hold's — so a key whose code were 0 would match "nothing" on its own
-// release and be taken for the end of a hold it never started. The Wayland
-// backend never met this because an xkb keycode is 8 or more by construction;
-// this table's codes are its own small integers, so the base is stated here
+// release and be taken for the end of a hold it never started. This
+// table's codes are its own small integers, so the base is stated here
 // rather than left to luck. THIS IS THE PRODUCT'S ONLY SYNTHESIZER since
 // 2026-09-12: the render player's car buttons took a base of their own
 // (kCarStableCodeBase = 1000, above this table's ceiling) while each of them
@@ -397,8 +396,8 @@ inline constexpr char32_t shifted_char(char32_t base, bool shift_armed) {
 // place by being BOUND somewhere, and nothing in the dispatch binds `$`, `(`
 // or `_` — they exist only as characters an editor inserts, and what the
 // editor inserts is the CODEPOINT the press carries beside the keysym (the
-// printable branch of text_editor::handle_key, into replace_selection — the
-// road a hardware keyboard's character takes on the laptop). (The numbering
+// printable branch of text_editor::handle_key, into replace_selection). (The
+// numbering
 // past ASCII — Latin-1 its own code points, everything else 0x01000000 + the
 // code point — stays here for the walk's completeness; the table types none
 // of it since 2026-10-29.)
@@ -488,8 +487,8 @@ inline constexpr Page page_after(Role role, Page page) {
 // THE HEIGHT, rounded at the element; THE PITCH is the key plus the gap; a
 // key of n units is n pitches less one gap. At the defaults on the tablet
 // (300 %): the key 48 x 60, the gap 6, the pitch 54, so 1u 48, 1.5u 75, 2u
-// 102, 2.5u 129 and 4u 210 device px; at the laptop's 200 % 32 x 40, the
-// gap 4, the pitch 36. THE KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S
+// 102, 2.5u 129 and 4u 210 device px; at 200 % 32 x 40, the gap 4, the
+// pitch 36. THE KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S
 // `key_height` (architect 2026-10-29; render.h's icon_case_h_px): their
 // height is `osk_key_h` alone. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
@@ -525,8 +524,8 @@ inline int edge_pad_px() { return skin_px(kEdgePadAt300, 1); }
 
 // The band's whole height: the edge pad, five key rows and the four gaps
 // between them, and the edge pad — at the defaults 14 + 324 + 14 = 352
-// device rows at 300 %, 6 + 152 + 6 = 164 at the laptop's 138 % (the key 28,
-// the gap 3). THE BAND CARRIES NO LINE (architect 2026-10-14: the raised
+// device rows at 300 %, 6 + 152 + 6 = 164 at 138 % (the key 28, the gap 3).
+// THE BAND CARRIES NO LINE (architect 2026-10-14: the raised
 // Hilight line the taskbar overlay laid on its top, 2026-10-10 to 2026-10-14,
 // is gone with the overlay; the placement block below).
 inline int surface_height_px() {
@@ -537,11 +536,10 @@ inline int surface_height_px() {
 // -- Standing ----------------------------------------------------------------
 
 // DOES THE SURFACE STAND? Two terms: the PLATFORM must want a painted
-// keyboard (false forever on Wayland — the ruling is at that backend's
-// wants_onscreen_keyboard), and one of the editors must own the keyboard.
-// EVERY paint site and EVERY hit site in the product asks this and nothing
-// else, which is what makes the laptop build's behaviour identical by
-// construction rather than by care.
+// keyboard (GuiPlatform::wants_onscreen_keyboard, the ruling at its
+// declaration: the glass has no keys), and one of the editors must own the
+// keyboard. EVERY paint site and EVERY hit site in the product asks this and
+// nothing else.
 //
 // The editor term is text_editor_session() (app_state.h) rather than
 // GuiInputHandler::keyboard_modal_editor_active because the painter has no
@@ -608,8 +606,7 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 //   ALONE (the flag editor), AT THE DEFAULTS (osk_key_w 48, osk_key_h 60):
 //     at 300 % on 2304 x 1440 the band 1088–1439 (14 + 324 + 14) across x
 //     0..2303, its first key row's top 1102, the block of keys x 804..1499
-//     (696 wide, 804 clear each side); at the laptop's 138 % on 1920 x 1080
-//     the band 916–1079 (6 + 152 + 6) across x 0..1919. Row 8 is under it
+//     (696 wide, 804 clear each side). Row 8 is under it
 //     and unreachable: the keyboard's press claim takes the band, the ground
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
@@ -725,8 +722,8 @@ inline GuiRect slot_damage_rect(const AppState& a) {
 // is at GuiInputCore::key_event). The release path — and the touch hard-end
 // beside it — is its one clearer.
 //
-// IT IS A NO-OP WHEREVER THE SURFACE DOES NOT STAND, the laptop forever
-// included: one platform query, no write, no damage.
+// IT IS A NO-OP WHEREVER THE SURFACE DOES NOT STAND: one platform query, no
+// write, no damage.
 inline void reconcile_session(AppState& a, const GuiPlatform& gui,
                               Viewport& viewport) {
     if (!stands(a, gui)) return;
@@ -762,12 +759,12 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // covered (the box spans the waveform area whole).
 //
 // TWO CALLERS (2026-10-13, the tablet's stale keyboard): the PRE-PAINT HOOK
-// (main.cpp), ahead of every frame either backend paints, and the TICK. The
+// (main.cpp), ahead of every frame the backend paints, and the TICK. The
 // pre-paint call is the fix: a pointer release or a key closes an editor and
-// the Android pump paints in the SAME pass, before its next tick, so a
-// tick-only comparator let the first frame after a hide paint without the
-// band. On the cairo road that cost one stale frame; under the GL CANVAS it
-// stranded the keyboard for good — that frame's canvas clip grew back over
+// the pump paints in the SAME pass, before its next tick, so a tick-only
+// comparator let the first frame after a hide paint without the band, and
+// under the GL CANVAS that stranded the keyboard for good — that frame's
+// canvas clip grew back over
 // the band with no damage there, so the band's old texels inside the new
 // clip were never uploaded (the upload rule skips the clip unless it moved
 // on that frame, GuiPlatform::present), and the GPU showed the departed keys
@@ -777,8 +774,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // of its own: a frame paints only with damage, so the pre-paint would never
 // run for it.
 //
-// One platform query and a bit compare per call with the slot down, which
-// on the laptop is its permanent state.
+// One platform query and a bit compare per call with the slot down.
 inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
                                     Viewport& viewport) {
     const bool live = stands(a, gui) || folder_overlay::stands(a);

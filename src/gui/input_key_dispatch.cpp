@@ -3383,16 +3383,12 @@ void GuiInputHandler::run_publish_chord() {
         return;
     case GuiGitHubStatus::Diverged:
         // FAST-FORWARD ONLY: no in-app resolution. The fix is named on stderr.
-        // The tablet is the only committer (architect 2026-09-28), so the
-        // laptop's clone holds nothing authored and
-        // its local commits are discarded, and a diverged tablet is re-placed
-        // after its sidecars are copied off.
+        // The tablet is the only committer (architect 2026-09-28), so a
+        // diverged tablet is re-placed after its sidecars are copied off.
         std::fprintf(stderr,
             "warptempo_gui: Save and Commit refused: this device and GitHub "
-            "have both moved; on the laptop discard its local commits with "
-            "'git reset --hard origin/main' in the projects clone (it holds "
-            "nothing authored), and on the tablet copy its sidecars off and "
-            "re-place its clone with 'warptempo_sync setup'\n");
+            "have both moved; copy its sidecars off and re-place its clone "
+            "with 'warptempo_sync setup'\n");
         notifications.notify(AppState::NotificationClass::Normal,
                              "This device and GitHub have both moved");
         return;
@@ -8261,31 +8257,6 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     }
 }
 
-// THE CLIPBOARD REFUSAL'S ONE SENTENCE, for the two carded clipboard writes
-// (2026-09-03, first at the AV Sync Stats panel's copy button, deleted with
-// the panel 2026-09-30; the editor's CUT joined the copies later that same
-// day): clipboard_set_text answers a VERDICT —
-// whether the copy can be pasted (the contract at the seam,
-// platform_android.h) — and a success card on a false
-// verdict would lie. IT IS ONE SENTENCE AND NOT A FORK. THE VERDICT IS
-// ALWAYS TRUE TODAY: the tablet's copy stays in its own process (architect
-// 2026-10-29, Android 13+'s "Copied" chip; the rule at platform_android.h's
-// clipboard_set_text), so neither verb ever cards — the false arm's one
-// producer was the laptop's system-clipboard claim, gone with the laptop
-// GUI (2026-10-30).
-//
-// THE VERB IS THE ONE VARIABLE and the sentence is not: "copy" for the
-// resolved value's copy (Ctrl+Shift+J in the main window), "cut" for the editor's, so the reader is told which act the
-// clipboard turned down. THE EDITOR'S COPY STILL CARDS NOTHING — an editor is
-// its own world, a refused copy changes nothing on screen and the paste that
-// follows will show it — but a refused CUT is not silent, because its own
-// refusal is the visible thing: the selection stays (apply_editor_clipboard,
-// input_handler.cpp, where that reasoning is written out).
-void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
-    notifications.notify(AppState::NotificationClass::Normal,
-                         std::string("The clipboard did not take the ") + verb);
-}
-
 // (THE DROPDOWN ITEMS' ONE ENABLED VERDICT, dropdown_item_enabled — the
 // truthful menus, 2026-09-24 — RETIRED 2026-10-21 with the Settings popup.)
 
@@ -9339,16 +9310,12 @@ void GuiInputHandler::copy_focused_marker_value() {
                              kNoResolvedValueToCopy);
         return;
     }
-    // THE WRITE'S VERDICT DECIDES THE CARD (2026-09-03): a refused write would
-    // say so instead of "Copied"; the tablet's in-process copy never refuses
+    // THE WRITE NEVER REFUSES: the copy stays in the program's own process
     // (architect 2026-10-29, the rule at platform_android.h's
-    // clipboard_set_text, card_clipboard_refusal's head), so this card is the
-    // copy's one confirmation, no system chip beside it. The button's face
-    // reads no half of this question; it is the press's own answer.
-    if (!gui.clipboard_set_text(payload)) {
-        card_clipboard_refusal(notifications, "copy");
-        return;
-    }
+    // clipboard_set_text), so the card below is the copy's one confirmation,
+    // no system chip beside it. The button's face reads no half of this
+    // question; it is the press's own answer.
+    gui.clipboard_set_text(payload);
     // AND THE SUCCESS SAYS SO (architect 2026-08-30, the strictness ruling's
     // invariant that an accepted press shows something): A CLIPBOARD WRITE IS
     // THE ONE SUCCESS IN THE PRODUCT THAT PAINTS NOTHING — no surface displays

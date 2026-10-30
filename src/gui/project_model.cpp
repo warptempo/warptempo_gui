@@ -28,10 +28,10 @@ std::expected<GuiProjectSource, std::string> resolve_project(
     // on a notification card that CLIPS, and the leading
     // `/home/.../projects/` is the one part of them the reader already knows —
     // it is the device config's own key, the same for every project on the
-    // machine. ONE SENTENCE PER REASON, on every road: the two FATAL roads
-    // (startup's resolve and gui_main's reopen, both stderr + exit 1) print
-    // the same words, and startup's own zero case is what names the projects
-    // path out loud ("No project under <projects_path>").
+    // machine. ONE SENTENCE PER REASON, on every road: the FATAL road
+    // (gui_main's reopen, stderr + exit 1) prints the same words, and
+    // startup's own zero case is what names the projects path out loud ("No
+    // project under <projects_path>").
     const std::string name = folder.filename().string();
     std::error_code ec;
     if (!std::filesystem::is_directory(folder, ec)) {
@@ -175,74 +175,22 @@ std::vector<std::string> enumerate_project_names(
 }
 
 std::expected<GuiProjectSource, std::string> startup_source(
-        const DeviceConfig& config, const char* argument) {
+        const DeviceConfig& config) {
     const std::filesystem::path projects_path(config.projects_path);
 
-    if (argument == nullptr) {
-        // THE REMEMBERED PROJECT FIRST, silently falling through when the
-        // folder it names is gone or invalid (the load-lenient class — the
-        // program wrote the name; what happened to the folder since is
-        // ordinary use, not a hand edit). A name that fails last_project's own
-        // grammar never reaches here: the config reader refuses it at startup.
-        if (!config.last_project.empty()) {
-            auto remembered = resolve_project(projects_path /
-                                              config.last_project);
-            if (remembered) return remembered;
-        }
-        // Then the FIRST VALID project in name order.
-        for (const std::string& name : enumerate_project_names(projects_path)) {
-            auto candidate = resolve_project(projects_path / name);
-            if (candidate) return candidate;
-        }
-        return std::unexpected("No project under " + projects_path.string());
+    // THE REMEMBERED PROJECT FIRST, silently falling through when the folder
+    // it names is gone or invalid (the load-lenient class — the program wrote
+    // the name; what happened to the folder since is ordinary use, not a hand
+    // edit). A name that fails last_project's own grammar never reaches here:
+    // the config reader refuses it at startup.
+    if (!config.last_project.empty()) {
+        auto remembered = resolve_project(projects_path / config.last_project);
+        if (remembered) return remembered;
     }
-
-    // WITH AN ARGUMENT: the argument's folder must sit directly under the
-    // projects path, and the argument must BE that folder's resolved source.
-    //
-    // BOTH QUESTIONS ARE ASKED OF THE SPELLING THE USER GAVE, and the second
-    // is asked BY FILESYSTEM IDENTITY. The folder is the ARGUMENT'S OWN
-    // parent — made absolute against the working directory and lexically
-    // normalized, which is spelling work only and follows no link — so
-    // "directly under the projects path" is a fact about where the user says
-    // the file is, not about where a symlink at that name happens to point.
-    // Then the source compare is std::filesystem::equivalent rather than a
-    // path compare, because the walk that resolved the folder followed links
-    // too (is_regular_file, above): a project's source may legitimately BE a
-    // symlink, and a canonicalized argument would then name the link's target,
-    // sit outside the projects path, and be refused as not a project source —
-    // the same file the picker opens without complaint. equivalent asks the
-    // one question that matters, whether the two spellings name the same file,
-    // and it refuses on its own when the argument names nothing at all.
-    // "Directly under" stays equivalent for its own reason: a trailing slash
-    // or a symlink in the CONFIG's spelling must not fail a folder that really
-    // is there.
-    std::error_code ec;
-    const std::filesystem::path spelled =
-        std::filesystem::absolute(std::filesystem::path(argument), ec)
-            .lexically_normal();
-    auto refuse = [&]() {
-        return std::unexpected(std::string(argument) +
-                               " is not a project source under " +
-                               projects_path.string());
-    };
-    if (ec) return refuse();
-    const std::filesystem::path folder = spelled.parent_path();
-    if (!std::filesystem::equivalent(folder.parent_path(), projects_path, ec) ||
-        ec) {
-        return refuse();
+    // Then the FIRST VALID project in name order.
+    for (const std::string& name : enumerate_project_names(projects_path)) {
+        auto candidate = resolve_project(projects_path / name);
+        if (candidate) return candidate;
     }
-    // THE NAME MUST BE ONE THE DEVICE CONFIG CAN CARRY — the enumeration's
-    // own membership rule, asked here because this road never walks the
-    // enumeration. The open would write this name into `last_project`, so a
-    // folder the grammar refuses is not a project source on this road either,
-    // and it refuses with the road's own sentence rather than a second
-    // vocabulary.
-    if (!is_last_project_name(folder.filename().string())) return refuse();
-    auto resolved = resolve_project(folder);
-    if (!resolved) return std::unexpected(std::move(resolved.error()));
-    if (!std::filesystem::equivalent(spelled, resolved->source, ec) || ec) {
-        return refuse();
-    }
-    return resolved;
+    return std::unexpected("No project under " + projects_path.string());
 }

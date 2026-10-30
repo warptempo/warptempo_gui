@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# libgit2 -- the history view's git, in process (src/gui/git_repo.cpp), the
-# laptop's version over libssh2 (70_libssh2.sh).
+# libgit2 -- the history view's git, in process (src/gui/git_repo.cpp), at the
+# version the pins took from the laptop's Arch (common.sh), over libssh2
+# (70_libssh2.sh).
 #
 # THE CHOICES, each measured by the arc 4 survey's probe:
 #   USE_SSH=libssh2     the push's one transport: the deploy key and GitHub's

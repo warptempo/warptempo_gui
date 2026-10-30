@@ -16,16 +16,16 @@ namespace {
 // The measure reads the picture at WORKING ZOOM, the placement-instrument
 // zoom, so its column is the device's WORKING COLUMN in source frames,
 // nearbyint(2.4 s × rate ÷ the held display width) (working_column_frames,
-// app_state.h, its one owner), handed in by GuiAudio::load: 55 on the laptop's
-// 1920 px at 44.1 kHz (as before the device-relative map of 2026-09-27, when
-// it was floor(55.125)), 46 on the tablet's 2304 px, 60 / 50 at 48 kHz. At
+// app_state.h, its one owner), handed in by GuiAudio::load: 46 on the
+// tablet's 2304 px at 44.1 kHz, 50 at 48 kHz (the constants below were
+// measured at the laptop's 1920 px column, 55 at 44.1 kHz). At
 // the working zoom in source view a plate column then covers exactly one
 // analysis column, the viewport resting on the column's own multiples.
 
 // --- the fixed constants -----------------------------------------------------
 // THE ANALYSIS HOP is resolution only, and it is the EBU short-term
-// loudness's 100 ms, taken as a whole number of columns (80 of the laptop's
-// 55 frames at 44.1 kHz, 4400 frames; 96 of the tablet's 46, 4416). Measured
+// loudness's 100 ms, taken as a whole number of columns (96 of the tablet's
+// 46 frames at 44.1 kHz, 4416 frames). Measured
 // against a 10 ms hop at the laptop's working zoom (55 frames per pixel,
 // where 0.1 s is an 80 px linear segment) over the 40th's first movement, the
 // two curves differed by 0.028 dB mean, 0.21 dB at p99, 1.47 dB at the

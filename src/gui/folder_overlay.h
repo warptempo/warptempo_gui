@@ -74,7 +74,7 @@
 // File open, because Quit should still be enabled — everything else like what
 // we do with history ... Leave that for the player, the picker and the AV
 // stats"; the File menu that ruling kept live retired with the menu row
-// 2026-10-21, Quit the window manager's close on the laptop, Android's Back on the tablet, and Ctrl+Q): every icon-row button —
+// 2026-10-21, Quit Android's Back and Ctrl+Q): every icon-row button —
 // the view pairs' four included — greys through redesign_button_enabled's
 // first arm (each content's opener key excepted, its own closer:
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
@@ -257,10 +257,9 @@ inline int row_inset_px()         { return modal_box_content_pad_px(); }
 // name for that one question (the predicate itself is folder_overlay_stands,
 // app_state.h — it has to live there because that header's own predicates
 // read it: the slot's two tenants are named from both ends). It takes no
-// platform term, unlike the
-// keyboard's: the panel serves the pointer and the finger alike, so it stands
-// on both backends. EVERY paint site and EVERY hit site asks this and nothing
-// else.
+// platform term, unlike the keyboard's (wants_onscreen_keyboard): the panel
+// serves the pen and the finger alike. EVERY paint site and EVERY hit site
+// asks this and nothing else.
 inline bool stands(const AppState& a) {
     return folder_overlay_stands(a);
 }

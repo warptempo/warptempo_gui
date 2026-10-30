@@ -684,8 +684,9 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
 
     // THE KEY-REPEAT CADENCE IS HARD-CODED HERE (architect ruling 2026-08-23).
     // Android advertises no repeat rate to a native activity — no system
-    // setting a native app can read — so the numbers are labwc's defaults,
-    // taken BY CONVENTION: the delay is kHoldBeatMs (600, gui_input.h, the
+    // setting a native app can read — so the numbers are labwc's defaults
+    // (the laptop compositor the product began on, their provenance), taken
+    // BY CONVENTION: the delay is kHoldBeatMs (600, gui_input.h, the
     // product's fixed beat — never the hold delay, architect 2026-09-29: a
     // repeat delay measures the cadence of a stream of repeats, not a hand
     // resting until a hold means something) and the rate is 25 Hz, a 40 ms
@@ -2643,15 +2644,14 @@ bool GuiPlatform::clipboard_road_open() const {
 }
 
 // THE COPY NEVER LEAVES THE PROCESS (architect 2026-10-29: Android 13+'s
-// "Copied" chip, the rule at the declaration): the payload and its stamp, and
-// a true verdict, since the copy is pastable here from this moment.
-bool GuiPlatform::clipboard_set_text(const std::string& text) {
+// "Copied" chip, the rule at the declaration): the payload and its stamp, no
+// verdict, since the copy is pastable here from this moment.
+void GuiPlatform::clipboard_set_text(const std::string& text) {
     clipboard_text_     = text;
     clipboard_stamp_ms_ =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
-    return true;
 }
 
 // THE SYSTEM CLIP'S STAMP, ms since the epoch: ClipDescription's
@@ -3000,16 +3000,16 @@ void android_main(android_app* app) {
     });
     if (app->destroyRequested != 0) return;
 
-    // NO ARGUMENT: the tablet has no command line, and what to open is the
-    // project model's question, answered inside gui_main from the device
-    // config (startup_source, project_model.h). It answers with a terminal
-    // line and a nonzero status when there is nothing to open, or when the
-    // device config is malformed — both before any GuiPlatform exists, so
-    // neither can have asked the activity to go, and the tail below is the
-    // only asker for them. On this platform the status itself carries nowhere:
+    // WHAT TO OPEN is the project model's question, answered inside gui_main
+    // (which takes no argument: the tablet has no command line) from the
+    // device config (startup_source, project_model.h). It answers with a
+    // terminal line and a nonzero status when there is nothing to open, or
+    // when the device config is malformed — both before any GuiPlatform
+    // exists, so neither can have asked the activity to go, and the tail
+    // below is the only asker for them. The status itself carries nowhere:
     // the line is already in logcat (the stdio routing is per process), and
     // the activity going is the whole of what the user sees.
-    gui_main(nullptr);
+    gui_main();
 
     // WHATEVER ENDED THE GUI, THE ACTIVITY GOES WITH IT. A quit has already
     // asked through GuiPlatform::request_exit and this call is the no-op the

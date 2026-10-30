@@ -5,12 +5,10 @@
 // THE CAR'S VOCABULARY ACROSS THE SEAM (architect design 2026-08-28 §3): what a
 // head unit's buttons say to the product, and what the product says back for
 // the head unit's display. Both types are the seam's — declared here so the
-// two GuiPlatform headers and the render player share ONE spelling — and both
-// are plain values: the backend that has a MediaSession (Android) fills the
-// first from its callbacks and consumes the second into the session's
-// metadata and playback state; the backend that has none (Wayland) stores the
-// hook and never fires it, and its publish is a no-op. The laptop has no head
-// unit at all, so nothing on it produces one of these.
+// GuiPlatform header and the render player share ONE spelling — and both
+// are plain values: the backend fills the first from its MediaSession's
+// callbacks and consumes the second into the session's metadata and playback
+// state.
 //
 // A COMMAND IS THE CAR'S OWN ACT (architect 2026-09-12, from the car: "the car
 // is a separate interface"). Every kind runs one of the PRODUCT'S OWN BODIES

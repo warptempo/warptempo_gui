@@ -178,10 +178,11 @@ public:
     // SYSTEM CLIPBOARD: it stores the text in clipboard_text_, this process's
     // one payload, with a wall-clock stamp (clipboard_stamp_ms_, ms since the
     // epoch — std::chrono::system_clock, the base Android's ClipDescription
-    // timestamps use), and answers TRUE: the copy is pastable here at once,
-    // and no road on this backend refuses it, so the card "Copied the
-    // resolved value '…'" is the one confirmation and the editor's cut always
-    // erases. clipboard_get_text answers WHICHEVER WAS COPIED LATER: the
+    // timestamps use), and RETURNS NOTHING: the copy is pastable here at
+    // once and no road refuses it, so the card "Copied the resolved value
+    // '…'" is the one confirmation and the editor's cut always erases (no
+    // refusal arm exists, the type rule: an error arm exists iff a producer
+    // exists). clipboard_get_text answers WHICHEVER WAS COPIED LATER: the
     // process's payload when it is set and its stamp is >= the system clip's
     // own (MainActivity.clipboardTime), else the system clipboard's text
     // (MainActivity.clipboardGet), so text copied in another app — a URL in a
@@ -197,9 +198,7 @@ public:
     // (the Java side carries the whole reasoning). The bytes are not
     // filtered here: the editor's own incoming filter,
     // text_editor::replace_selection, is the boundary that validates UTF-8
-    // well-formedness and drops control bytes. The verdict is what a carded
-    // clipboard success reads, and what the EDITOR'S CUT hangs its erase on
-    // (apply_editor_clipboard).
+    // well-formedness and drops control bytes.
     // WITH THE ROAD ABSENT (a failed attach or lookup, the line logged at
     // init) the paste reads the process's payload alone. `get` answers the
     // empty string where there is nothing to paste, the legal cold answer
@@ -208,7 +207,7 @@ public:
     // bytes never cross) is one more of them. A clock set backwards between
     // a copy here and one elsewhere picks the wrong one of the two; nothing
     // guards it (no backstops for adversarial use).
-    bool        clipboard_set_text(const std::string& text);
+    void        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
 
     int width()  const;

@@ -1484,9 +1484,7 @@ void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
     // role (the skin's constants and the ring tones off the ground's mean,
     // chrome_derive.h), only the waveform's and the program's roles and THE
     // LIT LEDS' ACCENT (its patches rebuilt at the install,
-    // materials::set_accent, 2026-10-23), which paint inside the client; the
-    // restored laptop's border outside it wears the ring's light tone, which
-    // no preset moves.
+    // materials::set_accent, 2026-10-23), which paint inside the client.
     viewport.invalidate_all();
 }
 

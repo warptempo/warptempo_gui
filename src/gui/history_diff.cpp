@@ -34,11 +34,9 @@
 namespace {
 
 // THE REPOSITORY ROOT IS DERIVED FROM THE LOADED SOURCE, and there is no
-// constant for it (architect 2026-08-11, superseding the fixed absolute path
-// that stood here: the product has TWO HOSTS now — an x86 laptop and a Raspberry
-// Pi road rig — so the single-laptop premise the path rested on is false, and
-// the rig had to replicate the laptop's directory layout by hand for the mode to
-// work at all).
+// constant for it (architect 2026-08-11, superseding a fixed absolute path
+// that assumed one host's directory layout; the clone is wherever the
+// program's projects sit, the tablet's on its external storage).
 //
 // THE CLONE YOU OPEN FROM IS THE CLONE THAT COMMITS — the folder law (a piece's
 // folder is the folder its source sits in) carried one level up. The owner is
@@ -2556,9 +2554,9 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //
 // THE COMMIT IDENTITY IS THE MACHINE'S: author and committer come from the
 // clone's git configuration and the global files (or git's own environment
-// variables), and this program embeds no name and no address — the laptop's
-// from its ~/.gitconfig, the tablet's from its clone's own .git/config
-// written at clone time (architect 2026-09-27; its HOME holds no gitconfig,
+// variables), and this program embeds no name and no address — the
+// tablet's from its clone's own .git/config written at clone time
+// (architect 2026-09-27; its HOME holds no gitconfig,
 // so without that the commit step refuses, CommitFailed). THE PUSH'S
 // CREDENTIAL IS THE DEPLOY KEY beside the device config, never the account's
 // ssh key, and GitHub's host keys are pinned (git_repo.cpp owns both). THE
@@ -3139,7 +3137,7 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
     // FILES FAILED (step 1, the forced checkout) left an unknown subset of
     // the working tree the upstream's with the index and the branch unmoved
     // (libgit2's checkout writes the index only when it succeeds), and the
-    // recovery is THE PULL AGAIN on either device: the status still reads
+    // recovery is THE PULL AGAIN: the status still reads
     // Behind, and the forced checkout rewrites every path the pull changes
     // whatever the partial write left there (architect 2026-10-19). THE PULL
     // IS NOT MADE CRASH-TRANSACTIONAL (architect 2026-09-28): no journal,

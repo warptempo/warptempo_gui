@@ -11,9 +11,7 @@
 // coordinate — more saturated than the browser shows the same hex ("ours
 // looks slightly more neon"). THE TABLET THEREFORE CONVERTS sRGB -> DISPLAY-P3
 // AT THE PAINTER'S ENTRY, and the panel receives P3 bytes that present the
-// sRGB color as the browser presents it. The laptop's Wayland surface is
-// untagged sRGB and converts nothing: there the transform never runs and
-// every byte is today's.
+// sRGB color as the browser presents it.
 //
 // WHERE IT RUNS, the one list (re-grep `display_transform::` to re-derive it):
 // set_palette_source and set_waveform_source (render.cpp — every role paint,
@@ -47,7 +45,7 @@
 //                    |-0.0420569547  1.0420569547  0.0000000000 |
 //                    |-0.0196375546 -0.0786360456  1.0982736001 |
 //      (each row sums to 1: a neutral maps to the same neutral, so a gray is
-//      byte-identical on both devices).
+//      byte-identical through the transform).
 //   3. ENCODE back through the same curve and round to the nearest byte:
 //      the byte is the count of the 255 decision levels decode((k + 0.5) /
 //      255) at or below the linear value (encode_byte) — exactly
@@ -70,7 +68,7 @@
 //   * TRUE COLORS (set_true_colors; architect 2026-10-08 ~05:35) — THE
 //     `true_colors` DEVICE KEY since 2026-10-21 (`on` | `off`, required, read
 //     at launch and set live by the settings editor's commit; device_config.h),
-//     ON in both devices' configs ("the default is on, not something off by
+//     ON in the tablet's config ("the default is on, not something off by
 //     default"); from 2026-10-08 until then the Settings menu's "True Colors"
 //     command row, checked, true at every launch and persisted nowhere. With
 //     the conversion on, a screenshot holds the converted P3 bytes, so a hex
@@ -79,8 +77,7 @@
 //     or sharing, not design", so he sets it off for the capture alone. While
 //     it is FALSE nothing converts: the raw sRGB bytes go to the P3 layer, a
 //     capture round-trips byte for byte, and the glass reads oversaturated
-//     meanwhile. On the laptop the key is present and acts (symmetry), and
-//     changes nothing: there is no conversion to turn off. PROCESS-LIFETIME
+//     meanwhile. PROCESS-LIFETIME
 //     STATE (seeded from the key at launch), FILE-SCOPE HERE AND NOT ON
 //     AppState, which gui_main rebuilds at
 //     every project reopen while the window and its caches stand (the live

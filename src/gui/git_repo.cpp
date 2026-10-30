@@ -30,7 +30,8 @@ constexpr int kServerTimeoutMs = 30000;
 // registered on the projects repository with write access, never the account
 // key an interactive ssh would offer. Two files BESIDE THE DEVICE CONFIG — the
 // directory device_config_path() names, which is `$XDG_CONFIG_HOME/
-// warptempo_gui/` on every backend — an OpenSSH private key with NO
+// warptempo_gui/` (android_main points the variable at the app's internal
+// directory) — an OpenSSH private key with NO
 // PASSPHRASE (nothing could type one) and its public half. No agent, no
 // ~/.ssh/config and no permission check: the file is the whole credential.
 constexpr const char* kDeployKeyName       = "deploy_key";
@@ -422,13 +423,14 @@ bool local_fetch_failure(const RemoteState& state) {
 void gui_git_init() {
     git_libgit2_init();
     // DURABLE OBJECT WRITES: git's own `core.fsync=committed` (the laptop's
-    // ~/.gitconfig sets it) is a key libgit2 does not read, so the durability
+    // ~/.gitconfig sets it, the model this follows) is a key libgit2 does not
+    // read, so the durability
     // it asks for is this process-wide switch instead.
     git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1);
     // The network time bound (kServerTimeoutMs owns the reasoning).
     git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, kServerTimeoutMs);
     git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, kServerTimeoutMs);
-    // OWNER VALIDATION OFF, on both devices (architect 2026-09-27). libgit2
+    // OWNER VALIDATION OFF (architect 2026-09-27). libgit2
     // refuses a clone whose work tree or .git is owned by anyone but this
     // process's user (or root) — git's safe.directory rule, whose premise
     // (CVE-2022-24765) is a HOSTILE USER's repository above a victim's working
@@ -438,9 +440,8 @@ void gui_git_init() {
     // the audio and the clone itself, the app writes the sidecars — so its
     // shell-owned .git would read "not owned by current user" and every git
     // question would fail as "History is unavailable", and any later adb push
-    // under .git would do the same again. On the laptop, a single-user
-    // machine, there is no hostile user for the rule to guard against. The
-    // clone opened is always the one derived from the loaded source
+    // under .git would do the same again. The clone opened is always the one
+    // derived from the loaded source
     // (resolve_repo_root_for_source), never a directory the process wandered
     // into.
     git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);

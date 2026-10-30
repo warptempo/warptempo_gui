@@ -16,8 +16,9 @@
 // named audio tool, measuring each window's short-term loudness and bringing
 // it to a target. Its unit is the painted column at WORKING ZOOM — the
 // placement-instrument zoom, where one column is the device's WORKING COLUMN
-// (working_column_frames, app_state.h, handed in by the caller: 55 frames on
-// the laptop at 44.1 kHz, 46 on the tablet) — which carries two numbers read
+// (working_column_frames, app_state.h, handed in by the caller: 46 frames on
+// the tablet at 44.1 kHz; the constants were tuned at the laptop's 55) —
+// which carries two numbers read
 // in one pass over the samples:
 // its PEAK, the plate renderer's own min/max reduced to one number (the
 // largest |x| over both channels), and its MEAN SQUARE (the sum of x^2 over

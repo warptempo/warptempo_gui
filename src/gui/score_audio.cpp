@@ -13,9 +13,8 @@
 #include <utility>
 
 // THE SAMPLES ARE READ AS THE FILE HOLDS THEM: a WAV's PCM16 is
-// little-endian, and so is every host this program runs on (the laptop's
-// x86-64, the tablet's arm64), so the payload's bytes are the int16_t words
-// with no swap.
+// little-endian, and so is the host this program runs on (the tablet's
+// arm64), so the payload's bytes are the int16_t words with no swap.
 static_assert(std::endian::native == std::endian::little,
               "the score's soundtrack is read as little-endian PCM16");
 

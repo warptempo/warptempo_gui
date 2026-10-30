@@ -611,14 +611,6 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
 bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
                                 GuiInputState mods);
 
-
-// THE CLIPBOARD REFUSAL'S ONE SENTENCE, composed for whichever write met it —
-// the verb is the act's own word ("copy", "cut"). The body and the reasoning
-// are at its definition (input_key_dispatch.cpp); it is declared here because
-// its raisers live in two translation units, the editor's cut having
-// joined the carded copies on 2026-09-03.
-void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
-
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
 // sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3)
 // and did not come back on 2026-08-18 when the region became the trim: a sync is
@@ -1062,7 +1054,7 @@ struct GuiInputHandler {
     //     begin needs no call: it runs only under an editor, a modal no act
     //     stands under.
     // Not presses: pointer and pen motion (hover), key release, the
-    // compositor's close (its prompt is a modal, whose open stops), and the
+    // platform's close (its prompt is a modal, whose open stops), and the
     // car's head unit, whose own transport ends the act (its play through
     // owner (2), its stop through owner (1)).
     void end_audition_for_press();
@@ -1275,11 +1267,11 @@ struct GuiInputHandler {
     // and so the anchor stem it gates is rubbed out at every end but ONE: the
     // pen lifting with its side button held keeps a one-finger seat as the
     // RETAINED anchor (architect 2026-09-27; the platform answers the pen
-    // facts, GuiPlatform::pen_lift_keeps_zoom_anchor, false on Wayland).
+    // facts, GuiPlatform::pen_lift_keeps_zoom_anchor).
     void end_touch_nav();
     // THE PEN'S RETAINED ANCHOR RELEASED — the platform's release hook
-    // (GuiPlatform::set_pen_zoom_anchor_release_hook, whose Android inventory
-    // is the list of what ends it; the Wayland backend never fires it): a
+    // (GuiPlatform::set_pen_zoom_anchor_release_hook, whose inventory is the
+    // list of what ends it): a
     // RETAINED seat is cleared with its stem's erase through
     // clear_touch_zoom_seat, and a seat a live gesture holds is left to that
     // gesture. Contract at TouchNavZoomState, app_state.h.
@@ -1291,7 +1283,7 @@ struct GuiInputHandler {
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // to the WHOLE WAVEFORM by the two-halves ruling of 2026-08-13, and to
     // THE WAVEFORM ALONE since 2026-09-25, when the ruler and the marker lane
-    // left the navigation surface on both devices): the platform asks
+    // left the navigation surface): the platform asks
     // whether a touch-DOWN point lies on the one-finger PAN SURFACE —
     // answered here as THE NAVIGATION SURFACE through its one geometry owner
     // (point_on_nav_surface, input_pointer.cpp), which is literally the
@@ -1613,7 +1605,7 @@ struct GuiInputHandler {
     // by grep 2026-10-06: every pointer press and every release, every
     // wheel, on_key's modal-opening end (a key that raised a
     // modal under a roster hint — keys themselves do not hide it), the
-    // compositor close (the one modal opener no key or press reaches), the
+    // platform's close (the one modal opener no key or press reaches), the
     // roster walk's tail for a dialog owner whose surface closed or was
     // replaced, end_tooltip_hover, the lamp's dark edge through it, and
     // main.cpp's activation edge. Damages the strip and the box's last
@@ -1708,7 +1700,7 @@ struct GuiInputHandler {
     // kToolbarChords being the membership — this synthesizes that button's
     // chord on the keyboard's own
     // cadence, the first fire a hold beat after the press and the rest at the
-    // compositor's advertised repeat rate. One kind compare and one integer
+    // platform's advertised repeat rate. One kind compare and one integer
     // compare when idle; every firing condition lives in the body, and the
     // burst's state and authoritative edge inventory are at
     // AppState::ChromePress. Deliberately NOT gated on
@@ -1817,7 +1809,7 @@ struct GuiInputHandler {
     // a press on a published card is consumed whole, and since 2026-10-01
     // the card is ONE BUTTON — the LEFT press anywhere on it ARMS the card
     // (AppState::ChromePress's Card kind, carrying the press-time shift and
-    // the press's stamp) and stops its clock, on both backends. The LIFT is
+    // the press's stamp) and stops its clock. The LIFT is
     // finish_notification_release, called at the head of on_button_release
     // with the arm taken: inside the same card it dismisses that card, or
     // every card when the carried shift or a hold past
@@ -1833,9 +1825,8 @@ struct GuiInputHandler {
     // (THE CAPTION AND THE SIZING FRAME'S POINTER HALVES —
     // claim_window_frame_press, claim_caption_press and
     // finish_caption_release, 2026-10-05 — went 2026-10-24 with the app's
-    // caption and frame: labwc decorates the window and owns its acts.)
-    // THE WINDOW'S CLOSE ROAD — the compositor's close request (labwc's
-    // title-bar close button, its keybinding, the taskbar; the tablet's
+    // caption and frame.)
+    // THE WINDOW'S CLOSE ROAD — the platform's close request (Android's
     // Back) through main.cpp's set_on_close (the app's own caption's Close
     // button reached it too, 2026-10-05 to 2026-10-24). It ends any live pointer gesture,
     // drops the tooltip and the open menu, and runs the close owner
@@ -1884,8 +1875,8 @@ struct GuiInputHandler {
     // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half (2026-08-28):
     // every standing keyboard-modal editor abandoned without committing, each
     // through its own exit-no-commit body. ONE CALLER, GuiPrompt::request_close
-    // — the one close road, which the keyboard's Ctrl+Q, the compositor's WM
-    // close and Open Project's commit all reach — so no road restates
+    // — the one close road, which the keyboard's Ctrl+Q, the platform's
+    // close (Back) and Open Project's commit all reach — so no road restates
     // the step and none can forget it. At most one editor can stand at a time
     // (each opener refuses under the others), so the chain runs exactly one
     // body; every one of them is is_active-guarded, which makes the whole call
@@ -1970,7 +1961,7 @@ struct GuiInputHandler {
     // No-op when nothing is live. Definition beside
     // on_button_release in input_pointer.cpp (same bodies, same order). FOUR
     // CALLERS: the Ctrl+Q hatch in on_key, the window's close road
-    // (on_window_close — the compositor's close) and
+    // (on_window_close — the platform's close, Back) and
     // main.cpp's resize callback (close ends the gestures before raising the
     // prompt, so none is
     // left live under it; resize ends them before the geometry rebuild, whose
@@ -2083,7 +2074,7 @@ struct GuiInputHandler {
                        bool scrub_release);
 
     // THE PLACEMENT LANES' PRESS (architect 2026-09-25: the ruler and the
-    // marker lane left the navigation surface on both devices): arm_nav_press
+    // marker lane left the navigation surface): arm_nav_press
     // with placement_only set, so the motionless release runs the click act
     // (and the empty-lane seed when `seed_empty_lane`) and a drag does
     // nothing — no pan, no zoom phase (contract at
@@ -2558,17 +2549,13 @@ private:
 
     // Clipboard: handle a Copy/Cut/Paste editor action against editor `s` and
     // report whether it handled one. THE PLATFORM HOLDS THE ONLY COPY of the
-    // payload (GuiPlatform::clipboard_set_text / clipboard_get_text): on the
-    // laptop the clipboard is the system one (the Wayland CLIPBOARD
-    // selection) and copy and cut hand the selected text straight to the
-    // compositor; on the tablet the copy stays in the program's own process
-    // (architect 2026-10-29, Android 13+'s "Copied" chip; platform_android.h).
-    // Nothing is kept here (THE CUT DELETES ONLY ON A TRUE VERDICT, and cards
-    // its refusal otherwise — the reasoning is at the case); paste takes what
-    // the platform answers — on the laptop our own payload while we still own
-    // the selection and another application's otherwise, on the tablet the
-    // newer of the program's copy and the system clip — and inserts it, doing
-    // NOTHING at all when there is nothing to paste. Returns false for any other action so the
+    // payload (GuiPlatform::clipboard_set_text / clipboard_get_text): copy
+    // and cut hand the selected text over and it stays in the program's own
+    // process (architect 2026-10-29, Android 13+'s "Copied" chip;
+    // platform_android.h), the cut then erasing it. Nothing is kept here;
+    // paste takes what the platform answers — the newer of the program's
+    // copy and the system clip — and inserts it, doing NOTHING at all when
+    // there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.
     //
     // This and Ctrl+Shift+J's value copy (copy_focused_marker_value,
@@ -3141,7 +3128,7 @@ private:
     //       (the Open Project key's lift) under the project picker,
     //       `;` (the Settings key's lift) under the settings page and the
     //       value list, Ctrl+Q's and the
-    //       compositor's close road (GuiPrompt::request_close, at its head
+    //       platform's close road (GuiPrompt::request_close, at its head
     //       beside the player's close, on the exit road alone), the page's
     //       row open ahead of its editor, the trim presets list's Close, Esc,
     //       `t` (the TRIM key's lift) and Save As ahead of its name editor,
@@ -3363,8 +3350,8 @@ private:
     // would re-light the very face it withheld; the latch is a DISTANCE, as
     // the plane's own hysteresis is.
     //   ARMED only by the Android backend's pen lift off an empty glass
-    //   (GuiPlatform::set_pen_lift_hook) — never by a mouse (the Wayland twin
-    //   never fires) or a finger (it never hovers), so the mouse and the
+    //   (GuiPlatform::set_pen_lift_hook) — never by a mouse (it lifts off no
+    //   glass) or a finger (it never hovers), so the mouse and the
     //   finger are untouched. IT ARMS AFTER THE LIFT'S OWN DELIVERY
     //   (architect 2026-10-08): the release and the restore motion at the
     //   lift run first, unlatched, and the arm then re-walks the roster
@@ -3904,7 +3891,7 @@ private:
     //
     // THE ZONES, each with the press branch it is taken from (re-derived
     // 2026-08-13 under THE TWO-HALVES RULING and 2026-09-25 when the ruler and
-    // the marker lane left the surface on both devices — the NAVIGATION
+    // the marker lane left the surface — the NAVIGATION
     // SURFACE is the WHOLE waveform and nothing else, in every view, read from
     // its one geometry owner point_on_nav_surface):
     // - Pan: the NAVIGATION SURFACE, plain — the cue promises the drag, which
@@ -4050,7 +4037,7 @@ private:
     //
     // THE ACCEPTED STALENESS IS ONE POLL WAKEUP WIDE, and that is the whole of
     // it since the cursor became a per-iteration answer (2026-08-03). Every
-    // state this map reads is written from inside a dispatched event — a wayland
+    // state this map reads is written from inside a dispatched event — a platform
     // event, the tick, or a worker completion — and the owner runs at that same
     // iteration's tail, so a change is on screen in the frame it happens in.
     // The classes that used to be listed here as stale (a load completing under a
@@ -4384,11 +4371,10 @@ private:
     // wheel detent and touch gesture is consumed, silently, and nothing
     // behind it changes face (dead and ungreyed — redesign_button_enabled's
     // record of the classes). The way out is Esc (cancel) and Enter
-    // (commit) alone — the hardware's on the laptop, the on-screen
-    // keyboard's own two keys on the glass (its Esc lower right since
-    // 2026-10-29) — and a dialog's Cancel and OK. A PRESS OUTSIDE THE FIELD
-    // CLOSES NOTHING, for the lane editors (the flag editor, the iteration
-    // bound editor) as for the dialogs, on both devices: every editor is a
+    // (commit) alone — the on-screen keyboard's own two keys (its Esc lower
+    // right since 2026-10-29) — and a dialog's Cancel and OK. A PRESS
+    // OUTSIDE THE FIELD CLOSES NOTHING, for the lane editors (the flag
+    // editor, the iteration bound editor) as for the dialogs: every editor is a
     // pure modal (architect 2026-10-29, undoing the lane editors' one
     // exception of 2026-10-26, a press in the lanes the keyboard left
     // visible closing them as Esc did: "I think we can reverse that,
@@ -4518,12 +4504,11 @@ private:
     // too); `l` and Esc close; Ctrl+S falls through to the
     // save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
-    // head (GuiPrompt::request_close, the compositor's close road too, so
+    // head (GuiPrompt::request_close, the platform's close road too, so
     // neither gesture restates the step). EVERY OTHER
-    // CHORD IS CONSUMED (strict modifier validation's no-op). THE KEYBOARD IS
-    // THE CLOSE ROAD ON PLASTIC AND THE CLOSE BUTTON IS THE ROAD ON GLASS
-    // (architect: "ctrl+q should still work on laptop, tablet requires cancel
-    // to close"). Returns true
+    // CHORD IS CONSUMED (strict modifier validation's no-op). THE CLOSE
+    // BUTTON IS THE ROAD ON GLASS (architect: "tablet requires cancel to
+    // close"). Returns true
     // when the key is consumed here, false for the two fall-throughs.
     bool route_render_player_key(GuiKey key, GuiInputState mods);
 

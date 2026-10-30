@@ -366,12 +366,12 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 //
 // The choice is invisible in paint: both forms sit within one frame of the
 // ideal grid point (m+col)*q, and one frame is at most 1/q px, q at least
-// half the working column at the deepest numeric zoom (27.5 on the laptop, 23
-// on the tablet at 44.1 kHz) — far under the half-pixel paint-rounding
+// half the working column at the deepest numeric zoom (23 on the tablet at
+// 44.1 kHz) — far under the half-pixel paint-rounding
 // threshold — so a landing paints at column `col` either way.
 //
 // m recovery is exact for product-reachable audio lengths: at the deepest
-// numeric zoom q >= column / 2 frames/px (23 or more on every deployed device)
+// numeric zoom q >= column / 2 frames/px (23 or more on the tablet)
 // and a source length fits well within the
 // double mantissa, so |viewport_start/q - m| << 0.5. The target domain's total
 // is at most 16x the source's — build_warp_frame_map divides each source delta

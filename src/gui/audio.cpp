@@ -121,7 +121,7 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 //
 // THE STANDING NEXT KNOB: a level switch still changes both quantization and
 // bin alignment, so a crossing can still pop — 4x makes it small, it does not
-// make it impossible. If a pop is still visible on the labwc pass, the next
+// make it impossible. If a pop is still visible on the glass, the next
 // step is min/max INTERPOLATION across a narrow log-span transition band
 // (blending the two levels' values); it is deliberately not built yet, since it
 // doubles the peak reads and the denser ladder may well be enough.

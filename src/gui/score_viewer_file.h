@@ -6,9 +6,9 @@
 // `<project>/score/viewer.txt`, and in no sidecar: the `.settings` schema
 // does not know them (settings_file.cpp's key record) and the CLI reads none
 // of this. THE FILE NEVER TRAVELS AND IS NEVER COMMITTED: the projects
-// repository ignores `projects/*/score/` on both devices, the sync script
-// pushes the pages and the audio and never this file, and each device makes
-// its own ("not hard to recreate"), the tablet its author. A movement whose
+// repository ignores `projects/*/score/`, the sync script pushes the pages
+// and the audio and never this file, and the tablet makes its own ("not
+// hard to recreate"). A movement whose
 // pages live in another movement's folder gets a `score/` of its own holding
 // this file alone.
 //

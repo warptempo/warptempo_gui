@@ -52,8 +52,7 @@ struct GuiInputHandler;
 // for a while — this tick hands over while the player stands and takes the
 // wire back on the first tick after it comes down. A REOPEN re-publishes the
 // new project on its first tick (this object is per project, built inside
-// run_project; last_pushed_ starts empty). On Wayland the platform's push is
-// a no-op and the hook never fires, so nothing here has an effect there.
+// run_project; last_pushed_ starts empty).
 //
 // THE THREE LINES, with the player closed (architect 2026-09-17): the ALBUM
 // (the console's dim top line) is the project's name, the ARTIST is THE TAB

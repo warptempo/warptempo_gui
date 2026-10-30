@@ -272,9 +272,9 @@ void playback_render_block(GuiPlaybackState& state,
             // `loop_begin >= end - 1`, so the window is at least two frames and
             // every subtraction moves `pos` down by that much; the position had
             // passed `end` by less than one increment, so ONE subtraction lands
-            // it in [loop_begin, end) at every rate ratio the two devices
-            // produce (the increment is about 1, a 48 k buffer on a 44.1 k
-            // graph the widest at 1.09), and the do-while is the
+            // it in [loop_begin, end) at every ordinary rate ratio (the
+            // increment is about 1, a 48 k source on a 44.1 k stream the
+            // widest at 1.09), and the do-while is the
             // belt for an increment wider than a two-frame window (a 4x source
             // rate on a 48 k stream), where it takes a second step and still
             // lands inside the window. The `total` clamp stays as the natural

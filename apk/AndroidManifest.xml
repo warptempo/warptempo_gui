@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- warptempo_gui, the product APK. A NativeActivity over libwarptempo_gui.so,
-     whose android_main (src/gui/platform_android.cpp) calls the same gui_main
-     the desktop main() calls.
+     whose android_main (src/gui/platform_android.cpp) calls gui_main, the one
+     GUI body.
 
      hasCode="true" since the Java sliver: the APK carries a classes.dex
      holding exactly ONE class, .MainActivity (a NativeActivity subclass), and
@@ -35,9 +35,7 @@
        resvg over the caption's flat ground
        #141415, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
-       reason), both layers rendered at every build by build_apk.sh. The
-       Linux desktop's launcher icon is the same drawing bare, a link into the
-       repository (docs/INSTALL.md). -->
+       reason), both layers rendered at every build by build_apk.sh. -->
   <application
       android:label="Warptempo"
       android:icon="@mipmap/ic_launcher"

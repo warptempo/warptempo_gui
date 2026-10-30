@@ -7,10 +7,10 @@
 // THE HOST'S BATTERY ACROSS THE SEAM, AND THE LOGO LANE'S LEGEND COMPOSED
 // FROM IT AND THE WALL CLOCK (architect 2026-10-24; the legend's first design
 // stood in the menu row 2026-10-01 to 2026-10-05). The type is the seam's —
-// declared here so the two GuiPlatform headers and the GUI share ONE
+// declared here so the GuiPlatform header and the GUI share ONE
 // spelling, gui_media.h's shape — and it is a plain value:
 // GuiPlatform::battery_status fills it from what the host knows (the
-// contracts are at the two declarations), and the tick composes the legend
+// contract is at its declaration), and the tick composes the legend
 // from it and the wall clock (main.cpp's tick, refresh_logo_legend, the
 // legend's one refresh site; render.h's logo lane block and
 // paint_handler.cpp's paint_logo_lane paint it).
@@ -21,7 +21,7 @@ struct GuiBattery {
     // dock); Unknown is no status at all, or one the host cannot read.
     enum class Plugged : uint8_t { Plugged, Unplugged, Unknown };
 
-    // FALSE ON A HOST WITH NO BATTERY (a desktop on mains).
+    // FALSE WHEN THE HOST REPORTS NO BATTERY (the broadcast's EXTRA_PRESENT).
     bool    has_battery = false;
     // 0..100, or -1 when the host cannot read the level.
     int     percent     = -1;
@@ -58,7 +58,7 @@ struct GuiLogoLegend {
 //   * THE GLYPH: GuiLogoGlyph's rule above.
 //   * THE CLOCK: "| " and the wall clock in 12-HOUR LOCAL time with AM / PM
 //     and NO LEADING ZERO on the hour ("2:12 PM", "12:05 AM"), from the C
-//     library on both hosts (localtime_r). The AM / PM words are spelled
+//     library (localtime_r). The AM / PM words are spelled
 //     here rather than taken from strftime's %p: the product's text is its
 //     own, and %p is the locale's word. The pipe is the body face's own
 //     glyph, never a drawn one (architect 2026-10-24: "I don't think we

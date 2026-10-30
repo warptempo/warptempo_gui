@@ -29,7 +29,7 @@
 //     panel_face, materials.h's TONE RULE) — so the role stands in the table
 //     and the generated rows as the record of each preset's Face, read by
 //     the static_asserts alone.
-//   THE CAPTION IS labwc's (render.h's caption note, 2026-10-24): the
+//   THERE IS NO CAPTION (render.h's caption note, 2026-10-24): the
 //     app paints none (one flat ground and two title inks as constants
 //     2026-10-23 to 2026-10-24). The
 //     caption's six colors and the
@@ -208,8 +208,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // the scanner: no plate render), the flag cache alone, synchronously
 // (Viewport::refresh_flag_cache, so a frame callback served before the tick
 // cannot blit flags in the old colors); then Viewport::invalidate_all, so
-// the swap is one frame (the whole surface, which is the GUI's geometry since
-// 2026-10-24: labwc owns the border outside it).
+// the swap is one frame (the whole surface, which is the GUI's geometry).
 // WHY THAT IS ENOUGH (re-read 2026-10-09): the ten bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,

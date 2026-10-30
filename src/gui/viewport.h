@@ -247,7 +247,7 @@ struct Viewport {
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
-    // changes — a compositor RESIZE and the launch load — and repaints the
+    // changes — a window RESIZE and the launch load — and repaints the
     // plate on preview completion. NONE of those is an explicit kick: they are
     // discovered by maybe_enqueue_waveform_render's dirty-detect on the next
     // tick (main.cpp), so since 2026-09-02 kick_waveform_render has NO caller
@@ -791,8 +791,8 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
-    // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY since 2026-10-24, labwc owning
-    // the window's border and title bar outside it, so invalidate_all covers
+    // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY, the tablet's window the whole
+    // panel with no border or title bar, so invalidate_all covers
     // everything the app paints; the pre-paint hook's whole-client damage
     // after a materials bake is invalidate_all's.)
 

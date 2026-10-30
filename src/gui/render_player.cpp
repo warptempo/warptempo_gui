@@ -57,7 +57,7 @@ void GuiRenderPlayer::refuse_decode(const std::filesystem::path& path,
 // engine differs from the laptop's by ULPs, so the deliverable is never driven
 // from the glass, and it carries no sidecars, so it cannot be loaded in place
 // (the load road's own refusal, 2026-08-28) — while `tmp/`'s batch cells are
-// the player's whole subject on both hosts.
+// the player's whole subject.
 //
 // WHAT WENT WITH THE RULING: GuiRenderPlayer::deliverable_wav (the one-file
 // folder's question, which PRUNED before it answered), the `Folder::Root` that
@@ -1338,7 +1338,7 @@ void GuiRenderPlayer::tick() {
         // stands ABOVE the
         // natural-end test — and it covers BOTH shapes, the device that went
         // away mid-play (the AAudio latch) and the device that never came up
-        // (an init that failed, the laptop without pipewire-jack), which
+        // (an init that failed), which
         // otherwise raced through the folder a wav per tick. It is the pause
         // arm of toggle_pause with one line added — the resume point is the
         // engine's held cursor (a suspended device holds it rather than
@@ -1610,9 +1610,8 @@ void GuiRenderPlayer::close() {
     // back on the FIRST TICK AFTER THIS CLOSE, its falling edge pushing the
     // project transport's own three lines (up to one tick of the player's
     // last picture on the console, accepted). No STOPPED state is pushed
-    // anywhere while the app runs; on Android the activity's onDestroy is
-    // what releases the session, and on Wayland the push is a no-op
-    // throughout.
+    // anywhere while the app runs; the activity's onDestroy is what releases
+    // the session.
 }
 
 // -- The car ---------------------------------------------------------------------

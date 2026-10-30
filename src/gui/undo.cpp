@@ -310,7 +310,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // another subject's entry. What (a) and (b) together buy is the
             // WINDOW: no clock is needed, and none is asked. THE SUBJECT IS
             // NOT bought by them — see (c) below. Keeping it clock-free is
-            // deliberate: a hold must coalesce at ANY compositor repeat delay or
+            // deliberate: a hold must coalesce at ANY platform repeat delay or
             // rate, and that independence is the whole reason repeat identity
             // replaced the retired kGestureCoalesceMs.
             //

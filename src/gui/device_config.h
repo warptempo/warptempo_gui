@@ -130,10 +130,8 @@
 //                            every key while they stand, which settle into
 //                            constexprs once he rules the numbers
 //                            (onscreen_keyboard.h's geometry), their keys,
-//                            grammar and rows going then; both templates
-//                            spell 48 and 60 (the laptop's too: the keyboard
-//                            never stands there, and one template shape
-//                            keeps the two files' schemas one)
+//                            grammar and rows going then; the template
+//                            spells 48 and 60
 //   osk_font_px=<px>         THE ON-SCREEN KEYBOARD'S CAP SIZE (architect
 //                            2026-10-29 night, "font size osk config tmp
 //                            key"): the keys face's em (gui_font.h's
@@ -147,7 +145,7 @@
 //                            while it stands, which settles into the face
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
-//                            then; both templates spell 24
+//                            then; the template spells 24
 //   (role=<author|mirror>, THE DEVICE'S PART IN THE PROJECTS REPOSITORY,
 //                            a required key 2026-10-10 to 2026-10-30,
 //                            RETIRED with the laptop GUI (architect
@@ -245,18 +243,19 @@
 //
 // WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
 // made it a fact about the PIECE: the same project opened on the laptop and
-// on the tablet wants different scales — 138 and 300 today (100 and 225 in
-// the laptop-pixel unit of that day). Carrying it in the sidecar meant every
+// on the tablet wanted different scales — 138 and 300 until the laptop GUI's
+// drop of 2026-10-30 (100 and 225 in the laptop-pixel unit of 2026-08-27).
+// Carrying it in the sidecar meant every
 // sync of a project between the two devices had to rewrite it on the way over
 // and put it back on the way home. It is the panel's business, so it
 // follows the panel. (`audio_player`, the `l` command's external player, made
 // the same move beside it and RETIRED WHOLE 2026-08-28 with the in-app render
-// player — `l` now plays a render through the product's own playback engine
-// on both devices, so there is no spawnable player to name; a config still
+// player — `l` now plays a render through the product's own playback
+// engine, so there is no spawnable player to name; a config still
 // carrying the key is unknown-key fatal, no migration, the architect's
 // ruling.) THE OTHER THREE JOINED 2026-08-27 with the project model:
-// where the projects live is a fact about the device (the projects clone's
-// `projects/` on the laptop, the app's external files dir on the tablet);
+// where the projects live is a fact about the device (the app's external
+// files dir's `projects/` on the tablet);
 // which repository is the projects home is ONE user's ONE repo, not a
 // property of each piece, so `projects_repo` left the sidecar too (architect
 // approval 2026-08-27, the fifth grant on settings_file.{h,cpp}); and what
@@ -386,8 +385,8 @@
 // every line and the first-run templates naming
 // `waveform=default`, so an absent line is the shared scanner's
 // missing-required-key refusal like any other, with no migration and no
-// launch-time repair — the planner edits the two devices' configs at the
-// install), one canonical spelling per
+// launch-time repair — the planner edited the configs at the install),
+// one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
 // silent fallback to defaults — a fallback would silently discard a value the
@@ -437,10 +436,10 @@
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for every key: each is required, so a successful read always
 // assigns them. `waveform` is EMPTY as construction state, never a read's
-// (an empty value is refused); both backends' templates
-// (GuiPlatform::device_config_defaults) SPELL THE DEFAULT into it (architect
+// (an empty value is refused); the backend's template
+// (GuiPlatform::device_config_defaults) SPELLS THE DEFAULT into it (architect
 // 2026-10-14: every key required) — kGuiDefaultPaletteKey (palette_file.h),
-// `default` — so the first-run file of either device names its
+// `default` — so the first-run file names its
 // waveform preset. EVERY KEY WRITES ITS LINE, so a first run stamps the
 // whole file and its read-back loads. (The `icons` and `font` keys left
 // 2026-10-12: the icons and Liberation Sans are hard-coded.)
@@ -495,7 +494,7 @@ struct DeviceConfig {
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
-// first-run template's `projects_repo=` value on both backends. It moved here
+// first-run template's `projects_repo=` value. It moved here
 // from settings_file.h with the key (architect approval 2026-08-27): the
 // sidecar no longer references it, and AppState's own field reads it so a
 // session that has not read the config yet names the same repository the
@@ -515,9 +514,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 // standing rule).
 //
 // THE PERCENT IS DEVICE PX PER WINDOWS-95 PX since 2026-10-02 (architect; the
-// unit's statement is at render.h's scaled_px): the laptop runs 138 (a
-// 16-W glyph at 22 device px, 16 · 1.38 = 22.08) and the tablet 300 since
-// 2026-10-06 (the same glyph at 48, 16 · 3); 100 is Windows' own
+// unit's statement is at render.h's scaled_px): the tablet runs 300 since
+// 2026-10-06 (a 16-W glyph at 48 device px, 16 · 3); 100 is Windows' own
 // 96-dpi size; 1000 is the ceiling; 50 is the half-size floor,
 // which is where every structural dimension in render.h's scaled_px
 // accessors still has a floor holding it above zero.
@@ -778,8 +776,8 @@ inline std::optional<int> parse_osk_key_size(std::string_view v) {
 // the one owner the reader, the writer, the settings editor's commit and its
 // recall read (format_osk_font_px, parse_osk_font_px). The default is the
 // face table's 24 (architect 2026-10-24, "C24"). The range: 12 is the
-// smallest em at which a cap stays legible at 300 % (the em the laptop's
-// 150 % paints the default at); 48 is twice the default, the em by which
+// smallest em at which a cap stays legible at 300 % (the em 150 % paints
+// the default at); 48 is twice the default, the em by which
 // every function word but "Bksp" and "Space" already overhangs its key at
 // the default key box ("Esc", the last of them, from em 44; "Bksp", 107 px
 // at em 48 in the 2.5u key's 127-px face, not until 58), so a larger cap
@@ -854,8 +852,8 @@ inline std::string shown_project_path(const std::filesystem::path& p) {
 //
 // THE GRAMMAR IS ALSO A MEMBERSHIP TEST, not only a reader's: a folder whose
 // name this predicate refuses is not a project on any road, because every
-// successful open writes that name into this key (enumerate_project_names and
-// the argument road, project_model.{h,cpp}, are the other two callers).
+// successful open writes that name into this key (enumerate_project_names,
+// project_model.{h,cpp}, is the other caller).
 inline bool is_last_project_name(const std::string& v) {
     if (v.empty()) return true;
     if (v == "." || v == "..") return false;
@@ -976,10 +974,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: the laptop wants 138 % and the projects clone's `projects/`
-// (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
-// 300 % and its external files dir's `projects/`;
-// both stamp `waveform=default` (the default spelled, every key
+// a GUI one: 300 % and the external files dir's `projects/`;
+// it stamps `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
 // `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`
@@ -987,7 +983,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // kOskKeyHDefaultAt300, kOskFontPxDefaultAt300), kDefaultProjectsRepo and
 // a blank
 // last_project),
-// so a first run on either device lands a
+// so a first run lands a
 // file that is
 // already right for it and the user edits
 // from there rather than from a wrong guess. A missing parent directory is

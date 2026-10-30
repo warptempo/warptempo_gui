@@ -219,10 +219,11 @@ enum class GuiPointerLeaveReason {
 // under labwc's implicit grab, where truncation gave -5 for -5.5 and
 // containment gives -6 — the correct cell; (b) the captured-pointer ledger
 // previously ROUNDED (nearbyint), so 5.5 delivered 6 and now delivers 5 —
-// and this one is LAPTOP-VISIBLE: the ledger is the nav drag's (grab-pan /
+// and this one was LAPTOP-VISIBLE (the laptop's locked pointer, the ledger's
+// one producer until 2026-10-30): the ledger is the nav drag's (grab-pan /
 // ctrl-zoom) virtual position, so every delivered captured-motion
 // coordinate and the release write-back (a motionless click right after the
-// release) can differ by 1 px from before. Say exactly that: the ABSOLUTE
+// release) could differ by 1 px from before. Say exactly that: the ABSOLUTE
 // mouse path truncated; the finger and the captured-pointer ledger rounded
 // — never "the mouse truncated" unqualified.
 inline int containing_pixel(double v) {
@@ -325,9 +326,9 @@ public:
     // THE FOUR TRACKED MODIFIERS, read out of the backend's keymap state at
     // every modifier event. The three modeled ones reach the application
     // through GuiInputState; super reaches nothing and gates key PRESS delivery
-    // instead (the ruling is at deliver_key, input_core.cpp). A backend with no
-    // desktop modifier to yield to passes super = false always, which leaves
-    // that gate structurally dead rather than removed.
+    // instead (the ruling is at deliver_key, input_core.cpp). The tablet's
+    // backend has no desktop modifier to yield to and passes super = false
+    // always, which leaves that gate structurally dead rather than removed.
     // ITS PRODUCER IS THE S PEN'S SIDE BUTTON (architect
     // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl
     // modifier, hardware keyboards being out of scope there, bare `k`'s
@@ -552,8 +553,9 @@ public:
     // ITS ONE APPLICATION CONSUMER is the CHROME BUTTON HOLD-REPEAT
     // (tick_chrome_press_repeat, input_pointer.cpp), which paces a held
     // repeating BUTTON at the rate its held KEY runs at rather than at a
-    // constant of its own — so the two holds cannot drift apart when the desktop's repeat
-    // setting is edited. Rate 0 therefore stops the buttons repeating too,
+    // constant of its own — so the two holds cannot drift apart if the
+    // platform's repeat cadence changes. Rate 0 therefore stops the buttons
+    // repeating too,
     // which is the honest mirror of a keyboard that does not repeat. It is
     // READ PER FIRE and never cached: repeat_info may be re-sent at any time.
     //

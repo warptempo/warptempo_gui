@@ -74,8 +74,8 @@ target_include_directories(snap_sidecar_to_grid
 # reproduce the product's map must forbid it identically.
 #
 # -O3 -march=native keep the codegen class the product's own, and -Wall -Wextra
-# the warning level. Link-time and Wayland-specific machinery stays out: these
-# targets share the product's compilation, not its link.
+# the warning level. Link-time machinery stays out: these targets share the
+# product's compilation, not its link.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt migrate_sidecar_to_frames snap_sidecar_to_grid)
         target_compile_options(${tgt} PRIVATE -Wall -Wextra -O3 -march=native -ffp-contract=off)

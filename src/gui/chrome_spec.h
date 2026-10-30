@@ -49,8 +49,8 @@ struct ChromeSpec {
     // product's one, gui_font.h.)
     // (THE CAPTION'S FIELDS — Windows 2000's SM_CYCAPTION 18, its
     // DFC_CAPTION buttons and the small icon's seat — left the spec
-    // 2026-10-24 with the app's caption: labwc draws the laptop's title bar,
-    // the tablet has none; the hi-fi caption of 2026-10-23 read none of them.)
+    // 2026-10-24 with the app's caption: the tablet has none; the hi-fi
+    // caption of 2026-10-23 read none of them.)
     // (THE MENU ROW'S FIELDS — its face row and 19-W content, the anchors'
     // 9 / 7 label pads and the 2-W lead, Explorer's menu band and the plain
     // menu bar's seat — left the spec 2026-10-21 with the row.)
@@ -83,7 +83,7 @@ struct ChromeSpec {
     // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
     // (THE WINDOW'S FRAME — its relief lines and whether it stood on a
     // maximized window — left the spec 2026-10-24 with the app's sizing
-    // frame: labwc draws the laptop's borders.)
+    // frame: the tablet's window is the whole panel.)
 };
 
 // WIN2000 (architect 2026-10-06), off the ReactOS captures: (THE CAPTION,

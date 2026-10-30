@@ -16,8 +16,8 @@
 #include <utility>
 
 // THE SAMPLES ARE READ AS THE FILE HOLDS THEM: a WAV's PCM16 is little-endian,
-// and so is every host this program runs on (the laptop's x86-64, the
-// tablet's arm64), so the payload's bytes are the int16_t words with no swap
+// and so is the host this program runs on (the tablet's arm64), so the
+// payload's bytes are the int16_t words with no swap
 // (score_audio.cpp's own assertion).
 static_assert(std::endian::native == std::endian::little,
               "the noise's segments are read as little-endian PCM16");
@@ -168,8 +168,8 @@ void noise_mix_block(GuiNoiseVoice& v, float* const* channel_buffers,
     if (v.cur < 0) return;
 
     // THE FILL'S CONSTANTS: the noise's own increment (the render body's rate
-    // rescaling — 48000/48000 on the tablet, 48000/44100 on the laptop's
-    // graph), the two envelope steps per output frame from the two fade
+    // rescaling — the bank's rate over the stream's, 48000/48000 on the
+    // tablet), the two envelope steps per output frame from the two fade
     // constants (noise.h, both positive), and the level, read once per fill,
     // so a settings change to the level applies at the next fill.
     const double rate      = static_cast<double>(output_rate);

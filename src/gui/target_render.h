@@ -52,7 +52,9 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
 // DETECT: a trigger arriving within this of the previous one makes a RUN. It
 // covers the MACHINE-CADENCE producers with headroom and nothing else — roughly
 // TWICE the architect's measured 40 ms key-repeat interval (labwc repeatRate 25
-// per second) and far above a drag's per-pointer-frame cadence (~8-16 ms) —
+// per second, measured on the laptop; the tablet's hold-repeat keeps the
+// number, platform_android.cpp's set_repeat_info) and far above a drag's
+// per-pointer-frame cadence (~8-16 ms) —
 // while deliberately EXCLUDING leisurely manual tapping, which is a series of
 // distinct actions and keeps the one-off lifecycle.
 inline constexpr long long kUpdatingRunDetectMs = 75;

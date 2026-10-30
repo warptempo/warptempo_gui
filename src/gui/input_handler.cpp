@@ -3610,44 +3610,18 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
 bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
-        // THE COPY IGNORES THE VERDICT AND THE CUT OBEYS IT, and the two
-        // are one rule rather than an inconsistency (2026-09-03).
-        //
-        // A FAILED COPY CHANGES NOTHING ON SCREEN, so it says nothing: the
-        // editor is its own world (notifications.h), the text it did not take is
-        // still sitting there selected, and the paste that follows shows the
-        // truth the moment it is asked for. The CARDED copy is the one whose
-        // result nothing paints at all (the main window's Ctrl+Shift+J, the
-        // resolved value's copy).
-        //
-        // A FAILED CUT IS DIFFERENT IN KIND, because a cut is a copy AND a
-        // deletion: erasing on a refused claim would destroy the bytes with
-        // nowhere to paste them from — the clipboard did not take them and,
-        // uniquely among the editors' acts, there is no undo inside an editor
-        // to get them back. SO THE ERASE HANGS ON A TRUE VERDICT: on false the
-        // selection stays exactly as it was and the press CARDS, because a
-        // refusal that leaves the screen unchanged must say why the key did
-        // nothing (the sentence's composer is card_clipboard_refusal,
-        // input_key_dispatch.cpp; a card stacks over an editor as over
-        // anything else — the flag editor is keyboard-modal and stops
-        // nothing).
-        //
-        // WHY THE VERDICT IS THE RIGHT TEST: false would mean the bytes are
-        // not pastable, and over a DELETION the conservative answer — keep
-        // the text, say so — is the right one to be wrong with. The tablet's
-        // copy stays in its own process and always answers true (architect
-        // 2026-10-29, the rule at platform_android.h's clipboard_set_text), so
-        // its cut always erases, the bytes pastable in the program until
-        // something newer is copied (the false arm's producer is gone,
-        // card_clipboard_refusal's head).
+        // THE COPY AND THE CUT HAND THE SELECTION OVER, AND THE CUT THEN
+        // ERASES IT: the copy stays in the program's own process and no road
+        // refuses it (architect 2026-10-29, the rule at platform_android.h's
+        // clipboard_set_text), so the erased bytes are pastable in the
+        // program until something newer is copied. NEITHER PRESS CARDS: an
+        // editor is its own world (notifications.h), and the paste that
+        // follows shows the truth the moment it is asked for.
         case text_editor::KeyAction::CopyRequested:
-            (void)gui.clipboard_set_text(text_editor::selected_text(s));
+            gui.clipboard_set_text(text_editor::selected_text(s));
             return true;
         case text_editor::KeyAction::CutRequested:
-            if (!gui.clipboard_set_text(text_editor::selected_text(s))) {
-                card_clipboard_refusal(notifications, "cut");
-                return true;
-            }
+            gui.clipboard_set_text(text_editor::selected_text(s));
             // An empty insert can only shrink the buffer, so this call has no
             // refusal to report (the cap's rule is at replace_selection).
             (void)text_editor::replace_selection(s, std::string());
@@ -3658,9 +3632,9 @@ bool GuiInputHandler::apply_editor_clipboard(
             // the newer of the program's own copy and the system clip
             // (architect 2026-10-29, platform_android.h).
             //
-            // AN EMPTY ANSWER IS A CONSUMED NO-OP: no offer, no text mime on
-            // the offer, or a failed read all mean there is nothing to paste,
-            // and pasting nothing must not delete the selection instead.
+            // AN EMPTY ANSWER IS A CONSUMED NO-OP: no clip, no text on the
+            // clip, or a failed read all mean there is nothing to paste, and
+            // pasting nothing must not delete the selection instead.
             //
             // NO FILTER HERE. replace_selection is the product's one incoming
             // text filter (printable ASCII plus well-formed UTF-8, controls and

@@ -10,9 +10,8 @@
 // THE PROJECT MODEL (architect 2026-08-27): A PROJECT IS A FOLDER DIRECTLY
 // UNDER THE PROJECTS PATH, one level deep, and the folder's NAME is the
 // project's name ("550 - 1"). `projects_path` is a DEVICE CONFIG key
-// (device_config.h) — the laptop's is the projects clone's `projects/`, the
-// tablet's the app's external files dir's `projects/`, which is its own
-// clone's `projects/`, the clone's root being that dir (placed by
+// (device_config.h) — the app's external files dir's `projects/`, which is
+// its own clone's `projects/`, the clone's root being that dir (placed by
 // `warptempo_sync setup`, filled by the pull and by `warptempo_sync tt`'s
 // audio) — and this file owns
 // the three questions the model asks of a filesystem and nothing else: what
@@ -66,9 +65,7 @@
 // therefore lives at the MEMBERSHIP rather than at each opening road:
 // enumerate_project_names below yields only names is_last_project_name
 // (device_config.h) accepts, so the startup fallback and the Open project
-// picker inherit it, and the ARGUMENT road — which walks no enumeration —
-// asks the same predicate of the argument's own folder name and refuses with
-// its ordinary sentence. The remembered road needs no test: the config reader
+// picker inherit it. The remembered road needs no test: the config reader
 // already refused a name that fails the grammar.
 //
 // EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the three sidecar spellings
@@ -119,38 +116,18 @@ std::expected<GuiProjectSource, std::string> resolve_project(
 std::vector<std::string> enumerate_project_names(
     const std::filesystem::path& projects_path);
 
-// WHAT THE PROGRAM OPENS AT STARTUP — the two roads, one owner:
-//
-//   * NO ARGUMENT (`argument == nullptr`; the tablet always, the laptop's bare
-//     launch): `last_project`, when it is non-empty and resolves; otherwise
-//     the FIRST folder in enumerate_project_names order that resolves; and
-//     with none, the error "No project under <projects_path>", which the
-//     caller prints as its blunt terminal line and exits 1 on. A
-//     `last_project` naming a folder that is gone or invalid is the
-//     LOAD-LENIENT class and falls through SILENTLY: the program wrote the
-//     name, and the user removing or breaking the folder afterwards is a state
-//     ordinary use produces, not a hand edit of a program-written file.
-//   * WITH AN ARGUMENT (the laptop's `warptempo_gui <wav>`): BOTH QUESTIONS
-//     ARE ASKED OF THE SPELLING GIVEN. The argument's OWN parent — made
-//     absolute and lexically normalized, spelling work that follows no link —
-//     must be a directory DIRECTLY under `projects_path`, which is asked of the
-//     filesystem (`std::filesystem::equivalent`) so a relative spelling, a
-//     trailing slash or a symlink in the config's own spelling still passes.
-//     And the argument must BE that folder's RESOLVED source BY FILESYSTEM
-//     IDENTITY (`equivalent` again, never a path compare): the walk above
-//     follows links when it asks `is_regular_file`, so a project's source may
-//     legitimately be a symlink, and identity is the only compare that accepts
-//     the same file the picker opens. A source symlinked from somewhere else
-//     is therefore a project; a spelling that reaches it from OUTSIDE the
-//     projects path is not that project's source road. The folder's NAME is
-//     asked the config grammar here too, this road walking no enumeration.
-//     Anything else refuses
-//     with the reason ("<path> is not a project source under
-//     <projects_path>", or the folder's own invalidity), exit 1. The
-//     launcher's "is this a source?" test lives here now, not in a shell
-//     script.
+// WHAT THE PROGRAM OPENS AT STARTUP, one road (the tablet has no command
+// line; the explicit-source argument went with the laptop GUI, 2026-10-30):
+// `last_project`, when it is non-empty and resolves; otherwise the FIRST
+// folder in enumerate_project_names order that resolves; and with none, the
+// error "No project under <projects_path>", which the caller prints as its
+// blunt terminal line and exits 1 on. A `last_project` naming a folder that
+// is gone or invalid is the LOAD-LENIENT class and falls through SILENTLY:
+// the program wrote the name, and the user removing or breaking the folder
+// afterwards is a state ordinary use produces, not a hand edit of a
+// program-written file.
 //
 // The app always has a project open: there is no empty state and no picker
 // at startup — the picker is Open Project, a dialog over a running project.
 std::expected<GuiProjectSource, std::string> startup_source(
-    const DeviceConfig& config, const char* argument);
+    const DeviceConfig& config);

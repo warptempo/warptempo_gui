@@ -28,9 +28,8 @@ int notification_card_max_w_px(const AppState& a) {
     // THE CEILING IS AUTHORED AND SCALED, NOT A FRACTION OF THE WINDOW
     // (architect 2026-08-31, the reasoning and the number at the declaration,
     // kNotificationMaxWidthPx in notifications.h): the ceiling is what
-    // `a.width / 3` gave on the 1920 px laptop, so the card the laptop already
-    // had is now the card every device gets, in millimetres rather than in
-    // device pixels.
+    // `a.width / 3` gave on the 1920 px laptop, where the number was taken,
+    // kept as an authored length rather than a fraction of the window.
     const int floor_w   = scaled_px(kNotificationMinWidthPx);
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
     // THE WINDOW IS A SAFETY BELOW THE CEILING AND NOTHING ABOVE THE FLOOR:
@@ -139,7 +138,7 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     // count IS the confirmation that each press was seen.
     //
     // THE ONE CARVE-OUT IS A HELD INPUT'S SYNTHESIZED REPEATS, which coalesce
-    // exactly as everything used to: a burst at the compositor's cadence is
+    // exactly as everything used to: a burst at the platform's repeat cadence is
     // ONE gesture, not thirty presses, and letting it stack would empty the
     // room of every other card in half a second. The bit is the key event's,
     // set at on_key's head and dispatch-scoped

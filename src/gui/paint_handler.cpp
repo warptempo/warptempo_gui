@@ -1042,8 +1042,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // band holds every run down to about 679 Windows px of window width outside
 // the `h` view and 472 inside it (the width math at paint_icon_row, its one
 // statement, re-derived 2026-10-29 with the Restrict lamp, plus the
-// ring's inset at each window edge, about 13 W), so neither host reaches the
-// rule at its scale: the tablet's 2304 device px hold the row in both states
+// ring's inset at each window edge, about 13 W), so the tablet does not reach
+// the rule at its scale: its 2304 device px hold the row in both states
 // up to about 340 % (the W arithmetic
 // over the device width; each element's own rounding moves the edge by a
 // pixel or so).

@@ -38,7 +38,7 @@
 // are no longer Windows'.
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15), as the
 // captures show them; the tablet converts each at the painter's entry
-// (display_transform.h's head), the laptop none.
+// (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
 // 2026-10-04), in GuiPalette's order: the Windows chrome's fifteen (the

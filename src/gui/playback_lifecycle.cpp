@@ -212,7 +212,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // AAudio backend reopened a dead stream inside play(), and a read ahead of
     // play() carded forever after a route drop, so the press now reopens
     // through GuiPlayback::ensure_device_available_for_play and cards only
-    // when the reopen FAILED; JACK's answer is the unchanged read). The launch
+    // when the reopen FAILED). The launch
     // body asks it first for the same reason and would answer this press
     // correctly in source view — but the target arm below decides a POSITION
     // refusal of its own before control could reach the body, so a dead device
@@ -639,12 +639,11 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // launch below would "succeed" — the scanner would seed, the page-in would
     // scroll and play() would return — with nothing coming out of the
     // machine, which is the one refusal the user cannot see for himself. The
-    // question is GuiPlayback::ensure_device_available_for_play's: on AAudio
-    // it closes a dead stream and reopens it at the press (play()'s own head
-    // check, hoisted — a route drop on the tablet is undone by the next
-    // press instead of carding forever behind a read), on JACK it is the
-    // honest read of "nothing will sound" and changes nothing; either way it
-    // answers false only when nothing can sound AFTER the reopen, which is
+    // question is GuiPlayback::ensure_device_available_for_play's: it closes
+    // a dead stream and reopens it at the press (play()'s own head check,
+    // hoisted — a route drop is undone by the next press instead of carding
+    // forever behind a read), and it answers false only when nothing can
+    // sound AFTER the reopen, which is
     // the same fact the render player's tick reads through device_unavailable
     // — no bit is added and nothing is latched here. The load's own stderr
     // line stays, but it is printed once at startup and this is every press

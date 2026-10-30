@@ -110,8 +110,8 @@ void GuiInputCore::tick() {
 // ---------------------------------------------------------------------------
 
 // THE ONE TEARDOWN FOR "the keyboard's modeled state is gone", called from both
-// edges that mean it: the keyboard focus leaving (wl_keyboard.leave on
-// Wayland) and keyboard-capability loss. Each site
+// edges that mean it: the keyboard focus leaving and keyboard-capability
+// loss. Each site
 // keeps only the justification that is ITS OWN; everything the two share is
 // here.
 //
@@ -145,8 +145,7 @@ void GuiInputCore::forget_keyboard_state() {
     // FRAME (the flush above is the keyboard-only one): a one-finger touch
     // zoom's seat and stem stand under a motionless finger until the next
     // motion frame delivers under the new bit. Cosmetic, and unreachable on
-    // both deployed devices — the laptop has no touchscreen and Android has
-    // no keyboard modifier producer.
+    // the tablet, which has no keyboard modifier producer.
     mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
     repeat_key_   = 0;
     scroll_accum_ = 0.0;
@@ -452,15 +451,17 @@ GuiInputState GuiInputCore::current_mods() const {
 }
 
 void GuiInputCore::deliver_key(GuiKey key, GuiInputState mods) {
-    // SUPER IS DROPPED AT THE PLATFORM BOUNDARY (architect 2026-07-30: super
-    // belongs to labwc and is not part of this program's vocabulary). STRICT
+    // SUPER IS DROPPED AT THE PLATFORM BOUNDARY (architect 2026-07-30, on the
+    // laptop: super belongs to labwc and is not part of this program's
+    // vocabulary; the tablet's backend passes super = false always). STRICT
     // MODIFIER VALIDATION says an unbound modifier combination is a no-op
     // everywhere (architect 2026-07-28) — and it was FALSE for Super, because the
     // mask never modelled it: every bare-exact predicate reads three bools, so a
     // held Logo left mods == {false,false,false} and Super+Escape reached the
-    // editors' cancel, Super+Return their commit. labwc grabs many Super chords,
-    // but Escape / Return / Space / Delete / the arrows / Home / End are not among
-    // them and arrive here. Rather than add a fourth bool to every reader, the
+    // editors' cancel, Super+Return their commit. labwc grabbed many Super
+    // chords, but Escape / Return / Space / Delete / the arrows / Home / End
+    // were not among them and arrived here. Rather than add a fourth bool to
+    // every reader, the
     // event is dropped HERE. WHAT THAT MAKES TRUE BY CONSTRUCTION IS EXACTLY WHAT
     // IS CONSTRUCTED: no Super-carrying PRESS is ever delivered, so no Super chord
     // can reach a binding — "the GUI binds no Super chord" is the rule, for the one
@@ -554,7 +555,7 @@ void GuiInputCore::maybe_fire_repeat() {
     // key's continuation presses from fresh physical ones, and UNDO COALESCING
     // IS BUILT ON IT (Undo::coalesce_gesture): a burst carrying this bit merges
     // with NO clock test at all, which is the arm that must work at any
-    // compositor repeat delay. (A physical press takes the other arm of the
+    // platform repeat delay. (A physical press takes the other arm of the
     // hybrid — the fixed 500 ms tap window — and this bit is exactly what
     // separates the two.)
     // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
@@ -685,7 +686,7 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // that delivers it when no leave follows, so clearing it at the finalize
     // would change behaviour on paths with no defect behind them.
     flush_deferred_motion();
-    // THE CALLER'S REASON is the argument: OrdinaryLeave from every Wayland
+    // THE CALLER'S REASON is the argument: OrdinaryLeave from every ordinary
     // leave, the same reason the capability loss passes (architect
     // 2026-10-01: the stream continues here, but no consumer keeps anything
     // across either edge); PenHoverEnd from the Android pen's hover ending,
@@ -726,7 +727,7 @@ void GuiInputCore::pointer_capability_lost() {
     // capability loss, a staged-motion flush may leave pointer_in_window true
     // and a hover face stale until the pointer next enters; accepted, do not
     // re-guard.
-    // OrdinaryLeave, the reason every Wayland leave passes: every consumer
+    // OrdinaryLeave, the reason every ordinary leave passes: every consumer
     // reads the two edges the same (architect 2026-10-01), the pull-down's lit
     // row darkened by both — only the Android pen's hover end (PenHoverEnd)
     // keeps it (GuiPointerLeaveReason, the one statement).
@@ -905,8 +906,9 @@ void GuiInputCore::pointer_axis(double value) {
     // Live path for touchpad two-finger scroll and any other continuous
     // (non-wheel) source. value120 carries WHEEL scroll only; the
     // backend delivers a touchpad's continuous delta through this legacy
-    // axis path (wl_pointer.axis on Wayland, in its own continuous scroll
-    // unit) and delivers no value120 for that frame. So this is the touchpad's
+    // axis path (in its own continuous scroll unit — wl_pointer.axis on the
+    // laptop's Wayland, this door's one producer until 2026-10-30) and
+    // delivers no value120 for that frame. So this is the touchpad's
     // only
     // path. We stage the delta into the per-frame scratch and do not emit
     // here — pointer_frame() arbitrates so exactly one source counts
@@ -1010,7 +1012,8 @@ void GuiInputCore::pointer_frame() {
     // The per-step wheel machinery (viewport move, full-width damage, hover
     // hit-test, worker kick) then runs once per frame, not once per detent —
     // which is the whole point: a fast touchpad burst no longer piles that
-    // work up between paints. Wheel convention on Wayland: positive value =
+    // work up between paints. Wheel convention (Wayland's, the door's
+    // provenance): positive value =
     // scroll down (content moves up under the cursor) = WheelDown, negative
     // = WheelUp. The sign of scroll_accum_ cannot flip mid-drain (each
     // iteration moves it toward zero by exactly one detent and stops once
@@ -1733,10 +1736,11 @@ void GuiInputCore::touch_up(int32_t id) {
                 // fragment of a mode that is over. Here the staged frame is
                 // the PAIR'S OWN COMPLETED MOTION, measured between two
                 // fingers that were both still down, and nothing supersedes
-                // it: Wayland orders motion and EVERY up before the
-                // touch_frame that closes the batch, so when both fingers
-                // lift together this site takes the first up with the pinch's
-                // last — often only — motion still staged, and dropping it
+                // it: the backend delivers an up event's whole snapshot as
+                // motion and then the up, before the touch_frame that closes
+                // the batch (platform_android.cpp's up arm), so when the pair
+                // breaks this site takes the first up with the pinch's last —
+                // often only — motion still staged, and dropping it
                 // left the second up calling end_touch_nav_gesture with
                 // nothing to deliver (a short pinch then did nothing at all,
                 // a long one lost its final zoom step). THE ORDERING: deliver
@@ -2026,9 +2030,10 @@ void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
 void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     // THE END SPLIT (recorded here, at the one owner; each caller passes its
     // own clause and the edge inventory at the touch state block names both):
-    // Wayland orders the terminating up/cancel BEFORE the touch_frame that
-    // closes its batch, so motion batched with the end is still staged in
-    // touch_nav_frame_dirty_ when this runs.
+    // the backend delivers the terminating up BEFORE the touch_frame that
+    // closes its batch (platform_android.cpp's up arm, the event's snapshot
+    // staged as motion first), so motion batched with the end is still
+    // staged in touch_nav_frame_dirty_ when this runs.
     //   * FINGER-UP (true): the staged frame is the user's own FINAL MOTION
     //     and DELIVERS first — the any-end-commits family. This is what lets
     //     a short pinch whose only latch-crossing motion batches with the up
@@ -2107,7 +2112,7 @@ void GuiInputCore::end_touch_caret_gesture(bool deliver_final_frame) {
 
 void GuiInputCore::touch_cancel() {
     // The window system claims the touches (its own gesture recognition, a
-    // grab; wl_touch.cancel on Wayland).
+    // grab; AMOTION_EVENT_ACTION_CANCEL).
     // One contract with touch-capability loss, in full.
     hard_end_touch_stream();
 }
@@ -2463,9 +2468,10 @@ void GuiInputCore::relative_motion(double dx, double dy) {
     //     folds in on its very first event, in either direction. The one way
     //     that happens is a pointer parked in the <=15px inert right gutter,
     //     which exists only at a window width that is not a multiple of 16 —
-    //     neither host's. Recorded, not guarded: it is one event wide and it
+    //     not the tablet's. Recorded, not guarded: it is one event wide and it
     //     lands the pointer somewhere legitimate.
-    // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: Wayland gives a client no
+    // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: the laptop's Wayland,
+    // this door's one producer until 2026-10-30, gave a client no
     // pointer-warp request at all, so a VISIBLE cursor could never be moved by
     // us — the only position we may ever state is the locked pointer's release
     // hint — but while captured this position is our own bookkeeping entirely,

@@ -3,8 +3,8 @@
 
 // THE PROGRAM SPEC (architect 2026-10-09 ~06:55, "chrome means chrome, the
 // program is Cool Edit"; the go ~09:40): THE CHROME is the OS part — the
-// caption and the window frame (labwc's since 2026-10-24; the menu row
-// under the caption until 2026-10-21), the
+// caption and the window frame (none since 2026-10-24, the tablet's window
+// the whole panel; the menu row under the caption until 2026-10-21), the
 // pull-downs, the cards, the
 // prompts, the project picker's and the Settings dialogs with their fields
 // and buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
@@ -34,8 +34,7 @@
 // canvas column and one round row 8's clock are the program's only strokes
 // on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
 // stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
-// bottom: THE TOOLBAR BAND at the window's top on both devices (under the
-// laptop's caption until 2026-10-24) — THE LOGO LANE (its upper pad since
+// bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (its upper pad since
 // 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,
 // settled 2026-10-23: strip_pad_px's field below; the keys' legends in the
 // bottom pad), its keys in plain runs

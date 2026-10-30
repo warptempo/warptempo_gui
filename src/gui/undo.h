@@ -50,9 +50,9 @@ struct GuiInputHandler;
 //       (the flip and its argument are at tick_chrome_press_repeat,
 //       input_pointer.cpp; the platform producer needs no flip).
 //       NO CLOCK IS CONSULTED on this arm, and that independence is the
-//       point of keeping it: a hold coalesces for any compositor at any key-repeat
-//       delay, so nothing here can drift out of sync with the desktop's repeat
-//       configuration.
+//       point of keeping it: a hold coalesces at any key-repeat delay, so
+//       nothing here can drift out of sync with the platform's repeat
+//       cadence.
 //   (2) THE TAP WINDOW, for consecutive PHYSICAL presses: a press of the same
 //       kind arriving within kTapCoalesceMs of the last ACCEPTED coalesce event
 //       merges too. FIXED compiled constant, no settings key, no compositor
@@ -132,7 +132,8 @@ enum class GestureKind {
 // the held-key arm still consults no clock.
 //
 // IT IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 600 ms, the
-// architect's own labwc <repeatDelay> matched by convention (architect
+// architect's own labwc <repeatDelay> on the laptop, matched by convention
+// when the beat was set (architect
 // 2026-08-28: "increase the coalesce wait to 575 ms, the global wait time for
 // long press, key repeat, etc."; the beat and his repeatDelay moved to 600
 // together 2026-09-29). It was its own 500 from 2026-08-01 until

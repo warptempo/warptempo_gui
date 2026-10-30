@@ -3,7 +3,7 @@
 // THE RENDERER (architect 2026-10-06: one renderer for every drawing) —
 // the bundled SVG drawings (icons.h), parsed at launch and rasterised
 // through RESVG (resvg's C API, Apache-2.0 OR MIT), built from one pinned
-// source on both devices (deps/85_resvg.sh, CMakeLists.txt), scalable
+// source (deps/85_resvg.sh, CMakeLists.txt), scalable
 // and antialiased — and THE RASTER ROAD (below), a PNG or JPEG decoded by
 // resvg itself at its own size, the score viewer's pages its reader
 // (score_page_worker.h). This file is a thin wrapper: the parse, the size,
@@ -68,8 +68,8 @@ cairo_surface_t* rasterise(const Document& doc, int px);
 //
 // A RASTER is a picture file, PNG or JPEG, decoded through resvg (the bytes
 // wrapped in a one-<image> SVG as a base64 data URL, rendered at the
-// identity, nearest — resvg's raster-images feature decodes both kinds on
-// both devices; the tablet's cairo has no PNG reader) AT ITS OWN SIZE: no
+// identity, nearest — resvg's raster-images feature decodes both kinds;
+// the tablet's cairo has no PNG reader) AT ITS OWN SIZE: no
 // scale here (the score pages' fit is the caller's, cairo's,
 // score_page_worker.h). A raster is a RECTANGLE and OPAQUE.
 

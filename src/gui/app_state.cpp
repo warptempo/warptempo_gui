@@ -532,7 +532,7 @@ bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
 // MEMOIZED AT THE OWNER (2026-09-01): one of the two readers is Jump to
 // Defining Marker's FACE (jump_to_value_source_actionable), which the tick
 // comparator asks every tick and the roster painter asks at every paint of
-// its row — and the Wayland backend runs the redraw callback once per pending
+// its row — and the backend runs the redraw callback once per pending
 // damage rectangle, so during playback the scanner's damage would re-run the
 // marker copy and the parser composer at paint cadence on an answer that had
 // not changed. (From 2026-09-01 until 2026-09-29 that seat was the Copy

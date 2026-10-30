@@ -92,7 +92,7 @@ struct GuiPrompt {
     // picker with it on the EXIT road (close_picker), and with them every
     // standing modal editor, abandoned uncommitted through the input
     // handler's one body (close_modal_editors_no_commit). No caller restates
-    // any step, which is what keeps the compositor's close — arriving with
+    // any step, which is what keeps the platform's close (Back) — arriving with
     // no key, so it can run no keyboard arm of its own — from raising the
     // unsaved-work prompt over a mode or an editor that is still up.
     // Ctrl+Q, the WM-close callback, the Open project picker's open act and
@@ -152,9 +152,9 @@ struct GuiPrompt {
     // own rule read back into the type.
     //
     // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it never was
-    // this one: the compositor's WM close raises the unsaved-work prompt
+    // this one: the platform's close (Back) raises the unsaved-work prompt
     // (GuiPrompt::request_close from main.cpp's set_on_close) on the
-    // compositor's clock, with no key and no gesture behind it. It is safe
+    // platform's clock, with no key and no gesture behind it. It is safe
     // because it CLEARS THE WAY IN ITS OWN BODY first — force-ending every
     // live gesture through their release bodies, hiding the floating hint and
     // closing the popup — so the honest rule is that nothing asynchronous

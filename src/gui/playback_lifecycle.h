@@ -50,7 +50,7 @@ struct GuiRenderPlayer;
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
 // 2026-09-02): each PRESS site (the three launch sites, the car's Play, the
 // noise lamp's lit press) reopens a dead AAudio stream before it asks, and
-// cards only when that reopen failed, JACK answering its unchanged read. The
+// cards only when that reopen failed. The
 // reads: the THREE TICKS keep device_unavailable (re-grepped 2026-10-28) — the
 // render player's (a dead stream mid-play must pause), the A/B audition's
 // (a dead stream mid-act must end the act, the fourth site above) and the

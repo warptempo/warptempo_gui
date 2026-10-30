@@ -55,7 +55,7 @@
 //     crossed before the hold delay sets the begin, one held past it the END,
 //     as ctrl+shift does at any duration — the S Pen's side button being the
 //     Ctrl bit, a tap with it held sets the begin on glass and a long press
-//     the end, on both devices alike.
+//     the end.
 //   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
@@ -1027,7 +1027,8 @@ void GuiInputHandler::commit_trim_drag() {
             // snap is nearest-column, so it moves an off-grid coincident value
             // in EITHER direction — toward the window's inside or away from it
             // — and only the toward case is caught by the partner re-clamp
-            // below. Worked at the laptop's working zoom, q = 55 (44.1 kHz): a
+            // below. Worked at q = 55 (the laptop's working zoom at 44.1 kHz,
+            // where the case was found): a
             // partner end at 12350 sits at 12350/55 = 224.55 → column 225 →
             // grid frame 12375, so a begin pinned on it snapped PAST it and the
             // re-clamp pulled it back — equality restored, clear fired. But a

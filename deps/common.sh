@@ -38,7 +38,8 @@ CAIRO_URL=http://deb.debian.org/debian/pool/main/c/cairo/cairo_${CAIRO_VER}.orig
 CAIRO_SHA256=445ed8208a6e4823de1226a74ca319d3600e83f6369f99b14265006599c32ccb
 
 # The history view's git (src/gui/git_repo.cpp): OpenSSL -> libssh2 -> libgit2,
-# each the laptop's own version, so both devices run the same git code.
+# each pinned at the version the laptop's Arch carried when the pins were set
+# (their provenance; the tablet is the one device that runs this git code).
 # OpenSSL's pin equals upstream's .sha256 file AND Arch's PKGBUILD sha256sums.
 OPENSSL_VER=3.6.4
 OPENSSL_TAR=openssl-$OPENSSL_VER.tar.gz

@@ -3,12 +3,12 @@
 #include <cstdint>
 #include <string>
 
-// Platform-neutral keyboard / mouse input types. Backends translate native
-// events at their boundary into these so the rest of the GUI never sees
-// platform-specific types. Numeric values mirror the universal keysym
-// numbering shared by xkbcommon and the X Window System (xkbcommon was
-// derived from that table), so each backend only needs a near-zero-cost
-// cast plus a small case-fold for letters.
+// Platform-neutral keyboard / mouse input types. The backend translates
+// native events at its boundary into these so the rest of the GUI never sees
+// platform-specific types. Numeric values are the universal keysym numbering
+// of the X Window System (the table xkbcommon carries too), the chord
+// grammar's one key space; the on-screen keyboard synthesizes them directly
+// (GuiPlatform::synthesize_key).
 using GuiKey = uint32_t;
 
 namespace GuiKeys {
@@ -138,11 +138,12 @@ constexpr int kHoldDelayMs = 300;
 // So a keyboard hold's first repeat, a held button's first repeat, a double
 // tap and a re-tapped nudge all land on the same beat.
 //
-// 600 ms BY CONVENTION WITH THE ARCHITECT'S DESKTOP KEY-REPEAT DELAY, matched
-// DELIBERATELY and not by coincidence: it is his own labwc <repeatDelay> (575
-// until 2026-09-29, when both moved to 600 together, to make it even like
-// the product's other pauses), so the beat the hand already knows from every
-// held key on the desktop is the beat this program's own cadences use.
+// 600 ms BY CONVENTION WITH THE ARCHITECT'S LAPTOP KEY-REPEAT DELAY, the
+// number's source, matched DELIBERATELY and not by coincidence: it is his own
+// labwc <repeatDelay> on the laptop (575 until 2026-09-29, when both moved to
+// 600 together, to make it even like the product's other pauses), so the beat
+// the hand knows from every held key there is the beat this program's own
+// cadences use.
 // Android advertises no repeat delay at all to a native activity, which is
 // why the inventory above lists the backend as a reader: a fallback where
 // there is nothing to track, not a second opinion about a setting that
@@ -329,11 +330,11 @@ enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
 
 // -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03) --------------------
 //
-// WHAT A PASTE WILL ACCEPT FROM OUTSIDE THIS PROGRAM, IN BYTES, ON EVERY
-// BACKEND. The clipboard is the one door another application writes through,
-// so the read is the one place a hostile or merely broken producer can hand
-// the GUI's single thread an unbounded allocation; the answer is the same on
-// both roads — REFUSE THE WHOLE PAYLOAD, log one line, and hand back the
+// WHAT A PASTE WILL ACCEPT FROM OUTSIDE THIS PROGRAM, IN BYTES. The
+// clipboard is the one door another application writes through, so the read
+// is the one place a hostile or merely broken producer can hand the GUI's
+// single thread an unbounded allocation; the answer is REFUSE THE WHOLE
+// PAYLOAD, log one line, and hand back the
 // empty string, which every caller already reads as "nothing to paste" (a
 // paste of nothing must not delete the selection). A partial paste is worse
 // than no paste, so nothing is truncated to the bound.
@@ -343,11 +344,11 @@ enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
 // text_editor::replace_selection long before this, with a card that says so.
 // This exists for the pathological case alone.
 //
-// IT IS THE SEAM'S, NOT A BACKEND'S: platform_android.cpp's
-// clipboard_get_text reads this constant (the backend header includes this
-// one), so a retune is one edit here.
+// IT IS THE SEAM'S: platform_android.cpp's clipboard_get_text reads this
+// constant (the backend header includes this one), so a retune is one edit
+// here.
 //
-// AND THERE IS A THIRD COPY THE BUILD CANNOT CHECK: MainActivity.java's
+// AND THERE IS A SECOND COPY THE BUILD CANNOT CHECK: MainActivity.java's
 // MAX_CLIPBOARD_BYTES refuses the same size before it encodes the clip to
 // UTF-8, so the oversized array never crosses JNI at all. THAT NUMBER IS A
 // MIRROR OF THIS ONE AND THE TWO ARE EDITED IN ONE ACT — the same rule the
