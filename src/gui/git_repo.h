@@ -37,7 +37,7 @@
 //
 // THE APK CARRIES (arc 4, architect 2026-09-27) libgit2 1.9.7 over libssh2
 // 1.11.1 over OpenSSL 3.6.4's libcrypto, cross-built static
-// (android/NOTES.md §14 owns
+// (docs/engineering/android_notes.md §14 owns
 // the build's choices: HTTPS off, zlib bundled so the NDK's libz adds no
 // DT_NEEDED line, threads on, ED25519 in). THE SIZE WAS ACCEPTED as the plain
 // OpenSSL build, over a trimmed one 1.4 MB smaller: the APK went 7.9 ->

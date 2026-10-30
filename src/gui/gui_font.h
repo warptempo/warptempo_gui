@@ -92,7 +92,7 @@ inline constexpr std::size_t kGuiFaceCount = 6;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
-// asset step (android/app/build_apk.sh) reads the quoted names out of this
+// asset step (apk/build_apk.sh) reads the quoted names out of this
 // initializer, so a file added here is packed with no second list; the
 // backend hands the bytes in in this order, and a use names its file by its
 // index here. Both are TrueType (FT_New_Memory_Face).

@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# Shared environment for every android/ script. Source it, never execute it:
-#     . android/toolchain/00_env.sh
+# Shared environment for every deps/ and apk/ script. Source it, never execute
+# it:
+#     . deps/toolchain/00_env.sh
 #
 # Host installs live OUTSIDE the repo, under $WT_ANDROID_ROOT (default
-# ~/.local/android). The only in-repo output is android/prebuilt/<abi>.
+# ~/.local/android). The only in-repo output is deps/prebuilt/<abi>.
 #
 # One knob decides the API level of the whole sysroot: WT_API. The deps and the
-# app are built at the SAME level deliberately (see android/NOTES.md, "API
-# levels"), so changing it here and re-running android/deps/build_all.sh is the
-# whole edit.
+# app are built at the SAME level deliberately (see
+# docs/engineering/android_notes.md, "API levels"), so changing it here and
+# re-running deps/build_all.sh is the whole edit.
 
 set -u
 
 # --- repo + install roots -------------------------------------------------
-WT_ANDROID_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-WT_REPO_ROOT="$(cd -- "$WT_ANDROID_DIR/.." && pwd)"
-export WT_ANDROID_DIR WT_REPO_ROOT
+# The sysroot's makers live in deps/ and the app shell in apk/, both at the
+# repo's top, since src/ is not Android-only (architect 2026-10-30, the split).
+WT_DEPS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+WT_REPO_ROOT="$(cd -- "$WT_DEPS_DIR/.." && pwd)"
+export WT_DEPS_DIR WT_REPO_ROOT
 
 export WT_ANDROID_ROOT="${WT_ANDROID_ROOT:-$HOME/.local/android}"
 export WT_CACHE="$WT_ANDROID_ROOT/cache"          # downloaded archives
@@ -45,8 +48,9 @@ export WT_BUILD_TOOLS_SHA1="b0b6376977657e8ad9b969bacf4093601da2c6fb"
 # targetSdk 34 (architect 2026-08-27). ITS REASON NOT TO BE 35 IS INERT SINCE
 # 2026-10-01: from Android 15 on, an app targeting 35 or higher is laid out
 # EDGE-TO-EDGE whatever it asks for, which mattered while the bars showed and
-# the window had to sit inside them (android/NOTES.md 11.7) -- and the window
-# is FULL SCREEN now, both bars hidden (MainActivity.java's head), the native
+# the window had to sit inside them (docs/engineering/android_notes.md
+# 11.7) -- and the window is FULL SCREEN now, both bars hidden
+# (MainActivity.java's head), the native
 # side taking the whole surface and reading no content rect. It STAYS at 34
 # because moving a pinned target is its own act, with behaviour changes of its
 # own across the platform, and nothing asks for one. NOT 36 either, which was
@@ -91,7 +95,7 @@ export WT_TCBIN="$WT_TOOLCHAIN/bin"
 export WT_SYSROOT="$WT_TOOLCHAIN/sysroot"
 
 # --- staging prefix (the one in-repo output) ------------------------------
-export WT_PREFIX="$WT_ANDROID_DIR/prebuilt/$WT_ABI"
+export WT_PREFIX="$WT_DEPS_DIR/prebuilt/$WT_ABI"
 export WT_CROSS_FILE="$WT_ANDROID_ROOT/meson/android-aarch64.ini"
 export WT_PKGCONFIG_WRAPPER="$WT_ANDROID_ROOT/bin/pkg-config-android"
 

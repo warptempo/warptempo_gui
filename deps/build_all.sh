@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the whole dependency sysroot into android/prebuilt/arm64-v8a, in order.
+# Build the whole dependency sysroot into deps/prebuilt/arm64-v8a, in order.
 #
 # The order is a straight line, not a graph:
 #   freetype (harfbuzz DISABLED) -> harfbuzz (freetype enabled)

@@ -2,11 +2,11 @@
 # Shared bits for the nine dependency builds. Source it, never execute it.
 #
 # Source tarballs are pinned by SHA-256. Provenance for each pin is recorded in
-# android/NOTES.md; eight of the nine are cross-checked against an independent
-# publisher (Arch PKGBUILD / Debian .dsc).
+# docs/engineering/android_notes.md; eight of the nine are cross-checked
+# against an independent publisher (Arch PKGBUILD / Debian .dsc).
 
 set -u
-. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../toolchain" && pwd)/00_env.sh"
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/toolchain" && pwd)/00_env.sh"
 
 # --- pinned sources -------------------------------------------------------
 FFTW_VER=3.3.11
@@ -28,7 +28,7 @@ PIXMAN_VER=0.46.4
 PIXMAN_TAR=pixman-$PIXMAN_VER.tar.gz
 # cairographics.org is unreachable from this host (connect timeout, IPv4, DNS
 # resolves) -- the debian pool copy is the pristine upstream .orig tarball and
-# its sha256 is published in pixman_0.46.4-1.dsc. See NOTES.md.
+# its sha256 is published in pixman_0.46.4-1.dsc. See android_notes.md.
 PIXMAN_URL=http://deb.debian.org/debian/pool/main/p/pixman/pixman_${PIXMAN_VER}.orig.tar.gz
 PIXMAN_SHA256=d09c44ebc3bd5bee7021c79f922fe8fb2fb57f7320f55e97ff9914d2346a591c
 

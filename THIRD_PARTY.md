@@ -2,8 +2,8 @@
 
 Every library compiled INTO a binary of this project, with its licence. The repository distributes no binary: the
 laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built into the gitignored
-`android/prebuilt/` (`android/deps/`, each source tarball pinned by sha256 in `android/deps/common.sh`, provenance in
-`android/NOTES.md` §6) and the APK is installed on one tablet only. The licence texts live in each pinned source; this
+`deps/prebuilt/` (`deps/`, each source tarball pinned by sha256 in `deps/common.sh`, provenance in
+`docs/engineering/android_notes.md` §6) and the APK is installed on one tablet only. The licence texts live in each pinned source; this
 file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
 Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
 code: `fonts/README.md` and `assets/icons/README.md` (the four icon SVGs, the launcher's drawing among them:

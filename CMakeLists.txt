@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # THE BUILD'S SHAPE (architect 2026-10-30: the laptop GUI dropped, the tablet
 # the one platform, the GL canvas the one road): NO OPTIONS, ONE PRODUCT PER
-# PLATFORM. Cross-built for Android (android/app/configure.sh, the `if(ANDROID)`
+# PLATFORM. Cross-built for Android (apk/configure.sh, the `if(ANDROID)`
 # branch below) the configuration's product is warptempo_gui, the tablet's
 # NativeActivity library; on the laptop, a plain `cmake -B build -S .`, it is
 # warptempo_cli, the headless render the laptop keeps for git pull and render,
@@ -113,7 +113,7 @@ set(WARPTEMPO_GUI_SOURCES
     # concern and exist only here, so like text_shape.cpp they are
     # deliberately in none of the four shared per-directory source lists —
     # warptempo_cli must never carry them, nor resvg. resvg is the
-    # cross-built static one (android/deps/85_resvg.sh), found in the Android
+    # cross-built static one (deps/85_resvg.sh), found in the Android
     # branch below.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
@@ -196,7 +196,7 @@ set(WARPTEMPO_GUI_SOURCES
     # THE ONE GIT ROAD (architect 2026-09-27): libgit2 in process, the history
     # module's only way into a repository, with the fetch's and the push's
     # deploy key and host-key pin. The one file that includes <git2.h>, so the one file that
-    # needs libgit2 — the cross-built static one (android/deps/80_libgit2.sh),
+    # needs libgit2 — the cross-built static one (deps/80_libgit2.sh),
     # found in the Android branch below; the APK always carries it.
     src/gui/git_repo.cpp
     # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
@@ -257,15 +257,15 @@ set(WARPTEMPO_GUI_SOURCES
 
 # ============================================================
 #  warptempo_gui — the ANDROID library (arm64 NativeActivity, cross-built from
-#  the laptop through android/app/configure.sh). It is a SHARED LIBRARY rather
+#  the laptop through apk/configure.sh). It is a SHARED LIBRARY rather
 #  than an executable because a NativeActivity's process is started by the
 #  system and dlopen's this .so; android_main (platform_android.cpp) is its
 #  entry point and calls gui_main (main.cpp).
 #
 #  Every dependency (the four graphics libraries, resvg, fftw, and the git
 #  stack) is found through the M1 sysroot's own .pc files:
-#  android/app/configure.sh passes PKG_CONFIG_EXECUTABLE (the toolchain's
-#  wrapper, which hard-forces PKG_CONFIG_LIBDIR at android/prebuilt/<abi>) and
+#  apk/configure.sh passes PKG_CONFIG_EXECUTABLE (the toolchain's
+#  wrapper, which hard-forces PKG_CONFIG_LIBDIR at deps/prebuilt/<abi>) and
 #  FFTW3_THREADS_LIB (whose find_library above cannot search a sysroot the NDK
 #  toolchain file has re-rooted), so this branch itself names no path.
 # ============================================================
@@ -277,7 +277,7 @@ if(ANDROID)
     # explicitly inside the group below.
     pkg_check_modules(WT_ANDROID_GFX REQUIRED cairo cairo-ft harfbuzz freetype2)
     # The icon renderer (svg_icon.cpp): resvg's C API, static, its resvg.pc
-    # written by android/deps/85_resvg.sh (upstream ships none without
+    # written by deps/85_resvg.sh (upstream ships none without
     # cargo-c). Its STATIC_LDFLAGS carry the Rust archive's native-static-libs
     # (-llog -lunwind -ldl -lm -lc), all the NDK's own: DT_NEEDED gains
     # nothing the nine do not already name (build_apk.sh's allowlist).
@@ -287,7 +287,7 @@ if(ANDROID)
     # libssh2, whose own .pc names libcrypto, so --static (the STATIC_LDFLAGS
     # below) carries the whole chain -lgit2 -lssh2 -lcrypto -ldl. zlib is
     # libgit2's bundled copy, so the chain adds nothing to DT_NEEDED
-    # (android/deps/80_libgit2.sh owns the build's choices).
+    # (deps/80_libgit2.sh owns the build's choices).
     pkg_check_modules(WT_ANDROID_GIT REQUIRED libgit2)
 
     # The NDK's stock android_native_app_glue. It is COMPILED IN PLACE from
@@ -410,7 +410,7 @@ endif()
 # same -O3 -ffp-contract=off on both products, with -march=native on the
 # laptop's.
 #
-# No CMAKE_BUILD_TYPE is set on either host (android/app/configure.sh empties
+# No CMAKE_BUILD_TYPE is set on either host (apk/configure.sh empties
 # it too), so NDEBUG is never defined: every assert in the tree is a live
 # breach check in the shipped binaries, a breach stopping the program rather
 # than running on.

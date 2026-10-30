@@ -153,7 +153,7 @@ After an OS reinstall, install the packages (above), then restore these from you
 - `~/.android/debug.keystore` (the key that signs the APK) and `~/.android/adbkey` (the tablet already trusts it)
 - `~/.config/warptempo_gui/config`, `deploy_key` and `deploy_key.pub`, and the `noise/` folder beside them (the tablet's is mirrored from it)
 - the tablet's deploy key pair at `$WARPTEMPO_TABLET_DEPLOY_KEY`, and the keystore copy at `$WARPTEMPO_KEYSTORE_BACKUP`
-- this repository, with `android/prebuilt/` if you keep it (else rebuild it: The tablet)
+- this repository, with `deps/prebuilt/` if you keep it (else rebuild it: The tablet)
 - the projects clone, with its audio and renders
 
 ```bash
@@ -185,7 +185,7 @@ Then build (above) and run it: the program opens the last piece. Press `h`; afte
 ### The Android toolchain
 
 ```bash
-bash android/toolchain/bootstrap.sh
+bash deps/toolchain/bootstrap.sh
 # no sudo; into ~/.local/android. About 1.1 GB downloaded (NDK, build tools, android.jar,
 # a JDK), about 3 GB on disk, every download checked against a pinned checksum. Safe to run
 # again: it skips what is there. The last lines list
@@ -194,13 +194,13 @@ bash android/toolchain/bootstrap.sh
 
 ### The prebuilt libraries
 
-The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the renderer of the four icon SVGs and the decoder of the score viewer's page images, built with Rust) statically from `android/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
+The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the renderer of the four icon SVGs and the decoder of the score viewer's page images, built with Rust) statically from `deps/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
 
 ```bash
-ls android/prebuilt/arm64-v8a/lib/libgit2.a android/prebuilt/arm64-v8a/lib/libresvg.a
-# both present: skip the next lines. libresvg.a alone missing: bash android/deps/85_resvg.sh
-# (about 20 s), then bash android/deps/smoke/build_smoke.sh. Both missing: build them all (about 12 minutes)
-bash android/deps/build_all.sh
+ls deps/prebuilt/arm64-v8a/lib/libgit2.a deps/prebuilt/arm64-v8a/lib/libresvg.a
+# both present: skip the next lines. libresvg.a alone missing: bash deps/85_resvg.sh
+# (about 20 s), then bash deps/smoke/build_smoke.sh. Both missing: build them all (about 12 minutes)
+bash deps/build_all.sh
 ```
 
 ### The signing key
@@ -214,13 +214,13 @@ The tablet accepts an update only when it is signed by the same key as the insta
 mkdir -p ~/.android && cp "$WARPTEMPO_KEYSTORE_BACKUP" ~/.android/debug.keystore
 ```
 
-Never let a build make a new one: an APK signed by another key will not install over the app, and uninstalling the app deletes everything it holds on the tablet. `build_apk.sh` refuses to mint a key when none is there. Only for a brand-new app identity (a first install, nothing on the tablet to keep) run it once as `WT_NEW_KEYSTORE=1 bash android/app/build_apk.sh`, then copy the new keystore to `$WARPTEMPO_KEYSTORE_BACKUP` and record its fingerprint, the `SHA256:` line of the keytool command above without the `grep`, in `WARPTEMPO_SIGNING_CERT_SHA256`. (`WT_KEYSTORE` points the build at a keystore elsewhere.)
+Never let a build make a new one: an APK signed by another key will not install over the app, and uninstalling the app deletes everything it holds on the tablet. `build_apk.sh` refuses to mint a key when none is there. Only for a brand-new app identity (a first install, nothing on the tablet to keep) run it once as `WT_NEW_KEYSTORE=1 bash apk/build_apk.sh`, then copy the new keystore to `$WARPTEMPO_KEYSTORE_BACKUP` and record its fingerprint, the `SHA256:` line of the keytool command above without the `grep`, in `WARPTEMPO_SIGNING_CERT_SHA256`. (`WT_KEYSTORE` points the build at a keystore elsewhere.)
 
 ### Build the APK
 
 ```bash
-bash android/app/build_apk.sh
-# five VERIFY steps, then near the end "APK: …/android/app/build-android/warptempo.apk"
+bash apk/build_apk.sh
+# five VERIFY steps, then near the end "APK: …/apk/build-android/warptempo.apk"
 # "no keystore at …": do The signing key
 ```
 
@@ -265,7 +265,7 @@ adb shell cmd media_session volume --stream 1 --set 0
 
 ```bash
 # 8. install the app over the cable (build it first)
-adb install -r android/app/build-android/warptempo.apk
+adb install -r apk/build-android/warptempo.apk
 # expect:  Success
 # Play Protect or "unknown app": More details > Install anyway
 ```
@@ -324,8 +324,8 @@ adb devices
 ### Update the app
 
 ```bash
-bash android/app/build_apk.sh
-adb install -r android/app/build-android/warptempo.apk
+bash apk/build_apk.sh
+adb install -r apk/build-android/warptempo.apk
 adb shell am start -n com.warptempo.gui/.MainActivity
 adb logcat -s warptempo:I
 # the app's log, live; Ctrl+C stops it. Over wireless, add -s "$WARPTEMPO_TABLET_ADDR" after adb.

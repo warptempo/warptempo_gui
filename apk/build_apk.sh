@@ -2,16 +2,16 @@
 # warptempo_gui: configure -> cross-build -> signed, aligned, verified APK.
 # One command, from a clean tree:
 #
-#     bash android/app/build_apk.sh
+#     bash apk/build_apk.sh
 #
 # THE DEVICE IS NOT INVOLVED and there must be no adb step here: this script's
 # whole job is to produce an artefact a device will accept. Installing it is
 #
-#     adb install -r android/app/build-android/warptempo.apk
+#     adb install -r apk/build-android/warptempo.apk
 #
 # Idempotent: the packaging tree is wiped first. The CMake build tree is NOT
 # wiped -- a re-run is an incremental rebuild, which is the whole point of
-# having one -- so `rm -rf android/app/build-android` is the clean-build gesture.
+# having one -- so `rm -rf apk/build-android` is the clean-build gesture.
 #
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
@@ -26,7 +26,7 @@ set -euo pipefail
 
 APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-. "$APPDIR/../toolchain/00_env.sh"
+. "$APPDIR/../deps/toolchain/00_env.sh"
 
 BUILD="${WT_ANDROID_BUILD_DIR:-$APPDIR/build-android}"
 APKNAME="warptempo.apk"
@@ -102,8 +102,8 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 #
 # The copies land under the build tree, which .gitignore already ignores
 # (`build*/`); the tracked originals are fonts/'s.
-FONT_DIR="$APPDIR/../../fonts"
-FONT_LIST_SRC="$APPDIR/../../src/gui/gui_font.h"
+FONT_DIR="$APPDIR/../fonts"
+FONT_LIST_SRC="$APPDIR/../src/gui/gui_font.h"
 FONT_FILES=$(sed -n '/kGuiFontFiles\[kGuiFontFileCount\] = {/,/^};/p' "$FONT_LIST_SRC" |
              grep -o '"[^"]*"' | tr -d '"')
 [ -n "$FONT_FILES" ] || wt_die "no font names read from $FONT_LIST_SRC's kGuiFontFiles"
@@ -120,7 +120,7 @@ done
 # reads them in place at launch, never copying them out (icons.h's load_set;
 # GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is a
 # build defect and stops the script here.
-ICON_DIR="$APPDIR/../../assets/icons"
+ICON_DIR="$APPDIR/../assets/icons"
 shopt -s nullglob
 ICON_FILES=("$ICON_DIR"/*.svg)
 shopt -u nullglob
@@ -284,8 +284,8 @@ wt_say "VERIFY 3/5 -- every LOAD segment 16 KB aligned (align 2**14)"
 
 echo
 wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that would have to ship beside the app)"
-# The set, compared exactly (this allowlist is its one statement; NOTES.md
-# records how it was measured): an extra entry or a missing one fails the
+# The set, compared exactly (this allowlist is its one statement;
+# docs/engineering/android_notes.md records how it was measured): an extra entry or a missing one fails the
 # build. libnativewindow is in it since the frame-rate pin
 # (ANativeWindow_setFrameRate lives there, not in libandroid); the git stack
 # added nothing, zlib being libgit2's bundled copy; libEGL.so and libGLESv3.so

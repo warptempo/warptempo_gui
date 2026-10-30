@@ -11,7 +11,7 @@
      no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH RENDERED AT
-     EVERY BUILD by android/app/build_apk.sh's launcher step into its staged
+     EVERY BUILD by apk/build_apk.sh's launcher step into its staged
      copy of res/ (the Linux desktop icon is the same drawing bare, a link
      into the repository, docs/INSTALL.md):
        ic_launcher_background.png  the full 108 dp canvas flat in #141415;

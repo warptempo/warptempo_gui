@@ -12,7 +12,7 @@
 # the ed25519 check (the deploy key's type must be linked in) and DT_NEEDED
 # (nothing beyond bionic and liblog: no dependency adds a library to ship).
 set -euo pipefail
-. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../toolchain" && pwd)/00_env.sh"
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../toolchain" && pwd)/00_env.sh"
 
 out="$WT_WORK/smoke"
 mkdir -p "$out"
@@ -53,7 +53,7 @@ for api in "$WT_API" "$WT_TARGET_SDK"; do
         *" _libssh2_ed25519_sign"*) wt_say "ed25519 linked in at API $api" ;;
         *) wt_warn "no _libssh2_ed25519_sign in $so"; fail=1 ;;
     esac
-    # EXACTLY bionic's three (NOTES.md §2) and liblog: the git stack and
+    # EXACTLY bionic's three (android_notes.md §2) and liblog: the git stack and
     # every other dependency are static, so anything else here is a library
     # to ship. liblog is the platform's, named by resvg's native-static-libs
     # (the Rust std's list for the target; no resvg object calls it), and the

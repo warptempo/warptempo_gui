@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Configure the PRODUCT's Android build: the real GUI, cross-compiled for
-# arm64-v8a against the M1 dependency sysroot, into android/app/build-android/.
+# arm64-v8a against the M1 dependency sysroot, into apk/build-android/.
 #
-#     bash android/app/configure.sh          # configure (idempotent)
-#     cmake --build android/app/build-android -j$(nproc)
+#     bash apk/configure.sh                  # configure (idempotent)
+#     cmake --build apk/build-android -j$(nproc)
 #
 # build_apk.sh calls this itself, so packaging from a clean tree is one command.
 #
@@ -11,7 +11,7 @@
 # the M1 sysroot. The root CMakeLists' if(ANDROID) branch names no directory at
 # all -- it asks pkg-config for cairo/cairo-ft/harfbuzz/freetype2 and reads
 # FFTW3_THREADS_LIB -- so the two knobs below are the whole binding between the
-# product build and android/prebuilt/<abi>.
+# product build and deps/prebuilt/<abi>.
 #
 #   PKG_CONFIG_EXECUTABLE  the toolchain's wrapper, which hard-forces
 #                          PKG_CONFIG_LIBDIR at the staging prefix so a host
@@ -29,14 +29,14 @@ set -euo pipefail
 
 APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-. "$APPDIR/../toolchain/00_env.sh"
+. "$APPDIR/../deps/toolchain/00_env.sh"
 
 BUILD="${WT_ANDROID_BUILD_DIR:-$APPDIR/build-android}"
 
 [ -x "$WT_PKGCONFIG_WRAPPER" ] ||
-    wt_die "missing $WT_PKGCONFIG_WRAPPER (run android/toolchain/40_gen_cross_file.sh)"
+    wt_die "missing $WT_PKGCONFIG_WRAPPER (run deps/toolchain/40_gen_cross_file.sh)"
 [ -f "$WT_PREFIX/lib/libfftw3_threads.a" ] ||
-    wt_die "missing $WT_PREFIX/lib/libfftw3_threads.a (run android/deps/build_all.sh)"
+    wt_die "missing $WT_PREFIX/lib/libfftw3_threads.a (run deps/build_all.sh)"
 [ -f "$WT_NDK/build/cmake/android.toolchain.cmake" ] ||
     wt_die "no NDK cmake toolchain file under $WT_NDK"
 

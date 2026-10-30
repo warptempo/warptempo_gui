@@ -3,7 +3,7 @@
 // THE RENDERER (architect 2026-10-06: one renderer for every drawing) —
 // the bundled SVG drawings (icons.h), parsed at launch and rasterised
 // through RESVG (resvg's C API, Apache-2.0 OR MIT), built from one pinned
-// source on both devices (android/deps/85_resvg.sh, CMakeLists.txt), scalable
+// source on both devices (deps/85_resvg.sh, CMakeLists.txt), scalable
 // and antialiased — and THE RASTER ROAD (below), a PNG or JPEG decoded by
 // resvg itself at its own size, the score viewer's pages its reader
 // (score_page_worker.h). This file is a thin wrapper: the parse, the size,

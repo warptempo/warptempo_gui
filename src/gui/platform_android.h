@@ -281,7 +281,7 @@ public:
     // the accepted residual loss). PREDICTIVE BACK DOES NOT TAKE THIS ROAD
     // AWAY: the manifest declares no android:enableOnBackInvokedCallback and
     // targets SDK 34, so the framework dispatches the legacy KEYCODE_BACK to
-    // the activity — measured on the tablet (android/NOTES.md).
+    // the activity — measured on the tablet (docs/engineering/android_notes.md).
     void set_on_close(CloseCallback cb);
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);

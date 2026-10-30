@@ -57,8 +57,8 @@ import java.nio.charset.StandardCharsets;
  * bands under permanently shown bars, and a transient bar draws its own
  * translucent scrim over whatever the app shows.
  *
- * <p>targetSdk is 34 (android/toolchain/00_env.sh owns the number and says
- * why it stays where it is now that its edge-to-edge reason is inert).
+ * <p>targetSdk is 34 (deps/toolchain/00_env.sh owns the number and says why
+ * it stays where it is now that its edge-to-edge reason is inert).
  *
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
  * top-level class (the MediaSession.Callback and the battery receiver below

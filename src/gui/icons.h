@@ -57,7 +57,7 @@ enum class Icon {
                          // to Quaver.svg (architect 2026-10-23: "the new note
                          // glyph on the caption's color"): the launcher
                          // icon a build product of this file
-                         // (android/app/build_apk.sh's launcher step). No
+                         // (apk/build_apk.sh's launcher step). No
                          // painter draws it; the launch's load vouches that
                          // the file parses
     Quaver,              // the logo lane's quaver (architect 2026-10-23):

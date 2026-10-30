@@ -72,7 +72,7 @@ uint32_t be16(std::string_view b, size_t at) {
 }
 
 // THE ONE-<image> WRAPPER, THE DECODER'S DETOUR WITH A REASON: the tablet's
-// cairo is built without its PNG reader on purpose (android/deps/50_cairo.sh,
+// cairo is built without its PNG reader on purpose (deps/50_cairo.sh,
 // -Dpng=disabled), resvg is built with its raster-images feature on both
 // devices from the one pin (85_resvg.sh, CMakeLists.txt) and so decodes PNG
 // and JPEG, and no new library was wanted for it (stb_image and lodepng not

@@ -22,10 +22,10 @@ docs/references/*.pdf
 # tools
 tools/build/
 
-# android cross-compiled dep sysroot: reproducible from android/deps/ scripts;
+# android cross-compiled dep sysroot: reproducible from deps/ scripts;
 # kept out of the public repo so no GPL/LGPL binary-distribution obligations
 # attach (fftw is GPL, cairo LGPL/MPL) — architect ruling 2026-08-23
-android/prebuilt/
+deps/prebuilt/
 
 # projects: their own repository (github.com/warptempo/warptempo_projects),
 # checked out beside this one at ~/.warptempo/warptempo_projects

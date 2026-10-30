@@ -1,5 +1,7 @@
 # Android bootstrap — toolchain + dependency sysroot (M1, 2026-08-23)
 
+*What this file is now: the record of the Android bootstrap and the tablet's milestones, 2026-08-23 onward; the live rules are at their symbols, and the scripts it names live in `deps/` and `apk/` since the split (architect 2026-10-30).*
+
 What this directory is: the host-side Android toolchain bootstrap and the
 cross-compiled dependency sysroot for `android-arm64`, ready for the M2 spike
 APK. **Nothing here touches the product build.** No file under `src/`,
@@ -29,7 +31,7 @@ package was used, so no system-wide config changed.
 | Source + build trees | — | `~/.local/android/work` |
 | Generated meson cross file | — | `~/.local/android/meson/android-aarch64.ini` |
 | Generated pkg-config wrapper | — | `~/.local/android/bin/pkg-config-android` |
-| **Dependency sysroot** | — | **`android/prebuilt/arm64-v8a` (in-repo, gitignored; 11 MB, 42 MB since the git stack joined, §14, 53 MB since resvg, §15)** |
+| **Dependency sysroot** | — | **`deps/prebuilt/arm64-v8a` (in-repo, gitignored; 11 MB, 42 MB since the git stack joined, §14, 53 MB since resvg, §15)** |
 
 **NDK r29 is the newest STABLE NDK.** The SDK repository manifest lists
 `ndk;30.0.14904198` and `ndk;30.0.15729638` under a "stable" channel ref, but
@@ -58,7 +60,7 @@ a first run. (Verified: `10_fftw3.sh` was re-run end to end after the sysroot
 was already populated.)
 
 ```
-android/toolchain/
+deps/toolchain/
   00_env.sh              sourced by everything; versions, paths, flags, helpers.
                          ONE knob (WT_API) sets the API level of the whole sysroot.
   10_fetch_ndk.sh        NDK r29, sha1-verified against the SDK manifest
@@ -67,7 +69,7 @@ android/toolchain/
   40_gen_cross_file.sh   writes the meson cross file + the pkg-config wrapper
   bootstrap.sh           all four, in order
 
-android/deps/
+deps/
   common.sh              pinned source URLs/SHA-256, fetch/unpack/verify helpers,
                          the shared `meson setup` argument list
   10_fftw3.sh            fftw 3.3.11   (autotools)
@@ -83,7 +85,7 @@ android/deps/
   smoke/smoke.cpp        one TU including all nine headers
   smoke/build_smoke.sh   compile+link at two API levels, then the 16 KB check
 
-android/prebuilt/arm64-v8a/   include/ lib/ lib/pkgconfig/ lib/cmake/  (the output)
+deps/prebuilt/arm64-v8a/   include/ lib/ lib/pkgconfig/ lib/cmake/  (the output)
 ```
 
 The cross file and the pkg-config wrapper are **generated**, not committed: they
@@ -103,7 +105,7 @@ is therefore the android-35 one, and the DECLARED TARGET was 35 with it until
 > needing a `res/` this APK has never had. 36 is still out for the reason above.
 > The `android.jar` is STILL the android-35 one — the compile platform and the
 > declared target are two numbers now (`WT_PLATFORM_SDK` / `WT_TARGET_SDK`,
-> `android/toolchain/00_env.sh`), because the runtime gates behaviour on the
+> `deps/toolchain/00_env.sh`), because the runtime gates behaviour on the
 > stamped target and never on the jar.
 
 **minSdk 30 (Android 11)** — this is the choice the brief asked me to make and
@@ -165,7 +167,7 @@ from fftw and harfbuzz are kept — the M2 CMake build may want them.
 
 ## 5. Smoke compile-and-link
 
-`android/deps/smoke/smoke.cpp` includes `fftw3.h`, `cairo.h`, `cairo-ft.h`,
+`deps/smoke/smoke.cpp` includes `fftw3.h`, `cairo.h`, `cairo-ft.h`,
 `hb.h`, `hb-ft.h`, `ft2build.h`/`FT_FREETYPE_H`, and calls one real function from
 each library (`fftw_init_threads` + `fftw_plan_with_nthreads` + `fftw_malloc`,
 `FT_Init_FreeType`, `hb_buffer_create`, `cairo_image_surface_create` + a real
@@ -295,10 +297,10 @@ aapt2/zipalign/apksigner pipeline, keystore and `adb` loop are all M2.
 - `zip` and `android-tools` (`adb`) are not installed; both are system packages.
 - No debug keystore was created (`~/.android/debug.keystore` does not exist).
   `keytool` is now available at `~/.local/android/jdk/bin/keytool`.
-- **`android/prebuilt/` is 11 MB of build output sitting in the repo.** It is
+- **`deps/prebuilt/` is 11 MB of build output sitting in the repo.** It is
   there because the brief names it a deliverable, but whether it should be
   committed or `.gitignore`d is an architect call — the whole tree is
-  reproducible from `android/deps/build_all.sh` in about ten minutes. I did not
+  reproducible from `deps/build_all.sh` in about ten minutes. I did not
   touch `.gitignore`.
 
 ---
@@ -358,7 +360,7 @@ The assets land under `build/assets/` deliberately: `.gitignore` already ignores
 `build*/`, so the generated WAV and the font copies stay out of the repo with no
 `.gitignore` edit (the tracked originals are `fonts/`'s since 2026-10-02; until
 then the fonts were copied from the host's Liberation package and stayed out on
-the same reasoning that keeps `android/prebuilt/` out).
+the same reasoning that keeps `deps/prebuilt/` out).
 
 ### 9.3 The keystore
 
@@ -515,7 +517,7 @@ Settings; the spike only reports the live state.
 
 The M3 seam's Android half: `src/gui/platform_android.{h,cpp}` (the backend),
 `src/gui/playback_stub.cpp` (silent; §11 replaced it), the root `CMakeLists.txt`'s
-`if(ANDROID)` branch, and `android/app/` (configure + package + manifest).
+`if(ANDROID)` branch, and `apk/` (configure + package + manifest).
 Unlike §9 this **is** product code — the same `src/gui`, `src/parser`,
 `src/engine`, `src/audio_io` and `src/prepost` the desktop binary compiles,
 minus three files and plus three.
@@ -523,8 +525,8 @@ minus three files and plus three.
 ### 10.1 The commands
 
 ```bash
-bash android/app/build_apk.sh                 # clean-to-signed-APK, one command
-adb install -r android/app/build-android/warptempo.apk
+bash apk/build_apk.sh                         # clean-to-signed-APK, one command
+adb install -r apk/build-android/warptempo.apk
 adb shell am start -n com.warptempo.gui/.MainActivity
 adb logcat -s warptempo:*                     # the GUI's own stderr
 ```
@@ -533,11 +535,11 @@ adb logcat -s warptempo:*                     # the GUI's own stderr
 incremental work:
 
 ```bash
-bash android/app/configure.sh
-cmake --build android/app/build-android -j$(nproc)
+bash apk/configure.sh
+cmake --build apk/build-android -j$(nproc)
 ```
 
-`rm -rf android/app/build-android` is the clean-build gesture; the packaging
+`rm -rf apk/build-android` is the clean-build gesture; the packaging
 tree under it is wiped on every run, the CMake tree is not.
 
 Installing a project is a push into the app's own external files dir, which
@@ -773,7 +775,7 @@ the caller's.
 `if(WARPTEMPO_BUILD_GUI AND ANDROID)` in the root `CMakeLists.txt`. It
 discovers no Wayland, xkb, JACK or wayland-scanner, and finds cairo / cairo-ft
 / harfbuzz / freetype2 through the M1 sysroot's own `.pc` files. **The branch
-names no path**: `android/app/configure.sh` passes `PKG_CONFIG_EXECUTABLE` (the
+names no path**: `apk/configure.sh` passes `PKG_CONFIG_EXECUTABLE` (the
 toolchain wrapper, which hard-forces `PKG_CONFIG_LIBDIR`) and
 `FFTW3_THREADS_LIB` (the one dependency with no upstream `.pc`, whose
 top-level `find_library` cannot search a sysroot the NDK toolchain file has
@@ -1184,7 +1186,7 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > a screen this size). The COMPILE platform stays `android-35` — the only jar
 > installed — because the runtime gates on the stamped target, not on the jar:
 > `WT_TARGET_SDK` and `WT_PLATFORM_SDK` are two numbers in
-> `android/toolchain/00_env.sh` now.
+> `deps/toolchain/00_env.sh` now.
 >
 > **AND 34 DID NOT SHRINK THE WINDOW EITHER** — the log still said
 > `window 2304x1440` — which is where `dumpsys window` settled the design. The
@@ -1273,7 +1275,7 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > which is kdenlive's own arrangement.
 
 The APK has Java in it now: **one class**, `com.warptempo.gui.MainActivity`,
-`android/app/java/com/warptempo/gui/MainActivity.java`, ~30 lines of body. It is
+`apk/java/com/warptempo/gui/MainActivity.java`, ~30 lines of body. It is
 the port's ONE Java home and **every later Java need joins it as a method, never
 as a second class** — the SAF picker's `onActivityResult` (which is the reason a
 subclass is structurally required at all: `NativeActivity` never forwards it,
@@ -1330,7 +1332,7 @@ method would throw `UnsatisfiedLinkError` (§5.4).
 
 ```bash
 javac -source 11 -target 11 -Xlint:-options -classpath $WT_ANDROID_JAR \
-      -d $PKGDIR/classes  $(find android/app/java -name '*.java')
+      -d $PKGDIR/classes  $(find apk/java -name '*.java')
 d8 --release --lib $WT_ANDROID_JAR --min-api 30 --output $PKGDIR/dex  <classes>
 zip -u -j -X -q $PKGDIR/unaligned.apk $PKGDIR/dex/classes.dex
 ```
@@ -1672,7 +1674,7 @@ of `git_remote_push` and `git_credential_ssh_key_new`, and calls
 with `-Wl,--no-undefined` inside one `--start-group`, as the product links,
 then checks ed25519 in the image and DT_NEEDED: `libdl libm libc` at both API
 levels, 16 KB aligned. THE DT_NEEDED CHECK IS AN EXACT ALLOWLIST (codex round 1
-over the git arc, 2026-09-28): `wt_check_dt_needed` (`toolchain/00_env.sh`)
+over the git arc, 2026-09-28): `wt_check_dt_needed` (`deps/toolchain/00_env.sh`)
 normalizes the image's NEEDED entries and fails on any entry missing from or
 extra to the named set — here bionic's three, and in `build_apk.sh`'s VERIFY
 4/5 the product's seven (`libdl libm libaaudio libandroid libnativewindow
@@ -1771,8 +1773,8 @@ two adoption calls (`setBuffersGeometry`, `setBuffersDataSpace`). A build
 choice, never a device key. `build_apk.sh` and `configure.sh` read
 `WT_CANVAS` (default `gl`):
 
-    bash android/app/build_apk.sh                 # gl: android/app/build-android/warptempo.apk
-    WT_CANVAS=cpu bash android/app/build_apk.sh   # cpu: android/app/build-android-cpu/warptempo-cpu.apk
+    bash apk/build_apk.sh                 # gl: apk/build-android/warptempo.apk
+    WT_CANVAS=cpu bash apk/build_apk.sh   # cpu: apk/build-android-cpu/warptempo-cpu.apk
 
 Both share the package and the key, so installing one replaces the other.
 
