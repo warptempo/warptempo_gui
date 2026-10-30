@@ -7319,7 +7319,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // face through the one shaping chokepoint. This surface draws no icon.
 //
 // STATE-AXIS: every one of the three faces is decided ONCE per key, from the
-// two lamps and the one held index this body reads at its head, and the cap
+// two lamps and the one held index this body reads at its head — compared as
+// a SLOT, not an index, so the page key's held face survives its own page
+// change (onscreen_keyboard::same_slot, architect 2026-10-29 night) — and the cap
 // comes from the layout table's own derivations (cap_word, shifted_char). There
 // is no second list of what a key looks like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
@@ -7393,7 +7395,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // page (fifty-one).
             if (!rects_intersect(exposed, r)) return;
 
-            const bool pressed = (static_cast<int>(index) == held);
+            // HELD BY SLOT, not by index (onscreen_keyboard::same_slot): the
+            // page key's own press has moved the page this walk is on.
+            const bool pressed =
+                onscreen_keyboard::same_slot(static_cast<int>(index), held);
             const bool armed   =
                 (k.role == Role::Shift      && shift_armed) ||
                 (k.role == Role::SymbolMode &&

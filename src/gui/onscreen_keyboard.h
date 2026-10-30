@@ -349,6 +349,25 @@ inline constexpr Page page_of_key_index(int index) {
         static_cast<uint32_t>(kRowCount * kMaxRowKeys));
 }
 
+// THE HELD FACE IS A SLOT, NOT AN INDEX (architect 2026-10-29 night, on the
+// glass: the page key never sank to its second depth). Two key indices name
+// the same SLOT when they differ in the page term alone — the same row and
+// column, which on these pages is the same rect, role and width, since
+// nothing moves between them (pages_are_well_formed pins it). The painter's
+// held test is this one: THE PAGE KEY IS THE ONE KEY WHOSE OWN PRESS MOVES
+// THE LIVE PAGE OUT FROM UNDER ITS INDEX before the paint, so an index test
+// against the new page's walk finds no held key and the page key paints its
+// checked or rest depth under the finger; the held face must follow the
+// finger (paint_key's HELD row, cool_edit_paint.h), and the finger is on the
+// slot.
+// A negative index — `pressed_key`'s "nothing held" — is on no slot.
+inline constexpr bool same_slot(int a, int b) {
+    constexpr int base  = static_cast<int>(kStableCodeBase);
+    constexpr int slots = kRowCount * kMaxRowKeys;
+    if (a < base || b < base) return false;
+    return (a - base) % slots == (b - base) % slots;
+}
+
 // -- The derivations off the table ------------------------------------------
 //
 // THE CASE IS A DERIVATION AND NOT A SECOND TABLE (the state-axis rule for a
