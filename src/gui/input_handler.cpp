@@ -1506,9 +1506,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // it). Read-only already dropped Return at the allowlist gate above (every
     // one of these is an authoring surface — the old click-to-edit refused
     // read-only too). Modifier-strict: only the plain, unmodified press opens
-    // an editor; Return's ctrl forms are the phase-reset propagate pair
-    // (architect 2026-10-21, is_phase_reset_copy_key / is_phase_reset_paste_
-    // key, gui_input.h), falling past this arm to handle_mode_keys below.
+    // an editor; a modified Enter is unbound (chord_is_bound's Return arm,
+    // gui_input.h, since 2026-10-24) and is dropped at the unbound-key gate
+    // before this arm — the phase-reset propagate pair is the letter P's.
     if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
         !ctrl && !shift && !alt) {
         selection.repair_last_selected();
