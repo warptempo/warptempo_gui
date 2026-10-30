@@ -928,15 +928,6 @@ bool GuiPlatform::init(int width, int height, const char* title) {
         xdg_toplevel_decoration_,
         ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
-#if WARPTEMPO_CANVAS_GL
-    // THE GL CANVAS'S EGL OBJECTS, made HERE: after the wl_surface and its
-    // xdg roles exist (the wl_egl_window wraps the surface) and before the
-    // first configure — making the window surface attaches and commits
-    // nothing, so the first commit with content still waits for the
-    // configure (has_initial_configure_), as the shm road's does. Once per
-    // process (the members' comment, platform_wayland.h).
-    ensure_gl();
-#endif
     resize_surface_buffers();
 
     // Cursor theme load is best-effort: failure leaves every kind's surface
@@ -1278,7 +1269,8 @@ void GuiPlatform::destroy_wayland_state() {
 // ---------------------------------------------------------------------------
 
 // THE SURFACE'S BUFFERS FOLLOW ITS SIZE (the declaration): one call per road
-// at init and at every configure that moves width_ / height_.
+// at init, at the first configure and at every later configure that moves
+// width_ / height_.
 void GuiPlatform::resize_surface_buffers() {
 #if WARPTEMPO_CANVAS_GL
     // The EGL window takes the surface's new size (its next buffer is made at
@@ -1305,7 +1297,8 @@ void GuiPlatform::resize_surface_buffers() {
 // road that moves the size declares the whole surface's damage (the
 // configure) — and THE TEXTURE FOLLOWS IT (GuiGlCanvas::ensure_texture's
 // rule), asked with the context current on the window surface, which it is
-// from init to shutdown.
+// from the first configure to shutdown (before it, at init, the backbuffer
+// is made alone and the texture waits for the surface).
 void GuiPlatform::ensure_backbuffer(int w, int h) {
     if (w <= 0 || h <= 0) return;
     if (!(back_ && back_w_ == w && back_h_ == h)) {
@@ -1333,7 +1326,8 @@ void GuiPlatform::destroy_backbuffer() {
 }
 
 // THE PROCESS'S EGL OBJECTS (the members' comment, platform_wayland.h), made
-// once, at init. THE DISPLAY IS THE WAYLAND CONNECTION'S OWN:
+// once, at the first configure (on_xdg_surface_configure, the rule there),
+// and standing across every run. THE DISPLAY IS THE WAYLAND CONNECTION'S OWN:
 // eglGetPlatformDisplay over wl_display_ (EGL 1.5 core; Mesa then talks to
 // the compositor on its own event queue, which this loop never dispatches —
 // eglSwapBuffers does). The config is RGBA 8/8/8/8 EXACTLY, no depth, no
@@ -1478,8 +1472,9 @@ bool GuiPlatform::present() {
     // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size the
     // frame was painted at and the texture follows), never eglQuerySurface's
     // answer: Mesa moves EGL_WIDTH / EGL_HEIGHT at wl_egl_window_resize only
-    // while it holds no back buffer, and at the first configure it holds the
-    // one eglMakeCurrent made at the init size. Android's present the same.
+    // while it holds no back buffer, so a resize taken between a frame's
+    // first draw and its swap is not yet the surface's. Android's present
+    // the same.
     if (!gl_canvas_.present_frame(back_, damage_, canvas_frame_,
                                   back_w_, back_h_))
         return false;
@@ -2506,12 +2501,25 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
 
     if (first) {
         has_initial_configure_ = true;
-        if (want_w > 0 && want_h > 0 &&
-            (want_w != width_ || want_h != height_)) {
+        if (want_w > 0 && want_h > 0) {
             width_  = want_w;
             height_ = want_h;
-            resize_surface_buffers();
         }
+#if WARPTEMPO_CANVAS_GL
+        // THE EGL WINDOW SURFACE IS MADE AT THE FIRST CONFIGURE, AT ITS SIZE
+        // (2026-10-29): Mesa acquires the surface's first back buffer at
+        // eglMakeCurrent, and a wl_egl_window_resize before that buffer's
+        // swap does not remake it — a surface made at init's cold size would
+        // map the toplevel with a cold-sized buffer under a frame painted and
+        // viewported at the configure's size (the laptop's launch flash, a
+        // crop of the empty canvas until the second frame). An unsized first
+        // configure keeps the cold size and the surface is made at it.
+        // Making it attaches and commits nothing, so the first commit with
+        // content is still the hold's one frame. Once per process (ensure_gl,
+        // the members' comment, platform_wayland.h).
+        ensure_gl();
+#endif
+        resize_surface_buffers();
         input_.set_surface_width(width_);
         damage_whole_surface();
         if (on_resize_) on_resize_(width_, height_);

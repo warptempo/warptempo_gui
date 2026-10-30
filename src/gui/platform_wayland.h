@@ -824,17 +824,18 @@ private:
     int              back_h_ = 0;
     void ensure_backbuffer(int w, int h);
     void destroy_backbuffer();
-    // THE EGL OBJECTS, all the PROCESS'S: the window is made once per
-    // process and stands across every run (platform.h's loop contract), so
-    // the display, config, context, wl_egl_window and window surface are
-    // made at init() and destroyed at shutdown (destroy_wayland_state),
-    // never per project. The EGL handles are spelled void* (each EGL type is
-    // one under Mesa's headers as under the NDK's) so no EGL header reaches
-    // this file; the wl_egl_window is an incomplete type. EVERYTHING GLES
-    // AND NEITHER EGL NOR WINDOW — the programs, the texture that follows
-    // the backbuffer's size, the canvas list's objects, the upload walk and
-    // the frame's draw — is gl_canvas_'s (GuiGlCanvas, gl_canvas.h), the one
-    // owner both platforms' presents drive.
+    // THE EGL OBJECTS, all the PROCESS'S: the window is made once per process
+    // and stands across every run (platform.h's loop contract), so the
+    // display, config, context, wl_egl_window and window surface are made at
+    // the first configure (ensure_gl, the rule at its call in
+    // on_xdg_surface_configure) and destroyed at shutdown
+    // (destroy_wayland_state), never per project. The EGL handles are spelled
+    // void* (each EGL type is one under Mesa's headers as under the NDK's) so
+    // no EGL header reaches this file; the wl_egl_window is an incomplete
+    // type. EVERYTHING GLES AND NEITHER EGL NOR WINDOW — the programs, the
+    // texture that follows the backbuffer's size, the canvas list's objects,
+    // the upload walk and the frame's draw — is gl_canvas_'s (GuiGlCanvas,
+    // gl_canvas.h), the one owner both platforms' presents drive.
     void*                 egl_display_ = nullptr;
     void*                 egl_config_  = nullptr;
     void*                 egl_context_ = nullptr;
@@ -883,10 +884,10 @@ private:
     size_t    shm_pool_size_ = 0;
     struct wl_shm_pool* shm_pool_ = nullptr;
 #endif
-    // THE SURFACE'S BUFFERS FOLLOW ITS SIZE (init and every configure that
-    // moves width_ / height_): the cpu canvas's shm pool remade, or the gl
-    // canvas's EGL window resized and its backbuffer remade (the texture
-    // following it, ensure_backbuffer).
+    // THE SURFACE'S BUFFERS FOLLOW ITS SIZE (init, the first configure and
+    // every later configure that moves width_ / height_): the cpu canvas's
+    // shm pool remade, or the gl canvas's EGL window resized and its
+    // backbuffer remade (the texture following it, ensure_backbuffer).
     void resize_surface_buffers();
 
     // -- Window state --
