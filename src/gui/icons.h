@@ -55,12 +55,11 @@ enum class Icon {
                          // (architect 2026-10-24)
     AppIcon,             // the program icon outside the window, a symlink
                          // to Quaver.svg (architect 2026-10-23: "the new note
-                         // glyph on the caption's color"): the Android
-                         // launcher icon a build product of this file
-                         // (android/app/build_apk.sh's launcher step); the
-                         // Linux icon packaging/warptempo_gui.svg, a link to
-                         // Quaver.svg (docs/INSTALL.md). No painter draws
-                         // it; the launch's load vouches that the file parses
+                         // glyph on the caption's color"): the launcher
+                         // icon a build product of this file
+                         // (android/app/build_apk.sh's launcher step). No
+                         // painter draws it; the launch's load vouches that
+                         // the file parses
     Quaver,              // the logo lane's quaver (architect 2026-10-23):
                          // Gemini Argon's one-path conversion of the
                          // planner's bitmap at his prompt, a BOXED DRAWING
@@ -75,9 +74,9 @@ inline constexpr int kIconCount = 6;
 // file in assets/icons/ is `<name>.svg`. A misspelling is a missing file at
 // the next launch, which fails it. THE REPEATS ARE SYMLINKS, relative, inside
 // the folder: AppIcon.svg -> Quaver.svg and WavRow.svg -> Quaver.svg (the
-// folder's README lists them). Both bundle roads dereference a link (the
-// laptop's read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy),
-// so the load reads a link as the file it names.
+// folder's README lists them). The bundle's road dereferences a link
+// (build_apk.sh's copy, cp -L), so the load reads a link as the file it
+// names.
 inline constexpr const char* kIconNames[] = {
     "FolderRow", "WavRow", "CardNormal", "CardCritical", "AppIcon", "Quaver",
 };
@@ -120,10 +119,9 @@ inline int icon_box_w_px(int box_h) {
 }
 
 // THE LOAD, once, in gui_main before the window: the folder's files fetched
-// from the bundle (GuiPlatform::bundled_icon_files — the repository's
-// assets/icons/ on the laptop, the APK's icons/ assets on the tablet; READ IN
-// PLACE, never copied into the config folder: nobody authors an icon on the
-// device), then per enumerator in enum order `<name>.svg` parsed
+// from the bundle (GuiPlatform::bundled_icon_files — the APK's icons/
+// assets; READ IN PLACE, never copied into the config folder: nobody authors
+// an icon on the device), then per enumerator in enum order `<name>.svg` parsed
 // (svg_icon::parse), all before any draw; files of other names (the README,
 // the licence text) ignored. THE ERROR ARM'S PRODUCERS: the bundle
 // unreadable (IO), the file not there, or a file not well-formed SVG (a

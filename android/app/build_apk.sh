@@ -9,10 +9,6 @@
 #
 #     adb install -r android/app/build-android/warptempo.apk
 #
-# THE REFERENCE CANVAS (2026-10-13) is the same command with WT_CANVAS=cpu: it
-# builds in android/app/build-android-cpu/ and stages warptempo-cpu.apk there
-# (the canvas block below).
-#
 # Idempotent: the packaging tree is wiped first. The CMake build tree is NOT
 # wiped -- a re-run is an incremental rebuild, which is the whole point of
 # having one -- so `rm -rf android/app/build-android` is the clean-build gesture.
@@ -32,23 +28,8 @@ APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$APPDIR/../toolchain/00_env.sh"
 
-# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_CANVAS owns the
-# rule): WT_CANVAS=gl (the default, the product) or cpu (the reference build
-# the screencap comparison installs in turn). The cpu variant builds in its
-# own tree, "<build dir>-cpu" (configure.sh derives the same one), and stages
-# its own APK, warptempo-cpu.apk, so both exist side by side; the two share
-# the package name and the key, so installing either replaces the other.
-CANVAS="${WT_CANVAS:-gl}"
-case "$CANVAS" in
-    gl|cpu) ;;
-    *) wt_die "WT_CANVAS must be gl or cpu, not '$CANVAS'" ;;
-esac
 BUILD="${WT_ANDROID_BUILD_DIR:-$APPDIR/build-android}"
 APKNAME="warptempo.apk"
-if [ "$CANVAS" = cpu ]; then
-    BUILD="$BUILD-cpu"
-    APKNAME="warptempo-cpu.apk"
-fi
 PKGDIR="$BUILD/package"
 ASSETS="$PKGDIR/assets"
 STAGING="$PKGDIR/staging"
@@ -110,10 +91,8 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 # --- 1. assets ------------------------------------------------------------
 # THE PRODUCT'S FONT FILES: Liberation Sans and Liberation Sans Bold
 # (TrueType; architect 2026-10-12, the one face), THE NAMES READ OUT OF
-# gui_font.h's kGuiFontFiles initializer, the one list (CMakeLists.txt's
-# font step reads the same), copied from the repository's own fonts/
-# (architect 2026-10-02) -- the very files the Linux executable compiles in,
-# so both devices paint from the same bytes and the build depends on no
+# gui_font.h's kGuiFontFiles initializer, the one list, copied from the
+# repository's own fonts/ (architect 2026-10-02), so the build depends on no
 # installed font package. They are what gui_font_bundled.cpp builds the
 # product's faces from, and android_main ABORTS if one is missing -- a font
 # that failed to install would otherwise paint silently in cairo's default
@@ -155,9 +134,7 @@ wt_say "assets: icons, ${#ICON_FILES[@]} files"
 # picture replaces it.)
 
 # --- 2/3. configure + build ----------------------------------------------
-# WT_CANVAS is in the environment, so configure.sh reads the same canvas and
-# configures the same tree.
-WT_CANVAS="$CANVAS" bash "$APPDIR/configure.sh"
+bash "$APPDIR/configure.sh"
 wt_say "building $LIBNAME"
 cmake --build "$BUILD" -j"$(nproc)"
 
@@ -201,11 +178,9 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # into a staged copy of res/ under the package tree,
 # which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.svg, read
 # through its link: THE QUAVER, AppIcon.svg -> Quaver.svg (architect
-# 2026-10-23: "the new note glyph on the caption's color"). THE FRAMINGS (architect
-# 2026-10-12, "two framings is normal": Android's adaptive mask demands a
-# full-bleed square, Linux desktops take any shape -- the Linux icon is the
-# bare drawing, packaging/warptempo_gui.svg, a link into the repository,
-# docs/INSTALL.md): the FOREGROUND the drawing fitted to the 52 dp art square
+# 2026-10-23: "the new note glyph on the caption's color"). THE FRAMING
+# (Android's adaptive mask demands a full-bleed square): the FOREGROUND the
+# drawing fitted to the 52 dp art square
 # (architect 2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp
 # series on the glass: the 64 dp art filled ~86 % of the launcher's visible
 # tile and nearly touched its corners) -- an SVG rendered by RESVG, the
@@ -313,17 +288,13 @@ wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that 
 # records how it was measured): an extra entry or a missing one fails the
 # build. libnativewindow is in it since the frame-rate pin
 # (ANativeWindow_setFrameRate lives there, not in libandroid); the git stack
-# added nothing, zlib being libgit2's bundled copy. THE SET IS PER CANVAS
-# (2026-10-13): the cpu canvas's is the seven below; the gl canvas adds
-# libEGL.so and libGLESv3.so, its two NDK stable-ABI libraries
-# (CMakeLists.txt's canvas block) — nine.
+# added nothing, zlib being libgit2's bundled copy; libEGL.so and libGLESv3.so
+# are the GL canvas's two NDK stable-ABI libraries (CMakeLists.txt's link
+# line). Nine.
 DT_SET=(libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so
-        liblog.so)
-if [ "$CANVAS" = gl ]; then
-    DT_SET+=(libEGL.so libGLESv3.so)
-fi
+        liblog.so libEGL.so libGLESv3.so)
 wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" "${DT_SET[@]}" \
-    || wt_die "DT_NEEDED of $LIBNAME is not the $CANVAS canvas's allowlist (above)"
+    || wt_die "DT_NEEDED of $LIBNAME is not the allowlist (above)"
 "$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "SONAME" || true
 
 echo

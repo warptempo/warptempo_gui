@@ -4,12 +4,10 @@
 // else, so the painters never name a font. THE PRODUCT'S FACE IS ITS OWN
 // (architect 2026-10-02: "the app becomes its own thing; it has its own
 // fonts"): LIBERATION SANS 2.1.5, Regular and Bold (fonts/README.md has the
-// provenance and the licence), carried by both binaries - compiled into the
-// Linux executable (gui_font_embedded.cpp), shipped as the APK's assets on
-// Android - and turned into faces by ONE implementation on both devices,
-// gui_font_bundled.cpp, through FreeType. Neither device asks anything for a
-// face: fontconfig is never consulted on the laptop and the tablet has
-// nothing to consult. ONE FACE, HARD-CODED (architect 2026-10-12; the Tahoma
+// provenance and the licence), shipped as the APK's assets (the one carrier
+// since the laptop GUI's drop, architect 2026-10-30) and turned into faces by
+// ONE implementation, gui_font_bundled.cpp, through FreeType. Nothing is
+// asked for a face: the tablet has no fontconfig to consult. ONE FACE, HARD-CODED (architect 2026-10-12; the Tahoma
 // and FreeSans sets and the `font` device key went that day,
 // docs/engineering/closed_questions.md).
 //
@@ -33,10 +31,8 @@
 // cards, the prompts, the dialog editors, the logo lane's battery + clock
 // legend) — THE TWO ROWS COINCIDE IN NUMBER TODAY AND STAY TWO ROWS: the
 // roster is the distinction (the Program row tunes with the cues, the
-// Body row with the rest); TITLE 24 Bold (the logo lane's brand "Warptempo" alone since
-// 2026-10-24, the laptop's caption title beside it that morning; architect 2026-10-24, "the caption size
-// 24", off the logo mocks — 22 from 2026-10-23
-// until then), RULER 16 Regular (the ruler's digits alone; architect
+// Body row with the rest); TITLE 24 Bold (the logo lane's brand "Warptempo"
+// alone; architect 2026-10-24, "the caption size 24", off the logo mocks), RULER 16 Regular (the ruler's digits alone; architect
 // 2026-10-24, "R16" off 14 / 15 / 16 / 17 on his type sheet — "we took
 // them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
 // 2026-10-23 to 2026-10-24, the skin's first night 15), LEGEND 14
@@ -95,12 +91,11 @@ enum class GuiFace { Body, Bold, Small, Program, Legend, Keys };
 inline constexpr std::size_t kGuiFaceCount = 6;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
-// Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the Linux
-// font step (CMakeLists.txt) and the APK's asset step
-// (android/app/build_apk.sh) each read the quoted names out of this
-// initializer, so a file added here is embedded and packed with no second
-// list; the two backends hand the bytes in in this order, and a use names
-// its file by its index here. Both are TrueType (FT_New_Memory_Face).
+// Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
+// asset step (android/app/build_apk.sh) reads the quoted names out of this
+// initializer, so a file added here is packed with no second list; the
+// backend hands the bytes in in this order, and a use names its file by its
+// index here. Both are TrueType (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps
@@ -136,11 +131,10 @@ struct GuiFontBytes {
     size_t         len  = 0;
 };
 
-// THE ONE SETUP CALL, with TWO CALLERS, one per platform, each once before the
-// first paint: the Wayland backend (GuiPlatform::init) hands in the bytes
-// compiled into the executable, the Android backend (install_fonts_or_die)
-// the files it read out of the APK's assets. The bytes are COPIED — the
-// caller may free or unmap them the moment it returns.
+// THE ONE SETUP CALL, with ONE CALLER, once before the first paint: the
+// backend (install_fonts_or_die, platform_android.cpp) hands in the files it
+// read out of the APK's assets. The bytes are COPIED — the caller may free
+// or unmap them the moment it returns.
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
 // two files selects as an FT-BACKED cairo face, which is what text_shape
@@ -296,7 +290,3 @@ inline double gui_tracking_px(const GuiFont&) {
 // over-estimates by design; no layout reads this.
 double gui_font_advance_bound_px(const GuiFont& f);
 
-// THE LINUX BINARY'S COPY OF THE TWO FILES, in kGuiFontFiles' order,
-// defined by gui_font_embedded.cpp, which only the Linux target compiles (the
-// APK carries the same files as assets instead).
-extern const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount];

@@ -19,9 +19,7 @@
 #include <utility>
 #include <vector>
 
-#if defined(__ANDROID__)
 #include <sys/system_properties.h>
-#endif
 
 // The rules are at the declarations (materials.h).
 
@@ -572,15 +570,9 @@ namespace materials {
 
 bool trace_enabled() {
     static const bool on = [] {
-        if (const char* t = std::getenv("WT_PAINT_TRACE"); t && t[0] == '1')
-            return true;
-#if defined(__ANDROID__)
         char value[PROP_VALUE_MAX] = {};
-        if (__system_property_get("debug.warptempo.trace", value) > 0 &&
-            std::strcmp(value, "1") == 0)
-            return true;
-#endif
-        return false;
+        return __system_property_get("debug.warptempo.trace", value) > 0 &&
+               std::strcmp(value, "1") == 0;
     }();
     return on;
 }

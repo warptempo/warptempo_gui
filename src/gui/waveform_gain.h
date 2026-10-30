@@ -47,7 +47,7 @@
 //
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
 //   the expander's multiplier and clamps the pair to [-1, 1]
-//   (render_waveform): THE OUTER BAR, the levelled, expanded one, painted
+//   (render_waveform_columns): THE OUTER BAR, the levelled, expanded one, painted
 //   first in the plate's own ink (the `waveform_ink` role). Over it the lit
 //   lamp paints
 //   THE INNER BAR, the source's own bar through the same expander, THE
@@ -173,7 +173,7 @@
 //   onset inside a coarse column is never dimmed by the dip before it and
 //   the rule holds at every zoom — erring, where it errs, toward the
 //   leveler's plain picture, never toward a hole. It applies exactly
-//   where the gain applies (render_waveform's `gain_or_null`): the dark
+//   where the gain applies (render_waveform_columns' `gain_or_null`): the dark
 //   lamp stays raw, in both audio views.
 //
 //   THE CRITERION, the architect's: the SWELL before an onset — the dip in
@@ -207,7 +207,7 @@
 //   between them is g / (c x 1/2), a pure function of L, and since
 //   c x 1/2 <= 1/2 < 1 <= g the inner can no longer exceed the outer in
 //   height about the centre row (a column wholly on one side of zero has its
-//   outer pushed outward past the inner — render_waveform's declaration). The
+//   outer pushed outward past the inner — render_waveform_columns' declaration). The
 //   reading is the source's bar over a levelled bar behind it, the core's
 //   relative thickness the loudness.
 //

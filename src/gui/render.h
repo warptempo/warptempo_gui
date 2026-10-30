@@ -172,7 +172,7 @@ struct TrimRange {
 // THE TABLET CONVERTS sRGB -> DISPLAY-P3 AT THE PAINTER'S ENTRY
 // (display_color; the math and every converting site at
 // display_transform.h's head) and the panel presents the color the browser
-// presents; the laptop's untagged sRGB surface takes the bytes as they are.
+// presents.
 // From 2026-10-02 until this ruling the bytes went to the P3 layer
 // unconverted, a hex then being a P3 triple.
 //
@@ -193,7 +193,7 @@ struct TrimRange {
 //                 frame, Windows 2000's Standard quartet — went 2026-10-23
 //                 with those parts: the hi-fi skin's keys,
 //                 cool_edit_paint.h; its caption and border went in turn
-//                 2026-10-24, labwc's);
+//                 2026-10-24);
 //   (PLAIN SUNKEN, Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) —
 //                 paint_relief_plain_sunken, the scrub's channel's until it
 //                 became two hairlines — went 2026-10-23 with the sweep);
@@ -259,7 +259,7 @@ struct TrimRange {
 //                 2026-10-10);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
-//   (THE CAPTION and THE WINDOW BORDER are labwc's since 2026-10-24, the
+//   (THE CAPTION and THE WINDOW BORDER went 2026-10-24, the
 //                 app painting no window chrome — the caption's six roles,
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
@@ -878,7 +878,7 @@ void install_true_colors(bool on);
 // THE WAVEFORM IS THE PROGRAM'S, A CANVAS UNDER ONE INK (the
 // `waveform_canvas` and `waveform_ink` roles): with the magnification lamp dark
 // the plate is the raw bar alone in the ink, with no outline; lit, the plate
-// is two bars (the rule is at render_waveform's declaration), BOTH FILLED IN
+// is two bars (the rule is at render_waveform_columns' declaration), BOTH FILLED IN
 // THE INK, the inner distinguished only by its OUTLINE, its true contour, an
 // erosion at distance waveform_line_px() (one device px at every scale since
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
@@ -888,11 +888,11 @@ void install_true_colors(bool on);
 // palette_presets.inc; architect 2026-10-26):
 // the outline #0A9757 under the #4BF3A7 ink on black — each outline
 // the ink at HLS lightness 0.3157, the generator's outline rule
-// (tools/theme_catalog/gen_presets.py). THE PLATE
-// BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
-// pair rides each render job and the cache's fingerprint
-// (waveform_plate_inks); the canvas is laid live under the plate's
-// transparent gaps (render_canvas) and bakes nowhere.
+// (tools/theme_catalog/gen_presets.py). THE PLATE WEARS THE INK AND THE
+// OUTLINE AS PUBLISHED (the sink writes their words, GuiCanvasSink::plate),
+// so the pair rides the cache's fingerprint (waveform_plate_inks) and
+// publishes with the plate; the canvas is laid live under the plate's
+// transparent gaps (render_canvas).
 //
 // THE CANVAS IS COOL EDIT'S (architect 2026-10-09, the third part):
 // THE WAVEFORM AREA IS THE CANVAS'S INTERIOR, inside its frame (the ring of
@@ -913,17 +913,18 @@ void install_true_colors(bool on);
 // (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
 // enough zero that the red line would become visible ever";
-// render_center_lines, a live pass after the plate's blit, the plate baking
-// its two inks alone); then THE STEREO DIVIDER'S THREE ROWS between the two
+// render_center_lines, a live pass after the plate, the plate wearing its
+// two inks alone); then THE STEREO DIVIDER'S THREE ROWS between the two
 // wells (architect 2026-10-16, chrome rows on the canvas, waveform_divider;
 // render_waveform_divider, over the plate so a plate from before a resize
 // never crosses them); then the lead-in ring, the dots, the scanner and the
-// zoom anchor (on_redraw's paint order). THE PICTURE IS ONE THING — the
+// zoom anchor (build_canvas_list's order). THE PICTURE IS ONE THING — the
 // canvas, the grid, the ink if any, the center lines — SO THE CENTER LINES
-// PAINT WHENEVER THE GRID DOES: over the plate while audio is loaded (a null
-// plate's frame included, its blit skipped), and with none loaded — no
-// source, or a load running — directly over the canvas and its grid, right
-// after render_canvas, the divider after them (on_redraw's `plate_branch`).
+// PAINT WHENEVER THE GRID DOES: over the plate while audio is loaded (a
+// frame before the first plate included, its plate record absent), and with
+// none loaded — no source, or a load running — directly over the canvas and
+// its grid, right after render_canvas, the divider after them
+// (build_canvas_list's `plate_branch`).
 // NO VERTICAL GRID (architect 2026-10-09 ~18:40: Cool Edit's verticals on
 // the ruler's major ticks, drawn that afternoon, were "solid versus the
 // markers dotted, they compete" — "drop them"). HIS PRINCIPLE, recorded
@@ -934,7 +935,7 @@ void install_true_colors(bool on);
 // A recorded departure from Cool Edit, as THE CENTER
 // LINE OVER THE INK is (the original mock drew it under the waveform with
 // the grid).
-// The waveform's plate is blitted over the ground and the grid, the ink over
+// The waveform's plate is drawn over the ground and the grid, the ink over
 // every grid line, the center lines over the ink. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
 // below), so the lines stand where the plate's zero is. THE CHANNELS FILL
@@ -1005,8 +1006,8 @@ WaveformPlateInks waveform_plate_inks();
 // chrome length is the number Windows 95 drew at 96 dpi (or, where Windows
 // has no such element, the length that kept its device size on the tablet
 // when the unit changed), and gui_scale is the number of DEVICE px per
-// Windows px, in percent — the tablet 300 (a 16-px glyph = 48 device px),
-// the laptop 138 (22). EVERY PAINTED DIMENSION IN THE TREE RIDES IT through
+// Windows px, in percent — the tablet 300 (a 16-px glyph = 48 device px).
+// EVERY PAINTED DIMENSION IN THE TREE RIDES IT through
 // scaled_px, below, where the rounding rule is stated. (The unit before it
 // was the laptop's own pixel at 100 %, the kdenlive crops' measure; the
 // constants were re-authored from it the same day.)
@@ -1163,10 +1164,9 @@ constexpr double kFlagBottomLiftPx = 0.0;
 // the moment it is un-zeroed (the note at kFlagBottomLiftPx).
 constexpr double kRowGapPx = 0.0;
 
-// Defensive window floor (a conservative 640x480 minimum). Enforced two ways:
-// the Wayland set_min_size hint at toplevel creation, and an internal clamp in
-// the geometry helpers so the waveform arithmetic is always valid regardless of
-// what the compositor sends. Not sized to fit content — the longest dialogue
+// Defensive window floor (a conservative 640x480 minimum), enforced by an
+// internal clamp in the geometry helpers so the waveform arithmetic is always
+// valid regardless of what size the window reports. Not sized to fit content — the longest dialogue
 // may clip at the floor, which is acceptable (nobody authors at 640x480).
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
@@ -1178,9 +1178,8 @@ constexpr int kMinWindowHeightPx = 480;
 // REMOVED 2026-10-24 with its lane, its painter, its buttons and its light
 // line, architect: "release it to the window manager as we had in the
 // beginning of this project before we introduced the client-side
-// decoration". THE APP PAINTS NO WINDOW CHROME: labwc decorates the laptop's
-// window (server-side decorations, platform_wayland.cpp's init), the
-// tablet's full-screen window has none, and the program starts at the
+// decoration". THE APP PAINTS NO WINDOW CHROME: the tablet's full-screen
+// window has none, and the program starts at the
 // surface's first row with the logo lane below. Its two lengths the logo
 // lane and the cards read are the logo lane's own below. Git history.)
 
@@ -1193,9 +1192,7 @@ constexpr int kMinWindowHeightPx = 480;
 // THAT PAD ALONE GROWS — kLogoLaneAt300, 72 px at 300 % through skin_px
 // (his pick P72 off P38 .. P84 by 2; 48 at 200 %, 36 at 150 %, 33
 // at 138 %), the band's three other pads the strip pad (strip_pad_px). It
-// stands AT THE SURFACE'S TOP ON BOTH DEVICES since 2026-10-24 (under the
-// app's own caption on the laptop that morning; labwc's title bar stands
-// above the surface since). THE LANE'S GROUND IS THE BAKE'S, nothing else
+// stands AT THE SURFACE'S TOP since 2026-10-24. THE LANE'S GROUND IS THE BAKE'S, nothing else
 // on it — no line, no caption tone — and it is INERT CHROME like the
 // strips' pads: no hit, no tooltip, no gesture (the band's ground falls
 // through to nothing, input_pointer.cpp). paint_handler.cpp's
@@ -1298,8 +1295,7 @@ inline int logo_lane_h_px() {
 // window, window_frame_px / paint_window_sizing_frame, Windows 95's raised
 // frame from 2026-10-05 and the hi-fi skin's transparent band under one
 // device px of the ring's light tone from 2026-10-23 — IS REMOVED 2026-10-24
-// with the caption: labwc draws the borders and owns the resize. Git
-// history.)
+// with the caption. Git history.)
 // (THE MENU ROW — the top strip's lane 1 under the caption from 2026-08 to
 // 2026-10-21, Windows' plain menu bar carrying File, Edit and Settings, a
 // face row over its 19-W content — IS REMOVED, architect 2026-10-21: "I'd
@@ -1412,7 +1408,7 @@ void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // 23 W, the buttons abutting at that pitch; A COMPOSITE OF ITS ROUNDED
 // PARTS (scaled_px's rule), each old line's slot one W and the glyph
 // scaled_px(20): 69 device px at 300 %, 46 at 200 %, 84 at 360 % (the glyph
-// 72, the slots 4 each), 31 at the laptop's 138 % — AN AREA since the hi-fi
+// 72, the slots 4 each), 31 at 138 % — AN AREA since the hi-fi
 // skin, THE KEY'S BOX (cool_edit_paint.h's paint_key, whose edges are one
 // device px and whose down face rides one device px right and down checked,
 // two held, 2026-10-23).
@@ -1621,7 +1617,7 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 // (The ruler's 6 W went to the marker lane, architect 2026-10-09 ~21:00 —
 // program_spec.h's ruler and marker-lane fields; the two lanes' sum keeps
 // its 87 device rows at 300 % and its 107 at 360 %, and at 138 % rounds one
-// row taller, 38 against 37, the laptop's well one row shorter.)
+// row taller, 38 against 37, the well one row shorter.)
 //   THE FRAME  the canvas's dark top frame row, one hairline
 //              (canvas_top_frame_h_px, below): 1 at every scale
 //              (2026-10-28; 3 / 1 / 4, one scaled W, until then).
@@ -1673,7 +1669,7 @@ inline int cue_triangle_unit_px() {
 // the current setting and apply"). THE CELL STAYS ONE DEVICE PX
 // (cue_triangle_unit_px above) and the staircase whole cells; only the
 // count rides the scale: 8 rows at 300 %, 5 at 200 % (Cool Edit's own 9 by
-// 5, 1:1 on the laptop), 4 at 150 % and at 138 % (3.68 rounded), 10 at
+// 5), 4 at 150 % and at 138 % (3.68 rounded), 10 at
 // 360 %; at the scale's floor of 50 % (is_gui_scale_percent,
 // device_config.h) 1.33 rounds to 1 — a one-row staircase, the stem's own
 // cell and its shadow, and the drawing holds: no floor, no clamp. The rows
@@ -1900,7 +1896,7 @@ GuiRect bottom_canvas_frame_area(const AppState& a);
 // the hairline itself since 2026-10-28, canvas_frame_column_w_px above) —
 // waveform_area's x and width, so the grid floor's leftover decides them and
 // no inset does: 23 and 2281 on the tablet's 2304 at 300 % (the area 24 ..
-// 2279), 15 and 1905 on the laptop's 1920 at 200 % and at 138 %. EVERY
+// 2279), 15 and 1905 on a 1920-px window at 200 % and at 138 %. EVERY
 // STRIP AND BOX STANDING ON THEM READS THEM HERE (architect 2026-10-23,
 // "yes" to tying both strips' ends to the ring): the column's frame
 // (paint_canvas_column_frame), the modal family's box and its controls row
@@ -1997,7 +1993,7 @@ constexpr int chrome_stack_authored_h() {
 // the frame rows' slots gave it 4 rows; 999 from 2026-10-24, when the trim
 // field's 15 px gave it 3; 996 under the 18-px field, 989 under the 40-row
 // caption over the strip pad, 2026-10-23 to 2026-10-24) — main.cpp's lane
-// table the record of each scale, the laptop's among them.
+// table the record of each scale.
 static_assert(chrome_stack_authored_h() == 75);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
@@ -2041,7 +2037,7 @@ inline int scrub_thumb_above_px() {
 // stem (render_strip_anchor_stem), the phase-reset lead-in ring's dots
 // (its right side and its top and bottom runs, paint_phase_reset_overlay_ring;
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
-// an erosion at distance 1 (render_waveform's inner_interior, render.cpp, the width riding the
+// an erosion at distance 1 (render_waveform_columns' inner_interior, render.cpp, the width riding the
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
 // (render_canvas, render_center_lines) — AND ONE AREA OFF IT, THE CUES'
 // TRIANGLES AND THE PLAYHEAD'S HEAD (paint_ce_cue_triangle), whose unit is
@@ -2096,9 +2092,7 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
 // — the stem the cue's triangle and the playhead's head stand centred on
 // (paint_ce_cue_triangle, ~14:35). Painted through the canvas sink
 // (2026-10-13): dotted_waveform_line_runs (after waveform_well_rows) makes
-// the line's runs, one per well, and GuiCanvasSink::dots paints them — on
-// the cairo road one 1 x 1 rectangle a dot and one fill, the shape this line
-// always drew.
+// the line's runs, one per well, and GuiCanvasSink::dots records them.
 //
 // ONE DOTTED RUN ON THE CANVAS (2026-10-13, the canvas sink's record,
 // canvas_sink.h): the one-device-px cells of a column (`vertical`, rows
@@ -2512,20 +2506,19 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // channel's horizontal grid, the channels' bands the plate's own
 // (waveform_channel_band) — no vertical grid. render_waveform_divider owns
 // THE STEREO DIVIDER'S THREE ROWS across the area (architect 2026-10-16,
-// waveform_divider: chrome on the canvas, through the sink so both roads
-// paint them alike), a pass AFTER THE PLATE and the center lines (its
+// waveform_divider: chrome on the canvas, through the sink), a pass AFTER
+// THE PLATE and the center lines (its
 // reason at its definition, render.cpp: a plate from before a resize stands
 // until the worker republishes). render_center_lines owns THE
 // CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
 // channel's zero row, one device px in `center`, painted live after the
-// plate's blit and before the dots (on_redraw's paint order) — the canvas's
-// lines stay these two painters' and the plate keeps baking its two inks
-// alone (WaveformPlateInks). The canvas's frame round the area is
+// plate and before the dots (build_canvas_list's order) — the canvas's
+// lines stay these two painters' and the plate wears its two inks alone
+// (WaveformPlateInks). The canvas's frame round the area is
 // paint_canvas_column_frame's (paint_handler.cpp).
 // THE THREE CANVAS PAINTERS PAINT THROUGH THE CANVAS SINK (2026-10-13,
-// canvas_sink.h): the cairo sink on the cpu road, the same rectangles and
-// fills as ever; the draw list under the GL canvas (both platforms' gl
-// builds since 2026-10-14), where the backbuffer's interior is cleared instead and the GPU draws them.
+// canvas_sink.h): the frame's draw list, the backbuffer's interior cleared
+// and the GPU drawing them.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area);
 void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
@@ -2550,17 +2543,14 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 
 // THE DIRECT ROAD (2026-10-13): the context's own target as pixel words, and
 // the clip it holds in device pixels, for a painter that writes the words
-// cairo would leave instead of asking cairo for them — the marker stems'
-// dots (paint_marker_stems through the cairo canvas sink's stem_dots,
-// canvas_sink.cpp, since 2026-10-13) and the cues' triangles (CueTrianglePass,
-// one target per pass, cool_edit_paint.h), each stating at its site why
-// its words are cairo's. Taken only where such a write can be cairo's
+// cairo would leave instead of asking cairo for them — the cues' triangles
+// (CueTrianglePass, one target per pass, cool_edit_paint.h), stating at its
+// site why its words are cairo's. Taken only where such a write can be cairo's
 // result: the target an ARGB32 image surface with no group open on it, no
 // device offset and unit device scale; the operator OVER; the matrix a pure
-// integral translation (both platforms hand on_redraw an untranslated
-// context since 2026-10-24, when the app's window frame went — translated
-// by its integral width until then, platform_wayland.cpp /
-// platform_android.cpp's paint loops; the flag cache's by its band's origin row, upward, since
+// integral translation (the platform hands on_redraw an untranslated
+// context, platform_android.cpp's paint loop; the flag cache's by its
+// band's origin row, upward, since
 // 2026-10-13, FlagCache's head, paint_handler.h); the clip a list of
 // integral rectangles (cairo_copy_clip_rectangle_list, in user space, so the
 // translation carries them to device pixels; each is intersected with the
@@ -2584,7 +2574,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // other word is disabled.)
 
 
-// THE WAVEFORM AREA IS THE CANVAS: the plate blit, the canvas's lines, the
+// THE WAVEFORM AREA IS THE CANVAS: the plate, the canvas's lines, the
 // lead-in ring and the zoom anchor's stem each span its columns (row 6's
 // canvas paragraph), and every vertical line on it spans its two wells.
 //
@@ -2610,10 +2600,9 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // two channels' rows: the area's height less the divider, halved and floored,
 // is each channel's band (below). Across the area's columns the divider's
 // three rows are painted through the canvas sink (render_waveform_divider,
-// after the plate and the center lines, on_redraw's paint order on both
-// roads), so the GL canvas draws them from its list exactly as the cairo
-// road fills them (canvas_sink.h's head); across the frame columns they are
-// the frame painter's. THEIR TONES ARE ONE END TO END (architect
+// after the plate and the center lines, build_canvas_list's order), so the
+// GL canvas draws them from its list (canvas_sink.h's head); across the
+// frame columns they are the frame painter's. THEIR TONES ARE ONE END TO END (architect
 // 2026-10-22: the divider is a seam, not a choice): the two lines the ring
 // tones `ce_hilight` and `ce_dark` and the face row the ground's flat mean,
 // inside the area and across the frame columns alike, so no seam can stand
@@ -2674,7 +2663,7 @@ inline WaveformDivider waveform_divider(int area_h) {
 // where the canvas's ground paints and no ink reaches (the rule since the
 // channels first filled the canvas, 2026-10-09: the two bands stay equal, so
 // the plate's layout is one height). Its ZERO ROW is y + h / 2, the row
-// render_waveform's centre y + h · 0.5 floors to; its HALF HEIGHT H, the
+// render_waveform_columns' centre y + h · 0.5 floors to; its HALF HEIGHT H, the
 // grid's (row 6's canvas paragraph), runs from that row to the band's edge.
 // h is 0 only on a canvas under the divider and two rows.
 struct WaveformChannelBand {
@@ -2785,9 +2774,9 @@ struct WaveformBasis {
 // PREMULTIPLIED, as ARGB32 requires; at full alpha that is the colour itself.
 // The channel bytes round with std::nearbyint, the project's rule — vacuous for
 // the exact n/255 hex palette, decisive only if a mixed colour ever ties. The
-// one word owner for every image the painters write as words: the plate
-// (render_waveform) and the GPU canvas's sink (canvas_sink.cpp), each
-// handing it the color already converted for the window (display_color); a
+// one word owner for every image the painters write as words: the GPU
+// canvas's sink (canvas_sink.cpp: its records and the plate's two inks),
+// handed the color already converted for the window (display_color); a
 // bound icon's color (icons.cpp) takes the authored word's low 24 bits, its
 // raster converted after.
 inline uint32_t argb32_opaque_word(GuiColor c) {
@@ -2797,11 +2786,13 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
            (static_cast<uint32_t>(std::nearbyint(c.b * 255.0)));
 }
 
-// Draws one channel's waveform into `area`, which holds the `area.w` columns
-// starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
-// col0+area.w) of `basis`. Both callers are full-plate renders and pass
-// col0 = 0 with area.w == basis.full_width. When `warp_frame_map` is null (source view) the basis
-// viewport is source-frame and each column reads `audio.get_peak_range`
+// THE PLATE'S RENDER, render_waveform_columns (declared below): one channel's
+// waveform over `area`, which holds the `area.w` columns starting at GLOBAL
+// column `col0` — i.e. the column sub-range [col0, col0+area.w) of `basis`.
+// The one caller (render_waveform_to_plate_columns, waveform_cache.cpp) is a
+// full-plate render and passes col0 = 0 with area.w == basis.full_width.
+// When `warp_frame_map` is null (source view) the basis viewport is
+// source-frame and each column reads `audio.get_peak_range`
 // directly. When non-null (target view) it is target-frame: each column's
 // [t0, t1) is translated to source-frame via `map_target_to_source` before the
 // pyramid read, producing the deformed-waveform display.
@@ -2847,45 +2838,36 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // same audio rendered interior; every plate is a full render since the
 // shift-and-strip pan's retirement, so no plate ever stitches the two.)
 //
-// THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
-// ARGB32 pixel words directly, which is why it takes the surface rather than a
-// context. ONE COMPOSITING RULE, where there were two: every write REPLACES,
-// and no write reads. With the lamp dark a pixel takes its column's one bar,
-// and lit the inner bar's word where the inner covers it, else the outer's
-// (the inner over the outer where they overlap is the magnification rule's
-// order), else the zero word — a priority, so replacing is correct and
-// idempotent. THE CALL WRITES ITS BAND WHOLE: every pixel of `area`'s rows
-// across its columns (both clamped to the surface) is stored, row by row
-// from one scratch row re-decided only where a column's bar starts or ends
-// (2026-10-13, a cost cut measured on the tablet; the identity with the
-// column-by-column order of record and the measurement are stated once, at
-// the write pass in render.cpp), so nothing the surface held before the call
-// survives in that region and the caller clears nothing under it — the
-// max-compositing that the segments needed (they wrote into an
-// already-rendered neighbour) went with them. RETURNS whether the stored
-// region is `area` whole: false when the call returned early without
-// writing (a degenerate area, basis or surface) or `area` overhangs the
-// surface, and the caller clears what no call stored
-// (render_waveform_to_cache_surface, waveform_cache.cpp).
+// THE COLUMNS ARE THE PRODUCT (2026-10-13; the one road since 2026-10-30):
+// the function writes no pixel. Its product is each column's rows
+// (WaveformColumnRows below), and the GPU's select draws them
+// (gl_canvas.cpp; canvas_sink.h's head). ONE COMPOSITING RULE: no pixel is
+// blended and none is read. With the lamp dark a pixel takes its column's
+// one bar, and lit the inner bar's word where the inner covers it, else the
+// outer's (the inner over the outer where they overlap is the magnification
+// rule's order), else the zero word — a priority. RETURNS false where it
+// refuses without bounds (a degenerate area, basis or pyramid, or a band
+// that misses the plate), `out` then unspecified; `out.whole` says whether
+// the bounds cover `area` whole, and a band is drawn only then
+// (GuiPlateColumns::Band::stored).
 //
-// The words are PREMULTIPLIED ARGB32 (argb32_opaque_word): each ink's word is
-// built once per call; at full coverage each is its colour
-// itself, so there is one word per colour rather than a table. The surface is flushed
-// before the first CPU write and marked dirty after the last, so later cairo
-// use sees the pixels.
+// The inks' words are PREMULTIPLIED ARGB32 (argb32_opaque_word), built by the
+// sink from the published inks (GuiCanvasSink::plate); at full coverage each
+// is its colour itself, so there is one word per colour rather than a table.
 //
-// THE INKS ARE PASSED, `inks` (WaveformPlateInks, the job's snapshot of the
-// `waveform_ink` and `waveform_outline` roles AS THE WINDOW TAKES THEM —
-// already converted, waveform_plate_inks; the worker reads no live state): the plate paints in the ink with the lamp dark, and lit both bars in
+// THE INKS (WaveformPlateInks, the `waveform_ink` and `waveform_outline`
+// roles AS THE WINDOW TAKES THEM — already converted, waveform_plate_inks)
+// ride the plate's publication, not this function: the plate paints in the
+// ink with the lamp dark, and lit both bars in
 // the ink with the inner's outline in the outline (row 6) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
 // is BINARY: opaque bars and transparent gaps, with no fractional edges left.
-// THE GAPS SHOW THE GROUND render_canvas lays under the blit: the plate bakes
-// no ground colour, so the canvas has that one painter and the cold frame
-// before the first plate shows the same ground. Nothing recolours a plate
-// pixel after the blit (the sweep's region highlight, which lifted the ground
+// THE GAPS SHOW THE GROUND render_canvas lays under the plate: the plate
+// carries no ground colour, so the canvas has that one painter and the cold
+// frame before the first plate shows the same ground. Nothing recolours a
+// plate pixel after the plate's record (the sweep's region highlight, which lifted the ground
 // in the gaps and the set pixels over its span, retired 2026-10-03, architect:
 // "the trim bar is enough"); no reason left needs the gaps over an opaque
 // canvas-coloured plate, and the plate stays as it is.
@@ -2913,8 +2895,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // on one side of zero is the exception: THE ALIGNMENT, below). Each bar's
 // tips are CLAMPED to [-1, 1] before they become rows, and each keeps the
 // >=1px floor at both lane edges (a bar clamped whole to an edge is that
-// edge's row). The writer
-// replace-writes opaque words, so where the two overlap the inner wins: the
+// edge's row). The select
+// puts the inner over the outer, so where the two overlap the inner wins: the
 // reading is the source's bar, the same ink as the levelled bar behind it and
 // set off from it by its darker contour alone (one pixel at 100 %, the line
 // width at every scale; settled by his eye
@@ -2935,8 +2917,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // has no outline (its outline ink would be its fill). Precedence per column:
 // the inner's fill and border over the outer; on a steep rise between
 // columns the outline runs down the taller column's side and the line is
-// continuous. Written as pixel words like every other plate pixel: no cairo
-// stroke, no coverage, no blend.
+// continuous. Selected per pixel like every other plate pixel: no stroke, no
+// coverage, no blend.
 // THE EDGES: a neighbour column beyond the plate's left or right edge counts
 // as INSIDE (the waveform continues off screen, so no vertical line is drawn
 // at the area's sides); a row beyond the bar's own ends is OUTSIDE, so both
@@ -2956,7 +2938,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // written once with the fill's word or the outline's. Nothing else in this
 // painter moves
 // (the column grid, the >=1px floor, the carried-endpoint chain and the
-// aliased-only writer are untouched). A loud passage's outer clips flat at
+// aliased-only select are untouched). A loud passage's outer clips flat at
 // the lane's edges while the inner still shows its compressed height inside
 // it.
 //
@@ -2981,8 +2963,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // its outer containing the inner; a column wholly on one side of zero (low
 // material at working zoom) has its outer pushed outward, with a gap between
 // it and the inner. Intended — that is what a true magnification looks like.
-// THE COST is one extra bar's rows (its boundaries in the write pass) and one
-// lookup (the scale) per column — the read, the map walk and the gain lookup are shared; no second pyramid, no second
+// THE COST is one extra bar's rows and one lookup (the scale) per column — the read, the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
 // lamp). The outline adds one row-extent pair per column for the inner, held
 // for the call so the write can see its neighbours, and a handful of
@@ -3016,9 +2997,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // pyramid. RULED (architect 2026-09-23): the centre rule stands and no gained
 // second pyramid is built — placement is never done at a coarse zoom, so the
 // approximation there costs nothing the plate is used for. At working zoom
-// (one working column per plate column against a hop of whole columns: 55
-// frames against 4400 on the laptop, 46 against 4416 on the tablet) the two
-// agree.
+// (one working column per plate column against a hop of whole columns: 46
+// frames against 4416 on the tablet) the two agree.
 //
 // THE EXPANDER'S MULTIPLIER rides the same pointer (the curve's
 // `expander_multiplier`, one per working-zoom column, waveform_gain.h owns
@@ -3047,56 +3027,36 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // is immutable once its derivation is ready — GuiAudio::gain_curve — so the job
 // carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
-//
-// THE COLUMNS AND THE WRITER ARE TWO FUNCTIONS (2026-10-13, the GPU canvas):
-// render_waveform_columns, below, is everything above but the store — the
-// band's rows and columns clamped to the surface, every column's bars and the
-// lit inner's interior — and the one producer of the column bounds both roads
-// read: render_waveform's write pass consumes them on the cairo road, and the
-// GL canvas keeps them as the plate (GuiPlateColumns) and draws the
-// same priority select per pixel on the GPU (canvas_sink.h).
-[[nodiscard]]
-bool render_waveform(cairo_surface_t* dest,
-                     GuiRect area,
-                     int col0,
-                     const GuiAudio& audio,
-                     int channel,
-                     const WaveformBasis& basis,
-                     const WaveformGainCurve* gain_or_null,
-                     int outline_px,
-                     WaveformPlateInks inks,
-                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // ONE PLATE COLUMN'S ROWS (2026-10-13), in the plate's own rows (row 0 its
 // top, the canvas's first row): the outer (or dark) bar [o0, o1], the lit
 // inner bar [i0, i1] — empty, i0 > i1, under the dark lamp — and the inner's
-// interior [lo, hi], empty where lo > hi. A pixel's word is the priority
-// select render_waveform's write pass states: inside the inner, the ink
-// within the interior and the outline elsewhere; else inside the outer, the
-// ink; else nothing (the zero word).
+// interior [lo, hi], empty where lo > hi. A pixel's word is THE PRIORITY
+// SELECT, the plate's one compositing rule (render_waveform_columns' head;
+// the GPU's, gl_canvas.cpp): inside the inner, the ink within the interior
+// and the outline elsewhere; else inside the outer, the ink; else nothing
+// (the zero word).
 struct WaveformColumnRows {
     int o0, o1;
     int i0, i1;
     int lo, hi;
 };
 // ONE CHANNEL BAND'S COLUMNS as render_waveform_columns produced them: the
-// region a write stores, rows [y_lo, y_hi) and columns [col_lo, col_hi) of
-// the surface (the band clamped to it), `cols` one entry per column from
-// col_lo, and whether that region is the asked area whole (`whole`, the
-// writer's return).
+// region the bounds cover, rows [y_lo, y_hi) and columns [col_lo, col_hi)
+// of the plate (the band clamped to it), `cols` one entry per column from
+// col_lo, and whether that region is the asked area whole (`whole`).
 struct WaveformBandColumns {
     int  y_lo = 0, y_hi = 0;
     int  col_lo = 0, col_hi = 0;
     bool whole = false;
     std::vector<WaveformColumnRows> cols;
 };
-// THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is
-// render_waveform's above, less the store): `area`, `col0`, the basis, the
-// gain, the outline width and the map as render_waveform takes them, and
-// the surface's size the band is clamped to (surf_w x surf_h). False exactly
-// where render_waveform returns false without writing — a degenerate area,
-// basis or pyramid, or a band that misses the surface — `out` then
-// unspecified. Thread-agnostic like the writer.
+// THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is THE PLATE'S
+// RENDER above): `area`, `col0`, the basis, the gain, the outline width and
+// the map, and the plate's size the band is clamped to (plate_w x plate_h).
+// False where it refuses — a degenerate area, basis or pyramid, or a band
+// that misses the plate — `out` then unspecified. Thread-agnostic: the
+// waveform worker or the synchronous rebuild (waveform_cache.cpp).
 [[nodiscard]]
 bool render_waveform_columns(GuiRect area,
                              int col0,
@@ -3105,18 +3065,18 @@ bool render_waveform_columns(GuiRect area,
                              const WaveformBasis& basis,
                              const WaveformGainCurve* gain_or_null,
                              int outline_px,
-                             int surf_w,
-                             int surf_h,
+                             int plate_w,
+                             int plate_h,
                              const std::vector<WarpFrameMapSegment>* warp_frame_map,
                              WaveformBandColumns& out);
 
 // THE PLATE AS COLUMN BOUNDS (2026-10-13, the GL canvas; the cache's
 // slot at WaveformCache::columns, paint_handler.h): the two channel bands of
-// a plate width x height, each `stored` exactly where the cairo road's plate
-// surface holds that band's words — its render_waveform call stored the band
-// whole — and transparent otherwise (the rows outside both bands, an odd
-// plate's last, included). `rendered` stands where the cairo road's surface
-// would exist: set by the producer, cleared by the cache's destroy.
+// a plate width x height, each `stored` exactly where its bounds cover the
+// band whole (WaveformBandColumns::whole) — a refused or partial band draws
+// nothing — and the plate transparent elsewhere (the rows outside both
+// bands, an odd plate's last, included). `rendered` stands once the producer
+// has filled the slot: set by the producer, cleared by the cache's destroy.
 // THE PLATE'S OWN REVISION (2026-10-14): `revision` names the live slot's
 // bounds — a process-wide counter the GUI thread stamps at every PUBLICATION
 // of a plate (next_plate_revision, waveform_cache.cpp: the worker's
@@ -3126,7 +3086,7 @@ bool render_waveform_columns(GuiRect area,
 // produced it. An owned number rather than an address: the slots swap, and
 // a pointer would name the slot, not the plate in it. The pending slot's
 // revision is stale and read by nobody; the producer never writes it.
-// Its readers are the GL canvas's alone: the list sink copies the bounds only
+// Its readers are the GL canvas's: the sink copies the bounds only
 // when the revision moved, and the GL canvas re-uploads its bounds texture only
 // when it moved (GuiGlCanvas::upload_list).
 struct GuiPlateColumns {

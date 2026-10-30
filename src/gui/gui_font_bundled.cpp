@@ -1,11 +1,9 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: two
-// files handed in once through gui_font_install_bundled — the Linux
-// executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become two FT faces, the pixel table (gui_font.h's kGuiFaceSizes) picks
-// its five uses among them, and no site below the seam learns
-// which device handed the bytes in.
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h): two files handed in once
+// through gui_font_install_bundled — the APK's assets, the one carrier
+// (architect 2026-10-30) — become two FT faces, and the pixel table
+// (gui_font.h's kGuiFaceSizes) picks its uses among them.
 //
 // THE FACES (Liberation Sans and its Bold, TrueType, FT_New_Memory_Face) are
 // FT faces wrapped as
@@ -19,8 +17,8 @@
 // included, is closed off — and FreeType reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
 // TrueType face with strikes answers a size request whose ppem ROUNDS to a
 // strike's by SELECTING the strike, scaling even the outline at the strike's
-// whole ppem (the laptop's 138 % asked Tahoma for 15.19 ppem and got 15.00,
-// its small face 10.95 and got 11, measured 2026-10-06 on FreeType 2.14), so
+// whole ppem (Tahoma asked for 15.19 ppem gave 15.00, its small face 10.95
+// gave 11, measured 2026-10-06 on FreeType 2.14), so
 // build_outline hides the strikes from FreeType (the face's fixed-sizes flag
 // cleared and its count zeroed, the file's bytes untouched) and every size
 // is the outline's own scale; (2) GLYPH LOADING — every load road passes
@@ -40,18 +38,17 @@
 // which no seat reads (the unhinted "H" per em, gui_font_cap_px, places
 // every label). The advances stay
 // unhinted (text_shape's come off hb-ft, which loads its own glyphs
-// unhinted) and both devices measure one set of widths. The vertical
+// unhinted), so every scale measures one set of widths. The vertical
 // metrics are the file's own hhea per em, read at the install and rounded
 // at the size (gui_font.h, 2026-10-23), so the hinter only decides how the
 // ink sits on the pixel rows. ANTIALIASING AND SUBPIXEL
-// ORDER STAY AT CAIRO'S DEFAULTS on both devices: GRAY, no subpixel order (a
-// tablet ROTATES, so a subpixel order is not a face fact there). HINT
-// METRICS stay at cairo's default too, ON for the image surfaces both
-// backends paint to.
+// ORDER STAY AT CAIRO'S DEFAULTS: GRAY, no subpixel order (a tablet ROTATES,
+// so a subpixel order is not a face fact there). HINT METRICS stay at
+// cairo's default too, ON for the image surface the backend paints to.
 //
 // LIFETIME: the library, the faces and the font options are created once
 // and never destroyed — the process's exit reclaims them, and there is no
-// second install. On Android the process ends with the activity
+// second install. The process ends with the activity
 // (MainActivity.onDestroy; the rule at platform_android.cpp's android_main
 // tail, 2026-10-07), so this once-per-process rule never meets a second
 // android_main. The byte buffers are COPIES this file owns, because

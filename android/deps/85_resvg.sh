@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # resvg -- the one icon renderer (src/gui/svg_icon.cpp), its C API crate
 # (crates/c-api, lib name `resvg`) built as a static archive from the pinned
-# source the laptop's CMake builds too (common.sh's RESVG_*), so both devices
-# run the same renderer.
+# source (common.sh's RESVG_*).
 #
 # THE CHOICES:
 #   cargo rustc --crate-type staticlib, no NDK tool

@@ -5,13 +5,11 @@
 struct GuiNoiseVoice;   // noise.h
 
 // Audio playback engine. Owns ONE audio device and drives itself from that
-// device's callback thread. The device half is per backend — a JACK client on
-// Linux (playback.cpp), an AAudio output stream on Android
-// (playback_aaudio.cpp), exactly one of the two compiled into a given binary —
-// while the render body, the cursor predictor and every main-thread helper
-// below are shared verbatim (playback_common.{h,cpp}). EVERY CLAUSE IN THIS
-// HEADER IS THE CONTRACT ON BOTH BACKENDS; where a clause is proved
-// differently by each device, it names both proofs.
+// device's callback thread. The device half is an AAudio output stream
+// (playback_aaudio.cpp, the one implementation since the laptop GUI's drop,
+// architect 2026-10-30), while the render body, the cursor predictor and
+// every main-thread helper below live in playback_common.{h,cpp}. THIS
+// HEADER IS THE CONTRACT; the device's proofs are at its definitions.
 // The sample buffer is borrowed, not owned: the caller must keep the
 // pointer passed to init() valid until shutdown() returns, and must call
 // stop()+shutdown() before tearing down the source.
@@ -39,8 +37,8 @@ struct GuiNoiseVoice;   // noise.h
 // translation happens only at this public API boundary.
 //
 // Thread model:
-//   - Audio thread (the device's callback thread: JACK's process thread,
-//     AAudio's data callback): reads and writes the cursor via relaxed
+//   - Audio thread (the device's callback thread, AAudio's data callback):
+//     reads and writes the cursor via relaxed
 //     atomics, lowers the session word's playing bit at a natural end by a
 //     generation-qualified compare-exchange (playback_common.h). No
 //     allocation, no I/O, no locks.
@@ -133,10 +131,9 @@ struct GuiNoiseVoice;   // noise.h
 // FRAME GRID AT THIS TOOL'S PLAY LENGTHS: the clocks part at 10–100 ppm, so
 // 0.6–6 ms per minute, and this is a spot-check instrument for segments of
 // up to ~30 s (the trim/render design, the memory-vs-disk preview cutoff),
-// where that is 0.6–3 ms — half a pixel to two and a half at the laptop's
-// working zoom (`c` is one working column per pixel, 55 frames or 1.25 ms at
-// 44.1 kHz there, 46 frames or about 1.04 ms on the tablet, where it is
-// about three pixels at the top), and well inside the ±10 ms band in which a
+// where that is 0.6–3 ms — up to about three pixels at the tablet's working
+// zoom (`c` is one working column per pixel, 46 frames or about 1.04 ms
+// there), and well inside the ±10 ms band in which a
 // picture/sound offset is invisible. THE BAND IS WHAT CARRIES THE RULING,
 // not the pixel count: the drift is imperceptible because the ear and the
 // eye do not resolve it, and a couple of pixels of line at a spot-check
@@ -159,10 +156,8 @@ struct GuiNoiseVoice;   // noise.h
 // because it is not NEEDED. (The cycle stamp above is that publish's DATA
 // without its cadence: the main thread reads it only at the resync events,
 // never per frame, so motion between resyncs stays the smooth wall-clock
-// line.) A JACK-clock predictor — jack_frame_time as the clock, every resync
-// a no-op on JACK — stays set aside on the one reason that survives: keeping
-// a JACK-only clock out of the shared body (its smoothness half went with
-// the perceptual argument).
+// line.) A device-clock predictor stays set aside: the perceptual argument
+// above is the whole ruling.
 //
 // The masking criterion for the chosen design is single-frame: each
 // resync's discontinuity — the accumulated drift since the last anchor —
@@ -244,8 +239,8 @@ public:
     // voice, summed by every callback of this engine from its first to its
     // shutdown. CALLED BEFORE init() — run_project's first act on its
     // engine — and never again, so the pointer never moves while a callback
-    // can run. Main thread only; null attaches nothing. Both backends forward
-    // it to the engine state (GuiPlaybackState::noise).
+    // can run. Main thread only; null attaches nothing. The device forwards it
+    // to the engine state (GuiPlaybackState::noise).
     void attach_noise(GuiNoiseVoice* voice);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
@@ -299,16 +294,15 @@ public:
     bool consume_loop_wrap();
 
     // Stop playback and block until any in-flight audio callback has exited,
-    // normally within about two of the device's callback periods. BOTH BACKENDS
-    // COUNT CALLBACK INVOCATIONS for that proof — a JACK client's process
-    // callback and an AAudio stream's data callback both keep running (silent)
-    // between plays, each backend's device staying live from init to shutdown,
-    // so two counted invocations after the session word's playing bit is
+    // normally within about two of the device's callback periods. THE DEVICE
+    // COUNTS CALLBACK INVOCATIONS for that proof — the AAudio stream's data
+    // callback keeps running (silent) between plays, the device staying live
+    // from init to shutdown, so two counted invocations after the session
+    // word's playing bit is
     // lowered prove the callback is out of the sample buffer (and a fill that
     // was in flight at the lowering can commit no terminal: its exchange
     // expects the word its gate acquired, which the lowering changed). THE
-    // DEVICE IS NOT STOPPED HERE on
-    // either platform. The wait has no deadline on either backend: it returns
+    // DEVICE IS NOT STOPPED HERE. The wait has no deadline: it returns
     // only once the callback has quiesced, so a stalled or dead device hangs
     // here rather than letting the caller mutate a buffer the audio thread may
     // still read. Safe to call when not playing; it still fences. Main thread
@@ -345,7 +339,7 @@ public:
     // — the device that went away under a live stream (the AAudio disconnect
     // latch, a headphone pulled or a Bluetooth route dropped, and the reopen
     // that was refused after it) AND the device that never came up at all (an
-    // init that failed — no JACK server, no AAudio stream — after which
+    // init that failed — no AAudio stream — after which
     // play() is the documented silent no-op). The two are ONE ANSWER because
     // they are one fact to every consumer: nothing will sound.
     // IT IS NOT A NATURAL END, and that is what it exists to separate: a
@@ -355,10 +349,8 @@ public:
     // one for the other — the render player's tick forks on this BEFORE its
     // natural-end test and PAUSES instead of advancing (GuiRenderPlayer::tick),
     // where otherwise it would walk a folder at tick rate with nothing to play
-    // it on. The JACK backend answers the never-came-up half alone; it records
-    // nothing for a server that vanishes mid-play, with the reason at its
-    // definition. Main thread only, like is_playing(). THIS IS THE READ AND
-    // NOTHING ELSE: it reopens nothing, so on Android a dead stream stays dead
+    // it on. Main thread only, like is_playing(). THIS IS THE READ AND
+    // NOTHING ELSE: it reopens nothing, so a dead stream stays dead
     // to it until a LAUNCH PRESS reopens through
     // ensure_device_available_for_play below (or the render player's own play
     // road reaches play(), which reopens at its head): a dead stream waits for
@@ -380,16 +372,14 @@ public:
     // THE DROP ITSELF (architect 2026-10-28, the noise lamp's darkening): the
     // error callback's `stream_dead` latch ALONE — true from a route drop
     // under a live stream until the first reopen attempt closes that stream.
-    // AAudio: `impl_ && impl_->stream_dead` (acquire). JACK: false, this
-    // backend having no latch (the reason at device_unavailable's JACK
-    // definition). THE LATCH HAS TWO MAIN-THREAD READERS THAT RESET THE
+    // `impl_ && impl_->stream_dead` (acquire). THE LATCH HAS TWO MAIN-THREAD READERS THAT RESET THE
     // NOISE VOICE (2026-10-28, noise.h's head, the two roads): (1) THIS
     // MEMBER, whose one caller is gui_main's per-tick poll beside
     // noise.tick() (main.cpp), which, while the latch stands, LIT OR NOT,
     // DARKENS the NOISE lamp and resets its voice
     // (GuiNoise::reset_on_dead_stream, idempotent, so the per-tick repeat
     // over the dead interval costs nothing) and reopens nothing; (2) the
-    // AAudio backend's own load of the latch at a reopen (reopen_stream_if_dead
+    // device's own load of the latch at a reopen (reopen_stream_if_dead
     // and launch_window's post-publish arm, through close_dead_stream,
     // playback_aaudio.cpp), which resets the voice ahead of the close that
     // clears the latch, so a press that reaches the device before the tick
@@ -407,9 +397,8 @@ public:
     // launch button — a face that read the latch would grey Play on the
     // tablet after every route drop while Space, the same act, reopened and
     // played (the twin rule: a button greys only when every admitted variant
-    // would change nothing). JACK: `!impl_ || !impl_->client_active`,
-    // identical to device_unavailable there (this backend has no latch).
-    // AAudio: `!impl_ || !impl_->device_ready` — the `stream_dead` latch and
+    // would change nothing): `!impl_ || !impl_->device_ready` — the
+    // `stream_dead` latch and
     // the null stream are NOT terms, being exactly what the press reopens.
     // FOUR READERS, re-grepped 2026-10-28: the two PLAY-face predicates
     // space_launch_would_play and ab_audition_preflight_ok, the render
@@ -434,14 +423,11 @@ public:
     // 2026-10-28, the `w` case of input_key_dispatch.cpp: the bed sounds only
     // through the running stream's callback, so the lit press is a launch
     // press for the device question; a FALSE cards and the lamp still
-    // lights). No road reopens without a press. JACK
-    // answers `!device_unavailable()` and touches nothing (this backend has no
-    // latch to clear — the mid-play loss is not recorded, the reason at
-    // device_unavailable's definition). AAudio closes a dead stream — the
+    // lights). No road reopens without a press. It closes a dead stream — the
     // noise voice reset first, its lamp dark (close_dead_stream, noise.h's
     // head) — and reopens a dead or null one at the head — play()'s own
-    // first two lines, hoisted here so a route that dropped on the tablet (a
-    // headphone pulled, a Bluetooth route gone) comes back at the NEXT PRESS
+    // first two lines, hoisted here so a route that dropped (a headphone
+    // pulled, a Bluetooth route gone) comes back at the NEXT PRESS
     // instead of leaving every main-window launch road carding forever
     // behind a read that never reopened — AND THEN STARTS IT, because the
     // question a launch gate asks is whether this device will SOUND, not
@@ -501,14 +487,14 @@ public:
     // Call before the sample buffer dies (at shutdown).
     void shutdown();
 
-    // Opaque to consumers, but public so the audio callback in
-    // playback.cpp (a free function outside the class) can reach it.
+    // Opaque to consumers, but public so the audio callback
+    // (playback_aaudio.cpp, a free function outside the class) can reach it.
     struct Impl;
 
 private:
     // THE ONE LAUNCH ROAD BEHIND BOTH PUBLIC FACES (2026-09-17): play() and
-    // play_loop() differ in the packet's third word alone, so each backend
-    // keeps its device head-check, its publish and its post-publish race
+    // play_loop() differ in the packet's third word alone, so the device
+    // keeps its head-check, its publish and its post-publish race
     // check in this one body and the two faces forward to it —
     // kPlaybackNoLoop from play(), the caller's target from play_loop().
     void launch_window(int64_t start_sample, int64_t end_sample,

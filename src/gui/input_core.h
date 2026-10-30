@@ -31,21 +31,22 @@
 // (every file that includes platform.h) hold GuiPlatform and see no change: every setter, query and
 // capture door on that class is the same call it always was, with the body
 // living here. COMMENTS HERE SPEAK THE CORE'S EVENT NAMES (touch_frame,
-// touch_cancel, pointer_leave, set_modifiers, set_repeat_info), a Wayland
-// instance named once in parentheses where it helps; a provenance sentence (a
-// measured compositor behaviour, labwc's repeat delay) keeps its words.
+// touch_cancel, pointer_leave, set_modifiers, set_repeat_info); a provenance
+// sentence (a behaviour measured under the laptop's compositor while its
+// backend stood, until the laptop GUI's drop of 2026-10-30; labwc's repeat
+// delay) keeps its words. The core's doors and its mouse vocabulary are
+// platform-neutral and stay whole: the glass's backend drives them
+// (platform_android.cpp — the finger's translation, the S Pen's hover as the
+// pointer, its side button as Ctrl, the painted keyboard as keys).
 
-// THE POINTER CURSOR KINDS. EVERY ONE OF THEM IS A NAMED CURSOR FROM THE USER'S
-// OWN XCURSOR THEME, UNMODIFIED (architect 2026-08-03): the product ships no
-// cursor art and draws no cursor pixels, so a kind is a name to look up
-// (load_cursor_theme's table, platform_wayland.cpp) and the theme's own image
-// and its own declared hotspot are what the compositor gets.
+// THE POINTER CURSOR KINDS (architect 2026-08-03): the product ships no
+// cursor art and draws no cursor pixels; each kind is NAMED by an xcursor
+// shape, and the GUI derives one per zone (pointer_cursor_kind) for the
+// platform to remember (set_cursor_kind) — on glass no image stands behind
+// it (platform_android.h), the kinds staying the one statement of which
+// gesture a zone promises.
 //
-// Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
-// also the FALLBACK: a theme missing one of the other SEVEN kinds' names —
-// ten names over eight kinds since the value drag landed, two of the rows
-// carrying a second spelling — degrades that KIND to the arrow with one
-// stderr line, which costs the cue and nothing else.
+// Arrow is left_ptr, the cursor everywhere the GUI names nothing else.
 // The seven beside it each mark a zone whose gesture the arrow cannot promise —
 // the mapping from zone to kind is the GUI's (pointer_cursor_kind,
 // input_handler.h), and this enum is only the vocabulary.
@@ -75,9 +76,8 @@
 // nav surface under it) and the dialog editor's edit control, the modal
 // family's box's interior since 2026-10-14 (its inset FIELD on the bottom row
 // before). It is the only kind
-// with a SECOND name to try (`text`, then the older `xterm`) before the per-kind
-// degrade, the two spellings being one shape with two conventional names; the
-// fallback chain is the loader's, at kCursorKindNames.
+// with a SECOND name (`text`, then the older `xterm`), the two spellings
+// being one shape with two conventional names.
 //
 // VALUEDRAG IS THE EIGHTH (architect 2026-09-10, with the value drag):
 // `ns-resize`, the vertical twin of the trim bridge's `ew-resize`, worn over a
@@ -86,15 +86,13 @@
 // tempo on an owning flag, a bound on a bound cell — and kept for the whole
 // gesture by the live-drag rule the marker and trim drags already
 // take. It is the second kind with an ALT NAME (`size_ver`), the same
-// two-conventional-spellings shape the I-beam has; Breeze ships a third
-// (`sb_v_double_arrow`) as a symlink of the same image, so two lookups reach
-// every theme that has the shape at all. A flag box the drag cannot act on
+// two-conventional-spellings shape the I-beam has. A flag box the drag cannot act on
 // wears the ARROW, never this — the map's standing rule that a point arming
 // nothing shows the arrow.
 //
 // (THE FOUR WINDOW-SIZING KINDS — the ninth to twelfth, 2026-10-05 to
-// 2026-10-24, worn over the restored laptop window's own sizing frame — went
-// with that frame: labwc draws the borders and their cursors since then.)
+// 2026-10-24, worn over the restored window's own sizing frame — went with
+// that frame.)
 enum class GuiCursorKind {
     Arrow,
     Pan,
@@ -114,12 +112,12 @@ inline constexpr int kGuiCursorKindCount = 8;
 // may leave standing (2026-08-08).
 //   * OrdinaryLeave is the pointer focus dropping, on either of two edges
 //     every consumer reads the same (architect 2026-10-01):
-//     THE LEAVE — pointer_leave (wl_pointer.leave on Wayland) and, since
+//     THE LEAVE — pointer_leave and, since
 //     touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's ABNORMAL end
 //     WITH NO PHYSICAL POINTER FOCUSED: the window system took the contact
 //     and no mouse rests in the window, so the pointer is gone (delivered
-//     after the lost-button motion; the fires are touch_cancel
-//     (wl_touch.cancel on Wayland) and touch-capability loss — the edge
+//     after the lost-button motion; the fires are touch_cancel and
+//     touch-capability loss — the edge
 //     inventory at the touch state block). A translation ending with the
 //     physical pointer FOCUSED fires this hook NOT AT ALL — it delivers a
 //     restore MOTION at the mouse's own position instead (the focus fork;
@@ -129,8 +127,8 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     synthesizes a motion, a held button still releases, and the held
 //     state survives — so state kept across this edge would be redeemed by
 //     that return motion.
-//     THE CAPABILITY LOSS — pointer_capability_lost (the seat losing
-//     wl_pointer on Wayland): the hard end of the stream. No leave, no
+//     THE CAPABILITY LOSS — pointer_capability_lost: the hard end of the
+//     stream. No leave, no
 //     motion, no release will ever arrive on that object again, so nothing
 //     may be KEPT DELIBERATELY across it — a keep would have no event left
 //     to redeem it; no consumer keeps anything across either edge, which is
@@ -307,7 +305,8 @@ public:
     // GUI has no use for the key at all, which is the same thing as "there is
     // nothing to deliver". `stable_code` is the backend's PER-KEY IDENTITY, the
     // value the repeat cancel and the synthesized-left hold end compare against
-    // (the xkb keycode on Wayland): deliberately NOT the keysym, since a layout
+    // (the painted keyboard's own per-key code, synthesize_key): deliberately
+    // NOT the keysym, since a layout
     // change mid-hold would break the match. `codepoint` is the UTF-32 value
     // the key resolves to under the live keyboard state, filled at the press
     // and re-filled per synthesized repeat through the codepoint probe.
@@ -319,8 +318,7 @@ public:
     // modifiers say; a release ignores it, as a release carries no modifier
     // state at all. It is a property of the KEY EVENT, never of the tracked
     // state: set_modifiers is not touched, so no ctrl edge is announced and
-    // nothing else reads a ctrl that outlives the press. The Wayland backend
-    // passes false, its ctrl arriving through set_modifiers.
+    // nothing else reads a ctrl that outlives the press.
     void key_event(GuiKey key, uint32_t stable_code, bool pressed,
                    uint32_t codepoint, bool with_ctrl);
 
@@ -330,8 +328,7 @@ public:
     // instead (the ruling is at deliver_key, input_core.cpp). A backend with no
     // desktop modifier to yield to passes super = false always, which leaves
     // that gate structurally dead rather than removed.
-    // TWO PRODUCERS, one per backend. On Wayland it is wl_keyboard.modifiers
-    // and nothing else. ON ANDROID IT IS THE S PEN'S SIDE BUTTON (architect
+    // ITS PRODUCER IS THE S PEN'S SIDE BUTTON (architect
     // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl
     // modifier, hardware keyboards being out of scope there, bare `k`'s
     // sticky ctrl being a lamp the flag press reads and not this bit, and
@@ -355,15 +352,15 @@ public:
     // seats and clears at the edge exactly as the pointer drag's does.
     void set_modifiers(bool ctrl, bool shift, bool alt, bool super);
 
-    // THE KEY-REPEAT CADENCE, as the platform advertises it
-    // (wl_keyboard.repeat_info on Wayland): `rate` in Hz and
+    // THE KEY-REPEAT CADENCE, as the platform gives it (the backend's
+    // hard-coded pair, platform_android.cpp's init): `rate` in Hz and
     // `delay` in milliseconds. Rate <= 0 means the platform has key repeat
     // DISABLED and is honored as such — the armed repeat is dropped with it,
     // and key_repeat_period_ms() then answers 0 for the chrome buttons too.
     void set_repeat_info(int32_t rate, int32_t delay);
     // THE KEYBOARD'S MODELED STATE GOING AWAY, and the one place that spells it.
-    // Two edges reach it — the keyboard focus leaving (wl_keyboard.leave on
-    // Wayland) and keyboard-capability loss — and
+    // Two edges reach it — the keyboard focus leaving and keyboard-capability
+    // loss — and
     // both mean the same thing: no further key event can arrive on the state
     // built so far, so the modifier bits, the repeat arm, the wheel sub-detent
     // remainder and a held synthesized-left button are all dropped together.
@@ -386,8 +383,8 @@ public:
     // region, the caret) leaves the pointer resting here for the backend's
     // next hover report, a motion.
     void pointer_focus_at(double x, double y);
-    // The ordinary leave by default (OrdinaryLeave: every Wayland call); the
-    // Android pen's hover ending passes PenHoverEnd (end_pen_hover, 2026-10-10);
+    // The ordinary leave by default (OrdinaryLeave); the pen's hover ending
+    // passes PenHoverEnd (end_pen_hover, 2026-10-10);
     // TouchLift is deliver_touch_translation_end's alone and does not come
     // through here (GuiPointerLeaveReason, above the class).
     void pointer_leave(
@@ -397,9 +394,8 @@ public:
     // THE SIGN IS THE SEAM'S CONTRACT AND BOTH DOORS SHARE IT: POSITIVE MEANS
     // SCROLL DOWN (content moves up under the cursor, delivered as WheelDown)
     // and negative means up — a backend whose platform reports the other
-    // polarity negates on its own side. It happens to be Wayland's own
-    // convention, which is why the drain body states it as such
-    // (input_core.cpp), but it is this class's requirement of every backend.
+    // polarity negates on its own side (the drain body states it,
+    // input_core.cpp): it is this class's requirement of every backend.
     //
     // One vertical-axis scroll delta in the backend's own continuous unit
     // (touchpads and other non-wheel sources), staged for the frame boundary.
@@ -519,7 +515,7 @@ public:
     // button's release, not a key's, and the press it matches was never
     // delivered either.
     // IT IS DELIBERATELY NOT GATED ON SUPER, where the press path is. The Super
-    // drop exists so a chord that belongs to labwc never reaches a BINDING, and
+    // drop exists so a chord that belongs to the desktop never reaches a BINDING, and
     // a release binds nothing on its own — it can only RESOLVE an arm an
     // already-delivered press created. A Super-dropped press arms nothing
     // application-side (and fires the keyboard-intent cancellation hook below,
@@ -688,8 +684,7 @@ public:
     // family's viewport chokepoint, to the region former's own bodies and
     // to the editor's caret-seat bodies).
     //
-    //   * update(frame): fired at most once per touch_frame (wl_touch.frame
-    //     on Wayland) while a
+    //   * update(frame): fired at most once per touch_frame while a
     //     navigation gesture is live and past its latch. The payload is a
     //     GuiTouchNavFrame (gui_input.h, the field contracts there): the
     //     CURRENT centroid, the centroid's horizontal delta and the
@@ -890,7 +885,7 @@ public:
     // this is their inventory (there is no third; set_gui_scale_percent,
     // render.h, has exactly these two callers):
     //   * gui_main's startup, beside its set_gui_scale_percent push and BEFORE
-    //     GuiPlatform::init — main.cpp. This is the INIT road on BOTH backends:
+    //     GuiPlatform::init — main.cpp. This is the INIT road:
     //     the scale arrives from the per-device config (device_config.h), which
     //     is read before a window exists, so no frame is ever painted and no
     //     finger is ever delivered at a scale other than the user's. IT MOVED
@@ -1124,14 +1119,13 @@ public:
     GuiInputState current_mods() const;
 
 private:
-    // Tracked modifier state, refreshed by set_modifiers (wl_keyboard.modifiers
-    // on Wayland) and consumed by GuiInputState construction on every key
-    // delivery.
+    // Tracked modifier state, refreshed by set_modifiers and consumed by
+    // GuiInputState construction on every key delivery.
     bool mod_ctrl_  = false;
     bool mod_shift_ = false;
     bool mod_alt_   = false;
     // SUPER (Logo) is tracked but NEVER projected into GuiInputState: it belongs
-    // to labwc, and this program's answer to it is to deliver no key PRESS at all
+    // to the desktop, and this program's answer to it is to deliver no key PRESS at all
     // while it is held, so the GUI binds no Super chord (the ruling is at
     // deliver_key, input_core.cpp; releases stay ungated, the corner at
     // set_on_key_release). That is why there is no `super` bool on GuiInputState
@@ -1140,8 +1134,7 @@ private:
 
     // Key repeat (last-key-wins, timerfd-tick-piggyback).
     // repeat_key_ is the GuiKey currently repeating (0 = none).
-    // repeat_keycode_ is that key's stable per-key code (the xkb keycode on
-    // Wayland), used so the key release event can match-and-cancel and so each
+    // repeat_keycode_ is that key's stable per-key code, used so the key release event can match-and-cancel and so each
     // synthesized repeat recomputes its codepoint live through the codepoint
     // probe.
     // repeat_due_us_ is the next-fire monotonic time in microseconds; when
@@ -1279,11 +1272,9 @@ private:
     // 2026-08-14: "that would make it feel less responsive") — the third
     // refusal of a preventative backstop on this surface.
     //
-    // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN. Wayland gives a client no
-    // pointer-warp request at all, so a VISIBLE cursor can never be moved by us
-    // — the one position we may ever state is the locked pointer's release hint
-    // — but while captured the position is our own bookkeeping entirely, so
-    // wrapping it costs nothing, needs no protocol, and cannot be seen.
+    // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: while captured the
+    // position is our own bookkeeping entirely, so wrapping it costs nothing,
+    // needs no protocol, and cannot be seen.
     //
     // IT CHANGES NO VIEW: every gesture's dx comes from the TRAVEL LEDGER
     // above, which is unbounded and untouched, so the scroll stays exactly as
@@ -1329,15 +1320,15 @@ private:
     // taken for a live lock by ruling, see begin_pointer_capture — from that moment
     // pointer_x_/pointer_y_ carry the unbounded VIRTUAL travel, a point the
     // pointer does not occupy — and stays true PAST the unlock, because the
-    // restore only tells the compositor where to put the cursor; where it ended
-    // up is not ours to know until the compositor says so.
+    // restore only tells the platform where to put the cursor; where it ended
+    // up is not ours to know until the platform says so.
     // WHAT THE UNLOCK DOES SETTLE IS THE COORDINATES, NOT THIS FLAG, and the two
     // must not be read as one fact: release_pointer_lock writes
     // pointer_x_/pointer_y_ (and the virtual pair) to the restore hint, so past
     // the unlock they name the pixels the cursor is DRAWN on rather than the
     // travel — an estimate, which is exactly why this flag stays set over it.
     // The split is load-bearing: the kinds this flag guards can afford to wait
-    // for the compositor, and the BUTTON deliveries — which carry no
+    // for the platform, and the BUTTON deliveries — which carry no
     // coordinates of their own and so read those fields — cannot, having once
     // routed a click at the travel's end (the account is at
     // release_pointer_lock). It goes false again at
@@ -1351,8 +1342,8 @@ private:
     // fact the gesture supplied while the position was still real, rather than
     // whatever the last dispatch batch happened to leave behind.
     // ONLY A REQUESTED LOCK SETS IT — treated as a live one by ruling, with the
-    // scope and the accepted degradation at begin_pointer_capture: the degraded
-    // compositor (no pointer-constraints or no relative-pointer) never asks for a
+    // scope and the accepted degradation at begin_pointer_capture: an uncaptured
+    // backend (the glass's, whose capture pair is a no-op) never asks for a
     // lock at all, so its "captured" gestures run on ordinary absolute motion with
     // the position true throughout and every cursor write landing normally. That is what lets the GUI's ONE per-iteration
     // re-resolve serve the captured and the degraded path alike, with nothing in
@@ -1377,7 +1368,7 @@ private:
 
     // kLeftClickKey emulation state. synth_left_held_ is true while that key
     // is held as a synthesized left button; synth_left_keycode_ is the stable
-    // per-key code that owns the hold (the xkb keycode on Wayland), so the
+    // per-key code that owns the hold, so the
     // release is matched by that code exactly like repeat cancellation is. The logical left button is
     // (pointer_left_held_ || synth_left_held_ || touch_left_held_): a press is
     // delivered only on the 0->1 edge of that OR and a release only on the
@@ -1406,12 +1397,7 @@ private:
     // with a pinch, so off it the finger is the pointer on contact
     // (2026-09-25). A PEN is a finger here (GuiTouchTool, gui_input.h): the
     // backend tells the core which tool touched, and the core reads it only
-    // to keep the pen out of every pinch. wl_touch is CORE protocol (wl_seat's
-    // third capability — the wl_data_device_manager precedent: same
-    // wayland.xml, no new library, no generated stub), bound from the seat
-    // listener when WL_SEAT_CAPABILITY_TOUCH is advertised and NOT required:
-    // absence is silence — no stderr, nothing degraded (the authoring laptop
-    // simply has no glass; the target rig's panel does).
+    // to keep the pen out of every pinch.
     //
     // THE PHASES:
     //   * Idle    — no touch points.
@@ -1643,8 +1629,8 @@ private:
     //     An ignored third finger stays ignored.
     //   * touch UP, the LAST nav finger (single-finger nav: the owner) — the
     //     staged dirty frame DELIVERS
-    //     first (Wayland orders the up before the touch_frame that closes
-    //     its batch, and that motion is the user's own final leg — the
+    //     first (the up comes before the touch_frame that closes its batch,
+    //     and that motion is the user's own final leg — the
     //     any-end-commits family; the end split at end_touch_nav_gesture),
     //     then the nav end (commits through the end hook iff an update was
     //     delivered). A nav gesture never held the logical button, so no
@@ -1702,8 +1688,8 @@ private:
     //     releases its touch object. The pointer- and keyboard-capability
     //     edges do NOT touch this state (each source dies on its own
     //     stream's edges), and shutdown releases that object with no
-    //     deliveries (destroy_wayland_state is not an input edge — the
-    //     pointer and keyboard teardowns there deliver nothing either).
+    //     deliveries (the backend's teardown is not an input edge — it
+    //     delivers nothing).
     //
     // TOUCH NEVER WRITES pointer_x_/pointer_y_ (a deliberate split): those
     // fields are the physical pointer's own — the wheel emits there, the

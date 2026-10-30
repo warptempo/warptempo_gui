@@ -107,8 +107,8 @@ constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
 // whole number of frames, so it sits on the sixteenth-frame grid and the
 // floor paints q = 20 exactly (painter_quantized_spp). It binds only where
 // level 1 would paint finer, a working column under 40 frames, which no
-// deployed device has (level 1's q: the laptop's 1920 px display 27.5 and
-// the tablet's 2304 px 23 at 44.1 kHz, 30 / 25 at 48 kHz, 60 / 50 at 96 kHz);
+// deployed device has (level 1's q: the tablet's 2304 px display 23 at
+// 44.1 kHz, 25 at 48 kHz, 50 at 96 kHz);
 // a 3840 px display at 44.1 kHz (column 28) floors at 20 frames per pixel,
 // about 1.74 s across its full width against the working zoom's 2.44 s. The persisted zoom vocabulary [kMinZoom, kMaxZoom] is
 // unchanged: a saved level under the floor clamps where it goes live, at
@@ -126,15 +126,13 @@ constexpr double kUnloadedZoomLevel = 2.0;
 // visible space: on a window resize the level is 2.4 seconds at the maximum
 // resolution of the device, the closest whole number of frames"). The
 // working zoom shows 2.4 s of source across the device's full width — the
-// laptop's 1920 at 44.1 kHz: 55; the tablet's 2304: 46; at 48 kHz 60 and 50
-// — and a strip narrower than the display (a restored laptop window, a
-// theme's visible frame or other chrome inside the window) keeps that same
-// column and so shows a little less than 2.4 s: a resize or a theme never
-// moves the grid. On both deployed devices under the Windows theme (the
-// laptop maximised, the tablet full screen) the strip IS the display's width,
-// so the column is the one the strip's width gave before the rule moved to
-// the resolution. W is GuiPlatform::display_width_px (the output's current
-// mode on Wayland, the surface on Android; the contract at platform_wayland.h).
+// tablet's 2304 at 44.1 kHz: 46; at 48 kHz 50 — and a strip narrower than the
+// display (chrome inside the window) keeps that same column and so shows a
+// little less than 2.4 s: a resize never moves the grid. On the deployed
+// device (the tablet full screen) the strip IS the display's width, so the
+// column is the one the strip's width gave before the rule moved to the
+// resolution. W is GuiPlatform::display_width_px (the surface's width; the
+// contract at platform_android.h).
 // Spelled (24·sr)/(10·W): both operands are exact integers in a double and
 // the one divide is correctly rounded, so a true .5 tie (2016 px at 44.1 kHz,
 // 52.5) is exact and takes banker's rounding; `2.4 * sr / W` would round 2.4
@@ -299,8 +297,8 @@ constexpr double kNavZoomPxPerLevel = 145.0;
 // divisor rather than a painted dimension, and rounding it to an int would
 // quantize the feel for no gain (render.h's conversion pair states that the
 // double-domain readers deliberately stay out of it). At gui_scale 100 the
-// rate is the authored 145 Windows px exactly; the laptop's 138 % gives
-// 200.1 device px, the laptop pixel's 200 it had before the unit's change.
+// rate is the authored 145 Windows px exactly; 138 % gives 200.1 device px,
+// the old unit's 200 it had before the unit's change.
 // The floor keeps the divisor away from zero at any factor the schema could
 // ever admit; inside the live [50, 1000] bracket the value rests in
 // [72.5, 1450] and the floor cannot fire.
@@ -860,7 +858,7 @@ struct UndoHistory {
 // entries, shift+drag on the desk and the hold-beat region hold on glass
 // (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: the plain drag
 // is the grab-pan, so the sweep is the deliberate act and takes the secondary
-// form on both devices). BOTH SURVIVE IN FULL and the hold is not the lesser
+// form). BOTH SURVIVE IN FULL and the hold is not the lesser
 // half: a finger has no modifier, so the hold is the finger's ONLY route to a
 // sweep.
 //
@@ -977,9 +975,9 @@ struct EditorTextDragState {
     // pointer past the anchor on either side, or back to the anchor word
     // alone (text_editor::extend_selection_by_words, the same class rule the
     // double-click's own select reads). The release seeds no candidate: it is
-    // the second click, never the first half of a third. Both devices take
-    // it through this one arm — on glass the translation delivers the second
-    // press at the down once the seed makes its identity certain.
+    // the second click, never the first half of a third. It takes this one
+    // arm — on glass the translation delivers the second press at the down
+    // once the seed makes its identity certain.
     bool by_words   = false;
     int  word_start = 0;
     int  word_end   = 0;
@@ -1187,8 +1185,7 @@ enum class PendingClickKind {
 // the begin and one held past it the END: on glass, where the S Pen's side
 // button is the Ctrl bit (platform_android.cpp) and the hand has no Shift, a
 // tap with the button held sets the begin and a long press the end — the
-// laptop's Ctrl+Shift click — and a laptop Ctrl press held as long sets the
-// end too (both devices alike). A Ctrl+Shift press sets the end whatever its
+// Ctrl+Shift click's act. A Ctrl+Shift press sets the end whatever its
 // duration. A crossing before the delay sets and then drags the begin, a
 // crossing after it the end. THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect
 // 2026-09-29): nothing marks the delay's passing, no tooltip rises under the
@@ -1745,8 +1742,8 @@ struct ScrollDragState {
 //     the do-not-add-touch-to-any_pointer_gesture_active note all live at
 //     clear_touch_zoom_seat's declaration (input_handler.h).
 //   * THE ONE END THAT KEEPS IT — THE PEN'S RETAINED ANCHOR (architect
-//     2026-09-27; the laptop's Ctrl + left button held while the mouse is
-//     lifted off the table and set down again): a ONE-FINGER seat standing
+//     2026-09-27; a mouse's Ctrl + left button held while it is lifted off
+//     the table and set down again): a ONE-FINGER seat standing
 //     when THE PEN lifts with its side button still held (the stroke's last
 //     sampled Ctrl bit — the lift itself is unsampled) OUTLIVES that end,
 //     `retained` set, the stem still painted at the anchor's live column; the
@@ -1755,9 +1752,8 @@ struct ScrollDragState {
 //     edge rebind applies as on any frame), and the first such frame drops
 //     `retained` — the seat is a live gesture's again. The platform owns the
 //     pen facts and end_touch_nav asks it (GuiPlatform::
-//     pen_lift_keeps_zoom_anchor, true only inside the pen's own lift and
-//     only on the Android backend); the Wayland backend answers false, so the
-//     laptop's every end clears exactly as before. A RETAINED SEAT DIES
+//     pen_lift_keeps_zoom_anchor, true only inside the pen's own lift). A
+//     RETAINED SEAT DIES
 //     (release_pen_zoom_anchor, through clear_touch_zoom_seat, erase
 //     included) at the platform's release hook — every finger down, the pen
 //     landing without its button, the first in-plane pen report showing the
@@ -1841,7 +1837,7 @@ struct TouchNavZoomState {
 
 // (THE CAPTION'S THREE BUTTONS, GuiCaptionButton — Minimise, Maximise /
 // Restore and Close on the app's own title bar, 2026-10-05 — went
-// 2026-10-24 with the caption: labwc's title bar carries the laptop's.)
+// 2026-10-24 with the caption.)
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
 // the five double-click surfaces from cross-firing: a candidate seeded on one
@@ -1851,8 +1847,8 @@ enum class DoubleClickSurface {
     None, TrimBar, Marker, EditorText, EmptyLane
 };
 
-// Double-click detection (Wayland delivers no double-click event, so it is
-// hand-rolled from two plain clicks). A click on a double-click-bearing surface
+// Double-click detection (the platform delivers no double-click event, so it
+// is hand-rolled from two plain clicks). A click on a double-click-bearing surface
 // records this candidate AT A MOTIONLESS RELEASE — one seed timing for all
 // four canvas surfaces since 2026-08-15, when the marker click moved to the
 // lift and its press-time seed (the last of them) went with it (the app's
@@ -1892,7 +1888,7 @@ enum class DoubleClickSurface {
 //       editor_double_press_at, which the touch layer's DoublePress query
 //       also reads) — the exception above.
 //   (The caption's, which toggled the window maximised, 2026-10-05 to
-//   2026-10-24, went with the caption; labwc's title bar does it now.)
+//   2026-10-24, went with the caption.)
 // Surfaces:
 //   TrimBar    -> the SPAN-FRAMING command on the trim bar lane, its whole band
 //                 (run_span_framing_command: a proper trim sub-window, else the
@@ -2824,7 +2820,7 @@ enum class RedesignButton {
     //
     // THE FOUR ARROWS REPEAT WHILE HELD (architect 2026-08-16), the row's one
     // hold gesture: the first fire a hold beat after the press, then the
-    // COMPOSITOR'S own key-repeat rate, so a held arrow BUTTON walks at exactly
+    // platform's key-repeat rate (key_repeat_period_ms), so a held arrow BUTTON walks at exactly
     // the speed a held arrow KEY does. His reasoning is recorded at the arrows'
     // rows in kToolbarChords (input_pointer.cpp), which owns the `repeats`
     // column; the burst's state and its whole edge inventory are at
@@ -3454,8 +3450,8 @@ inline constexpr GuiKey access_key_of(const char* label, int access) {
 // not a number per surface. The beat's declaration lists the two of them
 // apart from the holds, neither being one, and both stay on the constant.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
-// 6 WINDOWS PX (8 laptop px until the unit's change, architect 2026-10-02:
-// 18 device px at the tablet's 300 %, 8 at the laptop's 138 %).
+// 6 WINDOWS PX (8 of the old unit until the unit's change, architect
+// 2026-10-02: 18 device px at the tablet's 300 %).
 constexpr int     kDoubleClickSlackPx = 6;
 
 // The slack in DEVICE pixels at the live gui_scale — the compare sites' one
@@ -3618,7 +3614,7 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // it is this number exactly. 6 WINDOWS PX since the unit's change (architect
 // 2026-10-02): the laptop pixel's 8 re-authored to the device length it had
 // on the tablet then; at the tablet's 300 % it is 18 device px — 9dp under
-// its 320 density — and at the laptop's 138 % 8.
+// its 320 density.
 constexpr int     kDragMovedThresholdPx = 6;
 
 // The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
@@ -3853,8 +3849,8 @@ enum class DialogTrigger {
 // A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13 —
 // the one lag span the in-window modal still had; unchanged in substance by
 // the move onto the bottom row later that day, which moved the modal's
-// rectangle and nothing about this gate). One dispatch batch is
-// delivered whole (wl_display_dispatch_pending) before the loop paints, so a
+// rectangle and nothing about this gate). One loop pass's drain is
+// delivered whole (pump, platform_android.cpp) before the loop paints, so a
 // prompt can be RAISED and RECEIVE INPUT while the surface still shows the
 // prior world: dirty work + an editor dialog up + Ctrl+Q and Delete in one
 // batch tore the editor down, raised this prompt, and let the Delete answer
@@ -3864,7 +3860,7 @@ enum class DialogTrigger {
 // true is paint_modal_dialog's prompt branch — the same surface, the same
 // run-loop iteration, the same buffer the frame then commits. No
 // synchronization machinery, no generation counter, no probe: that locality
-// IS the mechanism, and it is precisely what a SECOND Wayland surface cannot
+// IS the mechanism, and it is precisely what a SECOND window surface cannot
 // have (the scrapped real-window modal needed five commits of
 // tail-sync machinery and each round found another span; the record is in
 // closed_questions.md and git).
@@ -4614,15 +4610,13 @@ struct GuiClockFingerprint {
     bool        yields = false;
     bool operator==(const GuiClockFingerprint&) const = default;
 };
-// ONE RECORD PER PAINT TARGET: the Wayland cpu build paints into one of its
-// two shm buffers per frame, and the Android backend and the Wayland gl
-// build (2026-10-14) into their one backbuffer
-// (GuiPlatform::kPaintTargetCount), and a check must hold for
-// the buffer that will be shown, so each target keeps what IT shows and
-// what it is owed. `valid` false means the target's rows may show a mix of
+// ONE RECORD PER PAINT TARGET: the backend paints into its one backbuffer
+// (GuiPlatform::kPaintTargetCount, one since 2026-10-14), and a check must
+// hold for the buffer that will be shown, so each target keeps what IT shows
+// and what it is owed. `valid` false means the target's rows may show a mix of
 // states (a partial paint whose live fingerprint differed from the record),
 // which only a repaint settles.
-inline constexpr int kGuiPaintTargetSlots = 2;
+inline constexpr int kGuiPaintTargetSlots = 1;
 struct GuiUpperRowsRecord {
     GuiUpperRowsFingerprint painted;
     bool valid    = false;
@@ -5031,7 +5025,7 @@ struct AppState {
     // 2026-10-09, "on waveform → unscaled"; t snapshotted on the plate job and
     // in its fingerprint, render.h and waveform_cache.cpp) (architect
     // 2026-09-25/27, the inks the palette's `waveform_ink` and
-    // `waveform_outline` roles — the rule is at render_waveform's
+    // `waveform_outline` roles — the rule is at render_waveform_columns'
     // declaration); DARK,
     // the raw picture alone. THE BIT IS THE ANSWER, read by waveform_magnified
     // (warp_frame_map_view.h) and by the lamp's face, and by nothing else —
@@ -5557,7 +5551,7 @@ struct AppState {
     // the three inputs it read to give it (since 2026-09-01). Jump to Defining
     // Marker's FACE (jump_to_value_source_actionable) asks that question every
     // tick through the comparator and at every paint of its row through the
-    // roster painter — the redraw callback Wayland runs once per pending
+    // roster painter — the redraw callback the platform runs once per pending
     // damage rectangle — so without the memo the scanner's damage during
     // playback would re-run an O(markers) copy plus the parser composer at
     // paint cadence on an unchanged answer. The key is the function's OWN
@@ -5678,7 +5672,7 @@ struct AppState {
     // flag item pixels are painted from the flag cache's rebuild-time
     // fingerprint (wf_cache.fp_vp_start / fp_vp_end / fp_area_w), NOT the live
     // viewport (app.viewport_start_sample). During an async plate-publish window (a
-    // worker-dispatched viewport change — a compositor resize is the one left,
+    // worker-dispatched viewport change — a window resize is the one left,
     // follow-scroll having taken the synchronous route 2026-09-02 and
     // center-on-playhead long before it) the
     // live viewport already holds the NEW span while the flags still paint at the
@@ -5812,7 +5806,7 @@ struct AppState {
     // pointer gesture and so deliberately not in the pointer-gesture clear
     // lists: it is seated and cleared by the touch nav body itself and by
     // end_touch_nav, which the platform fires on every end — a finger lift,
-    // wl_touch.cancel and touch-capability loss alike — and which clears it at
+    // a cancel and focus loss alike — and which clears it at
     // every end but the pen's lift with its button held, where a one-finger
     // seat stays RETAINED until the platform's release hook
     // (release_pen_zoom_anchor) or a view-state clear takes it.
@@ -7051,9 +7045,9 @@ struct AppState {
     //     threshold together, and deliberately NOT the hold delay (a
     //     repeat delay is a cadence, not a hold; the ruling is at
     //     kHoldBeatMs, gui_input.h) — and every later fire is
-    //     THE COMPOSITOR'S OWN advertised key-repeat interval
-    //     (GuiPlatform::key_repeat_period_ms, read per fire, 0 = the desktop
-    //     has key repeat off and neither the keys nor these buttons repeat).
+    //     THE PLATFORM'S key-repeat interval
+    //     (GuiPlatform::key_repeat_period_ms, read per fire, 0 = key repeat
+    //     off and neither the keys nor these buttons repeat).
     //   * `repeat_fired` records that the burst has produced at least one act,
     //     and the LIFT reads it: a hold gives the stream and nothing extra, so
     //     a fired burst SUPPRESSES the lift's own act — the burst's fires
@@ -7204,7 +7198,7 @@ struct AppState {
     //   * A HARD END hides at once and clears `reshow`: any pointer press or
     //     release (a click hides the hint), any wheel (Windows 95 had none;
     //     the dismissal stands), a
-    //     modal opening with no press to carry it (the compositor close), the
+    //     modal opening with no press to carry it (the platform's close), the
     //     pointer leaving the window or the pen's hover leaving the plane
     //     (both leaving the tool), the window's activation flipping either way
     //     (Windows shows a tooltip only while its window is active), and a
@@ -7215,7 +7209,7 @@ struct AppState {
     //     recompute_redesign_button_hover). The pointer still resting on the
     //     button starts nothing: only a motion past the slop does, and on a
     //     spent button not even that (above).
-    //   * NO TOOLTIP UNDER A HELD PRESS, on both devices: while the logical
+    //   * NO TOOLTIP UNDER A HELD PRESS: while the logical
     //     primary button is held (the physical left, bare `e`'s synthesized
     //     hold, a finger or the pen in contact) no wait starts, the anchor
     //     following the pointer, so a finger never raises a hint; after the
@@ -8867,9 +8861,9 @@ struct AppState {
 
     // (THERE IS NO TEXT CLIPBOARD FIELD HERE — 2026-08-02. The session-only
     // `text_clipboard` string is DELETED with the system clipboard's arrival:
-    // the payload has ONE representation now, GuiPlatform's, which has to exist
-    // anyway to serve the compositor's `send` event and which owns the
-    // self-paste short circuit. A second copy in AppState was pure duplication
+    // the payload has ONE representation now, GuiPlatform's (its copy and its
+    // stamp, the paste taking the newer, platform_android.h's
+    // clipboard_set_text). A second copy in AppState was pure duplication
     // with drift risk — every reader it ever had was a pass-through handing it
     // straight back to clipboard_set_text. The four copy sites compose their
     // string and hand it over directly. The PHASE-RESET clipboard above is a
@@ -9576,19 +9570,9 @@ struct AppState {
     //              waits for its paint (GuiScoreViewer::tick);
     //   `forward`  the decoder's bias: the last page step was forward (NEXT)
     //              or the transport sounds, so the neighbors ahead come first;
-    //   `cache`    THE PAINTED PAGES (score_viewer.h's head, THE CACHE;
-    //              trimmed by GuiScoreViewer::feed_decoder; the cpu canvas's
-    //              alone, empty under the GL canvas): the shown page
-    //              and up to three either side of it in the range — and the
-    //              last painted page while the shown page's is absent — each
-    //              at the fit box and conversion it was made for, owned here
-    //              — KEPT ACROSS THE CLOSE so a reopen is instant, dropped at
-    //              a score folder change (score_folder_changed) and with the
-    //              AppState;
     //   `gray`     THE GRAY STORE (score_viewer.h's head, THE GRAY STORE):
     //              every page of the viewing range at `gray_box_w` x
-    //              `gray_box_h`, one byte a pixel, shared with the jobs that
-    //              expand it and, under the GL canvas, with the page
+    //              `gray_box_h`, one byte a pixel, shared with the page
     //              textures' uploads (GuiCanvasPage::want, canvas_sink.h)
     //              until the texture is held, the RAM bytes then released
     //              (GuiScoreGrayPage; architect 2026-10-27, the memory fix),
@@ -9603,39 +9587,10 @@ struct AppState {
     //   `asked`    the work last handed to the decoder (the tick's change
     //              test);
     //   `decoder`  the page decoder (score_page_worker.h), the one thread
-    //              that decodes, scales and expands a page;
+    //              that decodes and scales a page;
     //   `seen_audio` the soundtrack's state the tick last saw, so its arrival
     //              or its failure repaints the face it decides.
     struct ScoreViewer {
-        // ONE CACHED PAGE: its key and its fit-size surface, owned (moved,
-        // never copied; freed with the entry) — or no surface and `failed`,
-        // a decode that failed under this key, never asked for again while
-        // the key stands.
-        struct Cached {
-            GuiScorePageKey  key;
-            cairo_surface_t* surface = nullptr;
-            bool             failed  = false;
-            Cached() = default;
-            Cached(const Cached&) = delete;
-            Cached& operator=(const Cached&) = delete;
-            Cached(Cached&& o) noexcept
-                : key(o.key), surface(o.surface), failed(o.failed) {
-                o.surface = nullptr;
-            }
-            Cached& operator=(Cached&& o) noexcept {
-                if (this != &o) {
-                    if (surface) cairo_surface_destroy(surface);
-                    key       = o.key;
-                    surface   = o.surface;
-                    failed    = o.failed;
-                    o.surface = nullptr;
-                }
-                return *this;
-            }
-            ~Cached() {
-                if (surface) cairo_surface_destroy(surface);
-            }
-        };
         struct ScrubDrag {
             bool armed      = false;
             bool on_thumb   = false;  // taken on the thumb
@@ -9655,7 +9610,6 @@ struct AppState {
         int64_t                      painted_cursor = -1;
         bool                         position_owed  = false;
         bool                         forward        = true;
-        std::vector<Cached>           cache;
         std::vector<GuiScoreGrayPage> gray;
         int                           gray_box_w = 0;
         int                           gray_box_h = 0;
@@ -10515,8 +10469,8 @@ GuiRect top_strip_area(const AppState& a);
 // leaves that file.)
 // (THE CAPTION'S LANE, top_caption_row_area, and THE SIZING FRAME'S EDGES,
 // window_frame_edges_at — the window's own title bar and the restored
-// laptop window's frame, architect 2026-10-05 — went 2026-10-24: labwc
-// decorates the window, render.h's caption note.)
+// window's frame, architect 2026-10-05 — went 2026-10-24, render.h's caption
+// note.)
 GuiRect top_icon_row_area(const AppState& a);
 // THE VIEWPORT'S LANES' TOP ROW — the toolbar band's foot (the simple
 // layout, 2026-10-22; the tab strip's 2026-10-18 to then), the view bar's
@@ -10759,7 +10713,7 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 // real, not theoretical: every painted step q is a whole number of
 // sixteenths of a frame (painter_quantized_spp), so a column's frame
 // position can sit exactly on a half — at level 1 on an odd working column
-// (the laptop's 55 at 44.1 kHz gives q = 27.5) every odd pixel offset is an
+// (55 at 44.1 kHz, a 1920-px display's, gives q = 27.5) every odd pixel offset is an
 // exact half-frame tie — and banker's rounding debiases them. No other call site may round or cast an authored
 // position on its own.
 inline int64_t snap_authored_frame(double frame) {

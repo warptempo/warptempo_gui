@@ -165,11 +165,11 @@ static_assert(kCompressorRatio >= 1.0, "the compressor never expands");
 // exactly 0.5 and never as a decibel power — the multiply below is exact.
 // Under 1, so the inner's scale (c x 1/2 <= 1/2 < 1 <= g) never exceeds the
 // outer's — the inner never stands out of the outer in height about the
-// centre row (render_waveform's declaration records the one-sided column) —
+// centre row (render_waveform_columns' declaration records the one-sided column) —
 // and, the raw peaks being at most 1 and the compressor's scale and the
 // expander's multiplier at most 1, no inner tip reaches full scale: the inner
 // bar is never clipped at the lane's edge, which is why its outline has no
-// open end (render_waveform).
+// open end (render_waveform_columns).
 constexpr double kForegroundGain = 0.5;
 static_assert(kForegroundGain > 0.0 && kForegroundGain < 1.0 &&
                   kForegroundGain <= kGainMin,

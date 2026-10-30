@@ -145,8 +145,8 @@ struct GuiNoiseBank {
 // standing), `pos_nxt`, `xf_len` (this transition's crossfade in the bank's
 // frames) and `rng` (xorshift64) — are touched by ONE AUDIO THREAD AT A TIME.
 // THE ENGINE IS PER PROJECT AND THE VOICE PER APP: at a project switch the old
-// engine's shutdown quiesces and closes its device (jack_deactivate,
-// AAudioStream_close — each returns only after its callback thread has left)
+// engine's shutdown quiesces and closes its device (AAudioStream_close,
+// which returns only after its callback thread has left)
 // before the new engine's init starts a new callback thread, so exactly one
 // audio thread ever touches these fields, the hand-off ordered by the device
 // close and the thread start.
@@ -161,8 +161,7 @@ struct GuiNoiseBank {
 // ONE thread that can touch these fields until a reopen starts a new
 // callback thread; and every reopen is the main thread's own
 // (reopen_stream_if_dead, playback_aaudio.cpp), ordered after that write by
-// program order and before the new thread by its start. JACK has no latch,
-// so the exception never arises on the laptop.
+// program order and before the new thread by its start.
 // THE SECOND EXCEPTION — THE MAIN THREAD BEHIND THE IN_FILL FENCE
 // (2026-10-28, GuiNoise::change_folder): with `bank` stored null and
 // `in_fill` read false (seq_cst both), no fill is inside its body and every
@@ -198,8 +197,8 @@ struct GuiNoiseVoice {
 
 // THE AUDIO-THREAD BODY: SUM the noise into `frame_count` output frames that
 // already hold the project voice or silence (the stride is
-// playback_write_silence's: 1 on JACK's per-port buffers, the channel count on
-// AAudio's interleaved one), at the device's `output_rate`. NO ALLOCATION, NO
+// playback_write_silence's: the channel count on AAudio's interleaved
+// buffer), at the device's `output_rate`. NO ALLOCATION, NO
 // LOCK, NO SYSCALL, NO I/O. A suspended device (`output_rate` 0) returns at
 // once; every other fill marks `in_fill` and loads `bank` first, and a fill
 // with no bank (no load yet, a lit lamp's load in flight — the fade-in begins
@@ -207,9 +206,9 @@ struct GuiNoiseVoice {
 // private field. A dark, silent voice then returns too — the idle arm, the
 // common case: the music path pays four atomic words per fill (in_fill's
 // store, the bank's load, target's load, in_fill's clear) and one branch, at
-// a fill every ~5 ms, nothing. Called by both backends' callbacks on BOTH
-// arms, the silence arm's and the render body's, before the clip
-// (playback.cpp, playback_aaudio.cpp).
+// a fill every ~5 ms, nothing. Called by the device's callback on BOTH arms,
+// the silence arm's and the render body's, before the clip
+// (playback_aaudio.cpp).
 void noise_mix_block(GuiNoiseVoice& voice, float* const* channel_buffers,
                      int64_t stride, int64_t frame_count, int channel_count,
                      uint32_t output_rate);
@@ -298,8 +297,7 @@ public:
     // the writes are idempotent, so the repeat costs nothing. A press that
     // reopens before the tick resets through the free function itself, ahead
     // of the close that clears the latch (the head's second road,
-    // playback_aaudio.cpp). JACK's stream_dead is always false, so it is
-    // never called on the laptop. Nothing is damaged here: the roster's
+    // playback_aaudio.cpp). Nothing is damaged here: the roster's
     // per-tick comparator carries the NOISE key's face edge.
     void reset_on_dead_stream();
 
@@ -336,8 +334,8 @@ public:
     //      then probe(folder_name): the next lit press loads the new folder.
     // A folder the probe refuses or cannot find leaves available() false: the
     // key greys, no card (the absent-folder rule), the config still holding
-    // the name he typed. BACKEND-NEUTRAL: AAudio's data callback and JACK's
-    // process callback are each one thread, the one fill this fence waits on.
+    // the name he typed. AAudio's data callback is one thread, the one fill
+    // this fence waits on.
     // A DARK-LAMP COMMIT takes the same road — step 1 a no-op, the bank freed
     // all the same (his ruling: the memory is dumped on a name change, lit or
     // not). A SAME-NAME COMMIT never reaches here: the editor's arm answers

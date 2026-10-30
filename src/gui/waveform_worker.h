@@ -1,10 +1,9 @@
 #pragma once
 
-#include "render.h"           // WaveformPlateInks
+#include "render.h"           // GuiPlateColumns
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <atomic>
-#include <cairo/cairo.h>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
@@ -21,9 +20,9 @@ class GuiAudio;
 // The waveform-cache rebuild runs off the paint thread on a dedicated worker.
 // Shape mirrors GuiAsyncRenderer byte-for-byte: single std::thread,
 // single-in-flight job, condition-variable wakeup, stop-on-shutdown atomic,
-// completion signaled via an eventfd that the platform run loop poll()s. The
-// cache lifecycle owns the destination surface — the worker writes pixels but
-// never destroys.
+// completion signaled via an eventfd that the platform run loop polls. The
+// cache lifecycle owns the destination slot (WaveformCache's pending column
+// bounds) — the worker fills it but never destroys.
 //
 // The job-payload owns no audio bytes. It carries `const GuiAudio*` whose
 // lifetime invariant is: audio outlives all in-flight jobs because
@@ -34,7 +33,7 @@ class GuiAudio;
 // project: the reopen tears this worker down with its GuiAudio and builds a
 // new pair, rather than swapping a buffer under a live job. The only
 // synchronous drain (GuiWaveformWorker::wait_until_idle) is the paint path's
-// force_synchronous_waveform_rebuild, which takes over the cache surfaces
+// force_synchronous_waveform_rebuild, which takes over the cache's slots
 // before a one-shot rebuild.
 struct WaveformJob {
     // Fingerprint inputs the worker's render uses. The cache's fp_* fields
@@ -63,9 +62,9 @@ struct WaveformJob {
     // vertical inset rode here too until its removal, architect 2026-10-09;
     // the bands are waveform_channel_band's off area_h and divider_px.)
     int       line_px          = 0;
-    // The plate's two INKS (waveform_plate_inks, render.h), captured beside
-    // the line width for the same reason: the worker reads no live palette.
-    WaveformPlateInks inks{};
+    // (The plate's two INKS ride the cache's fingerprint and its publication,
+    // not the job: the bounds the worker computes do not depend on them, the
+    // sink reading the published inks, GuiCanvasSink::plate.)
 
     // THE WAVEFORM'S GAIN FIELD (waveform_gain_fingerprint,
     // warp_frame_map_view.h, which owns the gate): the derivation's version
@@ -87,16 +86,10 @@ struct WaveformJob {
     // source view. The worker reads — never builds — this.
     std::vector<WarpFrameMapSegment> warp_frame_map;
 
-    // Surface to render into. Owned by the cache (the cache's pending-slot
-    // surface). The worker only writes pixels; the cache lifecycle owns
-    // destroy/recreate.
-    cairo_surface_t* surface = nullptr;
-
-    // THE GL CANVAS'S PLATE SLOT (2026-10-13; WaveformCache::columns,
-    // paint_handler.h): under kGuiCanvasDrawList the job carries the cache's
-    // pending COLUMN BOUNDS in place of a surface (surface null) and the
-    // worker fills them (render_waveform_to_plate_columns, below). Owned by
-    // the cache like the surface; null on the cairo road.
+    // THE PLATE'S SLOT (2026-10-13; WaveformCache::columns, paint_handler.h):
+    // the cache's pending COLUMN BOUNDS, which the worker fills
+    // (render_waveform_to_plate_columns, below). Owned by the cache; the
+    // worker only writes them.
     GuiPlateColumns* columns = nullptr;
 
     // Audio handle the render reads (see lifetime invariant above). Always
@@ -109,8 +102,8 @@ struct WaveformJob {
 
 class GuiWaveformWorker {
 public:
-    // ok=true on a clean render; ok=false on dispatch with neither a surface
-    // nor columns, or null audio. The completion handler is responsible for the
+    // ok=true on a clean render; ok=false on dispatch with no slot or null
+    // audio, or a cancel. The completion handler is responsible for the
     // swap-or-redispatch state machine.
     using DoneCallback = std::function<void(bool ok)>;
 
@@ -156,7 +149,7 @@ public:
     bool is_busy() const;
 
     // Block until state_ is Idle. Used by the paint path's
-    // force_synchronous_waveform_rebuild to take over the cache surfaces
+    // force_synchronous_waveform_rebuild to take over the cache's slots
     // before a one-shot synchronous rebuild, guaranteeing no in-flight job
     // touches them underneath it. Caps the wait at ~1000ms; if the worker
     // hasn't responded by then, logs to stderr and returns.
@@ -189,48 +182,29 @@ private:
     int completion_fd_ = -1;
 };
 
-// Render the waveform into `dest` from scratch (clears to transparent first,
-// then writes the peak columns for both stereo channels DIRECTLY into the plate
-// buffer — no cairo strokes; see render_waveform's writer contract — stereo is
-// structural, channels != 2 refuses at load; see file_loader). Thread-agnostic: it runs
-// either on the waveform worker thread (the async dispatch) or synchronously on
-// the GUI thread (force_synchronous_waveform_rebuild), touching only the
-// supplied dest surface, the audio handle's peak pyramid (read-only after
-// load), the caller's warp_frame_map snapshot, and the job-captured geometry
-// scalars (area_w/area_h/divider_px/line_px) and inks — no other shared or
-// main-thread state. The line width, the inks and the
-// MAGNIFICATION are passed in rather than read off live state so
-// the render touches no gui_scale and no settings state: ALL scale-dependent
-// geometry
-// is snapshotted on the GUI thread at dispatch, closing the race with a
-// mid-render set_gui_scale_percent. Such a job COMPLETES from its coherent
-// old-geometry snapshot on either reachable ordering: it may publish before the
-// next dirty-detect, or be discarded by a supersede request (a tick's
-// maybe_enqueue_waveform_render seeing the changed geometry while the job is
-// still in flight fills the supersede slot, and the completion handler discards
-// the old pixels and redispatches). When integer waveform geometry changed,
-// dirty-detect drives a replacement either way; otherwise none is needed.
-void render_waveform_to_cache_surface(
-    cairo_surface_t* dest,
-    int area_w,
-    int area_h,
-    int divider_px,
-    int line_px,
-    WaveformPlateInks inks,
-    const GuiAudio& audio,
-    int64_t vp_start,
-    double  painter_spp,
-    bool    magnified,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);
-
-// THE SAME PLATE AS COLUMN BOUNDS (2026-10-13, the GL canvas;
-// GuiPlateColumns, render.h): the two bands through the one producer
-// render_waveform_to_cache_surface's writer reads (render_waveform_columns),
-// at the plate's size, each band stored exactly where that function's
-// surface would hold its words — the inks ride the paint instead (the
-// published fingerprint's, GuiListCanvasSink::plate), so none is taken here.
-// Thread-agnostic on the same terms: the worker or the synchronous rebuild,
-// the dest slot the cache's.
+// THE PLATE AS COLUMN BOUNDS (2026-10-13; GuiPlateColumns, render.h): the two
+// stereo bands of waveform_channel_band's layout through the one producer
+// (render_waveform_columns) at the plate's size, each band stored exactly
+// where its bounds cover it whole — stereo is structural, channels != 2
+// refuses at load (file_loader). The inks ride the paint instead (the
+// published fingerprint's, GuiCanvasSink::plate), so none is taken here.
+// Thread-agnostic: it runs either on the waveform worker thread (the async
+// dispatch) or synchronously on the GUI thread
+// (force_synchronous_waveform_rebuild), touching only the supplied dest
+// slot, the audio handle's peak pyramid (read-only after load), the caller's
+// warp_frame_map snapshot, and the job-captured geometry scalars
+// (area_w/area_h/divider_px/line_px) — no other shared or main-thread state.
+// The line width and the MAGNIFICATION are passed in rather than read off
+// live state so the render touches no gui_scale and no settings state: ALL
+// scale-dependent geometry is snapshotted on the GUI thread at dispatch,
+// closing the race with a mid-render set_gui_scale_percent. Such a job
+// COMPLETES from its coherent old-geometry snapshot on either reachable
+// ordering: it may publish before the next dirty-detect, or be discarded by
+// a supersede request (a tick's maybe_enqueue_waveform_render seeing the
+// changed geometry while the job is still in flight fills the supersede
+// slot, and the completion handler discards the old bounds and
+// redispatches). When integer waveform geometry changed, dirty-detect drives
+// a replacement either way; otherwise none is needed.
 void render_waveform_to_plate_columns(
     GuiPlateColumns& dest,
     int area_w,

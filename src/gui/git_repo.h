@@ -9,9 +9,8 @@
 // guard compares, which directory a commit is about, the five-step checkpoint
 // act and every sentence the user reads — stays in history_diff.cpp, its one
 // caller. So the header carries no libgit2 type but the opaque repository
-// handle, and <git2.h> is included by git_repo.cpp alone. A build with
-// WARPTEMPO_GUI_GIT off links git_repo_stub.cpp in its place, which answers
-// every question here with its "could not ask" value (the rule at its head).
+// handle, and <git2.h> is included by git_repo.cpp alone, the seam's one
+// implementation (the APK always carries libgit2, architect 2026-10-30).
 //
 // THE FENCE IS WHICH FUNCTION A CALL SITE NAMES: GuiGitRepo's reads write no
 // file, no ref and no index entry, and the FIVE MUTATORS — stage, commit,
@@ -36,18 +35,16 @@
 // overlap on the remote-tracking refs, an abandoned check of a closed session
 // included.
 //
-// ONE CODE ON BOTH DEVICES (arc 4, architect 2026-09-27). The APK carries
-// libgit2 1.9.7 over libssh2 1.11.1 over OpenSSL 3.6.4's libcrypto — the
-// laptop's own three versions — cross-built static (android/NOTES.md §14 owns
+// THE APK CARRIES (arc 4, architect 2026-09-27) libgit2 1.9.7 over libssh2
+// 1.11.1 over OpenSSL 3.6.4's libcrypto, cross-built static
+// (android/NOTES.md §14 owns
 // the build's choices: HTTPS off, zlib bundled so the NDK's libz adds no
 // DT_NEEDED line, threads on, ED25519 in). THE SIZE WAS ACCEPTED as the plain
 // OpenSSL build, over a trimmed one 1.4 MB smaller: the APK went 7.9 ->
-// 15.4 MB. THE SEAM NEEDS NOTHING PER BACKEND: the tablet's $HOME is the app's
-// internal files/ (no .gitconfig, no .ssh), the deploy key resolves beside the
-// device config there as here, the host-key pin, the fsync switch and the time
-// bound are the same code, the COMMIT IDENTITY is each clone's own
-// .git/config (no identity constant in code), and SIGPIPE is ignored in
-// gui_main for both. THE APP NEVER CLONES: the clone, its storage config
+// 15.4 MB. The tablet's $HOME is the app's internal files/ (no .gitconfig,
+// no .ssh), the deploy key resolves beside the device config, the COMMIT
+// IDENTITY is the clone's own .git/config (no identity constant in code), and
+// SIGPIPE is ignored in gui_main. THE APP NEVER CLONES: the clone, its storage config
 // (core.filemode=false, core.symlinks=false, core.ignorecase=true on the
 // tablet's external storage), the identity and the key are placed by
 // scripts/warptempo_sync's `setup` (docs/INSTALL.md is the recipe).
@@ -93,9 +90,8 @@ GuiGitRoot gui_git_discover_root(const std::string& dir, std::string& root,
 // handed: a non-SSH URL fails there, before any connection, its cause on
 // stderr.
 //
-// DEFINED HERE, INLINE, because it is pure string logic that needs no libgit2:
-// both implementations of this seam (git_repo.cpp and the no-libgit2 stub,
-// git_repo_stub.cpp) compile against the one copy. libgit2 picks the transport
+// DEFINED HERE, INLINE, because it is pure string logic that needs no
+// libgit2. libgit2 picks the transport
 // from the spelling: a known scheme prefix, else ANY colon makes it SSH (its
 // scp-style reading), else a local directory. So the two admitted shapes are
 // the ones it reads as SSH, and each is parsed strictly enough that nothing it

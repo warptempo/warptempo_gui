@@ -17,13 +17,10 @@
 #include <android/window.h>
 #include <android_native_app_glue.h>
 
-#if WARPTEMPO_CANVAS_GL
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES3/gl3.h>
-#endif
 
-#include <arm_neon.h>
 #include <jni.h>
 
 #include <pthread.h>
@@ -54,9 +51,9 @@
 #include <utility>
 #include <vector>
 
-// THE ANDROID BACKEND. What is here is class A of the seam — the mechanics:
-// the glue's lifecycle, the ALooper run loop, the cairo -> window present
-// (the GL texture or the ANativeWindow blit, present),
+// THE ONE BACKEND (architect 2026-10-30, the tablet the one platform). What
+// is here is class A of the seam — the mechanics: the glue's lifecycle, the
+// ALooper run loop, the cairo -> window present (the GL texture, present),
 // the AMotionEvent decode and this platform's stubs. THE WINDOW IT PRESENTS TO
 // THE GUI IS THE WHOLE SURFACE: the activity is full
 // screen with both system bars hidden (MainActivity.java's head, architect
@@ -64,9 +61,8 @@
 // coordinate are one grid (the rule is at width_, platform_android.h; the
 // app paints no window frame since 2026-10-24). The POLICY (the touch
 // state machine, the key-repeat synthesis, the logical pointer, the notional-x
-// bookkeeping, the containment conversion) is in GuiInputCore and is shared
-// verbatim with the Wayland backend; every input event decoded below is handed
-// to that object in plain window-pixel doubles.
+// bookkeeping, the containment conversion) is in GuiInputCore; every input
+// event decoded below is handed to that object in plain window-pixel doubles.
 //
 // android_main lives at the bottom of this file: it is this platform's entry
 // point and calls the one portable GUI body, gui_main (gui_main.h).
@@ -83,17 +79,16 @@
 // STANDS (the hardware honors a P3-tagged layer); what the app hands it
 // changed on 2026-10-08 ~05:15: every authored color is an sRGB byte triple,
 // and the painters convert each to the Display-P3 triple that presents it as
-// a browser does (display_transform.h's head), so the bytes this file copies
-// to the window are the converted ones — the copy itself stays byte for byte.
-// (While the Settings menu's True Colors is unchecked, for a screenshot, the
-// painters convert nothing and the bytes are the authored sRGB ones.)
-// UNDER THE GL CANVAS (2026-10-13, the product build) THE TAG IS EGL'S: the
-// window surface is created with EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT,
-// the EGL twin of the data-space call (adopt_window's road), and the bytes
-// reach the layer through a texture that places them unfiltered (present), so
-// the measurement rests on that attribute's acceptance — logged once at the
-// first adoption — and on the layer's dataspace in `dumpsys SurfaceFlinger`,
-// which a screencap does not show. The cpu build keeps the data-space call.
+// a browser does (display_transform.h's head), so the bytes this file hands
+// the window are the converted ones, placed byte for byte. (While the
+// settings page's `true_colors` is off, for a screenshot, the painters
+// convert nothing and the bytes are the authored sRGB ones.) THE TAG IS
+// EGL'S (2026-10-13, the GL canvas): the window surface is created with
+// EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT (ensure_gl_surface), and the
+// bytes reach the layer through a texture that places them unfiltered
+// (present), so the measurement rests on that attribute's acceptance —
+// logged once at the first adoption — and on the layer's dataspace in
+// `dumpsys SurfaceFlinger`, which a screencap does not show.
 
 // ---------------------------------------------------------------------------
 // The logcat sink for the GUI's own diagnostics
@@ -183,8 +178,8 @@ void route_stdio_to_logcat() {
 // ---------------------------------------------------------------------------
 
 // THE ONE FILE-SCOPE POINTER, and why it has to exist: gui_main constructs its
-// GuiPlatform as an ordinary local, with the same signature on both platforms,
-// so there is no argument through which android_main could hand it the glue's
+// GuiPlatform as an ordinary local, through the portable gui_main body, so
+// there is no argument through which android_main could hand it the glue's
 // `android_app*`. android_main parks it here BEFORE calling gui_main and
 // init() adopts it; the two statics gui_main asks before any GuiPlatform
 // exists (device_config_defaults, read_asset_dir) read it too, and nothing
@@ -221,7 +216,7 @@ void finish_activity_once(android_app* app) {
 }
 
 // ---------------------------------------------------------------------------
-// Damage coalescing — the Wayland backend's rule, spelled the same way
+// Damage coalescing
 // ---------------------------------------------------------------------------
 
 template <typename Rect>
@@ -246,44 +241,14 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
 }
 
 // ---------------------------------------------------------------------------
-// The blit's channel swap
-// ---------------------------------------------------------------------------
-
-// cairo's ARGB32 is a NATIVE-ENDIAN 0xAARRGGBB word, so on this little-endian
-// target its bytes run B,G,R,A, while WINDOW_FORMAT_RGBA_8888 / RGBX_8888 run
-// R,G,B,A. R and B are transposed and the copy fixes it. Every buffer this
-// backend accepts is one of those two — the format the window ACTUALLY hands
-// back is checked at each lock (present), never assumed from what was
-// requested — so the swap is on every row of every frame. THE CPU CANVAS'S
-// ALONE: under the GL canvas the fragment shader makes the same swap
-// (kCanvasFragmentShader, gl_canvas.cpp).
-#if !WARPTEMPO_CANVAS_GL
-void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
-    int x = 0;
-    for (; x + 16 <= n; x += 16) {
-        uint8x16x4_t p = vld4q_u8(reinterpret_cast<const uint8_t*>(src + x));
-        const uint8x16_t t = p.val[0];
-        p.val[0] = p.val[2];
-        p.val[2] = t;
-        vst4q_u8(reinterpret_cast<uint8_t*>(dst + x), p);
-    }
-    for (; x < n; ++x) {
-        const uint32_t v = src[x];
-        dst[x] = (v & 0xFF00FF00u) | ((v >> 16) & 0xFFu) | ((v & 0xFFu) << 16);
-    }
-}
-#endif
-
-#if WARPTEMPO_CANVAS_GL
-// ---------------------------------------------------------------------------
 // The GL canvas's fatal lines (2026-10-13; the road is at present, its GL
 // calls GuiGlCanvas's, gl_canvas.cpp)
 // ---------------------------------------------------------------------------
 
-// A FAILURE OF THE GL ROAD'S SETUP IS FATAL, the buffer-format gate's shape:
-// the display, the config, the context, the plain window surface, the make
-// current and the shaders have no fallback at run time — the cpu canvas is a
-// BUILD (WARPTEMPO_CANVAS=cpu), never a road this binary switches to.
+// A FAILURE OF THE GL ROAD'S SETUP IS FATAL: the display, the config, the
+// context, the plain window surface, the make current and the shaders have
+// no fallback — the GL canvas is the one road (architect 2026-10-30), a rare
+// non-silent fault gets no recovery code.
 [[noreturn]] void gl_fatal(const char* what, int code) {
     __android_log_print(ANDROID_LOG_FATAL, kLogTag,
                         "the GL canvas: %s (0x%x)", what, code);
@@ -299,7 +264,6 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
     __android_log_write(ANDROID_LOG_FATAL, kLogTag, message);
     abort();
 }
-#endif
 
 // ---------------------------------------------------------------------------
 // The looper identifiers this backend adds
@@ -307,8 +271,8 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
 
 // LOOPER_ID_MAIN (1) and LOOPER_ID_INPUT (2) are the glue's; everything from
 // LOOPER_ID_USER (3) up is ours. The four worker slots are contiguous so the
-// dispatch can index them, and the ORDER they are dispatched in is the Wayland
-// loop's order (async renderer, waveform, checkpoint, prefetch). THE MEDIA
+// dispatch can index them, and the ORDER they are dispatched in is the
+// registration order (async renderer, waveform, checkpoint, prefetch). THE MEDIA
 // COMMAND SOURCE IS NOT A FIFTH WORKER SLOT: the
 // worker fds are per project (re-registered each session, forgotten at its
 // tail), while the car's eventfd is this backend's own and lives with the
@@ -610,8 +574,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
-    // `waveform=default`, the laptop's template the same
-    // (palette_file.h owns the name).
+    // `waveform=default` (palette_file.h owns the name).
     cfg.waveform      = kGuiDefaultPaletteKey;
     // NO ROLE (architect 2026-10-10): the program never invents one, so the
     // first start's read-back refuses on the required `role` key;
@@ -619,29 +582,27 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // device_config.h).
     // THE NOISE'S THREE (architect 2026-10-28), spelled: the folder `rain`
     // under noise/ beside the config, the level -9 dB, his "the rain is a
-    // masker", and the crossfade 4 s — the laptop's
-    // template the same (device_config.h's head).
+    // masker", and the crossfade 4 s (device_config.h's head).
     cfg.noise             = "rain";
     cfg.noise_level       = -9;
     cfg.noise_crossfade_s = 4;
     // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: his
-    // "around 33" device px at 300 % — the laptop's template the same
-    // (device_config.h's head).
+    // "around 33" device px at 300 % (device_config.h's head).
     cfg.key_height        = kKeyHeightDefaultAt300;
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
-    // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 % — the
-    // laptop's template the same (device_config.h's head).
+    // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 %
+    // (device_config.h's head).
     cfg.osk_key_w         = kOskKeyWDefaultAt300;
     cfg.osk_key_h         = kOskKeyHDefaultAt300;
     // THE ON-SCREEN KEYBOARD'S CAP SIZE (architect 2026-10-29 night, a
-    // tuning key), spelled: the face table's 24 device px at 300 % — the
-    // laptop's template the same (device_config.h's head).
+    // tuning key), spelled: the face table's 24 device px at 300 %
+    // (device_config.h's head).
     cfg.osk_font_px       = kOskFontPxDefaultAt300;
     return cfg;
 }
 
-// THE TABLET'S ICON BUNDLES ARE THE APK'S ASSET DIRECTORIES (contract at
-// platform_wayland.h's declaration): build_apk.sh copies the repository's
+// THE ICON BUNDLE IS THE APK'S ASSET DIRECTORY (contract at the
+// declaration, bundled_icon_files): build_apk.sh copies the repository's
 // assets/icons/*.svg (each symlink as the file it names, icons.h's
 // kIconNames) into assets/icons/, and one reader lists an asset directory
 // (AAssetManager_openDir lists FILES only) and reads every name ending one of
@@ -726,24 +687,20 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     input_.set_surface_width(width_);
 
     // THE KEY-REPEAT CADENCE IS HARD-CODED HERE (architect ruling 2026-08-23).
-    // Android advertises no repeat rate to a native activity — there is no
-    // wl_keyboard.repeat_info counterpart and no system setting a native app
-    // can read — so the numbers are labwc's own, taken BY CONVENTION: the
-    // delay is kHoldBeatMs (600, gui_input.h, the product's fixed beat — never
-    // the hold delay, architect 2026-09-29: a repeat delay measures the
-    // cadence of a stream of repeats, not a hand resting until a hold means
-    // something) and the rate is 25 Hz, a 40 ms period — labwc's
-    // own <repeatRate>, the twin of the <repeatDelay> kHoldBeatMs matches
-    // (it read 30 until 2026-09-02, when the number was found not to be
-    // the convention the sentence claimed). They pace
-    // the chrome buttons' hold-repeat through key_repeat_period_ms(), and
-    // whatever on-screen keyboard this backend comes to own.
+    // Android advertises no repeat rate to a native activity — no system
+    // setting a native app can read — so the numbers are labwc's defaults,
+    // taken BY CONVENTION: the delay is kHoldBeatMs (600, gui_input.h, the
+    // product's fixed beat — never the hold delay, architect 2026-09-29: a
+    // repeat delay measures the cadence of a stream of repeats, not a hand
+    // resting until a hold means something) and the rate is 25 Hz, a 40 ms
+    // period — labwc's <repeatRate>, beside the <repeatDelay> kHoldBeatMs
+    // matches. They pace the chrome buttons' hold-repeat and the on-screen
+    // keyboard's through key_repeat_period_ms().
     input_.set_repeat_info(25, kHoldBeatMs);
 
     // THE CORE'S CODEPOINT REFILL, the one probe pointing DOWNWARD across the
-    // seam (contract at GuiInputCore::set_codepoint_probe). The Wayland
-    // backend re-resolves the held key against the live xkb state; this one
-    // answers from the table synthesize_key fills, since a synthesized key
+    // seam (contract at GuiInputCore::set_codepoint_probe). It answers from
+    // the table synthesize_key fills, since a synthesized key
     // carries its own character and nothing under it can move. An unknown code
     // answers 0, which is what a key that produces no character already means.
     input_.set_codepoint_probe([this](uint32_t stable_code) -> uint32_t {
@@ -890,49 +847,17 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     window_ = app_->window;
     if (!window_) return;
 
-#if WARPTEMPO_CANVAS_GL
-    // THE GL CANVAS ADOPTS THROUGH EGL (2026-10-13): EGL owns the buffers'
-    // format and their dataspace, so neither of the cpu canvas's two calls
-    // below is made — the window surface's config sets RGBA_8888, and its
-    // colorspace attribute is the Display-P3 tag (ensure_gl_surface, where
-    // the refusal rule is). A re-adoption of the same window keeps its
-    // surface.
+    // THE WINDOW ADOPTS THROUGH EGL (2026-10-13, the GL canvas): EGL owns
+    // the buffers' format and their dataspace — the window surface's config
+    // sets RGBA_8888, and its colorspace attribute is the Display-P3 tag
+    // (ensure_gl_surface, where the refusal rule is). THE WINDOW IS A
+    // DISPLAY-P3 LAYER (architect 2026-10-02; the measurement is at this
+    // file's head): the app's bytes are handed over under that tag (the
+    // manifest's colorMode makes the compositor honor it), so the panel
+    // receives them as it receives a gallery viewer's P3-tagged image, and
+    // THOSE BYTES ARE ALREADY P3 (architect 2026-10-08, display_transform.h's
+    // head). A re-adoption of the same window keeps its surface.
     ensure_gl_surface();
-#else
-    // 0,0 for the geometry means "the window's own size"; the FORMAT is the
-    // one thing asked for. A REFUSAL IS REPORTED AND NOT FATAL HERE, because
-    // it is not yet the question that matters: the window may still hand back
-    // a 32-bit buffer of its own choosing. The gate sits where the truth is,
-    // at the lock that reads the format back (present).
-    const int32_t geom_rc =
-        ANativeWindow_setBuffersGeometry(window_, 0, 0, WINDOW_FORMAT_RGBA_8888);
-    if (geom_rc != 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: ANativeWindow_setBuffersGeometry"
-                     "(RGBA_8888) refused (%d)\n", static_cast<int>(geom_rc));
-    }
-
-    // THE WINDOW IS A DISPLAY-P3 LAYER (architect 2026-10-02; the measurement
-    // is at this file's head). The app's bytes are handed over under the
-    // DISPLAY_P3 tag (the manifest's colorMode makes the compositor honor
-    // it), so the panel receives them as it receives a gallery viewer's
-    // P3-tagged image. THOSE BYTES ARE ALREADY P3 (architect 2026-10-08):
-    // every authored color is sRGB and the painters convert it at their entry
-    // while window_is_display_p3() holds and True Colors is on
-    // (display_transform.h's head), so a hex shows here as the browser shows
-    // it. A REFUSAL IS REPORTED AND NOT
-    // FATAL, as the geometry's is: the layer then stays sRGB, the flag reads
-    // false and nothing is converted — the laptop's case, whose Wayland
-    // surface stays untagged sRGB. API 28; minSdk is 30.
-    const int32_t space_rc =
-        ANativeWindow_setBuffersDataSpace(window_, ADATASPACE_DISPLAY_P3);
-    window_display_p3_ = space_rc == 0;
-    if (space_rc != 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: ANativeWindow_setBuffersDataSpace"
-                     "(DISPLAY_P3) refused (%d)\n", static_cast<int>(space_rc));
-    }
-#endif
 
     // PIN THE PANEL TO 90 Hz (architect 2026-08-27; kPanelRefreshHz, the
     // number's one owner, this vote its one reader). One device, one rate —
@@ -1041,14 +966,11 @@ void GuiPlatform::ensure_backbuffer(int w, int h) {
         back_w_ = w;
         back_h_ = h;
     }
-#if WARPTEMPO_CANVAS_GL
     // The texture follows the backbuffer (GuiGlCanvas::ensure_texture's
     // rule), asked with the context current on a surface.
     if (egl_surface_ && back_) gl_canvas_.ensure_texture(back_w_, back_h_);
-#endif
 }
 
-#if WARPTEMPO_CANVAS_GL
 // THE PROCESS'S EGL OBJECTS (the members' comment, platform_android.h): made
 // once, at the first adoption. The config is RGBA 8/8/8/8 EXACTLY, no depth,
 // no stencil, window-renderable under ES 3 — taken from eglChooseConfig's
@@ -1099,12 +1021,11 @@ void GuiPlatform::ensure_gl_context() {
 // surface for (the first, and each after a loss) and bound current with the
 // process's context. THE DISPLAY-P3 TAG IS THE SURFACE'S COLORSPACE ATTRIBUTE
 // (architect 2026-10-02 for the tag, the file head for its measurement;
-// 2026-10-13 for this road): EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT is
-// the EGL twin of the cpu canvas's ANativeWindow_setBuffersDataSpace(
-// DISPLAY_P3) — the layer is tagged P3 and the bytes written go out as they
-// are, never encoded — and window_display_p3_ reads true iff it was accepted.
-// A REFUSAL IS REPORTED AND NOT FATAL, the data-space refusal's twin: an
-// EGL_BAD_ATTRIBUTE or EGL_BAD_MATCH retries the plain surface, the flag
+// 2026-10-13 for this road): EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT
+// tags the layer P3 and the bytes written go out as they are, never encoded,
+// and window_display_p3_ reads true iff it was accepted. A REFUSAL IS
+// REPORTED AND NOT FATAL: an EGL_BAD_ATTRIBUTE or EGL_BAD_MATCH retries the
+// plain surface, the flag
 // reads false, one line names it, and the painters convert nothing. Any
 // other failure, and a failure of the plain surface or of the make current,
 // is fatal (gl_fatal). The programs are built at the first make current and
@@ -1145,8 +1066,7 @@ void GuiPlatform::ensure_gl_surface() {
     // would leave every color converted for the wrong space — silently wrong
     // bytes on the glass — so it is a program fault caught at the last point
     // before them: fatal, naming both answers, with no re-conversion road.
-    // Under this canvas this is window_display_p3_'s one write (adopt_window's
-    // data-space write is the cpu canvas's alone).
+    // This is window_display_p3_'s one write.
     if (gl_first_display_p3_ && *gl_first_display_p3_ != p3)
         gl_fatal(p3 ? "Display-P3 passthrough: the first surface refused it, "
                       "this surface accepted it"
@@ -1210,10 +1130,8 @@ void GuiPlatform::destroy_gl() {
     egl_context_  = nullptr;
     gl_canvas_.forget();
 }
-#endif
 
-// THE GL CANVAS'S FRAME, named (the declaration; read at present under the
-// gl build alone).
+// THE GL CANVAS'S FRAME, named (the declaration; read at present).
 void GuiPlatform::set_canvas_frame(GuiCanvasDrawList* frame) {
     canvas_frame_ = frame;
 }
@@ -1236,17 +1154,12 @@ int GuiPlatform::display_width_px() const { return width_; }
 // ---------------------------------------------------------------------------
 
 // A NativeActivity under Theme.NoTitleBar has no system titlebar and no
-// task-switcher string a native app can rewrite, so the classic application
-// form the Wayland backend composes ("K551 - warptempo_gui") has nowhere to
-// go (the app paints no caption since 2026-10-24; the logo lane carries the
-// brand, never the piece). The setter is therefore a silent no-op. It is not deleted because the
-// GUI calls it unconditionally from the load path, and the seam's promise is
-// that a consumer compiles against either backend unchanged.
-// UNSAVED WORK IS SHOWN HERE like anywhere else: the dirty mark is the SAVE
-// BUTTON'S GREY (architect 2026-10-05, plain_save_actionable), painted by the
-// portable painter, the ONE dirty indicator on both backends — the title's own
-// asterisk is deleted, and the seam's set_title_dirty with it, so this backend
-// has no second setter to no-op.
+// task-switcher string a native app can rewrite, so a window title has
+// nowhere to go (the app paints no caption since 2026-10-24; the logo lane
+// carries the brand, never the piece). The setter is therefore a silent
+// no-op, kept because the GUI calls it unconditionally from the load path.
+// UNSAVED WORK IS SHOWN by the SAVE BUTTON'S GREY (architect 2026-10-05,
+// plain_save_actionable), the product's one dirty indicator.
 void GuiPlatform::set_project_title(std::string /*project_name*/) {}
 
 
@@ -1312,9 +1225,7 @@ void GuiPlatform::shutdown() {
     waveform_worker_completion_fd_  = -1;
     history_worker_completion_fd_   = -1;
     history_prefetch_completion_fd_ = -1;
-#if WARPTEMPO_CANVAS_GL
     destroy_gl();
-#endif
     destroy_backbuffer();
     window_ = nullptr;
     app_    = nullptr;
@@ -1372,7 +1283,7 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
 void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the damage
-    // signal uses the same containment coalescing the Wayland backend uses.
+    // signal is coalesced by containment (append_coalesced_rect).
     // THERE IS NO PER-BUFFER LIST HERE: the backbuffer is persistent, so the
     // one accumulator is the whole story and a rect never has to be replayed
     // for a second buffer that missed it.
@@ -1382,21 +1293,17 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     // Nothing is scheduled HERE: a declaration lands inside a loop pass (an
     // event, the tick, a worker, the car, the settled hook, the pre-paint),
     // and that pass's tail posts the vsync callback the damage waits for
-    // (the gate's rule, pump's tail) — one post site where the Wayland
-    // backend arms its frame callback at the declaration itself
-    // (schedule_frame_callback), the same one-callback-in-flight rule. A
+    // (the gate's rule, pump's tail) — one post site, one callback in
+    // flight. A
     // declaration ahead of a pass's drain (the owed resize at pump's head, a
     // reopen's set-up between two runs) is posted for at that pass's tail,
     // the drain's block bounded by the tick.
 }
 
 /*
- * Paint every damaged rect into the persistent backbuffer, then post their
- * bounding box. THE POST IS ONE RECT rather than the list because
- * ANativeWindow_lock takes a single dirty region and is free to widen it; the
- * backbuffer holds the whole frame, so the copy is correct for whatever it
- * hands back. (That is the cpu canvas's post; the GL canvas uploads the
- * damage list rect by rect and swaps the whole frame — present.)
+ * Paint every damaged rect into the persistent backbuffer, then present: the
+ * GL canvas uploads the damage list rect by rect and swaps the whole frame
+ * (present).
  */
 void GuiPlatform::paint_one_frame(bool held_frame) {
     // BEFORE ANY PIXEL: the owed first resize, so the layout the frame is
@@ -1417,11 +1324,8 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     // (e.g. re-read the playback predictor) and declare additional damage
     // based on the freshly-updated state. It runs BEFORE the damage list is
     // read precisely so it may add to it; invalidate_region needs no
-    // suppression here (unlike the Wayland twin's, it schedules nothing).
-    // (No in_pre_paint_ guard, unlike the Wayland twin's: there is nothing to
-    // suppress. That flag exists there to stop invalidate_region arming a
-    // second frame callback mid-pre-paint, and this backend's
-    // invalidate_region arms nothing at all.)
+    // suppression here, since it schedules nothing (the post is pump's
+    // tail's).
     if (on_pre_paint_) on_pre_paint_();
 
     // THE PAINT LOOP MUST NOT DECLARE DAMAGE. It range-fors over damage_ — the
@@ -1432,8 +1336,7 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     // does it BEFORE this loop through the pre-paint hook above, or from
     // ordinary event/tick code after the frame.
     // Each rect is handed to the GUI on a context clipped to it, the
-    // surface being the GUI's whole geometry (the Wayland backend's walk).
-    int lo_x = width_, lo_y = height_, hi_x = 0, hi_y = 0;
+    // surface being the GUI's whole geometry.
     cairo_t* cr = cairo_create(back_);
     for (const DamageRect& d : damage_) {
         cairo_save(cr);
@@ -1441,20 +1344,16 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
         cairo_clip(cr);
         if (on_redraw_) on_redraw_(cr, d.x, d.y, d.w, d.h);
         cairo_restore(cr);
-        lo_x = std::min(lo_x, d.x);
-        lo_y = std::min(lo_y, d.y);
-        hi_x = std::max(hi_x, d.x + d.w);
-        hi_y = std::max(hi_y, d.y + d.h);
     }
     cairo_destroy(cr);
     cairo_surface_flush(back_);
 
     // THE DAMAGE LIVES UNTIL THE POST SUCCEEDS. The pixels are in the
     // backbuffer either way, but the damage list is the only record of what
-    // the WINDOW has not yet been shown: clearing it on a failed lock or a
-    // failed post would leave the displayed buffer stale with nothing left to
-    // re-post it, and a later, disjoint invalidation would never copy the lost
-    // rectangle. Kept, it simply goes out again with the next frame.
+    // the WINDOW has not yet been shown: clearing it on a failed present
+    // would leave the texture stale with nothing left to re-upload it, and a
+    // later, disjoint invalidation would never upload the lost rectangle.
+    // Kept, it simply goes out again with the next frame.
     // Under the vsync gate (pump's tail) the kept damage posts the next
     // callback at the same pass's tail, so the retry is the next vsync's
     // frame.
@@ -1462,7 +1361,7 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     // finished picture is on the glass, so the hold and the owed release
     // clear together and the GUI's open_unseen() gates open. A failed post
     // keeps both, as it keeps the damage, and the next vsync's frame retries.
-    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) {
+    if (present()) {
         damage_.clear();
         if (release_owed_) {
             presentation_held_ = false;
@@ -1471,137 +1370,54 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     }
 }
 
-bool GuiPlatform::present(int x, int y, int w, int h) {
-    if (!window_ || !back_ || w <= 0 || h <= 0) return false;
+bool GuiPlatform::present() {
+    if (!window_ || !back_) return false;
 
-#if WARPTEMPO_CANVAS_GL
     // THE GL CANVAS (2026-10-13; the design record is
-    // docs/engineering/gpu_canvas_2026_10.md). The bounding box this was
-    // handed is the cpu canvas's single dirty region; this road hands THE
-    // DAMAGE LIST ITSELF, the rects paint_one_frame just painted, to the GL
-    // canvas's frame — the upload walk less the canvas clip, the clear, the
-    // list's draw and the texture's (GuiGlCanvas::present_frame, gl_canvas.cpp,
-    // where the upload and draw rules are) — and swaps. A false from it (no
+    // docs/engineering/gpu_canvas_2026_10.md). The damage list itself, the
+    // rects paint_one_frame just painted, goes to the GL canvas's frame —
+    // the upload walk less the canvas clip, the clear, the list's draw and
+    // the texture's (GuiGlCanvas::present_frame, gl_canvas.cpp, where the
+    // upload and draw rules are) — and the frame swaps. A false from it (no
     // texture yet, a backbuffer without data) swaps nothing and keeps the
     // damage.
     //
-    // THE SWAP WOULD BLOCK WHERE ANativeWindow_lock BLOCKED (swap interval
-    // 1, the queue full), and the paint's gate keeps the queue from filling:
-    // since 2026-10-14 a gated paint runs only at the vsync callback, one per
-    // display period (pump's tail, where the reversal of the 2026-08-27 "one
-    // wakeup, no Choreographer" ruling and its measurement are), so the
-    // unbuffered pen's ~500 events a second cost drains and never an extra
-    // swap. THE FRAME IS REDRAWN WHOLE at every swap, so neither EGL's
-    // buffer age nor a partial update is depended on. No glFinish, no
-    // glFlush beyond the swap's own, no readback.
+    // THE SWAP WOULD BLOCK with the queue full (swap interval 1), and the
+    // paint's gate keeps the queue from filling: since 2026-10-14 a gated
+    // paint runs only at the vsync callback, one per display period (pump's
+    // tail, where the reversal of the 2026-08-27 "one wakeup, no
+    // Choreographer" ruling and its measurement are), so the unbuffered
+    // pen's ~500 events a second cost drains and never an extra swap. THE
+    // FRAME IS REDRAWN WHOLE at every swap, so neither EGL's buffer age nor a
+    // partial update is depended on. No glFinish, no glFlush beyond the
+    // swap's own, no readback.
     //
     // A FAILED SWAP: a lost context is a rare non-silent fault and is fatal
     // (no recovery code); any other failure is one line and false, the
     // damage kept and re-posted (paint_one_frame's tail).
-    {
-        (void)x;   // the bounding box's origin: the cpu canvas's alone
-        (void)y;
-        EGLDisplay dpy  = egl_display_;
-        EGLSurface surf = egl_surface_;
-        if (!surf) return false;
-        // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size
-        // the frame was painted at and the texture follows), never
-        // eglQuerySurface's answer — the laptop's present's rule, where Mesa
-        // can latch a stale surface size; here the two are equal at every
-        // adoption (the window's own size, setBuffersGeometry(0, 0)).
-        if (!gl_canvas_.present_frame(back_, damage_, canvas_frame_,
-                                      back_w_, back_h_))
-            return false;
-        if (!eglSwapBuffers(dpy, surf)) {
-            const EGLint err = eglGetError();
-            if (err == EGL_CONTEXT_LOST) gl_fatal("the context was lost", err);
-            std::fprintf(stderr, "warptempo_gui: eglSwapBuffers failed (0x%x)\n",
-                         static_cast<unsigned>(err));
-            return false;
-        }
-        return true;
-    }
-#else
-
-    // THE GUI'S COORDINATES ARE THE SURFACE'S (the window is the whole
-    // surface, width_'s rule), so the damage rect goes to lock() as it is.
-    // The window keeps the area OUTSIDE the dirty rect it hands back (it
-    // copies it forward from the last post, or widens the rect and leaves the
-    // row loop below to fill it), which is what partial damage depends on.
-    ARect dirty{x, y, x + w, y + h};
-    ANativeWindow_Buffer buf;
-    const int rc = ANativeWindow_lock(window_, &buf, &dirty);
-    if (rc != 0) {
-        // A failed lock loses this frame's post and nothing else: the
-        // backbuffer still holds the pixels and the caller keeps the damage,
-        // so the next paint re-posts the same rectangle. One loud line, no
-        // retry machinery.
-        std::fprintf(stderr, "warptempo_gui: ANativeWindow_lock failed (%d)\n",
-                     rc);
+    EGLDisplay dpy  = egl_display_;
+    EGLSurface surf = egl_surface_;
+    if (!surf) return false;
+    // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size the
+    // frame was painted at and the texture follows), never eglQuerySurface's
+    // answer, which a driver may latch stale; the two are equal at every
+    // adoption (the window's own size).
+    if (!gl_canvas_.present_frame(back_, damage_, canvas_frame_, back_w_,
+                                  back_h_))
         return false;
-    }
-
-    // THE FORMAT IS 32-BIT OR THE PROGRAM STOPS. The copy below casts
-    // buf.bits to uint32_t* and applies buf.stride in 32-BIT UNITS, so a
-    // 16-bit buffer — WINDOW_FORMAT_RGB_565 is a legal NDK window format, and
-    // a refused geometry request above can leave one in place — would take
-    // four bytes per pixel into two and run off the end of every row. That is
-    // memory corruption, not a wrong picture. THE ACCEPTED SET IS EXACTLY
-    // RGBA_8888 AND RGBX_8888, the two the swizzle below is written for, and
-    // there is no conversion arm because there is no producer for one to
-    // serve: inventing a 565 path would be untestable machinery for a fault
-    // nothing on this product's panels produces.
-    if (buf.format != WINDOW_FORMAT_RGBA_8888 &&
-        buf.format != WINDOW_FORMAT_RGBX_8888) {
-        __android_log_print(ANDROID_LOG_FATAL, kLogTag,
-                            "ANativeWindow buffer format %d is neither "
-                            "RGBA_8888 nor RGBX_8888; refusing to blit 32-bit "
-                            "pixels into it",
-                            static_cast<int>(buf.format));
-        abort();
-    }
-
-    // lock() may WIDEN the rect it was asked for (a buffer whose content is
-    // older than the last post), and the widened region is what the caller
-    // must fill. The backbuffer holds the whole frame, so honoring it is a
-    // straight clamp-and-copy, clamped to the buffer and the backbuffer both.
-    const int cx0 = std::max(0, std::min(dirty.left,   buf.width));
-    const int cy0 = std::max(0, std::min(dirty.top,    buf.height));
-    const int cx1 = std::max(cx0, std::min({dirty.right,  buf.width,  back_w_}));
-    const int cy1 = std::max(cy0, std::min({dirty.bottom, buf.height, back_h_}));
-
-    // Both strides are in PIXELS: cairo's is bytes and is divided here,
-    // ANativeWindow_Buffer::stride is documented as pixels already.
-    const int src_stride_px = cairo_image_surface_get_stride(back_) / 4;
-    const auto* src = reinterpret_cast<const uint32_t*>(
-        cairo_image_surface_get_data(back_));
-    auto* dst = static_cast<uint32_t*>(buf.bits);
-    if (src && dst && cx1 > cx0) {
-        for (int row = cy0; row < cy1; ++row) {
-            uint32_t* drow = dst + static_cast<size_t>(row) * buf.stride;
-            const uint32_t* srow =
-                src + static_cast<size_t>(row) * src_stride_px + cx0;
-            // Both accepted formats need the R<->B swap (the gate above is
-            // what makes that unconditional).
-            copy_swap_rb(drow + cx0, srow, cx1 - cx0);
-        }
-    }
-
-    const int post_rc = ANativeWindow_unlockAndPost(window_);
-    if (post_rc != 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: ANativeWindow_unlockAndPost failed (%d)\n",
-                     post_rc);
+    if (!eglSwapBuffers(dpy, surf)) {
+        const EGLint err = eglGetError();
+        if (err == EGL_CONTEXT_LOST) gl_fatal("the context was lost", err);
+        std::fprintf(stderr, "warptempo_gui: eglSwapBuffers failed (0x%x)\n",
+                     static_cast<unsigned>(err));
         return false;
     }
     return true;
-#endif
 }
 
 // THE OPEN'S HOLD'S ONE FRAME (the rule at platform.h's head): painted and
 // posted AT ONCE, OUTSIDE THE VSYNC GATE and touching neither of its bits
-// (pump's tail), as the Wayland backend commits it at once: the load the GUI
-// runs next blocks the loop, so a callback posted now would land only after
+// (pump's tail): the load the GUI runs next blocks the loop, so a callback posted now would land only after
 // the load, and the frame with it. The swap waits at most for a free buffer,
 // as any post does; nothing has been posted under the hold, so the queue
 // holds at most the frames the last picture left. Called from the loop's
@@ -1617,10 +1433,9 @@ void GuiPlatform::present_held_frame() {
     paint_one_frame(/*held_frame=*/true);
 }
 
-// THE OPEN'S RELEASE (the rule at platform.h's head). THIS BACKEND'S ROAD OUT
-// IS THE VSYNC GATE, where the Wayland backend paints at once — the one
-// asymmetry of the mechanism: the window here is shown whether or not it was
-// ever posted to, so nothing is owed a paint outside the gate, and the
+// THE OPEN'S RELEASE (the rule at platform.h's head). THE ROAD OUT IS THE
+// VSYNC GATE: the window is shown whether or not it was ever posted to, so
+// nothing is owed a paint outside the gate, and the
 // release is called inside a pump() pass (the tick), whose tail posts the
 // callback for the damage declared here (pump's tail, the gate's rule). THE
 // RELEASE IS OWED, NOT DONE (2026-10-28, Sol's round): it sets release_owed_
@@ -1774,10 +1589,7 @@ void GuiPlatform::drain_looper(int timeout_ms) {
 /*
  * ONE PASS of the loop body, and the ONE place the dispatch order lives.
  *
- * The order is the Wayland loop's, member for member, because the arbitration
- * it encodes is the product's and not the protocol's — with ONE MEMBER OF ITS
- * OWN, the car's media commands, this backend being the only one with a head
- * unit behind it:
+ * The arbitration it encodes is the product's and not the platform's:
  *
  *   1. the window-system sources, drained to empty (drain_looper);
  *   2. the TICK: on_tick_ then input_.tick(), in that order — the core's own
@@ -1797,10 +1609,9 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ or the run stop is
  * set. The pass is the last one of this run — the objects the consumer reads
  * are still alive, main.cpp's outlive run() — but the frame it would compute
- * for is never presented, or is the next object set's to present. The
- * Wayland twin additionally skips it on its EINTR and connection-loss paths;
- * neither exists here (ALooper surfaces no EINTR and there is no connection to
- * lose), so the exit test is the whole condition.
+ * for is never presented, or is the next object set's to present. ALooper
+ * surfaces no EINTR and there is no connection to lose, so the exit test is
+ * the whole condition.
  */
 void GuiPlatform::pump() {
     if (!app_) return;
@@ -1840,7 +1651,7 @@ void GuiPlatform::pump() {
 
     // THE CAR'S COMMANDS, after the workers and before the settled hook and
     // the paint, so a button acts before the pass's paint decision (the
-    // hook's contract, platform_wayland.h; amended 2026-10-14: the tail paints
+    // hook's contract, at its declaration; amended 2026-10-14: the tail paints
     // only with the vsync bit, so the command's frame joins this pass if a
     // vsync is due and otherwise the next callback's, one vsync at most — the
     // dispatch order is unchanged and still the reason it sits here). The queue is swapped out
@@ -1921,17 +1732,9 @@ void GuiPlatform::pump() {
     // — it removed the input holes, and this gate is what makes its ~500 pen
     // events a second cost drains and not frames.
     //
-    // PARITY IN MECHANISM WITH THE WAYLAND BACKEND, which paces this way:
-    // its invalidate_region arms a wl_surface.frame request when none is in
-    // flight (schedule_frame_callback), paint_one_frame runs at the
-    // compositor's done event (on_frame_done) and requests the next callback
-    // on its own commit, so it paints at most once per compositor frame,
-    // invited, never by a clock (platform_wayland.cpp's head; under the gl
-    // canvas its swap interval 0, ensure_gl, takes Mesa's own frame-callback
-    // throttle away so the backend's callback stays the pacing signal). The
-    // one difference is where the paint runs: there inside the callback's
-    // dispatch, here at the tail of the pass the callback woke, so this
-    // frame also carries the input the same drain delivered.
+    // THE PAINT RUNS AT THE TAIL OF THE PASS THE CALLBACK WOKE, at most once
+    // per display period, invited, never by a clock — so the frame also
+    // carries the input the same drain delivered.
     if (damage_.empty()) {
         vsync_due_ = false;
     } else if (vsync_due_) {
@@ -1969,18 +1772,13 @@ void GuiPlatform::drain_events() {
     // the open's hold stands across it (platform.h's head) and the paint
     // returns at once: a load shows nothing of the half-built model, the
     // glass keeping the hold's one frame, the empty waveform, until the
-    // finished picture. What the caller was written against is
-    // the Wayland backend's wl_display_dispatch_pending: that call dispatches
-    // events ALREADY READ and reads no socket, so a load observes no new
-    // input, no focus change and no close — only the pending frame-done
-    // callback, which paints. This backend has no equivalent split: the
-    // looper's window-system sources hold the glue's own process() bodies,
-    // and stepping one would deliver a touch or a lifecycle command straight
-    // into a GUI whose AppState is explicitly half-built. So no source is
-    // processed at all — neither LOOPER_ID_MAIN nor LOOPER_ID_INPUT — and the
-    // periodic tick and the worker completions likewise wait for the next
-    // pump(), exactly as their Wayland counterparts wait outside
-    // dispatch_pending's reach.
+    // finished picture. A load observes no new input, no focus change and no
+    // close: the looper's window-system sources hold the glue's own
+    // process() bodies, and stepping one would deliver a touch or a
+    // lifecycle command straight into a GUI whose AppState is explicitly
+    // half-built. So no source is processed at all — neither LOOPER_ID_MAIN
+    // nor LOOPER_ID_INPUT — and the periodic tick and the worker completions
+    // likewise wait for the next pump().
     //
     // THE ACCEPTED COST is Android's ANR watchdog, which fires after ~5 s of
     // an input event nobody services. The product's loads measure ~0.5 s for a
@@ -2014,14 +1812,12 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // same size re-posts without a repaint. Input state is untouched:
             // a lost window is not a lost touch stream (the hard end has its
             // own edge, APP_CMD_LOST_FOCUS below and touch_cancel).
-#if WARPTEMPO_CANVAS_GL
             // THE GL CANVAS LETS GO OF THE WINDOW HERE: its EGL surface is
             // destroyed before the glue releases the window, the context and
             // the texture kept — the texture's content goes back up with the
             // full damage the next adoption declares, as the backbuffer is
             // re-posted (destroy_gl_surface).
             destroy_gl_surface();
-#endif
             window_ = nullptr;
             break;
 
@@ -2047,9 +1843,7 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             if (active == window_activated_) break;
             window_activated_ = active;
             // What the edge does is the caller's business (main.cpp's
-            // activation hook: the tooltip ends); this hook is the EDGE, the
-            // same shape the Wayland backend's configure-driven one takes for
-            // the same reason.
+            // activation hook: the tooltip ends); this hook is the EDGE.
             if (activation_changed_hook_) activation_changed_hook_();
             // FOCUS LEAVING PAUSES NOTHING, and that is recorded rather than
             // fixed (2026-09-02): "no background playback" is BUILD scope —
@@ -2109,18 +1903,15 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     if (type == AINPUT_EVENT_TYPE_KEY) {
         // BACK IS THIS PLATFORM'S CLOSE REQUEST (architect 2026-08-29), and it
         // is the ONE KeyEvent this backend answers. It fires the seam's
-        // CloseCallback — the very hook the Wayland backend fires for the
-        // compositor's title-bar X (on_toplevel_close) — so the tablet's BACK
-        // asks the unsaved-work question the laptop's X asks: the consumer
+        // CloseCallback, which asks the unsaved-work question: the consumer
         // routes it through GuiPrompt::request_close, which prompts on a dirty
         // tab and completes at once on a clean one, and the EXIT that follows
         // is request_exit's own — should_exit_ plus ANativeActivity_finish,
         // the one asker android_main's tail shares — so run() returns,
         // gui_main returns and the activity goes exactly as Quit's does.
-        // Until this landed the arm returned 0 for every key and the framework
-        // finished the activity on the system's own default handling, which
-        // reached no GUI road at all: a dirty session was torn down silently
-        // where the laptop's would have asked.
+        // Unconsumed, the framework would finish the activity on the system's
+        // own default handling, which reaches no GUI road at all: a dirty
+        // session would be torn down silently.
         //
         // THE WHOLE KEYCODE IS CONSUMED and the callback fires on the ACTION_UP
         // alone. Consuming the DOWN as well is what makes the arm airtight
@@ -2211,8 +2002,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // coordinate this backend hands the core (the key path carries none, the
     // pen's hover actions below take the same two, scrolls are dropped, and
     // the capture doors take GUI coordinates that never reach the window at
-    // all), which is what keeps GuiInputCore identical to the Wayland
-    // build's.
+    // all), which is what keeps GuiInputCore's coordinates the window's.
     //
     // They are handed over FRACTIONAL because that is what the panel reports
     // and what the core's one containment conversion expects
@@ -2323,7 +2113,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // under a hovering pen, so hovers reach apps on this tablet), so
             // the roster's hover walk and the tooltip dwell run under it
             // through the core's own pointer doors — enter, motion, leave,
-            // each closed by the pointer frame as a Wayland pointer's are.
+            // each closed by the core's pointer frame.
             // ONLY THE PEN HOVERS (a finger never does, and a mouse never
             // reaches here), and A HOVER NEVER OVERLAPS A TOUCH THE CORE IS
             // TRANSLATING: while any contact is down a hover motion would
@@ -2488,8 +2278,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 
         case AMOTION_EVENT_ACTION_MOVE:
             // EVERY POINTER'S CURRENT POSITION IS DELIVERED before the frame
-            // that closes the batch — the same shape wl_touch's
-            // motion-then-frame grouping has, and what lets the core's
+            // that closes the batch — the core's motion-then-frame grouping,
+            // and what lets the core's
             // two-finger machine read a consistent pair. (The down and up arms
             // deliver the same snapshot for the same reason; this is the arm
             // that carries nothing else.)
@@ -2518,9 +2308,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 // coordinates. It delivers whatever motion is STAGED for this
                 // frame — the nav pair's completed leg, the region former's
                 // final leg — and then ends the gesture, so a finger's LAST
-                // MOTION IS ITS LIFT POSITION. That is Wayland's shape
-                // (wl_touch.up carries no coordinates either), while an
-                // AMotionEvent up carries the whole current snapshot, and a
+                // MOTION IS ITS LIFT POSITION. That is the core's touch shape
+                // (its up carries no coordinates), while an AMotionEvent up
+                // carries the whole current snapshot, and a
                 // short gesture can have its only travel present in the up
                 // event alone. The snapshot is therefore delivered for every
                 // pointer INCLUDING the lifting one, and only then the up.
@@ -2611,8 +2401,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             return;   // scrolls and the rest: nothing to translate
     }
 
-    // THE BATCH BOUNDARY. One AMotionEvent is one logical touch frame, exactly
-    // as one wl_touch.frame closes one Wayland batch, and the core's per-frame
+    // THE BATCH BOUNDARY. One AMotionEvent is one logical touch frame (the
+    // core's touch_frame), and the core's per-frame
     // drain (one motion delivery, one nav update or one region update) hangs
     // off it. It follows every translated action, not just MOVE: a down and an
     // up each close their own batch too.
@@ -2745,8 +2535,8 @@ void GuiPlatform::release_pen_zoom_anchor() {
     if (pen_zoom_anchor_release_hook_) pen_zoom_anchor_release_hook_();
 }
 
-// THE ON-SCREEN KEYBOARD'S OTHER SEAM MEMBER (contract at the declarations;
-// the platform-question ruling is at platform_wayland.h's twin). YES,
+// THE ON-SCREEN KEYBOARD'S OTHER SEAM MEMBER (contract and the
+// platform-question ruling at the declaration). YES,
 // unconditionally: this backend translates no hardware key event, so the
 // painted surface is the only key producer the platform has.
 bool GuiPlatform::wants_onscreen_keyboard() {
@@ -2784,7 +2574,7 @@ GuiBattery GuiPlatform::battery_status() {
 }
 
 // ---------------------------------------------------------------------------
-// The car's two seam members (contracts at platform_wayland.h)
+// The car's two seam members (contracts at the declarations)
 // ---------------------------------------------------------------------------
 
 void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) {
@@ -2898,9 +2688,8 @@ int64_t GuiPlatform::clipboard_system_stamp_ms() {
 // already reads that as "nothing to paste" (a paste of nothing must not
 // delete the selection).
 //
-// AND THE PAYLOAD IS BOUNDED HERE AS IT IS ON WAYLAND (2026-09-03):
-// kClipboardMaxBytes (gui_input.h) is the seam's one number and this is its
-// second reader. THE ARRAY'S LENGTH IS ASKED BEFORE THE STRING IS RESIZED, so
+// AND THE PAYLOAD IS BOUNDED HERE (2026-09-03): kClipboardMaxBytes
+// (gui_input.h) is the seam's one number. THE ARRAY'S LENGTH IS ASKED BEFORE THE STRING IS RESIZED, so
 // an external clip of any size costs one jsize and not two allocations of it
 // on the single GUI/glue thread. The Java side refuses the same size FIRST
 // (MainActivity.MAX_CLIPBOARD_BYTES), so in practice nothing this big ever
@@ -2930,7 +2719,7 @@ std::string GuiPlatform::clipboard_get_text() {
         jbyteArray bytes = static_cast<jbyteArray>(answer);
         const jsize n = env->GetArrayLength(bytes);
         if (n > 0 && static_cast<size_t>(n) > kClipboardMaxBytes) {
-            // The Wayland road's own wording, one line, and the empty answer.
+            // One line, and the empty answer.
             std::fprintf(stderr,
                          "warptempo_gui: Clipboard payload exceeded %zu bytes; "
                          "paste abandoned\n", kClipboardMaxBytes);
@@ -2945,24 +2734,21 @@ std::string GuiPlatform::clipboard_get_text() {
 }
 
 // ---------------------------------------------------------------------------
-// The stubs — what the Wayland twin does, and why this platform has no twin
+// The stubs — what glass has nothing behind
 // ---------------------------------------------------------------------------
 
-// POINTER CAPTURE IS A NO-OP ON GLASS (contract at the declaration). The
-// Wayland twin hides the cursor, creates a zwp_locked_pointer_v1 and switches
-// the gesture onto the relative-motion stream; there is no cursor to hide, no
-// pointer to lock and no relative stream here. The core's capture state is
+// POINTER CAPTURE IS A NO-OP ON GLASS (contract at the declaration): there
+// is no cursor to hide, no pointer to lock and no relative stream. The core's capture state is
 // left alone on purpose — seeding it would tell the GUI its coordinates had
 // gone virtual when they had not.
 void GuiPlatform::begin_pointer_capture(GuiCursorKind /*restore_kind*/) {}
 void GuiPlatform::end_pointer_capture() {}
 
-// THE CURSOR IMAGE HAS NO SURFACE HERE (contract at the declaration). The
-// Wayland twin swaps a themed wl_surface under the pointer; a touch panel has
-// no pointer image at all. The POLICY still runs — the drop of a kind named
+// THE CURSOR IMAGE HAS NO SURFACE HERE (contract at the declaration): a
+// touch panel has no pointer image at all. The POLICY still runs — the drop of a kind named
 // for a position the pointer does not occupy, and the remember-only-on-change
 // — because it is the core's and because notional_pointer_x() is live on this
-// platform too; only the protocol request at the end is missing.
+// platform too; only an image to apply is missing.
 void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     if (input_.pointer_position_unknown()) return;
     if (kind == input_.cursor_kind()) return;
@@ -3082,8 +2868,7 @@ namespace {
 // THE INSTALL IS OBSERVED, not assumed: gui_font_install_bundled answers
 // whether each face is FT-backed and the set's carry their ems' glyphs
 // (its probe, gui_font.h), and false aborts here exactly as a missing asset
-// does — the Wayland backend's GuiPlatform::init asks the same owner the
-// same question of the bytes compiled into its executable. FALSE IS STILL
+// does. FALSE IS STILL
 // ONLY THE BUILD DEFECT: the install's other false, the once-per-process
 // answer to a second call, cannot meet this caller, because android_main
 // runs once per process (its tail says why; until 2026-10-07 a relaunch into
@@ -3195,8 +2980,7 @@ void android_main(android_app* app) {
         // has ONE resolver for that file — XDG first, then HOME/.config — and
         // pointing the variable here is what keeps it free of an Android arm.
         // The HOME below would already carry it, but naming the variable is
-        // what makes the resolver's first branch the one that answers on both
-        // platforms.
+        // what makes the resolver's first branch the one that answers.
         setenv("XDG_CONFIG_HOME", internal, 1);
         setenv("HOME", internal, 1);
         setenv("TMPDIR", internal, 1);

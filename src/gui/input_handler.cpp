@@ -396,8 +396,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // its hold-repeat) need a press that same hold dropped, and the car's
     // roads are dropped at their own hook. So PLAIN Ctrl+Q IS THE ONE KEY
     // THAT REACHES THIS GATE — read in the set's run() ahead of its first
-    // tick, which runs the load (both backends deliver a pass's input before
-    // its tick) — and it is admitted: dirty is false with nothing loaded, so
+    // tick, which runs the load (the backend delivers a pass's input before
+    // its tick, pump's order) — and it is admitted: dirty is false with nothing loaded, so
     // the close exits at once.
     //
     // THE GATE'S REST IS A SILENT RETURN AND RAISES NO CARD: no other press
@@ -405,11 +405,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // Loading itself is a BLOCKING, UNINTERRUPTIBLE phase: the run loop is
     // suspended for the whole synchronous decode/pyramid/install, so a Ctrl+Q
-    // or WM close pressed during loading is not observed here at all — it is
+    // or a Back pressed during loading is not observed here at all — it is
     // read when run() resumes after the load completes, with the audio
     // installed, and the deferred quit is then honored by Ctrl+Q's own arm
-    // below (the app quits on completion); an urgent abort is pkill / the
-    // compositor's force-close.
+    // below (the app quits on completion); an urgent abort is the system's
+    // force-stop.
     if (no_audio_to_dispatch_on(app, audio.total_frames())) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q)
             prompt.request_close(GuiCloseTarget::Exit);
@@ -1640,10 +1640,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // GuiInputHandler::on_key). Placed
     // before the GuiKeys::S save handling so modifier dispatch reads
     // left-to-right in the source. AN EMPTY STACK SAYS SO SINCE 2026-08-30.
-    // ALT IS UNBOUND HERE and stays that way: the target
-    // compositor (labwc) grabs Ctrl+Alt+Z / Ctrl+Alt+Shift+Z, so the GUI never
-    // receives them — the alt pair that briefly meant stay-put undo/redo was
-    // rolled back for that collision (closed_questions.md), and an alt-carrying
+    // ALT IS UNBOUND HERE and stays that way: the laptop's compositor
+    // (labwc) grabbed Ctrl+Alt+Z / Ctrl+Alt+Shift+Z while its backend stood,
+    // so the alt pair that briefly meant stay-put undo/redo was rolled back
+    // for that collision (closed_questions.md), and an alt-carrying
     // shape is again a plain no-op under strict modifier validation.
     if (ctrl && !alt && key == GuiKeys::Z) {
         run_undo_redo_command(/*redo=*/shift, mods.synthesized_repeat);
@@ -2166,9 +2166,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Magnification lamp; `0` already means "the whole song" to the camera,
     // so its ctrl-shifted form says it to the trim. The one predicate is
     // is_trim_maximize_key (gui_input.h). It arrives as the `0` key plus the
-    // modifier bits, never as a `)` keysym: key_from_keycode
-    // (platform_wayland.cpp) reads LEVEL 0 of the keymap, so the shifted
-    // level is never consulted. ITS POINTER ROUTE IS ZOOM TO FIT'S CTRL+SHIFT
+    // modifier bits, never as a `)` keysym: the backend's keys come only
+    // through synthesize_key, the GuiKey and the modifier bits apart. ITS POINTER ROUTE IS ZOOM TO FIT'S CTRL+SHIFT
     // PRESS (redesign_button_ctrl_shift_admits: on the glass the S Pen's
     // barrel held through the long press); a bound dragged onto its partner
     // on the trim bar is the other road to the whole song
@@ -3633,22 +3632,14 @@ bool GuiInputHandler::apply_editor_clipboard(
         // anything else — the flag editor is keyboard-modal and stops
         // nothing).
         //
-        // WHY THE VERDICT IS THE RIGHT TEST ON BOTH BACKENDS. False means no
-        // claim went out, and a refused claim does not leave the bytes
-        // readable: Wayland writes clipboard_send_text_ before it claims, but
-        // clipboard_get_text hands that payload back only while
-        // clipboard_we_own_ stands, and a refusal never raises that bit (the
-        // failed-source arm clears it), so the paste falls through to whatever
-        // another application is offering. The tablet's copy stays in its own
-        // process and always answers true (architect 2026-10-29, the rule at
-        // platform_android.h's clipboard_set_text), so its cut always erases,
-        // the bytes pastable in the program until something newer is copied.
-        // THE ONE SUB-CASE where a false verdict still leaves the bytes
-        // reachable is a Wayland refusal UNDER A CLAIM WE ALREADY HOLD (an
-        // earlier copy's source still answers `send` from the updated store).
-        // It is refused all the same: the verdict is the one thing this side
-        // can ask, and over a DELETION the conservative answer — keep the
-        // text, say so — is the right one to be wrong with.
+        // WHY THE VERDICT IS THE RIGHT TEST: false would mean the bytes are
+        // not pastable, and over a DELETION the conservative answer — keep
+        // the text, say so — is the right one to be wrong with. The tablet's
+        // copy stays in its own process and always answers true (architect
+        // 2026-10-29, the rule at platform_android.h's clipboard_set_text), so
+        // its cut always erases, the bytes pastable in the program until
+        // something newer is copied (the false arm's producer is gone,
+        // card_clipboard_refusal's head).
         case text_editor::KeyAction::CopyRequested:
             (void)gui.clipboard_set_text(text_editor::selected_text(s));
             return true;
@@ -3663,11 +3654,8 @@ bool GuiInputHandler::apply_editor_clipboard(
             return true;
         case text_editor::KeyAction::PasteRequested: {
             // The bytes come from the SYSTEM clipboard, so a URL copied in a
-            // browser pastes straight into a settings field. On the laptop
-            // GuiPlatform short-circuits to our own last-published payload
-            // while we still hold the selection, so a copy-then-paste inside
-            // this process never touches the pipe; on the tablet the paste
-            // takes the newer of the program's own copy and the system clip
+            // browser pastes straight into a settings field; the paste takes
+            // the newer of the program's own copy and the system clip
             // (architect 2026-10-29, platform_android.h).
             //
             // AN EMPTY ANSWER IS A CONSUMED NO-OP: no offer, no text mime on

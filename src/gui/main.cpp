@@ -147,10 +147,10 @@ namespace {
 // head): the TOP strip is FIVE lanes — from the window edge inward (every
 // Windows-px length below the live chrome spec's, chrome_spec.h, or the
 // program's, program_spec.h):
-// the ICON ROW (icon_row_h_px(), AT THE SURFACE'S TOP ON BOTH DEVICES since
-// 2026-10-24 — THE APP'S CAPTION, the window's own title bar lane 0 from
-// 2026-10-05, is removed: labwc decorates the laptop's window outside the
-// surface, the tablet has none; render.h's caption note): THE TOOLBAR BAND
+// the ICON ROW (icon_row_h_px(), AT THE SURFACE'S TOP since 2026-10-24 —
+// THE APP'S CAPTION, the window's own title bar lane 0 from 2026-10-05, is
+// removed: the tablet's window has none; render.h's caption note): THE
+// TOOLBAR BAND
 // (THE LOGO LANE — the band's upper pad, 72
 // device px at 300 % since 2026-10-24, render.h's logo lane block — the
 // key, 23 W wide and the `key_height` tuning key's device px at 300 % tall
@@ -209,10 +209,9 @@ namespace {
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, which
-// is the whole geometry on both devices: labwc's title bar and borders
-// stand outside the laptop's surface (server-side decorations, 2026-10-24;
-// the app's own caption lane and sizing frame of 2026-10-05 are removed),
-// so the window manager's rows need no arithmetic here. The derivation, all of
+// is the whole geometry (the app's own caption lane and sizing frame of
+// 2026-10-05 removed 2026-10-24), so no window chrome's rows need arithmetic
+// here. The derivation, all of
 // it in the four functions below (the gap's SIZE is the centering's
 // remainder above the block, and the lanes above the gap are part of the top
 // lane stack whichever side of it they sit on):
@@ -238,8 +237,7 @@ namespace {
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
 // 2026-10-29 rather than adjusted (the key's height a tuning key; before
 // that 2026-10-28, the canvas's frame rows one device px, render.h's
-// canvas-frame block, 2026-10-22, and the laptop's 2026-10-24, its caption
-// gone and its inspection scale 200 %), AT THE STRIP PAD'S 13 W (a
+// canvas-frame block, 2026-10-22), AT THE STRIP PAD'S 13 W (a
 // constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
 // key_height 33 (the templates' value; a tune moves the band's and row 8's
 // case rows and the well by their difference), the waveform the whole
@@ -255,8 +253,7 @@ namespace {
 // at 300 % over 3 since 2026-10-24, the ruler 12, the marker lane 17); row
 // 8's two pads 26 below — AND OVER IT THE LOGO LANE, the band's upper pad,
 // 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px), SCALED WITH
-// gui_scale (the laptop's caption, 40 device px at 300 %, stood over it
-// until the same day), THE TWO KEYS' ROWS, THE `key_height` KEY'S DEVICE
+// gui_scale, THE TWO KEYS' ROWS, THE `key_height` KEY'S DEVICE
 // PX AT 300 % (2026-10-29: icon_case_h_px, skin_px; 23 W each in the sums
 // until then), SCALED WITH gui_scale, AND THE CANVAS'S TWO FRAME ROWS, ONE
 // DEVICE PX EACH AT EVERY SCALE (2026-10-28, hairline_px). THE WELL — THE
@@ -278,9 +275,8 @@ namespace {
 // 400 % (the trim field skin_px's 15 px at 300 %; the view bar's and the
 // ruler's line slots keep their scaled height, the line painted in each one
 // device px, render.h's hairline_px; the frame row is the hairline itself).
-//   1920 x H AT 200 %, THE LAPTOP (its inspection scale since 2026-10-23;
-//   maximised under labwc, H the 1080 rows less labwc's title bar, which
-//   stands outside the surface — the theme's to say, never the app's): the
+//   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
+//   since the laptop GUI's drop, 2026-10-30): the
 //   lanes are 96 band (the logo lane 48, the case 22, the pad 26, rows
 //   0–95, the cases 48–69) + 14 trim + 24 ruler + 34 marker + 1 frame =
 //   169 above (96 the band, 73 the block) and 75 below (the bottom frame
@@ -316,8 +312,8 @@ namespace {
 //   above (192 and 145) and 149 below (1 + 148), leftover 954: the waveform
 //   954, both gaps 0 — 192 / 0 / 145 / 954 / 0 / 149; the waveform 2240
 //   wide, 32 px in.
-//   1024x600 AT 200 %, A SHORT WINDOW ON THE LAPTOP (kept as a worked case;
-//   no host runs this geometry): leftover 356 -> the waveform 356, both
+//   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
+//   this geometry): leftover 356 -> the waveform 356, both
 //   gaps 0 — 96 / 0 / 73 / 356 / 0 / 75.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
@@ -368,7 +364,7 @@ namespace {
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
-// regardless of what the compositor sends. Mirrors the set_min_size hint.
+// regardless of what size the window reports.
 static void clamp_dims(int& w, int& h) {
     if (w < kMinWindowWidthPx)  w = kMinWindowWidthPx;
     if (h < kMinWindowHeightPx) h = kMinWindowHeightPx;
@@ -401,9 +397,8 @@ namespace {
 // 2026-10-22).
 constexpr int kTopLaneCount    = 5;
 constexpr int kBottomLaneCount = 2;
-// THE FIRST PROGRAM LANE, the band, AT THE WINDOW'S TOP on both devices
-// since 2026-10-24 (the caption lane 0 above it on the laptop 2026-10-05 to
-// then, 0 rows on the tablet that morning).
+// THE FIRST PROGRAM LANE, the band, AT THE WINDOW'S TOP since 2026-10-24
+// (the caption lane 0 above it 2026-10-05 to then).
 constexpr int kTopProgramLane      = 0;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
 // flexible band (strip_row_rect below): THE TRIM LANE, lane 1 since
@@ -596,7 +591,7 @@ GuiRect waveform_area(const AppState& a) {
     // TO THE RIGHT (architect 2026-10-09, symmetry strict), the frame columns,
     // the view bar and the ruler following the canvas's x. 24 device px in
     // and 2256 wide on the tablet's 2304 at 300 % (18 + 1 and half the
-    // flooring's 10), 16 in and 1888 wide on the laptop's 1920 at 200 % (12 +
+    // flooring's 10), 16 in and 1888 wide on a 1920-px window at 200 % (12 +
     // 1 and half its 6) and at 138 % (8 + 1 and half its 14), 24 in and 2256
     // wide at 360 % (22 + 1 and half its 2), 32 in and 2240 wide at 400 %
     // (24 + 1 and half its 14) — the frame columns' slots going back into the
@@ -625,9 +620,8 @@ GuiRect waveform_area(const AppState& a) {
     // 400 %, 582 (385 + 197), leaving the tablet's 1440 rows 858 (the stack
     // record at the lane table above); and they pass 1440 near 990 %, short
     // of the 1000 % ceiling (architect 2026-10-05), so the top of the
-    // vocabulary lands on this floor. (The hosts run far below it: the laptop
-    // at 200 %, where the lanes take 292, and the tablet 300 % on its
-    // 1440-tall surface, where they take 437.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // vocabulary lands on this floor. (The host runs far below it: the
+    // tablet at 300 % on its 1440-tall surface, where they take 437.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -742,9 +736,8 @@ GuiRect top_flex_gap_area(const AppState& a) {
 }
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
-// Lane 0 is the ICON row, at the window's top on both devices since
-// 2026-10-24 (the app's caption, lane 0 from 2026-10-05, removed: labwc
-// draws the laptop's title bar outside the surface), the logo lane over its keys (the thirty-one
+// Lane 0 is the ICON row, at the window's top since 2026-10-24 (the app's
+// caption, lane 0 from 2026-10-05, removed), the logo lane over its keys (the thirty-one
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
 // count's authority; twenty-seven stand outside the `h` view and eighteen
@@ -821,7 +814,7 @@ GuiRect bottom_canvas_frame_area(const AppState& a) {
 // waveform became the whole leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
 // 2026-10-05, plain_save_actionable), the clock's `*` suffix retired, and no
-// title carries one — not the laptop's window title, which labwc draws.
+// title carries one (the tablet's window shows none).
 // Paint and hit agree through
 // the one accessor exactly as the top rows' do through theirs.
 GuiRect bottom_row_area(const AppState& a) {
@@ -1347,25 +1340,6 @@ GuiRect clock_invalidate_rect(const AppState& a) {
 }
 
 
-// THE LINUX ENTRY POINT and nothing more: the argument check, then the one GUI
-// body (gui_main.h). Android's backend has its own entry (android_main) and
-// calls the same body with no argument, so this wrapper is compiled out of that
-// build.
-#ifndef __ANDROID__
-int main(int argc, char** argv) {
-    // THE ARGUMENT IS OPTIONAL (2026-08-27, the project model): with none the
-    // app opens the device config's last project, or the first valid one in
-    // name order; with one it must be a project's SOURCE under the config's
-    // projects path (startup_source, project_model.h). There is no blank
-    // window to load into either way — the app always has a project open.
-    if (argc > 2) {
-        std::fprintf(stderr, "Usage: warptempo_gui [<project source .wav>]\n");
-        return 1;
-    }
-    return gui_main(argc == 2 ? argv[1] : nullptr);
-}
-#endif
-
 namespace {
 
 // What one project's session hands back to the loop: the process exit status
@@ -1684,7 +1658,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // reasoning is at Viewport::follow_scroll_if_needed), leaving
     // kick_waveform_render with only kick_waveform_sync's callback-unwired
     // fallback as a call site. This wiring stays for that fallback. The
-    // worker's undriven work — a compositor resize and the launch load, both of
+    // worker's undriven work — a window resize and the launch load, both of
     // which run on_resize, which only stores the new dimensions, re-clamps
     // zoom/viewport, and re-anchors the playback predictor if the level moved:
     // no enqueue and no cache rebuild there, a resize owing the gain nothing
@@ -1722,10 +1696,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the
     // one nav drag (pan by default, zoom while ctrl is held), for infinite
     // pan/zoom travel.
-    // All the platform methods self-guard (begin no-ops when a capture is live
-    // or the compositor lacks the managers; end is idempotent; the restore
-    // riders no-op uncaptured), so the input layer
-    // stays agnostic to whether capture is available. The begin hook forwards the
+    // All the platform methods self-guard (the capture pair no-ops on glass,
+    // GuiPlatform::begin_pointer_capture; the restore riders no-op
+    // uncaptured), so the input layer stays agnostic to whether capture is
+    // available. The begin hook forwards the
     // gesture's own cursor kind, which is what the release restores (contract at
     // GuiPlatform::begin_pointer_capture); the nav drag's mid-gesture mode
     // switches ride the restore-x clear, the restore-kind re-stamp, the
@@ -1766,7 +1740,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
     // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
-    // and the marker lane left it on both devices 2026-09-25) — surface geometry only
+    // and the marker lane left it 2026-09-25) — surface geometry only
     // save an open menu, which yields the whole zone (2026-10-01; the
     // carve-outs at touch_point_in_pan_zone), every other refusal staying
     // per-frame in the update body and in the region begin;
@@ -1845,8 +1819,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&]() { input_handler.end_touch_caret_drag(); });
     // THE PEN'S RETAINED ZOOM ANCHOR'S RELEASE (architect 2026-09-27): the
     // platform fires it where a retained anchor dies — its inventory is at
-    // GuiPlatform::set_pen_zoom_anchor_release_hook (platform_android.h); the
-    // Wayland backend accepts it and never fires it. Its partner, the
+    // GuiPlatform::set_pen_zoom_anchor_release_hook (platform_android.h). Its
+    // partner, the
     // retention itself, is a query end_touch_nav asks
     // (GuiPlatform::pen_lift_keeps_zoom_anchor), not a hook.
     gui.set_pen_zoom_anchor_release_hook(
@@ -1854,8 +1828,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE PEN'S LIFT ARMS THE HOT-FACE LATCH, which holds every hover-lit
     // face until the pen moves (architect 2026-10-07, every face since
     // 2026-10-09; the rule at GuiInputHandler::pen_hot_latch_, the producer at
-    // GuiPlatform::set_pen_lift_hook, platform_android.h; the Wayland backend
-    // accepts it and never fires it).
+    // GuiPlatform::set_pen_lift_hook, platform_android.h).
     gui.set_pen_lift_hook([&]() { input_handler.arm_pen_hot_latch(); });
 
     auto invalidate_dialog_editor_box = [&]() { viewport.invalidate_dialog_editor_box(); };
@@ -1889,7 +1862,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     });
 
     gui.set_on_resize([&](int w, int h) {
-        // A compositor configure can change zoom, samples-per-pixel, and the
+        // A window resize can change zoom, samples-per-pixel, and the
         // viewport beneath an in-flight positional drag whose grab anchor is a
         // frame coordinate computed from the old geometry, so the next motion
         // event would derive its delta across two different coordinate systems
@@ -2006,8 +1979,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
     });
 
-    // THE COMPOSITOR'S CLOSE REQUEST (labwc's title-bar close button, its
-    // keybinding, the taskbar; the tablet's Back) takes the window's close road
+    // THE PLATFORM'S CLOSE REQUEST (the tablet's Back, platform_android.h's
+    // set_on_close) takes the window's close road
     // (GuiInputHandler::on_window_close, which carries each step's reason),
     // the unsaved-work prompt Ctrl+Q reaches too.
     gui.set_on_close([&]() {
@@ -2204,7 +2177,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // render.h's palette block — the folder overlay's inactive highlight, the
     // edge's other reader from 2026-09-02, retired with it; the app's
     // caption's dulled title, 2026-10-05 to 2026-10-24, went with the
-    // caption — labwc shows the laptop's activation in its own title bar).
+    // caption).
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
     });
@@ -2392,13 +2365,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // audition start, the lit NOISE press, the car's Play at a connect —
         // clears the latch before this read, so the reopen resets the voice
         // itself ahead of its close (close_dead_stream, playback_aaudio.cpp)
-        // and this tick then reads no drop. JACK has no latch: on the laptop
-        // this is one read and the method is never called.
+        // and this tick then reads no drop.
         if (playback.stream_dead()) noise.reset_on_dead_stream();
 
-        // Startup file load, deferred out of pre-run() to the first tick on a
-        // configured window (the compositor's initial configure only lands
-        // once run() is pumping) — under the open's presentation hold, which
+        // Startup file load, deferred out of pre-run() to the first tick on an
+        // adopted window (has_initial_configure: the first on_resize lands
+        // once run() is pumping, the platform's owed fire) — under the open's presentation hold, which
         // keeps the glass on its one frame through the load and until the
         // finished picture (the release block below; platform.h's head).
         if (!initial_load_done && gui.has_initial_configure()) {
@@ -2970,7 +2942,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // stands on a button whose chord row carries `repeats` (the bottom
         // row's four cardinal arrows, Undo / Redo), this
         // synthesizes its chord on the keyboard's own cadence — a hold beat,
-        // then the compositor's advertised repeat rate — stamped as a repeat so
+        // then the platform's repeat rate (key_repeat_period_ms) — stamped as
+        // a repeat so
         // the undo coalescing is the held key's own rule. One kind compare when
         // idle; every firing condition (the arm, the schedule, the pointer on
         // the button, the enabled bit, the eligibility) lives in the body.
@@ -3061,8 +3034,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
         // THE SCORE VIEWER'S TICK (2026-10-26; the soundtrack 2026-10-26
         // night), the player's fork: on EVERY tick it drains the page
-        // decoder, the gray bytes into the gray store and the surfaces into the
-        // cpu canvas's cache, both of which outlive the viewer's close
+        // decoder, the gray bytes into the gray store, which outlives the
+        // viewer's close
         // (GuiScoreViewer::tick); while the viewer stands the engine plays
         // the score's soundtrack or nothing — the project's audio stopped at
         // its open, the scanner never running — so its tick takes the
@@ -3111,9 +3084,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // smallest rect that always produces a paint — and its repaint during
         // a rest changes no pixel (the field shows the resting cursor's
         // time). EVERY REST TAKES IT, the pair rests with the switch rest:
-        // one rule rather than a threshold against one device's timer. The
-        // laptop pays the same small frames for symmetry (labwc has no idle
-        // refresh timer of its own). It sits AFTER fire_if_due: a rest that
+        // one rule rather than a threshold against one device's timer. It sits
+        // AFTER fire_if_due: a rest that
         // fired this tick is waiting no longer, and the launch's own
         // full-area damage covers that frame.
         if (app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle &&
@@ -3252,7 +3224,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // `process_cycles` to advance by two, which is what proves a full callback
         // ran start-to-finish afterward and orders all of its buffer reads before
         // anything the main thread mutates next. `rebind_buffer` REQUIRES that fence
-        // by contract (playback.cpp). Without it the tick cleared
+        // by contract (playback.h). Without it the tick cleared
         // `playhead_scanner_active` while the fence was still untaken, and that left
         // exactly one reachable bypass: a post-natural-end S/T switch, whose
         // `stop_playback_if_playing` early-returns once BOTH flags are false, after
@@ -3268,7 +3240,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // flag's drop and the fence — a deferral during which the callback
         // takes its silence arm and reads no sample, and which every road
         // that means a stop ends at once. Cost: the fence blocks the tick for up
-        // to ~2 JACK periods, once per playback session, which is precisely what
+        // to ~2 callback periods, once per playback session, which is precisely what
         // Space's stop edge has always paid. stop() is idempotent on an
         // already-flag-stopped session — it re-stores the same false and then
         // just waits.
@@ -3326,13 +3298,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE ON-SCREEN KEYBOARD'S SESSION OWNER RUNS AHEAD OF EVERY FRAME,
         // and this hook is the one place a write may still happen with a paint
         // already committed to: it runs before the damage list is read and is
-        // allowed to add to it (both backends' paint_one_frame say so), while
+        // allowed to add to it (paint_one_frame says so), while
         // the painter itself may not — which is why the painter stays a pure
         // reader of the two lamps. A pointer release can open an editor and be
         // followed straight by the backend's paint with no tick between them,
         // so without this call the first frame of a NEW edit could show the
         // previous one's Shift arm or symbol page. It is a no-op with the
-        // surface down (the laptop forever) and on any frame whose session did
+        // surface down and on any frame whose session did
         // not change, and it sits ABOVE the playback guards below because it
         // has nothing to do with playback.
         onscreen_keyboard::reconcile_session(app, gui, viewport);
@@ -3514,8 +3486,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // one, or a gui_scale commit's or True Colors' at its act
         // (materials::ensure) — the frame's damage is the whole client (the
         // bake's palette install moves every chrome tone in it; nothing of
-        // the window stands outside it since 2026-10-24, labwc's decorations
-        // aside), and the flag cache is rebuilt at once
+        // the window stands outside it since 2026-10-24), and the flag cache is rebuilt at once
         // from the new palette's generation, so this frame's cue face boxes
         // wear the new bake's face rather than waiting a tick for the cache
         // to notice. Before the owed plate rebuild below, whose tail
@@ -3549,11 +3520,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         paint_handler.begin_canvas_frame();
     });
 
-    // THE GEOMETRY, REDELIVERED: a reopened set's window sends no configure
-    // for a size that did not change, so the platform fires on_resize with
-    // the standing geometry now that every hook is installed (a no-op on
-    // Wayland before the first configure, which delivers it itself; on
-    // Android this is also where the first session's owed fire lands).
+    // THE GEOMETRY, REDELIVERED: a reopened set's window brings no new
+    // INIT_WINDOW, so the platform fires on_resize with the standing geometry
+    // now that every hook is installed (this is also where the first
+    // session's owed fire lands).
     gui.redeliver_geometry();
 
     // NO DAMAGE IS DECLARED HERE: every set runs under the open's hold, and
@@ -3562,8 +3532,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.run();
 
     // WHY run() RETURNED, read before anything below dies: an exit (the
-    // platform's own bit — Ctrl+Q, the WM close, a connection loss, a load
-    // that failed) ends the process; otherwise the seated name (the Open
+    // platform's own bit — Ctrl+Q, Back's close, the activity's destroy, a
+    // load that failed) ends the process; otherwise the seated name (the Open
     // project picker's choice, or Revert's current project) is the
     // project to reopen (the loop contract, platform.h).
     GuiProjectOutcome outcome;
@@ -3637,17 +3607,13 @@ int gui_main(const char* argument) {
     // the external audio player `l` used to spawn — left 2026-08-28.)
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
-    // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
-    // clipboard data-source `send` callback (platform_wayland.cpp): it writes
-    // the payload into a pipe fd the CONSUMER owns, and a consumer that closes
-    // its read end before or during the transfer would otherwise terminate the
-    // GUI outright, the write loop's EPIPE arm never reached. With the signal
-    // ignored that loop sees the short/failed write it is already written for
-    // (abandon the transfer, close the fd, no state to unwind). libjack's
-    // server socket is the same shape and inherits the same protection — it has
-    // no SIGPIPE-dependent behaviour of its own, and neither has libgit2's SSH
-    // transport, whose socket to the remote a checkpoint push writes. The
-    // process spawns no child, so nothing inherits the disposition.
+    // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is
+    // libgit2's SSH transport, whose socket to the remote a checkpoint push
+    // writes: a remote that closes it mid-write would otherwise terminate the
+    // GUI outright, where with the signal ignored the transport sees the
+    // failed write it already answers (libgit2 has no SIGPIPE-dependent
+    // behaviour of its own). The process spawns no child, so nothing inherits
+    // the disposition.
     std::signal(SIGPIPE, SIG_IGN);
 
     // THE ONE GIT ROAD, initialized once for the whole process (git_repo.h):
@@ -3666,7 +3632,7 @@ int gui_main(const char* argument) {
     // not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
-    // device_config.h's). A first run on either device stamps the BACKEND's
+    // device_config.h's). A first run stamps the BACKEND's
     // own template — the seam's device_config_defaults(), the one platform fact
     // the GUI proper needs here — and then reads it back like any other launch.
     //
@@ -3704,7 +3670,7 @@ int gui_main(const char* argument) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }
-    // THIS IS THE SCALE'S INIT ROAD ON BOTH BACKENDS, and it runs BEFORE
+    // THIS IS THE SCALE'S INIT ROAD, and it runs BEFORE
     // gui.init(): the two pushes here install the scale into the renderer and
     // the input core, so the FIRST configure and the FIRST painted frame are
     // already at the user's scale. That is strictly earlier than the sidecar

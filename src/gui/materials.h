@@ -75,8 +75,8 @@ struct AppState;
 // THE PALETTE off the new ground's mean, so the next pre-paint widens that
 // frame's damage to the whole client and rebuilds the flag cache in the
 // new face (take_bake_landed). A CHANGE OF SIZE OF A BAKED WINDOW WAITS ON
-// THE SETTLE GATE (the laptop's frame drag, a configure per motion): no
-// resize bakes (on_resize only stamps its arrival, materials::note_resize),
+// THE SETTLE GATE (a resize per motion of a window's edge): no resize
+// bakes (on_resize only stamps its arrival, materials::note_resize),
 // and a paint that finds the size moved bakes nothing until kBakeSettle (150
 // ms) has passed with no further size change — the tick then arms the bake
 // and damages the client (materials::settle_due), and that frame's pre-paint
@@ -121,10 +121,7 @@ struct AppState;
 // SIZES at one height, 60 rows (the compact keyboard's unit widths, 2026-10-29:
 // 1u 48, 2u 102, 2.5u 129 and 4u 210 at depths 0 and 2, and the 1.5u 75 —
 // Shift, the page key, Copy, Paste and Esc — at 1 too, Shift's and the page
-// key's armed face — eleven patches, 288 720 bytes). On the
-// laptop's maximized 1920 x 1047 at 200 %,
-// 8 054 512 bytes (no keyboard; the lamp key's three 46 x 22 patches and
-// the thumb's 16 x 22). materials::resident_bytes, which the trace line
+// key's armed face — eleven patches, 288 720 bytes). materials::resident_bytes, which the trace line
 // prints at every bake with the patches' count and time, is the measure.
 //
 // THE REGIONS — WHICH GROUND A SURFACE IS (GuiMaterialRegion, a scope the
@@ -317,12 +314,11 @@ void note_resize();
 // change — the caller then damages the client, whose frame's pre-paint
 // hook bakes.
 bool settle_due();
-// THE TRACE'S GATE, read once: WT_PAINT_TRACE=1 in the environment, or on
-// Android, which cannot set one for an app, the system property
-// `debug.warptempo.trace` == "1" (`adb shell setprop debug.warptempo.trace
-// 1` before a launch); the two lines it opens are the bake's (materials.cpp)
-// and the full-window chrome paint's (GuiPaintHandler::on_redraw), stderr,
-// logcat on the tablet.
+// THE TRACE'S GATE, read once: the system property `debug.warptempo.trace`
+// == "1" (`adb shell setprop debug.warptempo.trace 1` before a launch;
+// Android sets no environment for an app); the two lines it opens are the
+// bake's (materials.cpp) and the full-window chrome paint's
+// (GuiPaintHandler::on_redraw), stderr, which is logcat.
 bool trace_enabled();
 // Whether a bake has landed (construction state paints flat).
 bool baked();

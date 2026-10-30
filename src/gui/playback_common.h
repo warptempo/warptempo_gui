@@ -4,41 +4,35 @@
 #include <atomic>
 #include <cstdint>
 
-struct GuiNoiseVoice;   // noise.h — the second voice the callbacks sum
+struct GuiNoiseVoice;   // noise.h — the second voice the callback sums
 
 // THE PORTABLE HALF OF THE PLAYBACK ENGINE. playback.h is the CONTRACT and
-// nothing here changes it: this file exists because that contract has two
-// implementations — the JACK client (playback.cpp) and the AAudio stream
-// (playback_aaudio.cpp) — and all but the device mechanics are the same
-// engine in both.
+// nothing here changes it: the device mechanics are the AAudio stream's
+// (playback_aaudio.cpp), everything else is the engine here.
 //
 // THE SPLIT, stated once:
-//   * DEVICE (per backend, in the backend's own file): opening and closing the
-//     device, registering the callbacks, the callback's own entry/exit, and
-//     stop()'s QUIESCENCE FENCE — the one piece of the contract whose proof is
-//     device-shaped: BOTH count callback cycles, and only AAudio adds a
-//     terminal-state escape (`fence_state_is_quiesced`, playback_aaudio.cpp);
-//     each states its choice at its own site.
-//   * PORTABLE (here): the state every backend keeps, the audio-thread RENDER
-//     BODY, and the main-thread predictor / domain / bind logic that the public
+//   * DEVICE (playback_aaudio.cpp): opening and closing the device,
+//     registering the callbacks, the callback's own entry/exit, and stop()'s
+//     QUIESCENCE FENCE — the one piece of the contract whose proof is
+//     device-shaped: it counts callback cycles, with a terminal-state escape
+//     (`fence_state_is_quiesced`), stated at its own site.
+//   * PORTABLE (here): the engine state, the audio-thread RENDER BODY, and
+//     the main-thread predictor / domain / bind logic that the public
 //     methods are thin wrappers over.
-// A backend file therefore holds its device calls plus one-line forwards; a
-// change to the ENGINE is a change to this file and reaches both platforms.
+// The device file therefore holds its device calls plus one-line forwards; a
+// change to the ENGINE is a change to this file.
 //
-// THE OUTPUT RATE IS THE ONE THING THE TWO DEVICES DISAGREE ABOUT NUMERICALLY.
-// `output_rate` is the rate the device asks its frames at, and the render
-// body's per-output-frame source increment is `source_rate / output_rate` — the
-// RATE RESCALING AND NOTHING ELSE, with the fractional read it drives as the
-// resampler. On JACK that is the graph's rate (44100 on a graph pinned to the
-// source, so the ratio is 1.0 and the increment is bare 1); on AAudio it is the
-// rate the stream was GRANTED (48000 on the tablet's own speaker, which is 48 k
-// hardware — 44.1 can never be native there), so the ratio is 44100/48000 and
-// every output frame reads a fractional source position. `source_rate` is THE
-// BOUND BUFFER'S (2026-10-26 night): the score's soundtrack binds at its own
-// 48000, so on the laptop's 44.1 k graph its increment is 48000/44100 and on
-// the tablet bare 1 — the same one division, the device never reopened for
-// it (GuiBoundAudio, playback.h). A rate of 0 is the
-// SUSPENDED device in both: the render body emits silence and holds position,
+// THE OUTPUT RATE. `output_rate` is the rate the device asks its frames at,
+// and the render body's per-output-frame source increment is
+// `source_rate / output_rate` — the RATE RESCALING AND NOTHING ELSE, with the
+// fractional read it drives as the resampler. It is the rate the stream was
+// GRANTED (48000 on the tablet's own speaker, which is 48 k hardware — 44.1
+// can never be native there), so a 44.1 k source's ratio is 44100/48000 and
+// every output frame reads a fractional source position. `source_rate` is
+// THE BOUND BUFFER'S (2026-10-26 night): the score's soundtrack binds at its
+// own 48000, so its increment is bare 1 — the same one division, the device
+// never reopened for it (GuiBoundAudio, playback.h). A rate of 0 is the
+// SUSPENDED device: the render body emits silence and holds position,
 // and cursor() holds at the integer cursor rather than extrapolating
 // (playback.h's graph-suspension clause).
 //
@@ -52,7 +46,7 @@ struct GuiNoiseVoice;   // noise.h — the second voice the callbacks sum
 // recorded at, and that has to be rescaled whatever the speed.
 //
 // THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the noise). Every
-// callback of either backend, on BOTH of its arms — the silence arm between
+// callback, on BOTH of its arms — the silence arm between
 // plays and the render body's — SUMS the app's one noise voice into the block
 // the engine just wrote (noise_mix_block, noise.h: its own bank, its own rate
 // ratio, its own fades; GuiPlaybackState::noise below, attached before the
@@ -63,8 +57,8 @@ struct GuiNoiseVoice;   // noise.h — the second voice the callbacks sum
 // sums nothing: the voice's positions hold as the engine's do.
 
 // Sources are stereo-only (the channels != 2 load refusal), so playback runs
-// exactly two output channels on every backend — two JACK ports, or the two
-// interleaved lanes of one AAudio buffer.
+// exactly two output channels — the two interleaved lanes of one AAudio
+// buffer.
 constexpr int kPlaybackOutputChannels = 2;
 
 // (THE LOOP TARGET'S SENTINEL, kPlaybackNoLoop, is declared in playback.h
@@ -99,12 +93,11 @@ constexpr uint64_t playback_command_seq(uint64_t generation) {
     return generation << 1;
 }
 
-// The engine state. Every backend's GuiPlayback::Impl holds one of these
-// beside its own device handles.
+// The engine state. The device's GuiPlayback::Impl holds one of these beside
+// its own device handles.
 struct GuiPlaybackState {
     // The rate the DEVICE asks frames at (the head comment). 0 = suspended.
-    // Written by the backend at open/close and, on JACK, from the graph's
-    // sample-rate callback; read from both threads.
+    // Written by the device at open/close; read from both threads.
     std::atomic<uint32_t> output_rate{0};
 
     // THE SECOND VOICE (2026-10-28, the head's paragraph): the app's one
@@ -220,7 +213,7 @@ struct GuiPlaybackState {
     // command packet that preceded it (the packet's own comment below: what
     // the fill then CONSUMES is qualified by this same generation). stop()
     // lowers the bit in one fetch_and ahead of its quiescence fence; the
-    // AAudio disconnect and both shutdowns lower the flag the same way.
+    // AAudio disconnect and the shutdown lower the flag the same way.
     //
     // THE TERMINAL (the render body's natural end) is ONE compare-exchange on
     // this word: expected = THE WORD THE GATE ACQUIRED (generation N,
@@ -425,18 +418,15 @@ struct GuiPlaybackState {
 // ---------------------------------------------------------------------------
 
 // Zero `frames` output frames beginning at output frame `first`, on every
-// channel. THE STRIDE IS THE ONLY THING THE TWO BACKENDS' OUTPUT BUFFERS
-// DISAGREE ABOUT: JACK hands the callback one contiguous float buffer PER PORT
-// (channel_buffers[c], stride 1), AAudio one INTERLEAVED buffer (channel_buffers
-// [c] = base + c, stride = the channel count). Stride 1 takes the contiguous
-// memset; an interleaved destination steps. No allocation, no I/O, no locks —
+// channel. THE STRIDE: AAudio hands the callback one INTERLEAVED buffer
+// (channel_buffers[c] = base + c, stride = the channel count), which steps; a
+// contiguous buffer per channel (stride 1) takes the contiguous memset. No allocation, no I/O, no locks —
 // this runs on the audio thread.
 void playback_write_silence(float* const* channel_buffers, int channel_count,
                             int64_t stride, int64_t first, int64_t frames);
 
 // THE CLIP (the architect's, 2026-10-28): every output sample of the block
-// clamped to [-1, 1] AFTER THE TWO VOICES ARE SUMMED, in both backends,
-// ALWAYS — no key, no condition. The music alone is unchanged for every
+// clamped to [-1, 1] AFTER THE TWO VOICES ARE SUMMED, ALWAYS — no key, no condition. The music alone is unchanged for every
 // in-range sample, and a target over full scale clips here in the app instead
 // of at the converter: in his words, the same sound. The stride is
 // playback_write_silence's. No allocation, no I/O, no locks — audio thread.
@@ -522,7 +512,7 @@ double playback_cursor_precise(const GuiPlaybackState& state);
 int64_t playback_domain_begin(const GuiPlaybackState& state);
 int64_t playback_domain_end(const GuiPlaybackState& state);
 
-// rebind_buffer()'s whole body — no device call in it on either backend
+// rebind_buffer()'s whole body — no device call in it
 // (playback.h's rebind contract, and the reasoning for the refuse-while-playing
 // check, are at the public declaration and repeated at the definition).
 void playback_rebind_buffer(GuiPlaybackState& state,

@@ -7,8 +7,8 @@
 
 // Implementation notes
 // --------------------
-// The render body runs on the backend's audio thread (JACK's process thread,
-// AAudio's data-callback thread). Its contract with the main thread is through
+// The render body runs on the device's audio thread (AAudio's data-callback
+// thread). Its contract with the main thread is through
 // a small set of atomics. Most are relaxed scalar reads whose value we want to
 // see "eventually" (the cursor). The exception is the SESSION WORD (its bit
 // 0, the playing flag): playback_publish_play stores it with release ordering
@@ -182,7 +182,7 @@ void playback_render_block(GuiPlaybackState& state,
     const uint32_t output_rate = state.output_rate.load(std::memory_order_relaxed);
     // The device asks for output-rate frames; the output-to-source rate ratio
     // IS the fractional source read increment (bare 1.0 whenever the device
-    // runs at the source's own rate, which is every JACK graph pinned to it).
+    // runs at the source's own rate).
     const double increment = output_rate == 0
         ? 0.0
         : static_cast<double>(state.source_rate) / static_cast<double>(output_rate);
@@ -422,10 +422,7 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
     state.output_rate.store(0, std::memory_order_relaxed);
 
     if (channels != 2) {
-        // The extraction's FIFTH deviation from the old JACK body (android/
-        // NOTES.md §11.8 lists the other four): this message dropped the word
-        // "JACK", the refusal being the shared engine's on both devices rather
-        // than any one device's.
+        // The message names no device: the refusal is the engine's.
         std::fprintf(stderr,
             "warptempo_gui: Unsupported channel count for playback "
             "(channels=%d, stereo sources only); playback disabled.\n",
@@ -450,13 +447,14 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // wall-clock at the source rate from there; nothing is added to that instant
 // and nothing is added to the `now` a position is read at. So the painted
 // line lights at `press + D` (the compositor's paint-to-light delay) while
-// the sound starts at `press + phase + L_audio` — the JACK pickup phase, 0
-// to one period, then the device's own output latency — and the line
+// the sound starts at `press + phase + L_audio` — the device's pickup phase,
+// 0 to one period, then its own output latency — and the line
 // therefore runs ahead of the ear by `L_audio − D + phase`, varying with the
 // phase from launch to launch. THAT IS THE CHOSEN BEHAVIOUR, not a defect
 // left standing: on 2026-09-03 the architect ran a blind comparison at his
-// own rig (33 ms measured display lead, 1536 frames = 34.8 ms JACK output
-// latency) between this build and a fully compensated one, and chose this
+// laptop rig of the day (33 ms measured display lead, 1536 frames = 34.8 ms
+// JACK output latency) between this build and a fully compensated one, and
+// chose this
 // one — "two continuous streams that we sort of happen to pick up here and
 // there — sometimes they match, sometimes they don't, and that's exactly
 // what they are". EVERY LAUNCH ROAD SHARES IT: bare Space, the waveform
@@ -489,19 +487,12 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // instant that cursor's frame enters the port), rather than on the main
 // thread's `now`, which is an ACCURACY choice for the same raw line — it takes
 // the period-wide phase re-roll out of a resync so the step is the accumulated
-// drift alone; and (5) THE WAYLAND SINGLE-COMMIT ORDERING, kept by his ruling
-// of 2026-09-03 though the presentation feedback it was landed for is gone
-// (paint_one_frame, platform_wayland.cpp).
+// drift alone.
 //
-// AND NO MEASUREMENT IS TAKEN OR PRINTED. The instruments the arc added —
-// the JACK port-latency figure with its two callbacks and its stderr line,
-// and the Wayland presentation-feedback lead with its own — went with the
-// leads on the same ruling: the product does not measure what the user has
-// not asked it to measure. The AV Sync Stats panel that offered the two
-// figures on demand (2026-09-03) was deleted with its instrument on
-// 2026-09-30, so the playback line carries no latency measurement at all, on
-// either backend, and no stderr line reports one. ANDROID RUNS THE SAME RAW
-// PREDICTOR, so no asymmetry is left on this axis to record.
+// AND NO MEASUREMENT IS TAKEN OR PRINTED (2026-09-03, the AV Sync Stats panel
+// deleted 2026-09-30): the product does not measure what the user has not
+// asked it to measure, so the playback line carries no latency measurement
+// at all, and no stderr line reports one.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample, int64_t loop_begin) {
     if ((!state.samples && !state.samples_i16) || state.total_frames <= 0)
@@ -681,9 +672,8 @@ Observation observe(const GuiPlaybackState& state) {
         // playhead holds honestly at the integer cursor. Re-anchoring
         // continuously through the outage makes resume extrapolate from the
         // held position and wall-clock now, with no forward jump or snap-back
-        // in either direction. (Unreachable mid-session on JACK, whose rate
-        // callback stores the new nonzero rate; session-ending on AAudio,
-        // whose disconnect lowers the flag with the rate.)
+        // in either direction. (Session-ending on AAudio, whose disconnect
+        // lowers the flag with the rate.)
         const int64_t cur = state.cursor.load(std::memory_order_relaxed);
         o.anchor    = Anchor{cur, now_ns};
         o.re_anchor = true;
@@ -762,7 +752,7 @@ void playback_rebind_buffer(GuiPlaybackState& state,
     // Caller invariant: the device must be fenced by stop() before rebind.
     // The callers are the target render's, the render player's and the score
     // viewer's (grep rebind_buffer), and a live device is NOT guaranteed: playback.init() failure is deliberately non-fatal at source
-    // load (no JACK server means the GUI runs playback-disabled), and a
+    // load (no AAudio stream means the GUI runs playback-disabled), and a
     // target-preview completion then calls this with no device open. That
     // is harmless — this body performs no device call, the assignments below are
     // exactly the right stash for a device-less session, and there is no

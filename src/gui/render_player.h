@@ -103,8 +103,7 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // NAMING-FOR-SHARING CONVENIENCE OUTSIDE THE GUI'S WORKFLOW — the tablet's
 // engine differs from the laptop's by ULPs, so it is never driven from the
 // glass, and it carries no sidecars, so it cannot be loaded in place
-// (2026-08-28) — while `tmp/`'s cells are what the workflow auditions on both
-// hosts. So `tmp/` IS THE ROOT: the two-branch root that listed `render` and
+// (2026-08-28) — while `tmp/`'s cells are what the workflow auditions. So `tmp/` IS THE ROOT: the two-branch root that listed `render` and
 // `tmp` as folder rows, the deliverable listing under it and the question that
 // fed them (deliverable_wav) are deleted, `AppState::RenderPlayer::Folder` is
 // two places, and the prune's LISTING trigger retires with them (its publish
@@ -301,7 +300,7 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // highlighted (highlighted_entry) and closes on the act's success.
 //
 // THE CAR IS ITS OWN INTERFACE (architect 2026-09-12, from the car). It
-// reaches this cluster through the seam's two members (platform_wayland.h owns
+// reaches this cluster through the seam's two members (platform_android.h owns
 // their contracts): the head unit's buttons arrive as GuiMediaCommand values
 // through main.cpp's hook into on_media_command, and EVERY ONE OF THEM IS A
 // DIRECT ACT ON THIS CLUSTER — no key is synthesized and no dispatch is run.
@@ -372,9 +371,9 @@ struct GuiRenderPlayer {
     // toggle the icon row's Play renders button shares with it; the load
     // road's success; the root's delete leaving no folder
     // (delete_batch_folders, architect 2026-10-01); and THE CLOSE ROAD — GuiPrompt::request_close, which
-    // takes the mode down at its head, so Ctrl+Q AND the compositor's
-    // title-bar X (main.cpp's set_on_close, the same road with no key behind
-    // it) both leave the ordinary window standing before the unsaved-work
+    // takes the mode down at its head, so Ctrl+Q AND the platform's close
+    // (Back; main.cpp's set_on_close, the same road with no key behind it)
+    // both leave the ordinary window standing before the unsaved-work
     // question is asked, and a Cancel answers over no player.
     void close();
 

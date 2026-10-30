@@ -461,7 +461,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // Ctrl+Shift+J since 2026-10-14, the jump on Ctrl+J since 2026-09-29) — is
     // admitted on the header's own standard: neither authors anything. The
     // copy composes the focused marker's resolved value and hands it to the
-    // compositor's clipboard; the jump switches the A/B tab, selects the
+    // platform's clipboard; the jump switches the A/B tab, selects the
     // marker that value came from, lands the playhead on it and centres it —
     // a tab switch, a selection, a playhead and a camera, every one of them
     // navigation this gate has never blocked.
@@ -1159,8 +1159,8 @@ void GuiInputHandler::close_history_mode() {
 // flags is paint-cache OUTPUT, rebuilt only by that same once-per-tick pass, so
 // between an edge and the next tick it still holds the LEAVING commit's flags —
 // and the keyboard reaches it directly, with no stash in between. Key events
-// arrive in BATCHES (the compositor's pending queue drains whole before the
-// tick, the same batching the mode's session counter already argues from), so a
+// arrive in BATCHES (a loop pass's drain delivers them whole before the
+// tick, pump's order, the same batching the mode's session counter already argues from), so a
 // `,` and a Tab delivered together would cycle the old commit's list: the
 // playhead lands on a flag that is no longer shown, and the ordinal it stored
 // then brightens whatever flag the NEW commit has at that ordinal once the
@@ -1366,8 +1366,8 @@ static std::optional<std::size_t> find_commit_walk_member(
 // git binary, `h` answered `could not ask git which clone holds '550 - 1'` and
 // nothing opened, and he does not need git history there). LOCAL HISTORY IS THE
 // FALLBACK — the session's own undo/redo timeline as states — and everything
-// that walk supports works exactly as it does when bare `g` chooses it on the
-// laptop: `,`/`.`, the diff lane, `'`, bare `v`, the paired march, Ctrl+Tab.
+// that walk supports works exactly as it does when bare `g` chooses it:
+// `,`/`.`, the diff lane, `'`, bare `v`, the paired march, Ctrl+Tab.
 // WHAT NEEDS GIT IS REFUSED TRUTHFULLY AND ELSEWHERE, at the press that asks
 // for it: the walk lamp's own chord and the checkpoint act each card the
 // bootstrap's reason, and both faces grey off the one predicate
@@ -2048,8 +2048,8 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.ctrl) return false;
     // THE CYCLE IS ONE OF THREE SHIFT-CARRYING SHAPES, and it is admitted in the
     // live cycle's own three spellings: bare Tab forward, Shift+Tab back, and
-    // IsoLeftTab back shift-agnostically (the compositor delivers that keysym
-    // for Shift+Tab on most layouts, and the live arm accepts it either way).
+    // IsoLeftTab back shift-agnostically (an X keymap gives that keysym to
+    // Shift+Tab on most layouts, and the live arm accepts it either way).
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) return true;
     // THE WALK IS THE SECOND (2026-08-07): bare `,` / `.` STEP and shift-exact
     // `,` / `.` JUMP TO THE WALLS — oldest and newest. Both shapes are the
@@ -3689,7 +3689,8 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 // is what retired a whole family of guards this function used to owe (the parked
 // notice, its three park classes, the dropdown close and the release-owned scrap
 // clears, all deleted 2026-08-09 as producer-less). One asynchronous modal
-// opener remains, the compositor's WM close (main.cpp's set_on_close), and it
+// opener remains, the platform's close request (Back; main.cpp's
+// set_on_close), and it
 // owes those guards in its own body: it force-ends every live gesture and hides
 // the hint before raising the unsaved-work prompt. What is gone
 // is an async opener that had to park and clear on someone ELSE's behalf — a
@@ -4827,8 +4828,8 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // own keys — typing, its motion keys, Esc and Enter — and a dialog's
     // ring are the whole admitted set; Ctrl+S and Ctrl+Q, admitted until
     // then, are consumed like every other chord, silently (on_key's gate).
-    // The window manager's close — labwc's button, Android's Back — is the
-    // quit road under every modal (GuiPrompt::request_close).
+    // The platform's close — Back — is the quit road under every modal
+    // (GuiPrompt::request_close).
     const bool is_editor_key =
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
@@ -6988,8 +6989,8 @@ bool GuiInputHandler::route_modal_editor_key(
 //
 // THE STEP LIVES ON THE CLOSE ROAD AND NOT ON THE KEYBOARD'S SIDE OF IT
 // (2026-08-28): Ctrl+Q used to tear its own editor down through a per-editor
-// hook on the shared modal route, and the COMPOSITOR'S CLOSE — which arrives
-// with no key at all (main.cpp's set_on_close) — reached GuiPrompt::request_close
+// hook on the shared modal route, and the PLATFORM'S CLOSE (Back) — which
+// arrives with no key at all (main.cpp's set_on_close) — reached GuiPrompt::request_close
 // without it, leaving a standing editor alive beneath the unsaved-work
 // question and back on screen at Cancel. One road, one closer, the render
 // player's own close's argument exactly.
@@ -8109,11 +8110,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     }
     // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
     // which takes the picker down at its head (GuiPrompt::request_close) —
-    // the same step the compositor's close takes, stated once there rather
+    // the same step the platform's close takes, stated once there rather
     // than here, so the two roads cannot drift. (The File menu's
     // Quit row was its pointer road above the band from 2026-09-03 evening
-    // until the menu row's removal, 2026-10-21; the tablet's quit road is
-    // Android's Back, the laptop's the window manager's close.) BOTH OF
+    // until the menu row's removal, 2026-10-21; the quit road is Back.) BOTH OF
     // OPEN'S CHORDS ARE THE PICKER'S OWN since 2026-10-25 — Ctrl+O closes it
     // and Ctrl+Alt+O reverts, the two arms below — so nothing of the
     // session-wide set dies in the catch-all any more.
@@ -8289,13 +8289,13 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 // the panel 2026-09-30; the editor's CUT joined the copies later that same
 // day): clipboard_set_text answers a VERDICT —
 // whether the copy can be pasted (the contract at the seam,
-// platform_wayland.h / platform_android.h) — and a success card on a false
-// verdict would lie. IT IS ONE SENTENCE AND NOT A FORK. ITS PRODUCERS ARE
-// THE LAPTOP'S ALONE: the Wayland claim can refuse per press (no data
-// device, no source, no input-event serial to ride), while the tablet's copy
-// stays in its own process and always answers true (architect 2026-10-29,
-// Android 13+'s "Copied" chip; the rule at platform_android.h's
-// clipboard_set_text), so neither verb ever cards there.
+// platform_android.h) — and a success card on a false
+// verdict would lie. IT IS ONE SENTENCE AND NOT A FORK. THE VERDICT IS
+// ALWAYS TRUE TODAY: the tablet's copy stays in its own process (architect
+// 2026-10-29, Android 13+'s "Copied" chip; the rule at platform_android.h's
+// clipboard_set_text), so neither verb ever cards — the false arm's one
+// producer was the laptop's system-clipboard claim, gone with the laptop
+// GUI (2026-10-30).
 //
 // THE VERB IS THE ONE VARIABLE and the sentence is not: "copy" for the
 // resolved value's copy (Ctrl+Shift+J in the main window), "cut" for the editor's, so the reader is told which act the
@@ -8958,7 +8958,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // design 2026-08-28, retiring the external `audio_player` spawn whole):
     // the in-app player over the project's `tmp/` batch cells (it walked
     // `render/` too until 2026-09-01),
-    // through the product's own engine on both devices. TWO PRODUCERS, ONE
+    // through the product's own engine. TWO PRODUCERS, ONE
     // ROUTE: this key and the icon row's Play renders button, which
     // synthesizes exactly this bare chord. The modal / editor / loading gates
     // in on_key run before this handler, so `l` is inert while any of them
@@ -9012,11 +9012,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // picker's twin pair, route_picker_key): Ctrl+S falls through to the
     // save with the player standing (no transport is touched); Ctrl+Q falls through to the ordinary quit road,
     // which takes the player down at its head (GuiPrompt::request_close) — the
-    // same step the compositor's close takes, stated once there rather than
+    // same step the platform's close takes, stated once there rather than
     // here, so the two roads cannot drift. (The File menu's
     // Quit row was its pointer road above the band from 2026-09-03 evening
-    // until the menu row's removal, 2026-10-21; on the TABLET Android's Back
-    // is the quit road, on the laptop the window manager's close.)
+    // until the menu row's removal, 2026-10-21; the quit road is Back.)
     // THE SET STAYS TWO: Ctrl+O and Ctrl+Alt+O are the two chords this
     // router answers with the catch-all's silence — chords
     // bound outside the mode and meaning nothing inside it, the unbound-keys
@@ -9357,16 +9356,16 @@ void GuiInputHandler::copy_focused_marker_value() {
         app.last_selected_marker, audio.total_frames());
     // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
     // string and hands it straight over, holding no copy of its own
-    // (the clipboard section of platform_wayland.cpp).
+    // (platform_android.h's clipboard_set_text).
     if (payload.empty()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kNoResolvedValueToCopy);
         return;
     }
-    // THE WRITE'S VERDICT DECIDES THE CARD (2026-09-03): a refused claim —
-    // a Wayland claim with nothing to ride — says so instead of "Copied"; the
-    // tablet's in-process copy never refuses (architect 2026-10-29, the rule
-    // at platform_android.h's clipboard_set_text), so there this card is the
+    // THE WRITE'S VERDICT DECIDES THE CARD (2026-09-03): a refused write would
+    // say so instead of "Copied"; the tablet's in-process copy never refuses
+    // (architect 2026-10-29, the rule at platform_android.h's
+    // clipboard_set_text, card_clipboard_refusal's head), so this card is the
     // copy's one confirmation, no system chip beside it. The button's face
     // reads no half of this question; it is the press's own answer.
     if (!gui.clipboard_set_text(payload)) {
@@ -9822,8 +9821,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // THE USER NEVER SEES THE OTHER TAB: the whole act runs inside this one
     // key dispatch, and nothing in it commits a frame — each switch's and
     // each zoom's synchronous rebuild (kick_waveform_sync) renders into the
-    // off-screen plate cache and posts damage, and the compositor gets one
-    // paint after the dispatch returns, of the home tab. The other tab's
+    // off-screen plate cache and posts damage, and the platform paints once
+    // after the dispatch returns, of the home tab. The other tab's
     // centred band persists: switch_active_tab_view_to pushes the live
     // viewport / zoom / playhead into the LEAVING tab's band
     // (refresh_active_tab_view_from_app) before pulling the entering one's, so
@@ -10163,8 +10162,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // the launch gates' sentence and STILL toggles: the lamp lights and
         // stays silent, the load-in-flight shape, until the next launch press
         // reopens. The DARK edge asks nothing. The ordinary press makes no
-        // device call (the start is idempotent on a running stream; JACK
-        // answers its plain read). THE IMMEDIATE REOPEN IS SAFE UNDER THE
+        // device call (the start is idempotent on a running stream). THE IMMEDIATE REOPEN IS SAFE UNDER THE
         // HANDS-OFF RULE (2026-10-28, Sol's finding of that day closed by it):
         // this press has already ended any standing A/B audition at on_key's
         // head (GuiInputHandler::end_audition_for_press) before this arm runs,

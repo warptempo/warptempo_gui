@@ -1,7 +1,8 @@
 #include "score_page_worker.h"
 
-#include "display_transform.h"   // p3_premultiplied, the job's bit's transform
 #include "svg_icon.h"            // the raster road: raster_info, raster_regions
+
+#include <cairo/cairo.h>
 
 #include <algorithm>
 #include <chrono>
@@ -19,48 +20,8 @@ double ms_between(Clock::time_point a, Clock::time_point b) {
     return std::chrono::duration<double, std::milli>(b - a).count();
 }
 
-// THE EXPANSION (the head's THE EXPANSION'S ROAD): the store's bytes into a
-// new opaque ARGB32 surface, FF g g g a pixel. NO CONVERSION PASS, BY PROOF
-// (2026-10-26): display_transform's sRGB -> P3 (transform_word over
-// kSrgbToP3, as p3_premultiplied runs it) maps every neutral word g g g to
-// itself, all 256 checked — each matrix row sums to 1 within 5e-16, so the
-// linear value is decode(g) within 5 ulp, and the encode's decision levels
-// stand at least 0.49 of a byte's interval from it on either side, a margin
-// no rounding order (FMA or none, either device) can cross; at alpha 255
-// p3_premultiplied's un-premultiply is exact, and its neutral test keeps the
-// word whole. So the converted surface IS the expanded one, under either bit.
-cairo_surface_t* expand_gray(const GuiScorePageJob& job) {
-    const Clock::time_point t0 = Clock::now();
-    const GuiScoreGrayPage& g  = job.from;
-    cairo_surface_t* out =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g.w, g.h);
-    if (cairo_surface_status(out) != CAIRO_STATUS_SUCCESS) {
-        cairo_surface_destroy(out);
-        std::fprintf(stderr,
-                     "warptempo_gui: Score page %d did not expand: no surface "
-                     "for it\n",
-                     job.work.key.page + 1);
-        return nullptr;
-    }
-    cairo_surface_flush(out);
-    unsigned char*  data   = cairo_image_surface_get_data(out);
-    const int       stride = cairo_image_surface_get_stride(out);
-    const uint8_t*  src    = g.bytes->data();
-    for (int y = 0; y < g.h; ++y) {
-        auto* row = reinterpret_cast<uint32_t*>(data + y * stride);
-        const uint8_t* in = src + static_cast<std::size_t>(y) *
-                                      static_cast<std::size_t>(g.w);
-        for (int x = 0; x < g.w; ++x)
-            row[x] = 0xFF000000u | (static_cast<uint32_t>(in[x]) * 0x010101u);
-    }
-    cairo_surface_mark_dirty(out);
-    std::fprintf(stderr, "warptempo_gui: score page %d: expand %.1f ms\n",
-                 job.work.key.page + 1, ms_between(t0, Clock::now()));
-    return out;
-}
-
 // THE FILE'S ROAD, the head's steps; a failure prints its one line and
-// answers neither the surface nor the gray. `r` carries the work.
+// answers no gray. `r` carries the work.
 void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
     const auto fail = [&](const std::string& words) {
         std::fprintf(stderr,
@@ -129,10 +90,8 @@ void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
     unsigned char* data   = cairo_image_surface_get_data(out);
     const int      stride = cairo_image_surface_get_stride(out);
 
-    // THE GRAY (the head): the low byte of each fit-size word, before any
-    // conversion.
-    Clock::time_point t_gray = t_scale;
-    if (job.work.gray) {
+    // THE GRAY (the head): the low byte of each fit-size word.
+    {
         auto g = std::make_shared<std::vector<uint8_t>>(
             static_cast<std::size_t>(dw) * static_cast<std::size_t>(dh));
         for (int y = 0; y < dh; ++y) {
@@ -145,36 +104,9 @@ void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
         }
         r.gray = GuiScoreGrayPage{key.page, key.box_w, key.box_h, dw, dh,
                                   std::move(g)};
-        t_gray = Clock::now();
     }
-
-    Clock::time_point t_convert = t_gray;
-    bool              converted = false;
-    if (!job.work.surface) {
-        cairo_surface_destroy(out);
-        out = nullptr;
-    } else if (key.convert) {
-        // THE WINDOW'S COPY, pixel by pixel, memoised on the last word: a page
-        // is runs of one paper and one ink, so most pixels repeat the one
-        // before them.
-        uint32_t last_in = 0, last_out = 0;
-        bool     have    = false;
-        for (int y = 0; y < dh; ++y) {
-            auto* row = reinterpret_cast<uint32_t*>(data + y * stride);
-            for (int x = 0; x < dw; ++x) {
-                if (!have || row[x] != last_in) {
-                    last_in  = row[x];
-                    last_out = display_transform::p3_premultiplied(last_in);
-                    have     = true;
-                }
-                row[x] = last_out;
-            }
-        }
-        cairo_surface_mark_dirty(out);
-        converted = true;
-        t_convert = Clock::now();
-    }
-    r.surface = out;
+    const Clock::time_point t_gray = Clock::now();
+    cairo_surface_destroy(out);
 
     // THE TIMING LINE (the head), the arms that ran.
     char line[160];
@@ -187,8 +119,7 @@ void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
                                ", %s %.1f ms", name, ms_between(a, b));
     };
     if (scaled) arm("scale", t_decode, t_scale);
-    if (job.work.gray) arm("gray", t_scale, t_gray);
-    if (converted) arm("convert", t_gray, t_convert);
+    arm("gray", t_scale, t_gray);
     std::fprintf(stderr, "warptempo_gui: score page %d: %s\n", key.page + 1,
                  line);
 }
@@ -196,11 +127,7 @@ void decode_fit_page(const GuiScorePageJob& job, GuiScorePageResult& r) {
 GuiScorePageResult run_job(const GuiScorePageJob& job) {
     GuiScorePageResult r;
     r.work = job.work;
-    if (job.work.expand) {
-        r.surface = expand_gray(job);
-    } else {
-        decode_fit_page(job, r);
-    }
+    decode_fit_page(job, r);
     return r;
 }
 
@@ -242,13 +169,8 @@ std::vector<GuiScorePageResult> GuiScorePageWorker::drain() {
         gen = generation_;
     }
     std::vector<GuiScorePageResult> out;
-    for (auto& [g, r] : taken) {
-        if (g == gen) {
-            out.push_back(std::move(r));
-        } else if (r.surface != nullptr) {
-            cairo_surface_destroy(r.surface);
-        }
-    }
+    for (auto& [g, r] : taken)
+        if (g == gen) out.push_back(std::move(r));
     return out;
 }
 
@@ -262,8 +184,6 @@ void GuiScorePageWorker::shutdown() {
     std::lock_guard<std::mutex> lk(mtx_);
     queue_.clear();
     current_.reset();
-    for (auto& [g, r] : done_)
-        if (r.surface != nullptr) cairo_surface_destroy(r.surface);
     done_.clear();
 }
 

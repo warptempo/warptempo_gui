@@ -76,7 +76,7 @@ bool GuiWaveformWorker::is_busy() const {
 void GuiWaveformWorker::wait_until_idle() {
     using clock = std::chrono::steady_clock;
     // The expiry path is unsafe by design: the caller (the paint path's
-    // force_synchronous_waveform_rebuild) takes over the cache surfaces from
+    // force_synchronous_waveform_rebuild) takes over the cache's slots from
     // under any live job. This bound exists only as a last-resort hang guard,
     // and is sized far above the two-render worst case so it does not fire in
     // practice.
@@ -125,24 +125,9 @@ void GuiWaveformWorker::worker_loop() {
         // is also re-checked after the render so a cancel issued during
         // the render still gets reported (last_ok_=false) to the
         // completion handler.
-        // The plate's slot is the job's surface on the cairo road, its
-        // column bounds under the GL canvas (WaveformJob::columns).
+        // The plate's slot is the job's column bounds (WaveformJob::columns).
         bool ok = false;
-        if (!cancel_flag_.load() && job.surface && job.audio) {
-            render_waveform_to_cache_surface(
-                job.surface,
-                job.area_w,
-                job.area_h,
-                job.divider_px,
-                job.line_px,
-                job.inks,
-                *job.audio,
-                job.vp_start,
-                job.painter_spp,
-                job.gain_hash != 0,
-                job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map);
-            ok = !cancel_flag_.load();
-        } else if (!cancel_flag_.load() && job.columns && job.audio) {
+        if (!cancel_flag_.load() && job.columns && job.audio) {
             render_waveform_to_plate_columns(
                 *job.columns,
                 job.area_w,

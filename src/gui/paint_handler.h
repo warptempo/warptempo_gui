@@ -124,34 +124,28 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // every token comes from a sidecar grammar that is ASCII-only.
 std::string history_diff_label(bool disabled, std::string_view token);
 
-// -- Off-screen pixel cache for the waveform subsystem -------------------
+// -- The waveform plate's cache ------------------------------------------
 //
-// Lives for the life of main(); recreated when the waveform area is
-// resized; re-rendered when any input to render_waveform has changed.
-// The redraw path blits this surface onto the pixmap and paints markers
-// / flags / playhead / timestamp on top. No implicit Cairo state from
-// the main pixmap context leaks in — render_waveform does its own
-// save/restore and does not depend on the caller's transform.
+// Lives for the life of the project set (run_project, main.cpp); re-rendered
+// when any input to the plate's render (render_waveform_columns) has
+// changed. THE PLATE IS COLUMN BOUNDS (2026-10-13; GuiPlateColumns, render.h):
+// the two bands' per-column bar bounds, no pixel kept on the CPU — the
+// frame's draw list carries them (GuiCanvasSink::plate) and the GPU draws
+// the priority select from them; the redraw path paints markers / flags /
+// playhead / timestamp around them.
 struct WaveformCache {
-    cairo_surface_t* surface = nullptr;
-    int              width   = 0;     // surface width  (== area.w when valid)
-    int              height  = 0;     // surface height (== area.h when valid)
+    int              width   = 0;     // the live plate's width  (== area.w when valid)
+    int              height  = 0;     // the live plate's height (== area.h when valid)
 
-    // THE PLATE AS COLUMN BOUNDS, THE GL CANVAS'S SLOT (2026-10-13;
-    // GuiPlateColumns, render.h): under kGuiCanvasDrawList (canvas_sink.h)
-    // the plate is kept as the two bands' per-column bar bounds IN PLACE OF
-    // the surface — no surface is ever made and no write pass runs; the GPU
-    // draws the writer's select from them (GuiListCanvasSink::plate). The
-    // live `columns` and the worker's `pending_columns` follow the surface
-    // pair's whole life — the worker writes the pending slot, the completion
+    // THE PLATE'S TWO SLOTS: the live `columns` and the worker's
+    // `pending_columns` — the worker writes the pending slot, the completion
     // swaps the two, the synchronous rebuild writes the live one after the
-    // drain — and width / height stand for them as for the surfaces; the
-    // fingerprints, the publish and the supersede rule are untouched. Both
-    // stay unrendered on the cairo road.
+    // drain — width / height and pending_width / pending_height standing for
+    // them.
     GuiPlateColumns columns;
     GuiPlateColumns pending_columns;
 
-    // Fingerprint of the LIVE surface (what the next blit will draw). Set
+    // Fingerprint of the LIVE plate (what the next frame will draw). Set
     // at completion-swap time, not at dispatch. fp_target discriminates
     // the source-view and target-view caches: a `t` toggle flips it
     // without disturbing the source-domain inputs, forcing a cache rebuild.
@@ -165,8 +159,8 @@ struct WaveformCache {
     // completion-swap and synchronous-publish sites copy exactly these):
     // vp_start, vp_end, area_w, area_h, divider_px, line_px, the plate's two
     // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
-    // an input the plate's PIXELS depend
-    // on, and each is keyed BY FIELD rather than through whatever else happens
+    // an input the plate's PIXELS depend on (the inks through its
+    // publication), and each is keyed BY FIELD rather than through whatever else happens
     // to move with it. THE AREA'S TWO DIMENSIONS AND THE STEREO DIVIDER'S
     // HEIGHT ARE THE PLATE'S WHOLE LAYOUT (the inset gone 2026-10-09, the
     // divider 2026-10-16): the channels' bands are the area less the divider,
@@ -187,12 +181,12 @@ struct WaveformCache {
     // device px at every scale since 2026-10-09; the field stays, the width
     // being the job's input.)
     int       fp_line_px = -1;
-    // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
-    // and `waveform_outline` roles, waveform_plate_inks, render.h): the plate
-    // writes their words, so an install that moves either (the Settings
-    // Waveform row's commit, install_program_palette, palette_file.h)
-    // re-renders it BY FIELD, keyed directly like the line width (architect
-    // 2026-10-03; palette roles since 2026-10-07).
+    // THE TWO INKS the live plate is published with (the `waveform_ink` and
+    // `waveform_outline` roles, waveform_plate_inks, render.h): the sink
+    // writes their words (GuiCanvasSink::plate), so an install that moves
+    // either (the settings page's `waveform` commit, install_program_palette,
+    // palette_file.h) republishes the plate BY FIELD, keyed directly like the
+    // line width (architect 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};
     // THE GAIN FIELD the live pixels were rendered under — the derived
     // curve's version where the picture is magnified, 0 where the gate answers
@@ -201,7 +195,7 @@ struct WaveformCache {
     // line width: the gain is an input to the tip mapping alone, so nothing else
     // about the plate would move if it changed by itself (the magnification
     // lamp moves no map), and without it a plate rendered at one gain could go
-    // on being blitted after the gain changed. The field alone is enough to
+    // on being drawn after the gain changed. The field alone is enough to
     // re-render — no basis freeze and no map term rides with it. PIXELS ONLY —
     // this cache holds a picture, and the gain reaches no sample anywhere.
     uint64_t  fp_gain_hash = 0;
@@ -221,13 +215,12 @@ struct WaveformCache {
     // empty before the first completion has fired.
     std::vector<WarpFrameMapSegment> fp_warp_frame_map;
 
-    // Pending-slot surface and fingerprint. The worker renders
-    // into pending_surface; the completion handler swaps it into surface
-    // and copies pending_fp_* into fp_*. While a render is in flight,
+    // Pending-slot size and fingerprint. The worker renders into
+    // pending_columns; the completion handler swaps it into columns and
+    // copies pending_fp_* into fp_*. While a render is in flight,
     // pending_fp_* describes what the worker is producing — dirty-detect
     // compares against pending_fp_* (not fp_*) so we don't enqueue a
     // second render for the same target the worker is already working on.
-    cairo_surface_t* pending_surface = nullptr;
     int              pending_width   = 0;
     int              pending_height  = 0;
 
@@ -250,9 +243,9 @@ struct WaveformCache {
     // Supersede slot: when dirty-detect sees a new viewport mid-render,
     // it stashes the desired fingerprint here instead of dispatching.
     // The completion handler consumes it — if set, the just-completed
-    // pending surface is discarded (its pixels will be overwritten by
-    // the next render) and a fresh job built from supersede_* is
-    // dispatched. Cleared at consumption.
+    // pending bounds are discarded (they will be overwritten by the next
+    // render) and a fresh job built from supersede_* is dispatched.
+    // Cleared at consumption.
     bool      supersede             = false;
     int64_t   supersede_vp_start    = 0;
     int64_t   supersede_vp_end      = 0;
@@ -271,15 +264,7 @@ struct WaveformCache {
     // the slot carries no audio pointer or keepalive — the deferred redispatch
     // just names &audio.
 
-    void destroy_surface() {
-        if (surface) {
-            cairo_surface_destroy(surface);
-            surface = nullptr;
-        }
-        if (pending_surface) {
-            cairo_surface_destroy(pending_surface);
-            pending_surface = nullptr;
-        }
+    void forget_plate() {
         columns.rendered         = false;
         pending_columns.rendered = false;
         width  = 0;
@@ -300,7 +285,7 @@ struct WaveformCache {
         pending_fp_warp_frame_map.clear();
     }
 
-    ~WaveformCache() { destroy_surface(); }
+    ~WaveformCache() { forget_plate(); }
 };
 
 // -- Off-screen pixel cache for the top-strip flag rects ----------------
@@ -363,8 +348,8 @@ struct WaveformCache {
 // IDENTITY RESTS ON (2026-10-13) — the bytes are the whole-strip surface's
 // of before, by construction: the same painters paint the same
 // client-coordinate geometry through an integral translation (cairo ignores
-// a translation in the font's ctm, and both platforms already hand on_redraw
-// a context translated by an integral frame; the direct road,
+// a translation in the font's ctm, and the platform hands on_redraw an
+// untranslated context; the direct road,
 // direct_pixel_target, carries the translation and the clip list through);
 // each pass's clip loses only rows above the marker lane, which its own
 // span clip (paint_cues) already excluded; and the blit puts the same bytes on the same client rows — the
@@ -756,12 +741,11 @@ struct GuiPaintHandler {
     // floater bit written, the list built — so the next frame's first damage
     // rect writes them again and its first rect meeting the canvas's paint
     // area builds the list. Called from the pre-paint hook (main.cpp), the
-    // one seat that opens every painted frame on both backends; a no-op's
-    // worth of work on the cairo road, which reads neither bit.
+    // one seat that opens every painted frame.
     void begin_canvas_frame();
 
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
-    // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
+    // to the published plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay stays
     // registered with the cached pixels instead of the not-yet-painted live
     // viewport. This is the ONE authoritative enumeration of the
@@ -815,7 +799,7 @@ private:
 
     // THE GL CANVAS'S PER-FRAME BITS (begin_canvas_frame above, on_redraw's
     // canvas block): the frame's list clip and floater bit written, and the
-    // frame's list built. Read and written under kGuiCanvasDrawList alone.
+    // frame's list built.
     bool canvas_frame_seen = false;
     bool canvas_list_built = false;
     // THE CANVAS PAINT AREA'S KNOWN-CLEAR RECORD (2026-10-14; the rule at
@@ -827,14 +811,14 @@ private:
     // frame's decision `canvas_clear_skip`, whether a rect of it covered the
     // area whole (`canvas_clear_covered`), and whether a floating surface
     // stood over it (`canvas_clear_floater`, the frame's floater bit).
-    // Read and written under kGuiCanvasDrawList alone; on_resize forgets it.
+    // on_resize forgets it.
     bool    canvas_clear_known   = false;
     GuiRect canvas_clear_area{0, 0, 0, 0};
     bool    canvas_clear_open    = false;
     bool    canvas_clear_skip    = false;
     bool    canvas_clear_covered = false;
     bool    canvas_clear_floater = false;
-    // The frame's draw list from the canvas passes, through the list sink, in
+    // The frame's draw list from the canvas passes, through the sink, in
     // on_redraw's paint order (the definition, paint_handler.cpp).
     void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);
 
@@ -901,7 +885,7 @@ private:
 
     // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
-    // recolor model, architect 2026-07-26: TRIM recolors no blitted pixel, the
+    // recolor model, architect 2026-07-26: TRIM recolors no plate pixel, the
     // trim bar spanning the window being the whole inside-the-window signal.
     // Neither helper had any other consumer, so both went with the pass.)
 
@@ -984,7 +968,7 @@ private:
     // 2026-10-10 to 2026-10-14 — with the taskbars.)
     // (THE CAPTION'S PAINTER, paint_caption_row — the window's own title
     // bar at the top lane 0, 2026-10-05 to 2026-10-24 — is removed with the
-    // lane: labwc draws the laptop's title bar, the tablet has none.)
+    // lane: the tablet's window has none.)
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
     // 2026-10-09): the clock in its dark time field (2026-10-05) in a
@@ -1048,8 +1032,8 @@ private:
     // reason: it publishes geometry the pointer path reads.)
     // THE CANVAS PASSES PAINT THROUGH THE CANVAS SINK (2026-10-13,
     // canvas_sink.h): the plate, the ring, the stems and their runs, the
-    // cursor, the scanner and the anchor below — the cairo sink on the cairo
-    // road, the list sink under the GL canvas (build_canvas_list).
+    // cursor, the scanner and the anchor below — into the frame's draw list
+    // (build_canvas_list).
     void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's DOTTED ring — the phase-reset overlay's whole
     // visual, its right side and its top and bottom runs one-device-px dots
@@ -1134,8 +1118,7 @@ private:
     //
     // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the
     // layout table, the geometry and the two lamps all live there): this body
-    // returns at its head on the laptop, permanently, because that predicate's
-    // platform term is false there.
+    // returns at its head while the keyboard does not stand.
     //
     // AND THEN ON ITS OWN EXPOSURE, exactly as the four redesigned rows are and
     // for their reason: this pass shapes up to thirteen cap runs per row, which

@@ -102,8 +102,8 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // It was a device config key with a Settings row for its tuning phase, the
 // same day; he ran 300 on the tablet and ruled it settled ("very good"), so
 // it is hard-coded and the key is struck, unknown-key fatal (the tuning rule:
-// a number under tuning is a device key, a settled one a constant). ONE NUMBER FOR BOTH DEVICES: the tablet is the authoring device
-// and the laptop authors nothing, so the tablet's number is the product's.
+// a number under tuning is a device key, a settled one a constant): the
+// tablet is the authoring device, so the tablet's number is the product's.
 // It rides NO SCALE: a duration is not a length.
 constexpr int kHoldDelayMs = 300;
 
@@ -130,33 +130,23 @@ constexpr int kHoldDelayMs = 300;
 //     time for long press, key repeat, etc."), and the properties that made
 //     it its own number are untouched by the move: it gates the TAP arm
 //     alone, and the held-key arm beside it consults no clock at all;
-//   * THE HOLD-REPEATING BUTTONS' FIRST FIRE (input_pointer.cpp's arm, on
-//     both devices, where every LATER fire is the compositor's advertised
-//     repeat interval) — a repeat delay, the first beat of a stream;
-//   * THE ANDROID BACKEND'S KEY-REPEAT DELAY (platform_android.cpp — the one
-//     place the paragraph below does not reach, because that platform
+//   * THE HOLD-REPEATING BUTTONS' FIRST FIRE (input_pointer.cpp's arm, where
+//     every LATER fire is the platform's repeat interval) — a repeat delay,
+//     the first beat of a stream;
+//   * THE BACKEND'S KEY-REPEAT DELAY (platform_android.cpp — the platform
 //     advertises no delay to ask for; the ruling is at that site).
 // So a keyboard hold's first repeat, a held button's first repeat, a double
 // tap and a re-tapped nudge all land on the same beat.
 //
-// 600 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
-// DELIBERATELY and not by coincidence: it is the architect's own labwc
-// <repeatDelay> (575 until 2026-09-29, when both moved to 600 together, to
-// make it even like the product's other pauses), so the beat the hand already
-// knows from every held key on the desktop is the beat this program's own
-// cadences use.
-//
-// THE KEYBOARD'S OWN DELAY IS NOT THIS CONSTANT AND NEVER SHOULD BE WHERE THE
-// PLATFORM ADVERTISES ONE. Key repeat arrives from the compositor through
-// wl_keyboard.repeat_info and reaches the input core through set_repeat_info,
-// so it tracks the user's desktop setting and moves with every other
-// application if that setting is ever edited. This constant is the number OUR
-// cadences use to agree with it — hard-coding the key delay to match
-// would be the one place the product fights the desktop, and it would buy
-// nothing, because the two numbers already agree. (Android advertises no delay
-// at all to a native activity, which is why the inventory above lists it as a
-// reader there: a fallback where there is nothing to track, not a second
-// opinion about a setting that exists.)
+// 600 ms BY CONVENTION WITH THE ARCHITECT'S DESKTOP KEY-REPEAT DELAY, matched
+// DELIBERATELY and not by coincidence: it is his own labwc <repeatDelay> (575
+// until 2026-09-29, when both moved to 600 together, to make it even like
+// the product's other pauses), so the beat the hand already knows from every
+// held key on the desktop is the beat this program's own cadences use.
+// Android advertises no repeat delay at all to a native activity, which is
+// why the inventory above lists the backend as a reader: a fallback where
+// there is nothing to track, not a second opinion about a setting that
+// exists.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale
 // has nothing to say about it.
@@ -180,7 +170,7 @@ struct GuiInputState {
     bool     primary_button_held = false;
     // The Unicode codepoint this key event resolves to under the live
     // keyboard state (shift / layout / compose applied), as computed by
-    // the backend — xkb_state_key_get_utf32 on Wayland; 0 when the key
+    // the backend — the painted key's own character (synthesize_key); 0 when the key
     // produces no character (function keys, bare modifiers). It is a FULL
     // CODEPOINT, not a byte — a compose or dead-key sequence arrives here
     // whole (U+2026, U+2014, an accented letter) and the text editors UTF-8
@@ -213,7 +203,7 @@ struct GuiInputState {
     // selects
     // the ARM (the hybrid is stated at the head of undo.h): a repeat merges into
     // the burst by IDENTITY with no clock consulted, so a held key coalesces by
-    // construction at any compositor's repeat delay. A PHYSICAL press takes the
+    // construction at any repeat delay. A PHYSICAL press takes the
     // other arm — since 2026-08-01 rapid manual taps of the same kind merge too,
     // on a fixed 500 ms window plus a subject test, and presses beyond it stay
     // separately undoable. The modal focus ring's Enter/Space arm consumes a
@@ -301,9 +291,8 @@ struct HorizontalArrowStep {
 // follows from the engine's lattice, which only P has: the render depends
 // only on the window a reset seeds in (S - N/2, the engine seeding at the
 // last window at or before it), so a column nudge on P is almost always
-// SILENT — about seventeen of eighteen at the laptop's working zoom (one hop
-// is about 18.6 of its 55-frame columns; about twenty-one of twenty-two on the
-// tablet's 46) re-render identical audio — and the hop is the only arrow move there that changes what is
+// SILENT — about twenty-one of twenty-two at the tablet's working zoom (one
+// hop is about 22 of its 46-frame columns) re-render identical audio — and the hop is the only arrow move there that changes what is
 // heard. Every reader of the horizontal pair's step asks this: the marker-
 // and waveform-lane dispatch, and the Left / Right face
 // (horizontal_arrow_step_actionable, app_state.h), so the face asks the step
@@ -354,10 +343,9 @@ enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
 // text_editor::replace_selection long before this, with a card that says so.
 // This exists for the pathological case alone.
 //
-// IT IS THE SEAM'S, NOT A BACKEND'S: platform_wayland.cpp's
-// read_clipboard_data and platform_android.cpp's clipboard_get_text both read
-// this constant (both backend headers include this one), so a retune is one
-// edit here.
+// IT IS THE SEAM'S, NOT A BACKEND'S: platform_android.cpp's
+// clipboard_get_text reads this constant (the backend header includes this
+// one), so a retune is one edit here.
 //
 // AND THERE IS A THIRD COPY THE BUILD CANNOT CHECK: MainActivity.java's
 // MAX_CLIPBOARD_BYTES refuses the same size before it encodes the clip to
@@ -460,10 +448,9 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // DELETE). It carried THREE MORE BLOCKS — the keypad whole, the editing and
 // system block, and the laptop's own vendor strip, in a GuiSpellKeys namespace
 // of their own — written when a press the platform could name and the card
-// would not was an identity thrown away: the Wayland boundary forwards the
-// level-0 keysym of every key that is not an F-key and not a modifier
-// (GuiPlatform::key_from_keycode), so the unbound half of a PC keyboard
-// reaches this speller. THE UNBOUND-KEYS RULING TOOK THEIR LAST PRODUCER on
+// would not was an identity thrown away: the laptop's keyboard boundary of
+// the day forwarded the level-0 keysym of every key that was not an F-key and
+// not a modifier, so the unbound half of a PC keyboard reached this speller. THE UNBOUND-KEYS RULING TOOK THEIR LAST PRODUCER on
 // 2026-08-30 — every gate that names a chord speaks only for a chord
 // chord_is_bound admits, and no value in those blocks was in that inventory —
 // and they stood one more day as "one owner of what a key is called, complete
@@ -480,25 +467,22 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // between and unreachability; and the vendor space the 2026-08-30 narrowing
 // had accepted as unnamed (XF86Calculator, browser Back/Forward, Power, Sleep,
 // WLAN, keyboard brightness, Touchpad Toggle, a space of hundreds), which that
-// day's ruling had already stopped owing a sentence to. THE XKB ROAD STAYS
-// REJECTED on its own reasoning — deriving the name from xkbcommon at the
-// Wayland boundary (xkb_keysym_get_name) would put a STRING on the key event
-// and so widen the platform seam for a name the Android backend, which
-// produces GuiKeys only through synthesize_key, could never spell the same
-// way; the two hosts must answer one press one sentence.
+// day's ruling had already stopped owing a sentence to. A NAME ON THE KEY
+// EVENT STAYS REJECTED: a STRING there would widen the platform seam for a
+// name the backend, which produces GuiKeys only through synthesize_key,
+// never spells.
 //
-// NO F-KEY ARM, deliberately: F1..F35 are dropped at the Wayland boundary
-// before delivery (GuiPlatform::key_from_keycode, "this GUI binds none of
-// them") and the Android backend produces GuiKeys only through synthesize_key,
-// so no F-key can reach a card on either host — and none is bound, so none
-// could reach this speller in any case. An arm exists iff a producer does
+// NO F-KEY ARM, deliberately: the backend produces GuiKeys only through
+// synthesize_key, the painted keyboard carrying no F-key, so no F-key can
+// reach a card — and none is bound, so none could reach this speller in any
+// case. An arm exists iff a producer does
 // (the type rule): a backend that delivered one would have to BIND it
 // before a card could name it, and the compile-time pin above is what would
 // then ask for the name.
 //
 // KEY REPEAT RIDES THE CARDS' OWN CARVE-OUT: a held key whose repeats are
 // eligible (repeat_eligible, input_key_dispatch.cpp) re-fires its gate at the
-// compositor's cadence and each fire re-pushes the SAME sentence, which
+// platform's repeat cadence and each fire re-pushes the SAME sentence, which
 // GuiNotifications::notify keeps as ONE card moved back to the top with a fresh
 // clock — one card for a hold, exactly as for a single press. DISTINCT PRESSES
 // DO NOT COALESCE ANY MORE (architect 2026-09-01): each pushes its own card, so
@@ -1507,11 +1491,9 @@ inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
 // (GuiInputHandler::handle_trim_maximize): CTRL+SHIFT+0 exactly — ctrl and
 // shift, no alt (architect 2026-10-24, when Shift+0 became the trim's frame,
 // below; Shift+0 from 2026-09-22, off Shift+[ when the bracket went to the
-// magnification lamp). It arrives as the `0` key plus the modifier bits on
-// both backends: the Wayland boundary reads LEVEL 0 of the keymap
-// (GuiPlatform::key_from_keycode), so a US layout's `)` never reaches the
-// dispatch, and the Android backend produces keys only through synthesize_key,
-// which carries the GuiKey and the modifier bits the same way. One-shot. TWO
+// magnification lamp). It arrives as the `0` key plus the modifier bits: the
+// backend produces keys only through synthesize_key, which carries the GuiKey
+// and the modifier bits apart, so a `)` never reaches the dispatch. One-shot. TWO
 // READERS: on_key's dispatch arm (input_handler.cpp) and the read-only
 // allowlist (read_only_key_blocked, which ADMITS it — trim is band, not
 // content); the Zoom to Fit button's ctrl+shift press (on the glass the S
@@ -1543,11 +1525,9 @@ inline bool is_trim_frame_key(GuiKey key, GuiInputState mods) {
 // Zoom In and Zoom Out "basically as they used to be ... and then add the
 // Shift version, which instead of going 2x goes 4x"): `=` zooms in and `-`
 // out, BARE ONE LEVEL and SHIFTED TWO (the step sizes below) — no ctrl, no
-// alt. Both arrive as their level-0 keysyms on Wayland
-// (GuiPlatform::key_from_keycode), so on a US layout Shift+= is the `=` key
-// with the shift bit and never `+`, and Shift+- never `_`; the Android
-// backend produces keys only through synthesize_key, the GuiKey and the
-// bits the same way. A CAMERA ACT about the viewport's centre
+// alt. Both arrive as their own keys with the modifier bits beside them (the
+// backend produces keys only through synthesize_key), so Shift+= is the `=`
+// key with the shift bit and never `+`, and Shift+- never `_`. A CAMERA ACT about the viewport's centre
 // (Viewport::zoom_step), writing no store, no trim and no playhead, so the
 // read-only allowlist (read_only_key_blocked, which the grid-iterations lock
 // falls through to) and the `h` view's (history_mode_key_blocked) both ADMIT

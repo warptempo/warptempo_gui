@@ -275,18 +275,13 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
 
     // THE WORKING COLUMN (working_column_frames, app_state.h, the rule): the
     // process holds THE DISPLAY'S WIDTH (gui.display_width_px(), the contract
-    // at platform_wayland.h), read here once at its first project's load, and
+    // at platform_android.h), read here once at its first project's load, and
     // every load computes its own rate's column from that held width,
     // published on the audio and handed to the gain derivation. The figure is
-    // known by now on both backends: Wayland's output modes arrive in init()'s
-    // second roundtrip, before the surface exists and so before the first
-    // configure the startup tick waits on (has_initial_configure); Android's
-    // is the surface init() adopted. Only a compositor reporting no current
-    // mode leaves it 0, and the hold then takes the window's width, with a
-    // stderr line — the same figure on both deployed devices under the
-    // Windows theme (the laptop maximised, the tablet full screen). One
-    // stderr line per load names the column and the held width, which the
-    // tablet reads in logcat.
+    // known by now: it is the surface init() adopted. A width of 0 (no window
+    // adopted) would take the window's width, with a stderr line — the same
+    // figure on the tablet's full-screen window. One stderr line per load
+    // names the column and the held width, which the tablet reads in logcat.
     if (held_display_width_px <= 0) {
         held_display_width_px = gui.display_width_px();
         if (held_display_width_px <= 0) {
@@ -309,16 +304,16 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     const auto t0 = std::chrono::steady_clock::now();
     // Loading is a blocking, uninterruptible phase: the run loop is suspended
     // for the whole synchronous decode/pyramid/install, so the callback below
-    // only pumps the compositor (drain_events reads no socket fd; the paint
-    // it reaches is withheld by the open's hold) and never reports cancel. A
-    // Ctrl+Q / WM close pressed during loading is not observed until the load
-    // completes; the queued event is then read when run() resumes and the
-    // deferred quit is honored on completion (the hold drops every other
-    // queued press — run_project's hook block, main.cpp). An urgent abort is
-    // pkill / the compositor's force-close.
+    // only asks the platform's paint (drain_events processes no looper
+    // source; the paint it reaches is withheld by the open's hold) and never
+    // reports cancel. A Ctrl+Q / Back pressed during loading is not observed
+    // until the load completes; the queued event is then read when run()
+    // resumes and the deferred quit is honored on completion (the hold drops
+    // every other queued press — run_project's hook block, main.cpp). An
+    // urgent abort is the system's force-stop.
     const bool ok = next.load(path, working_column, [&](float) {
-        // Pump the event loop so the compositor stays responsive across a
-        // multi-frame load.
+        // The platform's drain_events, across a multi-frame load (its
+        // contract at its definition, platform_android.cpp).
         gui.drain_events();
     });
     const auto t1 = std::chrono::steady_clock::now();

@@ -1,6 +1,5 @@
 #include "paint_handler.h"
 
-#include "canvas_sink.h"   // kGuiCanvasDrawList, the plate slot's road
 #include "render.h"
 #include "viewport.h"   // damage_window_top_rows
 #include "text_editor.h"
@@ -18,133 +17,18 @@
 #include <utility>
 #include <vector>
 
-// Waveform / flag cache production. The off-screen surfaces
-// on_redraw blits — the waveform plate (worker-rendered or synchronously
-// rebuilt; the incremental shift-and-strip pan was retired 2026-07-26) and the
-// flag-rect cache — are produced here, away from the on-screen paint
-// path in paint_handler.cpp. (Trim is a LIVE paint pass now —
+// Waveform / flag cache production. The waveform plate's column bounds
+// (worker-rendered or synchronously rebuilt; the incremental shift-and-strip
+// pan was retired 2026-07-26), which the frame's draw list carries to the
+// GPU, and the flag-rect cache's off-screen surface, which on_redraw blits,
+// are produced here, away from the on-screen paint path in
+// paint_handler.cpp. (Trim is a LIVE paint pass now —
 // GuiPaintHandler::paint_trim — so no trim pixel is
 // cached; the former trim-stem cache is retired.) These are GuiPaintHandler
 // members defined
 // in a second translation unit; the class declaration and the on-screen
 // paint passes live in paint_handler.{h,cpp}. Nothing here reaches the
-// render path, so this is a labwc / build concern only.
-
-// -- render_waveform_to_cache_surface ------------------------------------
-//
-// Extracted from on_redraw's inline cairo_create/cairo_destroy
-// block (the body that lived between fingerprint-check and blit). Runs on
-// the waveform worker thread when the main path goes through GuiWaveformWorker;
-// the function itself is thread-agnostic — it touches only the dest surface
-// the caller passed in, the audio handle's peak pyramid (read-only after
-// load), and the warp_frame_map snapshot the caller built.
-
-void render_waveform_to_cache_surface(
-    cairo_surface_t* dest,
-    int area_w,
-    int area_h,
-    int divider_px,
-    int line_px,
-    WaveformPlateInks inks,
-    const GuiAudio& audio,
-    int64_t vp_start,
-    double  painter_spp,
-    bool    magnified,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
-    if (!dest || area_w <= 0 || area_h <= 0) return;
-
-    // TRANSPARENT where no bar covers — the canvas ground render_canvas lays
-    // under the plate shows through wherever the waveform samples don't
-    // paint. No ground color is ever baked into the plate: its alpha is
-    // exactly what composites the ink over that ground through its gaps
-    // (binary alpha since the aliasing deletion), so the canvas has one
-    // painter. Nothing recolours that ground under the plate since the
-    // sweep's region highlight retired (2026-10-03); the remaining reason is
-    // that one-painter rule, and the plate stays as it is (the record is at
-    // render_waveform, render.h).
-    // THE CLEAR CONTRACT (2026-10-13): there is NO WHOLE-SURFACE CLEAR — each
-    // render_waveform call stores every pixel of its channel's band, the zero
-    // word where no bar covers (the write pass, render.cpp, where the cost
-    // measured on the tablet is recorded: the clear alone cost nearly as much
-    // as the whole write that replaces it). The surface is reused frame to
-    // frame, so whatever no call stored is cleared after the calls
-    // (`clear_rows` below): the rows outside both bands — the stereo
-    // divider's rows between them and the spare last row of an odd plate —
-    // and the band of a call that returned false. The bands
-    // span the surface's full width, so no column lies outside them.
-    const auto clear_rows = [dest](int y, int h) {
-        if (h <= 0) return;
-        cairo_t* ccr = cairo_create(dest);
-        cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-        cairo_rectangle(ccr, 0, y, cairo_image_surface_get_width(dest), h);
-        cairo_fill(ccr);
-        cairo_destroy(ccr);
-    };
-    // THE CHANNELS FILL THE PLATE, WHICH IS THE CANVAS (architect 2026-10-09,
-    // "remove": the waveform's 6-W vertical inset is gone — it paid for a
-    // stem-only band over the samples, where the retired tip-down playhead
-    // triangle hung, and since the canvas became Cool Edit's the head and the
-    // cues' triangles stand above the canvas's frame, so nothing needed it).
-    // The surface is area_w x area_h, blitted at area.y; the two channels
-    // fill its two wells, and the leveler's headroom (waveform_gain.h) is the
-    // only thing keeping peaks off their edge rows.
-    // Stereo is structural — channels != 2 refuses at load (see file_loader) —
-    // so both channels always render.
-    //
-    // THE TWO BANDS ARE EXACTLY EQUAL, COOL EDIT'S STEREO DIVIDER BETWEEN THEM
-    // (architect 2026-10-16; the channels met flush from 2026-08-03 until
-    // then): each channel takes the area less the divider, halved and floored,
-    // and the bottom one begins under the divider's `divider_px` rows — the
-    // job's snapshot of waveform_divider_px (render.h's waveform_divider),
-    // which the plate leaves transparent and the canvas paints. At an odd
-    // remainder the spare row is the plate's LAST, under channel 1, where no
-    // ink reaches. Purely a vertical band offset: no column's frame span
-    // moves, so plate column purity and both views' identity are untouched.
-    // THE TWO BANDS' ONE LAYOUT is waveform_channel_band (render.h), which the
-    // canvas's grid and center lines read too (render_canvas), so the lines
-    // stand on these bands' zero rows.
-    const WaveformChannelBand b0 = waveform_channel_band(area_h, divider_px, 0);
-    const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
-    if (b0.h <= 0) {
-        clear_rows(0, area_h);
-        return;
-    }
-    const GuiRect ch0{0, b0.y, area_w, b0.h};
-    const GuiRect ch1{0, b1.y, area_w, b1.h};
-    // The full render IS the basis: global column 0 at the plate's own width.
-    const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the plate's inks are the `waveform_ink` and `waveform_outline`
-    // keys (architect 2026-10-03), passed in as the job's snapshot `inks` and
-    // keyed in the fingerprint like the line width. The lamp dark, the raw
-    // bar alone in the plate's ink; lit, each column paints its OUTER bar (the
-    // levelled, expanded one) and its INNER bar (the compressed, expanded one)
-    // over it, both in the ink, the inner outlined in the outline, line_px
-    // thick — the rule is at render_waveform's declaration. Every scale the lit plate reads is on
-    // the curve itself, so nothing else is read here.
-    // THE GAIN rides in as one bit from the job snapshot beside the geometry,
-    // for the same reason the line width does: the worker must read no live
-    // GUI state. The curve it names is the audio object's own, immutable once
-    // ready (GuiAudio::gain_curve; a magnified job exists only after the lamp
-    // was lit, which requires the curve to be ready). Both channels take the one curve.
-    // It scales the PICTURE only — this whole function
-    // writes pixels.
-    const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
-    // THE LIT OUTLINE'S THICKNESS rides in the same way, the job's
-    // waveform_line_px() snapshot (render.h): the outline erodes at that
-    // distance (render_waveform), so it is a render input and a fingerprint
-    // field like the area's dimensions.
-    const bool whole0 = render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                                        basis, gain, line_px, inks,
-                                        warp_frame_map_or_null);
-    const bool whole1 = render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                                        basis, gain, line_px, inks,
-                                        warp_frame_map_or_null);
-    clear_rows(0, b0.y);
-    clear_rows(b0.y + b0.h, b1.y - (b0.y + b0.h));
-    clear_rows(b1.y + b1.h, area_h - (b1.y + b1.h));
-    if (!whole0) clear_rows(b0.y, b0.h);
-    if (!whole1) clear_rows(b1.y, b1.h);
-}
+// audio render path.
 
 // -- next_plate_revision (2026-10-14, the GL canvas) -----------------------
 //
@@ -153,25 +37,25 @@ void render_waveform_to_cache_surface(
 // draw list are not — advanced on the GUI thread at each of the live slot's
 // two writes, the completion swap (on_waveform_render_done) and the
 // synchronous rebuild (force_synchronous_waveform_rebuild). The first value
-// is 1, so 0 stays "never published". Unreferenced on the cpu canvas, whose
-// publications reach it only under kGuiCanvasDrawList.
+// is 1, so 0 stays "never published".
 namespace {
-[[maybe_unused]] uint64_t next_plate_revision() {
+uint64_t next_plate_revision() {
     static uint64_t revision = 0;
     return ++revision;
 }
 } // namespace
 
-// -- render_waveform_to_plate_columns (2026-10-13, the GL canvas) ----------
+// -- render_waveform_to_plate_columns (2026-10-13) -------------------------
 //
-// The function above with the store left out (the contract at the
-// declaration, waveform_worker.h): the same two bands of the same
-// layout (waveform_channel_band), the same basis, gain and outline width,
-// through the writer's own column producer (render_waveform_columns) at the
-// plate's own size, the size the surface above would have. A band is STORED
-// exactly where that surface would hold its words: its call returned the
-// band whole — a refused or partial call is the band the surface clears —
-// and every row outside both bands is transparent there and here alike.
+// THE PLATE'S RENDER (the contract at the declaration, waveform_worker.h):
+// the two bands through the one column producer (render_waveform_columns) at
+// the plate's own size. A band is STORED exactly where its call returned the
+// band whole — a refused or partial call is a band the plate leaves
+// transparent — and every row outside both bands is transparent too: THE
+// PLATE IS TRANSPARENT where no bar covers, the canvas ground render_canvas
+// lays under it showing through, so no ground color is ever carried by the
+// plate and the canvas has one painter (the record is at
+// render_waveform_columns, render.h).
 void render_waveform_to_plate_columns(
     GuiPlateColumns& dest,
     int area_w,
@@ -189,10 +73,47 @@ void render_waveform_to_plate_columns(
     dest.band[0].stored = false;
     dest.band[1].stored = false;
     if (area_w <= 0 || area_h <= 0) return;
+    // THE CHANNELS FILL THE PLATE, WHICH IS THE CANVAS (architect 2026-10-09,
+    // "remove": the waveform's 6-W vertical inset is gone — it paid for a
+    // stem-only band over the samples, where the retired tip-down playhead
+    // triangle hung, and since the canvas became Cool Edit's the head and the
+    // cues' triangles stand above the canvas's frame, so nothing needed it).
+    // The plate is area_w x area_h, drawn at the area's origin; the two
+    // channels fill its two wells, and the leveler's headroom
+    // (waveform_gain.h) is the only thing keeping peaks off their edge rows.
+    // Stereo is structural — channels != 2 refuses at load (see file_loader)
+    // — so both channels always render.
+    //
+    // THE TWO BANDS ARE EXACTLY EQUAL, COOL EDIT'S STEREO DIVIDER BETWEEN THEM
+    // (architect 2026-10-16; the channels met flush from 2026-08-03 until
+    // then): each channel takes the area less the divider, halved and floored,
+    // and the bottom one begins under the divider's `divider_px` rows — the
+    // job's snapshot of waveform_divider_px (render.h's waveform_divider),
+    // which the plate leaves transparent and the canvas paints. At an odd
+    // remainder the spare row is the plate's LAST, under channel 1, where no
+    // ink reaches. Purely a vertical band offset: no column's frame span
+    // moves, so plate column purity and both views' identity are untouched.
+    // THE TWO BANDS' ONE LAYOUT is waveform_channel_band (render.h), which the
+    // canvas's grid and center lines read too (render_canvas), so the lines
+    // stand on these bands' zero rows.
     const WaveformChannelBand b0 = waveform_channel_band(area_h, divider_px, 0);
     const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) return;
+    // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
+    // THE GAIN rides in as one bit from the job snapshot beside the geometry,
+    // for the same reason the line width does: the worker must read no live
+    // GUI state. The curve it names is the audio object's own, immutable once
+    // ready (GuiAudio::gain_curve; a magnified job exists only after the lamp
+    // was lit, which requires the curve to be ready). Both channels take the
+    // one curve. It scales the PICTURE only. With the lamp dark each column is
+    // the raw bar alone, lit its OUTER bar (the levelled, expanded one) and its
+    // INNER bar (the compressed, expanded one) over it, the inner outlined
+    // line_px thick — the rule is at render_waveform_columns' declaration.
+    // THE LIT OUTLINE'S THICKNESS rides in the same way, the job's
+    // waveform_line_px() snapshot (render.h): the outline erodes at that
+    // distance, so it is a render input and a fingerprint field like the
+    // area's dimensions.
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
     const GuiRect ch[2] = {GuiRect{0, b0.y, area_w, b0.h},
                            GuiRect{0, b1.y, area_w, b1.h}};
@@ -309,7 +230,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // wheels are gesture-gated (the drag-modal gate and wheel_context both
     // cover the pendings), the follow chase is paused for any live pointer
     // gesture (any_pointer_gesture_active, whose members include all of
-    // these), and a compositor resize FORCE-ENDS the gestures and disarms the
+    // these), and a window resize FORCE-ENDS the gestures and disarms the
     // pendings (finalize_active_drags) before catching
     // up at the first post-gesture tick. With no in-freeze dispatch the
     // completion drop fires AT MOST ONCE (the one job in flight at the aimed
@@ -401,25 +322,10 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         return;
     }
 
-    // Idle: dispatch immediately. Reuse pending_surface if dimensions
-    // match; recreate on mismatch (window resize, first allocation). UNDER
-    // THE GL CANVAS no surface is made: the pending slot is the column
-    // bounds (WaveformCache::columns), sized by its producer.
-    if constexpr (kGuiCanvasDrawList) {
-        wf_cache.pending_width  = in.area_w;
-        wf_cache.pending_height = in.area_h;
-    } else if (!wf_cache.pending_surface ||
-        wf_cache.pending_width  != in.area_w ||
-        wf_cache.pending_height != in.area_h) {
-        if (wf_cache.pending_surface) {
-            cairo_surface_destroy(wf_cache.pending_surface);
-            wf_cache.pending_surface = nullptr;
-        }
-        wf_cache.pending_surface = cairo_image_surface_create(
-            CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
-        wf_cache.pending_width  = in.area_w;
-        wf_cache.pending_height = in.area_h;
-    }
+    // Idle: dispatch immediately. The pending slot is the column bounds
+    // (WaveformCache::columns), sized by its producer.
+    wf_cache.pending_width  = in.area_w;
+    wf_cache.pending_height = in.area_h;
 
     WaveformJob job;
     job.vp_start       = in.vp_start;
@@ -429,7 +335,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.area_h         = in.area_h;
     job.divider_px     = in.divider_px;
     job.line_px        = in.line_px;
-    job.inks           = in.inks;
     job.gain_hash = in.gain_hash;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
@@ -438,8 +343,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // the original by move; the copy stays on the cache.
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
-    job.surface        = wf_cache.pending_surface;
-    if constexpr (kGuiCanvasDrawList) job.columns = &wf_cache.pending_columns;
+    job.columns        = &wf_cache.pending_columns;
     // The audio the worker reads: always the project's one source audio, fixed
     // for the whole lifetime of this cache and this worker.
     job.audio          = in.audio;
@@ -480,7 +384,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // the NEWLY published one, and the first motion's delta (or the set
     // column) would be wrong by the two epochs' difference — dropping here is
     // what makes the press-time aim survive to that step. So drop the
-    // completed job WHOLESALE: no surface swap, no fp_*
+    // completed job WHOLESALE: no slot swap, no fp_*
     // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
     // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed
     // fp_* so the pending fingerprint again describes what is on screen; once the
@@ -534,37 +438,19 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     }
 
     // Supersede path: a viewport change happened mid-render. Discard the
-    // just-completed pending pixels (they'll be overwritten by the next
+    // just-completed pending bounds (they'll be overwritten by the next
     // render — no swap, no invalidate) and dispatch a fresh job built
-    // from the supersede slot. The pending_surface dimensions may differ
-    // from supersede_area_*, so reuse-or-recreate the same way the
-    // idle-path does. EVERY FIELD THE PENDING FINGERPRINT RECORDS IS ALSO IN
-    // THE JOB PAYLOAD: the fingerprint names the pixels the job renders and
-    // never more, so a pending_fp_* left describing state the worker was not
+    // from the supersede slot. EVERY FIELD THE PENDING FINGERPRINT RECORDS IS
+    // IN THE JOB PAYLOAD OR THE PUBLICATION (the inks ride the latter): the
+    // fingerprint names the plate the job renders and never more, so a pending_fp_* left describing state the worker was not
     // handed would publish a plate under a claim dirty-detect then believes.
     if (wf_cache.supersede) {
         const int sw = wf_cache.supersede_area_w;
         const int sh = wf_cache.supersede_area_h;
 
-        if constexpr (kGuiCanvasDrawList) {
-            // The GL canvas's slot is the column bounds (the idle path's
-            // rule).
-            wf_cache.pending_width  = sw;
-            wf_cache.pending_height = sh;
-        } else if (!wf_cache.pending_surface ||
-            wf_cache.pending_width  != sw ||
-            wf_cache.pending_height != sh) {
-            if (wf_cache.pending_surface) {
-                cairo_surface_destroy(wf_cache.pending_surface);
-                wf_cache.pending_surface = nullptr;
-            }
-            if (sw > 0 && sh > 0) {
-                wf_cache.pending_surface = cairo_image_surface_create(
-                    CAIRO_FORMAT_ARGB32, sw, sh);
-                wf_cache.pending_width  = sw;
-                wf_cache.pending_height = sh;
-            }
-        }
+        // The slot is the column bounds (the idle path's rule).
+        wf_cache.pending_width  = sw;
+        wf_cache.pending_height = sh;
 
         WaveformJob job;
         job.vp_start       = wf_cache.supersede_vp_start;
@@ -574,7 +460,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.divider_px     = wf_cache.supersede_divider_px;
         job.line_px        = wf_cache.supersede_line_px;
-        job.inks           = wf_cache.supersede_inks;
         job.gain_hash = wf_cache.supersede_gain_hash;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
@@ -584,9 +469,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         // displayable copy for the post-completion flag rebuild.
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
-        job.surface        = wf_cache.pending_surface;
-        if constexpr (kGuiCanvasDrawList)
-            job.columns = &wf_cache.pending_columns;
+        job.columns        = &wf_cache.pending_columns;
         // The superseding job reads the project's one source audio, fixed for
         // the whole lifetime of this cache and this worker.
         job.audio          = &audio;
@@ -610,22 +493,15 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         return;
     }
 
-    // Swap the pending surface into the live slot. Cairo surface ownership
-    // transfers cleanly via pointer swap; no flush needed because the worker's
-    // render already committed the surface fully — render_waveform's direct
-    // pixel writes end in a cairo_surface_mark_dirty and any leftover CLEAR
-    // after them (render_waveform_to_cache_surface's clear_rows) was drawn
-    // through a context already destroyed, so the buffer and cairo agree
-    // before the swap.
-    std::swap(wf_cache.surface,        wf_cache.pending_surface);
+    // Swap the pending bounds into the live slot (the worker is Idle at a
+    // completion, so neither slot is shared).
     std::swap(wf_cache.columns,        wf_cache.pending_columns);
     std::swap(wf_cache.width,          wf_cache.pending_width);
     std::swap(wf_cache.height,         wf_cache.pending_height);
     // A NEW PLATE IS LIVE: its bounds take a revision of their own
     // (GuiPlateColumns::revision), the GL canvas's key for its copy and its
     // upload.
-    if constexpr (kGuiCanvasDrawList)
-        wf_cache.columns.revision = next_plate_revision();
+    wf_cache.columns.revision = next_plate_revision();
 
     wf_cache.fp_vp_start     = wf_cache.pending_fp_vp_start;
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
@@ -640,23 +516,24 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
     // Publish the in-flight job's warp_frame_map to the displayed slot
     // so the next maybe_rebuild_flag_cache reads the same coordinate
-    // system the just-blitted waveform pixels were rendered against.
+    // system the just-published plate was rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
 
     // Rebuild the flag cache INLINE now, against the fingerprint just published
     // — the same shape the synchronous-rebuild path already
     // uses (force_synchronous_waveform_rebuild). The run
-    // loop can service the wl_display fd (the frame callback that PAINTS) before
-    // the timerfd tick that runs the on_tick dirty-check, so deferring the
-    // flag rebuild to the tick let a frame blit the NEW plate over an OLD
-    // flag cache — and EVERY plate-registered overlay, which by definition reads
+    // loop paints at a pass's tail, after this completion and before the
+    // next timerfd tick that runs the on_tick dirty-check (pump's order,
+    // platform_android.cpp), so deferring the flag rebuild to the tick would
+    // let a frame draw the NEW plate under an OLD flag cache — and EVERY
+    // plate-registered overlay, which by definition reads
     // the NEW fp_* through GuiPaintHandler::plate_viewport_basis (its
     // declaration in paint_handler.h enumerates which overlays those are; the
     // hazard here is the whole class, not any member of it), visibly left its
     // flags for one frame during a
     // resize / drift-catchup publish (and during a follow-scroll page until
     // 2026-09-02, when follow took the synchronous route). Doing the rebuild here makes
-    // the committing frame blit new plate + new items together and promote the
+    // the committing frame paint new plate + new items together and promote the
     // staged basis atomically. The two-phase stage/promote ruling is UNCHANGED:
     // the rebuild STAGES the displayed hit map (app.staged_displayed_*), and
     // on_redraw still PROMOTES it at the committing frame; the on_tick rebuild
@@ -665,8 +542,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // rebuild — it reads the promoted item basis per frame.)
     maybe_rebuild_flag_cache();
 
-    // Invalidate the waveform area so the next paint blits the new
-    // pixels. Matches the rect Viewport::invalidate_waveform_area uses (the
+    // Invalidate the waveform area so the next paint draws the new
+    // plate. Matches the rect Viewport::invalidate_waveform_area uses (the
     // rationale lives there), through the same road: the viewport's lanes
     // damaged, the rows above them owed a check (damage_window_top_rows,
     // viewport.h). This is the
@@ -718,9 +595,9 @@ bool GuiPaintHandler::live_plate_published() const {
 // window. Rendering + publishing the fp here makes the flag cache converge
 // against the final viewport this tick.
 //
-// Writing into wf_cache.surface directly (not pending_surface + swap) is
+// Writing into wf_cache.columns directly (not pending_columns + swap) is
 // safe only because wait_until_idle() ran first — the worker is Idle and
-// holds no reference to the live surface. Do not reorder the drain after
+// holds no reference to the live slot. Do not reorder the drain after
 // the render.
 
 // Synchronous-repaint rule (the waveform-layer coherence invariant):
@@ -838,10 +715,10 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
 
-    // Drain any in-flight worker job so we own the cache surfaces.
+    // Drain any in-flight worker job so we own the cache's slots.
     // Cancels a Running job and synchronously consumes a
     // CompletionPending one. After this the worker is Idle and will not touch
-    // wf_cache surfaces underneath us.
+    // wf_cache's slots underneath us.
     waveform_worker.wait_until_idle();
 
     // Clear any stale supersede request: wait_until_idle may have
@@ -851,44 +728,18 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.supersede = false;
     wf_cache.supersede_warp_frame_map.clear();
 
-    // Render into the LIVE surface directly. Reuse-or-recreate on
-    // dimension mismatch, mirroring the dispatch path. UNDER THE GL CANVAS
-    // the live slot is the column bounds (WaveformCache::columns), filled by
-    // the same producer the worker runs.
-    if constexpr (kGuiCanvasDrawList) {
-        render_waveform_to_plate_columns(
-            wf_cache.columns,
-            in.area_w, in.area_h, in.divider_px, in.line_px,
-            *in.audio,
-            in.vp_start, in.painter_spp, in.gain_hash != 0,
-            in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
-        // The live slot rewritten in place is a new plate: a revision of
-        // its own (the completion swap's rule).
-        wf_cache.columns.revision = next_plate_revision();
-        wf_cache.width  = in.area_w;
-        wf_cache.height = in.area_h;
-    } else {
-        if (!wf_cache.surface ||
-            wf_cache.width  != in.area_w ||
-            wf_cache.height != in.area_h) {
-            if (wf_cache.surface) {
-                cairo_surface_destroy(wf_cache.surface);
-                wf_cache.surface = nullptr;
-            }
-            wf_cache.surface = cairo_image_surface_create(
-                CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
-            wf_cache.width  = in.area_w;
-            wf_cache.height = in.area_h;
-        }
-
-        // in.audio is the source audio.
-        render_waveform_to_cache_surface(
-            wf_cache.surface,
-            in.area_w, in.area_h, in.divider_px, in.line_px, in.inks,
-            *in.audio,
-            in.vp_start, in.painter_spp, in.gain_hash != 0,
-            in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
-    }
+    // Render into the LIVE slot directly, by the producer the worker runs.
+    render_waveform_to_plate_columns(
+        wf_cache.columns,
+        in.area_w, in.area_h, in.divider_px, in.line_px,
+        *in.audio,
+        in.vp_start, in.painter_spp, in.gain_hash != 0,
+        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+    // The live slot rewritten in place is a new plate: a revision of its own
+    // (the completion swap's rule).
+    wf_cache.columns.revision = next_plate_revision();
+    wf_cache.width  = in.area_w;
+    wf_cache.height = in.area_h;
 
     // Publish the displayed fingerprint NOW so the flag rebuild at
     // the tail of this function reads the current viewport. Keep pending_fp_*
@@ -933,10 +784,10 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 
     // Rebuild the flag cache inline, against the fingerprint just
     // published. Without this the plate leads its overlays: the run loop
-    // services the wl_display fd (the input event AND the frame callback that
-    // paints) before the timerfd tick that would run the on_tick dirty-check,
-    // so the paint blits the fresh plate over a flag cache
-    // that is one or more ticks stale — and during a zoom key-repeat or wheel
+    // drains the input event and paints at the same pass's tail without the
+    // timerfd tick that would run the on_tick dirty-check between them (pump's
+    // order, platform_android.cpp), so the paint draws the fresh plate under
+    // a flag cache that is one or more ticks stale — and during a zoom key-repeat or wheel
     // torrent the plate leads the overlays by the whole gesture. Doing the
     // rebuild here makes plate, fingerprint, flag cache, and the
     // staged displayed hit map all commit before the next paint — the
@@ -1235,8 +1086,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //   viewport lanes' rect from the band's foot, the rows above it owed a
     //   fingerprint check (damage_window_top_rows, viewport.cpp), every
     //   item-basis surface lying below the band's foot — and it
-    //   goes into the global damage list (and, on the Wayland cpu build, both
-    //   shm buffers' pending lists; invalidate_region), so whatever frame comes next carries it in its
+    //   goes into the global damage list (invalidate_region), so whatever
+    //   frame comes next carries it in its
     //   damage union — an interleaved narrow request coalesces INTO it rather
     //   than racing it, and the frame that promotes repaints every item-basis
     //   surface on the promoted basis.
@@ -1671,9 +1522,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE LAG, in the order the loop actually runs it: a nudge press mutates the
     // store and queues its own strip+waveform damage (the viewport lanes' rect
     // from the band's foot since 2026-10-13, the rows above owed a fingerprint
-    // check, damage_window_top_rows); THE FRAME PAINTS
-    // BEFORE THE NEXT TICK (the run loop services the compositor's frame
-    // callback, and this rebuild lives in on_tick — the same
+    // check, damage_window_top_rows); THE FRAME PAINTED
+    // BEFORE THE NEXT TICK (the loop of the day serviced the frame callback
+    // first, and this rebuild lives in on_tick — the same
     // paint-outruns-the-fingerprint-check ordering the `p` view switch was
     // fixed for), so that repaint consumed the OLD cache and the OLD stash and
     // was internally consistent: stale flag, stale stem. Then the tick ran, this

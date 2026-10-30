@@ -4,51 +4,17 @@ project(warptempo_gui VERSION 2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Build configuration. The GUI is the canonical product and builds by default;
-# warptempo_cli is the headless insurance render path and is opt-in. The GUI's
-# Wayland/Cairo/JACK toolchain is optional, so a headless host with none of the
-# GUI platform packages can still configure and build warptempo_cli. Turning
-# WARPTEMPO_BUILD_GUI OFF skips all GUI dependency discovery and the
-# warptempo_gui executable. WARPTEMPO_GUI_GIT OFF builds the GUI without
-# libgit2, for a build host that cannot provide it and does graphical work
-# only: the history view's git road is then a stub whose every act reports no
-# repository (git_repo_stub.cpp owns the rule), and libgit2 is neither
-# discovered nor linked. The two devices build with it ON (architect
-# 2026-10-02).
-option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
-option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
-option(WARPTEMPO_GUI_GIT "Link libgit2 for the history view's git road (OFF builds a stub: every git act reports no repository)" ON)
-# THE CANVAS (2026-10-13 on the tablet, 2026-10-14 on the laptop; the design
-# record is docs/engineering/gpu_canvas_2026_10.md, the road at each
-# backend's present — GuiPlatform::present, platform_android.cpp and
-# platform_wayland.cpp — over the one GL owner, GuiGlCanvas, gl_canvas.h):
-# `gl`, the product on both platforms, presents the cairo backbuffer through
-# EGL / GLES 3.0 as one texture uploaded by damage rect, the canvas drawn from
-# the draw list; `cpu`, the reference on both, keeps the cairo sink and the
-# platform's own copy (the tablet's ANativeWindow_lock, the laptop's two
-# wl_shm buffers). A BUILD CHOICE, never a device key and nothing the user
-# picks — the two builds exist to be compared byte for byte by screenshot.
-# Read by both GUI branches below (the compile definition WARPTEMPO_CANVAS_GL,
-# 1 or 0, TARGET-WIDE because it shapes GuiPlatform's private members on both
-# platforms, and the GL libraries); android/app/build_apk.sh chooses it
-# through WT_CANVAS, and a Linux host without EGL, GLES or wayland-egl (the
-# cloud) configures with -DWARPTEMPO_CANVAS=cpu, as it does
-# -DWARPTEMPO_GUI_GIT=OFF.
-set(WARPTEMPO_CANVAS "gl" CACHE STRING
-    "Canvas: gl (EGL/GLES 3.0 texture present, the product) or cpu (the platform's own copy, the reference)")
-set_property(CACHE WARPTEMPO_CANVAS PROPERTY STRINGS gl cpu)
-if(WARPTEMPO_CANVAS STREQUAL "gl")
-    set(WARPTEMPO_CANVAS_GL 1)
-elseif(WARPTEMPO_CANVAS STREQUAL "cpu")
-    set(WARPTEMPO_CANVAS_GL 0)
-else()
-    message(FATAL_ERROR
-        "WARPTEMPO_CANVAS must be gl or cpu, not '${WARPTEMPO_CANVAS}'")
-endif()
+# THE BUILD'S SHAPE (architect 2026-10-30: the laptop GUI dropped, the tablet
+# the one platform, the GL canvas the one road): NO OPTIONS, ONE PRODUCT PER
+# PLATFORM. Cross-built for Android (android/app/configure.sh, the `if(ANDROID)`
+# branch below) the configuration's product is warptempo_gui, the tablet's
+# NativeActivity library; on the laptop, a plain `cmake -B build -S .`, it is
+# warptempo_cli, the headless render the laptop keeps for git pull and render,
+# byte-identical to the GUI through the shared stages. The laptop is the APK's
+# cross-build host besides, and builds no GUI.
 
-# --- FFTW: needed by the engine sources, so required unconditionally. The GUI
-# default compiles the engine sources, and a headless WARPTEMPO_BUILD_CLI build
-# does too; keeping discovery top-level lets both configurations find it. ---
+# --- FFTW: needed by the engine sources, which both products compile, so
+# discovered top-level for either configuration. ---
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFTW3 REQUIRED fftw3)
 find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRED)
@@ -118,35 +84,11 @@ set(WARPTEMPO_PREPOST_SOURCES
     src/prepost/peak_limiter.cpp
 )
 
-# THE GIT ROAD'S ONE FILE, chosen here and nowhere else (architect
-# 2026-10-02): git_repo.cpp, the libgit2 implementation of git_repo.h, or with
-# WARPTEMPO_GUI_GIT OFF git_repo_stub.cpp, which answers every question as
-# "could not ask" and needs no libgit2. Each platform branch below discovers
-# and links libgit2 only when the switch is ON.
-if(WARPTEMPO_GUI_GIT)
-    set(WARPTEMPO_GIT_SOURCE src/gui/git_repo.cpp)
-else()
-    set(WARPTEMPO_GIT_SOURCE src/gui/git_repo_stub.cpp)
-endif()
-
 # ============================================================
-#  THE GUI'S SOURCE LIST, less the four per-directory lists and less the
-#  files that have one arm per backend. Both GUI targets below draw it,
-#  which is what keeps the two builds from drifting into two rosters: a new
-#  GUI source is added HERE and both platforms get it.
-#
-#  THE TWO PER-BACKEND ARMS, each with exactly one arm linked into a given
-#  binary and each named at its own site: the platform backend
-#  (platform_wayland.cpp / platform_android.cpp, chosen for the consumer by
-#  platform.h) and the playback DEVICE (playback.cpp, the JACK client /
-#  playback_aaudio.cpp, the AAudio stream) — the device half alone, the
-#  engine both drive being playback_common.cpp in the shared list. THE FACE
-#  OWNER IS ONE FILE ON BOTH (gui_font_bundled.cpp, here, since 2026-10-02 —
-#  gui_font.h): only the font BYTES' carrier differs, the Linux target
-#  compiling them in (gui_font_embedded.cpp, below) where the APK ships them
-#  as assets.
-#  main.cpp is in the list on BOTH: its Linux main() is #ifndef __ANDROID__
-#  and the body it wraps, gui_main, is the one entry both platforms call.
+#  THE GUI'S SOURCE LIST, less the four per-directory lists and the NDK's
+#  native_app_glue: the Android library below, the GUI's one target since the
+#  laptop GUI's drop (architect 2026-10-30), compiles it. A new GUI source is
+#  added HERE.
 # ============================================================
 set(WARPTEMPO_GUI_SOURCES
     src/gui/main.cpp
@@ -162,8 +104,7 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/text_shape.cpp
     # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
     # builds the product's faces (gui_font.h's kGuiFontFiles: Liberation
-    # Sans and its bold) through FreeType on
-    # both platforms.
+    # Sans and its bold) through FreeType from the APK's font assets.
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the icons (icons.cpp: the load, the raster cache, the
     # draws) and the wrapper over resvg it reads the bundled drawings through
@@ -171,9 +112,9 @@ set(WARPTEMPO_GUI_SOURCES
     # the materials' pictures) are a painting
     # concern and exist only here, so like text_shape.cpp they are
     # deliberately in none of the four shared per-directory source lists —
-    # warptempo_cli must never carry them, nor resvg. resvg is found in each
-    # platform branch below: built here from the pinned source on Linux, the
-    # cross-built static one (android/deps/85_resvg.sh) on Android.
+    # warptempo_cli must never carry them, nor resvg. resvg is the
+    # cross-built static one (android/deps/85_resvg.sh), found in the Android
+    # branch below.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
     # GUI-ONLY, for svg_icon.cpp's reason: THE HI-FI SKIN'S GROUNDS
@@ -186,18 +127,24 @@ set(WARPTEMPO_GUI_SOURCES
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
     # case, the same under every chrome (cool_edit_paint.h).
     src/gui/cool_edit_paint.cpp
-    # THE CANVAS SINK (2026-10-13): the canvas interior's one paint road,
-    # cairo on either platform's cpu canvas, a draw list on either
-    # platform's gl canvas (canvas_sink.h).
+    # THE CANVAS SINK (2026-10-13): the canvas interior's one paint road, the
+    # frame's draw list (canvas_sink.h).
     src/gui/canvas_sink.cpp
+    # THE GL CANVAS (2026-10-13; the one canvas road since the laptop GUI's
+    # drop, architect 2026-10-30): its owner GuiGlCanvas (gl_canvas.h) — the
+    # programs, the textures, the upload walk and the frame's draw — over
+    # EGL / GLES 3.0, the two libraries on the Android branch's link line.
+    src/gui/gl_canvas.cpp
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp
     src/gui/phaseresetmarkers.cpp
     src/gui/playback_lifecycle.cpp
     # THE PORTABLE HALF of the playback engine (the render body, the
-    # predictor, the domain/bind/speed logic). Shared: each backend arm
-    # below carries only its device mechanics over this one engine.
+    # predictor, the domain/bind/speed logic); the AAudio device,
+    # playback_aaudio.cpp, carries only its device mechanics over this one
+    # engine (playback.h the contract).
     src/gui/playback_common.cpp
+    src/gui/playback_aaudio.cpp
     src/gui/render_pipeline.cpp
     src/gui/warp_frame_map_view.cpp
     src/gui/viewport.cpp
@@ -249,10 +196,9 @@ set(WARPTEMPO_GUI_SOURCES
     # THE ONE GIT ROAD (architect 2026-09-27): libgit2 in process, the history
     # module's only way into a repository, with the fetch's and the push's
     # deploy key and host-key pin. The one file that includes <git2.h>, so the one file that
-    # needs libgit2 — found in each platform branch below: the system's on
-    # Linux, the cross-built static one (android/deps/80_libgit2.sh) on Android.
-    # WARPTEMPO_GIT_SOURCE above names it, or the stub in its place.
-    ${WARPTEMPO_GIT_SOURCE}
+    # needs libgit2 — the cross-built static one (android/deps/80_libgit2.sh),
+    # found in the Android branch below; the APK always carries it.
+    src/gui/git_repo.cpp
     # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
     # runs that file's network git routes (the checkpoint act, the GitHub
     # check) off the GUI thread. warptempo_cli reads no history of any kind.
@@ -281,7 +227,7 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/score_viewer.cpp
     # THE NOISE (2026-10-28): the background sound — the probe of the folder
     # under noise/ beside the device config that the `noise` key names, its
-    # loader thread, and the second voice both playback devices sum under the
+    # loader thread, and the second voice the playback device sums under the
     # engine's (noise.h). GUI-only: the CLI plays nothing.
     src/gui/noise.cpp
     # THE TRIM PRESETS (2026-10-28 night): the piece's named trim windows in
@@ -292,9 +238,7 @@ set(WARPTEMPO_GUI_SOURCES
     # THE CAR TRANSPORT (2026-09-17): the head unit's SECOND owner — the
     # cluster that drives the project's own transport while the render player
     # is closed, and publishes the console's three lines from the tab, the
-    # views and the trim. GUI-only for the player's reason, and portable: the
-    # Wayland platform's media push is a no-op and its command hook never
-    # fires, so this file compiles into both arms and has an effect on one.
+    # views and the trim. GUI-only for the player's reason.
     src/gui/car_transport.cpp
     src/gui/target_render.cpp
     src/gui/render_cache.cpp
@@ -305,6 +249,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/input_render_dispatch.cpp
     src/gui/input_pointer.cpp
     src/gui/input_key_dispatch.cpp
+    # THE PLATFORM BACKEND (platform.h's one include): GuiPlatform over the
+    # NativeActivity, whose android_main is the process's entry and calls
+    # main.cpp's gui_main.
+    src/gui/platform_android.cpp
 )
 
 # ============================================================
@@ -312,52 +260,35 @@ set(WARPTEMPO_GUI_SOURCES
 #  the laptop through android/app/configure.sh). It is a SHARED LIBRARY rather
 #  than an executable because a NativeActivity's process is started by the
 #  system and dlopen's this .so; android_main (platform_android.cpp) is its
-#  entry point and calls the same gui_main the Linux main() does.
+#  entry point and calls gui_main (main.cpp).
 #
-#  NO WAYLAND, NO XKB, NO JACK, NO wayland-scanner is discovered here — none
-#  of them exists on the platform. The dependencies that DO cross (the four
-#  graphics libraries, fftw, and the git stack) are found through the M1
-#  sysroot's own .pc files: android/app/configure.sh
-#  passes PKG_CONFIG_EXECUTABLE (the toolchain's wrapper, which hard-forces
-#  PKG_CONFIG_LIBDIR at android/prebuilt/<abi>) and FFTW3_THREADS_LIB (whose
-#  find_library above cannot search a sysroot the NDK toolchain file has
-#  re-rooted), so this branch itself names no path.
-#
-#  THE LINUX TARGET IS UNTOUCHED BY EVERYTHING IN HERE. The two branches are
-#  mutually exclusive on ANDROID, they share the source list and the flag
-#  block at the bottom of this file, and neither adds a compile option the
-#  other does not.
+#  Every dependency (the four graphics libraries, resvg, fftw, and the git
+#  stack) is found through the M1 sysroot's own .pc files:
+#  android/app/configure.sh passes PKG_CONFIG_EXECUTABLE (the toolchain's
+#  wrapper, which hard-forces PKG_CONFIG_LIBDIR at android/prebuilt/<abi>) and
+#  FFTW3_THREADS_LIB (whose find_library above cannot search a sysroot the NDK
+#  toolchain file has re-rooted), so this branch itself names no path.
 # ============================================================
-if(WARPTEMPO_BUILD_GUI AND ANDROID)
+if(ANDROID)
     # Cairo needs its FT backend (gui_font_bundled.cpp builds the product's
     # faces from the APK's own font assets, and this cairo is built with no
-    # fontconfig at all) and HarfBuzz shapes on those faces, exactly as on
-    # Linux. freetype2 gets its own check here — unlike the Linux branch,
-    # which lets cairo-ft and harfbuzz carry it transitively — because the
-    # static link needs its archive named explicitly inside the group below.
+    # fontconfig at all) and HarfBuzz shapes on those faces. freetype2 gets
+    # its own check because the static link needs its archive named
+    # explicitly inside the group below.
     pkg_check_modules(WT_ANDROID_GFX REQUIRED cairo cairo-ft harfbuzz freetype2)
     # The icon renderer (svg_icon.cpp): resvg's C API, static, its resvg.pc
     # written by android/deps/85_resvg.sh (upstream ships none without
     # cargo-c). Its STATIC_LDFLAGS carry the Rust archive's native-static-libs
     # (-llog -lunwind -ldl -lm -lc), all the NDK's own: DT_NEEDED gains
-    # nothing the seven do not already name.
+    # nothing the nine do not already name (build_apk.sh's allowlist).
     pkg_check_modules(WT_ANDROID_RESVG REQUIRED resvg)
-    # The history view's git (git_repo.cpp), as on Linux: libgit2 with its SSH
-    # transport. Static like everything here; libgit2.pc's Requires.private
-    # names libssh2, whose own .pc names libcrypto, so --static (the
-    # STATIC_LDFLAGS below) carries the whole chain -lgit2 -lssh2 -lcrypto -ldl.
-    # zlib is libgit2's bundled copy, so the chain adds nothing to DT_NEEDED
-    # (android/deps/80_libgit2.sh owns the build's choices). Skipped with
-    # WARPTEMPO_GUI_GIT OFF, which is allowed here but not exercised:
-    # android/app/build_apk.sh passes nothing for it, so the APK always
-    # carries the real road.
-    set(WARPTEMPO_GIT_INCLUDE_DIRS "")
-    set(WARPTEMPO_GIT_LIBRARIES "")
-    if(WARPTEMPO_GUI_GIT)
-        pkg_check_modules(WT_ANDROID_GIT REQUIRED libgit2)
-        set(WARPTEMPO_GIT_INCLUDE_DIRS ${WT_ANDROID_GIT_INCLUDE_DIRS})
-        set(WARPTEMPO_GIT_LIBRARIES ${WT_ANDROID_GIT_STATIC_LDFLAGS})
-    endif()
+    # The history view's git (git_repo.cpp): libgit2 with its SSH transport.
+    # Static like everything here; libgit2.pc's Requires.private names
+    # libssh2, whose own .pc names libcrypto, so --static (the STATIC_LDFLAGS
+    # below) carries the whole chain -lgit2 -lssh2 -lcrypto -ldl. zlib is
+    # libgit2's bundled copy, so the chain adds nothing to DT_NEEDED
+    # (android/deps/80_libgit2.sh owns the build's choices).
+    pkg_check_modules(WT_ANDROID_GIT REQUIRED libgit2)
 
     # The NDK's stock android_native_app_glue. It is COMPILED IN PLACE from
     # the NDK rather than vendored: r29's process_input already drains its
@@ -371,15 +302,12 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # edit, and it does not compile clean under this project's -Wall -Wextra
     # (two unused `source` parameters in its own poll handlers). The warning is
     # silenced FOR THAT FILE ALONE so the product's own warnings stay the only
-    # ones in the log — the same reason -Wfloat-conversion is scoped away from
-    # the generated Wayland protocol C on the other target.
+    # ones in the log.
     set_source_files_properties(${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c
         PROPERTIES COMPILE_OPTIONS "-Wno-unused-parameter")
 
     add_library(warptempo_gui SHARED
         ${WARPTEMPO_GUI_SOURCES}
-        src/gui/platform_android.cpp
-        src/gui/playback_aaudio.cpp
         ${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
@@ -397,7 +325,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         ${FFTW3_INCLUDE_DIRS}
         ${WT_ANDROID_GFX_INCLUDE_DIRS}
         ${WT_ANDROID_RESVG_INCLUDE_DIRS}
-        ${WARPTEMPO_GIT_INCLUDE_DIRS}
+        ${WT_ANDROID_GIT_INCLUDE_DIRS}
     )
     # -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ IS LOAD-BEARING and is
     # mentioned in no NDK document: without it bionic marks every symbol newer
@@ -409,23 +337,6 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # a missing library.
     target_compile_definitions(warptempo_gui PRIVATE
         __ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
-    # THE CANVAS (the cache entry's comment at the top of this file). The
-    # definition is TARGET-WIDE, never a source property: it shapes
-    # GuiPlatform's private members (platform_android.h), so every
-    # translation unit that sees the class must agree on it. Under `gl` the
-    # target links libEGL and libGLESv3, both NDK stable-ABI libraries, which
-    # is the whole of what the choice adds to DT_NEEDED (build_apk.sh's
-    # allowlist per variant). Under `gl` the target also compiles the GL
-    # canvas's platform-neutral owner (src/gui/gl_canvas.cpp, GuiGlCanvas:
-    # the programs, the textures, the upload walk and the frame's draw); the
-    # cpu build compiles none of it.
-    target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_CANVAS_GL=${WARPTEMPO_CANVAS_GL})
-    set(WARPTEMPO_CANVAS_LIBRARIES "")
-    if(WARPTEMPO_CANVAS_GL)
-        target_sources(warptempo_gui PRIVATE src/gui/gl_canvas.cpp)
-        set(WARPTEMPO_CANVAS_LIBRARIES EGL GLESv3)
-    endif()
     # --start-group covers the freetype <-> harfbuzz static cycle (cairo pulls
     # freetype, freetype's autohinter reaches back into harfbuzz), which a
     # single-pass static link cannot resolve on its own. --no-undefined makes a
@@ -437,7 +348,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         -Wl,--start-group
         ${WT_ANDROID_GFX_STATIC_LDFLAGS}
         ${WT_ANDROID_RESVG_STATIC_LDFLAGS}
-        ${WARPTEMPO_GIT_LIBRARIES}
+        ${WT_ANDROID_GIT_STATIC_LDFLAGS}
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}
         -Wl,--end-group
@@ -445,319 +356,32 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         android
         # libnativewindow, and it is NOT covered by libandroid (2026-08-27).
         # Most of the ANativeWindow_* surface this backend uses — the geometry
-        # setter, lock/unlockAndPost, the width and height queries — is
-        # re-exported by libandroid, which is why this line was not needed
-        # until the 90 Hz frame-rate pin at window adoption:
-        # ANativeWindow_setFrameRate (API 30) lives in libnativewindow alone,
-        # and --no-undefined turns its absence into the build failure it should
-        # be rather than a launch-time surprise.
+        # setter and the width and height queries — is re-exported by
+        # libandroid, which is why this line was not needed until the 90 Hz
+        # frame-rate pin at window adoption: ANativeWindow_setFrameRate (API
+        # 30) lives in libnativewindow alone, and --no-undefined turns its
+        # absence into the build failure it should be rather than a
+        # launch-time surprise.
         nativewindow
-        # The gl canvas's two (empty under cpu; the block above).
-        ${WARPTEMPO_CANVAS_LIBRARIES}
+        # THE GL CANVAS'S TWO (gl_canvas.h): libEGL and libGLESv3, both NDK
+        # stable-ABI libraries, the whole of what the canvas adds to
+        # DT_NEEDED (build_apk.sh's allowlist).
+        EGL
+        GLESv3
         log
         m
         dl
     )
     target_link_directories(warptempo_gui PRIVATE ${FFTW3_LIBRARY_DIRS})
-endif()
-
+else()
 # ============================================================
-#  warptempo_gui — Cairo/Wayland front end (canonical product, default ON).
-#  All GUI platform dependency discovery lives inside this guard so a
-#  headless build needs none of these packages present.
-# ============================================================
-if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
-    pkg_check_modules(WAYLAND_CLIENT    REQUIRED wayland-client)
-    pkg_check_modules(WAYLAND_CURSOR    REQUIRED wayland-cursor)
-    pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
-    pkg_check_modules(XKBCOMMON         REQUIRED xkbcommon)
-    pkg_get_variable(WAYLAND_PROTOCOLS_DATADIR wayland-protocols pkgdatadir)
-    find_program(WAYLAND_SCANNER_EXEC NAMES wayland-scanner REQUIRED)
-
-    # wayland-scanner: for each protocol XML, generate a client header and a
-    # private dispatch-table .c. Both files land in ${CMAKE_BINARY_DIR}/wayland-
-    # generated/ and are added to the warptempo_gui sources below. DEPENDS on
-    # the source XML so wayland-protocols updates trigger regeneration.
-    set(WAYLAND_PROTOCOL_SOURCES
-        ${WAYLAND_PROTOCOLS_DATADIR}/stable/xdg-shell/xdg-shell.xml
-        ${WAYLAND_PROTOCOLS_DATADIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
-        ${WAYLAND_PROTOCOLS_DATADIR}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml
-        ${WAYLAND_PROTOCOLS_DATADIR}/unstable/relative-pointer/relative-pointer-unstable-v1.xml
-    )
-    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/wayland-generated)
-    set(WAYLAND_GENERATED_SOURCES "")
-    foreach(proto IN LISTS WAYLAND_PROTOCOL_SOURCES)
-        get_filename_component(proto_name ${proto} NAME_WE)
-        set(proto_h ${CMAKE_BINARY_DIR}/wayland-generated/${proto_name}-client-protocol.h)
-        set(proto_c ${CMAKE_BINARY_DIR}/wayland-generated/${proto_name}-protocol.c)
-        add_custom_command(
-            OUTPUT  ${proto_h}
-            COMMAND ${WAYLAND_SCANNER_EXEC} client-header ${proto} ${proto_h}
-            DEPENDS ${proto}
-            VERBATIM)
-        add_custom_command(
-            OUTPUT  ${proto_c}
-            COMMAND ${WAYLAND_SCANNER_EXEC} private-code ${proto} ${proto_c}
-            DEPENDS ${proto}
-            VERBATIM)
-        list(APPEND WAYLAND_GENERATED_SOURCES ${proto_c} ${proto_h})
-    endforeach()
-
-    pkg_check_modules(CAIRO REQUIRED cairo)
-    # Proportional text shaping (src/gui/text_shape.cpp): HarfBuzz shapes on
-    # the cairo scaled font's own FreeType face, which needs cairo's FT
-    # backend headers, and the face owner (gui_font_bundled.cpp) builds its
-    # faces with FreeType directly. freetype2 gets no check of its own —
-    # cairo-ft.pc requires it, so its include dir and its -lfreetype come with
-    # cairo-ft's — and hb-ft lives in libharfbuzz itself, so there is no
-    # separate hb-ft module either. FONTCONFIG IS NOT ON THIS LINK LINE and
-    # the product never calls it (gui_font.h, 2026-10-02); libcairo's own
-    # dependency on it is the library's business.
-    pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
-    pkg_check_modules(CAIRO_FT REQUIRED cairo-ft)
-    # Playback is a direct libjack client. JACK is required by policy; under
-    # PipeWire this is satisfied by pipewire-jack.
-    pkg_check_modules(JACK REQUIRED jack)
-    # The history view's git (src/gui/git_repo.cpp): libgit2, in process, with
-    # its SSH transport (libssh2) for the checkpoint push. Skipped with
-    # WARPTEMPO_GUI_GIT OFF (the stub needs no library). Carried through plain
-    # variables rather than pkg-config's own, which persist in the cache, so a
-    # build directory switched OFF links no libgit2 left over from an ON run.
-    set(WARPTEMPO_GIT_INCLUDE_DIRS "")
-    set(WARPTEMPO_GIT_LIBRARIES "")
-    if(WARPTEMPO_GUI_GIT)
-        pkg_check_modules(LIBGIT2 REQUIRED libgit2)
-        set(WARPTEMPO_GIT_INCLUDE_DIRS ${LIBGIT2_INCLUDE_DIRS})
-        set(WARPTEMPO_GIT_LIBRARIES ${LIBGIT2_LIBRARIES})
-    endif()
-
-    # THE CANVAS ON THE LAPTOP (the cache entry's comment at the top of this
-    # file; 2026-10-14): under `gl` the Wayland backend presents through EGL
-    # on the Wayland display — Mesa's own libEGL and GLES, and libwayland-egl
-    # for the wl_egl_window, nothing else — and the target compiles the GL
-    # canvas's platform-neutral owner (src/gui/gl_canvas.cpp, GuiGlCanvas),
-    # as the Android branch does; under `cpu` none of the three is discovered
-    # or linked and the backend keeps its two wl_shm buffers, the reference.
-    # Plain variables, as the git road's above, so a tree switched to cpu
-    # links nothing left over from a gl run.
-    set(WARPTEMPO_CANVAS_SOURCES "")
-    set(WARPTEMPO_CANVAS_INCLUDE_DIRS "")
-    set(WARPTEMPO_CANVAS_LIBRARIES "")
-    if(WARPTEMPO_CANVAS_GL)
-        pkg_check_modules(EGL         REQUIRED egl)
-        pkg_check_modules(GLESV2      REQUIRED glesv2)
-        pkg_check_modules(WAYLAND_EGL REQUIRED wayland-egl)
-        set(WARPTEMPO_CANVAS_SOURCES src/gui/gl_canvas.cpp)
-        set(WARPTEMPO_CANVAS_INCLUDE_DIRS
-            ${EGL_INCLUDE_DIRS} ${GLESV2_INCLUDE_DIRS}
-            ${WAYLAND_EGL_INCLUDE_DIRS})
-        set(WARPTEMPO_CANVAS_LIBRARIES
-            ${EGL_LIBRARIES} ${GLESV2_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
-    endif()
-
-    # THE ICON RENDERER (svg_icon.cpp): resvg's C API, BUILT HERE FROM THE
-    # TABLET'S PINNED SOURCE (architect 2026-10-06: one renderer, the same
-    # pinned source on both devices, never a distro package). The pin is
-    # android/deps/common.sh's RESVG_VER / RESVG_URL / RESVG_SHA256, read from
-    # those lines, so the two devices cannot drift apart; that file is a
-    # configure dependency. Everything lands under ${CMAKE_BINARY_DIR}/resvg:
-    # the tarball (its sha256 checked), the source, cargo's CARGO_HOME (the
-    # crates the build compiles, downloaded from crates.io and pinned by
-    # checksum in the tarball's Cargo.lock; never ~/.cargo) and the target
-    # dir. The cargo invocation is 85_resvg.sh's: the crate's static archive
-    # alone, the production profile, no default features, raster-images on
-    # (that script's head owns each choice). It runs once per build tree; a
-    # new pin re-runs it.
-    find_program(WARPTEMPO_CARGO cargo)
-    if(NOT WARPTEMPO_CARGO)
-        message(FATAL_ERROR
-            "cargo not found: the GUI builds its icon renderer, resvg, with "
-            "Rust. Install rustup and its stable toolchain (docs/INSTALL.md).")
-    endif()
-    set(WARPTEMPO_RESVG_PIN_FILE ${CMAKE_SOURCE_DIR}/android/deps/common.sh)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-                 ${WARPTEMPO_RESVG_PIN_FILE})
-    file(STRINGS ${WARPTEMPO_RESVG_PIN_FILE} resvg_pin_lines
-         REGEX "^RESVG_(VER|URL|SHA256)=")
-    foreach(line IN LISTS resvg_pin_lines)
-        if(line MATCHES "^RESVG_(VER|URL|SHA256)=([^ \t#]+)")
-            set(WARPTEMPO_RESVG_${CMAKE_MATCH_1} ${CMAKE_MATCH_2})
-        endif()
-    endforeach()
-    if(NOT WARPTEMPO_RESVG_VER OR NOT WARPTEMPO_RESVG_URL OR
-       NOT WARPTEMPO_RESVG_SHA256)
-        message(FATAL_ERROR
-            "no RESVG_VER / RESVG_URL / RESVG_SHA256 in ${WARPTEMPO_RESVG_PIN_FILE}")
-    endif()
-    string(REPLACE "\$RESVG_VER" "${WARPTEMPO_RESVG_VER}"
-           WARPTEMPO_RESVG_URL "${WARPTEMPO_RESVG_URL}")
-    set(WARPTEMPO_RESVG_DIR ${CMAKE_BINARY_DIR}/resvg)
-    set(WARPTEMPO_RESVG_LIB ${WARPTEMPO_RESVG_DIR}/lib/libresvg.a)
-    set(WARPTEMPO_RESVG_INCLUDE_DIR ${WARPTEMPO_RESVG_DIR}/include)
-    # MAKEFLAGS is unset for cargo, which then schedules its own jobs: handed
-    # make's jobserver, it warns on every first build.
-    set(WARPTEMPO_RESVG_CARGO
-        ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS
-        CARGO_HOME=${WARPTEMPO_RESVG_DIR}/cargo-home ${WARPTEMPO_CARGO})
-    include(ExternalProject)
-    ExternalProject_Add(warptempo_resvg_build
-        URL ${WARPTEMPO_RESVG_URL}
-        URL_HASH SHA256=${WARPTEMPO_RESVG_SHA256}
-        DOWNLOAD_NAME resvg-${WARPTEMPO_RESVG_VER}.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-        PREFIX ${WARPTEMPO_RESVG_DIR}
-        SOURCE_DIR ${WARPTEMPO_RESVG_DIR}/resvg-${WARPTEMPO_RESVG_VER}
-        BUILD_IN_SOURCE TRUE
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ${WARPTEMPO_RESVG_CARGO} rustc --locked
-                --profile production -p resvg-capi
-                --no-default-features --features raster-images
-                --crate-type staticlib
-                --target-dir ${WARPTEMPO_RESVG_DIR}/target
-        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy
-                <SOURCE_DIR>/crates/c-api/resvg.h ${WARPTEMPO_RESVG_INCLUDE_DIR}/
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${WARPTEMPO_RESVG_DIR}/target/production/libresvg.a
-                ${WARPTEMPO_RESVG_DIR}/lib/
-        BUILD_BYPRODUCTS ${WARPTEMPO_RESVG_LIB})
-    # The include directory exists before the build fills it: an imported
-    # target's include directory must exist at generate time.
-    file(MAKE_DIRECTORY ${WARPTEMPO_RESVG_INCLUDE_DIR}
-                        ${WARPTEMPO_RESVG_DIR}/lib)
-    # The archive's native-static-libs on glibc (rustc's own list:
-    # -lgcc_s -lutil -lrt -lpthread -lm -ldl -lc) need nothing new: rt,
-    # pthread, dl and m are on the GUI's link line below, gcc_s and c come
-    # with g++'s driver, and util is inside libc since glibc 2.34. The
-    # binary's DT_NEEDED is what it was.
-    add_library(warptempo_resvg STATIC IMPORTED)
-    set_target_properties(warptempo_resvg PROPERTIES
-        IMPORTED_LOCATION ${WARPTEMPO_RESVG_LIB}
-        INTERFACE_INCLUDE_DIRECTORIES ${WARPTEMPO_RESVG_INCLUDE_DIR})
-    add_dependencies(warptempo_resvg warptempo_resvg_build)
-
-    # THE PRODUCT'S FONT FILES, COMPILED IN (architect 2026-10-02; Liberation
-    # Sans alone since 2026-10-12; the rule and the mechanism's reasons at gui_font_embedded.cpp's head).
-    # THE NAMES ARE
-    # READ OUT OF gui_font.h's kGuiFontFiles initializer, the one list, so a
-    # file added there is embedded here with no second spelling (gui_font.h
-    # is a configure dependency for that read). Each file becomes
-    # `<name>.inc` in the build tree — its bytes as a comma-separated list of
-    # hex literals, which that source includes inside an array's braces.
-    # Written at CONFIGURE time, and only when the bytes changed
-    # (file(CONFIGURE) leaves an identical output untouched), and the files
-    # are configure dependencies, so swapping a font re-runs the configure
-    # and rebuilds that one object.
-    set(WARPTEMPO_FONT_INC_DIR ${CMAKE_BINARY_DIR}/fonts-generated)
-    set(font_list_src ${CMAKE_SOURCE_DIR}/src/gui/gui_font.h)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-                 ${font_list_src})
-    file(READ ${font_list_src} font_list_text)
-    string(REGEX MATCH "kGuiFontFiles\\[kGuiFontFileCount\\] = {[^}]*}"
-           font_list_block "${font_list_text}")
-    string(REGEX MATCHALL "\"[^\"]+\"" font_list_quoted
-           "${font_list_block}")
-    set(WARPTEMPO_FONT_FILES)
-    foreach(quoted ${font_list_quoted})
-        string(REPLACE "\"" "" font_name ${quoted})
-        list(APPEND WARPTEMPO_FONT_FILES ${font_name})
-    endforeach()
-    if(NOT WARPTEMPO_FONT_FILES)
-        message(FATAL_ERROR "no font names read from gui_font.h's kGuiFontFiles")
-    endif()
-    foreach(font ${WARPTEMPO_FONT_FILES})
-        set(font_src ${CMAKE_SOURCE_DIR}/fonts/${font})
-        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-                     ${font_src})
-        file(READ ${font_src} font_hex HEX)
-        string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," font_bytes
-               "${font_hex}")
-        file(CONFIGURE OUTPUT ${WARPTEMPO_FONT_INC_DIR}/${font}.inc
-             CONTENT "${font_bytes}\n")
-    endforeach()
-
-    add_executable(warptempo_gui
-        ${WARPTEMPO_GUI_SOURCES}
-        # The two per-backend arms, Linux's: the Wayland platform backend and
-        # the JACK playback device. The Android library above compiles
-        # platform_android.cpp and playback_aaudio.cpp in their places; exactly
-        # one arm of each is ever linked. Beside them, the product's font
-        # files compiled in (the step above; the mechanism and why at its own
-        # file's head): the APK carries the same files as assets instead, and
-        # warptempo_cli, which paints nothing, carries none.
-        src/gui/platform_wayland.cpp
-        src/gui/playback.cpp
-        src/gui/gui_font_embedded.cpp
-        # The GL canvas's owner under `gl` (empty under cpu; the block above).
-        ${WARPTEMPO_CANVAS_SOURCES}
-        ${WARPTEMPO_AUDIO_IO_SOURCES}
-        ${WARPTEMPO_PARSER_SOURCES}
-        ${WARPTEMPO_ENGINE_SOURCES}
-        ${WARPTEMPO_PREPOST_SOURCES}
-        ${WAYLAND_GENERATED_SOURCES}
-    )
-    target_include_directories(warptempo_gui PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/parser
-        ${CMAKE_SOURCE_DIR}/src/engine
-        ${CMAKE_SOURCE_DIR}/src/audio_io
-        ${CMAKE_SOURCE_DIR}/src/prepost
-        ${CMAKE_SOURCE_DIR}/src/gui
-        ${CMAKE_BINARY_DIR}/wayland-generated
-        ${WARPTEMPO_FONT_INC_DIR}
-        ${FFTW3_INCLUDE_DIRS}
-        ${WAYLAND_CLIENT_INCLUDE_DIRS}
-        ${WAYLAND_CURSOR_INCLUDE_DIRS}
-        ${XKBCOMMON_INCLUDE_DIRS}
-        ${CAIRO_INCLUDE_DIRS}
-        ${HARFBUZZ_INCLUDE_DIRS}
-        ${CAIRO_FT_INCLUDE_DIRS}
-        ${JACK_INCLUDE_DIRS}
-        ${WARPTEMPO_GIT_INCLUDE_DIRS}
-        ${WARPTEMPO_CANVAS_INCLUDE_DIRS}
-    )
-    # THE CANVAS (the cache entry's comment at the top of this file): the
-    # definition TARGET-WIDE, as the Android branch's, because it shapes
-    # GuiPlatform's private members (platform_wayland.h) as well as the
-    # paint road (canvas_sink.h's kGuiCanvasDrawList).
-    target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_CANVAS_GL=${WARPTEMPO_CANVAS_GL})
-    # THE BUNDLED ICONS' SOURCE ON THE LAPTOP (icons.h's load_set): the
-    # repository's own assets/icons/, its absolute path compiled in, since
-    # the laptop runs the executable from its build tree beside this source
-    # tree, read in place at every launch (GuiPlatform::bundled_icon_files,
-    # platform_wayland.cpp).
-    # The APK packs the same files as assets instead (android/app/build_apk.sh),
-    # so the Android branch defines nothing.
-    target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
-    target_link_libraries(warptempo_gui PRIVATE
-        ${FFTW3_THREADS_LIB}
-        ${FFTW3_LIBRARIES}
-        ${WAYLAND_CLIENT_LIBRARIES}
-        ${WAYLAND_CURSOR_LIBRARIES}
-        ${XKBCOMMON_LIBRARIES}
-        rt
-        ${CAIRO_LIBRARIES}
-        ${HARFBUZZ_LIBRARIES}
-        ${CAIRO_FT_LIBRARIES}
-        ${JACK_LIBRARIES}
-        ${WARPTEMPO_GIT_LIBRARIES}
-        ${WARPTEMPO_CANVAS_LIBRARIES}
-        warptempo_resvg
-        pthread
-        dl
-        m
-    )
-endif()
-
-# ============================================================
-#  warptempo_cli — headless wav render binary (insurance render path).
+#  warptempo_cli — the laptop's one product, the headless wav render
+#  (architect 2026-10-30: the laptop keeps the CLI to git pull and render).
 #  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes
 #  the warped wav the GUI would render for the same project. Runs the full PGHI
 #  engine; renders are wav-only. Compiles the parser and engine sources
-#  directly, needing no Wayland/Cairo/JACK toolchain.
+#  directly, needing no GUI toolchain: fftw alone.
 # ============================================================
-if(WARPTEMPO_BUILD_CLI)
     add_executable(warptempo_cli
         src/cli/cli_main.cpp
         ${WARPTEMPO_AUDIO_IO_SOURCES}
@@ -781,10 +405,10 @@ if(WARPTEMPO_BUILD_CLI)
 endif()
 
 # --- Compiler Optimizations ---
-# Applied identically to every target that exists in this configuration. The
+# Applied to the configuration's one target (WARPTEMPO_OPT_TARGETS below). The
 # engine's PGHI hot path and the parser's frame-map math must compile under the
-# same -O3 -march=native -ffp-contract=off everywhere. Each target is appended
-# only under its own guard.
+# same -O3 -ffp-contract=off on both products, with -march=native on the
+# laptop's.
 #
 # No CMAKE_BUILD_TYPE is set on either host (android/app/configure.sh empties
 # it too), so NDEBUG is never defined: every assert in the tree is a live
@@ -814,12 +438,10 @@ if(ANDROID)
     set(WARPTEMPO_ARCH_FLAGS)
 endif()
 
-set(WARPTEMPO_OPT_TARGETS "")
-if(WARPTEMPO_BUILD_GUI)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
-endif()
-if(WARPTEMPO_BUILD_CLI)
-    list(APPEND WARPTEMPO_OPT_TARGETS warptempo_cli)
+if(ANDROID)
+    set(WARPTEMPO_OPT_TARGETS warptempo_gui)
+else()
+    set(WARPTEMPO_OPT_TARGETS warptempo_cli)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})
@@ -833,9 +455,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # off the rule to route through the chokepoint, not a cast to add. Scoped
     # to the GUI target alone and OUTSIDE the shared loop above: the CLI shares
     # only the frozen stages, which pass the flag but are not its subject; and
-    # scoped to C++ alone because the GUI target also compiles the generated C
-    # protocol stubs, which were never audited under it.
-    if(WARPTEMPO_BUILD_GUI)
+    # scoped to C++ alone because the GUI target's one C file is the NDK's
+    # native_app_glue, third-party source never audited under it.
+    if(ANDROID)
         target_compile_options(warptempo_gui PRIVATE
             $<$<COMPILE_LANGUAGE:CXX>:-Wfloat-conversion>)
     endif()

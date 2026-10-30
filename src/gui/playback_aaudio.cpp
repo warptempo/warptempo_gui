@@ -11,15 +11,11 @@
 #include <cstdio>
 #include <thread>
 
-// THE AAUDIO DEVICE HALF of playback.h's contract — the Android arm, replacing
-// the silent stub the port ran on before there was a sound. The ENGINE is
-// playback_common.{h,cpp}, shared verbatim with the JACK backend
-// (playback.cpp), so what lives here is one AAudio output stream: opening it,
-// its two callbacks, stop()'s quiescence fence, and the disconnect rule.
-//
-// THIS FILE IS NOT IN THE LINUX TARGET: exactly one of playback.cpp and this
-// file is compiled into a given binary, the same one-arm-per-backend rule
-// platform_wayland.cpp / platform_android.cpp follow.
+// THE AAUDIO DEVICE HALF of playback.h's contract — THE DEVICE HALF, the one
+// implementation (architect 2026-10-30, the tablet the one platform). The
+// ENGINE is playback_common.{h,cpp}, so what lives here is one AAudio output
+// stream: opening it, its two callbacks, stop()'s quiescence fence, and the
+// disconnect rule.
 //
 // THE RATE. The stream is opened at AAUDIO_UNSPECIFIED and the GRANTED rate
 // becomes the engine's `output_rate`, so the render body's one increment
@@ -119,9 +115,9 @@ struct GuiPlayback::Impl {
     // is AAudio's own.
     //
     // THIS BACKEND REPORTS NO LATENCY FIGURE, and after 2026-09-03 there is
-    // nothing on the other side of that to record: neither backend
-    // compensates for anything, both run the raw predictor, and the line
-    // leads the sound by the route's own latency on both (the ruling and its
+    // nothing on the other side of that to record: nothing compensates, the
+    // raw predictor runs, and the line leads the sound by the route's own
+    // latency (the ruling and its
     // arithmetic are at playback_common.cpp's record above
     // playback_publish_play). What stays worth saying is WHY no figure would
     // be published here even if one were wanted: in the car the tablet plays
@@ -151,8 +147,7 @@ struct GuiPlayback::Impl {
     // CLOSED — no longer a per-play bit (the lifecycle block at the head).
     AAudioStream* stream       = nullptr;
     bool          started      = false;
-    // init() bound a source AND opened a device. play()/stop() gate on it
-    // exactly as the JACK backend gates on its client being active.
+    // init() bound a source AND opened a device. play()/stop() gate on it.
     bool          device_ready = false;
 
     // Written by the error callback, read by the main thread. `dead` is the
@@ -162,9 +157,9 @@ struct GuiPlayback::Impl {
     std::atomic<int32_t> stream_error{0};
 
     // Incremented once at the end of every data-callback invocation, playing
-    // or silent. stop()'s fence counts it (fence_quiesced) — the JACK
-    // backend's own proof, available here only because the stream now stays
-    // STARTED between plays and so keeps calling its callback. Written by the
+    // or silent. stop()'s fence counts it (fence_quiesced) — a proof available
+    // only because the stream stays STARTED between plays and so keeps
+    // calling its callback. Written by the
     // callback thread with release, read by the main thread with acquire.
     std::atomic<uint64_t> callback_cycles{0};
 
@@ -204,8 +199,8 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     const int     channel_count = impl->state.channels;
     const int64_t frames        = static_cast<int64_t>(num_frames);
 
-    // THE GATE is ONE acquire load of the session word (playback_common.h),
-    // the JACK callback's own: the callback gates on its playing bit and
+    // THE GATE is ONE acquire load of the session word (playback_common.h):
+    // the callback gates on its playing bit and
     // hands that same word to the render body as its terminal's expected
     // value and as the one generation whose command packet the fill may
     // consume — loaded here and nowhere later in the burst, so a stop or a
@@ -330,9 +325,8 @@ bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
 }
 
 // THE QUIESCENCE FENCE (playback.h's stop() contract: "returns only once the
-// callback has quiesced"). IT COUNTS CALLBACK INVOCATIONS, exactly as the JACK
-// backend counts process cycles, and for exactly the JACK backend's reason: a
-// stream that stays STARTED keeps calling its data callback whether or not
+// callback has quiesced"). IT COUNTS CALLBACK INVOCATIONS, because a stream
+// that stays STARTED keeps calling its data callback whether or not
 // anything is playing (the lifecycle block at the head of this file), so the
 // counter keeps advancing and counting is a proof. It could not be one while
 // the stream was stopped between plays — the old fence therefore drove the
@@ -356,7 +350,7 @@ bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
 // and a stream that was never started has nothing in flight to begin with.
 //
 // OTHERWISE THE WAIT IS UNBOUNDED, AND HANGING IS THE CONTRACT'S SAFE FAILURE
-// MODE — the JACK fence's own choice. A framework that has stopped running
+// MODE. A framework that has stopped running
 // callbacks on a live stream is a broken environment; freezing the main thread
 // here is visible and loud, while a weakened fence lets a rebind, a buffer
 // replacement or a shutdown free samples out from under a live audio thread,
@@ -602,10 +596,8 @@ bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
 // react to it. A negative return (the call unimplemented on a path, an
 // invalid stream) is not a count and is dropped.
 //
-// THE JACK HALF HAS NO TWIN, the recorded asymmetry: playback.cpp registers
-// no jack_set_xrun_callback and says nothing, because the laptop's graph is
-// the architect's own and its xruns are already visible in the server's own
-// output, while this stream is inside a phone the app is the only window onto.
+// THE LINE IS SAID because this stream is inside a tablet the app is the only
+// window onto: nothing else reports its xruns.
 void report_xrun_count(GuiPlayback::Impl& impl) {
     if (!impl.stream) return;
     // NO SESSION STANDING — a stop with no launch since the last one, or since

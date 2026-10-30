@@ -13,11 +13,11 @@
 #include <vector>
 
 // THE GL CANVAS'S OWNER (the class's head, gl_canvas.h): the programs, the
-// textures and the frame's GL calls, moved whole out of the Android backend
-// (2026-10-14) so every platform's present drives the same ones. The calls,
-// their order and their arguments are the tablet's of 2026-10-13: the GL
-// canvas's identity proof (docs/engineering/gpu_canvas_2026_10.md §5) holds
-// across the move by construction. One reduction since, pixel-neutral by its
+// textures and the frame's GL calls, in their own object (2026-10-14) the
+// platform's present drives. The calls, their order and their arguments are
+// the tablet's of 2026-10-13, the build the GL canvas's identity proof
+// covered (docs/engineering/gpu_canvas_2026_10.md §5). One reduction since,
+// pixel-neutral by its
 // key: the plate's bounds texture is re-sent only when its key moved
 // (upload_list, 2026-10-14). One addition: the score viewer's page drawn by
 // the GPU (2026-10-27, the page program and its textures; the design record's
@@ -49,8 +49,7 @@ constexpr const char* kCanvasVertexShader =
 // integer pixel, the row flipped (cairo's row 0 is the top, GL's window row 0
 // the bottom; u_height is the texture's height), and the cairo bytes B,G,R,A
 // — uploaded as GL_RGBA, so the texel reads (B,G,R,A) — swizzled to R,G,B
-// with alpha written 1, the cpu canvas's copy_swap_rb (platform_android.cpp)
-// in the shader. The sampler is highp so the fetched value carries the 8-bit
+// with alpha written 1 — the channel swap, in the shader. The sampler is highp so the fetched value carries the 8-bit
 // UNORM texel exactly, and k/255 written to an RGBA8 framebuffer converts
 // back to k.
 // AN ALPHA-0 TEXEL IS DISCARDED (2026-10-13, the canvas sink's transparency
@@ -81,18 +80,19 @@ constexpr const char* kCanvasFragmentShader =
 // int. A pixel outside the instance's rect is discarded (the quad's float edges
 // never decide coverage); a RECT writes its word; a DOTTED RUN (kind 1 a
 // column, 2 a row) writes it where (c − origin) % period = phase, c the row or
-// the column, never negative (the list sink moved the origin back to the run's
+// the column, never negative (the sink moved the origin back to the run's
 // first cell or before; GLSL ES 3.00 leaves % on a negative operand undefined);
 // THE PLATE (kind 3) fetches its column's two texels from the bounds texture
 // (an isampler2D over GL_RGBA16I: row `period` holds o0 o1 i0 i1, row `period`
 // + 1 lo hi, the column the pixel's offset in the rect) and makes
-// render_waveform's priority select on the plate's row (the pixel's row less
+// the plate's priority select (render_waveform_columns' head) on the plate's
+// row (the pixel's row less
 // `origin`): inside [i0, i1] the ink within [lo, hi] and the outline elsewhere,
 // else inside [o0, o1] the ink, else nothing. A word is cairo's 0xAARRGGBB with
 // A = 255, written as (R, G, B, 1) at k / 255 per channel, which the RGBA8
 // framebuffer stores as k — the texture triangle's own channel order.
 // Primitives write in instance order (GL's primitive order within a draw), so a
-// later record overwrites an earlier one, the cairo road's paint order.
+// later record overwrites an earlier one, the paint order.
 constexpr const char* kListVertexShader =
     "#version 300 es\n"
     "precision highp float;\n"
@@ -193,7 +193,7 @@ constexpr int kPageUploadsPerPresent = 1;
 // One list record as the instance attributes read it: the rect (location
 // 0), {kind, period, origin, phase} (location 1), {word, word2} (location 2),
 // every coordinate in surface px (the GUI's own px: the app paints no window
-// frame on either platform since 2026-10-24, so the two are one).
+// frame since 2026-10-24, so the two are one).
 struct CanvasInstance {
     GLint  rect[4];
     GLint  param[4];
@@ -395,7 +395,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // THE DRAW: the canvas list first, then the texture over it. THE LIST
 // (kListVertexShader's head; GuiCanvasPrimitive, canvas_sink.h): its
 // records as instances in list order, one instanced draw, the scissor
-// the canvas clip (the cpu road's own clip of every canvas pass) — its
+// the canvas clip — its
 // instances re-made only when the list's generation moved, and the plate's
 // bounds texture, inside that, only when the plate's key moved
 // (upload_list). THE TEXTURE: one full-screen
@@ -409,15 +409,15 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // over the whole clip, and every texel outside it is opaque).
 // WHILE THE SCORE VIEWER'S PAGE STANDS the clip is the box's interior and
 // THE PAGE draws there in the list's stead (draw_page), under the same
-// scissor: the field's word and the held page's gray bytes, the cpu road's
-// bytes by GuiCanvasPage's proof.
+// scissor: the field's word and the held page's gray bytes, the window's
+// bytes by GuiCanvasPage's rule.
 // THE PICTURE IS THE BACKBUFFER'S BYTES EXACTLY outside the clip and
 // under every overlay: an 8-bit UNORM texel
 // fetched without a filter round-trips to the same 8-bit value in the
 // RGBA8 framebuffer, dithering is off, nothing blends, and the framebuffer
 // is plain RGBA (the passthrough colorspace encodes nothing — never an
-// sRGB framebuffer); inside the clip it is the list's words, the cpu
-// road's bytes by the sink's construction.
+// sRGB framebuffer); inside the clip it is the list's words, each a
+// chrome pixel's bytes for its color by the sink's construction.
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
                                 GuiCanvasDrawList* list,
@@ -486,9 +486,7 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     if (list) reconcile_pages(list->page);
 
     glViewport(0, 0, surface_w, surface_h);
-    // THE CLEAR IS OPAQUE BLACK. (The restored laptop window's invisible
-    // sizing band cleared to transparency, 2026-10-23 to 2026-10-24, went
-    // with the app's sizing frame: labwc draws the borders since then.)
+    // THE CLEAR IS OPAQUE BLACK.
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -663,7 +661,7 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // A plate record's `period` is re-pointed at its rows of THE PLATE'S BOUNDS
 // TEXTURE — two rows per plate record, the record's columns left to right:
 // row 2k {o0, o1, i0, i1}, row 2k + 1 {lo, hi, 0, 0}, the plate's rows as
-// render_waveform_columns gathered them (the cairo road's empty sentinels,
+// render_waveform_columns gathered them (the empty inner's sentinels,
 // y_lo − 1 among them, are why the format is signed, GL_RGBA16I — every
 // value a plate row of a canvas far under 32767 rows), zero past a record's
 // width and below the last record's rows.
@@ -675,10 +673,10 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // context remade after forget()); remade at a size change, else rewritten
 // whole. THE KEY IS COMPLETE: every texel is a function of the spans, the
 // dimensions and the list's columns at those spans, and the list's columns
-// are a function of the revision alone — the list sink copies the live
+// are a function of the revision alone — the sink copies the live
 // plate's stored bands into them once per revision, and the live plate's
 // bounds change only at a publication, which takes a new revision
-// (GuiPlateColumns::revision, render.h; GuiListCanvasSink::plate). A list
+// (GuiPlateColumns::revision, render.h; GuiCanvasSink::plate). A list
 // with no plate record leaves the texture and its key as they are: nothing
 // samples it, and its texels still answer the key.
 void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {

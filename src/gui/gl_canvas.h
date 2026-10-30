@@ -13,8 +13,9 @@ struct GuiCanvasPage;
 // is GLES 3.0 and neither EGL nor a window — the three programs and their
 // shaders, the backbuffer's texture, the canvas list's instance buffer, the
 // plate's bounds texture and the score viewer's page textures, the upload
-// walk and the frame's draw — in ONE
-// platform-neutral object each platform's present drives. THE PLATFORM KEEPS
+// walk and the frame's draw — in ONE platform-neutral object the
+// platform's present drives (the one canvas road, architect 2026-10-30).
+// THE PLATFORM KEEPS
 // WHAT IS ITS OWN: the display, the config, the context and the window's
 // surface, the make current, the swap interval, the swap and its failure
 // rule (GuiPlatform's EGL members; platform_android.cpp's ensure_gl_surface
@@ -22,10 +23,10 @@ struct GuiCanvasPage;
 //
 // THIS HEADER EXPOSES NO GL TYPE AND INCLUDES NO GL HEADER TO ITS CONSUMERS:
 // GL object names are spelled `unsigned int` and uniform locations `int`
-// (GLuint and GLint on every platform this builds for). The GL RENDERING
-// calls are gl_canvas.cpp's alone; each platform's translation unit includes
-// <GLES3/gl3.h> itself under the GL fence for its one driver-identity line
-// (glGetString), never for a render call.
+// (GLuint and GLint under the NDK's GLES 3.0). The GL RENDERING calls are
+// gl_canvas.cpp's alone; the platform's translation unit includes
+// <GLES3/gl3.h> itself for its one driver-identity line (glGetString), never
+// for a render call.
 
 // THE LOG SEAM: the owner names no platform's log. A failure of its setup —
 // a shader that fails to compile, a program that fails to link — is fatal
@@ -36,7 +37,7 @@ struct GuiGlCanvasHost {
     void (*fatal)(const char* message) = nullptr;
 };
 
-// ONE DAMAGE RECT in surface px, the shape both platforms' damage lists hold
+// ONE DAMAGE RECT in surface px, the shape the platform's damage list holds
 // (x, y, w, h), so a present passes its list in place.
 struct GuiGlRect { int x, y, w, h; };
 

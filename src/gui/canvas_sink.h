@@ -1,7 +1,6 @@
 #pragma once
 #include "render.h"   // GuiRect, GuiColor, GuiCanvasDotRun, GuiPlateColumns
 
-#include <cairo/cairo.h>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -18,54 +17,40 @@
 // the plate, so a plate from before a resize never crosses them), the
 // phase-reset lead-in ring, the nudged pairs' runs,
 // the marker stems, the cursor's dots, the scanner and the zoom anchor's
-// stem, in that order (on_redraw's paint-order block, paint_handler.cpp).
-// Each is a solid converted color on whole device pixels (ON WAVEFORM →
-// UNSCALED, waveform_line_px; the divider's rows scaled chrome, but solid
-// integral rects all the same), so the sink's vocabulary is three records:
-// a RECT, a DOTTED RUN (GuiCanvasDotRun, render.h: a column or a row of
-// one-px cells on a period's phase, counted from an origin) and THE PLATE
-// (the per-column bar bounds, GuiPlateColumns, with its two inks). EVERY
-// RECORD PAINTS ITS OWN COLOR straight over whatever lies under it, the
-// plate included, and none reads the canvas beneath it (architect
-// 2026-10-26, on the glass: the dots over the plate keep their own color,
-// closed_questions.md).
+// stem, in that order (build_canvas_list, paint_handler.cpp, after
+// on_redraw's paint-order block). Each is a solid converted color on whole
+// device pixels (ON WAVEFORM → UNSCALED, waveform_line_px; the divider's
+// rows scaled chrome, but solid integral rects all the same), so the sink's
+// vocabulary is three records: a RECT, a DOTTED RUN (GuiCanvasDotRun,
+// render.h: a column or a row of one-px cells on a period's phase, counted
+// from an origin) and THE PLATE (the per-column bar bounds, GuiPlateColumns,
+// with its two inks). EVERY RECORD PAINTS ITS OWN COLOR straight over
+// whatever lies under it, the plate included, and none reads the canvas
+// beneath it (architect 2026-10-26, on the glass: the dots over the plate
+// keep their own color, closed_questions.md).
 //
-// TWO IMPLEMENTATIONS, one per road:
-//   * THE CAIRO SINK (GuiCairoCanvasSink) — the cpu canvas on both
-//     platforms, the reference: each primitive is the cairo calls the
-//     painter made before the sink existed — begin / end the painter's
-//     cairo_save / cairo_restore with ANTIALIAS_NONE exactly where it set it
-//     (render_canvas, the center lines, the divider, the ring, the runs) and the default
-//     where it set none (the cursor, the scanner, the anchor, the stems); a
-//     rects call ONE fill of its rectangles under set_waveform_source (the
-//     body set_palette_source shares, render.cpp); a dots call ONE fill of
-//     its runs' 1 x 1 cells; the stems' DIRECT ROAD (direct_pixel_target,
-//     render.h: the converted word stored straight into the target inside
-//     its clip) and their A8 MASK ROAD where it is refused, both moved here
-//     unchanged in bytes; the plate the cache surface blitted OVER at the
-//     area's origin under the area's clip.
-//   * THE LIST SINK (GuiListCanvasSink) — the GL canvas on both platforms
-//     (the build's WARPTEMPO_CANVAS=gl, kGuiCanvasDrawList): each primitive
-//     appended to the frame's GuiCanvasDrawList in paint order, every word
-//     argb32_opaque_word(display_color(color)) — the word the cairo sink's
-//     source stores for that opaque color (display_color's channels are
-//     n/255, and cairo stores the byte n; cue_fill_pixel, cool_edit_paint.cpp,
-//     spells the identity) — the plate's two words its published inks' as the
-//     cairo road bakes them. The platform draws the list under a scissor to
-//     the list's clip (GuiPlatform::set_canvas_frame; gl_canvas.cpp's
-//     GuiGlCanvas::present_frame), the CPU never paints these pixels at all.
+// ONE SINK, ONE ROAD (architect 2026-10-30: the GL canvas the one road): the
+// sink appends each primitive to the frame's GuiCanvasDrawList in paint
+// order, every word argb32_opaque_word(display_color(color)) — the word a
+// cairo source stores for that opaque color (display_color's channels are
+// n/255, and cairo stores the byte n; cue_fill_pixel, cool_edit_paint.cpp,
+// spells the identity), so a canvas record and a chrome pixel of the same
+// color carry the same bytes — the plate's two words its published inks'.
+// The platform draws the list under a scissor to the list's clip
+// (GuiPlatform::set_canvas_frame; gl_canvas.cpp's GuiGlCanvas::present_frame);
+// the CPU never paints these pixels at all. A CONCRETE CLASS, no virtual
+// interface: the painters name GuiCanvasSink& as their road, and the one
+// implementation is the list's.
 //
-// THE TRANSPARENCY INVARIANT (design record §3.4): under the GL canvas the
-// backbuffer's canvas paint area is CLEARED (CAIRO_OPERATOR_CLEAR, on_redraw;
-// skipped where it is known clear already, 2026-10-14) where the cpu road
-// fills and paints it — the chrome ground and the
-// column's face skip it — so every CPU pixel inside the canvas paint area is
-// EITHER ALPHA 0 (the GPU's: the texture shader discards it and the canvas
-// drawn from the list shows) OR ALPHA 255 (an overlay's: every overlay over
-// the well is an opaque integral rectangle whose antialiasing blends against
-// its own ground alone, design record §2). A partial alpha there is a design
-// violation — a translucent or non-rectangular overlay would have to
-// composite on the CPU — and the screencap harness is its detector.
+// THE TRANSPARENCY INVARIANT (design record §3.4): the backbuffer's canvas
+// paint area is CLEARED (CAIRO_OPERATOR_CLEAR, on_redraw; skipped where it is
+// known clear already, 2026-10-14) — the chrome ground and the column's face
+// skip it — so every CPU pixel inside the canvas paint area is EITHER ALPHA 0
+// (the GPU's: the texture shader discards it and the canvas drawn from the
+// list shows) OR ALPHA 255 (an overlay's: every overlay over the well is an
+// opaque integral rectangle whose antialiasing blends against its own ground
+// alone, design record §2). A partial alpha there is a design violation — a
+// translucent or non-rectangular overlay would have to composite on the CPU.
 // THE HOLE IS ONE RECT, ITS TENANT THE CANVAS OR THE PAGE (architect
 // 2026-10-27, "1 a", the GPU page; design record §3.13): the list's clip is
 // the canvas paint area, or — while the score viewer's page stands
@@ -74,58 +59,25 @@
 // field ground and the page, GuiCanvasPage below) and which
 // paint_modal_box CLEARS at every rect that meets it, after every pass that
 // paints under the box (the lanes paint their exposure under it and the box
-// covered them on the cpu road, on_redraw's paint-order block step 12). The
-// invariant is the same inside it: alpha 0, or an opaque overlay's 255 (the
-// tooltip and the cards, the floater bit's two). The two tenants never stand
-// together, so the scissor, the rect every upload leaves out and the floater
-// bit's whole-walk rule are one rule for both.
+// covers them, on_redraw's paint-order block step 12). The invariant is the
+// same inside it: alpha 0, or an opaque overlay's 255 (the tooltip and the
+// cards, the floater bit's two). The two tenants never stand together, so
+// the scissor, the rect every upload leaves out and the floater bit's
+// whole-walk rule are one rule for both.
 //
-// WHERE IDENTITY RESTS, the three claims:
-//   * THE CPU CANVAS AGAINST THE TREE BEFORE THE SINK: the cairo
-//     sink's calls are the painters' own, argument for argument; where a
-//     painter's one path became a primitive's (the ring's top and bottom runs
-//     share one fill as before, the runs' cells now ordered run by run),
-//     every rectangle is integral under an integral translation with an
-//     opaque source and OVER, so a fill writes the source on exactly the
-//     union of its cells whatever their order in the path.
-//   * THE GL CANVAS AGAINST THE CPU CANVAS: a rect writes the same word on
-//     the same cells; a dotted run writes the word where (c − origin) mod
-//     period = phase, the same cells the cairo sink enumerates (the list
-//     moves `origin` back by whole periods to at or before the run's first
-//     cell, so the GPU's modulo never meets a negative operand); the plate's
-//     select is render_waveform's priority on the same bounds
-//     (render_waveform_columns, render.h, the one producer of both roads),
-//     the zero word where the cairo road leaves the plate transparent and
-//     the canvas shows; later records overwrite earlier ones in list order,
-//     the cairo road's paint order; the scissor is the cpu road's clip
-//     (the canvas paint area, the plate's area clip containing it); and the
-//     texture over it places every overlay pixel exactly (Milestone 1).
-//   * THE GPU PAGE AGAINST THE CPU PAGE (2026-10-27; GuiCanvasPage below):
-//     the field's word is the flat fill's (argb32_opaque_word of
-//     display_color, the rects' own claim); the page's texel is the gray
-//     byte g, written as g, and the cpu road's blitted pixel is FF g g g
-//     under either conversion bit (expand_gray's proof); the place is
-//     gui_page_place on the same interior and the same page size; the page
-//     chosen is the cpu painter's rule (the shown page, else the last
-//     painted, else the field). Where the two roads may differ in TIME, never
-//     in bytes: the cpu road shows a page when its ARGB surface lands, the
-//     GPU when its texture is held.
-//   * WHAT IS NOT IDENTICAL BY CONSTRUCTION: the list is rebuilt WHOLE from
-//     the frame's state where the cairo road repaints only the damaged part
-//     of a persistent backbuffer, so a canvas change some route forgot to
-//     damage shows at once on the GL canvas and stays stale on the cpu one —
-//     a damage defect on either build, never a road's difference.
-
-// THE ROAD, A BUILD CHOICE (CMakeLists.txt's WARPTEMPO_CANVAS, the compile
-// definition WARPTEMPO_CANVAS_GL, 2026-10-14 for both platforms): true on
-// either platform's gl build, false on either's cpu build, whose sink is
-// always the cairo one. A constexpr rather than a preprocessor fork, so the
-// cpu builds compile the list road too.
-#if defined(WARPTEMPO_CANVAS_GL) && WARPTEMPO_CANVAS_GL
-inline constexpr bool kGuiCanvasDrawList = true;
-#else
-inline constexpr bool kGuiCanvasDrawList = false;
-#endif
+// WHAT EACH RECORD WRITES, the rules the GPU's draw keeps: a rect writes its
+// word on its cells; a dotted run writes the word where (c − origin) mod
+// period = phase, the cells the run names (the sink moves `origin` back by
+// whole periods to at or before the run's first cell, so the GPU's modulo
+// never meets a negative operand); the plate's select is the column rows'
+// priority on render_waveform_columns' bounds (render.h, the plate's one
+// producer), the zero word where no bar covers and the canvas shows; later
+// records overwrite earlier ones in list order, the paint order; the
+// scissor is the canvas paint area, the plate's area clip containing it; and
+// the texture over it places every overlay pixel exactly (Milestone 1). THE
+// LIST IS REBUILT WHOLE from the frame's state at every frame that meets the
+// canvas paint area (on_redraw's canvas block), so no canvas pass is ever
+// cut to a damage rect.
 
 // ONE LIST RECORD. `r` the cells it may write, device px of the GUI's
 // client area (the platform adds its frame). A RECT writes `word` on r; a
@@ -165,24 +117,22 @@ struct GuiCanvasPrimitive {
 // THE PLATE'S PAYLOAD HAS ITS OWN LIFETIME (2026-10-14): `columns` holds the
 // bounds of the plate whose revision is `plate_revision`
 // (GuiPlateColumns::revision, render.h; 0 before the first plate), kept
-// across rebuilds and recopied by the list sink only when a plate of another
+// across rebuilds and recopied by the sink only when a plate of another
 // revision arrives — a revision's bounds never change, so the kept copy is
 // the copy a rebuild would make. The list's Plate records, when it has any,
 // draw that plate, and the platform re-uploads its bounds texture only when
 // the revision or the records' spans moved (GuiGlCanvas::upload_list).
 // THE GPU PAGE (architect 2026-10-27, "1 a": THE PICTURE FOLLOWS THE THUMB,
-// THE SOUND WAITS FOR THE LIFT; design record §3.13). Under the GL canvas the
-// score viewer's page is not blitted into the backbuffer: the box's interior
-// is the frame's hole (the list's clip) and the GPU draws it whole at every
-// swap — THE FIELD GROUND (`field`, the word the cpu road's flat fill
-// stores: argb32_opaque_word of display_color, the list sink's identity) and
-// over it THE PAGE, one R8 texture of THE GRAY STORE's bytes
-// (GuiScoreGrayPage, score_page_worker.h), texelFetched at integer
-// coordinates and written (g, g, g, 1) at gui_page_place's rect, the cpu
-// painter's centering. NO COLOR TABLE: the cpu road's page is FF g g g under
-// either conversion bit (expand_gray's proof, score_page_worker.cpp: sRGB ->
-// P3 is the identity on every neutral word, all 256 re-checked 2026-10-27),
-// so the gray byte is the window's byte on both roads.
+// THE SOUND WAITS FOR THE LIFT; design record §3.13). The score viewer's page
+// is not painted into the backbuffer: the box's interior is the frame's hole
+// (the list's clip) and the GPU draws it whole at every swap — THE FIELD
+// GROUND (`field`, argb32_opaque_word of display_color, the sink's word for
+// the field color) and over it THE PAGE, one R8 texture of THE GRAY STORE's
+// bytes (GuiScoreGrayPage, score_page_worker.h), texelFetched at integer
+// coordinates and written (g, g, g, 1) at gui_page_place's rect, centered.
+// NO COLOR TABLE: sRGB -> P3 is the identity on every neutral word (all 256
+// checked 2026-10-27, score_page_worker.h), so the gray byte is the window's
+// byte under either conversion bit.
 // TWO HALVES, the GUI's and the GL owner's:
 //   * THE REQUEST — written by the GUI at every frame's first damage rect
 //     (score_viewer_publish_gpu_page, score_viewer.cpp): whether the page
@@ -239,8 +189,7 @@ struct GuiCanvasPage {
 
 // THE PAGE'S PLACE IN THE BOX (the score viewer's, score_viewer.h's head):
 // a w x h page centered on both axes at whole device px, the integer
-// halves of the slack — the cpu painter's blit and the GPU page's draw read
-// this one arithmetic.
+// halves of the slack — the GPU page's draw reads this one arithmetic.
 inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
     return GuiRect{box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h};
 }
@@ -258,69 +207,24 @@ struct GuiCanvasDrawList {
 };
 GuiCanvasDrawList& gui_canvas_frame();
 
-// THE SINK. begin / end bracket one painter's scope (`aliased` the
-// painter's ANTIALIAS_NONE); rects and dots each one fill on the cairo road
-// in `color` (an authored color, display_color applied by the road);
-// stems_begin / stem_dots / stems_end the marker stems' bracket and their
-// dotted columns (rows [y, y + len) at column x, the phase counted from y);
-// plate the cache's published plate at `area`, the cairo road blitting
-// `surface` (null: nothing) and the list road reading `columns` (not
-// rendered: nothing), `inks` the published inks.
+// THE SINK (the head's ONE SINK, ONE ROAD). Constructed over the frame's list,
+// it rebuilds the list's records from empty (the clip and the floater bit
+// are the caller's), the generation moved at construction; the plate's
+// columns are kept while their revision holds (GuiCanvasDrawList's plate
+// payload). rects and dots append in `color` (an authored color,
+// display_color applied here); stem_dots a marker stem's dotted column (rows
+// [y, y + len) at column x, the phase counted from y); plate the cache's
+// published plate at `area` from its `columns` (not rendered: nothing),
+// `inks` the published inks.
 class GuiCanvasSink {
 public:
-    virtual ~GuiCanvasSink() = default;
-    virtual void begin(bool aliased) = 0;
-    virtual void end() = 0;
-    virtual void rects(std::span<const GuiRect> rs, GuiColor color) = 0;
-    virtual void dots(std::span<const GuiCanvasDotRun> runs,
-                      GuiColor color) = 0;
-    virtual void stems_begin() = 0;
-    virtual void stem_dots(int x, int y, int len, int period, int phase,
-                           GuiColor color) = 0;
-    virtual void stems_end() = 0;
-    virtual void plate(const GuiRect& area, cairo_surface_t* surface,
-                       const GuiPlateColumns& columns,
-                       WaveformPlateInks inks) = 0;
-};
-
-class GuiCairoCanvasSink final : public GuiCanvasSink {
-public:
-    explicit GuiCairoCanvasSink(cairo_t* cr) : cr_(cr) {}
-    void begin(bool aliased) override;
-    void end() override;
-    void rects(std::span<const GuiRect> rs, GuiColor color) override;
-    void dots(std::span<const GuiCanvasDotRun> runs, GuiColor color) override;
-    void stems_begin() override;
+    explicit GuiCanvasSink(GuiCanvasDrawList& list);
+    void rects(std::span<const GuiRect> rs, GuiColor color);
+    void dots(std::span<const GuiCanvasDotRun> runs, GuiColor color);
     void stem_dots(int x, int y, int len, int period, int phase,
-                   GuiColor color) override;
-    void stems_end() override;
-    void plate(const GuiRect& area, cairo_surface_t* surface,
-               const GuiPlateColumns& columns,
-               WaveformPlateInks inks) override;
-
-private:
-    cairo_t*          cr_;
-    DirectPixelTarget direct_;
-    bool              direct_ok_ = false;
-};
-
-// Rebuilds `list`'s records from empty (the clip and the floater bit are the
-// caller's), the generation moved at construction; the plate's columns are
-// kept while their revision holds (GuiCanvasDrawList's plate payload).
-class GuiListCanvasSink final : public GuiCanvasSink {
-public:
-    explicit GuiListCanvasSink(GuiCanvasDrawList& list);
-    void begin(bool) override {}
-    void end() override {}
-    void rects(std::span<const GuiRect> rs, GuiColor color) override;
-    void dots(std::span<const GuiCanvasDotRun> runs, GuiColor color) override;
-    void stems_begin() override {}
-    void stem_dots(int x, int y, int len, int period, int phase,
-                   GuiColor color) override;
-    void stems_end() override {}
-    void plate(const GuiRect& area, cairo_surface_t* surface,
-               const GuiPlateColumns& columns,
-               WaveformPlateInks inks) override;
+                   GuiColor color);
+    void plate(const GuiRect& area, const GuiPlateColumns& columns,
+               WaveformPlateInks inks);
 
 private:
     GuiCanvasDrawList& list_;

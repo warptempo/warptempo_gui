@@ -63,9 +63,9 @@ LIBGIT2_SHA256=1a4fbe7589e814777ae76b64734ad80f4ecad22cd33a22682a2aaea4ae5375e7
 # The icon renderer (src/gui/svg_icon.cpp): resvg's C API, pure Rust, built by
 # cargo from GitHub's tag archive, cached under a versioned name as libgit2's
 # is. Arch's resvg PKGBUILD sha256sums for the same URL matches the file. THE
-# ONE PIN FOR BOTH DEVICES: the laptop's CMakeLists.txt reads RESVG_VER and
-# RESVG_SHA256 from these lines, so a version step is an edit here alone. The
-# tarball's Cargo.lock pins every crate by its checksum.
+# ONE PIN: 85_resvg.sh reads these lines (the laptop builds no GUI since
+# 2026-10-30, so nothing else does), so a version step is an edit here alone.
+# The tarball's Cargo.lock pins every crate by its checksum.
 RESVG_VER=0.48.1
 RESVG_TAR=resvg-$RESVG_VER.tar.gz
 RESVG_URL=https://github.com/linebender/resvg/archive/refs/tags/v$RESVG_VER.tar.gz

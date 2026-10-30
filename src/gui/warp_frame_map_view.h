@@ -198,7 +198,7 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 //
 // The raw picture is the default; magnification is asked for. It is
 // universal: the painter reads the curve at each column's mapped SOURCE
-// frames through the warp map (render_waveform), so a target-view column
+// frames through the warp map (render_waveform_columns), so a target-view column
 // shows the gain and the expander of the source audio it draws.
 //
 // THE MAGNIFICATION LAMP IS THE ONLY EXCEPTIONS ROAD (architect 2026-09-23): no
@@ -208,7 +208,7 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // the curve being a function of the one source. The drawing excluded is a
 // plotted curve, a tint over the picture or a colour read from the gain: the
 // lit plate's per-column shade, which read the leveler's gain for one day,
-// is struck (architect 2026-09-25, render_waveform) and both lit bars are
+// is struck (architect 2026-09-25, render_waveform_columns) and both lit bars are
 // one flat colour, the inner's outline (waveform_line_px() thick) another
 // (2026-09-27).
 //
