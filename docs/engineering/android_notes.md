@@ -1836,9 +1836,11 @@ write pass). The design record's §3.3–3.7.
   moved, and at a remade texture's first walk; the frame is cleared; the list
   is drawn as one instanced draw under a scissor to the clip (rects, dotted
   runs by an integer modulo, the plate by `texelFetch` on a `GL_RGBA16I`
-  bounds texture — signed because the cairo road's empty-interval sentinel
-  `y_lo − 1` is −1 on the first band); then the texture triangle, its shader
-  discarding alpha-0 texels.
+  bounds texture — one row per plate record, each texel a column's four
+  quarter-row tips, the absent inner 0, 0; signed because the shader's
+  arithmetic on them is signed int — rasterized antialiased by
+  `kListFragmentShader`, the list's one blend); then the texture triangle,
+  its shader discarding alpha-0 texels.
 
 Not verified on this side: neither APK was compiled here (the Linux build
 compiles the shared code and the list road's GUI half); the planner builds

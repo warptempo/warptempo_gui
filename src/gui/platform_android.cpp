@@ -1026,7 +1026,8 @@ void GuiPlatform::ensure_gl_context() {
 // reads false, one line names it, and the painters convert nothing. Any
 // other failure, and a failure of the plain surface or of the make current,
 // is fatal (gl_fatal). The programs are built at the first make current and
-// the context's fixed state (no dither, no blend, no depth or scissor test) is
+// the context's fixed state (no dither, no depth or scissor test, the blend
+// off at rest and enabled for the canvas list's draw alone) is
 // set at each — both GuiGlCanvas's (gl_canvas.cpp) — and the swap interval 1
 // per surface.
 void GuiPlatform::ensure_gl_surface() {

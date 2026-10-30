@@ -11,7 +11,10 @@ proof method. Current behavior and its rationale live at the owning symbols
 *Note, 2026-10-30: the cpu canvas, the cairo sink and the laptop's twin
 were dropped with the laptop GUI (the CLI the laptop's one product). The GL
 canvas is the one road on the one platform. §5's identity proofs compare
-builds that no longer exist and are kept as history.*
+builds that no longer exist and are kept as history. The plate BLENDS since
+2026-10-30 — the waveform's exact-coverage antialiasing, source-over under
+the GL blend for the list's draw alone (`kListFragmentShader`,
+gl_canvas.cpp) — so this record's "nothing blends" claims are history too.*
 
 ## 1. The measurement that decided it
 

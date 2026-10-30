@@ -47,21 +47,16 @@ struct WaveformJob {
     int       area_w           = 0;
     int       area_h           = 0;
     // THE STEREO DIVIDER'S HEIGHT (waveform_divider_px(), render.h), a
-    // scaled length snapshotted with the rest of the geometry (the line
-    // width's reason below): channel 1's band starts under it.
+    // scaled length captured on the GUI thread at dispatch alongside
+    // area_w/area_h: channel 1's band starts under it. The worker must
+    // never read g_gui_scale_percent itself — the GUI thread mutates that
+    // via set_gui_scale_percent without draining in-flight jobs — so ALL
+    // geometry is snapshotted here for a coherent render; the bands are
+    // waveform_channel_band's off area_h and divider_px.
     int       divider_px       = 0;
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
 
-    // The waveform LINE WIDTH (waveform_line_px(), render.h), captured on the
-    // GUI thread at dispatch alongside area_w/area_h: the lit inner bar's
-    // outline erodes at that distance. The worker must never read
-    // g_gui_scale_percent itself — the GUI thread mutates that via
-    // set_gui_scale_percent without draining in-flight jobs — so ALL
-    // geometry is snapshotted here for a coherent render. (The waveform's
-    // vertical inset rode here too until its removal, architect 2026-10-09;
-    // the bands are waveform_channel_band's off area_h and divider_px.)
-    int       line_px          = 0;
     // (The plate's two INKS ride the cache's fingerprint and its publication,
     // not the job: the bounds the worker computes do not depend on them, the
     // sink reading the published inks, GuiCanvasSink::plate.)
@@ -193,8 +188,8 @@ private:
 // (force_synchronous_waveform_rebuild), touching only the supplied dest
 // slot, the audio handle's peak pyramid (read-only after load), the caller's
 // warp_frame_map snapshot, and the job-captured geometry scalars
-// (area_w/area_h/divider_px/line_px) — no other shared or main-thread state.
-// The line width and the MAGNIFICATION are passed in rather than read off
+// (area_w/area_h/divider_px) — no other shared or main-thread state.
+// The divider's height and the MAGNIFICATION are passed in rather than read off
 // live state so the render touches no gui_scale and no settings state: ALL
 // scale-dependent geometry is snapshotted on the GUI thread at dispatch,
 // closing the race with a mid-render set_gui_scale_percent. Such a job
@@ -210,7 +205,6 @@ void render_waveform_to_plate_columns(
     int area_w,
     int area_h,
     int divider_px,
-    int line_px,
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,

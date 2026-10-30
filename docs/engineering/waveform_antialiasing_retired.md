@@ -1,5 +1,7 @@
 # The Waveform Antialiasing — retired 2026-08-01, technique recorded
 
+*Note, 2026-10-30: the antialiasing RETURNED in another form — exact coverage of one filled contour through the column centers with a full-ink core, grown half a device pixel, rasterized on the GPU from the column tips and blended source-over (`render_waveform_columns`' head in render.h, `kListFragmentShader` in gl_canvas.cpp; the ruling in closed_questions.md). None of the technique below is in the tree; this record is history of the 2026-07-26 technique and its 2026-08-01 deletion.*
+
 RETIRED BY ARCHITECT VERDICT at the row-6 side-by-side (the kdenlive-redesign recolor, aliased-vs-AA binaries compared live): "subtle but noticeable — I prefer without it." The deciding property was PLACEMENT DETERMINISM — an aliased column is exactly one column, so where a marker visually sits is where it is, with no sub-pixel haze under the authoring gestures. The deletion reversed the earlier keep-it-inert future-proofing ruling by the architect's own word; this file is the reinstatement seed.
 
 ## What the AA was (the 2026-07-26 draw arc's soft passes; full detail in git history — the draw-arc commits of 2026-07-26 and the deletion commit whose reverse diff restores the code)

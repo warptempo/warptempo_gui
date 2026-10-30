@@ -19,9 +19,12 @@
 // covered (docs/engineering/gpu_canvas_2026_10.md §5). One reduction since,
 // pixel-neutral by its
 // key: the plate's bounds texture is re-sent only when its key moved
-// (upload_list, 2026-10-14). One addition: the score viewer's page drawn by
+// (upload_list, 2026-10-14). Two additions: the score viewer's page drawn by
 // the GPU (2026-10-27, the page program and its textures; the design record's
-// §3.13).
+// §3.13), and THE WAVEFORM'S ANTIALIASING (architect 2026-10-30): the plate's
+// fragment rasterizes the column tips at exact coverage and blends
+// source-over, the one blend the canvas does (kListFragmentShader's head;
+// the rule at render_waveform_columns' head, render.h).
 
 namespace {
 
@@ -82,17 +85,78 @@ constexpr const char* kCanvasFragmentShader =
 // column, 2 a row) writes it where (c − origin) % period = phase, c the row or
 // the column, never negative (the sink moved the origin back to the run's
 // first cell or before; GLSL ES 3.00 leaves % on a negative operand undefined);
-// THE PLATE (kind 3) fetches its column's two texels from the bounds texture
-// (an isampler2D over GL_RGBA16I: row `period` holds o0 o1 i0 i1, row `period`
-// + 1 lo hi, the column the pixel's offset in the rect) and makes
-// the plate's priority select (render_waveform_columns' head) on the plate's
-// row (the pixel's row less
-// `origin`): inside [i0, i1] the ink within [lo, hi] and the outline elsewhere,
-// else inside [o0, o1] the ink, else nothing. A word is cairo's 0xAARRGGBB with
-// A = 255, written as (R, G, B, 1) at k / 255 per channel, which the RGBA8
-// framebuffer stores as k — the texture triangle's own channel order.
+// THE PLATE (kind 3) is THE WAVEFORM'S ANTIALIASING (architect 2026-10-30;
+// the rule at render_waveform_columns' head, render.h), an INTEGER
+// ALGORITHM over the bounds texture
+// (an isampler2D over GL_RGBA16I: row `period` holds, per column of the
+// record, the four QUARTER-ROW tips {o_top, o_bot, i_top, i_bot}, the inner
+// absent where i_bot <= i_top) at the plate's row y (the pixel's row less
+// `origin`), in SUBROWS (quarter rows, kWaveformSubcells per row) and
+// SUBCOLUMNS (four per column, the pixel's own 4 x 4 subcells its coverage):
+//   * THE WINDOW: a mask is 20 bits, bit b the subrow 4y − 8 + b, the
+//     pixel's own subrows 4y .. 4y + 3 bits 8 .. 11 (kPixBits). Every mask
+//     is honest where every bit it was computed from is: the base masks on
+//     all 20 bits, the dilated ones (grown by up to 2) on bits 2 .. 17, the
+//     eroded ones (shrunk by up to 4) on bits 6 .. 13, which hold the pixel's
+//     with two bits to spare.
+//   * THE SEVEN COLUMNS i − 3 .. i + 3 are texelFetched (clamped into the
+//     record's width): the inner's sixteen subcolumns 4i − 6 .. 4i + 9 belong
+//     to columns i − 2 .. i + 2, whose contours read their neighbors.
+//   * THE BASE of subcolumn j of a column (base_bits): its bar's subrows
+//     [T, B − 1] UNION the contour's — the contour's top at the subcolumn's
+//     center interpolates this column's T and the NEARER neighbor's in
+//     eighths (j = 0..3: 3:5, 1:7, 7:1, 5:3; the left neighbor for j < 2,
+//     the right for j >= 2), the bottom likewise, and subrow k is in it iff
+//     8Tc <= 8k + 4 <= 8Bc, i.e. (8Tc + 3) / 8 <= k <= (8Bc − 4) / 8 — both
+//     operands non-negative (T >= 0, B >= 1 for a present bar), so / is
+//     floor. A neighbor beyond the record's side edge is the column itself
+//     (the contour runs flat to the edge), as is an absent inner neighbor; a
+//     subcolumn beyond the edge, or of an absent bar, has an empty base.
+//   * THE DILATION (grow 0.5 = the disc of radius kWaveformGrowSubcells = 2
+//     subcells, 13 offsets): at a subcolumn, the union of the five bases
+//     within two subcolumns, each grown vertically by 2, 1, 0 rows at
+//     |dx| = 0, 1, 2 (dilate: grow2, grow1 as shifted ORs). mo the outer's
+//     over the pixel's four subcolumns, mi the inner's over twelve (the
+//     erosion reads four either side).
+//   * THE EROSION (the outline's distance kWaveformSubcells ·
+//     waveform_line_px() = 4 subcells, the disc's 49 offsets): the inner's
+//     interior at a subcell holds iff the nine mi within four subcolumns,
+//     each shrunk vertically by 4, 3, 3, 2, 0 rows at |dx| = 0..4 (erode:
+//     shrink4 .. shrink2 as shifted ANDs), are all set. BEYOND THE RECORD'S
+//     SIDE EDGES AND BEYOND THE BAND'S ROWS mi COUNTS AS SET (`outside`, the
+//     all-ones mask): the waveform continues off screen, so no vertical line
+//     at the area's sides and none at the band's edges.
+//   * THE COVERAGE per pixel, in sixteenths (pixel_count, a 16-bit popcount
+//     — bitCount is GLSL ES 3.10's, not 3.00's): n_o = |(mo ∪ mi) ∩ pixel|,
+//     n_i = |mi ∩ pixel|, n_t = |interior ∩ pixel|; the outline's coverage
+//     is (n_i − n_t) / 16, never negative (the interior is inside mi).
+//   * THE COMPOSITE, source-over in byte space: the fragment writes the
+//     PREMULTIPLIED source  ink · cov_o · (1 − cov_ol) + outline · cov_ol
+//     with alpha 1 − (1 − cov_o)(1 − cov_ol), and the blend
+//     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA) (present_frame) lays it on
+//     the pixel beneath, G: the result is lerp(lerp(G, ink, cov_o), outline,
+//     cov_ol), rounded once to a byte. Where the core is (cov_o = 1, cov_ol 0
+//     or 1) the factors are exactly 1 and 0 and the word lands exactly;
+//     where nothing covers (n_o = 0) the fragment discards and the plate
+//     stays transparent there.
+//   * TWO EXACT FAST PATHS, each a provable subset of the rule above:
+//     (a) DISCARD where no bar can reach the pixel — its subrows lie more
+//     than two subrows outside the hull of the outer bars of columns
+//     i − 1 .. i + 1 and outside the hull of their present inner bars (the
+//     contour between two columns lies within their two extents, and the
+//     dilation reaches two subrows); (b) THE CORE — the pixel's subrows
+//     inside its own column's outer bar give cov_o = 1 (the base is inside
+//     the dilated), and cov_ol = 0 when no inner is present among
+//     i − 1 .. i + 1, or when the square of four subrows round the pixel lies
+//     inside the own and both in-record neighbors' inner bars (the square
+//     contains the erosion's disc; a neighbor beyond the edge counts as
+//     set): the ink is written opaque.
+// A word is cairo's 0xAARRGGBB with A = 255, written as (R, G, B, 1) at
+// k / 255 per channel for every record but the plate's fringe, which the
+// RGBA8 framebuffer stores as k — the texture triangle's own channel order.
 // Primitives write in instance order (GL's primitive order within a draw), so a
-// later record overwrites an earlier one, the paint order.
+// later record overwrites an earlier one, the paint order; under the blend an
+// opaque record's word lands exactly (src · 1 + dst · 0).
 constexpr const char* kListVertexShader =
     "#version 300 es\n"
     "precision highp float;\n"
@@ -124,9 +188,48 @@ constexpr const char* kListFragmentShader =
     "flat in ivec4 v_param;\n"
     "flat in uvec2 v_words;\n"
     "out vec4 o_color;\n"
-    "vec4 word_color(uint w) {\n"
-    "    return vec4(float((w >> 16u) & 255u), float((w >> 8u) & 255u),\n"
-    "                float(w & 255u), 255.0) / 255.0;\n"
+    "vec3 word_rgb(uint w) {\n"
+    "    return vec3(float((w >> 16u) & 255u), float((w >> 8u) & 255u),\n"
+    "                float(w & 255u)) / 255.0;\n"
+    "}\n"
+    // The plate's helpers (the head's plate paragraph): a mask's bit b is the
+    // subrow k0 + b, b in [0, 20); range_bits clips a subrow run to the window.
+    "uint range_bits(int lo, int hi) {\n"
+    "    int a = max(lo, 0);\n"
+    "    int b = min(hi, 19);\n"
+    "    if (b < a) return 0u;\n"
+    "    return ((1u << (b - a + 1)) - 1u) << a;\n"
+    "}\n"
+    "uint base_bits(ivec2 own, ivec2 nb, int j, int k0) {\n"
+    "    int wn = (j == 0 || j == 3) ? 3 : 1;\n"
+    "    int wc = 8 - wn;\n"
+    "    int t8 = wn * nb.x + wc * own.x;\n"
+    "    int b8 = wn * nb.y + wc * own.y;\n"
+    "    return range_bits((t8 + 3) / 8 - k0, (b8 - 4) / 8 - k0) |\n"
+    "           range_bits(own.x - k0, own.y - 1 - k0);\n"
+    "}\n"
+    "uint grow1(uint m) { return m | (m << 1) | (m >> 1); }\n"
+    "uint grow2(uint m) { return grow1(m) | (m << 2) | (m >> 2); }\n"
+    "uint shrink2(uint m) { return m & (m << 1) & (m >> 1) & (m << 2) & (m >> 2); }\n"
+    "uint shrink3(uint m) { return shrink2(m) & (m << 3) & (m >> 3); }\n"
+    "uint shrink4(uint m) { return shrink3(m) & (m << 4) & (m >> 4); }\n"
+    "uint dilate(uint l2, uint l1, uint c, uint r1, uint r2) {\n"
+    "    return l2 | grow1(l1) | grow2(c) | grow1(r1) | r2;\n"
+    "}\n"
+    "uint erode(uint a4, uint a3, uint a2, uint a1, uint c,\n"
+    "           uint b1, uint b2, uint b3, uint b4) {\n"
+    "    return a4 & shrink2(a3) & shrink3(a2) & shrink3(a1) & shrink4(c) &\n"
+    "           shrink3(b1) & shrink3(b2) & shrink2(b3) & b4;\n"
+    "}\n"
+    "int pop16(uint v) {\n"
+    "    v = v - ((v >> 1) & 0x5555u);\n"
+    "    v = (v & 0x3333u) + ((v >> 2) & 0x3333u);\n"
+    "    v = (v + (v >> 4)) & 0x0F0Fu;\n"
+    "    return int((v + (v >> 8)) & 0x1Fu);\n"
+    "}\n"
+    "int pixel_count(uint m0, uint m1, uint m2, uint m3) {\n"
+    "    return pop16(((m0 >> 8) & 0xFu) | ((m1 >> 4) & 0xF0u) |\n"
+    "                 (m2 & 0xF00u) | ((m3 << 4) & 0xF000u));\n"
     "}\n"
     "void main() {\n"
     "    int px = int(gl_FragCoord.x);\n"
@@ -138,19 +241,120 @@ constexpr const char* kListFragmentShader =
     "        int c = ((kind == 1) ? py : px) - v_param.z;\n"
     "        if (c % v_param.y != v_param.w) discard;\n"
     "    } else if (kind == 3) {\n"
+    "        int W = v_rect.z;\n"
     "        int i = px - v_rect.x;\n"
-    "        ivec4 a = texelFetch(u_columns, ivec2(i, v_param.y), 0);\n"
-    "        ivec4 b = texelFetch(u_columns, ivec2(i, v_param.y + 1), 0);\n"
     "        int y = py - v_param.z;\n"
-    "        if (y >= a.z && y <= a.w) {\n"
-    "            o_color = word_color((y >= b.x && y <= b.y) ? v_words.x\n"
-    "                                                         : v_words.y);\n"
-    "            return;\n"
+    "        int k0 = 4 * y - 8;\n"
+    "        ivec4 col[7];\n"
+    "        bool inp[7];\n"
+    "        bool lit[7];\n"
+    "        for (int d = 0; d < 7; ++d) {\n"
+    "            int c = i + d - 3;\n"
+    "            inp[d] = c >= 0 && c < W;\n"
+    "            col[d] = texelFetch(u_columns, ivec2(clamp(c, 0, W - 1), v_param.y), 0);\n"
+    "            lit[d] = inp[d] && col[d].w > col[d].z;\n"
     "        }\n"
-    "        if (y < a.x || y > a.y) discard;\n"
+    "        int ylo = 4 * y;\n"
+    "        int yhi = ylo + 3;\n"
+    "        int tmin_o = min(col[2].x, min(col[3].x, col[4].x));\n"
+    "        int bmax_o = max(col[2].y, max(col[3].y, col[4].y));\n"
+    "        int tmin_i = 1 << 20;\n"
+    "        int bmax_i = -(1 << 20);\n"
+    "        for (int d = 2; d <= 4; ++d) {\n"
+    "            if (lit[d]) {\n"
+    "                tmin_i = min(tmin_i, col[d].z);\n"
+    "                bmax_i = max(bmax_i, col[d].w);\n"
+    "            }\n"
+    "        }\n"
+    "        bool reach_o = yhi >= tmin_o - 2 && ylo <= bmax_o + 1;\n"
+    "        bool reach_i = yhi >= tmin_i - 2 && ylo <= bmax_i + 1;\n"
+    "        if (!reach_o && !reach_i) discard;\n"
+    "        if (col[3].x <= ylo && yhi <= col[3].y - 1) {\n"
+    "            bool core = !(lit[2] || lit[3] || lit[4]);\n"
+    "            if (!core) {\n"
+    "                core = true;\n"
+    "                for (int d = 2; d <= 4; ++d) {\n"
+    "                    if (inp[d])\n"
+    "                        core = core && lit[d] && col[d].z <= ylo - 4 &&\n"
+    "                               yhi + 4 <= col[d].w - 1;\n"
+    "                }\n"
+    "            }\n"
+    "            if (core) {\n"
+    "                o_color = vec4(word_rgb(v_words.x), 1.0);\n"
+    "                return;\n"
+    "            }\n"
+    "        }\n"
+    "        uint bo[8];\n"
+    "        for (int q = 0; q < 8; ++q) {\n"
+    "            int sp = q + 2;\n"
+    "            int d = 2 + sp / 4;\n"
+    "            int j = sp & 3;\n"
+    "            int e = d + ((j < 2) ? -1 : 1);\n"
+    "            bo[q] = inp[d] ? base_bits(col[d].xy, inp[e] ? col[e].xy : col[d].xy, j, k0)\n"
+    "                           : 0u;\n"
+    "        }\n"
+    "        uint bi[16];\n"
+    "        for (int q = 0; q < 16; ++q) {\n"
+    "            int sp = q + 2;\n"
+    "            int d = 1 + sp / 4;\n"
+    "            int j = sp & 3;\n"
+    "            int e = d + ((j < 2) ? -1 : 1);\n"
+    "            bi[q] = lit[d] ? base_bits(col[d].zw, lit[e] ? col[e].zw : col[d].zw, j, k0)\n"
+    "                           : 0u;\n"
+    "        }\n"
+    "        int band_lo = 4 * (v_rect.y - v_param.z);\n"
+    "        int band_hi = 4 * (v_rect.y + v_rect.w - v_param.z);\n"
+    "        uint outside = range_bits(0, band_lo - 1 - k0) | range_bits(band_hi - k0, 19);\n"
+    "        uint mo[4];\n"
+    "        for (int m = 0; m < 4; ++m)\n"
+    "            mo[m] = dilate(bo[m], bo[m + 1], bo[m + 2], bo[m + 3], bo[m + 4]);\n"
+    "        uint mi[12];\n"
+    "        for (int q = 0; q < 12; ++q) {\n"
+    "            int s = 4 * i - 4 + q;\n"
+    "            mi[q] = (s >= 0 && s < 4 * W)\n"
+    "                ? (dilate(bi[q], bi[q + 1], bi[q + 2], bi[q + 3], bi[q + 4]) | outside)\n"
+    "                : 0xFFFFFu;\n"
+    "        }\n"
+    "        uint mt[4];\n"
+    "        for (int m = 0; m < 4; ++m)\n"
+    "            mt[m] = erode(mi[m], mi[m + 1], mi[m + 2], mi[m + 3], mi[m + 4],\n"
+    "                          mi[m + 5], mi[m + 6], mi[m + 7], mi[m + 8]);\n"
+    "        int n_o = pixel_count(mo[0] | mi[4], mo[1] | mi[5], mo[2] | mi[6], mo[3] | mi[7]);\n"
+    "        int n_i = pixel_count(mi[4], mi[5], mi[6], mi[7]);\n"
+    "        int n_t = pixel_count(mt[0], mt[1], mt[2], mt[3]);\n"
+    "        if (n_o == 0) discard;\n"
+    "        float cov_o  = float(n_o) / 16.0;\n"
+    "        float cov_ol = float(n_i - n_t) / 16.0;\n"
+    "        o_color = vec4(word_rgb(v_words.x) * (cov_o * (1.0 - cov_ol)) +\n"
+    "                       word_rgb(v_words.y) * cov_ol,\n"
+    "                       1.0 - (1.0 - cov_o) * (1.0 - cov_ol));\n"
+    "        return;\n"
     "    }\n"
-    "    o_color = word_color(v_words.x);\n"
+    "    o_color = vec4(word_rgb(v_words.x), 1.0);\n"
     "}\n";
+
+// THE SHADER'S LITERALS ARE render.h's CONSTANTS: the shader is a string, so
+// this is the binding. kWaveformSubcells is the 4 of `4 * y`, the eighths'
+// 3:5 / 1:7 weights (two subcells to the half), the four-bit pixel slices
+// and the 16 of the coverage; kWaveformGrowSubcells is grow2's disc and its
+// 2, 1, 0 rows at |dx| = 0, 1, 2; the erosion's disc is kWaveformSubcells ·
+// waveform_line_px() = shrink4's 4 and its 4, 3, 3, 2, 0 rows at |dx| = 0..4
+// (disc_rows: the largest g with g² + dx² <= r²).
+constexpr int disc_rows(int r, int dx) {
+    int g = 0;
+    while ((g + 1) * (g + 1) + dx * dx <= r * r) ++g;
+    return g;
+}
+constexpr int kWaveformErodeSubcells = kWaveformSubcells * waveform_line_px();
+static_assert(kWaveformSubcells == 4,
+              "kListFragmentShader spells the 4x grid as literals");
+static_assert(kWaveformGrowSubcells == 2 && disc_rows(2, 0) == 2 &&
+                  disc_rows(2, 1) == 1 && disc_rows(2, 2) == 0,
+              "kListFragmentShader's dilate is the disc of radius 2");
+static_assert(kWaveformErodeSubcells == 4 && disc_rows(4, 0) == 4 &&
+                  disc_rows(4, 1) == 3 && disc_rows(4, 2) == 3 &&
+                  disc_rows(4, 3) == 2 && disc_rows(4, 4) == 0,
+              "kListFragmentShader's erode is the disc of radius 4");
 
 // THE PAGE PROGRAM (architect 2026-10-27, "1 a"; GuiCanvasPage,
 // canvas_sink.h): the texture triangle's vertex shader over the whole
@@ -250,12 +454,17 @@ GLuint link_canvas_program(const GuiGlCanvasHost& host, const char* vs_source,
 } // namespace
 
 // THE CONTEXT'S FIXED STATE, set at each make current (the platform's
-// surface road calls it right after its make current): nothing dithers,
-// blends or tests, so a texel and a list word reach the framebuffer as
+// surface road calls it right after its make current): nothing dithers or
+// tests, and THE BLEND IS OFF AT REST — its function set once here, the
+// premultiplied source-over the plate's fringe needs (kListFragmentShader's
+// composite), and enabled for the canvas list's draw alone (present_frame,
+// 2026-10-30) — so a texel and an opaque list word reach the framebuffer as
 // written.
 void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_DITHER);
     glDisable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_SCISSOR_TEST);
 }
@@ -277,7 +486,7 @@ void GuiGlCanvas::ensure_programs() {
     // the default one the texture triangle draws from — over one instance
     // buffer, and the plate's bounds texture on unit 1 (GL_RGBA16I, NEAREST:
     // an integer texture with a filtering minifier is incomplete), seeded
-    // 1 x 2 so the sampler is complete before the first plate.
+    // 1 x 1 so the sampler is complete before the first plate.
     if (!list_program_) {
         const GLuint prog =
             link_canvas_program(host_, kListVertexShader, kListFragmentShader);
@@ -308,13 +517,13 @@ void GuiGlCanvas::ensure_programs() {
         glBindTexture(GL_TEXTURE_2D, columns_texture_);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        const GLshort seed[8] = {};
+        const GLshort seed[4] = {};
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16I, 1, 2, 0, GL_RGBA_INTEGER,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16I, 1, 1, 0, GL_RGBA_INTEGER,
                      GL_SHORT, seed);
         columns_w_ = 1;
-        columns_h_ = 2;
+        columns_h_ = 1;
         // The seed is no upload: the first plate packs whatever its key.
         columns_uploaded_ = false;
         glActiveTexture(GL_TEXTURE0);
@@ -395,7 +604,11 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // THE DRAW: the canvas list first, then the texture over it. THE LIST
 // (kListVertexShader's head; GuiCanvasPrimitive, canvas_sink.h): its
 // records as instances in list order, one instanced draw, the scissor
-// the canvas clip — its
+// the canvas clip, UNDER THE BLEND (GL_BLEND enabled for this draw alone
+// and disabled after, its function the fixed state's premultiplied
+// source-over, bind_fixed_state): the plate's antialiased fringe blends
+// with the ground and the grid drawn before it, and every other record,
+// alpha 1, lands exactly as it would unblended (2026-10-30) — its
 // instances re-made only when the list's generation moved, and the plate's
 // bounds texture, inside that, only when the plate's key moved
 // (upload_list). THE TEXTURE: one full-screen
@@ -414,10 +627,12 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // THE PICTURE IS THE BACKBUFFER'S BYTES EXACTLY outside the clip and
 // under every overlay: an 8-bit UNORM texel
 // fetched without a filter round-trips to the same 8-bit value in the
-// RGBA8 framebuffer, dithering is off, nothing blends, and the framebuffer
-// is plain RGBA (the passthrough colorspace encodes nothing — never an
-// sRGB framebuffer); inside the clip it is the list's words, each a
-// chrome pixel's bytes for its color by the sink's construction.
+// RGBA8 framebuffer, dithering is off, the texture's draw is unblended, and
+// the framebuffer is plain RGBA (the passthrough colorspace encodes nothing
+// — never an sRGB framebuffer, which is what makes the plate's blend the
+// byte-space blend ruled); inside the clip it is the list's words, each a
+// chrome pixel's bytes for its color by the sink's construction, and on the
+// plate's fringe their coverage blend (kListFragmentShader).
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
                                 GuiCanvasDrawList* list,
@@ -506,8 +721,10 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, columns_texture_);
             glBindVertexArray(list_vao_);
+            glEnable(GL_BLEND);
             glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4,
                                   list_instances_);
+            glDisable(GL_BLEND);
             glBindVertexArray(0);
             glActiveTexture(GL_TEXTURE0);
             glDisable(GL_SCISSOR_TEST);
@@ -658,13 +875,12 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // them (a rect, a run's origin, a plate's row 0 alike), the instance buffer rewritten
 // whole — asked only when the list's generation moved, so at every rebuild of
 // the records (the scanner's and the cursor's among them; the buffer is small).
-// A plate record's `period` is re-pointed at its rows of THE PLATE'S BOUNDS
-// TEXTURE — two rows per plate record, the record's columns left to right:
-// row 2k {o0, o1, i0, i1}, row 2k + 1 {lo, hi, 0, 0}, the plate's rows as
-// render_waveform_columns gathered them (the empty inner's sentinels,
-// y_lo − 1 among them, are why the format is signed, GL_RGBA16I — every
-// value a plate row of a canvas far under 32767 rows), zero past a record's
-// width and below the last record's rows.
+// A plate record's `period` is re-pointed at its row of THE PLATE'S BOUNDS
+// TEXTURE — ONE ROW PER PLATE RECORD (2026-10-30), the record's columns left
+// to right, each texel the column's four quarter-row tips {o_top, o_bot,
+// i_top, i_bot} as render_waveform_columns gathered them (GL_RGBA16I: a
+// plate row times four of a canvas far under 8191 rows; the absent inner is
+// 0, 0), zero past a record's width; rows = max(1, the plate records).
 // THE BOUNDS TEXTURE HAS ITS OWN LIFETIME (2026-10-14): it is packed and sent
 // only when its KEY moved — the list's plate revision, the plate records'
 // spans in list order (each its offset into the list's columns and its
@@ -691,7 +907,7 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
         max_w = std::max(max_w, p.r.w);
     }
     const int plates = static_cast<int>(spans.size());
-    const int rows   = std::max(2, 2 * plates);
+    const int rows   = std::max(1, plates);
     const bool pack =
         plates > 0 &&
         !(columns_uploaded_ && list.plate_revision == columns_revision_ &&
@@ -731,17 +947,14 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
                     const WaveformColumnRows& c =
                         list.columns[static_cast<size_t>(p.period + j)];
                     GLshort* a = texel(row, j);
-                    a[0] = clamp16(c.o0);
-                    a[1] = clamp16(c.o1);
-                    a[2] = clamp16(c.i0);
-                    a[3] = clamp16(c.i1);
-                    GLshort* b = texel(row + 1, j);
-                    b[0] = clamp16(c.lo);
-                    b[1] = clamp16(c.hi);
+                    a[0] = clamp16(c.o_top);
+                    a[1] = clamp16(c.o_bot);
+                    a[2] = clamp16(c.i_top);
+                    a[3] = clamp16(c.i_bot);
                 }
             }
             in.param[1] = row;
-            row += 2;
+            row += 1;
             break;
         }
         instances.push_back(in);

@@ -129,9 +129,10 @@ std::string history_diff_label(bool disabled, std::string_view token);
 // Lives for the life of the project set (run_project, main.cpp); re-rendered
 // when any input to the plate's render (render_waveform_columns) has
 // changed. THE PLATE IS COLUMN BOUNDS (2026-10-13; GuiPlateColumns, render.h):
-// the two bands' per-column bar bounds, no pixel kept on the CPU — the
-// frame's draw list carries them (GuiCanvasSink::plate) and the GPU draws
-// the priority select from them; the redraw path paints markers / flags /
+// the two bands' per-column quarter-row tips, no pixel kept on the CPU — the
+// frame's draw list carries them (GuiCanvasSink::plate) and the GPU
+// rasterizes the antialiased plate from them (kListFragmentShader,
+// 2026-10-30); the redraw path paints markers / flags /
 // playhead / timestamp around them.
 struct WaveformCache {
     int              width   = 0;     // the live plate's width  (== area.w when valid)
@@ -157,7 +158,7 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, divider_px, line_px, the plate's two
+    // vp_start, vp_end, area_w, area_h, divider_px, the plate's two
     // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
     // an input the plate's PIXELS depend on (the inks through its
     // publication), and each is keyed BY FIELD rather than through whatever else happens
@@ -173,26 +174,23 @@ struct WaveformCache {
     int       fp_area_h      = 0;
     // THE STEREO DIVIDER'S HEIGHT the live pixels were laid out with
     // (waveform_divider_px(), render.h): channel 1's band starts under it, so
-    // a scale that moves it re-renders the plate BY FIELD, keyed directly.
+    // a scale that moves it re-renders the plate BY FIELD, keyed directly. A
+    // fingerprint field exists iff it is a render input (the type rule's
+    // shape): the lit outline's erosion distance, the GPU shader's constant,
+    // is neither.
     int       fp_divider_px  = -1;
-    // THE LINE WIDTH the live pixels were rendered with (waveform_line_px(),
-    // render.h): the lit inner bar's outline erodes at that distance, so a
-    // change that moves it re-renders the plate BY FIELD, keyed directly. (One
-    // device px at every scale since 2026-10-09; the field stays, the width
-    // being the job's input.)
-    int       fp_line_px = -1;
     // THE TWO INKS the live plate is published with (the `waveform_ink` and
     // `waveform_outline` roles, waveform_plate_inks, render.h): the sink
     // writes their words (GuiCanvasSink::plate), so an install that moves
     // either (the settings page's `waveform` commit, install_program_palette,
     // palette_file.h) republishes the plate BY FIELD, keyed directly like the
-    // line width (architect 2026-10-03; palette roles since 2026-10-07).
+    // divider's height (architect 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};
     // THE GAIN FIELD the live pixels were rendered under — the derived
     // curve's version where the picture is magnified, 0 where the gate answers
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
     // rule). A FINGERPRINT FIELD in its own right, keyed directly like the
-    // line width: the gain is an input to the tip mapping alone, so nothing else
+    // divider's height: the gain is an input to the tip mapping alone, so nothing else
     // about the plate would move if it changed by itself (the magnification
     // lamp moves no map), and without it a plate rendered at one gain could go
     // on being drawn after the gain changed. The field alone is enough to
@@ -229,7 +227,6 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_divider_px  = -1;
-    int       pending_fp_line_px = -1;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
@@ -253,7 +250,6 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_divider_px  = 0;   // GUI-captured divider height
-    int       supersede_line_px     = 0;   // GUI-captured waveform line width
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
@@ -846,25 +842,19 @@ private:
         int      area_w        = 0;
         int      area_h        = 0;
         // The stereo divider's height (waveform_divider_px(), render.h),
-        // captured beside the area's for the same reason as the line width
-        // below: channel 1's band starts under it, so it is both a render
-        // input and a fingerprint field.
+        // captured on the GUI thread beside area_w/area_h so the worker
+        // render reads no scale state (the GUI thread mutates that without
+        // draining jobs): channel 1's band starts under it, so it is both a
+        // render input and a fingerprint field; the area's dimensions and
+        // divider_px are the plate's whole layout.
         int      divider_px    = 0;
-        // The waveform LINE WIDTH (waveform_line_px()), captured on the GUI
-        // thread beside area_w/area_h so the worker render reads no scale
-        // state (the GUI thread mutates that without draining jobs): the lit
-        // inner bar's outline erodes at that distance, so it is both a render
-        // input and a fingerprint field. (The waveform's vertical inset rode
-        // here until its removal, architect 2026-10-09; the area's dimensions
-        // and divider_px above are the plate's whole layout.)
-        int      line_px       = 0;
         // The plate's two INKS (waveform_plate_inks), captured the same way
         // and for the same reason: the plate bakes their words, so they are
         // both render inputs and a fingerprint field.
         WaveformPlateInks inks{};
         // The waveform PICTURE's gain field (waveform_gain_fingerprint): nonzero
         // means apply the audio's derived curve. It is both the render input
-        // and the fingerprint field, exactly like line_px above: it feeds the
+        // and the fingerprint field, exactly like divider_px above: it feeds the
         // tip mapping and nothing else, so nothing else would move if it
         // changed alone.
         uint64_t gain_hash = 0;

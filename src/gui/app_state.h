@@ -5015,9 +5015,10 @@ struct AppState {
     // compressor) — is two flat bars per column, in both audio views: the
     // levelled, expanded OUTER and the compressed, expanded INNER over it,
     // both in the plate's ink, the inner outlined in an erosion at distance
-    // t = waveform_line_px() of its own (one device px at every scale since
-    // 2026-10-09, "on waveform → unscaled"; t snapshotted on the plate job and
-    // in its fingerprint, render.h and waveform_cache.cpp) (architect
+    // waveform_line_px() of its own (one device px at every scale since
+    // 2026-10-09, "on waveform → unscaled"; the GPU shader's constant,
+    // antialiased with its shape since 2026-10-30, kListFragmentShader,
+    // gl_canvas.cpp) (architect
     // 2026-09-25/27, the inks the palette's `waveform_ink` and
     // `waveform_outline` roles — the rule is at render_waveform_columns'
     // declaration); DARK,

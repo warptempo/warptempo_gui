@@ -4184,8 +4184,8 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     //
     // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): the list takes
     // the live COLUMN BOUNDS (WaveformCache::columns) and the published
-    // inks, the GPU drawing the plate's priority select
-    // (GuiCanvasSink::plate).
+    // inks, the GPU rasterizing the antialiased plate from them
+    // (GuiCanvasSink::plate; kListFragmentShader, gl_canvas.cpp).
     sink.plate(area, wf_cache.columns, wf_cache.fp_inks);
 }
 

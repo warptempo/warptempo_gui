@@ -48,7 +48,9 @@ public:
     void set_host(const GuiGlCanvasHost& host) { host_ = host; }
 
     // THE CONTEXT'S FIXED STATE, set at each make current: no dither, no
-    // blend, no depth or scissor test.
+    // depth or scissor test, the blend off at rest with its function set
+    // (the plate's premultiplied source-over, enabled for the canvas list's
+    // draw alone, 2026-10-30).
     void bind_fixed_state();
     // THE THREE PROGRAMS, built at the first make current (each a no-op once
     // made): the texture triangle's, the canvas list's with its vertex

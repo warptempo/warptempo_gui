@@ -454,16 +454,15 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
-// the plate's render, its product the bounds the GL canvas's plate reads
-// (waveform_cache.cpp's render_waveform_to_plate_columns; gl_canvas.cpp's
-// select).
+// the plate's render, its product the quarter-row tips the GL canvas's plate
+// rasterizes (waveform_cache.cpp's render_waveform_to_plate_columns;
+// gl_canvas.cpp's kListFragmentShader).
 bool render_waveform_columns(GuiRect area,
                              int col0,
                              const GuiAudio& audio,
                              int channel,
                              const WaveformBasis& basis,
                              const WaveformGainCurve* gain_or_null,
-                             int outline_px,
                              int plate_w,
                              int plate_h,
                              const std::vector<WarpFrameMapSegment>* warp_frame_map,
@@ -541,36 +540,28 @@ bool render_waveform_columns(GuiRect area,
         return v;
     };
 
-    // A column is ONE HARD BAR: its own raw min/max interval, floored to rows,
-    // its rows inclusive, which the GPU's select fills with the opaque ink
-    // word (with the lamp lit, the inner bar stands over the outer, both in
-    // the ink word, the inner's outline (outline_px thick) in the outline
-    // word — the rule is at this function's declaration).
-    // There is no fractional coverage and no inter-column connectivity of
-    // any kind — a spike stands alone, exactly as in a classic min/max
-    // renderer; the inner's outline READS the neighbouring columns' rows to
-    // decide which of the bar's own pixels are its border, and adds none.
+    // A column is ITS TWO TIPS IN QUARTER ROWS (architect 2026-10-30; the
+    // rule is at this function's declaration): its own raw min/max interval
+    // quantized to the 4x grid, the bar the subrows [T, B − 1], which the
+    // GPU fills in full ink as the shape's core, joins to its neighbors by
+    // the contour through the column centers, grows by half a device px and
+    // rasterizes at exact coverage (with the lamp lit, the inner bar stands
+    // over the outer, both in the ink, the inner's one-px outline — the
+    // erosion of the grown inner, on the GPU — in the outline). This
+    // function reads no neighbor and holds no interior: every column is its
+    // own tips, so a column's tips are a pure function of its own span and
+    // the picture a pure function of the plate's tips.
     //
-    // THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, after the
-    // side-by-side against a snapshotted AA binary: "subtle but noticeable — I
-    // prefer without it"). What went is named here so its absence reads as a
-    // decision rather than an omission: the Wu tip polylines and their
-    // max-coverage compositing, the fractional boundary rows, the 256-entry
-    // premultiplied coverage table, and BOTH EDGE HALOS. The technique is
-    // recorded in docs/engineering/waveform_antialiasing_retired.md.
+    // THE ANTIALIASING RETURNED 2026-10-30 IN ANOTHER FORM — exact coverage
+    // on the GPU from these tips; what the 2026-08-01 deletion took (the Wu
+    // tip polylines, their max-coverage compositing, the fractional boundary
+    // rows, the coverage table, the edge halos) stays in git and in
+    // docs/engineering/waveform_antialiasing_retired.md, none of it here.
     //
-    // THE >=1px NEVER-FADE FLOOR SURVIVES, as integer geometry rather than as a
-    // unit deposit: floor(top) and floor(bot) coincide for any sub-pixel
-    // interval, so the inclusive fill always writes at least one row and flat or
-    // silent material draws a hairline instead of fading out.
-    //
-    // THE HALOS WENT BECAUSE THEIR REASON WENT. They existed so an EDGE column
-    // would carry the same ink an interior column gets — under the segment
-    // model a column's ink came from the segments on both its sides, so a
-    // missing offscreen neighbour under-covered it and it popped during a pan.
-    // A bar depends on nothing but its own interval, so every column is now
-    // self-contained and there is nothing for an offscreen neighbour to
-    // contribute: pan invariance strengthened rather than weakened here.
+    // THE NEVER-FADE FLOOR IS A SUBROW (bar_tips, below): an interval under a
+    // quarter row takes one subrow, which the GPU's half-pixel grow makes a
+    // line of — one full device row and a soft neighbor — so flat or silent
+    // material draws a line instead of fading out.
 
     // Row bounds: this channel's band, intersected with the plate.
     int y_lo = area.y;
@@ -627,27 +618,39 @@ bool render_waveform_columns(GuiRect area,
     // this function).
     double g_prev = to_source(edge_at(static_cast<long long>(col0)));
 
-    // THE BAR'S ROWS. The column's tips — its maximum -> top tip, its minimum
-    // -> bottom tip, in float rows, never snapped — are clamped to this
-    // channel's rows BEFORE any row index is derived, so a clipped interval
-    // cannot address outside the band; then both ends are floored and both
-    // row indices are clamped into the band's rows [y_lo, y_hi - 1], and the
-    // bar is the rows r0 .. r1 inclusive. r0 == r1 for any sub-pixel
-    // interval, which is the >=1px floor stated at the top of this function,
-    // and it holds for both bars AT BOTH LANE EDGES: a bar clamped whole to
-    // the top edge is the lane's top row, and one clamped whole to the bottom
-    // edge (both tips at -1, flooring to the row past the lane) is the lane's
-    // bottom row. The bar is never empty: the column's minimum is at most its
-    // maximum and a tip's scale is positive, so yt <= yb, and the clamps keep
-    // r0 <= r1. The regime split (thin vs tall) went with the tip segments:
-    // there is one rendering for every column now, however small its
-    // interval. One owner for both bars and both lamps, so the outer and the
-    // inner cannot disagree about the geometry.
-    struct BarRows {
-        int r0;
-        int r1;
+    // THE BAR'S TIPS IN QUARTER ROWS (architect 2026-10-30). The column's
+    // tips — its maximum -> top tip, its minimum -> bottom tip, in float rows
+    // — are clamped to this channel's rows BEFORE any subrow is derived, so a
+    // clipped interval cannot address outside the band; then each is
+    // quantized to the nearest quarter row, T = nearbyint(4 · top) and B =
+    // nearbyint(4 · bottom), and the bar is the subrows [T, B − 1] (the
+    // center rule: subrow k's center k + 0.5 lies in [T, B] iff T <= k <=
+    // B − 1). The band's subrows are [4 · y_lo, 4 · y_hi), and both tips land
+    // in [4 · y_lo, 4 · y_hi] exactly (the clamps' ends are whole rows). THE
+    // NEVER-FADE FLOOR AT THE 4x GRID: an interval under a quarter row has
+    // B == T and an empty bar — digital silence at the zero row is the
+    // archetype — and TAKES ONE SUBROW, B = T + 1, T pulled down one where it
+    // sat on the band's last edge (T == 4 · y_hi) so the subrow lies inside
+    // the band; the GPU's half-pixel grow then makes a line of it (one full
+    // device row and a soft neighbor, Ableton's measured silence line).
+    // Nothing can fade out or vanish, and it holds for both bars AT BOTH LANE
+    // EDGES: a bar clamped whole to the top edge is the band's first subrow,
+    // one clamped whole to the bottom edge (both tips at -1) its last. The
+    // floor is needed because an interval under a quarter row holds no
+    // subrow center and would otherwise rasterize to nothing; the contour
+    // needs none, since it only ever joins two bars that exist. The bar
+    // is never empty: the column's minimum is at most its maximum and a
+    // tip's scale is positive, so yt <= yb, nearbyint is monotone, and the
+    // floor keeps B >= T + 1. One owner for both bars and both lamps, so the
+    // outer and the inner cannot disagree about the geometry; a present
+    // inner is told from the absent one by B > T alone (WaveformColumnRows).
+    struct BarTips {
+        int top;
+        int bot;   // exclusive: the bar's subrows are [top, bot − 1]
     };
-    const auto bar_rows = [&](double tip_min, double tip_max) {
+    const int sub_lo = kWaveformSubcells * y_lo;
+    const int sub_hi = kWaveformSubcells * y_hi;   // exclusive
+    const auto bar_tips = [&](double tip_min, double tip_max) {
         double yt = y_center - tip_max * half_h;
         double yb = y_center - tip_min * half_h;
         const double row_lo = static_cast<double>(y_lo);
@@ -656,59 +659,26 @@ bool render_waveform_columns(GuiRect area,
         if (yb < row_lo) yb = row_lo;
         if (yt > row_hi) yt = row_hi;
         if (yb > row_hi) yb = row_hi;
-        int r0 = static_cast<int>(std::floor(yt));
-        int r1 = static_cast<int>(std::floor(yb));
-        if (r0 < y_lo)     r0 = y_lo;
-        if (r0 > y_hi - 1) r0 = y_hi - 1;
-        if (r1 > y_hi - 1) r1 = y_hi - 1;
-        return BarRows{r0, r1};
-    };
-
-    // THE LIT INNER BAR'S INTERIOR: which of its rows wear the ink word and
-    // which the outline word (the outline recolours pixels of the bar's own
-    // shape and adds none). THE CONTOUR FROM THE 2t + 1 COLUMNS' EXTENTS, t =
-    // outline_px (the line width, render.h's waveform_line_px, snapshotted on
-    // the job), no 2D scan: a row of this bar is INTERIOR iff every row within
-    // t above and below it is in this bar (rows [r0 + t, r1 - t]) and it lies
-    // inside every column within t on each side (inside that column's
-    // [r0, r1]; a column beyond the plate's side edge counts as inside) — an
-    // erosion at distance t, the four-neighbour test at t = 1. That interior
-    // is one interval [lo, hi] because each bar is one; the rows of the bar
-    // above and below it are the border, the whole bar when the interior is
-    // empty (lo > hi; when it is not, lo >= r0 and hi <= r1, each clause only
-    // narrowing). No inner tip reaches full scale (kForegroundGain's
-    // static_assert, waveform_gain.cpp), so no inner bar is clipped and each
-    // of its ends is a true end of the shape, taking the border.
-    assert(!gain_or_null || outline_px >= 1);
-    const int t = outline_px;
-    const auto inner_interior = [&](int i, const std::vector<BarRows>& rows) {
-        const BarRows& b = rows[static_cast<size_t>(i)];
-        int lo = b.r0 + t;
-        int hi = b.r1 - t;
-        for (int d = 1; d <= t; ++d) {
-            if (i - d >= 0) {
-                const BarRows& n = rows[static_cast<size_t>(i - d)];
-                lo = std::max(lo, n.r0);
-                hi = std::min(hi, n.r1);
-            }
-            if (i + d < area.w) {
-                const BarRows& n = rows[static_cast<size_t>(i + d)];
-                lo = std::max(lo, n.r0);
-                hi = std::min(hi, n.r1);
+        int top = static_cast<int>(std::nearbyint(yt * kWaveformSubcells));
+        int bot = static_cast<int>(std::nearbyint(yb * kWaveformSubcells));
+        if (bot <= top) {
+            bot = top + 1;
+            if (bot > sub_hi) {
+                top = sub_hi - 1;
+                bot = sub_hi;
             }
         }
-        return BarRows{lo, hi};
+        assert(sub_lo <= top && top < bot && bot <= sub_hi);
+        return BarTips{top, bot};
     };
 
-    // THE BARS' ROWS, one per column of this call: the dark bar or the lit
-    // outer in `outer_rows`, the lit inner in `inner_rows` — held so the
-    // interior can read the neighbours within t of every column. The one
-    // caller renders the full plate, so this
-    // call's columns ARE the plate and its first and last columns' missing
-    // neighbours are the plate's side edges.
-    std::vector<BarRows> outer_rows(static_cast<size_t>(area.w));
-    std::vector<BarRows> inner_rows;
-    if (gain_or_null) inner_rows.resize(static_cast<size_t>(area.w));
+    // THE BARS' TIPS, one per column of this call: the dark bar or the lit
+    // outer in `outer_tips`, the lit inner in `inner_tips`. The one caller
+    // renders the full plate, so this call's columns ARE the plate; the
+    // neighbors a column's picture reads are the GPU's business.
+    std::vector<BarTips> outer_tips(static_cast<size_t>(area.w));
+    std::vector<BarTips> inner_tips;
+    if (gain_or_null) inner_tips.resize(static_cast<size_t>(area.w));
 
     for (int i = 0; i < area.w; i++) {
         const long long c  = static_cast<long long>(col0) + i;
@@ -741,25 +711,25 @@ bool render_waveform_columns(GuiRect area,
                 waveform_expander_multiplier_over(*gain_or_null, s0, s1));
             const double outer = waveform_gain_at(*gain_or_null, centre) * e;
             const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
-            outer_rows[static_cast<size_t>(i)] =
-                bar_rows(magnified_tip(mm.first, outer),
+            outer_tips[static_cast<size_t>(i)] =
+                bar_tips(magnified_tip(mm.first, outer),
                          magnified_tip(mm.second, outer));
-            inner_rows[static_cast<size_t>(i)] =
-                bar_rows(magnified_tip(mm.first, inner),
+            inner_tips[static_cast<size_t>(i)] =
+                bar_tips(magnified_tip(mm.first, inner),
                          magnified_tip(mm.second, inner));
         } else {
-            outer_rows[static_cast<size_t>(i)] =
-                bar_rows(magnified_tip(mm.first, 1.0),
+            outer_tips[static_cast<size_t>(i)] =
+                bar_tips(magnified_tip(mm.first, 1.0),
                          magnified_tip(mm.second, 1.0));
         }
 
         g_prev = g1;
     }
 
-    // EACH OWNED COLUMN'S ROWS (WaveformColumnRows, render.h): the outer
-    // [o0, o1], the lit inner [i0, i1] and its interior [lo, hi], an empty
-    // inner (the dark lamp's) never matching — the bounds the GL canvas's
-    // select reads.
+    // EACH OWNED COLUMN'S TIPS (WaveformColumnRows, render.h): the outer's
+    // [o_top, o_bot) and the lit inner's [i_top, i_bot) in quarter rows, the
+    // absent inner (the dark lamp's) 0, 0 — the bounds the GL canvas's plate
+    // rasterizes.
     const int ncols = col_hi - col_lo;
     out.y_lo   = y_lo;
     out.y_hi   = y_hi;
@@ -770,21 +740,16 @@ bool render_waveform_columns(GuiRect area,
     out.cols.resize(static_cast<size_t>(ncols));
     for (int x = col_lo; x < col_hi; ++x) {
         const int i = x - area.x;
-        const BarRows& o = outer_rows[static_cast<size_t>(i)];
+        const BarTips& o = outer_tips[static_cast<size_t>(i)];
         WaveformColumnRows& cw = out.cols[static_cast<size_t>(x - col_lo)];
-        cw.o0 = o.r0;
-        cw.o1 = o.r1;
-        cw.i0 = y_hi;
-        cw.i1 = y_lo - 1;
-        cw.lo = y_hi;
-        cw.hi = y_lo - 1;
+        cw.o_top = o.top;
+        cw.o_bot = o.bot;
+        cw.i_top = 0;
+        cw.i_bot = 0;
         if (gain_or_null) {
-            const BarRows& b = inner_rows[static_cast<size_t>(i)];
-            const BarRows in = inner_interior(i, inner_rows);
-            cw.i0 = b.r0;
-            cw.i1 = b.r1;
-            cw.lo = in.r0;
-            cw.hi = in.r1;
+            const BarTips& b = inner_tips[static_cast<size_t>(i)];
+            cw.i_top = b.top;
+            cw.i_bot = b.bot;
         }
     }
     return true;

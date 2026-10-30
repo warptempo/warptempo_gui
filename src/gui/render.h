@@ -146,8 +146,10 @@ struct TrimRange {
 // never had one; the lists' lit rows are a selection, not a button face.
 // Every colour is a solid fill of integer cells — EXCEPT THE CHROME'S
 // SURFACES ON A GROUND (materials.h: a baked tile copied 1:1, opaque,
-// nothing blended at paint time, every line its tone's own solid) and the
-// key's patch (a lit LED's glow composited at the bake). (The color
+// nothing blended at paint time, every line its tone's own solid), the
+// key's patch (a lit LED's glow composited at the bake) and, on the canvas,
+// THE WAVEFORM PLATE'S EDGE (antialiased and blended on the GPU since
+// 2026-10-30, render_waveform_columns' head). (The color
 // picker's hue ring and SV triangle, 2026-10-07..14, were the one place the
 // product painted colors that were not roles; THE PROGRAM CASE'S SHADOW
 // RAMP, 2026-10-09 to 2026-10-23, and THE CAPTION'S GRADIENT, 2026-10-05 to
@@ -881,7 +883,8 @@ void install_true_colors(bool on);
 // is two bars (the rule is at render_waveform_columns' declaration), BOTH FILLED IN
 // THE INK, the inner distinguished only by its OUTLINE, its true contour, an
 // erosion at distance waveform_line_px() (one device px at every scale since
-// 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
+// 2026-10-09 ~14:25, "on waveform → unscaled"; antialiased with its shape on
+// the GPU since 2026-10-30), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
 // palette is "Default" (`default`, kGuiDefaultPaletteKey,
@@ -908,7 +911,9 @@ void install_true_colors(bool on);
 // zero row ± nearbyint(k · H / 4) device rows for k = 1, 2, 3, H the
 // channel's half height (its zero row to its band's edge; the k = 4 line
 // would stand on the band's edge and is not drawn), the canvas's full width,
-// Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE; then THE CENTER
+// Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE (antialiased,
+// its soft edge blended over the canvas and the grid — the one soft thing
+// on the canvas, render_waveform_columns' head); then THE CENTER
 // LINE per channel on its zero row, one device px, in `center`, OVER THE INK
 // (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
@@ -1656,7 +1661,7 @@ inline int ruler_lane_h_px() {
 // SHADOWS' OFFSET IS NOT ITS READER: the label's shadow and, since
 // 2026-10-26 ~13:05, the triangle's are one LABEL quantum right and down
 // (cue_label_shadow_offset_px below).
-inline int waveform_line_px();   // the canvas's line, defined at row 6's block
+constexpr int waveform_line_px();   // the canvas's line, defined at row 6's block
 inline int cue_triangle_unit_px() {
     return waveform_line_px();
 }
@@ -2037,8 +2042,11 @@ inline int scrub_thumb_above_px() {
 // stem (render_strip_anchor_stem), the phase-reset lead-in ring's dots
 // (its right side and its top and bottom runs, paint_phase_reset_overlay_ring;
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
-// an erosion at distance 1 (render_waveform_columns' inner_interior, render.cpp, the width riding the
-// plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
+// an erosion at distance 1 — THE ONE OF THESE THAT IS NOT AN ALIASED RECT
+// since 2026-10-30: the GPU erodes the antialiased inner bar at the 4x
+// grid and the line is antialiased with its shape, its distance this one
+// device px (kListFragmentShader, gl_canvas.cpp; the plate's rule at
+// render_waveform_columns' head) — and the canvas's GRID AND CENTER LINES
 // (render_canvas, render_center_lines) — AND ONE AREA OFF IT, THE CUES'
 // TRIANGLES AND THE PLAYHEAD'S HEAD (paint_ce_cue_triangle), whose unit is
 // this one device px (cue_triangle_unit_px, architect 2026-10-26: Cool
@@ -2050,9 +2058,30 @@ inline int scrub_thumb_above_px() {
 // since the hi-fi skin (hairline_px, 2026-10-23).
 // (From 2026-09-27, "scale all, including the ruler ticks and the playhead
 // head", until this ruling every canvas line was one Windows px, scaled.)
-inline int waveform_line_px() {
+// Constexpr: it is also the lit outline's erosion distance, which the GL
+// shader spells as a literal and gl_canvas.cpp static_asserts against it.
+constexpr int waveform_line_px() {
     return 1;
 }
+// THE WAVEFORM PLATE'S ANTIALIASING GRID AND GROW (architect 2026-10-30, on
+// his glass against Ableton; the rule is render_waveform_columns' head, the
+// shader kListFragmentShader, gl_canvas.cpp): the plate's shape is rasterized
+// on a grid of kWaveformSubcells x kWaveformSubcells subcells per device
+// pixel — the tips quantized to quarter rows, a pixel's coverage its set
+// subcells over sixteen, exact to 1/16 — and THE WHOLE SHAPE IS GROWN BY
+// HALF A DEVICE PX on every side, a disc of radius kWaveformGrowSubcells
+// subcells, before the coverage is taken. GROW 0.5 IS A CONSTEXPR AND NOT
+// A TUNING KEY (his words: "0.5 is not judged as much as reasoned —
+// neighboring pixels spread the weight exactly at .5; at 0 they are thin,
+// at 1 they are overly thick"): a one-px stroke centered on the contour IS
+// the shape grown by half a pixel each side, so the number is derived, not
+// tuned. The shader spells both as literals; gl_canvas.cpp static_asserts
+// them against these two, and the erosion's radius against
+// kWaveformSubcells * waveform_line_px().
+constexpr int kWaveformSubcells     = 4;
+constexpr int kWaveformGrowSubcells = 2;
+static_assert(2 * kWaveformGrowSubcells == kWaveformSubcells,
+              "grow 0.5: the disc's radius is half a device pixel in subcells");
 // THE LINE'S ONE PAINT: columns [col, col + t) of a strip whose columns are
 // [0, area_w), at window x `area_x`, rows [y0, y1), as ONE aliased integer
 // rect in the caller's source colour, `t` the canvas's one device px unless a
@@ -2797,63 +2826,85 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // [t0, t1) is translated to source-frame via `map_target_to_source` before the
 // pyramid read, producing the deformed-waveform display.
 //
-// THE SILHOUETTE IS A COLUMN OF HARD BARS. Each column reduces to two TIPS in
-// float rows — its raw maximum as the top tip, its raw minimum as the bottom —
-// and paints as ONE opaque bar spanning floor(top) .. floor(bot) inclusive.
-// There is no fractional coverage, no regime threshold, and NO INTER-COLUMN
-// CONNECTIVITY AT ALL: a spike stands alone beside a short neighbour, which is
-// the classic min/max look the architect chose. (The lit inner bar's
-// outline — THE LIT OUTLINE, below, waveform_line_px() thick — recolours the bar's own edge
-// pixels by its neighbours' extents and adds no pixel, so the silhouette is
-// unchanged.)
+// THE SILHOUETTE IS ONE FILLED CONTOUR THROUGH THE COLUMN CENTERS, WITH A
+// FULL-INK CORE (architect 2026-10-30, on his glass against Ableton). Each
+// column reduces to two TIPS in float rows — its raw maximum as the top
+// tip, its raw minimum as the bottom — QUANTIZED TO QUARTER ROWS (below):
+// the column's own extent [T, B) in subrows is its BAR, kept whole in full
+// ink (THE CORE: a lone spike stands flat-topped at its own height, never
+// shaved toward its neighbors' mean), and THE CONTOUR joins it to its
+// neighbors — at each of the column's four subcolumns the top and bottom
+// interpolate linearly between this column's tips and the NEARER
+// neighbor's, from center to center, so a steep rise is a diagonal between
+// the two bars rather than a gap. THE WHOLE SHAPE (the bars' union with the
+// contour) IS GROWN BY HALF A DEVICE PX on every side — a disc dilation of
+// radius kWaveformGrowSubcells on the 4x grid (the reason at that constant)
+// — and each device pixel takes EXACT COVERAGE, its set subcells over
+// sixteen; the lit inner bar's OUTLINE is the one-px border of the grown
+// inner shape, an erosion at distance waveform_line_px() (THE LIT OUTLINE,
+// below), antialiased with its shape. The coverage is blended SOURCE-OVER
+// IN BYTE SPACE with what lies beneath (the GL blend, kListFragmentShader).
+// NO TIP RULE (his words: "I don't look at the tips, the troughs and their
+// crossings of the zero line"): a tip's pixel is its exact coverage like
+// any other. The dark lamp's raw bar takes the same rule.
 //
-// THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, at a side-by-side
-// against a snapshotted AA binary — "subtle but noticeable, I prefer without
-// it"). What went: the Wu-style tip polylines joining adjacent columns' tips,
-// their max-coverage compositing and endpoint unit deposits, the tall/thin
-// regime and its kThinIntervalPx threshold, the two fractional boundary rows,
-// the 256-entry premultiplied coverage table, and BOTH EDGE HALOS with their
-// wall clamps. The technique is recorded in
-// docs/engineering/waveform_antialiasing_retired.md rather than in the tree;
-// this paragraph exists so the absence reads as a decision.
+// THE ANTIALIASING RETURNED 2026-10-30 IN ANOTHER FORM: exact coverage of
+// one grown shape, computed on the GPU from the column bounds, the
+// one-device-px lines of the canvas untouched (the grid, the center lines,
+// the divider, the dots, the playhead, the scanner, the anchor stay whole
+// cells: ON THE WAVEFORM NOTHING IS SCALED), so placement reads as before —
+// the full-ink core keeps every column its own extent. What the 2026-08-01
+// deletion took (the Wu tip polylines, their max-coverage compositing, the
+// fractional boundary rows, the coverage table, the edge halos) stays in
+// git and in docs/engineering/waveform_antialiasing_retired.md; none of it
+// is this renderer.
 //
-// THE >=1px NEVER-FADE FLOOR SURVIVES, re-expressed: it came from each segment
-// depositing a full unit at its endpoint tips, and it now comes from integer
-// geometry — floor(top) == floor(bot) for any sub-pixel interval, and both row
-// indices are clamped into the lane, so the inclusive fill always writes at
-// least one row, a bar clamped whole to either lane edge included. Flat or
-// silent material draws a hairline; nothing can fade out or vanish.
+// THE TIPS IN QUARTER ROWS, AND THE >=1px NEVER-FADE FLOOR AT THE 4x GRID:
+// each tip, clamped into the band's rows, becomes T = nearbyint(4 · top)
+// and B = nearbyint(4 · bottom), the bar the subrows [T, B − 1] (the
+// center rule: subrow k's center k + 0.5 lies in [T, B] iff T <= k <= B − 1).
+// A bar whose interval is under a quarter row (B == T — digital silence at
+// the zero row is the archetype) TAKES ONE SUBROW, B = T + 1, T pulled down
+// one where it sat on the band's last edge so the subrow lies inside the
+// band; the disc dilation then makes a line of it — one full device row and
+// a soft neighbor, Ableton's measured silence line. Nothing can fade out or
+// vanish. The floor is needed because an interval under a quarter row
+// holds no subrow center and would otherwise rasterize to nothing; the
+// contour needs none, since it only ever joins two bars that exist.
 //
-// PAN INVARIANCE IS STRENGTHENED, NOT WEAKENED, BY THE HALOS' REMOVAL. They
-// existed because a column's ink came from the segments on BOTH its sides, so an
-// edge column missing an undrawn neighbour was under-covered against the same
-// audio rendered interior and shifted under a pan. A bar depends on nothing but
-// its own interval, so a column's pixel SET is a pure function of its own
-// (k0+c) span — two renders of the same columns at the same basis agree
-// exactly. The AUTHORING LATTICE below is untouched and is still what makes
-// that span depend on the global index alone. (With the lamp lit, which of the
-// inner bar's pixels wear its OUTLINE ink reads the two neighbouring columns' rows —
-// THE LIT OUTLINE, below — and at the plate's two side edges the missing
-// neighbour counts as inside, so an edge column's outline can differ from the
-// same audio rendered interior; every plate is a full render since the
-// shift-and-strip pan's retirement, so no plate ever stitches the two.)
+// PAN INVARIANCE: a column's tips are a pure function of its own (k0+c)
+// span — the AUTHORING LATTICE below is what makes that span depend on the
+// global index alone — and its picture reads the tips of the columns
+// within three of it (the contour toward its two neighbors, the dilation
+// and the erosion across them), so two full renders of the same columns at
+// the same basis agree exactly. At the plate's two side edges the missing
+// neighbor is the column itself for the contour (the shape runs flat to the
+// edge) and counts as inside for the erosion (no vertical outline at the
+// area's sides), so an edge column can differ from the same audio rendered
+// interior; every plate is a full render since the shift-and-strip pan's
+// retirement, so no plate ever stitches the two.
 //
 // THE COLUMNS ARE THE PRODUCT (2026-10-13; the one road since 2026-10-30):
-// the function writes no pixel. Its product is each column's rows
-// (WaveformColumnRows below), and the GPU's select draws them
-// (gl_canvas.cpp; canvas_sink.h's head). ONE COMPOSITING RULE: no pixel is
-// blended and none is read. With the lamp dark a pixel takes its column's
-// one bar, and lit the inner bar's word where the inner covers it, else the
-// outer's (the inner over the outer where they overlap is the magnification
-// rule's order), else the zero word — a priority. RETURNS false where it
+// the function writes no pixel. Its product is each column's four
+// quarter-row tips (WaveformColumnRows below), and the GPU rasterizes them
+// (kListFragmentShader, gl_canvas.cpp; canvas_sink.h's head) — the
+// contour, the dilation, the erosion and the coverage are the fragment
+// shader's, from the bounds texture, per pixel. THE PLATE IS THE ONE RECORD
+// THAT BLENDS: its fragment writes the premultiplied source of the two
+// coverages (the ink's where the grown shape covers, the outline's where
+// the grown inner's border does — the inner over the outer where they
+// overlap is the magnification rule's order) and the GL blend lays it
+// source-over on the canvas and the grid beneath; where the core is
+// (coverage one) the word lands exactly, and where nothing covers the
+// fragment discards and the plate stays transparent. RETURNS false where it
 // refuses without bounds (a degenerate area, basis or pyramid, or a band
 // that misses the plate), `out` then unspecified; `out.whole` says whether
 // the bounds cover `area` whole, and a band is drawn only then
 // (GuiPlateColumns::Band::stored).
 //
 // The inks' words are PREMULTIPLIED ARGB32 (argb32_opaque_word), built by the
-// sink from the published inks (GuiCanvasSink::plate); at full coverage each
-// is its colour itself, so there is one word per colour rather than a table.
+// sink from the published inks (GuiCanvasSink::plate); the shader scales each
+// by its coverage, so there is one word per colour rather than a table.
 //
 // THE INKS (WaveformPlateInks, the `waveform_ink` and `waveform_outline`
 // roles AS THE WINDOW TAKES THEM — already converted, waveform_plate_inks)
@@ -2862,8 +2913,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // the ink with the inner's outline in the outline (row 6) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
-// spanning the window being the whole inside-the-window signal now. Its alpha
-// is BINARY: opaque bars and transparent gaps, with no fractional edges left.
+// spanning the window being the whole inside-the-window signal now. Its
+// alpha is the coverage: opaque in the core, fractional on the half-pixel
+// fringe, transparent in the gaps (2026-10-30).
 // THE GAPS SHOW THE GROUND render_canvas lays under the plate: the plate
 // carries no ground colour, so the canvas has that one painter and the cold
 // frame before the first plate shows the same ground. Nothing recolours a
@@ -2894,8 +2946,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // out of the outer IN HEIGHT ABOUT THE CENTRE ROW (in pixels a column wholly
 // on one side of zero is the exception: THE ALIGNMENT, below). Each bar's
 // tips are CLAMPED to [-1, 1] before they become rows, and each keeps the
-// >=1px floor at both lane edges (a bar clamped whole to an edge is that
-// edge's row). The select
+// never-fade floor at both lane edges (a bar clamped whole to an edge is
+// that edge's last subrow, grown to a line). The composite
 // puts the inner over the outer, so where the two overlap the inner wins: the
 // reading is the source's bar, the same ink as the levelled bar behind it and
 // set off from it by its darker contour alone (one pixel at 100 %, the line
@@ -2904,43 +2956,36 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // compressor's threshold the core is half the raw bar (x E), over it thinner
 // by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in the ink at scale 1,
-// with no outline, byte for byte the plate it always drew.
+// with no outline, under the same contour, grow and coverage.
 //
-// THE LIT OUTLINE (architect 2026-09-27) — THE INNER BAR'S TRUE CONTOUR,
-// `outline_px` THICK, ALIASED. `outline_px` is t = waveform_line_px() (render.h,
-// the job's snapshot): ONE DEVICE PX AT EVERY SCALE since 2026-10-09 ("on
-// waveform → unscaled", waveform_line_px's rule) — the plate column's own
-// width, as the stems' dots are. A pixel of the inner's shape (the inner bars of all columns)
-// is a BORDER pixel iff any pixel within t of it straight left, right, up or
-// down lies outside that shape — an erosion at distance t, the four-neighbour
-// test at t = 1, byte-identical there to the one-pixel contour. The outer bar
-// has no outline (its outline ink would be its fill). Precedence per column:
-// the inner's fill and border over the outer; on a steep rise between
-// columns the outline runs down the taller column's side and the line is
-// continuous. Selected per pixel like every other plate pixel: no stroke, no
-// coverage, no blend.
+// THE LIT OUTLINE (architect 2026-09-27; antialiased with its shape since
+// 2026-10-30) — THE INNER BAR'S TRUE CONTOUR, waveform_line_px() THICK: ONE
+// DEVICE PX AT EVERY SCALE since 2026-10-09 ("on waveform → unscaled",
+// waveform_line_px's rule) — the plate column's own width, as the stems'
+// dots are. The GROWN INNER SHAPE (the inner bars of all columns with their
+// contour, dilated by the half pixel) is ERODED BY A DISC of radius
+// kWaveformSubcells · waveform_line_px() = 4 subcells for its INTERIOR; the
+// outline's coverage at a pixel is the grown inner's coverage less the
+// interior's, so the line is the shape's one-px border, soft where the
+// shape is. The outer bar has no outline (its outline ink would be its
+// fill). Precedence: the inner's fill and border over the outer; on a steep
+// rise between columns the outline runs down the contour's diagonal and the
+// line is continuous.
 // THE EDGES: a neighbour column beyond the plate's left or right edge counts
-// as INSIDE (the waveform continues off screen, so no vertical line is drawn
-// at the area's sides); a row beyond the bar's own ends is OUTSIDE, so both
-// ends of every inner bar carry the line. No inner bar is ever clipped at
+// as INSIDE for the erosion (the waveform continues off screen, so no
+// vertical line is drawn at the area's sides), and so does a row beyond the
+// band's rows; a row beyond the bar's own ends is OUTSIDE, so both ends of
+// every inner bar carry the line. No inner bar is ever clipped at
 // the lane's edge — its tips are at most half scale (raw at most 1, the
 // compressor's scale and the expander's multiplier at most 1, the foreground
 // gain one half; kForegroundGain's static_assert, waveform_gain.cpp) — so
 // every end is a true end of the shape. Each channel's lane is its own shape;
-// the other channel's pixels are never a neighbour. A bar up to 2t px tall
-// comes out all border; the >=1px floor stands. THE ALGORITHM is per column,
-// from the row extents of the 2t + 1 columns around it alone, no 2D scan: a
-// bar's interior is its rows [r0 + t, r1 - t], intersected with the
-// [r0, r1] of every in-plate column within t on each side; its border is the
-// bar's rows above and below that interior (the whole bar when the interior
-// is empty).
-// The outline recolours pixels of the bar's own shape and adds none, each
-// written once with the fill's word or the outline's. Nothing else in this
-// painter moves
-// (the column grid, the >=1px floor, the carried-endpoint chain and the
-// aliased-only select are untouched). A loud passage's outer clips flat at
-// the lane's edges while the inner still shows its compressed height inside
-// it.
+// the other channel's pixels are never a neighbour. A bar up to two px tall
+// comes out all border; the subrow floor stands. THE ALGORITHM IS THE
+// SHADER'S (kListFragmentShader, gl_canvas.cpp), per pixel from the tips of
+// the seven columns around it, no 2D scan: this function holds no interior.
+// A loud passage's outer clips flat at the lane's edges while the inner
+// still shows its compressed height inside it.
 //
 // BOTH LIT INKS ARE FLAT (architect 2026-09-26). THE CORE SHADE BY THE BAR
 // GAP (2026-09-25, one commit — the inner's ink a per-column blend toward
@@ -2965,9 +3010,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // it and the inner. Intended — that is what a true magnification looks like.
 // THE COST is one extra bar's rows and one lookup (the scale) per column — the read, the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
-// lamp). The outline adds one row-extent pair per column for the inner, held
-// for the call so the write can see its neighbours, and a handful of
-// compares per neighbour within t.
+// lamp). The outline adds nothing here: the inner's two tips ride the same
+// record and the GPU erodes them.
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).
@@ -3028,18 +3072,18 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
 
-// ONE PLATE COLUMN'S ROWS (2026-10-13), in the plate's own rows (row 0 its
-// top, the canvas's first row): the outer (or dark) bar [o0, o1], the lit
-// inner bar [i0, i1] — empty, i0 > i1, under the dark lamp — and the inner's
-// interior [lo, hi], empty where lo > hi. A pixel's word is THE PRIORITY
-// SELECT, the plate's one compositing rule (render_waveform_columns' head;
-// the GPU's, gl_canvas.cpp): inside the inner, the ink within the interior
-// and the outline elsewhere; else inside the outer, the ink; else nothing
-// (the zero word).
+// ONE PLATE COLUMN'S TIPS (2026-10-13; quarter rows since 2026-10-30), in
+// the plate's own rows times kWaveformSubcells (subrow 0 the top of the
+// canvas's first row): the outer (or dark) bar's subrows [o_top, o_bot − 1]
+// and the lit inner bar's [i_top, i_bot − 1] — the inner ABSENT (the dark
+// lamp) is i_top = i_bot = 0, and present iff i_bot > i_top (a present bar
+// always has bot >= top + 1, the subrow floor). The GPU rasterizes them
+// (kListFragmentShader, gl_canvas.cpp): the contour toward the neighbors,
+// the half-pixel grow, the inner's erosion and each pixel's exact coverage
+// are the fragment shader's, the rule at render_waveform_columns' head.
 struct WaveformColumnRows {
-    int o0, o1;
-    int i0, i1;
-    int lo, hi;
+    int o_top, o_bot;
+    int i_top, i_bot;
 };
 // ONE CHANNEL BAND'S COLUMNS as render_waveform_columns produced them: the
 // region the bounds cover, rows [y_lo, y_hi) and columns [col_lo, col_hi)
@@ -3052,11 +3096,13 @@ struct WaveformBandColumns {
     std::vector<WaveformColumnRows> cols;
 };
 // THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is THE PLATE'S
-// RENDER above): `area`, `col0`, the basis, the gain, the outline width and
-// the map, and the plate's size the band is clamped to (plate_w x plate_h).
-// False where it refuses — a degenerate area, basis or pyramid, or a band
-// that misses the plate — `out` then unspecified. Thread-agnostic: the
-// waveform worker or the synchronous rebuild (waveform_cache.cpp).
+// RENDER above): `area`, `col0`, the basis, the gain and the map, and the
+// plate's size the band is clamped to (plate_w x plate_h). The outline's
+// erosion distance is no input: it is waveform_line_px(), the shader's
+// constant (2026-10-30). False where it refuses — a degenerate area, basis
+// or pyramid, or a band that misses the plate — `out` then unspecified.
+// Thread-agnostic: the waveform worker or the synchronous rebuild
+// (waveform_cache.cpp).
 [[nodiscard]]
 bool render_waveform_columns(GuiRect area,
                              int col0,
@@ -3064,7 +3110,6 @@ bool render_waveform_columns(GuiRect area,
                              int channel,
                              const WaveformBasis& basis,
                              const WaveformGainCurve* gain_or_null,
-                             int outline_px,
                              int plate_w,
                              int plate_h,
                              const std::vector<WarpFrameMapSegment>* warp_frame_map,
