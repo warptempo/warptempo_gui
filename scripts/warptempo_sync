@@ -173,9 +173,8 @@ shopt -s nocaseglob
 #      into the app's private folder beside its settings file
 #      (files/warptempo_gui/deploy_key, .pub), reachable only through run-as.
 #   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
-#      line is made to read github.com/warptempo/warptempo_projects, the role
-#      line role=author (the tablet authors; the key is required, so the app's
-#      first start refuses without it), a chrome= line RENAMED waveform= with its
+#      line is made to read github.com/warptempo/warptempo_projects, a chrome=
+#      line RENAMED waveform= with its
 #      value kept (the key renamed 2026-10-21 for what it sets; dropped where a
 #      waveform= line already stands), a waveform= line added with the default
 #      (waveform=default) where the file has neither -- every key is
@@ -194,8 +193,9 @@ shopt -s nocaseglob
 #      cues' tuning keys, settled 2026-10-26, the lit LED's glow key,
 #      settled the same day, the noise's two fade keys, settled 2026-10-28
 #      at 200 and 40 ms, rain_level and rain_crossfade_ms, renamed
-#      noise_level and noise_crossfade_ms the same day, and
-#      noise_crossfade_ms, made noise_crossfade_s in seconds that night
+#      noise_level and noise_crossfade_ms the same day,
+#      noise_crossfade_ms, made noise_crossfade_s in seconds that night, and
+#      role, which left 2026-10-30 with the laptop GUI (one device, no mirror)
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE FOLDER (2026-10-28; src/gui/noise.h owns the sound): the
@@ -239,7 +239,6 @@ TABLET_WIRELESS="${WARPTEMPO_TABLET_ADDR:-}"
 GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
 ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
 PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
-ROLE_LINE="role=author"
 # THE DEFAULT WAVEFORM PRESET, Default, spelled (every device key
 # required since 2026-10-14; src/gui/palette_file.h's kGuiDefaultPaletteKey): added only where
 # the tablet's file has neither a waveform= line nor a chrome= line to rename.
@@ -280,8 +279,10 @@ ADDED_LINES="true_colors=on noise=rain noise_level=-9 noise_crossfade_s=4 key_he
 # rain_fade_out_ms, settled the same day at 200 and 40 ms and constants in
 # the program since (src/gui/noise.h); rain_level and rain_crossfade_ms
 # (retired 2026-10-28, renamed noise_level and noise_crossfade_ms the same
-# day); and noise_crossfade_ms (retired that night for noise_crossfade_s, the
-# crossfade in whole seconds). A TUNED LEVEL DOES NOT TRAVEL THROUGH setup:
+# day); noise_crossfade_ms (retired that night for noise_crossfade_s, the
+# crossfade in whole seconds); and role, the device's part in the projects
+# repository (author or mirror), retired 2026-10-30 with the laptop GUI, one
+# device running the program. A TUNED LEVEL DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level=-9 takes its place,
 # so the planner renames the two lines by hand at the install, on both
 # devices, the program not running; a crossfade in ms comes back as
@@ -296,7 +297,7 @@ RETIRED_KEYS=(sync_path theme_level
               cue_lead led_glow
               rain_fade_in_ms rain_fade_out_ms
               rain_level rain_crossfade_ms
-              noise_crossfade_ms)
+              noise_crossfade_ms role)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE key reads.
@@ -1231,7 +1232,7 @@ apply_setup() {
         put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
     fi
 
-    # 5. THE SETTINGS FILE: projects_repo and role made right, a chrome line
+    # 5. THE SETTINGS FILE: projects_repo made right, a chrome line
     # renamed waveform (its value kept; dropped where a waveform line stands),
     # waveform given its default where neither stands, true_colors, noise,
     # noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and
@@ -1239,8 +1240,8 @@ apply_setup() {
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
     # keys, the LED glow's, the noise's two fades, the level's and the
-    # crossfade's first names and the crossfade's ms key, RETIRED_KEYS), the
-    # rest kept.
+    # crossfade's first names, the crossfade's ms key and role, RETIRED_KEYS),
+    # the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
     # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
@@ -1255,30 +1256,28 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v added="$ADDED_LINES" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v waveform="$WAVEFORM_LINE" -v added="$ADDED_LINES" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1
                                 nt = split(added, t, " "); for (i = 1; i <= nt; i++) tkey[i] = substr(t[i], 1, index(t[i], "=")) }
                               { for (i = 1; i <= nt; i++) if (substr($0, 1, length(tkey[i])) == tkey[i]) had_t[i] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
-            /^role=/          { print role; had_role = 1; next }
             /^waveform=/      { had_waveform = 1 }
             /^chrome=/        { renamed = "waveform=" substr($0, length("chrome=") + 1); had_chrome = 1; next }
             (substr($0, 1, index($0, "=")) in gone) { next }
                               { print }
             END               { if (had == 0) print repo
                                 if (had_waveform == 0) print (had_chrome ? renamed : waveform)
-                                if (had_role == 0) print role
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role, true_colors, noise, noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, true_colors, noise, noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no chrome line and no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE where none stands, each of $ADDED_LINES where its key has no line, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $WAVEFORM_LINE where none stands, each of $ADDED_LINES where its key has no line, and no line of a retired key"
     fi
     printf '\n'
 

@@ -205,8 +205,8 @@ struct GuiInputHandler;
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
 // CONFIG's twelve editable keys in that file's
-// writer order (kDeviceConfigKeys, device_config.cpp — `last_project` and
-// `role` have no editor). The other keys this editor commits (`scale`, `bpm`,
+// writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
+// no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
 // the score viewer writes) are typed whole, Tab recalling their
 // values once complete; a key added to the product's editable set joins this

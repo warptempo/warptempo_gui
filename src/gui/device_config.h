@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fourteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Thirteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -66,20 +66,6 @@
 //                            templates and both installs `on`. (The row's
 //                            toggle, 2026-10-08..10-21, persisted nothing:
 //                            the switch was true at every launch.)
-//   role=<role>              THE DEVICE'S PART IN THE PROJECTS REPOSITORY
-//                            (architect 2026-10-10): `author` (the tablet:
-//                            it authors every movement, commits and pushes,
-//                            and pulls only when GitHub is ahead) or
-//                            `mirror` (the laptop: it never commits and
-//                            never pushes, and follows GitHub by pulling) —
-//                            GuiDeviceRole below; REQUIRED, an absent line
-//                            or any other word the launch's hard fail ("if
-//                            one of these lines is not in place, it means
-//                            something's wrong with the config or the
-//                            setup"); no Settings row, the file is its one
-//                            road; a harmless redundancy and a sanity
-//                            check ("the tablet should never pull [but to
-//                            recover], and the laptop should never push")
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -162,6 +148,15 @@
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
 //                            then; both templates spell 24
+//   (role=<author|mirror>, THE DEVICE'S PART IN THE PROJECTS REPOSITORY,
+//                            a required key 2026-10-10 to 2026-10-30,
+//                            RETIRED with the laptop GUI (architect
+//                            2026-10-30): one device runs the program, so
+//                            there is no mirror, and the one behavior is the
+//                            one that commits; an old `role=` line is the
+//                            ordinary unknown-key hard fail, the planner
+//                            editing the tablet's config at the install and
+//                            the sync script's setup removing it)
 //   (noise_crossfade_ms=<ms>, THE CROSSFADE IN MS, [100, 30000], a tuning
 //                            key 2026-10-28, RETIRED that day for the
 //                            seconds key above; an old line is the ordinary
@@ -218,11 +213,11 @@
 // 2026-10-03, the colour keys that stood after it for a day gone, below;
 // `palette` APPENDED after `theme` 2026-10-07, the program's colors' own
 // file type; `theme` gone 2026-10-08, below; `scheme` placed before `palette`
-// 2026-10-08 ~18:15, the chrome's colors before the program's; `role` APPENDED after
-// `palette` 2026-10-10; `icons` and `font` stood 2026-10-09 to 2026-10-12;
+// 2026-10-08 ~18:15, the chrome's colors before the program's; `icons` and
+// `font` stood 2026-10-09 to 2026-10-12;
 // `scheme` (`caption` since 2026-10-13) gone and `palette` (`chrome` since
 // 2026-10-13) renamed `waveform` in its place 2026-10-21;
-// three tuning keys APPENDED after `role` 2026-10-21, a tuning phase's
+// three tuning keys APPENDED at the end 2026-10-21, a tuning phase's
 // keys at the end as the 2026-09 phases' stood (`text_shadow` gone
 // 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
 // appended 2026-10-22 and gone 2026-10-23, the LED glow's appended
@@ -234,11 +229,12 @@
 // and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
 // paint_ce_cue_triangle, gui_font.h's Program size; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
-// keys together; the level APPENDED after `role` 2026-10-28, `role`'s
-// own road, and the crossfade after it — the two fade tuning keys after it
+// keys together; the level APPENDED after the permanent keys 2026-10-28,
+// and the crossfade after it — the two fade tuning keys after it
 // for part of that day, gone the same day; the two renamed `noise_level` and
-// `noise_crossfade_ms` the same day and `noise` placed after `role`, before
-// them; the crossfade made `noise_crossfade_s`, in seconds and permanent,
+// `noise_crossfade_ms` the same day and `noise` placed before them, so the
+// noise's three follow `true_colors` (`role` stood between them 2026-10-10
+// to 2026-10-30, the head's list); the crossfade made `noise_crossfade_s`, in seconds and permanent,
 // that night, in its place at the end; the tuning key `key_height`
 // APPENDED after it 2026-10-29, the tuning keys keeping the end, and the
 // keyboard's two, `osk_key_w` and `osk_key_h`, after it the same
@@ -381,7 +377,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fourteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the thirteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -427,10 +423,7 @@
 // `Waveform` (`Chrome` 2026-10-14..10-21, beside `Caption`), the tuning rows
 // and the "True Colors" command row; `Chrome` the vocabulary 2026-10-07..10,
 // `Icons` and `Font` 2026-10-09..12, `Theme` 2026-10-03..08; the color
-// picker's preset menu wrote the two color keys 2026-10-07..14.) `role`
-// (2026-10-10) is NOT EDITABLE
-// IN THE APP: the planner sets it on each device by hand, the program not
-// running, and the program only carries it through its rewrites. Until
+// picker's preset menu wrote the two color keys 2026-10-07..14.) Until
 // 2026-09-02 the path keys
 // were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
@@ -448,12 +441,8 @@
 // (GuiPlatform::device_config_defaults) SPELL THE DEFAULT into it (architect
 // 2026-10-14: every key required) — kGuiDefaultPaletteKey (palette_file.h),
 // `default` — so the first-run file of either device names its
-// waveform preset. THE ROLE'S
-// DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
-// (architect 2026-10-10: the program never invents a device's role), so a
-// first run stamps a file WITHOUT `role` and its read-back refuses the launch
-// on the missing key — the file is already there for the hand to add
-// `role=author` or `role=mirror` to. (The `icons` and `font` keys left
+// waveform preset. EVERY KEY WRITES ITS LINE, so a first run stamps the
+// whole file and its read-back loads. (The `icons` and `font` keys left
 // 2026-10-12: the icons and Liberation Sans are hard-coded.)
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
@@ -469,14 +458,6 @@
 // resolves it (install_palette, render.h, through palette_record,
 // palette_file.h) and derives the chrome's colors by Cool Edit's tones
 // (live_chrome_words, chrome_derive.h).
-// THE DEVICE'S ROLE (architect 2026-10-10; the key's ruling is in the head's
-// list): what this device may do to the projects repository. `Unset` is
-// CONSTRUCTION STATE alone — the first-run template's, which writes no line —
-// and never survives a read, the key being required. Read through
-// device_is_mirror (app_state.h) by the publish chord's act and the `h`
-// Save face.
-enum class GuiDeviceRole { Unset, Author, Mirror };
-
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -491,8 +472,6 @@ struct DeviceConfig {
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // templates' and the construction state's.
     bool        true_colors = true;
-    // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
-    GuiDeviceRole role = GuiDeviceRole::Unset;
     // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in seconds
     // (2026-10-28, the head's list): required; the construction state is the
     // templates' values (`rain`, -9, 4).
@@ -680,13 +659,6 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     if (v == kTrueColorsOff) return false;
     return std::nullopt;
 }
-
-// THE role GRAMMAR (architect 2026-10-10) — the two words, exactly; the one
-// owner the reader and the writer read.
-inline constexpr const char* kDeviceRoleAuthor = "author";
-inline constexpr const char* kDeviceRoleMirror = "mirror";
-inline constexpr const char* kDeviceRoleGrammarReason =
-    "must be author or mirror";
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the two noise integers' shared
 // lexis, and since 2026-10-29 the key's height's and the keyboard's key
@@ -1012,11 +984,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`
 // (2026-10-29, kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,
-// kOskKeyHDefaultAt300, kOskFontPxDefaultAt300) and
-// no role
-// line
-// (the role is never invented, so the first run's read-back refuses on it —
-// the struct's role paragraph), kDefaultProjectsRepo and
+// kOskKeyHDefaultAt300, kOskFontPxDefaultAt300), kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run on either device lands a

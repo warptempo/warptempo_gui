@@ -3706,7 +3706,7 @@ enum class DialogTrigger {
     // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
     // checkpoint and reload this piece?", OK / Cancel with passive focus on
     // Cancel (its OK discards the session). Raised by the publish chord,
-    // Ctrl+Shift+S, in either view and on either role, only when the pull
+    // Ctrl+Shift+S, in either view, only when the pull
     // changes the open piece; the plan waits at
     // AppState::pending_history_pull.
     PULL_CONFIRM,
@@ -8602,8 +8602,7 @@ struct AppState {
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
     // open, an `h` entry while Unchecked or Offline (2026-10-28: a standing
     // answer is reused, open_history_mode_fresh's head), and the publish
-    // chord, Ctrl+Shift+S, in either view while Offline or, on a mirror,
-    // UpToDate), the
+    // chord, Ctrl+Shift+S, in either view while Offline), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
     // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
@@ -14138,19 +14137,6 @@ inline bool history_revert_actionable(const AppState& a) {
            !active_view_state(a).read_only;
 }
 
-// IS THIS DEVICE A MIRROR? (architect 2026-10-10, ~23:00: "the tablet should
-// never pull [but to recover a wiped or new device], and the laptop should
-// never push") — the device config's required `role` key (GuiDeviceRole,
-// device_config.h), `mirror` on the laptop and `author` on the tablet: a
-// harmless redundancy and a sanity check. A MIRROR TAKES NO COMMIT ROAD: the
-// publish chord's act refuses every commit and push there on a card and
-// takes the pull road alone (run_publish_chord, which owns the gate at the
-// act), and the `h` view's Save-and-Commit face is dark on it
-// (history_checkpoint_actionable). An author's pull is not gated: the
-// chord pulls whenever GitHub is ahead, the recovery the ruling names.
-inline bool device_is_mirror(const AppState& a) {
-    return a.device_config->role == GuiDeviceRole::Mirror;
-}
 
 // DID THIS VISIT'S REMOTE WALK BOOTSTRAP? — the ONE predicate for "git can be
 // asked about this piece", and the GUI's whole vocabulary for it (architect
@@ -14218,16 +14204,12 @@ inline bool history_pull_actionable(const AppState& a) {
 // commits and pushes, both under the default title since 2026-10-10 — and
 // the bit RESTS TRUE while unmeasured, which under Ahead would push without
 // asking whether real edits are owed, so the face greys and the key is
-// silent until the measurement lands, as under UP TO DATE. AND THE DEVICE
-// IS AN AUTHOR (architect 2026-10-10, device_is_mirror above): a mirror takes
-// no commit road, so on a mirror this face is dark and the act cards
-// "This device is a mirror" (up to date, the mirror's Save is the CHECK's
-// face instead, below). Every other status
+// silent until the measurement lands, as under UP TO DATE. Every other status
 // greys the face — Checking, Refused, Diverged and Unchecked, each carded by
 // the key at the act (run_publish_chord) — Behind is the PULL's face
 // instead (history_pull_actionable above) and Offline the CHECK's
 // (history_github_recheck_actionable below). So an offline device takes no
-// checkpoint, on the laptop too (architect 2026-09-27, symmetric). (Outside
+// checkpoint (architect 2026-09-27). (Outside
 // the view this face is not asked: the Save button is the plain save there,
 // and the publish chord, Ctrl+Shift+S, has no button of its own.)
 //
@@ -14245,7 +14227,7 @@ inline bool history_pull_actionable(const AppState& a) {
 // session state, no data judged, outside the guard topology.
 inline bool history_checkpoint_actionable(const AppState& a) {
     if (!a.history_mode.active || !history_remote_walk_available(a) ||
-        a.history_checkpoint_in_flight || device_is_mirror(a)) {
+        a.history_checkpoint_in_flight) {
         return false;
     }
     if (a.github_status == GuiGitHubStatus::Ahead) {
@@ -14258,11 +14240,8 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // WOULD THE PUBLISH CHORD ASK GITHUB AGAIN? (architect 2026-09-28; the
 // chord Ctrl+Shift+S since 2026-10-10) — inside the `h`
 // view, on a visit with a clone, with no checkpoint publishing, while the
-// GitHub status reads OFFLINE, AND ON A MIRROR UP TO DATE (2026-10-28): the
-// reading may be minutes old (the hotspot coming up after the view opened),
-// and the mirror's standing UpToDate is the one word the author can make
-// stale between two visits (the `h` entry reuses a standing answer,
-// open_history_mode_fresh's head), so the chord and the Save button's lift
+// GitHub status reads OFFLINE: the reading may be minutes old (the hotspot
+// coming up after the view opened), so the chord and the Save button's lift
 // DISPATCH THE CHECK (dispatch_github_check, its one dispatcher) and nothing
 // else — row 8 reads `checking...` and then the answer, and the next press
 // acts on it (Behind puts the Pull face up). The face is live on these terms
@@ -14276,9 +14255,7 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 inline bool history_github_recheck_actionable(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
            !a.history_checkpoint_in_flight &&
-           (a.github_status == GuiGitHubStatus::Offline ||
-            (a.github_status == GuiGitHubStatus::UpToDate &&
-             device_is_mirror(a)));
+           a.github_status == GuiGitHubStatus::Offline;
 }
 
 // IS THERE ANYTHING TO SAVE? — THE PLAIN SAVE'S ONE PREDICATE, and SAVE IS THE
@@ -16905,8 +16882,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // AND IN THE VIEW THE GITHUB STATUS IS A TERM (architect 2026-09-27):
         // the face is live where the chord would commit, retry the push,
-        // PULL or — under Offline since 2026-09-28, and on a mirror up to
-        // date since 2026-10-28 — ASK GITHUB AGAIN
+        // PULL or — under Offline since 2026-09-28 — ASK GITHUB AGAIN
         // (history_checkpoint_actionable, history_pull_actionable,
         // history_github_recheck_actionable), and grey on Checking, Refused,
         // Diverged and Unchecked, whose cards are the key's.
@@ -16920,8 +16896,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-10-10: "the icons in history remain the same"): its lift spells
         // Ctrl+Shift+S there (finish_chrome_press_release), Ctrl+S being the
         // plain save in both views since, so the face above reads that act's
-        // predicates — a MIRROR's dark save-and-commit face included
-        // (history_checkpoint_actionable).
+        // predicates (history_checkpoint_actionable and its two siblings).
         //
         // THE SHIFT TWIN (2026-10-11, Ctrl+Shift+S on the shift-click and
         // the long press) ADDS NO TERM — A RECORDED DEPARTURE FROM THE TWIN
@@ -17327,9 +17302,9 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // checkpoint publishes — the PULL glyph in the view while the GitHub
         // status reads Behind, where the chord pulls (history_save_is_pull),
         // and the CHECK glyph where the chord asks GitHub again
-        // (history_github_recheck_actionable: Offline on either role, and Up
-        // to Date on a mirror; 2026-10-28 — the face read COMMIT there from
-        // 2026-09-28, naming an act its press did not run). The order is the
+        // (history_github_recheck_actionable: Offline; 2026-10-28 — the face
+        // read COMMIT there from 2026-09-28, naming an act its press did not
+        // run). The order is the
         // precedence, the pull's test first, then the recheck, then the
         // commit; no checkpoint publishing is a term of the first two (the
         // recheck's predicate carries it), so a publishing checkpoint wears
@@ -17582,9 +17557,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (finish_chrome_press_release, input_pointer.cpp).)
 // (SAVE JOINED 2026-10-11 with Ctrl+Shift+S, THE PUBLISH CHORD (architect):
 // its row is Ctrl+S and its shift-click and long press dispatch the row's
-// key under both modifiers, Ctrl+Shift+S — Save and Commit on an author, the
-// pull on a mirror (run_publish_chord, by the GitHub status and the device's
-// role) — Redo's spelling with the shift carried rather than tabled, and no
+// key under both modifiers, Ctrl+Shift+S — Save and Commit, or the pull
+// while GitHub is ahead (run_publish_chord, by the GitHub status) — Redo's
+// spelling with the shift carried rather than tabled, and no
 // translation. IN THE `h` VIEW its plain lift is already that chord
 // (save_button_publishes), so there the shifted press and the long press run
 // the same act as the tap and the tooltip carries no second line. ITS FACE
@@ -17949,10 +17924,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Open Project (Ctrl+O)", "Press Shift to revert."};
         // SAVE (architect 2026-10-11): its second line names the shift twin,
         // the publish chord, IN THE ROSTER'S OWN FORM, as Open's "Press
-        // Shift to revert." — "save and commit" here, the author's act; the
-        // stateful overload swaps in "pull" on a mirror (device_is_mirror)
-        // and drops the line in the `h` view, where the plain press is
-        // already that chord.
+        // Shift to revert." — "save and commit" here; the stateful overload
+        // drops the line in the `h` view, where the plain press is already
+        // that chord.
         case RedesignButton::Save:
             return {"Save (Ctrl+S)", "Press Shift to save and commit."};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
@@ -18582,8 +18556,8 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 //   Save arm at its third glyph — history_save_is_pull, the `h` view with
 //   GitHub behind and no checkpoint publishing), CHECK where its press asks
 //   GitHub again (the arm's fourth glyph, 2026-10-28 —
-//   history_github_recheck_actionable, Offline on either role and Up to
-//   Date on a mirror) and COMMIT elsewhere in the `h` view, where its press
+//   history_github_recheck_actionable, Offline) and COMMIT elsewhere in the
+//   `h` view, where its press
 //   is the save-and-commit (the tooltip's own fork on history_mode.active,
 //   "Save and Commit") (architect 2026-10-25, "agree"); SAVE outside the
 //   view, a checkpoint publishing there included (the press is the plain
@@ -18800,12 +18774,9 @@ inline RedesignTooltipText redesign_button_tooltip(
     // there — Save's one admission, shift (2026-10-11), spells the same
     // Ctrl+Shift+S the plain lift spells in the view, so the modified press
     // does nothing different and the line drops (rule (2) below). OUTSIDE THE
-    // VIEW ITS SECOND LINE NAMES THE TWIN BY THE DEVICE'S ROLE (architect
-    // 2026-10-11), in the roster's own form: the constant table's "Press
-    // Shift to save and commit." on an author, "Press Shift to pull." on a
-    // mirror (device_is_mirror), whose
-    // publish chord takes the pull road alone — rule (1)'s name fork, applied
-    // to the twin's line. (ITS TWO OTHER FORKS STOOD AHEAD OF THIS ONE
+    // VIEW ITS SECOND LINE NAMES THE TWIN (architect 2026-10-11), in the
+    // roster's own form: the constant table's "Press Shift to save and
+    // commit.", forwarded. (ITS TWO OTHER FORKS STOOD AHEAD OF THIS ONE
     // until 2026-09-12, the in-flight "Committing the checkpoint (Ctrl+S)"
     // outermost and the local fallback's "History is unavailable" — shared
     // there with the walk lamp — under it. Both were a state and a reason, and
@@ -18825,9 +18796,6 @@ inline RedesignTooltipText redesign_button_tooltip(
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
         return {"Save and Commit (Ctrl+Shift+S)", nullptr};
-    }
-    if (b == RedesignButton::Save && device_is_mirror(a)) {
-        return {redesign_button_tooltip(b).line1, "Press Shift to pull."};
     }
     // RENDER HAS NO HISTORY-VIEW HINT since 2026-08-08: the act left this button
     // with its chord, so in the view Render is an ordinary dead button and shows
@@ -19230,8 +19198,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // TABS under a lit grid iterations, where the lock refuses the march,
 // since 2026-10-11 SAVE's
 // publish line in the `h` view, where the plain press is already the publish
-// chord (on a mirror outside it the line is renamed Pull, the twin's name by
-// the role, never added), and since 2026-10-14 JUMP TO DEFINING MARKER's
+// chord, and since 2026-10-14 JUMP TO DEFINING MARKER's
 // copy line where the copy would refuse —
 // and since 2026-10-24 COPY PHASE RESETS' paste line in the phase-reset
 // column, where both pastes refuse at their first rung, and since 2026-10-25

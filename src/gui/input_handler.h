@@ -3436,8 +3436,8 @@ private:
     // THE PUBLISH CHORD'S ACT (architect 2026-10-10) — Ctrl+Shift+S in the
     // main window and in the `h` view alike, and the `h` view's Save button's
     // lift: the pull while GitHub is ahead, the check while offline, else
-    // save and commit under the default title with no question asked, a
-    // MIRROR device taking no commit road. Its one caller is on_key's `s`
+    // save and commit under the default title with no question asked. Its
+    // one caller is on_key's `s`
     // arm (is_publish_key, gui_input.h); the fork and its order are at the
     // definition (input_key_dispatch.cpp). THE COMMIT-TITLE EDITOR it
     // replaces (2026-08-07 to 2026-10-10, itself the replacement of a
@@ -4984,7 +4984,7 @@ private:
     // session that press read. The press plans it (plan_history_pull, local
     // and synchronous), asks its OK / Cancel confirmation only when the pull
     // changes the open piece, and runs it (execute_history_pull) at once
-    // otherwise — the one road on both roles.
+    // otherwise — the one road.
     void run_history_pull_press(const GuiHistoryDiff& session);
     void execute_history_pull(const GuiHistoryPullPlan& plan);
     void on_github_check_complete(GuiGitHubStatus status);

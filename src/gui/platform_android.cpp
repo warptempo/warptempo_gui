@@ -576,10 +576,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
     // `waveform=default` (palette_file.h owns the name).
     cfg.waveform      = kGuiDefaultPaletteKey;
-    // NO ROLE (architect 2026-10-10): the program never invents one, so the
-    // first start's read-back refuses on the required `role` key;
-    // `warptempo_sync setup` writes `role=author` (GuiDeviceRole,
-    // device_config.h).
     // THE NOISE'S THREE (architect 2026-10-28), spelled: the folder `rain`
     // under noise/ beside the config, the level -9 dB, his "the rain is a
     // masker", and the crossfade 4 s (device_config.h's head).

@@ -20,12 +20,13 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (FOURTEEN keys since 2026-10-29 night,
-// the keyboard's cap size `osk_font_px` appended at the end; THIRTEEN that
-// evening, the keyboard's two tuning keys `osk_key_w` and `osk_key_h`
+// REQUIRED SET, every one of them (THIRTEEN keys since 2026-10-30, `role`
+// retired with the laptop GUI — one device, no mirror; FOURTEEN 2026-10-29
+// night, the keyboard's cap size `osk_font_px` appended at the end; THIRTEEN
+// that evening, the keyboard's two tuning keys `osk_key_w` and `osk_key_h`
 // appended at the end; ELEVEN that morning, the tuning key `key_height`
 // appended at the end; TEN from 2026-10-28, the noise's
-// three after `role` — `noise`, `noise_level` and `noise_crossfade_s`, all
+// three appended — `noise`, `noise_level` and `noise_crossfade_s`, all
 // permanent, the crossfade the tuning key `noise_crossfade_ms` until that
 // night; NINE earlier that day, the level and
 // the crossfade appended as `rain_level` and `rain_crossfade_ms` before the
@@ -50,16 +51,16 @@ namespace {
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). ONE LIST SERVES BOTH, the writer's
 // order and the scanner's presence check (architect 2026-10-14, every key
-// required), so no key can be written and not demanded. `role` (2026-10-10)
-// was the first appended key to be required:
-// "if one of these lines is not in place, it means something's wrong with
-// the config or the setup" (architect), the rule every key follows now.
+// required), so no key can be written and not demanded — the rule the
+// retired `role` key (2026-10-10) brought, "if one of these lines is not in
+// place, it means something's wrong with the config or the setup"
+// (architect), and every key follows.
 //
 // THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13; and
 // 2026-10-21): `waveform` (`palette` until 2026-10-13, then `chrome` until
 // 2026-10-21, renamed for what it sets) FOLLOWS last_project, where the
 // `caption` key (formerly `scheme`) stood before it until it left
-// 2026-10-21; `role` is APPENDED after it (2026-10-10). (`theme` stood
+// 2026-10-21. (`theme` stood
 // 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
 // header's record.)
 //
@@ -68,8 +69,8 @@ namespace {
 // the tuning keys keep the end where they leave from.
 //
 // THE NOISE'S THREE (architect 2026-10-28): `noise`, `noise_level` and
-// `noise_crossfade_s` APPENDED after `role`, the permanent keys' end,
-// `role`'s own road, the folder before its loudness and its crossfade.
+// `noise_crossfade_s` FOLLOW `true_colors`, the permanent keys' end, the
+// folder before its loudness and its crossfade.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
@@ -94,7 +95,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "waveform",
     "true_colors",
-    "role",
     "noise",
     "noise_level",
     "noise_crossfade_s",
@@ -173,15 +173,8 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
-        // EVERY KEY WRITES ITS LINE but an unset role (architect
-        // 2026-10-14: the color keys, which wrote none while unset
-        // 2026-10-07..14, are required and always named).
-        // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
-        // alone carries it, and the program never invents a role — the
-        // read-back then refuses on the required key (device_config.h).
-        if (std::string_view(key) == "role" &&
-            cfg.role == GuiDeviceRole::Unset)
-            continue;
+        // EVERY KEY WRITES ITS LINE (architect 2026-10-14: every key is
+        // required and always named).
         s += key;
         s += '=';
         const std::string_view k(key);
@@ -205,10 +198,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "true_colors") {
             // The switch's word (format_true_colors, the grammar's owner).
             s += format_true_colors(cfg.true_colors);
-        } else if (k == "role") {
-            // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
-            s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
-                                                   : kDeviceRoleMirror;
         } else if (k == "noise") {
             // The folder's name verbatim (is_noise_folder_name's grammar).
             s += cfg.noise;
@@ -332,19 +321,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kTrueColorsGrammarReason);
             }
             out.true_colors = *on;
-            return {};
-        }
-        // THE ROLE (architect 2026-10-10): one of the two words, required
-        // like every key (kDeviceConfigKeys); any other word the launch's
-        // hard fail.
-        if (key == "role") {
-            if (value == kDeviceRoleAuthor) {
-                out.role = GuiDeviceRole::Author;
-            } else if (value == kDeviceRoleMirror) {
-                out.role = GuiDeviceRole::Mirror;
-            } else {
-                return bad_value(ln, key, value, kDeviceRoleGrammarReason);
-            }
             return {};
         }
         // THE NOISE'S THREE KEYS (2026-10-28): each under its one grammar

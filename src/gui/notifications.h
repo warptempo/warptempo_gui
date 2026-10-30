@@ -182,18 +182,16 @@
 //     selected, so nothing was copied". THE EDITORS' OWN Ctrl+C and Ctrl+V are
 //     silent: an editor is its own world with that world's conventions.
 //   * THE GITHUB CARDS (2026-09-27), the publish chord (Ctrl+Shift+S since
-//     2026-10-10, in either view) forking on the status and the device's role
-//     (run_publish_chord), each the KEY'S — in the `h` view the Save face
+//     2026-10-10, in either view) forking on the status (run_publish_chord),
+//     each the KEY'S — in the `h` view the Save face
 //     greys on the same status: "GitHub is still being checked", "GitHub
 //     refused this device", "This device and GitHub have both moved" (stderr
 //     names the fix), "GitHub has not been checked"; the pull's synchronous
 //     refusals "Pull refused: this device has moved", "Pull refused:
 //     GitHub's checkpoint of this piece would not load" and "Pull failed:
-//     nothing was changed"; the role's one (2026-10-10), "This device is a
-//     mirror"; and outside the view, where no face shows
+//     nothing was changed"; and outside the view, where no face shows
 //     the head delta, "Nothing to commit" and "The checkpoints are still
-//     being read". UNDER `offline`, AND ON A MIRROR `up to date` (2026-10-28),
-//     THE CHORD ASKS GITHUB AGAIN (architect 2026-09-28) and cards nothing in
+//     being read". UNDER `offline` THE CHORD ASKS GITHUB AGAIN (architect 2026-09-28) and cards nothing in
 //     the view, where row 8's state cell carries the answer, and "Asking
 //     GitHub again" outside it.
 //     The GitHub CHECK itself raises nothing — its failing readings print one

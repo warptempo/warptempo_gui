@@ -1222,8 +1222,8 @@ private:
 // commits the live authoring state into its directory in the projects
 // repository (the chord was Ctrl+Alt+R until 2026-08-08 and Ctrl+S in the
 // view until 2026-10-10). The GUI half — THE CHORD'S FORK that asks nothing
-// (run_publish_chord: the pull, the check or the commit by the GitHub status
-// and the device's role; the commit-title editor that asked for the message
+// (run_publish_chord: the pull, the check or the commit by the GitHub
+// status; the commit-title editor that asked for the message
 // from 2026-08-07 retired 2026-10-10), THE
 // ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and commit", and a
 // failed save refuses it before this module is reached at all), the CLOSE that
@@ -1317,8 +1317,7 @@ enum class GuiHistoryCommitOutcome {
 // `GitHub: <word>` (github_status_word), and it selects what the publish
 // chord (Ctrl+Shift+S, either view, 2026-10-10) does: UpToDate commits, Ahead
 // commits or retries the push, Behind pulls, Offline asks GitHub again, and
-// the rest refuse with a card — a mirror device committing nothing, its
-// UpToDate asking GitHub again (2026-10-28) (run_publish_chord).
+// the rest refuse with a card (run_publish_chord).
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
 //               read that did not answer, a fetch that failed in the clone
@@ -1351,7 +1350,7 @@ const char* github_status_word(GuiGitHubStatus status);
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
 // at every project open, an `h` entry with no standing answer (Unchecked or
 // Offline, 2026-10-28; open_history_mode_fresh) and the publish chord under
-// Offline or a mirror's UpToDate: derive the clone from the source
+// Offline: derive the clone from the source
 // through the same three steps resolve_history_walk_header takes
 // (resolve_repo_root_for_source, open_clone_for and the projects-home guard
 // clone_is_projects_home), read the branch, FETCH
@@ -1430,11 +1429,10 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 // branch to the remote-tracking ref THE LAST CHECK FETCHED, synchronous on
 // the main thread and NETWORK-FREE (the ref is local; nothing is fetched
 // again). Fast-forward only: a branch that is not strictly behind refuses.
-// FORCED ON BOTH ROLES (architect 2026-10-19): every path the pull changes
-// becomes the upstream's whatever the working tree holds there, and every
-// path it does not change is left alone — on the author, Behind means the
-// other copy (GitHub) is the truth; on the mirror there is no work to save,
-// its tree being scratch. Two steps, a confirmation between them when the
+// FORCED (architect 2026-10-19): every path the pull changes becomes the
+// upstream's whatever the working tree holds there, and every path it does
+// not change is left alone — Behind means the other copy (GitHub) is the
+// truth. Two steps, a confirmation between them when the
 // pull changes the open piece (GuiInputHandler::run_history_pull_press owns
 // the question).
 

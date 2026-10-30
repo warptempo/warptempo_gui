@@ -1726,7 +1726,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // remain the same. also ctrl shift s becomes pull if appropriate";
         // the commit-title editor retired the same night): the pull, the
         // check or save-and-commit under the default title by the GitHub
-        // status and the device's role (run_publish_chord owns the fork). The
+        // status (run_publish_chord owns the fork). The
         // `h` view's Save button reaches it by spelling this chord at its lift
         // (finish_chrome_press_release), its face unchanged. CTRL+S IS THE
         // PLAIN SAVE IN BOTH VIEWS since that ruling (it was the checkpoint

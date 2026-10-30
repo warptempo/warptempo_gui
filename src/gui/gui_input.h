@@ -1452,8 +1452,7 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // exactly — no alt. In the main window and in the `h` view alike it runs
 // GuiInputHandler::run_publish_chord: the pull while GitHub is ahead, the
 // check while offline, else save and commit under the default title with no
-// question asked — a MIRROR device (the device config's `role`) taking the
-// pull road alone. Ctrl+S beside it is the plain save in both views. THREE
+// question asked. Ctrl+S beside it is the plain save in both views. THREE
 // READERS, one shape: on_key's `s` arm (input_handler.cpp), the read-only
 // allowlist (read_only_key_blocked, which admits it as it admits the save —
 // a checkpoint of the state the tab already holds authors nothing) and the

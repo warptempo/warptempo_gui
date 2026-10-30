@@ -1394,9 +1394,7 @@ static std::optional<std::size_t> find_commit_walk_member(
 // execute_history_pull). THE OTHER DEVICE MOVING GITHUB BETWEEN TWO VISITS is
 // met by the act, not the word: the checkpoint fetches first and refuses on a
 // moved remote (RemoteMoved), the pull's plan refuses a branch no longer
-// strictly behind the refs the last fetch left (plan_history_pull's Moved),
-// and a MIRROR'S chord under UpToDate asks GitHub again rather than answer
-// from the word (run_publish_chord, 2026-10-28).
+// strictly behind the refs the last fetch left (plan_history_pull's Moved).
 // The cost is a stale word on row 8 until the next act or project open.
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
@@ -3267,7 +3265,7 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 // The act itself is commit_history_checkpoint (history_diff.h): the fetch
 // first, the three writes, the three-path commit, the push, and every stderr
 // line about them. What lives here is THE CHORD'S FORK in front of it (the
-// GitHub status, the device's role and the head delta), THE SAVE in front of
+// GitHub status and the head delta), THE SAVE in front of
 // the act (2026-08-04 — the act is "Save and Commit"), the CLOSE of a standing
 // `h` view behind the save (2026-08-05, re-partitioned 2026-08-07), and the
 // DISPATCH onto the background worker with the report that comes back from it.
@@ -3300,20 +3298,13 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 //   - NO CLONE TO COMMIT INTO (architect 2026-09-04) cards the bootstrap's
 //     reason under the product's one spelling of the fact, kHistoryUnavailable.
 //   - THE GITHUB STATUS (architect 2026-09-27): Checking, Refused, Unchecked
-//     and Diverged each card their sentence; OFFLINE, AND ON A MIRROR UP TO
-//     DATE, ASK GITHUB AGAIN (dispatch_github_check; architect 2026-09-28,
-//     the mirror's UpToDate 2026-10-28 — the one word the author can make
-//     stale between two visits) and nothing else, the answer being what the
-//     next press acts on — silent in the view, whose row 8 shows the word,
-//     and a card outside it; BEHIND is the PULL ON EITHER ROLE
+//     and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
+//     (dispatch_github_check; architect 2026-09-28) and nothing else, the
+//     answer being what the next press acts on — silent in the view, whose
+//     row 8 shows the word, and a card outside it; BEHIND is the PULL
 //     (run_history_pull_press, its OK / Cancel confirmation when the pull
-//     changes the open piece; the press owns the one road), reached before
-//     the role's gate below.
-//   - THE ROLE (architect 2026-10-10, device_is_mirror, app_state.h): A MIRROR
-//     TAKES NO COMMIT ROAD — its chord is the pull road and the asking above
-//     alone; AHEAD, a commit GitHub lacks and a push retry, refuses on the
-//     mirror's card. This is the commit road's one gate, at its owner.
-//   - On an AUTHOR, UP TO DATE OR AHEAD, THE HEAD DELTA DECIDES. Unmeasured
+//     changes the open piece; the press owns the one road).
+//   - UP TO DATE OR AHEAD, THE HEAD DELTA DECIDES. Unmeasured
 //     (the walk's member 0 not yet delivered — the bit rests TRUE, and reading
 //     that as "nothing new" under AHEAD would push without asking whether real
 //     edits are owed, architect 2026-09-28) or empty under UP TO DATE there is
@@ -3357,19 +3348,13 @@ void GuiInputHandler::run_publish_chord() {
                              "GitHub is still being checked");
         return;
     case GuiGitHubStatus::UpToDate:
-        // AN AUTHOR'S UP TO DATE COMMITS (below): its act fetches first and
-        // reads Behind / Diverged before committing. A MIRROR'S is the
-        // Offline arm's (the reason there).
-        if (!device_is_mirror(app)) break;
-        [[fallthrough]];
+        // UP TO DATE COMMITS (below): the act fetches first and reads
+        // Behind / Diverged before committing.
+        break;
     case GuiGitHubStatus::Offline:
-        // OFFLINE, AND ON A MIRROR UP TO DATE, ASK GITHUB AGAIN (architect
-        // 2026-09-28 for Offline; the mirror's UpToDate 2026-10-28): THE
-        // READING MAY BE STALE — a view opened while the link was still
-        // coming up would read offline for its whole life, and the mirror's
-        // standing UpToDate is the one word the author can make stale
-        // between two visits (the `h` entry reuses a standing answer,
-        // open_history_mode_fresh's head), so the act never answers from it.
+        // OFFLINE ASKS GITHUB AGAIN (architect 2026-09-28): THE READING MAY
+        // BE STALE — a view opened while the link was still coming up would
+        // read offline for its whole life — so the act never answers from it.
         // The press asks again through the check's one dispatcher and does
         // nothing else: in the view row 8 turns to `checking...` and then
         // the answer, and the next press acts on it (Behind puts the Pull
@@ -3398,8 +3383,8 @@ void GuiInputHandler::run_publish_chord() {
         return;
     case GuiGitHubStatus::Diverged:
         // FAST-FORWARD ONLY: no in-app resolution. The fix is named on stderr.
-        // The tablet is the only committer (architect 2026-09-28; the role
-        // since 2026-10-10), so the laptop's clone holds nothing authored and
+        // The tablet is the only committer (architect 2026-09-28), so the
+        // laptop's clone holds nothing authored and
         // its local commits are discarded, and a diverged tablet is re-placed
         // after its sidecars are copied off.
         std::fprintf(stderr,
@@ -3416,11 +3401,6 @@ void GuiInputHandler::run_publish_chord() {
         return;
     case GuiGitHubStatus::Ahead:
         break;
-    }
-    if (device_is_mirror(app)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "This device is a mirror");
-        return;
     }
     const std::string& dir = session->project_directory();
     if (dir.empty() || session->sidecar_base_name().empty()) return;
@@ -3825,10 +3805,7 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 // Cancel (architect 2026-10-19: one road, OK reloads — a confirmation whose
 // OK discards the session, so its Enter commits nothing). A pull that leaves
 // the open piece alone runs at once: the face said Pull, and nothing on
-// screen changes. THE ONE ROAD SERVES BOTH ROLES (architect 2026-10-19):
-// run_publish_chord's Behind arm reaches this press before its mirror gate,
-// so the mirror asks the same question, and on the mirror the question is
-// the only notice that a laptop session's unsaved edits are discarded.
+// screen changes.
 void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
     GuiHistoryPullPlan              plan;
     GuiGitHubStatus                 reading = app.github_status;

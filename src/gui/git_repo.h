@@ -337,7 +337,7 @@ public:
     // `to_sha` (a descendant), NETWORK-FREE, in three steps:
     //   1. every path the two trees differ on, and every path in `also`, is
     //      checked out FORCED to `to_sha`'s bytes (architect 2026-10-19: the
-    //      pull is a forced fast-forward on both roles) — a working-tree
+    //      pull is a forced fast-forward) — a working-tree
     //      edit, a deleted file or an untracked (or ignored) file in the way
     //      is overwritten, a path `to_sha` deletes is removed; every path
     //      the two trees agree on and `also` does not name is left exactly
