@@ -1,25 +1,16 @@
 # Statically linked dependencies
 
 Every library compiled INTO a binary of this project, with its licence. The repository distributes no binary: the
-laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built into the gitignored
-`deps/prebuilt/` (`deps/`, each source tarball pinned by sha256 in `deps/common.sh`, provenance in
-`docs/engineering/android_notes.md` §6) and the APK is installed on one tablet only. The licence texts live in each pinned source; this
-file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
-Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
-code: `fonts/README.md` and `assets/icons/README.md` (the four icon SVGs, the launcher's drawing among them:
-`AppIcon.svg`, the logo lane's quaver through its symlink) carry their provenance and licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
-(2.1.5; SIL Open Font License 1.1, the text in `fonts/LICENSE-Liberation-OFL.txt`, since 2026-10-09, the product's only face since
-2026-10-12); the repository distributes no binary.
+laptop builds the CLI (`CMakeLists.txt`), which links the distribution's fftw alone and is not listed here, and
+cross-builds the APK's libraries into the gitignored `deps/prebuilt/` (`deps/`, each source tarball pinned by sha256
+in `deps/common.sh`, provenance in `docs/engineering/android_notes.md` §6); the APK is installed on one tablet only.
+The licence texts live in each pinned source; this file is the list. The faces and the icons are data, not code:
+`fonts/README.md` and `assets/icons/README.md` (the four icon SVGs, the launcher's drawing among them: `AppIcon.svg`,
+the logo lane's quaver through its symlink) carry their provenance and licence texts. The face is packed into the
+APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1, the text in
+`fonts/LICENSE-Liberation-OFL.txt`).
 
-## Both devices
-
-| Library | Version | Licence |
-|---|---|---|
-| resvg's C API (`resvg-capi`, `src/gui/svg_icon.cpp`: the renderer of the four icon SVGs and the decoder of the score viewer's page images, the grayscale JPEG pages `tools/score_extract.py` writes), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
-| its 37 crates (below) | Cargo.lock at the pin | MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Zlib, 0BSD, Unlicense, each crate's own |
-| the Rust standard library inside `libresvg.a` (core, alloc, std and their crates) | rustc 1.99.0 | MIT OR Apache-2.0 |
-
-## The tablet's APK only
+## The tablet's APK
 
 | Library | Version | Licence |
 |---|---|---|
@@ -31,12 +22,15 @@ code: `fonts/README.md` and `assets/icons/README.md` (the four icon SVGs, the la
 | OpenSSL (libcrypto) | 3.6.4 | Apache-2.0 |
 | libssh2 | 1.11.1 | BSD-3-Clause |
 | libgit2 (with its bundled zlib, llhttp, SHA-1 collision detection) | 1.9.7 | GPL-2.0-only with the linking exception (its `COPYING`, which also states each bundled piece's licence) |
+| resvg's C API (`resvg-capi`, `src/gui/svg_icon.cpp`: the renderer of the four icon SVGs and the decoder of the score viewer's page images, the grayscale JPEG pages `tools/score_extract.py` writes), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
+| its 37 crates (below) | Cargo.lock at the pin | MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Zlib, 0BSD, Unlicense, each crate's own |
+| the Rust standard library inside `libresvg.a` (core, alloc, std and their crates) | rustc 1.99.0 | MIT OR Apache-2.0 |
 | the NDK's libc++, libc++abi and libunwind (`-static-libstdc++`), and `android_native_app_glue` | NDK r29 | Apache-2.0 WITH LLVM-exception; the glue Apache-2.0 |
 
 ## resvg's crates
 
-The packages of `cargo tree -p resvg-capi --no-default-features --features raster-images -e normal` at the pin, the
-same on both targets, with each crate's declared licence and the copyright line of its licence file (a dash where
+The packages of `cargo tree -p resvg-capi --no-default-features --features raster-images -e normal` at the pin, for the
+one target, with each crate's declared licence and the copyright line of its licence file (a dash where
 the file names no holder). Regenerate from the tarball's `Cargo.lock` when the pin moves.
 
 | Crate | Version | Licence | Copyright |

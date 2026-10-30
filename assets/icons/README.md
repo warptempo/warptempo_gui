@@ -2,8 +2,8 @@
 
 The drawings the program paints, one SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its
 enumerator. The keys print their names and draw no glyph, so these four drawings are the only icons on screen. The
-program reads the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the laptop from this folder, on
-the tablet from the APK's `icons/` assets (`apk/build_apk.sh`, which copies each link as the file it names). A
+program reads them at launch, through resvg (`src/gui/svg_icon.h`), from the APK's `icons/` assets, the one bundle
+(`apk/build_apk.sh` copies this folder's drawings there, each link as the file it names). A
 missing file, or one that is not well-formed SVG, fails the launch, naming the file. Files of other names here (this
 README, the licence text) are not read.
 
@@ -24,9 +24,8 @@ GLYPH, placed by its box (`src/gui/icons.h`, THE BOXED GLYPHS).
 A drawing with two uses is one file and a relative symlink in this folder:
 
 - `WavRow.svg` -> `Quaver.svg` (the wav rows wear the quaver);
-- `AppIcon.svg` -> `Quaver.svg` (the program icon outside the window: the Android launcher icon is rendered from it at
-  every APK build, `apk/build_apk.sh`; the Linux icon is `packaging/warptempo_gui.svg`, a link to
-  `Quaver.svg`, `docs/INSTALL.md`).
+- `AppIcon.svg` -> `Quaver.svg` (the program's one icon outside the window: the Android launcher icon, rendered from it
+  at every APK build, `apk/build_apk.sh`).
 
 ## Licence
 

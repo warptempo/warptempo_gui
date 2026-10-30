@@ -2,8 +2,11 @@
 
 THE COLOR ROAD (measured on the architect's glass 2026-10-22, after four sessions of flipping between roads on
 screenshots; his word that day: "this problem was already solved. We're reinventing the wheel"): THE iCCP TAG SAYS
-WHAT THE BYTES ARE. His viewer is Fossify Gallery (the tablet's VIEW default, not Samsung Gallery), and it honors a
-PNG's Display-P3 tag: a TAGGED file's bytes are shown as Display-P3 coordinates, an UNTAGGED file's as sRGB. The
+WHAT THE BYTES ARE. The judging viewer is SAMSUNG GALLERY (com.sec.android.gallery3d), fullscreen: byte-exact against
+the file and matching the app on his glass (adb-proven 2026-10-30). FOSSIFY GALLERY IS RETIRED FOR JUDGING (2026-10-30):
+it renders through a chroma-subsampled path, every pixel a little off and a grey one-px line bleeding into its
+neighbor row (the "ghost line"). Both viewers honor a PNG's Display-P3 tag, so the rule below is unchanged: a TAGGED
+file's bytes are shown as Display-P3 coordinates, an UNTAGGED file's as sRGB. The
 app's window is a Display-P3 layer (`src/gui/display_transform.h`): with `true_colors=on` it converts every authored
 sRGB byte to P3 at the painter's entry, so its bytes — and a screencap's, which always carries the 520-byte Skia
 Display-P3 iCCP, as his own screenshots do — are P3 bytes; with `true_colors=off` the same screencap holds the

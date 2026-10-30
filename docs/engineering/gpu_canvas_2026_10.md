@@ -6,7 +6,12 @@ holds what the code comments deliberately leave out: the measurement that
 decided the arc, the inventory the design rests on, the rulings, and the
 proof method. Current behavior and its rationale live at the owning symbols
 (`GuiPlatform` in `src/gui/platform_android.cpp`, the canvas sink in
-`src/gui/render.h`); this is the record of how they came to be.
+`src/gui/canvas_sink.h`); this is the record of how they came to be.
+
+*Note, 2026-10-30: the cpu canvas, the cairo sink and the laptop's twin
+were dropped with the laptop GUI (the CLI the laptop's one product). The GL
+canvas is the one road on the one platform. §5's identity proofs compare
+builds that no longer exist and are kept as history.*
 
 ## 1. The measurement that decided it
 
