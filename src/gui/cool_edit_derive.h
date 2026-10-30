@@ -613,16 +613,14 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // THE PANEL'S FACE, "an opacity look … not actually opaque" — three DERIVED
 // SOLID COLORS (the palette composites nothing at paint time; each a
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
-// of the program's words so a new Face, `cue` or `range` moves
+// of the program's words so a new Face or `cue` moves
 // them live; render.cpp's fill_program_palette). THE FACE HERE IS THE MARKER
 // LANE'S (architect 2026-10-22: truthful to the surface — the cues stand on
 // the marker lane), and the lane is flat in the ground's face since
 // 2026-10-29 (materials.h's head), so it is the one number
 // materials::face(), the baked ground's mean:
-//   the TRIANGLE   the marker's own color, `cue` for a warp marker
-//                  (`ce_off_cue`) or `range` for a phase reset
-//                  (`ce_off_range`) — each kind its color since 2026-10-29
-//                  — 45 % toward the Face;
+//   the TRIANGLE   the live triangle's color, the `cue` red (every cue's,
+//                  warp or phase reset), 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;
 //   the LABEL      the resting label's ink (Cool Edit's cue-label ink
 //                  `hilight`, re-verified on three captures 2026-10-10; the
@@ -646,8 +644,8 @@ constexpr uint32_t mix_toward(uint32_t from, uint32_t to, double t) {
     }
     return out;
 }
-// The triangle of the live color `triangle` (the `cue` or the `range`),
-// faded toward `face`.
+// The triangle of the live color `triangle` (the `cue`), faded toward
+// `face`.
 constexpr uint32_t disabled_triangle(uint32_t triangle, uint32_t face) {
     return mix_toward(triangle, face, kDisabledTriangleMix);
 }
@@ -662,10 +660,9 @@ constexpr uint32_t disabled_cue_shadow(uint32_t face) {
 constexpr uint32_t disabled_cue_label(uint32_t label, uint32_t face) {
     return mix_toward(label, face, kDisabledLabelMix);
 }
-// The GuiPalette members these fill (the two faded triangles, `cue` and
-// `range`, the faded shadow, the faded label), counted by palette_file.cpp's
-// coverage check.
-inline constexpr std::size_t kDisabledCueMemberCount = 4;
+// The GuiPalette members these fill (the faded cue triangle, the faded
+// shadow, the faded label), counted by palette_file.cpp's coverage check.
+inline constexpr std::size_t kDisabledCueMemberCount = 3;
 // A mix of 0 is the source and a mix of 1 the target, per channel.
 static_assert(mix_toward(0x102030, 0xF0E0D0, 0.0) == 0x102030 &&
               mix_toward(0x102030, 0xF0E0D0, 1.0) == 0xF0E0D0);

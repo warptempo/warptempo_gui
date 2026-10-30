@@ -40,7 +40,7 @@ static_assert(palette_members_disjoint());
 // THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled with the
 // program's words, render.cpp) are the struct's third part — the table's
 // painted tones and the panel label's swapping pair: distinct, and neither a
-// chrome role's member nor a program role's — and the disabled cue's four
+// chrome role's member nor a program role's — and the disabled cue's three
 // faded colors (kDisabledCueMemberCount) after them. (The button case's
 // twenty-four members and the tab strip's seventeen, 2026-10-10 and
 // 2026-10-18, left 2026-10-21 with the materials, materials.h.)

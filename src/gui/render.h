@@ -272,11 +272,11 @@ struct TrimRange {
 //                 Edit's — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE CUES' TWO COLORS,
 //                 Cool Edit's —
-//                 `cue` the red, a warp marker's triangle and dots, and
-//                 `range` the blue, a phase reset's (2026-10-29; the
-//                 invalid color, a third role 2026-10-09 to 2026-10-26,
-//                 retired: the strike is the mark, THE MARKER LANE
-//                 below); the playhead's role
+//                 `cue` the red, every cue's triangle and one of its dot
+//                 phases, and `range` the blue, the other, warp and phase
+//                 reset alike (the invalid color, a third role 2026-10-09
+//                 to 2026-10-26, retired: the strike is the mark, THE
+//                 MARKER LANE below); the playhead's role
 //                 `playhead_stem` — its head in the ruler and its dots in
 //                 the canvas, nothing else (THE PLAYHEAD, below); the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
@@ -429,11 +429,9 @@ struct GuiPalette {
     // and corner off the Face 2026-10-10..10-21, replaced by materials.h's
     // THE KEY.)
     // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
-    // disabled_* mixes toward the Face): a warp marker's triangle off the
-    // `cue` and a phase reset's off the `range` (2026-10-29, each kind its
-    // own color), the one cue shadow, and the one resting label.
+    // disabled_* mixes toward the Face): the triangle of the `cue` red, the
+    // cue shadow, and the resting label.
     GuiColor ce_off_cue;
-    GuiColor ce_off_range;
     GuiColor ce_off_cue_shadow;
     GuiColor ce_off_label;
 };
@@ -687,24 +685,20 @@ void install_true_colors(bool on);
 // in the lane or on the frame row; paint_marker_stems). No box, no outline,
 // no stem through the frame row.
 //
-// THE CUES ARE COOL EDIT'S TWO COLORS, ONE PER KIND (architect 2026-10-09
-// ~11:50–12:00, "red+blue for warp and phase"; 2026-10-29, on the split
-// mocks in his gallery: "let's do triangle and dots — warp = cue and phase =
-// range"): A WARP MARKER WEARS THE RED `cue` (Cool Edit's CueM, F34B58 in
-// its default) AND A PHASE RESET THE BLUE `range` (its RngM, 4B82F3),
-// TRIANGLE AND EVERY DOT ALIKE — each built-in's own pair, the two colors
+// THE CUES ARE COOL EDIT'S TWO COLORS (architect 2026-10-09 ~11:50–12:00,
+// "red+blue for warp and phase"; every cue since 2026-10-26, the history's
+// halves and a coincident marker's included):
+// THE RED `cue` (Cool Edit's CueM, F34B58 in its default) and THE BLUE
+// `range` (its RngM, 4B82F3) — each built-in's own pair, the two colors
 // returned 2026-10-26 (architect: "the default Cool Edit markers contrast
-// well, with the flag in red and the range in blue"); the history's halves
-// take their lane's axis, and a coincident marker its own. On the six
-// presets whose CueM and RngM are one color the kinds paint alike, the
-// label telling them apart. The stem keeps Cool Edit's two dot phases — a
-// point cue's range start and end superimposed, its dots on the canvas's
-// device rows ≡ 3 and ≡ 7 (mod 8), one dot every four rows
-// (program_spec.h's dot fields) — both in the marker's one color, no
-// alternation (the red and the blue alternating on every cue 2026-10-09 to
-// 2026-10-29). The lane paints the active column's markers alone, so on
-// screen the Warp view's lane is the `cue` and the Phase Reset view's the
-// `range`. THE STRIKE IS THE INVALID INDICATOR (architect 2026-10-26 ~15:10:
+// well, with the flag in red and the range in blue"). Every cue's triangle
+// is the red. A point cue's stem is Cool Edit's range start and end
+// superimposed — the blue dots on the canvas's device rows ≡ 3 (mod 8), the
+// red on rows ≡ 7, one dot every four rows in alternating colors
+// (program_spec.h's dot fields). WARP AND PHASE RESET WEAR THE SAME CUE:
+// the kind reads from the view that lists it — the lane paints the active
+// column's markers alone, the Warp and Phase Reset views — and from its
+// label (his one-label rule). THE STRIKE IS THE INVALID INDICATOR (architect 2026-10-26 ~15:10:
 // "It's very odd having anything but red mean invalid. So I think what we
 // should do is have coincident markers be shown as a strike through, which
 // is actually effective because that's what happens to them. They become
@@ -744,8 +738,7 @@ void install_true_colors(bool on);
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then the live cue; the strike rides either):
-//   THE CUE   the kind's triangle and dots — a warp marker's the `cue`
-//             red, a phase reset's the `range` blue — the label in the
+//   THE CUE   the red triangle, the red and blue dots, the label in the
 //             bone (materials.h's kBoneInk);
 //   STRUCK    the red-flag class (warp_red_flag_set_cached and its
 //             phase-reset twin — the coincident run, a warp label ref
@@ -757,8 +750,8 @@ void install_true_colors(bool on);
 //             faded label's, the selected text's);
 //   DISABLED  THE FADED LOOK (architect 2026-10-10 ~12:20, "the arrow needs
 //             to be legible for me, but the text doesn't … since it's
-//             disabled, it's inert"): the triangle's live color (the
-//             kind's, `cue` or `range`) and the cue
+//             disabled, it's inert"): the triangle's live color (the cue
+//             red) and the cue
 //             shadow BLENDED 45 % TOWARD THE FACE and the label's rest tone
 //             65 % toward it — derived solid colors, "an opacity look …
 //             not actually opaque" (cool_edit_derive.h, `ce_off_*`) — and NO
@@ -799,14 +792,14 @@ void install_true_colors(bool on);
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform is DOTTED IN ITS RESET'S STEM
 // PATTERN, never a solid line (paint_phase_reset_overlay_ring, through
-// phase_reset_stem_dots — architect 2026-09-17, the ring and the cue one
+// live_cue_stem_dots — architect 2026-09-17, the ring and the cue one
 // unit; 2026-10-09 ~17:40, "made of the same stuff the marker looks like"):
 // its left side the stem itself, its right side the stem's dots on the
 // band's last column, its top and bottom runs the same two phases along the
-// canvas's first and last rows; both phases the `range`, every live reset's
-// (2026-10-29) — a coincident one's too, its struck label the mark
-// (2026-10-26; the invalid color alone 2026-10-11 to 2026-10-26); resting
-// whether selected or not, as the stem is.
+// canvas's first and last rows; the red and the blue, every live reset's — a
+// coincident one's too, its struck label the mark (2026-10-26; the invalid
+// color alone 2026-10-11 to 2026-10-26); resting whether selected or not,
+// as the stem is.
 //
 // EDITING: THE FIELD IS WINDOWS' EDIT FIELD (architect 2026-10-09,
 // reversing 2026-10-07 ~09:45's flag-in-its-selected-face; the drawing
@@ -869,9 +862,8 @@ void install_true_colors(bool on);
 //
 // THE HISTORY VIEW'S DIFF FLAGS are cues of their own two kinds (architect
 // 2026-10-04; THE STRIKE 2026-10-26 ~15:30, "Two, agree"): both halves THE
-// PLAIN CUE of the lane's axis — on the Warp view the `cue` triangle and
-// dots, on the Phase Reset view the `range` (2026-10-29) — a REMOVED line's
-// label STRUCK and an ADDED line's plain, the label
+// PLAIN CUE in the cue colors — the `cue` triangle, the stem's red and blue
+// dots — a REMOVED line's label STRUCK and an ADDED line's plain, the label
 // the line's own text with no sign (history_diff_label, paint_handler.h; the
 // brackets `[+]` / `[-]` of 2026-08-05 retired the same day: "those are
 // always hard to see anyways at the font size. A strike through is easier to
@@ -3417,15 +3409,12 @@ struct FlagLaneRects {
     int     columns_x = 0;
 };
 
-// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S TWO PHASES
-// (`cue_dot_phase_a` and `cue_dot_phase_b`, program_spec.h), named as a
-// ROLE so the stash keeps no color and the painter reads the palette live
-// (resolve_flag_face, render.cpp, the one table): none, the `cue` red — a
-// warp marker's, on both phases — or the `range` blue — a phase reset's, on
-// both (2026-10-29; the two alternating on every cue's phases 2026-10-09 to
-// 2026-10-29; the invalid color, a third, 2026-10-11 to 2026-10-26, retired
-// with its role: the strike is the mark). The two phases stay two fields so
-// the rows' plumbing is the stem's own, one role or two.
+// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S TWO PHASES (the red's
+// `cue_dot_phase` and the blue's `range_dot_phase`, program_spec.h), named
+// as a ROLE so the stash keeps no color and the painter reads the palette
+// live (resolve_flag_face, render.cpp, the one table): none, the `cue` red
+// or the `range` blue (the invalid color, a third, 2026-10-11 to
+// 2026-10-26, retired with its role: the strike is the mark).
 enum class GuiCueDot : uint8_t { None, Cue, Range };
 // The live palette role a dot color names. Precondition: not None.
 inline GuiColor cue_dot_color(GuiCueDot d) {
@@ -3436,11 +3425,11 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
 // column the cue's dots stand on (the triangle's apex column) and THE DOTS
 // ITS CLASS RESOLVED TO ON EACH PHASE (resolve_flag_face, render.cpp;
-// architect 2026-10-09 ~11:50, 2026-10-26, 2026-10-29): every live cue,
-// coincident or not, and both of the history's halves its kind's one color
-// on both phases — a warp marker the red `cue`, a phase reset the blue
-// `range`, a history half its lane's axis's — selected or not (Cool Edit's
-// cue never changes when selected). The flag PAINTERS are the only producers — the
+// architect 2026-10-09 ~11:50, 2026-10-26): every live cue — warp, phase
+// reset, coincident or not, and both of the history's halves — the red
+// `cue` on the red's phase and the blue `range` on the blue's, alternating,
+// selected or not (Cool Edit's cue never changes when selected). The flag
+// PAINTERS are the only producers — the
 // two live columns', and the `h` view's diff lane, which replaces them
 // wholesale while the mode stands; the one reader is the per-frame waveform
 // pass GuiPaintHandler::paint_marker_stems, which paints each phase's dotted
@@ -3462,8 +3451,8 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 struct MarkerStem {
     int       marker_index;
     double    x;
-    GuiCueDot phase_a_dots;   // on cue_dot_phase_a
-    GuiCueDot phase_b_dots;   // on cue_dot_phase_b
+    GuiCueDot cue_phase_dots;     // on cue_dot_phase
+    GuiCueDot range_phase_dots;   // on range_dot_phase
 };
 
 // THE NUDGED PAIR'S RING RUNS (architect 2026-10-10 ~18:55 → 2026-10-26):
@@ -3474,12 +3463,10 @@ struct MarkerStem {
 // bottom: a run along the canvas's first row and one along its last, from
 // the left stem's window column `x0` to the right stem's `x1`, both ends
 // included. Dotted IN THE STEM'S OWN PATTERN as the phase-reset lead-in
-// ring's runs are (paint_phase_reset_overlay_ring, the model): one device
-// px a dot, on both phases in the pair's own stem dots (`phase_a_dots` and
-// `phase_b_dots`, the live face its two cues wear, published with the run
-// so the ring and its stems are one object: the `cue` on the Warp view, the
-// `range` on the Phase Reset view, architect 2026-10-29), one dot every four
-// columns, counted from the left stem's own column (unclipped, so the run stays put
+// ring's runs are (paint_phase_reset_overlay_ring, the model; live_cue_-
+// stem_dots): one device px a dot, the `cue` red on the red's phase and the
+// `range` blue on the blue's, one dot every four columns alternating,
+// counted from the left stem's own column (unclipped, so the run stays put
 // on the song as the view pans) — A STEM'S DENSITY (architect 2026-10-26:
 // "the horizontal lines in the overlay of history have double the density
 // of the vertical lines. They should have the same density as the
@@ -3490,11 +3477,9 @@ struct MarkerStem {
 // clipped at paint, the stems between which it stands possibly off screen.
 // It is promoted and dropped with the stem stash (AppState::marker_stems).
 struct MarkerStemRun {
-    int       marker_index;
-    double    x0;
-    double    x1;
-    GuiCueDot phase_a_dots;   // on cue_dot_phase_a
-    GuiCueDot phase_b_dots;   // on cue_dot_phase_b
+    int    marker_index;
+    double x0;
+    double x1;
 };
 
 // WHICH ONE SEGMENT OF WHICH ONE MARKER'S LABEL THE FLAG PASS DOES NOT PAINT,
@@ -3830,24 +3815,25 @@ void render_phase_reset_flags(cairo_t* cr,
                             // gates, while the bound editor is both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
-// THE DOTS A LIVE PHASE RESET'S STEM WEARS, for the surface that must wear
-// them too — the phase-reset lead-in ring (paint_phase_reset_overlay_ring,
+// THE DOTS A LIVE CUE'S STEM WEARS, for the two surfaces that must wear them
+// too — the phase-reset lead-in ring (paint_phase_reset_overlay_ring,
 // paint_handler.cpp; the ring and the cue one unit, architect 2026-09-17,
-// dotted in the stem's pattern since 2026-10-09 ~17:40). It asks the one
+// dotted in the stem's pattern since 2026-10-09 ~17:40) and the `h` view's
+// nudged-pair ring (MarkerStemRun; paint_marker_stem_runs, architect
+// 2026-10-26: "they should be joined by the overlay ring"). It asks the one
 // resolver (resolve_flag_face's table, render.cpp) rather than restating it:
-// the `range` on both phases, every live reset's (2026-10-29) — a
-// coincident reset's too, its struck label the mark (2026-10-26; the
-// invalid color's ring 2026-10-11 to 2026-10-26) — resting, selected or not
-// (the cue never changes when selected), so a ring and its stem stay one
-// object. The colors are the palette's live roles (cue_dot_color), read by
-// the painter as the stems read them. No disabled arm, a disabled reset
-// painting neither dots nor ring. (The `h` view's nudged-pair ring carries
-// its pair's dots on its own run, MarkerStemRun, its axis the lane's.)
+// the red `cue` dots and the blue `range` dots, every live cue's, warp or
+// phase reset — a coincident one's too, its struck label the mark
+// (2026-10-26; the invalid color's ring 2026-10-11 to 2026-10-26) —
+// resting, selected or not (the cue never changes when selected), so a ring
+// and its stems stay one object. The colors are the palette's live roles
+// (cue_dot_color), read by the painter as the stems read them. No disabled
+// arm, a disabled reset painting neither dots nor ring.
 struct GuiStemDots {
-    GuiCueDot phase_a_dots = GuiCueDot::None;
-    GuiCueDot phase_b_dots = GuiCueDot::None;
+    GuiCueDot cue_phase_dots   = GuiCueDot::None;
+    GuiCueDot range_phase_dots = GuiCueDot::None;
 };
-GuiStemDots phase_reset_stem_dots();
+GuiStemDots live_cue_stem_dots();
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
@@ -3975,11 +3961,9 @@ struct HistoryDiffFlag {
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
 // THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
-// every cue THE PLAIN CUE of the lane's axis, its triangle and its stem's
-// dots the `cue` on the Warp view and the `range` on the Phase Reset view
-// (2026-10-29, `markers_view` below), both halves alike (architect
-// 2026-10-26 ~15:30, "Two, agree": the history in the cue colors, the
-// invalid color retired) — and the label
+// every cue THE PLAIN CUE, the `cue` red triangle over the stem's red and
+// blue dots, both halves alike (architect 2026-10-26 ~15:30, "Two, agree":
+// the history in the cue colors, the invalid color retired) — and the label
 // in the program face, its resting text the bone. THE STRIKE TELLS THE
 // HALVES APART: a REMOVED line's label struck (show_cue_label's bar), an
 // ADDED line's plain (resolve_flag_face's table). THE LABEL IS THE LINE'S
@@ -4040,17 +4024,11 @@ struct HistoryDiffFlag {
 // in no commit, so a diff flag carries no bound cells, and the view's focus is
 // its own diff-flag cycle's with nothing for AppState::addressed_cell to
 // address — the focus lights the whole label.
-// `markers_view` IS THE LANE'S AXIS ('W' | 'P'), the active markers view
-// the flags were built from (rebuild_history_diff_flags lists that column's
-// half of the delta): every half wears its axis's color, warp the `cue` and
-// phase reset the `range` (architect 2026-10-29; resolve_flag_face's table),
-// as a live marker of that axis does.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,
                                int waveform_width,
                                const std::vector<HistoryDiffFlag>& flags,
-                               char markers_view,
                                long long viewport_start_sample,
                                long long viewport_end_sample,
                                int focus_index,
