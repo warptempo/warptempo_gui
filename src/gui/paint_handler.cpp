@@ -285,8 +285,9 @@ namespace {
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
 //     literal settings and config KEY names shown as keys (`projects_path`),
 //     and the routing/category tokens that are data rather than prose.
-//   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Return, Backspace,
-//     PgUp, PgDown, Space, Tab, Home, End — with a BARE LETTER UPPERCASE and
+//   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Backspace, PgUp,
+//     PgDown, Space, Tab, Home, End — save Enter for Qt's Return (architect
+//     2026-10-29 night), with a BARE LETTER UPPERCASE and
 //     punctuation naming the CAP rather than the stamped symbol ("Shift+/").
 //     The spelling's one owner is spell_chord's head (gui_input.h).
 //   * AN APPENDED REASON IS LOWERCASE: "<Act> refused: <reason>" is ONE
@@ -7374,10 +7375,11 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // the one face owner and shaped through the one chokepoint (text_shape.h)
     // like every other label in the product. EVERY key on this surface takes
     // it — the character caps, the page key's words and the function keys'
-    // words alike — so there is no second way a cap can be drawn; a word too
-    // long for its key takes its SHORTENED form where one is ruled, never a
-    // smaller face (cap_word, onscreen_keyboard.h; the measure below). A cap
-    // is one to nine glyphs, which are the cheapest runs there are.
+    // words alike — so there is no second way a cap can be drawn, and no
+    // measure against the key: every word fits its key, and one that a
+    // tuning makes fail overhangs it (cap_word's rule, onscreen_keyboard.h;
+    // architect 2026-10-29 night). A cap is one to five glyphs, which are the
+    // cheapest runs there are.
     const GuiFont font = gui_font(GuiFace::Keys);
 
     onscreen_keyboard::for_each_key(
@@ -7430,17 +7432,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                     onscreen_keyboard::shifted_char(k.ch, shift_armed));
                 cap = one.c_str();
             }
-            text_shape::ShapedRun run = text_shape::shape_text_run(font, cap);
-            // A WORD THAT FAILS ITS KEY — wider than the key's face inside
-            // its one-device-px outline — wears its shortened form where one
-            // is ruled (cap_word's rule, cap_short_word): a tuning of
-            // osk_key_w below the default or of osk_font_px above it
-            // (2026-10-29 night) can make it so, measured here against the
-            // live font.
-            const char* short_word = onscreen_keyboard::cap_short_word(k);
-            if (short_word != nullptr &&
-                run.width_px > r.w - 2 * hairline_px())
-                run = text_shape::shape_text_run(font, short_word);
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, cap);
             const double cap_x = std::nearbyint(
                 r.x + (r.w - run.width_px) * 0.5) + ride;
             const double baseline = redesign_baseline(

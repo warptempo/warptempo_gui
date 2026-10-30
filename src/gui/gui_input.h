@@ -403,9 +403,11 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // the "two surfaces, two conventions" split the tooltips and the cards ran
 // under until that day: an exception in user-facing text is a design smell,
 // so there is one rule and no per-surface convention left). Qt's own English
-// names for the named keys (Esc, Del, Return, Backspace, PgUp, PgDown, Space,
-// Tab, Home, End, the four arrows — QKeySequence's keyname[] table, researched
-// against the source), bare letters UPPERCASE, punctuation naming the CAP
+// names for the named keys (Esc, Del, Backspace, PgUp, PgDown, Space, Tab,
+// Home, End, the four arrows — QKeySequence's keyname[] table, researched
+// against the source) with ONE DEPARTURE, ENTER for Qt's "Return" (architect
+// 2026-10-29 night, "that's what I see on my keyboard"; spell_key_name's
+// head), bare letters UPPERCASE, punctuation naming the CAP
 // rather than the stamped symbol ("Shift+/"), modifiers
 // Ctrl, Alt, Shift joined by '+'.
 //
@@ -526,15 +528,17 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // first, and every_bound_key_is_spellable pins the other way round — no bound
 // key is left without a name here, which is what lets spell_chord carry no
 // unnamed fallback. THE NAMES ARE QT'S OWN (the head's one convention): Esc,
-// Del, Return, PgUp, PgDown — kdenlive's spellings, not the longhand this
-// table wrote until 2026-09-01. The two pairs that share a name share it
-// deliberately — Return / KpEnter are one "Return" to the hand, since both
-// keysyms carry the same three acts (the editor's open, and under Ctrl the
-// phase-reset copy and paste) and Qt's separate "Enter" for the keypad would
-// name a second key the product does not distinguish — and IsoLeftTab IS the
-// shifted Tab keysym. NO USER TEXT KEEPS THE SPLIT: the distinction lives
-// in no user-facing sentence now (the interface's own words are its
-// tooltips), and nothing this speller composes ever says "Enter".
+// Del, PgUp, PgDown — kdenlive's spellings, not the longhand this table wrote
+// until 2026-09-01 — SAVE ONE: THE RETURN KEY IS "ENTER" (architect
+// 2026-10-29 night, "that's what I see on my keyboard": his keyboards print
+// Enter, and the product's word for the key is what the hand finds on it).
+// The two pairs that share a name share it deliberately — Return / KpEnter
+// are one "Enter" to the hand, since both keysyms carry the same acts (the
+// editor's open, a dialog's commit) and a separate name for the keypad's
+// would name a second key the product does not distinguish — and IsoLeftTab
+// IS the shifted Tab keysym. NO USER TEXT KEEPS THE SPLIT, and none says
+// "Return": the tooltips, the cards, the on-screen keyboard's cap and HELP
+// all say Enter.
 //
 // TWO NAMES THIS TABLE DOES NOT HOLD, and cannot: the SUPER MODIFIER is
 // dropped at the platform boundary and no chord names it, so its Qt spelling —
@@ -551,7 +555,7 @@ constexpr const char* spell_key_name(GuiKey key) {
     switch (key) {
         case GuiKeys::Space:      return "Space";
         case GuiKeys::Return:
-        case GuiKeys::KpEnter:    return "Return";
+        case GuiKeys::KpEnter:    return "Enter";
         case GuiKeys::Tab:
         case GuiKeys::IsoLeftTab: return "Tab";
         case GuiKeys::Escape:     return "Esc";
@@ -1266,8 +1270,8 @@ static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
                                   GuiInputState{true, false, true}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{false, false, true}, false),
-              "Return binds bare alone (open the editor); Ctrl+Return, "
-              "Ctrl+Shift+Return, Shift+Return and the alt spellings bind "
+              "Enter binds bare alone (open the editor); Ctrl+Enter, "
+              "Ctrl+Shift+Enter, Shift+Enter and the alt spellings bind "
               "nothing");
 // THE PUBLISH CHORD (architect 2026-10-10) binds in both modes; its Alt
 // spelling does not.

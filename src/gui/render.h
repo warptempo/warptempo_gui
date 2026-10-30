@@ -3697,7 +3697,7 @@ void render_flags(cairo_t* cr,
 //                   PRESS ON A RIDING CELL IS VEILED since 2026-10-25 (every
 //                   editor a modal): it is a press outside the field, which
 //                   on_button_press's veil consumes silently, and the editor
-//                   stands — Esc and Return its way out (until then it closed
+//                   stands — Esc and Enter its way out (until then it closed
 //                   the editor uncommitted and acted on the cell). It is
 //                   still a SECOND rect and still deliberately not folded into
 //                   `box`: the caret / text-drag claim seats a caret for any

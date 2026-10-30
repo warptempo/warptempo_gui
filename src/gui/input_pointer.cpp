@@ -6092,8 +6092,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // can't do anything else in the window behind it"). EVERY EDITOR IS A
     // PURE MODAL, the lane editors (the flag editor, the iteration bound
     // editor) with the dialogs: an editor ends through its own keys alone —
-    // Esc, Return — and a dialog's Cancel and OK; on the glass the on-screen
-    // keyboard's own Esc and Return, whose claim ranks above every gate. THE
+    // Esc, Enter — and a dialog's Cancel and OK; on the glass the on-screen
+    // keyboard's own Esc and Enter, whose claim ranks above every gate. THE
     // SAME ON BOTH DEVICES (symmetry): the laptop's hardware keys, the
     // glass's keyboard keys, and no press outside the field on either. The
     // press inside the field keeps its act (the caret block above). (A LANE

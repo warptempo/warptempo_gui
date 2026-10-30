@@ -17843,8 +17843,8 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
 static_assert(!redesign_button_ctrl_admits(RedesignButton::IconOpenTextEditor) &&
                   !redesign_button_ctrl_shift_admits(RedesignButton::IconOpenTextEditor) &&
                   !redesign_button_shift_admits(RedesignButton::IconOpenTextEditor),
-    "Open Text Editor (Return) admits no modifier since 2026-10-24: "
-    "Ctrl+Return, Ctrl+Shift+Return and Shift+Return bind nothing, the "
+    "Open Text Editor (Enter) admits no modifier since 2026-10-24: "
+    "Ctrl+Enter, Ctrl+Shift+Enter and Shift+Enter bind nothing, the "
     "propagate family on its own key");
 static_assert(redesign_button_ctrl_admits(RedesignButton::IconCopyPhaseResets) &&
                   redesign_button_ctrl_shift_admits(RedesignButton::IconCopyPhaseResets) &&
@@ -17967,7 +17967,8 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // which is Qt's — a BARE LETTER UPPERCASE ("(T)", "(P)", "(H)"), a CHORD with
 // its spelled-out modifiers in the fixed order ("(Ctrl+S)", "(Ctrl+Alt+R)",
 // "(Ctrl+Shift+Z)"), a NAMED KEY by Qt's own English name ("(Esc)", "(Del)",
-// "(Return)", "(Home)", "(Space)", "(Tab)"), and punctuation naming the CAP
+// "(Home)", "(Space)", "(Tab)") save the one the product departs on, "(Enter)"
+// for Qt's Return (architect 2026-10-29 night), and punctuation naming the CAP
 // rather than the stamped symbol ("(,)", "(.)", "(')", "(`)").
 // This table writes literals rather than calling the speller — it advertises a
 // BOUND chord in advance where the speller names a press that just happened —
@@ -18245,7 +18246,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // The accelerators are the table's own convention (a NAMED key by
-        // Qt's own name "Space", "Del", "Return", punctuation by its cap, a
+        // Qt's own name "Space", "Del", and "Enter" for Qt's Return (2026-10-29
+        // night), punctuation by its cap, a
         // CHORD with its spelled-out modifiers); a modifier line names the
         // act and the modifier and not a key.
         // THE PLAY/STOP BUTTON'S TEXT IS STATEFUL and this row is its STOPPED
@@ -18367,15 +18369,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
                     "Press Shift to copy the resolved value."};
         // OPEN TEXT EDITOR (architect 2026-10-09, his name for the act), the
         // verb group's sixth: the act's name and its chord as every row
-        // writes them, bare Return by Qt's own name (this table's convention
-        // above; the keypad's Enter is the same arm's second keysym and is
+        // writes them, the bare Return keysym by the product's name for the
+        // key, "Enter" (this table's convention above, architect 2026-10-29
+        // night; the keypad's Enter is the same arm's second keysym and is
         // not named separately). ONE LINE: it admits no modifier since
         // 2026-10-24 (its ctrl presses, Copy / Paste Phase Resets from
         // 2026-10-21, and the second line naming them, went to the Copy Phase
         // Resets key that day). The name holds on either axis — a bound
         // cell's editor is a text editor as the payload's is.
         case RedesignButton::IconOpenTextEditor:
-            return {"Open Text Editor (Return)", nullptr};
+            return {"Open Text Editor (Enter)", nullptr};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH
         // since 2026-10-09 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;

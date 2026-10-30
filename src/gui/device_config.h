@@ -807,11 +807,12 @@ inline std::optional<int> parse_osk_key_size(std::string_view v) {
 // recall read (format_osk_font_px, parse_osk_font_px). The default is the
 // face table's 24 (architect 2026-10-24, "C24"). The range: 12 is the
 // smallest em at which a cap stays legible at 300 % (the em the laptop's
-// 150 % paints the default at); 48 is the em at which even the short form
-// BKSP (64 px at em 24, so 128 at 48) first outgrows the default 2.5u key's
-// 127-px face, past which a larger cap only overhangs (onscreen_keyboard.h's
-// KEY IS WIDE ENOUGH paragraph; "Backspace" itself, 117 px at em 24, takes
-// BKSP from em 27 at the default key box). The settings page opens the LINE
+// 150 % paints the default at); 48 is twice the default, the em by which
+// every function word but "Bksp" and "Space" already overhangs its key at
+// the default key box ("Esc", the last of them, from em 44; "Bksp", 107 px
+// at em 48 in the 2.5u key's 127-px face, not until 58), so a larger cap
+// would only overhang more (onscreen_keyboard.h's EVERY WORD FITS ITS KEY
+// paragraph, cap_word; architect 2026-10-29 night). The settings page opens the LINE
 // EDITOR on it, not a value list (37 values is no short domain,
 // kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number, the
 // key, these functions and its Settings row go, and the value settles into

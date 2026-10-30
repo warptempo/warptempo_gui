@@ -4780,7 +4780,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // and (architect 2026-07-28) the
 // top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can
-// reach the editor itself, bare Esc (exit) and Return (commit) — nothing
+// reach the editor itself, bare Esc (exit) and Enter (commit) — nothing
 // else, NO HATCH (2026-10-25): Ctrl+S, Ctrl+Q, Space-as-playback, zoom,
 // mode toggles, tab switches, undo/redo, the marker / trim chords, and the
 // Ctrl+Alt render chords all drop here. "The editor
@@ -4824,7 +4824,7 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // NO HATCH (architect 2026-10-25: "we can even block Ctrl+Q — we are
     // letting the window manager handle everything now … block all gestures
     // except the one escape, or anything that closes the modal"): the editor's
-    // own keys — typing, its motion keys, Esc and Return — and a dialog's
+    // own keys — typing, its motion keys, Esc and Enter — and a dialog's
     // ring are the whole admitted set; Ctrl+S and Ctrl+Q, admitted until
     // then, are consumed like every other chord, silently (on_key's gate).
     // The window manager's close — labwc's button, Android's Back — is the

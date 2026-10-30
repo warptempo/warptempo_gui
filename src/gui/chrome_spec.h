@@ -41,7 +41,7 @@
 // history).
 // The one instance is kChromeSpecWin2000 below, read through
 // live_chrome_spec(). What the chrome never varies is a plain constant at its
-// owner, not a field here: the card frame's four sides (paint_popup_chrome), the keyboard's Backspace
+// owner, not a field here: the card frame's four sides (paint_popup_chrome), the keyboard's Bksp
 // word (onscreen_keyboard.h's cap_word).
 
 struct ChromeSpec {

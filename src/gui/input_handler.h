@@ -4379,11 +4379,11 @@ private:
     // iteration bound editor (AppState::text_editor_session, the one
     // membership; any_text_editor_active is the same expression under its
     // platform name). Such a modal ADMITS ITS OWN VOCABULARY ALONE: its
-    // typed characters, its motion keys, Esc and Return, a dialog's ring
+    // typed characters, its motion keys, Esc and Enter, a dialog's ring
     // and buttons — and its FIELD for the pointer; every other key, press,
     // wheel detent and touch gesture is consumed, silently, and nothing
     // behind it changes face (dead and ungreyed — redesign_button_enabled's
-    // record of the classes). The way out is Esc (cancel) and Return
+    // record of the classes). The way out is Esc (cancel) and Enter
     // (commit) alone — the hardware's on the laptop, the on-screen
     // keyboard's own two keys on the glass (its Esc lower right since
     // 2026-10-29) — and a dialog's Cancel and OK. A PRESS OUTSIDE THE FIELD

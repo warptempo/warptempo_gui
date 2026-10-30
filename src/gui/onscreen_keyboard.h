@@ -60,7 +60,8 @@
 // hide act (it leaves with the editor that raised it), no caps lock (shift
 // is one-shot), no long-press alternates (an act at the press precludes
 // them), no third page and no character past ASCII (no grammar takes one),
-// no glyphs (architect 2026-10-29: "no glyphs"; every cap is text, cap_word)
+// no glyphs (architect 2026-10-29: "no glyphs", reaffirmed 2026-10-29 night
+// over the glyph mocks; every cap is text, cap_word)
 // and no chords — a second finger is the navigation gesture and never
 // reaches a key. No Left/Right keys either: backspace and retyping cover a
 // field, and a tap in the dialog editor's wrapped line places the caret. No
@@ -97,25 +98,25 @@ namespace onscreen_keyboard {
 // its inset — a hardware stagger, no centering of a short row:
 //   FLAGS
 //     row 0, inset 0:  1 2 3 4 5 6 7 8 9 0 + - *                    (13u)
-//     row 1, inset 0:  Tab q w e r t y u i o p                       (11u)
+//     row 1, inset 0:  Tb q w e r t y u i o p                        (11u)
 //     row 2, inset 1u: a s d f g h j k l ; :                         (11u)
-//     row 3, inset 0:  Shift(1.5) z x c v b n m Backspace(2.5)       (11u)
+//     row 3, inset 0:  Shift(1.5) z x c v b n m Bksp(2.5)            (11u)
 //     row 4, inset 0:  &123(1.5) Copy(1.5) Paste(1.5) Space(4) .
-//                      Esc(1.5) Return(2)                            (13u)
+//                      Esc(1.5) Enter(2)                             (13u)
 //   SYMBOLS
 //     row 0, inset 0:  1 2 3 4 5 6 7 8 9 0 + - *
-//     row 1, inset 0:  Tab @ # % & _ = / \ ~ ^
+//     row 1, inset 0:  Tb @ # % & _ = / \ ~ ^
 //     row 2, inset 1u: ( ) [ ] { } < > | ; :
-//     row 3, inset 0:  Shift ' " , ? ! $ ` Backspace
-//     row 4, inset 0:  ABC Copy Paste Space . Esc Return
+//     row 3, inset 0:  Shift ' " , ? ! $ ` Bksp
+//     row 4, inset 0:  ABC Copy Paste Space . Esc Enter
 // NOTHING MOVES BETWEEN THE PAGES (architect 2026-10-29: "I prefer that
 // things not move around"): the symbols page is the flags page with its 26
 // LETTER SLOTS re-lettered — exactly the 26 printable ASCII symbols the flags
-// page lacks — and every other key, the digits, `+ - *`, `;`, `:`, `.`, Tab,
-// Shift, Backspace and the bottom row, in the same slot on both (the page
+// page lacks — and every other key, the digits, `+ - *`, `;`, `:`, `.`, Tb,
+// Shift, Bksp and the bottom row, in the same slot on both (the page
 // key's cap alone changing, cap_word). Shift on the symbols page arms
 // nothing it can spend (no letter there) and stays for its place. ESC AND
-// RETURN STAND LOWER RIGHT (architect 2026-10-29: "that is where my hand
+// ENTER STAND LOWER RIGHT (architect 2026-10-29: "that is where my hand
 // rests"). Both facts, and the 26, are checked at compile time
 // (pages_are_well_formed, below).
 
@@ -228,7 +229,7 @@ inline constexpr KeyDef kSymbolsRow3[] = {
 };
 
 // THE BOTTOM ROW, ONE ARRAY FOR BOTH PAGES: the page key, Copy, Paste,
-// Space, `.`, Esc and Return — 6 + 6 + 6 + 16 + 4 + 6 + 8 = 52, the block.
+// Space, `.`, Esc and Enter — 6 + 6 + 6 + 16 + 4 + 6 + 8 = 52, the block.
 inline constexpr KeyDef kBottomRow[] = {
     {Role::SymbolMode, 0,     6},
     {Role::Copy,       0,     6},
@@ -406,47 +407,46 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 }
 
 // WHAT A KEY WEARS, AND IT IS TEXT AND NOTHING ELSE (architect 2026-08-27, on
-// glass; "no glyphs", 2026-10-29): every cap is a WORD or a character on the
+// glass; "no glyphs", 2026-10-29, reaffirmed 2026-10-29 night over mocks of
+// a Tab glyph and its kin, declined): every cap is a WORD or a character on the
 // ONE sans face in the keys' own size (gui_font.h's GuiFace::Keys, the
 // `osk_font_px` tuning key's px at 300 %, 24 by default, architect
 // 2026-10-29 night; "C24", architect 2026-10-24; "the glyph size is good",
 // 2026-10-29), shaped through the one chokepoint like every other label.
 //
 // A FUNCTION KEY WEARS ITS NAME (planner 2026-09-01, under the capitalization
-// sweep's universal-rules spine; architect 2026-10-29, "Backspace and Return
-// spelled out"): Shift, Backspace, Return, Esc, Tab, Space, Copy, Paste — in
-// the product's one key spelling, which is Qt's and so kdenlive's
-// (spell_chord's head, gui_input.h), Title case — and the PAGE KEY names the
-// page it goes TO, `&123` on the flags page and `ABC` on the symbols page.
-// This function is the ONE OWNER of the words; a Character key other than
-// space answers nullptr and the painter spells it out of the table's own
-// `ch` through the one case derivation above.
+// sweep's universal-rules spine; architect 2026-10-29 night, on the mocks):
+// Shift, Bksp, Enter, Esc, Tb, Space, Copy, Paste — Title case, the first
+// letter alone capital — and the PAGE KEY names the page it goes TO, `&123`
+// on the flags page and `ABC` on the symbols page. ENTER IS THE PRODUCT'S
+// ONE WORD FOR THE KEY (spell_chord's head, gui_input.h; architect
+// 2026-10-29 night, "that's what I see on my keyboard"). THE SHORT FORMS
+// Bksp AND Tb ARE THE WORDS (architect 2026-10-29 night, "only the first
+// letter capitalized"): the spelled-out Backspace and Tab, mocked at
+// em 26 on his 50-px keys, kept two and three device px of air a side, and a
+// smaller face for the two was mocked and declined — ONE FACE stands, every
+// cap in the keys face. This function is the ONE OWNER of the words; a
+// Character key other than space answers nullptr and the painter spells it
+// out of the table's own `ch` through the one case derivation above.
 //
-// THE KEY IS WIDE ENOUGH FOR ITS WORD (architect 2026-10-29): a function
-// key's width is authored to hold its word in the keys face, measured
-// (Liberation Sans, HarfBuzz's unhinted advances, text_shape's road) against
-// the key's face inside its one-device-px outline at the defaults
-// (osk_key_w 48, osk_key_h 60, osk_font_px 24): at 300 % "Backspace" 117 px
-// in the 2.5u key's 127, "Return" 72 in the 2u key's 100, "Space" 68 in the
-// 4u key's 208, "Paste" 61, "&123" and "Copy" 56, "ABC" 49, "Shift" 48 and
-// "Esc" 40 in the 1.5u key's 73, and "Tab" 39 in the 1u key's 46; at 200 %
-// (em 16) and 150 % (em 12) every word fits as well, the key and the face
-// scaling together.
-// A WORD THAT FAILS ITS KEY TAKES ITS SHORTENED FORM (architect 2026-10-29:
-// "ok to use smaller font and/or shortened forms for long words, but with
-// sizing that might not be needed"): a tuning of osk_key_w below the
-// default or of osk_font_px above it (the cap size a tuning key since
-// 2026-10-29 night) can make a word fail, and the fallback is the
-// keyboard's own abbreviation in capitals, as keyboards print it, Backspace
-// -> BKSP (64 px at 300 % at em 24) and Return -> RET (48) — measured at
-// paint against the key's face in the live font, never a second face
-// (cap_short_word; the painter's measure). At 300 % with osk_key_h 60 and
-// osk_font_px 24, Backspace falls back below osk_key_w 45 and Return below
-// 34; at the default box, Backspace falls back from osk_font_px 27, Return
-// from 34, and BKSP itself overhangs its key from 48, the key's ceiling
-// (device_config.h's grammar). No other word has a short form ruled:
-// "Tab", the first to outgrow its key, overhangs it below osk_key_w 41, and
-// at the default box "Tab" and "Paste" overhang theirs from osk_font_px 29.
+// EVERY WORD FITS ITS KEY WITH AIR, at the defaults and at his tuning, and
+// there is NO FALLBACK: no second form, no measure at paint, no second
+// face. Measured (Liberation Sans Regular, HarfBuzz's unhinted
+// advances through FreeType, text_shape's road) against the key's face
+// inside its one-device-px outline, at 300 %: at the defaults (osk_key_w 48,
+// osk_key_h 60, osk_font_px 24) "Bksp" 53 px in the 2.5u key's 127, "Enter"
+// 57 in the 2u key's 100, "Space" 68 in the 4u key's 208, "Paste" 61,
+// "&123" and "Copy" 56, "ABC" 49, "Shift" 48 and "Esc" 40 in the 1.5u key's
+// 73, and "Tb" 28 in the 1u key's 46; at his box (osk_key_w 50, the default
+// height, osk_font_px 26) "Bksp" 58 in 132, "Enter" 62 in 104, "Paste" 66,
+// "&123" and "Copy" 61 in 76, "Tb" 30 in 48. At 200 % and 150 % the key and
+// the face scale together and every word fits as well. A WORD THAT FAILS ITS
+// KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS IT — a tuning key's own
+// consequence, centered on its key like every cap: at the default box "Paste"
+// is the first to overhang, from osk_font_px 29 ("&123" and "Copy" from 32,
+// "Tb" from 40, "Enter" from 42, "Esc" from 44; "Bksp" not until 58, past
+// osk_font_px's ceiling of 48, device_config.h's grammar), and at osk_font_px 24
+// "Paste" overhangs below osk_key_w 41.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the key DOWN one device px, its
@@ -456,26 +456,16 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
-        case Role::Backspace:   return "Backspace";
-        case Role::Enter:       return "Return";
+        case Role::Backspace:   return "Bksp";
+        case Role::Enter:       return "Enter";
         case Role::Escape:      return "Esc";
-        case Role::Tab:         return "Tab";
+        case Role::Tab:         return "Tb";
         case Role::SymbolMode:  return page == Page::Flags ? "&123" : "ABC";
         case Role::Copy:        return "Copy";
         case Role::Paste:       return "Paste";
         case Role::Character:   return k.ch == U' ' ? "Space" : nullptr;
     }
     return nullptr;
-}
-
-// THE SHORTENED FORM a word falls back to where it fails its key (cap_word's
-// rule), or nullptr for a key that has none.
-inline const char* cap_short_word(const KeyDef& k) {
-    switch (k.role) {
-        case Role::Backspace: return "BKSP";
-        case Role::Enter:     return "RET";
-        default:              return nullptr;
-    }
 }
 
 // THE PAGE KEY'S ACT, one owner for where it goes: the flags page to the
@@ -759,7 +749,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // paint_keyboard_slot), and the drift is paid here. THIS IS THE ONE PLACE
 // THE KEYBOARD'S HIDE IS PAID, whatever closed its editor: standing is
 // derived (stands, above), so every close road — the dialog editors' OK,
-// Cancel, Esc and Return, the flag editor's — moves this comparison and
+// Cancel, Esc and Enter, the flag editor's — moves this comparison and
 // nothing else has to remember the band.
 //
 // THE DAMAGE IS THE SLOT'S BAND AT ITS TALLEST (slot_damage_rect), and only
