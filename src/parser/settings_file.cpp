@@ -326,8 +326,9 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     //
     // `gui_scale` (architect approval 2026-08-27): MOVED, not retired. The
     // GUI's rendering scale is a fact about the PANEL in front of the user
-    // rather than about the piece, and the two devices that run this product
-    // want different values for the same project — so it lives in the GUI's own
+    // rather than about the piece: the tablet runs the program and wants the
+    // scale, while the laptop's CLI reads this same file and has no panel
+    // (architect approval 2026-10-30, comment only) — so it lives in the GUI's own
     // per-device config now (`$XDG_CONFIG_HOME/warptempo_gui/config`,
     // src/gui/device_config.h), which also took over the RANGE this schema
     // used to own — [50, 400] at the move, [50, 350] from 2026-08-29, and
@@ -347,7 +348,7 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // free-UTF-8-verbatim rule with it — AND THEN RETIRED THE KEY WHOLE ON
     // 2026-08-28 (architect approval 2026-08-28, comment-only): bare `l` opens
     // an in-app render player that decodes a wav and plays it through the
-    // product's own engine on both devices, so there is no player binary to
+    // product's own engine on the tablet, so there is no player binary to
     // name anywhere. The key, its blank opt-out, the settings editor's arm and
     // the spawn itself are deleted; the device config's keys are enumerated
     // at `kDeviceConfigKeys` (src/gui/device_config.cpp; architect approval

@@ -10,8 +10,8 @@
 // The framemap pair writers (warp column + phase reset column). Together the
 // two files are exactly the engine's input for a full render. The GUI's
 // archival render pipeline drops the pair into the RenderCache per-process dir
-// as future-proofing, and the writers are shared with the headless parser CLI
-// so both emit byte-identical artifacts.
+// as future-proofing; it is the writers' one caller, the CLI writing no pair
+// since 2026-10-30 (comment only, 2026-10-30).
 
 // Serialize a built frame map to the canonical .warpframemap text form: one
 // "src_frame tgt_frame" line per segment, every segment included — the
@@ -34,8 +34,8 @@ std::expected<void, std::string> write_phase_reset_frame_map(
     const std::string& path, const std::vector<double>& engine_query_frames);
 
 // Write both columns of the pair into `dir`, named `<stem>.warpframemap` /
-// `<stem>.phaseresetframemap` — the single write-or-clean home shared by the
-// GUI render pipeline and the headless CLI so neither drifts. The pair is
+// `<stem>.phaseresetframemap` — the single write-or-clean home of the GUI
+// render pipeline, its one caller. The pair is
 // all-or-nothing: on ANY writer failure (a first-writer failure included, so an
 // old complete pair can never pose as the new render's) BOTH names are removed
 // (std::filesystem::remove, errors swallowed — these are cache files), leaving

@@ -6,7 +6,6 @@
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
-#include "map_output.h"                 // write_frame_map_pair
 #include "marker_store_validate.h"      // first_past_eof_wall_defect
 #include "sidecar_set.h"                // sidecar_path + its named indices,
                                         // sidecar_set_presence_core
@@ -26,11 +25,9 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -40,31 +37,6 @@ void unlink_silent(const std::string& path) {
     if (path.empty()) return;
     std::error_code ec;
     std::filesystem::remove(path, ec);
-}
-
-// Per-process cache directory for the framemap pair, resolved by the same
-// convention the GUI's RenderCache uses — $XDG_CACHE_HOME (else $HOME/.cache)
-// + "/warptempo_gui/<pid>/" — WITHOUT linking the GUI's RenderCache: this CLI
-// only creates the directories and writes the pair. It never sweeps or
-// removes the dir — its pid dir becomes a dead-PID orphan the GUI's
-// next-launch sweep_orphans removes. Returns the pid-dir path, or an empty
-// string when no cache home resolves or the directories cannot be created
-// (the caller skips the write silently then).
-std::string cache_framemap_dir() {
-    std::string base;
-    if (const char* xdg = std::getenv("XDG_CACHE_HOME"); xdg && xdg[0]) {
-        base = xdg;
-    } else if (const char* home = std::getenv("HOME"); home && home[0]) {
-        base = std::string(home) + "/.cache";
-    } else {
-        return {};
-    }
-    const std::string dir = base + "/warptempo_gui/" +
-        std::to_string(static_cast<long>(::getpid()));
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-    if (ec) return {};
-    return dir;
 }
 
 // Terminal message strings in this file carry sentence-initial capitals
@@ -353,36 +325,9 @@ int main(int argc, char** argv) {
         derive_phase_reset_frame_map(*phase_reset_source_frames_r,
                                      full_warp_frame_map);
 
-    // --- Cache-dir framemap pair (future-proofing; 1:1 with the GUI's
-    // archival disk-route write in do_render — this CLI is disk-only). Drop
-    // the FULL untrimmed warp frame map and its phase-reset column, through
-    // the shared write_frame_map_pair (the all-or-nothing write-or-clean home),
-    // into the cache pid dir, named by the final wav's basename stem —
-    // together exactly the engine's input for the FULL render
-    // (deliverable-relative target column, absolute source frames). Written
-    // here, once the final path and both full maps are in hand and before
-    // synthesis, matching the GUI's placement. Non-fatal: a failure prints one
-    // stderr line and the render proceeds; no staging/rename dance (cache
-    // files, not deliverables). The CLI never removes the dir — it rests as a
-    // dead-PID orphan until the GUI's next-launch sweep_orphans deletes it.
-    // This is a single source-dir render (one source per invocation, no batch
-    // folder), so the pair stays FLAT in the pid dir — no per-batch subdir, no
-    // basename collision possible; the GUI's batch-folder namespacing does not
-    // apply here. ---
-    {
-        const std::string pair_dir = cache_framemap_dir();
-        if (!pair_dir.empty()) {
-            const std::string pair_stem =
-                std::filesystem::path(out_path).stem().string();
-            if (auto w = write_frame_map_pair(
-                    pair_dir, pair_stem,
-                    full_warp_frame_map, full_phase_reset_frame_map); !w) {
-                std::fprintf(stderr,
-                    "warptempo_cli: Cache framemap write skipped: %s\n",
-                    w.error().c_str());
-            }
-        }
-    }
+    // --- No frame-map pair is written: the CLI renders the wav alone
+    // (architect approval 2026-10-30; the laptop runs no GUI, so nothing read
+    // the pair and nothing swept the cache folder it left behind). ---
 
     // --- trim plan (architect approval 2026-07-30 for this freeze-adjacent
     // edit). THE FULL WINDOW MEANS NO TRIM PLAN: the trim window is always a
@@ -496,8 +441,7 @@ int main(int argc, char** argv) {
     // above synthesis and the staging open, which is the first write under the
     // folder. So a run that refuses leaves no empty folder behind, while an
     // unwritable folder is still reported before the synthesis cost rather
-    // than after it. (The cache framemap pair above writes into the cache
-    // dir, not here.) A creation failure ends the run with its own line rather
+    // than after it. A creation failure ends the run with its own line rather
     // than letting the staging write fail with a stranger diagnostic.
     // (architect approval 2026-08-28) ---
     {

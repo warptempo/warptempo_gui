@@ -40,9 +40,9 @@ struct LoadInPlaceCriticalSidecars {
 };
 
 // write_frame_map_pair (over write_warp_frame_map / write_phase_reset_frame_map)
-// lives in the parser (map_output.cpp) so the GUI render pipeline's cache-dir
-// framemap pair and the headless parser CLI emit byte-identical artifacts, and
-// share the one all-or-nothing write-or-clean home, from one implementation.
+// lives in the parser (map_output.cpp), the one all-or-nothing write-or-clean
+// home for the render pipeline's cache-dir framemap pair; the CLI writes no
+// pair (2026-10-30).
 
 // resolve_warp_markers_for_render lives in warp_frame_map_build.cpp (public
 // function) so the target-view paint can reach it without crossing the
@@ -243,9 +243,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // (architect-ruled): no product path reads it back — its intended
     // consumer is a hypothetical future diff-capable algorithm — so nothing
     // may come to depend on it. Buffer-route previews
-    // deliberately skip; the CLI writes the same pair through the same shared
-    // write_frame_map_pair into the same cache convention, its pid dir swept as
-    // a dead-PID orphan by the GUI's next launch. This write is non-fatal — a
+    // deliberately skip, and the CLI writes no pair (2026-10-30). This write
+    // is non-fatal — a
     // failure prints one stderr line and the render proceeds — and needs no
     // staging/rename dance
     // (these are cache files, not deliverables) or cancel gating (a cancelled
