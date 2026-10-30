@@ -491,11 +491,12 @@ if [[ "$mode" == "ot" ]]; then
     exit 0
 fi
 
-# THE LAPTOP'S PROJECTS FOLDER IS THE DEVICE CONFIG'S projects_path, the one the
-# GUI opens; the projects clone is the folder above it.
+# THE LAPTOP'S PROJECTS FOLDER IS THE projects_path LINE OF ITS CONFIG FILE,
+# written by hand (the laptop runs no GUI, 2026-10-30; docs/INSTALL.md, The
+# laptop); the projects clone is the folder above it.
 PROJECTS="$(sed -n 's/^projects_path=//p' "${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/config" 2>/dev/null)"
 PROJECTS="${PROJECTS%/}"
-[[ -n "$PROJECTS" ]] || die "no projects_path in the device config: run the GUI once"
+[[ -n "$PROJECTS" ]] || die "no projects_path= line in the laptop's config (${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/config): write the line naming the projects clone's projects/ folder (docs/INSTALL.md, The laptop)"
 REPO="${PROJECTS%/*}"
 [[ -d "$PROJECTS" ]] || die "no projects folder at $PROJECTS"
 # THE LAPTOP'S NOISE FOLDER, beside the same device config (the head's noise

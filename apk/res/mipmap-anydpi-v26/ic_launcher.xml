@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
      recents card). Its picture (architect 2026-10-23: "the new note glyph
-     on the caption's color"): THE QUAVER, the caption's own icon,
+     on the caption's color"): THE QUAVER,
      assets/icons/AppIcon.svg (a symlink to Quaver.svg, bone F0F0F0 on a
      34 x 40 viewBox), rendered by resvg at the art's height and centered
-     over THE CAPTION'S GROUND, FLAT: #141415 (render.h's kCaptionGround),
-     one color over the whole canvas, so the mask shows the caption's dark
-     shape carrying the note. An
+     over THE LAUNCHER'S OWN GROUND, FLAT: #141415 (the color the caption
+     wore when the icon was framed; owned by apk/build_apk.sh's
+     LAUNCHER_GROUND alone), one color over the whole canvas, so the mask
+     shows a dark shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 

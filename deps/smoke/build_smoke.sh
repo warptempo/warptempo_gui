@@ -57,7 +57,7 @@ for api in "$WT_API" "$WT_TARGET_SDK"; do
     # every other dependency are static, so anything else here is a library
     # to ship. liblog is the platform's, named by resvg's native-static-libs
     # (the Rust std's list for the target; no resvg object calls it), and the
-    # product links it for its own logging (its seven, build_apk.sh).
+    # product links it for its own logging (its nine, apk/build_apk.sh's DT_SET).
     if wt_check_dt_needed "$so" libc.so libdl.so libm.so liblog.so; then
         wt_say "DT_NEEDED is exactly libc libdl libm liblog at API $api"
     else

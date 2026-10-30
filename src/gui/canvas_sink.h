@@ -79,8 +79,8 @@
 // canvas paint area (on_redraw's canvas block), so no canvas pass is ever
 // cut to a damage rect.
 
-// ONE LIST RECORD. `r` the cells it may write, device px of the GUI's
-// client area (the platform adds its frame). A RECT writes `word` on r; a
+// ONE LIST RECORD. `r` the cells it may write, device px of the
+// full-screen surface. A RECT writes `word` on r; a
 // DOTTED RUN (a column, DotsColumn: r one column wide; or a row, DotsRow:
 // r one row tall) writes `word` on the cells whose coordinate c along the
 // run satisfies (c − origin) mod period = phase, origin at or before the

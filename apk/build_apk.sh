@@ -189,20 +189,22 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # rounding up), never rasterised small and upscaled (magick's own delegate
 # renders the SVG at its 34 x 40 user size and blurs at -resize) --
 # centered on the transparent 108 dp canvas; the
-# BACKGROUND that canvas FLAT IN THE CAPTION'S GROUND #141415 (architect
-# 2026-10-23; render.h's kCaptionGround), one color over the whole square,
+# BACKGROUND that canvas FLAT IN THE LAUNCHER'S OWN GROUND #141415 (the color
+# the caption wore when the icon was framed, architect 2026-10-23; owned by
+# LAUNCHER_GROUND below alone), one color over the whole square,
 # which the launcher's mask cuts to its shape (#FFFFFF from 2026-10-17,
 # Windows Storm's caption start #800080 from 2026-10-16, the Cool Edit
 # case's 20 face-ramp bands under Midnight's Face from 2026-10-12 before
 # it). Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
-# Byte-stable: -strip drops the date chunks. Every GUI pixel is painted by
-# cairo, the icons included (assets/icons/'s SVGs rasterised by resvg,
-# svg_icon.cpp, each copied by cairo); the app declares no @string, no style, no res/values. aapt2 compile turns the
+# Byte-stable: -strip drops the date chunks. Cairo paints the
+# chrome and the icons onto the backbuffer (assets/icons/'s SVGs rasterised by
+# resvg, svg_icon.cpp, each copied by cairo); the canvas interior and the
+# score page are the GPU's (canvas_sink.h); the app declares no @string, no style, no res/values. aapt2 compile turns the
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to Quaver.svg)"
-LAUNCHER_GROUND="#141415"   # render.h's kCaptionGround
+LAUNCHER_GROUND="#141415"   # the launcher's own ground; the one owner of the color
 RES_STAGE="$PKGDIR/res"
 cp -r "$APPDIR/res" "$RES_STAGE"
 for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432; do

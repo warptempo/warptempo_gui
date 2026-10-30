@@ -82,7 +82,9 @@ struct GuiScorePageKey {
 // page index and the fit box it was made for — NOT the conversion bit: the
 // bytes are the page as authored, sRGB, which is the window's byte under
 // either bit (the head's proof) — and its fit-size pixels, one byte each, row-major, w x h, shared (immutable
-// once made) so a job carries them to the worker without a copy. `serial`
+// once made): the worker PRODUCES the buffer, and the sharing lets the store
+// and the GL canvas's page request (GuiCanvasPage, canvas_sink.h) hold the
+// one buffer without a copy. `serial`
 // NAMES THE BYTES FOR THE GL CANVAS (2026-10-27, the GPU page: GuiCanvasPage,
 // canvas_sink.h): minted when the entry enters the store
 // (GuiScoreViewer::drain_decoder) from a counter the process never resets, so

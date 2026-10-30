@@ -4164,8 +4164,10 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     // worker completion), the sink records nothing and the canvas
     // ground fill shows through. The user-visible difference is one
     // extra paint frame of empty canvas between load and first
-    // waveform display, masked by the existing load-time progress
-    // bar.
+    // waveform display, masked by the open's PRESENTATION HOLD (platform.h's
+    // head; main.cpp's initial-load / release block), which keeps the
+    // empty-waveform frame on screen until live_plate_published releases it
+    // with the first complete picture.
     //
     // DRAW-ONLY HERE, AND NOTHING RECOLORS IT AFTER: this call records the
     // plate as the renderer produced it, drawn once over the plain
