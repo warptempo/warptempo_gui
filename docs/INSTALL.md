@@ -194,7 +194,7 @@ bash android/toolchain/bootstrap.sh
 
 ### The prebuilt libraries
 
-The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the icons' renderer and the ground pictures' decoder, built with Rust) statically from `android/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
+The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the renderer of the four icon SVGs and the decoder of the score viewer's page images, built with Rust) statically from `android/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
 
 ```bash
 ls android/prebuilt/arm64-v8a/lib/libgit2.a android/prebuilt/arm64-v8a/lib/libresvg.a
@@ -343,7 +343,7 @@ scripts/warptempo_sync tt
 # the pages it names and its audio.wav, never viewer.txt) where the laptop has one, then mirrors
 # the laptop's noise/ folder; the soundtrack's few hundred MB and the noise's ~400 MB cross once;
 # the app is neither stopped nor started.
-# Then on the tablet: File > Open Project.
+# Then on the tablet: the OPEN key (Open Project).
 ```
 
 By hand, what it does for one piece:
@@ -356,7 +356,7 @@ far=/sdcard/Android/data/com.warptempo.gui/files/projects
 adb push "$projects/$piece/$wav" "$far/$piece/$wav"
 adb shell "chmod 777 '$far/$piece'"
 # a folder adb makes belongs to adb's shell user with mode 770, which the app cannot even
-# list; the chmod opens it. Then on the tablet: File > Open Project.
+# list; the chmod opens it. Then on the tablet: the OPEN key (Open Project).
 ```
 
 The noise in, after the laptop's `noise/` folder changes: `scripts/warptempo_sync tt`. It copies each recording the tablet's `files/warptempo_gui/noise/` lacks or holds otherwise, and deletes there every recording and sound folder the laptop's no longer holds (`tt -n` lists them); `setup` does the same as its noise step. A new sound is a new folder of `.wav` recordings under the laptop's `noise/`, converted by your own means (the sound paragraph beside the config's key table); choose it on each device with the Settings line's `noise=`.

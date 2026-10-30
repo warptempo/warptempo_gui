@@ -843,7 +843,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              selection/region ladder it used to serve here
     //                              is deleted, so a bare Esc with no render
     //                              running and no card standing is a plain
-    //                              no-op (the seven-place contract at its
+    //                              no-op (the eight-place contract at its
     //                              enumeration's home, input_handler.cpp's
     //                              on_key)
     //   - Ctrl+Q                 → close-prompt routing
@@ -1151,18 +1151,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
     // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN
-    // SEVEN PLACES AND NOWHERE ELSE (re-derived 2026-10-21, when the dropdowns'
-    // (c2) left with the Settings popup; EIGHT from 2026-09-30, when the AV SYNC
-    // STATS PANEL's (c5) left with the panel — the drag-modal gate above tests
-    // only Ctrl+Q, so Esc is UNBOUND there and falls through with every other
-    // key while a gesture is in flight; it is NOT one of the seven), the first
-    // six earlier in this function than this point, so reaching here means
+    // EIGHT PLACES AND NOWHERE ELSE (re-derived 2026-10-29, when the SCORE
+    // VIEWER's (c7) joined the list; the dropdowns' (c2) had left with the
+    // Settings popup 2026-10-21 and the AV SYNC STATS PANEL's (c5) with the
+    // panel 2026-09-30). During a pointer gesture the drag-modal gate above
+    // answers Esc with the kKeysDuringDrag card, as it answers every bound
+    // chord (pointer gestures have no cancel), so the press never reaches the
+    // places below; that is still not a binding of Esc. The first seven are
+    // earlier in this function than this point, so reaching here means
     // the press has nothing left to do BUT the stack. THE LETTERING BELOW IS
     // AN ENUMERATION, NOT THE DISPATCH'S ORDER (corrected 2026-09-02): on_key
     // tests the PROMPT gate first of all, ahead of the loading gate and so
     // ahead of the editor hatch and the editors — which is right, a prompt
     // outranking an editor everywhere — while the letters below run
-    // editor-first. Read them as a list of the seven places (c2 the retired
+    // editor-first. Read them as a list of the eight places (c2 the retired
     // dropdowns' letter, kept so the others keep theirs), and read on_key
     // itself for which one answers when two could:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
@@ -1197,6 +1199,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       from 2026-09-03 and went with the panel on 2026-09-30.)
     //   ((c6), THE COLOR PICKER's own router, was the ninth place again
     //       from 2026-10-07 and went with the picker on 2026-10-14.)
+    //   (c7) THE SCORE VIEWER (2026-10-26, the eighth) — Escape, like M,
+    //       closes it (route_score_viewer_key, dispatched earlier in this
+    //       function under the prompt gate, as the player's and the picker's
+    //       are);
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above,
     //       for a single render; a BATCH's Esc is answered higher, at the
     //       progress modal's own block under the prompt gate (2026-10-14),
@@ -1207,7 +1213,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
     //       rung, at the bare-key tail (handle_plain_bare_keys' Escape arm,
     //       input_key_dispatch.cpp, where the reasoning lives): a press none
-    //       of the six above claims clears every card, whatever its class,
+    //       of the seven above claims clears every card, whatever its class,
     //       and with no card standing the arm is the ruled silence it has
     //       always been. It is the keyboard twin of the shifted or held lift
     //       on a card (the card's X until 2026-10-01) and it is RANKED
@@ -1242,7 +1248,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is place (e) — the stack's clear, and an explicit no-op with no card
     // standing (handle_plain_bare_keys) — the one place the press ends.
-    // THE SEVEN PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
+    // THE EIGHT PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
     // every Escape reader. CTRL+ESC IS THE RETIREMENT RECORD: it was bound at
     // the very head of this function on the morning of 2026-09-01 to clear the
     // whole notification stack from above every gate, a DIFFERENT CHORD that

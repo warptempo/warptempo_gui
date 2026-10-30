@@ -62,10 +62,11 @@
 // them), no third page and no character past ASCII (no grammar takes one),
 // no glyphs (architect 2026-10-29: "no glyphs", reaffirmed 2026-10-29 night
 // over the glyph mocks; every cap is text, cap_word)
-// and no chords — a second finger is the navigation gesture and never
-// reaches a key. No Left/Right keys either: backspace and retyping cover a
-// field, and a tap in the dialog editor's wrapped line places the caret. No
-// `pass` key (architect 2026-10-29: Toggle Inherit covers it).
+// and no chords — a second finger on the keyboard is ignored (the pointer
+// translation's rule, input_core.cpp) and never reaches a key. No Left/Right
+// keys either: backspace and retyping cover a field, and a tap in the dialog
+// editor's wrapped line places the caret. No `pass` key (architect
+// 2026-10-29: Toggle Inherit covers it).
 
 #include "app_state.h"
 // THE SLOT'S OTHER TENANT (2026-08-28): this header reads the folder

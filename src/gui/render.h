@@ -768,9 +768,9 @@ void install_true_colors(bool on);
 //             NO FILL (architect 2026-10-09 ~23:30: "when I clicked on a
 //             flag and it was selected, the text would go white, not navy
 //             blue background"; "clicking on a flag to select it makes the
-//             text turn white. That's it. That's the only thing") — Cool
-//             Edit's program text, EFEFEF on the default Face, against the
-//             light tone at rest (the chrome's `selected_text` until
+//             text turn white. That's it. That's the only thing") — the
+//             bone `label` role under every preset (chrome_derive.h), against
+//             the light tone at rest (the chrome's `selected_text` until
 //             2026-10-10, when it became a text for the ink's fill,
 //             chrome_derive.h); the segment's resting face box (the
 //             overlap rule's, below) stays as it is, the text not moving,

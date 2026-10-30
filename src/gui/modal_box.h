@@ -34,7 +34,8 @@
 //      one hairline, out: render.h's program_ring_columns), its top row
 //      the view bar's top row, its bottom row the ring's last row;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
-//      the 23-W case, the strip pad (render.h's strip_h_px) — on the ground,
+//      the case (key_height tall, render.h's icon_case_h_px), the strip pad
+//      (strip_h_px) — on the ground,
 //      no line, bar or border, its outermost cases or buttons FLUSH WITH THE
 //      RING'S OUTER EDGES; on the window's foot.
 // IN THE HI-FI SKIN (architect 2026-10-23): THE PANEL'S MARGINS AND

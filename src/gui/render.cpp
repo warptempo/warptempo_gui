@@ -1666,9 +1666,8 @@ struct FlagFace {
 // the derivation's owner), the rows kept when the colors split by kind
 // (2026-10-29); "bone" the bone (materials.h's kBoneInk, the words'
 // and the flags' one ink since 2026-10-22); the selected text the chrome's
-// `label` — Cool Edit's program text, EFEFEF on the default Face, dark past
-// its light-face swap (chrome_derive.h) — every label on the panel's face
-// with no fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
+// `label`, the bone F0F0F0 under every preset (chrome_derive.h's role table,
+// 2026-10-22) — every label on the panel's face with no fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
 // SELECTION (Cool Edit's never do): the label carries the selection — ITS
 // TEXT ALONE, the chrome's `label` on the panel's face, no fill (architect
 // 2026-10-09 ~23:30: "clicking on a flag to select it makes the text turn

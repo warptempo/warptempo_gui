@@ -9407,10 +9407,10 @@ void GuiInputHandler::tick_tooltip() {
 
 // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
 // expression, read by the roster's hover walk and on_key's modal-opening
-// tooltip end. FIVE TERMS, re-derived 2026-10-25: the prompt, every editor
+// tooltip end. SIX TERMS, re-derived 2026-10-29: the prompt, every editor
 // (keyboard_modal_editor_active, the one predicate for a keyboard-taking
-// modal, the lane editors among them), the progress modal, and THE TWO
-// OVERLAYS, the render player and the picker — "overlays don't show hints …
+// modal, the lane editors among them), the progress modal, and THE THREE
+// OVERLAYS, the render player, the picker and the score viewer — "overlays don't show hints …
 // the only reason they still show the one button lit is that you can exit
 // by pressing it" (architect 2026-10-25). The `h` view keeps its hints: a
 // view, not an overlay.

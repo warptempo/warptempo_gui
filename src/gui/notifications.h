@@ -417,7 +417,7 @@
 // should clear all notifications", one act wanting one chord rather than two
 // roads onto it. Ctrl+Esc is unbound-silent now like every other modified
 // Escape, and the bare key's rank is unchanged — it is still the LAST of the
-// seven places, under every modal, so a standing surface takes the press for
+// eight places, under every modal, so a standing surface takes the press for
 // its own close and the stack waits.
 //
 // THE PRESS IS CONSUMED WHOLE, on both backends and whatever the button: it

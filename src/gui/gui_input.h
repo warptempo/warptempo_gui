@@ -976,7 +976,7 @@ static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
               "bare 1 is the Source selector and bare 4 the Phase Reset one; "
               "digits 5..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
-              "bare Esc is bound; it is one of the seven-place contract's own "
+              "bare Esc is bound; it is one of the eight-place contract's own "
               "arms (the notification stack's clear), and its top-level "
               "silence is that arm's own, reached only with no card standing");
 static_assert(!chord_is_bound(GuiKeys::Escape,
