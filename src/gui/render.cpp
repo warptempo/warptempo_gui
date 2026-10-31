@@ -454,7 +454,7 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
-// the plate's render, its product the quarter-row tips the GL canvas's plate
+// the plate's render, its product the eighth-row tips the GL canvas's plate
 // rasterizes (waveform_cache.cpp's render_waveform_to_plate_columns;
 // gl_canvas.cpp's kListFragmentShader).
 bool render_waveform_columns(GuiRect area,
@@ -540,12 +540,12 @@ bool render_waveform_columns(GuiRect area,
         return v;
     };
 
-    // A column is ITS TWO TIPS IN QUARTER ROWS (architect 2026-10-30; the
+    // A column is ITS TWO TIPS IN EIGHTH ROWS (architect 2026-10-30; the
     // rule is at this function's declaration): its own raw min/max interval
-    // quantized to the 4x grid, the bar the subrows [T, B − 1], which the
+    // quantized to the 8x grid, the bar the subrows [T, B − 1], which the
     // GPU fills in full ink as the shape's core, joins to its neighbors by
-    // the contour through the column centers, grows by half a device px and
-    // rasterizes at exact coverage (with the lamp lit, the inner bar stands
+    // the contour through the column centers, grows by the `waveform_grow`
+    // key and rasterizes at exact coverage (with the lamp lit, the inner bar stands
     // over the outer, both in the ink, the inner's one-px outline — the
     // erosion of the grown inner, on the GPU — in the outline). This
     // function reads no neighbor and holds no interior: every column is its
@@ -558,12 +558,14 @@ bool render_waveform_columns(GuiRect area,
     // rows, the coverage table, the edge halos) stays in git and in
     // docs/engineering/waveform_antialiasing_retired.md, none of it here.
     //
-    // THE NEVER-FADE FLOOR IS A SUBROW (bar_tips, below): an interval under a
-    // quarter row takes one subrow, which the GPU's half-pixel grow (the disc
-    // dilation, two subcells) makes a line of — nonzero coverage over two
-    // device rows, about one and a quarter device px of summed coverage (20
-    // of 16 subcells) whichever quarter-row phase the tip has — so flat or
-    // silent material draws a soft hairline instead of fading out.
+    // THE NEVER-FADE FLOOR IS A QUARTER ROW (bar_tips, below;
+    // kWaveformFloorSubcells, render.h): an interval under a quarter row
+    // takes two subrows, which the GPU's grow (the disc dilation by the
+    // `waveform_grow` key, four subcells by default) makes a line of — at
+    // the default nonzero coverage over two device rows, about one and a
+    // quarter device px of summed coverage (80 of 64 subcells) whichever
+    // eighth-row phase the tip has — so flat or silent material draws a
+    // soft hairline instead of fading out.
 
     // Row bounds: this channel's band, intersected with the plate.
     int y_lo = area.y;
@@ -620,32 +622,36 @@ bool render_waveform_columns(GuiRect area,
     // this function).
     double g_prev = to_source(edge_at(static_cast<long long>(col0)));
 
-    // THE BAR'S TIPS IN QUARTER ROWS (architect 2026-10-30). The column's
-    // tips — its maximum -> top tip, its minimum -> bottom tip, in float rows
-    // — are clamped to this channel's rows BEFORE any subrow is derived, so a
-    // clipped interval cannot address outside the band; then each is
-    // quantized to the nearest quarter row, T = nearbyint(4 · top) and B =
-    // nearbyint(4 · bottom), and the bar is the subrows [T, B − 1] (the
-    // center rule: subrow k's center k + 0.5 lies in [T, B] iff T <= k <=
-    // B − 1). The band's subrows are [4 · y_lo, 4 · y_hi), and both tips land
-    // in [4 · y_lo, 4 · y_hi] exactly (the clamps' ends are whole rows). THE
-    // NEVER-FADE FLOOR AT THE 4x GRID: an interval under a quarter row has
-    // B == T and an empty bar — digital silence at the zero row is the
-    // archetype — and TAKES ONE SUBROW, B = T + 1, T pulled down one where it
-    // sat on the band's last edge (T == 4 · y_hi) so the subrow lies inside
-    // the band; the GPU's half-pixel grow then makes a line of it (five
-    // subrows, nonzero coverage over two device rows and about one and a
-    // quarter device px of summed coverage at any tip phase, Ableton's
-    // measured silence line).
+    // THE BAR'S TIPS IN EIGHTH ROWS (architect 2026-10-30; the 8x grid
+    // 2026-10-31). The column's tips — its maximum -> top tip, its minimum
+    // -> bottom tip, in float rows — are clamped to this channel's rows
+    // BEFORE any subrow is derived, so a clipped interval cannot address
+    // outside the band; then each is quantized to the nearest eighth row,
+    // T = nearbyint(8 · top) and B = nearbyint(8 · bottom), and the bar is
+    // the subrows [T, B − 1] (the center rule: subrow k's center k + 0.5
+    // lies in [T, B] iff T <= k <= B − 1). The band's subrows are
+    // [8 · y_lo, 8 · y_hi), and both tips land in [8 · y_lo, 8 · y_hi]
+    // exactly (the clamps' ends are whole rows). THE NEVER-FADE FLOOR IS A
+    // QUARTER ROW ON THE 8x GRID (kWaveformFloorSubcells = 2, render.h; the
+    // reason there): an interval under a quarter row has B < T + 2 — digital
+    // silence at the zero row, B == T, is the archetype — and TAKES THE
+    // FLOOR, B = T + 2, T pulled down where it sat within two of the band's
+    // last edge (T > 8 · y_hi − 2) so the subrows lie inside the band; the
+    // GPU's grow then makes a line of it (at the default grow ten subrows,
+    // nonzero coverage over two device rows and about one and a quarter
+    // device px of summed coverage at any tip phase, Ableton's measured
+    // silence line).
     // Nothing can fade out or vanish, and it holds for both bars AT BOTH LANE
     // EDGES: a bar clamped whole to the top edge is the band's first subrow,
     // one clamped whole to the bottom edge (both tips at -1) its last. The
-    // floor is needed because an interval under a quarter row holds no
-    // subrow center and would otherwise rasterize to nothing; the contour
+    // floor is needed because an interval under an eighth row holds no
+    // subrow center and would otherwise rasterize to nothing, and a quarter
+    // row is the thickness judged; the contour
     // needs none, since it only ever joins two bars that exist. The bar
     // is never empty: the column's minimum is at most its maximum and a
     // tip's scale is positive, so yt <= yb, nearbyint is monotone, and the
-    // floor keeps B >= T + 1. One owner for both bars and both lamps, so the
+    // floor keeps B >= T + kWaveformFloorSubcells. One owner for both bars
+    // and both lamps, so the
     // outer and the inner cannot disagree about the geometry; a present
     // inner is told from the absent one by B > T alone (WaveformColumnRows).
     struct BarTips {
@@ -665,14 +671,15 @@ bool render_waveform_columns(GuiRect area,
         if (yb > row_hi) yb = row_hi;
         int top = static_cast<int>(std::nearbyint(yt * kWaveformSubcells));
         int bot = static_cast<int>(std::nearbyint(yb * kWaveformSubcells));
-        if (bot <= top) {
-            bot = top + 1;
+        if (bot < top + kWaveformFloorSubcells) {
+            bot = top + kWaveformFloorSubcells;
             if (bot > sub_hi) {
-                top = sub_hi - 1;
+                top = sub_hi - kWaveformFloorSubcells;
                 bot = sub_hi;
             }
         }
-        assert(sub_lo <= top && top < bot && bot <= sub_hi);
+        assert(sub_lo <= top && top + kWaveformFloorSubcells <= bot &&
+               bot <= sub_hi);
         return BarTips{top, bot};
     };
 
@@ -731,7 +738,7 @@ bool render_waveform_columns(GuiRect area,
     }
 
     // EACH OWNED COLUMN'S TIPS (WaveformColumnRows, render.h): the outer's
-    // [o_top, o_bot) and the lit inner's [i_top, i_bot) in quarter rows, the
+    // [o_top, o_bot) and the lit inner's [i_top, i_bot) in eighth rows, the
     // absent inner (the dark lamp's) 0, 0 — the bounds the GL canvas's plate
     // rasterizes.
     const int ncols = col_hi - col_lo;
@@ -2373,7 +2380,16 @@ namespace {
     // `osk_font_px` seat), set by set_osk_font_px_at300 from the same two
     // application points; the templates' value as construction state.
     int    g_osk_font_px_at300 = kOskFontPxDefaultAt300;
+    // THE WAVEFORM PLATE'S GROW in eighths of a device px (render.h's
+    // `waveform_grow` seat, a permanent key), set by
+    // set_waveform_grow_eighths from the same two application points; the
+    // template's value as construction state.
+    int    g_waveform_grow_eighths = kWaveformGrowDefaultEighths;
 } // namespace
+// AN EIGHTH OF A DEVICE PX IS ONE SUBCELL: the key's lattice is the grid's,
+// so the seat's number is the shader's u_grow with no conversion.
+static_assert(kWaveformGrowEighthsPerPx == kWaveformSubcells,
+              "the waveform_grow key counts the plate's subcells");
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 void   set_key_height_at300(int device_px_at_300) {
@@ -2388,6 +2404,10 @@ int    osk_key_w_at300() { return g_osk_key_w_at300; }
 int    osk_key_h_at300() { return g_osk_key_h_at300; }
 void   set_osk_font_px_at300(int px_at300) { g_osk_font_px_at300 = px_at300; }
 int    osk_font_px_at300() { return g_osk_font_px_at300; }
+void   set_waveform_grow_eighths(int eighths) {
+    g_waveform_grow_eighths = eighths;
+}
+int    waveform_grow_eighths() { return g_waveform_grow_eighths; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

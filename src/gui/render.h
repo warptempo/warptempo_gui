@@ -1076,6 +1076,23 @@ int  osk_key_h_at300();
 void set_osk_font_px_at300(int px_at300);
 int  osk_font_px_at300();
 
+// THE WAVEFORM PLATE'S GROW, THE `waveform_grow` KEY'S SEAT (architect
+// 2026-10-31; the reason at kWaveformSubcells below, the grammar
+// device_config.h's parse_waveform_grow): the live grow in EIGHTHS OF A
+// DEVICE PX — one subcell each on the 8x grid, so the value is the GPU's
+// u_grow as it is — read by the canvas sink alone, which stamps it on the
+// frame's draw list at every plate record (GuiCanvasDrawList::plate_grow,
+// canvas_sink.h), the GL canvas setting the uniform from the list at every
+// draw. The cap size seat's shape exactly — file-scope state in render.cpp,
+// pushed by gui_main's startup read of the device config before the window
+// exists and by the settings editor's `waveform_grow=` commit and its value
+// list's tap (GuiInputHandler::apply_waveform_grow, which repaints at once:
+// no plate re-render, the tips do not move). The construction state is the
+// template's 0.5 (kWaveformGrowDefaultEighths). A PERMANENT KEY, unlike the
+// three tuning seats above: this pair stays.
+void set_waveform_grow_eighths(int eighths);
+int  waveform_grow_eighths();
+
 // A FACE AT THE LIVE SCALE AND SIZE (gui_font.h): what every painter and
 // every seat asks for its text — each use at the face-size table's size
 // (gui_font_table_px), the Keys face at the live `osk_font_px` seat's above
@@ -2041,7 +2058,7 @@ inline int scrub_thumb_above_px() {
 // (its right side and its top and bottom runs, paint_phase_reset_overlay_ring;
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
 // an erosion at distance 1 — THE ONE OF THESE THAT IS NOT AN ALIASED RECT
-// since 2026-10-30: the GPU erodes the antialiased inner bar at the 4x
+// since 2026-10-30: the GPU erodes the antialiased inner bar at the 8x
 // grid and the line is antialiased with its shape, its distance this one
 // device px (kListFragmentShader, gl_canvas.cpp; the plate's rule at
 // render_waveform_columns' head) — and the canvas's GRID AND CENTER LINES
@@ -2062,24 +2079,48 @@ constexpr int waveform_line_px() {
     return 1;
 }
 // THE WAVEFORM PLATE'S ANTIALIASING GRID AND GROW (architect 2026-10-30, on
-// his glass against Ableton; the rule is render_waveform_columns' head, the
-// shader kListFragmentShader, gl_canvas.cpp): the plate's shape is rasterized
-// on a grid of kWaveformSubcells x kWaveformSubcells subcells per device
-// pixel — the tips quantized to quarter rows, a pixel's coverage its set
-// subcells over sixteen, exact to 1/16 — and THE WHOLE SHAPE IS GROWN BY
-// HALF A DEVICE PX on every side, a disc of radius kWaveformGrowSubcells
-// subcells, before the coverage is taken. GROW 0.5 IS A CONSTEXPR AND NOT
-// A TUNING KEY (his words: "0.5 is not judged as much as reasoned —
-// neighboring pixels spread the weight exactly at .5; at 0 they are thin,
-// at 1 they are overly thick"): a one-px stroke centered on the contour IS
-// the shape grown by half a pixel each side, so the number is derived, not
-// tuned. The shader spells both as literals; gl_canvas.cpp static_asserts
-// them against these two, and the erosion's radius against
-// kWaveformSubcells * waveform_line_px().
-constexpr int kWaveformSubcells     = 4;
-constexpr int kWaveformGrowSubcells = 2;
-static_assert(2 * kWaveformGrowSubcells == kWaveformSubcells,
-              "grow 0.5: the disc's radius is half a device pixel in subcells");
+// his glass against Ableton; the 8x grid and the grow's key 2026-10-31; the
+// rule is render_waveform_columns' head, the shader kListFragmentShader,
+// gl_canvas.cpp): the plate's shape is rasterized on a grid of
+// kWaveformSubcells x kWaveformSubcells subcells per device pixel — the
+// tips quantized to eighth rows, a pixel's coverage its set subcells over
+// sixty-four, exact to 1/64 — and THE WHOLE SHAPE IS GROWN on every side by
+// a disc of radius `waveform_grow` subcells before the coverage is taken.
+// THE GROW IS A DEVICE KEY, `waveform_grow`, IN EIGHTHS OF A DEVICE PX
+// (architect 2026-10-31; device_config.h's grammar, the seat
+// waveform_grow_eighths below, the GPU's u_grow): a multiple of 1/8 device
+// px in [0, 2], and it STAYS A KEY — ON THE WAVEFORM NOTHING IS SCALED,
+// every line and dot of the canvas one device px at every scale while the
+// rest of the GUI scales with gui_scale as one tied set of lengths, so the
+// waveform needs one tuning key of its own and the grow is the appropriate
+// one, THE CANVAS'S ONE SCALING CONCESSION, kept for good because a
+// replacement panel may not come at this density: the grow is the
+// device-px number whose right value depends most on the panel's density.
+// (The 2026-10-30 ruling that made it a reasoned constexpr — "neighboring
+// pixels spread the weight exactly at .5; at 0 they are thin, at 1 they are
+// overly thick", a one-px stroke centered on the contour being the shape
+// grown half a pixel each side — is reversed, and stays as THE DEFAULT'S
+// REASON: 0.5, kWaveformGrowDefaultEighths = 4 subcells, today's picture up
+// to the grid's finer quantization. 0.625 is the exact analog of Ableton at
+// 125 % Windows scale, the picture he prefers on the mocks; 1.0 read right
+// at a noisy passage and too thick at a clean one — hence the key.) The
+// grid is 8 so that an eighth of a device px is one subcell (the key's
+// lattice, kWaveformGrowEighthsPerPx, device_config.h). The shader spells
+// the grid as literals; gl_canvas.cpp static_asserts them against this
+// constant, the erosion's radius against kWaveformSubcells *
+// waveform_line_px(), and its 64-bit window against the key's top.
+constexpr int kWaveformSubcells = 8;
+// THE NEVER-FADE FLOOR IS A QUARTER DEVICE PX (architect 2026-10-30, judged
+// on his glass against Ableton's measured silence line; kept 2026-10-31
+// with the 8x grid: the finer grid refines the grow's lattice, not the
+// floor): a bar whose interval holds less than this many subrows takes
+// this many (bar_tips, render.cpp; the paragraph at
+// render_waveform_columns' head), so digital silence is a quarter-row bar
+// which the default grow makes a line of about 1.25 px of summed coverage.
+// A quarter of the grid, which must divide into quarters.
+constexpr int kWaveformFloorSubcells = kWaveformSubcells / 4;
+static_assert(kWaveformSubcells % 4 == 0,
+              "the never-fade floor is a quarter device px of subrows");
 // THE LINE'S ONE PAINT: columns [col, col + t) of a strip whose columns are
 // [0, area_w), at window x `area_x`, rows [y0, y1), as ONE aliased integer
 // rect in the caller's source colour, `t` the canvas's one device px unless a
@@ -2821,21 +2862,24 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE SILHOUETTE IS ONE FILLED CONTOUR THROUGH THE COLUMN CENTERS, WITH A
 // FULL-INK CORE (architect 2026-10-30, on his glass against Ableton). Each
 // column reduces to two TIPS in float rows — its raw maximum as the top
-// tip, its raw minimum as the bottom — QUANTIZED TO QUARTER ROWS (below):
+// tip, its raw minimum as the bottom — QUANTIZED TO EIGHTH ROWS (below):
 // the column's own extent [T, B) in subrows is its BAR, kept whole in full
 // ink (THE CORE: a lone spike stands flat-topped at its own height, never
 // shaved toward its neighbors' mean), and THE CONTOUR joins it to its
-// neighbors — at each of the column's four subcolumns the top and bottom
+// neighbors — at each of the column's eight subcolumns the top and bottom
 // interpolate linearly between this column's tips and the NEARER
 // neighbor's, from center to center, so a steep rise is a diagonal between
 // the two bars rather than a gap. THE WHOLE SHAPE (the bars' union with the
-// contour) IS GROWN BY HALF A DEVICE PX on every side — a disc dilation of
-// radius kWaveformGrowSubcells on the 4x grid (the reason at that constant)
-// — and each device pixel takes EXACT COVERAGE, its set subcells over
-// sixteen; the lit inner bar's OUTLINE is the one-px border of the grown
-// inner shape, an erosion at distance waveform_line_px() (THE LIT OUTLINE,
-// below), antialiased with its shape. The coverage is blended SOURCE-OVER
-// IN BYTE SPACE with what lies beneath (the GL blend, kListFragmentShader).
+// contour) IS GROWN BY THE `waveform_grow` KEY on every side — a disc
+// dilation of that many eighths of a device px on the 8x grid, 0.5 by
+// default (architect 2026-10-31; the key's reason at kWaveformSubcells: ON
+// THE WAVEFORM NOTHING IS SCALED, and the grow is the canvas's one scaling
+// concession, a device key for good) — and each device pixel takes EXACT
+// COVERAGE, its set subcells over sixty-four; the lit inner bar's OUTLINE is
+// the one-px border of the grown inner shape, an erosion at distance
+// waveform_line_px() (THE LIT OUTLINE, below), antialiased with its shape.
+// The coverage is blended SOURCE-OVER IN BYTE SPACE with what lies beneath
+// (the GL blend, kListFragmentShader).
 // NO TIP RULE (his words: "I don't look at the tips, the troughs and their
 // crossings of the zero line"): a tip's pixel is its exact coverage like
 // any other. The dark lamp's raw bar takes the same rule.
@@ -2851,27 +2895,30 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // git and in docs/engineering/waveform_antialiasing_retired.md; none of it
 // is this renderer.
 //
-// THE TIPS IN QUARTER ROWS, AND THE >=1px NEVER-FADE FLOOR AT THE 4x GRID:
-// each tip, clamped into the band's rows, becomes T = nearbyint(4 · top)
-// and B = nearbyint(4 · bottom), the bar the subrows [T, B − 1] (the
+// THE TIPS IN EIGHTH ROWS, AND THE QUARTER-ROW NEVER-FADE FLOOR AT THE 8x
+// GRID: each tip, clamped into the band's rows, becomes T = nearbyint(8 ·
+// top) and B = nearbyint(8 · bottom), the bar the subrows [T, B − 1] (the
 // center rule: subrow k's center k + 0.5 lies in [T, B] iff T <= k <= B − 1).
-// A bar whose interval is under a quarter row (B == T — digital silence at
-// the zero row is the archetype) TAKES ONE SUBROW, B = T + 1, T pulled down
-// one where it sat on the band's last edge so the subrow lies inside the
-// band; the disc dilation then makes a line of it — five subrows, nonzero
-// coverage over two device rows and about one and a quarter device px of
-// summed coverage (20 of 16 subcells) at any tip phase, Ableton's measured
-// silence line. Nothing can fade out or
-// vanish. The floor is needed because an interval under a quarter row
-// holds no subrow center and would otherwise rasterize to nothing; the
-// contour needs none, since it only ever joins two bars that exist.
+// A bar whose interval is under a quarter row (B < T + 2 — digital silence
+// at the zero row, B == T, is the archetype) TAKES THE FLOOR'S TWO SUBROWS
+// (kWaveformFloorSubcells, a quarter device px: its reason at that
+// constant), B = T + 2, T pulled down where it sat within two of the band's
+// last edge so the subrows lie inside the band; the disc dilation then
+// makes a line of it — at the default grow ten subrows, nonzero coverage
+// over two device rows and about one and a quarter device px of summed
+// coverage (80 of 64 subcells) at any tip phase, Ableton's measured
+// silence line. Nothing can fade out or vanish. A floor is needed because
+// an interval under an eighth row holds no subrow center and would
+// otherwise rasterize to nothing, and a quarter row is the thickness
+// judged; the contour needs none, since it only ever joins two bars that
+// exist.
 //
 // PAN INVARIANCE: a column's tips are a pure function of its own (k0+c)
 // span — the AUTHORING LATTICE below is what makes that span depend on the
 // global index alone — and its picture reads the tips of the columns
-// within three of it (the contour toward its two neighbors, the dilation
-// and the erosion across them), so two full renders of the same columns at
-// the same basis agree exactly. At the plate's two side edges the missing
+// within four of it (the contour toward its two neighbors, the dilation of
+// up to two device px and the erosion of one across them), so two full
+// renders of the same columns at the same basis agree exactly. At the plate's two side edges the missing
 // neighbor is the column itself for the contour (the shape runs flat to the
 // edge) and counts as inside for the erosion (no vertical outline at the
 // area's sides), so an edge column can differ from the same audio rendered
@@ -2880,7 +2927,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 //
 // THE COLUMNS ARE THE PRODUCT (2026-10-13; the one road since 2026-10-30):
 // the function writes no pixel. Its product is each column's four
-// quarter-row tips (WaveformColumnRows below), and the GPU rasterizes them
+// eighth-row tips (WaveformColumnRows below), and the GPU rasterizes them
 // (kListFragmentShader, gl_canvas.cpp; canvas_sink.h's head) — the
 // contour, the dilation, the erosion and the coverage are the fragment
 // shader's, from the bounds texture, per pixel. THE PLATE IS THE ONE RECORD
@@ -2908,7 +2955,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its
-// alpha is the coverage: opaque in the core, fractional on the half-pixel
+// alpha is the coverage: opaque in the core, fractional on the grown
 // fringe, transparent in the gaps (2026-10-30).
 // THE GAPS SHOW THE GROUND render_canvas lays under the plate: the plate
 // carries no ground colour, so the canvas has that one painter and the cold
@@ -2957,8 +3004,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // DEVICE PX AT EVERY SCALE since 2026-10-09 ("on waveform → unscaled",
 // waveform_line_px's rule) — the plate column's own width, as the stems'
 // dots are. The GROWN INNER SHAPE (the inner bars of all columns with their
-// contour, dilated by the half pixel) is ERODED BY A DISC of radius
-// kWaveformSubcells · waveform_line_px() = 4 subcells for its INTERIOR; the
+// contour, dilated by the `waveform_grow` key) is ERODED BY A DISC of radius
+// kWaveformSubcells · waveform_line_px() = 8 subcells for its INTERIOR; the
 // outline's coverage at a pixel is the grown inner's coverage less the
 // interior's, so the line is the shape's one-px border, soft where the
 // shape is. The outer bar has no outline (its outline ink would be its
@@ -2975,9 +3022,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // gain one half; kForegroundGain's static_assert, waveform_gain.cpp) — so
 // every end is a true end of the shape. Each channel's lane is its own shape;
 // the other channel's pixels are never a neighbour. A bar up to two px tall
-// comes out all border; the subrow floor stands. THE ALGORITHM IS THE
+// comes out all border; the quarter-row floor stands. THE ALGORITHM IS THE
 // SHADER'S (kListFragmentShader, gl_canvas.cpp), per pixel from the tips of
-// the seven columns around it, no 2D scan: this function holds no interior.
+// the nine columns around it, no 2D scan: this function holds no interior.
 // A loud passage's outer clips flat at the lane's edges while the inner
 // still shows its compressed height inside it.
 //
@@ -3066,15 +3113,16 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
 
-// ONE PLATE COLUMN'S TIPS (2026-10-13; quarter rows since 2026-10-30), in
-// the plate's own rows times kWaveformSubcells (subrow 0 the top of the
-// canvas's first row): the outer (or dark) bar's subrows [o_top, o_bot − 1]
-// and the lit inner bar's [i_top, i_bot − 1] — the inner ABSENT (the dark
-// lamp) is i_top = i_bot = 0, and present iff i_bot > i_top (a present bar
-// always has bot >= top + 1, the subrow floor). The GPU rasterizes them
-// (kListFragmentShader, gl_canvas.cpp): the contour toward the neighbors,
-// the half-pixel grow, the inner's erosion and each pixel's exact coverage
-// are the fragment shader's, the rule at render_waveform_columns' head.
+// ONE PLATE COLUMN'S TIPS (2026-10-13; subrows since 2026-10-30, eighth
+// rows since 2026-10-31), in the plate's own rows times kWaveformSubcells
+// (subrow 0 the top of the canvas's first row): the outer (or dark) bar's
+// subrows [o_top, o_bot − 1] and the lit inner bar's [i_top, i_bot − 1] —
+// the inner ABSENT (the dark lamp) is i_top = i_bot = 0, and present iff
+// i_bot > i_top (a present bar always has bot >= top +
+// kWaveformFloorSubcells, the quarter-row floor). The GPU rasterizes them (kListFragmentShader, gl_canvas.cpp): the
+// contour toward the neighbors, the `waveform_grow` key's grow, the inner's
+// erosion and each pixel's exact coverage are the fragment shader's, the
+// rule at render_waveform_columns' head.
 struct WaveformColumnRows {
     int o_top, o_bot;
     int i_top, i_bot;

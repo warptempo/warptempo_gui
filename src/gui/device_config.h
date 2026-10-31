@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Thirteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Fourteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -66,6 +66,35 @@
 //                            templates and both installs `on`. (The row's
 //                            toggle, 2026-10-08..10-21, persisted nothing:
 //                            the switch was true at every launch.)
+//   waveform_grow=<px>       THE WAVEFORM PLATE'S GROW (architect
+//                            2026-10-31; the rule at render.h's
+//                            kWaveformSubcells, the shader's u_grow,
+//                            gl_canvas.cpp): how far the antialiased
+//                            waveform's shape is grown on every side before
+//                            its coverage is taken, in DEVICE PX, a multiple
+//                            of 0.125 in [0, 2] in canonical spelling
+//                            (parse_waveform_grow below: `0.5`, `0.625`,
+//                            `1`, `1.125` — the integer part, then the
+//                            fraction only when it is not zero, with no
+//                            trailing zero), held as EIGHTHS, one subcell of
+//                            the 8x grid each; live at the settings editor's
+//                            OK and at the settings page's value list's tap
+//                            (GuiInputHandler::apply_waveform_grow, a
+//                            repaint: the tips do not move). PERMANENT and
+//                            REQUIRED, THE CANVAS'S ONE SCALING CONCESSION:
+//                            on the waveform nothing is scaled — its lines
+//                            and dots stay one device px at every scale
+//                            while the rest of the GUI scales with gui_scale
+//                            as one tied set of lengths — so the waveform
+//                            needs one tuning key of its own, and the grow
+//                            is the appropriate one, kept for good because a
+//                            replacement panel may not come at this density
+//                            (the grow is the device-px number whose right
+//                            value depends most on it). The template spells
+//                            0.5, the 2026-10-30 reasoning its reason
+//                            (neighboring pixels spread the weight exactly
+//                            at .5), 0.625 the exact analog of Ableton at
+//                            125 % Windows scale
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -237,7 +266,9 @@
 // APPENDED after it 2026-10-29, the tuning keys keeping the end, and the
 // keyboard's two, `osk_key_w` and `osk_key_h`, after it the same
 // evening, and the keyboard's cap size `osk_font_px` after them that
-// night);
+// night; the plate's grow `waveform_grow` placed after `true_colors`
+// 2026-10-31, the display keys' end, a permanent key before the noise's
+// three);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -376,7 +407,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the thirteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fourteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -412,7 +443,8 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors`, since 2026-10-28 `noise`, `noise_level`
+// `waveform`, `true_colors`, since 2026-10-31 `waveform_grow`, since
+// 2026-10-28 `noise`, `noise_level`
 // and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
 // `osk_key_w` and `osk_key_h` and that night `osk_font_px` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
@@ -471,6 +503,10 @@ struct DeviceConfig {
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // templates' and the construction state's.
     bool        true_colors = true;
+    // THE WAVEFORM PLATE'S GROW in eighths of a device px (2026-10-31, the
+    // head's list; a permanent key): required; the construction state is
+    // the template's 0.5 (kWaveformGrowDefaultEighths below).
+    int         waveform_grow_eighths = 4;
     // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in seconds
     // (2026-10-28, the head's list): required; the construction state is the
     // templates' values (`rain`, -9, 4).
@@ -800,6 +836,38 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
     return n;
 }
 
+// THE waveform_grow GRAMMAR (architect 2026-10-31) — a multiple of 0.125
+// DEVICE PX in [0, 2] in canonical spelling, held as EIGHTHS in [0, 16]
+// (kWaveformGrowEighthsPerPx: one eighth is one subcell of render.h's 8x
+// grid, kWaveformSubcells, so the number is the shader's u_grow as it is),
+// the one owner the reader, the writer, the settings editor's commit and
+// its recall read, and the settings page's value list (format_waveform_grow,
+// parse_waveform_grow; the list's 17 rows are this range in eighths). THE
+// CANONICAL SPELLING is the shortest exact decimal: the integer part, then
+// `.` and the fraction only when it is not zero, with no trailing zero —
+// `0`, `0.125`, `0.25`, `0.375`, `0.5`, `0.625`, `0.75`, `0.875`, `1`,
+// `1.125`, ... `2` — and the reader admits exactly the seventeen strings
+// the writer spells (it formats each eighth and compares), so `0.50`,
+// `1.0`, `.5` and anything off the eighths lattice or out of range are the
+// launch's hard fail, as every other key's off-spelling is. The default is
+// 0.5 (the reason at the head's entry and at kWaveformSubcells); the top, 2,
+// is what the shader's 64-bit window was sized for (gl_canvas.cpp's
+// asserts) and twice the mocks' thickest, 1.0, which already read too thick
+// at a clean passage.
+inline constexpr int kWaveformGrowEighthsPerPx   = 8;
+inline constexpr int kWaveformGrowMinEighths     = 0;
+inline constexpr int kWaveformGrowMaxEighths     = 16;
+inline constexpr int kWaveformGrowDefaultEighths = 4;
+inline constexpr const char* kWaveformGrowGrammarReason =
+    "must be a multiple of 0.125 in [0, 2] in canonical spelling "
+    "(0, 0.125, 0.25, ... 2)";
+std::string format_waveform_grow(int eighths);
+inline std::optional<int> parse_waveform_grow(std::string_view v) {
+    for (int n = kWaveformGrowMinEighths; n <= kWaveformGrowMaxEighths; ++n)
+        if (format_waveform_grow(n) == v) return n;
+    return std::nullopt;
+}
+
 // (THE waveform GRAMMAR is palette_file.h's is_builtin_palette_name and
 // kPaletteGrammarReason — a built-in's key alone since 2026-10-14; the
 // `caption` key's, is_builtin_scheme_name, left with the key 2026-10-21. The
@@ -943,10 +1011,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves eleven keys —
+// the settings editor's ONE device-key body, which serves twelve keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
-// `true_colors=`, and since 2026-10-28 the noise's three, `noise=`,
+// `true_colors=`, since 2026-10-31 `waveform_grow=` (its live act
+// GuiInputHandler::apply_waveform_grow), and since 2026-10-28 the noise's three, `noise=`,
 // `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
 // keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
@@ -977,6 +1046,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: 300 % and the external files dir's `projects/`;
 // it stamps `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
+// `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultEighths),
 // `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`
 // (2026-10-29, kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,

@@ -576,6 +576,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
     // `waveform=default` (palette_file.h owns the name).
     cfg.waveform      = kGuiDefaultPaletteKey;
+    // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key),
+    // spelled: half a device px, 4 eighths (device_config.h's head).
+    cfg.waveform_grow_eighths = kWaveformGrowDefaultEighths;
     // THE NOISE'S THREE (architect 2026-10-28), spelled: the folder `rain`
     // under noise/ beside the config, the level -9 dB, his "the rain is a
     // masker", and the crossfade 4 s (device_config.h's head).

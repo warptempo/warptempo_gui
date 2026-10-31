@@ -154,6 +154,8 @@ std::string format_settings_text(
 // and the color key (`waveform`, `chrome` 2026-10-14..10-21 beside the
 // retired `caption`; required since 2026-10-14, so the line is always there
 // to recall), or the switch's word (`true_colors`, 2026-10-21), or the
+// plate's grow (`waveform_grow`, 2026-10-31, through format_waveform_grow),
+// or the
 // noise's folder name verbatim (`noise`, 2026-10-28) and its two integers
 // (`noise_level`, `noise_crossfade_s`, 2026-10-28, through
 // format_noise_level and format_noise_crossfade_s), or the key's height

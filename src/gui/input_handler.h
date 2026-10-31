@@ -2622,7 +2622,8 @@ private:
     //   down would make it quicker, because I don't like having to type it
     //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
     //   night for `true_colors`, `noise`, `noise_level` and
-    //   `noise_crossfade_s`, the same shape) — THE SETTINGS PAGE'S ROW'S
+    //   `noise_crossfade_s`, the same shape; 2026-10-31 for `waveform_grow`)
+    //   — THE SETTINGS PAGE'S ROW'S
     //   CONTENT for a key of kSettingsValueListKeys, its one road, and A
     //   SUB-PAGE OF THE SETTINGS PAGE (architect 2026-10-28 night: "the
     //   cancel button should return to the main setup panel, no? setup
@@ -3621,6 +3622,21 @@ private:
     // and persists it (apply_device_setting); the launch seeds the size
     // before the window exists (main.cpp).
     void apply_osk_font_px(int px_at300);
+
+    // THE WAVEFORM PLATE'S GROW'S ONE LIVE ACT (the `waveform_grow` device
+    // key, architect 2026-10-31; render.h's seat): push the eighths to the
+    // renderer (set_waveform_grow_eighths), then invalidate the whole
+    // window — the next frame rebuilds the canvas's draw list, the sink
+    // stamps the new grow on it (GuiCanvasDrawList::plate_grow) and the GL
+    // canvas hands it to the plate's shader as u_grow. NO PLATE RE-RENDER,
+    // NO CACHE DROPPED, NO RELAYOUT AND NO BAKE: the grow is the GPU's
+    // alone — the plate's tips are a function of the audio and the view,
+    // not of the grow (render_waveform_columns' head) — and nothing off the
+    // canvas reads it. The settings editor's `waveform_grow=` commit and
+    // its value list's tap (one body, apply_device_setting) are the sole
+    // callers; it gates the no-op, assigns the live config and persists it;
+    // the launch seeds the grow before the window exists (main.cpp).
+    void apply_waveform_grow(int eighths);
 
     // THE RELAYOUT TAIL, the three live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):

@@ -91,6 +91,9 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
     if (copy) list_.columns.clear();
     const uint32_t ink     = argb32_opaque_word(hex(inks.ink_rgb));
     const uint32_t outline = argb32_opaque_word(hex(inks.outline_rgb));
+    // THE GROW (GuiCanvasDrawList::plate_grow): the key's live seat, in
+    // subcells, read at every rebuild so a commit of the key repaints.
+    list_.plate_grow = waveform_grow_eighths();
     std::size_t offset = 0;
     for (const GuiPlateColumns::Band& b : columns.band) {
         if (!b.stored) continue;

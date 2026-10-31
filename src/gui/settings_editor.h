@@ -56,7 +56,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the seventeen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the eighteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -86,13 +86,14 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// TWELVE editable ones the per-device config carries — gui_scale and
+// THIRTEEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-10-14 (architect) the
 // color key waveform (`chrome` until 2026-10-21; the caption key, editable
 // 2026-10-14..10-21, left with its key), the color picker's until that day,
-// since 2026-10-21 true_colors (the popup's command row made a key), and
+// since 2026-10-21 true_colors (the popup's command row made a key), since
+// 2026-10-31 (architect) the waveform plate's grow waveform_grow, and
 // since 2026-10-28 (architect) the noise's folder noise, its noise_level and
 // its crossfade in seconds noise_crossfade_s, and since 2026-10-29
 // (architect) the tuning key key_height, the key case's height, and the
@@ -118,8 +119,9 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors, noise, noise_level, noise_crossfade_s,
-//    key_height, osk_key_w, osk_key_h and osk_font_px — in ONE body,
+//    waveform, true_colors, waveform_grow, noise, noise_level,
+//    noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px —
+//    in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
@@ -130,7 +132,9 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; waveform and true_colors at once, applied live
-//    at the OK, no card (the screen is the answer); the noise's level and
+//    at the OK, no card (the screen is the answer); waveform_grow the same,
+//    the window repainted (GuiInputHandler::apply_waveform_grow), no card
+//    (the waveform is the answer); the noise's level and
 //    crossfade at once, handed to the one GuiNoise (noise.h) at the OK, no
 //    card (the sound is the answer); the noise's folder at once, the lamp
 //    darkened and the resident recordings freed (GuiNoise::change_folder),
@@ -183,28 +187,30 @@ struct GuiInputHandler;
 // stood and its list dropping over the well — stood 2026-10-07 to 2026-10-14
 // and is removed whole; a closed domain's help is Tab (stage 3 above), and
 // the commit is OK's and Enter's — the screen changing at the commit, never
-// before. (FIVE KEYS HAVE A LIST AGAIN — `waveform` since 2026-10-25, the
+// before. (SIX KEYS HAVE A LIST AGAIN — `waveform` since 2026-10-25, the
 // architect reversing this for it: "we rejected drop downs because it was
 // too much work to make them Windows identical, but now we don't have the
 // responsibility"; `true_colors`, `noise`, `noise_level` and
-// `noise_crossfade_s` since 2026-10-28 night, the same shape. A list is no
+// `noise_crossfade_s` since 2026-10-28 night, the same shape; `waveform_grow`
+// since 2026-10-31. A list is no
 // choice editor and no drop-down: the VALUE LIST, the folder overlay's
 // content behind the settings page's row for its key, whose row tap commits
 // at once — apply_device_setting, this editor's own road. THE SETTINGS
 // PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
 // nothing, each opening this line editor.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE SEVENTEEN (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE EIGHTEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
 // keyboard's `osk_key_w` and `osk_key_h` after it that evening, its
-// `osk_font_px` after them that night): the five
+// `osk_font_px` after them that night; the plate's grow `waveform_grow`
+// 2026-10-31, after `true_colors` as the config writes it): the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's twelve editable keys in that file's
+// CONFIG's thirteen editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
@@ -225,7 +231,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
-    "noise", "noise_level", "noise_crossfade_s", "key_height",
+    "waveform_grow", "noise", "noise_level", "noise_crossfade_s", "key_height",
     "osk_key_w", "osk_key_h", "osk_font_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
@@ -272,8 +278,9 @@ consteval bool settings_page_piece_keys_pinned() {
 }
 static_assert(settings_page_piece_keys_pinned());
 
-// THE KEYS WITH A VALUE LIST — ONE TABLE, THE FIVE (architect 2026-10-25 for
-// `waveform`, 2026-10-28 night for the other four): the settings page's row
+// THE KEYS WITH A VALUE LIST — ONE TABLE, THE SIX (architect 2026-10-25 for
+// `waveform`, 2026-10-28 night for four more, 2026-10-31 for
+// `waveform_grow`): the settings page's row
 // for one of these swaps the folder overlay's content to THE KEY'S VALUES
 // (GuiInputHandler::build_value_list_rows, its rows from
 // GuiSettingsEditor::value_choices below), and a row's tap commits that value
@@ -281,15 +288,16 @@ static_assert(settings_page_piece_keys_pinned());
 // returns to the page on that key's row (the list a sub-page of the page,
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
 // key with a short domain the list can show whole: the twenty presets, the
-// two words, the folders under `noise/`, the level's 31 whole dB and the
-// crossfade's 30 whole seconds. The typed line still names every one of
+// two words, the folders under `noise/`, the level's 31 whole dB, the
+// crossfade's 30 whole seconds and the grow's 17 eighths. The typed line still names every one of
 // them, its arms and completers unchanged (the list is a second door).
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
 // are no short domain, so its row opens the line editor; nor are the
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
 // `osk_font_px`, 37.)
 inline constexpr const char* kSettingsValueListKeys[] = {
-    "waveform", "true_colors", "noise", "noise_level", "noise_crossfade_s",
+    "waveform", "true_colors", "waveform_grow", "noise", "noise_level",
+    "noise_crossfade_s",
 };
 inline bool settings_key_has_value_list(std::string_view key) {
     for (const char* k : kSettingsValueListKeys)
@@ -397,8 +405,10 @@ struct GuiSettingsEditor {
     // directories through a link, no dot-directory) that the key's grammar
     // admits (is_noise_folder_name), so every row commits; no folder there,
     // or no config home, is a list with no rows; `noise_level` 0 down to -30
-    // in steps of 1; `noise_crossfade_s` 1 up to 30. Every value is
-    // the key's writer spelling (format_noise_level, format_noise_crossfade_s),
+    // in steps of 1; `noise_crossfade_s` 1 up to 30; `waveform_grow` 0 up
+    // to 2 in eighths (2026-10-31). Every value is
+    // the key's writer spelling (format_noise_level, format_noise_crossfade_s,
+    // format_waveform_grow),
     // so the seat compares it with setting_value byte for byte. Listed afresh
     // at each call; nothing is cached.
     std::vector<GuiSettingValueChoice> value_choices(const std::string& key) const;
@@ -428,7 +438,8 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `noise=`, `noise_level=`,
+    // `waveform=`, `true_colors=`, `waveform_grow=` (2026-10-31), `noise=`,
+    // `noise_level=`,
     // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`,
     // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
     // having no value list) — ONE BODY, TWO DOORS

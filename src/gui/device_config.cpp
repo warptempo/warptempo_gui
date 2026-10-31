@@ -20,7 +20,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (THIRTEEN keys since 2026-10-30, `role`
+// REQUIRED SET, every one of them (FOURTEEN keys since 2026-10-31, the
+// plate's grow `waveform_grow` placed after `true_colors`; THIRTEEN
+// 2026-10-30, `role`
 // retired with the laptop GUI — one device, no mirror; FOURTEEN 2026-10-29
 // night, the keyboard's cap size `osk_font_px` appended at the end; THIRTEEN
 // that evening, the keyboard's two tuning keys `osk_key_w` and `osk_key_h`
@@ -68,6 +70,11 @@ namespace {
 // key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
 // the tuning keys keep the end where they leave from.
 //
+// THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
+// `true_colors`, the display keys' end — a permanent key, the canvas's one
+// scaling concession (device_config.h's head), so it stands among the
+// permanent keys and not with the tuning keys at the end.
+//
 // THE NOISE'S THREE (architect 2026-10-28): `noise`, `noise_level` and
 // `noise_crossfade_s` FOLLOW `true_colors`, the permanent keys' end, the
 // folder before its loudness and its crossfade.
@@ -95,6 +102,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "waveform",
     "true_colors",
+    "waveform_grow",
     "noise",
     "noise_level",
     "noise_crossfade_s",
@@ -153,6 +161,26 @@ std::string format_osk_font_px(int px) {
     return std::string(buf);
 }
 
+// The plate's grow's canonical spelling (2026-10-31; the grammar's words at
+// parse_waveform_grow's head, device_config.h): the eighths as the shortest
+// exact decimal — the integer part, then the fraction in thousandths with
+// its trailing zeros cut, and no fraction at a whole number. Every eighth is
+// exact in three decimals (n/8 = 125n/1000), so nothing rounds.
+std::string format_waveform_grow(int eighths) {
+    char buf[32];
+    const int whole = eighths / 8;
+    const int thousandths = (eighths % 8) * 125;
+    if (thousandths == 0) {
+        std::snprintf(buf, sizeof(buf), "%d", whole);
+    } else {
+        std::snprintf(buf, sizeof(buf), "%d.%03d", whole, thousandths);
+        std::string s(buf);
+        while (s.back() == '0') s.pop_back();
+        return s;
+    }
+    return std::string(buf);
+}
+
 std::filesystem::path device_config_path() {
     // XDG_CONFIG_HOME AND NOTHING ELSE (architect 2026-10-30: the tablet is
     // the one platform), the render cache's own shape (RenderCache::init,
@@ -192,6 +220,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "true_colors") {
             // The switch's word (format_true_colors, the grammar's owner).
             s += format_true_colors(cfg.true_colors);
+        } else if (k == "waveform_grow") {
+            // The grow's canonical decimal (format_waveform_grow).
+            s += format_waveform_grow(cfg.waveform_grow_eighths);
         } else if (k == "noise") {
             // The folder's name verbatim (is_noise_folder_name's grammar).
             s += cfg.noise;
@@ -331,6 +362,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kNoiseFolderGrammarReason);
             }
             out.noise = value;
+            return {};
+        }
+        // THE PLATE'S GROW (2026-10-31, a permanent key): under its one
+        // grammar owner (parse_waveform_grow, device_config.h), required
+        // like every key; any other spelling the launch's hard fail.
+        if (key == "waveform_grow") {
+            const std::optional<int> eighths = parse_waveform_grow(value);
+            if (!eighths) {
+                return bad_value(ln, key, value, kWaveformGrowGrammarReason);
+            }
+            out.waveform_grow_eighths = *eighths;
             return {};
         }
         if (key == "noise_level") {

@@ -377,6 +377,11 @@ std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
                 out.push_back({name, name});
             }
         }
+    } else if (key == "waveform_grow") {
+        for (int n = kWaveformGrowMinEighths; n <= kWaveformGrowMaxEighths; ++n) {
+            const std::string v = format_waveform_grow(n);
+            out.push_back({v, v});
+        }
     } else if (key == "noise_level") {
         for (int db = kNoiseLevelMaxDb; db >= kNoiseLevelMinDb; --db) {
             const std::string v = format_noise_level(db);
@@ -1195,7 +1200,8 @@ void GuiSettingsEditor::commit() {
 // (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it, `noise`, `noise_level` and `noise_crossfade_s`
+// its arm after it, `waveform_grow` (2026-10-31) the same, its arm after
+// that, `noise`, `noise_level` and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it, and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
 // `osk_font_px` (2026-10-29) the same, their arms last
@@ -1213,7 +1219,8 @@ void GuiSettingsEditor::commit() {
 //
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
-// with its text selected, or the editor closed.
+// with its text selected, or the editor closed. (The five keys with a value
+// list are six since 2026-10-31, `waveform_grow` among them.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1329,6 +1336,27 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (value == app.device_config->noise) return unchanged();
         app.device_config->noise = value;
         if (app.noise != nullptr) app.noise->change_folder(value);
+        (void)persist();
+        return applied();
+    }
+
+    // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key;
+    // render.h's `waveform_grow` seat): a multiple of 0.125 device px under
+    // its one grammar owner (parse_waveform_grow, device_config.h), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then the one live act
+    // (GuiInputHandler::apply_waveform_grow: the renderer's seat and the
+    // window repainted, no plate re-render — the grow is the GPU's alone)
+    // — and persisted, so NO CARD: the waveform is the answer. The page
+    // opens its VALUE LIST (17 values, kSettingsValueListKeys); Tab
+    // completes no value (a number is typed, or picked from the list);
+    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    if (key == "waveform_grow") {
+        const std::optional<int> eighths = parse_waveform_grow(value);
+        if (!eighths) return reject(kWaveformGrowGrammarReason);
+        if (*eighths == app.device_config->waveform_grow_eighths)
+            return unchanged();
+        app.device_config->waveform_grow_eighths = *eighths;
+        input->apply_waveform_grow(*eighths);
         (void)persist();
         return applied();
     }
@@ -1593,7 +1621,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's seventeen and
+        // one key does — any key the recall knows, the table's eighteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

@@ -95,7 +95,9 @@ private:
     int          texture_w_      = 0;
     int          texture_h_      = 0;
     // THE CANVAS LIST'S OBJECTS (the draw at present_frame, the records at
-    // canvas_sink.h): the program and its two uniforms, its own vertex array
+    // canvas_sink.h): the program and its three uniforms (the size, the
+    // height and the plate's grow, u_grow, set from the list at every
+    // draw), its own vertex array
     // over the instance buffer, the plate's bounds texture and its size —
     // made with the texture program, living in the context — and the
     // instances' count and the list generation they were made from.
@@ -107,6 +109,7 @@ private:
     unsigned int list_program_        = 0;
     int          list_size_uniform_   = -1;
     int          list_height_uniform_ = -1;
+    int          list_grow_uniform_   = -1;
     unsigned int list_vao_            = 0;
     unsigned int list_vbo_            = 0;
     int          list_instances_      = 0;

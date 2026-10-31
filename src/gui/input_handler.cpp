@@ -3466,6 +3466,13 @@ void GuiInputHandler::apply_osk_font_px(int px_at300) {
     viewport.invalidate_all();
 }
 
+void GuiInputHandler::apply_waveform_grow(int eighths) {
+    // The contract is at the declaration (input_handler.h): the push, then
+    // the whole window's damage; the commit's arm owns the persist.
+    set_waveform_grow_eighths(eighths);
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::relayout_window() {
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);

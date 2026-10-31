@@ -1836,7 +1836,7 @@ write pass). The design record's §3.3–3.7.
   is drawn as one instanced draw under a scissor to the clip (rects, dotted
   runs by an integer modulo, the plate by `texelFetch` on a `GL_RGBA16I`
   bounds texture — one row per plate record, each texel a column's four
-  quarter-row tips, the absent inner 0, 0; signed because the shader's
+  eighth-row tips, the absent inner 0, 0; signed because the shader's
   arithmetic on them is signed int — rasterized antialiased by
   `kListFragmentShader`, the list's one blend); then the texture triangle,
   its shader discarding alpha-0 texels.
