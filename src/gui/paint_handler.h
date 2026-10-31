@@ -158,7 +158,8 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, divider_px, the plate's two
+    // vp_start, the LATTICE ORIGIN (fp_lattice_origin below, 2026-10-31),
+    // vp_end, area_w, area_h, divider_px, the plate's two
     // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
     // an input the plate's PIXELS depend on (the inks through its
     // publication), and each is keyed BY FIELD rather than through whatever else happens
@@ -169,6 +170,13 @@ struct WaveformCache {
     // own until 2026-10-09, and the measured MONOSPACE font size before row
     // 7, its proxy while it was font-derived.)
     int64_t   fp_vp_start    = 0;
+    // THE LATTICE the live pixels' columns were cut on (architect
+    // 2026-10-31; the rule at AppState::viewport_lattice_origin): column c's
+    // edges are origin + nearbyint((k0 + c)·q), so a camera that settles the
+    // same start on another lattice paints other columns and re-renders BY
+    // FIELD. Staged into the displayed mirror with the span (the flag
+    // rebuild's stage, AppState::displayed_lattice_origin).
+    int64_t   fp_lattice_origin = 0;
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
@@ -223,6 +231,7 @@ struct WaveformCache {
     int              pending_height  = 0;
 
     int64_t   pending_fp_vp_start    = 0;
+    int64_t   pending_fp_lattice_origin = 0;
     int64_t   pending_fp_vp_end      = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
@@ -245,6 +254,7 @@ struct WaveformCache {
     // Cleared at consumption.
     bool      supersede             = false;
     int64_t   supersede_vp_start    = 0;
+    int64_t   supersede_lattice_origin = 0;
     int64_t   supersede_vp_end      = 0;
     double    supersede_painter_spp = 0.0;  // the lattice q, like the job's
     int       supersede_area_w      = 0;
@@ -366,6 +376,7 @@ struct FlagCache {
 
     int64_t   fp_vp_start            = 0;
     int64_t   fp_vp_end              = 0;
+    int64_t   fp_lattice_origin      = 0;
     int       fp_area_w              = 0;
     int       fp_area_h              = 0;
     bool      fp_target              = false;
@@ -632,10 +643,15 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (26 fields, RE-DERIVED 2026-10-26 off the compare in
+    // (27 fields, RE-DERIVED 2026-10-31 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
-    //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
-    //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
+    //   - GEOMETRY, five fields off the displayed plate (wf_cache.fp_*):
+    //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash, and
+    //     fp_lattice_origin (architect 2026-10-31) — no flag pixel reads the
+    //     lattice (the flags place by displayed_column_at's offsets), but the
+    //     rebuild STAGES the displayed basis, the lattice origin with the
+    //     span (AppState::displayed_lattice_origin), so a plate that moved
+    //     its lattice alone must re-stage;
     //   - GEOMETRY, two fields off the LIVE surface band (not the plate —
     //     this surface holds strip rows, not the waveform): fp_area_w the
     //     window's width (top_strip_area's), fp_area_h the band's height, the
@@ -832,6 +848,9 @@ private:
     // helper the same way it tracked the prior inline block.
     struct WaveformRenderInputs {
         int64_t  vp_start      = 0;
+        // The camera's lattice origin (AppState::viewport_lattice_origin):
+        // a render input (the column edges) and a fingerprint field.
+        int64_t  lattice_origin = 0;
         int64_t  vp_end        = 0;
         // The PAINTER's samples-per-pixel (painter_samples_per_pixel, the one
         // owner) — the same q clamp_viewport_start snaps the viewport onto. The

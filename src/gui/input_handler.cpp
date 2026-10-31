@@ -3110,9 +3110,11 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     app.displayed_vp_start = 0;
     app.displayed_vp_end   = 0;
     app.displayed_area_w   = 0;
+    app.displayed_lattice_origin = 0;
     app.staged_displayed_vp_start = 0;
     app.staged_displayed_vp_end   = 0;
     app.staged_displayed_area_w   = 0;
+    app.staged_displayed_lattice_origin = 0;
     app.staged_displayed_valid = false;
 
     // (THE S/T SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the

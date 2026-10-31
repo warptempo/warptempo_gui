@@ -478,14 +478,16 @@ bool render_waveform_columns(GuiRect area,
     if (plate_w <= 0 || plate_h <= 0) return false;
 
     // THE AUTHORING LATTICE (see WaveformBasis). Recover the viewport's lattice
-    // index with the SAME expression clamp_viewport_start uses to snap onto it,
-    // so a resting viewport round-trips exactly; an off-lattice mid-gesture
-    // viewport quantizes to its nearest rest. Columns are then indexed globally
-    // from k0, which is what makes a pan a pure index shift — a column's frames
-    // depend on k0+c and nothing else, never on which window drew it.
+    // index on ITS OWN LATTICE, of origin basis.origin, with the SAME
+    // expression clamp_viewport_start uses to snap onto it
+    // (nearest_viewport_grid_point), so a resting viewport round-trips
+    // exactly. Columns are then indexed globally from k0, which is what makes
+    // a pan a pure index shift — a column's frames depend on the origin and
+    // k0+c and nothing else, never on which window drew it.
     const double samples_per_pixel = basis.spp;
-    double k0d = std::nearbyint(static_cast<double>(basis.vp_start) /
-                                samples_per_pixel);
+    double k0d = std::nearbyint(
+        static_cast<double>(basis.vp_start - basis.origin) /
+        samples_per_pixel);
     if (!(k0d >= 0.0)) k0d = 0.0;          // also rejects NaN
     const long long k0 = static_cast<long long>(k0d);
 
@@ -584,8 +586,10 @@ bool render_waveform_columns(GuiRect area,
     if (col_hi <= col_lo) return false;
 
     // Global column c's display-domain edge, AS THE LATTICE POINT ITSELF:
-    // g(k0+c) = nearbyint((k0+c)*spp), bit-for-bit the integer
-    // clamp_viewport_start's grid() lambda produces. THE QUANTIZE LIVES HERE,
+    // g(k0+c) = origin + nearbyint((k0+c)*spp), bit-for-bit the integer
+    // the chokepoint's snap produces (origin + viewport_grid_point(k0+c, q);
+    // the origin a whole frame, added after the rounding, so the edge stays
+    // integral). THE QUANTIZE LIVES HERE,
     // once, so every consumer — the loop and the carried-endpoint chain —
     // receives the same already-rounded lattice point and BOTH VIEWS
     // consume the identical integer. Rounding here rather than downstream is
@@ -597,7 +601,8 @@ bool render_waveform_columns(GuiRect area,
     // point is still a pure function of the global index), but the geometry sat
     // off the lattice this contract declares.
     const auto edge_at = [&](long long c) {
-        return std::nearbyint(static_cast<double>(k0 + c) * samples_per_pixel);
+        return static_cast<double>(basis.origin) +
+               std::nearbyint(static_cast<double>(k0 + c) * samples_per_pixel);
     };
     // Display-domain lattice point -> source frame. `f` arrives INTEGRAL from
     // edge_at, so the size_t cast below is exact, not a second quantization.

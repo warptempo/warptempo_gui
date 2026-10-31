@@ -63,6 +63,7 @@ void render_waveform_to_plate_columns(
     int divider_px,
     const GuiAudio& audio,
     int64_t vp_start,
+    int64_t lattice_origin,
     double  painter_spp,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
@@ -99,7 +100,7 @@ void render_waveform_to_plate_columns(
     const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) return;
     // The full render IS the basis: global column 0 at the plate's own width.
-    const WaveformBasis basis{vp_start, painter_spp, area_w};
+    const WaveformBasis basis{vp_start, lattice_origin, painter_spp, area_w};
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the divider's height does: the worker must read no live
     // GUI state. The curve it names is the audio object's own, immutable once
@@ -168,6 +169,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     const GuiAudio* audio_source = &audio;
 
     in.vp_start      = vp_start;
+    in.lattice_origin = app.viewport_lattice_origin;
     in.vp_end        = vp_end;
     in.painter_spp   = painter_q;
     in.area_w        = area.w;
@@ -261,7 +263,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // field of its own until 2026-10-09, and the measured MONOSPACE font size
     // before row 7, as a proxy for it while it was font-derived.)
     auto fingerprint_differs = [&](
-        int64_t fp_vp_s, int64_t fp_vp_e,
+        int64_t fp_vp_s, int64_t fp_origin, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
         int     fp_div,
         WaveformPlateInks fp_ink,
@@ -269,6 +271,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         bool    fp_t,
         uint64_t fp_h) -> bool {
         if (fp_vp_s != in.vp_start)        return true;
+        if (fp_origin != in.lattice_origin) return true;
         if (fp_vp_e != in.vp_end)          return true;
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
@@ -282,6 +285,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 
     const bool diff_vs_pending = fingerprint_differs(
         wf_cache.pending_fp_vp_start,
+        wf_cache.pending_fp_lattice_origin,
         wf_cache.pending_fp_vp_end,
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
@@ -300,6 +304,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     if (waveform_worker.is_busy()) {
         wf_cache.supersede             = true;
         wf_cache.supersede_vp_start    = in.vp_start;
+        wf_cache.supersede_lattice_origin = in.lattice_origin;
         wf_cache.supersede_vp_end      = in.vp_end;
         wf_cache.supersede_painter_spp = in.painter_spp;
         wf_cache.supersede_area_w      = in.area_w;
@@ -320,6 +325,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 
     WaveformJob job;
     job.vp_start       = in.vp_start;
+    job.lattice_origin = in.lattice_origin;
     job.vp_end         = in.vp_end;
     job.painter_spp    = in.painter_spp;
     job.area_w         = in.area_w;
@@ -339,6 +345,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.audio          = in.audio;
 
     wf_cache.pending_fp_vp_start    = in.vp_start;
+    wf_cache.pending_fp_lattice_origin = in.lattice_origin;
     wf_cache.pending_fp_vp_end      = in.vp_end;
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
@@ -399,6 +406,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
         wf_cache.pending_fp_vp_start            = wf_cache.fp_vp_start;
+        wf_cache.pending_fp_lattice_origin      = wf_cache.fp_lattice_origin;
         wf_cache.pending_fp_vp_end              = wf_cache.fp_vp_end;
         wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
@@ -442,6 +450,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
         WaveformJob job;
         job.vp_start       = wf_cache.supersede_vp_start;
+        job.lattice_origin = wf_cache.supersede_lattice_origin;
         job.vp_end         = wf_cache.supersede_vp_end;
         job.painter_spp    = wf_cache.supersede_painter_spp;
         job.area_w         = sw;
@@ -462,6 +471,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.audio          = &audio;
 
         wf_cache.pending_fp_vp_start    = wf_cache.supersede_vp_start;
+        wf_cache.pending_fp_lattice_origin = wf_cache.supersede_lattice_origin;
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
@@ -490,6 +500,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.columns.revision = next_plate_revision();
 
     wf_cache.fp_vp_start     = wf_cache.pending_fp_vp_start;
+    wf_cache.fp_lattice_origin = wf_cache.pending_fp_lattice_origin;
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
@@ -557,6 +568,7 @@ bool GuiPaintHandler::live_plate_published() const {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return false;
     return wf_cache.fp_vp_start            == in.vp_start &&
+           wf_cache.fp_lattice_origin      == in.lattice_origin &&
            wf_cache.fp_vp_end              == in.vp_end &&
            wf_cache.fp_area_w              == in.area_w &&
            wf_cache.fp_area_h              == in.area_h &&
@@ -716,7 +728,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         wf_cache.columns,
         in.area_w, in.area_h, in.divider_px,
         *in.audio,
-        in.vp_start, in.painter_spp, in.gain_hash != 0,
+        in.vp_start, in.lattice_origin, in.painter_spp, in.gain_hash != 0,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
     // The live slot rewritten in place is a new plate: a revision of its own
     // (the completion swap's rule).
@@ -729,6 +741,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // in lockstep so the next maybe_enqueue_waveform_render sees no diff and
     // does not re-dispatch the same target on the worker.
     wf_cache.fp_vp_start     = in.vp_start;
+    wf_cache.fp_lattice_origin = in.lattice_origin;
     wf_cache.fp_vp_end       = in.vp_end;
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
@@ -740,6 +753,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.fp_warp_frame_map      = in.warp_frame_map;
     wf_cache.pending_fp_vp_start     = in.vp_start;
+    wf_cache.pending_fp_lattice_origin = in.lattice_origin;
     wf_cache.pending_fp_vp_end       = in.vp_end;
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
@@ -1126,6 +1140,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // positioned at marker times only.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
+    const int64_t  lattice_origin = wf_cache.fp_lattice_origin;
     const bool     is_target    = wf_cache.fp_target;
     const uint64_t warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
 
@@ -1206,6 +1221,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.surface &&
         flag_cache.fp_vp_start                == vp_start &&
         flag_cache.fp_vp_end                  == vp_end &&
+        flag_cache.fp_lattice_origin          == lattice_origin &&
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_gui_scale_percent       == gui_scale &&
@@ -1434,6 +1450,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     flag_cache.fp_vp_start                = vp_start;
     flag_cache.fp_vp_end                  = vp_end;
+    flag_cache.fp_lattice_origin          = lattice_origin;
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_gui_scale_percent       = gui_scale;
@@ -1491,6 +1508,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
     app.staged_displayed_area_w   = wave_w;
+    app.staged_displayed_lattice_origin = wf_cache.fp_lattice_origin;
     app.staged_displayed_valid = true;
 
     // THE REBUILD'S OWN DAMAGE REACHES THE WAVEFORM (architect 2026-08-01,

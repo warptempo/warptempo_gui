@@ -292,9 +292,13 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // at a held zoom. The LEVEL→spp map is device-relative since 2026-09-27
 // (spp = working column × 2^(level − 2), samples_per_pixel_at), and the
 // working column is fixed per process from the held display width, so within a
-// device every level, whole or fractional (every rest a Ctrl-drag, pinch or
-// pen zoom leaves), has one grid; across devices the same level is the same
-// RELATIVE zoom and a different grid, the cross-device promise withdrawn.
+// device every level, whole or fractional (every rest a pinch or pen zoom
+// leaves), has one step; across devices the same level is the same RELATIVE
+// zoom and a different grid, the cross-device promise withdrawn. EVERY
+// LANDING rests on THE FRAME-0 LATTICE of that step, nearbyint(k·q); a
+// GESTURE'S rest lies on its own lattice, origin + nearbyint(k·q), the
+// origin held by the camera (architect 2026-10-31,
+// AppState::viewport_lattice_origin, which owns the three rules).
 //
 // WHY 16 — the waveform width rule's own reason (waveform_area, main.cpp):
 // every waveform width is a multiple of 16, so w·q is a WHOLE number of
@@ -312,22 +316,27 @@ inline double painter_quantized_spp(double spp) {
            kPainterGridSubdivisions;
 }
 
-// THE VIEWPORT GRID'S k-TH POINT at painter step q: nearbyint(k * q) — the
-// resting starts clamp_viewport_start snaps to and max_viewport_start_grid
-// walks (main.cpp).
+// THE FRAME-0 LATTICE'S k-TH POINT at painter step q: nearbyint(k * q) — the
+// landings' rests (clamp_viewport_start's Land rule) and the walls
+// max_viewport_start_grid walks (main.cpp). A lattice of origin o is the
+// points o + viewport_grid_point(k, q) (AppState::viewport_lattice_origin).
 inline int64_t viewport_grid_point(int64_t k, double q) {
     return static_cast<int64_t>(std::nearbyint(static_cast<double>(k) * q));
 }
 
-// THE GRID SNAP ALONE: the viewport grid point nearest `start` at painter
-// step q (q > 0), with no wall — the snap half of the chokepoint's rest
-// (resting_viewport_start, main.cpp, which clamps its answer into the two
-// walls). Its other reader is hold_derived_on_arrival (viewport.cpp), which
-// needs the snap and the walls as separate facts: a centring whose snapped
-// start falls outside the walls is a clamped one.
-inline int64_t nearest_viewport_grid_point(int64_t start, double q) {
-    return viewport_grid_point(static_cast<int64_t>(
-        std::nearbyint(static_cast<double>(start) / q)), q);
+// THE GRID SNAP ALONE: the point of the lattice of origin `origin` nearest
+// `start` at painter step q (q > 0), origin + nearbyint(m·q) with
+// m = nearbyint((start − origin) / q), with no wall — the snap half of the
+// chokepoint's rest (resting_viewport_start, main.cpp, which clamps its
+// answer into the two walls). Its other readers: hold_derived_on_arrival
+// (viewport.cpp), which needs the snap and the walls as separate facts — a
+// centring whose snapped start falls outside the walls is a clamped one —
+// on the frame-0 lattice (a centring is a landing); and the touch-nav
+// body's two wall tests (apply_touch_nav_update), on the live origin's.
+inline int64_t nearest_viewport_grid_point(int64_t start, double q,
+                                           int64_t origin) {
+    return origin + viewport_grid_point(static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(start - origin) / q)), q);
 }
 
 // Viewport-END sample for a strip `w` px wide at samples-per-pixel `spp`:
@@ -344,36 +353,51 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
         painter_quantized_spp(spp) * static_cast<double>(w)));
 }
 
-// THE ONE COLUMN->FRAME LANDING for a grid-snapped viewport: the exact
-// DISPLAY-DOMAIN grid position at pixel column `col`. Recover the viewport's
-// column index m = nearbyint(viewport_start/q), round ONCE, and return the
-// double (m+col)*q. A marker commit funnels this through snap_authored_frame;
-// the playhead landings llrint/nearbyint it. Caller supplies q>0 (painter spp)
-// and a `viewport_start` in the SAME domain as `q` — the arithmetic is
-// domain-blind, so source view and target view both land through it, each in
-// its own active display domain.
+// THE ONE COLUMN->FRAME LANDING for a lattice-snapped viewport: the exact
+// DISPLAY-DOMAIN grid position at pixel column `col` on the viewport's own
+// lattice, of origin `origin` (AppState::viewport_lattice_origin, carried by
+// the caller's basis). Recover the viewport's column index
+// m = nearbyint((viewport_start − origin)/q), round ONCE, and return the
+// lattice point itself, origin + nearbyint((m+col)*q), as a whole-frame
+// double. A marker commit funnels this through snap_authored_frame; the
+// playhead landings llrint/nearbyint it; those roundings pass the whole
+// value unchanged. Caller supplies q>0 (painter spp), and a `viewport_start`
+// and an origin in the SAME domain as `q` — the arithmetic is domain-blind,
+// so source view and target view both land through it, each in its own
+// active display domain.
 //
-// SINGLE ROUNDING, AND THE TWO-ROUNDING SIBLING IS BANNED: the form
-// viewport_start + nearbyint(col*q) rounds twice (once into the viewport start,
-// once into the column offset), each with its own independent half-frame error,
-// so its landings are anchored to the CURRENT viewport start rather than to
-// frame 0 — a pan or a zoom round trip back to the same level relabels the same
-// painted column by +/-1 frame. This form is anchored at frame 0 of the
-// displayed domain and is viewport-phase-independent, so a landing means the
-// same sample whatever the camera did on the way there. That matters past
-// display: both drop-at-playhead routes commit the playhead's sample into
-// authored data, so the playhead lattice is an authoring lattice too.
+// SINGLE ROUNDING, ON THE PAINTED LATTICE (architect 2026-10-31): the one
+// nearbyint is HERE, on (m+col)*q alone, so the answer IS the painted
+// column's left edge, render_waveform_columns' edge_at to the bit (the origin
+// is added after the rounding, as there: a tie rounded after adding an odd
+// origin would land a frame off the edge) — a commit lands on the frame the
+// finger's painted column shows. At origin 0 it is byte for byte the value
+// the callers' own nearbyint / llrint made of (m+col)*q before the origin
+// existed (both round half to even). At every LANDING the origin is 0
+// and this is the frame-0 lattice: viewport-phase-independent, a
+// landing meaning the same sample whatever the camera did on the way there.
+// Under a GESTURE'S rest (a pinch or a pen zoom) the grid follows the
+// picture, its origin the camera's (the architect's "the lattice is less
+// important than smooth operation"). That matters past display: both
+// drop-at-playhead routes commit the playhead's sample into authored data, so
+// the playhead lattice is an authoring lattice too.
 //
-// The choice is invisible in paint: both forms sit within one frame of the
-// ideal grid point (m+col)*q, and one frame is at most 1/q px, q at least
-// half the working column at the deepest numeric zoom (23 on the tablet at
-// 44.1 kHz) — far under the half-pixel paint-rounding
-// threshold — so a landing paints at column `col` either way.
+// THE TWO-ROUNDING SIBLING IS BANNED: the form viewport_start +
+// nearbyint(col*q) rounds twice (once into the viewport start, once into the
+// column offset), each with its own independent half-frame error, so its
+// landings are anchored to the CURRENT viewport start rather than to the
+// lattice — a pan or a zoom round trip back to the same level relabels the
+// same painted column by +/-1 frame. The choice is invisible in paint: both
+// forms sit within one frame of the ideal grid point, and one frame is at
+// most 1/q px, q at least half the working column at the deepest numeric
+// zoom (23 on the tablet at 44.1 kHz) — far under the half-pixel
+// paint-rounding threshold — so a landing paints at column `col` either way.
 //
 // m recovery is exact for product-reachable audio lengths: at the deepest
 // numeric zoom q >= column / 2 frames/px (23 or more on the tablet)
 // and a source length fits well within the
-// double mantissa, so |viewport_start/q - m| << 0.5. The target domain's total
+// double mantissa, so |(viewport_start − origin)/q - m| << 0.5 (the start lies
+// on its own lattice by the chokepoint's invariant). The target domain's total
 // is at most 16x the source's — build_warp_frame_map divides each source delta
 // by the product of tempo, marker scale and settings scale, and all three
 // floors are legal at once (0.25 * 0.5 * 0.5 = 1/16, value_format.h), so the
@@ -383,9 +407,12 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 // mantissa, and the argument holds in that domain too. It is NOT claimed exact
 // over the whole int64 range.
 inline double displayed_grid_position_at_column(int64_t viewport_start,
-                                                int64_t col, double q) {
-    const double m = std::nearbyint(static_cast<double>(viewport_start) / q);
-    return (m + static_cast<double>(col)) * q;
+                                                int64_t col, double q,
+                                                int64_t origin) {
+    const double m = std::nearbyint(
+        static_cast<double>(viewport_start - origin) / q);
+    return static_cast<double>(origin) +
+           std::nearbyint((m + static_cast<double>(col)) * q);
 }
 
 // THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain:
@@ -542,7 +569,11 @@ int painted_column_of_source_frame_on_basis(
 // frame furthest left: true iff the frame's painted column there, through
 // the painters' own placement (painted_column_of_source_frame_on_basis, the
 // displayed map, the live grid step q) is >= the waveform's width. It reads
-// the zoom and the frame, never the camera's current place. THE LEFT EDGE
+// the zoom and the frame, never the camera's current place — nor its lattice:
+// the walls are the frame-0 lattice's at every origin (a rest the walls clamp
+// takes origin 0, AppState::viewport_lattice_origin), so a gesture's rest on
+// another lattice lies inside them and this wall is still the rightmost
+// (architect 2026-10-31). THE LEFT EDGE
 // NEEDS NO TWIN: the leftmost start is 0, where frame 0 is column 0 and every
 // authored frame is >= 0, so no frame paints left of column 0 at every
 // viewport. Degenerate geometry answers false (the callers' own geometry
@@ -564,7 +595,10 @@ bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
 // column `col` under the same coordinate system and the caller's basis — the
 // active-domain time is displayed_grid_position_at_column above at the
 // basis's viewport start (`vp_start`, the integer frame — the grid owner
-// recovers its column index from it) and samples-per-pixel (`spp`), in EVERY
+// recovers its column index from it), samples-per-pixel (`spp`) and lattice
+// origin (`lattice_origin`, ItemViewportBasis's: 0 at every landing, the
+// gesture's own under a pinched rest, so the commit lands on the frame the
+// painted column shows — architect 2026-10-31), in EVERY
 // domain; in the TargetLive domain that time is quantized to an integer target
 // frame (llrint, floored at 0 — the same quantization the target-view nudges
 // have always applied) and inverse-mapped through `warp_frame_map` at full
@@ -575,7 +609,7 @@ bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
 int64_t authored_frame_at_column_on_basis(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    int64_t vp_start, double spp);
+    int64_t vp_start, double spp, int64_t lattice_origin);
 
 // -- THE PHASE-RESET LATTICE (the engine's seed geometry, GUI-side) ---------
 //

@@ -253,11 +253,13 @@ int64_t trim_bound_frame_at_column(const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     if (authored_frame_at_column_on_basis(app, audio, col + 1, map,
-                                          basis.vp_start_frame, basis.spp) >
+                                          basis.vp_start_frame, basis.spp,
+                                          basis.lattice_origin) >
         wall)
         return wall;
     int64_t frame = authored_frame_at_column_on_basis(
-        app, audio, col, map, basis.vp_start_frame, basis.spp);
+        app, audio, col, map, basis.vp_start_frame, basis.spp,
+        basis.lattice_origin);
     if (frame < 0)    frame = 0;
     if (frame > wall) frame = wall;
     return frame;
@@ -631,7 +633,7 @@ bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
     if (rel >= area.w) rel = area.w - 1;
     out_frame = static_cast<int64_t>(std::llrint(
         displayed_grid_position_at_column(basis.vp_start_frame, rel,
-                                          basis.spp)));
+                                          basis.spp, basis.lattice_origin)));
     return true;
 }
 

@@ -1025,9 +1025,12 @@ struct GuiInputHandler {
     //     SURVIVES THE REFUSAL (not the first APPLIED one: seating is above the
     //     exact-no-op return, the ordering rule at the site) and held for the
     //     phase WITH ITS COLUMN (architect 2026-10-31): every frame places the
-    //     held frame at the held column, so the grid snap's half-column
-    //     residue never accumulates into a walk of the stem (measured +-25 px
-    //     a pinch, 2026-10-31). The column is re-read from the live viewport
+    //     held frame at the held column, so no placement residue accumulates
+    //     into a walk of the stem (measured +-25 px a pinch, 2026-10-31), and
+    //     places it EXACTLY (the lattice origin's Exact rule, the same day,
+    //     AppState::viewport_lattice_origin): the held frame sits at the held
+    //     column to one frame, never the half column the frame-0 lattice's
+    //     snap left. The column is re-read from the live viewport
     //     at two re-seats alone: a placement the walls refused (the wall
     //     bullet below) and a camera another writer moved under the gesture.
     //   * MOVING BOTH FINGERS TOGETHER STILL APPLIES NOTHING: the ratio is 1
@@ -1082,7 +1085,15 @@ struct GuiInputHandler {
     // synchronous per-frame rebuild, and — through its clamp — the camera
     // chokepoint's compare on either axis all come from it), and DELIBERATELY
     // NOT any pointer-press arm — the gesture enters BELOW every one of them,
-    // and it delivers no pointer events.
+    // and it delivers no pointer events. IT HANDS THE APPLIER THE LATTICE
+    // RULE (architect 2026-10-31; the rules at
+    // AppState::viewport_lattice_origin): EXACT on a frame that changes the
+    // level, so the pivot's frame sits at its held column to ONE FRAME (the
+    // requested start is the rest, on its own lattice), and KEEP on a frame
+    // at an unchanged level, a pan a pure index shift on the camera's
+    // lattice. Its two wall tests (the pan's re-seat (3), the zoom's re-seat
+    // (A)) read the lattice the frame settled on, the live origin, through
+    // the one snap owner (nearest_viewport_grid_point).
     //
     // THE REFUSAL ANSWER IS A MODAL STATE, not the press path's, and per
     // frame rather than at entry: each frame refuses under the prompt, the

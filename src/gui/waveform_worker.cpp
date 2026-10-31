@@ -135,6 +135,7 @@ void GuiWaveformWorker::worker_loop() {
                 job.divider_px,
                 *job.audio,
                 job.vp_start,
+                job.lattice_origin,
                 job.painter_spp,
                 job.gain_hash != 0,
                 job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map);

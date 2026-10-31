@@ -2805,19 +2805,33 @@ inline bool point_on_waveform_divider(const GuiRect& area, int y) {
     return y >= w[0].y1 && y < w[1].y0;
 }
 
-// THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
-// samples-per-pixel, and the plate width.
+// THE COLUMN MAPPING BASIS — the plate's viewport start, its LATTICE ORIGIN,
+// the PAINTER's samples-per-pixel, and the plate width.
 //
 // Columns are mapped on THE AUTHORING LATTICE, not by interpolating between
 // integer viewport endpoints. `spp` is painter_samples_per_pixel's value (its
-// one owner) — the very q that clamp_viewport_start snaps the viewport onto, so
-// every RESTING viewport is a lattice point grid(k) = nearbyint(k*q). The
-// renderer recovers that k and maps global column c to the display-domain edge
-//     edge(c) = (k0 + c) * spp,   k0 = nearbyint(vp_start / spp)
-// which, fed through the renderer's existing nearbyint, is literally
-// clamp_viewport_start's own grid(k0 + c). Recovering k0 uses the same
-// expression the snap itself uses to produce the rest, so the two agree by
-// construction rather than by coincidence.
+// one owner) — the very q that clamp_viewport_start snaps the viewport onto,
+// and `origin` the camera's lattice origin (AppState::viewport_lattice_origin,
+// which owns the three rules), so every RESTING viewport is a point of its
+// lattice, grid(k) = origin + nearbyint(k*q). The renderer recovers that k
+// and maps global column c to the display-domain edge
+//     edge(c) = origin + nearbyint((k0 + c) * spp),
+//     k0 = nearbyint((vp_start − origin) / spp)
+// which is literally the chokepoint's own grid(k0 + c). Recovering k0 uses
+// the same expression the snap itself uses to produce the rest
+// (nearest_viewport_grid_point), so the two agree by construction rather than
+// by coincidence.
+//
+// THE ORIGIN, AND WHO SETS IT (architect 2026-10-31). EVERY LANDING rests at
+// origin 0 — the frame-0 lattice, the picture byte for byte what it was before
+// the origin existed. THE GESTURE'S ZOOM FRAMES (the pinch, the pen's
+// one-finger zoom) set the origin so the requested start IS the rest: the
+// pivot's held frame then sits at its held column to ONE FRAME, where the
+// frame-0 lattice left it up to half a column off with a fresh residue every
+// zoom frame (measured on the tablet 2026-10-31, ±half a column a step: the
+// peaks near the fingers bubbled up and down). THE GESTURE'S PAN FRAMES keep
+// the current origin, so the pan paragraph below holds on whichever lattice
+// the camera stands on, and a pan after a pinch keeps the pinch's lattice.
 //
 // WHY IT MUST BE THE LATTICE (the shimmer fix). Interpolating edges as
 // vp_start + span*c/W from integer endpoints gives each column a rounding
@@ -2826,18 +2840,19 @@ inline bool point_on_waveform_divider(const GuiRect& area, int y) {
 // pyramid-bin membership flipped with them, extrema jumped, and the tip
 // segments amplified every flip into both neighbours — two screenshots one
 // grab-pan pixel apart differed in most of their columns. On the lattice a pan
-// by n pixels moves k0 by exactly n, so column c simply becomes what column c+n
-// was: same k0+c, therefore the same double, therefore the same nearbyint, the
-// same bins and the same extrema. Bit-identical shifted pixels, in both views —
-// in target view the lattice lives in the display domain and the map consumes
-// the same doubles.
+// by n pixels moves k0 by exactly n at an unchanged origin, so column c simply
+// becomes what column c+n was: same k0+c, therefore the same double, therefore
+// the same nearbyint, the same bins and the same extrema. Bit-identical
+// shifted pixels, in both views — in target view the lattice lives in the
+// display domain and the map consumes the same doubles.
 //
-// Mid-gesture a viewport can sit OFF the lattice; k0 then quantizes the render
-// to the nearest lattice rest, at most half a column of display quantization
-// while the drag moves, healing exactly when it comes to rest. That is the
-// architect's smooth-movement ruling, and Ableton pans by whole columns too.
+// Every viewport the plate is handed lies on its own lattice (the chokepoint
+// snaps every write, the invariant at AppState::viewport_lattice_origin), so
+// the recovery is exact; a pan moves by whole columns of its lattice, as
+// Ableton pans by whole columns too.
 struct WaveformBasis {
     long long vp_start   = 0;   // plate viewport start, display domain
+    long long origin     = 0;   // its lattice's origin (whole frames), 0 at every landing
     double    spp        = 0.0; // painter_samples_per_pixel — the lattice step
     int       full_width = 0;   // full-plate column count
 };

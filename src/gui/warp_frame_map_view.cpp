@@ -301,15 +301,17 @@ bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio) {
 int64_t authored_frame_at_column_on_basis(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    int64_t vp_start, double spp) {
+    int64_t vp_start, double spp, int64_t lattice_origin) {
     if (spp <= 0.0) return 0;
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The column's ACTIVE-DOMAIN time on the single-rounding grid (the
-    // grid-snapped viewport is a true grid point, so the recovered column index
-    // is exact). Both arms below land on it, so a commit is anchored at frame 0
-    // of the domain it was authored in rather than at the basis's viewport
-    // start.
-    const double g = displayed_grid_position_at_column(vp_start, col, spp);
+    // lattice-snapped viewport is a true point of its own lattice, so the
+    // recovered column index is exact). Both arms below land on it, so a
+    // commit is anchored at the basis's lattice — frame 0 of the domain it was
+    // authored in at every landing, the painted column's edge under a
+    // gesture's rest — rather than at the basis's viewport start.
+    const double g = displayed_grid_position_at_column(vp_start, col, spp,
+                                                       lattice_origin);
     if (ctx.domain == GuiDisplayDomain::Source) {
         // snap_authored_frame stays the sole double-to-authored conversion.
         return snap_authored_frame(g);

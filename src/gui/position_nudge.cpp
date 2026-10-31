@@ -133,7 +133,8 @@ int64_t stepped_anchor_frame(
         app, audio, static_cast<double>(orig_frame), map,
         basis.vp_start, basis.spp);
     return authored_frame_at_column_on_basis(
-        app, audio, cf + step_columns, map, basis.vp_start_frame, basis.spp);
+        app, audio, cf + step_columns, map, basis.vp_start_frame, basis.spp,
+        basis.lattice_origin);
 }
 
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,

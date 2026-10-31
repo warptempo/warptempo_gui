@@ -316,13 +316,18 @@ struct Viewport {
         // center-on-playhead, apply_zoom_to_start, apply_strip_drag_zoom, undo, the
         // load-in-place,
         // active_views, the settings editor, the tick backstop) it is a pure no-op.
+        // A RE-VALIDATION, SO IT KEEPS THE LATTICE (ViewportLattice::Keep,
+        // architect 2026-10-31): it writes no start of its own, so a gesture's
+        // rest on its own lattice — every pinch frame reaches this call —
+        // stands as the gesture left it (the rule at
+        // AppState::viewport_lattice_origin).
         // The tick backstop (main.cpp) remains cheap belt-and-braces insurance
         // for any future total-changing path that skips this reclamp — with
         // every edit tail synchronous now, no NAMED asynchronous case drives
         // it, and the one edit that defers its re-land to a gesture's commit
         // (the value drag) is gated out of that backstop for the gesture's
         // life, so it reaches the tick exactly once, here, through this call.
-        clamp_viewport_start(app, audio);
+        clamp_viewport_start(app, audio, ViewportLattice::Keep);
         // Repair the resting playhead and any live region against the (possibly
         // shrunk) live domain, AFTER the zoom/viewport reclamp so it reads the
         // final geometry and its damage is covered by the rebuild's full-width
@@ -412,8 +417,14 @@ struct Viewport {
     // incremental pan fast-path that pan-only frames once used was retired
     // 2026-07-26). The terminating event (final=true) always runs the one
     // synchronous rebuild plus the predictor resync so the rest state is exact.
+    // `lattice` is the chokepoint's lattice rule for the placement (architect
+    // 2026-10-31; the rules at AppState::viewport_lattice_origin): the
+    // touch-nav body passes Exact on a frame that changes the level (the
+    // pivot's frame then sits at its column to one frame) and Keep on a pan
+    // frame; the zoom step passes Land, a landing.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
-                               double anchor_x, bool final);
+                               double anchor_x, bool final,
+                               ViewportLattice lattice);
     // THE ZOOM STEP (architect 2026-10-27: bare `=` / `-` and the band's
     // Zoom In / Zoom Out keys one level, Shift+= / Shift+- and the keys'
     // shift press or long press two): `levels` whole levels from the current

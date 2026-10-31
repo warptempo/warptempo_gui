@@ -8029,6 +8029,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         app.displayed_vp_start = app.staged_displayed_vp_start;
         app.displayed_vp_end   = app.staged_displayed_vp_end;
         app.displayed_area_w   = app.staged_displayed_area_w;
+        app.displayed_lattice_origin = app.staged_displayed_lattice_origin;
         app.staged_displayed_valid = false;
     }
 
@@ -8564,8 +8565,11 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // resize owes the gain nothing; its picture re-renders because a resize
     // moves the area dimensions, fields of the one plate fingerprint, and the
     // tick's enqueue carries that.)
+    // A re-validation writing no start, so it keeps the camera's lattice
+    // (ViewportLattice::Keep, architect 2026-10-31; the rule at
+    // AppState::viewport_lattice_origin).
     const double old_zoom = app.zoom_level;
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Keep);
     if (app.zoom_level != old_zoom && playback.is_playing())
         playback.resync_predictor();
 }

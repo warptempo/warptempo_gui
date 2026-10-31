@@ -1038,7 +1038,7 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 }
 
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
-    // The rightmost ON-grid viewport start: the smallest painter-grid point
+    // The rightmost ON-grid viewport start: the smallest FRAME-0 lattice point
     // >= max_start (= total - visible). Grid points viewport_grid_point(k, q) are
     // strictly increasing at numeric zoom (q >> 1), so starting at
     // floor(max_start/q) and stepping up finds it in O(1). Resting here shows
@@ -1054,6 +1054,11 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // wall). The flush-right viewport is a true grid point — unlike the off-grid max_start it replaces, this keeps
     // exact-grid marker commits and pixel anchoring simultaneously valid at
     // maximum scroll.
+    //
+    // THE WALL IS THE FRAME-0 LATTICE'S UNDER EVERY LATTICE RULE (architect
+    // 2026-10-31; the rule at AppState::viewport_lattice_origin): a gesture's
+    // rest on another lattice lies inside it, and a rest the walls clamp
+    // rests here at origin 0, the landings' own rest at the wall.
     //
     // The ONE right-wall owner, with THREE readers: clamp_viewport_start below
     // (through resting_viewport_start), which rests every viewport at or left
@@ -1074,52 +1079,82 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     return viewport_grid_point(k, q);
 }
 
-// THE RESTING START — the grid snap and the wall clamp the chokepoint below
-// applies to a requested start, as a PURE question at the live zoom, the
-// arithmetic's one copy (the chokepoint's body calls it after its level
-// clamp, and is its one caller). The snap half is nearest_viewport_grid_point
-// (warp_frame_map_view.h), which hold_derived_on_arrival (viewport.cpp) reads
-// on its own beside max_viewport_start_grid: the arrival derivation asks
-// whether a centring is CLAMPED, so it needs the snap and the walls apart
-// (architect 2026-09-29). It reads the live zoom as it stands: a caller that
-// has just written the level passes the chokepoint's level clamp first,
-// which the chokepoint does.
-int64_t resting_viewport_start(const AppState& a, const GuiAudio& audio,
-                               int64_t start) {
+// THE RESTING START — the lattice snap and the wall clamp the chokepoint
+// below applies to a requested start under a lattice rule, as a PURE
+// question at the live zoom, the arithmetic's one copy (the chokepoint's body
+// calls it after its level clamp, and is its one writer of the camera). The
+// snap half is nearest_viewport_grid_point (warp_frame_map_view.h), which
+// hold_derived_on_arrival (viewport.cpp) reads on its own beside
+// max_viewport_start_grid: the arrival derivation asks whether a centring is
+// CLAMPED, so it needs the snap and the walls apart (architect 2026-09-29).
+// It reads the live zoom as it stands: a caller that has just written the
+// level passes the chokepoint's level clamp first, which the chokepoint does.
+//
+// THE RULE, as the arithmetic (architect 2026-10-31; who passes which, and
+// why, at AppState::viewport_lattice_origin):
+//   1. the ORIGIN: Land 0; Keep the live origin, falling to 0 outside the
+//      bound |origin| <= (q + 1) / 2 at the settled q (a level the
+//      re-validation clamped); Exact `start` − nearbyint(k0·q),
+//      k0 = nearbyint(start / q), so `start` lies on its own lattice;
+//   2. the SNAP: the nearest point of that lattice to `start`,
+//      origin + nearbyint(m·q), m = nearbyint((start − origin) / q) — under
+//      Exact `start` itself, by construction;
+//   3. the WALLS, the frame-0 lattice's [0, max_viewport_start_grid]: a snap
+//      outside them rests AT the wall it passed, with origin 0.
+// Degenerate geometry (the whole song visible → the park at 0; a non-numeric
+// zoom → the walls alone) answers origin 0. At origin 0 — Land, and every
+// Keep or Exact whose origin is 0 — the answer is the frame-0 lattice's,
+// byte for byte the rest before the origin existed (the old `start < 0 → 0`
+// pre-clamp is the left wall's arm: a negative start's nearest point is <= 0,
+// so it rests at 0 either way).
+ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
+                                    int64_t start, ViewportLattice rule) {
     const int64_t visible = samples_visible(a, audio);
     const int64_t total   = live_total_frames(a, audio);
-    if (visible >= total) return 0;
-    if (start < 0) start = 0;
+    if (visible >= total) return {0, 0};
 
-    // The rightmost on-grid rest, through the shared right-wall owner (the same
-    // wall the strip drag's pan clamp uses). max_viewport_start_grid re-derives
-    // visible/total/q and returns max(0, total-visible) when q is non-numeric.
+    // The rightmost frame-0 rest, through the shared right-wall owner.
+    // max_viewport_start_grid re-derives visible/total/q and returns
+    // max(0, total-visible) when q is non-numeric.
     const int64_t max_start_grid = max_viewport_start_grid(a, audio);
 
     const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
-    if (q <= 0.0) return std::min(start, max_start_grid);
+    if (q <= 0.0)
+        return {std::min(std::max<int64_t>(start, 0), max_start_grid), 0};
 
-    // Snap the viewport to a whole-pixel (grid) boundary: every rest viewport is
-    // then a true grid point, so the SOURCE-view single-rounding warp-marker commit
-    // (authored_frame_at_column_on_basis's source branch via
-    // displayed_grid_position_at_column) lands EXACTLY on the frame-0 authoring
-    // grid, and the waveform rests pixel-aligned. The same painter spp the item
-    // basis carries into authored_frame_at_column_on_basis, so viewport grid and
-    // marker grid are one grid.
-    //
-    // Snap the viewport to its nearest grid point, then clamp into
-    // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
-    // max_start first — that would pull a valid flush-right grid rest back
-    // off-grid.) The snap is nearest_viewport_grid_point's
-    // (warp_frame_map_view.h), the one spelling the arrival derivation shares.
-    int64_t snapped = nearest_viewport_grid_point(start, q);
-    if (snapped < 0)               snapped = 0;
-    if (snapped > max_start_grid)  snapped = max_start_grid;
-    return snapped;
+    // 1. The origin under the rule. The same painter q the item basis carries
+    // into authored_frame_at_column_on_basis, so viewport grid and marker grid
+    // are one grid, on one lattice.
+    int64_t origin = 0;
+    switch (rule) {
+        case ViewportLattice::Land:
+            origin = 0;
+            break;
+        case ViewportLattice::Keep:
+            origin = a.viewport_lattice_origin;
+            if (2.0 * std::fabs(static_cast<double>(origin)) > q + 1.0)
+                origin = 0;
+            break;
+        case ViewportLattice::Exact:
+            origin = start - viewport_grid_point(static_cast<int64_t>(
+                std::nearbyint(static_cast<double>(start) / q)), q);
+            break;
+    }
+
+    // 2. The snap onto that lattice (nearest_viewport_grid_point, the one
+    // spelling the arrival derivation and the touch-nav wall tests share), and
+    // 3. the walls, the frame-0 lattice's at every origin. (Single clamp: do
+    // NOT also clamp to the off-grid max_start first — that would pull a valid
+    // flush-right grid rest back off-grid.)
+    const int64_t snapped = nearest_viewport_grid_point(start, q, origin);
+    if (snapped < 0)              return {0, 0};
+    if (snapped > max_start_grid) return {max_start_grid, 0};
+    return {snapped, origin};
 }
 
 namespace {
-void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
+void clamp_viewport_start_body(AppState& a, const GuiAudio& audio,
+                               ViewportLattice rule) {
     // Level ceiling (the chokepoint): every zoom write funnels through this
     // function immediately after assigning zoom_level — the same single-funnel
     // argument that placed the viewport grid snap below — so a per-file ceiling
@@ -1153,15 +1188,20 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
     }
     a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
 
-    // The grid snap and the two walls, at the level just settled
-    // (resting_viewport_start above, the arithmetic's one copy).
-    a.viewport_start_sample =
-        resting_viewport_start(a, audio, a.viewport_start_sample);
+    // The lattice snap and the two walls under the rule, at the level just
+    // settled (resting_viewport_start above, the arithmetic's one copy) — the
+    // camera's start and its lattice origin written together, the invariant
+    // at AppState::viewport_lattice_origin.
+    const ViewportRest rest =
+        resting_viewport_start(a, audio, a.viewport_start_sample, rule);
+    a.viewport_start_sample   = rest.start;
+    a.viewport_lattice_origin = rest.lattice_origin;
 }
 }  // namespace
 
-void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
-    clamp_viewport_start_body(a, audio);
+void clamp_viewport_start(AppState& a, const GuiAudio& audio,
+                          ViewportLattice rule) {
+    clamp_viewport_start_body(a, audio, rule);
     // THE CAMERA CHOKEPOINT'S COMPARE (architect 2026-09-23): every viewport
     // write passes this function before anything reads the camera, so a
     // camera it settles somewhere other than where it settled last puts out
@@ -1169,10 +1209,13 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // for every writer (the follow lamp itself is never written here). The
     // rule, the writer inventory this claim rests on and the exempt writers
     // (which keep or re-arm their bit after this call) are at
-    // AppState::camera_hold and AppState::follow_suspended. THE
-    // CAMERA IS FOUR FIELDS (AppState::camera_posture_identity): the tab and
-    // the audio view ride beside the start and the zoom, so a switch that
-    // lands the same two numbers still registers as the change it is. THE
+    // AppState::camera_hold and AppState::follow_suspended. ONE COMPARE FOR
+    // ALL THREE LATTICE RULES (Land, Keep, Exact). THE CAMERA IS FIVE FIELDS
+    // (AppState::camera_posture_identity): the tab and the audio view ride
+    // beside the start and the zoom, so a switch that lands the same two
+    // numbers still registers as the change it is, and the lattice origin
+    // with them (architect 2026-10-31), so a rest at the same start on
+    // another lattice — another picture — does too. THE
     // TAB SWITCH THEN DERIVES THE HOLD AFRESH behind this clear (architect
     // 2026-09-29): it assigns hold_derived_on_arrival (viewport.cpp) once its
     // camera and cursor have settled, so the bit put out here stands again on
@@ -1181,7 +1224,8 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // nothing: the bit put out here at a flip stays out.
     const AppState::CameraPostureIdentity settled{
         a.viewport_start_sample, a.zoom_level,
-        a.active_tab_view, a.active_audio_view};
+        a.active_tab_view, a.active_audio_view,
+        a.viewport_lattice_origin};
     if (settled != a.camera_posture_identity) {
         a.camera_hold      = false;
         a.follow_suspended = true;
@@ -2353,9 +2397,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 // clamp_viewport_start now; the tick keeps only its TRIGGER role
                 // (a live-total change must repair geometry without user input)
                 // and detects movement for the discrete-rebuild side effects.
+                // A re-validation writing no start, so it keeps the camera's
+                // lattice (ViewportLattice::Keep, architect 2026-10-31; the
+                // rule at AppState::viewport_lattice_origin) — the origin moves
+                // only with the start or the level, which the gate compares.
                 const double  old_zoom = app.zoom_level;
                 const int64_t old_vp   = app.viewport_start_sample;
-                clamp_viewport_start(app, audio);
+                clamp_viewport_start(app, audio, ViewportLattice::Keep);
                 // Mirror kick_waveform_sync's repair: a total
                 // change can strand the resting playhead or a live region
                 // outside the new domain even when the geometry itself did not

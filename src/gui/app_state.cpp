@@ -100,12 +100,14 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
         b.vp_start_frame = app.displayed_vp_start;
         b.vp_end_frame   = app.displayed_vp_end;
         b.area_w         = app.displayed_area_w;
+        b.lattice_origin = app.displayed_lattice_origin;
     } else {
         const GuiRect area = waveform_area(app);
         const double  spp  = current_samples_per_pixel(app, audio);
         b.vp_start_frame = app.viewport_start_sample;
         b.vp_end_frame   = viewport_end_sample(b.vp_start_frame, spp, area.w);
         b.area_w         = area.w;
+        b.lattice_origin = app.viewport_lattice_origin;
     }
     b.vp_start = static_cast<double>(b.vp_start_frame);
     b.spp = b.area_w > 0

@@ -38,7 +38,8 @@ int64_t committed_frame_for_proposal(
     const int c = painted_column_of_source_frame_on_basis(
         app, audio, proposed, dmap, basis.vp_start, basis.spp);
     int64_t t = authored_frame_at_column_on_basis(
-        app, audio, c, dmap, basis.vp_start_frame, basis.spp);
+        app, audio, c, dmap, basis.vp_start_frame, basis.spp,
+        basis.lattice_origin);
     if (t < 0)        t = 0;
     if (t > eof_wall) t = eof_wall;
     return t;

@@ -8,7 +8,11 @@
 // on the tablet; src/gui/app_state.h, working_column_frames), so these one-shot
 // tools are NO LONGER BIT-FOR-BIT with GUI authoring. Markers they wrote stay
 // whole frames and load unchanged; the GUI's next nudge lands them on its own
-// grid. No code here changed with it.
+// grid. No code here changed with it. Since 2026-10-31 a gesture's rest in
+// the GUI lies off the frame-0 lattice (its origin held by the camera,
+// AppState::viewport_lattice_origin, src/gui/app_state.h) and a commit there
+// lands on the painted column's frame; these tools describe the landings'
+// frame-0 lattice alone.
 //
 // sidecar_snap_common — the two canonical authored LATTICES a sidecar position
 // lands on, plus the sibling, read and backup/write machinery the sidecar tools

@@ -6,7 +6,10 @@
 // the pre-2026-09-27 lattice at the absolute 1.25 ms/px working zoom; the
 // GUI now works on a device-relative working column, so this one-shot tool
 // is no longer bit-for-bit with GUI authoring (the note at the head of
-// sidecar_snap_common.h).
+// sidecar_snap_common.h). Since 2026-10-31 a gesture's rest in the GUI lies
+// off the frame-0 lattice (its origin held by the camera,
+// AppState::viewport_lattice_origin) and a commit there lands on the painted
+// column's frame; this tool describes the landings' frame-0 lattice alone.
 //
 // Authored positions are deterministic against canonical, viewport-independent
 // lattices: the warp column against the source view's zoom-2 column grid, the

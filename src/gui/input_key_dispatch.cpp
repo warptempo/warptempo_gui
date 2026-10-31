@@ -5597,10 +5597,12 @@ void GuiInputHandler::apply_recipe_in_place(
     // THE PARKED BAND IS NOT CLAMPED HERE and must not be: it is not a live
     // field, and the Ctrl+Tab restore clamps it on the way in (active_views.cpp)
     // — the inventory at clamp_playhead_to_live_domain's declaration is what
-    // this follows.
+    // this follows. The viewport's clamp is a re-validation of a camera the
+    // user left, so it keeps the camera's lattice (ViewportLattice::Keep,
+    // architect 2026-10-31; the rule at AppState::viewport_lattice_origin).
     app.playhead_cursor_sample =
         clamp_playhead_to_live_domain(app.playhead_cursor_sample, app, audio);
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Keep);
 
     // COINCIDENCE AUTO-SELECT, the load-in-place chokepoint (the rule, the
     // formula and the authoritative call-site inventory live at

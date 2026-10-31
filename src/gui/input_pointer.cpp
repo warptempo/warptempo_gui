@@ -1056,7 +1056,8 @@ int64_t playhead_frame_at_click_column(const AppState& app,
     if (basis.spp > 0.0)
         return static_cast<int64_t>(std::llrint(
             displayed_grid_position_at_column(basis.vp_start_frame, col,
-                                              basis.spp)));
+                                              basis.spp,
+                                              basis.lattice_origin)));
     return basis.vp_start_frame;
 }
 
@@ -2266,6 +2267,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         z.anchor_sample = vp + seat_col * spp_old;
         z.anchor_col    = seat_col;
         z.zoom_vp       = app.viewport_start_sample;
+        z.zoom_origin   = app.viewport_lattice_origin;
         z.zoom_level    = app.zoom_level;
         z.seated        = true;
         z.one_finger    = one_finger_zoom;
@@ -2353,6 +2355,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         const bool hold_stands =
             z.pan_seated &&
             z.pan_vp == app.viewport_start_sample &&
+            z.pan_origin == app.viewport_lattice_origin &&
             z.pan_level == app.zoom_level &&
             z.pan_tab_view == app.active_tab_view &&
             z.pan_audio_view == app.active_audio_view;
@@ -2383,6 +2386,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // which pins a frame the page carried off the waveform at the edge
         // pixel and rebinds it to that pixel's content.
         if (z.zoom_vp != app.viewport_start_sample ||
+            z.zoom_origin != app.viewport_lattice_origin ||
             z.zoom_level != app.zoom_level)
             z.anchor_col = rebind_zoom_pivot_into_waveform(z.anchor_sample);
         anchor_col    = z.anchor_col;
@@ -2420,12 +2424,24 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
     // camera chokepoint's compare on either axis, and the mid-gesture true-no-op
     // skip.
+    // THE LATTICE RULE (architect 2026-10-31; the rules at
+    // AppState::viewport_lattice_origin): a frame that CHANGES THE LEVEL
+    // places EXACTLY — the requested start is the rest, its lattice origin
+    // derived from it, so the held frame sits at the held column to one frame
+    // rather than within half a column — and a frame at an unchanged level (a
+    // pan, or a zoom pinned at a level bound) KEEPS the camera's lattice, so a
+    // pan is a pure index shift on it and a pan after a pinch does not jump.
+    const ViewportLattice lattice = (new_level != app.zoom_level)
+                                        ? ViewportLattice::Exact
+                                        : ViewportLattice::Keep;
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
-                                   /*final=*/false);
+                                   /*final=*/false, lattice);
 
     if (pan) {
         // THE WALLS' REFUSAL RE-SEATS (re-seat (3) at the arm above): the
-        // placement asked for the grid point nearest the seat's start, and a
+        // placement asked for the lattice point nearest the seat's start (on
+        // the lattice the frame settled on, the live origin, through the one
+        // snap owner — architect 2026-10-31), and a
         // settled start anywhere else is the chokepoint's wall (or the
         // whole-song park at 0). The seat then becomes the content under the
         // finger NOW, so the travel spent pushing past the end is forgotten
@@ -2437,7 +2453,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         if (spp_now > 0.0) {
             const int64_t requested = static_cast<int64_t>(
                 std::nearbyint(anchor_sample - anchor_col * spp_now));
-            if (nearest_viewport_grid_point(requested, spp_now) !=
+            if (nearest_viewport_grid_point(requested, spp_now,
+                                            app.viewport_lattice_origin) !=
                 app.viewport_start_sample)
                 z.pan_anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
@@ -2445,14 +2462,17 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         }
         // The camera this frame settled, which re-seat (4) compares.
         z.pan_vp         = app.viewport_start_sample;
+        z.pan_origin     = app.viewport_lattice_origin;
         z.pan_level      = app.zoom_level;
         z.pan_tab_view   = app.active_tab_view;
         z.pan_audio_view = app.active_audio_view;
     } else {
         // RE-SEAT (A), A PLACEMENT THE WALLS REFUSED — the pan's re-seat (3)
         // in the zoom's form, the same test: a settled start other than the
-        // grid point nearest the requested one is the chokepoint's wall (or
-        // the whole-song park at 0). The viewport is pinned, so the held frame
+        // point nearest the requested one ON THE LATTICE THE FRAME SETTLED ON
+        // (the live origin, through the one snap owner; under Exact the
+        // requested start itself, architect 2026-10-31) is the chokepoint's
+        // wall (or the whole-song park at 0). The viewport is pinned, so the held frame
         // slides across the glass with the content and THE HELD COLUMN
         // FOLLOWS IT, re-read from the settled viewport through the edge
         // trick's one owner, which pins a frame pushed off the waveform at
@@ -2466,13 +2486,15 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         if (spp_now > 0.0) {
             const int64_t requested = static_cast<int64_t>(
                 std::nearbyint(anchor_sample - anchor_col * spp_now));
-            if (nearest_viewport_grid_point(requested, spp_now) !=
+            if (nearest_viewport_grid_point(requested, spp_now,
+                                            app.viewport_lattice_origin) !=
                 app.viewport_start_sample)
                 z.anchor_col = rebind_zoom_pivot_into_waveform(z.anchor_sample);
         }
         // The camera this frame settled, which re-seat (B) compares.
-        z.zoom_vp    = app.viewport_start_sample;
-        z.zoom_level = app.zoom_level;
+        z.zoom_vp     = app.viewport_start_sample;
+        z.zoom_origin = app.viewport_lattice_origin;
+        z.zoom_level  = app.zoom_level;
     }
 }
 

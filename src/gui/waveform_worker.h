@@ -39,6 +39,10 @@ struct WaveformJob {
     // Fingerprint inputs the worker's render uses. The cache's fp_* fields
     // are updated from these AT THE COMPLETION SWAP, not at dispatch.
     int64_t   vp_start         = 0;
+    // The camera's lattice origin (AppState::viewport_lattice_origin),
+    // captured with the start it qualifies: the render cuts column c at
+    // origin + nearbyint((k0 + c)·q).
+    int64_t   lattice_origin   = 0;
     int64_t   vp_end           = 0;
     // The painter's samples-per-pixel, captured on the GUI thread with the rest
     // of the geometry: the render maps columns on the authoring lattice this
@@ -207,6 +211,7 @@ void render_waveform_to_plate_columns(
     int divider_px,
     const GuiAudio& audio,
     int64_t vp_start,
+    int64_t lattice_origin,
     double  painter_spp,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);
