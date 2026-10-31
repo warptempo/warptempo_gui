@@ -111,8 +111,9 @@ struct GuiInputHandler;
 // ahead of its own chord, through the same verdicts and the same sentences:
 //   PREVIOUS AND NEXT ARE Ctrl+Z AND Ctrl+Shift+Z WHOLE
 //     (GuiInputHandler::run_undo_redo_without_key) — under a pointer drag
-//     the chord is swallowed with the key's card, a read-only tab
-//     cards the chord, the iteration lock cards undo's own sentence — and then
+//     the chord is swallowed with the drag's card, a read-only tab
+//     cards the act by name (Undo / Redo), the iteration lock cards undo's
+//     own sentence — and then
 //     they meet the command's own refusals and cards (the empty stack, the
 //     other tab's lock). Each of those refusals ends
 //     the press where it ends today and plays NOTHING (the block below).
@@ -127,7 +128,7 @@ struct GuiInputHandler;
 // when admits() took every editor; both keep a silent editor arm in on_key's
 // order, a bound chord under any modal being silent.)
 // So nothing the car does acts under an editor or a pointer drag, and what
-// it still acts under is nothing the keyboard would refuse either.
+// it still acts under is nothing the chord's own gates would refuse either.
 //
 // THE INPUT HANDLER IS AN ACT OWNER'S AND A GATE OWNER'S BACK-POINTER, NOT
 // THE DELETED KEY ROAD: Previous and Next call
@@ -135,8 +136,8 @@ struct GuiInputHandler;
 // shares, and the play calls car_play_refused_by_key_gates for Space's own
 // head gates — no key is pressed, no modal ring is touched, no dispatch runs —
 // each as a DELIBERATE press (a synthesized repeat's silent empty-stack wall
-// is the held key's alone; the wheel does not repeat). A restore stops a live
-// session exactly as the key's does (the restore body's own stop), the car's
+// is the held Undo / Redo button's alone; the car does not repeat). A restore
+// stops a live session exactly as the chord's does (the restore body's own stop), the car's
 // loop included.
 //
 // THE SKIPS PLAY WHAT THEY STEPPED TO (architect 2026-09-18; the pending play

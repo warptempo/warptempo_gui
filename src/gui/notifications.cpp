@@ -323,9 +323,9 @@ void GuiNotifications::rebank(uint64_t id, int64_t now) {
     // holding it — AppState::chrome_press's Card arm, which is the hold's one
     // record, read here rather than mirrored into a second field. ONE BANK
     // FOR BOTH: the card stands still while either holds and its clock
-    // resumes when neither does, so a press on a hovered card (the mouse, and
-    // the touch translation, whose entry motion hovers the card before its
-    // press) banks nothing twice, and a slide-away off a held card leaves the
+    // resumes when neither does, so a press on a hovered card (the pen's
+    // hover, and the touch translation, whose entry motion hovers the card
+    // before its press) banks nothing twice, and a slide-away off a held card leaves the
     // bank where the hold put it until the lift.
     const AppState::ChromePress& arm = app.chrome_press;
     const bool held =

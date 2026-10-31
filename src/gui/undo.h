@@ -28,27 +28,23 @@ struct GuiInputHandler;
 // three again since that column's deletion 2026-09-23): the
 // TWO COLUMNS' position nudges (Left/Right in the
 // marker lane) and the one coalescing arm of the Up/Down VALUE STEP on the
-// addressed cell — the tempo cent step, also
-// reached by the plain wheel over its flag cell — each in
-// the
-// step ladder's three magnitudes since 2026-08-31, which the coalescing is
-// blind to exactly as it is blind to direction (the record is at
-// coalesce_gesture) — collapses
+// addressed cell — the tempo cent step — each in
+// both of the step's magnitudes (bare and the barrel's three), which the
+// coalescing is blind to exactly as it is blind to direction (the record is
+// at coalesce_gesture) — collapses
 // into ONE undo entry under EITHER rule:
-//   (1) REPEAT IDENTITY, for a HELD key OR a HELD BUTTON: the burst's OPENER
+//   (1) REPEAT IDENTITY, for a HELD BUTTON: the burst's OPENER
 //       pushes the pre-burst snapshot, and every SYNTHESIZED REPEAT behind it
-//       (GuiInputState::synthesized_repeat — TWO producers, one per surface:
-//       GuiInputCore::maybe_fire_repeat for held keys, and
-//       GuiInputHandler::tick_chrome_press_repeat for the repeating BUTTONS,
-//       whose hold-repeat returned 2026-08-16 after three days deleted; the
-//       membership is the chord table's `repeats` column) SKIPS its
-//       own push. THE OPENER DIFFERS PER SURFACE: a held KEY's burst opens
-//       with the PHYSICAL press itself — the press acts and pushes, then its
-//       repeats merge behind it — while a held BUTTON's opens with the
+//       (GuiInputState::synthesized_repeat, whose producer here is
+//       GuiInputHandler::tick_chrome_press_repeat for the repeating BUTTONS;
+//       the membership is the chord table's `repeats` column — the platform's
+//       key repeat, GuiInputCore::maybe_fire_repeat, sets the same bit for a
+//       held on-screen key, which reaches no undo-pushing act) SKIPS its
+//       own push. A held BUTTON's burst opens with the
 //       burst's FIRST FIRE, dispatched with the bit cleared by the tick's own
 //       flip, because a button's press acts at the lift and pushes nothing
 //       (the flip and its argument are at tick_chrome_press_repeat,
-//       input_pointer.cpp; the platform producer needs no flip).
+//       input_pointer.cpp).
 //       NO CLOCK IS CONSULTED on this arm, and that independence is the
 //       point of keeping it: a hold coalesces at any key-repeat delay, so
 //       nothing here can drift out of sync with the platform's repeat
@@ -80,11 +76,11 @@ struct GuiInputHandler;
 // "Same target / same tab / same history" follow for FREE on arm (1): a
 // synthesized repeat can
 // only arrive while the hold is still armed, and each surface's hold dies on
-// the edges that let another command in — the platform key hold on three
-// (every intervening pointer press, key press, and completed wheel emission,
+// the edges that let another command in — the platform key hold on two
+// (every intervening pointer press and key press,
 // layer (1), stated at maybe_fire_repeat), and the BUTTON hold on the one
-// physical key delivery (main.cpp's set_on_key hook; the inventory, and why
-// the pointer and wheel edges need no mirror there, are at
+// platform key delivery (main.cpp's set_on_key hook; the inventory, and why
+// the pointer edges need no mirror there, are at
 // AppState::ChromePress) — so
 // no command can run
 // between a burst's opener and the repeats behind it. ARM (2) HAS NO SUCH

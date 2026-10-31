@@ -2766,8 +2766,6 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // are modals since that day, so nothing pans while one stands, and the
     // open does not pan to it either — the field travels with its marker,
     // the same answer the row gives for a label half off the edge at rest.
-    // (The wheel and the grab-pan worked while one stood, 2026-09-06 to
-    // 2026-10-25.)
     const int bx = area.x + col + anchor_off;
 
     // The text VIEWPORT inside the box: the band the run is clipped to, and the
@@ -3051,8 +3049,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // 2026-10-25 — a press outside the field, which the editor's modal veil
     // consumes, the editor standing (on_button_press). Folding it
     // into `box` would be the wrong union all the same: the caret / text-drag
-    // claim seats a caret for ANY press inside `box` and the cursor map shows
-    // the I-beam over exactly that rect, so a run folded in would map presses
+    // claim seats a caret for ANY press inside `box`, so a run folded in would map presses
     // on painted cell ink to payload bytes and promise text
     // editing where none is.
     // WHAT RIDES, BY RANK: every box standing right of the field's own. The

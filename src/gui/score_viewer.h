@@ -448,39 +448,39 @@ inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
     return "";
 }
 
-// THE TOOLTIPS: the act's name, Title Case, and the key it binds in the
-// roster's and the player's own form (render_player_button_hint); PLAY /
-// PAUSE names its face as the player's does; the skips name their 3 s
-// step and the bare arrow, their 10 s form the modifier line's
-// (score_viewer_button_shift_hint); the range keys bind none.
+// THE TOOLTIPS: the act's name alone, Title Case, no key named, in the
+// roster's and the player's own form (render_player_button_hint; architect
+// 2026-10-30); PLAY / PAUSE names its face as the player's does; the skips
+// name their 3 s step, their 10 s form the modifier line's
+// (score_viewer_button_shift_hint).
 inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
                                             PlayerPlayFace face) {
     using Act = AppState::ScoreButtonAct;
     switch (act) {
-        case Act::PrevPage: return "Previous Page (Left)";
-        case Act::NextPage: return "Next Page (Right)";
-        case Act::SkipBack:    return "Skip Back 3 s (Left)";
-        case Act::SkipForward: return "Skip Forward 3 s (Right)";
+        case Act::PrevPage: return "Previous Page";
+        case Act::NextPage: return "Next Page";
+        case Act::SkipBack:    return "Skip Back 3 s";
+        case Act::SkipForward: return "Skip Forward 3 s";
         case Act::PlayPause:
             switch (face) {
-                case PlayerPlayFace::Pause:      return "Pause (Space)";
+                case PlayerPlayFace::Pause:      return "Pause";
                 case PlayerPlayFace::OpenFolder:
                 case PlayerPlayFace::Play:       break;
             }
-            return "Play (Space)";
+            return "Play";
         case Act::Reset:    return "Reset Range";
         case Act::SetStart: return "Set as Start";
         case Act::SetEnd:   return "Set as End";
-        case Act::Close:    return "Close (Esc)";
+        case Act::Close:    return "Close";
         case Act::None:     break;
     }
     return "";
 }
 
-// THE MODIFIER LINE (the roster's form, "Press Shift ..."; the player's
+// THE MODIFIER LINE (the roster's form, "Hold …"; the player's
 // render_player_button_shift_hint): non-empty on exactly the buttons
-// score_button_shift_admits names (app_state.h) — the two skips, "Press
-// Shift to skip 10 s." — and DROPPING WHERE THE TWO FORMS LAND ON ONE FRAME,
+// score_button_shift_admits names (app_state.h) — the two skips, "Hold to
+// skip 10 s." — and DROPPING WHERE THE TWO FORMS LAND ON ONE FRAME,
 // the roster skips' rule (redesign_button_tooltip's stateful overload): the
 // range's last 3 s for FWD, its first 3 s for BACK, and a greyed skip. The
 // first line never forks.
@@ -495,7 +495,7 @@ inline const char* score_viewer_button_shift_hint(
             if (score_viewer_skip_landing(a, playback, forward, false) ==
                 score_viewer_skip_landing(a, playback, forward, true))
                 return "";
-            return "Press Shift to skip 10 s.";
+            return "Hold to skip 10 s.";
         }
         case Act::PrevPage:
         case Act::NextPage:

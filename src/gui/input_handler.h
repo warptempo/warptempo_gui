@@ -324,8 +324,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // alone, the gesture's surface decided once at its down, architect
 // 2026-10-16) is exactly that frame, and it is the case the clear's own
 // ordering rule already names (the clear leads apply_touch_nav_update's body,
-// above the refusal). Full waveform-area damage, the discrete shape the mouse's
-// own mode edges spell.
+// above the refusal). Full waveform-area damage, the discrete shape the mode
+// edges spell.
 //
 // FREE, AND ON THE VIEW-STATE WRITERS RATHER THAN THE COMMANDS: the seat is an
 // ACTIVE-DOMAIN song frame taken against a particular view, so A WRITE OF THE
@@ -1255,13 +1255,14 @@ struct GuiInputHandler {
     // EDITING SESSION THE STREAM BEGAN ON (AppState::touch_caret_session,
     // stamped from text_editor::State::session at the begin), and the update
     // and the end are NO-OPS unless the editor active right now is that same
-    // session. The stream must be able to survive nothing else: the caret
-    // phase is deliberately outside any_pointer_gesture_active, so a
-    // physical keyboard can commit the editor under a finger still down and
-    // open ANOTHER one (Enter, then `;`), and a body that asked only "is
-    // some editor open" would seat the new editor's caret and restart its
-    // blink from a finger that never touched it. Closing the editor under
-    // the stream therefore makes the rest of it a no-op WHATEVER opens
+    // session. The caret phase is deliberately outside
+    // any_pointer_gesture_active; since the hardware keyboard closed
+    // (architect 2026-10-30) no road commits or opens an editor while the
+    // finger is down — the touch window has one owner and the on-screen
+    // keyboard needs a touch of its own — so the compare answers true on
+    // every delivered frame, and the identity is the stream's record of the
+    // editor it belongs to. Were the editor closed under the stream, the
+    // rest of it would be a no-op WHATEVER opened
     // behind it — the session id names one raise of one surface for the life
     // of the process (text_editor::next_session_id), so a reopen of the SAME
     // editor on the same marker is a different stream too. The end clears
@@ -1714,8 +1715,7 @@ struct GuiInputHandler {
     // AND THE KEYBOARD'S OWN ARM, dropped at a focus move (2026-08-14: the
     // ring's walk, the pointer press's passive assignment, the editor act's
     // return of the focus to the field — three internal callers, each the site
-    // of a focus move; the platform edge that once fired it went with the
-    // hardware keyboard, architect 2026-10-30): the contract is at the
+    // of a focus move, re-derived 2026-10-30): the contract is at the
     // definition and the full edge list at AppState::modal_dialog_key_pressed.
     void clear_modal_dialog_key_press();
 
@@ -1756,8 +1756,7 @@ struct GuiInputHandler {
     // at the field). (x, y) is the press position for
     // the press-becomes-drag threshold. THE PRESS WRITES NO TRIM: a motionless
     // release is the placement and nothing else.
-    // TWO CALLERS (re-derived 2026-10-30, the pointer's two shift formers gone
-    // with the mouse): the LIVE former's press half
+    // TWO CALLERS (re-derived 2026-10-30): the LIVE former's press half
     // (place_playhead_and_arm_region, the touch begin's live arm), and the
     // touch begin's MODE arm (begin_touch_region — the view-local recipe
     // re-expressed at the down point). The LOWER half is on the sweep's
@@ -1804,8 +1803,8 @@ struct GuiInputHandler {
     // NO selection, NO
     // drag arm — each caller owns those, which is what lets the
     // mode reuse this recipe without inheriting a sweep it must not have.
-    // ITS ROUTES (re-derived 2026-10-30, the pointer's shift formers gone with
-    // the mouse): the DEFERRED CLICK ACT (run_nav_click_act, its two placement
+    // ITS ROUTES (re-derived 2026-10-30): the DEFERRED CLICK ACT
+    // (run_nav_click_act, its two placement
     // arms — the lower half's release runs the SCRUB arm, which returns above
     // this body), and the touch region begin — its
     // MODE arm directly, its live arm through the sweep's press half below.
@@ -1814,8 +1813,8 @@ struct GuiInputHandler {
     // take (the clamp's floor is 0).
     int64_t place_playhead_at_click_column(int click_rel_x);
 
-    // THE SWEEP'S LIVE PRESS HALF — ONE call site (architect 2026-10-30, the
-    // pointer's shift former gone with the mouse): the touch region begin's
+    // THE SWEEP'S LIVE PRESS HALF — ONE call site (architect 2026-10-30): the
+    // touch region begin's
     // live arm (begin_touch_region — the hold's expiry at the down point):
     // clear the marker selection, run the body above, and arm the sweep. The
     // clear runs ahead of the body's gutter return, so an inert-gutter hold
@@ -2453,7 +2452,7 @@ private:
     // 2026-07-28) and iteration bound editor. The modal contract is stated once
     // at the definition; it returns true for every key — NO HATCH since
     // 2026-10-25: the on_key gate admits the editor's own keys and a
-    // dialog's ring alone, so no Ctrl+Q reaches it to fall through.
+    // dialog's ring alone, so nothing reaches it to fall through.
     // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, passed by
     // the SETTINGS editor and returning whether it ADVANCED the
     // buffer, which is what decides between consuming the key and letting it
@@ -2483,7 +2482,7 @@ private:
                                 const std::function<void()>& repaint);
 
     // Routes a key to the active top-flag editor. Returns true for every key
-    // (on_key then returns): NO HATCH since 2026-10-25, no Ctrl+Q reaching
+    // (on_key then returns): NO HATCH since 2026-10-25, nothing reaching
     // it to fall through. BOTH kinds this editor state carries take
     // route_modal_editor_key: the FlagPayload flag editor since it became
     // keyboard-modal, and the IterBound editor since 2026-09-05 — they
@@ -2999,15 +2998,14 @@ private:
     // rule's statement), and it keeps every face in the inventory above as
     // painted — what was lit stays lit, this latch's own principle — while
     // still clearing the latch and doing everything else a leave does; the
-    // next pointer event re-derives the faces as ever. The mouse's leave
+    // next pointer event re-derives the faces as ever. Every other leave
     // still darkens.
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
     // would re-light the very face it withheld; the latch is a DISTANCE, as
     // the plane's own hysteresis is.
     //   ARMED only by the Android backend's pen lift off an empty glass
-    //   (GuiPlatform::set_pen_lift_hook) — never by a mouse (it lifts off no
-    //   glass) or a finger (it never hovers), so the mouse and the
-    //   finger are untouched. IT ARMS AFTER THE LIFT'S OWN DELIVERY
+    //   (GuiPlatform::set_pen_lift_hook) — never by a finger (it never
+    //   hovers), so the finger is untouched. IT ARMS AFTER THE LIFT'S OWN DELIVERY
     //   (architect 2026-10-08): the release and the restore motion at the
     //   lift run first, unlatched, and the arm then re-walks the roster
     //   (recompute_redesign_button_hover) and drops the player's hot button
@@ -3466,7 +3464,7 @@ private:
     std::optional<int64_t> trim_bound_click_frame(bool is_begin,
                                                   int mouse_x) const;
 
-    // The ctrl / ctrl+shift trim-bar bound set's THRESHOLD CROSSING (a PRESS
+    // The ctrl trim-bar bound set's THRESHOLD CROSSING (a PRESS
     // until 2026-08-15, when the set moved to the lift): sets the bound at the
     // PRESS column (set_trim_bound_at_click, above) AND arms the EXISTING
     // single-bound trim drag on it through arm_pending_trim_drag — the same
@@ -3584,10 +3582,10 @@ private:
     // to it: the act authors in the P column, which authors in both audio
     // views (the note is at active_column_authoring_allowed, app_state.h).
     //
-    // TWO CALLERS: on_key's Shift+S arm, and the bottom row's Drop marker
-    // button through the ordinary chord dispatch — its shift-click and its
-    // long press synthesize this very chord (redesign_button_shift_admits),
-    // so glass reaches the act with no keyboard and there is no second road.
+    // ONE CALLER: on_key's Shift+S arm, which the bottom row's Drop marker
+    // button reaches through the ordinary chord dispatch — its long press
+    // synthesizes this very chord (redesign_button_shift_admits), so there is
+    // no second road.
     void drop_phase_reset_crossing();
 
     // Apply a new GUI scale (percent), running the shared live sequence:
@@ -3711,7 +3709,7 @@ private:
     // on_key's head gates first through the same verdicts and sentences
     // on_key asks (a drag owning the keyboard, a
     // keyboard-modal editor swallowing the chord, the authoring lock — a
-    // read-only tab cards the chord), the routers and the `h` view's gate
+    // read-only tab cards the act by name), the routers and the `h` view's gate
     // ranked above them being the caller's to drop, and on_key's no-piece
     // gate having no car press to answer (the open's hold drops the car's
     // commands until the load). The gates' statement and order are at the
@@ -3749,9 +3747,13 @@ private:
     // that can land mid-gesture (architect 2026-10-30: no key can; on_key's
     // statement at the gestures) — and on_key's authoring lock
     // verdict-and-card, hoisted (true = the lock dropped the chord; its
-    // ruling stays at its site in on_key).
+    // ruling stays at its site in on_key). `read_only_act` is the act's name
+    // the read-only card says (read_only_act_card, notifications.h): the
+    // car's road passes its act, and on_key passes nullptr, no producer
+    // reaching the read-only sentence on its road (the walk at the gate).
     bool keyboard_owned_by_pointer_gesture() const;
-    bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods);
+    bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods,
+                                      const char* read_only_act);
 
     // THE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect 2026-09-22,
     // reversed and universal 2026-09-24) — set_tab_read_only's shape
@@ -3901,8 +3903,8 @@ private:
     // shape and input routing like it (it judges no data): true when
     // key+mods should be dropped while a keyboard-modal editor stands. It
     // admits only the keys the active editor consumes (text_editor::Kind, the
-    // five kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S and
-    // Ctrl+Q consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
+    // five kinds) and a dialog's ring — NO HATCH since 2026-10-25, Ctrl+S
+    // consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
     // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
     // gap these editors have always had, which is also why a refused
     // clipboard cut must not erase (apply_editor_clipboard,
@@ -4031,7 +4033,7 @@ private:
     // Both are
     // read-only-legal, both live in S and T, both refused in the `h` view at
     // its allowlist; the bottom row's Jump to Defining Marker is Ctrl+J at
-    // its lift and Ctrl+Shift+J, the copy, at its shift-click or long press
+    // its lift and Ctrl+Shift+J, the copy, at its long press
     // (2026-10-14). Definitions and the whole
     // reasoning are in input_key_dispatch.cpp.
     void copy_focused_marker_value();
@@ -4248,14 +4250,15 @@ private:
     //     surface died with the stems-inert ruling, 2026-08-12). It
     //     clears the mode's multi-selection: a plain click replaces it. It is
     //     the plain claim's body while ADD TO SELECTION IS DARK (2026-09-17).
-    //   * select_history_diff_flags_modified is the SHIFT and CTRL clicks' body,
-    //     over the MARKER LANE ALONE — the range extend and the membership
-    //     toggle, both then focusing the clicked flag and landing on it (over
+    //   * select_history_diff_flags_modified is the CTRL click's body (the
+    //     barrel; no shift reaches the pointer since 2026-10-30),
+    //     over the MARKER LANE ALONE — the membership
+    //     toggle, then focusing the clicked flag and landing on it (over
     //     the waveform a modifier names a gesture, not a selection — the
     //     2026-08-06 symmetry ruling — and since 2026-08-12 a plain waveform
     //     press resolves no flag either: the placement press at every column).
-    //     THE CTRL ARM IS ALSO THE PLAIN CLAIM'S BODY WHILE ADD TO SELECTION
-    //     STANDS (architect 2026-09-17, extend=false): the sticky ctrl reaches
+    //     IT IS ALSO THE PLAIN CLAIM'S BODY WHILE ADD TO SELECTION
+    //     STANDS (architect 2026-09-17): the sticky ctrl reaches
     //     this view's flags now, being the one road onto this multi-selection
     //     a finger has.
     //   * close_history_mode is the ONE exit owner; every closer calls it. It

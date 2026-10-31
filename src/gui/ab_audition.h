@@ -20,8 +20,8 @@ struct GuiInputHandler;
 // transport act that spans several plays. The model, the phases and the
 // complete edge inventory of its state are at GuiAuditionSequence
 // (app_state.h); this struct owns the two things that move it: the PRESS-TIME
-// ACT (start — Shift+Space, and the play button's shift-click / long press
-// through the same chord), the ADVANCE (advance_after_natural_end — the
+// ACT (start — Shift+Space, the play button's long press), the ADVANCE
+// (advance_after_natural_end — the
 // tick's natural-end branch hands it the phase that just ended, and it arms
 // the REST before the next play) and the FIRE (fire_if_due — the run loop's
 // deadline tick, which ends that rest and launches). The ONE PLAY
@@ -57,8 +57,8 @@ struct GuiInputHandler;
 // press the cursor already rests on the focus — every focus-changing route
 // lands it — so in practice both pairs still start where the user left them.
 //
-// THE WORKING ZOOM OPENS EACH HALF (architect 2026-08-28, from his plastic
-// pass): apply_working_zoom runs the `c` key's act — the whole command through
+// THE WORKING ZOOM OPENS EACH HALF (architect 2026-08-28): apply_working_zoom
+// runs the `c` key's act — the whole command through
 // its one owner, GuiInputHandler::run_center_command, reached through the
 // key's own GuiInputHandler::run_center_key_command, never a second zoom
 // recipe — at the press on the tab the press found, on the other tab the
@@ -130,7 +130,7 @@ struct GuiInputHandler;
 // AND SHIFT+SPACE IS THE ACT'S STOP TOO (architect 2026-08-31): the chord is a
 // TOGGLE like the transport it rides — start() routes a press that finds a
 // standing sequence into that same one stop body instead of refusing, so the
-// button's shift-click and long press agree with the STOP face it already
+// button's long press agrees with the STOP face it already
 // wears, and the "An audition is already running" card retires with the arm.
 //
 // THE SWITCH IS CTRL+TAB'S WHOLE ROAD (architect 2026-10-18, on his saved
@@ -153,7 +153,7 @@ struct GuiInputHandler;
 //
 // THE ACT IS HANDS-OFF (architect 2026-10-28): any press on the window ends
 // it ahead of the press's own dispatch — a bound chord, a pointer or touch
-// press, the wheel, a touch pan, pinch or region hold — bare Space and
+// press, a touch pan, pinch or region hold — bare Space and
 // Shift+Space (and the PLAY key whose lift is one of them) excepted, their
 // own dispatch forking on the act to end it (the entries at
 // GuiInputHandler::end_audition_for_press).
@@ -193,8 +193,8 @@ struct GuiInputHandler;
 // the press is a caller of clearing owner (1) and not a new owner. A REST
 // COUNTS AS RUNNING, `phase` being the act's one running bit in both halves, so
 // the test is the same `phase != Idle` it always was (and the same term the
-// transport fork and the play/stop glyph read); a held key meets the same
-// answer, though Space is one-shot in repeat_eligible and no repeat arrives.
+// transport fork and the play/stop glyph read); Space is one-shot in
+// repeat_eligible, so no repeat arrives.
 // No card: the silence stops, which is the answer, and the "An audition is
 // already running" sentence retired with the arm that said it.
 //
@@ -273,7 +273,7 @@ struct GuiAbAudition {
     // STOP it through the one stop body and launch nothing (the toggle,
     // 2026-08-31).
     // ONE CALLER: on_key's Shift+Space arm (input_handler.cpp), which the play
-    // button's shift-click and long press also reach.
+    // button's long press reaches.
     void start();
 
     // THE ADVANCE: `ended` is the sequence state the tick's natural-end branch

@@ -131,7 +131,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.delta_min = map_source_to_target(0.0, vdmap)      - fwd_orig;
     d.delta_max = map_source_to_target(eof_wall, vdmap) - fwd_orig;
 
-    // Viewport clamp on top of the absolute data walls above, so a mouse drag
+    // Viewport clamp on top of the absolute data walls above, so a pointer drag
     // can't push the marker FURTHER offscreen, where its precise position — the
     // one being authored — would be hidden. Same active domain and the same
     // painted viewport as the anchor above: viewport_marker_bounds reads the
@@ -176,7 +176,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     }
     // NO PRE-GESTURE CAPTURES HERE (all three deleted 2026-07-29): the selection
     // snapshot, the grab-playhead sample and the pre-drag region existed only for
-    // an Esc/Ctrl+Q cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
+    // a cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
     // reasoning are at the drag-modal gate (input_handler.cpp's on_key). The drag
     // still captures the pre-drag STORE above, but that is the undo payload
     // commit_drag pushes, not cancel machinery: undo is what takes a committed drag
@@ -207,7 +207,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     return true;
 }
 
-// Apply a raw ACTIVE-domain frame delta (mouse-derived: the pointer's
+// Apply a raw ACTIVE-domain frame delta (pointer-derived: the pointer's
 // active-domain position minus the press anchor) to the dragged marker.
 // The proposal anchors in the DISPLAYED target domain — dmap =
 // displayed_or_live_target_map, the SAME map the DragOverlay flag painter
@@ -385,7 +385,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
 // only if the marker actually moved. Playhead rule (drag and nudge,
-// keyboard/mouse counterparts, share it): the playhead follows the dragged
+// the button and pointer counterparts, share it): the playhead follows the dragged
 // marker UNCONDITIONALLY (architect 2026-07-23, reversing the 2026-07-20
 // decoupling). The crossing's own click act already landed the playhead on it and the
 // mid-motion follow slid it along, and this land runs regardless of net change (a
@@ -561,8 +561,8 @@ void MarkerDragOps::commit_drag() {
     // CROSSING drops T+W, into the lit lamp's value drag or into nothing,
     // before beginning this one, the
     // arming press itself being unconditional so an off-home flag click
-    // still selects and lands, and the view cannot toggle mid-gesture since every
-    // key but the Ctrl+Q hatch is swallowed while a drag
+    // still selects and lands, and the view cannot toggle mid-gesture since the
+    // drag owns the one touch and no view key can arrive while it
     // is active), where the source waveform has no map-dependent plate; and a phase
     // reset drag never touches the warp map. So the only surviving MAP effect is
     // the view-independent target preview trigger below.

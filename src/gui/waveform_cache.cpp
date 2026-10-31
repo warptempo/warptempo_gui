@@ -599,8 +599,7 @@ bool GuiPaintHandler::live_plate_published() const {
 //      this function. The jumps this governs: zoom, center-on-playhead, the
 //      viewport-shift playhead moves (Home / End and navigate-to-marker), the
 //      A/B tab switch, the source/target toggle, undo / redo — AND ALL PANNING
-//      (touchpad scroll, the plain-wheel stepped pan, PageUp/PageDown, the
-//      plain-drag grab-pan).
+//      (the touch pan).
 //      ONE RENDER PER DISPLAYED FRAME (architect 2026-10-13): each change
 //      OWES this render (Viewport::kick_waveform_sync, owe_waveform_rebuild)
 //      and the pre-paint hook runs it once, from the latest state, however
@@ -666,11 +665,9 @@ bool GuiPaintHandler::live_plate_published() const {
 //
 // IT CARRIES NO FREEZE CHECK (displayed_basis_frozen, app_state.h), and it
 // publishes a plate the worker's two freeze gates never see. By grep
-// (2026-09-24) NO caller is reachable inside the freeze: keys are swallowed
-// under any pointer gesture and its pending presses (Ctrl+Q force-ends the
-// gesture first, and finalize_active_drags clears the drags before the nav
-// drag's zoom kick, which no freeze member can stand beside — a press arms
-// one gesture), wheels are gesture-gated, a resize force-ends before it
+// (2026-09-24, re-read 2026-10-30) NO caller is reachable inside the freeze:
+// no key arrives under any pointer gesture and its pending presses (the
+// touch window has one owner; a press arms one gesture), a resize force-ends before it
 // catches up, the tick's live-total repair finds no total change under a
 // marker or trim drag (neither writes the live map) and stands down for the
 // value drag, the value drag clears itself before its commit's kick, the
@@ -771,7 +768,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // drains the input event and paints at the same pass's tail without the
     // timerfd tick that would run the on_tick dirty-check between them (pump's
     // order, platform_android.cpp), so the paint draws the fresh plate under
-    // a flag cache that is one or more ticks stale — and during a zoom key-repeat or wheel
+    // a flag cache that is one or more ticks stale — and during a pinch
     // torrent the plate leads the overlays by the whole gesture. Doing the
     // rebuild here makes plate, fingerprint, flag cache, and the
     // staged displayed hit map all commit before the next paint — the

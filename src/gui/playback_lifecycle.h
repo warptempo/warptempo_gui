@@ -288,7 +288,7 @@ struct GuiPlaybackLifecycle {
     //     editor) IS EXEMPT, and that is a DECISION, not an omission: editing
     //     flag text while listening to the passage is a workflow the
     //     architect uses, and it stays recorded so when the editors became
-    //     modals, pointer and wheel included (architect 2026-10-25 — the
+    //     modals, pointer included (architect 2026-10-25 — the
     //     exemption kept as it was; until then their modality was chords
     //     alone). Its open site
     //     (GuiFlagEditor::enter_top_flag_edit) carries a pointer back here.

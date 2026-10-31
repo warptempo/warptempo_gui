@@ -16,9 +16,9 @@
 // quaver, 2026-10-28) is the palette's cue shadow through the raster's
 // alpha, never a recolored drawing.
 //
-// NO CURSOR IS AN ICON: every cursor the product shows is a NAMED
-// CURSOR FROM THE USER'S OWN XCURSOR THEME (architect 2026-08-03), so the
-// platform ships no cursor art and draws none.
+// NO CURSOR IS AN ICON: the product shows no pointer cursor at all (the
+// mouse is closed, architect 2026-10-30), so it ships no cursor art and
+// draws none.
 //
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).

@@ -1912,9 +1912,12 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         // returns — it waits on nothing, exactly as the motion path's GUI
         // hooks below do not.
         //
-        // EVERY OTHER KEY STILL RETURNS 0, unchanged: HARDWARE KEYBOARDS ARE
-        // OUT OF SCOPE ON THIS PLATFORM (this arm owns the ruling; a mouse's
-        // own below), so a KeyEvent that is not
+        // EVERY OTHER KEY RETURNS 0: THE HARDWARE KEYBOARD IS CLOSED FOR GOOD
+        // (architect 2026-10-30; this arm owns the ruling, the mouse's own
+        // below): determinism is per display width, so consistency across
+        // sessions commits him to this one panel, and a keyboard at the tablet
+        // would duplicate the pen and the finger and lose the car form factor.
+        // A KeyEvent that is not
         // BACK is handed back to the system rather than swallowed by a GUI
         // with no use for it. The road INTO the core's key path exists and is
         // public — synthesize_key — for the on-screen keyboard this backend
@@ -1937,12 +1940,12 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
 
     if (type != AINPUT_EVENT_TYPE_MOTION) return 0;
 
-    // A MOUSE IS CLOSED AND IS CONSUMED (architect 2026-10-30: the pen and the
-    // finger are the whole input, and the core has no mouse door at all). A
-    // USB mouse or a trackpad delivers motion on AINPUT_SOURCE_MOUSE/TOUCHPAD,
-    // and nothing here translates it. Consuming rather than returning it is
-    // deliberate: a mouse click that fell through to the system would act on
-    // whatever is behind the activity.
+    // THE MOUSE IS CLOSED FOR GOOD AND IS CONSUMED (architect 2026-10-30, the
+    // keyboard arm's reasoning above: the pen and the finger are the whole
+    // input, and the core has no mouse door at all). A USB mouse or a trackpad
+    // delivers motion on AINPUT_SOURCE_MOUSE/TOUCHPAD, and nothing here
+    // translates it. The consume stays: a mouse event that fell through to the
+    // system would act on whatever is behind the activity.
     //
     // THE S PEN IS NOT IN THAT CLASS: IT IS A FINGER WITH THREE AMENDMENTS
     // (architect 2026-09-25; GuiTouchTool, gui_input.h). The architect uses the
@@ -2097,8 +2100,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // under a hovering pen, so hovers reach apps on this tablet), so
             // the roster's hover walk and the tooltip dwell run under it
             // through the core's own pointer doors — enter, motion, leave.
-            // ONLY THE PEN HOVERS (a finger never does, and a mouse never
-            // reaches here), and A HOVER NEVER OVERLAPS A TOUCH THE CORE IS
+            // ONLY THE PEN HOVERS (a finger never does, and a mouse is
+            // consumed above), and A HOVER NEVER OVERLAPS A TOUCH THE CORE IS
             // TRANSLATING: while any contact is down a hover motion would
             // carry the touch translation's held button to the hover's
             // position and drag whatever that contact holds, so hovers are
@@ -2140,7 +2143,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // so does every finger's lift (a finger never hovers). A pen
             // withdrawn out of range before the platform reports any hover
             // leaves the pointer resting at the lift until the pen's next
-            // report or the next contact — a mouse resting where it clicked.
+            // report or the next contact, the way Windows' mouse rests where
+            // it clicked.
             // AND EVERY HOVER-LIT FACE HOLDS UNTIL MOTION after such a lift
             // (architect 2026-10-07, the roster's hot face; every face
             // 2026-10-09): the UP arm arms the GUI's latch (set_pen_lift_hook;
@@ -2405,8 +2409,8 @@ void GuiPlatform::end_pen_hover() {
     if (!pen_hovering_) return;
     pen_hovering_ = false;
     // THE PEN'S OWN LEAVE, PenHoverEnd (architect 2026-10-10, "the word Pick
-    // Colors blinks"): the pen has left the tool as a mouse leaving the window
-    // has — the tooltip, the in-window bit, the arms and the latch go — but
+    // Colors blinks"): the pen has left the tool as Windows' mouse leaving the
+    // window has — the tooltip, the in-window bit, the arms and the latch go — but
     // its leave DARKENS NOTHING, every hover-lit face keeping what was
     // painted. The HOVER_EXIT the platform sends just before every tip DOWN
     // comes through here in a delivery of its own, so a darkening leave would

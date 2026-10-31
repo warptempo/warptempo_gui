@@ -2679,7 +2679,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                          (up.ahead > 0)
                              ? ", and this device has its own: fast-forward "
                                "only, so resolve it in a terminal"
-                             : "; pull them first (Ctrl+Shift+S)");
+                             : "; pull them first (the history view's Pull)");
             return GuiHistoryCommitOutcome::RemoteMoved;
         }
         github = (up.ahead > 0) ? GuiGitHubStatus::Ahead
@@ -3159,7 +3159,7 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
         std::fprintf(stderr,
                      "warptempo_gui: Pull failed: the files were partly "
                      "updated and '%s' did not move (%s)\n"
-                     "warptempo_gui:   pull again (Ctrl+Shift+S): the "
+                     "warptempo_gui:   pull again (the history view's Pull): the "
                      "forced checkout rewrites every file the pull "
                      "changes\n",
                      branch.c_str(), diag.c_str());

@@ -14,21 +14,21 @@
 // raised by GuiInputHandler::render_player_load_in_place in the player and by
 // GuiInputHandler::history_load_in_place in the `h` view, and answered back
 // through the input-handler back-pointer below). Two entry points are exposed:
-// request_close (called by Ctrl+Q, the WM-close callback, the Open
+// request_close (called by the platform's close — Back — the Open
 // project picker's commit and Revert — the ONE close road, which is why the
 // render player's close, the picker's close on the exit road and the modal
 // editors' abandon all live inside it) and
-// activate_response (called by the keyboard
-// handler when a prompt is active). The other two former lambdas (open_unsaved,
+// activate_response (called by the prompt's word buttons through the
+// pointer's shared dispatch). The other two former lambdas (open_unsaved,
 // proceed) are private helpers; they have no callers outside this cluster.
 //
 // save_markers is reached through save_ops. viewport, phase_reset_propagate,
 // and gui are reached directly.
 
 // WHAT A CLOSE COMPLETES — the one close road, three targets (architect
-// 2026-08-27, with the reopen loop; REVERT 2026-09-13). EXIT is Ctrl+Q's and
-// the WM close's: the run loop stops and the process ends. REOPEN is File →
-// Open project's: the run loop stops and gui_main's loop builds the next
+// 2026-08-27, with the reopen loop; REVERT 2026-09-13). EXIT is the
+// platform close's (Back): the run loop stops and the process ends. REOPEN is
+// Open Project's: the run loop stops and gui_main's loop builds the next
 // object set around the project the prompt chose (AppState::reopen_project,
 // already seated by the commit). The unsaved-work question, its three answers,
 // its Save-failed rung and its painted-before-answering rule are IDENTICAL for
@@ -85,7 +85,7 @@ struct GuiPrompt {
 
     // Route a close through the unsaved-work prompt when history is dirty;
     // otherwise complete `target` immediately. Centralizes the decision so
-    // Ctrl+Q, the WM-close callback and the Open prompt's commit share
+    // the platform's close and the Open prompt's commit share
     // identical behaviour, each naming what its close completes — AND WHAT
     // CLOSES BEFORE THE QUIT QUESTION IS STATED HERE, ONCE, for every road:
     // a standing render player comes down at this road's head, a standing
@@ -95,11 +95,11 @@ struct GuiPrompt {
     // any step, which is what keeps the platform's close (Back) — arriving with
     // no key, so it can run no keyboard arm of its own — from raising the
     // unsaved-work prompt over a mode or an editor that is still up.
-    // Ctrl+Q, the WM-close callback, the Open project picker's open act and
+    // The platform's close, the Open project picker's open act and
     // Revert share the road; what differs is the target. THE PICKER STAYS
     // UNDER THE REOPEN AND THE REVERT (architect 2026-10-25, an overlay
     // stands under its own question): with a picker up, those two targets
-    // come only from the picker itself (its pick and its Ctrl+Alt+O), so
+    // come only from the picker itself (its pick and its Revert), so
     // their question paints over its list, Cancel returns to it, and the
     // completion ends it with the session.
     //
@@ -168,9 +168,8 @@ struct GuiPrompt {
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
     // prompt and clear the pending paste anchor, which is the phase reset
-    // paste's whole pending state. Called from activate_response on Esc, and from the
-    // Ctrl+Q interception in input_handler so both cancels go through one
-    // path (no synthesized Esc keystroke). Safe to call only when a
+    // paste's whole pending state. ONE CALLER: activate_response's cancel
+    // answer (the prompt's Cancel button). Safe to call only when a
     // PASTE_CONFIRM prompt is up.
     void cancel_paste_confirmation();
 

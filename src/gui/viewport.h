@@ -396,8 +396,7 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // TWO callers (re-derived 2026-10-30, the nav drag's mouse zoom phase
-    // gone): the touch-nav body
+    // TWO callers (re-derived 2026-10-30): the touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the song frame the pan seated, placed at the current
     // fractional finger centroid, 2026-10-22) and the zoom step zoom_step

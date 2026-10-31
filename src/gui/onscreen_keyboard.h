@@ -53,8 +53,8 @@
 // (GuiInputHandler::on_key) — with these keys on the hotkey side and the
 // editors' own
 // BUTTONS (a dialog's OK and Cancel) still chrome, still acting at the lift.
-// A key held down repeats through the core exactly as a held physical key
-// does, on the platform's advertised cadence.
+// A key held down repeats through the core's key repeat, on the platform's
+// advertised cadence.
 //
 // WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout), no
 // hide act (it leaves with the editor that raised it), no caps lock (shift
@@ -419,8 +419,10 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // Shift, Bksp, Enter, Esc, Tb, Space, Copy, Paste — Title case, the first
 // letter alone capital — and the PAGE KEY names the page it goes TO, `&123`
 // on the flags page and `ABC` on the symbols page. ENTER IS THE PRODUCT'S
-// ONE WORD FOR THE KEY (spell_chord's head, gui_input.h; architect
-// 2026-10-29 night, "that's what I see on my keyboard"). THE SHORT FORMS
+// ONE WORD FOR THE KEY (architect 2026-10-29 night, "that's what I see on my
+// keyboard"): no user text says "Return", and since 2026-10-30 these caps and
+// HELP's mentions of them are the only text that names a key at all (a
+// tooltip, a card or a label never does). THE SHORT FORMS
 // Bksp AND Tb ARE THE WORDS (architect 2026-10-29 night, "only the first
 // letter capitalized"): the spelled-out Backspace and Tab, mocked at
 // em 26 on his 50-px keys, kept two and three device px of air a side, and a

@@ -550,13 +550,11 @@ internal files dir, readable with `adb shell run-as com.warptempo.gui cat
 files/warptempo_gui/config`), or, when that name is empty or its folder is
 gone or invalid, the first valid project folder under `<externalDataPath>/
 projects` in name order. Opening a DIFFERENT project is done from inside the
-running app, and on glass THERE IS NOTHING TO TYPE: File → `Open project`, tap
-the project's row, tap `OK`. The prompt's PICKER — one row per openable
+running app, and THERE IS NOTHING TO TYPE: the icon row's OPEN key, then a
+tap on the project's row. The PICKER — one row per openable
 project — takes the on-screen keyboard's own band while it stands, so the list
-replaces the keyboard rather than sitting beside it, and the menu row is the
-only road in here (the on-screen keyboard has no `Ctrl`, so `Ctrl+O` is the
-laptop's). Typing a name and completing it with `Tab` is the laptop's road
-(docs/HELP.md's Opening another project). The layout under `<externalDataPath>` =
+replaces the keyboard rather than sitting beside it, and the OPEN key is the
+only road in here (the hardware keyboard is closed, 2026-10-30). The layout under `<externalDataPath>` =
 `/sdcard/Android/data/com.warptempo.gui/files` is the laptop's `projects/`
 mirrored:
 
@@ -713,11 +711,13 @@ consumer, and the seam has no addition at all — §13.3.)*
   consumed as well as the UP because the framework's own back handling runs off
   the UP after tracking the DOWN; DOWN repeats fire nothing. THE SYSTEM DESTROY
   is untouched and cannot ask — BACK asks, a destroy cannot — so a session
-  killed from the task switcher still goes unasked. EVERY OTHER KEY still
-  returns 0: hardware keyboards are out of scope (`on_input_event`'s key arm), and the road into
-  the core's key path is `synthesize_key`.
-- **Mouse**: consumed, not routed and not returned — a click that fell through
-  would act on whatever is behind the activity.
+  killed from the task switcher still goes unasked. EVERY OTHER KEY
+  returns 0: the hardware keyboard is closed for good (architect 2026-10-30;
+  `on_input_event`'s key arm owns the ruling), and the road into the core's key
+  path is `synthesize_key`, the on-screen keyboard's.
+- **Mouse**: closed for good with the keyboard (2026-10-30) and consumed, not
+  routed and not returned — a click that fell through would act on whatever is
+  behind the activity.
 - **Key repeat**: `set_repeat_info(25, kHoldBeatMs)`, hard-coded (architect
   ruling 2026-08-23) — Android advertises no cadence to a native activity, so
   the numbers are labwc's by convention: `<repeatRate>` 25 and `<repeatDelay>`

@@ -57,8 +57,7 @@ struct GuiTargetRender;
 // steps it (architect 2026-09-13; value_drag_target, app_state.h).
 //
 // THE TARGET RULE IS NOT HERE EITHER: value_drag_target (app_state.h) answers
-// which flags and which cells this gesture may touch, and the CURSOR MAP reads
-// that same predicate, so the cue promises exactly the gesture. `begin` asks
+// which flags and which cells this gesture may touch. `begin` asks
 // it and refuses in silence — a pointer gesture's non-event is its own answer.
 //
 // THE UNDO STORY FORKS THREE WAYS AT THE COMMIT, one arm per axis.

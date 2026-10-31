@@ -146,10 +146,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the tail (hold_derived_on_arrival, architect 2026-09-29). Placed HERE,
     // before the band flips, so clear_selection's
     // stem/overlay/playhead-column damage resolves against the LEAVING tab's
-    // basis — the basis of the pixels it erases. It also subsumes the
-    // shift-range anchor clear this site used to spell out by hand (every
-    // Selection mutator dissolves the anchor; the authoritative clear list is at
-    // the field, app_state.h).
+    // basis — the basis of the pixels it erases.
     selection.clear_selection();
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;

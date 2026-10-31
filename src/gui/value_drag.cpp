@@ -32,7 +32,7 @@ int64_t phase_bound_now(const GuiPhaseResetMarker& m, MarkerCell cell) {
 
 bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
     // THE TARGET RULE, asked of its one owner and asked HERE rather than at the
-    // caller, so the crossing and the cursor map cannot answer it differently
+    // caller, so no caller can answer it differently
     // (value_drag_target, app_state.h). A refusal is SILENT and writes nothing:
     // a pointer gesture's non-event is its own answer, and where the lamp makes
     // this the flag's plain drag (value_drag_posture) a flag that cannot be
@@ -74,8 +74,9 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
         // THE UNDO PAYLOAD, captured at the BEGIN because that is where the
         // pre-gesture store still stands: the crossing runs before the first
         // motion writes anything, and nothing can mutate the store between the
-        // press and here (the drag-modal gate swallows every chord but the
-        // Ctrl+Q hatch, which force-ends this gesture through its own commit).
+        // press and here (the gesture owns the one touch, so no key arrives,
+        // and the car's commands refuse mid-gesture on kKeysDuringDrag's card,
+        // input_handler.cpp).
         // The commit pushes it iff the value actually moved.
         st.pre_drag_snapshot = mv;
     } else if (column == 'P') {
@@ -236,8 +237,8 @@ void ValueDragOps::apply_motion(int mouse_y) {
 void ValueDragOps::commit() {
     if (!app.value_drag.active) return;
     // READ, CLEAR, THEN ACT — the release bodies' standing shape, so the tail
-    // below runs with no gesture live (the cursor map and follow's page
-    // both ask any_pointer_gesture_active, and this body's own tail moves the
+    // below runs with no gesture live (follow's page asks
+    // any_pointer_gesture_active, and this body's own tail moves the
     // camera through the reseat).
     ValueDragState st = std::move(app.value_drag);
     app.value_drag = ValueDragState{};

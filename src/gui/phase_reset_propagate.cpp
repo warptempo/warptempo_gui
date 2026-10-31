@@ -343,16 +343,15 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // A modal surface is opening: stop playback. Space is swallowed while
     // the prompt is up, so playback cannot restart until it closes.
     playback_lifecycle.stop_playback_if_playing();
-    // Button words in the PLAIN spelling (PromptState owns the rule; each
-    // button names its key on its tooltip): `y` answers Yes from the keyboard
-    // exactly as before. Raised
+    // Button words in the PLAIN spelling (PromptState owns the rule); the
+    // buttons are the prompt's one road (architect 2026-10-30). Raised
     // through PromptState::present, the one raise route — which clears the
     // PAINTED bit, so the confirmation cannot be answered before it is on the
     // screen (the rule is at PromptState).
-    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, so a bare Enter answers
-    // Yes (architect 2026-09-16, "align — paste should open on the equivalent
+    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (architect 2026-09-16,
+    // "align — paste should open on the equivalent
     // of OK"): this confirmation is the deliberate second step of an explicit
-    // act — Ctrl+P, by key or by the Copy Phase Resets key's ctrl press
+    // act — Ctrl+P, the Copy Phase Resets key's barrel press
     // (2026-10-24) — exactly as the load
     // confirmation's and Revert's are, so it takes their default
     // (PromptInitialFocus, app_state.h, where the three-way Save / Discard /

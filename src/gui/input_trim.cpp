@@ -41,7 +41,7 @@
 //   THE BOTH-BOUNDS (bridge) DRAG NEEDS NO PARTNER WALL and has none: it moves
 //     the pair rigidly by one shared delta, so the gap between the bounds is
 //     invariant for the whole gesture and there is nothing to cross.
-//   THE CTRL / CTRL+SHIFT BOUND-SET CLICKS ARE STRICTER STILL, and were before
+//   THE CTRL BOUND-SET CLICKS ARE STRICTER STILL, and were before
 //     this ruling: a click that would rest ON or past its partner is a consumed
 //     no-op that writes nothing (the strictly-inside guard at
 //     handle_trim_set_bound). A clamp would move the bound somewhere the user
@@ -52,10 +52,10 @@
 //     column and then hands over to that bound's endcap drag): the guard is
 //     unchanged and is simply re-asked live where the act now runs. THE BOUND
 //     IS DECIDED THERE TOO (architect 2026-10-27): a ctrl press lifted or
-//     crossed before the hold delay sets the begin, one held past it the END,
-//     as ctrl+shift does at any duration — the S Pen's side button being the
-//     Ctrl bit, a tap with it held sets the begin on glass and a long press
-//     the end.
+//     crossed before the hold delay sets the begin, one held past it the END
+//     — the S Pen's side button being the Ctrl bit, a tap with it held sets
+//     the begin and a long press the end (the pointer carries no shift,
+//     architect 2026-10-30).
 //   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
@@ -79,7 +79,7 @@
 // the COMMITTED begin out of the store and lands through
 // land_playhead_on_marker's placement basis with NO viewport move. THE
 // MEMBERSHIP, re-derived by grepping the routes that write a trim bound:
-//   * the CTRL / CTRL+SHIFT bound-set clicks (set_trim_bound_at_click), AT THEIR
+//   * the CTRL bound-set clicks (set_trim_bound_at_click), AT THEIR
 //     MOTIONLESS LIFT or at their threshold crossing since 2026-08-15 — the act
 //     is unchanged and only its timing moved — a ctrl press held past the hold
 //     delay writing the end (2026-10-27);
@@ -133,13 +133,12 @@
 // settings — and trim is BAND: it lives in ViewState beside the viewport and the
 // zoom, it has no undo, and it never dirties the session, which is what the
 // gate's old "authoring mutation" classification of it was missing. So `Ctrl+Shift+0`
-// is on the keyboard allowlist, the endcap / bridge
-// drags and the ctrl / ctrl+shift bound-set clicks carry no read-only refusal
+// is on the read-only allowlist, the endcap / bridge
+// drags and the barrel's bound-set clicks carry no read-only refusal
 // anywhere on their routes, the SWEEP carries none either (trim being band
-// whichever surface writes it), the
-// settings editor's typed `trim_*=` arms commit in a locked tab, and the trim
-// CURSOR cues promise all of it because they read those same routes' own
-// deciders. NOT ONE of the behaviors above changed with the
+// whichever surface writes it), and the
+// settings editor's typed `trim_*=` arms commit in a locked tab. NOT ONE of
+// the behaviors above changed with the
 // admission — the strictly-inside guard, the
 // partner clamp, the setter's deselect, the playhead park and the
 // trim-mutation playback stop are the same code taking the same decisions. The
@@ -207,8 +206,8 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // zero"). Every trim former that lands a bound by column takes its frame
 // here, so the family authors on one lattice: the endcap and bridge drags'
 // release snap (commit_trim_drag), the sweep's two ends
-// (sweep_trim_frame_at_column, the shift+drag and the touch region hold) and
-// the ctrl / ctrl+shift bound-set click (trim_bound_click_frame). The frame
+// (sweep_trim_frame_at_column, the touch region hold) and
+// the ctrl bound-set click (trim_bound_click_frame). The frame
 // is the column's authored time — authored_frame_at_column_on_basis over the
 // displayed-or-live target map on the item viewport basis, the column's LEFT
 // edge, where the waveform painter starts that column's span — with the
@@ -388,9 +387,8 @@ void GuiInputHandler::commit_trim_mutation() {
 // already covers the whole song"): a benign one-dimensional refusal already at
 // its state says nothing — the trim bar spans the window and the endcaps sit at
 // its ends, so one glance at one place answers what the maximizer would have
-// done. (The key is its one road since the Show trim region button, whose
-// shift-click and long press dispatched this same chord, was deleted on
-// 2026-09-22.)
+// done. (Its one road is Zoom to Fit's barrel-held long press, Ctrl+Shift+0,
+// since 2026-10-24.)
 void GuiInputHandler::handle_trim_clear_both() {
     if (trim_is_full_window(app.trim, audio.total_frames())) {
         // Nothing to recover, nothing to say (the rule above).
@@ -586,7 +584,7 @@ void GuiInputHandler::handle_trim_maximize() {
 // Waveform Magnification lamp since, and the maximizer above moved to
 // Ctrl+Shift+0.)
 
-// --- Trim boundary mouse gestures ---------------------------------------
+// --- Trim boundary pointer gestures -------------------------------------
 
 // THE TRIM GESTURES' COLUMN->FRAME LANDING, on the one displayed-grid owner
 // (displayed_grid_position_at_column, warp_frame_map_view.h): trim bounds are
@@ -838,7 +836,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     const double delta_frames = cursor_frame - app.trim_drag.anchor_frame;
 
     // Single-bound: pre-drag frame plus the anchor-relative delta. The
-    // mouse-derived delta rounds once into the integer domain through
+    // pointer-derived delta rounds once into the integer domain through
     // snap_authored_frame — the value lands in an authored store field
     // below, so the conversion goes through the single double-to-authored
     // chokepoint like every other authored write; everything after is
@@ -1163,9 +1161,8 @@ void GuiInputHandler::commit_trim_drag() {
 // resetting the whole window on a mis-click is the outcome trim cannot afford
 // (trim has no undo): a constructive refusal of a legal state at the gesture
 // boundary, the ruled exception to the crossed-pair normalization. SINCE 2026-08-30 THE REFUSAL SAYS SO on a notification
-// card, raised by the ACT and not by the decider this comment heads — the
-// cursor map asks that decider once per motion, and a card raised inside it
-// would stack while the pointer merely hovered the bar.
+// card, raised by the ACT and not by the decider this comment heads — a card
+// raised inside a decider would speak for every asker, not for the act.
 //
 // READ-ONLY DOES NOT REFUSE (architect 2026-08-07): the clicks are trim, which
 // is band rather than authored content, so this route's first gate — the read-
@@ -1173,14 +1170,14 @@ void GuiInputHandler::commit_trim_drag() {
 // exactly as a writable one does. History-less like every trim
 // mutation; the repaint + target_render.trigger() tail mirrors the drag release.
 // This function OWNS the click's playback stop — placed past every refusal above
-// and immediately ahead of the bound write, so the ctrl / ctrl+shift press carries
+// and immediately ahead of the bound write, so the ctrl press carries
 // none of its own and a refused click leaves a live audition playing (the
 // claim-keyed stop rule at on_button_press's top-strip paragraph, taken inside the
 // gate).
 //
 // IT RUNS AT THE LIFT, NOT AT THE PRESS (architect 2026-08-15, the act-at-lift
-// sweep finishing: "all actions should be on mouse-up / finger-up"). The ctrl /
-// ctrl+shift press ARMS PendingClickAct (app_state.h) and commits nothing, and
+// sweep finishing: "all actions should be on mouse-up / finger-up"). The ctrl
+// (barrel) press ARMS PendingClickAct (app_state.h) and commits nothing, and
 // which bound it writes is decided where it runs (a ctrl press held past the
 // hold delay writes the end, 2026-10-27); the
 // MOTIONLESS LIFT calls this at the PRESS COLUMN, and a THRESHOLD CROSSING calls
@@ -1255,8 +1252,7 @@ std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
 bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click_frame above) — the
     // degenerate audio/geometry states and the strictly-inside guard — so
-    // this function is exactly the act, and the cursor cue that asks the same
-    // question cannot answer it differently.
+    // this function is exactly the act.
     const std::optional<int64_t> decided = trim_bound_click_frame(is_begin,
                                                                  mouse_x);
     if (!decided) {
@@ -1277,7 +1273,7 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     // (architect 2026-07-27): the trim window is about to change under it, and
     // every refusal above — a degenerate audio/geometry state, a
     // non-strictly-inside value — has already returned without stopping anything.
-    // The caller (the ctrl / ctrl+shift trim-bar press) carries no stop of its own
+    // The caller (the ctrl trim-bar press) carries no stop of its own
     // for exactly that reason. Ahead of the write, like every claim's stop.
     playback_lifecycle.stop_playback_if_playing();
     if (is_begin) {
@@ -1293,7 +1289,7 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     return true;
 }
 
-// The ctrl / ctrl+shift trim-bar bound set's THRESHOLD CROSSING: set the bound at
+// The ctrl trim-bar bound set's THRESHOLD CROSSING: set the bound at
 // the press column (set_trim_bound_at_click above) AND arm the single-bound trim
 // drag on the bound just set, so the gesture continues exactly like an ENDCAP
 // press's does. NOTHING is stashed: the click-set is committed when made (trim is
@@ -1334,7 +1330,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // and one of TWO arm_pending_trim_drag callers (re-derived 2026-08-12, the
 // trim surface arc's revert — the arc's extra arms, the alt bridge press and
 // the ctrl deferred-set pending, lived one day, 2026-08-11..12, and are
-// deleted whole): this router, and the ctrl / ctrl+shift BOUND SET's THRESHOLD
+// deleted whole): this router, and the ctrl BOUND SET's THRESHOLD
 // CROSSING above (a PRESS until 2026-08-15, when the set moved to the lift),
 // which arms the same single-bound pending on the bound it has just written.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:

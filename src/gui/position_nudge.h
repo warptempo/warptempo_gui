@@ -75,8 +75,9 @@ struct GuiTargetRender;
 // the focus as it always did). Bare `0` had left one day earlier, re-ruled a
 // PURE VIEWPORT MOVE.
 // REACHABILITY, with the pointer deferral dead: the ONLY producers of a resting
-// 2+ selection are the two multi-select clicks (shift-range, ctrl-toggle), the
-// `m` bpm-mode open, the propagate paste, and the undo/redo restores — and every
+// 2+ selection are the multi-select click (the ctrl toggle, the barrel's or
+// the add-to-selection lamp's), the
+// bpm-mode open, the propagate paste, and the undo/redo restores — and every
 // group verb that remains is span-read or member-independent, so nothing that can
 // rest a group can then move it.
 //
@@ -86,7 +87,7 @@ struct GuiTargetRender;
 //     column = samples-per-pixel FRAMES (or, on the phase-reset column, one
 //     HOP of the engine's analysis lattice — below), so a press starting near
 //     an edge can overshoot mid-step; clamping is what makes the song edges
-//     EXACTLY REACHABLE by keyboard, in every column. The hop, being the
+//     EXACTLY REACHABLE by the arrow buttons, in every column. The hop, being the
 //     longer stride at working zoom, clamps sooner than a column step does.
 //     Both position twins clamp (the warp twin
 //     always did; the phase twin joined with this ruling, replacing a whole-press

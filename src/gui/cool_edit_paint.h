@@ -132,8 +132,8 @@ GuiRect key_led_rect(const GuiRect& r, int depth);
 //              seeing which ones are pushed in"). A lit LED IS a checked
 //              key: paint_key reads `led` Lit as checked.
 //   HELD     — THE DEEP DEPTH, TWO DEVICE PX, WHATEVER THE CHECKED STATE: a
-//              live press arm (the glass's or the mouse's) or a keyboard
-//              key under the finger, `pressed`; at the lift the key returns
+//              live press arm (the finger's or the pen's) or an on-screen
+//              keyboard key under the finger, `pressed`; at the lift the key returns
 //              to its checked depth. THE LED LIT while it stands (architect
 //              2026-10-23: "I would expect the little light to turn on when
 //              pressed"; "make the LEDs flash when pressed. Flash meaning

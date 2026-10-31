@@ -235,15 +235,15 @@ namespace {
 //   * A CONTROL'S NAME IS TITLE CASE — a dropdown item ("Open Project",
 //     "Paste Phase Reset State", "Projects Repository"), a modal row's WORD button ("Copy to
 //     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
-//     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Grid Iterations (I)").
+//     ACT ("Drop Marker", "Go to Start", "Toggle Grid Iterations").
 //     The evidence is kdenlive's own: the Title Case hover on an icon button
 //     IS the QAction's name echoed back by Qt, while every tooltip kdenlive
-//     writes by hand is a sentence. A LAMP'S "Toggle <Mode> (<key>)" IS A NAME
+//     writes by hand is a sentence. A LAMP'S "Toggle <Mode>" IS A NAME
 //     under this — Qt names a checkable action the same way ("Show Audio
 //     Thumbnails") — the lamp FACE, never the words, carrying the state.
 //   * A DESCRIPTION IS SENTENCE CASE — a label, a field prefix, the SECOND
 //     modifier line of a tooltip (always a whole sentence with terminal
-//     punctuation: "Press Shift for the A/B audition."), a card, a prompt (a
+//     punctuation: "Hold for the A/B audition."), a card, a prompt (a
 //     question), the row-8 state cell, and a panel's row labels and prose.
 //     A TOOLTIP'S FIRST LINE IS NEVER IN THIS CLASS any more (architect
 //     2026-09-12): it named a STATE or a REASON on a handful of buttons until
@@ -256,8 +256,8 @@ namespace {
 //     than a carve-out: a CARD naming an act stays a sentence because a card
 //     is a description ("BPM iterations work in source view"), while the
 //     TOOLTIP naming the same act is that control's name ("Render Grid
-//     Iterations (Ctrl+Alt+R)"), which is also the icon-row button's own
-//     ("BPM Iterations (Ctrl+B)"). No reader compares any of these as strings — the
+//     Iterations"), which is also the icon-row button's own
+//     ("BPM Iterations"). No reader compares any of these as strings — the
 //     menus' item
 //     tables were read by index (until the popups retired, 2026-10-21) —
 //     so each surface is free to spell its own class.
@@ -265,25 +265,21 @@ namespace {
 //     conjunctions and prepositions of three letters or fewer lowercase unless
 //     they lead ("Copy to Clipboard", "Load in Place", "Save and Commit", "Up
 //     a Folder", "Toggle Add to Selection"); a hyphenated compound capitalizes
-//     both halves ("Toggle Read-Only (O)"); a single word is the same string
-//     in either class and settles nothing. The chord suffix "(Ctrl+S)" is not
-//     part of the name and is spelled by its own owner.
-//   * A CARD OR A LABEL NEVER NAMES A KEY TO PRESS; THE ONE KEY TEXT IS THE
-//     TOOLTIP'S KEY (architect 2026-10-27, "keep"; redesign_button_tooltip's
-//     head, app_state.h, owns it). The dialog buttons' words are plain
-//     words, no letter underlined and never a bracket (architect
-//     2026-10-30: no keyboard stands under a dialog, so an access key has
-//     no producer).
+//     both halves ("Toggle Read-Only"); a single word is the same string
+//     in either class and settles nothing.
+//   * NO CARD, LABEL OR TOOLTIP NAMES A KEY (architect 2026-10-30; the
+//     tooltip's rule at redesign_button_tooltip's head, app_state.h): a
+//     tooltip names the act and, on its second line, the glass gesture that
+//     reaches a twin ("Hold to …", "Barrel button to …"). The one key text
+//     is the on-screen keyboard's own caps (onscreen_keyboard.h's cap_word).
+//     The dialog buttons' words are plain words, no letter underlined and
+//     never a bracket (architect 2026-10-30: no keyboard stands under a
+//     dialog, so an access key has no producer).
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
 //     literal settings and config KEY names shown as keys (`projects_path`),
 //     and the routing/category tokens that are data rather than prose.
-//   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Backspace, Space,
-//     Tab, Home, End — save Enter for Qt's Return (architect
-//     2026-10-29 night), with a BARE LETTER UPPERCASE and
-//     punctuation naming the CAP rather than the stamped symbol ("Shift+/").
-//     The spelling's one owner is spell_chord's head (gui_input.h).
 //   * AN APPENDED REASON IS LOWERCASE: "<Act> refused: <reason>" is ONE
 //     sentence, so its tail starts no second one. A producer whose string is
 //     ever used WHOLE is itself a sentence and capitalizes at that producer;
@@ -372,7 +368,7 @@ KeyLegendSeat key_legend_seat(const GuiRect& key, double run_w) {
 // the mock's REFRESH a misprint. THE LAST KEY READS CLOSE (architect
 // 2026-10-28 night, "agree all"): the player asks nothing, and a button's
 // word says what leaving does (the rule at kModalCancelLabel); its tooltip,
-// "Close (Esc)", says the same.
+// "Close", says the same.
 const char* render_player_button_legend(AppState::PlayerButtonAct act) {
     using Act = AppState::PlayerButtonAct;
     switch (act) {
@@ -1927,8 +1923,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // 2026-10-22; the active tab's name is row 8's, beside the clock.)
 
 // THE BOTTOM ROW'S BUTTON CLUSTER AND CLOCK — THE UNIFIED BOTTOM ROW (rows 8
-// and 9 merged 2026-08-12): permanent on every host — ordinary
-// mouse-clickable buttons, no touch mode, no flag, no detection. LEFT TO
+// and 9 merged 2026-08-12): permanent — ordinary
+// buttons, no touch mode, no flag, no detection. LEFT TO
 // RIGHT (architect 2026-09-29, for the right-handed tablet: the most-used
 // buttons at the bottom right):
 //
@@ -2119,7 +2115,7 @@ struct TransportRowDef {
 // after Toggle Inherit, Add to Selection closing the group behind it. It is an
 // act, wears no lamp, and SINCE 2026-10-14 CARRIES THE COPY AS ITS SHIFT TWIN
 // (architect: "it's a marker action and the marker row is the bottom row"):
-// its shift-click and long press are Ctrl+Shift+J, Copy Resolved Value, whose
+// its long press is Ctrl+Shift+J, Copy Resolved Value, whose
 // icon-row button left that day. It greys where the jump and the copy both
 // refuse (the twin rule at its enabled arm) and in the `h` view; neither lock
 // greys it, neither act authoring anything.
@@ -2822,7 +2818,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // 2026-10-26 ~11:30, "the same shadow for the tab/git/etc text"), on
         // the clock's baseline.
         // Never greyed: it is no button (Ctrl+Tab, Switch Tab and the walk's
-        // ctrl-click switch the tab). A tab switch damages the lane
+        // barrel press switch the tab). A tab switch damages the lane
         // (GuiActiveViews' switch, the state cell's owner).
         // IN THE `h` VIEW THE NAME'S RUN ENDS IN THE WALK LINE'S OWN
         // SEPARATOR, "Tab A | " (architect 2026-10-24: the name ran into the
@@ -3371,7 +3367,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // IT PUBLISHES WHAT IT DREW: each card's rect, and their union,
 // into AppState::Notifications (the owner-tag doctrine at
 // ModalDialogGeometry — published geometry may only SELECT; the press claim,
-// the cursor map and the hover walk read this and then ask the live stack).
+// and the hover walk read this and then ask the live stack).
 // THE CARDS ARE CLIPPED TO THE ROOM and PUBLISHED CLIPPED TO IT: a stack tall
 // enough to reach the bottom row is the contrived case nothing caters for,
 // and clipping is what keeps it from painting over that row or claiming a
@@ -4496,7 +4492,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
 // trim_endcap_rect inside the renderer — the chain's ONE run: the trim hits
 // (hit_test_trim_endcap / point_in_trim_bridge_span, both reached through
-// route_trim_bar_press and the cursor map) read what this pass PUBLISHES
+// route_trim_bar_press) read what this pass PUBLISHES
 // (AppState::trim_bar_hit, below) rather than deriving it a second time, so
 // paint == hit by publication (architect 2026-09-24) — IN EVERY STATE since
 // 2026-08-18, the `h` history view's display-only diff-span substitution

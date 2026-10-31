@@ -74,7 +74,7 @@
 // File open, because Quit should still be enabled — everything else like what
 // we do with history ... Leave that for the player, the picker and the AV
 // stats"; the File menu that ruling kept live retired with the menu row
-// 2026-10-21, Quit Android's Back and Ctrl+Q): every icon-row button —
+// 2026-10-21, Quit being Android's Back): every icon-row button —
 // the view pairs' four included — greys through redesign_button_enabled's
 // first arm (each content's opener key excepted, its own closer:
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
@@ -97,9 +97,9 @@
 // panel's owners are modes that are not editors (the record is at
 // onscreen_keyboard::stands). Unlike the keyboard the panel holds
 // VARIABLE-LENGTH content and
-// SCROLLS when a listing outgrows the band — the wheel on plastic, the
-// band's own drag on glass, and the keyboard's row walk keeping the focused
-// row visible. No header row, no columns, no scrollbar: the offset is the
+// SCROLLS when a listing outgrows the band — the band's own drag, and the
+// highlight buttons' row walk keeping the focused row visible. No header
+// row, no columns, no scrollbar: the offset is the
 // whole scroll state, and an over-long listing simply scrolls. A LISTING
 // OPENS WITH ITS SEATED ROW CENTERED in the band, as close to center as the
 // listing's ends allow (scroll_row_centered, architect 2026-10-26); every
@@ -338,7 +338,7 @@ inline int max_scroll_px(const AppState& a) {
 }
 
 // THE ONE CLAMP of the scroll offset onto [0, max_scroll_px]. Every writer
-// (the wheel, the drag, the row walk, the listing rebuild) calls it after its
+// (the drag, the row walk, the listing rebuild) calls it after its
 // write, so a listing that shrank under a standing offset lands honestly.
 inline void clamp_scroll(AppState& a) {
     a.folder_overlay.scroll_px =

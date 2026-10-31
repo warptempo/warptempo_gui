@@ -139,15 +139,11 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // THE MODEL (2026-08-28, revised 2026-08-29): the listing is navigated THE
 // REGULAR WAY and A CLICK ACTIVATES — a click or tap on a folder row ENTERS
 // it, on a wav row PLAYS IT FROM ITS START. GOING UP IS NOT A ROW since
-// 2026-09-01: it is the modal row's Up button, with Backspace as its key on
-// plastic (the `..` row stood at the top of every non-root listing until
-// then). The click's act rides
+// 2026-09-01: it is the modal row's Up button. The click's act rides
 // the motionless LIFT (the press still arms, the same press being the band's
-// possible scroll drag) and the highlight moves onto the row first; Enter is
-// the keyboard's own click on the highlight and Up/Down walk the band without
-// opening anything — and, for the tablet's lack of arrow keys, the row's
-// Highlight Next / Highlight Previous buttons (architect 2026-10-10) are the
-// same walk, move_highlight(+1 / -1), on glass. THE PLAY BUTTON READS THE HIGHLIGHT FIRST AND THE
+// possible scroll drag) and the highlight moves onto the row first; the
+// row's Highlight Next / Highlight Previous buttons (architect 2026-10-10)
+// walk the band without opening anything, move_highlight(+1 / -1). THE PLAY BUTTON READS THE HIGHLIGHT FIRST AND THE
 // TRANSPORT SECOND (architect 2026-08-31, narrowing 2026-08-29's "it never
 // reads the highlight, in any state" — the table is at play_button_act). THE
 // TRANSPORT'S ITEM is separate from the highlight: it keeps playing while the
@@ -371,9 +367,9 @@ struct GuiRenderPlayer {
     // toggle the icon row's Play renders button shares with it; the load
     // road's success; the root's delete leaving no folder
     // (delete_batch_folders, architect 2026-10-01); and THE CLOSE ROAD — GuiPrompt::request_close, which
-    // takes the mode down at its head, so Ctrl+Q AND the platform's close
-    // (Back; main.cpp's set_on_close, the same road with no key behind it)
-    // both leave the ordinary window standing before the unsaved-work
+    // takes the mode down at its head, so the platform's close
+    // (Back; main.cpp's set_on_close)
+    // leaves the ordinary window standing before the unsaved-work
     // question is asked, and a Cancel answers over no player.
     void close();
 
@@ -520,8 +516,8 @@ struct GuiRenderPlayer {
     // head unit's Stop — went with it, the last of them becoming the
     // pause-then-home composition at on_media_command's own arm.)
     //
-    // THE ITEM FOLDER'S ENDS (2026-08-28, Shift+Home / Shift+End since
-    // 2026-08-31 and the two skip buttons' shift-click or long press): the
+    // THE ITEM FOLDER'S ENDS (2026-08-28, the two skip buttons' long press
+    // since 2026-08-31): the
     // first / last wav of `item_folder`, played from its start on the play road
     // — never a wrap, and a SILENT refusal with no item AND on an item already
     // at that end (both went silent on 2026-08-31, the end's own first and the
@@ -584,8 +580,8 @@ struct GuiRenderPlayer {
     //   no-op, nothing looping, and the button greys on that same wall
     //   (render_player_next_track_actionable).
     //
-    // THE SHIFTED TWINS ARE THEIR OTHER HALF (Shift+Home / Shift+End and the
-    // buttons' shift-click or long press): the ITEM folder's first and last
+    // THE SHIFTED TWINS ARE THEIR OTHER HALF (the buttons' long press): the
+    // ITEM folder's first and last
     // wav in every transport state, silent with no item, as they have been
     // since 2026-08-31.
     //

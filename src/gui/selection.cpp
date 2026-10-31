@@ -114,7 +114,7 @@ void Selection::repair_last_selected() {
     // selected index, or to none. In P + target view that
     // can change the overlay subject (a stale reset -> the largest remaining
     // selected reset, or -> none), and this runs without a reliable enclosing
-    // waveform repaint — bare Return/KpEnter routes here and, in P view, returns
+    // waveform repaint — bare Return routes here and, in P view, returns
     // before the warp-only editor with no waveform damage, and `c`'s recenter
     // can be a no-op at an already-centered rest — so own the overlay repaint
     // here like every other focus-writing mutator. When reached from

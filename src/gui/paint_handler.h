@@ -1010,7 +1010,7 @@ private:
     // row 1, painted after the flag editor's box — above every lane and the
     // keyboard slot, below the pointer-transient tooltip and above the modal (the order is on_redraw's step 13). It
     // PUBLISHES each card's rect (AppState::Notifications::painted)
-    // for the press claim, the cursor map and the hover walk, and runs on
+    // for the press claim and the hover walk, and runs on
     // every frame for the floating surfaces' own reason: a skipped run would
     // strand a stale publication. Model and ruling at notifications.h.
     void paint_notifications(cairo_t* cr);

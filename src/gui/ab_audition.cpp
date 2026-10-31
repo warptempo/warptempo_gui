@@ -132,7 +132,7 @@ void GuiAbAudition::start() {
     // and Shift+Space ends it, exactly as bare Space already does through the
     // same body — and the Play button, which wears STOP for the act's whole
     // duration (redesign_button_glyph_swapped reads this same `phase !=
-    // Idle`), now AGREES WITH ITS FACE on its shift-click and long press too.
+    // Idle`), AGREES WITH ITS FACE on its long press too.
     // `phase` is the act's one running bit in BOTH halves, so this test covers
     // a standing rest as it covers a live play and needs no second term.
     //
@@ -193,8 +193,8 @@ void GuiAbAudition::start() {
     // the act at its next launch).
     // AND THE GATE SAYS SO, ONCE, FOR EITHER TAB (architect 2026-08-30): the
     // act is one act over a pair, so which half of the pair could not play is
-    // not the answer — that it cannot run is. The Play button's shift-click
-    // and long press reach this same body, so the one card answers every
+    // not the answer — that it cannot run is. The Play button's long press
+    // reaches this same body, so the one card answers every
     // road. (The sentence deliberately does not name the target preview: in
     // target view the readiness gate is the preview's, and a Space pressed
     // for itself already says that in its own words.)

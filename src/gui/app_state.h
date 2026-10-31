@@ -827,8 +827,8 @@ struct UndoHistory {
 // ENTRY, the hold-beat region hold on the NAVIGATION SURFACE — the WHOLE
 // waveform and nothing else (architect 2026-08-12, the eighth glass ruling,
 // PAN-PRIMARY: the plain drag is the pan, so the sweep is the deliberate act
-// and takes the secondary form; the desk's shift+drag went with the mouse,
-// 2026-10-30). The hold's begin does its press-time work (deselect-all,
+// and takes the secondary form, its one road since 2026-10-30). The hold's
+// begin does its press-time work (deselect-all,
 // playhead placement with the play's stop — it never SELECTS a marker) and
 // arms this drag; motion past the shared press-becomes-drag threshold
 // (drag_moved_threshold_px()) writes the trim from the press frame to the pointer
@@ -1209,15 +1209,14 @@ struct TrimDragState {
 };
 
 // (Viewport::apply_strip_drag_zoom, the chokepoint the zoom-strip family was
-// named for, is driven by the touch pinch and the one-finger ctrl zoom since
-// the mouse's nav drag closed, architect 2026-10-30.)
+// named for, is driven by the touch pinch and the one-finger ctrl zoom,
+// architect 2026-10-30.)
 
 // THE PLAIN PRESS ON THE NAVIGATION SURFACE — a PENDING CLICK (architect
 // 2026-08-12, the eighth glass ruling, PAN-PRIMARY: pan is the most common
 // gesture, so it takes the primary drag — on glass the touch layer's
 // single-finger pan, which a waveform contact past the slop becomes before
-// the pointer road sees it; the mouse that dragged this pending into a
-// grab-pan is closed, architect 2026-10-30). The
+// the pointer road sees it, architect 2026-10-30). The
 // NAVIGATION SURFACE is the WHOLE waveform — BOTH HALVES since 2026-08-13, in
 // every view — AND NOTHING ELSE since 2026-09-25 (architect: the RULER and the
 // MARKER lane's empty stretches, the surface's lane members since 2026-08-12,
@@ -1255,9 +1254,9 @@ struct TrimDragState {
 //     under any live pointer gesture (this pending included) and under any
 //     touch contact, so no autopager can slide the song beneath a held
 //     column between the press and the release that converts it (main.cpp);
-//   * CROSSING the threshold ends the click and BEGINS NOTHING (2026-10-30:
-//     the grab-pan and the ctrl zoom it carried were the mouse's, closed with
-//     it): `moved` marks that the release runs no act, and the held button
+//   * CROSSING the threshold ends the click and BEGINS NOTHING (architect
+//     2026-10-30: on glass the pan is the touch layer's, before this road):
+//     `moved` marks that the release runs no act, and the held button
 //     stays this pending's until the release — but for the head drag, whose
 //     every motion past the slop places the playhead.
 // THE ONE-FINGER ZOOM'S LEVEL RULE, nav_drag_zoom_level (input_pointer.cpp),
@@ -1729,7 +1728,7 @@ enum class RedesignButton {
     // Ctrl+Tab radios on Cool Edit's Organizer strip under the band,
     // 2026-10-18 — LEFT WITH THE STRIP, architect 2026-10-22, the simple
     // layout: the active tab's name stands in row 8 right of the clock, and
-    // the switch is Ctrl+Tab, Switch Tab and the walk's ctrl-click. Their
+    // the switch is Ctrl+Tab, Switch Tab and the walk's barrel press. Their
     // record is git history.)
     // THE BACKGROUND SOUND is IconNoise, the band's third run's last since
     // 2026-10-28 (its entry below, after the Score key).
@@ -1808,10 +1807,10 @@ enum class RedesignButton {
     // (GuiInputHandler::open_project_picker, the one owner whose body carries
     // every gate; the File menu's Open Project row, the same chord, went with the
     // menu row 2026-10-21). ITS
-    // SHIFT TWIN IS REVERT (architect 2026-10-07): the shift-click and
-    // the long press dispatch Ctrl+Alt+O, the one translated twin on the
+    // SHIFT TWIN IS REVERT (architect 2026-10-07): the long press
+    // dispatches Ctrl+Alt+O, the one translated twin on the
     // roster (the lift's chord build, finish_chrome_press_release, states the
-    // exception; the key keeps its unshifted spelling, is_revert_project_key).
+    // exception; the chord keeps its unshifted spelling, is_revert_project_key).
     // OPEN AND REVERT KEEP THIS ONE POINTER
     // ROAD since the menu row's removal (2026-10-21; until then the two
     // commands with both a menu row and an icon-row road, the architect's
@@ -1886,14 +1885,14 @@ enum class RedesignButton {
     // used to be, including the position in the toolbar, and then add the
     // Shift version, which instead of going 2x goes 4x") — THE ZOOM STEP:
     // bare `=` and bare `-`, ONE LEVEL deeper or shallower (×2, the map's
-    // own step), their SHIFT-CLICK AND LONG PRESS Shift+= and Shift+-, TWO
+    // own step), their LONG PRESS Shift+= and Shift+-, TWO
     // LEVELS (×4; is_zoom_step_key and the step sizes, gui_input.h), each
     // ABOUT THE VIEWPORT'S CENTRE (Viewport::zoom_step) and saturating at the
     // map's live bounds — Zoom In at the floor, Zoom Out at the fit. THEY
     // SEAT BEFORE ZOOM TO FIT, Zoom In leading the group and the band's
     // second run, in the order they stood in 2026-09-22 to 2026-09-25. Zoom
-    // stays on every surface beside them (the Ctrl+drag on the waveform, the
-    // two-finger pinch, the S Pen's button-held drag), and the step is a zoom
+    // stays on every surface beside them (the two-finger pinch, the S Pen's
+    // barrel-held drag), and the step is a zoom
     // like those in every effect: it puts the camera hold out and drops Zoom
     // to Fit's recall where it moves the level (the rule at the act). NEITHER
     // REPEATS: the long press is the shift, START / END's shape. Both are
@@ -1908,7 +1907,7 @@ enum class RedesignButton {
     // ZOOM TO FIT, legend FIT (architect 2026-10-24; FULL ZOOM OUT, legend
     // ZOOM 0, from 2026-08-12, the grand relayout's roster commit, until
     // then): bare `0`, whose second press restores the view the first left.
-    // ITS SHIFT-CLICK AND LONG PRESS ARE SHIFT+0, FRAME THE TRIM — the trim
+    // ITS LONG PRESS IS SHIFT+0, FRAME THE TRIM — the trim
     // bar's double-click exactly (run_span_framing_command) — and ITS
     // CTRL+SHIFT PRESS (on the glass the S Pen's barrel held through the long
     // press) CTRL+SHIFT+0, RESET TRIM, since 2026-10-24 (Shift+0 reset the
@@ -2119,7 +2118,7 @@ enum class RedesignButton {
     // question over the whole store — no selection term, the act having none.
     // THE TWIN RULE DECIDES WHICH KIND THE FACE ASKS: the plain act needs one
     // marker in the piece with a term, the shifted one needs two on a marker,
-    // so the weaker condition is the face's and a shift-click over a piece
+    // so the weaker condition is the face's and a long press over a piece
     // where nothing carries two terms reaches the chord, which CARDS.
     //
     // NO LAMP (an act, not a mode), no repeat (a flatten repeats onto
@@ -2473,23 +2472,20 @@ enum class RedesignButton {
     // THE FOUR ARROWS REPEAT WHILE HELD (architect 2026-08-16), the row's one
     // hold gesture: the first fire a hold beat after the press, then the
     // platform's key-repeat rate (key_repeat_period_ms), so a held arrow BUTTON walks at exactly
-    // the speed a held arrow KEY does. His reasoning is recorded at the arrows'
+    // the speed a held on-screen key does. His reasoning is recorded at the arrows'
     // rows in kToolbarChords (input_pointer.cpp), which owns the `repeats`
     // column; the burst's state and its whole edge inventory are at
     // AppState::ChromePress.
     //
-    // UP / DOWN ADMIT BOTH MODIFIERS since 2026-08-31 (architect, THE
-    // STEP LADDER): a CTRL-click steps THREE units and a SHIFT-click TEN on
-    // the addressed cell's own unit (shift the long stride since 2026-09-21).
-    // They are one of the two-modifier rule's two shapes (the walk, which
-    // admits the pair, is the other — redesign_button_ctrl_shift_admits), the
-    // two admissions being two RUNGS OF ONE LADDER rather than two acts, the
-    // pair refused, so their single second tooltip line names both. A HELD MODIFIED PRESS REPEATS ITS OWN
-    // STEP (the burst carries the arm's modifiers), while the SHIFT LONG PRESS
-    // cannot reach them — a held repeat outranks the long-press shift, the
-    // principle at ToolbarChord::repeats (input_pointer.cpp) — so the shift
-    // rung is PLASTIC-ONLY and the ctrl rung's one glass road is the S Pen's
-    // side button (the Ctrl bit, platform_android.cpp's on_motion_event).
+    // UP / DOWN ADMIT THE CTRL ALONE (architect 2026-10-30; the barrel's
+    // step since 2026-08-31): the S Pen's barrel button held through the press
+    // (the Ctrl bit, platform_android.cpp's on_motion_event) steps THREE units
+    // on the addressed cell's own unit, and their second tooltip line names
+    // it. A HELD BARREL PRESS REPEATS ITS OWN STEP (the burst carries the
+    // arm's modifiers), while the SHIFT LONG PRESS cannot reach them — a held
+    // repeat outranks the long-press shift, the principle at
+    // ToolbarChord::repeats (input_pointer.cpp) — which is why they admit no
+    // shift.
     // LEFT / RIGHT ADMIT NEITHER since
     // 2026-09-21 (the horizontal ladder retired on every column): their one
     // bare step is the active column's unit — a painted column on W and M, a
@@ -2497,11 +2493,9 @@ enum class RedesignButton {
     // plain press and the held button walks hops.
     //
     // THE PLAY BUTTON ADMITS SHIFT (architect 2026-08-26): its twin is
-    // Shift+Space, THE A/B AUDITION, so a shift-click or a long press runs the
-    // four-play sequence the key runs (redesign_button_shift_admits owns the
-    // membership; the act is GuiAbAudition, ab_audition.h). Here the long
-    // press IS wanted on glass — the sequence exists for the touch panel's
-    // workflow as much as the desk's.
+    // Shift+Space, THE A/B AUDITION, so a long press runs the
+    // four-play sequence (redesign_button_shift_admits owns the
+    // membership; the act is GuiAbAudition, ab_audition.h).
     // ROW 8'S CLOCK IS ITS SECOND RECT (architect 2026-10-27): a press on
     // the clock's field is a press on this key, its tooltip this key's
     // (RedesignButtonFace::field holds the rule).
@@ -2535,18 +2529,15 @@ enum class RedesignButton {
     // label definition's references carried with it, 2026-10-29. The membership is
     // redesign_button_shift_admits' alone, never a count restated here. Its
     // own twin is SHIFT+S, THE PHASE-RESET DROP FROM THE WARP COLUMN, so a
-    // shift-click or a LONG PRESS switches to the P column in the standing
+    // LONG PRESS switches to the P column in the standing
     // audio view (S+W to S+P, T+W to T+P — architect 2026-10-12) and drops
     // the lead-in reset there — bare `s`'s own act with the column switch in
     // front of it (drop_phase_reset_crossing, input_handler.cpp; the
     // membership is redesign_button_shift_admits below, and the tooltip's
-    // second line is bound to it by the static_assert). The long press is
-    // WANTED here for the play button's reason: a phase reset dropped without
-    // leaving the warp column is a glass workflow as much as a desk one, and
-    // the panel has no shift key. THE LOCK STILL REFUSES IT — the button is
-    // one of the marker verbs this arm greys on a read-only tab, and a
-    // greyed button consumes a shift press with its plain one, so the face and both chords
-    // agree with no second edit.
+    // second line is bound to it by the static_assert). THE LOCK STILL
+    // REFUSES IT — the button is one of the marker verbs this arm greys on a
+    // read-only tab, and a greyed button consumes a long press with its plain
+    // one, so the face and both chords agree with no second edit.
     //
     // THEIR GATES ARE THE BUTTONS' OWN, NOT THE ROW'S: the `h` view GREYS all
     // four through the derived partition, so does the READ-ONLY LOCK, the
@@ -2580,7 +2571,7 @@ enum class RedesignButton {
     // ITS SHIFT TWIN IS COPY RESOLVED VALUE (architect 2026-10-14: "we give
     // that cmd to Ctrl+Shift+J so we piggyback the Jump to Defining Marker
     // button/gesture … it's a marker action and the marker row is the bottom
-    // row"): the shift-click and the long press dispatch CTRL+SHIFT+J, which
+    // row"): the long press dispatches CTRL+SHIFT+J, which
     // copies the FOCUSED marker's resolved value to the system clipboard
     // (copy_focused_marker_value) — Toggle Inherit's shape, a ctrl row whose
     // shifted press is a different act (redesign_button_shift_admits). WHY THE
@@ -2746,11 +2737,11 @@ enum class RedesignButton {
     // Previous marker and Next marker, two buttons over two chords since
     // 2026-08-15; the dedicated Previous Marker beside it again since
     // 2026-09-29 took nothing from it): its plain
-    // press is bare Tab, the next marker, and its shift-click and long press
-    // are Shift+Tab, the previous one (redesign_button_shift_admits, whose
+    // press is bare Tab, the next marker, and its long press
+    // is Shift+Tab, the previous one (redesign_button_shift_admits, whose
     // static_assert binds the tooltip's second line to the admission). IT
     // ADMITS CTRL AND THE PAIR (architect 2026-09-26): a modified press
-    // spells the button's own key under those modifiers, so its ctrl-click is
+    // spells the button's own key under those modifiers, so its barrel press is
     // Ctrl+Tab, the other tab, and its ctrl-shift press Ctrl+Shift+Tab, the
     // paired march (redesign_button_ctrl_admits /
     // redesign_button_ctrl_shift_admits) — on glass the S Pen's side button
@@ -2768,8 +2759,7 @@ enum class RedesignButton {
     // (WALK BOTH TABS, the group's third button on Ctrl+Shift+Tab, stood here
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
     // shift-admission rule: the march is Switch Tab's shifted press and, since
-    // this button admits ctrl, its own ctrl-shift press. The key is untouched
-    // in every state.)
+    // this button admits ctrl, its own ctrl-shift press.)
     //
     // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
     // the reason is mechanical rather than a preference: EVERY double-click
@@ -2791,8 +2781,8 @@ enum class RedesignButton {
     // viewport-class group where it stood beside Zoom to Fit from the
     // 2026-08-12 grand relayout. The id keeps its Icon* name, a roster id
     // naming the button and not the lane. Nothing but the seat moved: same
-    // chord, glyph, act, tooltip ("Center on Focus (C)", "Center on Playhead
-    // (C)" with nothing focused) and face. It NEVER GREYS because `c` always
+    // chord, glyph, act, tooltip ("Center on Focus", "Center on Playhead"
+    // with nothing focused) and face. It NEVER GREYS because `c` always
     // frames; it admits no modifier and does not repeat; it is LIVE in the
     // `h` view, `c` being that mode's own vocabulary. Its act arms the hold
     // posture (AppState::camera_hold).
@@ -2801,10 +2791,9 @@ enum class RedesignButton {
     // 2026-10-18 and the nudge-and-play group's first since: CTRL+TAB, the
     // one-shot other-tab act, its table row carrying the ctrl, wearing
     // SwitchTab's two windows in both tabs (2026-10-18). It ADMITS SHIFT and
-    // nothing else: the shift-click
-    // and the long press OR the shift into the row's ctrl and dispatch
-    // CTRL+SHIFT+TAB, the paired march (so the tab switch has three pointer
-    // roads: the walk's ctrl-click and this button). Not a radio: the
+    // nothing else: the long press ORs the shift into the row's ctrl and
+    // dispatches CTRL+SHIFT+TAB, the paired march (so the tab switch has two
+    // pointer roads: the walk's barrel press and this button). Not a radio: the
     // chord toggles the tab, so there is no lit half — the active tab's name
     // in row 8 says which tab is active (2026-10-22; the tab strip's lit tab
     // 2026-10-18 to then). It NEVER GREYS: Ctrl+Tab acts in
@@ -3130,18 +3119,19 @@ inline int double_click_slack_px() {
 // modal buttons to admit a modified press — and THE NOTIFICATION CARD'S LIFT
 // since 2026-10-01 (finish_notification_release, the same file, against the
 // same ChromePress stamp on its Card arm), where the shifted act is
-// dismissing EVERY card ("shift click or long press dismisses all"), and
+// dismissing EVERY card, and
 // THE TRIM BAR'S CTRL BOUND SET since 2026-10-27 (pending_click_writes_begin,
-// the same file, against PendingClickAct::press_ms), where a Ctrl press held
-// past the delay writes the END as a Ctrl+Shift press does — read at the
+// the same file, against PendingClickAct::press_ms), where a barrel press held
+// past the delay writes the END — read at the
 // motionless lift and at the grab gate's crossing alike, the two places that
-// act runs. Same hold, same term, same reason: glass has no shift key.
+// act runs. Same hold, same term, same reason: the pointer carries no shift
+// (architect 2026-10-30).
 //
 // IT READS THE HOLD DELAY (kHoldDelayMs, gui_input.h — 300 ms, architect
 // 2026-09-29), the value both deliberate holds in the product cross their
 // threshold on; that constant's declaration names its two holds and the
 // beat's (kHoldBeatMs) carries the cadences' inventory, including why the
-// keyboard's delay and the held buttons' first repeat stay on the fixed beat
+// platform key repeat's delay and the held buttons' first repeat stay on the fixed beat
 // rather than on the hold delay.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
@@ -3736,7 +3726,7 @@ inline TrimState full_trim_window(int64_t total_frames) {
 // applier's clamp_viewport_start — with no centring. It superseded the
 // 2026-08-18 return LEVEL (the second press ran `c` at the stamped level).
 // ONE OWNER: GuiInputHandler::run_overview_command (input_handler.cpp) is the
-// one writer and the one reader; no `c`, no wheel, drag,
+// one writer and the one reader; no `c`, drag,
 // touch gesture or load path writes it.
 //
 // THE DOMAIN TAG. The live fields carry target frames in target view, and the
@@ -3909,8 +3899,8 @@ inline constexpr int kAuditionPairGapMs   = 150;
 inline constexpr int kAuditionSwitchGapMs = 650;
 
 // THE A/B AUDITION SEQUENCE (architect 2026-08-26) — the state of the ONE
-// transport act that spans several plays. Shift+Space (and the play button's
-// shift-click or long press, which dispatch the same chord) switches to the
+// transport act that spans several plays. Shift+Space (the play button's
+// long press) switches to the
 // OTHER tab, plays kAuditionMs from that tab's resting playhead TWICE with a
 // kAuditionPairGapMs rest between them, switches back to the tab it started
 // on, rests kAuditionSwitchGapMs, and plays the same span from THAT tab's
@@ -4702,9 +4692,9 @@ struct AppState {
 
     // THE GUI TRANSPORT PRESS COUNT — session-only, never persisted, bumped
     // by EVERY deliberate press of a project-transport launch road at the
-    // glass or the plastic, AT THE ROAD'S HEAD and so AHEAD OF ITS REFUSALS:
+    // glass, AT THE ROAD'S HEAD and so AHEAD OF ITS REFUSALS:
     // bare Space's arm and Shift+Space's arm in on_key (input_handler.cpp;
-    // the Play button's lift and its shift press arrive there as those
+    // the Play button's lift and its long press arrive there as those
     // chords) and the waveform scrub's one act, scrub_act_at
     // (input_pointer.cpp). Its one reader is the car's PENDING PLAY
     // (GuiCarTransport::PendingCarPlay, car_transport.h, where the rule is
@@ -4900,7 +4890,7 @@ struct AppState {
     // select two events — the diff consists of two events, and I need to
     // select them both if I want to revert"). That view has its own
     // mode-local multi-selection over its own press router, whose one other
-    // road onto it is the CTRL-click (the S Pen's barrel), so the lamp is the
+    // road onto it is the CTRL press (the S Pen's barrel), so the lamp is the
     // fingertip's road to a two-flag selection for bare `v` to revert. So
     // bare `k` is on history_mode_key_blocked's allowlist, the
     // button lights through the derived partition with no arm of its own, and
@@ -4971,8 +4961,8 @@ struct AppState {
     // plain press on a Lower or Upper cell is a plain press however this lamp
     // stands and the cells stay the pointer's. What the pair buys is the
     // pointer road onto a multi-marker selection under a lit lamp: several
-    // markers ctrl-clicked on their flag boxes, and on glass this lamp is the
-    // fingertip's road to ctrl, the S Pen's side button the other.
+    // markers barrel-pressed on their flag boxes, and on glass this lamp is
+    // the fingertip's road to ctrl, the S Pen's side button the other.
     // The other direction stopped being a refusal on
     // 2026-09-12 — bare `i`'s ON edge calls selection_consumed and puts this
     // lamp out, the mode being a use case that ends the selecting — so the
@@ -5342,11 +5332,11 @@ struct AppState {
     // the live caret stream began on (text_editor::State::session, the
     // process-wide id every `enter` takes), or 0 for no stream. It is an
     // IDENTITY and not a gesture flag — nothing gates on its truthiness but
-    // the two bodies that compare it — and it exists because the caret phase
-    // is deliberately outside any_pointer_gesture_active: a physical
-    // keyboard can commit the editor the finger is dragging in and open a
-    // different one while that finger is still down, and without an identity
-    // the stream's remaining frames would seat THAT editor's caret. The
+    // the two bodies that compare it — and it holds the stream to its own
+    // editor, the caret phase being deliberately outside
+    // any_pointer_gesture_active (no road opens another editor under a
+    // finger still down since the hardware keyboard closed, architect
+    // 2026-10-30; the trio's contract says so). The
     // begin stamps it, the update and the end refuse a session that is not
     // it, and the end clears it on every road — the lift and the hard ends
     // alike, since the platform fires caret_end unconditionally once the
@@ -5935,8 +5925,8 @@ struct AppState {
         // press — the roster tooltip's `line2` over this surface (2026-08-28).
         // Its producers are the player's shift-admitting buttons
         // (render_player_button_shift_hint) and the score viewer's two skips
-        // (score_viewer_button_shift_hint), and it says the same thing their
-        // shift-click and their long press do; the painter shows a second
+        // (score_viewer_button_shift_hint), and it says what their long
+        // press does; the painter shows a second
         // line exactly when this is non-empty.
         std::string tooltip2;
     };
@@ -6132,8 +6122,8 @@ struct AppState {
     // time. Neither surface can arm under the other — the veil swallows every
     // press outside the dialog's own field and buttons, with no exception
     // since 2026-08-13 (on_button_press, input_pointer.cpp), so no roster
-    // press lands while a dialog stands — but a dialog raised MID-HOLD by a
-    // key chord stands over a roster arm taken before it, which is why the
+    // press lands while a dialog stands — but a dialog raised MID-HOLD
+    // stands over a roster arm taken before it, which is why the
     // chrome lift re-asks the veil (finish_chrome_press_release). Since
     // 2026-08-13 the roster's
     // arm carries the SAME act-at-release lifetime as this one — this arm was
@@ -6272,8 +6262,8 @@ struct AppState {
     //   arm_modal_dialog_press, at the press; the rule is at
     //   modal_dialog_pressed). A press's assignment REPLACES whatever focus
     //   the dialog had, of either strength.
-    //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — Tab, its two
-    //   reverse spellings, Left, Right — so its one producer is
+    //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — the on-screen
+    //   keyboard's bare Tab (architect 2026-10-30) — so its one producer is
     //   route_modal_dialog_focus_key's walk, which sets it on every landing.
     //   There is NO route back down to passive except a new passive
     //   assignment.
@@ -6286,10 +6276,8 @@ struct AppState {
     // Enter when a button has focus pushes down the button. It doesn't
     // automatically commit the action... we move the playhead when the user
     // lifts up the mouse key, so we should do that here as well"). It is the
-    // POINTER ARM'S TWIN and deliberately a separate index: the two can stand
-    // together (a pointer hold while the keyboard presses the
-    // focused button), they die on different edges, and one field would have
-    // to encode both.
+    // POINTER ARM'S TWIN and deliberately a separate index: they die on
+    // different edges, and one field would have to encode both.
     //
     // THE ACT IS AT THE PHYSICAL RELEASE, which is the only reason this state
     // exists: the press paints the button down and dispatches nothing, and the
@@ -6669,14 +6657,13 @@ struct AppState {
     //     leave of the tool — and with every hard leave, which forgets the
     //     button; an arrival from a spent button onto another is an ordinary
     //     arrival, the reshow judged as for any. THE OTHER HARD ENDS SPEND
-    //     NOTHING (a release, a wheel, a menu or a modal opening, the
+    //     NOTHING (a release, a modal opening, the
     //     activation flip): they leave `spent` as they found it, and what
     //     takes the button away after them — a walk finding no owner under a
     //     raised modal, a dead dialog owner, the lamp's dark edge, a leave —
     //     clears it as the leave it is.
     //   * A HARD END hides at once and clears `reshow`: any pointer press or
-    //     release (a click hides the hint), any wheel (Windows 95 had none;
-    //     the dismissal stands), a
+    //     release (a click hides the hint), a
     //     modal opening with no press to carry it (the platform's close), the
     //     pointer leaving the window or the pen's hover leaving the plane
     //     (both leaving the tool), the window's activation flipping either way
@@ -6689,14 +6676,11 @@ struct AppState {
     //     button starts nothing: only a motion past the slop does, and on a
     //     spent button not even that (above).
     //   * NO TOOLTIP UNDER A HELD PRESS: while the logical
-    //     primary button is held (the physical left, bare `e`'s synthesized
-    //     hold, a finger or the pen in contact) no wait starts, the anchor
-    //     following the pointer, so a finger never raises a hint; after the
-    //     release the button the press landed on is spent, and a button the
-    //     held pointer slid onto (an arrival, so not spent) waits for a
-    //     motion past the slop. The other two buttons bind nothing in this
-    //     product and are not terms (a press of either still spends, as a
-    //     click of any button hides Windows' hint).
+    //     primary button is held (a finger or the pen in contact) no wait
+    //     starts, the anchor following the pointer, so a finger never raises
+    //     a hint; after the release the button the press landed on is spent,
+    //     and a button the held pointer slid onto (an arrival, so not spent)
+    //     waits for a motion past the slop.
     //   * A TRANSLATED CONTACT'S LIFT IS NOT THE POINTER GOING AWAY (architect
     //     2026-09-29): the touch translation ends a contact with a release and
     //     then a leave (TouchLift), and that leave keeps the wait's button,
@@ -6709,7 +6693,7 @@ struct AppState {
     //     Every other leave forgets them. THE S PEN'S LIFT OFF AN EMPTY GLASS
     //     takes no leave at all (architect 2026-10-07): the pen stays the
     //     pointer at its lift and the translation ends with a motion there,
-    //     which is that same mouse after its click, spent button and all.
+    //     which is Windows' mouse after its click, spent button and all.
     // No timer object and no callback: GuiInputHandler::tick_tooltip reads the
     // two deadlines on the run loop's existing tick and damages once per edge;
     // note_tooltip_hover is the one writer of the wait.
@@ -6748,9 +6732,8 @@ struct AppState {
     // event delivered it.
     //
     // AN OWNER NAMES ONE OF TWO SURFACES since 2026-08-13, when the modal's
-    // buttons took tooltips too (architect, retiring the bracketed
-    // accelerators: "we just do a tooltip just like the regular icon
-    // tooltips"). THE ENCODING, stated once here and nowhere restated:
+    // buttons took tooltips too (architect: "we just do a tooltip just like
+    // the regular icon tooltips"). THE ENCODING, stated once here and nowhere restated:
     // `surface` says WHICH index space `index` lives in — Roster indexes the
     // redesign roster (redesign_buttons / RedesignButton), Dialog indexes
     // AppState::modal_dialog.buttons — and `index` < 0 means NO OWNER in
@@ -7366,7 +7349,8 @@ struct AppState {
         HistoryDiffHalf focus_half = HistoryDiffHalf::Removed;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
         // `flags` beside the focus and the REVERT ACT's subject. It is the live
-        // selection model re-expressed mode-locally — ctrl-click toggles one
+        // selection model re-expressed mode-locally — the ctrl click (the
+        // barrel, or the add-to-selection lamp) toggles one
         // flag's membership, and a PLAIN click clears it, the focus alone then being a
         // selection of one — and it touches the store selection no more than the
         // focus does.
@@ -7377,7 +7361,7 @@ struct AppState {
         // frame order (the list is frame-sorted) and the paint reads membership
         // in one lookup.
         //
-        // EVERY SETTER: the two MODIFIED diff-flag clicks, ON THE LANE'S FLAG
+        // EVERY SETTER: the MODIFIED (ctrl) diff-flag click, ON THE LANE'S FLAG
         // BOXES and nowhere else (select_history_diff_flags_modified,
         // input_pointer.cpp — the stems are pointer-inert in every context
         // since 2026-08-12, and waveform/lane modifiers off a flag are gesture
@@ -7974,7 +7958,8 @@ struct AppState {
     // BpmForm). It is the
     // FOURTH ModalDialogOwner (Picker), never an
     // editor: no buffer, no caret, no keyboard-modal gate — the router
-    // GuiInputHandler::route_picker_key is its whole plastic vocabulary, and
+    // GuiInputHandler::route_picker_key is its whole chord vocabulary (the
+    // opener's alone, architect 2026-10-30), and
     // ITS ROW IS ONE BUTTON (architect 2026-08-29: a click on a row
     // opens it, so the row needs no OK — "if I'm using the picker my hand
     // stays on the right", and the one button sits flush right), its word
@@ -9252,11 +9237,10 @@ struct RenderPlayerHintState {
 };
 
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
-// the player's own act vocabulary: the word is the act's, the key the chord
-// the player's key router bound to exactly that act (route_render_player_key,
-// input_key_dispatch.cpp — which binds the opener's chord alone since
-// 2026-10-30, so the hints' key words are the tooltip pass's to respell).
-// EVERY WORD IS THE ACT THE PRESS WILL
+// the player's own act vocabulary: the word is the act's name alone, no key
+// named (architect 2026-10-30, redesign_button_tooltip's head — the player's
+// buttons dispatch their acts directly, and its key router binds the
+// opener's chord alone). EVERY WORD IS THE ACT THE PRESS WILL
 // RUN IN THE CURRENT STATE (architect 2026-09-01, the truthful-tooltips
 // ruling — "tooltips never lie: they update dynamically with the act"), read
 // off RenderPlayerHintState above, whose every bit is a predicate an act or a
@@ -9264,19 +9248,16 @@ struct RenderPlayerHintState {
 //
 // THE CASE IS THE ROSTER'S TOO, and for the same reason: these are glyph
 // buttons, so a hint that NAMES THE ACT is that control's name and is Title
-// Case ("Go to Start (Home)", "Open Folder (Space)", "Toggle Repeat One
-// (R)"), while a hint that answers with a STATE instead is a description and
-// stays sentence case — the row carries none since 2026-09-04, its one
-// example having been the right skip's "At the end (End)", which went with
-// the seek it described. The two-class rule's owner is the
+// Case ("Go to Start", "Open Folder", "Toggle Repeat One"), while a hint
+// that answers with a STATE instead is a description and stays sentence case
+// — the row carries none. The two-class rule's owner is the
 // capitalization block (paint_handler.cpp) and this comment states only its
-// own class; the row read sentence case throughout until 2026-09-03's
-// evening.
+// own class.
 inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
                                              const RenderPlayerHintState& s) {
     switch (act) {
         // THE TWO SKIPS ARE THE ROSTER'S OWN TRANSPORT PAIR (architect
-        // 2026-08-31): the same acts on the same keys as the main window's
+        // 2026-08-31): the same acts as the main window's
         // two skip buttons, so they wear the roster's own two labels where
         // the act is the same. THE PREVIOUS-TRACK WINDOW RENAMES HOME since
         // 2026-09-01: inside the item's first kPlayerPreviousThresholdMs the
@@ -9295,51 +9276,38 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // 2026-09-12 — and the walk went back to the car with the ruling that
         // made the car an interface of its own.
         case AppState::PlayerButtonAct::Home:
-            return s.home_previous ? "Previous File (Home)"
-                                   : "Go to Start (Home)";
+            return s.home_previous ? "Previous File" : "Go to Start";
         // PLAY/PAUSE NAMES ITS FACE, and the face is render_player_play_face's
         // (the glyph's own owner): a folder under the band OPENS, another wav
         // PLAYS, and on the item's row or an empty band a live transport
         // PAUSES and any other PLAYS.
         case AppState::PlayerButtonAct::PlayPause:
             switch (s.play_face) {
-                case PlayerPlayFace::Pause:      return "Pause (Space)";
-                case PlayerPlayFace::OpenFolder: return "Open Folder (Space)";
+                case PlayerPlayFace::Pause:      return "Pause";
+                case PlayerPlayFace::OpenFolder: return "Open Folder";
                 case PlayerPlayFace::Play:       break;
             }
-            return "Play (Space)";
+            return "Play";
         case AppState::PlayerButtonAct::NextTrack:
-            return "Next Track (End)";
-        // A BARE LETTER IS UPPERCASE and a named key wears Qt's own name —
-        // the product's one accelerator-spelling convention, stated once at
-        // spell_chord's head (gui_input.h) and followed here (architect
-        // 2026-09-01; this row read "(r)" and the close row "(Escape)" while
-        // the tooltips ran their own lowercase rule).
+            return "Next Track";
         // THE LAMP'S TEXT NAMES THE TOGGLE (architect 2026-09-01, the class
         // ruling at redesign_button_tooltip's head: "use toggle-based wording
         // so it's always accurate") — constant in both states and true in
-        // both, the lamp saying which way the next press goes. It read
-        // "Repeat one (R)" from 2026-08-28.
+        // both, the lamp saying which way the next press goes.
         case AppState::PlayerButtonAct::RepeatOne:
-            return "Toggle Repeat One (R)";
-        // THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01): the key is
-        // Backspace, which the router has bound to this act since the mode
-        // was built, so the button advertises the chord it answers exactly as
-        // every other row of this table does.
+            return "Toggle Repeat One";
+        // THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01), up a folder.
         // THE HIGHLIGHT PAIR (architect 2026-10-10): the band walk's two
-        // keys, named for the act — the highlight alone moves.
+        // buttons, named for the act — the highlight alone moves.
         case AppState::PlayerButtonAct::HighlightDown:
-            return "Highlight Next (Down)";
+            return "Highlight Next";
         case AppState::PlayerButtonAct::HighlightUp:
-            return "Highlight Previous (Up)";
-        case AppState::PlayerButtonAct::Up:          return "Up a Folder (Backspace)";
-        case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place (')";
-        // DELETE (architect 2026-09-29), Load in Place's slot at the root: the
-        // act named over the key the router binds to it, spelled "Del" as
-        // the product spells that key everywhere (spell_key_name, gui_input.h;
-        // Delete Markers' own "(Del)").
-        case AppState::PlayerButtonAct::Delete:      return "Delete Folder (Del)";
-        case AppState::PlayerButtonAct::Close:       return "Close (Esc)";
+            return "Highlight Previous";
+        case AppState::PlayerButtonAct::Up:          return "Up a Folder";
+        case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place";
+        // DELETE (architect 2026-09-29), Load in Place's slot at the root.
+        case AppState::PlayerButtonAct::Delete:      return "Delete Folder";
+        case AppState::PlayerButtonAct::Close:       return "Close";
         case AppState::PlayerButtonAct::None:        break;
     }
     return std::string();
@@ -9347,13 +9315,11 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 
 // THE PLAYER ROW'S SHIFT-ADMITTING BUTTONS (architect 2026-08-28) —
 // redesign_button_shift_admits one surface over, and for the same reason: a
-// button that admits a modified press gets its SHIFT-CLICK on plastic and,
-// through the hold delay (chrome_shift_hold_ms), its LONG PRESS on glass, so
-// the shifted half of
-// the pair is reachable with no keyboard. THE TWO SKIPS AND DELETE ARE THE
-// WHOLE SET — the skips' twins are Shift+Home / Shift+End (2026-08-31, the
-// keys following the plain acts off `,` / `.`), the item folder's FIRST
-// and LAST wav, and Delete's (architect 2026-09-29) is Shift+Delete, EVERY
+// button that admits a modified press gets, through the hold delay
+// (chrome_shift_hold_ms), its LONG PRESS, so the shifted half of
+// the pair is reachable on the glass. THE TWO SKIPS AND DELETE ARE THE
+// WHOLE SET — the skips' twins are the item folder's FIRST
+// and LAST wav (2026-08-31), and Delete's (architect 2026-09-29) is EVERY
 // batch folder at the root — and every other button on the row keeps its
 // plain act however long it is held, exactly as a roster button with no twin
 // does.
@@ -9369,12 +9335,11 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
            act == AppState::PlayerButtonAct::Delete;
 }
 
-// THE MODIFIER LINE, in the roster's own form ("Press Shift for ...", which
+// THE MODIFIER LINE, in the roster's own form ("Hold for ...", which
 // NAMES THE OTHER FUNCTION rather than saying "for more"): non-empty on
 // exactly the buttons player_button_shift_admits names, which the assert below
-// holds. It is the tooltip's own shortcut line, exactly as the roster's is and
-// with the exception framing both carried retired on the same day
-// (2026-09-01): a tooltip that names the modifier reaching its button's second
+// holds. It is the tooltip's own shortcut line, exactly as the roster's is
+// (2026-09-01): a tooltip that names the gesture reaching its button's second
 // act is a tooltip doing its job, not a gesture hint. THE LINE GOES
 // EMPTY WHERE THE SHIFTED PRESS WOULD LAND WHERE THE PLAIN ONE DOES
 // (architect 2026-09-01, the truthful-tooltips ruling; the DESTINATION
@@ -9398,17 +9363,17 @@ inline std::string render_player_button_shift_hint(
     switch (act) {
         case AppState::PlayerButtonAct::Home:
             return s.home_shift_differs
-                       ? "Press Shift for the first file of the playing folder."
+                       ? "Hold for the first file of the playing folder."
                        : std::string();
         case AppState::PlayerButtonAct::NextTrack:
             return s.end_shift_differs
-                       ? "Press Shift for the last file of the playing folder."
+                       ? "Hold for the last file of the playing folder."
                        : std::string();
-        // DELETE'S LINE (architect 2026-09-29) stands only where the shifted
+        // DELETE'S LINE (architect 2026-09-29) stands only where the long
         // press reaches more than the plain one — a root listing of two or
         // more batch folders.
         case AppState::PlayerButtonAct::Delete:
-            return s.delete_all_differs ? "Press Shift to delete all folders."
+            return s.delete_all_differs ? "Hold to delete all folders."
                                         : std::string();
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::RepeatOne:
@@ -9446,12 +9411,10 @@ static_assert(
 
 // THE SCORE VIEWER ROW'S SHIFT-ADMITTING BUTTONS (architect 2026-10-27),
 // player_button_shift_admits one owner over and for its reason: THE TWO
-// SKIPS, whose shift-click on plastic and long press on glass (the hold
-// delay, chrome_shift_hold_ms) skip 10 s for the plain press's 3 s — the
-// keys' Shift+Left / Shift+Right. Every other key on the row keeps its plain
+// SKIPS, whose long press (the hold delay, chrome_shift_hold_ms) skips 10 s
+// for the plain press's 3 s. Every other key on the row keeps its plain
 // act however long it is held. THE SAME THREE READERS as the player's: the
-// press claim (arm_modal_dialog_press: a shift press on a non-admitting key
-// is a consumed nothing), the lift's dispatch (dispatch_modal_dialog_button's
+// press claim (arm_modal_dialog_press), the lift's dispatch (dispatch_modal_dialog_button's
 // score arm) and the modifier line (score_viewer_button_shift_hint,
 // score_viewer.h, whose arms are exactly these).
 inline constexpr bool score_button_shift_admits(AppState::ScoreButtonAct act) {
@@ -9552,15 +9515,15 @@ int render_player_highlight_act_row(const AppState& a);
 //   grey.
 //   THE HINT DOES NOT FORK ON THE DEVICE: render_player_button_hint names the
 //   ACT the press would run and never a reason, so a greyed Play goes on
-//   saying "Play (Space)" — the grey is the message, the roster's own shape
+//   saying "Play" — the grey is the message, the roster's own shape
 //   for a device that is not there.
 //   (STOP had an arm of its own here — the no-item belt and its
 //   already-resting return — and it went with the button on 2026-09-01.)
 //   UP greys AT THE ROOT, which is `tmp/` itself — the act's own wall, read
 //   through the one owner render_player_up_actionable below, so the face and
 //   GuiRenderPlayer::up() cannot disagree about where the wall is. The wall
-//   is SILENT on the key (Backspace at the root is a one-dimensional refusal
-//   already at its state) and the grey is the button's whole message.
+//   is a one-dimensional refusal already at its state, and the grey is the
+//   button's whole message.
 //   LOAD IN PLACE greys on a read-only tab (the lock refuses the load), on
 //   a highlight with no recipe (render_player_highlighted_entry, the act's
 //   own question) and, since 2026-09-01, WHILE A RENDER IS RUNNING —
@@ -10175,10 +10138,8 @@ inline int64_t snap_authored_frame(double frame) {
 // through scroll_drag, exactly as a held upper-half press is. The target-view
 // TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// FOUR CONSUMERS AT FOUR CALL SITES, re-derived 2026-10-30 (the wheel's
-// context and the pointer cursor's live-gesture refusal left with the mouse,
-// and the three overlay key gates in on_key with the hardware keyboard: no key
-// arrives mid-gesture, on_key's drag-modal statement). EACH STATES THE SAME
+// FOUR CONSUMERS AT FOUR CALL SITES, re-derived 2026-10-30 (no key arrives
+// mid-gesture, on_key's drag-modal statement). EACH STATES THE SAME
 // "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
 // two kinds: the TWO INPUT-ROUTE consumers refuse events, and the run loop's
 // TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
@@ -10724,22 +10685,19 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 //
 // TWO FORMS SINCE 2026-09-10, ONE BODY — the verdict is a fact about ONE
 // MARKER, so the INDEX form carries it and the FOCUS form is the group
-// short-circuit over it. Split at the owner because the value drag asked the
-// focus form about the marker UNDER THE POINTER: at the resting hover the
-// press has not selected that flag yet, so an eligible hovered owner could
-// show the Arrow because the FOCUS was a collapsed member, and a collapsed
-// hovered owner could show ns-resize because the focus was eligible — the
-// cursor promising a gesture the crossing would then refuse. Fixing it at the
+// short-circuit over it. Split at the owner because the value drag asks
+// about the marker UNDER THE PRESS, which need not be the focus yet: asking
+// the focus form there would answer for the wrong marker. Fixing it at the
 // caller would have been a second reading of these three tests.
 //
 // FOUR READERS ACROSS THE TWO FORMS, and they are four because the CARD, the
-// GREY, the LINE and the CUE must say the same thing:
+// GREY, the LINE and the DRAG must say the same thing:
 //   * the FOCUS form — GuiWarpMarkersOps::adjust_tempo_cents' singleton arm,
 //     whose refusal this IS (asked ahead of the wall and the coalesce stamp),
 //     and the Up / Down buttons' MODIFIER LINE in the stateful tooltip
-//     overload below, which drops where it answers non-null (the plain, the
-//     shifted and the ctrl press all refuse alike, so "Press Shift for a
-//     10-step, Ctrl for 3." would name three rungs that do nothing different);
+//     overload below, which drops where it answers non-null (the plain and
+//     the barrel press refuse alike, so "Barrel button for a 3-step." would
+//     name a step that does nothing different);
 //   * the INDEX form — tempo_cent_step_direction_actionable's singleton arm,
 //     THE UP / DOWN FACE, asked of the focus it has already range-checked;
 //     and value_drag_target below, the gesture's ONE predicate, which the
@@ -11274,7 +11232,7 @@ const char* iter_bound_step_kind_refusal(const AppState& a);
 // ONE OWNER FOR THE SENTENCE AND THE DIRECTION, because the act and the face
 // must not disagree about either: the dispatch arm cards `refusal` and runs
 // `act` past it, and the Toggle inherit button's face — the chord's one
-// pointer road, through that button's shift-click and long press — greys on
+// pointer road, through that button's long press — greys on
 // the very same answer. Nothing else composes a tie sentence.
 //
 // THE DIRECTION IS THE SELECTION'S, not a second chord: a selection holding
@@ -11871,8 +11829,8 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
 // existed only for the per-tab parked selections, deleted 2026-07-29).
 //
 // THE COMPLETENESS CLAIM, re-derived 2026-07-29 by reading every field of
-// AppState and of the live drag state rather than by inheriting a list (the
-// shift-range anchor, a third, went with the mouse, architect 2026-10-30).
+// AppState and of the live drag state rather than by inheriting a list, and
+// again 2026-10-30.
 // Exactly two kinds of state hold a marker INDEX, and both are covered:
 //   * the LIVE selection — app.selected_markers + app.last_selected_marker, the
 //     product's ONLY selection (nothing parks a copy). Correct without a column
@@ -12628,7 +12586,7 @@ inline bool value_drag_armed(const AppState& a) {
 // OFF on every flag ("we never allow multi-axis dragging; flags move up and
 // down or not at all"). THE PRESS ITSELF IS UNTOUCHED, lit or dark: it still
 // stops playback, selects, lands the playhead and addresses the cell at the
-// press (run_marker_click_act), and ctrl-click acts at the press and arms
+// press (run_marker_click_act), and the barrel press acts at the press and arms
 // nothing, so it cannot become a drag. The posture says
 // WHETHER the gesture is armed; value_drag_target below says ON WHAT, and a
 // press on a non-target — a label ref, a phase reset's payload — is the
@@ -12654,8 +12612,8 @@ inline bool value_drag_armed(const AppState& a) {
 // begin either drag. ON A BOUND CELL the lamp folds nothing, so the plain
 // press arms what this posture arms.
 //
-// ONE READER, re-derived 2026-10-30 (the cursor map's two went with the
-// mouse), asking this and then horizontal_flag_drag_refused: the THRESHOLD
+// ONE READER, re-derived 2026-10-30, asking this and then
+// horizontal_flag_drag_refused: the THRESHOLD
 // CROSSING (input_pointer.cpp's pending-marker-press arm, which begins the
 // value drag or nothing while this is true, and nothing at all where the
 // other is).
@@ -12694,8 +12652,8 @@ inline bool horizontal_flag_drag_refused(const AppState& a) {
 // indexes the ACTIVE column's store (the drag has no other subject) and an
 // out-of-range index answers false through the owners below.
 //
-// ONE READER (the cursor map's two went with the mouse, architect
-// 2026-10-30): the THRESHOLD CROSSING's begin (ValueDragOps::begin), which
+// ONE READER (re-derived 2026-10-30): the THRESHOLD CROSSING's begin
+// (ValueDragOps::begin), which
 // begins the drag only where this is true.
 //
 // THE PAYLOAD ARM IS THE BASE TEMPO OF A TEMPO OWNER, IN EITHER AUDIO VIEW
@@ -13553,7 +13511,7 @@ inline bool history_remote_walk_available(const AppState& a) {
 // with a clone, while the GitHub status reads BEHIND: the publish chord
 // (Ctrl+Shift+S, 2026-10-10) fast-forwards to what the last check fetched
 // (GuiInputHandler::run_history_pull_press), and the Save button wears
-// IconVcsPull and "Pull (Ctrl+Shift+S)". The glyph's one
+// IconVcsPull and "Pull". The glyph's one
 // source (redesign_button_glyph's Save arm) and the pull's admission below.
 inline bool history_save_is_pull(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
@@ -13626,7 +13584,7 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // (a face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight, and it names the act (2026-10-28): Save's
 // fourth glyph (redesign_button_glyph), so the key's legend reads CHECK and
-// its hint "Check GitHub (Ctrl+Shift+S)" on exactly these terms. Read by
+// its hint "Check GitHub" on exactly these terms. Read by
 // Save's face and its glyph; the act answers the same status at its own fork
 // (run_publish_chord), below the no-clone and in-flight refusals this
 // restates.
@@ -13780,10 +13738,7 @@ inline constexpr std::size_t kMaxIterSweepCells = 1000;
 // dispatch that raises them because the SWEEP PLAN's owner is here, and
 // notifications.h, the home for sentences several translation units raise,
 // includes this header rather than the other way round. THEY ARE CARDS AND
-// ONLY CARDS: the first two carried a `Hint` twin until 2026-09-12 — the same
-// sentence plus this roster's accelerator, for the greyed Render button to
-// wear, with a static_assert keeping each pair in step — and both twins went
-// with the reason-and-state tooltip class, so the third never had one. The
+// ONLY CARDS (a tooltip names the act, architect 2026-09-12). The
 // cap's static_assert stays: the sentence spells the number.
 //
 // THE FIRST SENTENCE MEANS "ON THE LIT COLUMN" since 2026-09-10 — the sweep
@@ -13822,17 +13777,14 @@ static_assert(kMaxIterSweepCells == 1000,
 // lit and the bound cells are painted, so "grid iterations is on" would tell
 // the user what they can see.
 //
-// IT IS kTabReadOnlyCard'S SIBLING and shares its readers — the keyboard gate
-// (where the read-only half names the chord instead: that gate drops unbound
+// IT IS kTabReadOnlyCard'S SIBLING and shares its readers — the lock gate
+// (where the read-only half names the act instead: that gate drops unbound
 // chords with bound ones and has to say which it ate, while this one answers a
 // mode the user turned on deliberately), the settings editor's ENGINE-KEY
 // commit arm and the render player's Load in place, the last two through the
-// one composer authoring_lock_card (notifications.h). It was homed HERE rather
-// than beside that sibling because A FACE READ IT — the Toggle Marker Column
-// button's hint was this sentence plus its accelerator — and it STAYS here
-// though no face reads it any more: the refusal-reason tooltips went on
-// 2026-09-12, and moving the literal now would be churn for a constant whose
-// composer (notifications.h) includes this header and not the reverse.
+// one composer authoring_lock_card (notifications.h). It is homed HERE
+// because its composer (notifications.h) includes this header and not the
+// reverse.
 inline constexpr const char* kIterationLockCard =
     "Turn off grid iterations first";
 
@@ -13874,36 +13826,30 @@ inline constexpr const char* kValueDragPhaseResetViewCard =
 // the undo stack at all; they're considered transient by design" — so while
 // grid iterations stands the history is frozen whole): a CARD sentence per
 // direction, one clause, sentence case,
-// raised by the key that refuses (input_handler.cpp's Ctrl+Z arm, ahead of the
-// empty-stack and other-tab terms because the lock is the outermost state).
+// raised by the chord that refuses (input_handler.cpp's Ctrl+Z arm, ahead of
+// the empty-stack and other-tab terms because the lock is the outermost
+// state; its producer is the car's undo / redo, the roster's pair greying on
+// the lock).
 //
 // THEY DO NOT SAY "TURN OFF GRID ITERATIONS FIRST", the sentence every other
 // site under this lock says (kIterationLockCard above): these two
-// name the act, because a user who has just pressed Ctrl+Z is asking about
+// name the act, because a user who has just asked for undo is asking about
 // undo and the answer is what it would take to undo. One card per press, at
 // the outermost site that has the reason.
 //
-// THEY ARE CARDS AND NOTHING ELSE since 2026-09-12: each had a `Hint` twin —
-// the same sentence plus the accelerator, worn by the greyed button — and the
-// architect deleted that whole class of tooltip, a refusal reason being card
-// language ("a tooltip names the act; the grey is the message"). The pair the
-// static_asserts tied together no longer exists to drift.
+// THEY ARE CARDS AND NOTHING ELSE (architect 2026-09-12, a refusal reason
+// being card language: "a tooltip names the act; the grey is the message").
 inline constexpr const char* kIterationLockUndoCard =
     "Turn off grid iterations to undo";
 inline constexpr const char* kIterationLockRedoCard =
     "Turn off grid iterations to redo";
 
-// THE READ-ONLY GATE'S ENGLISH, the tail read_only_chord_card (notifications.h)
-// appends to a spelled chord so that every card the composer builds says the
-// fact in one wording. It is homed HERE rather than beside kTabReadOnlyCard
-// because this header is the one notifications.h includes, not the reverse.
-//
-// (ITS FACE-SIDE TWIN kIterationReadOnlyHint — "I is not available on a
-// read-only tab", worn by the greyed Grid Iterations button from 2026-09-10 —
-// went on 2026-09-12 with the rest of the refusal-reason tooltips. The KEY
-// still cards this sentence through the composer; the greyed face states the
-// act's own name and nothing more.)
-inline constexpr const char* kReadOnlyChordCardSuffix =
+// THE READ-ONLY GATE'S ENGLISH, the tail read_only_act_card (notifications.h)
+// appends to an act's name (architect 2026-10-30: a card never names a key)
+// so that every card the composer builds says the fact in one wording. It is
+// homed HERE rather than beside kTabReadOnlyCard because this header is the
+// one notifications.h includes, not the reverse.
+inline constexpr const char* kReadOnlyActCardSuffix =
     " is not available on a read-only tab";
 
 enum class IterationSweepRefusal {
@@ -15083,7 +15029,7 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::OpenProject:
             return true;
         // THE WALK, UNDER THE TWIN RULE (architect 2026-09-26): its
-        // ctrl-click is Ctrl+Tab, the same tab switch, whose arm
+        // barrel press is Ctrl+Tab, the same tab switch, whose arm
         // (handle_tab_switch_keys) has no refusal in any state the roster is
         // live in — the iteration lock admits it, the `h` view admits it, a
         // locked tab admits it. A button with a live modified twin greys
@@ -15429,7 +15375,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // AND IT ASKS THE CHORD THE STATE ADMITS (2026-09-19, the twin rule):
         // under a lit lamp Ctrl+N is dead and CTRL+SHIFT+N — the TIE, this
-        // button's shift-click and long press — is the live half, so the face
+        // button's long press — is the live half, so the face
         // reads the tie's own verdict there and the plain half's predicate
         // everywhere else. Exactly one of the two is reachable in each state,
         // which is why this is a fork and not an OR: a lit button whose plain
@@ -15549,7 +15495,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // ASKS THE CLEAR KIND under the twin rule: Ctrl+F acts wherever a
         // marker IN THE PIECE carries one deviation term and Ctrl+Shift+F
         // wherever one carries two, so the weaker condition is the face's and
-        // a shift-click over a piece where nothing carries two reaches
+        // a long press over a piece where nothing carries two reaches
         // the chord, which cards. NEITHER KIND HAS A SELECTION TERM since the
         // act went universal (2026-09-19), so this face never blinks with a
         // selecting pass.
@@ -15891,9 +15837,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // transport session (the press stops it), a standing selection (the
         // act clears it; the mode's diff-flag focus inside the `h` view), or
         // a landing that differs from the resting cursor — and the face asks
-        // it of the BARE form AND the WHOLE-PIECE form (the shift-click and
-        // the long press, Shift+Home / Shift+End since 2026-10-24 — the ctrl
-        // forms until the buttons left), greying only when both answer no
+        // it of the BARE form AND the WHOLE-PIECE form (the long press,
+        // Shift+Home / Shift+End since 2026-10-24), greying only when both answer no
         // (the twin rule at the head of this body). A Home / End press is not
         // a pure jump — either form also STOPS A LIVE AUDITION and CLEARS THE
         // MARKER SELECTION even when the jump moves nothing
@@ -16276,8 +16221,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // plain save in both views since, so the face above reads that act's
         // predicates (history_checkpoint_actionable and its two siblings).
         //
-        // THE SHIFT TWIN (2026-10-11, Ctrl+Shift+S on the shift-click and
-        // the long press) ADDS NO TERM — A RECORDED DEPARTURE FROM THE TWIN
+        // THE SHIFT TWIN (2026-10-11, Ctrl+Shift+S on the long press) ADDS
+        // NO TERM — A RECORDED DEPARTURE FROM THE TWIN
         // RULE: in the view the twin is the plain act itself; outside it the
         // publish chord's verdict needs the head delta, which only the
         // press's own transient bind measures (run_publish_chord), so the
@@ -16771,7 +16716,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 }
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
-// a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
+// a pair the dispatch already spells, so the long press (the lift's carried
+// shift) reaches the twin".
 // The membership is the predicate below and is deliberately not restated as a
 // count anywhere (it was "FIVE" from 2026-08-26 until 2026-08-31, by which
 // time three more had joined without the word moving). Each member is here for
@@ -16784,8 +16730,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (handle_history_mode_key, input_key_dispatch.cpp, owns both shapes; the arrows
 // dispatch them through the one press body like every other button), and
 // since 2026-08-26 THE PLAY BUTTON, whose twin is Shift+Space, THE A/B
-// AUDITION (GuiAbAudition, ab_audition.h): a shift-click or a long press on
-// the transport's play/stop button runs the four-play sequence the key runs,
+// AUDITION (GuiAbAudition, ab_audition.h): a long press on
+// the transport's play/stop button runs the four-play sequence the chord runs,
 // the button still acting at the lift and dispatching the chord through
 // on_key like every other roster member. The admission is what gives glass
 // the act at all — the panel has no Shift and no Space.
@@ -16799,7 +16745,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // song; the maximizer itself is Ctrl+Shift+0 since 2026-10-24, Zoom to Fit's
 // ctrl+shift press — Shift+0, its shift press, from 2026-09-22 until then.)
 //
-// THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
+// THIS STAYS THE STRUCTURAL FACT — "the dispatch spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
 // (Ctrl+Alt+Shift+R is a consumed no-op there, refused inside the render route),
 // but the shift press still routes to it and is still swallowed by the one
@@ -16814,8 +16760,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (the ctrl set below shares that line and that assert) — and,
 // since 2026-08-13, THE SHIFT LONG PRESS, whose membership is this same
 // predicate rather than a fourth list: a press held past chrome_shift_hold_ms()
-// reaches the twin exactly where a shift press does, which is what gives a
-// keyboardless glass rig the shifted half of each pair (the hold's contract is
+// reaches the twin, which is what gives the glass the shifted half of each
+// pair (the hold's contract is
 // at that reader, the arm's stamp at AppState::ChromePress::press_ms).
 // (ICONPASTE LEFT THIS SET ON 2026-08-20 WITH ITS BUTTON. It admitted shift
 // for Ctrl+Alt+Shift+P, the paste-state chord, which the Edit menu carried
@@ -16828,33 +16774,21 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // letter does.)
 // (JUMP TO DEFINING MARKER JOINED 2026-10-14 with Ctrl+Shift+J, THE COPY
 // (architect: "we give that cmd to Ctrl+Shift+J so we piggyback the Jump to
-// Defining Marker button/gesture"): its row is Ctrl+J, and its shift-click
-// and long press dispatch the row's key under both modifiers, copying the
+// Defining Marker button/gesture"): its row is Ctrl+J, and its long press
+// dispatches the row's key under both modifiers, copying the
 // focused marker's resolved value — Toggle Inherit's shape below, a ctrl row
 // whose shifted press is a different act. THE TWIN RULE DECIDES THE FACE AND
 // IT ORS: both halves are reachable in the same states, so the button greys
 // only where the jump and the copy both refuse (redesign_button_enabled).)
-// (THE TWO VERTICAL ARROWS JOINED 2026-08-31 with the STEP LADDER —
-// Shift+Up / Shift+Down = a TEN-unit step on the addressed cell since
-// 2026-09-21, a three until the architect made shift the long stride — and
-// they ALSO ADMIT CTRL, the three-unit step (redesign_button_ctrl_admits
-// below, whose two-modifier walk names them the step ladder; the walk is the
-// set's other member admitting both). Their one second tooltip line names
-// both. LEFT AND
-// RIGHT JOINED WITH THEM AND LEFT 2026-09-21, when the architect retired the
-// horizontal ladder on every column (placement is graphical, the tempo
-// numeric): Shift+Left / Shift+Right bind nothing, so a shift-click there is
-// the consumed no-op any non-admitting button's is.
-//
-// AND THEIR LONG PRESS IS THEIR REPEAT, NEVER THEIR SHIFT — the standing
-// principle that A HELD REPEAT OUTRANKS THE LONG-PRESS SHIFT, stated once at
-// its authoritative home, ToolbarChord::repeats (input_pointer.cpp), and
-// read at the lift's hold-as-shift term off that same column. The long
-// press therefore reaches neither rung of the vertical ladder: the shift
-// rung is plastic-only, recorded and not designed around, and the ctrl
-// rung's one glass road is the S Pen's side button. The admission stays
-// because the SHIFT-CLICK is real and because the tooltip's second line is
-// bound to this predicate.)
+// (THE FOUR ARROWS ARE NOT MEMBERS (architect 2026-10-30): A HELD REPEAT
+// OUTRANKS THE LONG-PRESS SHIFT — the standing principle, stated once at its
+// authoritative home, ToolbarChord::repeats (input_pointer.cpp), and read at
+// the lift's hold-as-shift term off that same column — so a repeating row's
+// long press is its repeat and no shift reaches it. The vertical arrows'
+// one modifier is the barrel's ctrl, the three-unit step
+// (redesign_button_ctrl_admits below); Left / Right admit none, the
+// horizontal ladder retired on every column (placement is graphical, the
+// tempo numeric).)
 // (Play Renders admitted shift from 2026-09-03 to 2026-09-30, its shifted
 // press and its long press opening the AV Sync Stats panel; the admission
 // went with the panel.)
@@ -16871,9 +16805,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // markers become ONE AXIS of the grid iteration sweep, every cell applying
 // the same delta to each of them. It NEEDS NO BUTTON OF ITS OWN — the tie is
 // the inherit toggle's own letter and its own link glyph, so the act rides
-// this button's shift-click and its long press, the drop's and the copy's
+// this button's long press, the drop's and the copy's
 // rule once more. THE TWIN RULE DECIDES THE FACE AND IT FORKS RATHER THAN
-// ORING: under a lit lamp Ctrl+N is refused at the keyboard gate and the tie
+// ORING: under a lit lamp Ctrl+N is refused at the lock gate and the tie
 // is the live half, outside it the tie refuses and the plain act is, so the
 // button's arm asks whichever chord the state admits and the other half's
 // press cards (redesign_button_enabled).)
@@ -16889,9 +16823,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (FULL ZOOM OUT JOINED 2026-09-22 with Shift+0, RESET TRIM (architect: `0`
 // is the whole song, full zoom out and, shifted, full trim out). The act had
 // ridden the Show trim region button's shift press until that button's
-// deletion the same day left it keyboard-only — the hole the scissors'
-// deletion had opened once before, a keyboardless panel able to set a trim
-// window and never get back out of it — and the drop's rule puts it on the
+// deletion the same day — and the drop's rule puts it on the
 // button whose bare form is `0`. The long press is the tablet's road. SINCE
 // 2026-10-24 THE BUTTON IS ZOOM TO FIT and its shifted press is SHIFT+0,
 // FRAME THE TRIM (the trim bar's double-click), the reset moving to its
@@ -16899,7 +16831,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (ZOOM IN AND ZOOM OUT JOINED 2026-10-27 with SHIFT+= AND SHIFT+-, THE
 // TWO-LEVEL STEP (architect: "add the Shift version, which instead of going
 // 2x goes 4x"): their rows are bare `=` and bare `-`, and their
-// shift-click and long press dispatch the row's key under shift with no
+// long press dispatches the row's key under shift with no
 // translation — the drop's rule once more, a shift-enabled gesture whose bare
 // form has a button. Neither repeats, so the long press reaches the shift.
 // THE TWIN RULE DECIDES THE FACE AND IT ORS: each key greys only where
@@ -16924,34 +16856,33 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // about the modified press on a button, and says nothing about which chords
 // may also own a button.)
 // (OPEN PROJECT JOINED 2026-10-07 with REVERT (architect): the
-// shift-click and the long press reopen the current project from disk, the
+// long press reopens the current project from disk, the
 // act's own unsaved-work question guarding it, which is why a twin may carry
 // it. IT IS THE ONE TWIN THAT TRANSLATES: the button's row is Ctrl+O and its
 // shifted lift dispatches CTRL+ALT+O, Revert's chord, rather than
-// Ctrl+Shift+O, which binds nothing — the keyboard keeps Revert's unshifted
-// spelling (is_revert_project_key) and the icon's twin is the icon road's
-// alone. The exception is stated at the lift's chord build
+// Ctrl+Shift+O, which binds nothing — Revert's chord keeps its unshifted
+// spelling (is_revert_project_key). The exception is stated at the lift's chord build
 // (finish_chrome_press_release, input_pointer.cpp).)
 // (SAVE JOINED 2026-10-11 with Ctrl+Shift+S, THE PUBLISH CHORD (architect):
-// its row is Ctrl+S and its shift-click and long press dispatch the row's
+// its row is Ctrl+S and its long press dispatches the row's
 // key under both modifiers, Ctrl+Shift+S — Save and Commit, or the pull
 // while GitHub is ahead (run_publish_chord, by the GitHub status) — Redo's
 // spelling with the shift carried rather than tabled, and no
 // translation. IN THE `h` VIEW its plain lift is already that chord
-// (save_button_publishes), so there the shifted press and the long press run
+// (save_button_publishes), so there the long press runs
 // the same act as the tap and the tooltip carries no second line. ITS FACE
 // STAYS THE DIRTY MARK OUTSIDE THE VIEW (plain_save_actionable): the twin's
 // own verdict there needs the head delta of a transient bind the press
 // alone runs, so the twin term is not composed and a clean piece's greyed
-// Save refuses its long press too — the publish is then the key's, or the
-// `h` view's Save.)
+// Save refuses its long press too — the publish is then the `h` view's
+// Save.)
 // (DELETE AND DISABLE JOINED 2026-10-29 with SHIFT+DELETE and CTRL+SHIFT+D
 // (architect: "for symmetry, give it a shift form"): the plain acts touch the
 // selected markers alone, and the shifted twins carry every reference to
 // every selected label definition with it — the delete removing them, the
 // toggle writing them to the definition's new state. Delete's row is bare
-// Delete and Disable's Ctrl+D, so the shift-click and the long press
-// dispatch the row's key with the shift added (Toggle Inherit's shape on the
+// Delete and Disable's Ctrl+D, so the long press
+// dispatches the row's key with the shift added (Toggle Inherit's shape on the
 // ctrl row); neither repeats, so the long press reaches the shift. THE FACE
 // CANNOT FORK PER CHORD: both buttons stay lit on the plain verb's empty-
 // selection predicate (the twin rule — the plain condition is the weaker),
@@ -16977,9 +16908,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconJumpToDefiningMarker ||
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::TransportWalk ||
-           b == RedesignButton::TransportSwitchTab ||
-           b == RedesignButton::TransportUp ||
-           b == RedesignButton::TransportDown;
+           b == RedesignButton::TransportSwitchTab;
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two
@@ -16992,16 +16921,15 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // jump, Ctrl+Home / Ctrl+End, from 2026-09-26 until they left the row
 // 2026-10-12, admit no ctrl since their return of 2026-10-24: the
 // whole-piece jump is their SHIFT press, Shift+Home / Shift+End.) The VERTICAL ARROWS'
-// ctrl-click (2026-08-31)
-// is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
-// shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
-// WALK'S ctrl-click (architect 2026-09-26) dispatches Ctrl+Tab, the one-shot
-// tab switch, and its ctrl-shift press Ctrl+Shift+Tab, the paired march
-// (redesign_button_ctrl_shift_admits below).
+// barrel press is the step's THREE-unit form beside the bare one (the
+// arrows' one modifier since 2026-10-30) and dispatches Ctrl+Up / Ctrl+Down.
+// THE WALK'S barrel press (architect 2026-09-26) dispatches Ctrl+Tab, the
+// one-shot tab switch, and its barrel-held long press Ctrl+Shift+Tab, the
+// paired march (redesign_button_ctrl_shift_admits below).
 //
 // A MODIFIED PRESS SPELLS ITS BUTTON'S OWN KEY UNDER THOSE MODIFIERS, AND
 // TRANSLATES NOTHING (architect 2026-09-26) — the roster's grammar, the same
-// shape a shift-click dispatches a shifted chord. The walk's key is Tab, so
+// shape the long press dispatches a shifted chord. The walk's key is Tab, so
 // Ctrl+Tab and Ctrl+Shift+Tab are its modified forms whatever else carries
 // them. The two TABS keep their roads (the other tab's press is Ctrl+Tab, its
 // shifted press the march; PCManFM-Qt's tabs), so those two chords have TWO
@@ -17013,7 +16941,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 //
 // ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (architect 2026-09-25; the
 // Ctrl bit's sampling is platform_android.cpp's on_motion_event): held on a
-// chrome button it carries the ctrl bit into the press like a held Ctrl key,
+// chrome button it carries the ctrl bit into the press,
 // so the arrows' three-step and the walk's tab
 // switch are reachable on the tablet with the pen. NO CTRL ADMISSION IS BUILT
 // FOR GLASS ALONE: the pen reaches the roster's own admissions and nothing
@@ -17077,22 +17005,18 @@ inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
     return ctrl ? redesign_button_ctrl_shift_admits(b)
                 : redesign_button_shift_admits(b);
 }
-// THE TWO-MODIFIER RULE, WALKED RATHER THAN LISTED (2026-08-31; restated
-// 2026-09-26 and 2026-09-29): a hand list of names would stay true of every
+// THE TWO-MODIFIER RULE, WALKED RATHER THAN LISTED (architect 2026-10-30, the
+// vertical arrows' shift gone): a hand list of names would stay true of every
 // name listed and go false of the roster the day a button joined both sets. A
 // button carries ONE second tooltip line, and a button that admits BOTH
-// single modifiers is one of two shapes whose single line can name all its
-// forms honestly: THE STEP LADDER (the vertical arrows, whose two admissions
-// are two RUNGS OF ONE LADDER, the pair refused — Ctrl+Shift+Up binds
-// nothing), or A BUTTON THAT ADMITS THE PAIR (the walk, whose line names its
-// key's three modified forms, each spelled on the key). Left / Right admit
-// neither since 2026-09-21, the horizontal ladder retired. The walk states the
-// pair's implication too: a pair admission with NEITHER single admission
-// fails here — the pair is always one single admission with the other
-// modifier beside it (ctrl for the walk and Copy Phase Resets, shift for Zoom
-// to Fit, 2026-10-24), which is what lets the glass reach it: the barrel's
-// carried ctrl with the long press's shift.
-constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
+// single modifiers ADMITS THE PAIR too (the walk, whose line names its key's
+// three modified forms: the hold, the barrel, and the barrel through the
+// hold). The walk states the pair's implication as well: a pair admission
+// with NEITHER single admission fails here — the pair is always one single
+// admission with the other modifier beside it (ctrl for the walk and Copy
+// Phase Resets, shift for Zoom to Fit), which is what lets the glass reach
+// it: the barrel's carried ctrl with the long press's shift.
+constexpr bool redesign_button_dual_modifier_admits_pair() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
         const bool both = redesign_button_ctrl_admits(b) &&
@@ -17101,17 +17025,13 @@ constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
         if (pair && !redesign_button_ctrl_admits(b) &&
             !redesign_button_shift_admits(b))
             return false;
-        if (!both) continue;
-        const bool ladder = b == RedesignButton::TransportUp ||
-                            b == RedesignButton::TransportDown;
-        if (ladder == pair) return false;
+        if (both && !pair) return false;
     }
     return true;
 }
-static_assert(redesign_button_dual_modifier_is_ladder_or_pair(),
-    "a button admitting both single modifiers is the step ladder (Up / Down, "
-    "the pair refused) or admits the pair (the walk), and a pair admission "
-    "implies one single admission");
+static_assert(redesign_button_dual_modifier_admits_pair(),
+    "a button admitting both single modifiers admits the pair (the walk), "
+    "and a pair admission implies one single admission");
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportRight) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportLeft) &&
@@ -17183,8 +17103,8 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
     "whole piece's ends, Shift+Home / Shift+End; nothing binds under Ctrl "
     "(architect 2026-10-24)");
 
-// THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
-// button. It sits with the roster (rather than with the chord table in
+// THE HOVER TOOLTIP'S TEXT — the act's name and, where a twin exists, the
+// glass gesture that reaches it, one row per button. It sits with the roster (rather than with the chord table in
 // input_pointer.cpp) because BOTH the painter and the pointer read it. EVERY
 // ROSTER BUTTON CARRIES ONE since the menu row's removal (2026-10-21): its
 // icon or label is not self-describing. (The menu row carried none by rule,
@@ -17194,13 +17114,18 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // THE TOOLTIPS OWN THE VOCABULARY: the names here are the product's names for
 // its acts, and no manual restates them.
 //
-// A ROSTER TOOLTIP NAMES ITS ACT AND ITS KEY (architect 2026-10-27, "keep"):
-// line 1 is the name plus the bound chord in the accelerator spelling below
-// ("Save (Ctrl+S)", "Play (Space)"), line 2 at most the modifier line. The
-// render player's hints (render_player_button_hint) and the score viewer's
-// (score_viewer_button_hint) follow the same form. The tooltip is the one
-// text that names a key: a card or a label never names a key to press, and
-// the dialog buttons' tooltips are their word alone (PromptState's block).
+// A ROSTER TOOLTIP NAMES ITS ACT (architect 2026-10-30): line 1 is the act's
+// name alone ("Save", "Play"), and line 2, where a modified press does
+// something else, names the GLASS GESTURE that reaches it and the act it
+// runs — "Hold to …" for the long press (the lift's shift), "Barrel button
+// to …" for the S Pen's barrel button held through the press (the ctrl),
+// "Hold with the barrel to …" for the two together (ctrl+shift); a line
+// naming two twins keeps both in the same words, joined by a semicolon. NO
+// KEY IS NAMED ANYWHERE IN THE PRODUCT'S TEXT: the hardware keyboard is
+// closed, so a chord is the dispatch's internal key and never the user's
+// road. The render player's hints (render_player_button_hint) and the score
+// viewer's (score_viewer_button_hint) follow the same form, and the dialog
+// buttons' tooltips are their word alone (PromptState's block).
 //
 // `line2` is THE MODIFIER LINE and is non-null on exactly the buttons that
 // admit a modified press — the shift-admitting set, and since 2026-08-24 the
@@ -17245,7 +17170,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // THE CASE IS THE PRODUCT'S TWO-CLASS RULE, NOT THIS TABLE'S (the
 // capitalization block, paint_handler.cpp, owns it and this comment states
 // only its own class): LINE 1 IS ALWAYS A NAME and so always TITLE CASE
-// ("Drop Marker (S)", "Toggle Add to Selection (K)"), and LINE 2 IS ALWAYS A
+// ("Drop Marker", "Toggle Add to Selection"), and LINE 2 IS ALWAYS A
 // SENTENCE. It read sentence case throughout from 2026-09-01 until the evening
 // of 2026-09-03, when the rule that explains kdenlive's own strings landed;
 // the sentence-case LINE 1 that rule admitted — a state or a reason — has had
@@ -17253,7 +17178,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 //
 // A LAMP BUTTON'S TEXT NAMES THE TOGGLE (architect, the
 // same day: "use toggle-based wording so it's always accurate"): "Toggle
-// <Mode> (<key>)", constant in both states and true in both — the lamp says
+// <Mode>", constant in both states and true in both — the lamp says
 // which way the next press goes, and the text never has to swap between a
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
 // every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
@@ -17266,26 +17191,6 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // whose press HIDES it, the lie
 // the ruling retired; a RADIO's halves each name their own value, lit or
 // not, a press on the lit half popping it to the other (2026-10-23 night).
-//
-// THE ACCELERATOR'S SPELLING IS THE PRODUCT'S ONE CONVENTION, stated once at
-// the speller (spell_chord's head, gui_input.h) and followed here: kdenlive's,
-// which is Qt's — a BARE LETTER UPPERCASE ("(T)", "(P)", "(H)"), a CHORD with
-// its spelled-out modifiers in the fixed order ("(Ctrl+S)", "(Ctrl+Alt+R)",
-// "(Ctrl+Shift+Z)"), a NAMED KEY by Qt's own English name ("(Esc)", "(Del)",
-// "(Home)", "(Space)", "(Tab)") save the one the product departs on, "(Enter)"
-// for Qt's Return (architect 2026-10-29 night), and punctuation naming the CAP
-// rather than the stamped symbol ("(,)", "(.)", "(')", "(`)").
-// This table writes literals rather than calling the speller — it advertises a
-// BOUND chord in advance where the speller names a press that just happened —
-// but it writes the same spelling, and the shift ambiguity a capital carries is
-// the accepted cost recorded there.
-//
-// The succession in one sentence: the table wrote a bare letter LOWERCASE from
-// 2026-08-09 ("the key AS TYPED"; the eight row-4 letters had been capitals
-// before that) under a rule that was this surface's and not the product's, and
-// went UPPERCASE on 2026-09-01 with the rest of the product on the architect's
-// kdenlive key-cap reasoning — the design reference writes a bare "T" the way
-// it writes "Ctrl+S", so an exception here was one convention too many.
 struct RedesignTooltipText {
     const char* line1;   // nullptr -> no tooltip at all
     const char* line2;   // nullptr -> the one-line form
@@ -17293,26 +17198,26 @@ struct RedesignTooltipText {
 inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     switch (b) {
         // (Row 1, the menu row, carried no tooltips; it went 2026-10-21.)
-        // OPEN PROJECT (architect 2026-10-07): the act's name and its chord
-        // as every row writes them; its second line names the shift twin,
-        // Revert, by the retired File menu row's own word.
+        // OPEN PROJECT (architect 2026-10-07): the act's name as every row
+        // writes it; its second line names the long press's twin, Revert, by
+        // the retired File menu row's own word.
         case RedesignButton::OpenProject:
-            return {"Open Project (Ctrl+O)", "Press Shift to revert."};
-        // SAVE (architect 2026-10-11): its second line names the shift twin,
-        // the publish chord, IN THE ROSTER'S OWN FORM, as Open's "Press
-        // Shift to revert." — "save and commit" here; the stateful overload
+            return {"Open Project", "Hold to revert."};
+        // SAVE (architect 2026-10-11): its second line names the long press's
+        // twin, the publish chord, IN THE ROSTER'S OWN FORM, as Open's "Hold
+        // to revert." — "save and commit" here; the stateful overload
         // drops the line in the `h` view, where the plain press is already
         // that chord.
         case RedesignButton::Save:
-            return {"Save (Ctrl+S)", "Press Shift to save and commit."};
-        case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
-        case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
+            return {"Save", "Hold to save and commit."};
+        case RedesignButton::Undo:       return {"Undo", nullptr};
+        case RedesignButton::Redo:       return {"Redo", nullptr};
         // THE MODIFIER LINE NAMES THE OTHER FUNCTION (architect 2026-07-31),
         // not "for more": a hint that does not say what it gets you is not a
         // hint. IT IS THE TOOLTIP'S OWN SHORTCUT LINE and no exception to
         // anything (2026-09-01, retiring the "ONE ruled exception to the
         // no-gesture-hints preference" framing this comment carried): naming
-        // the modifier that reaches a button's own second act is what a
+        // the gesture that reaches a button's own second act is what a
         // tooltip IS — kdenlive's carry their shortcuts — while the
         // no-gesture-hints rule targets PROSE inside a label that tells the
         // user what to press. redesign_button_shift_admits and
@@ -17320,16 +17225,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // not restate it (Paste was named here until its button left with the
         // 2026-08-20 propagate relocation, which is what a restated list
         // costs).
-        case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
-                                                 "Press Shift for miscellaneous render."};
+        case RedesignButton::Render:     return {"Render",
+                                                 "Hold for miscellaneous render."};
         // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
         // category: their axes are the four view selectors' alone now.)
         // ZOOM TO FIT AND CENTER (2026-08-12, the icon row's zoom pair until
         // Center moved to the bottom row's walk group on 2026-09-29 with its
-        // words unchanged); the accelerators are the table's own
-        // convention — a key names its own cap. BOTH ARE STATE-FREE HERE ONLY
+        // words unchanged). BOTH ARE STATE-FREE HERE ONLY
         // (2026-09-01, the
         // overload): Zoom to Fit at the ceiling is the recall, and Center
         // with nothing focused centers on the playhead — each press does
@@ -17337,46 +17241,45 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // 2026-10-24; "Full Zoom Out (0)" until then, the act unchanged —
         // the whole piece, and back to the view it left) CARRIES A SECOND
         // LINE NAMING ITS TWO MODIFIED PRESSES (since 2026-10-24, Jump to
-        // Defining Marker's sentence form, the act and the modifier and not
-        // a key): Shift+0 FRAMES THE TRIM, Ctrl+Shift+0 RESETS IT (Shift+0
-        // reset it from 2026-09-22, the line "Press Shift to reset the
-        // trim."). THE LINE STANDS WHOLE while either form would act (a
+        // Defining Marker's sentence form, the act and the gesture): the long
+        // press (Shift+0) FRAMES THE TRIM, the long press with the barrel
+        // (Ctrl+Shift+0) RESETS IT. THE LINE STANDS WHOLE while either form would act (a
         // multi-form line stands while any of its forms is live, the
         // overload's head) and drops there where neither would (2026-10-25).
         // CENTER CARRIES NONE: it admits no modifier (2026-10-14).
         // ZOOM IN AND ZOOM OUT (architect 2026-10-27, the pair's return
-        // under its 2026-09-22 names and keys): each a NAME and its bare key,
-        // its second line the shift admission's — the two-level step, ×4,
-        // in Zoom to Fit's sentence form. The overload drops the line where
-        // the two sizes land on one level.
+        // under its 2026-09-22 names): each a NAME, its second line the
+        // shift admission's — the two-level step, ×4, in Zoom to Fit's
+        // sentence form. The overload drops the line where the two sizes
+        // land on one level.
         case RedesignButton::IconZoomIn:
-            return {"Zoom In (=)", "Press Shift to zoom in four times."};
+            return {"Zoom In", "Hold to zoom in four times."};
         case RedesignButton::IconZoomOut:
-            return {"Zoom Out (-)", "Press Shift to zoom out four times."};
+            return {"Zoom Out", "Hold to zoom out four times."};
         case RedesignButton::IconZoomFitBest:
-            return {"Zoom to Fit (0)",
-                    "Press Shift to frame the trim, Ctrl+Shift to reset it."};
+            return {"Zoom to Fit",
+                    "Hold to frame the trim; hold with the barrel to reset "
+                    "it."};
         case RedesignButton::IconZoomOriginal:
-            return {"Center on Focus (C)", nullptr};
+            return {"Center on Focus", nullptr};
         // THE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22, renamed
-        // 2026-09-24), one line: the bare backtick toggles (since 2026-09-23)
-        // and has no shifted twin; the name is the toggle's.
+        // 2026-09-24), one line: it has no twin; the name is the toggle's.
         case RedesignButton::IconWaveformMagnification:
-            return {"Toggle Waveform Magnification (`)", nullptr};
-        // THE FOLLOW LAMP (architect 2026-09-23), one line: bare `f` toggles
-        // and has no shifted twin; the name is the toggle's.
+            return {"Toggle Waveform Magnification", nullptr};
+        // THE FOLLOW LAMP (architect 2026-09-23), one line: it has no twin;
+        // the name is the toggle's.
         case RedesignButton::IconFollow:
-            return {"Toggle Follow (F)", nullptr};
-        // THE RESTRICT LAMP (architect 2026-10-29), one line: bare `r`
-        // toggles and has no shifted twin; the name is the toggle's.
+            return {"Toggle Follow", nullptr};
+        // THE RESTRICT LAMP (architect 2026-10-29), one line: it has no
+        // twin; the name is the toggle's.
         case RedesignButton::IconRestrict:
-            return {"Toggle Restrict (R)", nullptr};
+            return {"Toggle Restrict", nullptr};
         // THE TRIM PRESETS (architect 2026-10-28 night), one line: an
         // overlay's opener NAMED, as Settings and Score are — the press under
-        // the standing list being the same key's close — and bare `t`
-        // admits no modifier.
+        // the standing list being the same key's close — and the key admits
+        // no modifier.
         case RedesignButton::IconTrimPresets:
-            return {"Trim Presets (T)", nullptr};
+            return {"Trim Presets", nullptr};
         // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
         // menu), one line each: neither chord has a shifted twin, so neither
         // carries a second line. THESE TWO STRINGS ARE THE VOCABULARY'S OWNER
@@ -17388,101 +17291,82 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // NAME because it opens an overlay (the form is the state, its lit
         // face the overlay openers' rule), while the
         // MODE'S reads "Toggle <Mode>", the lamp rule at this table's head:
-        // "Grid Iterations" alone would lie on the lit face. The accelerators
-        // are bare letters and so uppercase, this table's rule and the
-        // product's since 2026-09-01 — which is the spelling the two deleted
-        // menu rows had carried from the crop since 2026-08-27 — EXCEPT THE
-        // BPM OPENER'S OWN, Ctrl+B since 2026-09-15 (moved off bare `m`, a
-        // Ctrl chord guarding against a stray bare press as Ctrl+D / Ctrl+N
-        // do), spelled the product's Ctrl+ convention.
+        // "Grid Iterations" alone would lie on the lit face.
         case RedesignButton::IconBpm:
-            return {"BPM Iterations (Ctrl+B)", nullptr};
+            return {"BPM Iterations", nullptr};
         case RedesignButton::IconIter:
-            return {"Toggle Grid Iterations (I)", nullptr};
+            return {"Toggle Grid Iterations", nullptr};
         // FLATTEN (2026-09-19), the iteration group's third row and its only
         // TWO-LINE form: the plain
         // act clears every marker's tempo deviations and the shifted
         // twin collapses them into one, so the second line names the act and
-        // the modifier and not a key — this table's rule for second lines,
+        // the gesture — this table's rule for second lines,
         // with the static_assert below keeping the line and the admission one
         // fact. It is a NAME and not a toggle's "Toggle <Mode>", the act
         // completing where its neighbour's lamp stays lit. The words say
         // "deviations" and never "chain": the link metaphor belongs to a pass,
         // whose own button wears the chain-link glyph down on the bottom row.
         case RedesignButton::IconFlatten:
-            return {"Flatten (Ctrl+F)",
-                    "Press Shift to flatten the deviations into one."};
+            return {"Flatten",
+                    "Hold to flatten the deviations into one."};
         // PLAY RENDERS IS THE PLAYER'S ONE ICON-ROW OPENER since 2026-09-01
-        // (architect, on the tooltip survey): both buttons opened it until
-        // then — bare `l` and bare `'` being TWO KEYS onto one act outside the
-        // `h` view — and the LOAD IN PLACE moved to the history group, whose
-        // arm greys it out here. Its row is below with its new neighbours. The
-        // KEYS are untouched: bare `'` still opens the player from the
-        // keyboard outside the view, an alias the no-second-road doctrine
-        // permits because that doctrine is about pointer homes.
-        // One line: its second, "Press Shift for the AV sync stats.", went with
-        // the AV Sync Stats panel on 2026-09-30, and the button admits no
-        // modifier.
+        // (architect, on the tooltip survey), and the LOAD IN PLACE is the
+        // history group's, whose arm greys it out here. One line: the button
+        // admits no modifier.
         case RedesignButton::IconListen:
-            return {"Play Renders (L)", nullptr};
-        // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
-        // has no shifted twin. The TEXT NAMES THE TOGGLE (the lamp rule at
-        // this table's head) while the glyph and the lamp carry the state;
-        // it read "Read-only (O)" — the constant-act precedent the other
-        // lamps followed — until 2026-09-01.
+            return {"Play Renders", nullptr};
+        // THE READ-ONLY TOGGLE (2026-08-14), one line: it has no twin. The
+        // TEXT NAMES THE TOGGLE (the lamp rule at this table's head) while the
+        // glyph and the lamp carry the state.
         case RedesignButton::IconReadOnly:
-            return {"Toggle Read-Only (O)", nullptr};
+            return {"Toggle Read-Only", nullptr};
         // ENABLE TOOLTIPS (architect 2026-09-29), one line: a lamp, so the
-        // text names the TOGGLE (the lamp rule at this table's head), its
-        // accelerator the bare backslash's own cap. It shows only while the
-        // lamp it names is lit — a dark lamp raises no tooltip anywhere, its
-        // own included.
+        // text names the TOGGLE (the lamp rule at this table's head). It
+        // shows only while the lamp it names is lit — a dark lamp raises no
+        // tooltip anywhere, its own included.
         case RedesignButton::IconTooltips:
-            return {"Toggle Tooltips (\\)", nullptr};
-        // THE SCORE (architect 2026-10-26), one line: the act's name and its
-        // key as every row writes them; no shifted twin. It names the opener,
-        // the press under the standing viewer being the same key's close.
+            return {"Toggle Tooltips", nullptr};
+        // THE SCORE (architect 2026-10-26), one line: the act's name as
+        // every row writes it; no twin. It names the opener, the press under
+        // the standing viewer being the same key's close.
         case RedesignButton::IconScore:
-            return {"Score (M)", nullptr};
+            return {"Score", nullptr};
         // THE NOISE (architect 2026-10-28), one line, HIS OWN WORDS FOR IT: a
         // lamp whose tooltip names THE SOUND rather than "Toggle …" — the one
         // lamp that does, a deliberate exception to the lamp rule at this
-        // table's head, the sound being what the key is; bare `w` admits no
+        // table's head, the sound being what the key is; it admits no
         // modifier.
         case RedesignButton::IconNoise:
-            return {"Noise (W)", nullptr};
-        // SETTINGS (architect 2026-09-29), one line: bare `;` opens the
-        // settings page (2026-10-28). The accelerator names the cap, the
-        // table's punctuation rule. The name is the retired menu anchor's own
-        // word (2026-10-21), the act being that menu's list again. The button
-        // admits no modifier (plain press only, architect 2026-10-28).
+            return {"Noise", nullptr};
+        // SETTINGS (architect 2026-09-29), one line: the key opens the
+        // settings page (2026-10-28). The name is the retired menu anchor's
+        // own word (2026-10-21), the act being that menu's list again. The
+        // button admits no modifier (plain press only, architect 2026-10-28).
         case RedesignButton::IconSettings:
-            return {"Settings (;)", nullptr};
+            return {"Settings", nullptr};
         // THE HISTORY VIEW'S TOGGLE, one line: the key toggles and there is
-        // no shifted twin. The text names the toggle (the lamp rule at this
-        // table's head); it read "History (H)", the word the manual then
-        // used for the mode, until 2026-09-01.
+        // no twin. The text names the toggle (the lamp rule at this table's
+        // head).
         case RedesignButton::IconHistory:
-            return {"Toggle History View (H)", nullptr};
-        // THE WALK LAMP, one line: bare `g` toggles the axis and has no shifted
+            return {"Toggle History View", nullptr};
+        // THE WALK LAMP, one line: the key toggles the axis and has no
         // twin. A lamp names its LIT state (architect 2026-10-16), and it
         // lights in Session, the walk reading this session's own timeline;
         // WALK stays the tree's word for the axis (GuiHistoryWalkSource), and
         // the Cumulative toggle beside it owns "reading". THE NAMES ARE THE
         // ONES THEY CARRIED AT THEIR REMOVAL, the reinstatement's own terms
         // (architect 2026-10-26). IT IS THIS ONE STRING IN EVERY STATE: where
-        // a visit opened on the local fallback the button greys and bare `g`
-        // cards the reason.
+        // a visit opened on the local fallback the button greys.
         case RedesignButton::SessionHistory:
-            return {"Toggle Session History (G)", nullptr};
-        // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
+            return {"Toggle Session History", nullptr};
+        // THE CUMULATIVE TOGGLE, one line: the key toggles and has no
         // twin; the text names the toggle (the lamp rule at this table's
         // head). Both toggles stand only inside the `h` view (the stand-ins,
         // kIconRowHistoryStandIns), so the hint shows inside the view alone.
         case RedesignButton::HistoryCumulative:
-            return {"Toggle Cumulative (U)", nullptr};
+            return {"Toggle Cumulative", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
-        // shifted twins jump to the walk's walls, so the hint says so — the same
+        // long presses jump to the walk's walls, so the hint says so — the same
         // rule the static_assert below states, met by two more buttons. The
         // shift line deliberately does not name the member kind since
         // 2026-08-08: the Local walk's members are states of the session's own
@@ -17506,13 +17390,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (kTransportHistoryStandIns), so
         // the tooltip flips above them with the row.
         case RedesignButton::HistoryOlder:
-            return {"Older (,)", "Press Shift for oldest."};
+            return {"Older", "Hold for oldest."};
         case RedesignButton::HistoryNewer:
-            return {"Newer (.)", "Press Shift for newest."};
-        // THE REVERT ACT, one line: the key has no shifted twin. IT READS
-        // BARE `v` SINCE 2026-09-01 (architect), the accelerator following the
-        // act off Ctrl+H onto the letter the render player's retired Stop
-        // freed; the succession is at the dispatch arm, input_handler.cpp. It is
+            return {"Newer", "Hold for newest."};
+        // THE REVERT ACT, one line: the key has no twin. It is
         // GREYED inside the view whenever nothing is selected and shows this
         // hint there too, per the same ruling — from 2026-08-05, lit in every
         // frame the view stood from 2026-08-15 (the architect's reversal of a
@@ -17520,8 +17401,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // 2026-08-30 (the truthful-buttons ruling). The disabled ruling
         // reaches it OUTSIDE the view too since 2026-08-18, on the companions'
         // revived resting grey — a different fact, owned at a different arm.
-        case RedesignButton::HistoryRevert: return {"Revert (V)", nullptr};
-        // THE HISTORY GROUP'S LAST, one line: bare `'` admits no modifier.
+        case RedesignButton::HistoryRevert: return {"Revert", nullptr};
+        // THE HISTORY GROUP'S LAST, one line: the key admits no modifier.
         // THE WORDS ARE UNCHANGED AND TRUE IN EVERY STATE THE FACE IS LIT
         // (architect 2026-09-01, with the button's move to this group): the
         // press raises "Load '<member>' in place?" on the walk member the lane
@@ -17537,25 +17418,21 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // DEAD button outside the view like its seven neighbours' do
         // (tooltips-on-disabled, architect 2026-08-07).
         case RedesignButton::IconLoadInPlace:
-            return {"Load in Place (')", nullptr};
+            return {"Load in Place", nullptr};
         // THE VIEW PAIRS (architect 2026-10-14): each hint is its axis value's
-        // name and its bare digit, the acts' own names in Title Case. A
+        // name, the acts' own names in Title Case. A
         // pair's lit member keeps its name too — the button names the value
         // its lamp shows, and a press there pops it, selecting the pair's
         // other member (2026-10-23 night).
-        case RedesignButton::ViewSource: return {"Source (1)", nullptr};
-        case RedesignButton::ViewTarget: return {"Target (2)", nullptr};
-        case RedesignButton::ViewWarp:   return {"Warp (3)", nullptr};
-        case RedesignButton::ViewPhase:  return {"Phase Reset (4)", nullptr};
+        case RedesignButton::ViewSource: return {"Source", nullptr};
+        case RedesignButton::ViewTarget: return {"Target", nullptr};
+        case RedesignButton::ViewWarp:   return {"Warp", nullptr};
+        case RedesignButton::ViewPhase:  return {"Phase Reset", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
-        // The accelerators are the table's own convention (a NAMED key by
-        // Qt's own name "Space", "Del", and "Enter" for Qt's Return (2026-10-29
-        // night), punctuation by its cap, a
-        // CHORD with its spelled-out modifiers); a modifier line names the
-        // act and the modifier and not a key.
+        // A modifier line names the act and the gesture, never a key.
         // THE PLAY/STOP BUTTON'S TEXT IS STATEFUL and this row is its STOPPED
-        // form — the stateful overload below returns "Stop (Space)" while an
+        // form — the stateful overload below returns "Stop" while an
         // audition runs, Render's own pattern (a constant row for the ordinary
         // meaning, an override for the live one). It says the half the press
         // will DO rather than "Toggle playback", which is what the glyph is
@@ -17563,30 +17440,30 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // A/B audition, the button's twin since it joined
         // redesign_button_shift_admits; the static_assert below keeps the line
         // and the admission one fact. The live form over a PLAIN audition
-        // carries the same line — see the overload — because a shift press
+        // carries the same line — see the overload — because a long press
         // starts the sequence there, so it does something different from the
         // plain press; over a standing A/B SEQUENCE the overload drops it
-        // (the shift press stops the act exactly as the plain one does).
+        // (the long press stops the act exactly as the plain one does).
         // THE LINE STAYS ON A GREYED PLAY (2026-08-30): under the twin
         // rule the button greys only where the plain launch AND the
         // audition's own preflight would refuse, so the act the line names
         // is dead on every dead face — a runnable audition keeps the button
         // lit instead.
         case RedesignButton::TransportPlayStop:
-            return {"Play (Space)", "Press Shift for the A/B audition."};
-        // THE TWO SKIPS (architect 2026-10-24, back on row 8): the act's name
-        // and its key by Qt's own name, and the shift line naming the
-        // whole-piece jump the press reaches — the act and the modifier, not
-        // a key. THE LINE STAYS ON A GREYED SKIP: the button greys only when
+            return {"Play", "Hold for the A/B audition."};
+        // THE TWO SKIPS (architect 2026-10-24, back on row 8): the act's name,
+        // and the shift line naming the whole-piece jump the long press
+        // reaches — the act and the gesture, not a key. THE LINE STAYS ON A
+        // GREYED SKIP: the button greys only when
         // the bare jump AND the whole-piece jump would both change nothing,
         // and a disabled button still explains itself; the overload drops it
         // where the two forms land on one frame.
         case RedesignButton::TransportSkipBack:
-            return {"Go to Start (Home)",
-                    "Press Shift to go to the piece's start."};
+            return {"Go to Start",
+                    "Hold to go to the piece's start."};
         case RedesignButton::TransportSkipForward:
-            return {"Go to End (End)",
-                    "Press Shift to go to the piece's end."};
+            return {"Go to End",
+                    "Hold to go to the piece's end."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
         // the tooltips' own vocabulary. THREE OF THEM ADMIT SHIFT and carry the second
         // line that says so — the DROP since 2026-08-28, whose shifted chord
@@ -17606,7 +17483,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // RULING REACHES THEM HERE (architect 2026-08-07): these verbs are the
         // row's resting greys — in the `h` view and on a locked tab, both the
         // buttons' own gates — and a dead icon still explains itself.
-        // THE DROP'S SHIFT LINE (2026-08-28) names the act and the modifier
+        // THE DROP'S SHIFT LINE (2026-08-28) names the act and the gesture
         // and not a key, this table's rule for second lines; the
         // static_assert below keeps the line and the admission one fact. It
         // names no view since 2026-10-12 (architect: the shifted press stays
@@ -17614,37 +17491,34 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // said "in target view" while the press tripped there).
         // THE OVERLOAD TOUCHES THE SECOND LINE ALONE (2026-09-01): in the P
         // column the shifted press refuses as already crossed, so the line
-        // drops. (It forked the FIRST line too until 2026-09-12, saying
-        // "Markers are placed in source view (S)" in T+W where the plain
-        // press cards exactly that. The line was a REFUSAL'S REASON and went
-        // with the class: the button never greys on that refusal under the
-        // twin rule, so the plain lift reaches the chord and the chord cards.)
+        // drops. (The button never greys on the T+W refusal under the twin
+        // rule, so the plain lift reaches the chord and the chord cards.)
         case RedesignButton::IconMarkerDrop:
-            return {"Drop Marker (S)",
-                    "Press Shift to drop a phase reset."};
+            return {"Drop Marker",
+                    "Hold to drop a phase reset."};
         // DELETE'S SECOND LINE (2026-10-29) names Shift+Delete's act, the
         // references carried with a selected definition — the act and the
-        // modifier and not a key, this table's rule.
+        // gesture and not a key, this table's rule.
         case RedesignButton::IconMarkerDelete:
-            return {"Delete Markers (Del)",
-                    "Press Shift to delete a definition's references with it."};
+            return {"Delete Markers",
+                    "Hold to delete a definition's references with it."};
         // TOGGLE DISABLED, Toggle inherit's own shape (architect 2026-09-01,
         // the truthful-tooltips ruling): the act flips `disabled` PER MEMBER
         // (warpmarkers_ops.cpp / phaseresetmarkers_ops.cpp), so on a disabled
         // selection the press ENABLES and on a mixed one it goes both ways in
         // one press — "Disable markers", its text from 2026-08-12, named one
         // direction of a toggle.
-        // ITS SECOND LINE (2026-10-29) names Ctrl+Shift+D, the definition
-        // toggled with its references; the plain press toggles each marker
-        // alone.
+        // ITS SECOND LINE (2026-10-29) names the long press's Ctrl+Shift+D,
+        // the definition toggled with its references; the plain press toggles
+        // each marker alone.
         case RedesignButton::IconMarkerDisable:
-            return {"Toggle Disabled (Ctrl+D)",
-                    "Press Shift to toggle a definition's references with it."};
+            return {"Toggle Disabled",
+                    "Hold to toggle a definition's references with it."};
         // TOGGLE INHERIT, two-line since 2026-09-19: the plain act converts
         // the selection between owning and inheriting its tempo, and the
         // shifted twin TIES the selected markers into one axis of the grid
         // iteration sweep (or unties them again). The second line names the
-        // act and the modifier and not a key, this table's rule, and it says
+        // act and the gesture and not a key, this table's rule, and it says
         // "tie" rather than "chain" — a chain is what a pass makes of its
         // tempo, which is this button's PLAIN act.
         //
@@ -17657,32 +17531,26 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (redesign_button_modifier_hint_agrees, below, reads this table),
         // and it is the first line every one of those arms forwards.
         case RedesignButton::IconMarkerInherit:
-            return {"Toggle Inherit (Ctrl+N)",
-                    "Press Shift to tie the markers into one sweep axis."};
+            return {"Toggle Inherit",
+                    "Hold to tie the markers into one sweep axis."};
         // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's
-        // fifth: the act's name in the architect's words and its own chord,
-        // Ctrl+J, spelled with its modifier as a chord is. ITS SECOND LINE
-        // (architect 2026-10-14) names the shift twin, Ctrl+Shift+J, the copy
-        // of the focused marker's resolved value — RESOLVED because that is
-        // what the value is and the flag shows the unresolved one (the
-        // architect's word, 2026-08-29) — the act and the modifier and not a
+        // fifth: the act's name in the architect's words. ITS SECOND LINE
+        // (architect 2026-10-14) names the long press's twin, Ctrl+Shift+J,
+        // the copy of the focused marker's resolved value — RESOLVED because
+        // that is what the value is and the flag shows the unresolved one (the
+        // architect's word, 2026-08-29) — the act and the gesture and not a
         // key, this table's rule; the overload drops it where the copy would
         // refuse.
         case RedesignButton::IconJumpToDefiningMarker:
-            return {"Jump to Defining Marker (Ctrl+J)",
-                    "Press Shift to copy the resolved value."};
+            return {"Jump to Defining Marker",
+                    "Hold to copy the resolved value."};
         // OPEN TEXT EDITOR (architect 2026-10-09, his name for the act), the
-        // verb group's sixth: the act's name and its chord as every row
-        // writes them, the bare Return keysym by the product's name for the
-        // key, "Enter" (this table's convention above, architect 2026-10-29
-        // night; the keypad's Enter is the same arm's second keysym and is
-        // not named separately). ONE LINE: it admits no modifier since
-        // 2026-10-24 (its ctrl presses, Copy / Paste Phase Resets from
-        // 2026-10-21, and the second line naming them, went to the Copy Phase
-        // Resets key that day). The name holds on either axis — a bound
-        // cell's editor is a text editor as the payload's is.
+        // verb group's sixth: the act's name as every row writes it. ONE
+        // LINE: it admits no modifier since 2026-10-24 (the propagate family
+        // is the Copy Phase Resets key's). The name holds on either axis — a
+        // bound cell's editor is a text editor as the payload's is.
         case RedesignButton::IconOpenTextEditor:
-            return {"Open Text Editor (Enter)", nullptr};
+            return {"Open Text Editor", nullptr};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH
         // since 2026-10-09 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
@@ -17699,28 +17567,29 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // whole roster's head gates — the words are unchanged either way, a
         // tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
-            return {"Toggle Add to Selection (K)", nullptr};
+            return {"Toggle Add to Selection", nullptr};
         // COPY PHASE RESETS (architect 2026-10-24), the band's first run's
         // fifth since 2026-10-25 (row 8's verb group's eighth the day
-        // before): the act's name and its chord, the bare letter by its cap. ITS
+        // before): the act's name. ITS
         // SECOND LINE NAMES BOTH PASTES in one sentence, Jump to Defining
-        // Marker's form (the act and the modifier, not a key): Ctrl+P pastes
-        // the phase resets, Ctrl+Shift+P their state. The overload drops it
+        // Marker's form (the act and the gesture, not a key): the barrel
+        // press (Ctrl+P) pastes the phase resets, the barrel through the long
+        // press (Ctrl+Shift+P) their state. The overload drops it
         // in the phase-reset column, where both pastes refuse at their first
         // rung.
         case RedesignButton::IconCopyPhaseResets:
-            return {"Copy Phase Resets (P)",
-                    "Press Ctrl to paste them, Ctrl+Shift to paste their "
-                    "state."};
+            return {"Copy Phase Resets",
+                    "Barrel button to paste them; hold with the barrel to "
+                    "paste their state."};
         // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's EIGHTH
-        // and last (after Add to Selection), a lamp — the hint NAMES THE TOGGLE, Add to Selection's
-        // shape, and the accelerator names the cap (this table's punctuation
-        // rule). ONE LINE: it admits no modifier. The words hold lit or dark,
-        // spent or not — a tooltip names the act and never a state.
+        // and last (after Add to Selection), a lamp — the hint NAMES THE
+        // TOGGLE, Add to Selection's shape. ONE LINE: it admits no modifier.
+        // The words hold lit or dark, spent or not — a tooltip names the act
+        // and never a state.
         case RedesignButton::IconValueDrag:
-            return {"Toggle Value Drag ([)", nullptr};
+            return {"Toggle Value Drag", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Next marker" / "previous
-        // marker" are the tooltips' own words for the bare Tab cycle (the
+        // marker" are the tooltips' own words for the walk (the
         // manual's too, while there was one), and the group's
         // buttons are what made the Navigation dropdown a duplicate path and
         // got it deleted hours later — so the names outlived the surface they
@@ -17731,8 +17600,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the button's own key, so ctrl is Ctrl+Tab, the other tab, and
         // ctrl+shift Ctrl+Shift+Tab, the paired march. The one second line
         // names all three forms in one sentence, this table's rule for
-        // second lines (the act and the modifier, not a key), in Up / Down's
-        // shape; "walk both tabs" is the march's own words. The
+        // second lines (the act and the gesture, not a key) — the hold, the
+        // barrel, the barrel through the hold; "walk both tabs" is the
+        // march's own words. The
         // stateful overload has no arm for it and the line never drops: the
         // ctrl form switches the tab in every state the button is live in,
         // so a modified press always does something the plain one does not.
@@ -17740,52 +17610,44 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and "the previous marker" names the reverse step there as it does
         // outside.
         case RedesignButton::TransportWalk:
-            return {"Next Marker (Tab)",
-                    "Press Shift for the previous marker, Ctrl for the other "
-                    "tab, Ctrl+Shift to walk both tabs."};
+            return {"Next Marker",
+                    "Hold for the previous marker; barrel button for the "
+                    "other tab; hold with the barrel to walk both tabs."};
         // PREVIOUS MARKER (architect 2026-09-29): its own chord is Shift+Tab,
-        // spelled with its modifier as a chord is ("Redo (Ctrl+Shift+Z)"'s
-        // shape), and its one admission is ctrl, the paired march — "walk
+        // and its one admission is ctrl, the paired march — "walk
         // both tabs" being the march's own words. The stateful overload
         // drops the line under a lit grid iterations, where the march refuses.
         case RedesignButton::TransportWalkPrevious:
-            return {"Previous Marker (Shift+Tab)",
-                    "Press Ctrl to walk both tabs."};
+            return {"Previous Marker",
+                    "Barrel button to walk both tabs."};
         // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the act's name, and
         // its one admission, shift, the paired march in the march's own
         // words. The overload drops the line under a lit grid iterations.
         case RedesignButton::TransportSwitchTab:
-            return {"Switch Tab (Ctrl+Tab)",
-                    "Press Shift to walk both tabs."};
-        // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
-        // the key IS the direction, so "Left (Left)" would name the same word
-        // twice — the hint keeps the direction alone (one word, which the
+            return {"Switch Tab",
+                    "Hold to walk both tabs."};
+        // THE FOUR ARROWS' HINT IS THE DIRECTION ALONE (one word, which the
         // two-class rule spells the same either way). (Painted
         // order is down, up, left, right since 2026-08-14; this table is keyed
         // by id and carries no order of its own.)
         //
-        // UP / DOWN'S SECOND LINE NAMES BOTH RUNGS OF THE STEP LADDER
-        // (2026-08-31), the ladder being one of the two-modifier rule's
-        // two shapes (the walk's three-form line above is the other): shift is a
-        // ten-unit step and ctrl a three on the addressed cell's own unit
-        // (swapped 2026-09-21, shift the long stride), so
-        // the line says "step" and lets the button's own name supply the
-        // unit. The ctrl rung's number is the ladder's (kArrowStepCtrl,
-        // gui_input.h) and this is the one place it is written as a word; a
-        // retune there is a retune here. (The shift rung has no producer
-        // since 2026-10-30, the ladder's head; its words are the tooltip
-        // pass's to respell.)
-        // THE STATEFUL OVERLOAD DROPS THIS LINE where every rung of the ladder
-        // refuses alike (2026-09-02): on the step's kind refusals; the
+        // UP / DOWN'S SECOND LINE NAMES THE BARREL'S STEP (architect
+        // 2026-10-30, the arrows' one modifier): ctrl is a three on the
+        // addressed cell's own unit, so the line says "step" and lets the
+        // button's own name supply the unit. The number is the step's
+        // (kArrowStepCtrl, gui_input.h) and this is the one place it is
+        // written as a word; a retune there is a retune here.
+        // THE STATEFUL OVERLOAD DROPS THIS LINE where the bare and the barrel
+        // step refuse alike (2026-09-02): on the step's kind refusals; the
         // reasoning is at that arm.
         // LEFT / RIGHT CARRY NO SECOND LINE since 2026-09-21: the horizontal
         // ladder is retired on every column, their ctrl form binds nothing
         // since 2026-09-23, and the buttons admit no modifier (a held repeat outranks the long-press
         // shift — the principle at ToolbarChord::repeats, input_pointer.cpp).
         case RedesignButton::TransportDown:
-            return {"Down", "Press Shift for a 10-step, Ctrl for 3."};
+            return {"Down", "Barrel button for a 3-step."};
         case RedesignButton::TransportUp:
-            return {"Up", "Press Shift for a 10-step, Ctrl for 3."};
+            return {"Up", "Barrel button for a 3-step."};
         case RedesignButton::TransportLeft:
             return {"Left", nullptr};
         case RedesignButton::TransportRight:
@@ -18016,7 +17878,7 @@ inline const char* redesign_button_legend(const AppState& a,
 // whichever command it currently is:
 //
 //   SAVE, WITH THE HISTORY MODE STANDING → the vcs-commit icon and the
-//   "Save and Commit (Ctrl+Shift+S)" hint: its lift there, the publish chord
+//   "Save and Commit" hint: its lift there, the publish chord
 //   (Ctrl+S until 2026-10-10), SAVES the piece beside its
 //   source through this
 //   very button's ordinary act and then commits the live state into the projects
@@ -18048,13 +17910,13 @@ inline const char* redesign_button_legend(const AppState& a,
 //   itself (architect 2026-08-11 — the ruling, the rank over the iteration
 //   hint and the condition are at redesign_button_glyph_swapped's Render
 //   arm and the divergence
-//   record at finish_chrome_press_release's Render arm; Ctrl+Alt+R on the keyboard
+//   record at finish_chrome_press_release's Render arm; the Ctrl+Alt+R chord
 //   keeps its own kill-and-redispatch semantics unchanged).
 //
 //   RENDER, WITH ITERATION MODE ON (and nothing live) → the SAME media-record
 //   glyph (the architect's 2026-08-12 ruling: no second render glyph, "the
-//   context makes it clear") under the one-line "Render Grid Iterations
-//   (Ctrl+Alt+R)" hint — the TOOLTIP alone forks the two idle meanings. The
+//   context makes it clear") under the one-line "Render Grid Iterations"
+//   hint — the TOOLTIP alone forks the two idle meanings. The
 //   history mode gives Render NO face of its own any more: in
 //   the view both render chords are consumed, so the button wears its ordinary
 //   icon over the derived disabled face — visibly, the icon row hiding
@@ -18064,19 +17926,18 @@ inline const char* redesign_button_legend(const AppState& a,
 // A TOOLTIP IS THE ACT'S NAME AND NOTHING ELSE (architect 2026-09-12,
 // completing the truthful-tooltips ruling): "cards for card-like info;
 // tooltips for tooltips only; disabled — or the lamp off — IS the message."
-// A hint is the NAME of the act, in Title Case with its key, plus the
+// A hint is the NAME of the act, in Title Case, plus the
 // MODIFIER LINE where the modified press does something different. It is
 // never a reason and never a state. So this overload may do exactly two
 // things, and every fork below is one of them:
 //
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
-//   "Save and Commit (Ctrl+Shift+S)" in the `h` view ("Pull" and "Check
+//   "Save and Commit" in the `h` view ("Pull" and "Check
 //   GitHub" where the chord pulls or asks again), Render reads "Cancel" while a
-//   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
-//   Play reads "Stop (Space)" while the transport is live, Zoom to Fit reads "Back to
-//   Previous View (0)" while its whole-song state stands and "Back to Working
-//   Zoom (0)" at a ceiling nothing stamped, Center
-//   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair
+//   render runs and "Render Grid Iterations" with the mode on,
+//   Play reads "Stop" while the transport is live, Zoom to Fit reads "Back to
+//   Previous View" while its whole-song state stands, Center
+//   reads "Center on Playhead" with nothing focused, the Up/Down pair
 //   reads the ADDRESSED CELL's own name. Each of those names what a
 //   press would do in that state — which is what a name is for.
 //
@@ -18086,13 +17947,14 @@ inline const char* redesign_button_legend(const AppState& a,
 //
 // A MULTI-FORM LINE STANDS WHOLE WHILE ANY ONE OF ITS FORMS IS LIVE
 // (architect 2026-09-29). One second line names more than one modified form —
-// Next Marker's three (Shift, Ctrl, Ctrl+Shift) — and since this overload may
+// Next Marker's three (the hold, the barrel, the barrel through the hold) —
+// and since this overload may
 // drop a line but never rewrite
 // one, a line naming several forms cannot be shortened to its live ones: it
 // stands whole while any of its forms would act, and drops only where none
 // would. So Next Marker's stands under a lit grid iterations, where its
-// Ctrl+Shift form is the refused march (its Ctrl form switches the tab in
-// every state, so it never drops). A
+// barrel-through-the-hold form is the refused march (its barrel form switches
+// the tab in every state, so it never drops). A
 // greyed-out half of a sentence has no face to carry it. The single-form
 // march lines (Previous Marker's and Switch Tab's) are rule (2)'s
 // plain case and drop under that lamp.
@@ -18103,9 +17965,9 @@ inline const char* redesign_button_legend(const AppState& a,
 // "Committing the checkpoint (Ctrl+S)", the iteration sweep's two refusals,
 // "Markers are placed in source view (S)",
 // the collapsed-stack sentence, and the two skips' "At the trim start/end".
-// THE GREY IS THE MESSAGE AND THE REASON LIVES AT THE KEY'S CARD: a greyed
+// THE GREY IS THE MESSAGE AND THE REASON LIVES AT THE CHORD'S CARD: a greyed
 // button raises no card, so nothing was lost by its hint going quiet, while
-// every one of those chords still says its sentence when the KEY is pressed —
+// every one of those chords still says its sentence when it is dispatched —
 // except the two skips, whose benign already-at-the-bound refusal is silent
 // by the messaging ruling on every surface.
 //
@@ -18153,14 +18015,10 @@ inline RedesignTooltipText redesign_button_tooltip(
     // Ctrl+Shift+S the plain lift spells in the view, so the modified press
     // does nothing different and the line drops (rule (2) below). OUTSIDE THE
     // VIEW ITS SECOND LINE NAMES THE TWIN (architect 2026-10-11), in the
-    // roster's own form: the constant table's "Press Shift to save and
-    // commit.", forwarded. (ITS TWO OTHER FORKS STOOD AHEAD OF THIS ONE
-    // until 2026-09-12, the in-flight "Committing the checkpoint (Ctrl+S)"
-    // outermost and the local fallback's "History is unavailable" — shared
-    // there with the walk lamp — under it. Both were a state and a reason, and
-    // the whole class left this overload: a greyed button states no reason,
-    // and the two keys' cards, which append the clone-specific clause a
-    // constant line could not carry, are where the fact is said.)
+    // roster's own form: the constant table's "Hold to save and commit.",
+    // forwarded. A greyed button states no reason; the two chords' cards,
+    // which append the clone-specific clause a constant line could not carry,
+    // are where the fact is said.
     // THE PULL (architect 2026-09-27) AND THE CHECK (2026-10-28): while the
     // button is PAINTED as Pull or as Check (its stashed glyph, the Render
     // hint's as-painted rule) the hint names that act — the check being the
@@ -18169,11 +18027,11 @@ inline RedesignTooltipText redesign_button_tooltip(
     if (b == RedesignButton::Save) {
         const int glyph =
             a.redesign_buttons[static_cast<size_t>(RedesignButton::Save)].glyph;
-        if (glyph == 2) return {"Pull (Ctrl+Shift+S)", nullptr};
-        if (glyph == 3) return {"Check GitHub (Ctrl+Shift+S)", nullptr};
+        if (glyph == 2) return {"Pull", nullptr};
+        if (glyph == 3) return {"Check GitHub", nullptr};
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
-        return {"Save and Commit (Ctrl+Shift+S)", nullptr};
+        return {"Save and Commit", nullptr};
     }
     // RENDER HAS NO HISTORY-VIEW HINT since 2026-08-08: the act left this button
     // with its chord, so in the view Render is an ordinary dead button and shows
@@ -18183,14 +18041,11 @@ inline RedesignTooltipText redesign_button_tooltip(
     // BUTTONS as the example; they left row 4 on 2026-08-14 and stopped being
     // resting-disabled on 2026-08-15, so the general rule is named instead.)
     // RENDER'S MID-RENDER HINT, ranked above its iteration form like the
-    // label: one line, "Cancel", NO KEY NAMED — deliberately. The act is the
+    // label: one line, "Cancel". The act is the
     // button's own (the ruled chord divergence at
     // finish_chrome_press_release's Render arm), which runs the cancel BODY
-    // rather than dispatching any key. (Naming Esc would also have LIED
-    // whenever the trim region overlay was shown, the hide having ranked above
-    // the cancel until 2026-08-21; that retirement removes the lie but not the
-    // reason — the button is not a chord.) NO SHIFT LINE either: while the face is
-    // Cancel a shift press cancels too — one face, one act — and the hint
+    // rather than dispatching any key. NO SHIFT LINE either: while the face is
+    // Cancel a long press cancels too — one face, one act — and the hint
     // exists only where shift does something DIFFERENT (the static_assert's
     // rule, met here by the stateful form exactly as iteration mode's already
     // does).
@@ -18208,33 +18063,12 @@ inline RedesignTooltipText redesign_button_tooltip(
                 .glyph != 0) {
         return {"Cancel", nullptr};
     }
-    // RENDER WITH THE MODE ON NAMES THE SWEEP, in every state. (IT FORKED ON
-    // THE SWEEP'S OWN VERDICT from 2026-09-02 to 2026-09-12, answering the
-    // card the press would have raised — "No iteration ranges are authored",
-    // "Grid iterations refused: …" — wherever the plan greyed the face. That
-    // was a REASON on a tooltip, and the class is gone: the grey says the
-    // press would do nothing, and Ctrl+Alt+R still cards each sentence at its
-    // own arm in run_iteration_sweep_render, which is the road that has a
-    // press to answer.)
+    // RENDER WITH THE MODE ON NAMES THE SWEEP, in every state: the grey says
+    // the press would do nothing, and the chord cards each refusal at its own
+    // arm in run_iteration_sweep_render.
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        return {"Render Grid Iterations (Ctrl+Alt+R)", nullptr};
+        return {"Render Grid Iterations", nullptr};
     }
-    // (THE REFUSAL LINES STOOD HERE AND ARE DELETED WHOLE — 2026-09-12, in
-    // the day's two steps. FIRST the lock's and the lamps', which had stood
-    // since 2026-09-10: the Toggle Marker Column lamp's "Turn off grid
-    // iterations first (P)", the since-deleted Walk Both Tabs button's bare card,
-    // the shared fork over
-    // iteration_lock_greys that gave every other greyed member the same
-    // sentence, the three lamp-exclusion lines, Grid Iterations' read-only
-    // line and Undo's and Redo's "Turn off grid iterations to undo/redo".
-    // THEN the rest of the class. THE ARCHITECT RULED THE WHOLE CLASS OUT: that
-    // kind of language "belongs in a card", and it was applied inconsistently —
-    // some greyed buttons wore a reason and others did not — so A TOOLTIP NAMES
-    // THE ACT, THE GREY IS THE MESSAGE, AND THE REASON LIVES AT THE KEY'S CARD.
-    // Nothing about the cards changed: every one of those chords still says its
-    // sentence when the KEY is pressed, which is the road that has a press to
-    // answer. A greyed button raises no card and now states no reason
-    // either.)
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
     // one button over bare Space, so the hint names whichever act the press
     // will run — "Stop" while the transport is live (a plain audition, or an
@@ -18242,21 +18076,20 @@ inline RedesignTooltipText redesign_button_tooltip(
     // otherwise. The condition is redesign_button_glyph_swapped's, not a
     // second read of the audition bit, so the WORDS and the GLYPH can never
     // disagree about which half the button currently is. THE SHIFT LINE
-    // STAYS ON THE LIVE FORM OVER A PLAIN AUDITION (2026-08-26): the shift
+    // STAYS ON THE LIVE FORM OVER A PLAIN AUDITION (2026-08-26): the long
     // press's act is the A/B audition there — its first tab switch stops
     // that audition and the sequence begins — so, unlike Render's Cancel
-    // face (where a shift press cancels exactly as the plain one does), the
+    // face (where a long press cancels exactly as the plain one does), the
     // modified press does something DIFFERENT and the line is owed. OVER A
-    // STANDING SEQUENCE IT DROPS (2026-09-01; the chord became a toggle on
-    // 2026-08-31 and the line was "recorded rather than forked" for one day):
-    // there the shift press stops the act exactly as the plain one does —
+    // STANDING SEQUENCE IT DROPS (2026-09-01): there the long press stops the
+    // act exactly as the plain one does —
     // GuiAbAudition::start's head, whose test this is — so the face is
     // Render's Cancel shape, one face, one act, no line.
     if (b == RedesignButton::TransportPlayStop &&
         redesign_button_glyph_swapped(a, b)) {
         if (a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle)
-            return {"Stop (Space)", nullptr};
-        return {"Stop (Space)", "Press Shift for the A/B audition."};
+            return {"Stop", nullptr};
+        return {"Stop", redesign_button_tooltip(b).line2};
     }
     // EVERY FORK BELOW IS THE TRUTHFUL-TOOLTIPS RULING'S (architect
     // 2026-09-01; the rule is at the constant table's head): the word names
@@ -18268,11 +18101,8 @@ inline RedesignTooltipText redesign_button_tooltip(
         // of the stamped view (architect 2026-09-23) — through the act's one
         // fork (overview_command_target, run_overview_command's own), so the
         // word cannot name an act the press will not run. AT THE NO-OP the
-        // word is the act's name, "Zoom to Fit (0)" (architect 2026-10-24;
-        // "Full Zoom Out (0)" until then): a tooltip's first line is the act's
-        // name with its key, never a reason or a state. ("Back to Working
-        // Zoom", the unstamped ceiling's `c`,
-        // left with that arm the same day.)
+        // word is the act's name, "Zoom to Fit" (architect 2026-10-24): a
+        // tooltip's first line is the act's name, never a reason or a state.
         //
         // ITS MODIFIER LINE names the frame (Shift+0) and the reset
         // (Ctrl+Shift+0), and a multi-form line stands whole while any of its
@@ -18289,7 +18119,7 @@ inline RedesignTooltipText redesign_button_tooltip(
                     ? redesign_button_tooltip(b).line2
                     : nullptr;
             if (t.arm == OverviewCommandTarget::Arm::RestoreView)
-                return {"Back to Previous View (0)", line2};
+                return {"Back to Previous View", line2};
             return {redesign_button_tooltip(b).line1, line2};
         }
         // ZOOM IN'S AND ZOOM OUT'S SHIFT LINE DROPS WHERE THE TWO SIZES LAND
@@ -18334,7 +18164,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // inside it).
         case RedesignButton::IconZoomOriginal:
             if (!center_command_lands_on_focus(a))
-                return {"Center on Playhead (C)", nullptr};
+                return {"Center on Playhead", nullptr};
             break;
         // JUMP TO DEFINING MARKER'S SHIFT LINE (Ctrl+Shift+J, the copy,
         // architect 2026-10-14) DROPS WHERE THE COPY WOULD REFUSE: the `h`
@@ -18363,16 +18193,14 @@ inline RedesignTooltipText redesign_button_tooltip(
             break;
         // DROP MARKER: in the P column the shifted press refuses as already
         // crossed (phase_reset_drop_crossing_actionable, the shift act's own
-        // head), so its line drops — the one thing this arm does. (IN T+W IT
-        // ALSO SAID "Markers are placed in source view (S)" from 2026-09-01
-        // to 2026-09-12, the card the plain press raises. That was a REASON,
-        // and it left with the class; the plain press still raises the card
-        // itself — the button never greys on that refusal under the twin
-        // rule, so its plain lift reaches the chord and the chord answers —
-        // while the shift line stays, the crossing being live exactly there.)
+        // head), so its line drops — the one thing this arm does. (In T+W the
+        // plain press raises its own card — the button never greys on that
+        // refusal under the twin rule, so its plain lift reaches the chord and
+        // the chord answers — while the shift line stays, the crossing being
+        // live exactly there.)
         case RedesignButton::IconMarkerDrop:
             if (!phase_reset_drop_crossing_actionable(a))
-                return {"Drop Marker (S)", nullptr};
+                return {redesign_button_tooltip(b).line1, nullptr};
             break;
         // FLATTEN DROPS ITS LINE WHERE THE COLLAPSE WOULD NOT ACT
         // (2026-09-19), the same shape the drop's arm and the jump's copy line
@@ -18404,11 +18232,11 @@ inline RedesignTooltipText redesign_button_tooltip(
         // stateful overload's own licence to fork a NAME on the predicate the
         // FACE already reads (Render → "Render Grid Iterations" is the
         // precedent, and this face forks on the very same bit). Under a lit
-        // grid-iterations lamp the plain Ctrl+N is dead — the keyboard gate
-        // cards it — and the button is lit for the TIE alone, so the name is
+        // grid-iterations lamp the plain Ctrl+N is dead — the lock gate
+        // refuses it — and the button is lit for the TIE alone, so the name is
         // the tie's, off the verdict's own `act` so a press that unties never
         // reads "Tie", and it carries NO SECOND LINE: the modifier is then
-        // the chord itself, and "Press Shift to…" would name a press the user
+        // the chord itself, and "Hold to…" would name a press the user
         // is already making.
         //
         // OUTSIDE THE LAMP the plain name and its tie line stand as the table
@@ -18419,8 +18247,8 @@ inline RedesignTooltipText redesign_button_tooltip(
         case RedesignButton::IconMarkerInherit:
             if (a.iteration_mode_enabled) {
                 return {iter_tie_toggle_verdict(a).act == IterTieAct::Untie
-                            ? "Untie Markers (Ctrl+Shift+N)"
-                            : "Tie Markers (Ctrl+Shift+N)",
+                            ? "Untie Markers"
+                            : "Tie Markers",
                         nullptr};
             }
             // Outside the lamp the tie refuses in every state ("Turn on grid
@@ -18428,11 +18256,11 @@ inline RedesignTooltipText redesign_button_tooltip(
             // different from the plain one and the table's line always goes —
             // which is why this arm needs no verdict of its own to drop it.
             return {redesign_button_tooltip(b).line1, nullptr};
-        // THE VERTICAL ARROWS' STEP-LADDER LINE drops where EVERY RUNG of the
-        // ladder refuses alike (architect 2026-09-02): "Press Shift for a
-        // 10-step, Ctrl for 3." exists to say that a modified press does
-        // something DIFFERENT, and in the two states below the bare, the
-        // shifted and the ctrl press all raise the SAME card. Each arm reads
+        // THE VERTICAL ARROWS' BARREL LINE drops where the bare and the
+        // barrel step refuse alike (architect 2026-09-02): "Barrel button for
+        // a 3-step." exists to say that a modified press does something
+        // DIFFERENT, and in the two states below the bare and the barrel
+        // press both raise the SAME card. Each arm reads
         // the act's own owner and restates nothing; the word comes back from
         // the constant table so the direction is spelled once.
         //
@@ -18443,35 +18271,35 @@ inline RedesignTooltipText redesign_button_tooltip(
         // (tempo_cent_step_direction_actionable), and THE DROP STAYS on the
         // bound axis's precedent just below: a modifier line exists where
         // the modified press does something different in that state, and on a
-        // dead face every rung is equally dead, so the ladder line would name
-        // three rungs that differ in nothing. It is not a reason line — it
+        // dead face both steps are equally dead, so the barrel line would name
+        // a step that differs in nothing. It is not a reason line — it
         // removes a line and adds none, the grey carrying the message. Until
         // that ruling the drop fired in target view alone, the owner answering
         // nullptr in source view while the source-view ref refused on every
         // rung all the same; the one owner closes that asymmetry. The BRACKET wall is deliberately not here: it is
-        // directional and magnitude-DEPENDENT — a member three cents from the
-        // max takes the bare step and refuses the shift one — and it GREYS the
+        // directional and magnitude-DEPENDENT — a member two cents from the
+        // max takes the bare step and refuses the barrel one — and it GREYS the
         // face on the bare rung anyway (tempo_cent_step_direction_actionable),
         // so the line is owed for the twin. The GROUP arm is out for the same
         // reason: its wall scan walls a superset as the step grows.
         //
         // WITH A BOUND CELL ADDRESSED (architect 2026-09-04) the pair steps
         // that bound instead, and the hint SAYS WHICH — a NAME in title case
-        // over the table's own direction word, the key still the direction —
-        // with the same ladder line, dropped on the bound step's own kind
+        // over the table's own direction word —
+        // with the same barrel line, dropped on the bound step's own kind
         // refusal (iter_bound_step_kind_refusal: a marker without a tempo of
-        // its own, a disabled owner — magnitude-blind, every rung carding
+        // its own, a disabled owner — magnitude-blind, both steps carding
         // alike). A second
-        // line only where the table already binds one: these two carry both
-        // admissions.
+        // line only where the table already binds one: these two carry the
+        // ctrl admission.
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown: {
             const bool up = b == RedesignButton::TransportUp;
             if (a.addressed_cell != MarkerCell::Payload) {
                 const char* name =
                     a.addressed_cell == MarkerCell::Lower
-                        ? (up ? "Lower Bound Up (Up)" : "Lower Bound Down (Down)")
-                        : (up ? "Upper Bound Up (Up)" : "Upper Bound Down (Down)");
+                        ? (up ? "Lower Bound Up" : "Lower Bound Down")
+                        : (up ? "Upper Bound Up" : "Upper Bound Down");
                 return {name, iter_bound_step_kind_refusal(a)
                                   ? nullptr
                                   : redesign_button_tooltip(b).line2};
@@ -18485,9 +18313,8 @@ inline RedesignTooltipText redesign_button_tooltip(
         // reset and the playhead alike (horizontal_arrow_step, gui_input.h —
         // the fork the act and the face read, the active column), so the NAME
         // forks on that same predicate and says which step the press takes.
-        // A name, not a line: the buttons admit no modifier and carry none.
-        // The key returns in parentheses because the name is no longer the
-        // key's own word — the bound cells' "Lower Bound Up (Up)" shape. The
+        // A name, not a line: the buttons admit no modifier and carry none,
+        // the bound cells' "Lower Bound Up" shape. The
         // table's bare direction word stands on W.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
@@ -18495,7 +18322,7 @@ inline RedesignTooltipText redesign_button_tooltip(
             const bool left = b == RedesignButton::TransportLeft;
             if (horizontal_arrow_step(left ? -1 : +1, a.active_markers_view)
                     .unit == HorizontalArrowStep::Unit::Hops)
-                return {left ? "Hop Left (Left)" : "Hop Right (Right)", nullptr};
+                return {left ? "Hop Left" : "Hop Right", nullptr};
             break;
         }
         // THE MARCH ROADS (architect 2026-09-29): Previous Marker's ctrl
@@ -18556,11 +18383,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // Checked at compile time so the tables cannot drift: a button that gains a
 // shifted or a ctrl chord without gaining the line (or the reverse) fails to
 // build here. The two admissions are ORed because a button carries ONE second
-// line — for most buttons that line names the one modifier that acts, and
-// the walk at redesign_button_ctrl_shift_admits is what holds the buttons
-// admitting both to the two shapes whose one line names every form (Up and
-// Down's names both rungs of the step ladder, the walk's its key's three
-// modified forms).
+// line — for most buttons that line names the one gesture that acts, and
+// the walk at redesign_button_dual_modifier_admits_pair is what holds the
+// buttons admitting both to the one shape whose one line names every form
+// (the walk's, its key's three modified forms).
 //
 // IT HOLDS ON THE CONSTANT TABLE, the state-free truth. THE STATEFUL OVERLOAD
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
@@ -18568,9 +18394,9 @@ inline RedesignTooltipText redesign_button_tooltip(
 // twin is dead in the current state — the crossing in the P column, the
 // two skips' whole-piece line where both forms land on one frame, the
 // audition's shift over a standing sequence,
-// since 2026-09-02 UP / DOWN'S STEP
-// LADDER where every
-// rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
+// since 2026-09-02 UP / DOWN'S BARREL
+// LINE where the bare and the barrel
+// step refuse alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
 // from a wall, where the jump names the member the step already reaches, and
 // since 2026-09-29 the MARCH LINE of PREVIOUS MARKER, SWITCH TAB and the two
 // TABS under a lit grid iterations, where the lock refuses the march,
@@ -18664,8 +18490,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
 // WHICH CELL of that run the point landed on — the topmost rect's three
-// published boundaries compared against mouse_x, nothing more. ITS CONSUMER
-// (the cursor map, a second, went with the mouse, architect 2026-10-30): THE
+// published boundaries compared against mouse_x, nothing more. ITS ONE
+// CONSUMER (re-derived 2026-10-30): THE
 // MARKER PRESS (run_marker_click_act) writes the addressed cell from the
 // answer, stamps it onto the double-click seed so each cell can open its own
 // editor, and asks it for the sticky ctrl's own box test (the MarkerCell
@@ -18727,9 +18553,9 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 
 // point_in_trim_bridge_span: is (mouse_x, mouse_y) on the trim bar's INTER-CAP
 // BRIDGE — the painted bar's stretch between the two endcaps, the pair drag's
-// handle? The endcap test's twin. ONE consumer (the cursor's zone map, a
-// second, went with the mouse, architect 2026-10-30): the plain trim-bar press
-// router (route_trim_bar_press, which arms the pair drag on a true).
+// handle? The endcap test's twin. ONE consumer (re-derived 2026-10-30): the
+// plain trim-bar press router (route_trim_bar_press, which arms the pair drag
+// on a true).
 //
 // IT READS THE PAINTER'S STASH, like the endcap test (AppState::trim_bar_hit,
 // architect 2026-09-24): the y-gate is the lane the bar was painted in, the

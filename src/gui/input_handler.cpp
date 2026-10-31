@@ -112,8 +112,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The dispatch's own repeat scope, first statement so it covers the whole
     // body (the ruling and the reasoning are at the guard above).
     const HeldRepeatDispatchScope repeat_scope(app, mods.synthesized_repeat);
-    // Double-click lifecycle, KEYBOARD half: any keyboard command between two
-    // clicks breaks EVERY pending double-click candidate (TrimBar, Marker,
+    // Double-click lifecycle, KEY half: any chord between two clicks (a
+    // roster lift, an on-screen keyboard key) breaks EVERY pending
+    // double-click candidate (TrimBar, Marker,
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
     // a key between its two presses, and a cross-context consume (seed a
     // candidate, run a command, click again to consume in a different context)
@@ -126,7 +127,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     app.double_click = DoubleClickCandidate{};
     // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
     // end_audition_for_press's declaration): a bound chord ends a standing act
-    // here, ahead of every gate below, bare Esc among them. THE TWO
+    // here, ahead of every gate below. THE TWO
     // EXCEPTIONS are bare Space and Shift+Space, the only bound Space chords
     // (chord_is_bound): their own dispatch forks on the standing act and
     // takes its stop side — toggle_playback reading `phase != Idle` as
@@ -197,11 +198,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // that the progress modal owns.
     if (app.batch_progress.active) return;
 
-    // (THE OPEN DROPDOWN WAS KEYBOARD-MODAL HERE, directly under the prompt —
-    // bare Esc closed it, Ctrl+Q closed it and fell through, a row's access
-    // key ran the row and every other chord was swallowed — until the
-    // Settings popup, its last menu, retired 2026-10-21.)
-
     // THE OVERLAYS — THE RENDER PLAYER (2026-08-28), THE SCORE VIEWER
     // (2026-10-26) AND THE PICKER (2026-08-28: the project picker, the
     // settings page and the value list it swaps in, the trim presets list,
@@ -242,44 +238,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Editor text-selection drag modal gate. This sits ABOVE the
     // text-editor handlers because the flag / settings editor is active
     // during its own selection drag, and those handlers would otherwise
-    // tear the edit down and dispatch a command on any command key; this
-    // gate must intercept first so the drag owns the keyboard like every
-    // other drag. Swallow every key but the one escape hatch, BARE Esc (its
-    // only hatch since 2026-10-25; Ctrl+Q was its second until then, and is
-    // consumed as every modal consumes it). For the hatch, finalize the
-    // selection first (reading the still-live editor geometry) and then fall
-    // through with no return, so the editor handler below runs Esc (cancel
-    // the edit) exactly as it would with no drag in flight. A text drag is
-    // not a navigation gesture, so it gets no bare-`s` carve-out. The hatch
-    // is modifier-exact: NO MODIFIED ESCAPE BINDS ANYWHERE in this product (the
-    // one that did, Ctrl+Esc, retired on 2026-09-01 when bare Esc took the
-    // notification stack whole), so a modified Escape has nothing to be an
-    // escape hatch FOR and is swallowed here like any other key rather than
-    // ending the drag.
-    // THIS DRAG KEEPS ITS Esc HATCH while the POINTER gestures have none
-    // (they have no cancel at all — the rule is stated below, at the
-    // gestures' paragraph): the hatch
-    // FINALIZES the text selection, restoring nothing, and the Esc it falls
-    // through to belongs to the EDITOR's own modality (discard the buffer), which
-    // is a different thing from cancelling a gesture.
-
-    if (app.editor_text_drag.active) {
-        const bool escape_hatch =
-            (!ctrl && !shift && !alt && key == GuiKeys::Escape);
-        if (!escape_hatch) {
-            // THE SWALLOW IS SILENT (2026-10-25): a text drag exists only
-            // under an editor, which is a modal, and a bound chord under any
-            // modal says nothing — the card this gate raised (the pointer
-            // drags' "Keys are ignored during a drag", 2026-08-30) retired
-            // with the editor gate's own. NO HATCH BUT Esc: Ctrl+Q, the
-            // drag's second hatch until then, is consumed as every modal
-            // consumes it.
-            return;
-        }
-        finalize_editor_text_drag();
-        // fall through: the editor handler below runs Esc (cancel the
-        // edit) exactly as with no drag in flight.
-    }
+    // tear the edit down and dispatch a command on any command key. THE
+    // CARET DRAG OWNS THE ONE TOUCH (architect 2026-10-30), so no on-screen
+    // keyboard key and no roster lift can arrive during it: the gate has no
+    // hatch and consumes whatever could, silently — a text drag exists only
+    // under an editor, which is a modal, and a bound chord under any modal
+    // says nothing. The drag ends at its own lift (finalize_editor_text_drag),
+    // and the editor's Esc runs only after it.
+    if (app.editor_text_drag.active) return;
 
     // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the
     // single-State dialog one (the settings line, the trim preset's name and
@@ -290,7 +256,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and a dialog's ring get through (modal_editor_key_blocked); everything
     // else — playback, navigation, zoom, mode toggles, tab switches,
     // undo/redo, marker / trim chords, the Ctrl+Alt render chords, and since
-    // 2026-10-25 Ctrl+S and Ctrl+Q (NO HATCH) — drops HERE, SILENTLY, so no
+    // 2026-10-25 Ctrl+S (NO HATCH) — drops HERE, SILENTLY, so no
     // authoring or view change can happen while an edit is up. Admitted keys
     // route through the editor blocks below.
     // This gate is what makes an unbound chord STRUCTURALLY inert rather than
@@ -301,8 +267,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // declaration names every reader); opening a flag editor still does not
     // stop playback — that one rides no predicate at all, each modal surface
     // spelling its own stop at its open site.
-    // Sits after the text-drag gate so an in-flight editor selection drag keeps
-    // owning the keyboard exactly as before.
     if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
         // A BOUND CHORD UNDER ANY MODAL IS SILENT (architect 2026-10-25:
@@ -317,8 +281,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The top-flag editor owns the keyboard while active. Only its own editor
     // keys pass the gate above, so
     // this block cannot see a command, and it consumes every key it is handed
-    // (route_modal_editor_key answers true throughout since 2026-10-25, when
-    // its Ctrl+Q fall-through to the close road went with the hatch).
+    // (route_modal_editor_key answers true throughout since 2026-10-25, NO
+    // HATCH).
     if (text_editor::is_active(app.top_flag_editor)) {
         if (handle_top_flag_editor_key(key, mods)) return;
     }
@@ -582,15 +546,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tab. The iteration side's other admissions (the bound axis, the undo
     // pair, the clipboard copy, the tie, bare `[`) stay refused on a locked
     // tab, the wider list eating them as it does with the lamp dark.
-    if (authoring_lock_refuses_chord(key, mods)) {
-        // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
-        // 2026-08-30): "<chord> is not available on a read-only tab", said
-        // for a chord this product BINDS and for no other. The sentence is
-        // kept over a bare "This tab is read-only" because it names what was
-        // pressed, which is what the user is looking for after a press that
-        // did nothing. THE ENGLISH IS read_only_chord_card's (notifications.h)
-        // and not this site's: the English has one owner beside its knowing
-        // siblings (kTabReadOnlyCard, notifications.h).
+    if (authoring_lock_refuses_chord(key, mods, /*read_only_act=*/nullptr)) {
+        // THE LOCK SAYS SO, AND THE CARD NAMES THE ACT (architect 2026-10-30:
+        // a card never names a key): "<Act> is not available on a read-only
+        // tab", said for a chord this product BINDS and for no other, and only
+        // where the caller knows the act's name — the car's undo / redo road
+        // (WHO REACHES IT, below: this road never meets the read-only
+        // sentence, so it passes no act and that half drops in silence). The
+        // sentence is kept over a bare "This tab is read-only" because it
+        // names what was pressed, which is what the user is looking for after
+        // a press that did nothing. THE ENGLISH IS read_only_act_card's
+        // (notifications.h) and not this site's: the English has one owner
+        // beside its knowing siblings (kTabReadOnlyCard, notifications.h).
         //
         // THE SECOND CLASS IT WAS BUILT FOR HAS GONE SILENT — TWICE OVER, in
         // two rulings a day apart — and with it the cost the wording was chosen
@@ -648,25 +615,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // enabled's read-only arm, the mirror at read_only_key_blocked's
         // head), so the roster never meets the read-only sentence here. Two
         // producers still do: THE CAR'S Previous / Next on a locked tab, which
-        // spell Ctrl+Z / Ctrl+Shift+Z through run_undo_redo_without_key and
-        // take the read-only card, and the ITERATION sentence's lit buttons
-        // whose shifted or barrel twin is the Ctrl+Shift+Tab march, which the
-        // iteration list subtracts (the walk, Previous Marker, Switch Tab).
-        // The bare literal kTabReadOnlyCard stays the word of the sites that
-        // KNOW THEIR ACT and so need no chord in the sentence (its readers at
-        // notifications.h).
+        // build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
+        // the read-only card naming Undo or Redo, and the ITERATION sentence's
+        // lit buttons whose long-press or barrel twin is the Ctrl+Shift+Tab
+        // march, which the iteration list subtracts (the walk, Previous
+        // Marker, Switch Tab). The bare literal kTabReadOnlyCard stays the
+        // word of the sites that KNOW THEIR ACT and say the tab instead (its
+        // readers at notifications.h).
         //
         // AND THE CARD FORKS ON THE REASON AT THIS ONE SITE (architect
         // 2026-09-10), on the REASON THAT ACTUALLY STOOD — the read-only
         // list first where both stand (2026-10-13, the fork's own note
         // above). The
-        // read-only sentence names the chord for the reason
+        // read-only sentence names the act for the reason
         // above — this gate drops unbound chords with bound ones, so it has to
         // say which it ate. THE ITERATION SENTENCE NAMES THE WAY OUT INSTEAD
         // (kIterationLockCard, app_state.h — "Turn off grid iterations
         // first"): the mode is one the user turned on deliberately and can see
         // (the lamp is lit, the bound cells are painted), so one clause
-        // answers it, and naming the chord would add nothing the press did not
+        // answers it, and naming the act would add nothing the press did not
         // already say. chord_is_bound gates BOTH halves, for its own reason:
         // an unbound press is identified by its silence in every state.
         // (Ctrl+Z and Ctrl+Shift+Z are NOT answered here under the iteration
@@ -800,10 +767,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // ALONE. Its one producer is the on-screen keyboard's Esc key, and the
     // keyboard stands only while an editor owns a text session
     // (onscreen_keyboard::stands), so every Esc arrives under an editor and
-    // its two places are the editors' — (a) THE EDITOR TEXT-DRAG HATCH above,
-    // which finalizes an in-flight selection and falls through, and (b) THE
-    // EDITORS' OWN ROUTE (route_modal_editor_key), which closes / cancels the
-    // edit. No roster button spells Esc, so no Esc reaches this line, and
+    // its one place is THE EDITORS' OWN ROUTE (route_modal_editor_key), which
+    // closes / cancels the edit (never during a caret drag, which owns the one
+    // touch — the gate above). No roster button spells Esc, so no Esc reaches this line, and
     // every surface that answered it outside the editors answers its own
     // buttons instead: the prompts and the progress modal their word buttons,
     // the overlays their Close or Cancel and their opener keys, a running
@@ -911,7 +877,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // them. Exact through the shared predicates (gui_input.h), so these
     // arms and the allowlist cannot drift; every refusal is the act's own
     // card. The bottom row's Jump to Defining Marker dispatches Ctrl+J through
-    // here at its lift, and Ctrl+Shift+J at its shift-click or long press.
+    // here at its lift, and Ctrl+Shift+J at its long press.
     if (is_copy_value_key(key, mods)) {
         copy_focused_marker_value();
         return;
@@ -969,8 +935,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // row 8's process line already names the reason. It carded from
             // 2026-08-30 to that day, in the sentence the waveform scrub's
             // twin refusal shared (kTargetPreviewNotReadyCard, deleted with
-            // both raises). Space stays bound: chord_is_bound and spell_chord
-            // are untouched, so this silence is this rule's and not an
+            // both raises). Space stays bound: chord_is_bound still lists
+            // it, so this silence is this rule's and not an
             // unbinding's.
             return;
         }
@@ -1031,8 +997,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (playback is removed from the view whole and Space in neither form is
     // on its allowlist); loading-or-absent audio consumed it at the head of
     // this function; a read-only tab ADMITS it (the allowlist's
-    // is_ab_audition term — it authors nothing). The play button's shift-click
-    // and long press arrive here through the same chord
+    // is_ab_audition term — it authors nothing). The play button's long
+    // press arrives here through the same chord
     // (redesign_button_shift_admits).
     if (is_ab_audition_key(key, mods)) {
         // A GUI TRANSPORT PRESS, counted ahead of start()'s refusals (the
@@ -1393,7 +1359,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // itself, so the chord is in no repeat_eligible list.
     //
     // IT IS THE INHERIT TOGGLE'S OWN LETTER AND ITS OWN BUTTON: the tie has
-    // no button of its own — it rides IconMarkerInherit's shift-click and
+    // no button of its own — it rides IconMarkerInherit's
     // chrome_shift_hold_ms() long press (redesign_button_shift_admits,
     // app_state.h), which is where the two acts' relation is argued.
     //
@@ -1429,7 +1395,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // BOTH LOCKS RANK ABOVE THIS ARM and neither is spelled here: `F` sits on
     // no read_only_key_blocked and no iteration_lock_key_blocked allowlist
     // entry — both gates are allowlists — so authoring_lock_refuses_chord at
-    // the head of on_key eats the chord and cards its own sentence, which is
+    // the head of on_key eats the chord (the button greying on the same lock), which is
     // the outermost refusal a locked press can get. The Ctrl+D and Ctrl+N
     // arms above take the same order.
     //
@@ -1975,17 +1941,24 @@ bool GuiInputHandler::keyboard_owned_by_pointer_gesture() const {
 // THE AUTHORING LOCK'S KEYBOARD VERDICT AND ITS CARD (the ruling, the
 // composition that ranks the read-only sentence first, and the card's two
 // sentences are stated at the gate in on_key): true when the lock drops the
-// chord, the card raised for a bound chord alone.
+// chord, the card raised for a bound chord alone. THE READ-ONLY SENTENCE
+// NAMES THE ACT (architect 2026-10-30: a card never names a key), so it is
+// raised only where the caller names one — the car's undo / redo road; on
+// on_key's road `read_only_act` is nullptr and the read-only half drops in
+// silence, no producer reaching it there (the walk at the gate).
 bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
-                                                   GuiInputState mods) {
+                                                   GuiInputState mods,
+                                                   const char* read_only_act) {
     if (!authoring_lock_drops_chord(app, key, mods)) return false;
     const bool read_only_says_no =
         active_view_state(app).read_only && read_only_key_blocked(app, key, mods);
-    if (chord_is_bound(key, mods, app.history_mode.active))
+    if (!chord_is_bound(key, mods, app.history_mode.active)) return true;
+    if (!read_only_says_no)
         notifications.notify(AppState::NotificationClass::Normal,
-                             read_only_says_no
-                                 ? read_only_chord_card(spell_chord(key, mods))
-                                 : std::string(kIterationLockCard));
+                             std::string(kIterationLockCard));
+    else if (read_only_act != nullptr)
+        notifications.notify(AppState::NotificationClass::Normal,
+                             read_only_act_card(read_only_act));
     return true;
 }
 
@@ -2069,7 +2042,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 // editor swallowing the chord — SILENTLY since 2026-10-25, a bound chord
 // under any modal saying nothing (the editor gate in on_key), and the editor
 // a belt here, the caller dropping every editor first — and the
-// authoring lock (a read-only tab cards the chord; the iteration lock admits
+// authoring lock (a read-only tab cards the act by name; the iteration lock admits
 // it so the command's own arm names undo). The routers ranked above those
 // gates — the prompt, the two folder-overlay contents, every editor —
 // and the `h` view's gate are the CALLER'S to drop (GuiCarTransport::admits),
@@ -2105,7 +2078,12 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
         card_bound(kKeysDuringDrag);
         return false;
     }
-    if (authoring_lock_refuses_chord(key, mods)) return false;
+    // THE READ-ONLY CARD NAMES THE ACT by the roster's own word for it, the
+    // Undo / Redo key's tooltip (redesign_button_tooltip's line 1).
+    const char* act =
+        redesign_button_tooltip(redo ? RedesignButton::Redo
+                                     : RedesignButton::Undo).line1;
+    if (authoring_lock_refuses_chord(key, mods, act)) return false;
     return run_undo_redo_command(redo, /*synthesized_repeat=*/false);
 }
 
@@ -3143,7 +3121,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // THE SEATED PINCH'S ANCHOR IS CLEARED HERE, a flip making it a stale
     // song frame: TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
     // song frame, and nothing about two fingers resting on the glass stops a
-    // keyboard `t` or a mouse click on the audio-view lamp from reaching here — so a
+    // flip from reaching here — so a
     // pinch held across this flip would go on zooming about a SOURCE frame read
     // as a TARGET one, seating the view on an unrelated song point. THIS IS THE
     // CORRECTNESS member of the rule: it is the one view write that changes what

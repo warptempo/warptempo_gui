@@ -119,11 +119,11 @@
 //     BACKSTOPS).
 //   * INPUT WAITS FOR THE PICTURE: while the hold stands the GUI's press-
 //     class hooks drop what they are handed (run_project's hook block,
-//     main.cpp, which lists them) — a press, a key, a wheel, a touch
+//     main.cpp, which lists them) — a press, a key, a touch
 //     gesture's begin or a car button would act on the one frame, a
 //     picture with no piece, or on a piece the glass has not shown (ON
-//     SCREEN IS AS PAINTED). Releases, motion, focus, the close request and
-//     Ctrl+Q pass: they find no claim, or end the process.
+//     SCREEN IS AS PAINTED). Releases, motion, focus and the close request
+//     pass: they find no claim, or end the process.
 // What the glass shows meanwhile: from the open's certainty to the load's
 // entry — the next tick, a few milliseconds — the last frame it was shown
 // (the picker, or the prompt a dirty reopen answered; at a cold launch

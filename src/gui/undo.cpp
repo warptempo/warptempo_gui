@@ -232,11 +232,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // a stack cleared by a load/reset.
     //
     // THE KIND IS BLIND TO DIRECTION AND, SINCE 2026-08-31, TO MAGNITUDE (the
-    // step ladder: Ctrl+Up / Down steps three units and Shift+Up / Down
-    // ten since 2026-09-21, shift the long stride).
+    // barrel's step: Ctrl+Up / Down steps three units).
     // The blindness is UNCHANGED rather than newly granted: a Left tap and a
     // Right tap inside the window have always merged into one entry, and a
-    // bare tap followed by a shifted one now merges the same way. Both stay
+    // bare tap followed by a barrel one merges the same way. Both stay
     // right for the same reason — an undo entry restores a SNAPSHOT taken
     // before the run, so what the run did between them is not the entry's
     // business, and the one-entry-per-BURST rule is untouched either way (a
@@ -283,8 +282,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // (a) and (b) buy the window, (c) tests the subject.
             // (a) Layer (1) of the platform's key-repeat contract (stated at
             // GuiInputCore::maybe_fire_repeat) disarms the
-            // hold at every intervening pointer-button press, key press, and
-            // completed wheel emission, so a synthesized repeat STRUCTURALLY
+            // hold at every intervening pointer-button press and key press,
+            // so a synthesized repeat STRUCTURALLY
             // CANNOT arrive after another INPUT-BORNE command ran — and the
             // held-BUTTON producer beside it (tick_chrome_press_repeat, whose
             // repeat-eligible members are the four cardinal arrows and, since
@@ -558,7 +557,7 @@ void Undo::note_saved() {
     // The byte-equal pop then gave the wobble a second face — Right, save,
     // Left popped the entry and stepped the reference 0 → +1 over an EMPTY
     // redo stack, clean again with the file holding the post-Right state —
-    // and Ctrl+Q read the flag and exited with no prompt.
+    // and a quit read the flag and exited with no prompt.
     //
     // THE FIX IS ONE CLEAR AT THE OWNER, beside the reference move it belongs
     // to, so no caller can move the reference and forget the stamp: the next

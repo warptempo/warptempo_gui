@@ -70,8 +70,8 @@
 //     STANDING MODE (chord_is_bound, gui_input.h): kKeysDuringDrag
 //     (input_handler.cpp: the car's two roads, a head unit's press that lands
 //     while a pointer gesture holds the glass — no key can, the touch window
-//     having one owner, architect 2026-10-30), read_only_chord_card below
-//     (the read-only lock, its one live producer the car's undo / redo road
+//     having one owner, architect 2026-10-30), read_only_act_card below
+//     (the read-only lock, its one producer the car's undo / redo road
 //     on a locked tab — the roster's refused chords wear the grey) and
 //     kIterationLockCard (the iteration lock, reached by the lit tab buttons'
 //     Ctrl+Shift+Tab twin and the car); the lock's own composer
@@ -81,18 +81,17 @@
 //     I'm not using the laptop for authoring … silence") — the prompt, the
 //     progress modal and every editor, the editor text drag with them. The
 //     `h` view raises no gate card (architect 2026-10-30): every chord its
-//     allowlist refuses greys its button, so no refused chord arrives. ONE of
-//     them names the chord through the one speller
-//     spell_chord (gui_input.h). A GATE'S MEMBERSHIP IS THE CHORD'S ALONE
+//     allowlist refuses greys its button, so no refused chord arrives. NONE
+//     of them names a key (architect 2026-10-30): the read-only card names
+//     the ACT, by the roster's own word for it. A GATE'S MEMBERSHIP IS THE CHORD'S ALONE
 //     (architect 2026-09-01: "look for instances where it lies by saying it's
 //     not allowed when, in fact, it's only contextually not allowed") — a
 //     chord the state owns is admitted and its ACT answers the contextual
-//     refusal with the true reason. A card naming the chord pressed says what
+//     refusal with the true reason. A card naming the act refused says what
 //     happened, never what to press instead — it is not a gesture hint. (A
-//     card or a label never names a key to press; the interface's key text is
-//     the tooltip's key in the accelerator spelling, redesign_button_tooltip's
-//     head (app_state.h), architect 2026-10-27 — paint_handler.cpp's
-//     capitalization block.)
+//     card, a label or a tooltip never names a key (architect 2026-10-30,
+//     redesign_button_tooltip's head, app_state.h); the one key text in the
+//     product is the on-screen keyboard's own caps.)
 //   * THE VERBS' OWN REFUSALS, naming a subject or a view, never a chord: the
 //     home-view binding ("Markers are placed in source view", "Markers are
 //     moved in source view", Shift+S's "Already in phase reset view"); the
@@ -296,7 +295,8 @@
 //   * AN APPENDED REASON IS LOWERCASE (lowercase_initial below); THE SYSTEM'S
 //     OWN WORDS (ec.message(), strerror) are appended as they arrive —
 //     nothing lowercases libc.
-//   * A KEY IS SPELLED BY spell_chord (gui_input.h) and nothing else.
+//   * A CARD NEVER NAMES A KEY (architect 2026-10-30): a refused act is named
+//     by the roster's own word for it (read_only_act_card below).
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
 // it and nothing else writes a card.
@@ -354,19 +354,15 @@
 // the chrome's own model. A press anywhere on it ARMS it
 // (AppState::ChromePress's Card kind) and dismisses nothing; THE LIFT inside
 // the same card dismisses it; a lift outside the card it pressed dismisses
-// nothing (the chrome's slide-away cancel). A SHIFT-CLICK OR A LONG PRESS
-// DISMISSES EVERY CARD, criticals included — THE CHROME SHIFT LONG PRESS's
-// own pairing, one term at the lift: the press-time shift ORed with a hold
-// past chrome_shift_hold_ms(), with no visual announcement
-// (finish_notification_release, input_pointer.cpp). THE REASON: the tablet
-// has no key for a clear-all, so the pen was ticking the stack down X by X.
-// It is THE ONE WHOLE-STACK DISMISSAL (architect 2026-10-30: bare Esc's
-// clear-all, the keyboard's, went with the hardware keyboard). The
-// X went with the ruling, its hover fade with it, and the card wears no
-// hover face and no pressed face. ONE RULE FOR FINGER AND MOUSE, as before:
+// nothing (the chrome's slide-away cancel). A LONG PRESS
+// DISMISSES EVERY CARD, criticals included — THE CHROME SHIFT LONG PRESS,
+// one term at the lift: a hold past chrome_shift_hold_ms(), with no visual
+// announcement (finish_notification_release, input_pointer.cpp). THE
+// REASON: the pen was ticking the stack down card by card. It is THE ONE
+// WHOLE-STACK DISMISSAL (architect 2026-10-30). The card wears no
+// hover face and no pressed face. ONE RULE FOR FINGER AND PEN:
 // the router cannot fork on tap versus click (no origin bit rides a press;
-// GuiInputState carries modifiers alone), and the whole card is a larger
-// glass target than the X's 32 px box was.
+// GuiInputState carries modifiers alone).
 //
 // THE DISMISSAL IS THE LIFT'S — the ONE STATED EXCEPTION to "every dismissal
 // stays at the press" (AppState::ChromePress's head): a card is an EVENT the
@@ -402,7 +398,7 @@
 //
 // THE GEOMETRY A CARD IS HIT BY IS THE GEOMETRY IT WAS PAINTED WITH: the
 // painter publishes each visible card's rect into
-// AppState::Notifications::painted, and the router, the cursor map and the
+// AppState::Notifications::painted, and the router and the
 // hover walk read that publication and then ask the live stack whether the
 // id still stands (published geometry may only SELECT; live state decides).
 // The owners below are pure functions of the window and the scale — the
@@ -454,48 +450,40 @@
 // authoring_lock_card BELOW SINCE 2026-09-10 — the lock gained a second
 // reason, grid iterations, and those two acts refuse under both — while the
 // `h` view's fork keeps the literal, the view being unreachable under the
-// second reason. THE KEYBOARD GATE IS
-// NOT A READER (since 2026-08-30): it says "<chord> is not available on a
-// read-only tab" through the speller and the composer below instead, naming
-// what was pressed, which is what a user who just pressed it is looking for. Its predicate is the
+// second reason. THE LOCK GATE IS
+// NOT A READER: it says "<Act> is not available on a read-only tab" through
+// the composer below instead, naming what was pressed, which is what a user
+// who just pressed it is looking for. Its predicate is the
 // complement of an allowlist and so drops an unbound chord with a bound
 // authoring one, which is why that gate asks chord_is_bound first and answers
 // the unbound half with silence. The full reasoning is at that gate
 // (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 
-// THE SAME LOCK'S SENTENCE WITH THE CHORD IN IT, composed once — "<chord> is
-// not available on a read-only tab", the words the keyboard gate has said
-// since 2026-08-30 (the reasoning for naming the press rather than the tab is
-// at that gate, input_handler.cpp). It takes the ALREADY-SPELLED chord rather
-// than the key and its modifiers, so this header needs nothing of the
-// speller's; its caller reaches spell_chord (gui_input.h) for itself.
+// THE SAME LOCK'S SENTENCE WITH THE ACT IN IT, composed once — "<Act> is
+// not available on a read-only tab" (architect 2026-10-30: a card never
+// names a key, so the refused press is named by its ACT, the roster's own
+// word for it, redesign_button_tooltip's line 1 — "Undo is not available on
+// a read-only tab"; the reasoning for naming the press rather than the tab is
+// at the gate, input_handler.cpp).
 //
-// ONE CALLER, the lock's verdict-and-card (authoring_lock_refuses_chord), on
-// on_key's gate and the car's undo / redo road — the latter its one live
-// producer since 2026-10-30, the roster's refused chords greying on the same
+// ONE CALLER, the lock's verdict-and-card (authoring_lock_refuses_chord), and
+// ONE PRODUCER, the car's undo / redo road on a locked tab — on_key's road
+// never meets the sentence, the roster's refused chords greying on the same
 // lock — whose subject is the ACTIVE tab's bit (architect 2026-10-13: the
 // lamp's exclusion is the active tab's like every other read-only refusal,
 // authoring_locked, app_state.h).
 //
-// THE TAIL IS A CONSTANT IN app_state.h SINCE 2026-09-10
-// (kReadOnlyChordCardSuffix), for that header's own third-home reason: a FACE
-// read this English then — the Grid Iterations button's read-only line was `I`
-// plus this very tail — so the words went where the faces are compiled. That
-// second reader went on 2026-09-12 with the whole refusal-reason tooltip
-// class, leaving this composer the tail's ONE reader; the constant stays where
-// it is, this header including app_state.h and not the reverse.
-inline std::string read_only_chord_card(const std::string& chord) {
-    return chord + kReadOnlyChordCardSuffix;
+// THE TAIL IS A CONSTANT IN app_state.h (kReadOnlyActCardSuffix), this header
+// including app_state.h and not the reverse.
+inline std::string read_only_act_card(std::string_view act) {
+    return std::string(act) + kReadOnlyActCardSuffix;
 }
 
 // THE ITERATION LOCK'S SENTENCE IS kIterationLockCard AND IT LIVES IN
-// app_state.h, beside the sweep's two verdict cards, on the reason this header
-// states above — a FACE read it, the Toggle Marker Column button's hint being
-// that sentence plus its accelerator — and it stays there now that no face
-// does: the refusal-reason tooltips went on 2026-09-12, and this header
-// includes app_state.h and not the reverse, so the literal is reachable where
-// it stands. It is the read-only sentence's sibling all the same, and the
+// app_state.h, beside the sweep's verdict cards: this header includes
+// app_state.h and not the reverse, so the literal is reachable where it
+// stands. It is the read-only sentence's sibling all the same, and the
 // composer below is where the two meet.
 
 // THE ONE COMPOSER THE LOCK'S CARD FORKS AT, and READ-ONLY RANKS FIRST: the

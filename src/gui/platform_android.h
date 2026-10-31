@@ -265,8 +265,8 @@ public:
     // AKEYCODE_BACK is consumed whole in on_input_event and fires this
     // callback on its ACTION_UP — a REQUEST the program answers
     // (GuiInputHandler::on_window_close) with the unsaved-work prompt when
-    // the tab is dirty and with an immediate exit when it is clean, as it
-    // answers Ctrl+Q.
+    // the tab is dirty and with an immediate exit when it is clean — the one
+    // quit road (no chord spells it, architect 2026-10-30).
     // WHAT IS STILL NOT THIS HOOK is APP_CMD_DESTROY / destroyRequested: that
     // is the system stating the activity is already going, with nobody left to
     // answer a prompt and nothing allowed to block, so the loop returns at
@@ -404,9 +404,9 @@ public:
     // wherever an editor owns the keyboard, with no platform term
     // (onscreen_keyboard::stands).
     //
-    // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. Hardware
-    // keyboards are out of scope on this platform (on_input_event's key arm)
-    // and this backend
+    // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. The
+    // hardware keyboard is closed for good (on_input_event's key arm owns the
+    // ruling) and this backend
     // translates none: AInputEvent key events are handed back to the system so
     // BACK still leaves the app. THIS IS THE ROAD THE OWNED ON-SCREEN KEYBOARD
     // TAKES INTO THE CORE'S KEY PATH — a painted surface emitting keysyms

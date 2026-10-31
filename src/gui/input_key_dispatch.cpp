@@ -1,7 +1,7 @@
 // on_key dispatch helpers. Each is a GuiInputHandler method declared in
 // input_handler.h; on_key calls them in sequence (if (handle_X(...))
 // return;). Grouped here to keep input_handler.cpp focused on the event
-// entry points and the pointer / wheel paths.
+// entry points and the pointer paths.
 
 #include "input_handler.h"
 
@@ -131,8 +131,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // The deeper owner refusals — do_undo / do_redo's per-entry target-tab check
 // (undo.cpp), and the pointer AUTHORING refusals (input_pointer.cpp: the marker
 // drag arm, the flag editor's double-click open, the empty-lane marker drop) —
-// stay as backstops for the mouse and cross-tab paths, no longer the primary
-// surface for these keyboard chords.
+// stay as the cross-tab and pointer paths' own refusals, no longer the
+// primary surface for these chords.
 // THE POINTER TRIM REFUSALS ARE GONE WITH THIS RULING rather than merely
 // bypassed: the plain trim-bar press's band gate (input_pointer.cpp),
 // trim_bound_click_frame's first gate (input_trim.cpp) and the settings editor's
@@ -327,10 +327,10 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
-    // (Esc and Ctrl+Q need no admission: neither reaches this gate, the
-    // on-screen keyboard's Esc arriving only under an editor, whose route
-    // takes it above, and no producer spelling Ctrl+Q — architect 2026-10-30,
-    // the roster and the on-screen keyboard the two producers of every key.)
+    // (Esc needs no admission: it never reaches this gate, the on-screen
+    // keyboard's Esc arriving only under an editor, whose route takes it
+    // above — architect 2026-10-30, the roster and the on-screen keyboard the
+    // two producers of every key.)
     // THE SAVE (architect 2026-08-07). It writes the state the tab already
     // holds — it authors nothing — and the close prompt's Save answer already saved
     // from a locked tab through the very same owner (the header's inconsistency
@@ -503,10 +503,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // entry above is ctrl-exact, so the shifted spelling reaches no admission
     // and falls out at the default. THE FACE FOLLOWS THE KEY WITH NO SECOND
     // EDIT: the Drop marker button is already one of the marker verbs the lock
-    // greys, and its press arm consumes a SHIFT press on a disabled button
-    // exactly as it consumes a plain one (arm_redesign_press, one predicate
-    // for both routes), so the button's shift-click and its long press refuse
-    // where the key refuses.
+    // greys, and its press arm consumes any press on a disabled button
+    // (arm_redesign_press), so the button's long press refuses where the
+    // chord refuses.
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
     // nothing on it — are NOT on the allowlist: both drop at this gate. The
     // old design admitted them because an undo entry
@@ -605,8 +604,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // lamp, and there is nothing left for the refusal to protect — so the chord
 // left this delta and the IconAddToSelection button left iteration_lock_greys
 // with it. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
-// multi-marker selection under the lamp wants: several markers ctrl-clicked on
-// their flag boxes, and on glass this lamp is the fingertip's road to ctrl,
+// multi-marker selection under the lamp wants: several markers barrel-pressed
+// on their flag boxes, and on glass this lamp is the fingertip's road to ctrl,
 // the S Pen's side button the other. Bare
 // `i`'s ON edge still PUTS ADD TO SELECTION OUT (architect 2026-09-12, its own
 // arm calling selection_consumed — raising the cells is an act that ends a
@@ -822,10 +821,9 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
 // THE AUTHORING LOCK'S VERDICT, card-free — either lock's list dropping the
 // chord drops it; the two can stand together since 2026-10-13
 // (authoring_locked, app_state.h).
-// TWO READERS: on_key's gate (authoring_lock_refuses_chord, which adds the
-// card) and the flag-cell wheel's silent refusal (input_pointer.cpp). (The
-// propagate pair's faces were a third, the Edit menu's rows and then the
-// pigeon's seat in the phase-reset view, until 2026-10-21.)
+// ONE READER (re-derived 2026-10-30): the lock's verdict-and-card
+// (authoring_lock_refuses_chord), which on_key's gate and the car's undo /
+// redo road both ask.
 bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
                                 GuiInputState mods) {
     return (active_view_state(app).read_only &&
@@ -2221,7 +2219,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // press on the lit half a consumed nothing instead of a switch away from
     // what the user had just clicked; with one button there is no wrong half.
     //
-    // NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare shapes
+    // NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the chords
     // that DO repeat and leaves this one out, exactly as it leaves `u` out): a
     // held toggle over two walks can only flap.
     //
@@ -2266,8 +2264,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // stash dropped, lane republished synchronously, window
     // damaged — and the two can never come to do different amounts of work.
     //
-    // ONE-SHOT, NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare
-    // shapes that DO repeat and leaves this one out): a held toggle can only
+    // ONE-SHOT, NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the
+    // chords that DO repeat and leaves this one out): a held toggle can only
     // flap, exactly as the ctrl cycle can.
     //
     // THE BIT IS THE SESSION'S, NOT THE VIEW'S: it lives on AppState so the mode
@@ -2291,8 +2289,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // ACT — the same mode edge below, in the same order — so the two shapes
     // differ in one expression and in nothing else; and standing at the wall it
     // names, it is the step's own consumed nothing.
-    // ONLY THE BARE SHAPES REPEAT (repeat_eligible, below): a held absolute jump
-    // could only flap against the wall it is already on.
+    // NEITHER SHAPE REPEATS (architect 2026-10-30): the two step buttons carry
+    // no `repeats` (kToolbarChords), their long press being the jump, and
+    // repeat_eligible names neither key.
     // THE TWO STEP BUTTONS ARE THESE KEYS (2026-08-05,
     // RedesignButton::HistoryOlder / HistoryNewer — row 8's since 2026-10-11,
     // in the Left / Right arrows' seats in the view, which keeps bare Left /
@@ -2303,7 +2302,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // they stand on through the same two predicates (the truthful-buttons
     // ruling; redesign_button_enabled's companions arm) — and since
     // 2026-08-07 they are SHIFT-ADMITTING (redesign_button_shift_
-    // admits, app_state.h), so a shift-click reaches the jump through that same
+    // admits, app_state.h), so the long press reaches the jump through that same
     // one route and their tooltips carry the shift line that names it; a
     // greyed arrow loses no jump, the jump onto the wall it stands on moving
     // nothing either.
@@ -2694,12 +2693,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             with extend=false, at the router's plain lane
 //                             claim, input_pointer.cpp), which is exactly what
 //                             the sticky ctrl does to a live flag. THE REASON
-//                             IS THE RIG: the view's multi-selection had two
-//                             roads, ctrl-click and shift-click, and there is
-//                             NO CTRL KEY ON GLASS — so the two-flag selection
-//                             bare `v` reverts had no spelling at all on the
-//                             tablet, which is the exact gap the sticky ctrl
-//                             exists to close (AppState::add_to_selection).
+//                             IS THE RIG: the view's multi-selection's other
+//                             road is the barrel's ctrl click, which the
+//                             fingertip lacks, so the two-flag selection
+//                             bare `v` reverts wants the sticky ctrl, the
+//                             exact gap it exists to close
+//                             (AppState::add_to_selection).
 //                             ADMITTED ON THE HEADER'S OWN STANDARD, the
 //                             read-only allowlist's argument repeated: the
 //                             chord flips a session bit and the click it
@@ -2855,9 +2854,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             this act writes it; Save-and-Commit, which
 //                             authors nothing, is admitted by that gate
 //                             instead).
-// (Esc and Ctrl+Q are not on it: neither reaches this gate — architect
-// 2026-10-30, the roster and the on-screen keyboard the two producers of
-// every key, the keyboard's Esc arriving only under an editor.)
+// (Esc is not on it: it never reaches this gate — architect 2026-10-30, the
+// roster and the on-screen keyboard the two producers of every key, the
+// keyboard's Esc arriving only under an editor.)
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its
@@ -3350,11 +3349,10 @@ void GuiInputHandler::run_publish_chord() {
 // frozen side is honest about AUTHORED state — the mode's gates refuse every
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
-// it (membership re-derived 2026-08-12 under pan-primary): zoom, the paged
-// scroll, the plain-wheel stepped pan, the overview command,
-// the one nav drag on the mode's whole navigation surface (its pan and its
-// ctrl zoom phase alike), and the mode's own cursor-moving acts
-// — the diff-flag click, the deferred click act and the keyboard's Tab cycle,
+// it (membership re-derived 2026-10-30): zoom, the overview command,
+// the touch pan and pinch on the mode's whole navigation surface, and the
+// mode's own cursor-moving acts
+// — the diff-flag click, the deferred click act and the walk's Tab cycle,
 // Home/End and `c`, which `0` reaches too from full zoom out. Committing the
 // frozen text
 // would therefore write a checkpoint whose view band is a stale copy of one the
@@ -4349,11 +4347,6 @@ void GuiInputHandler::run_history_revert() {
     close_history_mode();
 }
 
-// (THE OPEN DROPDOWN'S keyboard gate, dropdown_key_blocked — bare Esc closed
-// the popup, Ctrl+Q closed it and fell through, a row's access key ran the row,
-// and every other chord was a ruled silence — RETIRED 2026-10-21 with the
-// Settings popup.)
-
 // The DIALOG editors alone (the settings editor's buffer in its three kinds,
 // the settings line, the trim preset's name and the BPM form's line) — the
 // membership is AppState::dialog_editor_session's and nothing here restates
@@ -4415,7 +4408,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // A press a live pointer gesture would swallow must not arm: its owning
     // context rejected the press, and the gate lifting later must not
     // retroactively empower the hold (e.g. a chord held through a marker drag
-    // must not repeat onto the just-committed marker once the mouse releases).
+    // must not repeat onto the just-committed marker once the finger lifts).
     if (any_pointer_gesture_active(app)) return false;
     // NOTHING REPEATS UNDER A PROMPT, THE PROGRESS MODAL OR AN OVERLAY
     // (architect 2026-10-30): no key arrives under any of them but an
@@ -4481,44 +4474,17 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
     }
-    // Global dispatch: only the continuous step gestures repeat — the
-    // ARROWS all four (Left/Right being the playhead step in the waveform lane
-    // and the position nudge in the marker lane, Up/Down the
-    // VALUE STEP on the addressed cell — the tempo or a bound;
-    // the lane split is decided per fire at dispatch, so the
-    // arrows repeat as one family — and since 2026-08-31 they repeat on their
-    // ctrl spelling too, which the arm below this one owns),
-    // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
-    // older/newer step, a continuous step gesture like the arrows and held for
-    // the same reason, to walk quickly; in GLOBAL dispatch it is bound only
-    // inside that view, so a repeat outside it fires into an unbound key
-    // exactly as a held arrow with nothing to nudge fires into a refusal — the
-    // render player bound the same pair to its own item walk for the one day
-    // of 2026-08-30). Their SHIFT shapes — the
-    // walk's absolute wall jumps — are excluded
-    // by the no-shift term below and stay one-shot: a held jump could only
-    // flap against the wall it just reached),
-    // the marker-focus cycle (bare Tab / Shift+Tab), and the
-    // THREE repeating Ctrl chords — the
-    // Ctrl+Shift+Tab march and Ctrl+Z / Ctrl+Shift+Z (undo / redo),
-    // each a continuous step gesture like the cycle, not a
-    // one-shot command. THE MARCH REPEATS IN EVERY STATE since 2026-08-18, its
-    // mode scope having gone with the reason for it: the chord is the march
-    // inside the `h` history view too, over the diff-flag cycle instead of the
-    // live one, so a hold continues exactly the gesture it continues outside —
-    // the same eligibility the bare cycle already inherits in there. (It was
-    // the mode's reverse walk cycle from 2026-08-07, which a hold could only
-    // flap, and this line excluded the view for that.) Ctrl+Tab stays one-shot
-    // everywhere, in the view as out of it, a held A/B switch being able only
-    // to flap. Every
-    // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space in BOTH of
-    // its forms (bare, and Shift+Space the A/B audition — a held one would
-    // only meet the running-sequence refusal, so no repeat is owed), Home/End
-    // in BOTH of its forms (bare and the Shift whole-piece jump, Shift since
-    // 2026-10-24), and Delete is one-shot.
-    if (!mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::Comma || key == GuiKeys::Period))
-        return true;
+    // Global dispatch: only the continuous step gestures repeat, and THE ONE
+    // READER OUT HERE IS THE ROSTER'S HOLD-REPEAT (tick_chrome_press_repeat,
+    // input_pointer.cpp; architect 2026-10-30): the on-screen keyboard stands
+    // only under an editor, so a global key arrives only from a button's lift
+    // or its burst, and a burst runs only on a `repeats` row of
+    // kToolbarChords — the four ARROWS (Left/Right being the playhead step in
+    // the waveform lane and the position nudge in the marker lane, Up/Down the
+    // VALUE STEP on the addressed cell — the tempo or a bound; the lane split
+    // is decided per fire at dispatch, so the arrows repeat as one family, on
+    // their ctrl spelling too) and UNDO / REDO, Ctrl+Z / Ctrl+Shift+Z. These
+    // arms name exactly those rows' chords; every other chord is one-shot.
     // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31):
     // a HELD REPEAT CARRIES ITS MODIFIER, so a held Ctrl+Up (the barrel held
     // on the button) walks three cents a fire — the burst continues the
@@ -4526,7 +4492,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Down bind bare and Ctrl (the ladder, arrow_step_magnitude, whose head
     // says why Shift spells nothing since 2026-10-30); Left / Right bind BARE ONLY
     // (the horizontal ladder retired 2026-09-21; the Ctrl form 2026-09-23),
-    // so a held Left / Right — key or button — walks one step of the active
+    // so a held Left / Right button walks one step of the active
     // column's unit a fire, a hop on the phase-reset column, keeping its
     // column at every fire while the hold posture stands. The lane
     // split and the unit are decided per fire at dispatch, so the arm is
@@ -4538,39 +4504,16 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (!mods.alt && !mods.shift &&
         (key == GuiKeys::Up || key == GuiKeys::Down))
         return true;
-    // Marker-focus cycle keys auto-advance while held (fast marker walking):
-    // bare Tab and Shift+Tab both cycle (mirroring the dispatch arm), both
-    // requiring no ctrl and no alt (no Alt spelling of Tab binds, so none
-    // repeats). The `h` history
-    // mode's diff-flag cycle takes the same two shapes and inherits this line
-    // unchanged, which is the eligibility it wants: fast walking of the flags
-    // instead of the markers. CTRL+TAB is excluded by the
-    // same no-ctrl term, which is the eligibility it wants in every state — a
-    // held A/B switch would only flap.
-    if (!mods.ctrl && !mods.alt && key == GuiKeys::Tab)
-        return true;
-    // Ctrl+Shift+Tab exactly (the lockstep march) repeats too, IN EVERY STATE
-    // since 2026-08-18: the mode-scoped term this line carried from 2026-08-07
-    // is deleted with the thing it was about — the chord was the view's reverse
-    // WALK cycle in there, which a hold could only flap, and it is the march
-    // itself in there now, marching the diff-flag cycle instead of the live one.
-    // Ctrl+Tab needs no term of its own — the no-ctrl arms above exclude it in
-    // every state.
-    if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab)
-        return true;
     // Ctrl+Z / Ctrl+Shift+Z (undo / redo) repeat while held (architect
     // 2026-07-23): stepping through history is a continuous step gesture
-    // like the marker march — each fire is a full command (touched-set
+    // like the arrows' — each fire is a full command (touched-set
     // selection, offscreen-only recenter, the sync re-warp where the entry
     // demands it), costs bounded like the tempo step. The single condition
-    // covers both: shift distinguishes undo from redo, and repeat recomputes
-    // modifiers live, so a shift pressed mid-hold flips to redo — consistent
-    // with the platform's live-modifier rule. THE UNDO AND REDO BUTTONS ASK
-    // THIS SAME TERM since 2026-09-13, both rows carrying `repeats` in
-    // kToolbarChords (input_pointer.cpp), so key and button walk the history
-    // at one speed; the button's chord is built from its row at the press and
-    // does not flip on a live shift. A repeat that finds the stack empty is
-    // silent at the dispatch arm (input_handler.cpp).
+    // covers both, shift distinguishing undo from redo. THE UNDO AND REDO
+    // BUTTONS are its readers, both rows carrying `repeats` in kToolbarChords
+    // (input_pointer.cpp); the button's chord is built from its row at the
+    // press. A repeat that finds the stack empty is silent at the dispatch
+    // arm (input_handler.cpp).
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
     // THE ZOOM STEP'S `=` / `-` ARE DELIBERATELY ABSENT, bare and shifted
@@ -4590,7 +4533,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit) and Enter (commit) — nothing
-// else, NO HATCH (2026-10-25): Ctrl+S, Ctrl+Q, Space-as-playback, zoom,
+// else, NO HATCH (2026-10-25): Ctrl+S, Space-as-playback, zoom,
 // mode toggles, tab switches, undo/redo, the marker / trim chords, and the
 // Ctrl+Alt render chords all drop here. "The editor
 // itself" CONSUMES the one editor-key owner:
@@ -4617,8 +4560,8 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // letting the window manager handle everything now … block all gestures
     // except the one escape, or anything that closes the modal"): the editor's
     // own keys — typing, its motion keys, Esc and Enter — and a dialog's
-    // ring are the whole admitted set; Ctrl+S and Ctrl+Q, admitted until
-    // then, are consumed like every other chord, silently (on_key's gate).
+    // ring are the whole admitted set; every other chord is consumed,
+    // silently (on_key's gate).
     // The platform's close — Back — is the quit road under every modal
     // (GuiPrompt::request_close).
     const bool is_editor_key =
@@ -6416,16 +6359,12 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // and the marker lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys and a dialog's ring — NO HATCH since
-// 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate (they were this route's
-// save and close fall-through until then) — so a NotConsumed key here is
-// swallowed as a backstop and this route answers true for every key. A
-// WINDOW MANAGER'S CLOSE still tears the editor down uncommitted on the close
-// road's own step (close_modal_editors_no_commit). THE COMMAND ADMISSION IS
-// KEYBOARD-ONLY (2026-08-13): it had a pointer-side mirror from 2026-08-11 —
-// the modal-trap reach-through, which let a roster button whose chord is
-// admitted here dispatch from a press while a dialog editor stood — and the
-// architect retired it once every dialog grew real OK and Cancel buttons,
-// and every editor's veil swallows every roster press since 2026-10-25.
+// 2026-10-25, every other chord consumed at the gate — so a NotConsumed key
+// here is swallowed and this route answers true for every key. The
+// platform's close (Back) still tears the editor down uncommitted on the close
+// road's own step (close_modal_editors_no_commit). Every editor's veil
+// swallows every roster press since 2026-10-25, so the on-screen keyboard is
+// the one producer of the keys this route sees.
 // `autocomplete` is the optional
 // bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the bpm and flag editors
 // have no vocabulary to complete and pass an empty hook).
@@ -6506,10 +6445,9 @@ bool GuiInputHandler::route_modal_editor_key(
     // Anything the ring above did not claim is a CONSUMED NO-OP here — EXCEPT
     // bare Esc, which abandons the edit from anywhere in the dialog, a button
     // included, as it does from the field: spelled here because this wall
-    // stands ABOVE the editor's own keymap. (Ctrl+S and Ctrl+Q were admitted
-    // here and at the tail until 2026-10-25 — NO HATCH, a modal admitting
-    // its own vocabulary alone: the gate consumes both now, and the window
-    // manager's close is the quit road.)
+    // stands ABOVE the editor's own keymap. NO HATCH (2026-10-25): a modal
+    // admits its own vocabulary alone, and the platform's close is the quit
+    // road.
     // (The FLAG editor cannot be in this branch: it publishes no dialog, so its
     // ring is empty and the live focus is structurally -1 while it stands.)
     // IT READS THE LIVE FOCUS, never the raw index (modal_dialog_focus_live,
@@ -6554,12 +6492,10 @@ bool GuiInputHandler::route_modal_editor_key(
                              "This field is full");
         return true;
     }
-    // (CTRL+S SAVED AND CTRL+Q HANDED THE CLOSE ROUTING ON from here until
-    // 2026-10-25, the editors' two hatches; the gate consumes both now. A
-    // WINDOW MANAGER'S CLOSE over a standing editor still tears it down
+    // (The platform's close over a standing editor tears it down
     // uncommitted on the close road itself — GuiPrompt::request_close,
     // through close_modal_editors_no_commit — and asks the unsaved-work
-    // question exactly as before.)
+    // question.)
     return true;  // modal: swallow
 }
 
@@ -6571,11 +6507,9 @@ bool GuiInputHandler::route_modal_editor_key(
 // editor's key route's (handle_settings_editor_key), which this road never
 // passes, an exit having nothing to return to.
 //
-// THE STEP LIVES ON THE CLOSE ROAD AND NOT ON THE KEYBOARD'S SIDE OF IT
-// (2026-08-28): Ctrl+Q used to tear its own editor down through a per-editor
-// hook on the shared modal route, and the PLATFORM'S CLOSE (Back) — which
-// arrives with no key at all (main.cpp's set_on_close) — reached GuiPrompt::request_close
-// without it, leaving a standing editor alive beneath the unsaved-work
+// THE STEP LIVES ON THE CLOSE ROAD (2026-08-28): the PLATFORM'S CLOSE (Back)
+// arrives with no key at all (main.cpp's set_on_close), so a closer on the
+// key route would leave a standing editor alive beneath the unsaved-work
 // question and back on screen at Cancel. One road, one closer, the render
 // player's own close's argument exactly.
 //
@@ -7632,7 +7566,7 @@ void GuiInputHandler::close_picker() {
 }
 
 
-// THE PICKER'S KEY ROUTER — the whole plastic vocabulary while a picker
+// THE PICKER'S KEY ROUTER — the whole chord vocabulary while a picker
 // stands, in route_render_player_key's shape (the contract is at the
 // declaration).
 void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
@@ -8524,8 +8458,8 @@ void GuiInputHandler::copy_focused_marker_value() {
     // every named thing on a card is. The save and a render stay silent by
     // ruling: each has its own visible answer (row 8's clock
     // suffix — the `*` a save clears — and the file on disk). THE BUTTON
-    // INHERITS IT: Jump to Defining Marker's shift-click and long press
-    // dispatch this same Ctrl+Shift+J through on_key at their lift
+    // INHERITS IT: Jump to Defining Marker's long press
+    // dispatches this same Ctrl+Shift+J through on_key at its lift
     // (2026-10-14), so the sentence lives once and every road says it.
     notifications.notify(AppState::NotificationClass::Normal,
                          "Copied the resolved value '" + payload + "'");
@@ -9379,8 +9313,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // vocabulary to complete, and a bare Tab never reaches this route at all —
 // the on_key gate swallows it, a flag editor publishing no dialog and so no
 // ring (route_modal_editor_key). Esc / Enter are the session's only exits:
-// NO HATCH since 2026-10-25, Ctrl+S and Ctrl+Q consumed at the gate like
-// every other chord.
+// NO HATCH since 2026-10-25, every other chord consumed at the gate.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {

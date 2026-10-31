@@ -2563,7 +2563,7 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 // tone lands as its material (materials.h) and any other color flat.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // One cell rect of INK in `c`, flat whatever the scope (set_palette_source):
-// a glyph's or a word's own cells — an access key's underline, the cases'
+// a glyph's or a word's own cells — the cases'
 // constant outline and rings — which no
 // material ever wears, even in a tone's bytes.
 void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
@@ -3670,9 +3670,9 @@ void render_flags(cairo_t* cr,
 //                   POINTER TOO (architect 2026-09-05, completing the
 //                   one-graphic-principle ruling for the press: the three
 //                   editors are transparent to each other for the pointer as
-//                   they already are graphically; no press or wheel reaches
+//                   they already are graphically; no press reaches
 //                   them while the editor stands since 2026-10-25, its veil
-//                   swallowing both, so the rule answers the walk's other
+//                   swallowing it, so the rule answers the walk's other
 //                   readers alone). The one flag walk
 //                   (topmost_flag_rect, app_state.cpp) asks this rect FIRST,
 //                   because the editor paints last and so covers whatever the
@@ -3690,8 +3690,7 @@ void render_flags(cairo_t* cr,
 //                   the editor uncommitted and acted on the cell). It is
 //                   still a SECOND rect and still deliberately not folded into
 //                   `box`: the caret / text-drag claim seats a caret for any
-//                   press inside `box` and the cursor map shows the I-beam
-//                   over exactly that rect, so a folded run would map presses
+//                   press inside `box`, so a folded run would map presses
 //                   on cell ink to payload bytes and promise
 //                   editing where none is. What the run promises instead is
 //                   the marker-lane cue, which it gets for free from the same
@@ -3761,7 +3760,7 @@ struct FlagEditorBox {
 // the text does not scroll inside it any more — and a field reaching past an
 // edge is READ BY Esc, A PAN AND A REOPEN (architect 2026-10-25): the editor
 // is a modal, so nothing pans while it stands, and its open pans nothing
-// either (the wheel and the grab-pan worked under it until then).
+// either.
 // State::view_offset_px survives on this surface for the sub-pixel case alone
 // (a run's width rounded down to a whole column, which would otherwise clip
 // the caret's reserved column at end-of-text); the glyph-by-glyph travel its

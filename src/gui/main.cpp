@@ -708,8 +708,8 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 }
 } // namespace
 
-// THE TWO BLANK BANDS HAVE NO ACCESSOR (architect 2026-10-30: gap 1's rect
-// had one reader, the wheel's inert band list, gone with the mouse): both are
+// THE TWO BLANK BANDS HAVE NO ACCESSOR (architect 2026-10-30: nothing reads
+// a rect of theirs): both are
 // fall-throughs — a press claims nothing, the touch pan zone has no term for
 // them and answers as it answers the lanes around them, and
 // render_background paints them as window ground.

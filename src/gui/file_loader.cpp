@@ -305,7 +305,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // for the whole synchronous decode/pyramid/install, so the callback below
     // only asks the platform's paint (drain_events processes no looper
     // source; the paint it reaches is withheld by the open's hold) and never
-    // reports cancel. A Ctrl+Q / Back pressed during loading is not observed
+    // reports cancel. A Back pressed during loading is not observed
     // until the load completes; the queued event is then read when run()
     // resumes and the deferred quit is honored on completion (the hold drops
     // every other queued press — run_project's hook block, main.cpp). An
