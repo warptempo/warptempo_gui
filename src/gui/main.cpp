@@ -3497,7 +3497,7 @@ int gui_main() {
     // architect 2026-10-31; render.h's seat): seeded before the first
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
-    set_waveform_grow_eighths(device_config.waveform_grow_eighths);
+    set_waveform_grow_quarters(device_config.waveform_grow_quarters);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

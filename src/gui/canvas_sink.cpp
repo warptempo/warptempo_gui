@@ -25,9 +25,14 @@ GuiCanvasDrawList& gui_canvas_frame() {
 
 // THE COLUMNS ARE NOT CLEARED HERE (2026-10-14): they belong to the plate's
 // revision, not to the rebuild (plate, below).
+// THE GROW IS STAMPED AT EVERY REBUILD (GuiCanvasDrawList::plate_grow):
+// the key's live seat, in subcells, whether or not a plate follows — the GL
+// canvas compares it with its program's at every list draw, so a list
+// without a plate must carry the same number as one with.
 GuiCanvasSink::GuiCanvasSink(GuiCanvasDrawList& list) : list_(list) {
     list_.prims.clear();
     ++list_.generation;
+    list_.plate_grow = waveform_grow_quarters();
 }
 
 void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
@@ -91,9 +96,6 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
     if (copy) list_.columns.clear();
     const uint32_t ink     = argb32_opaque_word(hex(inks.ink_rgb));
     const uint32_t outline = argb32_opaque_word(hex(inks.outline_rgb));
-    // THE GROW (GuiCanvasDrawList::plate_grow): the key's live seat, in
-    // subcells, read at every rebuild so a commit of the key repaints.
-    list_.plate_grow = waveform_grow_eighths();
     std::size_t offset = 0;
     for (const GuiPlateColumns::Band& b : columns.band) {
         if (!b.stored) continue;

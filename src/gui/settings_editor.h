@@ -289,7 +289,7 @@ static_assert(settings_page_piece_keys_pinned());
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
 // key with a short domain the list can show whole: the twenty presets, the
 // two words, the folders under `noise/`, the level's 31 whole dB, the
-// crossfade's 30 whole seconds and the grow's 17 eighths. The typed line still names every one of
+// crossfade's 30 whole seconds and the grow's 9 quarters. The typed line still names every one of
 // them, its arms and completers unchanged (the list is a second door).
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
 // are no short domain, so its row opens the line editor; nor are the
@@ -406,7 +406,7 @@ struct GuiSettingsEditor {
     // admits (is_noise_folder_name), so every row commits; no folder there,
     // or no config home, is a list with no rows; `noise_level` 0 down to -30
     // in steps of 1; `noise_crossfade_s` 1 up to 30; `waveform_grow` 0 up
-    // to 2 in eighths (2026-10-31). Every value is
+    // to 2 in quarters (2026-10-31). Every value is
     // the key's writer spelling (format_noise_level, format_noise_crossfade_s,
     // format_waveform_grow),
     // so the seat compares it with setting_value byte for byte. Listed afresh

@@ -53,9 +53,10 @@ public:
     // draw alone, 2026-10-30).
     void bind_fixed_state();
     // THE THREE PROGRAMS, built at the first make current (each a no-op once
-    // made): the texture triangle's, the canvas list's with its vertex
-    // array, its instance buffer and the plate's bounds texture, and the GPU
-    // page's (2026-10-27).
+    // made): the texture triangle's, the canvas list's — at the plate's
+    // default grow, the source being specialized per grow (build_list_program
+    // below) — with its vertex array, its instance buffer and the plate's
+    // bounds texture, and the GPU page's (2026-10-27).
     void ensure_programs();
     // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER (the definition): remade at
     // a size of w x h it does not have.
@@ -82,6 +83,14 @@ public:
     void forget();
 
 private:
+    // THE LIST PROGRAM AT A GROW (2026-10-31; the specialization rule at
+    // kListFragmentShader's head, gl_canvas.cpp): linked from the source
+    // assembled with `grow` as its GROW constant, its sampler bound to unit
+    // 1, its two uniforms fetched, and the grow recorded as
+    // list_program_grow_. ensure_programs builds it once at the default
+    // grow; present_frame rebuilds it — the old program deleted — before a
+    // draw whose list carries another grow.
+    void build_list_program(int grow);
     void upload_list(const GuiCanvasDrawList& list);
     void reconcile_pages(GuiCanvasPage& page);
     void draw_page(GuiCanvasPage& page, const int clip[4]);
@@ -95,12 +104,17 @@ private:
     int          texture_w_      = 0;
     int          texture_h_      = 0;
     // THE CANVAS LIST'S OBJECTS (the draw at present_frame, the records at
-    // canvas_sink.h): the program and its three uniforms (the size, the
-    // height and the plate's grow, u_grow, set from the list at every
-    // draw), its own vertex array
-    // over the instance buffer, the plate's bounds texture and its size —
-    // made with the texture program, living in the context — and the
-    // instances' count and the list generation they were made from.
+    // canvas_sink.h): the program with its two uniforms (the size and the
+    // height) and THE GROW IT WAS COMPILED FOR (list_program_grow_, −1 while
+    // no program stands: the plate's grow is a constant of the shader's
+    // source, never a uniform — the specialization rule at
+    // kListFragmentShader's head — so a list whose plate_grow differs has
+    // the program rebuilt at its draw, build_list_program), its own vertex
+    // array over the instance buffer (independent of the program: the
+    // attribute locations are the vertex shader's layout qualifiers, so a
+    // rebuild keeps it), the plate's bounds texture and its size — made with
+    // the texture program, living in the context — and the instances' count
+    // and the list generation they were made from.
     // THE BOUNDS TEXTURE'S KEY (2026-10-14, upload_list's rule): whether its
     // texels are an upload's at all (false while it holds the seed, after
     // forget()), and the plate revision and the plate records' spans —
@@ -109,7 +123,7 @@ private:
     unsigned int list_program_        = 0;
     int          list_size_uniform_   = -1;
     int          list_height_uniform_ = -1;
-    int          list_grow_uniform_   = -1;
+    int          list_program_grow_   = -1;
     unsigned int list_vao_            = 0;
     unsigned int list_vbo_            = 0;
     int          list_instances_      = 0;

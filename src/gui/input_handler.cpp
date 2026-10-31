@@ -3466,10 +3466,10 @@ void GuiInputHandler::apply_osk_font_px(int px_at300) {
     viewport.invalidate_all();
 }
 
-void GuiInputHandler::apply_waveform_grow(int eighths) {
+void GuiInputHandler::apply_waveform_grow(int quarters) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the whole window's damage; the commit's arm owns the persist.
-    set_waveform_grow_eighths(eighths);
+    set_waveform_grow_quarters(quarters);
     viewport.invalidate_all();
 }
 

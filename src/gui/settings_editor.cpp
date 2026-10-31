@@ -378,7 +378,7 @@ std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
             }
         }
     } else if (key == "waveform_grow") {
-        for (int n = kWaveformGrowMinEighths; n <= kWaveformGrowMaxEighths; ++n) {
+        for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n) {
             const std::string v = format_waveform_grow(n);
             out.push_back({v, v});
         }
@@ -1341,22 +1341,22 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key;
-    // render.h's `waveform_grow` seat): a multiple of 0.125 device px under
+    // render.h's `waveform_grow` seat): a multiple of 0.25 device px under
     // its one grammar owner (parse_waveform_grow, device_config.h), APPLIED
     // LIVE AT THE COMMIT — the live struct, then the one live act
     // (GuiInputHandler::apply_waveform_grow: the renderer's seat and the
     // window repainted, no plate re-render — the grow is the GPU's alone)
     // — and persisted, so NO CARD: the waveform is the answer. The page
-    // opens its VALUE LIST (17 values, kSettingsValueListKeys); Tab
+    // opens its VALUE LIST (9 values, kSettingsValueListKeys); Tab
     // completes no value (a number is typed, or picked from the list);
     // stage 2's recall is the writer's spelling (recall_gui_setting_value).
     if (key == "waveform_grow") {
-        const std::optional<int> eighths = parse_waveform_grow(value);
-        if (!eighths) return reject(kWaveformGrowGrammarReason);
-        if (*eighths == app.device_config->waveform_grow_eighths)
+        const std::optional<int> quarters = parse_waveform_grow(value);
+        if (!quarters) return reject(kWaveformGrowGrammarReason);
+        if (*quarters == app.device_config->waveform_grow_quarters)
             return unchanged();
-        app.device_config->waveform_grow_eighths = *eighths;
-        input->apply_waveform_grow(*eighths);
+        app.device_config->waveform_grow_quarters = *quarters;
+        input->apply_waveform_grow(*quarters);
         (void)persist();
         return applied();
     }

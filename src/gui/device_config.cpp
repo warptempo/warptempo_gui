@@ -162,18 +162,18 @@ std::string format_osk_font_px(int px) {
 }
 
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
-// parse_waveform_grow's head, device_config.h): the eighths as the shortest
-// exact decimal — the integer part, then the fraction in thousandths with
-// its trailing zeros cut, and no fraction at a whole number. Every eighth is
-// exact in three decimals (n/8 = 125n/1000), so nothing rounds.
-std::string format_waveform_grow(int eighths) {
+// parse_waveform_grow's head, device_config.h): the quarters as the shortest
+// exact decimal — the integer part, then the fraction in hundredths with
+// its trailing zero cut, and no fraction at a whole number. Every quarter is
+// exact in two decimals (n/4 = 25n/100), so nothing rounds.
+std::string format_waveform_grow(int quarters) {
     char buf[32];
-    const int whole = eighths / 8;
-    const int thousandths = (eighths % 8) * 125;
-    if (thousandths == 0) {
+    const int whole = quarters / 4;
+    const int hundredths = (quarters % 4) * 25;
+    if (hundredths == 0) {
         std::snprintf(buf, sizeof(buf), "%d", whole);
     } else {
-        std::snprintf(buf, sizeof(buf), "%d.%03d", whole, thousandths);
+        std::snprintf(buf, sizeof(buf), "%d.%02d", whole, hundredths);
         std::string s(buf);
         while (s.back() == '0') s.pop_back();
         return s;
@@ -222,7 +222,7 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_true_colors(cfg.true_colors);
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
-            s += format_waveform_grow(cfg.waveform_grow_eighths);
+            s += format_waveform_grow(cfg.waveform_grow_quarters);
         } else if (k == "noise") {
             // The folder's name verbatim (is_noise_folder_name's grammar).
             s += cfg.noise;
@@ -368,11 +368,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
         // grammar owner (parse_waveform_grow, device_config.h), required
         // like every key; any other spelling the launch's hard fail.
         if (key == "waveform_grow") {
-            const std::optional<int> eighths = parse_waveform_grow(value);
-            if (!eighths) {
+            const std::optional<int> quarters = parse_waveform_grow(value);
+            if (!quarters) {
                 return bad_value(ln, key, value, kWaveformGrowGrammarReason);
             }
-            out.waveform_grow_eighths = *eighths;
+            out.waveform_grow_quarters = *quarters;
             return {};
         }
         if (key == "noise_level") {

@@ -129,7 +129,7 @@ std::string history_diff_label(bool disabled, std::string_view token);
 // Lives for the life of the project set (run_project, main.cpp); re-rendered
 // when any input to the plate's render (render_waveform_columns) has
 // changed. THE PLATE IS COLUMN BOUNDS (2026-10-13; GuiPlateColumns, render.h):
-// the two bands' per-column eighth-row tips, no pixel kept on the CPU — the
+// the two bands' per-column quarter-row tips, no pixel kept on the CPU — the
 // frame's draw list carries them (GuiCanvasSink::plate) and the GPU
 // rasterizes the antialiased plate from them (kListFragmentShader,
 // 2026-10-30); the redraw path paints markers / flags /

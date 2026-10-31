@@ -25,7 +25,7 @@
 // render_waveform_columns' head), so the sink's vocabulary is three
 // records: a RECT, a DOTTED RUN (GuiCanvasDotRun,
 // render.h: a column or a row of one-px cells on a period's phase, counted
-// from an origin) and THE PLATE (the per-column eighth-row tips,
+// from an origin) and THE PLATE (the per-column quarter-row tips,
 // GuiPlateColumns, with its two inks and the grow). EVERY RECORD BUT THE PLATE PAINTS
 // ITS OWN COLOR straight over whatever lies under it, and THE PLATE'S
 // FRINGE BLENDS SOURCE-OVER with the ground and the grid beneath it — the
@@ -210,12 +210,16 @@ struct GuiCanvasDrawList {
     uint64_t generation = 0;
     uint64_t plate_revision = 0;
     // THE PLATE'S GROW in subcells (2026-10-31; the `waveform_grow` device
-    // key's eighths of a device px, one subcell each on the 8x grid): the
-    // sink stamps it from the key's seat (waveform_grow_eighths, render.h)
-    // at every plate record, and the GL canvas hands it to the fragment
-    // shader as u_grow at every draw (GuiGlCanvas::present_frame). It is
-    // the GPU's alone — no tip moves with it — so a commit of the key is
-    // a rebuild of the records and nothing else.
+    // key's quarters of a device px, one subcell each on the 4x grid): the
+    // sink stamps it from the key's seat (waveform_grow_quarters, render.h)
+    // at every rebuild, plate or none, and the GL canvas compares it at
+    // every list draw with the grow its list program was compiled for —
+    // THE GROW IS A CONSTANT OF THE PLATE SHADER'S SOURCE, not a uniform
+    // (kListFragmentShader's specialization rule, gl_canvas.cpp; 2026-10-31
+    // afternoon), so a differing number rebuilds the program once
+    // (GuiGlCanvas::present_frame). It is the GPU's alone — no tip moves
+    // with it — so a commit of the key is a rebuild of the records and of
+    // the program, nothing else.
     int      plate_grow = 0;
     std::vector<GuiCanvasPrimitive>  prims;
     std::vector<WaveformColumnRows>  columns;

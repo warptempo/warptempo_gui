@@ -3624,11 +3624,13 @@ private:
     void apply_osk_font_px(int px_at300);
 
     // THE WAVEFORM PLATE'S GROW'S ONE LIVE ACT (the `waveform_grow` device
-    // key, architect 2026-10-31; render.h's seat): push the eighths to the
-    // renderer (set_waveform_grow_eighths), then invalidate the whole
+    // key, architect 2026-10-31; render.h's seat): push the quarters to the
+    // renderer (set_waveform_grow_quarters), then invalidate the whole
     // window — the next frame rebuilds the canvas's draw list, the sink
     // stamps the new grow on it (GuiCanvasDrawList::plate_grow) and the GL
-    // canvas hands it to the plate's shader as u_grow. NO PLATE RE-RENDER,
+    // canvas rebuilds the plate's program with it as the shader's GROW
+    // constant, once (GuiGlCanvas::present_frame; tens of ms, the key's
+    // commit alone pays it). NO PLATE RE-RENDER,
     // NO CACHE DROPPED, NO RELAYOUT AND NO BAKE: the grow is the GPU's
     // alone — the plate's tips are a function of the audio and the view,
     // not of the grow (render_waveform_columns' head) — and nothing off the
@@ -3636,7 +3638,7 @@ private:
     // its value list's tap (one body, apply_device_setting) are the sole
     // callers; it gates the no-op, assigns the live config and persists it;
     // the launch seeds the grow before the window exists (main.cpp).
-    void apply_waveform_grow(int eighths);
+    void apply_waveform_grow(int quarters);
 
     // THE RELAYOUT TAIL, the three live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):

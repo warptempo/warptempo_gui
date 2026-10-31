@@ -68,16 +68,16 @@
 //                            the switch was true at every launch.)
 //   waveform_grow=<px>       THE WAVEFORM PLATE'S GROW (architect
 //                            2026-10-31; the rule at render.h's
-//                            kWaveformSubcells, the shader's u_grow,
+//                            kWaveformSubcells, the plate shader's GROW,
 //                            gl_canvas.cpp): how far the antialiased
 //                            waveform's shape is grown on every side before
 //                            its coverage is taken, in DEVICE PX, a multiple
-//                            of 0.125 in [0, 2] in canonical spelling
-//                            (parse_waveform_grow below: `0.5`, `0.625`,
-//                            `1`, `1.125` — the integer part, then the
+//                            of 0.25 in [0, 2] in canonical spelling
+//                            (parse_waveform_grow below: `0.5`, `0.75`,
+//                            `1`, `1.25` — the integer part, then the
 //                            fraction only when it is not zero, with no
-//                            trailing zero), held as EIGHTHS, one subcell of
-//                            the 8x grid each; live at the settings editor's
+//                            trailing zero), held as QUARTERS, one subcell of
+//                            the 4x grid each; live at the settings editor's
 //                            OK and at the settings page's value list's tap
 //                            (GuiInputHandler::apply_waveform_grow, a
 //                            repaint: the tips do not move). PERMANENT and
@@ -503,10 +503,10 @@ struct DeviceConfig {
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // templates' and the construction state's.
     bool        true_colors = true;
-    // THE WAVEFORM PLATE'S GROW in eighths of a device px (2026-10-31, the
+    // THE WAVEFORM PLATE'S GROW in quarters of a device px (2026-10-31, the
     // head's list; a permanent key): required; the construction state is
-    // the template's 0.5 (kWaveformGrowDefaultEighths below).
-    int         waveform_grow_eighths = 4;
+    // the template's 0.5 (kWaveformGrowDefaultQuarters below).
+    int         waveform_grow_quarters = 2;
     // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in seconds
     // (2026-10-28, the head's list): required; the construction state is the
     // templates' values (`rain`, -9, 4).
@@ -836,34 +836,35 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
     return n;
 }
 
-// THE waveform_grow GRAMMAR (architect 2026-10-31) — a multiple of 0.125
-// DEVICE PX in [0, 2] in canonical spelling, held as EIGHTHS in [0, 16]
-// (kWaveformGrowEighthsPerPx: one eighth is one subcell of render.h's 8x
-// grid, kWaveformSubcells, so the number is the shader's u_grow as it is),
-// the one owner the reader, the writer, the settings editor's commit and
-// its recall read, and the settings page's value list (format_waveform_grow,
-// parse_waveform_grow; the list's 17 rows are this range in eighths). THE
-// CANONICAL SPELLING is the shortest exact decimal: the integer part, then
-// `.` and the fraction only when it is not zero, with no trailing zero —
-// `0`, `0.125`, `0.25`, `0.375`, `0.5`, `0.625`, `0.75`, `0.875`, `1`,
-// `1.125`, ... `2` — and the reader admits exactly the seventeen strings
-// the writer spells (it formats each eighth and compares), so `0.50`,
-// `1.0`, `.5` and anything off the eighths lattice or out of range are the
+// THE waveform_grow GRAMMAR (architect 2026-10-31; the lattice quarters
+// since that afternoon's 4x ruling, render.h's kWaveformSubcells) — a
+// multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
+// QUARTERS in [0, 8] (kWaveformGrowQuartersPerPx: one quarter is one
+// subcell of render.h's 4x grid, kWaveformSubcells, so the number is the
+// plate shader's GROW as it is), the one owner the reader, the writer, the
+// settings editor's commit and its recall read, and the settings page's
+// value list (format_waveform_grow, parse_waveform_grow; the list's 9 rows
+// are this range in quarters). THE CANONICAL SPELLING is the shortest exact
+// decimal: the integer part, then `.` and the fraction only when it is not
+// zero, with no trailing zero — `0`, `0.25`, `0.5`, `0.75`, `1`, `1.25`,
+// `1.5`, `1.75`, `2` — and the reader admits exactly the nine strings the
+// writer spells (it formats each quarter and compares), so `0.50`, `1.0`,
+// `.5` and anything off the quarters lattice or out of range are the
 // launch's hard fail, as every other key's off-spelling is. The default is
 // 0.5 (the reason at the head's entry and at kWaveformSubcells); the top, 2,
-// is what the shader's 64-bit window was sized for (gl_canvas.cpp's
+// is what the shader's one-word window was sized for (gl_canvas.cpp's
 // asserts) and twice the mocks' thickest, 1.0, which already read too thick
 // at a clean passage.
-inline constexpr int kWaveformGrowEighthsPerPx   = 8;
-inline constexpr int kWaveformGrowMinEighths     = 0;
-inline constexpr int kWaveformGrowMaxEighths     = 16;
-inline constexpr int kWaveformGrowDefaultEighths = 4;
+inline constexpr int kWaveformGrowQuartersPerPx   = 4;
+inline constexpr int kWaveformGrowMinQuarters     = 0;
+inline constexpr int kWaveformGrowMaxQuarters     = 8;
+inline constexpr int kWaveformGrowDefaultQuarters = 2;
 inline constexpr const char* kWaveformGrowGrammarReason =
-    "must be a multiple of 0.125 in [0, 2] in canonical spelling "
-    "(0, 0.125, 0.25, ... 2)";
-std::string format_waveform_grow(int eighths);
+    "must be a multiple of 0.25 in [0, 2] in canonical spelling "
+    "(0, 0.25, 0.5, ... 2)";
+std::string format_waveform_grow(int quarters);
 inline std::optional<int> parse_waveform_grow(std::string_view v) {
-    for (int n = kWaveformGrowMinEighths; n <= kWaveformGrowMaxEighths; ++n)
+    for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n)
         if (format_waveform_grow(n) == v) return n;
     return std::nullopt;
 }
@@ -1046,7 +1047,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: 300 % and the external files dir's `projects/`;
 // it stamps `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
-// `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultEighths),
+// `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultQuarters),
 // `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`
 // (2026-10-29, kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,
