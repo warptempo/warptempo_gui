@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-// Platform-neutral keyboard / mouse input types. The backend translates
+// Platform-neutral key and pointer input types. The backend translates
 // native events at its boundary into these so the rest of the GUI never sees
 // platform-specific types. Numeric values are the universal keysym numbering
 // of the X Window System (the table xkbcommon carries too), the chord
@@ -69,18 +69,6 @@ namespace GuiKeys {
     constexpr GuiKey KpEnter    = 0xff8d;
     constexpr GuiKey Delete     = 0xffff;
 }
-
-// The keyboard key the platform layer translates into BTN_LEFT (press =
-// button down at the pointer position, hold = button held, release = button
-// up), except while a text editor is open, when it stays a normal letter.
-// Rebinding the emulation to a different key is exactly this one edit. Any
-// modifier state (shift/ctrl/alt) rides along to the synthesized button,
-// exactly as it would for a physical BTN_LEFT device (Alt alone reached
-// on_key as the Edit title's access key 2026-10-10 to 2026-10-21, until the
-// menu row went). So bare `e` can be no access key's letter (the pull-down
-// rows' check, dropdown_access_keys_valid, retired with the popups
-// 2026-10-21).
-constexpr GuiKey kLeftClickKey = GuiKeys::E;
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
 // thing before the rest crosses into its held meaning. It is the delay of the
@@ -525,10 +513,10 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // "Return": the tooltips, the cards, the on-screen keyboard's cap and HELP
 // all say Enter.
 //
-// TWO NAMES THIS TABLE DOES NOT HOLD, and cannot: the SUPER MODIFIER is
-// dropped at the platform boundary and no chord names it, so its Qt spelling —
-// `Meta`, kdenlive's own — is spelled nowhere in user text, no chord and no
-// tooltip having a Super to name. The PAINTED KEYBOARD'S CAPS are the
+// TWO NAMES THIS TABLE DOES NOT HOLD, and cannot: the SUPER MODIFIER has no
+// input bit at all (architect 2026-10-30) and no chord names it, so its Qt
+// spelling — `Meta`, kdenlive's own — is spelled nowhere in user text, no
+// chord and no tooltip having a Super to name. The PAINTED KEYBOARD'S CAPS are the
 // other: they name the same keys the same way but are their own table
 // (onscreen_keyboard.h's cap_word, which points here for the convention).
 //
@@ -664,9 +652,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // carries a fraction of the set (the chords the roster's buttons synthesize)
 // and is no substitute for reading the dispatch.
 //
-// WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
-// into the left mouse button before a key event exists (kLeftClickKey — it
-// reaches on_key only as a character inside an editor); the digits 5..9;
+// WHAT IS DELIBERATELY ABSENT: the digits 5..9;
 // Backspace, and every letter the ladder never tests (A, E, X, Y — T
 // left the class 2026-10-28 night for the Trim Presets list's opener; W
 // left the class 2026-10-28 for the NOISE lamp's toggle; E
@@ -706,8 +692,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     // same evening, the two pastes Ctrl+P and Ctrl+Shift+P since
     // 2026-10-24.) No Alt-alone chord binds (the
     // static_asserts below pin Alt+Tab's family and the three former titles'
-    // letters), and alt's POINTER vocabulary is empty: no alt-modified press
-    // or wheel binds anything. THE Ctrl+Alt SHAPE IS THE INVARIANT rather
+    // letters), and alt has no POINTER vocabulary: the pointer carries the
+    // ctrl bit alone (architect 2026-10-30). THE Ctrl+Alt SHAPE IS THE INVARIANT rather
     // than the number: alt with Ctrl marks a HEAVIER SIBLING of a plain chord
     // — a write that emits (a render), or the reopen that DISCARDS (Revert is
     // Open's own letter with alt added); Alt alone is Windows' menu access
@@ -951,9 +937,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 // above must keep, so a careless widening trips at compile time. The chords
 // that read no mode term are pinned OUTSIDE the view (the ordinary state), and
 // the three anchors that follow them pin the term itself, both ways.
-static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
-              "bare `e` is the left mouse button at the platform boundary and "
-              "must never become a key binding");
 static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
@@ -1645,12 +1628,12 @@ inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
+// THE POINTER'S BUTTON — LEFT ALONE (architect 2026-10-30: the mouse is
+// closed on the tablet, and the touch translation's press is the one button
+// the core delivers). The type stays the pointer hooks' parameter, the shape
+// of the press / release vocabulary the GUI's bodies are written against.
 enum class GuiMouseButton {
     Left,
-    Middle,
-    Right,
-    WheelUp,
-    WheelDown
 };
 
 // One delivered touch-navigation frame (the nav update hook's payload — the
@@ -1695,23 +1678,21 @@ struct GuiTouchNavFrame {
     //     so the GUI hears the pinch end; its errand is the seated pivot's
     //     clear, which apply_touch_nav_update runs above its no-op return.
     //   * THE CTRL EDGE'S FRAME (2026-09-25, the S Pen), delivered when the
-    //     modifier state's ctrl bit changes under a live single-finger nav:
-    //     it carries the NEW bit, so a ctrl-down seats the one-finger zoom's
-    //     pivot and paints its stem at the edge itself and a ctrl-up clears
-    //     them there, exactly as the pointer's own ctrl edge does
-    //     (sync_nav_drag_mode) — not at the next motion.
+    //     ctrl bit changes under a live single-finger nav: it carries the NEW
+    //     bit, so a ctrl-down seats the one-finger zoom's pivot and paints its
+    //     stem at the edge itself and a ctrl-up clears them there — not at the
+    //     next motion.
     // Each carries the finger's own centroid, and the model applies nothing
     // for either.
     // TWO fingers vs the phone model's one — the GUI's fork between the
     // zoom-only gesture and the one-finger one.
     bool   two_finger = false;
-    // THE LIVE CTRL BIT at this frame's delivery (GuiInputCore's modeled
-    // ctrl, the modifier door's state — on the tablet the S Pen's side
-    // button, set_modifiers' second producer). READ ON SINGLE-FINGER FRAMES
-    // ONLY: while it stands the one-finger gesture is THE ZOOM ABOUT THE
-    // FINGER'S POINT rather than the pan, the nav drag's own live-ctrl fork
-    // (ScrollDragState) carried onto the glass (architect 2026-09-25: "the
-    // ctrl-zoom is the only thing I want from pointer"). A two-finger frame
+    // THE LIVE CTRL BIT at this frame's delivery (GuiInputCore's tracked
+    // ctrl, set_ctrl's state — the S Pen's side button, its one producer).
+    // READ ON SINGLE-FINGER FRAMES ONLY: while it stands the one-finger
+    // gesture is THE ZOOM ABOUT THE FINGER'S POINT rather than the pan, a
+    // live fork mid-gesture (architect 2026-09-25: "the ctrl-zoom is the only
+    // thing I want from pointer"). A two-finger frame
     // ignores it — the pinch is already the zoom. The platform reads it at
     // delivery and applies no policy; the fork is the GUI's.
     bool   ctrl = false;
@@ -1720,11 +1701,10 @@ struct GuiTouchNavFrame {
 // THE EDITOR-FIELD QUERY'S ANSWER (2026-09-05) — what the platform asks the
 // GUI once at a first finger's down, beside the pan-zone query (the
 // contract at GuiInputCore::set_touch_nav_hooks). It names the
-// one surface whose plain drag diverges by device: inside an OPEN EDITOR'S
-// FIELD a finger that drags moves the caret through the caret-drag hook trio
-// and never becomes a pointer drag (begin_touch_caret_drag's declaration,
-// input_handler.h), while a
-// mouse drag there is the ordinary press road's selection sweep.
+// one surface whose plain drag diverges from the pointer road: inside an OPEN
+// EDITOR'S FIELD a finger that drags moves the caret through the caret-drag
+// hook trio and never becomes a pointer drag (begin_touch_caret_drag's
+// declaration, input_handler.h).
 //   * Outside     — not in the active editor's field (or no editor is open):
 //                   the ordinary window, whatever surface it is.
 //   * Field       — in the field: the window's slop crossing resolves to the

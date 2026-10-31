@@ -6,12 +6,19 @@
 #include <optional>
 
 // GuiInputCore: the product's PLATFORM-NEUTRAL INPUT POLICY, in one object.
-// It owns the touch translation state machine, the key-repeat synthesis and
-// the bare-`e` left-button emulation, the modifier state, the logical pointer
-// (position, focus and the three-source left hold), the notional-x / capture
-// bookkeeping, the wheel and pointer-frame scratch, the remembered cursor
-// kind, and the one fractional->pixel conversion the whole product converts
-// through (containing_pixel below).
+// It owns the touch translation state machine, the key-repeat synthesis, the
+// ctrl bit, the logical pointer (position, focus and the touch translation's
+// left hold), the pointer's notional x, and the one fractional->pixel
+// conversion the whole product converts through (containing_pixel below).
+//
+// THE PEN AND THE FINGER ARE THE WHOLE INPUT (architect 2026-10-30: the
+// hardware keyboard and the mouse are closed on the tablet, the one platform —
+// determinism is per display width, so consistency across sessions commits him
+// to this one panel, and a keyboard or mouse at the tablet would duplicate
+// what the pen and the finger do and lose the car form factor). So this layer
+// carries no mouse door, no wheel, no pointer capture and no cursor: its
+// producers are the finger's and the pen's contacts, the pen's hover as the
+// pointer, the pen's side button as Ctrl, and the painted keyboard's keys.
 //
 // WHAT IT CONSUMES: primitive input events in PLAIN UNITS from exactly ONE
 // backend — window-pixel doubles, bools, ids, an already-translated GuiKey
@@ -19,134 +26,40 @@
 // value and no keymap object reaches this layer; a backend decodes on its own
 // side of the call and hands over values. It reads no window system.
 //
-// WHAT IT EMITS: the consumer hooks the GUI installs — the key, button, wheel
-// and motion callbacks, the pointer-leave hook, the keyboard-intent
-// cancellation hook and the ten touch hooks (the six navigation ones,
-// the editor-field query and the caret-drag trio) — plus the three
-// probes it asks the GUI (wheel context, text-editor-active, repeat-eligible)
-// and the ONE probe it asks the backend (the codepoint refill, at
-// set_codepoint_probe).
+// WHAT IT EMITS: the consumer hooks the GUI installs — the key, key-release,
+// button and motion callbacks, the pointer-leave hook and the ten touch hooks
+// (the six navigation ones, the editor-field query and the caret-drag trio)
+// — plus the two probes it asks the GUI (text-editor-active,
+// repeat-eligible) and the ONE probe it asks the backend (the codepoint
+// refill, at set_codepoint_probe).
 //
 // GuiPlatform HOLDS ONE OF THESE AND FORWARDS TO IT. The GUI's consumers
-// (every file that includes platform.h) hold GuiPlatform and see no change: every setter, query and
-// capture door on that class is the same call it always was, with the body
-// living here. COMMENTS HERE SPEAK THE CORE'S EVENT NAMES (touch_frame,
-// touch_cancel, pointer_leave, set_modifiers, set_repeat_info); a provenance
-// sentence (a behaviour measured under the laptop's compositor while its
-// backend stood, until the laptop GUI's drop of 2026-10-30; labwc's repeat
-// delay) keeps its words. The core's doors and its mouse vocabulary are
-// platform-neutral and stay whole: the glass's backend drives them
-// (platform_android.cpp — the finger's translation, the S Pen's hover as the
-// pointer, its side button as Ctrl, the painted keyboard as keys).
-
-// THE POINTER CURSOR KINDS (architect 2026-08-03): the product ships no
-// cursor art and draws no cursor pixels; each kind is NAMED by an xcursor
-// shape, and the GUI derives one per zone (pointer_cursor_kind) for the
-// platform to remember (set_cursor_kind) — on glass no image stands behind
-// it (platform_android.h), the kinds staying the one statement of which
-// gesture a zone promises.
-//
-// Arrow is left_ptr, the cursor everywhere the GUI names nothing else.
-// The seven beside it each mark a zone whose gesture the arrow cannot promise —
-// the mapping from zone to kind is the GUI's (pointer_cursor_kind,
-// input_handler.h), and this enum is only the vocabulary.
-//
-// SCRUB (`crosshair`) IS DELETED (architect 2026-08-13, THE WAVEFORM'S TWO
-// HALVES BECOME ONE SURFACE — "we need to just get rid of the crosshairs but
-// retain the scrub action"): the lower half's audition survives as the
-// motionless release's CLICK ACT, and a click carries no cue anywhere in the
-// product, so the whole waveform wears PAN — the drag both halves now take.
-// Seven kinds became six; a kind is deleted when the zone it promised stops
-// being a zone.
-//
-// THE TRIM BAR SPENDS THREE OF THEM, and the split is the act rather than the
-// surface (architect 2026-08-03): TrimBoundBegin and TrimBoundEnd are the
-// window-edge shapes a window manager shows on a left / right border, and they
-// mark EXTENDING ONE BOUNDARY — the trim window's begin cap and end cap, and the
-// ctrl / ctrl+shift clicks that write those same two bounds — while TrimResize
-// stays with the BRIDGE, which moves both bounds together. A begin/end pair
-// rather than a left/right one because the bound is what the gesture names; the
-// two happen to coincide because the begin bound is always the window's left
-// edge.
-//
-// TEXT IS THE SEVENTH (architect 2026-08-13): the I-beam every desktop shows
-// over editable text, worn over the ONE thing in this product that is editable
-// text under the pointer — the top-strip flag editor's unrolled box (which wore
-// the navigation surface's PAN until this kind existed, the marker lane being
-// nav surface under it) and the dialog editor's edit control, the modal
-// family's box's interior since 2026-10-14 (its inset FIELD on the bottom row
-// before). It is the only kind
-// with a SECOND name (`text`, then the older `xterm`), the two spellings
-// being one shape with two conventional names.
-//
-// VALUEDRAG IS THE EIGHTH (architect 2026-09-10, with the value drag):
-// `ns-resize`, the vertical twin of the trim bridge's `ew-resize`, worn over a
-// flag box whose cell the VALUE DRAG can step while its lamp arms it
-// (value_drag_posture, app_state.h, the lamp's since 2026-10-11) — the
-// tempo on an owning flag, a bound on a bound cell — and kept for the whole
-// gesture by the live-drag rule the marker and trim drags already
-// take. It is the second kind with an ALT NAME (`size_ver`), the same
-// two-conventional-spellings shape the I-beam has. A flag box the drag cannot act on
-// wears the ARROW, never this — the map's standing rule that a point arming
-// nothing shows the arrow.
-//
-// (THE FOUR WINDOW-SIZING KINDS — the ninth to twelfth, 2026-10-05 to
-// 2026-10-24, worn over the restored window's own sizing frame — went with
-// that frame.)
-enum class GuiCursorKind {
-    Arrow,
-    Pan,
-    Zoom,
-    TrimResize,
-    TrimBoundBegin,
-    TrimBoundEnd,
-    Text,
-    ValueDrag,
-};
-// Roster size, for the platform's per-kind cursor array. Keep it equal to the
-// enumerator count above.
-inline constexpr int kGuiCursorKindCount = 8;
+// (every file that includes platform.h) hold GuiPlatform, and every setter
+// and query on that class forwards to the body living here. COMMENTS HERE
+// SPEAK THE CORE'S EVENT NAMES (touch_frame, touch_cancel, pointer_leave,
+// set_ctrl, set_repeat_info); a provenance sentence (a behaviour measured
+// under the laptop's compositor while its backend stood, until the laptop
+// GUI's drop of 2026-10-30; labwc's repeat delay) keeps its words.
 
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
-//   * OrdinaryLeave is the pointer focus dropping, on either of two edges
-//     every consumer reads the same (architect 2026-10-01):
-//     THE LEAVE — pointer_leave and, since
-//     touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's ABNORMAL end
-//     WITH NO PHYSICAL POINTER FOCUSED: the window system took the contact
-//     and no mouse rests in the window, so the pointer is gone (delivered
-//     after the lost-button motion; the fires are touch_cancel and
-//     touch-capability loss — the edge
-//     inventory at the touch state block). A translation ending with the
-//     physical pointer FOCUSED fires this hook NOT AT ALL — it delivers a
-//     restore MOTION at the mouse's own position instead (the focus fork;
-//     the one statement is at deliver_touch_translation_end's definition).
-//     On the leave the stream is NOT over: no position event arrives WHILE
-//     the pointer stays outside, but a re-entry (or the next touch)
-//     synthesizes a motion, a held button still releases, and the held
-//     state survives — so state kept across this edge would be redeemed by
-//     that return motion.
-//     THE CAPABILITY LOSS — pointer_capability_lost: the hard end of the
-//     stream. No leave, no
-//     motion, no release will ever arrive on that object again, so nothing
-//     may be KEPT DELIBERATELY across it — a keep would have no event left
-//     to redeem it; no consumer keeps anything across either edge, which is
-//     why one enumerator serves both. (The S Pen's hover ending is its own
-//     reason, PenHoverEnd below.) WHAT THE CAPABILITY LOSS PROMISES IS
-//     BOUNDED, and no more than its fire site does: the logical left hold
-//     ends in both its sources, and every face clears ONCE. It does not promise a cold stream at a later capability
-//     return — a staged-motion flush can put `pointer_in_window` back and
-//     leave a hover face stale, which is a recorded ACCEPTED GLITCH
-//     (architect 2026-08-09; the record is at the fire site) and self-heals
-//     on the pointer's next entry.
+//   * OrdinaryLeave is the pointer focus dropping: pointer_leave's default
+//     and a touch POINTER TRANSLATION's ABNORMAL end WITH NO POINTER
+//     FOCUSED — the window system took the contact and no pen hovers in the
+//     window, so the pointer is gone (delivered after the lost-button
+//     motion; the fires are touch_cancel and touch-capability loss — the
+//     edge inventory at the touch state block). A translation ending with
+//     the pointer FOCUSED fires this hook NOT AT ALL — it delivers a restore
+//     MOTION at the pointer's own position instead (the focus fork; the one
+//     statement is at deliver_touch_translation_end's definition). No
+//     consumer keeps anything across this edge.
 //   * TouchLift is the same translation's CLEAN end, the contact's own lift
-//     (touch_up), with no physical pointer focused — delivered after the
-//     release, the fork being the same one. An ordinary leave in every
-//     respect but one: THE CONTACT LIFTING IS NOT THE POINTER GOING AWAY for
-//     the hover tooltip (architect 2026-09-29), which keeps its button, its
-//     slop anchor, its seen position and the button's spent state across it
-//     exactly as it keeps them across a mouse's release, so a later hover
+//     (touch_up), with no pointer focused — delivered after the release, the
+//     fork being the same one. An ordinary leave in every respect but one:
+//     THE CONTACT LIFTING IS NOT THE POINTER GOING AWAY for the hover tooltip
+//     (architect 2026-09-29), which keeps its button, its slop anchor, its
+//     seen position and the button's spent state across it, so a later hover
 //     starts no wait on that button until it has left it and arrived again —
 //     Windows' rule after a click (2026-10-06; the rule is at
 //     AppState::RedesignTooltip). Every other consumer reads it as it reads
@@ -181,9 +94,7 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     Everything else the leave does it still does: the tooltip goes at once
 //     as on leaving any tool (architect 2026-10-06), the in-window bit drops,
 //     the press arms, the drags, the cards' hover and the pen latch clear
-//     (the popup list's scroll holds beside them until 2026-10-14). A mouse
-//     leaving the window (OrdinaryLeave) still
-//     darkens.
+//     (the popup list's scroll holds beside them until 2026-10-14).
 // The distinction is read in one place, main.cpp's hook body, by one
 // consumer: the tooltip's leave (end_tooltip_hover), which the contact's lift
 // (TouchLift) makes no leave at all, OrdinaryLeave and PenHoverEnd being its
@@ -199,33 +110,17 @@ enum class GuiPointerLeaveReason {
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names
 // THE PIXEL THAT CONTAINS IT — floor, not rounding. Every fractional position
-// this layer turns into a window pixel goes through here: the mouse's absolute
-// enter and motion, the captured travel ledger and the capture restore, and
-// every one of the touch machine's deliveries and surface queries.
+// this layer turns into a window pixel goes through here: the pen's hover
+// enter and motion, and every one of the touch machine's deliveries and
+// surface queries.
 //
 // std::nearbyint STAYS THE RULE FOR POINTS ON A GRID and is untouched by this:
 // authored frames, lattice columns and sample indices are POINTS, where the
 // nearest one is the right answer and banker's rounding is the project's
 // tie-break (CLAUDE.md "Rounding", snap_authored_frame). A CELL is not a
 // point — asking which pixel a coordinate is IN has one answer and no tie to
-// break — and the two questions had drifted apart: before this owner the mouse
-// TRUNCATED (wl_fixed_to_int) while the finger ROUNDED (nearbyint), so the same
-// physical spot landed one pixel apart on the 10 px endcap bands and the 8 px
-// drag crossing depending on which device was under it.
-//
-// TWO CASES ARE WHERE THIS MOVES SOMETHING (architect 2026-08-25, landed
-// 2026-08-26; CLAUDE.md "Rounding" carries the corrected digest): (a) a held
-// pointer drag past the left/top edge reports a NEGATIVE surface coordinate
-// under labwc's implicit grab, where truncation gave -5 for -5.5 and
-// containment gives -6 — the correct cell; (b) the captured-pointer ledger
-// previously ROUNDED (nearbyint), so 5.5 delivered 6 and now delivers 5 —
-// and this one was LAPTOP-VISIBLE (the laptop's locked pointer, the ledger's
-// one producer until 2026-10-30): the ledger is the nav drag's (grab-pan /
-// ctrl-zoom) virtual position, so every delivered captured-motion
-// coordinate and the release write-back (a motionless click right after the
-// release) could differ by 1 px from before. Say exactly that: the ABSOLUTE
-// mouse path truncated; the finger and the captured-pointer ledger rounded
-// — never "the mouse truncated" unqualified.
+// break — so the containment is the one answer for every device that hands
+// this layer a fractional position.
 inline int containing_pixel(double v) {
     return static_cast<int>(std::floor(v));
 }
@@ -262,24 +157,12 @@ public:
     // on_button_release's unused `mods` parameter says of the pointer.
     using KeyReleaseCallback   = std::function<void(GuiKey key)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
-    // A scroll wheel notification carrying the NET number of detents crossed
-    // in one pointer frame (always >= 1). pointer_frame() coalesces a
-    // frame's worth of value120 / legacy-axis deltas into a single emission
-    // of this callback, so the per-step wheel machinery (viewport move,
-    // damage, hover, worker kick) runs once per frame regardless of burst
-    // size. `dir` is WheelUp or WheelDown; `steps` is the magnitude.
-    using WheelCallback        = std::function<void(GuiMouseButton dir, int steps, int x, int y, GuiInputState mods)>;
     using MotionCallback       = std::function<void(int x, int y, GuiInputState mods)>;
     using CloseCallback        = std::function<void()>;
-    // Wheel routing predicate installed by main.cpp: given pointer
-    // coordinates, returns -1 (blocked) or a region code. pointer_frame()
-    // consults it per raw pointer frame before accumulating sub-detent
-    // scroll so remainder is bound to the routing context it will emit in.
-    using WheelContextProbe    = std::function<int(int x, int y)>;
     // Predicate installed by main.cpp: true when a text editor is consuming
-    // printable keys. Consulted at PRESS time for kLeftClickKey to decide
-    // whether it is its synthesized form (false) or a normal character (true):
-    // while a text editor is open kLeftClickKey stays a normal letter.
+    // printable keys. Consulted at PRESS time and at every repeat fire: the
+    // arm records it and a fire whose answer no longer matches disarms
+    // (layer (2) of the repeat contract, at maybe_fire_repeat).
     using TextEditorProbe      = std::function<bool()>;
     // Predicate installed by main.cpp: true when the pressed key+mods should
     // arm key repeat. Consulted at PRESS time (after the codepoint is filled)
@@ -305,7 +188,7 @@ public:
     // standalone modifier keysyms and F1..F35 already dropped — or 0 when this
     // GUI has no use for the key at all, which is the same thing as "there is
     // nothing to deliver". `stable_code` is the backend's PER-KEY IDENTITY, the
-    // value the repeat cancel and the synthesized-left hold end compare against
+    // value the repeat cancel compares against
     // (the painted keyboard's own per-key code, synthesize_key): deliberately
     // NOT the keysym, since a layout
     // change mid-hold would break the match. `codepoint` is the UTF-32 value
@@ -318,55 +201,37 @@ public:
     // chord, the way a physical Ctrl+key hold does — whatever the tracked
     // modifiers say; a release ignores it, as a release carries no modifier
     // state at all. It is a property of the KEY EVENT, never of the tracked
-    // state: set_modifiers is not touched, so no ctrl edge is announced and
+    // state: set_ctrl is not touched, so no ctrl edge is announced and
     // nothing else reads a ctrl that outlives the press.
     void key_event(GuiKey key, uint32_t stable_code, bool pressed,
                    uint32_t codepoint, bool with_ctrl);
 
-    // THE FOUR TRACKED MODIFIERS, read out of the backend's keymap state at
-    // every modifier event. The three modeled ones reach the application
-    // through GuiInputState; super reaches nothing and gates key PRESS delivery
-    // instead (the ruling is at deliver_key, input_core.cpp). The tablet's
-    // backend has no desktop modifier to yield to and passes super = false
-    // always, which leaves that gate structurally dead rather than removed.
-    // ITS PRODUCER IS THE S PEN'S SIDE BUTTON (architect
-    // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl
-    // modifier, hardware keyboards being out of scope there, bare `k`'s
-    // sticky ctrl being a lamp the flag press reads and not this bit, and
-    // the painted Copy and Paste keys' ctrl riding their own key events,
-    // key_event's with_ctrl, not this bit either): the
-    // backend calls this
-    // with ctrl = the button held — for what the pen owns alone, its hover or
-    // a gesture touch_owner_tool() reports as the pen's (an ignored pen
-    // passes released) — carrying the other three bits through unchanged,
-    // BEFORE it delivers the touch or hover event that reported the button
-    // state, so the press, the motions and the settled hook's
-    // sync_nav_drag_mode all read the bit that event carried; the pen's own
-    // lift is not sampled (its last leg keeps the stroke's bit), and the bit
-    // drops after that lift, at a cancel, a hover exit (or any pen report
-    // above the GUI's plane, 2026-09-27), a finger's first down and focus
-    // loss. The door is the same one — an
-    // edge here means the same thing whoever produced it — and it owes the
-    // touch machine ONE thing of its own: a ctrl edge under a live
-    // single-finger nav is announced to the GUI as a nav frame (the exemption
-    // at set_touch_nav_hooks' update contract), so the one-finger zoom's pivot
-    // seats and clears at the edge exactly as the pointer drag's does.
-    void set_modifiers(bool ctrl, bool shift, bool alt, bool super);
+    // THE CTRL EDGE — the one tracked modifier, the only bit GuiInputState's
+    // ctrl carries from this layer (shift and alt are never raised here: the
+    // roster's long press raises shift on the chord itself, downstream of
+    // this layer, and nothing binds alt on glass). ITS ONE PRODUCER IS THE S
+    // PEN'S SIDE BUTTON (architect 2026-09-25: the pen's button IS the Ctrl
+    // bit — the glass's only Ctrl modifier, bare `k`'s sticky ctrl being a
+    // lamp the flag press reads and not this bit, and the painted Copy and
+    // Paste keys' ctrl riding their own key events, key_event's with_ctrl,
+    // not this bit either): the backend calls this with ctrl = the button
+    // held — for what the pen owns alone, its hover or a gesture
+    // touch_owner_tool() reports as the pen's (an ignored pen passes
+    // released) — BEFORE it delivers the touch or hover event that reported
+    // the button state, so the press and the motions read the bit that event
+    // carried; the pen's own lift is not sampled (its last leg keeps the
+    // stroke's bit), and the bit drops after that lift, at a cancel, a hover
+    // exit (or any pen report above the GUI's plane, 2026-09-27), a finger's
+    // first down and focus loss. It owes the touch machine ONE thing of its
+    // own: a ctrl edge under a live single-finger nav is announced to the GUI
+    // as a nav frame (the exemption at set_touch_nav_hooks' update contract),
+    // so the one-finger zoom's pivot seats and clears at the edge itself.
+    void set_ctrl(bool ctrl);
 
     // THE KEY-REPEAT CADENCE, as the platform gives it (the backend's
-    // hard-coded pair, platform_android.cpp's init): `rate` in Hz and
-    // `delay` in milliseconds. Rate <= 0 means the platform has key repeat
-    // DISABLED and is honored as such — the armed repeat is dropped with it,
-    // and key_repeat_period_ms() then answers 0 for the chrome buttons too.
+    // hard-coded pair, platform_android.cpp's init): `rate` in Hz, positive,
+    // and `delay` in milliseconds.
     void set_repeat_info(int32_t rate, int32_t delay);
-    // THE KEYBOARD'S MODELED STATE GOING AWAY, and the one place that spells it.
-    // Two edges reach it — the keyboard focus leaving and keyboard-capability
-    // loss — and
-    // both mean the same thing: no further key event can arrive on the state
-    // built so far, so the modifier bits, the repeat arm, the wheel sub-detent
-    // remainder and a held synthesized-left button are all dropped together.
-    // Hoisted so a third such edge cannot land with one of the four forgotten.
-    void forget_keyboard_state();
 
     void pointer_enter(double x, double y);
     // THE CONTACT'S INSTRUMENT STAYS AS THE POINTER (architect 2026-10-07,
@@ -390,35 +255,9 @@ public:
     // through here (GuiPointerLeaveReason, above the class).
     void pointer_leave(
         GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
+    // The pen's hover motion (the Android backend's hover arm), delivered at
+    // once: the hover carries no button, so there is nothing to coalesce.
     void pointer_motion(double x, double y);
-    void pointer_button(GuiMouseButton button, bool pressed);
-    // THE SIGN IS THE SEAM'S CONTRACT AND BOTH DOORS SHARE IT: POSITIVE MEANS
-    // SCROLL DOWN (content moves up under the cursor, delivered as WheelDown)
-    // and negative means up — a backend whose platform reports the other
-    // polarity negates on its own side (the drain body states it,
-    // input_core.cpp): it is this class's requirement of every backend.
-    //
-    // One vertical-axis scroll delta in the backend's own continuous unit
-    // (touchpads and other non-wheel sources), staged for the frame boundary.
-    void pointer_axis(double value);
-    // One vertical-axis WHEEL delta in value120 units (120 = one detent),
-    // staged for the frame boundary.
-    void pointer_axis_value120(int32_t value120);
-    void pointer_frame();
-    // One captured relative-motion delta, in window pixels. Consumed only
-    // while a capture is live.
-    void relative_motion(double dx, double dy);
-
-    // THE POINTER CAPABILITY GOING AWAY, in the two halves the teardown needs
-    // to be wrapped around (the backend destroys its pointer objects between
-    // them): pointer_capability_lost() delivers what is still OWED — the leave
-    // hook and both keyboard-adjacent hold ends — while the objects still
-    // exist, and forget_pointer_state() drops the focus and the frame scratch
-    // once they are gone. THE POLICY IS HERE RATHER THAN IN THE BACKEND
-    // DELIBERATELY: a backend that replaced its capability handler wholesale
-    // would otherwise silently drop the hard end of the pointer stream.
-    void pointer_capability_lost();
-    void forget_pointer_state();
 
     // A CONTACT'S DOWN. `tool` is the backend's answer to "what touched"
     // (GuiTouchTool, gui_input.h — the pen's three amendments are there):
@@ -439,8 +278,7 @@ public:
     void touch_cancel();
     // THE TOUCH CAPABILITY GOING AWAY — the hard-end contract, shared whole
     // with touch_cancel (hard_end_touch_stream). Named rather than left to the
-    // backend for pointer_capability_lost's reason: the contract must not be
-    // droppable by replacing a backend body.
+    // backend: the contract must not be droppable by replacing a backend body.
     void touch_capability_lost();
 
     // BOTH SOFTWARE DEADLINES, SAMPLED. The backend calls this once per
@@ -459,190 +297,60 @@ public:
     // key that produces no character already means.
     void set_codepoint_probe(std::function<uint32_t(uint32_t stable_code)> probe);
 
-    // -- The capture's seam ------------------------------------------------
-    // begin_pointer_capture and the lock release live in the BACKEND (they are
-    // protocol requests end to end), and reach the state those requests seed
-    // through these narrow doors rather than through friendship.
-
-    // True from the moment a lock is REQUESTED until the release drops it (the
-    // optimism is the backend's ruling, at begin_pointer_capture).
-    bool pointer_captured() const { return pointer_captured_; }
-    // Seed everything a capture opens with: the travel ledger from the current
-    // tracked position, the restore row, no restore-x override, a degenerate
-    // wrap span and an unfrozen notional x. Called once the backend has decided
-    // the capture is going ahead and before it issues any request.
-    void begin_capture_seed();
-    // The lock proxy exists: the capture is live, the gesture's own cue is
-    // stamped as the kind the release will hand back, and the tracked position
-    // stops being the pointer's (the contracts are at the three fields).
-    void note_capture_locked(GuiCursorKind restore_kind);
-    // WHERE THE CURSOR COMES BACK, resolved: the anchor-stem column a strip
-    // drag named through set_capture_restore_x when one is set, else the
-    // pointer's NOTIONAL POSITION — always, with no second arm (the full record
-    // is at notional_pointer_x_).
-    double capture_restore_x() const {
-        return capture_restore_x_override_.value_or(notional_pointer_x_);
-    }
-    // The row the cursor vanished from, frozen at the press for both capturing
-    // gestures.
-    double capture_restore_y() const { return capture_restore_y_; }
-    // THE TRACKED POSITION FOLLOWS THE RESTORE HINT (the backend clamps the
-    // pair into the surface first): the travel ledger, the notional position
-    // and the delivered pointer pixels all move to where the cursor is now
-    // DRAWN, so a click made before the user next moves is not routed at the
-    // capture's travel. The contract, and the defect it closed, are at the
-    // backend's release_pointer_lock.
-    void apply_capture_restore(double tracked_x, double tracked_y);
-    // The capture is over: drop the captured bit and the lateral freeze with
-    // it, so nothing a zoom phase asserted survives into the next gesture.
-    void end_capture();
-
-    // -- The cursor's remembered kind --------------------------------------
-    // The IMAGE is the backend's (a theme, a protocol request); the ANSWER is
-    // policy and lives here. The backend's set_cursor_kind reads both of these
-    // and writes through the third.
-    bool pointer_position_unknown() const { return pointer_position_unknown_; }
-    GuiCursorKind cursor_kind() const { return cursor_kind_; }
-    void remember_cursor_kind(GuiCursorKind kind) { cursor_kind_ = kind; }
-
     // -- The consumer's side of the seam -----------------------------------
 
     void set_on_key(KeyCallback cb);
     // THE KEY RELEASE HOOK (2026-08-13). It fires for the SAME key identity the
     // press delivered — the same keysym lookup, the same ASCII case-fold — and
-    // it inherits the press path's two drop classes verbatim (standalone
-    // modifier keysyms and F1..F35, keys this GUI has no use for) plus one of
-    // its own: a release that ENDS A SYNTHESIZED LEFT-BUTTON HOLD is the mouse
-    // button's release, not a key's, and the press it matches was never
-    // delivered either.
-    // IT IS DELIBERATELY NOT GATED ON SUPER, where the press path is. The Super
-    // drop exists so a chord that belongs to the desktop never reaches a BINDING, and
-    // a release binds nothing on its own — it can only RESOLVE an arm an
-    // already-delivered press created. A Super-dropped press arms nothing
-    // application-side (and fires the keyboard-intent cancellation hook below,
-    // which drops the one armed key intent), so ungated releases stay
-    // correct BY CONSTRUCTION; gating them would instead strand exactly the
-    // arm whose press got through before Super went down, which is the one
-    // case that could go wrong. THE CORNER LIVES HERE AND IS RULED KEPT
-    // (architect 2026-08-16: "super is the desktop's; the
-    // GUI basically ignores it — Super usage inside the GUI is outside the
-    // GUI's providence"): Super pressed mid-hold does not block the one armed
-    // act at its release — the modal dialog's Enter/Space arm, the product's
-    // one act-on-lift keyboard edge. The GUI's rule is that it
-    // BINDS NO SUPER CHORD, which the press drop makes true by construction —
-    // not that nothing may happen while the desktop's modifier is physically
-    // down. An act armed BEFORE Super went down and completed at its release is
-    // the GUI running its own command, not a Super chord, and is not this
-    // program's to referee. Null-safe.
+    // carries no modifier state: a release binds nothing on its own, it can
+    // only RESOLVE an arm an already-delivered press created. Null-safe.
     void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
-    void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
-    void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
 
-    // THE PLATFORM'S ADVERTISED KEY-REPEAT INTERVAL, in milliseconds, or 0
-    // when the platform has key repeat DISABLED (set_repeat_info with rate 0
-    // — honored here exactly as the platform's own repeat honors
-    // it; the field's contract is at repeat_period_us_). A platform truth
-    // handed out the way notional_pointer_x() is: the GUI holds this class by
-    // reference and reads it directly, no hook.
+    // THE PLATFORM'S ADVERTISED KEY-REPEAT INTERVAL, in milliseconds (the
+    // field's contract is at repeat_period_us_). A platform truth handed out
+    // the way notional_pointer_x() is: the GUI holds this class by reference
+    // and reads it directly, no hook.
     //
     // ITS ONE APPLICATION CONSUMER is the CHROME BUTTON HOLD-REPEAT
     // (tick_chrome_press_repeat, input_pointer.cpp), which paces a held
     // repeating BUTTON at the rate its held KEY runs at rather than at a
     // constant of its own — so the two holds cannot drift apart if the
-    // platform's repeat cadence changes. Rate 0 therefore stops the buttons
-    // repeating too,
-    // which is the honest mirror of a keyboard that does not repeat. It is
-    // READ PER FIRE and never cached: repeat_info may be re-sent at any time.
+    // platform's repeat cadence changes. It is READ PER FIRE and never cached.
     //
     // The advertised value is a RATE in Hz, so the period is exact only for
     // divisors of 1000; the microsecond field is rounded to the nearest
-    // millisecond here and floored at 1, which keeps 0 meaning "disabled"
-    // alone.
+    // millisecond here and floored at 1.
     int64_t key_repeat_period_ms() const {
-        if (repeat_period_us_ == 0) return 0;
         const int64_t ms =
             static_cast<int64_t>((repeat_period_us_ + 500ull) / 1000ull);
         return ms < 1 ? 1 : ms;
     }
 
-    // Fired when the pointer LEAVES the surface (pointer_leave), at
-    // pointer-capability loss, and — since touch phase 1 — at a touch pointer
-    // translation's end on its NO-FOCUS arm only (as TouchLift after the
-    // lift's release, as OrdinaryLeave after an abnormal end's lost-button
-    // motion: the contact is gone and no mouse rests in the window; a
-    // FOCUSED physical pointer gets a restore motion instead and this hook
+    // Fired when the pointer LEAVES (pointer_leave — the pen's hover ending)
+    // and at a touch pointer translation's end on its NO-FOCUS arm only (as
+    // TouchLift after the lift's release, as OrdinaryLeave after an abnormal
+    // end's lost-button motion: the contact is gone and no pen hovers in the
+    // window; a FOCUSED pointer gets a restore motion instead and this hook
     // stays silent — the focus fork, stated at
-    // deliver_touch_translation_end). The edges drop pointer focus
-    // and no position event will follow (outright, for capability loss; for the
-    // ordinary leaves, for as long as the pointer stays outside — it may
-    // re-enter
-    // with a synthesized motion, and a held button still releases normally).
+    // deliver_touch_translation_end). The edges drop pointer focus.
     // WHY IT FIRED IS THE ARGUMENT (GuiPointerLeaveReason, above the class;
-    // 2026-08-08): the ordinary leave and the capability loss both pass
-    // OrdinaryLeave (architect 2026-10-01) — the difference above is real, but
-    // no consumer keeps anything across either — while the pen's hover ending
-    // (PenHoverEnd, 2026-10-10) and a translated contact's lift pass their own
-    // reasons. Each fire site
-    // passes its own reason and none infers it. The two consumers that read it
-    // (the tooltip's leave and the lit rows' clear) are named at the enum.
+    // 2026-08-08): the pen's hover ending (PenHoverEnd, 2026-10-10) and a
+    // translated contact's lift (TouchLift) pass their own reasons, the
+    // abnormal end OrdinaryLeave. Each fire site passes its own reason and
+    // none infers it. The consumer that reads it (the tooltip's leave) is
+    // named at the enum.
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
     // main.cpp wires it to is enumerated THERE, at the hook body, which is the
     // authoritative list — this contract deliberately does not keep a second
     // copy — but the shape is: every face and claim derived from where the
-    // pointer is, so a pointer that slides out through the window edge cannot
-    // leave a stranded pressed interior, a lit menu item or a hanging tooltip
-    // behind (the pen's hover end keeping the lit menu item, PenHoverEnd's
-    // rule at the enum). It USED to clear the
-    // marker hover popup as well; that whole surface died with the marker-text
-    // lane in row 5. (Widened 2026-08-03 to the open dropdown's pointer-derived
-    // state, until the popup retired 2026-10-21.) Null-safe.
+    // pointer is, so a pointer that has gone cannot leave a stranded pressed
+    // interior or a hanging tooltip behind. Null-safe.
     void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
-
-    // THE KEYBOARD-INTENT CANCELLATION HOOK (2026-08-11): fired
-    // wherever the platform ENDS OR CONSUMES the keyboard stream WITHOUT a
-    // delivery, so application-side key intent — the modal dialog's keyboard
-    // press arm, whose own disarms can only see events that reach the
-    // application — dies on the same edges the platform's own key-repeat
-    // state does. TWO fire classes, each stated at its site:
-    //   * forget_keyboard_state — the keyboard focus leaving and
-    //     keyboard-capability loss, the edges that clear repeat_key_ itself:
-    //     a keyboard-driven
-    //     focus change ends every release the stream owed;
-    //   * deliver_key's SUPER DROP, per swallowed NON-SYNTHESIZED press: the
-    //     swallowed press is an intervening key ARRIVAL the application's
-    //     on_key disarm never sees, and the platform's own layer-1 disarms its
-    //     armed repeat at that very press (the arming else-branch in
-    //     key_event runs BEFORE the drop) — per-delivery is the faithful
-    //     mirror. Deliberately NOT at Super's press edge, and the ground is
-    //     the RULING (the corner at set_on_key_release above): the Super
-    //     keysym itself "disarms nothing" platform-side,
-    //     and Super's edge has nothing to cancel because a PENDING ARMED ACT IS
-    //     THE GUI'S OWN COMMAND, NOT A SUPER CHORD — the modal Enter/Space arm
-    //     completes at its release
-    //     on its own terms, outside the GUI's providence to referee. The hold
-    //     itself is also a POINTER
-    //     act, which the Super ruling explicitly scopes out (Super+click
-    //     clicks).
-    // ONE hook rather than another application-side list, so a platform edge
-    // added later joins by firing it. The consumer's authoritative effect
-    // list is main.cpp's hook body, which names the one intent it drops.
-    // THE ARROW BUTTONS' HOLD-REPEAT IS DELIBERATELY NOT A MEMBER (2026-08-16,
-    // where the pre-2026-08-13 form of it was): that burst hangs off the ARMED
-    // CHROME PRESS, which is POINTER intent — it dies on the pointer's own
-    // edges (the release, the leave / capability-loss clear), and none of this
-    // hook's edges ends a finger's hold on a button. What the hook's edges
-    // could otherwise argue for is undo adjacency, and they do not reach it
-    // either: a Super-swallowed press runs NO COMMAND, so nothing can land
-    // between the burst's opener and its repeats there. The burst's own
-    // key-arrival disarm is the physical key delivery in the application
-    // (main.cpp's set_on_key hook; the inventory is at AppState::ChromePress).
-    // Null-safe.
-    void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
     // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members
     // from PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
@@ -653,8 +361,8 @@ public:
     // the retired shapes are closed_questions.md's touch section). ONE
     // finger on
     // the glass IS the pointer — translated whole inside this class, so the
-    // GUI sees ordinary pointer deliveries and cannot tell which device
-    // produced them (the bare-`e` precedent applied to glass; the translation
+    // GUI sees ordinary pointer deliveries and cannot tell which contact
+    // produced them (the translation
     // contract lives at the touch state block below) — with THREE ruled
     // exceptions, two born of the pan zone (the pan_zone query below) and
     // one of the open editor's field (the editor_field query below): a
@@ -671,8 +379,8 @@ public:
     // hold) — and a one-finger DRAG, or a HOLD, whose down point lies in an
     // OPEN EDITOR'S FIELD is THE CARET DRAG: the caret follows the finger
     // through the caret trio and nothing selects (architect 2026-09-05, the
-    // phone's text vocabulary; the mouse's drag there stays the selection
-    // sweep, which is why this is a divergence and lives here). TWO fingers
+    // phone's text vocabulary — a divergence from the pointer road's drag
+    // there, the selection sweep, which is why it lives here). TWO fingers
     // are the ZOOM gesture: this layer measures both the
     // centroid delta and the distance ratio and delivers both, and the GUI
     // discards the centroid delta on a two-finger frame — two fingers zoom
@@ -680,8 +388,7 @@ public:
     // declaration, input_handler.h), which
     // is a GESTURE POLICY and therefore the GUI's, not this layer's. None of
     // the four delivers pointer events.
-    // All are handed to the GUI through these hooks (the
-    // set_keyboard_intent_cancel_hook wiring precedent — main.cpp wires them
+    // All are handed to the GUI through these hooks (main.cpp wires them
     // to the input handler's touch-nav body, which drives the strip-drag
     // family's viewport chokepoint, to the region former's own bodies and
     // to the editor's caret-seat bodies).
@@ -711,14 +418,13 @@ public:
     //         ARRIVAL as the end of the pinch (it is where the seated pivot is
     //         cleared and its stem erased), and a survivor that stands still
     //         would otherwise never produce one.
-    //       - THE CTRL EDGE (2026-09-25, the S Pen's button): set_modifiers'
-    //         ctrl edge under a live, latched single-finger nav delivers one
+    //       - THE CTRL EDGE (2026-09-25, the S Pen's button): set_ctrl's
+    //         edge under a live, latched single-finger nav delivers one
     //         carrying the NEW bit — after delivering, under the OLD bit, any
     //         frame already staged (motion made under one meaning is delivered
-    //         under it, the pointer's own flush-at-the-edge rule). The GUI
-    //         seats the one-finger zoom's pivot on a ctrl-down arrival and
-    //         clears it on a ctrl-up one, so the stem appears and vanishes at
-    //         the edge as the nav drag's does rather than at the next motion.
+    //         under it). The GUI seats the one-finger zoom's pivot on a
+    //         ctrl-down arrival and clears it on a ctrl-up one, so the stem
+    //         appears and vanishes at the edge rather than at the next motion.
     //   * end(): the gesture ended — its LAST nav finger lifted (any end
     //     commits; one finger of TWO lifting is the DOWNGRADE, a transform
     //     the END hook never sees — the update hook announces it with the
@@ -935,204 +641,34 @@ public:
         return touch_owner_tool_;
     }
 
-    // Override the release-restore x for the active capture. The zoom bodies
-    // set this each event to the surface x of their anchor stem, so the cursor
-    // reappears dead on the stem's column (the edge-trick rebind pins the stem
-    // while the raw cursor travel keeps going, so the raw travel ledger
-    // virtual_pointer_x_ would land past it). begin_pointer_capture clears it,
-    // so a capture with no override set (the pan phase, which has no stem)
-    // restores at the pointer's NOTIONAL POSITION, notional_pointer_x_ — the
-    // continuously clamped, wrapping position, never the travel ledger (the
-    // contract is at that field).
-    void set_capture_restore_x(double surface_x);
 
-    // Drop that override mid-capture (the nav drag's zoom→pan switch,
-    // 2026-08-14 — the live-ctrl model): a capture whose zoom phase set the
-    // stem override and whose pan phase then ends the gesture must restore
-    // exactly where a never-zoomed pan does — the notional x (the field carries
-    // that rule). No-op with no capture live.
-    void clear_capture_restore_x();
-
-    // Re-stamp the kind the active capture's release will restore (the nav
-    // drag's mode switches, 2026-08-14): begin_pointer_capture stamps the
-    // gesture's opening cue, and a mid-capture pan↔zoom switch moves what the
-    // gesture IS, so the switch re-stamps and the release hands back the
-    // phase the gesture ended in. Same semantics as the begin's stamp — "this
-    // is what comes back", written only while the lock proxy exists (the
-    // capture guard); no-op with no capture live, where the loop-tail owner
-    // governs the visible cursor.
-    void set_capture_restore_kind(GuiCursorKind kind);
-
-    // FREEZE THE POINTER'S NOTIONAL X FOR THE REST OF THIS CAPTURE PHASE
-    // (architect 2026-08-14, from the rig: "I've been operating under the
-    // assumption that the zoom control would lock the x position... We need to
-    // clamp to zero horizontal movement on zoom"). While true, the captured
-    // relative stream's dx does not advance notional_pointer_x_ — THE TRAVEL
-    // LEDGER IS UNTOUCHED, so the gesture's own unlimited travel in both axes
-    // is exactly as it was, and no delta expression anywhere changes.
-    //
-    // WHY IT IS LOAD-BEARING, restated for the 2026-08-14 ROTATION that put the
-    // nav drag's zoom on the HORIZONTAL axis: the argument that first asked for
-    // this bit was that the zoom DISCARDED its lateral travel and accumulating
-    // it invisibly was a defect. That premise is superseded — the zoom now
-    // SPENDS that travel on the zoom level — and the conclusion is stronger for
-    // it. The level having spent those pixels, letting the position spend them
-    // too would count them twice; and because this position CLAMPS into the
-    // surface where the ledger does not, an unfrozen zoom would run out of room
-    // at the window's edge. The freeze is therefore what keeps the zoom's
-    // travel unlimited — the same unlimitedness the vertical axis used to get
-    // for free by having no notional coordinate at all.
-    //
-    // WHY THE PLATFORM HOLDS THE BIT AND THE GUI DECIDES ITS VALUE. The
-    // position is ACCUMULATED here, per RAW event, and there is exactly one of
-    // it (the contract at notional_pointer_x_ records why a second one cannot
-    // be made to agree with this one at a wall). Suppression therefore has to
-    // happen at the accumulation: a GUI-side correction would have to subtract
-    // the discarded travel on the DELIVERY cadence, which is precisely the
-    // deleted second-position shape. But the platform applies NO
-    // GESTURE POLICY — it never works out that a zoom phase is running. It is
-    // TOLD, exactly as it is told the restore x and the restore kind, by the
-    // gesture that is the only thing that knows: this is the fourth member of
-    // that same told-not-inferred family.
-    //
-    // SCOPED TO THE CAPTURE, which is what keeps it from leaking: no-op while
-    // no capture is live (the siblings' own guard), cleared by
-    // begin_pointer_capture so every capture opens unfrozen, and cleared again
-    // at release_pointer_lock. The nav drag re-asserts it at its threshold
-    // crossing and at every ctrl edge, and it is the only gesture that ever
-    // does — no other gesture captures the pointer.
-    //
-    // A FROZEN PHASE CAN NEVER WRAP, which is the freeze's own consequence
-    // rather than a second rule: the wrap (set_capture_wrap_span below) rides
-    // the accumulation this bit suppresses, so a zoom phase writes no position
-    // at all and cannot reach a bound. Its travel is spent on the level.
-    //
-    // ACCEPTED PRECISION, one pointer frame wide: the raw relative events are
-    // accumulated as they arrive while the value is set at DELIVERY time, so
-    // the frame carrying a ctrl-down edge advances the notional x by that
-    // frame's own lateral travel before the freeze takes hold. That is the same
-    // one-frame grain the pivot seat already reads at, and it is bounded by a
-    // single frame's hand movement rather than by the whole phase's.
-    void set_notional_x_frozen(bool frozen);
-
-    // TELL THE POINTER WHERE IT NOW IS (architect 2026-08-14, from the rig, on
-    // the ctrl-up edge: "if I let go of the left mouse button first, I see the
-    // hand pop back up exactly where I expected, but if I let go of control
-    // first, the hand basically teleports... it doesn't keep track of where it
-    // should be"). The nav drag's zoom->pan switch drops the stem override, and
-    // the restore then falls back to notional_pointer_x_ — which the lateral
-    // freeze pinned at the ctrl-down column and which therefore never learned
-    // that the stem SLID, as the song-anchored pivot makes it do wherever
-    // clamp_viewport_start saturates. So the gesture HANDS THE STEM'S COLUMN
-    // OVER at that edge and the pan phase advances the position from there:
-    // a release with ctrl still held lands on the stem through the OVERRIDE, a
-    // release after ctrl-up lands on the stem through the POSITION, and the two
-    // orders agree by construction rather than by two rules kept in step.
-    //
-    // THE FIFTH MEMBER OF THE TOLD-NOT-INFERRED FAMILY (set_capture_restore_x,
-    // clear_capture_restore_x, set_capture_restore_kind, set_notional_x_frozen
-    // above): the platform applies no gesture policy and works out nothing
-    // about where a stem is; it is told, by the only thing that knows.
-    // Capture-guarded like its four siblings.
-    //
-    // FREEZE-INDEPENDENT BY CLASS, and the distinction is the one already drawn
-    // at the capture release's own write-back (release_pointer_lock): the
-    // freeze gates the RELATIVE stream's ACCUMULATION, while this STATES A REAL
-    // POSITION, which is what that write-back does too and for the same reason.
-    // No caller need order it against the freeze.
-    //
-    // IT WRITES THROUGH THE ONE CLAMP BODY, note_notional_pointer_x, never the
-    // field — so the window clamp comes from the same owner as every other
-    // write. It states a position and so does NOT wrap: the wrap belongs to the
-    // captured accumulation, which is where an OVERSHOOT can exist at all (the
-    // record is at set_capture_wrap_span below). A stem column is interior by
-    // construction anyway, so nothing here could reach a bound.
-    void set_notional_pointer_x(double surface_x);
-
-    // THE CAPTURED POINTER'S WRAP SPAN (architect 2026-08-14, from the rig:
-    // "what if instead we had the cursor, every time that it touches the
-    // bounds, teleport back to the centre of the waveform?" — then, having
-    // driven that centre form, "make the wraparound a full screen wraparound,
-    // not just the half width wraparound"). Under a capture the notional
-    // position no longer PINS at a bound: an event that would push it past one
-    // WRAPS it to the OPPOSITE bound, carrying its overshoot, and it goes on
-    // travelling — so a pan of several screens leaves the cursor somewhere
-    // ordinary and the release simply restores where the virtual pointer is,
-    // with no runaway case to detect (the full record is at the accumulation
-    // site, relative_motion, and at notional_pointer_x_). Each
-    // crossing therefore buys the waveform's FULL width of travel; the centre
-    // form, which bought half of it, lived one commit.
-    //
-    // THE SIXTH MEMBER OF THE TOLD-NOT-INFERRED FAMILY (set_capture_restore_x,
-    // clear_capture_restore_x, set_capture_restore_kind, set_notional_x_frozen,
-    // set_notional_pointer_x above), and for the family's own reason: the
-    // bounds are THE WAVEFORM'S, and this class knows nothing about a waveform
-    // — that is an explicit layering statement at notional_pointer_x_. The GUI
-    // supplies both from waveform_area at each capture's begin. THERE IS NO
-    // THIRD VALUE: an edge-to-edge fold has no middle, so the centre column
-    // the centre form had to be handed — and the even-width rounding question
-    // that came with it — stopped existing rather than being settled.
-    //
-    // Capture-guarded like its siblings, and cleared to a DEGENERATE span by
-    // begin_pointer_capture so a capture that was never told a span cannot wrap
-    // on the previous one's numbers (the wrap skips a degenerate span; the
-    // clamp still answers).
-    //
-    // A WINDOW RESIZE MID-CAPTURE LEAVES THE SPAN STALE, and that is ACCEPTED:
-    // the values are re-supplied at the next capture, the drift is bounded by
-    // the resize itself, and a live push would need a producer that does not
-    // exist.
-    void set_capture_wrap_span(double lo, double hi);
 
     // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
-    // ANSWER TO "WHERE IS THE POINTER?", live for the whole process and not
-    // just under a capture. The full contract, and why there is exactly one of
-    // these, are at notional_pointer_x_ below. The GUI reads it to place the
-    // nav drag's zoom pivot, PROJECTING it into waveform columns in the bounds
-    // it owns (nav_notional_col, input_pointer.cpp) — the projection is the
-    // GUI's because the platform knows nothing about the waveform; the
-    // POSITION is the platform's because that is where the raw events are.
-    // THE SEAT READS THIS AND NOTHING ELSE (architect 2026-08-14: the stem goes
-    // wherever the cursor is at the ctrl-down, visible or invisible). It briefly
-    // read the release's restore fork instead, on a premise recorded as FALSE at
-    // ScrollDragState::anchor_sample so it is not re-derived here — and there is
-    // no fork left to read either way: CTRL MEANS ONE THING, it seats the stem
-    // where the cursor is, full stop.
+    // ANSWER TO "WHERE IS THE POINTER?", live for the whole process. The full
+    // contract is at notional_pointer_x_ below. The GUI's one projection of it
+    // into waveform columns is nav_notional_col (input_pointer.cpp) — the
+    // projection is the GUI's because the platform knows nothing about the
+    // waveform; the POSITION is the platform's because that is where the
+    // events are.
     double notional_pointer_x() const { return notional_pointer_x_; }
 
     // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
-    // callback and the loop-settled hook are built from, read out of the tracked
-    // ctrl/shift/alt bits and the logical left-button hold.
-    // OFF THE APPLICATION'S SURFACE since 2026-08-03: it was reachable for
-    // exactly two callers, main.cpp's WM-close and resize callbacks, which
-    // carried no modifier state of their own and had to re-derive the pointer
-    // cursor after force-ending a gesture. The per-iteration cursor owner
-    // deleted both calls, and the hook that replaced them is HANDED this state
-    // rather than fetching it — so the door is closed rather than left standing
-    // with nothing asking for it, and GuiPlatform does not re-export this one:
-    // the only thing it does with it is hand it to the loop-settled hook at the
-    // tail of each run-loop iteration.
+    // callback is built from: the tracked ctrl bit and the touch translation's
+    // left hold; shift and alt are never raised here (set_ctrl's contract).
+    // Read by the core's own deliveries and by the backend's pen-button
+    // sampling (set_pen_ctrl, platform_android.cpp), which asks the standing
+    // bit before it announces an edge.
     // THE STANDING SPLIT, which is why this is read live and never stashed: the
     // POSITION must be remembered (only pointer events carry it) and the
-    // MODIFIERS must not (they are live here) — end_left_hold_source documents
-    // the same split for its synthesized release. A remembered copy of the
+    // MODIFIERS must not (they are live here). A remembered copy of the
     // modifiers would be a second representation of a fact this object owns,
     // with its own staleness invariant to keep.
     GuiInputState current_mods() const;
 
 private:
-    // Tracked modifier state, refreshed by set_modifiers and consumed by
-    // GuiInputState construction on every key delivery.
+    // The tracked ctrl bit, written by set_ctrl alone and read into every
+    // GuiInputState this layer builds.
     bool mod_ctrl_  = false;
-    bool mod_shift_ = false;
-    bool mod_alt_   = false;
-    // SUPER (Logo) is tracked but NEVER projected into GuiInputState: it belongs
-    // to the desktop, and this program's answer to it is to deliver no key PRESS at all
-    // while it is held, so the GUI binds no Super chord (the ruling is at
-    // deliver_key, input_core.cpp; releases stay ungated, the corner at
-    // set_on_key_release). That is why there is no `super` bool on GuiInputState
-    // and no reader anywhere.
-    bool mod_super_ = false;
 
     // Key repeat (last-key-wins, timerfd-tick-piggyback).
     // repeat_key_ is the GuiKey currently repeating (0 = none).
@@ -1147,15 +683,13 @@ private:
     // the first repeat (from set_repeat_info), in microseconds.
     // repeat_period_us_ is the platform-advertised inter-repeat interval
     // (1_000_000 / rate), in microseconds.
-    // Zero rate means "no repeat" and is honored — held keys do not repeat.
     // repeat_editor_ctx_ is the arm-time editor-active flag (from
     // text_editor_active_probe_); each fire re-checks that the live flag still
     // matches it. This boolean is sufficient because the editor target/session
     // can only change via a key or pointer-button event, and both kill the hold
     // outright — a key press re-arms or disarms via press-time eligibility, and
-    // a pointer-button press or a completed wheel emission clears repeat_key_ at
-    // the platform input chokepoints — so no armed hold can straddle a target
-    // change.
+    // the touch translation's press clears repeat_key_ at its delivery — so no
+    // armed hold can straddle a target change.
     // repeat_with_ctrl_ is the armed press's own `with_ctrl` (key_event's
     // contract), ORed into each fire's modifiers before the eligibility
     // re-check, so a held carried chord repeats as itself.
@@ -1170,217 +704,23 @@ private:
     // once per synthesized repeat, with the held key's stable code.
     std::function<uint32_t(uint32_t)> codepoint_probe_;
 
-    // Virtual-pointer state. THE PRODUCT TRACKS TWO DIFFERENT POINTER
-    // QUANTITIES AND THEY ARE NOT THE SAME THING (architect 2026-08-14, from
-    // the rig — the defect that forced the split: "if I reverse direction and
-    // it's clamped, it should drift back into the middle no matter how far in
-    // the other direction we've travelled"):
-    //   * virtual_pointer_x_/y_ — THE TRAVEL LEDGER, live only while
-    //     pointer_captured_ is true. Seeded from the absolute
-    //     press position and advanced by each relative-motion delta WITHOUT
-    //     clamping, which is what buys UNLIMITED TRAVEL: its rounded value is
-    //     written into pointer_x_/pointer_y_ and delivered through on_motion_
-    //     exactly like an absolute motion, and every captured gesture derives
-    //     its per-event delta by DIFFERENCING those deliveries, so a clamp here
-    //     would stall the pan the moment the hand passed the window edge. It
-    //     must stay unbounded.
-    //   * notional_pointer_x_ — THE POINTER'S NOTIONAL POSITION, live for the
-    //     whole process: surface-local x, CLAMPED INTO THE SURFACE AT EVERY
-    //     WRITE, so it carries no off-window debt and is always a position
-    //     inside the window. UNDER A CAPTURE IT WRAPS rather than pinning: an
-    //     accumulation that would push it past one of the waveform's bounds
-    //     re-enters at the other, carrying the overshoot (the wrap's whole
-    //     record is below, the span's contract at set_capture_wrap_span).
-    //     ITS WRITERS ARE EVERY DELIVERY THAT CARRIES A REAL POSITION —
-    //     deliver_motion is the one funnel (pointer_enter, absolute
-    //     pointer_motion, and all four touch-translation deliveries) —
-    //     PLUS the captured relative stream, which accumulates and clamps it
-    //     per RAW event, the capture release, which moves it to the
-    //     restore hint alongside pointer_x_/pointer_y_, and
-    //     set_notional_pointer_x, through which a live gesture STATES the
-    //     position (the nav drag's ctrl-up handover of the zoom stem's column;
-    //     contract at that method). The last two are the STATED writers and
-    //     the first two the observed ones, which is why neither is gated by
-    //     the lateral freeze. Uncaptured there is
-    //     nothing virtual, so it simply IS the delivered position; captured it
-    //     is the ledger folded into the waveform's span, MINUS whatever a
-    //     frozen phase withheld (notional_x_frozen_ below). Its consumers are
-    //     the release restore below and, through notional_pointer_x(), the
-    //     GUI's zoom pivot seat.
-    //     THERE IS EXACTLY ONE OF THESE, AND THAT IS THE POINT: the
-    //     GUI briefly kept a second clamped position of its own,
-    //     advanced once per DELIVERED (coalesced) motion by the net travel
-    //     delta of the whole pointer frame while this one advanced per RAW
-    //     event, and CLAMP-PER-STEP AND CLAMP-ONCE-ON-THE-NET-DELTA ARE NOT
-    //     EQUIVALENT AT A WALL — an edge reversal coalesced into one frame
-    //     (raw +20 then -8 at the right edge) leaves this one at max-8 and the
-    //     other pinned at max, and interior motion then preserves that offset
-    //     for the rest of the gesture. The divergence is silent and permanent,
-    //     so the two positions cannot be made to agree by matching clamps;
-    //     there has to be one owner, and it is here, where the raw events are.
-    //     The GUI PROJECTS this into waveform columns and clamps in the bounds
-    //     it owns (nav_notional_col, input_pointer.cpp) — a projection, never
-    //     an accumulation.
-    //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
-    //     omission: the restore's y is frozen at the press row and no gesture
-    //     reads a vertical position here — since the 2026-08-14 rotation the
-    //     nav drag discards dy in BOTH phases. So nothing would read a
-    //     notional y. THE FROZEN
-    //     RESTORE Y IS NOT THE X DEFECT'S OTHER HALF, which is why the
-    //     2026-08-14 lateral freeze below did not grow a y twin: the x defect
-    //     was an ACCUMULATOR silently diverging from the pointer and feeding
-    //     TWO consumers, and there is no y accumulator to diverge and no
-    //     second y consumer. What is left is a restore-position preference —
-    //     a drag that wandered 300 px down returns the cursor 300 px up — and
-    //     the press row is the ergonomic answer there: vertical travel is
-    //     unbounded and would restore into another lane or off the surface
-    //     entirely, whereas the notional x always lands back on the waveform,
-    //     which spans the full width. Architect's ruling, unchanged — and since
-    //     the rotation the nav drag has no vertical term at all, so what the
-    //     press row now answers is nothing but the hand's own drift.
-    // On release the cursor reappears at capture_restore_x_override_ when a
-    // strip drag set it (the anchor stem's surface x), else at
-    // notional_pointer_x_ — ALWAYS, with no fork; y is frozen at the press row
-    // (capture_restore_y_).
-    //
-    // THE HIDDEN CURSOR WRAPS EDGE TO EDGE INSTEAD OF PINNING AT A BOUND
-    // (architect 2026-08-14, from the rig: "what if instead we had the cursor,
-    // every time that it touches the bounds, teleport back to the centre of the
-    // waveform?" and "whatever the virtual point is is where the cursor shows
-    // back up" — then, having driven that centre form, "make the wraparound a
-    // full screen wraparound, not just the half width wraparound"). Under a
-    // capture the position no longer runs out of room: an accumulation that
-    // would push it past the right bound re-enters at the left one and vice
-    // versa, carrying the overshoot, and travel continues. A pan of several
-    // screens therefore leaves the cursor somewhere ordinary rather than
-    // stranded on the last pixel, so the release simply restores where the
-    // virtual pointer is — and each crossing buys the waveform's FULL width of
-    // travel, so the folds are half as frequent as the centre form's and the
-    // cursor spends its time spread across the whole surface rather than
-    // clustered around the middle. THE WRAP ITSELF LIVES AT THE CAPTURED
-    // ACCUMULATION (relative_motion), which is the one place an
-    // overshoot exists; the span comes from the GUI (set_capture_wrap_span).
-    //
-    // THE TELEPORT-ON-CLAMP SPLIT IS SUPERSEDED, AND SUPERSEDED AT ITS PREMISE:
-    // it read "a small pan moves the cursor a little, a runaway pan brings it
-    // home", and the wrap removes the runaway case itself — the cursor is never
-    // stranded, so there is nothing to bring home. The whole apparatus went
-    // with it: the clamp verdict, the capture's remembered home column, the
-    // shared homecoming expression the release and the ctrl edge both read, and
-    // the nav drag's ctrl-down pop. CTRL GOES BACK TO MEANING ONE THING — it
-    // seats the stem where the cursor is, full stop, the seat rule that has
-    // stood since the simple-rule ruling. A reader who wants the old rule has
-    // git. A RECENTRING DELAY WAS CONSIDERED AND DECLINED (architect
-    // 2026-08-14: "that would make it feel less responsive") — the third
-    // refusal of a preventative backstop on this surface.
-    //
-    // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: while captured the
-    // position is our own bookkeeping entirely, so wrapping it costs nothing,
-    // needs no protocol, and cannot be seen.
-    //
-    // IT CHANGES NO VIEW: every gesture's dx comes from the TRAVEL LEDGER
-    // above, which is unbounded and untouched, so the scroll stays exactly as
-    // smooth as it was and only where the cursor reappears is different.
-    // THE ZOOM PHASE CANNOT WRAP, because the freeze suppresses the very
-    // accumulation the wrap rides (notional_x_frozen_ below): a zoom writes no
-    // position, so it can never reach a bound. THE Y HAS NO HALF OF THIS
-    // EITHER — the restore's y is the press row unconditionally.
-    // THE RESTORE ALSO WRITES THE TRACKED POSITION BACK to that same hint —
-    // the ledger pair, the notional position and pointer_x_/pointer_y_ alike
-    // — so the travel does NOT outlive the lock in the coordinates. It has to:
-    // button events carry no
-    // coordinates in the protocol and are delivered at pointer_x_/pointer_y_,
-    // and the unlock warp comes back as no pointer_motion, so a click made
-    // before the user next moved was routed at the travel's end. The full
-    // account of the defect (a ruler zoom drag — that entry is history now,
-    // the strip drag arming from the ctrl-waveform press alone — then a click
-    // that flipped the marker view from the icon row) is at
-    // release_pointer_lock.
-    bool   pointer_captured_   = false;
-    double virtual_pointer_x_  = 0.0;
-    double virtual_pointer_y_  = 0.0;
+    // THE POINTER'S NOTIONAL POSITION, live for the whole process:
+    // surface-local x, CLAMPED INTO THE SURFACE AT EVERY WRITE, so it is
+    // always a position inside the window. ITS WRITERS ARE EVERY DELIVERY THAT
+    // CARRIES A REAL POSITION, through the one funnel deliver_motion
+    // (pointer_enter, the pen's hover motion, and all four touch-translation
+    // deliveries), and its reader is notional_pointer_x(). THERE IS NO
+    // NOTIONAL Y: nothing reads a vertical position here.
     double notional_pointer_x_ = 0.0;
-    double capture_restore_y_  = 0.0;
-    // THE ACTIVE CAPTURE'S WRAP SPAN — the waveform's left and right bounds,
-    // and nothing else, the fold being edge to edge between them (contract at
-    // set_capture_wrap_span, its one writer besides begin_pointer_capture,
-    // which clears both to the degenerate 0). Read at exactly one place,
-    // the notional half of relative_motion, and never by the ledger.
-    // Told by the GUI because a waveform is not a thing this class knows.
-    double capture_wrap_lo_ = 0.0;
-    double capture_wrap_hi_ = 0.0;
-    // THE ACTIVE CAPTURE'S LATERAL FREEZE (contract at set_notional_x_frozen,
-    // the only writer besides the two capture edges that clear it). Read at
-    // exactly one place — the notional half of relative_motion —
-    // and never by the ledger.
-    bool   notional_x_frozen_  = false;
-    std::optional<double> capture_restore_x_override_;
 
-    // "THE POSITION WE HAVE IS NOT THE POINTER'S." ONE FACT, ONE OWNER, and the
-    // whole reason set_cursor_kind can ignore a write (the rule is stated at that
-    // method's declaration). It goes TRUE when a lock is REQUESTED — the proxy is
-    // taken for a live lock by ruling, see begin_pointer_capture — from that moment
-    // pointer_x_/pointer_y_ carry the unbounded VIRTUAL travel, a point the
-    // pointer does not occupy — and stays true PAST the unlock, because the
-    // restore only tells the platform where to put the cursor; where it ended
-    // up is not ours to know until the platform says so.
-    // WHAT THE UNLOCK DOES SETTLE IS THE COORDINATES, NOT THIS FLAG, and the two
-    // must not be read as one fact: release_pointer_lock writes
-    // pointer_x_/pointer_y_ (and the virtual pair) to the restore hint, so past
-    // the unlock they name the pixels the cursor is DRAWN on rather than the
-    // travel — an estimate, which is exactly why this flag stays set over it.
-    // The split is load-bearing: the kinds this flag guards can afford to wait
-    // for the platform, and the BUTTON deliveries — which carry no
-    // coordinates of their own and so read those fields — cannot, having once
-    // routed a click at the travel's end (the account is at
-    // release_pointer_lock). It goes false again at
-    // the next ABSOLUTE position the backend delivers (pointer_enter or
-    // pointer_motion), which is exactly the event that re-establishes the
-    // truth — and the re-derivation follows in that same loop iteration, at the
-    // tail hook that owns the cursor (set_loop_settled_hook).
-    // WHAT SURVIVES THE SPAN is not an inference: the same lock-request path that
-    // sets this STAMPS the gesture's own cue as the remembered kind (the
-    // restore_kind parameter at begin_pointer_capture), so the release restores a
-    // fact the gesture supplied while the position was still real, rather than
-    // whatever the last dispatch batch happened to leave behind.
-    // ONLY A REQUESTED LOCK SETS IT — treated as a live one by ruling, with the
-    // scope and the accepted degradation at begin_pointer_capture: an uncaptured
-    // backend (the glass's, whose capture pair is a no-op) never asks for a
-    // lock at all, so its "captured" gestures run on ordinary absolute motion with
-    // the position true throughout and every cursor write landing normally. That is what lets the GUI's ONE per-iteration
-    // re-resolve serve the captured and the degraded path alike, with nothing in
-    // the GUI testing which case it is in.
-    // The clear is guarded on !pointer_captured_ so a stray absolute event mid-
-    // capture cannot declare the virtual position true.
-    bool pointer_position_unknown_ = false;
-
-    // Pointer focus and last-known position. The backend hands over the
-    // pointer's surface-local position as a fractional DOUBLE and
+    // THE HOVERING PEN'S FOCUS AND LAST-KNOWN POSITION. The backend hands over
+    // the pen's surface-local hover position as a fractional DOUBLE and
     // containing_pixel names the pixel it lands in; pointer_x_/pointer_y_ hold
-    // the most recent such pixel so we have a position to report with button
-    // events (a button edge carries no coordinates of its own on any backend).
+    // the most recent such pixel, which the translation end's focus fork
+    // restores the pointer to (deliver_touch_translation_end).
     bool pointer_focused_ = false;
     int  pointer_x_ = 0;
     int  pointer_y_ = 0;
-
-    // Live truth for left-button held state. Updated on every press and
-    // release of the left button. Read by current_mods() into the
-    // primary_button_held field of GuiInputState.
-    bool pointer_left_held_ = false;
-
-    // kLeftClickKey emulation state. synth_left_held_ is true while that key
-    // is held as a synthesized left button; synth_left_keycode_ is the stable
-    // per-key code that owns the hold, so the
-    // release is matched by that code exactly like repeat cancellation is. The logical left button is
-    // (pointer_left_held_ || synth_left_held_ || touch_left_held_): a press is
-    // delivered only on the 0->1 edge of that OR and a release only on the
-    // 1->0 edge (the evdev model for devices sharing BTN_LEFT), so the
-    // physical, synthesized and touch sources never double-deliver. Each
-    // source's hold ends on its OWN stream's edges and never on a sibling's
-    // (the keyboard edges end the synth hold, the pointer-capability loss ends
-    // the physical and synth holds, the touch edges end the touch hold).
-    bool     synth_left_held_    = false;
-    uint32_t synth_left_keycode_ = 0;
 
     // -- Touch (the finger as the pointer; touch phase 1, 2026-08-11; the
     //    WINDOWED MODEL, restored at the sixth glass ruling, 2026-08-12) --
@@ -1388,8 +728,8 @@ private:
     // THE UNIFIED-MODE PREMISE, made literal at this boundary: ONE finger IS
     // the pointer, translated whole here so the GUI sees ordinary pointer
     // deliveries — enter-motion, left press, motion, release — and cannot tell
-    // which device produced an event (no touch mode, no flag, no GUI-side
-    // branch; the bare-`e` precedent applied to glass). TWO fingers are the
+    // which contact produced an event (no touch mode, no flag, no GUI-side
+    // branch). TWO fingers are the
     // navigation gesture, delivered through the touch-nav hooks and NEVER as
     // pointer events. The WINDOW is what buys that vocabulary ON THE PAN ZONE
     // (a real pinch's two fingers land tens of milliseconds apart, so a press
@@ -1416,8 +756,8 @@ private:
     //     with no wait. It resolves to Pointer on the contact lifting inside
     //     it (a TAP — the whole burst delivers at the lift, and on the
     //     navigation surface that burst's motionless press-release IS the
-    //     deferred click act — the playhead placement, the pan-primary mouse
-    //     half's own machinery); on the zone's EXPIRY to THE REGION HOLD
+    //     deferred click act — the playhead placement, the pointer road's
+    //     own machinery); on the zone's EXPIRY to THE REGION HOLD
     //     (-> Region below — hold-then-drag sweeps a region, the deliberate
     //     act's glass form — a MOTIONLESS contact's alone since 2026-10-22,
     //     the edge inventory's expiry clause), the field having no expiry;
@@ -1435,13 +775,11 @@ private:
     //     window's whole point there; in the field's window, or where either
     //     contact is a PEN, it is ignored.
     //   * Pointer — the translation is live: the owning contact's motion is
-    //     pointer motion (coalesced to the touch_frame boundary, the
-    //     pointer-frame precedent), its lift is the release on the logical
-    //     left 1->0 edge AND the TRANSLATION END ON THAT SAME EDGE — an
-    //     ordinary leave, or a restore motion at the mouse when the physical
-    //     pointer has focus (the finger left the glass; what keeps hover
-    //     faces from resting lit where a finger last was; a sibling-held
-    //     logical left suppresses ALL of it — see the UP clauses below). A
+    //     pointer motion (coalesced to the touch_frame boundary), its lift is
+    //     the release AND THE TRANSLATION END ON THAT SAME EDGE — an ordinary
+    //     leave, or a restore motion at the pointer when it has focus (the
+    //     pen's lift, pointer_focus_at; the finger left the glass, which is
+    //     what keeps hover faces from resting lit where a finger last was). A
     //     SECOND contact landing here is IGNORED whole, moved or not: a pinch
     //     is admitted only from the zone's window (2026-09-25), and a live
     //     translation lies off the zone by construction — the zone's only
@@ -1537,7 +875,7 @@ private:
     //     clock). THE PLACEMENT LANES (the ruler, the marker lane's empty
     //     stretches) are this same road with no window and no touch-side
     //     machinery of their own: a tap's ordinary press+release burst
-    //     places exactly as a mouse click does, and on the marker lane's
+    //     places exactly as a pen click does, and on the marker lane's
     //     empty stretch that release also seeds the EmptyLane double-click
     //     candidate, so TWO TAPS there reach the marker CREATE (the second
     //     tap's press consumes the candidate).
@@ -1591,22 +929,13 @@ private:
     //   * second DOWN during Caret — IGNORED whole, the Region clause's own
     //     terms: the finger becomes nothing, not a pinch pivot inside the
     //     field.
-    //   * touch UP, owner, Pointer  — staged motion flushed, release on the
-    //     logical left 1->0 edge at the last position, THE TRANSLATION END ON
-    //     THAT SAME EDGE (one owner,
-    //     deliver_touch_translation_end), which FORKS ON PHYSICAL POINTER
-    //     FOCUS: the leave (TouchLift) when no mouse rests in
-    //     the window, an ordinary restore MOTION at pointer_x_/pointer_y_
-    //     when one does — the finger lifted, so the unified pointer is where
-    //     the mouse is, and the motion re-derives hover and the settled
-    //     cursor from truth (the cursor-residue fix). A sibling source
-    //     (the physical left button / bare-`e`) still holding suppresses the
-    //     release, the leave AND the restore — the unified pointer has not
-    //     left, the mouse is mid-press, and the leave hook's clears (the
-    //     armed chrome press, the modal's armed button, the popup's press
-    //     claim) belong to that still-held press. A suppressed end can strand a hover face where
-    //     the finger last was — the accepted-glitch class, self-healing on
-    //     the next pointer event;
+    //   * touch UP, owner, Pointer  — staged motion flushed, the release at
+    //     the last position, THE TRANSLATION END ON THAT SAME EDGE (one
+    //     owner, deliver_touch_translation_end), which FORKS ON POINTER
+    //     FOCUS: the leave (TouchLift) when no pen hovers in the window, an
+    //     ordinary restore MOTION at pointer_x_/pointer_y_ when one does (the
+    //     pen's own lift off an empty glass, pointer_focus_at) — the motion
+    //     re-derives hover from truth;
     //     -> Drain if ignored fingers remain, else Idle.
     //   * touch UP, one of TWO nav fingers — THE DOWNGRADE (2026-08-14, the
     //     one-model ruling; the site's comment carries the full record and
@@ -1666,8 +995,7 @@ private:
     //     press commits nothing, and the drag-modal gate un-latches either
     //     way) then the
     //     translation end on that delivery's own edge (the UP clause's
-    //     focus fork and sibling-suppression rule apply here identically —
-    //     one owner); a live Nav
+    //     focus fork applies here identically — one owner); a live Nav
     //     gesture (single- or two-finger — one arm) DROPS its staged dirty
     //     frame
     //     (the window system's claim means that motion retroactively was not
@@ -1687,29 +1015,20 @@ private:
     //     Pending window is dropped silently (nothing was delivered, so
     //     there is nothing to end); all touch state forgotten either way.
     //   * TOUCH capability loss — the cancel contract above, then the backend
-    //     releases its touch object. The pointer- and keyboard-capability
-    //     edges do NOT touch this state (each source dies on its own
-    //     stream's edges), and shutdown releases that object with no
+    //     releases its touch object. Shutdown releases that object with no
     //     deliveries (the backend's teardown is not an input edge — it
     //     delivers nothing).
     //
     // TOUCH NEVER WRITES pointer_x_/pointer_y_ (a deliberate split): those
-    // fields are the physical pointer's own — the wheel emits there, the
-    // bare-`e` press lands there, the capture machinery rewrites them — and
-    // every touch
-    // delivery carries its own explicit coordinates, so the unified "one
-    // pointer" view lives in the DELIVERIES while each device's platform
-    // state stays self-consistent. For the same reason touch does not clear
-    // pointer_position_unknown_ (a touch says nothing about where the mouse
-    // cursor is) and gates NO DELIVERY on pointer_focused_ (touch delivers
+    // fields are the hovering pen's own, and every touch delivery carries its
+    // own explicit coordinates, so the unified "one pointer" view lives in the
+    // DELIVERIES. Touch gates NO DELIVERY on pointer_focused_ (touch delivers
     // only to the touched surface). The split has ONE deliberate reader:
-    // deliver_touch_translation_end reads pointer_focused_ —
-    // and pointer_x_/pointer_y_ on the focused arm — because the translation's
-    // END is a MOUSE question ("is the mouse resting in the window, and
-    // where"), not a touch delivery to gate. (The Android pen answers it as
-    // the mouse would: the backend's pointer_focus_at at the pen's lift is
-    // a pointer door, the pen going on as the hovering pointer, not a touch
-    // write — architect 2026-10-07.)
+    // deliver_touch_translation_end reads pointer_focused_ — and
+    // pointer_x_/pointer_y_ on the focused arm — because the translation's END
+    // asks where the pointer now is: the backend's pointer_focus_at at the
+    // pen's lift is a pointer door, the pen going on as the hovering pointer,
+    // not a touch write (architect 2026-10-07).
     //
     // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the one thing outside this
     // layer that reads the phase machine, through touch_contact_active()
@@ -1787,10 +1106,13 @@ private:
     // and read at the second-down arms (a pen on either side of a pair
     // opens no two-finger navigation) and by touch_owner_tool().
     GuiTouchTool touch_owner_tool_ = GuiTouchTool::Finger;
-    // The logical left's third source (see the OR-edge model above).
+    // THE LOGICAL LEFT BUTTON: true while the touch translation holds it
+    // (raised at the resolution's press, dropped at the translation's end),
+    // read by current_mods() into GuiInputState::primary_button_held. The
+    // translation is its one source.
     bool       touch_left_held_          = false;
-    // Pointer: a motion staged for the touch_frame boundary (the
-    // pointer-frame coalescing precedent; flushed ahead of the release).
+    // Pointer: a motion staged for the touch_frame boundary (flushed ahead
+    // of the release).
     bool       touch_frame_motion_pending_ = false;
     // Nav: ONE finger (the phone model's pan — the finger is the centroid and
     // the distance fields stay degenerate) vs two. touch_nav_id2_ and the
@@ -1817,59 +1139,6 @@ private:
     // Positions moved this touch frame (compute + deliver at the frame).
     bool       touch_nav_frame_dirty_ = false;
 
-    // Accumulated vertical scroll carry, in value120 units (120 = one
-    // detent). pointer_frame() folds the per-frame delta (arbitrated
-    // from the two staged sources below) into this and drains it into
-    // discrete WheelUp/WheelDown steps once per logical pointer frame,
-    // carrying the sub-detent remainder forward. This is what collapses a
-    // touchpad's stream of small axis events into the same handful of
-    // steps a mouse wheel produces.
-    double scroll_accum_ = 0.0;
-
-    // The routing context every unit currently in scroll_accum_ was
-    // contributed under: (probe region << 3) | modifier chord bits. When a
-    // frame carrying axis input re-probes to a different key, the stale
-    // remainder is cleared before the new delta is added, so a completed
-    // detent is never assembled across a modifier or region change.
-    int    scroll_context_key_ = 0;
-
-    // Per-frame scroll staging. A pointer frame may carry a value120
-    // event (wheel, high-resolution) and/or a legacy continuous axis event
-    // (touchpad and other continuous sources). Both handlers stage into
-    // these scratch fields; pointer_frame() arbitrates — value120 wins
-    // when present, legacy axis is used otherwise — folds the result into
-    // scroll_accum_, then resets all four unconditionally at the frame
-    // boundary so no partial delta leaks into a later frame.
-    double frame_v120_accum_ = 0.0;   // value120 units seen this frame (wheel)
-    double frame_axis_accum_ = 0.0;   // legacy axis units seen this frame
-    bool   frame_have_v120_  = false; // a value120 event arrived this frame
-    bool   frame_have_axis_  = false; // a legacy axis event arrived this frame
-
-    // Per-frame captured-motion coalescing. While pointer_captured_, each
-    // relative-motion event advances the virtual position (and pointer_x_/y_)
-    // immediately but DEFERS its on_motion_ delivery, setting this flag;
-    // pointer_frame() delivers exactly one on_motion_ at the accumulated
-    // position when set, then clears it — collapsing a 500-1000 Hz capture
-    // torrent to one gesture event per pointer frame so the strip drag's
-    // synchronous per-event repaint runs at frame cadence. Reset with the
-    // scroll scratch at the frame boundary.
-    bool   frame_have_relmotion_ = false;
-
-    // The kind last asked for. THE ONE PLACE the current cursor is recorded —
-    // every applier reads it and none takes a kind as an argument, so a re-apply
-    // on an enter or a capture release restores exactly what this field last
-    // recorded. That is NOT "whatever was showing": a capture STAMPS this field
-    // with the gesture's own cue and then hides the cursor, so the release
-    // deliberately hands back a kind (Zoom, Pan) that may never have been on
-    // screen before the drag. It outlived the custom-buffer cursor it was written
-    // for and is load-bearing for those two platform-side edges, which know
-    // nothing about where the pointer is in the GUI's terms.
-    // TWO WRITERS: set_cursor_kind (the GUI's answer for a REAL position) and
-    // begin_pointer_capture's stamp on the lock-request path (the gesture's own
-    // cue, written for the release that will hand it back; why a requested lock
-    // counts is at that contract). Nothing else.
-    GuiCursorKind cursor_kind_ = GuiCursorKind::Arrow;
-
     // The window's width in pixels, told by the backend (contract at
     // set_surface_width). Read only by the notional position's clamp.
     int surface_width_ = 0;
@@ -1879,27 +1148,18 @@ private:
     KeyReleaseCallback   on_key_release_;
     ButtonCallback       on_button_press_;
     ButtonCallback       on_button_release_;
-    WheelCallback        on_wheel_;
     MotionCallback       on_motion_;
-    WheelContextProbe    wheel_context_probe_;
     TextEditorProbe      text_editor_active_probe_;
     RepeatEligibleProbe  repeat_eligible_probe_;
-    // The one owner of the pointer-leave drop: fired at pointer_leave, at
-    // pointer-capability loss, and at a touch translation end's NO-FOCUS arm
-    // (the focus fork at deliver_touch_translation_end — a focused mouse
-    // gets a restore motion, not this hook): the focus-dropping edges with no
-    // motion to
-    // re-resolve — permanently on capability loss, and for the duration of the
-    // absence on an ordinary leave. Wired to everything derived from where the
-    // pointer is, main.cpp's hook body holding the authoritative list; the marker
-    // hover popup it also dropped no longer exists. It carries why it fired —
-    // the pen's hover ending, a translated contact's lift, or the ordinary
-    // leave that covers the leave and the capability loss alike — because the
-    // tooltip's leave reads it (GuiPointerLeaveReason). Null-safe.
+    // The one owner of the pointer-leave drop: fired at pointer_leave and at a
+    // touch translation end's NO-FOCUS arm (the focus fork at
+    // deliver_touch_translation_end — a focused pointer gets a restore motion,
+    // not this hook). Wired to everything derived from where the pointer is,
+    // main.cpp's hook body holding the authoritative list. It carries why it
+    // fired — the pen's hover ending, a translated contact's lift, or the
+    // abnormal end's ordinary leave — because the tooltip's leave reads it
+    // (GuiPointerLeaveReason). Null-safe.
     std::function<void(GuiPointerLeaveReason)> pointer_left_hook_;
-    // Fired at the platform's consumed keyboard edges (see
-    // set_keyboard_intent_cancel_hook). Null-safe at each fire site.
-    std::function<void()> keyboard_intent_cancel_hook_;
     // The touch navigation hooks (see set_touch_nav_hooks). Null-safe at
     // each fire site.
     std::function<void(const GuiTouchNavFrame&)>  touch_nav_update_hook_;
@@ -1924,70 +1184,27 @@ private:
     void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
 
-    // Deliver any captured relative motion that was deferred to the pointer-
-    // frame boundary (see relative_motion) before a button event is
-    // dispatched, so the button handler always sees the latest accumulated
-    // position. Idempotent — a no-op when no deferred motion is pending; clears
-    // the flag so pointer_frame's trailing delivery does not double-fire.
-    // Every button-delivery site calls this immediately before delivering; the
-    // classes, re-derived by grep: the pointer button path (pointer_button),
-    // the kLeftClickKey synth edges, the HARD-EDGE hold ends — keyboard leave /
-    // keyboard-capability loss (forget_keyboard_state) and pointer-capability
-    // loss (pointer_capability_lost, which ends BOTH keyboard-adjacent
-    // sources) —
-    // which reach it inside end_left_hold_source rather than calling it
-    // themselves, and the TOUCH translation's two delivery sites (the
-    // resolution press in resolve_touch_window_to_pointer and the release in
-    // end_touch_left_hold), which also flush their own staged touch motion
-    // first.
-    void flush_deferred_motion();
-
     // DELIVER A MOTION THAT CARRIES A REAL POINTER POSITION — the one funnel
     // for every such delivery, and therefore the one place the pointer's
-    // notional position is kept current outside the captured relative stream
-    // (contract at notional_pointer_x_). Its callers are pointer_enter,
-    // absolute pointer_motion, and the FOUR touch-translation deliveries
-    // (the resolution's entry motion and its queued motion, the touch frame
-    // flush, and the translation end's re-delivery at the mouse's resting
-    // spot) — touch is the pointer by ruling, and its deliveries move the
-    // notional position for the same reason a mouse motion does.
-    // THE TWO CAPTURED DELIVERIES DELIBERATELY DO NOT COME THROUGH HERE
-    // (flush_deferred_motion and pointer_frame's trailing call): what they
-    // hand over is the TRAVEL LEDGER, not a position, and the notional one has
-    // already been advanced per RAW event by relative_motion.
+    // notional position is kept current (contract at notional_pointer_x_).
+    // Its callers are pointer_enter, the pen's hover pointer_motion, and the
+    // FOUR touch-translation deliveries (the resolution's entry motion and
+    // its queued motion, the touch frame flush, and the translation end's
+    // re-delivery at the hovering pen's spot) — touch is the pointer by
+    // ruling, and its deliveries move the notional position for the same
+    // reason the pen's hover does.
     void deliver_motion(int x, int y);
 
     // Clamp x into the surface and store it as the pointer's notional
-    // position. One writer body so every source clamps identically — and it
-    // stays the ONE clamp body for every writer, which is why the capture's
-    // WRAP is applied by the caller that accumulates rather than in here: an
-    // absolute delivery from the backend is a real position and must be
-    // taken as given, never folded (contract at notional_pointer_x_).
+    // position — the ONE clamp body, so every source clamps identically.
     void note_notional_pointer_x(double x);
-
-    // Ends one of the two KEYBOARD-ADJACENT sources' contribution to the
-    // logical left hold. The logical left is a THREE-source OR —
-    // pointer_left_held_ || synth_left_held_ || touch_left_held_ — whose one
-    // authoritative statement is the OR-edge model at synth_left_held_'s
-    // declaration; this helper ends the physical or the synth bit only (the
-    // TOUCH bit has its own end, end_touch_left_hold, which takes the same
-    // ordering). Delivers the release only on the logical 1->0 edge — i.e.
-    // when NEITHER sibling source is still held — and encodes the ordering
-    // invariant ONCE: flush the deferred motion FIRST, while this source's
-    // bit still reads held, so the flushed motion observes the pre-release
-    // held state and takes the live-drag path, not the button-lost teardown;
-    // then clear the bit; then deliver at the last known pointer coordinates
-    // with current_mods(). When no edge occurs (a sibling source still
-    // holds), just clear — the last surviving source's own end delivers the
-    // single edge. physical selects pointer_left_held_
-    // (true) vs synth_left_held_ (false, which also clears synth_left_keycode_).
-    void end_left_hold_source(bool physical);
 
     // -- The touch machine's internals (the phase machine and the edge
     // inventory are at the touch state block above) --
     // Resolve the Pending window to the POINTER translation: deliver the
     // synthesized enter-motion at the ORIGINAL down point, the left press
-    // there (on the logical OR's 0->1 edge), then any queued motion. Shared
+    // there, then any queued motion inside the slop (the sliver's rule at the
+    // definition). Shared
     // by all three pointer resolutions — the OFF-ZONE DOWN (on contact,
     // 2026-09-25), the editor field's DOUBLE PRESS (on contact), and the tap
     // (whose caller then delivers the release + the translation end itself,
@@ -2022,16 +1239,13 @@ private:
     // against the resolved state.
     void maybe_resolve_touch_window();
     // Deliver the staged Pointer-phase motion (touch_frame coalescing) —
-    // the touch twin of flush_deferred_motion, called at the frame boundary,
-    // ahead of every touch button delivery, and UNCONDITIONALLY at every end
-    // of the touch hold (the flush-vs-clear invariant is at the definition).
+    // called at the frame boundary and UNCONDITIONALLY at every end of the
+    // touch hold (the flush-vs-clear invariant is at the definition).
     void flush_touch_frame_motion();
-    // End the touch source's contribution to the logical left hold: flush the
-    // staged TOUCH motion unconditionally while the bit still reads held (it
-    // is independent of the logical-left OR — the flush owner's invariant),
-    // flush the deferred POINTER motion on the delivering edge, clear the
-    // bit, then deliver at the owner's last position only on the logical
-    // 1->0 edge (the end_left_hold_source ordering, third source).
+    // End the touch translation's hold on the logical left: flush the staged
+    // TOUCH motion while the bit still reads held (so the flushed motion takes
+    // the live-drag path, not the button-lost teardown), clear the bit, then
+    // deliver at the owner's last position.
     // clean_release picks WHAT that edge delivers: true =
     // the left RELEASE, the press ending as the click it was; false = THE
     // ABNORMAL END, a lost-button MOTION instead (the hold bit still drops,
@@ -2043,18 +1257,15 @@ private:
     // unless it moved).
     // RETURNS whether the end was delivered — the translation end's own
     // edge: every end site goes through deliver_touch_translation_end below,
-    // which acts iff the end fired (a sibling-suppressed end means
-    // the unified pointer has not left; the rationale is at the definition).
+    // which acts iff the end fired (no hold standing, or no consumer
+    // installed, delivers nothing).
     bool end_touch_left_hold(bool clean_release);
     // The one owner of the translation's END, called by the touch-up site
-    // and the hard-end contract: end the touch
-    // hold, and on the delivering
-    // edge FORK ON PHYSICAL POINTER FOCUS — a mouse resting
-    // in the window gets an ordinary restore MOTION at its last
-    // platform-tracked position instead of the leave (the finger is no longer
-    // the pointer, so the unified pointer is where the mouse is; the
-    // cursor-residue fix), no
-    // mouse focus gets the leave as before. clean_release is passed
+    // and the hard-end contract: end the touch hold, and on the delivering
+    // edge FORK ON POINTER FOCUS — a pen hovering in the window (its own
+    // lift off an empty glass, pointer_focus_at) gets an ordinary restore
+    // MOTION at its last platform-tracked position instead of the leave, no
+    // focus gets the leave. clean_release is passed
     // through to end_touch_left_hold and chooses one thing more, the leave's
     // reason (TouchLift for a lift, OrdinaryLeave for a hard end): the
     // finger's OWN LIFT passes true, and the ends where no finger left — the
@@ -2069,8 +1280,8 @@ private:
     // 1.0 — everything downstream is shared verbatim.
     // A DELIVERED FRAME IS NEITHER A KEY-REPEAT DISARM EDGE NOR A TRANSPORT
     // HOLD EDGE, by judgment rather than omission: those are ruled event-edge
-    // enumerations (a key press, a pointer press, a completed wheel emission)
-    // and a navigation frame is none of them.
+    // enumerations (a key press, a pointer press) and a navigation frame is
+    // neither.
     // deliver_even_if_no_op exempts THIS call from the body's exact-no-op
     // return (dx 0.0 and ratio 1.0 deliver nothing), and it has TWO callers,
     // each a change of meaning under a finger that may be standing still (the
@@ -2078,7 +1289,7 @@ private:
     // the two-to-one transition owes the GUI a not-two-finger frame, that
     // arrival being the only thing that tells it the pinch is over and clears
     // its seated pivot — and the CTRL EDGE under a live single-finger nav
-    // (set_modifiers), whose frame carries the new bit so the one-finger
+    // (set_ctrl), whose frame carries the new bit so the one-finger
     // zoom's pivot seats or clears at the edge. It does not exempt the LATCH,
     // so a sub-latch pair still navigates nothing. Every other call passes
     // false.

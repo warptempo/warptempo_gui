@@ -535,10 +535,10 @@ inline int surface_height_px() {
 
 // -- Standing ----------------------------------------------------------------
 
-// DOES THE SURFACE STAND? Two terms: the PLATFORM must want a painted
-// keyboard (GuiPlatform::wants_onscreen_keyboard, the ruling at its
-// declaration: the glass has no keys), and one of the editors must own the
-// keyboard. EVERY paint site and EVERY hit site in the product asks this and
+// DOES THE SURFACE STAND? One term: one of the editors owns the keyboard.
+// The painted keyboard is the one key producer (architect 2026-10-30: the
+// hardware keyboard is closed on the tablet), so no platform term stands
+// beside it. EVERY paint site and EVERY hit site in the product asks this and
 // nothing else.
 //
 // The editor term is text_editor_session() (app_state.h) rather than
@@ -570,8 +570,8 @@ inline int surface_height_px() {
 // 2026-10-14: a choice row had nothing to type, so the band did not rise for
 // it. The choice editor is removed — the color rows are line editors like
 // every other row, architect 2026-10-14 — and the term with it.)
-inline bool stands(const AppState& a, const GuiPlatform& gui) {
-    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
+inline bool stands(const AppState& a) {
+    return a.text_editor_session() != 0;
 }
 
 // -- The keyboard's placement (architect 2026-10-14) -------------------------
@@ -614,14 +614,13 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 //     key_height 33 and the keyboard's defaults the controls row 977–1087,
 //     its cases 1016–1048, the box 144–976, its top under the band's rows
 //     0–143 with the 72-row logo lane, 2026-10-24).
-// ON SCREEN IS AS PAINTED: nothing under the band answers a press, a cursor
-// zone or the touch pan zone — the waveform's painted rect stops at the
+// ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
+// touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),
 // row 8 yields its buttons under it (paint_bottom_strip) and the keyboard's
 // claim is opaque. The keys and the band's ground are paint_onscreen_keyboard's.
 // Geometry only here: every rect below is a fact about geometry and asks no
-// standing unless its name or its contract says so (modal_keyboard_h_px,
-// standing_rect).
+// standing unless its name or its contract says so (modal_keyboard_h_px).
 
 // THE KEYBOARD'S BAND: the program lanes' x and width (bottom_row_area's,
 // the window's), standing on the window's foot (row 8's lane's foot), its
@@ -640,8 +639,8 @@ inline GuiRect surface_rect(const AppState& a) {
 // THE HEIGHT THE MODAL'S STACK STANDS ON (modal_box.h's `keyboard_h`): the
 // band's height while the keyboard stands, 0 otherwise. Every modal rect a
 // painter or a hit site reads under a standing keyboard takes this.
-inline int modal_keyboard_h_px(const AppState& a, const GuiPlatform& gui) {
-    return stands(a, gui) ? surface_height_px() : 0;
+inline int modal_keyboard_h_px(const AppState& a) {
+    return stands(a) ? surface_height_px() : 0;
 }
 
 // THE KEYBOARD'S CLAIMED SURFACE: its band, whole — the pad round the keys
@@ -652,12 +651,6 @@ inline int modal_keyboard_h_px(const AppState& a, const GuiPlatform& gui) {
 // stood on the keyboard.)
 inline GuiRect claim_rect(const AppState& a) {
     return surface_rect(a);
-}
-
-// THE STANDING KEYBOARD'S BAND, or a zero rect when it does not stand — the
-// wheel's swallow (GuiInputHandler::wheel_context).
-inline GuiRect standing_rect(const AppState& a, const GuiPlatform& gui) {
-    return stands(a, gui) ? surface_rect(a) : GuiRect{0, 0, 0, 0};
 }
 
 // THE SLOT'S DAMAGE RECT, the slot AT ITS TALLEST: the whole area the modal
@@ -722,11 +715,10 @@ inline GuiRect slot_damage_rect(const AppState& a) {
 // is at GuiInputCore::key_event). The release path — and the touch hard-end
 // beside it — is its one clearer.
 //
-// IT IS A NO-OP WHEREVER THE SURFACE DOES NOT STAND: one platform query, no
-// write, no damage.
-inline void reconcile_session(AppState& a, const GuiPlatform& gui,
-                              Viewport& viewport) {
-    if (!stands(a, gui)) return;
+// IT IS A NO-OP WHEREVER THE SURFACE DOES NOT STAND: one compare, no write,
+// no damage.
+inline void reconcile_session(AppState& a, Viewport& viewport) {
+    if (!stands(a)) return;
     const uint64_t live = a.text_editor_session();
     if (a.onscreen_keyboard.lamp_session == live) return;
     a.onscreen_keyboard.lamp_session = live;
@@ -774,10 +766,9 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // of its own: a frame paints only with damage, so the pre-paint would never
 // run for it.
 //
-// One platform query and a bit compare per call with the slot down.
-inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
-                                    Viewport& viewport) {
-    const bool live = stands(a, gui) || folder_overlay::stands(a);
+// A few compares per call with the slot down.
+inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
+    const bool live = stands(a) || folder_overlay::stands(a);
     if (live == a.keyboard_slot_painted_standing) return;
     viewport.invalidate_rect(slot_damage_rect(a));
 }
@@ -804,8 +795,8 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // IT IS THE EXPOSURE GATE, THE CLIP AND THE NAVIGATION SURFACE'S EXTENT,
 // NEVER A COORDINATE INPUT: the column mapping keeps reading waveform_area
 // itself (the displayed basis, the strictly-as-painted rule at app_state.h),
-// while the press, the cursor's Pan / Zoom zone and the touch pan zone ask
-// this rect where the waveform ENDS (point_on_nav_surface, input_pointer.cpp,
+// while the press and the touch pan zone ask this rect where the waveform
+// ENDS (point_on_nav_surface, input_pointer.cpp,
 // 2026-10-10) — so a press never answers where no waveform is painted, and
 // paint and hit cannot drift. This rect says WHERE THE PIXELS MAY LAND, and
 // so where the waveform takes a press.
@@ -826,13 +817,12 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // ones it leaves live) are not spared this way — their painters
 // run and the panel covers them, because they publish the roster's hit rects
 // (the record is at the paint-order block, paint_handler.cpp).
-inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
+inline GuiRect waveform_paint_area(const AppState& a) {
     const GuiRect area  = waveform_area(a);
     int           cut_y = area.y + area.h;
     if (modal_box_stands(a)) {
-        cut_y = std::min(cut_y,
-                         modal_panel_rect(a, modal_keyboard_h_px(a, gui)).y);
-    } else if (stands(a, gui)) {
+        cut_y = std::min(cut_y, modal_panel_rect(a, modal_keyboard_h_px(a)).y);
+    } else if (stands(a)) {
         const GuiRect kb = surface_rect(a);
         if (kb.w > 0 && kb.h > 0) cut_y = std::min(cut_y, kb.y);
     }

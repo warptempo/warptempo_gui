@@ -4443,9 +4443,7 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 // Any text editor consuming printable keys — the settings prompt, the
 // top-strip flag editor in ANY of its
 // kinds (the FlagPayload editor takes typed letters too); the
-// Kinds are listed at text_editor::Kind. The platform layer's kLeftClickKey probe: while
-// this is true that key types a normal letter rather than emulating the left
-// button.
+// Kinds are listed at text_editor::Kind.
 bool GuiInputHandler::any_text_editor_active() const {
     // Every kind's one membership, AppState::text_editor_session (the
     // settings editor and the top-strip editor in every kind).
@@ -5634,10 +5632,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // Ctrl+Alt+Shift+R (miscellaneous render): render the current authoring
     // state — the SAME recipe Ctrl+Alt+R captures (live stores + the active
     // tab's trim) — into a numbered cell inside a `_miscellaneous` batch folder
-    // under tmp/. This moved off its former `e`-based chord because `e` is
-    // now the click key (kLeftClickKey), so an e-chord is swallowed at the
-    // platform boundary and can never reach dispatch as a command.
-    // This is Ctrl+Alt+R with an extra mkdir and a different output
+    // under tmp/. This is Ctrl+Alt+R with an extra mkdir and a different output
     // location: no queue, no batch runner, one request through the same
     // single-dispatch path. Folder logic (in allocate_miscellaneous_cell):
     // look at the most-recent folder BY INDEX in tmp/; if it is a

@@ -36,14 +36,12 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // THE PUBLIC API IS THE SEAM the GUI's consumers compile against through
 // platform.h (re-grepped 2026-10-08: main.cpp, viewport.cpp, icons.cpp,
 // paint_handler.h, prompt.h, file_loader.h, input_handler.h,
-// onscreen_keyboard.h, render_player.h, car_transport.h). It is kept as the
-// portable surface it was while a second backend stood beside this one
-// (until 2026-10-30), so a member with nothing behind it on glass — the
-// pointer capture's pair, the cursor image, the window title — is an honest
-// no-op whose declaration says why. EACH CONTRACT IS STATED ONCE: the input
-// doors and the capture/cursor policy at their owner, GuiInputCore
-// (input_core.h); the loop, the hold, the damage call and the canvas frame at
-// platform.h's head; every other member's at its declaration below.
+// onscreen_keyboard.h, render_player.h, car_transport.h). A member with
+// nothing behind it on glass — the window title — is an honest no-op whose
+// declaration says why. EACH CONTRACT IS STATED ONCE: the input doors at
+// their owner, GuiInputCore (input_core.h); the loop, the hold, the damage
+// call and the canvas frame at platform.h's head; every other member's at
+// its declaration below.
 //
 // THE INPUT POLICY IS NOT HERE. It lives in the ONE portable GuiInputCore
 // this class holds (input_core.h);
@@ -69,10 +67,8 @@ public:
     using KeyCallback          = GuiInputCore::KeyCallback;
     using KeyReleaseCallback   = GuiInputCore::KeyReleaseCallback;
     using ButtonCallback       = GuiInputCore::ButtonCallback;
-    using WheelCallback        = GuiInputCore::WheelCallback;
     using MotionCallback       = GuiInputCore::MotionCallback;
     using CloseCallback        = std::function<void()>;
-    using WheelContextProbe    = GuiInputCore::WheelContextProbe;
     using TextEditorProbe      = GuiInputCore::TextEditorProbe;
     using RepeatEligibleProbe  = GuiInputCore::RepeatEligibleProbe;
     using TickCallback         = std::function<void()>;
@@ -264,7 +260,6 @@ public:
     void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
-    void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
     // THE CLOSE HOOK'S PRODUCER HERE IS THE BACK KEY (architect 2026-08-29):
     // AKEYCODE_BACK is consumed whole in on_input_event and fires this
@@ -282,7 +277,6 @@ public:
     // targets SDK 34, so the framework dispatches the legacy KEYCODE_BACK to
     // the activity — measured on the tablet (docs/engineering/android_notes.md).
     void set_on_close(CloseCallback cb);
-    void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
 
@@ -303,9 +297,6 @@ public:
     // takes for the same reason (a platform edge with no other event to
     // carry its effect). Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
-
-    // Contract at GuiInputCore::set_keyboard_intent_cancel_hook, input_core.h.
-    void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
     // THE TOUCH NAVIGATION HOOKS. Contract at
     // GuiInputCore::set_touch_nav_hooks, input_core.h.
@@ -378,33 +369,6 @@ public:
     // set_touch_stillness_px), pushed at the slop's two call sites.
     void set_touch_stillness_px(double px);
 
-    // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body —
-    // after every source this pass dispatched (the tick and the worker
-    // completions included), so it observes the iteration's FULLY SETTLED
-    // state. That placement is the whole point: a loop boundary is by
-    // definition after every write an iteration made, so a consumer that
-    // derives an answer here needs no list of the writers it depends on and
-    // no "call me after your state has settled" rule at each of them. The
-    // exact skip conditions are stated at the fire site (pump,
-    // platform_android.cpp). Null-free (seeded with a no-op), so the fire
-    // site needs no test.
-    //
-    // IT EXISTS FOR POINTER-DERIVED FACES WHOSE INPUTS CAN SETTLE WITH NO
-    // POINTER EVENT UNDER THEM — one class, and the reason it is a class
-    // rather than a single wiring: such a face cannot be maintained by pushes
-    // at the sites that move its inputs, because that set is not enumerable
-    // and does not stay enumerated. THE POINTER CURSOR WAS THE FIRST CONSUMER
-    // and is that cue's ONE owner (the kind derived from the pointer's
-    // position, the modifiers, every gesture's state, the trim window, the
-    // layout and the modal surfaces). WHAT IS WIRED HERE is enumerated in
-    // main.cpp's hook body, the authoritative list — this contract keeps no
-    // second copy. IT CARRIES THE LIVE MODIFIER STATE, the same GuiInputState
-    // the pointer callbacks are built from, because modifiers select between
-    // the waveform's cues and the platform is that fact's owner — the
-    // consumer never reaches back for it, and no second copy of the modifier
-    // state exists to go stale.
-    void set_loop_settled_hook(std::function<void(GuiInputState)> cb);
-
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -414,47 +378,10 @@ public:
     // counter to clear the fd and then invokes the registered callback.
     void set_worker_completion_fd(int fd, std::function<void()> on_event);
 
-    // POINTER CAPTURE HAS NO MEANING ON GLASS and both halves are no-ops:
-    // there is no cursor to hide, no pointer to lock and no relative stream —
-    // a finger is an absolute position or it is nothing. The gestures that
-    // ask for a capture (the ctrl strip drag and the grab-pan) run on real
-    // coordinates. The core's own capture state is deliberately NOT
-    // seeded here — an uncaptured backend must leave pointer_captured() false
-    // so nothing downstream believes travel is virtual.
-    void begin_pointer_capture(GuiCursorKind restore_kind);
-    void end_pointer_capture();
-
-    // Contract at GuiInputCore::set_capture_restore_x, input_core.h.
-    void set_capture_restore_x(double surface_x);
-
-    // Contract at GuiInputCore::clear_capture_restore_x, input_core.h.
-    void clear_capture_restore_x();
-
-    // Contract at GuiInputCore::set_capture_restore_kind, input_core.h.
-    void set_capture_restore_kind(GuiCursorKind kind);
-
-    // Contract at GuiInputCore::set_notional_x_frozen, input_core.h.
-    void set_notional_x_frozen(bool frozen);
-
-    // Contract at GuiInputCore::set_notional_pointer_x, input_core.h.
-    void set_notional_pointer_x(double surface_x);
-
-    // Contract at GuiInputCore::set_capture_wrap_span, input_core.h.
-    void set_capture_wrap_span(double lo, double hi);
-
     // THE POINTER'S NOTIONAL POSITION (surface x, px). Contract at
-    // GuiInputCore::notional_pointer_x, input_core.h. The field is live here
-    // too — the finger's translation writes it through the core — so the GUI's
-    // one answer to "where is the pointer?" stays answerable on glass.
+    // GuiInputCore::notional_pointer_x, input_core.h: the finger's
+    // translation and the pen's hover write it through the core.
     double notional_pointer_x() const;
-
-    // THE ONE DOOR TO THE CURSOR IMAGE, and on Android it has no image behind
-    // it: there is no pointer, so the kind is REMEMBERED (the core's policy,
-    // including the drop of a kind named for a position the pointer does not
-    // occupy — stated at GuiInputCore::pointer_position_unknown) and nothing
-    // is applied. Remembering rather than discarding keeps the accessor
-    // honest for a future backend that grows a cursor, and costs one store.
-    void set_cursor_kind(GuiCursorKind kind);
 
     // The GuiWaveformWorker's completion eventfd; same shape as the async
     // renderer's above.
@@ -470,18 +397,13 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
-    // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS -------------------------
+    // -- THE ON-SCREEN KEYBOARD'S SEAM MEMBER -------------------------------
     //
-    // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? YES,
-    // unconditionally: the glass has no keys and this backend translates no
-    // hardware ones, so the painted surface is the ONLY key producer the
-    // platform can have. The GUI's keyboard surface is gated on this answer
-    // at every paint and hit site it has (onscreen_keyboard.h). It is a
-    // PLATFORM question and not a settings one deliberately: a backend knows
-    // whether the machine it runs on has keys, and the glass has no choice to
-    // offer. STATIC (2026-10-22): a fact of the backend compiled in.
-    static bool wants_onscreen_keyboard();
-
+    // THE PAINTED KEYBOARD IS THE ONE KEY PRODUCER (architect 2026-10-30: the
+    // hardware keyboard is closed on the tablet), so the GUI paints it
+    // wherever an editor owns the keyboard, with no platform term
+    // (onscreen_keyboard::stands).
+    //
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. Hardware
     // keyboards are out of scope on this platform (on_input_event's key arm)
     // and this backend
@@ -493,8 +415,8 @@ public:
     // `key` is a GuiKey (an X11 keysym, ASCII case-folded, standalone
     // modifiers and F1..F35 already dropped — the backend's contract, at
     // GuiInputCore::key_event). `stable_code` is the caller's own per-key
-    // identity, which the repeat cancel and the synthesized-left hold end
-    // compare against; it must be stable for a given key and must not be the
+    // identity, which the repeat cancel compares against; it must be stable
+    // for a given key and must not be the
     // keysym. `codepoint` is the UTF-32 value the key produces, or 0 for a key
     // that produces no character — it is REMEMBERED against stable_code so the
     // core's codepoint probe can re-answer for a synthesized repeat, which is
@@ -504,8 +426,7 @@ public:
     // contract there): the S Pen's barrel stays the glass's tracked Ctrl.
     //
     // ITS ONE CALLER (2026-08-27) is the keyboard's press router, which
-    // calls it through the seam like any other member, having asked
-    // wants_onscreen_keyboard() first.
+    // calls it through the seam like any other member.
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
                         uint32_t codepoint, bool with_ctrl);
 
@@ -530,7 +451,7 @@ public:
     //
     // THE HOOK IS FIRED ON THE LOOP'S OWN THREAD, one call per command, in
     // arrival order, from the same pass that dispatches the worker
-    // completions and before that pass's settled hook and paint — so a
+    // completions and before that pass's paint — so a
     // button acts and its frame paints in one pass, and nothing the GUI holds
     // needs a lock. A command that arrives with no hook installed is DROPPED
     // by the platform's null test: main.cpp installs the hook per project and
@@ -853,11 +774,6 @@ private:
     CloseCallback        on_close_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
-    // Fired at the TAIL of every run() iteration that is not leaving the loop
-    // (see set_loop_settled_hook). SEEDED with a no-op so the fire site needs
-    // no null test.
-    std::function<void(GuiInputState)> loop_settled_hook_ =
-        [](GuiInputState) {};
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 
@@ -913,7 +829,7 @@ private:
     // whatever is already there.
     void drain_looper(int timeout_ms);
     // One pass of the loop body: the blocking drain, then the fixed dispatch
-    // order, the settled hook and the paint at the vsync callback (its gate).
+    // order and the paint at the vsync callback (its gate).
     void pump();
 
     // -- Lifecycle and input handlers (called from the file-static glue hooks) --
@@ -921,11 +837,10 @@ private:
     // Returns 1 when the event was consumed, 0 to let the system have it.
     int32_t on_input_event(struct AInputEvent* event);
     void on_motion_event(struct AInputEvent* event);
-    // THE PEN'S SIDE BUTTON THROUGH THE MODIFIER DOOR — the ctrl bit set to
-    // `held`, shift and alt carried through unchanged, super false (this
-    // backend's constant); a no-op when the bit already stands, and a
-    // release is a no-op unless the pen set the bit (pen_ctrl_ above). The
-    // door's second producer (the contract at GuiInputCore::set_modifiers).
+    // THE PEN'S SIDE BUTTON THROUGH THE CTRL DOOR — the ctrl bit set to
+    // `held`; a no-op when the bit already stands, and a release is a no-op
+    // unless the pen set the bit (pen_ctrl_ above). The door's one producer
+    // (the contract at GuiInputCore::set_ctrl).
     void set_pen_ctrl(bool held);
     // END A PEN HOVER — the core's pointer_leave with the pen's own reason,
     // PenHoverEnd (the leave that darkens no lit row; GuiPointerLeaveReason,

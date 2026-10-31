@@ -4842,38 +4842,24 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
 // current column, full waveform height — a live zoom gesture's, or the S
 // Pen's retained one between strokes — WHITE, in the scanner's role: the
 // stems that belong to the controls are white and the playhead alone wears
-// `playhead_stem` (architect 2026-10-09; render_strip_anchor_stem). TWO PRODUCERS,
-// ONE STEM:
-//   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
-//     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
-//     the ctrl-up edge; the mode's contract is at ScrollDragState);
-//   * THE TOUCH ZOOM (touch_nav_zoom.seated — the contract is at
-//     TouchNavZoomState, app_state.h), added so THE TWO SURFACES SHOW THE SAME
-//     AFFORDANCE (architect 2026-08-14, from the rig, asking to SEE the glass
-//     gesture: "add a zoom stem to the zoom on the touchpad just so I can see
-//     exactly what's going on, because at the edges there are some
-//     strangeness, it seems like") — the record it reads is one seat shared
-//     by the TWO-FINGER PINCH and, since 2026-09-25, the ONE-FINGER CTRL ZOOM
-//     (`TouchNavZoomState::one_finger`), so the stem has a third producer
-//     riding the second's record; AND THE SEAT'S THIRD POSTURE, THE PEN'S
-//     RETAINED ANCHOR (`TouchNavZoomState::retained`, architect 2026-09-27):
-//     a one-finger seat the pen lifted from with its side button held
-//     outlives the gesture, so the stem stays painted between strokes, at
-//     the anchor's live column, until the platform's release hook or a
-//     view-state clear takes the seat.
-// The gate is the gesture record and nothing else since 2026-08-05
-// (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
-// rather than the stem appearing only once the drag crosses the slack. The
-// mouse arm and the mode-switch edges owe the frame's damage
-// (arm_nav_zoom_press / the mode sync in on_motion); it
-// vanishes the moment its gate drops (release / button loss / the force-end
-// finalizer / the ctrl-up switch, each spelling its own damage; Esc no longer
-// ends a gesture at all) — on the glass, at the seat's clear, which a
-// retained pen anchor defers past the pen's lift. The stem is the ZOOM PIVOT and nothing more — the
-// playhead jump that briefly rode the strip drag was rolled back 2026-08-06
-// and the stem is what survives it.
-// THE PINCH OWES ITS DAMAGE AT BOTH ENDS, exactly as the other producer
-// does, and NEITHER END IS FREE — a seating frame is not an applied frame at all
+// `playhead_stem` (architect 2026-10-09; render_strip_anchor_stem). ONE
+// PRODUCER, THE TOUCH ZOOM (touch_nav_zoom.seated — the contract is at
+// TouchNavZoomState, app_state.h; architect 2026-08-14, from the rig, asking
+// to SEE the glass gesture: "add a zoom stem to the zoom on the touchpad just
+// so I can see exactly what's going on, because at the edges there are some
+// strangeness, it seems like") — the record it reads is one seat shared by
+// the TWO-FINGER PINCH and, since 2026-09-25, the ONE-FINGER CTRL ZOOM
+// (`TouchNavZoomState::one_finger`); AND THE SEAT'S THIRD POSTURE, THE PEN'S
+// RETAINED ANCHOR (`TouchNavZoomState::retained`, architect 2026-09-27): a
+// one-finger seat the pen lifted from with its side button held outlives the
+// gesture, so the stem stays painted between strokes, at the anchor's live
+// column, until the platform's release hook or a view-state clear takes the
+// seat.
+// The gate is the gesture record and nothing else, so THE SEAT ITSELF SHOWS
+// THE PIVOT — the headless zoom stem — and it vanishes at the seat's clear,
+// which a retained pen anchor defers past the pen's lift. The stem is the
+// ZOOM PIVOT and nothing more.
+// THE SEAT OWES ITS DAMAGE AT BOTH ENDS, and NEITHER END IS FREE — a seating frame is not an applied frame at all
 // in the general case (the seat is taken above the gesture's exact-no-op
 // return, so two fingers landing and sliding together seat and apply nothing;
 // the ordering rule is at apply_touch_nav_update's seat), and even a seating
@@ -4881,47 +4867,33 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
 // apply_strip_drag_zoom's mid-gesture true-no-op return, which discards any
 // frame whose post-clamp level and viewport both stand (a pinch that begins
 // saturated is exactly that frame). So the SEAT damages at its own
-// site, the mouse arms' rule, and the CLEAR damages through
+// site, and the CLEAR damages through
 // clear_touch_zoom_seat, because a clear can land on a frame that applies
 // nothing at all (a survivor's pan refused under a modal state — the
 // per-frame refusal asks state alone, the gesture's surface decided once at
 // its down, architect 2026-10-16, apply_touch_nav_update).
-// BOTH PRODUCERS ANCHOR THE SAME WAY AND ALWAYS DID (all three did, while
-// there were three), which is why there
-// is ONE expression (the nav drag's pivot went back to a SONG position
-// 2026-08-14 — the clamped-zoom reversibility ruling, contract at
-// ScrollDragState — and the pinch seats a song frame for the same reason): the
+// THE ANCHOR IS A SONG POSITION (2026-08-14, the clamped-zoom reversibility
+// ruling, contract at TouchNavZoomState): the
 // anchor column is recomputed each frame from the persisted anchor_sample
 // against the DISPLAYED viewport (wf_cache.fp_*), the same basis
 // paint_playheads uses, so the stem stays locked to the
 // published plate while the worker rebuilds, and the anchor lives in the active
 // display domain (viewport_start + col*spp) so no warp map is walked.
 // Re-projecting is what makes the stem SLIDE WITH ITS CONTENT when a clamped
-// zoom keeps moving the song under it — which is now visible ON GLASS exactly
-// as it is under the mouse, the ruling made watchable and the reason the
-// architect asked for the stem there.
+// zoom keeps moving the song under it — the ruling made watchable on glass
+// and the reason the architect asked for the stem there.
 // strip_anchor_stem_column clamps the column to the visible edges (and
 // render_strip_anchor_stem's own clamp agrees) — an edge-pinned anchor draws
 // the clamp itself.
-// PRECEDENCE IS DECLARED RATHER THAN LEFT TO THE EXPRESSION'S SHAPE: a held
-// mouse capture and a glass contact are not structurally impossible together,
-// so the CAPTURING gesture goes first — the nav drag's zoom phase, then the
-// pinch — a capture owning the pointer for its whole life and being the more
-// committed act. (With two producers the selection is a ternary again; it was
-// an if/else chain while there were three, and the rule it expresses is the
-// same either way.) One stem is painted either way.
 void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
                                               const GuiRect& area) {
-    const bool nav_zoom    = app.scroll_drag.active && app.scroll_drag.zooming;
-    const bool touch_pinch = app.touch_nav_zoom.seated;
-    if (!nav_zoom && !touch_pinch) return;
+    if (!app.touch_nav_zoom.seated) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
     if (basis.spp <= 0.0) return;
 
-    const double anchor_sample = nav_zoom ? app.scroll_drag.anchor_sample
-                                          : app.touch_nav_zoom.anchor_sample;
+    const double anchor_sample = app.touch_nav_zoom.anchor_sample;
 
     // The stem's one column derivation (strip_anchor_stem_column over
     // displayed_column_at, warp_frame_map_view.h), on the PLATE basis.
@@ -5180,7 +5152,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // keyboard with no dialog — and a button nothing shows must not hover,
     // wear a tooltip or answer a press (the keyboard's claim takes the press
     // first; the zero rects take the rest).
-    if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app, gui)) {
+    if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app)) {
         // The right block's groups stand down together: the SKIPS, the
         // MARKER VERBS, the STEP-AND-WALK GROUP, the NUDGE-AND-PLAY GROUP
         // with Play, and the `h` view's Older / Newer in the nudge pair's
@@ -5682,20 +5654,19 @@ std::vector<GuiKeySeat> program_key_seats(const AppState& app) {
     }
     // THE SCRUB'S THUMB: at rest, no LED (paint_scrub_thumb).
     add(scrub_thumb_w_px(), scrub_thumb_h_px(), false, 0b001);
-    // THE ON-SCREEN KEYBOARD'S KEYS, on a platform that has it: every key of
-    // the two pages at rest and held, the two lamps' keys (Shift, the page
-    // key) armed too — no LED (paint_onscreen_keyboard).
-    if (GuiPlatform::wants_onscreen_keyboard())
-        for (int p = 0; p < onscreen_keyboard::kPageCount; ++p)
-            onscreen_keyboard::for_each_key(
-                app, static_cast<onscreen_keyboard::Page>(p),
-                [&](uint32_t, const onscreen_keyboard::KeyDef& k,
-                    const GuiRect& r) {
-                    using Role = onscreen_keyboard::Role;
-                    const bool armable =
-                        k.role == Role::Shift || k.role == Role::SymbolMode;
-                    add(r.w, r.h, false, armable ? 0b111 : 0b101);
-                });
+    // THE ON-SCREEN KEYBOARD'S KEYS: every key of the two pages at rest and
+    // held, the two lamps' keys (Shift, the page key) armed too — no LED
+    // (paint_onscreen_keyboard).
+    for (int p = 0; p < onscreen_keyboard::kPageCount; ++p)
+        onscreen_keyboard::for_each_key(
+            app, static_cast<onscreen_keyboard::Page>(p),
+            [&](uint32_t, const onscreen_keyboard::KeyDef& k,
+                const GuiRect& r) {
+                using Role = onscreen_keyboard::Role;
+                const bool armable =
+                    k.role == Role::Shift || k.role == Role::SymbolMode;
+                add(r.w, r.h, false, armable ? 0b111 : 0b101);
+            });
     return out;
 }
 
@@ -5729,7 +5700,6 @@ namespace {
 void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_pressed         = -1;
     app.modal_dialog_press_inside    = false;
-    app.modal_dialog_press_shift     = false;
     app.modal_dialog_press_ms        = 0;
     app.modal_dialog_focus           = -1;
     app.modal_dialog_focus_active    = false;
@@ -5877,7 +5847,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // interior (the score branch below).
     const bool    boxed   = prompt_up || progress_up || ed != nullptr ||
                             score_up;
-    const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app, gui);
+    const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app);
     const GuiRect lane    = bottom_row_area(app);
     const GuiRect content = modal_controls_row_rect(app, kb_h);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) {
@@ -7247,7 +7217,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // (The slot's as-painted bit is written by paint_keyboard_slot, the
     // dispatch that calls this — the keyboard shares its band with the folder
     // overlay since 2026-08-28 and one bit describes the slot.)
-    const bool    standing = onscreen_keyboard::stands(app, gui);
+    const bool    standing = onscreen_keyboard::stands(app);
     const GuiRect surf     = onscreen_keyboard::surface_rect(app);
     if (!standing) return;
     if (surf.w <= 0 || surf.h <= 0) return;
@@ -7395,7 +7365,7 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // the pixels THIS frame may have written. With NEITHER standing the band
     // to cover is the slot's tallest — the hide's own damage, which is what
     // has to erase the departed tenant.
-    const bool keyboard = onscreen_keyboard::stands(app, gui);
+    const bool keyboard = onscreen_keyboard::stands(app);
     const bool overlay  = folder_overlay::stands(app);
     const GuiRect surf  = overlay  ? folder_overlay::surface_rect(app)
                         : keyboard ? onscreen_keyboard::surface_rect(app)
@@ -7928,8 +7898,7 @@ GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
         app.width, app.height, gui_scale_percent(), palette_generation()};
     fp.cell      = app.clock_cell_rect;
     fp.time_text = clock_time_text(app, audio);
-    fp.yields    = modal_owns_bottom_row(app) ||
-                   onscreen_keyboard::stands(app, gui);
+    fp.yields    = modal_owns_bottom_row(app) || onscreen_keyboard::stands(app);
     return fp;
 }
 
@@ -8221,8 +8190,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // paint_modal_box clears it — after the lanes that paint under the box —
     // so the known-clear record below stays the canvas's alone.
     const GuiRect exposed_rect{x, y, w, h};
-    const GuiRect canvas_paint =
-        onscreen_keyboard::waveform_paint_area(app, gui);
+    const GuiRect canvas_paint = onscreen_keyboard::waveform_paint_area(app);
     const bool canvas_paint_whole = canvas_paint.w > 0 && canvas_paint.h > 0;
     const bool plate_branch = audio.total_frames() > 0 && !app.loading;
     {
@@ -8422,10 +8390,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // and stays what every pass below MAPS with; this rect is what they are
         // GATED on, and the clip below is what keeps a pass that straddles the
         // band's top edge from rasterizing the half nobody sees. Equal to
-        // `area` on any platform with no painted keyboard, where both are
-        // therefore exactly what they were.
-        const GuiRect wave_paint =
-            onscreen_keyboard::waveform_paint_area(app, gui);
+        // `area` while nothing stands over the waveform.
+        const GuiRect wave_paint = onscreen_keyboard::waveform_paint_area(app);
         const bool    band_cuts  = wave_paint.h < area.h;
         if (band_cuts) {
             // TWO RECTANGLES, ONE CLIP: this branch paints in the TOP STRIP and

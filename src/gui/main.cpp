@@ -319,17 +319,13 @@ namespace {
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
 // them. A press in either falls to a consumed nothing (gap 1 through the top
-// strip's empty-spot return, gap 2 through the press path's tail), the cursor
-// map answers Arrow over both, and the wheel is inert in both (gap 1 by its
-// own band in wheel_context's inert list — it lies INSIDE top_strip_area,
-// which is a pan surface; gap 2 needs no band, lying below every area that
-// probe tests). ONE OWNER: the two gaps enter the geometry at exactly three
+// strip's empty-spot return, gap 2 through the press path's tail). ONE
+// OWNER: the two gaps enter the geometry at exactly three
 // expressions in this file — strip_row_rect's inset for every top lane from
 // kTopFlexGapLane down (the trim lane and everything below it), top_strip_h's
 // total and bottom_strip_h's total (which is what makes waveform_area's h -
 // top - bottom arithmetic yield W with no second expression of the rule) — so
-// every consumer (hit tests, paint, damage, the wheel probe, the touch pan
-// zone, the notification stack, the modal family's box starting at the view
+// every consumer (hit tests, paint, damage, the touch pan zone, the notification stack, the modal family's box starting at the view
 // bar's top row, modal_box.h) inherits the shifted y's through the lane
 // accessors with no second site.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
@@ -406,7 +402,7 @@ constexpr int kTopProgramLane      = 0;
 // when the tab strip and the column's air between the band and the view
 // bar went), so the band stands at the window's top and everything from
 // the view bar down is the centered block. ONE number, read by
-// strip_row_rect's inset and by top_flex_gap_area's derivation.
+// strip_row_rect's inset.
 constexpr int kTopFlexGapLane  = 1;
 // THE CANVAS COLUMN'S LANES, top lanes 1 to 4.
 constexpr int kTopTrimLane        = 1;
@@ -712,28 +708,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 }
 } // namespace
 
-// THE TWO BLANK BANDS AS RECTS. Gap 1 has ONE reader (re-grepped
-// 2026-10-01): wheel_context's wheel-inert band list, because the band lies
-// INSIDE top_strip_area, which is one of that probe's pan surfaces — everything
-// else about both bands is a fall-through (a press claims nothing, the cursor
-// map answers Arrow, the touch pan zone has no term for it and answers as it
-// answers the lanes around it, and render_background paints it as window
-// ground). GAP 2 DELIBERATELY HAS NO ACCESSOR: it lies below every area the
-// wheel probe tests, so the no-context 0 already answers it, and a rect with
-// no reader would be dead code. Derived from the two neighbouring lanes' rects
-// — the band's foot and the trim lane's top — rather than from the gap
-// function, so the band covers the (zero) inter-lane gap between them too: a
-// seam is non-lane ground exactly as the flexible band is, and the answer
-// stays correct if kRowGapPx is ever un-zeroed. Its columns are the
-// window's, as every lane's (2026-10-21).
-GuiRect top_flex_gap_area(const AppState& a) {
-    const GuiRect above = strip_row_rect(a, /*top_strip=*/true,
-                                         kTopFlexGapLane - 1);
-    const GuiRect below = strip_row_rect(a, /*top_strip=*/true,
-                                         kTopFlexGapLane);
-    const int top = above.y + above.h;
-    return GuiRect{above.x, top, above.w, below.y > top ? below.y - top : 0};
-}
+// THE TWO BLANK BANDS HAVE NO ACCESSOR (architect 2026-10-30: gap 1's rect
+// had one reader, the wheel's inert band list, gone with the mouse): both are
+// fall-throughs — a press claims nothing, the touch pan zone has no term for
+// them and answers as it answers the lanes around them, and
+// render_background paints them as window ground.
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the ICON row, at the window's top since 2026-10-24 (the app's
@@ -1692,39 +1671,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     viewport.refresh_flag_cache_ =
         [&]() { paint_handler.maybe_rebuild_flag_cache(); };
 
-    // Pointer capture: the input handler's begin/end hooks drive the platform's
-    // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the
-    // one nav drag (pan by default, zoom while ctrl is held), for infinite
-    // pan/zoom travel.
-    // All the platform methods self-guard (the capture pair no-ops on glass,
-    // GuiPlatform::begin_pointer_capture; the restore riders no-op
-    // uncaptured), so the input layer stays agnostic to whether capture is
-    // available. The begin hook forwards the
-    // gesture's own cursor kind, which is what the release restores (contract at
-    // GuiPlatform::begin_pointer_capture); the nav drag's mid-gesture mode
-    // switches ride the restore-x clear, the restore-kind re-stamp, the
-    // lateral freeze that stops the zoom phase's discarded sideways travel
-    // moving the pointer's notional position, and the ctrl-up handover that
-    // gives that position the stem's own column before the override is
-    // dropped (2026-08-14, the live-ctrl model). The WRAP SPAN rides the
-    // capture's begin instead of a mode switch — it belongs to the captured
-    // pointer rather than to a phase.
-    input_handler.begin_strip_pointer_capture = [&](GuiCursorKind restore_kind) {
-        gui.begin_pointer_capture(restore_kind);
-    };
-    input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
-    input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
-    input_handler.clear_strip_capture_restore_x =
-        [&]() { gui.clear_capture_restore_x(); };
-    input_handler.set_strip_capture_restore_kind =
-        [&](GuiCursorKind kind) { gui.set_capture_restore_kind(kind); };
-    input_handler.set_strip_capture_notional_x_frozen =
-        [&](bool frozen) { gui.set_notional_x_frozen(frozen); };
-    input_handler.set_strip_capture_notional_x =
-        [&](double sx) { gui.set_notional_pointer_x(sx); };
-    input_handler.set_strip_capture_wrap_span =
-        [&](double lo, double hi) { gui.set_capture_wrap_span(lo, hi); };
-
     // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
     // pan-primary's touch half, the eighth glass ruling 2026-08-12): the
     // platform's nav frames —
@@ -1735,8 +1681,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // pan, or under the ctrl bit (the S Pen's button on the tablet,
     // 2026-09-25) the one-finger zoom — drive the input handler's ONE
     // touch-nav body, which runs the
-    // strip-drag family's own viewport chokepoint — the
-    // set_keyboard_intent_cancel_hook wiring precedent, one narrow
+    // strip-drag family's own viewport chokepoint — one narrow
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
     // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
@@ -1763,8 +1708,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // is translated into the ordinary pointer deliveries above, at contact, and nothing
     // on this side can tell which device produced them. Contracts at
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
-    // apply_touch_nav_update's declaration (the GUI half, including why the
-    // nav gesture stops short of the strip drag's pointer-press arm).
+    // apply_touch_nav_update's declaration (the GUI half).
     //
     // INPUT WAITS FOR THE PICTURE (architect 2026-10-27, the open's
     // presentation hold — platform.h's head owns the rule): while the hold
@@ -1780,7 +1724,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // but plain Ctrl+Q, which ends the process and acts on no picture) and
     // its repeat (the repeat-eligibility probe answers false, so a dropped
     // press arms none and a held key's fire disarms it), the
-    // button press, the wheel, a touch navigation frame, the region hold's
+    // button press, a touch navigation frame, the region hold's
     // and the caret drag's begins, and the car's buttons. A DROP, NOT A
     // QUEUE: input arriving during the load (read when the loop resumes)
     // and the plate's few milliseconds after it is gone, the simplest shape
@@ -1790,8 +1734,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // motion (hover is a model the next painted frame reads), the touch
     // updates and ends (self-guarded on their begins: a dropped region
     // begin arms nothing, and the navigation's end clears a seat no frame
-    // made), the pointer's leave, the activation and intent edges, the
-    // settled hook, and the close request (an exit, like Ctrl+Q).
+    // made), the pointer's leave, the activation edge, and the close
+    // request (an exit, like Ctrl+Q).
     const auto open_unseen = [&gui]() { return gui.presentation_held(); };
     gui.set_touch_nav_hooks(
         [&](const GuiTouchNavFrame& frame) {
@@ -1907,9 +1851,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The drag and selection-shift operations are methods on the
     // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).
 
-    // The shared wheel handler (handle_wheel) is a private helper method on
-    // GuiInputHandler; GuiInputHandler::on_wheel is its only caller.
-
     // The batch render runner (start_render_batch and the ActiveBatch
     // lifecycle) is a set of private helper methods on GuiInputHandler
     // (input_handler.h), driven by the iteration and BPM sweeps.
@@ -1998,26 +1939,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.on_button_release(button, x, y, mods);
     });
 
-    // Scroll wheel arrives coalesced once per pointer frame, carrying the
-    // net detent count, so the per-step wheel machinery runs once regardless
-    // of how many detents a fast touchpad burst crossed in that frame.
-    gui.set_on_wheel([&](GuiMouseButton dir, int steps, int x, int y,
-                         GuiInputState mods) {
-        if (open_unseen()) return;   // the open's hold (the block above)
-        input_handler.on_wheel(dir, steps, x, y, mods);
-    });
-
-    // The same wheel routing predicate on_wheel gates with, exposed to the
-    // platform so its per-frame accumulator binds sub-detent remainder to the
-    // context it will emit in — one predicate, two surfaces that never drift.
-    gui.set_wheel_context_probe([&](int x, int y) {
-        return input_handler.wheel_context(x, y);
-    });
-
-    // kLeftClickKey emulates its platform-boundary form (the left mouse
-    // button), except while a text editor is open, when it stays a normal
-    // letter. This probe is the "editor open" truth the platform consults at
-    // its press time.
+    // The "editor open" truth the platform's key repeat records at its arm
+    // and re-asks at every fire (layer (2) of the repeat contract,
+    // GuiInputCore::maybe_fire_repeat).
     gui.set_text_editor_active_probe([&]() {
         return input_handler.any_text_editor_active();
     });
@@ -2038,7 +1962,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         return input_handler.repeat_eligible(key, mods);
     });
 
-    // Pointer-leave / capability-loss drop. THIS BODY IS THE AUTHORITATIVE
+    // Pointer-leave drop. THIS BODY IS THE AUTHORITATIVE
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
@@ -2050,26 +1974,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // row or scrub handle wears a hover face (architect 2026-10-02), so none
     // of them owes this edge a clear. The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
-    // and the member comment in input_core.h, and the capability-loss fire
-    // site in input_core.cpp).
-    // THE TWO EDGES ARE NOT THE SAME EDGE (2026-08-03), but the body reads
-    // them alike: both hand in OrdinaryLeave (architect 2026-10-01). The
-    // GuiPointerLeaveReason it is handed tells only a translated contact's
-    // lift from that leave (the pen's hover ending is that leave too), for
-    // the one effect below that differs — the tooltip's end, read last in
-    // this account.
-    // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
-    // fires this hook too — as TouchLift for the contact's own lift and as
-    // OrdinaryLeave for the hard end, and ONLY on its no-focus arm:
-    // with the physical pointer focused, the platform
-    // delivers a restore MOTION at the mouse's own position instead and this
-    // body never runs — the ordinary motion path re-derives hover and the
-    // settled cursor from truth (the fork's one statement is at
-    // deliver_touch_translation_end, input_core.cpp). On the arm that
-    // DOES fire, the body needed no change:
-    // clearing the pointer's state where a finger last was is precisely what
-    // the no-hover-under-touch consequence asks for. The fire
-    // sites are the touch edge inventory's, input_core.h.
+    // and the member comment in input_core.h).
+    // THE FIRES ARE THE PEN'S HOVER ENDING (PenHoverEnd) and a touch pointer
+    // translation's end — as TouchLift for the contact's own lift and as
+    // OrdinaryLeave for the hard end, and ONLY on its no-focus arm: with the
+    // pen hovering, the platform delivers a restore MOTION at the pen's own
+    // position instead and this body never runs — the ordinary motion path
+    // re-derives hover from truth (the fork's one statement is at
+    // deliver_touch_translation_end, input_core.cpp). Clearing the pointer's
+    // state where a finger last was is precisely what the
+    // no-hover-under-touch consequence asks for. The fire sites are the
+    // touch edge inventory's, input_core.h. The reason it is handed matters to
+    // one effect below — the tooltip's end, read last in this account.
     // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
     // focus loss on a live pointer translation, hard_end_touch_stream), whose
     // end is the ABNORMAL one (when the second-finger upgrade
@@ -2078,31 +1994,21 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // press ARMS this body drops are what stops a system-taken touch
     // dispatching whatever the finger was resting on. The clears were already
     // exactly right for it; only their load-bearingness grew.)
-    // The difference itself is the reason none of the clears may lean on "no
-    // later event". Only
-    // CAPABILITY LOSS ends that pointer stream outright — no motion and no
-    // release will ever arrive on the object again. AN ORDINARY LEAVE has no
-    // position event only WHILE the pointer stays outside: the platform PRESERVES
-    // `pointer_left_held_`, a re-entry synthesizes a motion, and a still-held
-    // button releases normally afterward. WHAT MAKES EVERY CLEAR HERE SAFE is
-    // that each drops a VISUAL FACE, a hover's state or a press CLAIM, so a
-    // later motion or release lands unowned or as a harmless no-op — never an
-    // inability of those events to arrive.
+    // WHAT MAKES EVERY CLEAR HERE SAFE is that each drops a VISUAL FACE, a
+    // hover's state or a press CLAIM, so a later motion or release lands
+    // unowned or as a harmless no-op.
     // The pointer-position-dependent state must therefore be cleared here, or
-    // a pointer that slides out of the window leaves it standing for as long
-    // as it stays outside: the notification cards' hover is the one left
-    // (below; an open dropdown's item face was the other until 2026-10-21).
+    // a pointer that has gone leaves it standing: the notification cards'
+    // hover is the one left (below; an open dropdown's item face was the
+    // other until 2026-10-21).
     // THE ARMED CHROME PRESS joins it, and since the act moved to the release
     // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
     // this is the BUTTON-LOST edge — the hold stops being the pointer's to
-    // show and the act must not wait on a release that may never come. A
-    // release that does arrive later (the ordinary-leave case) finds no arm
-    // and dispatches nothing: the harmless no-op named above, and the intended
-    // answer — a release outside the window's visit runs nothing.
+    // show and the act must not wait on a release that may never come.
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
     // must end HERE rather than be left to the tick's hover recompute, which
     // refuses outright while the pointer is outside. THE REASON FORKS IT: the
-    // ORDINARY leave, capability loss (OrdinaryLeave) and the pen's hover
+    // abnormal end (OrdinaryLeave) and the pen's hover
     // ending (PenHoverEnd) are HARD ends (architect
     // 2026-10-06, Windows 95's: leaving the tool hides a tooltip at once) —
     // the box goes down in this same event, through the one hide that
@@ -2111,7 +2017,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // LEAVE FOR THE TOOLTIP at all (architect 2026-09-29): it is the release
     // of a press that already hard-ended the hint and spent its button, so
     // the wait's button, its anchor, the seen position and the spent state
-    // stand at the lift point as a mouse's release leaves them, and a later
+    // stand at the lift point as a release leaves them, and a later
     // hover on that button starts no wait until it has left it
     // (end_tooltip_hover). (The S Pen's lift off an empty glass never reaches
     // this body since 2026-10-07: the pen stays the pointer at its lift, the
@@ -2180,91 +2086,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // caption).
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
-    });
-
-    // THE PLATFORM'S CONSUMED KEYBOARD EDGES (2026-08-11):
-    // keyboard leave / keyboard-capability loss and every Super-swallowed
-    // press are key events the GUI's own chokepoints can never see — the
-    // platform consumes them without calling on_key — so the platform reports
-    // them through this one hook instead of the application growing a second,
-    // partial list. The fire classes and the per-swallowed-delivery decision
-    // are at the setter's contract (input_core.h). THIS BODY IS THE
-    // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
-    // model, and it holds ONE application-side key intent: THE MODAL DIALOG'S
-    // KEYBOARD PRESS ARM, which is sharper than a face — that button is
-    // painted down waiting for a RELEASE that these edges guarantee will never
-    // be delivered, so the arm is dropped and the box damaged
-    // (clear_modal_dialog_key_press).
-    // THE MEMBER IS A KEY INTENT, which is the list's membership rule and the
-    // reason THE ARROW BUTTONS' HOLD-REPEAT IS NOT HERE (2026-08-16, where
-    // its pre-2026-08-13 form was): that burst hangs off the armed CHROME
-    // PRESS, pointer intent, and no edge of this hook ends a finger's hold on a
-    // button (the reasoning is at the setter's contract, the burst's whole edge
-    // inventory at AppState::ChromePress).
-    gui.set_keyboard_intent_cancel_hook([&] {
-        input_handler.clear_modal_dialog_key_press();
-    });
-
-    // THE SETTLED BOUNDARY AND ITS THREE CONSUMERS (architect 2026-08-03,
-    // replacing the per-site model; the third joined 2026-08-14 with the nav
-    // drag's live ctrl). The run loop fires this at the TAIL of every
-    // iteration it is not leaving, so whatever is derived here is derived once per
-    // poll wakeup from a state that has fully settled — after the display's
-    // events, the tick and both worker completions.
-    //
-    // WHAT BELONGS HERE IS ONE CLASS: a POINTER-DERIVED FACE whose INPUTS can
-    // move with no pointer event under them. Such a face cannot be maintained by
-    // pushes at the sites that move its inputs — the set of those sites is not
-    // enumerable and stays wrong — and the loop boundary answers all of them at
-    // once. This body IS the authoritative list of what rides the boundary; the
-    // platform-side contracts name only their own concern and point here.
-    //
-    // THE POINTER CURSOR WAS THE FIRST CONSUMER and is still the one this
-    // boundary was built for.
-    // WHAT IT REPLACED, and why the replacement is structural rather than one
-    // more site: the kind used to be PUSHED from twenty-three places — the top of
-    // on_motion, eight release arms, ten button-lost and refused-begin arms in
-    // on_motion, the two force-end callbacks above, a modifier-edge hook in the
-    // platform, and a scope guard in on_key — each owing the rule "run after the
-    // state you read has settled". The zone map reads about ten independent fact
-    // families, so a refresh was owed by
-    // every writer of any of them: a set nobody could enumerate and keep
-    // enumerated, and the previous derivation twice missed a class
-    // while whole classes (a keyboard zoom moving the trim
-    // handles under a resting pointer, the zoom and navigation keys, the trim
-    // keys, an
-    // undo restoring trim, `o`, a gui_scale relayout, every keyboard editor open
-    // and close, a dropdown item click while there was one) had no site to hang a call on at all.
-    // A LOOP BOUNDARY IS AFTER EVERY SETTLE BY DEFINITION, so all of them are
-    // answered by this one call and the ordering rule itself is gone.
-    //
-    // THE COST IS ONE MAP EVALUATION PER WAKEUP and no protocol traffic while
-    // the answer holds: GuiPlatform::set_cursor_kind applies only on a change.
-    // refresh_pointer_cursor is a no-op while the pointer is outside the window,
-    // and it does nothing but re-derive and apply — no hover recompute, no
-    // damage, no gesture logic. `mods` is the platform's live modifier truth,
-    // handed over rather than fetched.
-    //
-    // (THE OPEN DROPDOWN'S ITEM FACES WERE A SECOND CONSUMER, 2026-08-03 —
-    // painter-published rects moving under a resting pointer — until the
-    // Settings popup retired, 2026-10-21.) THE CURSOR does not re-light what
-    // the pointer-leave hook above dropped: it refuses on app.pointer_in_window
-    // inside its own body.
-    //
-    // THE NAV DRAG'S ZOOM/PAN MODE IS THE SECOND CONSUMER (2026-08-14), and it
-    // is the same disease once more: ctrl SELECTS what a live navigation drag
-    // means, so releasing it under a MOTIONLESS pointer must drop the zoom stem
-    // and re-stamp the capture's restore there and then — the old model synced
-    // in on_motion alone, so the stem stood until the mouse moved again
-    // (architect, from the rig). It refuses immediately with no nav drag
-    // standing, and unlike the cursor it is deliberately NOT gated on the
-    // pointer being in the window: a captured drag's pointer is virtual and
-    // may be anywhere, and the gesture is what owns the answer. It is
-    // independent of it — the map refuses every cue while a gesture is live —
-    // so the order here is free.
-    gui.set_loop_settled_hook([&](GuiInputState mods) {
-        input_handler.refresh_pointer_cursor(mods);
-        input_handler.sync_nav_drag_mode(mods);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
@@ -2473,7 +2294,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // so the run ends and the held label clears once the work is idle
         // (target_render.h's two run constants carry the rule).
         //
-        // THE TICK, NOT THE SETTLED HOOK, and not any event site. It has to be a
+        // THE TICK, and not any event site. It has to be a
         // clock somebody reads unbidden: a run ends by nothing happening, and
         // the last trigger of a run is indistinguishable from the middle of one
         // when it arrives, so no event exists to hang this on. The tick is the
@@ -2483,10 +2304,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // so the quiet is noticed within a tick of the window expiring even on a
         // completely idle screen. It is also where the product's other
         // millisecond display timeouts already live (the button hover dwell
-        // below). The settled hook was considered and refused: its documented
-        // class is POINTER-DERIVED FACES whose inputs move with no pointer event
-        // under them, and this is neither pointer-derived nor a face.
-        // Placement inside the tick is free — it reads only its own run state
+        // below). Placement inside the tick is free — it reads only its own run state
         // and the status slot — but it sits above the paint invalidations so its
         // clear lands in the same frame they do.
         target_render.tick_updating_hold();
@@ -2912,7 +2730,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // standing moving (a flag-editor retarget, a close and a reopen in
         // one drained batch); that is the lamps' owner, reconcile_session,
         // the pre-paint's and the press router's alone.
-        onscreen_keyboard::reconcile_slot_standing(app, gui, viewport);
+        onscreen_keyboard::reconcile_slot_standing(app, viewport);
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
         // and the armed press's inside bit (recompute_redesign_button_hover;
@@ -3307,12 +3125,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // surface down and on any frame whose session did
         // not change, and it sits ABOVE the playback guards below because it
         // has nothing to do with playback.
-        onscreen_keyboard::reconcile_session(app, gui, viewport);
+        onscreen_keyboard::reconcile_session(app, viewport);
         // THE SLOT'S SHOW AND HIDE, ahead of the frame for the same reason
         // (2026-10-13): an editor closed by this pass's press is painted in
         // this pass, before any tick, and the band it leaves must be in this
         // frame's damage (the owner's record, reconcile_slot_standing).
-        onscreen_keyboard::reconcile_slot_standing(app, gui, viewport);
+        onscreen_keyboard::reconcile_slot_standing(app, viewport);
 
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the

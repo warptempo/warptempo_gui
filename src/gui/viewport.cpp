@@ -219,7 +219,7 @@ void Viewport::invalidate_modal_dialog_area() {
 // inventory at the declaration, viewport.h).
 void Viewport::invalidate_dialog_editor_box() {
     invalidate_rect(modal_box_interior_rect(
-        app, onscreen_keyboard::modal_keyboard_h_px(app, gui)));
+        app, onscreen_keyboard::modal_keyboard_h_px(app)));
 }
 
 // THE NOTIFICATION STACK'S DAMAGE — its room, whole; the callers and the
@@ -761,9 +761,9 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // out the hold and suspends a following play's paging
     // (AppState::camera_hold, AppState::follow_suspended); follow has no
     // exemption here, so a zoom during a following play suspends its paging.
-    // `level_changed` reports a real move, not a request: ALL THREE callers —
-    // the nav drag's zoom phase (apply_nav_zoom_at), the two-finger touch-nav
-    // body (apply_touch_nav_update) and the zoom step (zoom_step) — pre-clamp
+    // `level_changed` reports a real move, not a request: BOTH callers — the
+    // touch-nav body (apply_touch_nav_update, the pinch and the one-finger
+    // ctrl zoom) and the zoom step (zoom_step) — pre-clamp
     // new_level into the same [effective_min_zoom_level, effective_max_zoom_level]
     // window clamp_viewport_start re-applies, so the pre-assignment compare
     // cannot read a wall-saturated no-op as movement.

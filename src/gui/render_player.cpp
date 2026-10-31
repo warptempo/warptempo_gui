@@ -448,10 +448,6 @@ void GuiRenderPlayer::abandon_paused_resume_if_band_left_item() {
     damage_row();
 }
 
-void GuiRenderPlayer::scroll_rows(int rows) {
-    if (folder_overlay::scroll_rows(app, rows)) damage_band();
-}
-
 const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a) {
     const AppState::FolderOverlay& ov = a.folder_overlay;
     if (ov.highlight_row < 0 ||

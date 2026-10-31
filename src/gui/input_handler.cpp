@@ -1,12 +1,12 @@
 #include "input_handler.h"
 
 #include "engine/engine_geometry.h"  // kN
-#include "folder_overlay.h"          // the overlay's wheel context and scroll
+#include "folder_overlay.h"
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "icons.h"                  // drop_rasters on a scale change
 #include "materials.h"              // the materials' rebake at True Colors and a scale commit
-#include "onscreen_keyboard.h"      // the keyboard band's wheel swallow
+#include "onscreen_keyboard.h"
 #include "render.h"
 #include "device_config.h"
 #include "settings_io.h"
@@ -25,8 +25,8 @@
 #include <utility>
 #include <vector>
 
-// Keyboard input handler event entry points (on_key, the pointer handlers,
-// on_wheel), dispatching into the operation structs through the reference
+// Keyboard input handler event entry points (on_key, the pointer handlers),
+// dispatching into the operation structs through the reference
 // members (warpops, phase_resets, flag_editor, renders_dir, active_views,
 // playback_lifecycle, save_ops, prompt, selection, undo, viewport).
 // compute_base_tempo_scale + BaseTempoScale (and bpm_cell_warp_markers)
@@ -137,8 +137,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // equally fine — no candidate can survive a held key. The pointer-side
     // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
     // clears, the force-end finalizer's clear) stay: they own the pointer half of the
-    // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
-    // (the same clear at its own entry).
+    // lifetime; this owns the keyboard half.
     app.double_click = DoubleClickCandidate{};
     // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
     // end_audition_for_press's declaration): a bound chord ends a standing act
@@ -438,17 +437,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // FINALIZES the text selection, restoring nothing, and the Esc it falls
     // through to belongs to the EDITOR's own modality (discard the buffer), which
     // is a different thing from cancelling a gesture.
-    // (THE KEYBOARD OWNS NO CURSOR RE-RESOLVE, 2026-08-03. A scope guard stood
-    // here, armed by the two routes that end a gesture from a key — the text-drag
-    // hatch immediately below and the pointer gestures' Ctrl+Q hatch in the
-    // drag-modal gate — and paid at whatever return the route took, because the
-    // refresh could not run where the gesture ends: both routes fall onward, and
-    // the editor is still open one line later, so the map would answer with the
-    // modal's own Arrow. The whole difficulty was an ordering problem, and the
-    // per-iteration cursor owner dissolves it: this handler is called from a
-    // dispatched key event, and the loop's tail re-resolves after the entire call
-    // has returned — past every editor close, every prompt raise and every
-    // teardown any route below performs.)
 
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
@@ -464,15 +452,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         finalize_editor_text_drag();
-        // THE HATCH IS A GESTURE END: this drag holds the cursor to the TEXT
-        // I-beam through pointer_cursor_kind's live-drag arm (architect
-        // 2026-09-03), so pressing Esc over the
-        // waveform must come back showing the Pan
-        // — which it does at this iteration's tail, once the editor
-        // below has closed and everything else this call does has settled.
-        // (The TOP FLAG EDITOR is in it too, by the SAME route: that arm sits
-        // above the dialog editors' blanket and reads the drag's own record,
-        // so it is one owner for both editor families.)
         // fall through: the editor handler below runs Esc (cancel the
         // edit) exactly as with no drag in flight.
     }
@@ -580,9 +559,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // which writes the live store per motion and so must swallow every chord
     // exactly as its horizontal sibling does) /
     // trim / region drags, the one nav drag and its pending
-    // click (scroll_drag — one state for the pending, the pan and the ctrl
-    // zoom phase since 2026-08-14; the dual-axis STRIP drag was a member here
-    // until its deletion, 2026-08-15),
+    // click (scroll_drag — one state for the pending and the pan; the
+    // dual-axis STRIP drag was a member here until its deletion, 2026-08-15),
     // (THE STANDING REGION'S OWN EDITOR was an entry of its own from
     // 2026-08-15 until 2026-08-18: `region_edit_drag`, the move and the two
     // bound drags. Its state is DELETED — those drags ARE the trim drags named
@@ -621,12 +599,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             finalize_active_drags();
             prompt.request_close(GuiCloseTarget::Exit);
-            // THE CURSOR RE-RESOLVES AFTER THE FORCE-END, and nothing here has
-            // to arrange it: the finalizer cleared the gesture state
-            // pointer_cursor_kind reads and request_close may have raised the
-            // prompt it reads next, and the loop's per-iteration owner answers
-            // after both — after this whole call, in fact, so a later edit below
-            // cannot get the ordering wrong.
             return;
         }
         // THE SWALLOW SAYS WHY (architect 2026-08-30), in the editor text
@@ -808,8 +780,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Home/End (bare or      → playhead to trim region bounds (bare)
     //     Shift)                   or to the piece's ends (Shift, since
     //                              2026-10-24; Ctrl until then)
-    //   - PageUp/PageDown        → viewport step scroll by the plain wheel's
-    //     (no mods)                stepped-pan step. Pure navigation, same
+    //   - PageUp/PageDown        → viewport step scroll by the stepped-pan
+    //     (no mods)                stride. Pure navigation, same
     //                              family as the playhead-step and Home/End
     //                              entries.
     //   - 0 (no mods)            → full zoom-out stamping the view, then the
@@ -2378,7 +2350,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // binds nothing and falls to the strict-modifier tail in silence.)
 
     // PageUp / PageDown: step the viewport back / forward by exactly the
-    // plain wheel's stepped-pan step (samples_visible / kViewportPanStepDivisor).
+    // stepped-pan stride (samples_visible / kViewportPanStepDivisor).
     // PageUp goes back, PageDown
     // forward. Pure active-display navigation, so the read-only allowlist
     // admits it.
@@ -3310,301 +3282,6 @@ void GuiInputHandler::run_span_framing_command() {
         frame_span_into_view(app, audio, viewport, span->lo, span->hi,
                              span->margin);
     }
-}
-
-// Shared wheel handler. ONE ARM, EXACT-MATCHED (architect approval
-// 2026-09-14): THE PLAIN WHEEL IS THE STEPPED PAN, and every modified wheel is
-// a swallowed no-op.
-//
-// THE STEPPED PAN: the samples_visible / kViewportPanStepDivisor stride through
-// the scroll_viewport funnel, whose clamp puts out the hold posture and
-// suspends a following play's paging,
-// over the waveform and the top strip alike (every context
-// id, one route; the two bools below say only "a wheel-live surface"). up =
-// earlier, down = later. HISTORY OF THE SPELLING: plain from 2026-08-12 (the
-// eighth glass ruling moved the pan onto the bare form), on ALT from
-// 2026-08-27 while the plain wheel stepped the waveform magnification, and
-// plain again since 2026-09-14, when that setting retired — the picture's gain
-// varies over source time now — with the ALT
-// FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
-// SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
-// caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
-// its keys `=` / `-` (the zoom step, back 2026-10-27, one level bare and
-// two shifted), `0` and `c`.
-//
-// Every OTHER combination is a swallowed no-op (strict modifier validation):
-// ctrl, alt, shift and every mixed chord alike. Pure viewport move otherwise:
-// no playhead write, no selection change, no playback stop,
-// read-only-legal.
-void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
-                                   bool ctrl, bool shift, bool alt,
-                                   bool inside_waveform, bool inside_top) {
-    if (!inside_waveform && !inside_top) return;
-    // `count` is the net detent count coalesced for this pointer frame
-    // (always >= 1 from the platform). The arm scales its per-step quantity
-    // by that count and applies it in ONE call, so the damage /
-    // hover / worker-kick path fires once per frame regardless of burst size.
-    // count == 1 reproduces the single-detent behavior.
-    if (count < 1) count = 1;
-    if (ctrl || shift || alt) return;
-    const int64_t step = std::max<int64_t>(
-        1, samples_visible(app, audio) / kViewportPanStepDivisor);
-    viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
-}
-
-int GuiInputHandler::wheel_context(int x, int y) const {
-    // The SINGLE wheel routing predicate, shared by two surfaces that must
-    // never drift: the platform's per-frame accumulator probe (which decides
-    // whether and under what context key sub-detent scroll remainder may
-    // accumulate) and on_wheel's own completed-detent gate. Every swallow
-    // gate below is a gate on_wheel would otherwise spell inline; keeping
-    // them here means the platform never grows remainder in a context the
-    // eventual emission could not fire in.
-    //
-    // EVERY EDITOR SWALLOWS THE WHEEL (architect 2026-10-25: an act that
-    // takes the keyboard is a modal, and "even the waveform stops the pan and
-    // drag") — keyboard_modal_editor_active, the one predicate for a
-    // keyboard-taking modal, whose membership this line restates none of.
-    // (The lane editors — the flag editor and the iteration bound editor —
-    // let the wheel pan through them from 2026-07-28, the wheel being
-    // navigation and not a chord, and a wheel over a flag cell closed one
-    // uncommitted and stepped the cell; reversed with their
-    // pointer-transparency, so the wheel is the dialog editors' -1 under
-    // every editor.)
-    //
-    // The wheel routes by area — the waveform and the top strip — plus the ONE
-    // row-wise carve-out below, the redesigned rows' inert band. BOTH
-    // take the same one route since 2026-08-12, and the wheel's one arm rides
-    // it (the plain stepped pan, every modifier refused inside handle_wheel and
-    // never here), so the context ids
-    // differ only for the platform's
-    // sub-detent remainder attribution, harmlessly. Fewer regions is
-    // strictly safer for the accumulator, and the inert band is the safest kind:
-    // it emits nothing at all. THE TWO BLANK BANDS SPLIT (the relayout's commit
-    // B, whose two flexible gaps center the waveform): GAP 2, between the
-    // waveform and the bottom row, needs no band of its own — it lies below
-    // every area this probe tests, so a wheel there falls to the no-context 0
-    // exactly as the old blank foot's did — while GAP 1, BETWEEN THE ICON ROW
-    // AND THE TRIM LANE (main.cpp's vertical rule is the owner), lies INSIDE
-    // top_strip_area and
-    // therefore JOINS THE INERT BAND LIST below, that band being no more a
-    // panning surface under the toolbar than the blank ground at the
-    // window's foot.
-    //
-    // A wheel event during ANY active pointer gesture is ignored, matching
-    // on_button_press and the keyboard's drag-modal gate. The region drag
-    // is included: the keyboard gate swallows every authoring chord
-    // mid-drag, so viewport changes must not slip through either.
-    // The editor-text drag is included: viewport changes must not fire under a
-    // held text-selection drag either (a wheel can emit axis events while the
-    // primary button stays held), so this gate is any_pointer_gesture_active,
-    // every gesture — the marker flag's pending click included, so a wheel
-    // cannot pan or zoom the viewport out from under a flag press before it
-    // resolves.
-    // A NOTIFICATION CARD SWALLOWS THE WHEEL (2026-08-29), first and above
-    // every veil below exactly as its press claim ranks above them: a card is
-    // opaque to the pointer and it is not a scroll surface, so a detent over
-    // one must neither reach the waveform under it nor scroll the band it may
-    // overlap. -1 rather than 0 for the inert bands' own reason — the
-    // platform grows no sub-detent remainder in a context that can fire
-    // nothing.
-    if (notification_card_at(app, x, y) != 0) return -1;
-    if (app.prompt.active) return -1;
-    // THE PROGRESS MODAL SWALLOWS THE WHEEL (2026-10-14): its box covers the
-    // canvas column and nothing under it scrolls; the touch navigation
-    // refuses under it too (apply_touch_nav_update's state list).
-    if (app.batch_progress.active) return -1;
-    // (AN OPEN DROPDOWN SWALLOWED THE WHEEL here until the Settings popup
-    // retired, 2026-10-21.)
-    // THE LIVE-GESTURE REFUSAL IS RANKED ABOVE THE OVERLAY (2026-08-28), not
-    // below it as it was when the player's context landed: the overlay's row
-    // press and the scrub's marker drag are members of the predicate now, and
-    // the overlay's own context is the one wheel arm a live gesture could
-    // otherwise have moved — a detent under a held row press would scroll the
-    // list out from under the arm the lift re-hits. Its rank against the
-    // editor and loading tests below is free (all three refuse).
-    if (any_pointer_gesture_active(app)) return -1;
-    // THE FOLDER OVERLAY'S WHEEL (2026-08-28): live over the BAND alone —
-    // context 4, the list's one-row-per-detent scroll — and swallowed
-    // everywhere else, the veil's own answer for the wheel under the player
-    // and the pickers alike (neither is an editor, so the swallow below never
-    // sees them — this line is their whole wheel answer). The band is the
-    // keyboard slot's rect; the standing predicate is the owner tag.
-    if (folder_overlay_stands(app)) {
-        return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
-    }
-    // THE SCORE VIEWER SWALLOWS THE WHEEL everywhere (2026-10-26): nothing
-    // under its box scrolls, and the page takes no hidden gesture.
-    if (score_viewer_stands(app)) return -1;
-    // THE ON-SCREEN KEYBOARD SWALLOWS THE WHEEL (2026-10-10, ON SCREEN IS AS
-    // PAINTED): its band (onscreen_keyboard.h's placement block; with the
-    // overlay's line and a dialog standing on it until 2026-10-14) is
-    // opaque, not a scroll surface, and what lies under it is covered, so a
-    // detent over its painted rect reaches neither the waveform nor row 8
-    // behind it. -1 for the inert bands' reason. (A running touch gesture
-    // that crosses the keys navigates on: its surface was decided at its
-    // start, apply_touch_nav_update.) Under any editor the line below
-    // swallows everything, the modal family's box over the canvas with it.
-    if (rect_contains(onscreen_keyboard::standing_rect(app, gui), x, y))
-        return -1;
-    if (keyboard_modal_editor_active()) return -1;
-    if (app.loading || audio.total_frames() <= 0) return -1;
-
-    // THE REDESIGNED ROWS ARE WHEEL-INERT (architect 2026-07-31) — ONE decision
-    // for the whole family, recorded here where the routing lives, and every
-    // future row inherits it by joining this band list. A wheel over any
-    // redesigned row does NOTHING: those rows are chrome with no scrollable
-    // content and no relation to the waveform under them, so passing the event
-    // through to the top-strip zoom/pan (which is what happened before row 1's
-    // ruling) made a scroll over row 1's buttons silently zoom the song. They sit
-    // ABOVE the area tests below because they are sub-bands of the top strip and
-    // must win over it. Returning -1 (rather than 0) also stops the platform's
-    // sub-detent accumulator from growing remainder over them.
-    {
-        const GuiRect bands[] = {
-            // (The toolbar row's band left with its lane, 2026-08-12 — the
-            // relayout dissolved row 2 into the icon row, whose band below
-            // covers its four buttons now.)
-            // (The menu row's band left with its lane, 2026-10-21.)
-            // (The program frame's top row's band left with its lane,
-            // 2026-10-22.)
-            // (The caption's band left with its lane, 2026-10-24.)
-            top_icon_row_area(app),
-            // (The tab strip's band, 2026-10-18 to 2026-10-22, left with the
-            // strip.)
-            // GAP 1's band, the ONE non-lane member (between the band and
-            // the view bar, window ground): it sits inside the
-            // top-strip area below, which
-            // pans, so without this entry a wheel over that ground would
-            // scroll the song — exactly the fault row 1's ruling named. Not
-            // a redesigned row, but the same answer for the same reason, and
-            // the reason it needs a rect at all is at top_flex_gap_area
-            // (app_state.h).
-            top_flex_gap_area(app),
-            // The bottom row joined the family's inert band list 2026-08-11
-            // (as the transport row), exactly as the rule above promises a
-            // future row would, and the 2026-08-12 unification widened its
-            // band to the whole merged lane — the clock cell and the modal
-            // that displaces it are as wheel-inert as the buttons. It is a bottom-strip
-            // lane, so the top-strip area test below would never have routed it
-            // anyway; membership here is what stops the sub-detent accumulator
-            // growing remainder over it, like its three siblings.
-            bottom_row_area(app),
-        };
-        for (const GuiRect& b : bands) {
-            if (rect_contains(b, x, y)) return -1;
-        }
-    }
-
-    // THE WAVEFORM WHERE IT IS PAINTED (2026-10-10): waveform_paint_area, the
-    // press road's own navigation surface (point_on_nav_surface,
-    // input_pointer.cpp) — the overlay's rows over the canvas answered -1
-    // above, and this reads the same one geometry rather than the whole
-    // canvas interior — LESS THE STEREO DIVIDER'S ROWS (architect
-    // 2026-10-16, point_on_waveform_divider, render.h): chrome, so a wheel
-    // there falls to the no-context 0 as on the frame's columns beside the
-    // waveform (a running touch gesture navigates on across them, its
-    // surface decided at its start, apply_touch_nav_update).
-    // THE TOP STRIP across the program lanes' columns, read off the trim
-    // lane's rect (the window's width since 2026-10-21; the program frame's
-    // top row, inert ground inside the strip and answering the no-context 0,
-    // left with its lane 2026-10-22).
-    const GuiRect area  = onscreen_keyboard::waveform_paint_area(app, gui);
-    const GuiRect top   = top_strip_area(app);
-    const GuiRect lanes = top_trim_row_area(app);
-    const bool inside_waveform =
-        rect_contains(area, x, y) &&
-        !point_on_waveform_divider(waveform_area(app), y);
-    const bool inside_top      = rect_contains(top, x, y) &&
-                                 x >= lanes.x && x < lanes.x + lanes.w;
-    if (inside_waveform) return 1;
-    // A FLAG CELL (context 5, architect 2026-09-14): the plain wheel over a
-    // flag of the LIVE marker lane selects that flag and steps that cell
-    // (run_flag_cell_wheel), so it gets its OWN id — the platform's sub-detent
-    // remainder is keyed by this answer, and a remainder grown over the lane's
-    // ground must not complete a detent over a flag or the other way round.
-    // THE `h` VIEW IS EXCLUDED — its flags are the mode's diff flags and a
-    // wheel there stays the plain stepped pan. No editor stands here (the
-    // swallow above, 2026-10-25). THE TOUCH
-    // ROAD NEVER READS THIS ANSWER: apply_touch_nav_update asks state alone,
-    // so a nav frame over a flag navigates as it does anywhere else.
-    if (inside_top && !app.history_mode.active &&
-        hit_test_flag(app, audio, x, y) >= 0)
-        return 5;
-    if (inside_top) return 2;
-    return 0;
-}
-
-// Coalesced wheel entry point. The platform delivers one of these per
-// pointer frame carrying the net detent count (>= 1), instead of pumping a
-// WheelUp/WheelDown through on_button_press once per detent. The gating —
-// prompt / editor modals, loading, active gestures, area hit-test — lives in
-// wheel_context above, the same predicate the platform's sub-detent
-// accumulator probes, so a wheel event is swallowed in exactly the same
-// situations the platform refuses to accumulate remainder in.
-void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
-                               GuiInputState mods) {
-    // Double-click lifecycle, WHEEL half: a wheel command between two clicks
-    // moves content under the pointer (a zoom rescales, a pan slides), so the
-    // second click must not consume as a double-click of the first. Clear every
-    // pending candidate here, exactly as on_key's keyboard half does — the
-    // platform delivers one on_wheel per pointer frame (net detent count >= 1)
-    // after accumulating sub-detent remainder itself, so every call here is a
-    // completed detent frame, matching on_key's unconditional placement.
-    app.double_click = DoubleClickCandidate{};
-    // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
-    // end_audition_for_press's declaration): a wheel frame ends a standing
-    // act ahead of the context test, wherever it lands — the zoom and the
-    // stepped pan it drives no longer leave the act standing.
-    end_audition_for_press();
-    // A WHEEL DISMISSES THE TOOLTIP, before the context test so the
-    // dismissal happens on the very frame the wheel arrives. (It closed the
-    // Settings dropdown too, until the popup retired, 2026-10-21.)
-    hide_shift_tooltip();
-    const int ctx = wheel_context(x, y);
-    if (ctx < 0) return;
-    // ctx 4 — THE FOLDER OVERLAY (2026-08-28): one row per detent on the PLAIN
-    // wheel, the wheel's direction the list's (down = later rows) — the band
-    // scrolls and nothing else moves, whichever content fills it. The whole
-    // wheel vocabulary under either owner is this arm; every other position is
-    // swallowed at the context. The mechanics are the widget's and the damage
-    // this file's, the band being the only thing that moved.
-    //
-    // EVERY MODIFIED WHEEL IS A SWALLOWED NO-OP HERE (2026-08-29), strict
-    // modifier validation's own rule, which this arm read as "every modifier
-    // ignored" until that date and so let Ctrl / Alt / Shift + wheel scroll
-    // the list. The band binds one wheel act, so the other three chords bind
-    // nothing and must not fall through to a bare one — and none of them may
-    // reach the surfaces BELOW the veil either, which is why the refusal is a
-    // return rather than a fall-through.
-    if (ctx == 4) {
-        if (mods.ctrl || mods.shift || mods.alt) return;
-        const int rows = dir == GuiMouseButton::WheelDown ? count : -count;
-        if (folder_overlay::scroll_rows(app, rows)) {
-            viewport.invalidate_rect(folder_overlay::surface_rect(app));
-        }
-        return;
-    }
-    // (ctx 6, A SCROLLING POPUP LIST's wheel — the settings choice editor's
-    // list, kPopupWheelRows a notch — stood 2026-10-08 to 2026-10-14 and went
-    // with the list.)
-    // ctx 5 — A FLAG CELL (architect 2026-09-14): the PLAIN wheel selects the
-    // flag under the pointer and steps that cell (run_flag_cell_wheel); every
-    // MODIFIED wheel is a swallowed no-op here as on the other surfaces.
-    if (ctx == 5) {
-        if (mods.ctrl || mods.shift || mods.alt) return;
-        run_flag_cell_wheel(dir, count, x, y);
-        return;
-    }
-    // ctx: 1 waveform, 2 the top strip. Both take
-    // the same one-arm vocabulary — plain = the stepped pan, every modified
-    // wheel a swallowed no-op (architect approval 2026-09-14). THE CONTEXT
-    // ANSWER
-    // IS MODIFIER-INDEPENDENT by construction (wheel_context takes only x/y and
-    // reads no modifier state), so a modifier cannot change WHERE the wheel is
-    // live, only whether it acts there.
-    handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
-                 ctx == 1, ctx == 2);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(

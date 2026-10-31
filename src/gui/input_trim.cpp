@@ -1378,11 +1378,8 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     like every trim gesture, moves the playhead only at its release, through
 //     the commit tail's park), so it always arms as
 //     Begin structurally.
-// BOTH ARMS ARE SHARED OWNERS AND NEITHER IS SPELLED HERE, which is what lets the
-// pointer CURSOR promise exactly what this router claims: the zone map calls the
-// same two predicates (pointer_cursor_kind, input_pointer.cpp), so a point that
-// arms nothing shows the Arrow by construction rather than by proximity.
-// The drags DESELECT and STOP a live audition at
+// BOTH ARMS ARE SHARED OWNERS AND NEITHER IS SPELLED HERE (hit_test_trim_endcap,
+// point_in_trim_bridge_span). The drags DESELECT and STOP a live audition at
 // their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30 — the
 // press-time stop went with the highlight-only publish it accompanied); the
 // PLAYHEAD is what they never

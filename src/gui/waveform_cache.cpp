@@ -222,9 +222,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // because
     // the vp/area fields still differed — wasted full renders all gesture long.
     // Nothing that legitimately re-renders can occur inside the freeze anyway:
-    // keys and
-    // wheels are gesture-gated (the drag-modal gate and wheel_context both
-    // cover the pendings), the follow chase is paused for any live pointer
+    // keys are gesture-gated (the drag-modal gate covers the pendings), the
+    // follow chase is paused for any live pointer
     // gesture (any_pointer_gesture_active, whose members include all of
     // these), and a window resize FORCE-ENDS the gestures and disarms the
     // pendings (finalize_active_drags) before catching

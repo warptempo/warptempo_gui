@@ -206,8 +206,7 @@ struct Viewport {
     //    off this list — the bare Left/Right tempo-image step and the pointer tempo
     //    DRAG. What remains: THE TEMPO WRITES, through their one shared tail
     //    (warp_tempo_write_tail, warpmarkers_ops.cpp) — the bare Up/Down tempo
-    //    step (adjust_tempo_cents, singleton AND group, which the flag-cell
-    //    wheel's payload arm, run_flag_cell_wheel, also reaches) and the VALUE
+    //    step (adjust_tempo_cents, singleton AND group) and the VALUE
     //    DRAG's commit (value_drag.cpp, once at the release, the drag having
     //    written the store per motion under the displayed-basis freeze) — the
     //    settings engine-scale commit (GuiSettingsEditor::commit), undo/redo
@@ -398,10 +397,8 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // THREE callers (re-greped 2026-10-27):
-    // the nav drag's zoom phase apply_nav_zoom_at
-    // (pure zoom about the seated pivot — the viewport arrives unpanned),
-    // the two-finger touch-nav body
+    // TWO callers (re-derived 2026-10-30, the nav drag's mouse zoom phase
+    // gone): the touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the song frame the pan seated, placed at the current
     // fractional finger centroid, 2026-10-22) and the zoom step zoom_step

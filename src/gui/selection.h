@@ -26,11 +26,9 @@ struct Selection {
     void repair_last_selected();
     void set_single_selection(int idx);
     // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
-    // set_single_selection's own body one arity up, with the same clear — the
-    // shift-range anchor — because it is the same boundary: a membership
-    // REPLACE is what ends it. (It rode beside the STICKY CTRL's clear until
-    // 2026-09-10, when that lamp became a tool posture no Selection body
-    // writes; the contract is at AppState::add_to_selection.) TWO CALLERS,
+    // set_single_selection's own body one arity up (the STICKY CTRL is a tool
+    // posture no Selection body writes; the contract is at
+    // AppState::add_to_selection). TWO CALLERS,
     // re-grepped 2026-09-23, in two classes. THE PASTE LANDING installs a
     // set it just created: the phase-reset propagate's landing in the P column
     // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
@@ -50,7 +48,6 @@ struct Selection {
     void clear_selection();
     void collapse_to_focused();
     bool toggle_selection_membership(int idx);
-    void select_range_from_anchor(int idx);
     void sanitize_selection_after_restore(int n);
     void cycle_selection(bool forward);
     void select_next_marker();

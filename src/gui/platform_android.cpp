@@ -1289,7 +1289,7 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     append_coalesced_rect(damage_, nr);
 
     // Nothing is scheduled HERE: a declaration lands inside a loop pass (an
-    // event, the tick, a worker, the car, the settled hook, the pre-paint),
+    // event, the tick, a worker, the car, the pre-paint),
     // and that pass's tail posts the vsync callback the damage waits for
     // (the gate's rule, pump's tail) — one post site, one callback in
     // flight. A
@@ -1594,22 +1594,13 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *      fixed order (key repeat, then the touch window) is inside tick();
  *   3. the four worker completions, in registration order;
  *   4. the MEDIA COMMANDS, drained under the mutex and dispatched outside it,
- *      after the workers and before the settled hook, so a car button acts before
- *      the pass's paint decision (the reasoning is at the block; since
- *      2026-10-14 its frame joins this pass IF a vsync is due, else the next
- *      callback's, one vsync at most);
- *   5. the loop-settled hook, at the tail, so it observes the pass's FULLY
- *      settled state;
- *   6. paint-if-dirty AT THE VSYNC CALLBACK (2026-10-14): the pass paints
+ *      after the workers, so a car button acts before the pass's paint
+ *      decision (the reasoning is at the block; since 2026-10-14 its frame
+ *      joins this pass IF a vsync is due, else the next callback's, one vsync
+ *      at most);
+ *   5. paint-if-dirty AT THE VSYNC CALLBACK (2026-10-14): the pass paints
  *      only when damage stands and a vsync callback landed in its drain, and
  *      damage with no callback in flight posts one (the rule at the tail).
- *
- * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ or the run stop is
- * set. The pass is the last one of this run — the objects the consumer reads
- * are still alive, main.cpp's outlive run() — but the frame it would compute
- * for is never presented, or is the next object set's to present. ALooper
- * surfaces no EINTR and there is no connection to lose, so the exit test is
- * the whole condition.
  */
 void GuiPlatform::pump() {
     if (!app_) return;
@@ -1623,8 +1614,8 @@ void GuiPlatform::pump() {
     // THE POLL BLOCKS until the first of the loop's wake sources: the
     // window-system sources, the four workers, the car's eventfd, and the
     // loop's TWO CADENCES since 2026-10-14 — the 5-ms timerfd tick (key
-    // repeat, the touch window, the settled hook's pass) and the vsync
-    // callback, posted only while damage waits (the tail).
+    // repeat, the touch window) and the vsync callback, posted only while
+    // damage waits (the tail).
     drain_looper(-1);
 
     if (timer_fired_) {
@@ -1647,9 +1638,9 @@ void GuiPlatform::pump() {
         }
     }
 
-    // THE CAR'S COMMANDS, after the workers and before the settled hook and
-    // the paint, so a button acts before the pass's paint decision (the
-    // hook's contract, at its declaration; amended 2026-10-14: the tail paints
+    // THE CAR'S COMMANDS, after the workers and before the paint, so a
+    // button acts before the pass's paint decision (the hook's contract, at
+    // its declaration; amended 2026-10-14: the tail paints
     // only with the vsync bit, so the command's frame joins this pass if a
     // vsync is due and otherwise the next callback's, one vsync at most — the
     // dispatch order is unchanged and still the reason it sits here). The queue is swapped out
@@ -1668,9 +1659,6 @@ void GuiPlatform::pump() {
             for (const GuiMediaCommand& cmd : commands) on_media_command_(cmd);
         }
     }
-
-    if (!should_exit_ && !run_stop_requested_)
-        loop_settled_hook_(input_.current_mods());
 
     // THE PAINT'S GATE IS THE VSYNC CALLBACK (architect 2026-10-14
     // evening; AChoreographer_postFrameCallback64, the instance taken in
@@ -1753,8 +1741,8 @@ void GuiPlatform::run() {
     // THE LOOP HAS TWO WAKE SOURCES of its own since 2026-10-14 (the
     // 2026-08-27 "one wakeup" ruling reversed; the reason at pump's tail):
     // the periodic timerfd, so the blocking poll never waits longer than one
-    // tick period for the tick's work (key repeat, the touch window, the
-    // settled hook's pass), and the vsync callback, posted while damage
+    // tick period for the tick's work (key repeat, the touch window), and the
+    // vsync callback, posted while damage
     // waits, so declared damage paints at the next vsync. The stop bit is this
     // run's alone (platform.h): cleared here, set by the reopen, never by an
     // exit — which sets should_exit_ and is never cleared.
@@ -1949,12 +1937,12 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
 
     if (type != AINPUT_EVENT_TYPE_MOTION) return 0;
 
-    // A MOUSE IS OUT OF SCOPE AND IS CONSUMED. A USB mouse or a trackpad
-    // delivers motion on AINPUT_SOURCE_MOUSE/TOUCHPAD, and routing it into the
-    // core's POINTER doors would put a second, untested vocabulary on a glass
-    // product whose gestures were all taken on the finger. Consuming rather
-    // than returning it is deliberate: a mouse click that fell through to the
-    // system would act on whatever is behind the activity.
+    // A MOUSE IS CLOSED AND IS CONSUMED (architect 2026-10-30: the pen and the
+    // finger are the whole input, and the core has no mouse door at all). A
+    // USB mouse or a trackpad delivers motion on AINPUT_SOURCE_MOUSE/TOUCHPAD,
+    // and nothing here translates it. Consuming rather than returning it is
+    // deliberate: a mouse click that fell through to the system would act on
+    // whatever is behind the activity.
     //
     // THE S PEN IS NOT IN THAT CLASS: IT IS A FINGER WITH THREE AMENDMENTS
     // (architect 2026-09-25; GuiTouchTool, gui_input.h). The architect uses the
@@ -1998,9 +1986,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // AMotionEvent's coordinate — measured from the window's own corner — is
     // the GUI's with no factor and no offset. These two lambdas are every
     // coordinate this backend hands the core (the key path carries none, the
-    // pen's hover actions below take the same two, scrolls are dropped, and
-    // the capture doors take GUI coordinates that never reach the window at
-    // all), which is what keeps GuiInputCore's coordinates the window's.
+    // pen's hover actions below take the same two, and scrolls are dropped),
+    // which is what keeps GuiInputCore's coordinates the window's.
     //
     // They are handed over FRACTIONAL because that is what the panel reports
     // and what the core's one containment conversion expects
@@ -2042,9 +2029,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
         pen_present && pen_report_in_plane(event, masked, pen_index);
 
     // THE SIDE BUTTON IS THE CTRL BIT, set BEFORE this event's delivery so
-    // the press, the motions and the settled hook's sync_nav_drag_mode all
-    // read the state this event reported (the door's contract,
-    // GuiInputCore::set_modifiers). STYLUS_PRIMARY is the platform's name for
+    // the press and the motions read the state this event reported (the
+    // door's contract, GuiInputCore::set_ctrl). STYLUS_PRIMARY is the platform's name for
     // the barrel button since API 23; SECONDARY is accepted beside it because
     // pens of the S Pen's lineage reported the barrel button that way before
     // STYLUS_PRIMARY existed. Both bits are accepted, verified working on
@@ -2110,8 +2096,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // hover tooltips are wanted — Samsung's own apps light items
             // under a hovering pen, so hovers reach apps on this tablet), so
             // the roster's hover walk and the tooltip dwell run under it
-            // through the core's own pointer doors — enter, motion, leave,
-            // each closed by the core's pointer frame.
+            // through the core's own pointer doors — enter, motion, leave.
             // ONLY THE PEN HOVERS (a finger never does, and a mouse never
             // reaches here), and A HOVER NEVER OVERLAPS A TOUCH THE CORE IS
             // TRANSLATING: while any contact is down a hover motion would
@@ -2186,7 +2171,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             } else {
                 input_.pointer_motion(px(pen_index), py(pen_index));
             }
-            input_.pointer_frame();
             return;
 
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
@@ -2375,7 +2359,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 
         case AMOTION_EVENT_ACTION_CANCEL:
             // The window system claims the touches. One contract with
-            // capability loss, and the core owns it whole; a pen-set Ctrl
+            // touch-capability loss, and the core owns it whole; a pen-set Ctrl
             // bit goes with them UNCONDITIONALLY — the clear reads the
             // backend's own record (pen_ctrl_), not whether this cancel
             // still enumerates a stylus, and the event was not sampled.
@@ -2413,9 +2397,8 @@ void GuiPlatform::set_pen_ctrl(bool held) {
     const bool was_pen_set = pen_ctrl_;
     pen_ctrl_ = held;
     if (!held && !was_pen_set) return;
-    const GuiInputState mods = input_.current_mods();
-    if (mods.ctrl == held) return;
-    input_.set_modifiers(held, mods.shift, mods.alt, /*super=*/false);
+    if (input_.current_mods().ctrl == held) return;
+    input_.set_ctrl(held);
 }
 
 void GuiPlatform::end_pen_hover() {
@@ -2431,7 +2414,6 @@ void GuiPlatform::end_pen_hover() {
     // re-lit it (the rule, and the trace that measured the gap, at
     // GuiPointerLeaveReason, input_core.h).
     input_.pointer_leave(GuiPointerLeaveReason::PenHoverEnd);
-    input_.pointer_frame();
 }
 
 // THE GUI'S PLANE (architect 2026-09-27): the pen acts on the GUI only
@@ -2531,14 +2513,6 @@ void GuiPlatform::set_pen_lift_hook(std::function<void()> cb) {
 
 void GuiPlatform::release_pen_zoom_anchor() {
     if (pen_zoom_anchor_release_hook_) pen_zoom_anchor_release_hook_();
-}
-
-// THE ON-SCREEN KEYBOARD'S OTHER SEAM MEMBER (contract and the
-// platform-question ruling at the declaration). YES,
-// unconditionally: this backend translates no hardware key event, so the
-// painted surface is the only key producer the platform has.
-bool GuiPlatform::wants_onscreen_keyboard() {
-    return true;
 }
 
 void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
@@ -2731,28 +2705,6 @@ std::string GuiPlatform::clipboard_get_text() {
 }
 
 // ---------------------------------------------------------------------------
-// The stubs — what glass has nothing behind
-// ---------------------------------------------------------------------------
-
-// POINTER CAPTURE IS A NO-OP ON GLASS (contract at the declaration): there
-// is no cursor to hide, no pointer to lock and no relative stream. The core's capture state is
-// left alone on purpose — seeding it would tell the GUI its coordinates had
-// gone virtual when they had not.
-void GuiPlatform::begin_pointer_capture(GuiCursorKind /*restore_kind*/) {}
-void GuiPlatform::end_pointer_capture() {}
-
-// THE CURSOR IMAGE HAS NO SURFACE HERE (contract at the declaration): a
-// touch panel has no pointer image at all. The POLICY still runs — the drop of a kind named
-// for a position the pointer does not occupy, and the remember-only-on-change
-// — because it is the core's and because notional_pointer_x() is live on this
-// platform too; only an image to apply is missing.
-void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
-    if (input_.pointer_position_unknown()) return;
-    if (kind == input_.cursor_kind()) return;
-    input_.remember_cursor_kind(kind);
-}
-
-// ---------------------------------------------------------------------------
 // Callback registration and the forwards to the core
 // ---------------------------------------------------------------------------
 
@@ -2760,7 +2712,6 @@ void GuiPlatform::set_on_redraw(RedrawCallback cb)              { on_redraw_ = s
 void GuiPlatform::set_on_resize(ResizeCallback cb)              { on_resize_ = std::move(cb); }
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
-void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 
@@ -2799,14 +2750,11 @@ void GuiPlatform::set_on_key(KeyCallback cb)                    { input_.set_on_
 void GuiPlatform::set_on_key_release(KeyReleaseCallback cb)     { input_.set_on_key_release(std::move(cb)); }
 void GuiPlatform::set_on_button_press(ButtonCallback cb)        { input_.set_on_button_press(std::move(cb)); }
 void GuiPlatform::set_on_button_release(ButtonCallback cb)      { input_.set_on_button_release(std::move(cb)); }
-void GuiPlatform::set_on_wheel(WheelCallback cb)                { input_.set_on_wheel(std::move(cb)); }
 void GuiPlatform::set_on_motion(MotionCallback cb)              { input_.set_on_motion(std::move(cb)); }
-void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)     { input_.set_wheel_context_probe(std::move(cb)); }
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb)  { input_.set_text_editor_active_probe(std::move(cb)); }
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { input_.set_repeat_eligible_probe(std::move(cb)); }
 int64_t GuiPlatform::key_repeat_period_ms() const { return input_.key_repeat_period_ms(); }
 void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb) { input_.set_pointer_left_hook(std::move(cb)); }
-void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { input_.set_keyboard_intent_cancel_hook(std::move(cb)); }
 void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
@@ -2828,12 +2776,6 @@ void GuiPlatform::set_touch_nav_hooks(
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
 void GuiPlatform::set_touch_stillness_px(double px)         { input_.set_touch_stillness_px(px); }
-void GuiPlatform::set_capture_restore_x(double surface_x)   { input_.set_capture_restore_x(surface_x); }
-void GuiPlatform::clear_capture_restore_x()                 { input_.clear_capture_restore_x(); }
-void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) { input_.set_capture_restore_kind(kind); }
-void GuiPlatform::set_notional_x_frozen(bool frozen)        { input_.set_notional_x_frozen(frozen); }
-void GuiPlatform::set_notional_pointer_x(double surface_x)  { input_.set_notional_pointer_x(surface_x); }
-void GuiPlatform::set_capture_wrap_span(double lo, double hi) { input_.set_capture_wrap_span(lo, hi); }
 double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_x(); }
 
 // ---------------------------------------------------------------------------
@@ -2948,11 +2890,13 @@ void android_main(android_app* app) {
     route_stdio_to_logcat();
 
     // THE ENVIRONMENT, BEFORE ANYTHING READS IT. The render cache is
-    // XDG_CACHE_HOME's tenant (render_cache.cpp) and several std::filesystem
-    // paths fall back to HOME; on Android neither variable is set at all, so
-    // they are pointed at the app's private directory here — the one place
-    // that is guaranteed writable and is wiped with the app. This must precede
-    // gui_main, which builds the cache directory during construction.
+    // XDG_CACHE_HOME's tenant (render_cache.cpp) and the device config
+    // XDG_CONFIG_HOME's (device_config.cpp), each read with no fallback (an
+    // unset variable is their hard fail); on Android no such variable is set
+    // at all, so they are pointed at the app's private directory here — the
+    // one place that is guaranteed writable and is wiped with the app. This
+    // must precede gui_main, which builds the cache directory during
+    // construction.
     // THE NUMERIC LOCALE, MADE `C` BEFORE THE GUARD ASKS. On Linux a process
     // starts in `C` and verify_c_numeric_locale (locale_check.h) is a pure
     // TRIPWIRE for a linked library moving it; on bionic the process starts in
@@ -2973,12 +2917,14 @@ void android_main(android_app* app) {
     if (internal && *internal) {
         setenv("XDG_CACHE_HOME", internal, 1);
         // XDG_CONFIG_HOME joined 2026-08-27 with the device config
-        // (device_config.h), for the same reason and by the same rule: the GUI
-        // has ONE resolver for that file — XDG first, then HOME/.config — and
-        // pointing the variable here is what keeps it free of an Android arm.
-        // The HOME below would already carry it, but naming the variable is
-        // what makes the resolver's first branch the one that answers.
+        // (device_config.h), for the same reason and by the same rule: the
+        // GUI has ONE resolver for that file, the variable alone, and pointing
+        // it here is what keeps that resolver free of an Android arm.
         setenv("XDG_CONFIG_HOME", internal, 1);
+        // HOME STAYS FOR A LINKED LIBRARY: libgit2 seeks its global and XDG
+        // config under it (its sysdir guess), so it is pointed at the same
+        // private directory rather than left to the library's own fallback.
+        // TMPDIR the same.
         setenv("HOME", internal, 1);
         setenv("TMPDIR", internal, 1);
     }

@@ -422,16 +422,14 @@ struct GuiRenderPlayer {
     // no folder at all, the player closes itself through close(), its own
     // close act (architect 2026-10-01; the rule is at the body).
     void delete_batch_folders(const std::vector<std::filesystem::path>& folders);
-    // The widget's three mechanics with the player's damage on top
+    // The widget's two mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
     // overlay's other five contents drive the same mechanics through their own
     // damage): move the highlight by
-    // `delta` rows, seat it on `index` — the click's first half, the open
-    // being its second — and scroll the band by `rows` rows, the wheel's
-    // detent step.
+    // `delta` rows, and seat it on `index` — the click's first half, the open
+    // being its second.
     void move_highlight(int delta);
     void set_highlight(int index);
-    void scroll_rows(int rows);
     // The highlighted row's render entry — non-null exactly when the highlight
     // is a LOAD-CAPABLE wav (a batch cell). The load road's one question.
     const AppState::RenderEntry* highlighted_entry() const;

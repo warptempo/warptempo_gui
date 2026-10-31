@@ -48,14 +48,6 @@ void remap_marker_indices_after_reorder(AppState& app,
     // change — the same marker keeps the same cell — so this is not one of
     // the writes that reset the axis (those go through Selection::seat_focus).
     app.last_selected_marker = mapped(app.last_selected_marker);
-    // The SHIFT-RANGE ANCHOR is index-shaped live state over the same active
-    // column's store, so it FOLLOWS its marker exactly like the focus above
-    // rather than dissolving: a reorder does not end a range interaction — a
-    // position nudge reorders whenever it carries its marker across a
-    // neighbour, mid-interaction — and the anchor survives shift
-    // releases, so a stale pre-reorder index would name the wrong row at the
-    // next shift-click. -1 (no anchor) passes through mapped() unchanged.
-    app.shift_range_anchor = mapped(app.shift_range_anchor);
     // No parked copies to follow: neither ViewState holds an index (the rule is
     // at ViewState, app_state.h), which is also why this function needs no
     // `column` argument — everything above belongs to the active column, and

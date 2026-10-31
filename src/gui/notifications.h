@@ -912,10 +912,9 @@ bool notification_visible(const AppState& a, uint64_t id);
 // THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the
 // press claim (claim_notification_press) and its lift
 // (finish_notification_release, which asks it for the SAME card at the
-// release's own coordinates), the cursor map
-// (pointer_cursor_kind), the card hover walk (GuiNotifications::update_hover),
-// the WHEEL's routing predicate (wheel_context, which swallows a detent over
-// a card), the touch pan zone (touch_point_in_pan_zone) and the roster's
+// release's own coordinates), the play-key test at the press head
+// (on_button_press's audition rule), the card hover walk
+// (GuiNotifications::update_hover), the touch pan zone (touch_point_in_pan_zone) and the roster's
 // pointer walk (recompute_redesign_button_hover), which answers "nothing
 // under the pointer" so no button beneath a card starts a tooltip.
 uint64_t notification_card_at(const AppState& a, int x, int y);

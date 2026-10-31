@@ -443,11 +443,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     app.scroll_drag = ScrollDragState{};
     app.double_click = DoubleClickCandidate{};
     app.trim_bar_press = TrimBarPressSeed{};
-    // Belt-and-braces: dissolve the shift-range-select anchor on load (the
-    // selection.clear_selection() above already clears it — the Selection
-    // mutators are the anchor's only owners).
-    app.shift_range_anchor = -1;
-    // The STICKY CTRL does NOT ride that belt (architect 2026-09-10). It is a
+    // The STICKY CTRL is not cleared here (architect 2026-09-10). It is a
     // session TOOL POSTURE now, in the session lamps' family (AppState::follow
     // among them) — this body does not clear `add_to_selection`, and it has
     // nothing to clear either: this is the FRESH AppState's own first load,

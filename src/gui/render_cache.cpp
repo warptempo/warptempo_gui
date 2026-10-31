@@ -550,14 +550,19 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 void RenderCache::init() {
     enabled_ = false;
 
-    std::string base;
-    if (const char* xdg = std::getenv("XDG_CACHE_HOME"); xdg && xdg[0]) {
-        base = xdg;
-    } else if (const char* home = std::getenv("HOME"); home && home[0]) {
-        base = std::string(home) + "/.cache";
-    } else {
-        return; // no cache home; store stays disabled
+    // THE CACHE HOME IS XDG_CACHE_HOME AND NOTHING ELSE (architect
+    // 2026-10-30: the tablet is the one platform): android_main points it at
+    // the app's private directory before gui_main runs, so its absence is a
+    // program fault in this binary — one line and a hard fail, no fallback
+    // (no backstops for a state the product cannot produce).
+    const char* xdg = std::getenv("XDG_CACHE_HOME");
+    if (!xdg || !xdg[0]) {
+        std::fprintf(stderr,
+                     "warptempo_gui: XDG_CACHE_HOME is not set; android_main "
+                     "sets it before the GUI starts\n");
+        std::abort();
     }
+    const std::string base = xdg;
 
     parent_ = base + "/warptempo_gui";
     std::error_code ec;

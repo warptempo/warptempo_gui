@@ -789,8 +789,7 @@ void install_true_colors(bool on);
 //             selectable, so its selection must show): the selected label —
 //             its text in the chrome's `label` on the face in place of the
 //             faded label, no fill — over the faded triangle, no dots.
-// A CUE HAS NO HOVER FACE (architect 2026-09-29): the pointer over a cue says
-// what a press will do through the CURSOR alone (pointer_cursor_kind).
+// A CUE HAS NO HOVER FACE (architect 2026-09-29).
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform is DOTTED IN ITS RESET'S STEM
 // PATTERN, never a solid line (paint_phase_reset_overlay_ring, through
@@ -2745,13 +2744,12 @@ inline int dotted_waveform_line_runs(const GuiRect& area, int col, int period,
 // "chrome is not waveform, for any surface"): window row `y` lies on the
 // divider's rows across `area` — between the upper well's last row and the
 // lower well's first (waveform_well_rows, so the press and the paint read
-// one geometry, waveform_divider). A press, a touch-down, a pen-down or a
-// wheel there answers exactly as the canvas column's margins do: nothing
+// one geometry, waveform_divider). A press, a touch-down or a pen-down there
+// answers exactly as the canvas column's margins do: nothing
 // (point_on_nav_surface, input_pointer.cpp, the one reader for every claim
-// — the press, the pen's and the finger's pan zone, the cursor map — and
-// wheel_context's waveform term for the wheel). A gesture that began in a
-// well keeps running when it crosses these rows (the captured drags read
-// motion alone; the touch navigation's surface is decided at its start,
+// — the press and the pen's and the finger's pan zone). A gesture that began
+// in a well keeps running when it crosses these rows (the drags read motion
+// alone; the touch navigation's surface is decided at its start,
 // apply_touch_nav_update). Columns are not tested: the caller asks inside
 // the area.
 inline bool point_on_waveform_divider(const GuiRect& area, int y) {

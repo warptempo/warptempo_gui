@@ -256,10 +256,8 @@ inline int row_inset_px()         { return modal_box_content_pad_px(); }
 // DOES THE PANEL STAND? THE OWNER TAG DECIDES and this is the panel's own
 // name for that one question (the predicate itself is folder_overlay_stands,
 // app_state.h — it has to live there because that header's own predicates
-// read it: the slot's two tenants are named from both ends). It takes no
-// platform term, unlike the keyboard's (wants_onscreen_keyboard): the panel
-// serves the pen and the finger alike. EVERY paint site and EVERY hit site
-// asks this and nothing else.
+// read it: the slot's two tenants are named from both ends). EVERY paint
+// site and EVERY hit site asks this and nothing else.
 inline bool stands(const AppState& a) {
     return folder_overlay_stands(a);
 }
@@ -551,16 +549,6 @@ inline bool move_highlight(AppState& a, int delta) {
 inline bool move_highlight_actionable(const AppState& a, int delta) {
     const int to = move_highlight_target(a, delta);
     return to >= 0 && to != a.folder_overlay.highlight_row;
-}
-
-// Scroll the band by `rows` rows (the wheel's detent step) at the button
-// row's pitch, clamped. Returns whether the offset moved.
-inline bool scroll_rows(AppState& a, int rows) {
-    const int before = a.folder_overlay.scroll_px;
-    a.folder_overlay.scroll_px +=
-        rows * (button_row_height_px() + button_row_gap_px());
-    clamp_scroll(a);
-    return a.folder_overlay.scroll_px != before;
 }
 
 } // namespace folder_overlay

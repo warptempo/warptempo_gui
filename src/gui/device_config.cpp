@@ -154,20 +154,14 @@ std::string format_osk_font_px(int px) {
 }
 
 std::filesystem::path device_config_path() {
-    // The render cache's resolution shape verbatim (RenderCache::init,
-    // render_cache.cpp), one variable over: XDG first, then HOME/.config, then
-    // nothing. On Android neither variable exists until the backend sets them,
-    // which android_main does before gui_main runs, so this resolver needs no
-    // platform arm of its own.
-    std::string base;
-    if (const char* xdg = std::getenv("XDG_CONFIG_HOME"); xdg && xdg[0]) {
-        base = xdg;
-    } else if (const char* home = std::getenv("HOME"); home && home[0]) {
-        base = std::string(home) + "/.config";
-    } else {
-        return {};
-    }
-    return std::filesystem::path(base) / "warptempo_gui" / "config";
+    // XDG_CONFIG_HOME AND NOTHING ELSE (architect 2026-10-30: the tablet is
+    // the one platform), the render cache's own shape (RenderCache::init,
+    // render_cache.cpp) one variable over. android_main sets it before
+    // gui_main runs, so an unset variable is a program fault: the empty
+    // answer, which the reader refuses at startup with one line.
+    const char* xdg = std::getenv("XDG_CONFIG_HOME");
+    if (!xdg || !xdg[0]) return {};
+    return std::filesystem::path(xdg) / "warptempo_gui" / "config";
 }
 
 std::string format_device_config_text(const DeviceConfig& cfg) {
@@ -412,8 +406,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg) {
         // resolver — the environment does not change under the process — and
         // kept as the belt it always was, with no path to name.
         return plain_failure(
-            "Device config write failed: no config home (neither "
-            "XDG_CONFIG_HOME nor HOME is set)");
+            "Device config write failed: no config home (XDG_CONFIG_HOME "
+            "is not set)");
     }
     std::error_code ec;
     std::filesystem::create_directories(path.parent_path(), ec);
@@ -437,8 +431,7 @@ std::expected<DeviceConfig, std::string> load_device_config(
     const std::filesystem::path path = device_config_path();
     if (path.empty()) {
         return std::unexpected(
-            std::string("no config home: neither XDG_CONFIG_HOME nor HOME is "
-                        "set"));
+            std::string("no config home: XDG_CONFIG_HOME is not set"));
     }
 
     // A FAILED STAT READS AS ABSENCE HERE, AND THAT IS ACCEPTED ADVERSARIAL

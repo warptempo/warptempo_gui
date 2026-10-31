@@ -691,7 +691,6 @@ void GuiInputHandler::swap_batch_progress_for_player() {
     // consumed it.
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_inside = false;
-    app.modal_dialog_press_shift  = false;
     app.modal_dialog_press_ms     = 0;
     clear_modal_dialog_key_press();
     hide_shift_tooltip();
