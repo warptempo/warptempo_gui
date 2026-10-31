@@ -1709,12 +1709,14 @@ struct GuiInputHandler {
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated
     // at on_key's drag-modal statement). The marker drag commits its proposed
     // position with its undo entry, the trim drag keeps its live bounds and runs its
-    // commit tail, the sweep commits the trim it wrote, the strip / grab-pan drags
-    // just end (they applied continuously), and the THREE PENDINGS disarm (the
+    // commit tail, the sweep commits the trim it wrote, the navigation press
+    // (scroll_drag) disarms crossed or not (a crossed press began nothing),
+    // the THREE PENDINGS disarm (the
     // third is PendingClickAct — the trim bound sets, the one deferred click
     // since 2026-08-17 — which really has committed nothing; the marker
     // pending's click already committed at its press, so only its drag and its
-    // release-side seed die here — the split is stated at the definition).
+    // release-side seed die here — the split is stated at the definition),
+    // and the overlays' arms clear.
     // (The tempo drag was one more body here until 2026-07-29 —
     // the whole gesture is deleted, see marker_drag.h.)
     // No-op when nothing is live. Definition beside
@@ -3476,11 +3478,9 @@ private:
     // plain lower-half waveform press. IT USED TO RUN AT THE PRESS and the
     // architect moved it to the lift — "the playhead scrub is an outlier. We do
     // everything on lift the finger or on mouse up, but the playhead scrub, we
-    // do right on mouse down. We should remove that" — which is what let the
-    // lower half take the grab-pan and the region former. (The BARE RIGHT
-    // full-height entry of 2026-08-01 died 2026-08-12 with the right button's
-    // unbinding; the marker-text lane's empty-spot scrub was DELETED
-    // 2026-07-27.) Given the click's waveform-relative column, run ONE scrub
+    // do right on mouse down. We should remove that" — so the lower half's
+    // press arms the pending click alone, a drag there being the touch
+    // layer's pan and a hold its region former. Given the click's waveform-relative column, run ONE scrub
     // act (scrub_act_at — stop a live session, then launch) at that column's
     // frame — the scrub is ONE-SHOT per click (architect 2026-07-23, the
     // Ableton model): the press arms only the pending click, a held press does
@@ -3932,15 +3932,16 @@ private:
     // (on_media_command).
     void route_render_player_key(GuiKey key, GuiInputState mods);
 
-    // THE PLAYER'S OPENER TOGGLE for bare `l` and bare `'` outside the `h`
-    // view: closes a standing player on `l`, opens it otherwise through the
-    // one opener (GuiRenderPlayer::open). Its callers have already refused
-    // the modal states (a prompt, an editor, loading — all above it in
-    // on_key); THE `h` VIEW ADMITS bare `l` since 2026-10-25 (architect,
-    // "admit both"), the player opening over the view as the picker does.
-    // A running render refuses at the opener itself
+    // THE PLAYER'S OPENER for bare `l` and bare `'` outside the `h` view,
+    // through the one opener (GuiRenderPlayer::open). It only opens: while
+    // the player stands its router takes every key (route_render_player_key,
+    // the closer), so neither producer reaches here then. Its callers have
+    // already refused the modal states (a prompt, an editor, loading — all
+    // above it in on_key); THE `h` VIEW ADMITS bare `l` since 2026-10-25
+    // (architect, "admit both"), the player opening over the view as the
+    // picker does. A running render refuses at the opener itself
     // (GuiRenderPlayer::open), not here.
-    void toggle_render_player();
+    void open_render_player();
 
     // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp), ONE ROUTER
     // FOR EVERY CONTENT: the row press claim (arm at the press — a modified

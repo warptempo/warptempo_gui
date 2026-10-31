@@ -1754,7 +1754,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // undisturbed.
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
         if (app.history_mode.active) history_load_in_place();
-        else                         toggle_render_player();
+        else                         open_render_player();
         return;
     }
 

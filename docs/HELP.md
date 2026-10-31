@@ -66,7 +66,7 @@ The window is a black hi-fi panel, after the late-1980s Japanese component decks
 
 ### Font
 
-Every text is set in Liberation Sans, a stand-in for Arial, at a few fixed sizes that follow the `gui_scale`: the markers' labels, the clock at the bottom left, the tab's name and the line beside it, the tooltips, the lists, the cards, the questions, the render player's clocks and the battery and time at one size; the name Warptempo in bold and the on-screen keyboard's keys a little larger, the largest (their labels' size, for now, a setting under tuning: the panel, above); the ruler's digits smaller, the keys' print smallest. There is no font setting: the face is built into the program.
+Every text is set in Liberation Sans, a stand-in for Arial, at a few fixed sizes that follow the `gui_scale`: the markers' labels, the clock at the bottom left, the tab's name and the line beside it, the tooltips' names, the lists, the cards, the questions, the render player's clocks and the battery and time at one size; the name Warptempo in bold and the on-screen keyboard's keys a little larger, the largest (their labels' size, for now, a setting under tuning: the panel, above); the tooltips' second line, the gesture, smaller and in a dimmer grey; the ruler's digits smaller still, the keys' print smallest. There is no font setting: the face is built into the program.
 
 ## A working method
 

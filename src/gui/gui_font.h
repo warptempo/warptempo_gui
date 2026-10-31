@@ -26,8 +26,8 @@
 // bound editor), ROW 8'S CLOCK AND ITS STATE LINE (the tab's name, the
 // GitHub word, the walk line, the progress line), THE RENDER PLAYER'S TWO
 // TIME FIELDS (architect 2026-10-26 ~12:10, "yes" to symmetry with row 8's
-// clock) and THE TOOLTIP ("the tooltips font size should be the same as
-// the flags", 2026-10-23); BODY 22 Regular, THE REST (the lists, the
+// clock) and THE TOOLTIP'S NAME LINE ("the tooltips font size should be the
+// same as the flags", 2026-10-23); BODY 22 Regular, THE REST (the lists, the
 // cards, the prompts, the dialog editors, the logo lane's battery + clock
 // legend) — THE TWO ROWS COINCIDE IN NUMBER TODAY AND STAY TWO ROWS: the
 // roster is the distinction (the Program row tunes with the cues, the
@@ -43,7 +43,10 @@
 // his type sheet — the night's C34, off 22 / 28 / 34 / 40, stood
 // 2026-10-23 to 2026-10-24, the caps wearing the body's 22 before it) BY
 // DEFAULT, THE ONE LIVE SIZE — the `osk_font_px` tuning key's (architect
-// 2026-10-29 night, GuiFont below). (The
+// 2026-10-29 night, GuiFont below), HINT 18 Regular (the tooltip's hint
+// line alone, under its name line — kdenlive's tooltip, a 10 pt hint under
+// 12 pt, the ratio the pre-Windows-95 painter's smaller hint line carried;
+// architect 2026-10-31, paint_shift_tooltip). (The
 // three recorded Windows metric sets — MS Sans Serif 8's {11, 2, x 6} cell,
 // the ruler's six-row digit, Cool Edit's cue cap of 7 — and the ems derived
 // to stand their ink those rows tall, 2026-10-05 to 2026-10-23, are git
@@ -85,10 +88,10 @@
 // THE USES (the head's table): the body, the brand's bold, the ruler's
 // digits (`Small`), the cues' labels and their kin (`Program`: the lane's
 // editors, row 8's clock and state line, the player's clocks, the
-// tooltip), the keys' legends
-// and the on-screen keyboard's caps (`Keys`).
-enum class GuiFace { Body, Bold, Small, Program, Legend, Keys };
-inline constexpr std::size_t kGuiFaceCount = 6;
+// tooltip's name line), the keys' legends, the on-screen keyboard's caps
+// (`Keys`) and the tooltip's hint line (`Hint`).
+enum class GuiFace { Body, Bold, Small, Program, Legend, Keys, Hint };
+inline constexpr std::size_t kGuiFaceCount = 7;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
@@ -98,7 +101,7 @@ inline constexpr std::size_t kGuiFaceCount = 6;
 // index here. Both are TrueType (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
-    "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps
+    "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps, the hint
     "LiberationSans-Bold.ttf",    // 1: the brand
 };
 
@@ -114,10 +117,12 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {1, 24.0},   // Bold: the brand
     {0, 16.0},   // Small: the ruler's digits
     {0, 22.0},   // Program: the cues' labels, the lane's editors, row 8's
-                 // clock and state line, the player's clocks, the tooltip
+                 // clock and state line, the player's clocks, the
+                 // tooltip's name line
     {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
+    {0, 18.0},   // Hint: the tooltip's hint line
 };
 
 // THE USE'S TABLE SIZE, its em in device px at 300 % — the one read of the

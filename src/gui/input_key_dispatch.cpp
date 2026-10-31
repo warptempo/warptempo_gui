@@ -8308,11 +8308,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // in on_key run before this handler, so `l` is inert while any of them
     // owns the keyboard; the `h` view's allowlist ADMITS it since 2026-10-25
     // (the player opens over the view); inside the player the key is the mode's
-    // own closer (route_render_player_key) and never reaches here. "Nothing
-    // to play: no renders under tmp/" and, since 2026-09-15, "Render player
-    // is unavailable while rendering" are the opener's two card refusals.
+    // own closer (route_render_player_key) and never reaches here, so this
+    // arm opens. "Nothing to play: no renders under tmp/" and, since
+    // 2026-09-15, "Render player is unavailable while rendering" are the
+    // opener's two card refusals.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
-        toggle_render_player();
+        open_render_player();
         return true;
     }
 
@@ -8337,11 +8338,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 // The contracts are at the declarations (input_handler.h); the acts are
 // GuiRenderPlayer's (render_player.h). What lives here is the routing.
 
-void GuiInputHandler::toggle_render_player() {
-    if (app.render_player.active) {
-        render_player.close();
-        return;
-    }
+void GuiInputHandler::open_render_player() {
     (void)render_player.open();
 }
 

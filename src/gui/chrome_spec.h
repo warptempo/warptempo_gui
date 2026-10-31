@@ -65,9 +65,9 @@ struct ChromeSpec {
     double             push_button_box_px;
     double             push_button_pad_left_px;
     double             push_button_pad_right_px;
-    // THE TOOLTIP'S PAD inside its frame, each way (paint_popup_chrome's
-    // tooltip arm, kTooltipLineGapPx beside it).
-    int                tooltip_pad_px;
+    // (THE TOOLTIP'S PAD — comctl32's 2 px, measured on a ReactOS capture,
+    // 2026-10-07 — left the spec 2026-10-31: the tooltip pads with the time
+    // field's pad, paint_shift_tooltip.)
     // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
     // field is the program's since 2026-10-09, Cool Edit's dark field under
     // every chrome, its height and its 5-W pad program_spec.h's.)
@@ -90,16 +90,14 @@ struct ChromeSpec {
 // Windows' SM_CYCAPTION 18 with its DFC_CAPTION buttons, until 2026-10-24;
 // THE MENU ROW, Explorer's menu band and the plain menu bar's
 // seat, 2026-10-02 to 2026-10-21, left with the row; git history); THE PUSH
-// BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
-// (measured on a ReactOS capture) (THE DROPDOWN, Windows' popup menu, until
-// 2026-10-21). (Explorer's
+// BUTTON Windows' 75 x 23 with 7-px pads (THE TOOLTIP's pad until
+// 2026-10-31; THE DROPDOWN, Windows' popup menu, until 2026-10-21). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
-    .tooltip_pad_px               = 2,
 };
 
 // THE LIVE SPEC — the one instance the process paints, Windows 2000's.

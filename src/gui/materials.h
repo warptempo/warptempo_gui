@@ -154,14 +154,19 @@ struct AppState;
 // THE INKS (constants all; 0xRRGGBB, sRGB): THE BONE kBoneInk F0F0F0 on
 // every word and digit the chrome prints at the body size — the logo
 // lane's brand and legend, the flag labels, the clocks' digits, the tab name, the state line,
-// the lists' rows, the cards, the prompts, the editors' text, the tooltip
-// (the bone since 2026-10-23 night, like the flags, paint_shift_tooltip) —
+// the lists' rows, the cards, the prompts, the editors' text, the tooltip's
+// name line (the bone since 2026-10-23 night, like the flags,
+// paint_shift_tooltip) —
 // and on the keyboard's caps in their keys face (24 px at 300 %, 2026-10-24)
 // and the ruler's digits and ticks; THE LEGEND INK kLegendInk
 // C4C4C8, the keys' printed legends ALONE; THE DIM INK kDimInk
 // 6A6A6E, a disabled key's legend and, in that dead print, the settings
 // page's inert rows — its group rows (architect 2026-10-28) and its
-// disabled `scale` and `bpm` lines (2026-10-29), paint_folder_overlay.
+// disabled `scale` and `bpm` lines (2026-10-29), paint_folder_overlay;
+// THE HINT INK kHintInk 808084, the tooltip's hint line alone, under its
+// name (architect 2026-10-31, on the mocks: a shade or two lighter than the
+// dim ink, which "reads a little dark" there, chosen from three steps;
+// kdenlive's dimmer hint, paint_shift_tooltip).
 // NO WORD
 // WEARS A SHADOW but the cue labels, row 8's tab name and state line, and
 // THE LOGO LANE — the brand, the legend's percent and clock runs, and with
@@ -197,6 +202,7 @@ inline constexpr double   kBrushSigmaY    = 0.4;
 inline constexpr uint32_t kBoneInk   = 0xF0F0F0;
 inline constexpr uint32_t kLegendInk = 0xC4C4C8;
 inline constexpr uint32_t kDimInk    = 0x6A6A6E;
+inline constexpr uint32_t kHintInk   = 0x808084;
 // THE FLAT GROUNDS (architect 2026-10-23): the ruler's flat dark lane, the
 // field (every field, the modal family's box, the cards and the tooltip),
 // the time fields' and the view bar's black.

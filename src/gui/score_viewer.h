@@ -482,7 +482,7 @@ inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
 // THE MODIFIER LINE (the roster's form, "Hold …"; the player's
 // render_player_button_shift_hint): non-empty on exactly the buttons
 // score_button_shift_admits names (app_state.h) — the two skips, "Hold to
-// skip 10 s." — and DROPPING WHERE THE TWO FORMS LAND ON ONE FRAME,
+// skip 10 s" — and DROPPING WHERE THE TWO FORMS LAND ON ONE FRAME,
 // the roster skips' rule (redesign_button_tooltip's stateful overload): the
 // range's last 3 s for FWD, its first 3 s for BACK, and a greyed skip. The
 // first line never forks.
@@ -497,7 +497,7 @@ inline const char* score_viewer_button_shift_hint(
             if (score_viewer_skip_landing(a, playback, forward, false) ==
                 score_viewer_skip_landing(a, playback, forward, true))
                 return "";
-            return "Hold to skip 10 s.";
+            return "Hold to skip 10 s";
         }
         case Act::PrevPage:
         case Act::NextPage:

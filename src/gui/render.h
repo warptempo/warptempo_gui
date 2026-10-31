@@ -131,7 +131,7 @@ struct TrimRange {
 // PAINTER CONSTANTS (cool_edit_paint.h: the view bar's black field, the
 // ruler's ticks and digits, and the black shadow under the ticks) — or THE
 // HI-FI SKIN'S CONSTANTS AND GROUNDS (materials.h, 2026-10-23:
-// the bone, legend and dim inks, the ruler's and the fields' grounds, the
+// the bone, legend, dim and hint inks, the ruler's and the fields' grounds, the
 // selection pair, the key's face, edges and LED, the accent, and the baked
 // brushed grounds through set_surface_source) — or THE ICONS' OWN INKS
 // (architect 2026-10-06): the drawings' colors as each file names them
@@ -140,7 +140,7 @@ struct TrimRange {
 // DRAWS ONE since 2026-10-23, and no drawing is ever shown disabled.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role: the bone over the ground and the field, the legend ink under the
-// keys and in the tooltip, the bone over the selection's grey.
+// keys, the bone over the selection's grey.
 // STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
 // never had one; the lists' lit rows are a selection, not a button face.
@@ -293,11 +293,11 @@ struct TrimRange {
 // stand on `card_ground` — THE FIELD, kFieldGround — INSIDE A ONE-DEVICE-PX
 // SUNKEN RING in the ring tones, dark top and left, light bottom and right,
 // mitred (paint_popup_chrome, paint_hairline_frame), the cards' words the
-// bone (`card_text`) at the body size, THE TOOLTIP'S the flags' own program
-// face (2026-10-23, "the same as the flags", 22 px since the flags' size
-// settled 2026-10-26; the legend face its first night) in the bone
-// kBoneInk like the cards' words (2026-10-23 night; the legend ink
-// kLegendInk until then). (Windows 2000's one-W `card_frame`
+// bone (`card_text`) at the body size, THE TOOLTIP'S NAME LINE the flags'
+// own program face (2026-10-23, "the same as the flags", 22 px since the
+// flags' size settled 2026-10-26) in the bone kBoneInk like the cards'
+// words, ITS HINT LINE the hint face (18 px) in the hint ink kHintInk
+// (architect 2026-10-31, paint_shift_tooltip). (Windows 2000's one-W `card_frame`
 // border, square, on the Face, 2026-10-04 to 2026-10-23, is git history.)
 // THIS PARAGRAPH IS THE RULE'S ONE STATEMENT.
 // THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
@@ -2285,14 +2285,9 @@ inline int view_bar_grab_w_px() {
 // and the two delays.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
-// from the BODY FACE'S OWN CELL (one line, or two 13-px bands), so the box
-// follows the face instead of a literal that could drift from it; the run
-// loop only needs to know it can never exceed this. 50 Windows px (the
-// laptop pixel's 60 re-authored as 44, architect 2026-10-02; raised to 50
-// 2026-10-07 for a 4-px tooltip pad, kept) clears the two-line form —
-// win2000's 1 + 2 + 13 + 3 + 13 + 2 + 1 = 35 at 100 % (chrome_spec.h's
-// tooltip_pad_px 2), 105 device rows against 150 at 300 % (a bound, with
-// room for a later vocabulary's pad).
+// from the two faces' caps under the time field's pad (paint_shift_tooltip,
+// 2026-10-31), so the run loop only needs to know it can never exceed this:
+// 50 Windows px, 150 device rows at 300 % against the two-line box's 65.
 inline constexpr int     kTooltipDamageHeightPx = 50;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);

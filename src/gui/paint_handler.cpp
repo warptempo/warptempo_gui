@@ -242,9 +242,10 @@ namespace {
 //     under this — Qt names a checkable action the same way ("Show Audio
 //     Thumbnails") — the lamp FACE, never the words, carrying the state.
 //   * A DESCRIPTION IS SENTENCE CASE — a label, a field prefix, the SECOND
-//     modifier line of a tooltip (always a whole sentence with terminal
-//     punctuation: "Hold for the A/B audition."), a card, a prompt (a
-//     question), the row-8 state cell, and a panel's row labels and prose.
+//     modifier line of a tooltip (a sentence-case clause with no terminal
+//     period, a caption: "Hold for the A/B audition"; architect 2026-10-31),
+//     a card, a prompt (a question), the row-8 state cell, and a panel's row
+//     labels and prose.
 //     A TOOLTIP'S FIRST LINE IS NEVER IN THIS CLASS any more (architect
 //     2026-09-12): it named a STATE or a REASON on a handful of buttons until
 //     then ("At the trim end (End)", "Markers are placed in source view (S)",
@@ -1044,37 +1045,10 @@ constexpr IconRowDef kIconRowRightRun[] = {
 
 // -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
-// The tooltip's metrics are measured off its period capture, ReactOS's
-// "Views"; its chrome is the floating surfaces' one box
-// (paint_popup_chrome), and its seat, its timing and its damage bound live in
-// render.h.
-//
-// THE TOOLTIP'S TYPE AND SPACING. ONE FACE FOR BOTH LINES, the body
-// (architect 2026-10-05: the period faces have no smaller text face — the
-// SHIFT line's own 11 Windows px, ruled 2026-07-31 to read as subordinate,
-// retired with the outline face it sized). Both go through the one shaping
-// chokepoint.
-//
-// THE VERTICAL LAYOUT IS DERIVED, NOT AUTHORED, and it is SYMMETRIC BY
-// CONSTRUCTION: each line occupies the face's (ascent + descent) band — the
-// recorded 13-row cell — the two bands are separated by a real gap, and the
-// SAME padding closes the box above the first band and below the last. So
-// the box height falls out as
-//     pad + band [+ gap + band] + pad
-// and the top and bottom air are equal by the arithmetic rather than by a
-// measured pair that could drift. THE PAD IS THE CHROME SPEC'S
-// (tooltip_pad_px, 2026-10-07): WIN2000'S 2 (architect 2026-10-06,
-// Views on that capture): the capture's one-line box is 19 rows,
-// 1 + 2 + 13 + 2 + 1 — the black line, two rows of face, the 13-row cell,
-// two rows, the line — and two face columns stand between the left line and
-// the V, so the pad is 2 each way INSIDE the four-sided frame, whose line is
-// ONE DEVICE PX since the hi-fi skin (hairline_px, 2026-10-23; one scaled W
-// until then) and whose band is the legend face's line box: at the tablet's
-// 300 %, 1 + 6 + band + 6 + 1 for one line, at 138 %, 1 + 3 + band + 3 + 1
-// (the band rounded once). The gap is the old unit's 4 re-authored at the
-// unit's change. render.h carries only a BOUND on this for the
-// damage band.
-constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
+// The tooltip's chrome is the floating surfaces' one box
+// (paint_popup_chrome); its type and its box are its painter's
+// (paint_shift_tooltip, kdenlive's form since 2026-10-31), its seat, its
+// timing and its damage bound render.h's.
 // (The damage BOUND on the height and the timing constants live in render.h —
 // the tooltip's clock reads them, for the deadlines and for the band beside
 // the strip.)
@@ -1118,13 +1092,14 @@ constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 // rows (17 x 1.38 = 23.46) seat at floor((23 + 11.04) / 2) = 17. The answer is
 // independent of the box's y by construction rather than by a tie rule.
 //
-// ONE SEAT FOR EVERY CHROME LABEL (architect 2026-10-22: the tooltip and the
-// cards came back to it — the line box centered in their interior read low
-// under descenders and the one-W lift on it overshot). THE BOX SEATS: the
-// logo lane's brand, the row-8 clock (in its time field) and the
+// ONE SEAT FOR EVERY CHROME LABEL (architect 2026-10-22: the cards came
+// back to it — the line box centered in their interior read low under
+// descenders and the one-W lift on it overshot; the hover tooltip seats its
+// own caps under one pad since 2026-10-31, paint_shift_tooltip). THE BOX
+// SEATS: the logo lane's brand, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
-// is at paint_bottom_row_buttons_and_clock), the tooltip's and the
-// notification card's first lines (a further line one line height lower),
+// is at paint_bottom_row_buttons_and_clock), the notification card's first
+// line (a further line one line height lower),
 // the prompt's question and the
 // dialog editor's line in the modal family's box (each row on the list's
 // row box, 2026-10-14), the render player's
@@ -2363,6 +2338,10 @@ static std::string clock_time_text(const AppState& app,
 // tighter"): 40 DEVICE PX TALL AND 12 PX OF PAD
 // EACH SIDE OF THE DIGITS' CELL, both authored at 300 % and scaled with
 // gui_scale (skin_px; the amendment of the same night) — 18 and 6 at 138 %.
+// THE PAD IS ONE NUMBER WITH TWO WEARERS: the time fields and the hover
+// tooltip, whose box pads every side with it (architect 2026-10-31, row 8's
+// clock "has a nice padding for the font size and resolution";
+// paint_shift_tooltip).
 // (17 W tall with a 5-W pad, scaled_px, 2026-10-09 to 2026-10-23: Cool
 // Edit's field, then the dialog field's pad; git history.)
 // THE FIELD STANDS AT 40 WHATEVER THE KEY'S HEIGHT (architect 2026-10-29):
@@ -3040,8 +3019,9 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
     // (architect 2026-10-23): ONE SUNKEN FLAT FIELD, `card_ground` (the field
     // kFieldGround), under a ONE-DEVICE-PX RING in the ring tones, dark on the
     // top row and left column, light on the bottom row and right column,
-    // mitred (paint_hairline_frame; render.h's line rule). A card keeps its
-    // own height rule; its pad is the spec's (tooltip_pad_px). (The one-line
+    // mitred (paint_hairline_frame; render.h's line rule). The tooltip and
+    // each card keep their own height rule and pad (paint_shift_tooltip,
+    // notification_pad_px). (The one-line
     // square `card_frame` border of Windows 2000's tooltip on the Face,
     // 2026-10-04 to 2026-10-23, is git history.)
     const GuiMaterialScope flat(GuiMaterialRegion::Flat);
@@ -3139,42 +3119,50 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    // THE TOOLTIP WEARS THE FLAGS' FACE (architect 2026-10-23, "the tooltips
-    // font size should be the same as the flags"): GuiFace::Program, 22 px
-    // at 300 % since the flags' size settled there (2026-10-26 ~13:05), IN
-    // THE BONE kBoneInk like the flags and every word (architect 2026-10-23
-    // night; the legend ink kLegendInk its first night, now the keys' print
-    // alone) on the field, no shadow; the box grows with the face's own line
-    // (its pads are the chrome spec's, below) — 44 device rows at 300 % for
-    // one line (the line 30, the hairline and the 2-W pad twice). The legend
-    // face, 14 px, is the keys' print alone (it was the tooltip's the first
-    // night of the skin).
-    const GuiFont font = gui_font(GuiFace::Program);
+    // KDENLIVE'S TOOLTIP (architect 2026-10-31, on the hint-ink mock: the
+    // name, and under it a smaller, dimmer hint; "think 90s Japanese
+    // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (22 px
+    // at 300 %, "the tooltips font size should be the same as the flags",
+    // 2026-10-23) in the bone kBoneInk; THE HINT LINE its own face,
+    // GuiFace::Hint (18 px at 300 %, a 10 pt hint under a 12 pt name), in the
+    // hint ink kHintInk (materials.h's inks: 808084, a shade or two lighter
+    // than the dim ink, ruled on the mocks).
+    // Neither wears a shadow.
+    //
+    // THE BOX IS SEATED BY CAP AND BASELINE UNDER ONE PAD, derived with
+    // nothing authored but the pad: the frame (hairline_px), the pad, the
+    // name's cap band [, the pad, the hint's cap band], the pad, the frame
+    // down; the frame and the pad each side of the wider run across. THE PAD
+    // IS THE TIME FIELD'S (time_field_pad_px, 12 at 300 %: the architect's
+    // row-8 clock, "a nice padding for the font size and resolution"), on
+    // both axes. Each cap is the face's own (gui_font_cap_px) rounded at
+    // the element; each baseline stands on its cap's bottom row, so a
+    // descender hangs into the pad below it. At 300 % a one-line box is
+    // 1 + 12 + 15 + 12 + 1 = 41 device rows, a two-line one
+    // 1 + 12 + 15 + 12 + 12 + 12 + 1 = 65.
+    const GuiFont name_font = gui_font(GuiFace::Program);
+    const GuiFont hint_font = gui_font(GuiFace::Hint);
     const bool two_line = (line2 != nullptr);
-    const text_shape::ShapedRun r1 = text_shape::shape_text_run(font, line1);
-    const double band1 = gui_font_line_px(font);
+    const text_shape::ShapedRun r1 =
+        text_shape::shape_text_run(name_font, line1);
+    const int cap1 =
+        static_cast<int>(std::nearbyint(gui_font_cap_px(name_font)));
 
-    double band2 = 0.0, w2 = 0.0;
+    int cap2 = 0;
+    double w2 = 0.0;
     text_shape::ShapedRun r2;
     if (two_line) {
-        r2 = text_shape::shape_text_run(font, line2);
-        band2 = gui_font_line_px(font);
+        r2 = text_shape::shape_text_run(hint_font, line2);
+        cap2 = static_cast<int>(std::nearbyint(gui_font_cap_px(hint_font)));
         w2 = r2.width_px;
     }
 
-    // THE PADS FROM THE BOX'S EDGE: the frame's line, then the air inside it
-    // (the record above).
     const int frame = hairline_px();
-    const int pad_x = frame + scaled_px(live_chrome_spec().tooltip_pad_px);
-    const int pad_y = frame + scaled_px(live_chrome_spec().tooltip_pad_px);
-    const int gap   = two_line ? scaled_px(kTooltipLineGapPx) : 0;
+    const int pad   = time_field_pad_px();
+    const int inset = frame + pad;
     const int w = static_cast<int>(std::nearbyint(std::max(r1.width_px, w2))) +
-                  2 * pad_x;
-    // THE SYMMETRIC BOX: the same pad above the first band and below the last,
-    // with a real gap between them. Nothing is authored but the two paddings and
-    // the gap; the bands are the face's own.
-    const int h = static_cast<int>(std::nearbyint(band1 + band2)) + gap +
-                  2 * pad_y;
+                  2 * inset;
+    const int h = 2 * inset + cap1 + (two_line ? pad + cap2 : 0);
 
     // UNDER THE POINTER, WINDOWS 95's SEAT (architect 2026-10-06): the left
     // edge at the pointer's x and the top 18 Windows px below it, the pointer
@@ -3206,24 +3194,16 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     paint_popup_chrome(cr, box);
 
-    // EACH LINE SITS ON ITS OWN BAND, the face's ascent plus its descent
-    // (the box's height, above). THE FIRST LINE'S CAP BAND IS CENTERED IN
-    // ITS BAND by redesign_baseline — the interior itself on a one-line
-    // tooltip — the one rule every chrome label takes (architect 2026-10-22:
-    // the line box centered there read low under descenders, and the one-W
-    // lift on it overshot); the hint line stands one band and the gap lower.
+    // THE BASELINES (the box above): the name's on its cap's bottom row
+    // under the frame and the pad, the hint's one pad and its own cap lower.
+    const double base1 = static_cast<double>(y + inset + cap1);
     set_palette_source(cr, hex(kBoneInk));
-    const double base1 =
-        redesign_baseline(font, static_cast<double>(y + pad_y),
-                          std::nearbyint(band1));
-    text_shape::show_shaped_run(cr, r1, static_cast<double>(x + pad_x),
+    text_shape::show_shaped_run(cr, r1, static_cast<double>(x + inset),
                                 base1);
     if (two_line) {
-        // The hint line takes THE CARD TEXT like the first (architect
-        // 2026-10-03, Windows' ink, no dims; the card face's words are
-        // `card_text` since 2026-10-04, render.h's palette block).
-        text_shape::show_shaped_run(cr, r2, static_cast<double>(x + pad_x),
-                                    base1 + band1 + static_cast<double>(gap));
+        set_palette_source(cr, hex(kHintInk));
+        text_shape::show_shaped_run(cr, r2, static_cast<double>(x + inset),
+                                    base1 + static_cast<double>(pad + cap2));
     }
 
     cairo_restore(cr);
