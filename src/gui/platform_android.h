@@ -338,12 +338,19 @@ public:
     //       retained, inert on the live stroke's own), and the stroke is
     //       marked so its lift keeps nothing;
     //   (b) THE PEN LANDING WITHOUT ITS BUTTON (its DOWN, sampled released);
-    //   (c) THE FIRST IN-PLANE PEN REPORT SHOWING THE BUTTON UP, the plane
-    //       being pen_report_in_plane's latch (a hover report or hovering
-    //       button edge entering at or under kPenPlaneEnter and staying in
-    //       until one rises past kPenPlaneExit, and every contact report).
-    //       A button state reported ABOVE the plane, a HOVER_EXIT, or
-    //       nothing at all (out of range) changes nothing;
+    //   (c) THE SECOND CONSECUTIVE IN-PLANE HOVERING SYNC SHOWING THE BUTTON
+    //       UP (the first arms a pending release; the firmware reports the
+    //       barrel button released at every range leave, in its own sync just
+    //       before the HOVER_EXIT, which drops the pending — architect
+    //       2026-10-31, measured on the raw stream: a fast lift leaves range
+    //       from 61-66 counts, inside the plane; the rule and its drops at
+    //       pen_hover_release_pending_); ON THE GLASS, THE FIRST REPORT
+    //       SHOWING IT UP. The plane is pen_report_in_plane's latch (a hover
+    //       report or hovering button edge entering at or under
+    //       kPenPlaneEnter and staying in until one rises past kPenPlaneExit,
+    //       and every contact report). A button state reported ABOVE the
+    //       plane, a HOVER_EXIT, or nothing at all (out of range) releases
+    //       nothing (the first two drop a pending);
     //   (d) THE HARD ENDS — a CANCEL and focus loss.
     // The GUI's body (GuiInputHandler::release_pen_zoom_anchor) clears only a
     // RETAINED seat, so a fire that meets a live gesture's seat is inert.
@@ -646,6 +653,35 @@ private:
     // pen_lift_keeps_zoom_anchor's answer: set immediately around the pen's
     // own touch_up and false everywhere else.
     bool pen_lift_keeps_anchor_ = false;
+    // THE PEN'S PENDING HOVER RELEASE (release inventory (c) at
+    // set_pen_zoom_anchor_release_hook; architect 2026-10-31). THE RULE: a
+    // HOVERING pen releases the retained zoom anchor at the SECOND
+    // CONSECUTIVE IN-PLANE SYNC SHOWING THE BUTTON UP. The first such report
+    // the pen steers (a HOVER_ENTER / HOVER_MOVE or a hovering
+    // BUTTON_RELEASE) arms the pending, stamped with its event time; the
+    // next in-plane hovering report still showing the button up with a
+    // STRICTLY LATER event time fires the release (the reports of one sync
+    // share a time, so the deferral is one sync, about 2 ms at the pen's
+    // ~480 Hz hover rate, invisible). Anything that breaks the run DROPS it,
+    // no release: a HOVER_EXIT and every report above the plane (the hover
+    // arm's and the button edge's above-plane answers), an in-plane report
+    // showing the button held or one the pen does not steer, every contact
+    // report (the pen's DOWN: sampled released it releases at once, (b);
+    // sampled held the anchor stands), a CANCEL and focus loss. WHY
+    // (measured 2026-10-31 on the raw stylus stream, `getevent -lt` on
+    // sec_e-pen): the S Pen's firmware reports the barrel button RELEASED the
+    // instant the pen leaves sensing range — the hand never let go — in its
+    // own sync, the last sampled height still standing, and 0.15 ms later
+    // the range leave Android turns into the HOVER_EXIT. A slow lift's
+    // release arrives at 101 counts, above the plane, but a fast one outruns
+    // the sampler and leaves from 61-66 counts, inside it, so no height tells
+    // the firmware's release from the hand's. The SIGNATURE does: the
+    // firmware's is followed by the range leave and never by another
+    // in-plane report with the button up; a real release in reach is
+    // followed within ~2 ms by further in-plane hover reports showing it up.
+    bool    pen_hover_release_pending_ = false;
+    // The pending's event time (AMotionEvent_getEventTime, ns).
+    int64_t pen_hover_release_time_ns_ = 0;
     std::function<void()> pen_zoom_anchor_release_hook_;
     // set_pen_lift_hook's callback; fired from the UP arm's pen_stays alone,
     // at the arm's end.

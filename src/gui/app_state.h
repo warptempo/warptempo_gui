@@ -1408,8 +1408,10 @@ struct ScrollDragState {
 //     RETAINED SEAT DIES
 //     (release_pen_zoom_anchor, through clear_touch_zoom_seat, erase
 //     included) at the platform's release hook — every finger down, the pen
-//     landing without its button, the first in-plane pen report showing the
-//     button up, a cancel and focus loss
+//     landing without its button, the pen's button up sampled in its plane
+//     (on the glass the first report, hovering the second consecutive sync,
+//     the firmware's release at a range leave never firing it), a cancel
+//     and focus loss
 //     (the inventory is at GuiPlatform::set_pen_zoom_anchor_release_hook,
 //     platform_android.h) — and at every clear above that reaches any seat:
 //     the view-state writers and the source load. A motionless button-held

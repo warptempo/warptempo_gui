@@ -1861,9 +1861,12 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 // window's absence. The pen's contact record goes with the
                 // contacts, and the plane's latch goes OUT (the pen left the
                 // window; pen_report_in_plane's transitions): the pen's next
-                // report here must enter the plane afresh.
+                // report here must enter the plane afresh. A pending hover
+                // release is dropped, the release firing regardless
+                // (pen_hover_release_pending_).
                 pen_on_glass_ = false;
                 pen_in_plane_ = false;
+                pen_hover_release_pending_ = false;
                 release_pen_zoom_anchor();
             }
             break;
@@ -2067,12 +2070,21 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // unsampled here. The plane has hysteresis, so "within" is the latch's
     // answer: a pen that entered stays sampled up to the exit threshold.)
     //
-    // AND AN IN-PLANE REPORT SHOWING THE BUTTON UP RELEASES THE PEN'S
-    // RETAINED ZOOM ANCHOR (release inventory (b) and (c),
-    // set_pen_zoom_anchor_release_hook): the pen's DOWN sampled released, a
-    // hover within the plane, a hovering button edge there, a
-    // mid-stroke report. Only while the pen steers: an ignored pen's button
-    // reads released by rule, not by the hand, and the finger that owns the
+    // AND THE BUTTON UP, SAMPLED IN THE PLANE, RELEASES THE PEN'S RETAINED
+    // ZOOM ANCHOR (release inventory (b) and (c),
+    // set_pen_zoom_anchor_release_hook): a CONTACT report AT ONCE — the
+    // pen's DOWN sampled released, a mid-stroke report — and a HOVERING
+    // report (a hover within the plane, a hovering button edge there) ONE
+    // SYNC LATE: the first arms a pending release, the next in-plane
+    // hovering sync still showing the button up fires it, and a HOVER_EXIT
+    // between them drops it — the firmware's release at every range leave
+    // (the rule, its drops and the measurement at
+    // pen_hover_release_pending_). "Hovering" is keyed on the ACTION, as the
+    // plane's own transitions are, not on pen_on_glass_ alone: the pen's DOWN
+    // is sampled here before its arm sets pen_on_glass_. A report showing the
+    // button held, one the pen does not steer, and every contact report drop
+    // the pending. Only while the pen steers: an ignored pen's button reads
+    // released by rule, not by the hand, and the finger that owns the
     // gesture already released any anchor at its own first down. A release
     // meeting a live stroke's seat is inert (the GUI clears a RETAINED seat
     // alone); that stroke's own ctrl edge is what clears it there.
@@ -2089,7 +2101,27 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             !input_.touch_contact_active() ||
             (owner && *owner == GuiTouchTool::Pen);
         set_pen_ctrl(held && pen_steers);
-        if (pen_steers && !held) release_pen_zoom_anchor();
+        const bool hovering_report =
+            masked == AMOTION_EVENT_ACTION_HOVER_ENTER ||
+            masked == AMOTION_EVENT_ACTION_HOVER_MOVE ||
+            ((masked == AMOTION_EVENT_ACTION_BUTTON_PRESS ||
+              masked == AMOTION_EVENT_ACTION_BUTTON_RELEASE) &&
+             !pen_on_glass_);
+        if (!pen_steers || held) {
+            pen_hover_release_pending_ = false;
+        } else if (!hovering_report) {
+            pen_hover_release_pending_ = false;
+            release_pen_zoom_anchor();
+        } else {
+            const int64_t time_ns = AMotionEvent_getEventTime(event);
+            if (!pen_hover_release_pending_) {
+                pen_hover_release_pending_ = true;
+                pen_hover_release_time_ns_ = time_ns;
+            } else if (time_ns > pen_hover_release_time_ns_) {
+                pen_hover_release_pending_ = false;
+                release_pen_zoom_anchor();
+            }
+        }
     }
 
     switch (masked) {
@@ -2161,12 +2193,17 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // enter or motion is delivered. Back within the plane (at or
             // under the ENTER threshold, the latch's rule) the first report
             // is a fresh enter. Neither the exit nor a report
-            // above the plane touches the retained zoom anchor, and neither
-            // darkens a lit row (PenHoverEnd, end_pen_hover).
+            // above the plane releases the retained zoom anchor, and neither
+            // darkens a lit row (PenHoverEnd, end_pen_hover); both DROP a
+            // pending hover release — the exit is what tells the firmware's
+            // button release at a range leave from the hand's
+            // (pen_hover_release_pending_). Within the plane, a hover showing
+            // the button up arms or fires that pending in the sampling above.
             if (!pen_present) return;
             if (!pen_in_plane) {   // a HOVER_EXIT, or a hover above the plane
                 end_pen_hover();
                 set_pen_ctrl(false);
+                pen_hover_release_pending_ = false;
                 return;
             }
             if (input_.touch_contact_active()) return;
@@ -2185,15 +2222,22 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // is the whole of it — the door delivers the staged motion under
             // the old bit and announces the edge to a live single-finger nav
             // itself, so there is no position to hand over and no frame owed.
+            // A release the pen steers was sampled above too: on the glass it
+            // released the retained zoom anchor at once, hovering in the
+            // plane it armed or fired the pending hover release
+            // (pen_hover_release_pending_ — the firmware's release at every
+            // range leave arrives as just such a hovering edge).
             // AN EDGE ABOVE THE GUI'S PLANE was not sampled (the pen is out
             // of reach there) and is no pointer, so it takes the hover arm's
             // own above-plane answer whole: a standing hover ENDS
-            // (end_pen_hover — the outline and the tooltip all go) and the bit drops. It leaves the retained
-            // anchor alone: released high up and pressed again before
+            // (end_pen_hover — the outline and the tooltip all go), the bit
+            // drops and a pending hover release is dropped. It releases no
+            // retained anchor: released high up and pressed again before
             // re-entering the plane, the anchor stands.
             if (pen_present && !pen_in_plane) {
                 end_pen_hover();
                 set_pen_ctrl(false);
+                pen_hover_release_pending_ = false;
             }
             return;
 
@@ -2376,11 +2420,14 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // contacts, and the plane's latch goes OUT, UNCONDITIONALLY like
             // the Ctrl clear (pen_report_in_plane's transitions: the
             // predicate sets it out only on a cancel that still carries the
-            // pen, and this one may not).
+            // pen, and this one may not). A pending hover release is
+            // dropped, the release firing regardless
+            // (pen_hover_release_pending_).
             input_.touch_cancel();
             set_pen_ctrl(false);
             pen_on_glass_ = false;
             pen_in_plane_ = false;
+            pen_hover_release_pending_ = false;
             release_pen_zoom_anchor();
             return;   // a cancel closes its own batch; no frame is owed
 
@@ -2439,7 +2486,12 @@ void GuiPlatform::end_pen_hover() {
 // its first report, and one detected higher within about 3 mm more of
 // descent. The phase in which they were device keys is closed and the keys
 // struck (device_config.h's record); a retune is a recompile of these two
-// lines.
+// lines. The thresholds once carried the retained zoom anchor through a lift
+// out of range by luck alone: a SLOW lift's firmware button release at the
+// range leave arrives at 101 counts, past the exit, and went unsampled (a
+// fast lift's arrives inside the plane); the release's one-sync deferral
+// (pen_hover_release_pending_, architect 2026-10-31), not these thresholds,
+// now carries that rule.
 // (The pen's one other distance, the hot face's re-arm after a lift, is a
 // chrome length in Windows px and so lives at the GUI's latch, which owns the
 // scale: kPenHotRearmPx, input_handler.h.)
@@ -2449,7 +2501,7 @@ constexpr float kPenPlaneExit  = 100.0f;
 // THE ONE PREDICATE — "is this pen report within the GUI's plane" — read by
 // both pen rules and nothing else: the hover doors (on_motion_event's hover
 // arm: above the plane the pen is not a pointer) and the retained zoom
-// anchor's release (c) (an in-plane report showing the button up). IT OWNS
+// anchor's release (c) (in-plane reports showing the button up). IT OWNS
 // THE PLANE'S LATCH (pen_in_plane_) and answers with the latch's new state,
 // so its one caller asks it exactly once per pen-carrying event. THE
 // TRANSITIONS:
@@ -2469,7 +2521,12 @@ constexpr float kPenPlaneExit  = 100.0f;
 //     at a range leave the driver writes distance 0 beside the tool going
 //     up, so the exit carries no trustworthy height. THAT SAME TRAP is why
 //     the button edge asks pen_on_glass_ (keyed on the contact actions)
-//     rather than reading distance 0 as touching.
+//     rather than reading distance 0 as touching. AND IN ITS OWN SYNC JUST
+//     BEFORE A RANGE LEAVE (0.15 ms, measured 2026-10-31) the firmware
+//     reports the barrel button released, the last sampled height still
+//     standing — a hovering BUTTON_RELEASE that may read IN the plane, which
+//     is why the anchor's hovering release waits one sync for this exit
+//     (pen_hover_release_pending_).
 //   - Every other action is never in and leaves the latch alone.
 // The latch's other writers are the hard ends, OUT unconditionally: the
 // CANCEL arm (a cancel that no longer carries the pen never reaches this
