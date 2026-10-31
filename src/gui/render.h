@@ -2890,11 +2890,11 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE SILHOUETTE IS ONE FILLED CONTOUR THROUGH THE COLUMN CENTERS, WITH A
 // FULL-INK CORE (architect 2026-10-30, on his glass against Ableton). Each
 // column reduces to two TIPS in float rows — its raw maximum as the top
-// tip, its raw minimum as the bottom — QUANTIZED TO EIGHTH ROWS (below):
+// tip, its raw minimum as the bottom — QUANTIZED TO QUARTER ROWS (below):
 // the column's own extent [T, B) in subrows is its BAR, kept whole in full
 // ink (THE CORE: a lone spike stands flat-topped at its own height, never
 // shaved toward its neighbors' mean), and THE CONTOUR joins it to its
-// neighbors — at each of the column's eight subcolumns the top and bottom
+// neighbors — at each of the column's four subcolumns the top and bottom
 // interpolate linearly between this column's tips and the NEARER
 // neighbor's, from center to center, so a steep rise is a diagonal between
 // the two bars rather than a gap. THE WHOLE SHAPE (the bars' union with the
