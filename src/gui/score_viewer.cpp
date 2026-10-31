@@ -234,24 +234,6 @@ void GuiScoreViewer::step(int delta) {
     show_page(app.score_viewer.page + delta);
 }
 
-void GuiScoreViewer::first_page() {
-    if (!app.score_viewer.active || !app.score) return;
-    if (score_viewer_has_soundtrack(app)) {
-        seek_to(score_viewer_frame_range(app).begin);
-        return;
-    }
-    show_page(score_viewer_range(app).first);
-}
-
-void GuiScoreViewer::last_page() {
-    if (!app.score_viewer.active || !app.score) return;
-    if (score_viewer_has_soundtrack(app)) {
-        seek_to(score_viewer_frame_range(app).end - 1);
-        return;
-    }
-    show_page(score_viewer_range(app).last);
-}
-
 bool GuiScoreViewer::bind_soundtrack() {
     AppState::ScoreViewer& sv = app.score_viewer;
     if (sv.transport != Transport::Idle) return true;

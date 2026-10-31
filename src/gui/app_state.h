@@ -155,16 +155,6 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
         (10.0 * static_cast<double>(display_width_px))));
 }
 
-// THE STEPPED PAN'S STRIDE, as a divisor of the visible span: one PageUp /
-// PageDown moves the viewport samples_visible / 10, so a page keeps nine
-// tenths of the window as overlap. ITS ONE READER is that pan step
-// (input_handler.cpp; the wheel's detent, its other reader, went with the
-// mouse, architect 2026-10-30). It was kViewportLeadDivisor until 2026-09-22 and
-// follow's page-in lead too, the 10 % lead; that reader moved to the edge
-// margin below (architect 2026-09-22 — the lead "starts way too late"), and
-// the constant was renamed for the one job it kept.
-constexpr int64_t kViewportPanStepDivisor = 10;
-
 // THE EDGE MARGIN (architect 2026-09-22 — "leave it tunable"): EVERY LANDING
 // THAT BRINGS A SUBJECT ON SCREEN WITHOUT CENTRING IT places it this fraction
 // of the visible window in from the edge. 5 % since the ruling (2.5 % was
@@ -458,9 +448,8 @@ struct UndoEntry {
 // motion handling; the rest holds the drag's own working set — the pre-drag
 // position the proposal is derived from and the pre-drag store the COMMIT pushes
 // as its undo entry. Nothing here is a cancel
-// origin: pointer gestures have no cancel (2026-07-29, the rule at the drag-modal
-// gate in input_handler.cpp), so Esc mid-drag changes nothing and the release
-// commits.
+// origin: pointer gestures have no cancel (2026-07-29, the rule at on_key's
+// drag-modal statement in input_handler.cpp), so the release commits.
 //
 // `delta_min` / `delta_max` is a scalar ACTIVE-domain offset range
 // (architect 2026-07-23): the dragged marker's wall
@@ -519,8 +508,8 @@ struct DragState {
     // marker-store generation + scale (+ sample rate + total frames), and
     // nothing that changes either is reachable while a drag is in flight: the
     // frozen-coordinate regime keeps motion in the overlay (no generation
-    // bump), the drag-modal gate swallows every key but the Ctrl+Q hatch, pointer
-    // gestures are mutually exclusive, the wheel is blocked mid-gesture, editors
+    // bump), no key arrives mid-gesture (on_key's drag-modal statement), pointer
+    // gestures are mutually exclusive, editors
     // cannot open, and resize / WM-close END the drag first (a commit, through its
     // release body — pointer gestures have no cancel); a preview
     // completing mid-drag touches only the audio buffer, playback rebind, dirty
@@ -535,8 +524,8 @@ struct DragState {
     std::vector<GuiPhaseResetMarker> pre_drag_phase_reset_snapshot;
     // NO CANCEL CAPTURES (the selection snapshot, the grab playhead and the
     // pre-drag region all deleted 2026-07-29): POINTER GESTURES HAVE NO CANCEL —
-    // Esc mid-drag is a consumed no-op, release commits, and undo is the mitigation
-    // (the rule is stated at the drag-modal gate in input_handler.cpp's on_key).
+    // release commits, and undo is the mitigation
+    // (the rule is stated at on_key's drag-modal statement, input_handler.cpp).
     // What survives above is the pre-drag STORE, which is the undo payload, not a
     // restore origin.
     // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
@@ -601,7 +590,8 @@ struct DragState {
 // record so neither has to carry a field the other reads.
 //
 // NOTHING HERE IS A CANCEL ORIGIN, the standing rule: pointer gestures have no
-// cancel, so Esc mid-drag changes nothing and any end commits. `start_value`
+// cancel (no key arrives mid-drag, architect 2026-10-30), and any end
+// commits. `start_value`
 // is the value the press found — the anchor the per-motion target is derived
 // from, so the walk is absolute against its origin rather than an
 // accumulation of deltas that could round differently in each direction — and
@@ -613,8 +603,8 @@ struct ValueDragState {
     int        marker  = -1;   // store index in `column`'s own list
     // Which column the drag began on ('W' / 'P'), held for the same reason
     // DragState::drag_mode is: the motion and the commit dispatch on it rather
-    // than on the live view. Nothing can switch the column mid-gesture (the
-    // drag-modal gate swallows every chord but the Ctrl+Q hatch), so this is a
+    // than on the live view. Nothing can switch the column mid-gesture (no
+    // key arrives mid-gesture, on_key's drag-modal statement), so this is a
     // record of what was grabbed, not a defence against a switch.
     char       column  = 'W';
     // Which cell the press landed on — Payload (the base tempo) or Lower /
@@ -879,11 +869,10 @@ struct UndoHistory {
 // a stroke that collapses onto its own anchor clears the trim to the whole song
 // at the release, and Ctrl+Shift+0 is the way back from anything else.
 //
-// ESC DOES NOTHING TO A DRAG IN FLIGHT: pointer gestures have no cancel, so a
-// mid-drag Esc is swallowed by the drag-modal gate and the sweep keeps writing
-// under the pointer; any end commits what stands. This state was the first to
-// lose its pre-press snapshot — the whole family followed. The rule is at the
-// drag-modal gate (input_handler.cpp). Session-only, never undoable — trim is
+// NOTHING CANCELS A DRAG IN FLIGHT: pointer gestures have no cancel, so the
+// sweep keeps writing under the pointer; any end commits what stands. This
+// state was the first to lose its pre-press snapshot — the whole family
+// followed. The rule is at on_key's drag-modal statement (input_handler.cpp). Session-only, never undoable — trim is
 // outside the undo stacks by ruling.
 struct RegionDragState {
     bool    active       = false;
@@ -1025,8 +1014,8 @@ struct EditorTextDragState {
 //
 // Session-only, never serialized. Cleared on the crossing (either the drag
 // takes over or the arm is spent), on release / lost button, by the force-end
-// finalizer, and on file load. Esc does nothing (pointer gestures have no
-// cancel — the rule at the drag-modal gate in input_handler.cpp).
+// finalizer, and on file load. Nothing cancels it (pointer gestures have no
+// cancel — the rule at on_key's drag-modal statement, input_handler.cpp).
 struct PendingMarkerPress {
     bool active         = false;
     int  marker         = -1; // marker index the press hit (active view's list)
@@ -1086,7 +1075,7 @@ struct PendingMarkerPress {
 // FIVE FIELDS AND NO CAPTURES (2026-07-29): the set_click flag, the pre-press pair
 // (preset_*_frame) and the pre-gesture selection + region were all an Esc-restore
 // origin for the ctrl / ctrl+shift bound-set press, and POINTER GESTURES HAVE NO
-// CANCEL (the rule at the drag-modal gate, input_handler.cpp). A bound-set press's
+// CANCEL (the rule at on_key's drag-modal statement, input_handler.cpp). A bound-set press's
 // click-set is committed the moment it is made — trim is history-less, so nothing
 // takes it back — which is why the pending no longer needs to distinguish itself
 // from a plain endcap-drag pending at all.
@@ -1162,8 +1151,8 @@ enum class PendingClickKind {
 //
 // Session-only, never serialized. Cleared on the crossing (the trim drag takes
 // over), on release / lost button, by the force-end finalizer, and on file
-// load. Esc does nothing (pointer gestures have no cancel — the rule at the
-// drag-modal gate in input_handler.cpp).
+// load. Nothing cancels it (pointer gestures have no cancel — the rule at
+// on_key's drag-modal statement, input_handler.cpp).
 struct PendingClickAct {
     PendingClickKind kind = PendingClickKind::None;
     int  press_x  = 0;   // press position (window px): the gate + the act's column
@@ -1203,7 +1192,7 @@ struct TrimDragState {
     // bound that moves.
     // orig_begin/orig_end are LIVE MECHANICS, the one thing to know about them now
     // that no cancel reads anything here (2026-07-29 — pointer gestures have no
-    // cancel; the rule is at the drag-modal gate in input_handler.cpp): the rigid
+    // cancel; the rule is at on_key's drag-modal statement): the rigid
     // PAIR path rides its delta off them, and commit_trim_drag's release snap uses
     // them as its untouched-bound test (a bound equal to its origin keeps its
     // stored value bit-exact instead of column-snapping). They hold the values at
@@ -1399,7 +1388,7 @@ struct ScrollDragState {
 //     the icon row's view pairs, the settings keys, the
 //     propagate pastes and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
-//     ACTIVE DOMAIN, and nothing stops a keyboard command, a mouse click or a
+//     ACTIVE DOMAIN, and nothing stops a command or a
 //     modal load from moving that domain with two fingers still down: the S/T
 //     write is the sharp case (a source frame read as a target one), while a
 //     W/P or A/B write leaves the number valid and clears on the fresh-grip
@@ -2431,7 +2420,7 @@ enum class RedesignButton {
     // with the row and was DELETED the same day at the architect's live pass:
     // "looks like a missing button with that cross out". The mid-render CANCEL
     // moved onto the RENDER button instead — the toolbar's stateful-face
-    // precedent — and bare Esc stays keyboard-only.)
+    // precedent.)
     //
     // PLAY AND STOP ARE ONE BUTTON WITH TWO FACES (architect 2026-08-15, at his
     // live look at the row): bare Space is ONE TOGGLE, so the roster carries
@@ -3052,23 +3041,6 @@ inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
 // settings_editor.h). The menu row and its File and Edit menus went the same
 // day; the menus' succession and their rows are git history.)
 
-// AN ACCESS KEY'S LETTER (architect 2026-10-10: "accelerators are not used on
-// the tablet, but they are part of the aesthetic and therefore important") —
-// Windows' underlined letter, ALWAYS SHOWN, on the dialogs' word buttons
-// (PromptAnswer, below). THE LETTER IS DATA: a BYTE INDEX into the button's
-// plain label (`access`), so the label stays the plain word wherever else it
-// is read and Windows' `&` spelling never enters a string; the painter
-// underlines that glyph (show_access_run and access_underline_rect, paint_handler.cpp) and the
-// keyboard reads the same index through this. (The pull-down rows' letters,
-// 2026-10-10 to 2026-10-21, went with the popups.)
-//
-// AN ASCII LETTER'S KEY: the letter folded to the lowercase keysym every
-// GuiKeys letter is (gui_input.h), the platform case-folding alike.
-inline constexpr GuiKey access_key_of(const char* label, int access) {
-    const char c = label[access];
-    return static_cast<GuiKey>(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
-}
-
 // (THE SETTINGS POPUP'S ROWS — kSettingsPopupItems, Title / Notes / URL /
 // Cover, GUI Scale / Projects Repository / Projects Path, Waveform, Bevel
 // Light / Bevel Dark / Text Shadow and the True Colors command row, each
@@ -3400,13 +3372,10 @@ enum class DialogTrigger {
     REVERT_CONFIRM,
     // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete '<folder
     // name>'?" or "Delete all N folders?", Delete / Cancel, raised by the
-    // root listing's Delete button or the Delete key (the shift press and
-    // Shift+Delete for all), the folders parked at
-    // AppState::RenderPlayer::pending_delete. RAISED WITH CANCEL FOCUSED
-    // (PromptInitialFocus::LastButton): the act destroys files and nothing
-    // takes it back, so a bare Enter answers Cancel — the one-key answer is
-    // `d`, Delete's letter, never the Delete key itself, so a second press of
-    // the key that raised the question cannot answer it.
+    // root listing's Delete button (its long press for all), the folders
+    // parked at AppState::RenderPlayer::pending_delete. RAISED WITH CANCEL
+    // FOCUSED (PromptInitialFocus::LastButton): the act destroys files and
+    // nothing takes it back, so only the Delete answer's own press confirms.
     DELETE_FOLDER_CONFIRM,    // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
     // confirmation because there's no undo"): "Reset the page range to every
     // page?", OK / Cancel, raised over the standing viewer by its RESET key
@@ -3416,22 +3385,21 @@ enum class DialogTrigger {
     // player (LOAD_IN_PLACE_CONFIRM, the model for that), and it is RAISED
     // WITH CANCEL FOCUSED (PromptInitialFocus::LastButton), the destructive
     // confirmation's shape, DELETE_FOLDER_CONFIRM's own: no undo stands
-    // behind it, which is the whole reason it asks, so a bare Enter answers
-    // Cancel and only OK itself — a press, or a Tab onto it and Enter —
+    // behind it, which is the whole reason it asks, so only OK's own press
     // confirms.
     SCORE_RESET_CONFIRM,
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28 night,
     // the render player's delete's shape): "Delete '<name>'?" with Delete /
-    // Cancel, raised by the list's Delete key and the Delete key on the
-    // highlighted preset, and "Save the current trim as '<name>'?" with
+    // Cancel, raised by the list's Delete key on the highlighted preset, and
+    // "Save the current trim as '<name>'?" with
     // Save / Cancel, raised by its Save key on the highlighted preset (his
     // glass on 852a28d9, Windows' dialog words: Save writes into the preset
     // chosen, Save As names a new one) — the subject parked at
     // AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
     // LIST as the player's stands over the player, and each is RAISED WITH
-    // CANCEL FOCUSED (PromptInitialFocus::LastButton): trim has no undo, so a
-    // bare Enter answers Cancel and only the answer's own press or its
-    // letter acts. The answer runs the act and the list stays, re-listed
+    // CANCEL FOCUSED (PromptInitialFocus::LastButton): trim has no undo, so
+    // only the answer's own press acts. The answer runs the act and the list
+    // stays, re-listed
     // (GuiInputHandler::confirm_trim_preset_delete /
     // confirm_trim_preset_save, input_key_dispatch.cpp).
     TRIM_PRESET_DELETE_CONFIRM,
@@ -3446,37 +3414,18 @@ enum class DialogTrigger {
 // (the text at the left pad, the buttons after it, the taskbar dialog laid
 // over the row from 2026-10-10); the centered box of 2026-08-12 is scrapped,
 // and before that arc the prompts were a tier in this same row's status span.
-// Keyboard input is owned by the prompt exactly as it always was: only its
-// answers' ACCESS KEYS, Esc (the last answer, Cancel) and the focus ring's
-// Tab / arrows / Enter / Space do anything; everything else is swallowed.
-// The answers are a PromptAnswer table (below): each answer's dispatch char
-// (`key`, what activate_response forks on), its button's PLAIN WORD
-// (`label` — "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete")
-// and its ACCESS KEY (`access`).
-//
-// THE DIALOG BUTTONS CARRY WINDOWS' UNDERLINED ACCESS KEYS (architect
-// 2026-10-10 ~16:05, "agree to make it windows strict"), exactly as the menu
-// row got them the same day (access_key_of, whose rule this
-// follows): the letter is a BYTE INDEX into the plain word, underlined by the
-// painter and always shown; OK and Cancel carry NONE, being Enter and Esc as
-// in Windows. With a BUTTON focused — every prompt, a prompt having no field
-// — the BARE letter fires its button and Alt+letter fires it too; the match
-// is the menus' own, CASE-INSENSITIVE on the case-folded key (Caps Lock
-// answers) with Shift and Ctrl spelling nothing. THAT SUPERSEDES TWO RECORDS
-// (Windows strict, 2026-10-10): the bare-only match of 2026-07-28 (which
-// refused Alt+Y on the paste confirmation) and the codepoint-exact lowercase
-// match of 2026-07-30 (which refused a Caps Lock Y). NON-WINDOWS KEYS ON
-// DIALOG BUTTONS WENT WITH IT: Discard answered the Delete key (a '\x7f'
-// sentinel) and OK the letter `o`; Discard answers D now, and OK only Enter
-// and its press. The resolution is the published stash's
-// (ModalDialogGeometry::button_for_access_key), fired through the button's
-// own dispatch (GuiInputHandler::modal_dialog_access_button).
-//
-// THE BRACKETED ACCELERATOR SPELLING ("[S]ave", "[D]iscard") STAYS RETIRED
-// (architect 2026-08-13, at his live look: "the brackets now look odd... a
-// normal button would use an underline for the character"); the key lived on
-// the button's tooltip from then until the underline arrived on 2026-10-10,
-// and the tooltip is the act's name alone since (Windows strict).
+// THE BUTTONS ARE THE PROMPT'S ONE ROAD (architect 2026-10-30: the hardware
+// keyboard is closed, and the on-screen keyboard stands only under an
+// editor, which every prompt's raise either finds absent or takes down
+// first — GuiPrompt::request_close), so NO KEY ARRIVES while a prompt
+// stands and its key gate in on_key consumes whatever could. The answers
+// are a PromptAnswer table (below): each answer's dispatch char (`key`,
+// what activate_response forks on) and its button's PLAIN WORD (`label` —
+// "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete"), no letter
+// underlined and never bracketed; the tooltip is the act's name alone.
+// (THE PASSIVE FOCUS BELOW HAS NO KEY READER since 2026-10-30 — no Enter or
+// Space reaches a prompt — and stands as recorded, the dialog family's one
+// focus model, the ring's own state at AppState::modal_dialog_focus.)
 // A PROMPT DOES HAVE AN ENTER ANSWER, AND IT IS THE PASSIVELY FOCUSED BUTTON
 // (architect 2026-08-13, SUPERSEDING this block's own standing ruling — "no
 // button wears the default face; this prompt system HAS no Enter answer,
@@ -3502,9 +3451,8 @@ enum class DialogTrigger {
 //        button (the load's two, the revert's and the phase reset paste's)
 //        put OK — or Yes — one Enter away by
 //        choice, each being the deliberate second step of an explicit act.
-//   (ii) THE PAINTED GATE below already consumes every key until the prompt
-//        has been on screen, so an Enter queued behind a raise answers
-//        nothing — the exact hazard the old rule was reaching for, closed
+//   (ii) THE PAINTED GATE below answers nothing until the prompt has been
+//        on screen — the exact hazard the old rule was reaching for, closed
 //        structurally instead of by leaving the ring empty.
 // The two focus STRENGTHS (passive, assigned; active, walked onto) are at
 // AppState::modal_dialog_focus_active, which owns the model; the face ladder
@@ -3516,9 +3464,8 @@ enum class DialogTrigger {
 // rectangle and nothing about this gate). One loop pass's drain is
 // delivered whole (pump, platform_android.cpp) before the loop paints, so a
 // prompt can be RAISED and RECEIVE INPUT while the surface still shows the
-// prior world: dirty work + an editor dialog up + Ctrl+Q and Delete in one
-// batch tore the editor down, raised this prompt, and let the Delete answer
-// Discard — the work gone, the question never seen. `painted` closes that
+// prior world — a press on the previous paint's rects answering a question
+// never seen. `painted` closes that
 // span BY THE PAINTER'S OWN HAND: it is false at every raise (`present`
 // below is the one route, so no raiser can forget it) and the ONE writer of
 // true is paint_modal_dialog's prompt branch — the same surface, the same
@@ -3528,11 +3475,8 @@ enum class DialogTrigger {
 // have (the scrapped real-window modal needed five commits of
 // tail-sync machinery and each round found another span; the record is in
 // closed_questions.md and git).
-// WHAT THE GATE COSTS: while `painted` is false the prompt consumes EVERY
-// key — not just the access letters but Esc too (the prompt
-// dispatch, input_handler.cpp), because a consumed no-answer is the only
-// safe reading of input aimed at an unseen surface — and the pointer's
-// response claim is gated on it as well (on_button_press; the veil still
+// WHAT THE GATE COSTS: while `painted` is false the pointer's
+// response claim answers nothing (on_button_press; the veil still
 // swallows the press, it just answers nothing). The claim needs the gate
 // because the button RECTS the pointer reads are the previous paint's
 // publication: an editor dialog's buttons publish a zero response key and the
@@ -3587,55 +3531,43 @@ enum class DialogTrigger {
 enum class PromptInitialFocus { LastButton, FirstButton };
 
 // ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
-// lowercase letter, or '\x1b' for the Esc answer, Cancel), `label` the
-// button's plain word, `access` the byte in `label` of its ACCESS KEY
-// (architect 2026-10-10, Windows strict; the rule is PromptState's block
-// above), or -1 for none — OK and Cancel, Enter and Esc in Windows. A
-// lettered answer's `key` IS its access letter, folded; OK's `o` is its
-// dispatch identity alone, reached by its press and Enter, never typed.
+// lowercase letter, or '\x1b' for Cancel, the escape sentinel), and `label`
+// the button's plain word. The char is the answer's dispatch identity alone,
+// reached by its button's press, never typed (architect 2026-10-30: no key
+// reaches a prompt).
 struct PromptAnswer {
     char        key;
     const char* label;
-    int         access;
 };
 // THE ANSWER TABLES, one per answer set, each named for its words; the
 // raises pass one to PromptState::present. Cancel LAST on every one, the
 // escape sentinel (PromptState's fact (i)).
 inline constexpr PromptAnswer kPromptSaveDiscardCancel[] = {
-    {'s', "Save", 0}, {'d', "Discard", 0}, {'\x1b', "Cancel", -1}};
+    {'s', "Save"}, {'d', "Discard"}, {'\x1b', "Cancel"}};
 inline constexpr PromptAnswer kPromptRetryDiscardCancel[] = {
-    {'r', "Retry", 0}, {'d', "Discard", 0}, {'\x1b', "Cancel", -1}};
+    {'r', "Retry"}, {'d', "Discard"}, {'\x1b', "Cancel"}};
 inline constexpr PromptAnswer kPromptYesCancel[] = {
-    {'y', "Yes", 0}, {'\x1b', "Cancel", -1}};
+    {'y', "Yes"}, {'\x1b', "Cancel"}};
 inline constexpr PromptAnswer kPromptOkCancel[] = {
-    {'o', "OK", -1}, {'\x1b', "Cancel", -1}};
+    {'o', "OK"}, {'\x1b', "Cancel"}};
 inline constexpr PromptAnswer kPromptDeleteCancel[] = {
-    {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
+    {'d', "Delete"}, {'\x1b', "Cancel"}};
 // THE TRIM PRESET'S SAVE (architect 2026-10-28 night): its answer is the
-// act's own word, its letter S (TRIM_PRESET_SAVE_CONFIRM).
+// act's own word (TRIM_PRESET_SAVE_CONFIRM).
 inline constexpr PromptAnswer kPromptSaveCancel[] = {
-    {'s', "Save", 0}, {'\x1b', "Cancel", -1}};
+    {'s', "Save"}, {'\x1b', "Cancel"}};
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
 // walks it. A table a raise passes must be listed here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
     kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
     kPromptOkCancel, kPromptDeleteCancel, kPromptSaveCancel};
-// A TABLE IS WELL FORMED when every dispatch char is distinct, a marked
-// letter lies inside its word and IS its answer's key (folded, access_key_of),
-// no two marked letters coincide, and the last answer is the Esc one.
+// A TABLE IS WELL FORMED when every dispatch char is distinct and the last
+// answer is Cancel's, the '\x1b' sentinel its button carries (the buttons are
+// a prompt's one road, architect 2026-10-30).
 inline constexpr bool prompt_answers_valid(std::span<const PromptAnswer> t) {
     const std::size_t N = t.size();
-    if (N == 0 || t[N - 1].key != '\x1b' || t[N - 1].access >= 0)
-        return false;
+    if (N == 0 || t[N - 1].key != '\x1b') return false;
     for (std::size_t i = 0; i < N; ++i) {
-        if (t[i].access >= 0) {
-            if (static_cast<std::size_t>(t[i].access) >=
-                std::char_traits<char>::length(t[i].label))
-                return false;
-            if (access_key_of(t[i].label, t[i].access) !=
-                static_cast<GuiKey>(static_cast<unsigned char>(t[i].key)))
-                return false;
-        }
         for (std::size_t j = 0; j < i; ++j)
             if (t[j].key == t[i].key) return false;
     }
@@ -3647,8 +3579,8 @@ inline constexpr bool kPromptAnswerTablesValid = [] {
     return true;
 }();
 static_assert(kPromptAnswerTablesValid,
-              "a prompt's access letter must be in its word, be its key, be "
-              "unique, and Cancel (Esc, no letter) must stand last");
+              "a prompt's dispatch chars must be unique, and Cancel ('\\x1b') "
+              "must stand last");
 
 struct PromptState {
     bool                     active = false;
@@ -3911,7 +3843,7 @@ struct ViewState {
     // MUSICAL CONTENT — the two marker stores and the engine settings — AND
     // NOTHING ELSE (architect 2026-08-07): while true, the active tab admits a
     // subset of keys (navigation, playback, view-switch, the save, the renders
-    // and the trim gestures) and its mouse handlers block the authoring gestures
+    // and the trim gestures) and its pointer handlers block the authoring gestures
     // (drop, drag, label edit) — but NOT the trim drags or bound-set clicks,
     // trim being BAND, which is to say the rest of this very struct: the
     // viewport, zoom, playhead and trim fields around this one are all freely
@@ -4102,7 +4034,7 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         at its head and ahead of the press's own dispatch, through
 //         GuiInputHandler::end_audition_for_press (input_handler.h, whose
 //         declaration holds the entries whole): on_key for every BOUND
-//         chord, bare Esc among them, EXCEPT bare Space and Shift+Space,
+//         chord, EXCEPT bare Space and Shift+Space,
 //         whose own dispatch forks on the standing act and takes the stop
 //         edges named above (ending it ahead of them would turn Space into a
 //         launch and Shift+Space into a restart); on_button_press above
@@ -4346,7 +4278,7 @@ struct AppState {
     // by clamp_viewport_start before its caller reads the camera): in
     // viewport.cpp reseat_playhead_to's keep-visible edge-align,
     // apply_zoom_change, apply_strip_drag_zoom, apply_zoom_to_start,
-    // scroll_viewport, center_viewport_on_playhead,
+    // center_viewport_on_playhead,
     // hold_subject_column_after_nudge, follow_scroll_if_needed and
     // land_subject (the walk's and the undo restore's camera,
     // the restore also reaching frame_span_into_view, undo.cpp, and its
@@ -4581,8 +4513,8 @@ struct AppState {
     // back until that play ends. The lamp stays lit. Meaningful only while a
     // project play runs; its value at rest is never read.
     //   * SET by every CHANGED CAMERA at the chokepoint above
-    //     (clamp_viewport_start) — the pans (PageUp/PageDown, the plain wheel,
-    //     touchpad scroll, the grab-pan), the pointer zooms, the zoom step,
+    //     (clamp_viewport_start) — the touch pan, the pointer zooms, the zoom
+    //     step,
     //     `0`,
     //     the undo restore's camera, the tab and view switches, a resize that
     //     moves the camera. A PLACEMENT CLICK DURING A PLAY DOES NOT SET IT:
@@ -5402,7 +5334,7 @@ struct AppState {
     // (release_pen_zoom_anchor) or a view-state clear takes it.
     TouchNavZoomState touch_nav_zoom;
 
-    // Mouse drag-to-select inside the active text editor. Cleared on
+    // Pointer drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
 
@@ -5735,13 +5667,11 @@ struct AppState {
     // (validated against the LIVE answers at dispatch); for an EDITOR,
     // `editor_ok` selects the session's own Enter (true) or Esc (false),
     // dispatched through the editor's one key route — button-is-its-chord.
-    // `tooltip` is the button's word, the act's name and nothing else since
-    // the underline carries the key (architect 2026-10-10, Windows strict),
-    // stashed because the WORD is the half the pointer path cannot see: the
-    // prompt's labels are its tables' and the editors' two are literals.
-    // Every dialog button has one, so membership needs no test beyond the
-    // index. `access_key` is the underlined letter's key AS PAINTED, 0 for
-    // none (button_for_access_key, the keyboard's one resolution).
+    // `tooltip` is the button's word, the act's name and nothing else
+    // (architect 2026-10-10), stashed because the WORD is the half the pointer
+    // path cannot see: the prompt's labels are its tables' and the editors'
+    // two are literals. Every dialog button has one, so membership needs no
+    // test beyond the index.
     //
     // PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine,
     // recorded here once, 2026-08-13). The icon roster always obeyed it —
@@ -5949,15 +5879,15 @@ struct AppState {
     // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their legends and
     // words the player's (render_player_button_legend,
     // render_player_button_hint) and their act the band walk alone, no apply
-    // — then FOUR WORD BUTTONS with the dialogs' underlined access keys,
-    // SAVE, SAVE AS, DELETE and CLOSE. THE WORDS ARE WINDOWS' DIALOG
+    // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE. THE WORDS
+    // ARE WINDOWS' DIALOG
     // VOCABULARY (the same glass): SAVE writes the active tab's trim into
     // THE HIGHLIGHTED preset, its name kept, after its question — and with no
     // preset to save into it is Save As ("with no presets yet, both create a
     // new preset") — SAVE AS names a new one, Save standing left of Save As;
     // the Close word kModalCloseLabel's rule (the list asks nothing, an act
     // returns to it, only the opener and Close leave). No Apply: a row's tap
-    // and Enter are the act. The acts are the input handler's
+    // is the act. The acts are the input handler's
     // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
     // close_picker); the faces trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
@@ -5966,9 +5896,9 @@ struct AppState {
     // THE BPM FORM'S BUTTONS (architect 2026-10-29), its dispatch
     // vocabulary, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT as
     // the trim presets list's (key_cluster_row_layout, paint_handler.cpp):
-    // RENDER, a word button with its underlined access key, which renders
+    // RENDER, a word button, which renders
     // the sweep and closes the form (GuiInputHandler::bpm_form_render), and
-    // CANCEL, no letter, Esc's, which closes the form and the mode with it
+    // CANCEL, which closes the form and the mode with it
     // (close_bpm_form) — the Cancel word kModalCancelLabel's rule, the form
     // asking for a choice. No OK: a row's tap is the edit and RENDER the
     // answer. The faces are bpm_form_button_enabled's.
@@ -6001,11 +5931,6 @@ struct AppState {
         // their dialog stands.
         bool        enabled      = true;
         std::string tooltip;            // the word alone; never empty
-        // THE ACCESS KEY AS PAINTED (architect 2026-10-10, Windows strict;
-        // PromptState's block owns the rule): the folded key of the letter
-        // the painter underlined in the word, 0 where none is (OK, Cancel,
-        // Close, every glyph button).
-        GuiKey      access_key   = 0;
         // THE MODIFIER LINE, empty on every button that admits no modified
         // press — the roster tooltip's `line2` over this surface (2026-08-28).
         // Its producers are the player's shift-admitting buttons
@@ -6052,15 +5977,6 @@ struct AppState {
         // the list's rows and its scroll bar, 2026-10-07 to 2026-10-14 — went
         // with the choice editor, architect 2026-10-14.)
         std::vector<ModalDialogButton> buttons;
-        // THE BUTTON A KEY'S ACCESS LETTER NAMES, by index, or -1 — read off
-        // the published buttons (ON SCREEN IS AS PAINTED). The focus kind's
-        // rule and the act are GuiInputHandler::modal_dialog_access_button's.
-        int button_for_access_key(GuiKey key) const {
-            if (key == 0) return -1;
-            for (std::size_t i = 0; i < buttons.size(); ++i)
-                if (buttons[i].access_key == key) return static_cast<int>(i);
-            return -1;
-        }
     };
     ModalDialogGeometry modal_dialog;
 
@@ -6298,22 +6214,18 @@ struct AppState {
     // between a raise and the paint that assigns the focus, which the painted
     // gate makes unreachable by input.)
     //
-    // THE RING: Tab cycles every stop including the field and SHIFT+TAB WALKS
-    // IT BACKWARDS (architect 2026-08-13, in the live marker cycle's own
-    // spellings — Shift+Tab and IsoLeftTab, the latter shift-agnostic), Left/
-    // Right move
-    // between BUTTONS only and are inert in the field (the arrows belong to
-    // the text there, and the editors' own motion arm owns them), and bare
+    // THE RING (THE DIALOG EDITOR'S ALONE since 2026-10-30, the on-screen
+    // keyboard the one key producer under a modal and standing only under an
+    // editor): bare Tab cycles every stop including the field, and bare
     // Enter / bare Space PRESS the focused button down for the act at their
     // release (modal_dialog_key_pressed, below). The one route is
-    // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by the
-    // prompt gate and by route_modal_editor_key alike. ONE THING RANKS ABOVE
-    // the ring's FORWARD Tab: an editor whose FIELD has an autocomplete offers
-    // that completion first and reaches the ring only when it did not advance
-    // the buffer — the one autocomplete model, stated at
-    // route_modal_editor_key's Tab arm, which is also what makes -1 a stop Tab
-    // can always leave. The reverse walk is offered to no completion, shift
-    // meaning "go back" and never "complete".
+    // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by
+    // route_modal_editor_key. ONE THING RANKS ABOVE the ring's Tab: an editor
+    // whose FIELD has an autocomplete offers that completion first and reaches
+    // the ring only when it did not advance the buffer — the one autocomplete
+    // model, stated at route_modal_editor_key's Tab arm, which is also what
+    // makes -1 a stop Tab can always leave. On a PROMPT the focus is the
+    // raise's assignment alone, no key walking it.
     //
     // IT RESETS STRUCTURALLY, in paint_modal_dialog and nowhere else: with the
     // stash when no dialog stands, and ON ANY CHANGE OF THE STASH'S SESSION —
@@ -6639,7 +6551,7 @@ struct AppState {
     // carries its own member plus a pointer here):
     //   ARMING is judged under the PRESS-TIME context by the KEYBOARD'S OWN
     //   predicate SHARED, not mirrored — repeat_eligible, exactly what the
-    //   platform's arming probe asks for a physical key — so the button's hold
+    //   platform's arming probe asks for a held key — so the button's hold
     //   arms in precisely the contexts a held key would (arm_redesign_press).
     //   THE ARM'S OWN ENDS END THE BURST, all of them by construction: the
     //   release (take_chrome_press) and the pointer-leave clear
@@ -6652,19 +6564,16 @@ struct AppState {
     //   consume's mirror); and repeat_eligible
     //   going false DISARMS — a context that revoked the burst's eligibility
     //   ends it rather than parking it.
-    //   ANY PHYSICAL KEY DELIVERY DISARMS — one edge, the platform's key
-    //   arrival in main.cpp's set_on_key hook, upstream of on_key's synthetic
-    //   callers (which include this burst's own tick fires — the reason the
-    //   disarm cannot live at on_key's top). It is LOAD-BEARING FOR UNDO, not
-    //   hand-feel: Undo::coalesce_gesture merges a synthesized repeat by KIND
-    //   ALONE, with no subject test, on the premise that no command can run
-    //   between a burst's opener and its repeats — and under press-time
-    //   dispatch the PRESS edge spans that premise whole: a key RELEASE runs
-    //   no command (the one release act, the modal Enter/Space commit, needs
-    //   its own arming press, which that edge already caught — and a prompt
-    //   standing disarms the burst anyway, through the tick's per-fire
-    //   repeat_eligible re-ask). The barrel's ctrl edge never reaches the
-    //   hook, so a ctrl tapped mid-hold ends nothing.
+    //   NO KEY CAN ARRIVE UNDER THE HOLD (architect 2026-10-30, the hardware
+    //   keyboard closed): the platform's one key producer is the on-screen
+    //   keyboard, whose key is a touch of its own, and the touch window has
+    //   one owner (GuiInputCore::touch_down) — so nothing runs a command
+    //   between a burst's opener and its repeats, the premise
+    //   Undo::coalesce_gesture's KIND-ALONE merge of a synthesized repeat
+    //   rests on, and no key edge disarms the burst (main.cpp's set_on_key
+    //   hook carries the statement). A prompt raised asynchronously disarms
+    //   it through the tick's per-fire repeat_eligible re-ask. The barrel's
+    //   ctrl edge reaches no key hook, so a ctrl tapped mid-hold ends nothing.
     //   NOTHING IS MIRRORED FOR THE POINTER-BUTTON EDGE: the one button
     //   cannot press again while it is held, so it cannot change the undo
     //   subject.
@@ -6966,29 +6875,20 @@ struct AppState {
     // superseded the act's in-place re-entry: the checkpoint's own verdict now
     // arrives seconds later on a worker, so the last thing the closing thread
     // knows is whether the save succeeded — the partition and its principle are
-    // at run_history_commit, input_key_dispatch.cpp); Ctrl+Q and the WM close, trivially, the process
+    // at run_history_commit, input_key_dispatch.cpp); the WM close, trivially, the process
     // going with it. ESC IS NOT
     // ON THAT LIST AND CANNOT BE: the toggle is handle_history_mode_key's, and
     // Escape is not in that function's vocabulary at all (the membership is
-    // re-derived at history_mode_owns_key), so no Esc reaches it. A RESIZE
+    // re-derived at history_mode_owns_key), and no Esc reaches the view
+    // anyway, the keyboard standing only under an editor. A RESIZE
     // does NOT close it: the delta is re-laid-out against the new geometry by
     // the flag cache's own rebuild, exactly as live flags are.
     //
-    // BARE ESC IS ADMITTED (architect 2026-08-04) AND ADDS NO ESC PLACE OF ITS
-    // OWN. The bare-Esc inventory is the one enumerated at its dispatch point
-    // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
-    // so the bindings that can be live in here run — the RENDER / BATCH CANCEL
-    // (a render launched before `h`) and, since 2026-08-31, THE NOTIFICATION
-    // STACK'S CLEAR, the mode's own refusals being ordinary cards. The REGION HIDE
-    // was another until 2026-08-21, when it retired.
-    // Neither touches authored state, which is why admitting the key costs the
-    // frozen now side nothing. With no render and no card standing, Esc is a
-    // consumed nothing.
-    //
     // WHAT IT REFUSES, and where: every state-mutating route is a consumed no-op
     // while it stands, through TWO gates and no scattered ifs — history_mode_-
-    // key_blocked (the keyboard allowlist, which the redesigned buttons pass
-    // through too, since they dispatch as chords via on_key) and handle_history_mode_press (the pointer allowlist). Each
+    // key_blocked (the chord allowlist, which greys and hides the redesigned
+    // buttons whose chords it refuses, so a refused chord never dispatches —
+    // architect 2026-10-30) and handle_history_mode_press (the pointer allowlist). Each
     // states its own admitted set at its definition. (THE SETTINGS DROPDOWN
     // was shut out structurally at its toggle until it retired, 2026-10-21;
     // the Settings button is `;`'s chord, refused by the keyboard gate.)
@@ -6996,8 +6896,8 @@ struct AppState {
     // THE FILE DROPDOWN OPENS IN HERE, so a popup and this mode DO stand
     // together and the old "never together" invariant is retired to the Settings
     // half. It costs the gates nothing: its one row is a CHORD dispatched
-    // through on_key, so the two gates above answer per item exactly as they do
-    // for a redesigned button — Ctrl+Q is on the allowlist. (The ruling is the
+    // through on_key, so the gates above answer per item exactly as they do
+    // for a redesigned button. (The ruling is the
     // architect's 2026-08-08 one and it was made for the NAVIGATION menu, whose
     // seven rows the gates answered per item the same way: zoom in / out /
     // overview admitted by the allowlist, center-on-focus and the two marker
@@ -7032,10 +6932,8 @@ struct AppState {
     //   history button and the WALK LAMP
     //   (bare `h` and bare `g`, the mode's OWN vocabulary, which the derivation
     //   asks about
-    //   first), the walk's two arrows (bare `,` / `.`, the same), and
-    //   Ctrl+Q, a chord with no button (the Quit button retired, then the
-    //   FILE anchor that carried it 2026-08-13 to 2026-10-21; the chord is
-    //   admitted exactly as it was). (The NAVIGATION anchor was lit here too
+    //   first) and the walk's two arrows (bare `,` / `.`, the same). (The
+    //   NAVIGATION anchor was lit here too
     //   from 2026-08-08 — its menu worked in here, and its one dead row greyed
     //   at the ITEM rather than through this partition, which knows only about
     //   buttons. It left the roster with its menu on 2026-08-15, and this list
@@ -7200,10 +7098,8 @@ struct AppState {
     // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that takes no
     // keyboard focus, is never TIMED out and is never BUMPED, and leaves only
     // by a deliberate dismissal: a click or tap on the card (its X until
-    // 2026-10-01), a Shift-click or long press on any card, or bare Esc
-    // clearing the whole stack, criticals included — the key took the stack's OLDEST
-    // card of any class from 2026-08-31 and the whole of it since 2026-09-01;
-    // it was the tab
+    // 2026-10-01) or a long press on any card clearing the whole stack,
+    // criticals included; it was the tab
     // row's permanent critical chip from 2026-08-09, and before that an
     // acknowledge modal), and its two ENDINGS say what they have to say on
     // stderr and raise nothing. A FOURTH failure, Unconfirmed, stood from
@@ -7267,10 +7163,8 @@ struct AppState {
     // the commit act is the one route that has to care. Both allowlists admit
     // routes that move it (membership re-derived 2026-08-12; the ruler drag
     // left it 2026-09-25 — the ruler is a placement lane now, off the mode's
-    // navigation surface, which is the waveform alone): zoom, the
-    // paged
-    // scroll, the plain-wheel stepped pan and the overview command move
-    // viewport_start_sample or zoom_level,
+    // navigation surface, which is the waveform alone): zoom and the
+    // overview command move viewport_start_sample or zoom_level,
     // the
     // waveform's ONE nav drag moves both through its pan and ctrl zoom phases,
     // the mode's OWN
@@ -7399,7 +7293,7 @@ struct AppState {
         // (focus_history_diff_flag); the LANE's two MODIFIED clicks, which focus
         // the flag they select (select_history_diff_flags_modified — flag
         // boxes alone); and the mode's own
-        // bare Tab / Shift+Tab / IsoLeftTab cycle. Each sets it and lands the
+        // bare Tab / Shift+Tab cycle. Each sets it and lands the
         // playhead on that flag's frame, and nothing else writes it true.
         // ALL THREE CLICKS RUN AT THE PRESS (2026-08-17, reverting the
         // one-day lift deferral of 2026-08-15), on the index the press
@@ -7777,7 +7671,7 @@ struct AppState {
         //
         // THREE CLEARERS, and the third is why the second is reachable
         // programmatically: OK (confirm_load_in_place, which consumes it),
-        // Cancel / Esc (cancel_load_in_place), and THE FAILED-SCAN ARRIVAL —
+        // Cancel (cancel_load_in_place), and THE FAILED-SCAN ARRIVAL —
         // the one asynchronous edge that ends a visit
         // (GuiInputHandler::on_history_prefetch_ready), which cancels the
         // standing confirmation through GuiPrompt::cancel_load_confirmation
@@ -8063,7 +7957,7 @@ struct AppState {
     // `noise`, `noise_level` and `noise_crossfade_s`; reached through the
     // page's row for its key alone; the key's values as rows, the open act
     // the value's commit through the typed line's own body, then the return
-    // to the page, as its Cancel and Esc return — a sub-page of the page);
+    // to the page, as its Cancel returns — a sub-page of the page);
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim with the list standing, the player's
@@ -8094,17 +7988,17 @@ struct AppState {
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
-    // GuiInputHandler::close_picker (Esc and the one button, the opener's
+    // GuiInputHandler::close_picker (the one button, the opener's
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
     // value list, `t` under the trim presets list, Ctrl+B under the BPM form
-    // — Ctrl+Q's road, the same-project no-op, Save As's name editor ahead
+    // — the exit road, the same-project no-op, Save As's name editor ahead
     // of its open and the page's and the form's row opens ahead of their
     // editor all pass through it — the editor's OK and Cancel reopening the
     // page, the trim list or the form, handle_settings_editor_key; every
     // road that LEAVES the BPM form takes the BPM mode down with it
     // (close_bpm_form, and the exit road's close_modal_editors_no_commit) — but under a
-    // value list Esc and Cancel return to the page, as its commit does,
+    // value list Cancel returns to the page, as its commit does,
     // GuiInputHandler::return_to_settings_page; a reopen
     // ends the session with the picker standing, the whole AppState going
     // with it), which
@@ -8205,16 +8099,15 @@ struct AppState {
     //               NORMAL   leaves on its own kNotificationMs from its PUSH
     //                        (there is no later surfacing to wait for), or at
     //                        the lift of a press on it, or at a bump, or at
-    //                        the whole stack's dismissal (bare Esc, or a
-    //                        Shift-click or long press on any card);
+    //                        the whole stack's dismissal (a long press on
+    //                        any card);
     //               CRITICAL is never TIMED out and never BUMPED — no clock,
     //                        ever, and no victimhood at a push — but a
     //                        deliberate act dismisses it: the lift of a press
-    //                        on it, or the whole stack's dismissal (bare Esc
-    //                        since 2026-09-01, which reads no class — the arm
-    //                        took the oldest card alone from 2026-08-31 — and
-    //                        the shifted or held lift since 2026-10-01). Its
-    //                        producers are enumerated at notifications.h.
+    //                        on it, or the whole stack's dismissal (the
+    //                        held lift, which reads no class; architect
+    //                        2026-10-01). Its producers are enumerated at
+    //                        notifications.h.
     //             `paused` with `remaining_ms` is THE BANK: while a normal
     //             card has a reason to stand still its clock stops, the
     //             remaining time banked when the first reason begins and
@@ -8289,9 +8182,10 @@ struct AppState {
 
     // Archival render dispatch state. `queue_running` is true while any
     // archival render dispatch is in flight (the Ctrl+Alt+R one-shot and the
-    // iteration/BPM sweep batch runs). The Esc handler checks it to scope the
-    // cancel binding away from normal interaction. `queue_cancel_requested`
-    // is set by Esc during a run and read between batch entries.
+    // iteration/BPM sweep batch runs). `queue_cancel_requested` is set by
+    // the render cancel (cancel_archival_session: the RENDER key's Cancel
+    // face and the progress modal's Cancel) or a killing dispatch during a
+    // run, and read between batch entries.
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
 
@@ -8301,7 +8195,7 @@ struct AppState {
     // iterations and the BPM sweep — opens it AT THE RENDER PRESS: the box with
     // THE FACE INSIDE (a surface you only read), the sentence on its first row
     // at the list's row metrics, and CANCEL ALONE flush right on the controls
-    // row, no access letter (Cancel is Esc, Windows strict). The sentence is
+    // row, the modal's one road. The sentence is
     // `sentence()` below, rewritten as each entry starts.
     //   `active`   it stands — from the press (GuiInputHandler::
     //              open_batch_progress: at the batch's first dispatch, or at
@@ -8357,7 +8251,7 @@ struct AppState {
     // dispatch_next_batch_entry).
     // IT COEXISTS WITH prompt.active AS STATE and NEEDS NO MODAL TEST OF ITS
     // OWN: an archival render runs on, so dirtying the project and pressing
-    // Ctrl+Q raises the close prompt over a live run (the prompt cancels
+    // Back raises the close prompt over a live run (the prompt cancels
     // nothing), and the run's own completion can rewrite or clear this string
     // while the prompt stands — THE ROW YIELDS WHOLE TO THE MODAL, so the cell
     // is simply not painted while one stands and the live string is back the
@@ -8380,15 +8274,15 @@ struct AppState {
 
     // One-slot pending archival render command. An archival dispatch
     // (Ctrl+Alt+R / the iteration or bpm sweep) that finds the
-    // worker busy kills the running render (the Esc pair: request_cancel +
+    // worker busy kills the running render (the cancel pair: request_cancel +
     // queue_cancel_requested) and parks its fully built request set here;
     // the worker-idle pump (GuiTargetRender::maybe_dispatch_pending, via
     // GuiInputHandler::dispatch_pending_archival_command) dispatches it once
     // the cooperative cancellation drains — never a synchronous wait on the
     // GUI thread. A newer command replaces an older parked one wholesale.
-    // Esc during the drain disarms the slot (Esc means stop rendering, and
-    // the parked command would otherwise resurrect a render right after the
-    // cancel lands).
+    // The render cancel during the drain disarms the slot (cancel means stop
+    // rendering, and the parked command would otherwise resurrect a render
+    // right after the cancel lands; cancel_archival_session).
     struct PendingArchivalCommand {
         bool armed = false;
         // Ctrl+Alt+R shape (single): reqs holds exactly one request,
@@ -8404,7 +8298,7 @@ struct AppState {
         // may still publish into tmp/ during its cancellation drain,
         // after the scan but before the cancel flag lands, stealing the
         // scanned cell name). Set only by the Ctrl+Alt+Shift+R park site; the
-        // pump allocates the folder/cell here. Because Esc disarming the slot
+        // pump allocates the folder/cell here. Because the cancel disarming the slot
         // (the wholesale `pending_archival = {}` reset) clears this flag with
         // everything else, a parked-then-abandoned misc command creates no
         // folder at all — the allocation never runs.
@@ -8511,17 +8405,15 @@ struct AppState {
     // reach over every cell and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
     //
-    // WRITTEN TO A CELL BY FOUR ROUTES, each behind the selection write it
+    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
     // rides: a marker press inside run_marker_click_act (the pressed cell,
-    // all three, on all three click shapes), the plain WHEEL over a flag cell
-    // through the plain click's select body (run_marker_plain_select,
-    // 2026-09-14), the bound editor's open (Lower
+    // all three, on all three click shapes), the bound editor's open (Lower
     // or Upper) — an editor open seats the cell it edits — and, since
     // 2026-09-10, THE BARE TAB WALK
     // (GuiInputHandler::cycle_marker_focus), which steps through the focused
     // marker's PURPLE cells while grid iterations paints them and enters a
     // marker from the right on Shift+Tab. The walk's cell write comes after
-    // its own seat for the same reason the other three do, and a SAME-MARKER
+    // its own seat for the same reason the other two do, and a SAME-MARKER
     // step is that write and nothing else (marker_walk_step, below). THE
     // Ctrl+Shift+Tab PAIRED MARCH IS NOT A ROUTE: it is refused while the lamp
     // stands (the lock's delta (a), iteration_lock_key_blocked), so it
@@ -8583,7 +8475,7 @@ struct AppState {
     // of its rows opened), which is what makes the pair's OTHER direction
     // need no arm at all: this bit is set by enter_bpm_mode, whose one caller
     // opens the form in the same press, and cleared by exit_bpm_mode, which
-    // every road out of the form reaches — its Cancel, Esc and the BPM key
+    // every road out of the form reaches — its Cancel and the BPM key
     // (close_bpm_form), RENDER (render_bpm_sweep's success, or its bail's
     // exit), and the quit road (close_modal_editors_no_commit) — so while it
     // stands the form's picker router or the field's modal editor owns the
@@ -8643,7 +8535,7 @@ struct AppState {
     //   `owner`       WHOSE CONTENT THE ROWS ARE, and THE PANEL'S ONE
     //                 STANDING PREDICATE: the overlay stands iff this is not
     //                 None (folder_overlay_stands, below — every paint site,
-    //                 hit site, wheel context and greying arm asks that one
+    //                 hit site and greying arm asks that one
     //                 function). The player writes Player at its open and
     //                 None at its close; the picker writes ProjectPicker or
     //                 SettingsPage at its open and ValueList at the page's
@@ -8682,10 +8574,9 @@ struct AppState {
     //   `scroll_px`   THE PRODUCT'S FIRST SCROLL OFFSET — a pixel offset into
     //                 the content, clamped to [0, max(0, content_h - band_h)]
     //                 through folder_overlay::clamp_scroll, reset to 0 on
-    //                 every listing rebuild; the wheel steps it one row per
-    //                 detent, the band's own drag carries it on glass, and the
-    //                 keyboard's row walk scrolls it to keep the focused row
-    //                 visible;
+    //                 every listing rebuild; the band's own drag carries it
+    //                 on glass, and the player's highlight pair scrolls it to
+    //                 keep the highlighted row visible;
     //   `highlight_row` THE HIGHLIGHT — the BAND (kdenlive's selection band)
     //                 AND the list's keyboard focus, ONE field. A CLICK MOVES
     //                 IT AND THEN OPENS THE ROW (architect 2026-08-29: a click
@@ -8717,15 +8608,6 @@ struct AppState {
     //                 that field's row).
     //                 IT NEVER STANDS ON AN INERT ROW (folder_overlay.h's
     //                 set_highlight and its walk);
-    //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
-    //                 nothing at all (false, the open state). IT PAINTS
-    //                 NOTHING since 2026-10-23 (the focus frame round the
-    //                 highlighted row retired, paint_folder_overlay). The
-    //                 highlight itself is unmoved by it,
-    //                 Up/Down walking it either way, and it also decides what
-    //                 a bare Enter means: on the list, the highlight's OPEN
-    //                 act; on a button, that button's press.
-    //                 Reset with the modal face state, being part of it;
     //   `press`       THE ROW PRESS ARM (the chrome shape: arm at the press,
     //                 act at the lift): the row, the y and the scroll offset
     //                 at the press for the scroll drag, the feint's inside
@@ -8831,7 +8713,6 @@ struct AppState {
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
         int                highlight_row = -1;
-        bool               list_focused  = false;
         FolderOverlayPress press;
     };
     FolderOverlay folder_overlay;
@@ -9288,8 +9169,8 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // set before its load, whose one painted frame is the open's hold's,
 // platform.h's head). ONE OWNER for the one condition its surfaces answer
 // (architect 2026-09-24; the frame's readers 2026-10-27, "the hold shows the
-// empty waveform"): on_key's head gate, which plain Ctrl+Q alone reaches
-// there (the hold drops every other press) and which admits it; the
+// empty waveform"): on_key's head gate, which no key reaches there (the
+// hold drops every press) and which consumes whatever could; the
 // roster's face, which greys every button there (redesign_button_enabled's
 // head) and lights no LED (redesign_button_selected's head); row 8's clock
 // and tab name, blank there (clock_time_text and
@@ -9371,10 +9252,11 @@ struct RenderPlayerHintState {
 };
 
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
-// the player's own act vocabulary: the word is the act's, the key is the
-// chord the player's key router binds to exactly that act
-// (route_render_player_key, input_key_dispatch.cpp), so a button cannot
-// advertise a key it does not answer. EVERY WORD IS THE ACT THE PRESS WILL
+// the player's own act vocabulary: the word is the act's, the key the chord
+// the player's key router bound to exactly that act (route_render_player_key,
+// input_key_dispatch.cpp — which binds the opener's chord alone since
+// 2026-10-30, so the hints' key words are the tooltip pass's to respell).
+// EVERY WORD IS THE ACT THE PRESS WILL
 // RUN IN THE CURRENT STATE (architect 2026-09-01, the truthful-tooltips
 // ruling — "tooltips never lie: they update dynamically with the act"), read
 // off RenderPlayerHintState above, whose every bit is a predicate an act or a
@@ -10113,20 +9995,17 @@ inline int dialog_editor_row_of(const AppState::DialogEditorText& t, int pos,
 // wrap broke AT A CODEPOINT because no space fit (a long path or URL, `hard`,
 // text_editor::soft_wrap_rows), THE ROW'S END ITSELF, so the row's last
 // visible character can be reached and selected from its own row — stepping
-// back there would leave a painted character no End, Shift+End or press
-// could ever cover. That end is the next row's begin too, so the one byte is
-// two caret places, told apart as Windows' multiline edit control tells them
-// — THE ROW-END AFFINITY (text_editor::State::caret_row_end): a caret that
-// got there FROM THAT ROW (End, Shift+End, a press or a drag past the row's
-// text) paints at that row's end, and any other road (arrow motion, typing,
-// the next row's Home, a press at the next row's start) leaves it on the next
-// row's start. THE READERS, all on this one rule: the End / Home route
-// (route_modal_editor_key, input_key_dispatch.cpp: the stop and its
-// affinity), dialog_editor_byte_at (the press, the F2.1 drag, the finger's
-// caret drag and, through the stop's probe, the double-click's word select
-// and its drag by words), and the painter's caret through
-// dialog_editor_row_of (the selection band is bytes and needs no affinity).
-// End lands here and a press past a row's text does.
+// back there would leave a painted character no press could ever cover. That
+// end is the next row's begin too, so the one byte is two caret places, told
+// apart as Windows' multiline edit control tells them — THE ROW-END AFFINITY
+// (text_editor::State::caret_row_end): a caret that got there FROM THAT ROW
+// (a press or a drag past the row's text) paints at that row's end, and any
+// other road (typing, a press at the next row's start) leaves it on the next
+// row's start. THE READERS, all on this one rule: dialog_editor_byte_at (the
+// press, the F2.1 drag, the finger's caret drag and, through the stop's probe,
+// the double-click's word select and its drag by words), and the painter's
+// caret through dialog_editor_row_of (the selection band is bytes and needs
+// no affinity). A press past a row's text lands here.
 inline int dialog_editor_row_last_stop(const AppState::DialogEditorText& t,
                                        const std::string& text, int row) {
     const AppState::DialogEditorText::Row& r =
@@ -10242,7 +10121,7 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 double  samples_per_pixel_at(double zoom_level, int64_t column_frames);
 // Active-domain sample range a marker may occupy to stay within the visible
 // strip: pixel 0 (viewport_start) through the last fully-visible pixel
-// (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so
+// (area.w - 1). Pointer-driven marker moves clamp the grabbed marker to this so
 // it can never hide offscreen, where its precise location would be lost. The
 // playhead is exempt — it alone may reach 1px past the strip, and only at EOF.
 // Returns {lo, hi} as active-domain samples. THE STRIP IS THE PAINTED ONE
@@ -10288,40 +10167,24 @@ inline int64_t snap_authored_frame(double frame) {
 // whose motionless lift highlights the row and opens it — and the modal row's
 // PLAY-SCRUB MARKER DRAG, whose seek commits at the release. The player is a
 // modal surface, so nothing under it could pop a dialog; what its membership
-// buys is the rest of the rule — the keyboard swallowed and the wheel
-// suppressed for the gesture's life, so the mode cannot close, the listing
-// cannot be re-entered and the list cannot scroll out from under a held
-// press. (The scrub still
+// buys is the rest of the rule — the movers paused and no repeat armed for
+// the gesture's life. (The scrub still
 // has no entry of its own — it is a one-shot ACT, not a gesture — but since
 // 2026-08-13 its press arms the navigation surface's PENDING CLICK like every
 // other press on that surface, so a held lower-half press IS in flight here
 // through scroll_drag, exactly as a held upper-half press is. The target-view
 // TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// SIX CONSUMERS AT SIX CALL SITES, re-derived 2026-10-30 (the wheel's context
-// and the pointer cursor's live-gesture refusal left with the mouse). EACH
-// STATES THE SAME "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and
-// they split into two kinds: the FOUR INPUT-ROUTE consumers refuse events, and
-// the run loop's TWO — the per-tick hover refresh and the pre-paint follow
-// chase — pause the world's autonomous movers for the gesture's life:
-//   * repeat_eligible (input_key_dispatch.cpp) — a key held through a gesture
-//     must not arm a repeat that fires once the gesture ends;
-//   * THE RENDER PLAYER'S KEY GATE (input_handler.cpp's on_key, 2026-08-28) —
-//     the player's router is ranked ABOVE the drag-modal gate (it is the whole
-//     keyboard vocabulary while the mode stands), so it asks this question
-//     itself rather than inheriting the answer by ordering, and swallows every
-//     key under a live gesture with the drag-modal gate's own single Ctrl+Q
-//     hatch. THE DRAG-MODAL GATE IS NOT A CONSUMER: it spells its own member
-//     list inline (the two arms above are deliberately absent from it — the
-//     player's gate above it already owns them, and nothing else it guards is
-//     reachable under the player);
-//   * THE PICKER'S KEY GATE (input_handler.cpp's on_key, 2026-08-28) — the
-//     player's clause spelled again at the picker's rank, the two never
-//     standing together: the overlay's row press arm is a member of this
-//     predicate under EITHER owner, so the picker asks the same question and
-//     swallows every key under a live gesture with the same single Ctrl+Q
-//     hatch. Two gates rather than one because each owns its own router;
-//     folder_overlay_stands is what makes the arm one thing under both;
+// FOUR CONSUMERS AT FOUR CALL SITES, re-derived 2026-10-30 (the wheel's
+// context and the pointer cursor's live-gesture refusal left with the mouse,
+// and the three overlay key gates in on_key with the hardware keyboard: no key
+// arrives mid-gesture, on_key's drag-modal statement). EACH STATES THE SAME
+// "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
+// two kinds: the TWO INPUT-ROUTE consumers refuse events, and the run loop's
+// TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
+// world's autonomous movers for the gesture's life:
+//   * repeat_eligible (input_key_dispatch.cpp) — a hold-repeat must not arm
+//     under a gesture and fire once the gesture ends;
 //   * begin_touch_region's refusal (input_pointer.cpp, the eighth ruling's
 //     touch half) — the region hold bypasses the press path, so it restates
 //     the same no-second-writer boundary the press claims inherit by
@@ -10348,8 +10211,8 @@ inline int64_t snap_authored_frame(double frame) {
 // the settings choice list's scroll hold stood
 // 2026-10-08 to 2026-10-14, the color picker's gesture and its two lists'
 // scroll holds beside it until the picker's removal the same day), because
-// its callers' whole promise is that a resize, a WM close or the Ctrl+Q hatch
-// lands on a state this predicate calls free. The two lists are grepped
+// its callers' whole promise is that a resize, a WM close or the failed-scan
+// closer lands on a state this predicate calls free. The two lists are grepped
 // against each other whenever either grows; the finalizer's own head comment
 // spells its twelve in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
@@ -10433,7 +10296,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // Ctrl+N (toggle_inherits), Delete (delete_selected_marker — again the warp
 // arm alone; Ctrl+Shift+D and Shift+Delete, 2026-10-29, ride the Ctrl+D and
 // Delete bodies and so the same membership) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
-// routes, bare Return / KpEnter and the flag double-click (bracket authoring
+// routes, bare Return and the flag double-click (bracket authoring
 // had been source-only only because the editor was; the bracket's own grammar
 // left this surface on 2026-09-05 for the bound cells' editor).
 // THE ITERATION BRACKET IS NO EXCEPTION'S MEMBER AND OWES NONE, ON EITHER
@@ -14764,10 +14627,10 @@ inline bool playback_launch_playable(const AppState& a,
 // view"): while the band stands — under the render player or the picker —
 // EVERY roster button is dead but the render player's own closer (the
 // view pairs with the rest; the File anchor, lit above the band from
-// 2026-09-03 evening, went with the menu row 2026-10-21, Quit keeping Ctrl+Q
-// and the window manager's close).
+// 2026-09-03 evening, went with the menu row 2026-10-21, Quit keeping the
+// window manager's close).
 // THE LOAD IS THE SAME SHAPE (architect 2026-09-24): with no piece to
-// dispatch on every button greys (Ctrl+Q stays live).
+// dispatch on every button greys (Back stays live).
 // All three are MODES like
 // the `h` view rather than questions like a prompt, and the whole chrome is
 // what they take away; each veil already makes the chrome inert, and the
@@ -15037,7 +14900,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // OVERLAYS, the render player and the picker's five contents (the
     // project picker, the settings page and the value list it swaps in, the
     // trim presets list and the BPM form), which end at a pick, a row's open
-    // or a load and also leave on Esc and
+    // or a load and also leave on their Close or Cancel and
     // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
     // page's and the value list's both), Trim Presets and BPM, lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey and the
@@ -16855,8 +16718,7 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // the cancel act on a face painted Cancel — the roster's one ruled
         // exception to THE BUTTON IS ITS CHORD — gating the act on the live
         // bit so it never reaches a preview session, and carding the stale
-        // edge (kNoRenderRunningCard). Keyboard Esc's render-cancel binding is
-        // untouched and keeps its own wider reach. Readers of this condition:
+        // edge (kNoRenderRunningCard). Readers of this condition:
         // this arm (the painter's glyph and the comparator) and the Render arm
         // of redesign_button_enabled, both face SOURCES; the stateful tooltip
         // overload reads the PAINTED glyph this arm produces, not the bit, so
@@ -17338,8 +17200,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // render player's hints (render_player_button_hint) and the score viewer's
 // (score_viewer_button_hint) follow the same form. The tooltip is the one
 // text that names a key: a card or a label never names a key to press, and
-// the dialog buttons' tooltips are their word alone (the underline carries
-// their access key, PromptState's block).
+// the dialog buttons' tooltips are their word alone (PromptState's block).
 //
 // `line2` is THE MODIFIER LINE and is non-null on exactly the buttons that
 // admit a modified press — the shift-admitting set, and since 2026-08-24 the
@@ -17909,9 +17770,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // ten-unit step and ctrl a three on the addressed cell's own unit
         // (swapped 2026-09-21, shift the long stride), so
         // the line says "step" and lets the button's own name supply the
-        // unit. The numbers are the ladder's (kArrowStepShift /
-        // kArrowStepCtrl, gui_input.h) and this is the one place they are
-        // written as words; a retune there is a retune here.
+        // unit. The ctrl rung's number is the ladder's (kArrowStepCtrl,
+        // gui_input.h) and this is the one place it is written as a word; a
+        // retune there is a retune here. (The shift rung has no producer
+        // since 2026-10-30, the ladder's head; its words are the tooltip
+        // pass's to respell.)
         // THE STATEFUL OVERLOAD DROPS THIS LINE where every rung of the ladder
         // refuses alike (2026-09-02): on the step's kind refusals; the
         // reasoning is at that arm.

@@ -585,9 +585,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (key_repeat_period_ms), read per fire — a repeat rate of 0 would stop
     // the button repeat too. The burst rides the armed ChromePress and its whole edge
     // inventory is at that struct (app_state.h); the firing body is
-    // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
-    // throughout, repeat_eligible included — the arm SHARES that predicate
-    // rather than mirroring it.
+    // tick_chrome_press_repeat below. The arm SHARES repeat_eligible, the
+    // platform's own arming probe, rather than mirroring it.
     // The rows below carry the PLAIN chord, as every row does; the
     // admission and its modifier are the roster's, never a column here.
     {RedesignButton::TransportPlayStop,
@@ -663,10 +662,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // derived partition greys it there and the view hides it), the read-only
     // allowlist (which does not name it either — every editor is an
     // authoring surface), the grid-iterations gate (Return admitted on a bound
-    // axis alone), the tie's card and flag_editor_open_actionable. The
-    // keypad's Enter is the same arm's second keysym and is NOT a second row:
-    // a row spells the chord the dispatch synthesizes, and Return is the
-    // spelling every reader accepts (the walk's IsoLeftTab precedent). NOT A
+    // axis alone), the tie's card and flag_editor_open_actionable. NOT A
     // RADIO AND NO LAMP (an act whose editor session is the state), and it
     // does NOT repeat (an opener). IT ADMITS NO MODIFIER since 2026-10-24:
     // its ctrl and ctrl+shift presses, Copy / Paste Phase Resets on
@@ -757,9 +753,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // button's own key, so the ctrl-click dispatches Ctrl+Tab, the tab
     // switch, and the ctrl-shift press Ctrl+Shift+Tab, the paired march — on
     // glass the S Pen's side button with a tap and with a long press. Switch
-    // Tab's roads to the same two chords stand beside these. The reverse cycle's other spelling, IsoLeftTab, is
-    // deliberately NOT a row: the dispatch is synthesized, so it goes out in
-    // the Tab spelling every reader accepts. It does NOT repeat: its long
+    // Tab's roads to the same two chords stand beside these. It does NOT repeat: its long
     // press is its shift (a held repeat would outrank it, ToolbarChord::repeats).
     //
     // IT IS LIVE INSIDE THE `h` VIEW and the derived partition says so with
@@ -2012,8 +2006,8 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // making the gesture a pan (each click pays scrub_act_at's stop quiescence
 // fence AT MOST once — a stopped session's launch pays none — and the
 // per-column fence cadence class is structurally gone). The press claims
-// nothing and stops nothing, and the drag-modal gate swallows every chord
-// while the pending stands, so the act sees the session as it stands at the
+// nothing and stops nothing, and no key arrives while the pending stands
+// (on_key's drag-modal statement), so the act sees the session as it stands at the
 // release; since the scrub always plays (architect 2026-09-21) that reading
 // decides only whether the act pays the stop's fence, never whether it
 // launches.
@@ -2998,15 +2992,6 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
         clear_modal_dialog_key_press();
         app.modal_dialog_focus        = hit;
         app.modal_dialog_focus_active = false;
-        // AND THE LIST'S RING BIT GOES WITH IT (2026-08-29): on the two
-        // list-bearing owners the ring's stops are [list, buttons…], and the
-        // press REPLACES whatever focus the dialog had, so the ring stands in
-        // one place (the bit also decides what a bare Enter means; the focus
-        // frames it once painted retired 2026-10-23).
-        if (app.folder_overlay.list_focused) {
-            app.folder_overlay.list_focused = false;
-            viewport.invalidate_rect(folder_overlay::surface_rect(app));
-        }
         viewport.invalidate_rect(app.modal_dialog.box);
     }
     app.modal_dialog_press_ms = monotonic_ms();
@@ -3116,9 +3101,6 @@ int GuiInputHandler::modal_dialog_focus_live() const {
 //   the RESPONSE KEY the stash names is validated against the LIVE answers
 //   (PromptState::answers), a different question from the stash's and asked
 //   separately.
-// THE ACCESS KEYS RIDE THIS ROAD TOO (architect 2026-10-10, Windows strict):
-// modal_dialog_access_button selects the index off the stash and its callers
-// fire it here, so a letter meets every gate a press meets.
 // THE ONE THING THE STASH DECIDES is a button's ENABLED bit (architect
 // 2026-09-24, strictly as-painted): the claim reads the painted face, never
 // the live predicate, and the act answers for itself (the player's arm below).
@@ -3143,8 +3125,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     }
     // THE PROGRESS MODAL'S ONE BUTTON (2026-10-14): Cancel, and its act is
     // the batch's cancel road (cancel_batch_progress) — reached at the lift
-    // of a press armed on it or at the release of Enter or Space on its ring
-    // focus, as Esc reaches it at the key's press.
+    // of a press armed on it, the modal's one road (architect 2026-10-30).
     if (app.batch_progress.active) {
         cancel_batch_progress();
         return true;
@@ -3156,18 +3137,17 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     if (app.render_player.active) {
         // THE CLAIM IS THE PAINTED FACE (architect 2026-09-24, strictly
         // as-painted, superseding 2026-08-30's live enabled re-ask here): a
-        // button painted grey never arms — the pointer's press claim and the
-        // ring's Enter/Space road both select on ModalDialogButton::enabled —
+        // button painted grey never arms — the pointer's press claim selects
+        // on ModalDialogButton::enabled —
         // and the lift asks the same painted bit once more (a face the
         // comparator repainted grey under the hold is consumed, the roster
         // lift's rule), so what passes was painted live and DISPATCHES.
         // Where the act has become refused since that paint (at most one tick,
         // the per-tick comparator in main.cpp repainting the row on drift),
-        // the act's own body answers exactly as its key does: carding where
-        // the key cards (the load in place's three refusals), silent where
-        // the silence is ruled (the folder walks' and the seeks' benign
-        // refusals at their state, 2026-08-31). The KEYS never come through
-        // here, and THE CAR never does either: on_media_command runs the
+        // the act's own body answers: carding where it cards (the load in
+        // place's three refusals), silent where the silence is ruled (the
+        // folder walks' and the seeks' benign refusals at their state,
+        // 2026-08-31). THE CAR never comes through here: on_media_command runs the
         // player's bodies DIRECT, so a head unit's button reaches neither this
         // line nor a button's face.
         if (!b.enabled) return true;
@@ -3176,14 +3156,13 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             // their keys are Home and End since 2026-08-31 — the main window's
             // own transport pair, "just like the regular GUI" — with the plain
             // acts home() and next_track(), the right one a NEXT TRACK since
-            // 2026-09-04; THIS IS THE SECOND OF EACH ACT'S TWO ROADS, the key
-            // being the other (the car's own Previous and Next are the car's
+            // 2026-09-04; THIS IS EACH ACT'S ONE ROAD on the glass (the car's
+            // own Previous and Next are the car's
             // acts and reach neither of these buttons — architect 2026-09-12,
             // "the car is a separate interface"; both plain acts walked the
             // band at rest for the one day before that ruling), and
-            // their shifted twin — the long press — is the item folder's END,
-            // the keys' own
-            // Shift+Home / Shift+End. THE
+            // their shifted twin — the long press — is the item folder's END.
+            // THE
             // ARMS THAT READ `shifted` ARE THE ADMISSION'S OWN MEMBERS
             // (player_button_shift_admits, app_state.h): every other act below
             // ignores the bit, so a held Play or Close is its plain act — the
@@ -3205,8 +3184,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();
                 return true;
-            // THE HIGHLIGHT PAIR (architect 2026-10-10): the bare Down / Up
-            // keys' own call, the band walk and nothing else — a silent wall
+            // THE HIGHLIGHT PAIR (architect 2026-10-10): the band walk and
+            // nothing else — a silent wall
             // at either end of the listing, in every transport state.
             case AppState::PlayerButtonAct::HighlightDown:
                 render_player.move_highlight(+1);
@@ -3215,8 +3194,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
                 render_player.move_highlight(-1);
                 return true;
             case AppState::PlayerButtonAct::Up:
-                // THE `..` ROW'S ACT, ON THE ROW SINCE 2026-09-01: the same
-                // body Backspace runs, with its own silent wall at the root.
+                // THE `..` ROW'S ACT, ON THE ROW SINCE 2026-09-01, with its
+                // own silent wall at the root.
                 render_player.up();
                 return true;
             case AppState::PlayerButtonAct::LoadInPlace:
@@ -3225,8 +3204,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             // DELETE (architect 2026-09-29), the root's slot and the row's
             // third shift-admitting button: the plain press asks for the
             // highlighted batch folder, the shifted one (the long press) for
-            // every batch folder at the root — the
-            // Delete key's two spellings.
+            // every batch folder at the root.
             case AppState::PlayerButtonAct::Delete:
                 render_player_delete(/*all=*/shifted);
                 return true;
@@ -3246,14 +3224,12 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // trim presets list's row is its own arm, below). Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
     // the list's key, nothing applied (return_to_settings_page, architect
     // 2026-10-28 night: the list is the page's sub-page); under every other
-    // content it runs the one close body. Esc is the same fork
-    // (route_picker_key). (Enter on the list is still the open act, through
-    // picker_open_highlight, the keyboard's own click.)
+    // content it runs the one close body.
     // THE TRIM PRESETS LIST'S ROW IS THE PLAYER'S SHAPE (architect
     // 2026-10-28 night): its published face decides as the player's does — a
     // key painted dead is consumed — and each act is the list's own: the
-    // highlight pair the band walk alone (picker_move_highlight, bare Down /
-    // Up's call), Save, Save As and Delete their bodies, Close the one
+    // highlight pair the band walk alone (picker_move_highlight), Save,
+    // Save As and Delete their bodies, Close the one
     // close body. No member admits a modifier.
     if (app.picker.active &&
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets) {
@@ -4235,15 +4211,15 @@ void GuiInputHandler::finish_notification_release(
 // resize, 2026-10-05 — went 2026-10-24 with the caption and the frame.)
 
 void GuiInputHandler::on_window_close() {
-    // The window close (Android's Back) routes
-    // through the unsaved-work dialog when dirty, same as Ctrl+Q. END any
+    // The window close (Android's Back, the one quit road) routes
+    // through the unsaved-work dialog when dirty. END any
     // in-flight pointer
-    // gesture before the prompt goes up, matching the Ctrl+Q
-    // hatch: while the prompt is up the pointer handlers swallow motion
+    // gesture before the prompt goes up: while the prompt is up the pointer
+    // handlers swallow motion
     // and release, so a gesture left alive would commit on the next motion
     // if the user dismisses the prompt. ENDING IS COMMITTING (pointer
-    // gestures have no cancel — the rule is at the drag-modal gate in
-    // input_handler.cpp): each gesture runs its own release body here.
+    // gestures have no cancel — the rule is at on_key's drag-modal statement
+    // in input_handler.cpp): each gesture runs its own release body here.
     // finalize_active_drags is a no-op when nothing is live, so the clean and
     // non-gesture close paths are unaffected. A live editor text-selection
     // drag is finalized there too (collapsed to a caret, selection-only,
@@ -4269,7 +4245,7 @@ void GuiInputHandler::on_window_close() {
     // until the Settings dropdown retired, 2026-10-21.)
     // THE RENDER PLAYER, THE PICKER AND EVERY STANDING MODAL EDITOR GO
     // DOWN INSIDE request_close, not here: the close road owns those
-    // steps for Ctrl+Q and for this road alike, so neither a mode
+    // steps for every road into it, so neither a mode
     // nor an editor — nor either overlay band — is left standing under
     // the unsaved-work prompt.
     prompt.request_close(GuiCloseTarget::Exit);
@@ -6299,9 +6275,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
 }
 
 // END every in-flight pointer gesture THROUGH ITS OWN RELEASE BODY. The one
-// force-end route in the product: the Ctrl+Q hatch in the drag-modal gate
-// (input_handler.cpp, where the no-cancel rule is stated in full) and main.cpp's
-// resize / WM-close callbacks. It replaced cancel_active_drags — POINTER GESTURES
+// force-end route in the product: the window's close road (on_window_close),
+// main.cpp's resize callback and the history prefetch's failed-scan closer
+// (the no-cancel rule is stated in full at on_key's drag-modal statement,
+// input_handler.cpp). It replaced cancel_active_drags — POINTER GESTURES
 // HAVE NO CANCEL (architect 2026-07-29), so there is nothing to restore anywhere
 // here: every live gesture COMMITS what stands, and undo is the mitigation.
 // Homed beside on_button_release deliberately — these are the same bodies in the
@@ -6339,7 +6316,7 @@ void GuiInputHandler::finalize_active_drags() {
     // change — the release path exactly, so Ctrl+Z reverts it.
     if (app.drag.active) marker_drag.commit_drag();
     // THE VALUE DRAG COMMITS TOO (2026-09-10) — the release path exactly, so
-    // a resize, a WM close or the Ctrl+Q hatch leaves the value the hand had
+    // a resize or a WM close leaves the value the hand had
     // reached and, on the tempo arm, the one undo entry that takes it back.
     if (app.value_drag.active) value_drag.commit();
     // (The tempo drag's finalize arm went with the gesture, 2026-07-29 — see
@@ -6810,8 +6787,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
         // repeat_eligible is exactly what the platform's arming probe asks for
-        // the physical key, so the button's hold arms in precisely the contexts
-        // a held key would — and refuses in the ones it refuses, which is what
+        // a held on-screen key, so the button's hold arms in precisely the
+        // contexts a held key would — and refuses in the ones it refuses, which is what
         // keeps a press some surface consumes from arming a burst that would
         // start firing when that surface closes under a held button. Nothing
         // has dispatched by this line and nothing will until the lift, so
@@ -6916,11 +6893,11 @@ void GuiInputHandler::finish_chrome_press_release(
     // nothing while an editor dialog stands, whatever the arm is. It was a
     // membership test until 2026-08-13, admitting the modal-trap
     // reach-through's own buttons; with that retired the veil is blanket
-    // again, and its whole job here is the editor OPENED MID-HOLD — a key
-    // press deliberately does not end a pointer hold (main.cpp's set_on_key
-    // hook), so a key that raises an editor dialog does so under a standing
-    // arm, and an arm taken before the dialog rose must not fire into
-    // it. IT SITS ABOVE THE KIND SWITCH because the rule is every arm's and
+    // again, and its whole job here is a modal RAISED MID-HOLD — no key can
+    // arrive under a held button (the touch window has one owner, main.cpp's
+    // set_on_key hook), but an asynchronous raise can (a parked batch's
+    // progress modal), and an arm taken before the surface rose must not fire
+    // into it. IT SITS ABOVE THE KIND SWITCH because the rule is every arm's and
     // none has an exception to it. (Carried per-branch it once was on the
     // roster's and missing from the deleted walk-tab kind's, so arming a
     // Remote/Local tab, raising the dialog mid-hold and lifting on the tab
@@ -6930,10 +6907,10 @@ void GuiInputHandler::finish_chrome_press_release(
     // gate returns unconditionally above this call, so no arm reaches this
     // body while one stands — and neither does THE RENDER PLAYER's or THE
     // PICKER's, whose release blocks return above this call the same way; the
-    // term below is the editor OPENED MID-HOLD's, and any overlay opened
-    // mid-hold (bare `l`, Ctrl+O, bare `;`, bare `t`, Ctrl+B or `'` typed under a held button)
-    // takes the same refusal through it — and so does THE PROGRESS MODAL
-    // (2026-10-14), a batch's render chord typed under a held button.
+    // term below is the surface RAISED MID-HOLD's — THE PROGRESS MODAL
+    // (2026-10-14) of a batch parked behind a killed render's drain, which
+    // can rise under a held button — and every overlay and editor takes the
+    // same refusal through it, though no key can open one under a hold.
     // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
     // for Play Renders under the player, 2026-10-25 for Open Project under the
     // project picker, 2026-10-28 for Settings under the settings page and the
@@ -6997,19 +6974,14 @@ void GuiInputHandler::finish_chrome_press_release(
         // CHORD": while the face is PAINTED as Cancel (its stashed
         // glyph, whose Render arm at redesign_button_glyph
         // is queue_running and holds the face's contract) the lift runs THE
-        // CANCEL ACT ITSELF, the Esc
-        // arm's own body, and dispatches no chord at all. The divergence is
-        // his ruling, both halves: the KEYBOARD keeps Ctrl+Alt+R's own
+        // CANCEL ACT ITSELF (cancel_archival_session, the render cancel's one
+        // body) and dispatches no chord at all. The divergence is
+        // his ruling, both halves: Ctrl+Alt+R keeps its own
         // semantics unchanged (a dispatch kills the running render and starts
         // a new one — the render-dispatch rule), while the BUTTON "doesn't
-        // need to exist while nothing's rendering" and so becomes the cancel;
-        // and it dispatches no Esc either: the act body is what the button
-        // owes, not a key. (Until 2026-08-21 that was also a correctness
-        // requirement — Esc ranked the region hide ABOVE the render cancel, so
-        // a dispatched Esc would have hidden the trim region overlay instead of
-        // cancelling. With the hide retired the key reaches the cancel in one
-        // press, and running the act directly is simply what the exception has
-        // always meant.)
+        // need to exist while nothing's rendering" and so becomes the cancel —
+        // the one road to a single render's cancel since bare Esc's went with
+        // the hardware keyboard (architect 2026-10-30).
         // THE SHIFT LONG PRESS CANCELS TOO: one face, one act — while the
         // button IS Cancel, letting the hold slip through to the miscellaneous
         // render would start a render from a button that says Cancel. It
@@ -7266,10 +7238,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
         chord.synthesized_repeat = arm.repeat_fired;
         arm.repeat_fired = true;
         // Through on_key, the same route the lift takes, so every gate the
-        // chord passes on the keyboard applies per fire. (The physical-key
-        // burst disarm lives UPSTREAM of on_key, at the platform delivery in
-        // main.cpp — which is what lets this fire pass through on_key without
-        // ending its own schedule.)
+        // chord meets applies per fire.
         on_key(tc.key, chord);
         return;
     }
@@ -8449,8 +8418,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // app.trim_drag.active.
         // THREE FIELDS CROSS, and that is the whole transfer (2026-07-29): the
         // pending's set_click / pre-press pair / selection+region snapshots were an
-        // Esc-restore origin, and pointer gestures have no cancel (the rule at the
-        // drag-modal gate in input_handler.cpp), so the cross-struct data path they
+        // Esc-restore origin, and pointer gestures have no cancel (the rule at
+        // on_key's drag-modal statement), so the cross-struct data path they
         // needed is gone. A bound-set-armed drag is now indistinguishable from a
         // plain one here — correctly: its click-set already committed, and
         // begin_trim_drag's orig_* capture (the click-set values) is exactly the
@@ -8533,8 +8502,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // at the press, so the stop, the select and the land
         // all already stand — the select is what paints the dragged flag
         // BRIGHTENED, and the stop is why no live playback needs handling
-        // below (nothing can restart playback under the held button: the
-        // drag-modal gate swallows every chord while this pending stands).
+        // below (nothing can restart playback under the held button: no key
+        // arrives while this pending stands, on_key's drag-modal statement).
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
         // THE DRAG'S GATES LIVE HERE, not at the arm: they guard the DRAG
@@ -8611,8 +8580,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 return;
         }
         // No live playback to handle: the arming press ran the click act's
-        // stop, and nothing can have restarted playback since (the drag-modal
-        // gate).
+        // stop, and nothing can have restarted playback since (on_key's
+        // drag-modal statement: no key arrives mid-gesture).
     }
     // THE VALUE DRAG'S LIVE ARM (2026-09-10), ahead of the marker drag's own
     // and in its shape exactly: a lost button ends the gesture through its

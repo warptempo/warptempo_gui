@@ -1356,8 +1356,7 @@ inline int logo_lane_h_px() {
 // — and, since the sweep of 2026-10-23
 // (architect: "let's do a sweep for all of these Windows Pixel lines. I
 // guess we should get rid of most of them"), the view bar's span's bevel
-// (render_trim_flags), the access key's underline and its air under the
-// baseline (access_underline_rect, paint_handler.cpp), the dialog editors'
+// (render_trim_flags), the dialog editors'
 // and the flag editor's carets (paint_modal_dialog, render.cpp's flag
 // editor) — read
 // at those sites and nowhere else. Everything else keeps scaled_px, AREAS:

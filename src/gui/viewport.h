@@ -126,9 +126,7 @@ struct Viewport {
     //    apply_zoom_to_start, center_viewport_on_playhead, the discrete move's
     //    other three callers (hold_subject_column_after_nudge,
     //    follow_scroll_if_needed and land_subject),
-    //    apply_strip_drag_zoom,
-    //    scroll_viewport — every pan/scroll class, which joined this route
-    //    2026-07-26 when the incremental shift-and-strip path was retired),
+    //    apply_strip_drag_zoom),
     //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
     //    switch (GuiInputHandler::switch_active_audio_view_to) and the A/B tab
     //    switch (GuiActiveViews::switch_active_tab_view_to — Ctrl+Tab and the
@@ -168,8 +166,9 @@ struct Viewport {
     //    settings tab_X_viewport_start commit
     //    (GuiSettingsEditor::commit_gui_setting),
     //    the nav drag's ZOOM-PHASE FORCE-END (finalize_active_drags,
-    //    input_pointer.cpp — the force-end finalizer, whose callers are Ctrl+Q,
-    //    resize and WM close; a moved zoom-phase drag owes one synchronous
+    //    input_pointer.cpp — the force-end finalizer, whose callers are the
+    //    window's close, resize and the history prefetch's failed-scan
+    //    closer; a moved zoom-phase drag owes one synchronous
     //    rebuild there, having no release coordinates for a final apply; the
     //    strip drag whose terminating-event finalize stood here was deleted
     //    2026-08-15, and Esc is no terminating event, pointer gestures having
@@ -239,10 +238,10 @@ struct Viewport {
     // cent step mid-gesture (the kick a hand-copied list kept dropping), and it
     // died with the gesture on 2026-07-29 — so no map edit runs per pointer frame
     // any more.
-    // (The live-per-event kicks that remain are apply_strip_drag_zoom,
-    // scroll_viewport — generic viewport rebuilds, not map edits, both
-    // sustained pointer gestures paying one full rebuild per displayed frame
-    // since the rebuild became owed, 2026-10-13, below.)
+    // (The live-per-event kick that remains is apply_strip_drag_zoom — a
+    // generic viewport rebuild, not a map edit, a sustained pointer gesture
+    // paying one full rebuild per displayed frame since the rebuild became
+    // owed, 2026-10-13, below.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
@@ -448,11 +447,6 @@ struct Viewport {
     // undo/redo restore) and bare `0`'s restore of its stamped view
     // (run_overview_command), whose start is the stamp's, not a span's.
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
-    // `continuous` marks a drag-driven scroll, which suppresses the per-event
-    // playback predictor resync (re-anchored once at gesture end). There is no
-    // longer a `synchronous` flag: it selected between the two pan drivers, and
-    // with the incremental path retired every scroll renders synchronously.
-    void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
     // THE NUDGE HOLDS ITS SUBJECT'S COLUMN while the HOLD posture stands
     // (architect 2026-09-17; chosen by AppState::camera_hold, which an
@@ -816,7 +810,7 @@ struct Viewport {
     // the room and the painter clips to it.
     // ITS CALLERS, re-derived by grep 2026-10-01, are GuiNotifications' four
     // stack changes and nothing else: notify (a push), dismiss (a card's
-    // lift), dismiss_all (bare Esc, or a shifted or held lift) and
+    // lift), dismiss_all (a held lift) and
     // fire_if_due (an expiry). The hover paints nothing since the card's X
     // retired (2026-10-01) and damages nothing, and the painter publishes the
     // rects it drew rather than damaging anything.

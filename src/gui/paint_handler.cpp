@@ -268,25 +268,19 @@ namespace {
 //     both halves ("Toggle Read-Only (O)"); a single word is the same string
 //     in either class and settles nothing. The chord suffix "(Ctrl+S)" is not
 //     part of the name and is spelled by its own owner.
-//   * A CARD OR A LABEL NEVER NAMES A KEY TO PRESS; THE KEY TEXT IS TWO: THE
+//   * A CARD OR A LABEL NEVER NAMES A KEY TO PRESS; THE ONE KEY TEXT IS THE
 //     TOOLTIP'S KEY (architect 2026-10-27, "keep"; redesign_button_tooltip's
-//     head, app_state.h, owns it) AND WINDOWS' UNDERLINED ACCESS
-//     KEY on the menu row's titles and on every row of their pull-downs,
-//     always shown (architect 2026-10-10, "part of the aesthetic and
-//     therefore important"; the letters at access_key_of,
-//     app_state.h, the line at access_underline_rect below), and since the
-//     same day on THE DIALOG BUTTONS' WORDS (Windows strict; the prompts'
-//     letters at PromptState, app_state.h; OK, Cancel and Close carry
-//     none). It is an underline under
-//     a letter of the plain word, never a bracket (the `[S]ave` spelling
-//     stays retired), and the label strings stay the plain words.
+//     head, app_state.h, owns it). The dialog buttons' words are plain
+//     words, no letter underlined and never a bracket (architect
+//     2026-10-30: no keyboard stands under a dialog, so an access key has
+//     no producer).
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
 //     literal settings and config KEY names shown as keys (`projects_path`),
 //     and the routing/category tokens that are data rather than prose.
-//   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Backspace, PgUp,
-//     PgDown, Space, Tab, Home, End — save Enter for Qt's Return (architect
+//   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Backspace, Space,
+//     Tab, Home, End — save Enter for Qt's Return (architect
 //     2026-10-29 night), with a BARE LETTER UPPERCASE and
 //     punctuation naming the CAP rather than the stamped symbol ("Shift+/").
 //     The spelling's one owner is spell_chord's head (gui_input.h).
@@ -420,8 +414,7 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
 // (publish_button_face's and the modal row's coverage tests), so a coverage
 // test and the paint cannot part. THE EXTENT IS THE KEY UNITED WITH THE
 // LEGEND'S LINE BOX — the run's advance across, the face's ascent above the
-// baseline to its descent below (or the access underline's foot, when it
-// reaches lower), each edge rounded outward to whole px — because the
+// baseline to its descent below, each edge rounded outward to whole px — because the
 // legend stands OUTSIDE the key, in the strip's bottom pad and overhanging
 // the key's sides when wider: a damage rect confined to the pad (a tooltip
 // closing over a bottom-row legend) has the strip's ground erased under it,
@@ -433,8 +426,7 @@ struct KeyLegendLayout {
     KeyLegendSeat         seat;
     GuiRect               extent;   // the key united with the legend's box
 };
-KeyLegendLayout key_legend_layout(const GuiRect& key, std::string_view word,
-                                  int access = -1) {
+KeyLegendLayout key_legend_layout(const GuiRect& key, std::string_view word) {
     KeyLegendLayout out;
     out.extent = key;
     if (word.empty()) return out;
@@ -446,12 +438,8 @@ KeyLegendLayout key_legend_layout(const GuiRect& key, std::string_view word,
     const int lx2 =
         static_cast<int>(std::ceil(out.seat.x + out.run->width_px));
     const int ly1 = static_cast<int>(std::floor(base - gui_font_ascent_px(font)));
-    int ly2 = static_cast<int>(std::ceil(base + gui_font_descent_px(font)));
-    // THE ACCESS UNDERLINE'S FOOT (access_underline_rect: one line, one
-    // line under the rounded baseline).
-    if (access >= 0)
-        ly2 = std::max(ly2, static_cast<int>(std::nearbyint(base)) +
-                                2 * hairline_px());
+    const int ly2 =
+        static_cast<int>(std::ceil(base + gui_font_descent_px(font)));
     const int x1 = std::min(key.x, lx1);
     const int y1 = std::min(key.y, ly1);
     const int x2 = std::max(key.x + key.w, lx2);
@@ -461,20 +449,16 @@ KeyLegendLayout key_legend_layout(const GuiRect& key, std::string_view word,
 }
 
 // A KEY'S LEGEND under it (key_legend_layout), in the legend ink kLegendInk
-// or, `enabled` false, the dim kDimInk; `access` the access key's byte in
-// `word` to underline (-1 none: the Windows-strict dialog rules unchanged,
-// only the drawing).
-void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
-                     const char* label, int access, double x,
-                     double baseline, GuiColor ink);
+// or, `enabled` false, the dim kDimInk. No letter of it is underlined
+// (architect 2026-10-30: no keyboard stands under a dialog, so an access key
+// has no producer; the words are the dialogs' plain words).
 void paint_key_legend(cairo_t* cr, const GuiRect& key, std::string_view word,
-                      bool enabled, int access = -1) {
+                      bool enabled) {
     if (word.empty()) return;
-    const KeyLegendLayout layout = key_legend_layout(key, word, access);
-    const std::string text(word);
-    show_access_run(cr, *layout.run, access >= 0 ? text.c_str() : nullptr,
-                    access, layout.seat.x, layout.seat.baseline,
-                    hex(enabled ? kLegendInk : kDimInk));
+    const KeyLegendLayout layout = key_legend_layout(key, word);
+    set_palette_source(cr, hex(enabled ? kLegendInk : kDimInk));
+    text_shape::show_shaped_run(cr, *layout.run, layout.seat.x,
+                                layout.seat.baseline);
 }
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
@@ -1181,60 +1165,6 @@ double redesign_baseline(const GuiFont& font, double box_y,
                          double box_h) {
     return box_y + std::floor((box_h + gui_font_cap_px(font)) * 0.5);
 }
-namespace {
-
-// THE ACCESS KEY'S UNDERLINE — WINDOWS' MENU MNEMONIC (architect 2026-10-10:
-// "accelerators are not used on the tablet, but they are part of the
-// aesthetic and therefore important"; the letters and the keys are
-// app_state.h's, access_key_of), ALWAYS DRAWN: on the menu row's
-// titles, on every row of their three pull-downs and, since the same day, on
-// the dialog buttons' words (Windows strict, PromptState's block; their
-// legends since 2026-10-23, paint_key_legend), nowhere else (not the
-// tooltips or the cards; nor the
-// settings choice editor's list while it stood). Windows 2000 hides it until
-// Alt is held; ReactOS
-// always draws it, and so does this product — the tablet has no Alt to
-// reveal it (a deliberate departure).
-//
-// THE LINE IS DrawText's PREFIX UNDERLINE (user32's TEXT_DrawUnderscore)
-// read off his ReactOS capture (File's F, Edit's open
-// E, Undo's U): ONE W THICK, ONE W OF AIR UNDER THE BASELINE (the cell's
-// ascent + 1 — the F's last ink row 166, the line on 168), FROM THE MARKED
-// GLYPH'S PEN TO ITS ADVANCE LESS ONE W (LineTo stops one short: the F's
-// 6-px advance under a 5-px line, the U's 7 under 6). IN THE HI-FI SKIN THE
-// LINE IS ONE DEVICE PX THICK, ONE DEVICE PX OF AIR UNDER THE BASELINE AND
-// STOPPING ONE DEVICE PX SHORT (render.h's line rule, the sweep of
-// 2026-10-23: "let's do a sweep for all of these Windows Pixel lines"; the
-// three were scaled W until then); the pens are the run's own, measured
-// through the shaping chokepoint (byte_offsets_px), never assumed. A run
-// painted in a color takes the line in that color (a dead key's legend its
-// dim ink).
-GuiRect access_underline_rect(const text_shape::ShapedRun& run,
-                              const char* label, int access, double x,
-                              double baseline) {
-    const std::size_t a = static_cast<std::size_t>(access);
-    const std::vector<double> pen = text_shape::byte_offsets_px(
-        run, std::char_traits<char>::length(label));
-    const int line = hairline_px();
-    const int x0 = static_cast<int>(std::nearbyint(x + pen[a]));
-    const int x1 = static_cast<int>(std::nearbyint(x + pen[a + 1])) - line;
-    const int y  = static_cast<int>(std::nearbyint(baseline)) + line;
-    return GuiRect{x0, y, std::max(x1 - x0, line), line};
-}
-// A menu label in `ink`, its access key underlined (`label` the run's own
-// text; a null label, the accelerator column's, paints the run alone).
-void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
-                     const char* label, int access, double x,
-                     double baseline, GuiColor ink) {
-    set_palette_source(cr, ink);
-    text_shape::show_shaped_run(cr, run, x, baseline);
-    if (label != nullptr)
-        paint_ink_rect(cr,
-                       access_underline_rect(run, label, access, x, baseline),
-                       ink);
-}
-} // namespace
-
 // (THE CAPTION'S PAINTER — paint_caption_row, the window's own title bar
 // at the top lane 0 from 2026-10-05: the quaver, "<piece> - Warptempo" and
 // the three procedural glyphs, the hi-fi skin's flat lane 2026-10-23 — is
@@ -2066,8 +1996,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
 // was DELETED at the architect's live pass — "looks like a missing button
-// with that cross out"; the mid-render CANCEL lives on the RENDER button now,
-// and bare Esc is keyboard-only.)
+// with that cross out"; the mid-render CANCEL lives on the RENDER button now.)
 //
 // THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
 // the other icon buttons", bigger finger targets without stealing waveform
@@ -5239,9 +5168,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   the answer buttons FLUSH RIGHT on the controls row in painted order, the
 //   last one's right edge the ring's outer edge. Each button wears its
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
-//   "Delete") with Windows' UNDERLINED ACCESS KEY (architect 2026-10-10,
-//   Windows strict; OK and Cancel none) — the bracketed accelerators stay
-//   retired, PromptState owning the label rule and the key match. ONE BUTTON
+//   "Delete"), no letter underlined (architect 2026-10-30: the buttons are
+//   the prompt's one road, no keyboard standing under it). ONE BUTTON
 //   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this
 //   block's "no default face: this prompt system has no Enter answer, so
 //   every button is plain") — the LAST, the Escape sentinel, on every prompt
@@ -5253,7 +5181,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
 //   first row on the field, and Cancel alone flush right on the controls row,
-//   no access letter, raised with passive focus on it.
+//   raised with passive focus on it.
 //   AN EDITOR — THE BOX IS ITS EDIT CONTROL:
 //   the whole pending line on the box's flat field in the field's text,
 //   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
@@ -5272,8 +5200,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // just like the regular icon tooltips"), through the roster's own machinery
 // end to end — the same Qt timing, the same box, the same painter, the same
 // AppState::redesign_tooltip state, whose owner names either surface now. The
-// TEXT is a word button's word alone since the underline carries its key
-// (architect 2026-10-10, Windows strict), a glyph button's the player's own,
+// TEXT is a word button's word alone, a glyph button's the player's own,
 // published in the stash beside the rect; the WAIT is written by this surface's own hover walk
 // (update_modal_dialog_hover), and as everywhere no wait starts under a held
 // press (the model is at AppState::RedesignTooltip).
@@ -5283,7 +5210,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // painted by the roster's key painter (paint_roster_case) — at rest, down
 // under a live press, its LED lit for the row's one checked button — and its
 // legend printed under it (paint_key_legend: a word button's word in
-// capitals with its access key underlined, a player key its own legend).
+// capitals, a player key its own legend).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
 // architect 2026-10-23). No hover face. (Windows' push buttons, 2026-10-02 to
 // 2026-10-22, are git history.)
@@ -5354,11 +5281,10 @@ constexpr double kPlayerGroupGapPx    = 8.0;
 // the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER (its
 // last key's legend, render_player_button_legend) and THE TRIM PRESETS LIST
 // (2026-10-28 night: its acts return to it, only Close and its opener leave;
-// its last word button). Esc is the key of Cancel
-// and Close alike, and neither word carries an access letter (Esc is the
-// dialogs' way out, Windows strict, the underline rule at access_key_of);
-// the word buttons' layout reads their count alone (modal_word_buttons), so
-// the word changes no geometry.
+// its last word button). The words are plain, no letter underlined
+// (architect 2026-10-30: the buttons are the dialogs' one road, no keyboard
+// standing under them), and the word buttons' layout reads their count
+// alone (modal_word_buttons), so the word changes no geometry.
 constexpr std::string_view kModalOkLabel     = "OK";
 constexpr std::string_view kModalCancelLabel = "Cancel";
 constexpr std::string_view kModalCloseLabel  = "Close";
@@ -5705,12 +5631,6 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_focus_active    = false;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
-    // THE LIST BIT is modal face state too (2026-08-28): whether the ring's
-    // -1 means the folder overlay's list, under every one of the overlay's
-    // contents alike (the ring's own record, input_key_dispatch.cpp).
-    // It dies on the same edges — a prompt raised over the player and
-    // answered leaves the ring off the list, as a fresh open does.
-    app.folder_overlay.list_focused  = false;
 }
 
 } // namespace
@@ -5914,10 +5834,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // buttons.
     struct DialogButtonPlan {
         std::string label;
-        // The access key's byte in `label`, -1 for none (Windows strict,
-        // architect 2026-10-10): a prompt answer's from its table; every
-        // other owner's word button (OK, Cancel) and every glyph has none.
-        int         access       = -1;
         char        response_key = 0;
         bool        editor_ok    = false;
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
@@ -5961,7 +5877,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         for (const PromptAnswer& a : app.prompt.answers) {
             DialogButtonPlan b;
             b.label        = a.label;
-            b.access       = a.access;
             b.response_key = a.key;
             plan.push_back(std::move(b));
         }
@@ -6140,11 +6055,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
         // and UP, its legends and its words, the band walk without applying
-        // — then FOUR WORD BUTTONS with the dialogs' underlined access keys,
-        // SAVE (S), SAVE AS (A), DELETE (D) and CLOSE (the Close word
-        // kModalCloseLabel's rule, no letter), CLOSE LAST, the
-        // escape sentinel by construction. No Apply: the row's tap and
-        // Enter are the act. Each face is the act's own truthful answer
+        // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE (the
+        // Close word kModalCloseLabel's rule), CLOSE LAST. No Apply: the
+        // row's tap is the act. Each face is the act's own truthful answer
         // (trim_presets_button_enabled).
         using Act = AppState::TrimPresetsButtonAct;
         for (const Act act : {Act::HighlightDown, Act::HighlightUp}) {
@@ -6156,48 +6069,41 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                    RenderPlayerHintState{});
             plan.push_back(std::move(b));
         }
-        const auto word = [&](Act act, std::string_view label, int access) {
+        const auto word = [&](Act act, std::string_view label) {
             DialogButtonPlan b;
             b.trim_act = act;
             b.label    = std::string(label);
-            b.access   = access;
             b.enabled  = trim_presets_button_enabled(app, act);
             plan.push_back(std::move(b));
         };
-        word(Act::Save, "Save", 0);
-        word(Act::SaveAs, "Save As", 5);
-        word(Act::Delete, "Delete", 0);
-        word(Act::Close, kModalCloseLabel, -1);
+        word(Act::Save, "Save");
+        word(Act::SaveAs, "Save As");
+        word(Act::Delete, "Delete");
+        word(Act::Close, kModalCloseLabel);
     } else if (bpm_up) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
-        // trim list's cluster flush right (key_cluster_row_layout): RENDER
-        // (R), which greys until the three fields are set and low <= high,
-        // and CANCEL (kModalCancelLabel's rule, the form asking for a
-        // choice; no letter), CANCEL LAST, the escape sentinel by
-        // construction. No OK: a row's tap is the edit, RENDER the answer.
+        // trim list's cluster flush right (key_cluster_row_layout): RENDER,
+        // which greys until the three fields are set and low <= high, and
+        // CANCEL (kModalCancelLabel's rule, the form asking for a choice),
+        // CANCEL LAST. No OK: a row's tap is the edit, RENDER the answer.
         // Each face is the act's own truthful answer
         // (bpm_form_button_enabled).
         using Act = AppState::BpmFormButtonAct;
-        const auto word = [&](Act act, std::string_view label, int access) {
+        const auto word = [&](Act act, std::string_view label) {
             DialogButtonPlan b;
             b.bpm_act = act;
             b.label   = std::string(label);
-            b.access  = access;
             b.enabled = bpm_form_button_enabled(app, act);
             plan.push_back(std::move(b));
         };
-        word(Act::Render, "Render", 0);
-        word(Act::Cancel, kModalCancelLabel, -1);
+        word(Act::Render, "Render");
+        word(Act::Cancel, kModalCancelLabel);
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
         // claim), button-is-its-chord.
         // THE PICKER'S ROW IS ONE BUTTON (architect 2026-08-29): a click on a
-        // row opens it, so there is nothing for an OK to add — Enter on the
-        // list is the same act from the keyboard. Its one-day OK, named by
-        // the act it ran, went with the row-click ruling; the one button
-        // stays LAST, which on a one-button row makes it the escape sentinel
-        // by construction. ITS WORD IS WHAT LEAVING DOES (the rule at
+        // row opens it, so there is nothing for an OK to add. ITS WORD IS WHAT LEAVING DOES (the rule at
         // kModalCancelLabel, architect 2026-10-28 night): CANCEL under the
         // project picker and the value list, CLOSE under the settings page —
         // the act the same body by content (dispatch_modal_dialog_button's
@@ -6205,7 +6111,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE PROGRESS MODAL'S ROW IS **Cancel** ALONE TOO (architect
         // 2026-10-14): the batch's one act a user owns is stopping it, and its
         // lift is the batch's cancel road (dispatch_modal_dialog_button's
-        // progress arm). No access letter: Cancel is Esc, Windows strict.
+        // progress arm).
         if (!picker_up && !progress_up) {
             DialogButtonPlan ok;
             ok.label     = std::string(kModalOkLabel);
@@ -6278,10 +6184,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
     // THE PROGRESS MODAL IS RAISED WITH PASSIVE FOCUS ON ITS CANCEL
     // (2026-10-14), a prompt's LastButton raise on a one-button row: Windows'
-    // progress dialog, whose Cancel is its default button, so bare Enter or
-    // Space presses it and cancels at the key's release, as Esc cancels at
-    // its press. The same one assignment edge as the prompt's (a fresh
-    // session), so a key arm a previous surface left cannot carry over.
+    // progress dialog, whose Cancel is its default button (no key reaches it,
+    // architect 2026-10-30; its press is the road). The same one assignment
+    // edge as the prompt's (a fresh session), so a key arm a previous surface
+    // left cannot carry over.
     if (face_state_reset && progress_up && !plan.empty()) {
         app.modal_dialog_focus        = static_cast<int>(plan.size()) - 1;
         app.modal_dialog_focus_active = false;
@@ -7034,9 +6940,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
              static_cast<int>(i) == app.modal_dialog_key_pressed);
         // NO FOCUS FRAME (architect 2026-10-23: "when I open up the settings
         // and I press cancel, it gets that square drawn around it. Let's get
-        // rid of that"): the focused button — Enter's target, the
-        // Windows-strict tables unchanged (AppState::modal_dialog_focus) —
-        // wears nothing; the key's pressed face and its LED are the only
+        // rid of that"): the focused button — Enter's target
+        // (AppState::modal_dialog_focus) — wears nothing; the key's pressed face and its LED are the only
         // signs. The default-button frame's one relief line in the ring's
         // light tone, 2026-10-02 to 2026-10-23, read as a bevel on the flat
         // ground.
@@ -7046,14 +6951,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (render_player_button_legend, the Play key's naming its next press,
         // 2026-10-25 — its repaint the row's one damage owner, the play
         // face's writers damaging the row whole), dimmed when dead; a word
-        // button prints its word IN CAPITALS, its access key underlined (the
-        // Windows-strict keys unchanged, only the drawing), and wears the
-        // enabled bit as the glyph buttons do (THE DISABLED RUNG above owns
-        // the bit and which owners publish it).
+        // button prints its word IN CAPITALS and wears the enabled bit as the
+        // glyph buttons do (THE DISABLED RUNG above owns the bit and which
+        // owners publish it).
         const GuiMaterialScope flat(GuiMaterialRegion::Flat);
         paint_roster_case(cr, r, plan[i].lit, pressed);
         std::string legend;
-        int legend_access = -1;
         if (plan[i].glyph) {
             // The score viewer's PLAY / PAUSE prints the render player's Play
             // key's legend by its face, the same key painted the same way.
@@ -7074,18 +6977,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             legend = plan[i].label;
             for (char& ch : legend)
                 if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
-            legend_access = plan[i].access;
             // THE WORD'S PRINT WEARS ITS BIT TOO since the trim presets list's
             // Save and Delete grey (2026-10-28 night), and the BPM form's
             // Render (2026-10-29); every other owner's word publishes true.
-            paint_key_legend(cr, r, legend, enabled, legend_access);
+            paint_key_legend(cr, r, legend, enabled);
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
-        out.access_key   = plan[i].access >= 0
-                               ? access_key_of(plan[i].label.c_str(),
-                                               plan[i].access)
-                               : 0;
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
@@ -7119,7 +7017,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // keep the bit.
         if ((player_up || score_up || trim_up || bpm_up) &&
             !clip_covers_drawable(
-                cr, app, key_legend_layout(r, legend, legend_access).extent)) {
+                cr, app, key_legend_layout(r, legend).extent)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
                                prev_enabled[i].player_act == out.player_act &&
@@ -7129,10 +7027,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             out.enabled = carry && prev_enabled[i].enabled;
         }
         // THE HINT: a word button's is THE ACT'S NAME ALONE, its word
-        // (architect 2026-10-10, Windows strict — the underline carries the
-        // access key, and Enter and Esc are every dialog's; the key-naming
-        // hint "Save (S)" of 2026-08-13 retired with it); a glyph button's
-        // is the player's own. Published with the rect because the WORD is
+        // (architect 2026-10-10; no key behind it, the buttons being the
+        // dialogs' one road, architect 2026-10-30); a glyph button's is the
+        // player's own. Published with the rect because the WORD is
         // the half the pointer path cannot re-derive.
         out.tooltip = plan[i].tooltip.empty() ? plan[i].label
                                               : plan[i].tooltip;
@@ -7510,13 +7407,10 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            whose act is the lift, and the highlight is what
 //                            it promises
 // NO HOVER FACE (architect 2026-10-02) AND NO FOCUS FRAME (architect
-// 2026-10-23): THE RING'S FOCUS ON THE LIST (`list_focused`) is the keyboard's
-// state alone, the lit row the only sign (the walk below).
+// 2026-10-23): the lit row is the only sign (the walk below).
 //
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
-// list's keyboard focus — what Enter and Load in place act on, and nothing
-// else: Space and the Play button answer the TRANSPORT and never read the
-// highlight)
+// row Load in place and the highlight pair act on)
 // and the TRANSPORT'S ITEM, which its row does not mark (architect
 // 2026-10-23; the wav glyph swapped for Play until then).
 //
@@ -7624,8 +7518,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // NO FOCUS FRAME (architect 2026-10-23: "a highlight around the
             // button, which is more of a usability thing for the laptop, but
             // the laptop is deprecated as an authoring surface"): the lit row
-            // is the list's one sign, focused or not — `list_focused` still
-            // steers the keyboard's walk. The frame's one relief line in the
+            // is the list's one sign. The frame's one relief line in the
             // ring's light tone round the highlighted row, 2026-10-02 to
             // 2026-10-23, read as a bevel on the flat field.
 

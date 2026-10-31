@@ -1652,9 +1652,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     viewport.request_waveform_render_ =
         [&]() { paint_handler.maybe_enqueue_waveform_render(); };
 
-    // (No pan callback: scroll_viewport routes through request_waveform_sync_
-    // below, like zoom. The incremental shift-and-strip pan was retired
-    // 2026-07-26 — one render path for moving and resting plates.)
+    // (No pan callback: a pan routes through request_waveform_sync_ below,
+    // like zoom — one render path for moving and resting plates.)
 
     // Every user-driven viewport change routes here instead of the async
     // worker — zoom, scroll/pan, and the one-shot jumps alike: it OWES the
@@ -1720,8 +1719,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (redesign_button_enabled's no-piece term, the face that frame
     // paints), and after it on a piece the glass has not shown. The one frame
     // is a paint, not a release, so presentation_held() reads true across it
-    // and the drop spans the whole open. Dropped: the key press (all
-    // but plain Ctrl+Q, which ends the process and acts on no picture) and
+    // and the drop spans the whole open. Dropped: the key press and
     // its repeat (the repeat-eligibility probe answers false, so a dropped
     // press arms none and a held key's fire disarms it), the
     // button press, a touch navigation frame, the region hold's
@@ -1735,7 +1733,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // updates and ends (self-guarded on their begins: a dropped region
     // begin arms nothing, and the navigation's end clears a seat no frame
     // made), the pointer's leave, the activation edge, and the close
-    // request (an exit, like Ctrl+Q).
+    // request (Back's exit).
     const auto open_unseen = [&gui]() { return gui.presentation_held(); };
     gui.set_touch_nav_hooks(
         [&](const GuiTouchNavFrame& frame) {
@@ -1813,7 +1811,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // and commit a spurious jump. END any in-flight pointer gesture before
         // on_resize applies, so the resize always lands on a gesture-free state.
         // ENDING IS COMMITTING (architect 2026-07-29 — pointer gestures have no
-        // cancel; the rule is at the drag-modal gate in input_handler.cpp): each
+        // cancel; the rule is at on_key's drag-modal statement): each
         // gesture runs its own release body, so a resize mid-drag keeps what the
         // last motion event proposed — computed against the OLD geometry, which was
         // valid when it was proposed; it is the NEXT motion that could not be
@@ -1856,32 +1854,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (input_handler.h), driven by the iteration and BPM sweeps.
 
     gui.set_on_key([&](GuiKey key, GuiInputState mods) {
-        // A PHYSICAL KEY ARRIVAL ENDS A HELD ARROW BUTTON'S REPEAT BURST, and
-        // THIS hook is that edge: it sees exactly the platform's key
-        // deliveries and none of the synthetic on_key entries (the chrome
-        // lift and the burst's own tick fires — which
-        // must not end the schedule they ride, so the disarm cannot live at
-        // on_key's own top). It is LOAD-BEARING FOR UNDO rather than
-        // hand-feel: Undo::coalesce_gesture merges a synthesized repeat by
-        // KIND ALONE, with no subject test, on the premise that no command
-        // can run between a burst's opener and the repeats behind it — and
-        // under press-time dispatch the PRESS edge alone spans that premise:
-        // a key RELEASE runs no command (the one release act, the modal
-        // Enter/Space commit, needs its own arming press, which this line
-        // already caught — and a prompt standing disarms the burst anyway,
-        // through the tick's per-fire repeat_eligible re-ask). Only the ARM's
-        // schedule dies: the arm itself is the pointer's and a key press does
-        // not end a finger's hold, so the lift still runs the act the burst
-        // had not yet suppressed. A synthesized KEY repeat cannot arrive
-        // under a held button at all — the platform kills its own key hold at
-        // any pointer-button press — so no repeat-bit test is needed. The
-        // burst's full edge inventory is at AppState::ChromePress.
-        app.chrome_press.repeat_due_ms = 0;
-        // The open's hold drops it (the block above set_touch_nav_hooks),
-        // plain Ctrl+Q excepted.
-        if (open_unseen() &&
-            !(mods.ctrl && !mods.shift && !mods.alt && key == GuiKeys::Q))
-            return;
+        // THE PLATFORM'S KEY DELIVERIES ARE THE ON-SCREEN KEYBOARD'S
+        // (architect 2026-10-30: the hardware keyboard is closed), and none can
+        // arrive under a held roster button — a keyboard key is a touch of its
+        // own and the touch window has one owner (GuiInputCore::touch_down) —
+        // so this hook owes the button's repeat burst no disarm: the burst's
+        // two live producers, the keyboard's held key and the button's hold,
+        // are touches that never stand together (the burst's edge inventory
+        // is at AppState::ChromePress). The open's hold drops it (the block
+        // above set_touch_nav_hooks).
+        if (open_unseen()) return;
         input_handler.on_key(key, mods);
     });
 
@@ -1923,7 +1905,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE PLATFORM'S CLOSE REQUEST (the tablet's Back, platform_android.h's
     // set_on_close) takes the window's close road
     // (GuiInputHandler::on_window_close, which carries each step's reason),
-    // the unsaved-work prompt Ctrl+Q reaches too.
+    // the unsaved-work prompt with it.
     gui.set_on_close([&]() {
         input_handler.on_window_close();
     });
@@ -3259,9 +3241,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         //   * the pending nav-surface click (ScrollDragState) converts its
         //     remembered press_x at the RELEASE, so a page in between would
         //     place the playhead on whatever frame had slid under that column;
-        //   * the grab-pan's first leg folds the whole press->crossing delta,
-        //     and follow's suspension only lands once that first
-        //     scroll_viewport application fires;
         //   * a live marker / trim / region / strip drag converts each motion's
         //     window x the same way, so a page mid-drag would teleport the
         //     dragged subject under a motionless pointer;
@@ -3350,7 +3329,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.run();
 
     // WHY run() RETURNED, read before anything below dies: an exit (the
-    // platform's own bit — Ctrl+Q, Back's close, the activity's destroy, a
+    // platform's own bit — Back's close, the activity's destroy, a
     // load that failed) ends the process; otherwise the seated name (the Open
     // project picker's choice, or Revert's current project) is the
     // project to reopen (the loop contract, platform.h).

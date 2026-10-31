@@ -188,7 +188,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // THE OPEN PROJECT PICKER (architect 2026-08-28), Ctrl+O — the same letter
     // as the escape chord above and a wholly different act, which is why each
     // gets its own term rather than one loosened test. It is admitted on the
-    // header's own standard, exactly as Ctrl+Q and Ctrl+S are: the picker
+    // header's own standard, exactly as Ctrl+S is: the picker
     // authors nothing — it lists the projects, and choosing one REOPENS the
     // program around another project, discarding this session rather than
     // writing into it, so there is no marker and no engine setting for the lock
@@ -226,9 +226,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // arrows outright (a consumed no-op); it does not fall back to the
     // waveform-lane step — this project has no gesture fallbacks. Leaving the
     // marker lane is any DESELECTING route (the lane model at
-    // playhead_in_marker_lane); Esc is not one of them, being unbound outside the
-    // editors, the prompts, the drag swallow and the render cancel since
-    // 2026-07-29.
+    // playhead_in_marker_lane).
     // NOT the audition scrub: that is the waveform's one-shot POINTER act
     // (scrub_act_at — the lower half's motionless-release click act, its one
     // entry), a different act on a different surface, untouched here
@@ -255,9 +253,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_home_end =
         ((key == GuiKeys::Home || key == GuiKeys::End) &&
          !ctrl && !alt);
-    const bool is_page_updown =
-        ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
-         !ctrl && !shift && !alt);
     // ZOOM TO FIT AND ITS SHIFTED FORM, FRAME THE TRIM (2026-10-24): both are
     // the camera — the whole piece and back, the trim's span — writing no
     // store, so both are admitted (the trim bar's double-click, the frame's
@@ -324,34 +319,18 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
          !ctrl && !shift && !alt);
-    // THE WALK: bare Tab / Shift+Tab / IsoLeftTab — pure navigation, its
-    // camera the landing owner's (Viewport::land_subject). No ctrl: Ctrl+Tab
-    // and the march are their own entries below. No alt: no Alt spelling of
-    // Tab binds (the Alt walk was deleted 2026-09-23).
-    const bool is_tab_cycle =
-        (!ctrl && !alt && key == GuiKeys::Tab) ||
-        (!ctrl && !alt && key == GuiKeys::IsoLeftTab);
+    // THE WALK: bare Tab / Shift+Tab — pure navigation, its camera the
+    // landing owner's (Viewport::land_subject). No ctrl: Ctrl+Tab and the
+    // march are their own entries below. No alt: no Alt spelling of Tab binds.
+    const bool is_tab_cycle = (!ctrl && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
-    // Bare Escape only, and no modified Escape needs an admission here because
-    // none of them binds anywhere (Ctrl+Esc, the one that did, retired on
-    // 2026-09-01 when bare Esc took the notification stack whole), so a
-    // modified Escape has nothing to be admitted FOR.
-    // WHAT BARE Esc IS ADMITTED FOR: the RENDER /
-    // BATCH CANCEL and, since 2026-08-31, THE NOTIFICATION STACK'S CLEAR at
-    // the bare tail — the two of Esc's places that reach this
-    // gate. Neither mutates anything
-    // persistent, so both are read-only-safe like every one of Esc's bindings (the
-    // authoritative enumeration is at its dispatch point in on_key,
-    // input_handler.cpp; no count belongs here), and dropping Esc at this gate
-    // would break it. (THE REGION HIDE WAS THE OTHER ADMISSION UNTIL
-    // 2026-08-21.)
-    const bool is_esc =
-        (key == GuiKeys::Escape && !ctrl && !shift && !alt);
-    const bool is_ctrl_q =
-        (ctrl && !shift && !alt && key == GuiKeys::Q);
+    // (Esc and Ctrl+Q need no admission: neither reaches this gate, the
+    // on-screen keyboard's Esc arriving only under an editor, whose route
+    // takes it above, and no producer spelling Ctrl+Q — architect 2026-10-30,
+    // the roster and the on-screen keyboard the two producers of every key.)
     // THE SAVE (architect 2026-08-07). It writes the state the tab already
     // holds — it authors nothing — and the close prompt's Save answer already saved
     // from a locked tab through the very same owner (the header's inconsistency
@@ -549,13 +528,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     return !(is_o || is_open_project || is_revert_project ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
-             is_home_end || is_page_updown ||
+             is_home_end ||
              is_zoom_step || is_zero ||
              is_waveform_magnification ||
              is_center || is_follow || is_restrict ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-             is_esc || is_ctrl_q ||
              is_save || is_publish || is_render || is_render_misc ||
              is_trim_maximize || is_trim_presets ||
              is_add_to_selection ||
@@ -683,9 +661,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     Lower or Upper runs the bound step or opens that cell's editor, while
 //     the payload axis is the TEMPO step or the payload editor, both of
 //     which push and both of which stay refused. The step
-//     ladder's three magnitudes are admitted together for the arrows (bare,
-//     shift and ctrl, exactly the dispatch arm's own spelling) and Return
-//     admits its plain form alone, KpEnter with it. The bound EDITOR's own
+//     ladder's two magnitudes are admitted together for the arrows (bare
+//     and ctrl, exactly the dispatch arm's own spelling) and Return
+//     admits its plain form alone. The bound EDITOR's own
 //     keys need no entry here: an open editor claims the keyboard above this
 //     gate (keyboard_modal_editor_active).
 //   * CTRL+Z AND CTRL+SHIFT+Z — admitted NOT TO ACT but so that their own
@@ -830,14 +808,12 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool bound_axis = (app.addressed_cell == MarkerCell::Lower ||
                              app.addressed_cell == MarkerCell::Upper);
     if (bound_axis) {
-        // Up / Down at all three magnitudes — bare, shift and ctrl — which is
-        // `!alt && !(ctrl && shift)`, the dispatch arm's own test.
-        if ((key == GuiKeys::Up || key == GuiKeys::Down) &&
-            !alt && !(ctrl && shift))
+        // Up / Down at both magnitudes — bare and ctrl — which is
+        // `!alt && !shift`, the dispatch arm's own test.
+        if ((key == GuiKeys::Up || key == GuiKeys::Down) && !alt && !shift)
             return false;
-        // Return / KpEnter, plain only, the editor-open arm's own test.
-        if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
-            !ctrl && !shift && !alt)
+        // Return, plain only, the editor-open arm's own test.
+        if (key == GuiKeys::Return && !ctrl && !shift && !alt)
             return false;
     }
     return read_only_key_blocked(app, key, mods);
@@ -1710,8 +1686,8 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // region drag and the one nav drag, pan and ctrl-zoom phases alike): left held across the
 // reset, the next motion would grow a VIEW-LOCAL region in the EDITOR from an
 // anchor the view took, or pan on behalf of a view that is no longer up.
-// finalize_active_drags is the existing force-end — the same release bodies the
-// Ctrl+Q hatch and main.cpp's resize and WM-close callbacks run — so "any end
+// finalize_active_drags is the existing force-end — the same release bodies
+// main.cpp's resize and close callbacks run — so "any end
 // commits" stays true, no cancel semantics appear, and by the time the mode
 // resets the gate's invariant holds again exactly as it does for a key. It runs
 // BEFORE the close so each gesture ends against the state it was made in, and
@@ -1917,8 +1893,7 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //   * bare `g`             — the WALK's toggle (2026-08-18), the icon row's
 //     WALK LAMP's chord;
 //   * bare `,` / `.`       — the walk;
-//   * bare Tab / Shift+Tab / IsoLeftTab — the diff-flag cycle, shift-agnostic on
-//     IsoLeftTab exactly as the live cycle is, its landing's camera the
+//   * bare Tab / Shift+Tab — the diff-flag cycle, its landing's camera the
 //     landing owner's exactly as the live walk's is (Viewport::land_subject);
 //   * Ctrl+Shift+Tab       — the PAIRED MARCH (2026-08-18), the diff-flag cycle
 //     composed with a round trip through the other tab (2026-09-26): the tab
@@ -1945,8 +1920,9 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 // keyboard-modal editor gate (keyboard_modal_editor_active + modal_editor_key_-
 // blocked, and a printable `h` is a PrintableKey, so it is not merely dropped
 // but TYPED — the editor's own handler consumes it and returns above this
-// point), and the drag-modal gate (any live pointer gesture swallows every key
-// but Ctrl+Q). Every other key above inherits the identical list.
+// point); a live pointer gesture is never live beside a key at all (the one
+// touch owner, on_key's statement). Every other key above inherits the
+// identical list.
 //
 // ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
 // check and every other arm below it, so with the mode down `u`, `g`, `,`, `.`,
@@ -2019,9 +1995,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // 2026-10-18), already answer, both for the key and for the
     // roster face derived from this predicate.
     //
-    // THE SPELLING IS THE LIVE MARCH'S EXACTLY — plain Tab with ctrl+shift, no
-    // IsoLeftTab arm — because the live arm binds that one shape too; the mode
-    // mirrors what it composes rather than widening it.
+    // THE SPELLING IS THE LIVE MARCH'S EXACTLY — plain Tab with ctrl+shift —
+    // because the live arm binds that one shape too; the mode mirrors what it
+    // composes rather than widening it.
     if (mods.ctrl && mods.shift && key == GuiKeys::Tab) return true;
     // (CTRL+HOME / CTRL+END, the WHOLE-PIECE jump, were the other ctrl shape
     // claimed here from 2026-09-26 until 2026-10-24, when the jump moved to
@@ -2037,18 +2013,15 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // strict modifier validation holds.
     //
     // (WHAT IT ALSO CLAIMED: from 2026-08-05 Ctrl+Tab stepped the WALK SOURCE
-    // one tab right and, from 2026-08-07, Ctrl+Shift+Tab one tab left — both in
-    // the plain Tab spelling and in the IsoLeftTab one xkb puts on the Tab key's
-    // shift level. The walk is bare `g` below now, so Ctrl+Tab falls through to
+    // one tab right and, from 2026-08-07, Ctrl+Shift+Tab one tab left. The
+    // walk is bare `g` below now, so Ctrl+Tab falls through to
     // the allowlist, which ADMITS it — an A/B tab switch works normally in the
     // view, the architect's own ruling — while Ctrl+Shift+Tab is claimed above
     // for the march itself rather than for a walk cycle.)
     if (mods.ctrl) return false;
     // THE CYCLE IS ONE OF THREE SHIFT-CARRYING SHAPES, and it is admitted in the
-    // live cycle's own three spellings: bare Tab forward, Shift+Tab back, and
-    // IsoLeftTab back shift-agnostically (an X keymap gives that keysym to
-    // Shift+Tab on most layouts, and the live arm accepts it either way).
-    if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) return true;
+    // live cycle's own two spellings: bare Tab forward, Shift+Tab back.
+    if (key == GuiKeys::Tab) return true;
     // THE WALK IS THE SECOND (2026-08-07): bare `,` / `.` STEP and shift-exact
     // `,` / `.` JUMP TO THE WALLS — oldest and newest. Both shapes are the
     // walk's own vocabulary, so both are admitted here and the arm below reads
@@ -2444,8 +2417,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE TAB FAMILY IN THE VIEW — the diff-flag cycle, and above it the march
     // that composes the cycle with the A/B switch.
     //
-    // BARE TAB / SHIFT+TAB / IsoLeftTab — THE DIFF-FLAG CYCLE, mode-local. Tab
-    // steps to the next flag, Shift+Tab and IsoLeftTab to the previous, in the
+    // BARE TAB / SHIFT+TAB — THE DIFF-FLAG CYCLE, mode-local. Tab
+    // steps to the next flag, Shift+Tab to the previous, in the
     // list's own order: rebuild_history_diff_flags leaves `flags` sorted
     // ASCENDING BY time_frame, so list order IS reading order and no second
     // ordering is derived here (the hit stash indexes this same list).
@@ -2515,9 +2488,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // walks frame alike at every level in both worlds. No alt term here:
     // history_mode_owns_key refuses every alt shape ahead of this body; the
     // march above ranks first.
-    if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
-        cycle_history_diff_flag_focus(key == GuiKeys::Tab && !mods.shift,
-                                      MarkerLandingFrame::Land);
+    if (key == GuiKeys::Tab) {
+        cycle_history_diff_flag_focus(!mods.shift, MarkerLandingFrame::Land);
         return true;
     }
 
@@ -2621,8 +2593,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 
 // THE MODE'S KEYBOARD ALLOWLIST — the shape read_only_key_blocked has, and for
 // the same reason: one gate with a stated membership beats twenty scattered
-// refusals. True when the press is NOT admitted and should be dropped as a
-// consumed no-op.
+// refusals. True when the chord is NOT admitted, and its button greys (the
+// faces' reader, below).
 //
 // WHAT IS ADMITTED, the whole list. SPACE IS NOT ON IT (architect 2026-08-05):
 // PLAYBACK IS REMOVED FROM THE VIEW WHOLE — it was slow, the mode's full-song
@@ -2638,14 +2610,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             is the live tab's, and a restore that moves the
 //                             playhead clears the mode's focus as Home / End
 //                             do. At a ceiling nothing stamped it is a silent
-//                             no-op, as in the live view.
-//   - PageUp/PageDown       → the paged viewport scroll
-//     (bare)                  — the two above are NAVIGATION, which is the
-//                             mode's whole vocabulary: the delta is laid out on
-//                             the viewport, so panning and zooming it is reading
-//                             it. PageUp/PageDown are PURE viewport moves; `0`'s
-//                             restore lands the playhead, which the mode's
-//                             diff-flag click and Tab cycle already do.
+//                             no-op, as in the live view. It is NAVIGATION,
+//                             which is the mode's whole vocabulary: the delta
+//                             is laid out on the viewport, so zooming it is
+//                             reading it; the restore lands the playhead,
+//                             which the mode's diff-flag click and Tab cycle
+//                             already do. Its shifted and ctrl-shifted presses
+//                             (the trim's frame and reset) are admitted beside
+//                             it (is_zero below).
 //   - t / p / 1 / 2 / 3 / 4 → THE VIEW SWITCHES (architect 2026-08-04, from his
 //     (bare)                  first real session with the mode). THE DELTA IS
 //                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,
@@ -2883,35 +2855,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             this act writes it; Save-and-Commit, which
 //                             authors nothing, is admitted by that gate
 //                             instead).
-//   - Ctrl+Q                → the close routing.
-//   - Esc (bare)            → ITS EXISTING BINDINGS, AND NOT ONE OF ITS OWN
-//                             (architect 2026-08-04, closing the arc's recorded
-//                             cost). Admitting it adds NO Esc place of its own:
-//                             the bare-Esc inventory is the one enumerated at
-//                             on_key's dispatch point (input_handler.cpp), and
-//                             this line lets exactly the binding that sits BELOW
-//                             it run — the RENDER / BATCH CANCEL (a render
-//                             launched before `h`, whose progress line the mode's
-//                             corner outranks). It sits BELOW this gate in
-//                             on_key and mutates no authored state, so the
-//                             frozen now side is untouched — the same argument
-//                             the read-only allowlist admits Esc on. (The REGION
-//                             HIDE was the other one the admission bought until
-//                             2026-08-21, when it retired; the resting overlay
-//                             it hid is itself deleted since 2026-09-22.)
-//                             IT CANNOT CLOSE THE VIEW, structurally rather than
-//                             by refusal: the toggle is handle_history_mode_key's,
-//                             and that function's whole vocabulary
-//                             (history_mode_owns_key, whose declaration below
-//                             enumerates it) carries no Esc shape in any modifier
-//                             combination, so no Esc reaches it. The
-//                             view's exits are unchanged, and `h` is still the
-//                             key that leaves. With no render running a bare
-//                             Esc falls to the card dismissal (the whole
-//                             notification stack, if any card is standing)
-//                             exactly as it does everywhere else, and is a
-//                             consumed nothing only where that too finds
-//                             nothing to dismiss.
+// (Esc and Ctrl+Q are not on it: neither reaches this gate — architect
+// 2026-10-30, the roster and the on-screen keyboard the two producers of
+// every key, the keyboard's Esc arriving only under an editor.)
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its
@@ -2923,7 +2869,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // handle_history_mode_key's own vocabulary — bare `h` (the toggle), bare `u`
 // (the CUMULATIVE READING's toggle, 2026-08-08), bare `g` (the WALK's toggle,
 // 2026-08-18), bare `,` and
-// `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the DIFF-FLAG CYCLE),
+// `.` (the walk), bare Tab / Shift+Tab (the DIFF-FLAG CYCLE),
 // bare Home / End and Shift+Home / Shift+End (the ABSOLUTE ends of the song,
 // not the trim bounds), bare `c` (working zoom centered on the mode's own
 // focus) and bare Left / Right (the PLAYHEAD STEP, 2026-09-26, refused on a
@@ -2979,34 +2925,24 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // argument's premise is gone, while the tab-band argument, which was never about
 // markers, stands untouched.
 //
-// THE REDESIGNED BUTTONS PASS THROUGH HERE UNCHANGED, which is why they need
-// no rule of their own: they synthesize a chord and call on_key
-// (finish_chrome_press_release, at the lift; the command menus' items did the
-// same until the menu row's removal, 2026-10-21), so Save, Undo, Redo, Render and the view pairs drop at this gate exactly as
-// their keys do. (A command menu OPENED inside the view from 2026-08-08 —
-// the dropdown's lockout narrowed to the Settings popup, retired the same
-// evening — and this predicate admitted the File
-// menu's Ctrl+Q, Ctrl+O since 2026-08-29 (architect, "admit both") and
-// Ctrl+Alt+O since 2026-09-13, until the menu row's removal, 2026-10-21; the
-// three chords stay admitted.)
-// (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
-// the same way, refusing nothing else on it — its remaining four were claimed
-// one line above as the mode's own vocabulary — while the row whose chord means
-// something ELSE in the view greyed at the item instead, which is the one thing
-// a chord dispatch cannot express: the chord acts, it is just not the act the
-// label names. That menu and that grey are deleted 2026-08-15.)
-//
-// AND SINCE 2026-08-04 THIS GATE IS ALSO READ BY THE FACES: a button whose chord
-// this predicate blocks wears its row's DISABLED face while the mode stands and
-// ignores the pointer, so the roster says what it will do rather than swallowing
-// clicks silently. The partition is DERIVED from this function (the menu
-// row's anchors, which had no chord to ask about, were hand-answered until
-// the row's removal, 2026-10-21), never
-// hand-listed —
+// THIS LIST IS THE FACES' ALONE (architect 2026-10-30: the roster and the
+// on-screen keyboard are the two producers of every key, so the press that
+// reaches the view is a roster lift, and on_key keeps no gate on this list):
+// a button whose chord this predicate blocks wears its row's DISABLED face
+// while the mode stands and its press is consumed at the arm, so the roster
+// says what it will do and a refused chord is never dispatched at all. The
+// partition is DERIVED from this function, never hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
-// inventory.
+// inventory. THE DERIVATION ASKS THE BASE CHORD, so a lit button's modifier
+// twins are this list's members too, and every one is: Open Project's
+// Ctrl+Alt+O, Zoom to Fit's Shift+0 and Ctrl+Shift+0, the zoom pair's
+// shifted steps and the tab buttons' Ctrl+Tab are admitted below, Save's
+// lift is the publish chord in here, and the walk's, the march's, the
+// skips' and the history steps' shifted forms are the mode's own
+// vocabulary (history_mode_owns_key) — so no press a lit button makes is
+// one this list refuses.
 //
-// THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
+// THE PREDICATE IS FREE, NOT A MEMBER, for exactly that reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
 // TWO admissions are conditional on session state (the revert act's, on a
@@ -3015,12 +2951,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // ACT'S TWO — head_delta_empty and history_checkpoint_in_flight, the act's
 // chord's since 2026-08-08 — moved to the act on the architect's ruling that a gate's
 // membership is the chord's alone (a state term here makes the gate answer the
-// view's own chord with "not available in the history view"); the two that
-// remain say their own true sentence at the gate's call site instead of falling
-// into that one. Both readers hand it
-// the same `app` — each condition is decided HERE and restated at neither
-// caller, which is what keeps the key that refuses and the face that greys one
-// decision rather than two spellings of one. THE REVERT ACT'S ADMISSION HAD
+// view's own chord with "not available in the history view"). Each
+// condition is decided HERE and restated nowhere, so the face that greys is
+// one decision. THE REVERT ACT'S ADMISSION HAD
 // NO FACE READER from 2026-08-15 to 2026-08-30, a scope rather than a second
 // spelling: its subject term still decided the KEY here while
 // redesign_button_enabled lifted the four history companions over the derived
@@ -3039,7 +2972,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // the session the two conditional admissions read, or nullptr to ask about
 // EVERY state at once — each conditional admission then answers for its
 // chord's SHAPE alone, as if its term stood. history_mode_key_blocked (the
-// key and the grey) hands it the session; history_mode_key_blocked_in_every_
+// grey) hands it the session; history_mode_key_blocked_in_every_
 // state (the roster's HIDE, history_mode_hides_button, input_pointer.cpp)
 // hands it none, so a chord that answer refuses is refused whatever the
 // session holds — dead by construction, never by state — and the two
@@ -3050,19 +2983,22 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
-    // ZOOM TO FIT AND FRAME THE TRIM (bare `0` and Shift+0, the latter
-    // 2026-10-24): the camera, touching nothing the view froze — the frame is
-    // the trim bar's double-click, which the view has always run
-    // (handle_history_mode_press's trim-bar arm). Reset Trim, Ctrl+Shift+0,
-    // is not named: trim is frozen in here, so the view cards it.
+    // ZOOM TO FIT, FRAME THE TRIM AND RESET TRIM — Zoom to Fit's three
+    // presses (bare `0`, Shift+0 since 2026-10-24, and Ctrl+Shift+0, the
+    // barrel held through the long press, admitted 2026-10-30, architect:
+    // every press a lit button can make is a press the view admits, so no
+    // chord the roster spells is refused here): the first two are the camera,
+    // touching nothing the view froze — the frame is the trim bar's
+    // double-click, which the view has always run (handle_history_mode_press's
+    // trim-bar arm) — and the third is the trim's reset
+    // (handle_trim_maximize), its own body answering in here as outside.
     const bool is_zero  = (key == GuiKeys::Digit0 && bare) ||
-                          is_trim_frame_key(key, mods);
+                          is_trim_frame_key(key, mods) ||
+                          is_trim_maximize_key(key, mods);
     // THE ZOOM STEP (`=` / `-`, bare and shifted; architect 2026-10-27): the
     // camera, as the Ctrl+drag zoom the view already admits is — so the Zoom
     // In and Zoom Out keys stand live in the view by the derived partition.
     const bool is_zoom_step = is_zoom_step_key(key, mods);
-    const bool is_page_updown =
-        ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
     // the 2026-08-07 "the Local walk consumes it": a local member is a STATE of
     // this session's timeline, and loading a state in place is exactly what the
@@ -3104,9 +3040,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // THE TERM IS history_revert_actionable SINCE PLANNER DECISION 58 (the
     // same day): the subject AND the lock composed once, so a locked tab's
     // Revert greys from this line too — the admission used to ignore the lock
-    // and lit a button whose chord the read-only gate below then dropped. So
-    // on a locked tab this gate now refuses the key ahead of that gate, and
-    // the card is this gate's (the view's), not the lock's. Unlike
+    // and lit a button whose chord the read-only gate below then dropped. Unlike
     // the two mutators above it, this key is NOT dispatched from a mode arm:
     // it falls through to on_key's ordinary body, below the read-only gate,
     // which is a backstop for it now rather than its first refusal.
@@ -3139,21 +3073,16 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool is_publish = is_publish_key(key, mods);
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
-    const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
-    // CTRL+O IS ADMITTED (architect 2026-08-29, "admit both"), and it is the
-    // ONE OTHER ACT ON THE SESSION AS A WHOLE — Ctrl+Q's own family, sitting
-    // beside it here as it sits beside it in on_key's dispatch. The reasoning
-    // is the quit's exactly: an open TEARS THIS VIEW DOWN, which is not a
-    // reason to refuse it but a description of what a reopen does to
-    // everything, and the admitted Ctrl+Q already ends the view the same way.
+    // CTRL+O IS ADMITTED (architect 2026-08-29, "admit both"), an ACT ON THE
+    // SESSION AS A WHOLE: an open TEARS THIS VIEW DOWN, which is not a reason
+    // to refuse it but a description of what a reopen does to everything.
     // The picker it raises stands OVER the mode — its router runs ahead of
     // this gate in on_key, its veil consumes the view's presses, and its band
     // — the modal family's box since 2026-10-14 (modal_box.h) — starts at the
     // view bar's top row and runs to row 8, covering the canvas column's
     // lanes (the diff lane with them) and the waveform, with only the
-    // toolbar band standing above it, dead — so a Cancel or an Esc leaves the view exactly as it stood, this view owning no navigation
-    // state to disturb. Until this date the chord fell through this list as a
-    // consumed no-op.
+    // toolbar band standing above it, dead — so a Cancel leaves the view
+    // exactly as it stood, this view owning no navigation state to disturb.
     //
     // IT IS THE SHARED PREDICATE'S SHAPE and not a second spelling of it
     // (is_open_project_key, gui_input.h — ctrl-exact, so Ctrl+Shift+O stays
@@ -3165,7 +3094,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // REVERT IS ADMITTED BESIDE IT (Ctrl+Alt+O, architect 2026-09-13,
     // the planner's default): the same act on the session as a whole aimed at
     // the project already open, so Open's reasoning is its reasoning — a
-    // reopen tears this view down as Ctrl+Q's exit does.
+    // reopen tears this view down.
     const bool is_revert_project = is_revert_project_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
     // bare-exact, read off its own arm in on_key: the four absolute selectors
@@ -3184,7 +3113,6 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // the lamp turns a plain diff-flag press into the mode's ctrl body, which
     // is the only road to a two-flag selection a finger has.
     const bool is_add_to_selection = (key == GuiKeys::K && bare);
-    const bool is_esc = (key == GuiKeys::Escape && bare);
     // THE A/B TAB SWITCH (architect 2026-08-18): "ctrl+tab should work as
     // normal in history view — it becomes essentially another view but in
     // mostly readonly mode, with no playback since trim is not mutable". So
@@ -3232,8 +3160,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // 2026-10-25, "admit both": the player opens over the view as the picker
     // does on Ctrl+O, beside it above). It authors nothing the view froze;
     // the overlay stands over the view, its router ahead of this gate and its
-    // veil over the view's presses, and a Cancel or an Esc leaves the view as
-    // it stood — while the player's LOAD IN PLACE tears the view down as a
+    // veil over the view's presses, and its Close leaves the view as it
+    // stood — while the player's LOAD IN PLACE tears the view down as a
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
@@ -3243,10 +3171,10 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // view froze and nothing the view has a reason to refuse — so the view
     // admits it and the NOISE key stands lit in here by the derived partition.
     const bool is_noise = (key == GuiKeys::W && bare);
-    return !(is_zoom_step || is_zero || is_page_updown || is_play_renders ||
-             is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
+    return !(is_zoom_step || is_zero || is_play_renders ||
+             is_view_selector || is_add_to_selection || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
-             is_save || is_publish || is_ctrl_q || is_open_project ||
+             is_save || is_publish || is_open_project ||
              is_revert_project ||
              is_tooltip_lamp || is_waveform_magnification || is_noise);
 }
@@ -4464,44 +4392,16 @@ bool GuiInputHandler::keyboard_modal_editor_active() const {
 
 namespace {
 
-// THE MODAL FOCUS RING'S TAB SHAPE — the ONE predicate four sites read (the
+// THE MODAL FOCUS RING'S WALK KEY — the ONE predicate four sites read (the
 // keyboard-modal gate's admission, the ring's own walk, the completion arm
-// that must fire on the FORWARD shape alone, and repeat_eligible's ring arm
-// just below), so the spellings cannot drift apart the way hand-kept lists
-// would.
-//
-// IT MIRRORS THE LIVE MARKER CYCLE'S SPELLINGS EXACTLY (`is_tab_cycle` and
-// handle_tab_switch_keys' three arms, both in this file) rather than inventing
-// a second convention for the same physical gesture: bare Tab forward,
-// Shift+Tab back, and IsoLeftTab back SHIFT-AGNOSTICALLY — that keysym lives on
-// the Tab key's shift level, so a layout may deliver the reverse either with or
-// without the shift bit and the product reads both as the one shape everywhere
-// it binds a reverse Tab (the `h` view's diff-flag cycle does the same). CTRL
-// AND ALT ARE REFUSED on every arm: a ctrl-carrying Tab is the tab-cycle
-// family's, not this ring's, and alt binds nothing in it, as it binds no Tab
-// anywhere.
-enum class ModalRingTab { None, Forward, Reverse };
-
-ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
-    if (mods.ctrl || mods.alt) return ModalRingTab::None;
-    if (key == GuiKeys::IsoLeftTab) return ModalRingTab::Reverse;
-    if (key != GuiKeys::Tab) return ModalRingTab::None;
-    return mods.shift ? ModalRingTab::Reverse : ModalRingTab::Forward;
-}
-
-// THE RING'S KEY NORMALIZATION — KEYPAD ENTER IS RETURN'S TWIN (2026-08-29),
-// the one owner, read by the ring's walk at its head and by the release arm
-// (GuiInputHandler::on_key_release) before its compare. The pair is one key
-// everywhere else in the product — the editors' session keys
-// (text_editor::classify_key), the flag editor's open chord, and the picker's
-// and the player's list routers, which both spell `case Return: case KpEnter:`
-// — and a ring that read Return alone made the difference depend on nothing
-// but where the focus happened to be, letting a keypad Enter on a focused
-// button reach the LIST instead. Normalizing at both ends is what keeps a
-// press stored as Return answerable by the KpEnter release that ends it.
-// Every other key passes through unchanged.
-GuiKey modal_ring_press_key(GuiKey key) {
-    return key == GuiKeys::KpEnter ? GuiKeys::Return : key;
+// and repeat_eligible's ring arm just below), so the spelling cannot drift
+// apart the way hand-kept lists would. BARE TAB EXACTLY, the forward walk
+// (architect 2026-10-30: the on-screen keyboard's Tab key, its one producer,
+// carries no shift — Shift is a one-shot capital for the next character — so
+// the reverse walk had no producer and went; the barrel's Ctrl+Tab is the
+// tab-cycle family's, never this ring's).
+bool modal_ring_tab(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Tab && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
 }  // namespace
@@ -4517,17 +4417,27 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // retroactively empower the hold (e.g. a chord held through a marker drag
     // must not repeat onto the just-committed marker once the mouse releases).
     if (any_pointer_gesture_active(app)) return false;
+    // NOTHING REPEATS UNDER A PROMPT, THE PROGRESS MODAL OR AN OVERLAY
+    // (architect 2026-10-30): no key arrives under any of them but an
+    // overlay's opener, which is one-shot, so a hold has nothing to continue
+    // there — and a prompt's one-key answers are the destructive shape a
+    // repeat must never reach. A held roster button whose burst was armed
+    // before one of them rose is disarmed at its next fire by this answer
+    // (tick_chrome_press_repeat re-asks it per fire).
+    if (app.prompt.active || app.batch_progress.active ||
+        app.render_player.active || app.picker.active ||
+        app.score_viewer.active)
+        return false;
     // THE MODAL FOCUS RING'S TAB WALK REPEATS (architect 2026-08-13, at his
     // live test: "a held tab does not key repeat. It should"), and it is the
     // ONE thing that repeats on a modal surface. It is a continuous step
     // gesture in exactly the sense the marker cycle is — walk the stops
-    // quickly — and its shapes are that cycle's own, read from the one
-    // predicate the gate, the walk and the completion arm share rather than
-    // re-spelled here.
+    // quickly — read from the one predicate the gate, the walk and the
+    // completion arm share rather than re-spelled here.
     //
-    // THE TWO SURFACES ARE THE TWO THAT HAVE A RING: a prompt (whose buttons
-    // cycle) and a DIALOG editor (field plus buttons). The top-strip flag
-    // editor publishes no dialog and so has no ring; its whole Tab family
+    // THE ONE SURFACE IS THE DIALOG EDITOR (field plus buttons), the one ring
+    // a key reaches (architect 2026-10-30: no key arrives under a prompt). The
+    // top-strip flag editor publishes no dialog and so has no ring; its Tab
     // drops at modal_editor_key_blocked before anything could act on it, and
     // it is deliberately absent here.
     //
@@ -4538,8 +4448,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // answers false and every subsequent fire walks. The completion cannot
     // fire repeatedly under a hold for that reason alone; nothing here has to
     // suppress it.
-    if ((app.prompt.active || modal_dialog_editor_active()) &&
-        modal_ring_tab_shape(key, mods) != ModalRingTab::None)
+    if (modal_dialog_editor_active() && modal_ring_tab(key, mods))
         return true;
     // AND THE WALK IS THE ONLY THING THAT REPEATS ONCE THE FOCUS IS ON A BUTTON
     // (2026-08-13): from there no key reaches the field at all
@@ -4551,75 +4460,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // and everything else, derived from the wall rather than listing keys —
     // through the wall's own reading of the focus (modal_dialog_focus_live),
     // so the two cannot disagree about where the keyboard is.
-    if ((app.prompt.active || modal_dialog_editor_active()) &&
-        modal_dialog_focus_live() >= 0)
+    if (modal_dialog_editor_active() && modal_dialog_focus_live() >= 0)
         return false;
-    // THE RENDER PLAYER (2026-08-28): its continuous steps repeat — the
-    // highlight walk (Up/Down) and the seeks (Left/Right) — AND NOTHING ELSE
-    // DOES, on any modifier. Enter and Space are the modal's one-shot press or
-    // the open/play acts; the closers and the load chord are
-    // one-shot commands; THE TWO SKIPS ARE ONE-SHOT ON BOTH SHAPES (architect
-    // 2026-08-31, and more plainly so since 2026-09-04): a plain press is a
-    // whole FILE — the next track on End, and on Home the item's
-    // start or, inside the previous-track window, a whole file back — so a
-    // hold would walk the folder a file per repeat, while the SHIFTED pair
-    // lands the folder's first and last wav, where a hold could only re-reach
-    // the wall it just hit; and the ring's Tab repeats through this arm's own
-    // first line exactly as every ring's does. THE
-    // ARROWS STAY ELIGIBLE and are pure walks: bare Up stops at the band's top
-    // rather than leaving the folder, so a hold can only walk a listing, which
-    // is the continuous step this eligibility is for. NOTHING HERE ANSWERS FOR
-    // THE CAR: a head unit's button is a direct act on the player and never
-    // enters this road at all.
-    // The item's two NEIGHBOURS were
-    // repeat-eligible on bare `,` / `.` with their shifted ends from
-    // 2026-08-30 to 2026-08-31 and left the mode with them. A prompt over the
-    // player is the prompt's own answer, which the arm above and the blanket
-    // below already give.
-    if (app.render_player.active && !app.prompt.active) {
-        if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
-        if (mods.ctrl || mods.alt || mods.shift) return false;
-        return key == GuiKeys::Left || key == GuiKeys::Right ||
-               key == GuiKeys::Up || key == GuiKeys::Down;
-    }
-    // THE PICKER (2026-08-28), the player's shape with the player's reason:
-    // the highlight walk (Up/Down) repeats — a continuous step that decides
-    // nothing but where the band is — and the ring's Tab repeats as every
-    // ring's does; Enter, Space and Esc are one-shot, the open act and the
-    // close being acts and the button press being the modal's own
-    // press-and-hold, and so are the trim presets list's access letters and
-    // its Delete key (2026-10-28 night), each an act or a question. A prompt
-    // over the picker is the prompt's own answer.
-    if (app.score_viewer.active && !app.prompt.active) {
-        // THE SCORE VIEWER (2026-10-26): the ring's walk and the arrows'
-        // steps repeat — on the page road the page step, a held arrow
-        // turning pages; under the soundtrack the skips in both forms
-        // (2026-10-27), a held arrow walking 3 s or, shifted, 10 s a repeat
-        // to the range's wall, the render player's held seek — Home / End
-        // land once, Space is one-shot (the soundtrack's toggle).
-        if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
-        if (mods.ctrl || mods.alt) return false;
-        if (key != GuiKeys::Left && key != GuiKeys::Right) return false;
-        return score_viewer_has_soundtrack(app) || !mods.shift;
-    }
-    if (app.picker.active && !app.prompt.active) {
-        if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
-        return !mods.ctrl && !mods.shift && !mods.alt &&
-               (key == GuiKeys::Up || key == GuiKeys::Down);
-    }
-    // THE PROGRESS MODAL (2026-10-14): only the ring's Tab repeats, as every
-    // ring's does; Enter, Space and Esc are its Cancel, one-shot. A prompt
-    // over it is the prompt's own answer.
-    if (app.batch_progress.active && !app.prompt.active)
-        return modal_ring_tab_shape(key, mods) != ModalRingTab::None;
-    // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
-    // blanket stays exactly as it was: a prompt's one-key answers must be
-    // one-shot, because a held response key repeating is the destructive shape
-    // the painted gate (PromptState::painted) exists to prevent — the second
-    // fire would answer a question raised by the first. The ring's walk is
-    // safe under a hold precisely because it decides nothing; it only moves
-    // where the keyboard is.
-    if (app.prompt.active) return false;
     if (any_text_editor_active()) {
         // Only the editor's motion/edit and printable-insert keys auto-repeat
         // while held; its session (bare Escape/Return) and chord (ctrl-exact
@@ -4645,20 +4487,18 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // VALUE STEP on the addressed cell — the tempo or a bound;
     // the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family — and since 2026-08-31 they repeat on their
-    // shifted and ctrl spellings too, which the arm below this one owns),
-    // bare PageUp/PageDown,
+    // ctrl spelling too, which the arm below this one owns),
     // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
     // older/newer step, a continuous step gesture like the arrows and held for
     // the same reason, to walk quickly; in GLOBAL dispatch it is bound only
     // inside that view, so a repeat outside it fires into an unbound key
     // exactly as a held arrow with nothing to nudge fires into a refusal — the
     // render player bound the same pair to its own item walk for the one day
-    // of 2026-08-30 and answered for it in the player arm above, which returns
-    // before this one whatever that mode binds. Their SHIFT shapes — the
+    // of 2026-08-30). Their SHIFT shapes — the
     // walk's absolute wall jumps — are excluded
     // by the no-shift term below and stay one-shot: a held jump could only
     // flap against the wall it just reached),
-    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the
+    // the marker-focus cycle (bare Tab / Shift+Tab), and the
     // THREE repeating Ctrl chords — the
     // Ctrl+Shift+Tab march and Ctrl+Z / Ctrl+Shift+Z (undo / redo),
     // each a continuous step gesture like the cycle, not a
@@ -4677,14 +4517,14 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // in BOTH of its forms (bare and the Shift whole-piece jump, Shift since
     // 2026-10-24), and Delete is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
-         key == GuiKeys::Comma || key == GuiKeys::Period))
+        (key == GuiKeys::Comma || key == GuiKeys::Period))
         return true;
     // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31):
-    // a HELD REPEAT CARRIES ITS MODIFIER, so a held Shift+Up walks ten
-    // cents a fire — the burst continues the gesture the press began, which
-    // is the whole meaning of a hold. Up / Down bind bare, Shift and Ctrl
-    // (the ladder, arrow_step_magnitude); Left / Right bind BARE ONLY
+    // a HELD REPEAT CARRIES ITS MODIFIER, so a held Ctrl+Up (the barrel held
+    // on the button) walks three cents a fire — the burst continues the
+    // gesture the press began, which is the whole meaning of a hold. Up /
+    // Down bind bare and Ctrl (the ladder, arrow_step_magnitude, whose head
+    // says why Shift spells nothing since 2026-10-30); Left / Right bind BARE ONLY
     // (the horizontal ladder retired 2026-09-21; the Ctrl form 2026-09-23),
     // so a held Left / Right — key or button — walks one step of the active
     // column's unit a fire, a hop on the phase-reset column, keeping its
@@ -4695,21 +4535,19 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if ((key == GuiKeys::Left || key == GuiKeys::Right) &&
         !mods.ctrl && !mods.alt && !mods.shift)
         return true;
-    if (!mods.alt && !(mods.ctrl && mods.shift) &&
+    if (!mods.alt && !mods.shift &&
         (key == GuiKeys::Up || key == GuiKeys::Down))
         return true;
     // Marker-focus cycle keys auto-advance while held (fast marker walking):
-    // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic
-    // (mirroring the dispatch arm), all requiring no ctrl and no alt (no Alt
-    // spelling of Tab binds, so none repeats). The `h` history
-    // mode's diff-flag cycle takes the same three shapes and inherits this line
+    // bare Tab and Shift+Tab both cycle (mirroring the dispatch arm), both
+    // requiring no ctrl and no alt (no Alt spelling of Tab binds, so none
+    // repeats). The `h` history
+    // mode's diff-flag cycle takes the same two shapes and inherits this line
     // unchanged, which is the eligibility it wants: fast walking of the flags
     // instead of the markers. CTRL+TAB is excluded by the
     // same no-ctrl term, which is the eligibility it wants in every state — a
-    // held A/B switch would only flap — and the term catches ctrl+shift+
-    // IsoLeftTab with it (the Ctrl+Shift+Tab spelling needs the arm below).
-    if (!mods.ctrl && !mods.alt &&
-        (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab))
+    // held A/B switch would only flap.
+    if (!mods.ctrl && !mods.alt && key == GuiKeys::Tab)
         return true;
     // Ctrl+Shift+Tab exactly (the lockstep march) repeats too, IN EVERY STATE
     // since 2026-08-18: the mode-scoped term this line carried from 2026-08-07
@@ -4717,8 +4555,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // WALK cycle in there, which a hold could only flap, and it is the march
     // itself in there now, marching the diff-flag cycle instead of the live one.
     // Ctrl+Tab needs no term of its own — the no-ctrl arms above exclude it in
-    // every state — and ctrl+shift+IsoLeftTab is excluded by those same arms'
-    // no-ctrl term, the march binding the plain Tab spelling alone.
+    // every state.
     if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab)
         return true;
     // Ctrl+Z / Ctrl+Shift+Z (undo / redo) repeat while held (architect
@@ -4758,39 +4595,22 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // Ctrl+Alt render chords all drop here. "The editor
 // itself" CONSUMES the one editor-key owner:
 // text_editor::classify_key — the gate admits exactly the non-NotEditorKey
-// set (BARE Escape/Enter, CTRL-EXACT A/C/X/V, the cursor/editing keys Left /
-// Right / Home / End / BackSpace / Delete under ctrl/shift but never alt, and
-// printable insertion; Space lands in the buffer as a typed character, not as
-// playback). NO admitted key carries alt, on any arm.
+// set, which is the on-screen keyboard's vocabulary (architect 2026-10-30,
+// the keyboard the one key producer under an editor): BARE Escape / Enter,
+// CTRL-EXACT A/C/X/V, BackSpace and Ctrl+BackSpace, and printable insertion
+// (Space lands in the buffer as a typed character, not as playback). NO
+// admitted key carries alt, on any arm.
 // The strict-modifier rule therefore holds by ONE route: a press wearing a
-// modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V,
-// Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is NotEditorKey like any other
-// unbound chord and drops right here, so it cannot cancel, commit, paste, move
-// the caret, or erase. The gate-level
+// modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V — the barrel held
+// on a keyboard key) is NotEditorKey like any other unbound chord and drops
+// right here, so it cannot cancel, commit, paste or erase. The gate-level
 // carve-out below is NOT editor consumption — it is gate policy layered on
-// top: the Tab family under any DIALOG editor (the focus ring's step and,
-// where the editor has one, its autocomplete — the fork is
-// route_modal_editor_key's, not this gate's). Admitted keys flow into the
-// editor routing unchanged; no chord outside the editor's keys and the ring
-// reaches route_modal_editor_key at all.
-// THE ADMITTED SET HAS GROWN TWICE since the dialog arc, both times by the
-// TAB FAMILY: bare Tab, from "the settings and load editors only" to "any
-// dialog editor", when the focus ring landed 2026-08-13; and THE RING'S
-// REVERSE WALK the same day (architect: "also, shift+tab should cycle
-// backward"), which admits Shift+Tab and the IsoLeftTab keysym in the live
-// marker cycle's own spellings — one predicate, modal_ring_tab_shape above,
-// read here and by the ring alike. (The Open project prompt's bare Up / Down
-// were a third growth for one afternoon on 2026-08-28, scoped to that one
-// editor's picker band, and left when the prompt lost its field: the picker
-// is a modal owner with its own router now, not an editor this gate serves.)
-// (WHAT A TAB DOES inside the set was re-ruled
-// twice more that day and settled on the one autocomplete model — completion
-// first, ring if it did not advance, stated at route_modal_editor_key — without
-// moving the admission either time.) Nothing else about
-// the contract moved — Left / Right /
-// Enter were always admitted as editor keys
-// and still are, and what the ring does with them is decided downstream, on a
-// focus state that did not exist before.
+// top: bare Tab under any DIALOG editor (the focus ring's step and, where the
+// editor has one, its autocomplete — the fork is route_modal_editor_key's,
+// not this gate's), one predicate, modal_ring_tab above, read here and by the
+// ring alike. Admitted keys flow into the editor routing unchanged; no chord
+// outside the editor's keys and the ring reaches route_modal_editor_key at
+// all.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
                                                GuiInputState mods) {
     // NO HATCH (architect 2026-10-25: "we can even block Ctrl+Q — we are
@@ -4804,27 +4624,24 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_editor_key =
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
-    // THE RING'S WHOLE TAB FAMILY, admitted while any DIALOG editor stands
-    // (2026-08-13) — a superset of what this gate admitted before: the one
-    // editor that HAS a completion, SETTINGS (its value recall), keeps the
-    // FORWARD key as its first meaning, while the trim preset's name and the
+    // THE RING'S TAB, admitted while any DIALOG editor stands (2026-08-13):
+    // the one editor that HAS a completion, SETTINGS (its value recall),
+    // keeps it as its first meaning, while the trim preset's name and the
     // BPM form's line let it walk the ring from the first press
-    // (route_modal_editor_key owns which of the two a given forward Tab is,
-    // under the one autocomplete model), and the REVERSE shapes walk
-    // backwards for both, completing nothing anywhere. The top-strip FLAG
-    // editor is deliberately outside it: it is not a dialog, publishes no
-    // buttons, and so has no ring for Tab to walk — its whole Tab family still
-    // drops here while it stands.
+    // (route_modal_editor_key owns which of the two a given Tab is, under the
+    // one autocomplete model). The top-strip FLAG editor is deliberately
+    // outside it: it is not a dialog, publishes no buttons, and so has no
+    // ring for Tab to walk — its Tab still drops here while it stands.
     // THE DIALOG ALONE IS MEANT here (modal_dialog_editor_active, never the
     // wider predicate): the ring is a dialog's own.
     const bool is_dialog_focus_tab =
-        (modal_dialog_editor_active() &&
-         modal_ring_tab_shape(key, mods) != ModalRingTab::None);
+        (modal_dialog_editor_active() && modal_ring_tab(key, mods));
     return !(is_editor_key || is_dialog_focus_tab);
 }
 
-// The Esc-cancel semantics as a callable body, used by the Esc key
-// handler below. Requesting cancellation has two effects:
+// The render cancel as a callable body, the RENDER key's Cancel face's act
+// (finish_chrome_press_release) and the progress modal's Cancel
+// (cancel_batch_progress). Requesting cancellation has two effects:
 //   1. async_renderer.request_cancel() sets the worker's cancel flag,
 //      which do_render passes through to the engine.
 //   2. app.queue_cancel_requested = true so that on_batch_entry_complete
@@ -4870,20 +4687,6 @@ bool GuiInputHandler::cancel_archival_session() {
     return false;
 }
 
-// Esc-cancel handlers for in-flight operations. See the declaration in
-// input_handler.h for routing order. This is one of the surviving bare-Esc
-// bindings (the full enumeration is at its dispatch point in on_key,
-// input_handler.cpp — no count belongs here) — it
-// SURVIVES the 2026-07-29 Esc unbinding as its own binding class, render-work
-// cancel rather than a ladder rung — ARCHITECT-CONFIRMED 2026-07-29 ("esc should
-// cancel render"), no longer a planner interpretation. The whole Esc story is stated at the on_key site where the deleted
-// selection/region ladder used to be dispatched.
-bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
-    if (key != GuiKeys::Escape) return false;
-    if (mods.ctrl || mods.shift || mods.alt) return false;
-    return cancel_archival_session();
-}
-
 // THE ITERATION SWEEP — the Cartesian product of the per-marker iter ranges
 // authored in grid iterations, ON THE COLUMN THE LAMP WAS LIT IN AND ON THAT
 // ONE ALONE (architect 2026-09-10: "the iterations land wherever I'm
@@ -4904,7 +4707,7 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
 // file names are what I remember"). Nothing anywhere parses a basename.
 // Markers with no range authored are excluded from the CSV and contribute
 // one fixed value to the product (a warp marker its authored tempo_cents, a
-// phase reset its authored frame). Per-cell progress and Esc cancellation are
+// phase reset its authored frame). Per-cell progress and cancellation are
 // handled by the batch runner (start_render_batch and the ActiveBatch
 // lifecycle).
 //
@@ -6455,31 +6258,20 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // THE MODAL DIALOG'S KEYBOARD FOCUS RING (architect 2026-08-13, part D of the
 // modal-button ruling: the FACE is kdenlive-sampled, the NAVIGATION his own
 // derivation — kdenlive's dialogs have no text boxes, so there was nothing to
-// copy for the field's half). ONE route for both modal surfaces, read by the
-// prompt gate (input_handler.cpp) and by route_modal_editor_key below; the
-// state, the two meanings of -1 and the reset rule are at
-// AppState::modal_dialog_focus.
+// copy for the field's half). THE DIALOG EDITORS' RING, read by
+// route_modal_editor_key below and by nothing else (architect 2026-10-30: the
+// on-screen keyboard is the one producer of a key under a modal surface, and
+// it stands only under an editor — a prompt, the progress modal and the
+// overlays take their buttons alone); the state, the two meanings of -1 and
+// the reset rule are at AppState::modal_dialog_focus.
 //
-//   TAB      cycles every stop. On an EDITOR dialog the FIELD is a stop, so
-//            one field and two buttons is three stops, wrapping; on a PROMPT
-//            there is no field and the buttons alone cycle. AN EDITOR WITH AN
-//            AUTOCOMPLETE GETS FIRST REFUSAL on the field's FORWARD Tab,
-//            upstream of this route — a completion that ADVANCED consumes the
-//            key and this route is never called, one that did not hands it
-//            straight here. The whole model is stated once at
-//            route_modal_editor_key's Tab arm; nothing about it is decided in
-//            this body.
-//   SHIFT+   the REVERSE walk (architect 2026-08-13: "also, shift+tab should
-//   TAB      cycle backward"), the forward arm's exact inverse — the same
-//            stops, the same wrap, the other direction — and it NEVER
-//            COMPLETES: shift means "go back", never "complete", so no
-//            autocomplete is offered on this shape at any site. Its spellings
-//            are the live marker cycle's, one predicate away at
-//            modal_ring_tab_shape.
-//   LEFT /
-//   RIGHT    move between BUTTONS ONLY and are INERT in an editor's field: the
-//            arrows belong to the text there and the editors' own motion arm
-//            owns them. They wrap like Tab: one ring, one rule.
+//   TAB      cycles every stop: the FIELD is a stop, so one field and two
+//            buttons is three stops, wrapping. AN EDITOR WITH AN
+//            AUTOCOMPLETE GETS FIRST REFUSAL on the field's Tab, upstream of
+//            this route — a completion that ADVANCED consumes the key and this
+//            route is never called, one that did not hands it straight here.
+//            The whole model is stated once at route_modal_editor_key's Tab
+//            arm; nothing about it is decided in this body.
 //   ENTER /  PRESS THE FOCUSED BUTTON DOWN and commit it AT THE KEY'S RELEASE
 //   SPACE    (architect 2026-08-13, from kdenlive: "pressing Enter when a
 //            button has focus pushes down the button. It doesn't automatically
@@ -6487,142 +6279,44 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 //            the mouse key, so we should do that here as well"). The press arms
 //            and paints; on_key_release runs the act through the one shared
 //            dispatch. Both keys are BARE-EXACT, and both mean the button only
-//            while the focus IS on a button: with the focus in an editor's
-//            FIELD neither reaches this route at all, so Enter keeps its commit
-//            and Space still types a space, byte-identical to before the ring.
-//            A prompt has no field, so on a prompt they always mean the focused
-//            button — which since the same day's passive-focus ruling is the
-//            button the raise focused: the Escape sentinel everywhere but the
-//            render player's load confirmation, which asks for its OK
-//            (PromptState owns the supersession of "this prompt system has no
-//            Enter answer", the two facts that make it safe and that one
-//            exception's own reason).
+//            while the focus IS on a button: with the focus in the FIELD
+//            neither reaches this route at all, so Enter keeps its commit and
+//            Space still types a space.
 //
 // THE WALK ASSIGNS THE ACTIVE STRENGTH, and it is the strength's ONE producer:
 // every landing on a button here is a deliberate keyboard step, which is the
 // definition of active focus (AppState::modal_dialog_focus_active). Landing
-// back on an editor's FIELD carries no strength and clears it.
+// back on the FIELD carries no strength and clears it.
 //
-// EVERY SHAPE IS BARE-EXACT WITH ONE DELIBERATE EXCEPTION, THE REVERSE WALK:
-// the strict-modifier rule's own text (GuiInputHandler::on_key) names THREE
-// families
-// left untightened BECAUSE the modifier is a real binding there — is_tab_cycle,
-// Ctrl+Z's shift-selects-redo, and the editors' motion arm — and the ring's
-// reverse Tab is exactly that shape, shift meaning "go back" here as it does in
-// the marker cycle this ring's spellings mirror. So the modifier guard below
-// admits the reverse shape and refuses every other modified key: Ctrl+Tab
-// (the tab-cycle family's), Shift+Left (the field's selection extension) and
-// the rest are still not this ring's to take.
-// THE STASH'S IDENTITY GATES IT like both press claims — the stash is the
+// EVERY SHAPE IS BARE-EXACT: the modifier guard below refuses every modified
+// key (the barrel's Ctrl+Tab is the tab-cycle family's, never this ring's).
+// THE STASH'S IDENTITY GATES IT like the press claim — the stash is the
 // painter's publication and may only SELECT; the surface that owns input
 // DECIDES (modal_dialog_stash_current, the one comparison). A flag editor
 // publishes no dialog at all, so its ring is empty by construction and every
 // shape here declines.
-// THE DIALOG BUTTONS' ACCESS KEYS (architect 2026-10-10, Windows strict; the
-// contract is at the declaration). Under the same identity gate as the ring:
-// a stash that is not the live surface's names no button.
-int GuiInputHandler::modal_dialog_access_button(GuiKey key,
-                                                GuiInputState mods,
-                                                bool field_focused) const {
-    if (mods.ctrl || mods.shift) return -1;
-    if (field_focused && !mods.alt) return -1;
-    if (!modal_dialog_stash_current()) return -1;
-    return app.modal_dialog.button_for_access_key(key);
-}
-
 bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
                                                    GuiInputState mods) {
-    // KEYPAD ENTER IS RETURN, HERE AS EVERYWHERE (2026-08-29). The pair is one
-    // key at every other surface in the product — the editors' session keys,
-    // the flag editor's open chord, and the two LIST routers below, which map
-    // KpEnter onto the highlight's own act — so a ring that knew only Return
-    // let a keypad Enter fall PAST a focused button and open the highlighted
-    // row instead: Tab onto the picker's Cancel and press it, and the picker
-    // opened a project. NORMALIZED AT THE HEAD, so the press arm's compare and
-    // the key it STORES for the release are both Return and a KpEnter press
-    // released as KpEnter still completes (on_key_release normalizes the same
-    // way, through the same owner). With the LIST focused (at < 0) both keys
-    // still fall through to the list routers exactly as before.
-    key = modal_ring_press_key(key);
-    const ModalRingTab tab_shape = modal_ring_tab_shape(key, mods);
-    if (tab_shape == ModalRingTab::None &&
-        (mods.ctrl || mods.shift || mods.alt)) {
-        return false;
-    }
+    const bool tab = modal_ring_tab(key, mods);
+    if (!tab && (mods.ctrl || mods.shift || mods.alt)) return false;
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.buttons.empty()) return false;
     if (!modal_dialog_stash_current()) return false;
-    // A BUTTONS-ONLY RING — a prompt's, and THE PROGRESS MODAL'S since
-    // 2026-10-14 (its one Cancel, focused at the raise like a prompt's last
-    // button): the buttons alone, wrapping, no field and no list.
-    const bool prompt_up = app.prompt.active || app.batch_progress.active;
-    // THE RENDER PLAYER'S RING (architect 2026-08-28) is [LIST, buttons…]:
-    // the folder overlay's list is one member, standing where an editor's
-    // field stands (-1) with one difference — the player OPENS with the ring
-    // NOWHERE (-1 and `list_focused` false), and the first Tab lands on the
-    // list. LANDING THERE SHOWS NOTHING since 2026-10-23 (the focus frame
-    // the highlighted row wore from 2026-10-02 retired, paint_folder_overlay;
-    // the band still repaints at the bit's write below, a no-op picture).
-    // What it does NOT change is the highlight itself: Up/Down walk it
-    // either way, and what else the landing decides is what a bare Enter
-    // means. Left/Right are NOT the ring's here: they are the seeks, the car's
-    // rewind and fast-forward, on a button or off it. THE PICKER'S RING IS THE
-    // SAME SHAPE over its own row: one word under the project picker, the
-    // settings page and the value list (since 2026-08-29, Cancel or Close),
-    // the trim presets list's six (the pair and four words, the grey ones
-    // skipped by the walk) — [list, the row's live buttons in painted
-    // order], opening nowhere, and Left/Right are not
-    // its either — its router consumes them, the list's walk being Up/Down —
-    // so the two list-bearing owners share one arm.
-    const bool list_up = !prompt_up &&
-                         (app.render_player.active || app.picker.active);
-    // THE SCORE VIEWER'S ARROWS ARE ITS ROUTER'S (2026-10-26), whatever the
-    // focus — its pages on the page road, the skips under the soundtrack — the
-    // list owners' answer below, with no list in its ring.
-    const bool pages_up = !prompt_up && app.score_viewer.active;
-    const bool on_list = list_up && app.folder_overlay.list_focused;
     const int n = static_cast<int>(dlg.buttons.size());
     const int at = (app.modal_dialog_focus >= 0 &&
                     app.modal_dialog_focus < n) ? app.modal_dialog_focus : -1;
 
-    int  next      = at;
-    bool list_next = on_list;
-    if (tab_shape == ModalRingTab::Forward) {
-        // The field is a stop only on an editor dialog, which is the one
-        // place -1 is a place to come back to — and the player's list is
-        // that place for the player, reached first from nowhere.
-        if (list_up && at < 0 && !on_list) { next = -1; list_next = true; }
-        else if (at < 0)       { next = 0; list_next = false; }
+    int next = at;
+    if (tab) {
+        // The field is the stop at -1: field -> first button -> ... -> last
+        // button -> field.
+        if (at < 0)            next = 0;
         else if (at + 1 < n)   next = at + 1;
-        else                   { next = prompt_up ? 0 : -1;
-                                 list_next = list_up; }
-    } else if (tab_shape == ModalRingTab::Reverse) {
-        // The exact inverse of the forward arm — the same stops in the same
-        // order, walked the other way, with the same wrap: on an editor
-        // field -> last button -> ... -> first button -> field, on a prompt
-        // the buttons alone, wrapping, on the player list -> last button ->
-        // ... -> first button -> list. (The prompt's `at < 0` arm below is a
-        // cold answer only: a standing prompt always has a focused button,
-        // assigned at its raise.)
-        if (at < 0)            { next = n - 1; list_next = false; }
-        else if (at > 0)       next = at - 1;
-        else                   { next = prompt_up ? n - 1 : -1;
-                                 list_next = list_up; }
-    } else if (key == GuiKeys::Right) {
-        if (list_up || pages_up) return false;    // the list owners' own
-        if (at < 0 && !prompt_up) return false;   // the field's own arrows
-        next = (at < 0) ? 0 : (at + 1) % n;
-    } else if (key == GuiKeys::Left) {
-        if (list_up || pages_up) return false;    // the list owners' own
-        if (at < 0 && !prompt_up) return false;   // the field's own arrows
-        next = (at < 0) ? n - 1 : (at + n - 1) % n;
+        else                   next = -1;
     } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
-        // THE BUTTON'S KEYBOARD PRESS — Return here NAMES BOTH ENTER KEYS, the
-        // main one and the keypad's, normalized to this spelling at the head
-        // (modal_ring_press_key); no other site restates that pairing. With no
-        // button focused this is not the ring's key at all: an editor's field
-        // keeps Enter's commit and Space's typed character, and both fall
-        // through untouched.
+        // THE BUTTON'S KEYBOARD PRESS. With no button focused this is not the
+        // ring's key at all: the field keeps Enter's commit and Space's
+        // typed character, and both fall through untouched.
         if (at < 0) return false;
         // A GREYED BUTTON'S KEYBOARD PRESS IS A CONSUMED NOTHING (architect
         // 2026-08-30) — the roster's rule on this surface: no arm, no
@@ -6651,32 +6345,19 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         return false;
     }
 
-    // THE RING SKIPS A GREYED BUTTON (architect 2026-08-30: the transport
-    // keys are their own class; the router and the ring consume what the
-    // face refuses — there is no roster Tab behaviour to mirror, the icon
-    // rows taking no keyboard at all, so the modal ring's own rule is the
-    // one stated here): a Tab walk that lands on a disabled button advances
-    // again, in its own direction and by its own wrap rules, until an
-    // enabled stop. The LIST stop and an editor's field are always stops,
-    // and Close never greys, so the walk terminates; the guard bounds it
+    // THE RING SKIPS A GREYED BUTTON (architect 2026-08-30: the ring
+    // consumes what the face refuses): a Tab walk that lands on a disabled
+    // button advances again, by its own wrap rule, until an enabled stop. The
+    // field is always a stop, so the walk terminates; the guard bounds it
     // against the impossible all-disabled ring anyway. The bit read is the
     // STASH'S — the walk only SELECTS a focus, and the press it leads to
-    // claims on the same painted bit. Left / Right are not gated:
-    // they walk the prompt ring alone, whose buttons carry no enabled
-    // split.
-    if (tab_shape != ModalRingTab::None) {
-        int guard = 0;
-        while (next >= 0 &&
-               !dlg.buttons[static_cast<size_t>(next)].enabled &&
-               guard++ <= n) {
-            if (tab_shape == ModalRingTab::Forward) {
-                if (next + 1 < n) ++next;
-                else { next = prompt_up ? 0 : -1; list_next = list_up; }
-            } else {
-                if (next > 0) --next;
-                else { next = prompt_up ? n - 1 : -1; list_next = list_up; }
-            }
-        }
+    // claims on the same painted bit.
+    int guard = 0;
+    while (next >= 0 &&
+           !dlg.buttons[static_cast<size_t>(next)].enabled &&
+           guard++ <= n) {
+        if (next + 1 < n) ++next;
+        else              next = -1;
     }
 
     // LEAVING THE BUTTON CANCELS A HELD ENTER OR SPACE (2026-08-14), the
@@ -6699,12 +6380,6 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         app.modal_dialog_focus_active = next >= 0;
         viewport.invalidate_rect(dlg.box);
     }
-    // THE LIST BIT, written on the same walk (it says whether the ring is on
-    // the list; no frame paints it since 2026-10-23, the repaint kept).
-    if (list_up && app.folder_overlay.list_focused != list_next) {
-        app.folder_overlay.list_focused = list_next;
-        viewport.invalidate_rect(folder_overlay::surface_rect(app));
-    }
     return true;
 }
 
@@ -6726,10 +6401,6 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 // is bare-exact, and a shift tapped mid-hold does not turn a committed press
 // into something else.
 void GuiInputHandler::on_key_release(GuiKey key) {
-    // KEYPAD ENTER IS RETURN at both ends of the arm — the press stored
-    // Return through the same owner, so the release has to ask the same
-    // question or a KpEnter hold could never complete (modal_ring_press_key).
-    key = modal_ring_press_key(key);
     const int armed = app.modal_dialog_key_pressed;
     if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
     app.modal_dialog_key_pressed     = -1;
@@ -6782,26 +6453,15 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 //     AppState::modal_dialog_focus owns that meaning).
 //   * Tab with the focus IN THE FIELD offers the completion, then walks.
 //   * Tab in a dialog editor with NO hook (BPM) walks at once.
-//   * SHIFT+TAB NEVER COMPLETES — it is the ring's REVERSE WALK and nothing
-//     else (architect 2026-08-13: "also, shift+tab should cycle backward"),
-//     so the completion is not offered on it at any site: this arm tests the
-//     FORWARD shape alone, and shift means "go back", never "complete". Its
-//     spellings are the live marker cycle's, one predicate away at
-//     modal_ring_tab_shape (bare Tab forward, Shift+Tab and IsoLeftTab back,
-//     the latter shift-agnostic because that keysym rides the Tab key's shift
-//     level).
 //   * The top-strip FLAG editor is not a dialog: it publishes no buttons, has
-//     no ring, and its whole Tab family drops at that gate before this route
-//     sees it.
-// modal_editor_key_blocked's ADMITTED SET grew with the reverse walk and only
-// with it — bare Tab was already admitted for every dialog editor when the ring
-// landed, and the reverse spellings joined it at the same one term, read from
-// the same predicate this arm reads.
+//     no ring, and its Tab drops at that gate before this route sees it.
+// The walk key is one predicate, modal_ring_tab, read by this arm, the ring
+// and modal_editor_key_blocked's admission alike: bare Tab, the on-screen
+// keyboard's Tab key (architect 2026-10-30).
 //
-// EVERYTHING ELSE THE RING TOOK is unchanged: Left / Right / Enter change
-// meaning ONLY while the focus is on a BUTTON — a state that did not exist
-// before it — so every key's behaviour with the focus in the field is
-// byte-identical to what it has always been.
+// EVERYTHING ELSE THE RING TOOK: Enter and Space change meaning ONLY while
+// the focus is on a BUTTON, so every key's behaviour with the focus in the
+// field is the editor's own.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the two
 // dialog surfaces pass invalidate_dialog_editor_box (the box's interior, all
@@ -6817,14 +6477,12 @@ bool GuiInputHandler::route_modal_editor_key(
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // THE FIELD'S FIRST REFUSAL ON THE FORWARD TAB (the one autocomplete model
+    // THE FIELD'S FIRST REFUSAL ON THE TAB (the one autocomplete model
     // above): offered only with the focus in the field, and consuming the key
     // only when it advanced the buffer. A false answer falls into the ring
     // below, which is where a second Tab, an unknown key and an ambiguous
-    // prefix all land — as does every REVERSE shape, which is never offered
-    // here at all.
-    if (autocomplete &&
-        modal_ring_tab_shape(key, mods) == ModalRingTab::Forward &&
+    // prefix all land.
+    if (autocomplete && modal_ring_tab(key, mods) &&
         modal_dialog_focus_live() < 0 && autocomplete()) {
         return true;
     }
@@ -6832,10 +6490,9 @@ bool GuiInputHandler::route_modal_editor_key(
         // THE CARET RESTARTS WHEN THE RING WALKS BACK ONTO THE FIELD: the blink
         // keeps its own clock, and the field's caret stops painting while the
         // focus is on a button, so a field re-focused mid-period could
-        // otherwise show nothing for up to half a second. One site, with the
-        // editor already in hand — the ring's other caller is the prompt gate,
-        // which has no field at all. The caret did not move, so its row-end
-        // affinity stands (restart_blink, not touch_blink).
+        // otherwise show nothing for up to half a second. The ring's one
+        // caller, with the editor already in hand. The caret did not move, so
+        // its row-end affinity stands (restart_blink, not touch_blink).
         if (app.modal_dialog_focus < 0) text_editor::restart_blink(ed);
         return true;
     }
@@ -6866,47 +6523,6 @@ bool GuiInputHandler::route_modal_editor_key(
             return true;
         }
         return true;       // modal: swallow, and the field never sees it
-    }
-    // HOME AND END WALK A DIALOG EDITOR'S WRAPPED ROWS (architect 2026-10-14:
-    // the line soft-wraps in the modal family's box, and the caret, the
-    // selection, the press and Home / End walk the rows consistently): bare
-    // or shifted, they land on the caret's own row as painted
-    // (DialogEditorText and dialog_editor_row_of, app_state.h, the caret's
-    // row-end affinity read, so a caret painted at a hard row's end is on
-    // that row) — Home its first byte, End its last stop
-    // (dialog_editor_row_last_stop: a space-broken row's end before the
-    // space its break stands after; a hard-broken row's end itself, WITH THE
-    // ROW-END AFFINITY SET so the caret paints at that row's end, 2026-10-14;
-    // the last row's the buffer's end) — the shift extending the selection
-    // from the standing anchor exactly as the editor's own Shift+Home /
-    // Shift+End do. CTRL+HOME AND CTRL+END keep the
-    // whole text's extremes (text_editor::handle_key, below), a multiline
-    // edit's own pair. The flag editor's one-row field is not a member: its
-    // session is no dialog editor's.
-    if (!ctrl && !alt && (key == GuiKeys::Home || key == GuiKeys::End) &&
-        app.dialog_editor_text.valid &&
-        !app.dialog_editor_text.rows.empty() &&
-        app.dialog_editor_session() == ed.session) {
-        const AppState::DialogEditorText& t = app.dialog_editor_text;
-        const int size = static_cast<int>(ed.pending.size());
-        const int pos  = std::clamp(ed.cursor_pos, 0, size);
-        const int row  = dialog_editor_row_of(t, pos, ed.caret_row_end);
-        const int to   = std::clamp(
-            key == GuiKeys::Home
-                ? t.rows[static_cast<std::size_t>(row)].begin
-                : dialog_editor_row_last_stop(t, ed.pending, row),
-            0, size);
-        if (shift) {
-            if (ed.selection_anchor < 0) ed.selection_anchor = pos;
-        } else {
-            ed.selection_anchor = -1;
-        }
-        ed.cursor_pos = to;
-        text_editor::touch_blink(ed);
-        ed.caret_row_end = key == GuiKeys::End &&
-                           dialog_editor_stop_is_row_end(t, row, to);
-        repaint();
-        return true;
     }
     const auto action = text_editor::handle_key(ed, key, mods);
     if (action == text_editor::KeyAction::CommitRequested) {
@@ -7010,15 +6626,15 @@ void GuiInputHandler::open_project_picker() {
     if (app.prompt.active) return;
     // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
     // "admit both": the File menu's rows were all live in the view (the menu
-    // row retired 2026-10-21), and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
-    // premise was that "a reopen would tear the view down from under itself",
-    // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
-    // everything — Ctrl+Q, which is admitted, ends the view the same way. The
+    // row retired 2026-10-21), and Ctrl+O joined the mode's allowlist with it.
+    // The premise was that "a reopen would tear the view down from under
+    // itself", and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
+    // everything. The
     // picker stands OVER the view (its router runs ahead of the mode's gate in
     // on_key, its veil consumes the view's presses, and its band — the modal
     // family's box since 2026-10-14 — starts at the view bar's top row and
     // covers the canvas column's lanes — the diff lane with them — and the
-    // waveform, the toolbar band alone above it), a Cancel or Esc leaves
+    // waveform, the toolbar band alone above it), a Cancel leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything
@@ -7134,7 +6750,7 @@ void GuiInputHandler::open_project_commit(int index) {
     // in the `h` view like anywhere else — they were the status chain's
     // transient tier for one day, invisible under the view's own line — and
     // the picker STAYS OPEN on every one of them, which is the answer the
-    // user can act on: press another row, or Esc. EACH IS A GuiFailure
+    // user can act on: press another row, or Cancel. EACH IS A GuiFailure
     // (failure.h, 2026-09-02): the card raises the display clause and the
     // stderr line prints the diagnostic — the same words for the state
     // refusal and the project model's (which name folders and stems, never
@@ -7192,7 +6808,7 @@ void GuiInputHandler::open_project_commit(int index) {
 
     // THE REOPEN. The chosen name is seated for gui_main's loop and the close
     // request runs with the REOPEN target — the unsaved-tab prompt exactly as
-    // Ctrl+Q's when the tab is dirty, an immediate completion when it is
+    // Back's when the tab is dirty, an immediate completion when it is
     // clean. THE PICKER STAYS STANDING UNDER ITS QUESTION (architect
     // 2026-10-25, the render player's precedent made one rule for the
     // overlays: an overlay stays standing under its own question, Cancel
@@ -7304,9 +6920,9 @@ void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
 // THE RETURN FROM A VALUE LIST (architect 2026-10-28 night: "the cancel
 // button should return to the main setup panel … otherwise it's assumed i
 // am editing one key only. setting a value should also return to the main
-// page"): the list is a SUB-PAGE of the settings page. Its three roads —
-// Cancel (dispatch_modal_dialog_button), Esc (route_picker_key) and a
-// value's commit (value_list_commit's tail) — all land here: THE PAGE'S
+// page"): the list is a SUB-PAGE of the settings page. Its two roads —
+// Cancel (dispatch_modal_dialog_button) and a value's commit
+// (value_list_commit's tail) — both land here: THE PAGE'S
 // ROWS ARE REBUILT under the SAME picker session (no new session, no modal
 // stop again, the Settings key lit throughout), SEATED ON `seat_key`'s ROW,
 // the key the list was showing, whose text is its line as it now stands.
@@ -7329,7 +6945,7 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // (settings_key_has_value_list — `waveform`, `true_colors`, `noise`,
 // `noise_level`, `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
-// sub-page whose commit, Cancel and Esc return to this page
+// sub-page whose commit and Cancel return to this page
 // (return_to_settings_page). On every other row THE PAGE
 // CLOSES (close_picker — the overlay and the on-screen keyboard never both
 // stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
@@ -7596,9 +7212,9 @@ void GuiInputHandler::commit_trim_preset_name() {
 // no highlight — SAVE AS's name editor, no question, there being nothing to
 // overwrite (architect 2026-10-28 night, his glass on 852a28d9: "with no
 // presets yet, both create a new preset"). The greyed face's road is silent
-// — the button's press never arms and its letter dispatches through the
-// painted bit — so this guard is the face's own predicate, stated for the
-// body's other road.
+// — the button's press never arms — so this guard is the face's own
+// predicate, stated for a face painted live whose act went dead inside that
+// frame.
 void GuiInputHandler::trim_presets_save() {
     if (!app.picker.active || app.prompt.active) return;
     AppState::FolderOverlay& ov = app.folder_overlay;
@@ -7615,7 +7231,7 @@ void GuiInputHandler::trim_presets_save() {
     // THE QUESTION NAMES THE PRESET, single-quoted and spelled raw as the
     // player's delete names its folder: nothing takes a save into it back.
     // Save / Cancel, Cancel the Escape sentinel LAST and FOCUSED
-    // (PromptInitialFocus::LastButton), `s` Save's letter.
+    // (PromptInitialFocus::LastButton).
     app.prompt.present(
         "Save the current trim as '" +
             ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
@@ -7626,9 +7242,9 @@ void GuiInputHandler::trim_presets_save() {
     viewport.invalidate_all();
 }
 
-// DELETE: the button, its letter and the bare Delete key. With no highlight
-// — an empty list, the button grey — the key cards, the render player's
-// "There is no folder to delete" one surface over.
+// DELETE: the button. With no highlight — an empty list, the button grey —
+// a face painted live whose act went dead inside that frame cards, the
+// render player's "There is no folder to delete" one surface over.
 void GuiInputHandler::trim_presets_delete() {
     if (!app.picker.active || app.prompt.active) return;
     AppState::FolderOverlay& ov = app.folder_overlay;
@@ -7640,9 +7256,8 @@ void GuiInputHandler::trim_presets_delete() {
         return;
     }
     ov.trim_pending = ov.highlight_row;
-    // Delete / Cancel, Cancel LAST and FOCUSED, `d` Delete's letter — the
-    // Delete key is no answer here, so the press that raised the question
-    // cannot also answer it (DELETE_FOLDER_CONFIRM's own reasoning).
+    // Delete / Cancel, Cancel LAST and FOCUSED (DELETE_FOLDER_CONFIRM's own
+    // reasoning).
     app.prompt.present(
         "Delete '" +
             ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
@@ -7826,9 +7441,8 @@ void GuiInputHandler::bpm_form_commit(int index) {
 }
 
 // RENDER (the declaration's contract). The greyed face's road is silent —
-// the button's press never arms and its letter dispatches through the
-// painted bit — so the face's predicate here is that same rule stated for
-// the body. The form closes BEFORE the dispatch: the batch's progress
+// the button's press never arms — so the face's predicate here is that same
+// rule stated for the body. The form closes BEFORE the dispatch: the batch's progress
 // modal never stands beside it.
 void GuiInputHandler::bpm_form_render() {
     if (!app.picker.active) return;
@@ -7850,7 +7464,7 @@ void GuiInputHandler::bpm_form_render() {
     if (!render_bpm_sweep()) flag_editor.exit_bpm_mode();
 }
 
-// THE FORM'S CLOSE — Cancel, Esc and Ctrl+B (the BPM key's lift): the one
+// THE FORM'S CLOSE — Cancel and Ctrl+B (the BPM key's lift): the one
 // close body, then the mode's one off-chokepoint, which wipes the owner's
 // fields (the next open is blank).
 void GuiInputHandler::close_bpm_form() {
@@ -7979,38 +7593,6 @@ void GuiInputHandler::history_load_in_place() {
 
 // -- The picker's shared machinery --------------------------------------------
 
-// ENTER ON THE LIST — the keyboard's own click on the highlight, through the
-// one row-act fork (folder_overlay_open_row, input_pointer.cpp, which the row
-// click's motionless lift reaches too). A -1 highlight is a consumed no-op.
-// The row's own OK button went with the ruling that a click activates: the
-// picker's row is one button, Cancel (Close under the settings page), and
-// under the trim presets list the row is the player's shape, no OK among its
-// words either.
-void GuiInputHandler::picker_open_highlight() {
-    if (!app.picker.active) return;
-    const int highlight = app.folder_overlay.highlight_row;
-    if (highlight < 0) {
-        // NO HIGHLIGHT IS AN EMPTY BAND, and it says so (architect
-        // 2026-08-30): the builder seats the highlight on the current
-        // project, or on row 0, so the only way to reach here is a listing
-        // with no rows at all — every folder under projects_path refused by
-        // the model, or none there. Enter on an empty band would otherwise
-        // read as a dead key over a panel that is plainly standing. THE
-        // PROJECT PICKER'S ALONE: the settings page's listing is the
-        // editor's key table, never empty; a value list is empty only for
-        // `noise` with no folder under `noise/`, and the trim presets list
-        // before its first save, and Enter there is a
-        // consumed nothing — the empty band is the answer, and the card's
-        // sentence is the project picker's.
-        if (app.folder_overlay.owner ==
-            AppState::FolderOverlay::Owner::ProjectPicker)
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Choose a project first");
-        return;
-    }
-    folder_overlay_open_row(highlight);
-}
-
 // The widget's two highlight mechanics (folder_overlay.h owns the clamps and
 // the scroll-into-view) with the picker's damage on top — the band as it
 // stands, which is the whole of what a moved highlight touches, and under the
@@ -8053,48 +7635,24 @@ void GuiInputHandler::close_picker() {
 // THE PICKER'S KEY ROUTER — the whole plastic vocabulary while a picker
 // stands, in route_render_player_key's shape (the contract is at the
 // declaration).
-bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
+void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
 
-    // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner. THE
-    // OVERLAYS KEEP THEIR SAVE AND CLOSE ROADS: the picker and the player are
-    // interface, not modals, so the NO HATCH rule of 2026-10-25 — which
-    // consumes Ctrl+S and Ctrl+Q under a prompt, the progress modal and
-    // every editor — leaves this arm and the Ctrl+Q fall-through below as
-    // they were (the player's twin pair, route_render_player_key). EVERY REFUSAL THE OWNER CAN MEET
-    // SAYS ITSELF from inside save() (save_ops.cpp — one composer, every
-    // caller inheriting it): the three write arms and the numeric-locale arm
-    // since 2026-09-02, and the checkpoint-in-flight arm since 2026-09-24,
-    // which this arm asked ahead of the call until the owner carded it
-    // itself. The empty-sidecar-path belt keeps its silence, having no
-    // producer, and so does a clean session (save_from_key, architect
-    // 2026-10-05: nothing to save, Save greyed).
-    if (ctrl && !shift && !alt && key == GuiKeys::S) {
-        save_ops.save_from_key();
-        return true;
-    }
-    // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
-    // which takes the picker down at its head (GuiPrompt::request_close) —
-    // the same step the platform's close takes, stated once there rather
-    // than here, so the two roads cannot drift. (The File menu's
-    // Quit row was its pointer road above the band from 2026-09-03 evening
-    // until the menu row's removal, 2026-10-21; the quit road is Back.) BOTH OF
-    // OPEN'S CHORDS ARE THE PICKER'S OWN since 2026-10-25 — Ctrl+O closes it
-    // and Ctrl+Alt+O reverts, the two arms below — so nothing of the
-    // session-wide set dies in the catch-all any more.
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
-
-    // THE OPENER ARMS ARE THE CONTENT'S OWN (2026-10-25): the five picker
-    // contents share this router and the overlay's tag says whose opener a
-    // chord is, so each content's opener chords act under it alone and are
-    // the catch-all's consumed nothing under the others — the other opener
-    // key greys there (redesign_button_enabled's overlay arm), and a chord
-    // with no button behind it is silent the same. The settings page and
-    // the value list it swaps in share ONE opener, the Settings key
-    // (is_folder_overlay_opener, 2026-10-28).
+    // THE OPENER ARMS ARE THE WHOLE VOCABULARY (architect 2026-10-30: the
+    // roster and the on-screen keyboard are the two producers of every key;
+    // no keyboard stands under a picker, every content's editor opening only
+    // after its close, and the roster's one lift the picker's veil admits is
+    // the content's own opener, is_folder_overlay_opener at
+    // finish_chrome_press_release). Every other act the picker has is its
+    // row's tap or a controls-row button, reached through the pointer
+    // (claim_folder_overlay_press, dispatch_modal_dialog_button), never here.
+    // The five picker contents share this router and the overlay's tag says
+    // whose opener a chord is, so each content's opener chords act under it
+    // alone. The settings page and the value list it swaps in share ONE
+    // opener, the Settings key (is_folder_overlay_opener, 2026-10-28).
     const bool project_picker =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::ProjectPicker;
     const bool settings_opener =
@@ -8108,14 +7666,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
     // opens an overlay is the way out of it, as bare `l` is the player's):
     // the act the picker's Cancel button runs (close_picker, the one close
-    // body), and the Open Project key's lift under the picker, which
-    // dispatches this chord — so the key and the button cannot drift. Asked
-    // here, ahead of the mode's gate, because this router is the picker's
-    // whole vocabulary. (Ctrl+O was a consumed nothing here from 2026-08-28
-    // until then.)
+    // body), dispatched by the Open Project key's lift under the picker.
     if (project_picker && ctrl && !shift && !alt && key == GuiKeys::O) {
         close_picker();
-        return true;
+        return;
     }
 
     // BARE `;` CLOSES THE SETTINGS PAGE AND THE VALUE LIST (architect
@@ -8123,132 +7677,41 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // content over): the Settings key's lift under either, the opener's own
     // chord, runs the one close body — under the swapped-in list too, the
     // whole panel closing with nothing applied, the opener key being the way
-    // out of the panel where Esc and Cancel return to the page (architect
+    // out of the panel where Cancel returns to the page (architect
     // 2026-10-28 night: "setup button still should close the whole panel").
-    // Shift+; is unbound (chord_is_bound), the catch-all's nothing below.
     if (settings_opener && bare && key == GuiKeys::Semicolon) {
         close_picker();
-        return true;
+        return;
     }
 
     // BARE `t` CLOSES THE TRIM PRESETS LIST (architect 2026-10-28 night, the
     // same rule one content over): the TRIM key's lift under the list, the
-    // opener's own chord, runs the one close body. Every modified `t` binds
-    // nothing, the catch-all's nothing below.
+    // opener's own chord, runs the one close body.
     if (trim_presets && bare && key == GuiKeys::T) {
         close_picker();
-        return true;
+        return;
     }
 
     // CTRL+B CLOSES THE BPM FORM AND THE MODE WITH IT (architect 2026-10-29,
     // the same rule one content over): the BPM key's lift under the form,
     // the opener's own chord, runs the form's close (close_bpm_form), as its
-    // Cancel and Esc do. Every other `b` chord binds nothing here, the
-    // catch-all's nothing below.
+    // Cancel does.
     if (bpm_form && ctrl && !shift && !alt && key == GuiKeys::B) {
         close_bpm_form();
-        return true;
+        return;
     }
 
     // CTRL+ALT+O RUNS REVERT UNDER THE PROJECT PICKER (architect
-    // 2026-10-25; under the other two contents the catch-all's nothing): the
-    // same body the ordinary dispatch's arm calls, with the same (default)
-    // question_asked, and the long press on the Open Project key under the
-    // picker, whose lift turns its Shift into this chord
-    // (finish_chrome_press_release) — one road, so the key and the chord
-    // cannot drift. Revert's question then stands over the picker as the
-    // pick's does (the overlay under its own question, open_project_commit),
-    // and its refusals card over it. The picker's state is untouched by the
-    // ask. (The catch-all consumed the chord in silence from 2026-08-28
-    // until then.)
+    // 2026-10-25): the long press on the Open Project key under the picker,
+    // whose lift turns its Shift into this chord (finish_chrome_press_release),
+    // runs the same body the ordinary dispatch's arm calls, with the same
+    // (default) question_asked. Revert's question then stands over the picker
+    // as the pick's does (the overlay under its own question,
+    // open_project_commit), and its refusals card over it. The picker's state
+    // is untouched by the ask.
     if (project_picker && is_revert_project_key(key, mods)) {
         revert_project();
-        return true;
-    }
-
-    // THE RING: Tab / Shift+Tab walk [list, the row's live buttons] through
-    // the one modal ring route (the picker's row is one word, Cancel or Close,
-    // except under the trim presets list's six; the route holds the shape),
-    // whose list arm the player and the picker share. A
-    // RING-FOCUSED BUTTON takes Enter and Space as its own press
-    // (press-at-press, commit-at-release — the route above already armed it
-    // and returned true); reaching the switch below with the focus on a
-    // button means the key was not one of the ring's.
-    if (route_modal_dialog_focus_key(key, mods)) return true;
-
-    // THE ACCESS LETTERS (Windows strict, the prompt's own match: bare or
-    // with Alt, the case-folded key, off the published row, ON SCREEN IS AS
-    // PAINTED): a word button's underlined letter presses it through the
-    // row's one dispatch, its painted face deciding — the trim presets
-    // list's Save, Save As and Delete (2026-10-28 night) and the BPM form's
-    // Render (2026-10-29). The other contents' one word carries none (Cancel
-    // and Close are Esc's), so this arm answers under those two alone. One-shot: no letter repeats
-    // under a picker (repeat_eligible).
-    if (const int access =
-            modal_dialog_access_button(key, mods, /*field_focused=*/false);
-        access >= 0) {
-        (void)dispatch_modal_dialog_button(access);
-        return true;
-    }
-
-    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
-    // 2026-08-30, the unbound-keys ruling — "bound keys either show an effect
-    // or a card, so an unbound key is identified by its silence"), the
-    // player's own arm one mode over and for its reason: the router is the
-    // whole vocabulary while the picker stands, and a chord it does not name
-    // is a chord that does nothing here. It carded "<chord> is not bound in
-    // the project list" for the one day of 2026-08-30.
-    if (!bare) return true;
-
-    switch (key) {
-        case GuiKeys::Escape:
-            // Esc is the box's closing button, Cancel or Close
-            // (dispatch_modal_dialog_button's picker arm, the same
-            // fork): under a value list it RETURNS TO THE
-            // SETTINGS PAGE, seated on the list's key, nothing applied
-            // (return_to_settings_page, architect 2026-10-28 night); under
-            // the BPM form it closes the form and the mode (close_bpm_form,
-            // its Cancel's act, 2026-10-29); under every other content — the
-            // trim presets list's Close among them — it closes the picker.
-            if (app.folder_overlay.owner ==
-                AppState::FolderOverlay::Owner::ValueList)
-                return_to_settings_page(app.folder_overlay.value_key);
-            else if (bpm_form)
-                close_bpm_form();
-            else
-                close_picker();
-            return true;
-        case GuiKeys::Return:
-        case GuiKeys::KpEnter:
-            // With no button focused, Enter OPENS the highlight — the row
-            // click's own act from the keyboard.
-            if (mods.synthesized_repeat) return true;
-            picker_open_highlight();
-            return true;
-        case GuiKeys::Up:
-            picker_move_highlight(-1);
-            return true;
-        case GuiKeys::Down:
-            picker_move_highlight(+1);
-            return true;
-        case GuiKeys::Delete:
-            // THE TRIM PRESETS LIST'S DELETE (2026-10-28 night), the render
-            // player's key one content over: its question on the highlight,
-            // or the card with none (trim_presets_delete). One-shot. A
-            // consumed nothing under every other content.
-            if (trim_presets && !mods.synthesized_repeat)
-                trim_presets_delete();
-            return true;
-        case GuiKeys::Backslash:
-            // The tooltip lamp, the render player's arm verbatim (the rule is
-            // stated there).
-            set_show_tooltips(!app.show_tooltips);
-            return true;
-        default:
-            // Space with no button focused, Left / Right, and every other
-            // bare key: consumed, and silent with the modified arm above. The
-            // picker has no bare act for them.
-            return true;
+        return;
     }
 }
 
@@ -8944,294 +8407,32 @@ void GuiInputHandler::toggle_render_player() {
     (void)render_player.open();
 }
 
-bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
-    const bool ctrl  = mods.ctrl;
-    const bool shift = mods.shift;
-    const bool alt   = mods.alt;
-    const bool bare  = !ctrl && !shift && !alt;
-
-    // THE TWO FALL-THROUGHS, kept under the player because it is interface,
-    // not a modal (the NO HATCH rule of 2026-10-25 is the modals' alone; the
-    // picker's twin pair, route_picker_key): Ctrl+S falls through to the
-    // save with the player standing (no transport is touched); Ctrl+Q falls through to the ordinary quit road,
-    // which takes the player down at its head (GuiPrompt::request_close) — the
-    // same step the platform's close takes, stated once there rather than
-    // here, so the two roads cannot drift. (The File menu's
-    // Quit row was its pointer road above the band from 2026-09-03 evening
-    // until the menu row's removal, 2026-10-21; the quit road is Back.)
-    // THE SET STAYS TWO: Ctrl+O and Ctrl+Alt+O are the two chords this
-    // router answers with the catch-all's silence — chords
-    // bound outside the mode and meaning nothing inside it, the unbound-keys
-    // ruling. (Both were fall-throughs for the one day of 2026-09-02, when
-    // every row had to be its chord here.)
-    if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
-
-    // THE RING: Tab / Shift+Tab walk [list, buttons…] through the one modal
-    // ring route, whose player arm owns the list's membership.
-    if (route_modal_dialog_focus_key(key, mods)) return true;
-
-    // A RING-FOCUSED BUTTON takes Enter and Space as its own press
-    // (press-at-press, commit-at-release — the modal's own rule, the route
-    // above already armed it and returned true). Reaching here with the
-    // focus on a button means the key was not one of the ring's, so the
-    // player's vocabulary below applies to it; Left/Right are the seeks even
-    // then, deliberately — the player's ring has no Left/Right walk, since
-    // those keys are the car's rewind and fast-forward.
-
-    // THE ITEM FOLDER'S ENDS (architect 2026-08-28; re-keyed 2026-08-31):
-    // Shift+Home and Shift+End are the two skips' keys with the modifier — the
-    // first and the last wav of the transport item's own folder, never a wrap
-    // and a carded refusal with no item. Ahead of the blanket below because
-    // that blanket is what consumes every OTHER shifted spelling; they are
-    // ONE-SHOT with the plain pair (repeat_eligible's player arm), these two
-    // because an absolute landing is all a hold could re-reach and the plain
-    // pair because each press is a whole file.
-    //
-    // THE PAIR FOLLOWS ITS PLAIN ACTS off `,` / `.` — the skips are Home and
-    // End now, "just like the regular GUI", and a shifted twin lives on its
-    // own button's key or it is not a twin.
-    if (shift && !ctrl && !alt) {
-        if (key == GuiKeys::Home) {
-            render_player.first_in_item_folder();
-            return true;
-        }
-        if (key == GuiKeys::End) {
-            render_player.last_in_item_folder();
-            return true;
-        }
-    }
-
-    // THE ROOT'S DELETE (architect 2026-09-29): bare Delete asks to delete the
-    // highlighted batch folder and Shift+Delete every batch folder the root
-    // listing shows — the Delete button's plain and shifted presses. AT THE
-    // ROOT ALONE: inside a batch folder both fall to the catch-alls below,
-    // silent, the slot there being Load in Place. One-shot (repeat_eligible's
-    // player arm names neither).
-    if (key == GuiKeys::Delete && !ctrl && !alt &&
-        app.render_player.folder == AppState::RenderPlayer::Folder::Root) {
-        render_player_delete(/*all=*/shift);
-        return true;
-    }
-
-    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
-    // 2026-08-30, the unbound-keys ruling) — the mode's router IS the whole
-    // vocabulary while it stands, so a chord that means something outside it
-    // means nothing in here, and a press that does nothing is answered by the
-    // silence that identifies it. Both catch-alls, the modified one and the
-    // bare one below, carded "<chord> is not bound in the render player" for
-    // the one day of 2026-08-30.
-    if (!bare) return true;
-
-    const int highlight = app.folder_overlay.highlight_row;
-    switch (key) {
-        case GuiKeys::Escape:
-        case GuiKeys::L:
-            render_player.close();
-            return true;
-        // BARE `v` WAS STOP (the act from 2026-08-28, on this letter since
-        // 2026-08-30 — Audacious and Winamp before it stop on V) AND IS
-        // UNBOUND HERE since 2026-09-01: the player's Stop act retired whole
-        // with its button, leaving the row the main window's own transport
-        // triple, so the letter falls to the silent catch-all below like every
-        // other chord this router does not name.
-        case GuiKeys::Apostrophe:
-            render_player_load_in_place();
-            return true;
-        case GuiKeys::R:
-            // REPEAT ONE (architect 2026-08-28), the Repeat one button's
-            // own chord: one-shot like every other act key here, and bare-
-            // exact like all of them — every modified spelling of `r` is
-            // consumed above by the router's `if (!bare) return true`.
-            render_player.toggle_repeat_one();
-            return true;
-        case GuiKeys::Backslash:
-            // THE TOOLTIP LAMP (architect 2026-09-29), the main window's bare
-            // `\` answering in here through the lamp's one body
-            // (set_show_tooltips), so the player row's hints can be lit and
-            // put out where they stand. The lamp is chrome and governs this
-            // row's hints too; its roster button stays greyed under the
-            // overlay with the rest of the roster, the key being the road in
-            // here. Put out while a hint shows, the hint ends (the setter's
-            // dark edge, the hard end). The picker's router carries the same
-            // arm.
-            set_show_tooltips(!app.show_tooltips);
-            return true;
-        case GuiKeys::Return:
-        case GuiKeys::KpEnter:
-            // With no button focused, Enter OPENS the highlight.
-            if (mods.synthesized_repeat) return true;
-            render_player.open_row(highlight);
-            return true;
-        case GuiKeys::Space:
-            // THE PLAY BUTTON'S ACT, which since 2026-08-31 reads the
-            // HIGHLIGHT first and the transport second (the fork at
-            // play_button_act): a band standing on a folder row or on a
-            // wav that is not the item goes THERE, and anywhere else it is
-            // the transport's toggle. Enter one case above is the same act
-            // through the row's own body, and the two differ only on the
-            // transport's own item.
-            if (mods.synthesized_repeat) return true;
-            render_player.play_button_act();
-            return true;
-        case GuiKeys::Up:
-            // THE ARROWS ARE THE BAND WALK AND NOTHING ELSE, in every transport
-            // state (architect 2026-09-12, from the car: "Up is different than
-            // Home — leave Up without popping out to the folder; Up is more of
-            // a laptop thing, and on the laptop I don't want it to pop out").
-            // Row 0 is Up's silent wall exactly as the listing's last row is
-            // Down's: the arrow is the fast walk through a listing and must
-            // never leave one by itself. THE UP-A-FOLDER EXIT IS THE UP
-            // BUTTON'S, BACKSPACE'S AND THE CAR'S PREVIOUS, and no arrow's and
-            // no skip's. (This arm carried the left skip's row-0 rule for the
-            // hours between his two rulings of that day.)
-            render_player.move_highlight(-1);
-            return true;
-        case GuiKeys::Down:
-            // Bare Down is the walk and nothing else — the listing's last row
-            // is its silent wall, exactly as bare Up's is row 0.
-            render_player.move_highlight(+1);
-            return true;
-        case GuiKeys::Left:
-            render_player.seek_by(-render_player.seek_step_frames());
-            return true;
-        case GuiKeys::Right:
-            render_player.seek_by(+render_player.seek_step_frames());
-            return true;
-        case GuiKeys::Home:
-            // THE LEFT SKIP'S ACT — this key and the Home button's plain press,
-            // TWO ROADS AND NO MORE (architect 2026-09-12, from the car: "the
-            // car is a separate interface", so the head unit's own Previous is
-            // its own act and reaches nothing here). Two arms over one position
-            // test: THE PREVIOUS ENTRY of the item's folder inside the item's
-            // first three seconds (the previous-track window at
-            // kPlayerPreviousThresholdMs, asked in every transport state), and
-            // everywhere else this track's own start. IT NEVER LEAVES A
-            // FOLDER — that is the Up button, Backspace and the car's Previous
-            // — the key having gone up for the one day on which the skips
-            // walked the band. One-shot: each press is a whole FILE, so a hold
-            // could only walk the folder a file per repeat
-            // (repeat_eligible's player arm).
-            render_player.home();
-            return true;
-        case GuiKeys::End:
-            // THE RIGHT SKIP'S ACT — this key and the NextTrack button's plain
-            // press, the same two roads (the car's Next is the car's own act).
-            // IT IS THE NEXT SONG in every transport state (architect
-            // 2026-09-04, from the
-            // car: "Next should always skip to the next song. The home/end
-            // analogy doesn't quite work — this isn't a playhead, this is audio
-            // playback"): the next wav of the TRANSPORT ITEM's folder from its
-            // start, whatever the Repeat one
-            // lamp says, live or paused alike (IDLE has no item, the wall's
-            // first term); at the folder's last
-            // wav it is a silent walled no-op, nothing looping, and the button
-            // greys on that same wall.
-            // IT WAS THE TRACK'S OWN END from 2026-08-30 to
-            // 2026-09-04 — a seek
-            // to the position the scrub's right edge writes, on the reasoning
-            // that a LIVE transport would play its last frames out and the
-            // natural end would advance from there. That held for a live
-            // transport and for nothing else: paused, the seek only moved the
-            // rest, whose resume replayed the same file; idle, it met
-            // seek_to's own refusal; and under a lit Repeat one even the live
-            // road came back to the same file, which is the shape the
-            // architect met in the car.
-            render_player.next_track();
-            return true;
-        case GuiKeys::BackSpace:
-            render_player.up();
-            return true;
-        default:
-            // The bare half of the catch-all above, silent with it: every
-            // bare key the player binds is a case above this one — `,` and
-            // `.` among the keys it does NOT, since 2026-08-31: they stepped
-            // the item's folder for one day and fall here now, silent like
-            // every other unbound chord (decision 72's deduction rule, not a
-            // card), their acts having gone to the two skips as Home and End.
-            // Bare `v` joined them on 2026-09-01 with the Stop's retirement.
-            return true;   // consumed
-    }
+// THE PLAYER'S ONE CHORD IS ITS OPENER'S (architect 2026-10-30: the roster
+// and the on-screen keyboard are the two producers of every key; no keyboard
+// stands under the player, its opener refusing under every editor, and the
+// one roster lift its veil admits is Play Renders', bare `l`,
+// is_folder_overlay_opener at finish_chrome_press_release). Bare `l` closes
+// it (the opener key the way out, architect 2026-10-25). Every other act the
+// player has is a row's tap or a controls-row button, reached through the
+// pointer (claim_folder_overlay_press, dispatch_modal_dialog_button), or the
+// car's (on_media_command), never here.
+void GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
+    if (key == GuiKeys::L && !mods.ctrl && !mods.shift && !mods.alt)
+        render_player.close();
 }
 
 // -- THE SCORE VIEWER'S KEYBOARD HALF (2026-10-26) ----------------------------
 //
 // The contract is at the declaration (input_handler.h); the acts are
-// GuiScoreViewer's (score_viewer.h). What lives here is the routing, the
-// render player's router's shape (route_render_player_key, above).
-
-bool GuiInputHandler::route_score_viewer_key(GuiKey key, GuiInputState mods) {
-    const bool ctrl  = mods.ctrl;
-    const bool shift = mods.shift;
-    const bool alt   = mods.alt;
-    const bool bare  = !ctrl && !shift && !alt;
-    if (score_viewer == nullptr) return false;
-
-    // THE TWO FALL-THROUGHS, the player's: Ctrl+S saves with the viewer
-    // standing; Ctrl+Q takes the ordinary quit road, which closes the viewer
-    // at its head (GuiPrompt::request_close).
-    if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
-
-    // THE RING: Tab / Shift+Tab walk the controls row's keys, Enter and Space
-    // press a ring-focused one (the modal's own rule; Left / Right are the
-    // pages' or the skips' whatever the focus, the list owners' answer at the
-    // ring router).
-    if (route_modal_dialog_focus_key(key, mods)) return true;
-
-    const bool media = score_viewer_has_soundtrack(app);
-
-    // THE SKIPS' 10 s FORM (architect 2026-10-27): Shift+Left / Shift+Right
-    // on the media face, the BACK / FWD keys' shift-click and long press;
-    // ahead of the blanket below, which consumes every other shifted
-    // spelling — on the page road these two among them, as before.
-    if (shift && !ctrl && !alt && media &&
-        (key == GuiKeys::Left || key == GuiKeys::Right)) {
-        score_viewer->skip(key == GuiKeys::Right, /*long_form=*/true);
-        return true;
-    }
-
-    // EVERY MODIFIED CHORD: CONSUMED, SILENTLY (the unbound-keys ruling) —
-    // Ctrl+Tab among them, so the active tab is the viewer's for its life.
-    if (!bare) return true;
-
-    // THE TWO FACES' KEYS (score_viewer.h's head): under the soundtrack Space
-    // plays and pauses and Left / Right are the skips, BACK / FWD's 3 s; on
-    // the page road Left / Right are PREV / NEXT and Space has none. Home /
-    // End are the range's first / last page there, its first / last frame
-    // here (first_page / last_page fork on the face).
-    switch (key) {
-        case GuiKeys::Escape:
-        case GuiKeys::M:
-            score_viewer->close();
-            return true;
-        case GuiKeys::Space:
-            if (media && !mods.synthesized_repeat) score_viewer->toggle_play();
-            return true;
-        case GuiKeys::Left:
-            if (media) score_viewer->skip(/*forward=*/false, false);
-            else       score_viewer->step(-1);
-            return true;
-        case GuiKeys::Right:
-            if (media) score_viewer->skip(/*forward=*/true, false);
-            else       score_viewer->step(+1);
-            return true;
-        case GuiKeys::Home:
-            score_viewer->first_page();
-            return true;
-        case GuiKeys::End:
-            score_viewer->last_page();
-            return true;
-        case GuiKeys::Backslash:
-            // THE TOOLTIP LAMP, the main window's bare `\` answering in here
-            // through the lamp's one body, as under the player.
-            set_show_tooltips(!app.show_tooltips);
-            return true;
-        default:
-            // Enter with no key focused and every other bare key: consumed,
-            // silent.
-            return true;
-    }
+// GuiScoreViewer's (score_viewer.h). THE VIEWER'S ONE CHORD IS ITS OPENER'S,
+// the player's reasons (route_render_player_key, above; architect
+// 2026-10-30): bare `m`, the SCORE key's lift, the one roster arm the
+// viewer's veil admits, closes it. Every other act is a controls-row key's
+// (dispatch_modal_dialog_button) or the page scrub's.
+void GuiInputHandler::route_score_viewer_key(GuiKey key, GuiInputState mods) {
+    if (score_viewer == nullptr) return;
+    if (key == GuiKeys::M && !mods.ctrl && !mods.shift && !mods.alt)
+        score_viewer->close();
 }
 
 void GuiInputHandler::close_score_viewer() {
@@ -9539,8 +8740,7 @@ void GuiInputHandler::render_player_load_in_place() {
     // (2026-09-01, the product's one quoting form on cards and prompts alike;
     // both raisers of this prompt body wore backticks until that day),
     // OK / Cancel — Cancel the Escape sentinel LAST like every
-    // prompt's, so Esc's own answer is derived rather than declared; `o` is
-    // OK's letter.
+    // prompt's; `o` is OK's dispatch char.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
     // raised from its TWO subjects (architect 2026-08-28), and Revert's
     // confirmation (architect 2026-09-13) and the phase reset paste's
@@ -9600,10 +8800,8 @@ void GuiInputHandler::render_player_delete(bool all) {
     // the top row after a delete, so "this" would read the same over any
     // row; the count is the rows the press parked. Delete / Cancel, Cancel
     // the Escape sentinel LAST and FOCUSED (PromptInitialFocus::LastButton):
-    // nothing takes a deletion
-    // back, so a bare Enter answers Cancel, and `d` is Delete's letter — the
-    // Delete key is no answer here, so the press that raised the question
-    // cannot also answer it. Through PromptState::present, the one raise
+    // nothing takes a deletion back, so only the Delete answer's own press
+    // confirms. Through PromptState::present, the one raise
     // route, so the painted gate holds. A shifted press over a one-folder
     // root parks that one folder — the highlighted one — and asks the named
     // question, the shift line being absent there for the same reason.
@@ -9801,7 +8999,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
+    // Bare Tab / Shift+Tab: cycle focus onto the next/prev
     // marker, moving the playhead to it through THE LANDING OWNER
     // (MarkerLandingFrame::Land — Viewport::land_subject's walk, architect
     // 2026-09-24), in both audio views alike: at the working zoom, as
@@ -9823,9 +9021,6 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         cycle_marker_focus(true,  walk_frame); return true;
     }
     if (!ctrl && !alt && key == GuiKeys::Tab && shift)  {
-        cycle_marker_focus(false, walk_frame); return true;
-    }
-    if (!ctrl && !alt && key == GuiKeys::IsoLeftTab)    {
         cycle_marker_focus(false, walk_frame); return true;
     }
 
@@ -10015,39 +9210,10 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
 
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
-    case GuiKeys::Escape:
-        // ESC CLEARS THE WHOLE NOTIFICATION STACK (architect 2026-09-01), at
-        // the tail of its own ranking and nowhere else: every one of Esc's
-        // other places is EARLIER in on_key, so reaching this arm means
-        // nothing modal is standing and no render is in flight, and the last
-        // thing the press can be aimed at is the stack. It is the KEYBOARD
-        // TWIN of the shifted or held lift on a card (2026-10-01, the
-        // pointer's whole-stack dismissal; until then it was the card X's
-        // bulk twin, the X pressed on every card at once) and it READS NO
-        // CLASS: a critical card
-        // goes with the rest, exactly as a press on a card takes any class
-        // (the bump is the act that skips criticals, and it is not this one),
-        // which makes this the one act that reaches a critical card without
-        // a pointer. THE SUCCESSION: the arm was born 2026-08-31
-        // dismissing the stack's OLDEST card one press at a time, and the
-        // whole stack has been its act since 2026-09-01, when the bulk clear
-        // it duplicated (Ctrl+Esc, bound at on_key's head for one morning)
-        // retired — one act wants one chord, and the bare key is the one the
-        // hand already reaches for.
-        //
-        // WITH NO CARDS THE ARM IS THE RULED SILENCE (architect 2026-08-30):
-        // a press that finds nothing to dismiss means "never mind" and is
-        // already answered by the surface that did not close — a card would
-        // answer a retraction with a complaint. It is an arm of its own and
-        // not the bare default's for exactly that reason.
-        //
-        // IT IS RANKED, NOT PRIVILEGED: the card's own claim sits above every
-        // veil because a card must be dismissable under any modal, while this
-        // key sits UNDER all of them — a standing prompt, editor, player or
-        // picker takes the press for its own close, and the card waits for
-        // its clock, a press on it, or an Esc once that surface is down.
-        notifications.dismiss_all();
-        break;
+    // (NO ESCAPE ARM: bare Esc is the editors' alone since 2026-10-30, the
+    // on-screen keyboard its one producer — on_key's Esc statement. The
+    // notification stack's whole-stack clear is the card's own long press,
+    // notifications.h.)
     case GuiKeys::Left:
         // THE WAVEFORM-LANE STEP — one step back in the active column's unit
         // (horizontal_arrow_step, gui_input.h: a painted column, or a hop on

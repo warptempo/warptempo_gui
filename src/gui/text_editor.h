@@ -34,11 +34,17 @@
 //     offsets (text_shape::byte_offsets_px) and the click-to-byte search all
 //     address by byte, so there is exactly one coordinate and nothing to
 //     convert between.
-//   - EVERY STEP MOVES A WHOLE CODEPOINT. Left/Right, BackSpace/Delete, the
-//     Ctrl word walks and the double-click run selector all land on codepoint
-//     boundaries, so `cursor_pos` and `selection_anchor` are boundaries by
-//     construction and no operation can split a character. Home/End and Ctrl+A
-//     take the string's extremes, which are boundaries trivially.
+//   - EVERY STEP MOVES A WHOLE CODEPOINT. BackSpace, the Ctrl word erase, the
+//     pointer's caret placement and the double-click run selector all land on
+//     codepoint boundaries, so `cursor_pos` and `selection_anchor` are
+//     boundaries by construction and no operation can split a character.
+//     Ctrl+A takes the string's extremes, which are boundaries trivially.
+//   - THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its
+//     one producer): its characters, Backspace and Ctrl+Backspace, Enter,
+//     Esc, Tab (the dialog ring's and the completion's, upstream of this
+//     module), Copy and Paste (Ctrl+C / Ctrl+V) and, with the barrel's Ctrl,
+//     Ctrl+A and Ctrl+X. It has no arrows, no Home / End and no Delete; the
+//     caret moves by the pointer (the field's press, its caret drag).
 //   - GRAPHEME CLUSTERS ARE OUT OF SCOPE, deliberately and in the same class as
 //     the no-bidi and no-font-fallback exclusions: a combining mark is its own
 //     codepoint, so it carets and deletes separately from the base character it
@@ -374,10 +380,11 @@ struct State {
     int cursor_pos = 0;
 
     // -1 means no selection. When >= 0, the selected range is
-    // [min(selection_anchor, cursor_pos), max(...)). Set by shift-
-    // extended motion (Shift+Left/Right/Home/End) and Ctrl+A; cleared
-    // by non-shift motion, any printable insertion, any delete /
-    // backspace, and by enter/deactivate.
+    // [min(selection_anchor, cursor_pos), max(...)). Set by Ctrl+A, an
+    // open-selected seed, the pointer's double-click and drag, and a refused
+    // Enter (refuse); cleared
+    // by a pointer caret placement, any printable insertion, any backspace,
+    // and by enter/deactivate.
     int selection_anchor = -1;
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
@@ -429,10 +436,10 @@ struct State {
     // a row soft_wrap_rows broke at a codepoint because no space fit ends at
     // the byte the next row begins at, so that one byte is two caret places —
     // after the row's last character, or before the next row's first. TRUE
-    // means the former: the caret got there FROM THAT ROW (End, Shift+End, a
-    // press or a drag past the row's text) and paints at that row's end;
-    // false, everywhere else, paints it on the next row's start. Set by those
-    // three seats alone, after their blink restart; CLEARED BY EVERY OTHER
+    // means the former: the caret got there FROM THAT ROW (a press or a drag
+    // past the row's text) and paints at that row's end; false, everywhere
+    // else, paints it on the next row's start. Set by those two seats alone,
+    // after their blink restart; CLEARED BY EVERY OTHER
     // CARET MOTION AND EVERY EDIT through touch_blink, which each of them
     // calls, and by enter / deactivate. Meaningless off a hard break's end
     // (the readers ignore it there), and never set by the flag editor's one
@@ -493,7 +500,7 @@ void enter(State& s, int target,
 //   - consumed_commit: editor wants the caller to validate-and-commit.
 //   - consumed_cancel: editor wants the caller to discard (Esc).
 //
-// Pure printable characters and motion keys are handled internally and
+// Pure printable characters and Backspace are handled internally and
 // reported as plain `consumed`.
 //
 // Keys are platform-neutral GuiKey values; mods is the GuiInputState
@@ -529,13 +536,11 @@ enum class KeyAction {
 // re-enumerates a key.
 enum class KeyClass {
     NotEditorKey,   // not the editor's — the keyboard-modal gate drops it
-    SessionKey,     // BARE Escape, Return/KpEnter — end the session, never repeat
+    SessionKey,     // BARE Escape, Return — end the session, never repeat
     ChordKey,       // CTRL-EXACT A/C/X/V — one-shot
-    // Left/Right/Home/End/BackSpace/Delete under ctrl/shift in ANY combination
-    // but NEVER alt — repeats. Ctrl and Shift bind here (word jump/erase,
-    // selection extend, and the plain gesture where a combination adds nothing,
-    // as in any one-line text field); alt binds nothing, so an alt-carrying
-    // motion press is NotEditorKey.
+    // BackSpace, bare or under ctrl (the word erase), NEVER alt or shift —
+    // repeats. The on-screen keyboard's one editing key (architect
+    // 2026-10-30); an alt- or shift-carrying press is NotEditorKey.
     MotionEditKey,
     // No ctrl/alt and a character-bearing codepoint: >= 0x20, not DEL, not a
     // surrogate, within Unicode. Not ASCII-limited — the platform resolves a
@@ -545,14 +550,14 @@ enum class KeyClass {
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
 // exact predicates and precedence: the session keys before the Ctrl chords, the
-// chords (specific A/C/X/V) before motion, motion (ctrl/shift, never alt) before
+// chords (specific A/C/X/V) before BackSpace, BackSpace (ctrl only) before
 // printable. A key that could satisfy two predicates classifies as the one
 // handle_key acts on (Ctrl+A is a chord, not printable — printable already
-// excludes ctrl; Ctrl+Left is MotionEditKey — the chord shape list is A/C/X/V
-// only). NO ARM ADMITS ALT: session is bare-exact, the chords ctrl-exact, motion
-// ctrl/shift-only, printable already excludes ctrl and alt. So a press wearing a
-// modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
-// Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is simply NotEditorKey: unbound and
+// excludes ctrl). NO ARM ADMITS ALT: session is bare-exact, the chords
+// ctrl-exact, BackSpace ctrl-only, printable already excludes ctrl and alt. So
+// a press wearing a modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter,
+// Ctrl+Shift+V — the barrel held on the keyboard's keys) is simply
+// NotEditorKey: unbound and
 // not-ours need not be told apart, because every keyboard-modal editor drops
 // both at the gate and nothing downstream can act on either. An input routing
 // decision, judging no data.
@@ -613,9 +618,8 @@ bool cursor_visible_now(const State& s);
 // THE CARET MOVED OR THE TEXT CHANGED — restart the blink phase (the caret
 // becomes visible NOW and the period runs from here) AND DROP THE ROW-END
 // AFFINITY (State::caret_row_end, 2026-10-14): every caret motion and every
-// edit inside this module calls it, and so do the pointer's caret seats and
-// the dialog editors' Home / End route, which then set the affinity again
-// where their own stop holds it.
+// edit inside this module calls it, and so do the pointer's caret seats,
+// which then set the affinity again where their own stop holds it.
 void touch_blink(State& s);
 
 // RESTART THE BLINK PHASE ALONE, the caret unmoved and the affinity kept —
@@ -651,9 +655,9 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
 // `pos`, setting selection_anchor to the run start and cursor_pos to its end
 // (an empty pending leaves no selection; a non-empty pending always selects at
 // least one character). This is a selection-specific classifier DISTINCT from
-// the Ctrl+Left/Right cursor-motion scanners — the desktop double-click
+// the Ctrl+Backspace word-erase scanner — the desktop double-click
 // convention (select the clicked class's run, never crossing a class change)
-// differs from cursor-motion word-walking, and every toolkit (GTK/Qt/Kate/
+// differs from word-walking, and every toolkit (GTK/Qt/Kate/
 // Firefox) ships a tailored selection heuristic rather than reusing its motion
 // boundaries. Three classes, the Qt/Kate "programmer's word" variant: WORD is
 // [A-Za-z0-9_] plus any byte >= 0x80 (so a multi-byte character is one uniform

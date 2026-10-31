@@ -31,8 +31,9 @@
 // the rest the field ground (paint_modal_dialog's score branch). It is the
 // sixth modal owner (AppState::ModalDialogOwner::Score), ranked with the
 // player and the picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with
-// other modals"): its router consumes Ctrl+Tab, so the active tab is the
-// viewer's for its whole life. Its state is AppState::ScoreViewer and the
+// other modals"): its veil admits the SCORE key alone and its router the
+// SCORE key's chord alone, so the active tab is the viewer's for its whole
+// life. Its state is AppState::ScoreViewer and the
 // piece's range keys (app_state.h); this struct owns the acts.
 //
 // TWO FACES OF THE CONTROLS ROW, decided by whether the soundtrack is present
@@ -47,8 +48,8 @@
 //     player's stands between its two skips), THE SKIPS (architect
 //     2026-10-27): BACK and FWD skip the soundtrack 3 s back / forward at its
 //     own rate, their Shift-press or long press 10 s (score_viewer_skip_
-//     landing, the one landing the act and the face ask) — each a seek_to,
-//     Home / End's class; THE SCRUB (the render player's, its domain
+//     landing, the one landing the act and the face ask) — each a seek_to;
+//     THE SCRUB (the render player's, its domain
 //     the viewing range's FRAMES: the thumb at the cursor, a press off the
 //     thumb jumping it, a drag CARRYING it and seeking nothing, the page
 //     holding the frame under it SHOWN LIVE, display only — architect
@@ -61,9 +62,8 @@
 //     dropping the thumb"), THE CLOCK (the render player's two time fields,
 //     verbatim: the elapsed time within the range and the range's length,
 //     unmoved under a held scrub), then RESET, START, END and CLOSE flush
-//     right. Space plays and pauses, Home / End seek the range's first /
-//     last frame, Left / Right are BACK / FWD and Shift+Left / Shift+Right
-//     their 10 s forms (architect 2026-10-27).
+//     right. The keys are the acts' one road (architect 2026-10-30: no
+//     keyboard stands under the viewer).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
 //     pages.txt — always so on the PDF road, tools/score_extract.py's PDF
 //     input, 2026-10-27): PREV and NEXT (the render player's
@@ -75,8 +75,7 @@
 //     under it shown as the thumb crosses into it, and the lift writes the
 //     position), THE PAGE CELL where the player's clock stands ("7 / 15", the
 //     shown page's ordinal within the range and the range's count) and the
-//     same four keys flush right. Left / Right are PREV / NEXT, Home / End
-//     the range's first / last page, Space nothing.
+//     same four keys flush right.
 //
 // THE TRANSPORT (the media player's face) is the render player's model,
 // simplified — IDLE (the engine not on the soundtrack), PAUSED, LIVE
@@ -386,8 +385,7 @@ inline bool score_viewer_skip_actionable(const AppState& a,
 // its act would be a no-op): PREV and NEXT at the range's edges; BACK and FWD
 // where NEITHER form would move the cursor (the roster skips' twin rule,
 // playhead_end_jump_actionable asked of both forms) — BACK at the range's
-// first frame, FWD at its end (LIVE, its last two frames) — and with no
-// soundtrack, Home / End's own refusals (seek_to's); PLAY / PAUSE
+// first frame, FWD at its end (LIVE, its last two frames); PLAY / PAUSE
 // until the soundtrack is loaded, on a device that never came up
 // (GuiPlayback::device_absent, the render player's own term: a press reopens
 // one that went away), and while the engine is not yet the viewer's under a
@@ -636,19 +634,19 @@ struct GuiScoreViewer {
           target_render(target_render_),
           notifications(notifications_) {}
 
-    // THE ONE OPENER — the SCORE key's lift and bare `m` (the dispatch arm,
+    // THE ONE OPENER — the SCORE key's lift, bare `m` (the dispatch arm,
     // input_key_dispatch.cpp). A piece with no score cards why (the key is
-    // grey, so the keyboard alone reaches that refusal); a standing prompt is
-    // silent (it veils everything). The folder overlay's contents never stand
-    // under it: under them `m` is their routers' silent catch-all and the
-    // SCORE key is grey, so no road reaches here (the player's and the
+    // grey, so only a face painted live inside the frame its act went dead in
+    // reaches that refusal); a standing prompt is silent (it veils
+    // everything). The folder overlay's contents never stand
+    // under it: under them the SCORE key is grey, so no road reaches here (the player's and the
     // picker's own mutual exclusion, input_key_dispatch.cpp's
     // open_project_picker). Takes the modal-open stop, mints the session,
     // lands on the active tab's remembered position (the soundtrack bound,
     // PAUSED, where it can be: the head's THE OPEN), asks the decoder for
     // what the gray store lacks and damages the window.
     bool open();
-    // THE ONE CLOSER — CLOSE, Esc, the SCORE key and bare `m`, and the exit
+    // THE ONE CLOSER — CLOSE, the SCORE key (its lift, bare `m`), and the exit
     // road's teardown (GuiPrompt::request_close): the render player's close
     // road where the engine was the viewer's (the head's THE CLOSE), the
     // cursor's frame written through, the scrub's arm dropped, the gray store
@@ -673,16 +671,12 @@ struct GuiScoreViewer {
     // the page road's lift alone.
     bool display_page(int index);
     void write_page_position();
-    // PREV / NEXT (and Left / Right): one page, walled at the range's edges;
-    // NEXT biases the decoder forward.
+    // PREV / NEXT: one page, walled at the range's edges; NEXT biases the
+    // decoder forward.
     void step(int delta);
-    // Home / End: the range's first / last page — under the soundtrack its
-    // first / last frame (seek_to).
-    void first_page();
-    void last_page();
 
     // -- The media player's face ---------------------------------------------
-    // PLAY / PAUSE and Space: refused, silent, where its key is grey; else
+    // PLAY / PAUSE: refused, silent, where its key is grey; else
     // pause() where LIVE, play() otherwise.
     void toggle_play();
     // THE PAUSE: LIVE parks at PAUSED through the one stop body, the cursor
@@ -712,15 +706,15 @@ struct GuiScoreViewer {
     // the render player's rule, so the natural end takes over), at rest the
     // cursor moves; the page follows either way; the position written
     // through. The landing is score_viewer_seek_landing's, the one body the
-    // skips' face asks too. Its callers are Home / End, the skips and the
+    // skips' face asks too. Its callers are the skips and the
     // scrub's lift where the press found the soundtrack paused (architect
     // 2026-10-26, "no scrubbing": the drag carries the thumb and seeks
     // nothing; a lift that plays on is play_from's).
     void seek_to(int64_t frame);
-    // THE SKIPS (architect 2026-10-27) — BACK / FWD and Left / Right, their
-    // Shift-press, long press and Shift+Left / Shift+Right `long_form`: the
+    // THE SKIPS (architect 2026-10-27) — BACK / FWD, their long press the
+    // `long_form`: the
     // cursor 3 s back (`forward` false) or forward, 10 s in the long form, at
-    // the soundtrack's own rate, through seek_to — Home / End's class, so
+    // the soundtrack's own rate, through seek_to, so
     // LIVE plays on from the landing and at rest the cursor moves, the page
     // following and the position written. Refused, silent, where this form
     // would not move the cursor its way (score_viewer_skip_actionable, the

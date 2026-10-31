@@ -103,7 +103,7 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 // on the focused marker with the payload addressed and the flag box's
 // double-click (both -> enter_top_flag_edit). Every route opens the editor with its
 // SEEDED content fully selected (open-selected) — typing replaces
-// wholesale, bare Left/Right collapse to the extremes — so there is no
+// wholesale — so there is no
 // clicked-glyph caret to seat; a specific caret spot is a click inside the
 // already-open editor (input_pointer's F2.1 path). A blank seed selects
 // nothing and rests at caret 0, the same rule degenerating for the
@@ -166,7 +166,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
 
     // Open-selected: fully select the seeded content (mirrors Ctrl+A's
     // anchor=0 / cursor=end assignments) so the first keystroke replaces it
-    // wholesale and bare Left/Right collapse to the extremes; a blank seed
+    // wholesale; a blank seed
     // selects nothing and rests at caret 0. text_editor::enter already
     // refreshed blink_epoch, so no touch_blink is needed here.
     if (!app.top_flag_editor.pending.empty()) {

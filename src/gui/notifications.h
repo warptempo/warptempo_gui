@@ -60,41 +60,39 @@
 //
 // NORMAL — leaves on its own kNotificationMs after its push (gui_input.h; the
 // pointer resting on it, or a press holding it, pauses the clock), at the
-// lift of a press on it, at a BUMP, or at the whole stack's dismissal (a bare
-// Esc that reaches the stack, or a Shift-click or long press on any card).
+// lift of a press on it, at a BUMP, or at the whole stack's dismissal (a
+// long press on any card).
 // THE INVENTORY, by family and owner (each
 // family's sentences are literals at their raisers; re-grep `notify(` before
 // restating a count):
-//   * THE GATES' OWN CARDS, the swallowed press answered by the state that
-//     swallowed it, each asked only for a chord the product BINDS IN THE
+//   * THE GATES' OWN CARDS, the refused press answered by the state that
+//     refused it, each asked only for a chord the product BINDS IN THE
 //     STANDING MODE (chord_is_bound, gui_input.h): kKeysDuringDrag
-//     (input_handler.cpp: the pointer gestures' drag-modal gate, the render
-//     player's and the picker's own arms — those two, their routers being
-//     their vocabulary, do not ask chord_is_bound),
-//     "<chord> is not available in the history view" (on_key's call site,
-//     never the predicate's) and read_only_chord_card below; the lock's own
-//     composer authoring_lock_card; kIterationLockUndoCard /
-//     kIterationLockRedoCard (app_state.h). A BOUND CHORD UNDER ANY MODAL IS
+//     (input_handler.cpp: the car's two roads, a head unit's press that lands
+//     while a pointer gesture holds the glass — no key can, the touch window
+//     having one owner, architect 2026-10-30), read_only_chord_card below
+//     (the read-only lock, its one live producer the car's undo / redo road
+//     on a locked tab — the roster's refused chords wear the grey) and
+//     kIterationLockCard (the iteration lock, reached by the lit tab buttons'
+//     Ctrl+Shift+Tab twin and the car); the lock's own composer
+//     authoring_lock_card; kIterationLockUndoCard / kIterationLockRedoCard
+//     (app_state.h). A BOUND CHORD UNDER ANY MODAL IS
 //     SILENT (architect 2026-10-25: "chords are used with the laptop, and
 //     I'm not using the laptop for authoring … silence") — the prompt, the
-//     progress modal and every editor, the editor text drag with them; the
-//     editor gate's "Close the editor first: <chord> is ignored while it is
-//     open" and the text drag's kKeysDuringDrag retired that day. TWO of
-//     them name the chord through the one speller
+//     progress modal and every editor, the editor text drag with them. The
+//     `h` view raises no gate card (architect 2026-10-30): every chord its
+//     allowlist refuses greys its button, so no refused chord arrives. ONE of
+//     them names the chord through the one speller
 //     spell_chord (gui_input.h). A GATE'S MEMBERSHIP IS THE CHORD'S ALONE
 //     (architect 2026-09-01: "look for instances where it lies by saying it's
 //     not allowed when, in fact, it's only contextually not allowed") — a
 //     chord the state owns is admitted and its ACT answers the contextual
-//     refusal with the true reason; the `h` allowlist's two state-conditional
-//     admissions fork their own truthful sentences ("There is nothing to
-//     load" for bare `'`, "Select a change to revert" / kTabReadOnlyCard for
-//     bare `v`). A card naming the chord pressed says what happened, never
-//     what to press instead — it is not a gesture hint. (A card or a label
-//     never names a key to press; the interface's key text is the tooltip's
-//     key in the accelerator spelling, redesign_button_tooltip's head
-//     (app_state.h), architect 2026-10-27, and the underlined access keys of
-//     the menus and the dialog buttons, architect 2026-10-10 —
-//     paint_handler.cpp's capitalization block.)
+//     refusal with the true reason. A card naming the chord pressed says what
+//     happened, never what to press instead — it is not a gesture hint. (A
+//     card or a label never names a key to press; the interface's key text is
+//     the tooltip's key in the accelerator spelling, redesign_button_tooltip's
+//     head (app_state.h), architect 2026-10-27 — paint_handler.cpp's
+//     capitalization block.)
 //   * THE VERBS' OWN REFUSALS, naming a subject or a view, never a chord: the
 //     home-view binding ("Markers are placed in source view", "Markers are
 //     moved in source view", Shift+S's "Already in phase reset view"); the
@@ -110,9 +108,7 @@
 //     kHistoryViewMovesNoMarkersCard; the off-edge pair below; bare `m`'s
 //     NINE-arm BPM gate, one card per press carrying the first failure (the
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
-//   * THE MODES: the picker's "Choose a project first" (its opener's
-//     "Close the editor first" retired 2026-10-25 with the lane editors'
-//     pointer-transparency); kCheckpointPublishing (below — bare `h`, the
+//   * THE MODES: kCheckpointPublishing (below — bare `h`, the
 //     publish chord, the save owner, the picker, Revert); "History
 //     is unavailable[: <reason>]" (the press that asks for git where the
 //     remote walk could not bootstrap — bare `g` at set_history_delta and the
@@ -200,8 +196,7 @@
 // CRITICAL — never TIMED OUT and never BUMPED (architect 2026-08-30:
 // "critical cards keep standing"): no clock, and a later success clears
 // nothing. Down only by a DELIBERATE dismissal: a click or tap on it, or the
-// whole stack's dismissal (bare Esc, or a Shift-click or long press on any
-// card). THE PRODUCERS, and nothing else (re-greped 2026-09-30): the three
+// whole stack's dismissal (a long press on any card). THE PRODUCERS, and nothing else (re-greped 2026-09-30): the three
 // checkpoint failures ("Checkpoint failed: nothing was committed", "Checkpoint
 // failed: files written but not committed", "Checkpoint committed but not
 // pushed") and the three pre-commit refusals ("Checkpoint refused: GitHub has
@@ -264,10 +259,6 @@
 //     modified press the waveform, the top strip or the folder overlay's
 //     band (pad, gaps and rows) binds nothing for says nothing, and the
 //     render player's modified press on the scrub track likewise.
-//   * TOP-LEVEL BARE ESC WITH AN EMPTY STACK — a retraction with nothing to
-//     dismiss (the arm's other half clears the stack; the hit section below).
-//     Esc inside a drag gate is NOT this case: Esc is bound, so the gate
-//     cards it with every other bound key.
 //   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
 //     DOUBLE-CLICK DROP (the warp column's alone), because a gesture that
 //     never begins is its own answer; the double-click drop's READ-ONLY arm is
@@ -368,8 +359,9 @@
 // own pairing, one term at the lift: the press-time shift ORed with a hold
 // past chrome_shift_hold_ms(), with no visual announcement
 // (finish_notification_release, input_pointer.cpp). THE REASON: the tablet
-// has no hardware keyboard for bare Esc's clear-all, so the pen was ticking
-// the stack down X by X. The
+// has no key for a clear-all, so the pen was ticking the stack down X by X.
+// It is THE ONE WHOLE-STACK DISMISSAL (architect 2026-10-30: bare Esc's
+// clear-all, the keyboard's, went with the hardware keyboard). The
 // X went with the ruling, its hover fade with it, and the card wears no
 // hover face and no pressed face. ONE RULE FOR FINGER AND MOUSE, as before:
 // the router cannot fork on tap versus click (no origin bit rides a press;
@@ -387,36 +379,15 @@
 // press being a second reason the same card stands still and never a second
 // mechanism (GuiNotifications::press_hold_edge); a slide-away lift re-arms
 // it, and a card already due at the press is not banked (the hover's rule:
-// a pause does not resurrect). A held card can still be BUMPED by a push or
-// cleared by Esc; the lift re-asks the live stack and then lands nothing.
+// a pause does not resurrect). A held card can still be BUMPED by a push;
+// the lift re-asks the live stack and then lands nothing.
 //
-// BARE ESC IS THE KEYBOARD'S WHOLE-STACK DISMISSAL (since 2026-08-31; the
-// whole stack, CRITICALS INCLUDED, since 2026-09-01), at the tail of its own
-// ranking, and it lands on no card at all. THE POINTER AND THE KEY DIFFER IN
-// RANK, deliberately: the card's claim sits ABOVE EVERY VEIL because a card
-// must be dismissable under any modal, while Esc sits UNDER all of them —
-// every other Esc place is earlier in the dispatch, so the key reaches the
-// stack only when nothing modal stands and no render is in flight (the EIGHT
-// places are enumerated at on_key, input_handler.cpp; the arm itself is
-// handle_plain_bare_keys'). Neither road reads a class — a critical card is
-// dismissed like any other — so what takes a critical card down is always a
+// THE WHOLE-STACK DISMISSAL READS NO CLASS — a critical card is dismissed
+// like any other — so what takes a critical card down is always a
 // deliberate act, never the CLOCK (a critical card has none). That asymmetry
 // is deliberate and is the record a reversal would start from: if the
 // criticals should survive the whole-stack dismissal, dismiss_all is the one
 // line to change.
-//
-// THE ESC ARM'S OWN SUCCESSION, in two rulings a day apart: it was born
-// 2026-08-31 taking the stack's OLDEST card alone — clearing the top would
-// have let the bottom card stick around preferentially, so the key emptied
-// the stack from the back the way the clock does, one press per card — and a
-// BULK FORM, Ctrl+Esc, was bound beside it at the head of on_key on the
-// morning of 2026-09-01 to reach a whole stack from under any modal. THE
-// CHORD RETIRED THE SAME EVENING and its act moved onto the bare key: "Esc
-// should clear all notifications", one act wanting one chord rather than two
-// roads onto it. Ctrl+Esc is unbound-silent now like every other modified
-// Escape, and the bare key's rank is unchanged — it is still the LAST of the
-// eight places, under every modal, so a standing surface takes the press for
-// its own close and the stack waits.
 //
 // THE PRESS IS CONSUMED WHOLE, whatever the button: it
 // arms nothing else, moves nothing, lands no playhead and reaches nothing
@@ -498,11 +469,13 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // since 2026-08-30 (the reasoning for naming the press rather than the tab is
 // at that gate, input_handler.cpp). It takes the ALREADY-SPELLED chord rather
 // than the key and its modifiers, so this header needs nothing of the
-// speller's; every caller reaches spell_chord (gui_input.h) for itself.
+// speller's; its caller reaches spell_chord (gui_input.h) for itself.
 //
-// ONE CALLER, the keyboard gate (on_key), whose subject is the ACTIVE tab's
-// bit — bare `i`'s ON edge included (architect 2026-10-13: the lamp's
-// exclusion is the active tab's like every other read-only refusal,
+// ONE CALLER, the lock's verdict-and-card (authoring_lock_refuses_chord), on
+// on_key's gate and the car's undo / redo road — the latter its one live
+// producer since 2026-10-30, the roster's refused chords greying on the same
+// lock — whose subject is the ACTIVE tab's bit (architect 2026-10-13: the
+// lamp's exclusion is the active tab's like every other read-only refusal,
 // authoring_locked, app_state.h).
 //
 // THE TAIL IS A CONSTANT IN app_state.h SINCE 2026-09-10

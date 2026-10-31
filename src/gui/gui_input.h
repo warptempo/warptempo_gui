@@ -167,10 +167,8 @@ struct GuiInputState {
     // SURFACE READS IT (re-derived by grep 2026-10-10): the text editors, at
     // their two readers in text_editor.cpp — the key classifier (whose
     // printable verdict repeat_eligible's editor-typing repeat gate asks) and
-    // handle_key's printable insertion. The modal prompt's letter responses
-    // read it from 2026-07-30 until the prompts' access keys went Windows
-    // strict (2026-10-10): they match the case-folded GuiKey now. Every
-    // other consumer reads the GuiKey and ignores this.
+    // handle_key's printable insertion. Every other consumer reads the
+    // GuiKey and ignores this.
     uint32_t codepoint           = 0;
     // True iff this key event is a SYNTHESIZED REPEAT — one the process
     // generated itself from a HELD input rather than a fresh physical press.
@@ -204,12 +202,16 @@ struct GuiInputState {
 // -- THE ARROW STEP LADDER (architect 2026-08-31) ----------------------------
 //
 // THE MODIFIER IS THE STEP'S MAGNITUDE ON THE VERTICAL ARROWS, AND ON THEM
-// ALONE: bare is ONE unit, Ctrl is THREE and Shift is TEN (the two rungs
-// swapped 2026-09-21, below), and the unit is
+// ALONE: bare is ONE unit and Ctrl is THREE, and the unit is
 // whatever the bare Up / Down's own act steps on the addressed cell — a CENT
 // on the tempo (singleton and group), a cent or a hop on a bound. The tempo
 // is NUMERIC, so a count of
-// cents is a number the user thinks in.
+// cents is a number the user thinks in. THE LADDER HAS TWO RUNGS (architect
+// 2026-10-30): its Shift ten-step was the hardware keyboard's alone — the
+// Up / Down buttons repeat, and a held repeat outranks the long-press shift
+// (ToolbarChord::repeats, input_pointer.cpp) — so with that keyboard closed
+// Shift+Up / Shift+Down have no producer and bind nothing; the barrel's
+// Ctrl is the one modifier the buttons carry.
 //
 // THE HORIZONTAL PAIR HAS NO LADDER (architect 2026-09-21, retiring the
 // 2026-08-31 horizontal rungs on every column): horizontal placement is
@@ -223,30 +225,19 @@ struct GuiInputState {
 // camera is the hold posture's (NudgeCamera below), so this function is never
 // asked about a horizontal press.
 //
-// SHIFT IS THE LONG STRIDE (architect 2026-09-21, swapping the 2026-08-31
-// order, which had shift the three and ctrl the ten): "shift becomes the long
-// stride. This is different than how e.g. VLC uses shift/ctrl for seeking
-// (there shift is 3 s and ctrl is 1 min) — so different context." The order is
-// bare < ctrl < shift; the names stay the modifiers' (kArrowStepShift is the
-// ten, kArrowStepCtrl the three).
-//
-// CTRL+SHIFT SPELLS NOTHING — strict modifier validation, so the pair is the
-// consumed no-op it is everywhere else and no arm composes a 30. Alt likewise.
-// The dispatch arms ask for the magnitude only after they have refused those
-// combinations; this function answers ctrl first and never sees the pair, so
-// the test order says nothing about which rung is longer.
+// SHIFT AND CTRL+SHIFT SPELL NOTHING — strict modifier validation, so each
+// is the consumed no-op it is everywhere else. Alt likewise. The dispatch
+// arms ask for the magnitude only after they have refused those
+// combinations.
 //
 // THE WALLS ARE THE BARE FORM'S, at the scaled size: a SINGLETON step clamps
 // onto its wall and a GROUP press refuses whole where any member could not
 // take the FULL step — the unified wall policy, stated at the head of
 // position_nudge.h and instanced at the group tempo scan
 // (tempo_cent_step_group_actionable).
-inline constexpr int64_t kArrowStepShift = 10;
-inline constexpr int64_t kArrowStepCtrl  = 3;
+inline constexpr int64_t kArrowStepCtrl = 3;
 constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
-    if (mods.ctrl)  return kArrowStepCtrl;
-    if (mods.shift) return kArrowStepShift;
-    return 1;
+    return mods.ctrl ? kArrowStepCtrl : 1;
 }
 
 // ONE HORIZONTAL ARROW PRESS'S STEP, as the dispatch hands it to the act, the
@@ -350,28 +341,25 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 //
 // THE ONE PLACE A PRESS IS TURNED INTO THE NAME THE USER READS. The strictness
 // ruling ("go very verbose — a card for every refusal that is silent today")
-// gave the gates sentences that must say WHICH press was refused, and THE
-// THREE THAT NAME ONE compose it here: the keyboard-modal editor gate, the `h`
-// view's allowlist and the read-only lock. NO OTHER SITE COMPOSES A CHORD NAME
-// FOR A CARD, and spell_modifiers below has no caller of its own — it is this
+// gave the gates sentences that must say WHICH press was refused, and ONE
+// GATE NAMES ONE since 2026-10-30: the read-only lock (authoring_lock_
+// refuses_chord, input_handler.cpp), whose one live producer is THE CAR'S
+// UNDO / REDO ROAD on a locked tab (run_undo_redo_without_key, Ctrl+Z and
+// Ctrl+Shift+Z) — the roster never reaches the sentence, every button whose
+// chord the lock drops greying on that lock, and the hardware keyboard that
+// once typed the rest is closed (architect 2026-10-30; the `h` view's card,
+// the other namer, went with it). NO OTHER SITE COMPOSES A CHORD NAME FOR A
+// CARD, and spell_modifiers below has no caller of its own — it is this
 // speller's prefix half and nothing else. The roster's TOOLTIPS carry chords
 // too, as hand-written literals in redesign_button_tooltip, and they are a different
 // job: a tooltip advertises a BOUND chord in advance, this spells a press that
 // just happened.
 //
-// AND ALL THREE SPEAK ONLY FOR A CHORD THIS PRODUCT BINDS IN THE STANDING MODE
+// AND THE GATE SPEAKS ONLY FOR A CHORD THIS PRODUCT BINDS IN THE STANDING MODE
 // (architect 2026-08-30: bound keys either show an effect or a card, so an
 // unbound key is identified by its silence; the mode term added 2026-09-01,
-// U4). Each asks chord_is_bound — the inventory below this speller, which reads
-// the `h` view's bit so that the view's own seven shapes are spoken for only
-// while it stands — before it composes anything, and a press nothing binds
-// there dies at its gate saying nothing at all. So every chord a card names is
-// one the user could have expected to do something IN THE STATE HE PRESSED IT.
-//
-// (WHAT THIS SPELLER SERVED UNTIL THAT RULING, all retired with the "<chord>
-// is not bound" class: the strict-modifier tail, the unbound bare default,
-// the render player's and the picker's two catch-alls each, and — through
-// spell_modifiers alone — the pointer's unbound modified press.)
+// U4): it asks chord_is_bound — the inventory below this speller — before it
+// composes anything.
 //
 // AND THE NAMES ARE THE PRODUCT'S, NOT THIS SURFACE'S: every user-facing
 // spelling of a key follows KDENLIVE (Qt), one convention stated here and
@@ -380,7 +368,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // the "two surfaces, two conventions" split the tooltips and the cards ran
 // under until that day: an exception in user-facing text is a design smell,
 // so there is one rule and no per-surface convention left). Qt's own English
-// names for the named keys (Esc, Del, Backspace, PgUp, PgDown, Space, Tab,
+// names for the named keys (Esc, Del, Backspace, Space, Tab,
 // Home, End, the four arrows — QKeySequence's keyname[] table, researched
 // against the source) with ONE DEPARTURE, ENTER for Qt's "Return" (architect
 // 2026-10-29 night, "that's what I see on my keyboard"; spell_key_name's
@@ -415,9 +403,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // stated here.
 //
 // A CARD NAMING THE CHORD THE USER PRESSED IS NOT A GESTURE HINT (the standing
-// no-hints rule, whose one exception is the menus' underlined access keys,
-// architect 2026-10-10): it names what just happened, never what to press
-// instead.
+// no-hints rule): it names what just happened, never what to press instead.
 //
 // THE SPELLING: modifiers first in the fixed order Ctrl, Alt, Shift, joined by
 // '+', then the key — a printable ASCII key by its own character upper-cased
@@ -426,8 +412,8 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // the card and the documentation spell one chord one way.
 //
 // EVERY CHORD THIS SPELLER IS ASKED FOR HAS A NAME, BY CONSTRUCTION, and there
-// is no fallback for one that does not (architect 2026-08-31): the three
-// readers ask chord_is_bound first, and every key that inventory admits is
+// is no fallback for one that does not (architect 2026-08-31): its reader
+// asks chord_is_bound first, and every key that inventory admits is
 // either named in the table below or a printable ASCII character spell_chord
 // upper-cases. every_bound_key_is_spellable, beside chord_is_bound's own
 // anchors, PINS the implication at compile time, so a binding added on a key
@@ -501,17 +487,12 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // first, and every_bound_key_is_spellable pins the other way round — no bound
 // key is left without a name here, which is what lets spell_chord carry no
 // unnamed fallback. THE NAMES ARE QT'S OWN (the head's one convention): Esc,
-// Del, PgUp, PgDown — kdenlive's spellings, not the longhand this table wrote
+// Del — kdenlive's spellings, not the longhand this table wrote
 // until 2026-09-01 — SAVE ONE: THE RETURN KEY IS "ENTER" (architect
 // 2026-10-29 night, "that's what I see on my keyboard": his keyboards print
 // Enter, and the product's word for the key is what the hand finds on it).
-// The two pairs that share a name share it deliberately — Return / KpEnter
-// are one "Enter" to the hand, since both keysyms carry the same acts (the
-// editor's open, a dialog's commit) and a separate name for the keypad's
-// would name a second key the product does not distinguish — and IsoLeftTab
-// IS the shifted Tab keysym. NO USER TEXT KEEPS THE SPLIT, and none says
-// "Return": the tooltips, the cards, the on-screen keyboard's cap and HELP
-// all say Enter.
+// No user text says "Return": the tooltips, the cards, the on-screen
+// keyboard's cap and HELP all say Enter.
 //
 // TWO NAMES THIS TABLE DOES NOT HOLD, and cannot: the SUPER MODIFIER has no
 // input bit at all (architect 2026-10-30) and no chord names it, so its Qt
@@ -527,16 +508,12 @@ inline std::string spell_modifiers(GuiInputState mods) {
 constexpr const char* spell_key_name(GuiKey key) {
     switch (key) {
         case GuiKeys::Space:      return "Space";
-        case GuiKeys::Return:
-        case GuiKeys::KpEnter:    return "Enter";
-        case GuiKeys::Tab:
-        case GuiKeys::IsoLeftTab: return "Tab";
+        case GuiKeys::Return:     return "Enter";
+        case GuiKeys::Tab:        return "Tab";
         case GuiKeys::Escape:     return "Esc";
         case GuiKeys::Delete:     return "Del";
         case GuiKeys::Home:       return "Home";
         case GuiKeys::End:        return "End";
-        case GuiKeys::PageUp:     return "PgUp";
-        case GuiKeys::PageDown:   return "PgDown";
         case GuiKeys::Up:         return "Up";
         case GuiKeys::Down:       return "Down";
         case GuiKeys::Left:       return "Left";
@@ -578,33 +555,35 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // term added 2026-09-01, U4) ------------------------------------------------
 //
 // "Bound keys either show an effect or a card, so an unbound key is identified
-// by its silence." The gates that answer a swallowed press therefore ask this
+// by its silence." The gates that answer a refused press therefore ask this
 // first, and say nothing for a chord that binds nothing where the press
-// landed: the deduction only works if the silence is reserved for it. THREE
-// GATES IN on_key READ IT (re-grepped 2026-10-27): the pointer gestures'
-// DRAG-MODAL gate, the `h` view's allowlist and the read-only lock, three
-// sentences between them — and the car's two roads onto the same gates
-// (run_undo_redo_without_key, car_play_refused_by_key_gates). (The no-piece
-// gate answers in silence: plain Ctrl+Q is the one key that reaches it,
-// on_key's statement.)
-// (THE KEYBOARD-MODAL EDITOR GATE AND THE EDITOR TEXT DRAG'S were readers
-// until 2026-10-25, when a bound chord under any modal became silent —
-// architect: "silence".) THE
-// PLAYER'S AND THE PICKER'S OWN DRAG ARMS, which say that same literal one
-// rank higher, DO NOT ASK: while either mode stands its router is the whole
-// vocabulary, and this inventory does not know it — a bare `r` swallowed by
-// the player's scroll drag is a bound key there and must be answered.
+// landed: the deduction only works if the silence is reserved for it. ITS
+// READERS (re-grepped 2026-10-30): on_key's read-only lock
+// (authoring_lock_refuses_chord), the car's two roads onto the same gates
+// (run_undo_redo_without_key, car_play_refused_by_key_gates), and the A/B
+// audition's hands-off end at on_key's head (end_audition_for_press: a bound
+// chord ends a standing act).
+//
+// THE LIST IS THE DISPATCH'S INTERNAL KEY (architect 2026-10-30: the hardware
+// keyboard is closed; the roster and the on-screen keyboard are the two
+// producers of every key). The roster spells only chords its rows and their
+// admissions reach, every one of them on this list; the on-screen keyboard
+// stands only under an editor, whose own route takes its keys above every
+// reader — so the unbound-key silence covers what a roster row never spells
+// and the keyboard's characters with no editor, which cannot occur. ESCAPE,
+// RETURN AND TAB STAY ON IT for the keyboard's sake: its Esc, Enter and Tab
+// arrive under an editor (and Return is the Open Text Editor key's chord),
+// and they must be what they are, bound keys, wherever a reader asks.
 //
 // WHAT COUNTS AS BOUND IS WHAT THE MAIN DISPATCH CLAIMS IN THE STANDING MODE —
 // every chord on_key's own road would claim in the state the press arrived in,
-// whether or not it would ACT there. The five sub-handlers on that road are in
-// it (handle_escape_cancels, handle_render_dispatch_keys, handle_mode_keys,
+// whether or not it would ACT there. The four sub-handlers on that road are in
+// it (handle_render_dispatch_keys, handle_mode_keys,
 // handle_tab_switch_keys and handle_plain_bare_keys' switch), and so is
 // handle_history_mode_key: the `h` view ADDS its seven shapes to the dispatch
-// rather than replacing it — the allowlist below it still admits the ordinary
-// vocabulary — so bare `g`, bare `u`, the `,` / `.` pair with and without shift
-// and bare `v` are bindings of this product's keyboard like any other WHILE THE
-// VIEW STANDS, and nothing at all outside it. (Bare `h` itself is NOT one of
+// rather than replacing it, so bare `g`, bare `u`, the `,` / `.` pair with and
+// without shift and bare `v` are bindings like any other WHILE THE VIEW
+// STANDS, and nothing at all outside it. (Bare `h` itself is NOT one of
 // them: the toggle is claimed in every state, which is why it reads no term.)
 //
 // THE MODE BIT IS THE ONE STATE TERM THIS PREDICATE CARRIES (architect
@@ -629,17 +608,11 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // existing lock refusal are untouched, and drift here stays what it always was
 // — a MISSED CARD, never a wrong act.
 //
-// THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER
-// PLAYER or the PICKER stands, its router IS the whole vocabulary and the
-// dispatch
-// below it never runs, so its keys are its own world and not the product's —
-// bare `r` flips Repeat one in the player and binds nothing anywhere else
-// (the render chords are Ctrl+Alt), and an `r` pressed outside it must be as
-// silent as any unbound letter. Neither
-// router can reach a gate below it either (both are ranked above all six), so
-// no term for them could ever be asked. THE EDITORS ARE THE SAME KIND OF
-// WORLD and, being modals, ask nothing since 2026-10-25: an editor's own
-// keys (its motion arm, its ctrl-exact clipboard chords, its printable
+// THE OVERLAY ROUTERS ARE NOT, and that is the line: while an overlay stands
+// its router IS the whole vocabulary (its opener's chord alone since
+// 2026-10-30) and the dispatch below it never runs. THE EDITORS ARE THE SAME
+// KIND OF WORLD and, being modals, ask nothing since 2026-10-25: an editor's
+// own keys (Backspace, its ctrl-exact clipboard chords, its printable
 // insertion) are consumed by the editor itself, and every chord it does not
 // own is consumed by its gate in silence.
 //
@@ -649,8 +622,9 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // there is no shape to read it off. Drift here is a MISSED CARD (a bound chord
 // answered by silence at a gate), never a wrong act — nothing routes through
 // this predicate — and codex is the backstop that finds it. kToolbarChords
-// carries a fraction of the set (the chords the roster's buttons synthesize)
-// and is no substitute for reading the dispatch.
+// is the set's one PRODUCER on the main dispatch (the chords the roster's
+// buttons synthesize, with their admitted modifiers), and every chord it can
+// spell is on this list.
 //
 // WHAT IS DELIBERATELY ABSENT: the digits 5..9;
 // Backspace, and every letter the ladder never tests (A, E, X, Y — T
@@ -669,11 +643,11 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // whole with its view lamp — B LEFT THE LIST THE SAME DAY, moving the other
 // direction, when the BPM opener moved off bare `m` onto Ctrl+B, so the
 // ladder now tests B for the first time, admitting only the ctrl chord);
-// every key the boards carry that this switch names nowhere (the keypad, the
-// editing and system block, the vendor strip — the speller named them too
-// until 2026-08-31, when the blocks were deleted for want of a producer); and
-// every modifier decoration no arm spells, which is strict modifier
-// validation's whole no-op class.
+// Ctrl+Q, PageUp / PageDown, the keypad's Enter and the shifted Tab's own
+// keysym (2026-10-30: the hardware keyboard's alone, so no producer spells
+// them — Quit is Back's, the pans are the finger's); every key this switch
+// names nowhere; and every modifier decoration no arm spells, which is strict
+// modifier validation's whole no-op class.
 constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
                               bool history_view) {
     const bool ctrl = mods.ctrl, alt = mods.alt, shift = mods.shift;
@@ -770,7 +744,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::P: return bare || cl || cs;
         // BARE `m` OPENS THE SCORE VIEWER (architect 2026-10-26, the SCORE
         // key's chord), in both modes: the `h` view's allowlist refuses it
-        // there (its bound refusal), and under the viewer its own router
+        // there (its key hidden there), and under the viewer its own router
         // closes on it (route_score_viewer_key, ranked above this
         // predicate's every reader). Every modified `m` binds nothing — the
         // magnification level propagate's Ctrl and Ctrl+Alt chords and
@@ -784,8 +758,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::W: return bare;
         // BARE `t` OPENS THE TRIM PRESETS LIST (architect 2026-10-28 night,
         // the TRIM key's chord; GuiInputHandler::open_trim_presets), in both
-        // modes: the `h` view's allowlist refuses it there (its bound
-        // refusal), and under the standing list
+        // modes: the `h` view's allowlist refuses it there (its key hidden
+        // there), and under the standing list
         // the picker's router closes on it (route_picker_key, ranked above
         // this predicate's every reader). Every modified `t` binds nothing.
         case GuiKeys::T: return bare;
@@ -803,8 +777,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // long press (redesign_button_shift_admits). Plain `d`, Shift+D and
         // every alt spelling bind nothing.
         case GuiKeys::D: return cl || cs;
-        // Quit.
-        case GuiKeys::Q: return cl;
         // Toggle inherit, and THE TIE since 2026-09-19: Ctrl+Shift+N makes
         // one axis of the grid iteration sweep out of the selected markers,
         // or unties them again. The shifted form is the plain act's twin on a
@@ -819,10 +791,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // THE LETTER CARRIES THREE ACTS: bare `r` is the RESTRICT LAMP in the
         // main window (architect 2026-10-29, GuiPlaybackLifecycle::
         // toggle_restrict; the `h` view's allowlist refuses it there, its
-        // bound refusal), and Ctrl+Alt+R / Ctrl+Alt+Shift+R are the render
-        // pair, the dispatch and the archival one. Inside the render player
-        // bare `r` is REPEAT ONE, routed by the player's own router ahead of
-        // every reader of this predicate. Shift+R and Ctrl+R bind nothing.
+        // key hidden there), and Ctrl+Alt+R / Ctrl+Alt+Shift+R are the render
+        // pair, the dispatch and the archival one. Shift+R and Ctrl+R bind
+        // nothing.
         case GuiKeys::R: return bare || ca || cas;
 
         // Zoom to Fit, on its shifted form FRAME THE TRIM, and on its
@@ -862,7 +833,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Toggle Value Drag (architect 2026-10-11), the bare LEFT BRACKET,
         // bound in both modes as `k` is: the one-shot lamp arming the flag's
         // value drag (AppState::value_drag_lamp), the `h` view's allowlist
-        // refusing it on a card, and under grid iterations its own arm carding
+        // refusing it (its key hidden there), and under grid iterations its own arm carding
         // that the lamp is always on there (kValueDragIterationsCard). Every modified `[`, and the whole of `]`,
         // are unbound.
         case GuiKeys::BracketLeft: return bare;
@@ -881,18 +852,19 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 
         // Play from the playhead, and the A/B audition.
         case GuiKeys::Space: return bare || sh;
-        // BARE ONLY: the render cancel, the notification stack's clear and the
-        // top-level no-op arm that is deliberately silent — an arm all the
-        // same, so Esc is a bound key. NO MODIFIED ESCAPE BINDS ANYWHERE:
-        // Ctrl+Esc carried the stack's bulk clear for one morning of
-        // 2026-09-01 and retired that evening when bare Esc took the whole
-        // stack, one act wanting one chord.
+        // BARE ONLY, AND THE EDITORS' ALONE (architect 2026-10-30): the
+        // on-screen keyboard's Esc, its one producer, arrives only under an
+        // editor, whose route cancels the edit with it, so no dispatch arm
+        // outside the editors answers Esc — and it stays a bound key, the
+        // keyboard's own key being what it is wherever a reader asks (the
+        // head's paragraph). NO MODIFIED ESCAPE BINDS ANYWHERE.
         case GuiKeys::Escape: return bare;
         // BARE RETURN opens the addressed cell's editor on the focused marker
-        // (the Open Text Editor key's). EVERY MODIFIED RETURN BINDS NOTHING
+        // (the Open Text Editor key's), and is the editors' commit under the
+        // on-screen keyboard's Enter. EVERY MODIFIED RETURN BINDS NOTHING
         // since 2026-10-24: its ctrl forms carried the phase-reset propagate
         // pair from 2026-10-21 until the family moved to the letter P.
-        case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
+        case GuiKeys::Return: return bare;
         // DELETE the selected markers, and SHIFT+DELETE (architect
         // 2026-10-29) them with every reference to every selected label
         // definition — the Delete button's shift-click and long press. The
@@ -903,16 +875,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // and the paired march. No Alt spelling of Tab binds (the Alt walk
         // was deleted 2026-09-23).
         case GuiKeys::Tab: return bare || sh || cl || cs;
-        // The shifted Tab's own keysym, admitted shift-agnostically as the
-        // live walk admits it.
-        case GuiKeys::IsoLeftTab: return bare || sh;
         // The value step on the addressed cell (the tempo or a bound), IN
-        // THREE MAGNITUDES since 2026-08-31:
-        // bare one unit, Ctrl three, Shift ten since 2026-09-21 (the
-        // ladder's owner is arrow_step_magnitude above). Ctrl+Shift spells
-        // nothing.
+        // TWO MAGNITUDES: bare one unit and Ctrl three (the ladder's owner is
+        // arrow_step_magnitude above, whose head says why Shift spells
+        // nothing since 2026-10-30). Shift and Ctrl+Shift spell nothing.
         case GuiKeys::Up: case GuiKeys::Down:
-            return bare || sh || cl;
+            return bare || cl;
         // The playhead / marker position step, BARE ONLY on every column
         // (architect 2026-09-21: the horizontal ladder is retired — placement
         // is graphical; the step's unit is the active column's,
@@ -926,8 +894,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the glass long press is Shift; under ctrl from 2026-09-26, the S
         // Pen's side button, until then). Ctrl and Ctrl+Shift spell nothing.
         case GuiKeys::Home: case GuiKeys::End: return bare || sh;
-        // The viewport's stepped scroll.
-        case GuiKeys::PageUp: case GuiKeys::PageDown: return bare;
 
         default: return false;
     }
@@ -937,16 +903,15 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 // above must keep, so a careless widening trips at compile time. The chords
 // that read no mode term are pinned OUTSIDE the view (the ordinary state), and
 // the three anchors that follow them pin the term itself, both ways.
+// AN ANCHOR PINS ONLY WHAT A PRODUCER CAN SPELL (architect 2026-10-30, the
+// roster and the on-screen keyboard the two producers of every key): an
+// absence no producer can type guards nothing, so none is pinned.
 static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 1 is the Source selector and bare 4 the Phase Reset one; "
-              "digits 5..9 are unbound");
+                  chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false),
+              "bare 1 is the Source selector and bare 4 the Phase Reset one");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
-              "bare Esc is bound; it is one of the eight-place contract's own "
-              "arms (the notification stack's clear), and its top-level "
-              "silence is that arm's own, reached only with no card standing");
+              "bare Esc is bound: the on-screen keyboard's Esc, the editors' "
+              "cancel, is a bound key wherever a reader asks");
 static_assert(!chord_is_bound(GuiKeys::Escape,
                               GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
@@ -1000,12 +965,10 @@ static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::BracketLeft,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::BracketLeft,
-                                  GuiInputState{true, false, false}, false) &&
-                  !chord_is_bound(GuiKeys::BracketRight, GuiInputState{},
-                                  false),
+                                  GuiInputState{true, false, false}, false),
               "the backtick is the magnification lamp, bare in both modes and "
               "no decoration of it; bare `[` is the value drag lamp "
-              "(2026-10-11), no decoration of it binds, and `]` is unbound");
+              "(2026-10-11), and no decoration of it binds");
 static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Backslash, GuiInputState{}, true) &&
                   !chord_is_bound(GuiKeys::Backslash,
@@ -1179,18 +1142,12 @@ static_assert(!chord_is_bound(GuiKeys::Tab,
                                   GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::Tab,
                                   GuiInputState{false, true, true}, true) &&
-                  !chord_is_bound(GuiKeys::IsoLeftTab,
-                                  GuiInputState{false, false, true}, false) &&
-                  !chord_is_bound(GuiKeys::IsoLeftTab,
-                                  GuiInputState{false, false, true}, true) &&
                   !chord_is_bound(GuiKeys::Tab,
                                   GuiInputState{true, false, true}, false) &&
                   !chord_is_bound(GuiKeys::Tab,
-                                  GuiInputState{true, true, true}, true) &&
-                  !chord_is_bound(GuiKeys::IsoLeftTab,
-                                  GuiInputState{true, false, true}, false),
-              "no Alt spelling of Tab or IsoLeftTab binds in either mode, "
-              "with or without Shift or Ctrl: each is an unbound no-op");
+                                  GuiInputState{true, true, true}, true),
+              "no Alt spelling of Tab binds in either mode, with or without "
+              "Shift or Ctrl: each is an unbound no-op");
 // NO ALT-ALONE LETTER BINDS (2026-10-21: the menu titles' Alt+F, Alt+E and
 // Alt+S left with the menu row).
 static_assert(!chord_is_bound(GuiKeys::F,
@@ -1205,7 +1162,7 @@ static_assert(!chord_is_bound(GuiKeys::F,
               "no Alt-alone letter binds");
 // THE LETTER P IS THE PROPAGATE (architect 2026-10-24): bare the copy, Ctrl
 // the paste, Ctrl+Shift the state paste, in both modes (the `h` view's
-// allowlist then refuses all three on its card); Shift+P and every alt
+// allowlist then refuses all three, the key hidden there); Shift+P and every alt
 // spelling bind nothing — the anchor walks all eight combinations.
 consteval bool letter_p_binds_the_propagate() {
     for (int bits = 0; bits < 8; ++bits) {
@@ -1222,15 +1179,12 @@ static_assert(letter_p_binds_the_propagate(),
               "the letter P binds bare (copy phase resets), Ctrl (paste them) "
               "and Ctrl+Shift (paste their state); Shift+P and the alt "
               "spellings bind nothing");
-// RETURN BINDS BARE ALONE (2026-10-24): the editor's open, on both keysyms;
-// its ctrl forms, the propagate pair from 2026-10-21, left for the letter P.
+// RETURN BINDS BARE ALONE (2026-10-24): the editor's open; its ctrl forms,
+// the propagate pair from 2026-10-21, left for the letter P.
 static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::KpEnter, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
-                                  GuiInputState{true, true, false}, false) &&
-                  !chord_is_bound(GuiKeys::KpEnter,
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{false, true, false}, false) &&
@@ -1253,13 +1207,13 @@ static_assert(chord_is_bound(GuiKeys::S,
               "Ctrl+Alt+Shift+S stays unbound");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{false, true, false}, false) &&
-                  chord_is_bound(GuiKeys::Up,
                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Up,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Up,
                                   GuiInputState{true, true, false}, false),
-              "a vertical arrow binds bare, Shift and Ctrl — the step ladder's three "
-              "magnitudes — and Ctrl+Shift spells no fourth");
+              "a vertical arrow binds bare and Ctrl — the step ladder's two "
+              "magnitudes — and neither Shift nor Ctrl+Shift spells a third");
 static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Right, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Left,
@@ -1464,8 +1418,8 @@ inline bool is_publish_key(GuiKey key, GuiInputState mods) {
 // grid-iterations lock's gate falls through to) and, since 2026-10-12
 // (architect: he wants to magnify while walking history), the `h` view's
 // allowlist (history_mode_key_blocked), which admits it beside the tooltip
-// lamp; Follow, its group's other lamp, stays refused there and cards like
-// every chord the view does not name.
+// lamp; Follow, its group's other lamp, stays refused there, its key hidden
+// like every chord's the view does not name.
 inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Grave && !mods.ctrl && !mods.shift && !mods.alt;
 }
@@ -1476,13 +1430,14 @@ inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
 // below; Shift+0 from 2026-09-22, off Shift+[ when the bracket went to the
 // magnification lamp). It arrives as the `0` key plus the modifier bits: the
 // backend produces keys only through synthesize_key, which carries the GuiKey
-// and the modifier bits apart, so a `)` never reaches the dispatch. One-shot. TWO
-// READERS: on_key's dispatch arm (input_handler.cpp) and the read-only
+// and the modifier bits apart, so a `)` never reaches the dispatch. One-shot.
+// THREE READERS: on_key's dispatch arm (input_handler.cpp), the read-only
 // allowlist (read_only_key_blocked, which ADMITS it — trim is band, not
-// content); the Zoom to Fit button's ctrl+shift press (on the glass the S
-// Pen's barrel held through the long press) reaches the first through on_key
-// (redesign_button_ctrl_shift_admits). The `h` view's allowlist does not
-// name it: trim is frozen there, so the view cards it.
+// content) and the `h` view's (history_mode_allowlist_refuses, which ADMITS
+// it since 2026-10-30, architect: every press the lit Zoom to Fit key can
+// make is admitted in the view); the Zoom to Fit button's ctrl+shift press
+// (on the glass the S Pen's barrel held through the long press) reaches the
+// first through on_key (redesign_button_ctrl_shift_admits).
 inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Digit0 && mods.ctrl && mods.shift && !mods.alt;
 }
@@ -1621,9 +1576,7 @@ inline bool is_phase_reset_state_paste_key(GuiKey key, GuiInputState mods) {
 // view's allowlist (history_mode_key_blocked, which admits it — the lamp is
 // chrome, not that view's business) and the dispatch arm (Backslash's case in
 // handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
-// reaches). The folder overlay's two routers answer the same bare key in
-// their own bare switches (a Backslash case under each router's bare-only
-// catch-all), outside the main dispatch this predicate serves.
+// reaches).
 inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }

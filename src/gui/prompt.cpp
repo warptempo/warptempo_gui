@@ -42,11 +42,9 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // the time-sorted store (equal times reload legal), trim bounds persist
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
-    // the GUI never writes a LOAD-invalid state. Save (S) / Discard (D,
-    // discard-and-proceed; the Delete key until Windows strict, architect
-    // 2026-10-10) / Cancel (Esc); the buttons wear their plain words with
-    // the access letter underlined (PromptState's declaration owns the rule
-    // and the retired bracket spelling's record).
+    // the GUI never writes a LOAD-invalid state. Save / Discard
+    // (discard-and-proceed) / Cancel; the buttons wear their plain words, the
+    // prompt's one road (PromptState's declaration owns the rule).
     // Through `present`, the state's one raise route: it clears the PAINTED
     // bit, so nothing this prompt asks can be answered until the painter has
     // put it on the screen (the rule is at PromptState).
@@ -71,9 +69,9 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // chord here, the `'` press there, the paste chord or its Edit row), so the
 // question itself is the safeguard and its Enter confirms the act the user
 // just asked for; the three-way Save / Discard / Cancel prompts above and
-// below are no such confirmation and keep the last button. OK carries no
-// access key (Windows strict, architect 2026-10-10; its `o` the dispatch char
-// alone): Enter and its press answer it. The stop below is every prompt's own
+// below are no such confirmation and keep the last button. OK's `o` is its
+// dispatch char alone, its press the answer (no key reaches a prompt,
+// architect 2026-10-30). The stop below is every prompt's own
 // opening act, not something this one adds: playback stops and an A/B audition ends, exactly as
 // raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
@@ -303,9 +301,9 @@ void GuiPrompt::activate_response(char k) {
 }
 
 // The load confirmation's programmatic abandon (contract at the declaration).
-// It reaches the SAME body Esc reaches — the prompt down, both parked subjects
-// dropped through cancel_load_in_place — so the asynchronous edge and the
-// keyboard's own Cancel cannot leave different state behind.
+// It reaches the SAME body Cancel reaches — the prompt down, both parked
+// subjects dropped through cancel_load_in_place — so the asynchronous edge
+// and the button's own Cancel cannot leave different state behind.
 void GuiPrompt::cancel_load_confirmation() {
     if (!app.prompt.active) return;
     if (app.prompt.trigger != DialogTrigger::LOAD_IN_PLACE_CONFIRM) return;
@@ -321,8 +319,8 @@ void GuiPrompt::cancel_paste_confirmation() {
 }
 
 // Route a close gesture through the prompt when history is dirty;
-// otherwise proceed immediately. Centralizes the decision so Ctrl+Q, the
-// WM-close callback, the Open project picker's open act and Revert
+// otherwise proceed immediately. Centralizes the decision so the platform's
+// close (Back), the Open project picker's open act and Revert
 // share identical behaviour; what differs between them is the target, seated
 // here for proceed — and, for Revert alone, the question a dirty session is
 // asked — and, since 2026-10-25, whether a standing picker comes down first
@@ -332,11 +330,10 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // THE RENDER PLAYER COMES DOWN FIRST, on every road into this one: the
     // mode's transport is stopped, the view's buffer rebound and the overlay
     // cleared before the question is asked, so a Cancel leaves the ordinary
-    // window rather than a player the user cannot see the prompt through. It
-    // lives here rather than in the keyboard's own Ctrl+Q arm because the
-    // platform's close (Back, main.cpp's set_on_close) arrives without a key and
-    // must take the identical step — one road, one closer. A no-op when the
-    // mode is down, which is every other close.
+    // window rather than a player the user cannot see the prompt through — one
+    // road, one closer, the platform's close (Back, main.cpp's set_on_close)
+    // among the roads. A no-op when the mode is down, which is every other
+    // close.
     render_player.close();
     // AND SO DOES A STANDING PICKER ON THE EXIT ROAD (2026-08-28), the same
     // shape one mode over — one close body, close_picker, which takes the
@@ -349,8 +346,8 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // so the question is the picker's own, painted over the list, and the
     // picker ends with its session when the reopen completes (AppState dies
     // with run_project's frame, main.cpp). An exit is no question of the
-    // picker's — Ctrl+Q and the platform's close — and takes it down
-    // before asking, as it takes the player.
+    // picker's — the platform's close — and takes it down before asking, as
+    // it takes the player.
     if (input != nullptr && target == GuiCloseTarget::Exit)
         input->close_picker();
     // AND THE SCORE VIEWER COMES DOWN FIRST (2026-10-26), the player's step:
@@ -360,10 +357,10 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // not about. A no-op when it is down.
     if (input != nullptr) input->close_score_viewer();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
-    // identical reason and on the identical road: the keyboard's Ctrl+Q used
-    // to do this itself, editor by editor, and the PLATFORM'S CLOSE — which
-    // carries no key — did not, so a close over a standing editor asked the
-    // unsaved-work question through it, back on screen at Cancel. The step is
+    // identical reason and on the identical road, so a close over a standing
+    // editor never asks the unsaved-work question through it, the editor back
+    // on screen at Cancel — and so no prompt ever stands with the on-screen
+    // keyboard up (the prompt's one road is its buttons). The step is
     // the input handler's (each editor's own exit body, and at most one can
     // stand), stated once at close_modal_editors_no_commit and idempotent.
     if (input != nullptr) input->close_modal_editors_no_commit();

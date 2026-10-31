@@ -522,8 +522,8 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
 //     playhead (land_playhead_on_marker, the audition's end, and the hold's
 //     when the press moved the cursor; a press on the marker under the
 //     playhead leaves the hold to commit_drag's move_playhead_to, which
-//     clears it at every release) and nothing can re-arm either under the
-//     drag-modal gate (the argument is at the site).
+//     clears it at every release) and nothing can re-arm either mid-drag
+//     (on_key's drag-modal statement: no key arrives mid-gesture).
 // The live-domain clamp is the shared ruling (clamp_playhead_to_live_domain);
 // the viewport's own domain wall is re-derived through clamp_viewport_start
 // because the restore's swap may have shortened the domain under a standing
@@ -926,44 +926,6 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     kick_waveform_sync();
 }
 
-void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
-    if (audio.total_frames() <= 0) return;
-    const int64_t old_vp = app.viewport_start_sample;
-    app.viewport_start_sample += delta_samples;
-    clamp_viewport_start(app, audio);
-    if (app.viewport_start_sample != old_vp) {
-        // EVERY PAN ENDS THE HOLD AND SUSPENDS A FOLLOWING PLAY'S PAGING at
-        // the clamp above, the one compare every viewport write passes
-        // (AppState::camera_hold, AppState::follow_suspended); a pan that
-        // moved nothing (wall-saturated) settles the same camera and ends
-        // nothing. This is the pan funnel —
-        // PageUp/PageDown, the plain-wheel stepped pan, touchpad scroll and
-        // the plain-drag grab-pan all land here.
-        invalidate_waveform_area();
-        // Flag positions move with the viewport, so the top strip must
-        // repaint too — the flags carry their own text now, so this one
-        // invalidation covers every marker pixel the move affects (the rows
-        // above the viewport's lanes owed a check, damage_window_top_rows).
-        const GuiRect ts = top_strip_area(app);
-        damage_window_top_rows(app, gui, ts.y + ts.h);
-        // A discrete pan (the plain wheel, PageUp/PageDown) re-anchors here -
-        // a single snap is invisible. A continuous drag pan passes
-        // continuous=true and does NOT resync per motion event: the
-        // predictor keeps extrapolating smoothly for the gesture's
-        // duration and is re-anchored once when the drag ends.
-        if (!continuous && playback.is_playing()) playback.resync_predictor();
-        // Viewport actually moved (inside the changed guard). Render the plate
-        // synchronously, the same route zoom and every other user-driven
-        // viewport change takes: the incremental shift-and-strip fast-path this
-        // used to drive was retired 2026-07-26 so a scrolling plate and a
-        // resting one come off one code path. Every scroll class lands here —
-        // touchpad, the plain wheel, PageUp/PageDown, the plain-drag grab-pan — and the
-        // synchronous render also gives them all the grab-pan's old guarantee:
-        // no frame paints overlays against a plate from an older basis.
-        kick_waveform_sync();
-    }
-}
-
 // THE TWO LANDING PLACEMENTS, spelled once each for the cameras that share
 // them. The start each returns is unclamped: the caller writes it and passes
 // clamp_viewport_start, which owns the song's two ends and the grid.
@@ -1357,7 +1319,7 @@ void Viewport::follow_scroll_if_needed() {
 //
 // ITS READERS, re-grepped 2026-10-29:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
-//     (input_handler.cpp — bare Tab / Shift+Tab / IsoLeftTab through
+//     (input_handler.cpp — bare Tab / Shift+Tab through
 //     cycle_marker_focus), cycle_history_diff_flag_focus's Land arm
 //     (input_key_dispatch.cpp — the `h` view's Tab), and the marker drop's
 //     seat (seat_playhead_on_drop, above — every drop body, architect

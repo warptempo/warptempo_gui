@@ -43,17 +43,6 @@ int prev_codepoint_boundary(const std::string& s, int pos) {
     return i;
 }
 
-// The codepoint boundary strictly RIGHT of `pos` (the end when there is none).
-int next_codepoint_boundary(const std::string& s, int pos) {
-    const int n = static_cast<int>(s.size());
-    if (pos >= n) return n;
-    int i = std::max(pos, 0) + 1;
-    while (i < n && is_utf8_continuation_byte(
-                        static_cast<unsigned char>(s[static_cast<size_t>(i)])))
-        ++i;
-    return i;
-}
-
 // The insertable codepoints for the typed path: everything from U+0020 up
 // EXCEPT the C0 controls, DEL, the surrogate range, and anything past the
 // Unicode maximum. ASCII controls are dropped as they always were (Return and
@@ -80,9 +69,9 @@ void erase_selection(State& s) {
     s.selection_anchor = -1;
 }
 
-// The CURSOR-MOTION word class (Ctrl+Left/Right and the word erases), distinct
-// from the double-click selector's three-class `classify` below. Any byte >=
-// 0x80 counts as a word character, which is what makes the two byte walks below
+// The WORD-ERASE word class (Ctrl+Backspace), distinct from the double-click
+// selector's three-class `classify` below. Any byte >=
+// 0x80 counts as a word character, which is what makes the byte walk below
 // codepoint-safe without carrying a decoder: a multi-byte character's bytes are
 // ALL >= 0x80, so a run of them is one uniform class and a boundary can never
 // land inside one. It also gives the behavior a user expects — a word of
@@ -104,22 +93,12 @@ int prev_word_boundary(const std::string& s, int pos) {
     return i;
 }
 
-// Index of the boundary to the right of `pos`: skip separators
-// immediately right, then the word run beyond them.
-int next_word_boundary(const std::string& s, int pos) {
-    const int n = static_cast<int>(s.size());
-    int i = pos;
-    while (i < n && !is_word_char(s[static_cast<size_t>(i)])) ++i;
-    while (i < n &&  is_word_char(s[static_cast<size_t>(i)])) ++i;
-    return i;
-}
-
 // Character class for the double-click run selector (below). Three classes,
 // the Qt/Kate "programmer's word" convention: WORD is [A-Za-z0-9_] plus any
 // byte >= 0x80 (UTF-8 lead and continuation bytes both classify as word, so a
 // multi-byte character is one uniform run and a selection edge can never land
 // inside one); WHITESPACE is ' ' and '\t'; PUNCTUATION is every other byte.
-// Distinct from the cursor-motion word class above, which excludes '_' and
+// Distinct from the word-erase class above, which excludes '_' and
 // treats every non-word byte as a separator to skip.
 //
 // THE PROBE IS EXACT, not a degradation: `pos` comes from
@@ -187,7 +166,7 @@ namespace {
 // The maximal run of the character class under byte index `pos` of a
 // NON-EMPTY string, as [start, end) — never crossing a class change, the
 // desktop double-click convention (GTK/Qt/Kate/Firefox), deliberately
-// distinct from the Ctrl+Left/Right skip-separators scanners: a click on
+// distinct from the word erase's skip-separators scanner: a click on
 // punctuation selects that punctuation run, not the following word. pos == n
 // (a click past the last glyph) has no character AT n, so it classifies by
 // n-1 and yields the trailing run. THE ONE RUN WALK, read by the
@@ -404,12 +383,15 @@ void enter(State& s, int target,
 
 KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // Precedence mirrors handle_key's branch order exactly (see the header):
-    // session first, then the Ctrl chords, then motion (ctrl/shift, never alt),
-    // then printable. Each test returns before the next, so a key satisfying two
-    // predicates classifies as the branch handle_key would act on.
+    // session first, then the Ctrl chords, then Backspace (ctrl, never alt or
+    // shift), then printable. Each test returns before the next, so a key
+    // satisfying two predicates classifies as the branch handle_key would act
+    // on. THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30,
+    // its one producer under an editor): its characters, Backspace, Enter,
+    // Esc, Copy and Paste, and the barrel's Ctrl on any of them.
     //
     // NO ARM ADMITS ALT. Session is bare-exact, the chords are ctrl-exact,
-    // motion takes ctrl/shift only, printable already excludes ctrl and alt — so
+    // Backspace takes ctrl only, printable already excludes ctrl and alt — so
     // a press wearing a modifier the arm does not bind falls all the way to
     // NotEditorKey and is dropped by the keyboard-modal gate before it can reach
     // an editor at all. That is the whole enforcement: unbound is unbound, and
@@ -417,13 +399,12 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // own.
     //
     // Session keys are BARE-EXACT (the strict-modifier rule): a modified
-    // Escape / Return / KpEnter has no binding, so it must not cancel or commit
-    // an edit — Ctrl+Enter in particular must not commit the settings line, a
-    // flag, or a BPM form field. Escape
+    // Escape / Return has no binding, so it must not cancel or commit
+    // an edit — Ctrl+Enter (the barrel on the Enter key) in particular must not
+    // commit the settings line, a flag, or a BPM form field. Escape
     // and Return produce sub-0x20 codepoints, so neither can reappear as a
     // printable below.
-    if ((key == GuiKeys::Escape ||
-         key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
+    if ((key == GuiKeys::Escape || key == GuiKeys::Return) &&
         !mods.ctrl && !mods.shift && !mods.alt)
         return KeyClass::SessionKey;
     // The chords are CTRL-EXACT (architect 2026-07-28, the same strict-modifier
@@ -431,29 +412,17 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // The `mods.ctrl` term is load-bearing beyond strictness: without it a BARE
     // a/c/x/v would stop being a typed character, and bare `c` / `x` are global
     // bindings the editor deliberately shadows by typing them.
-    // Ctrl+Left is not a chord here — the shape list is A/C/X/V only, so it is
-    // motion below.
     if (mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::A || key == GuiKeys::C ||
          key == GuiKeys::X || key == GuiKeys::V))
         return KeyClass::ChordKey;
-    // Motion / editing takes CTRL AND SHIFT IN EVERY COMBINATION but NEVER ALT
-    // (architect 2026-07-28). The asymmetry is the point, so do not "finish the
-    // job" by making these exact too:
-    //   - Ctrl and Shift carry real meaning on all six keys — Shift extends the
-    //     selection, Ctrl jumps / erases by WORD, Ctrl+Shift extends by word —
-    //     and where a combination has no distinct behavior it degrades to the
-    //     plain gesture exactly as an ordinary one-line text field does
-    //     (Ctrl+Home still goes to the start, Shift+BackSpace still backspaces).
-    //     Making them exact would break those.
-    //   - ALT binds nothing anywhere in this family; no standard one-line field
-    //     uses it. So an alt-carrying motion press is genuinely UNBOUND, and the
-    //     strict-modifier rule makes it a no-op: it falls to NotEditorKey and the
-    //     keyboard-modal gate drops it before any editor sees it.
-    if (!mods.alt &&
-        (key == GuiKeys::Left || key == GuiKeys::Right ||
-         key == GuiKeys::Home || key == GuiKeys::End ||
-         key == GuiKeys::BackSpace || key == GuiKeys::Delete))
+    // Backspace takes CTRL (the word erase, the barrel held on the key) and
+    // NEVER ALT OR SHIFT: the keyboard's Shift is a one-shot capital for the
+    // next character and never modifies a function key, and alt binds nothing
+    // in this family — so either is genuinely UNBOUND, and the strict-modifier
+    // rule makes it a no-op: it falls to NotEditorKey and the keyboard-modal
+    // gate drops it before any editor sees it.
+    if (!mods.alt && !mods.shift && key == GuiKeys::BackSpace)
         return KeyClass::MotionEditKey;
     // Printable insertion: no Ctrl/Alt, and a character-bearing codepoint —
     // ASCII or otherwise (is_insertable_codepoint owns the range, and
@@ -479,21 +448,20 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (classify_key(key, mods) == KeyClass::NotEditorKey)
         return KeyAction::NotConsumed;
 
-    // Only ctrl and shift are ever read below, and `mods.alt` is FALSE on every
-    // press that reaches this line: no classifier arm admits alt. That is why no
+    // Only ctrl is ever read below, and `mods.alt` is FALSE on every press
+    // that reaches this line: no classifier arm admits alt. That is why no
     // branch tests it.
     const bool ctrl  = mods.ctrl;
-    const bool shift = mods.shift;
 
     // The session and chord branches below need no modifier tests of their own:
-    // the membership gate above already rejected every modified Escape / Return /
-    // KpEnter and every Ctrl+Shift / Ctrl+Alt A/C/X/V as NotEditorKey, so only
+    // the membership gate above already rejected every modified Escape / Return
+    // and every Ctrl+Shift / Ctrl+Alt A/C/X/V as NotEditorKey, so only
     // the exactly-bound presses reach here. The classifier is the single owner
     // of those predicates.
     if (key == GuiKeys::Escape) {
         return KeyAction::CancelRequested;
     }
-    if (key == GuiKeys::Return || key == GuiKeys::KpEnter) {
+    if (key == GuiKeys::Return) {
         return KeyAction::CommitRequested;
     }
 
@@ -529,94 +497,13 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::PasteRequested;
     }
 
-    // Cursor motion. Shift extends a selection from an anchor; bare
-    // motion collapses any existing selection to the corresponding edge.
-    // These branches read ctrl and shift and NEVER alt, and that is a CONTRACT,
-    // not an oversight: the membership gate above classifies an alt-carrying
-    // motion press as NotEditorKey, so `mods.alt` is false on every press that
-    // reaches here. Do not add an alt arm — alt binds nothing in this family,
-    // and an alt press is dropped at the keyboard-modal gate long before this.
-    if (key == GuiKeys::Left) {
-        if (ctrl) {
-            // Word-left: optionally extend the selection (Shift), else
-            // collapse it, then jump the cursor to the previous boundary.
-            const int b = prev_word_boundary(s.pending, s.cursor_pos);
-            if (shift) {
-                if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-            } else {
-                s.selection_anchor = -1;
-            }
-            s.cursor_pos = b;
-            touch_blink(s);
-            return KeyAction::Consumed;
-        }
-        // One CODEPOINT left, not one byte: `pending` carries UTF-8 and a caret
-        // must never rest inside a character (the contract is at the head of
-        // text_editor.h). The selection endpoints inherit the property, since
-        // both are cursor positions.
-        if (shift) {
-            if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-            s.cursor_pos = prev_codepoint_boundary(s.pending, s.cursor_pos);
-        } else {
-            if (has_selection(s)) {
-                s.cursor_pos = selection_start(s);
-            } else {
-                s.cursor_pos = prev_codepoint_boundary(s.pending, s.cursor_pos);
-            }
-            s.selection_anchor = -1;
-        }
-        touch_blink(s);
-        return KeyAction::Consumed;
-    }
-    if (key == GuiKeys::Right) {
-        if (ctrl) {
-            const int b = next_word_boundary(s.pending, s.cursor_pos);
-            if (shift) {
-                if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-            } else {
-                s.selection_anchor = -1;
-            }
-            s.cursor_pos = b;
-            touch_blink(s);
-            return KeyAction::Consumed;
-        }
-        // One CODEPOINT right — the mirror of the Left branch above.
-        if (shift) {
-            if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-            s.cursor_pos = next_codepoint_boundary(s.pending, s.cursor_pos);
-        } else {
-            if (has_selection(s)) {
-                s.cursor_pos = selection_end(s);
-            } else {
-                s.cursor_pos = next_codepoint_boundary(s.pending, s.cursor_pos);
-            }
-            s.selection_anchor = -1;
-        }
-        touch_blink(s);
-        return KeyAction::Consumed;
-    }
-    if (key == GuiKeys::Home) {
-        if (shift) {
-            if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-        } else {
-            s.selection_anchor = -1;
-        }
-        s.cursor_pos = 0;
-        touch_blink(s);
-        return KeyAction::Consumed;
-    }
-    if (key == GuiKeys::End) {
-        if (shift) {
-            if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-        } else {
-            s.selection_anchor = -1;
-        }
-        s.cursor_pos = static_cast<int>(s.pending.size());
-        touch_blink(s);
-        return KeyAction::Consumed;
-    }
-
-    // Editing.
+    // Editing: BACKSPACE, the keyboard's one editing key (architect
+    // 2026-10-30: the on-screen keyboard carries no arrows, no Home / End and
+    // no Delete — the caret moves by the pointer, the field's press and its
+    // caret drag). The barrel's Ctrl is its word erase. It reads ctrl and
+    // NEVER alt or shift, and that is a CONTRACT: the membership gate above
+    // classifies any other modifier as NotEditorKey, so `mods.alt` and
+    // `mods.shift` are false on every press that reaches here.
     if (key == GuiKeys::BackSpace) {
         if (has_selection(s)) {
             erase_selection(s);
@@ -638,28 +525,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                 s.pending.erase(static_cast<size_t>(b),
                                 static_cast<size_t>(s.cursor_pos - b));
                 s.cursor_pos = b;
-            }
-        }
-        touch_blink(s);
-        return KeyAction::Consumed;
-    }
-    if (key == GuiKeys::Delete) {
-        if (has_selection(s)) {
-            erase_selection(s);
-        } else {
-            s.selection_anchor = -1;
-            if (ctrl) {
-                const int e = next_word_boundary(s.pending, s.cursor_pos);
-                if (e > s.cursor_pos) {
-                    s.pending.erase(static_cast<size_t>(s.cursor_pos),
-                                    static_cast<size_t>(e - s.cursor_pos));
-                }
-            } else if (s.cursor_pos < static_cast<int>(s.pending.size())) {
-                // A WHOLE CODEPOINT forward — the mirror of BackSpace's.
-                const int e =
-                    next_codepoint_boundary(s.pending, s.cursor_pos);
-                s.pending.erase(static_cast<size_t>(s.cursor_pos),
-                                static_cast<size_t>(e - s.cursor_pos));
             }
         }
         touch_blink(s);
