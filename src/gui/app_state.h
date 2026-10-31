@@ -1340,8 +1340,8 @@ struct ScrollDragState {
 // button as the Ctrl bit, a live fork mid-gesture): a single-finger frame carrying ctrl is a zoom about a held song
 // frame exactly as the pinch is, seated at the finger's point when the zoom
 // began (the previous centroid column; apply_touch_nav_update carries the
-// seat rule), re-derived and edge-rebound through the same owner, and it is
-// the stem's gate the same way. THE SEAT RECORDS WHICH ZOOM TOOK IT
+// seat rule), its column held and edge-rebound through the same owner, and
+// it is the stem's gate the same way. THE SEAT RECORDS WHICH ZOOM TOOK IT
 // (`one_finger`), so a frame of the other meaning clears it: a pan frame, a
 // pinch frame over a one-finger seat, or the reverse. Every lifecycle clause
 // below reads "a zoom phase" for "a two-finger phase" and "a frame of another
@@ -1399,8 +1399,9 @@ struct ScrollDragState {
 //     sampled Ctrl bit — the lift itself is unsampled) OUTLIVES that end,
 //     `retained` set, the stem still painted at the anchor's live column; the
 //     next button-held landing's zoom frames find it seated and of their own
-//     kind, so they continue about the SAME anchor_sample (no re-seat; the
-//     edge rebind applies as on any frame), and the first such frame drops
+//     kind, so they continue about the SAME anchor_sample and anchor_col (no
+//     seat; a camera a following play paged meanwhile is re-seat (B) below,
+//     the column re-read from the live view), and the first such frame drops
 //     `retained` — the seat is a live gesture's again. The platform owns the
 //     pen facts and end_touch_nav asks it (GuiPlatform::
 //     pen_lift_keeps_zoom_anchor, true only inside the pen's own lift). A
@@ -1414,12 +1415,31 @@ struct ScrollDragState {
 //     the view-state writers and the source load. A motionless button-held
 //     tap, a button-held landing off the waveform and a button-held region
 //     hold deliver no nav frame and so leave it standing, retained.
-// THE COLUMN IS RE-DERIVED EVERY FRAME from the held frame against the live
-// viewport, and a column pushed outside the waveform CLAMPS to the edge pixel
-// and REBINDS this field to that pixel's content — the edge trick's one owner,
-// rebind_zoom_pivot_into_waveform. (The pan's seat needs no edge trick: it
-// is placed at the finger's own column, and a placement the walls refuse
-// re-seats it there — apply_touch_nav_update's one-finger arm.)
+// THE SEAT HOLDS THE COLUMN WITH THE FRAME (architect 2026-10-31): seated
+// once per zoom phase, the song frame AND its column (`anchor_col`, clamped
+// into the waveform at the seat), and every zoom frame places the held frame
+// at the held column. The model is the pan's ABSOLUTE SEAT (2026-10-22,
+// apply_touch_nav_update's one-finger arm). WHY: the viewport chokepoint
+// snaps every placement to the painter grid (resting_viewport_start), leaving
+// the frame up to half a column off the column it was placed at; a column
+// re-read from each settled viewport inherited that residue and the residues
+// accumulated frame over frame, a walk (the stem measured walking +-25 px
+// over a pinch on the tablet, 2026-10-31, with the frame under it held
+// exactly). Placed at a held column, the frame sits within half a column of
+// it on every frame and the residue never compounds. TWO RE-SEATS re-read
+// the column from the live viewport, both through the one owner,
+// rebind_zoom_pivot_into_waveform: (A) A PLACEMENT THE WALLS REFUSED (after
+// the apply) — the viewport is pinned, the frame slides across the glass with
+// the content and the held column follows it, which is the reversibility
+// paragraph above; and (B) A CAMERA ANOTHER WRITER MOVED under the gesture
+// (before the placement; `zoom_vp` / `zoom_level`, the camera the last zoom
+// frame settled, no longer stand) — a following play paging the view under
+// the pen's retained anchor, or between the seat and the first applied
+// frame. At either re-seat a column pushed outside the waveform CLAMPS to the
+// edge pixel and REBINDS the held frame to that pixel's content — the edge
+// trick, its one job. (The pan's seat needs no edge trick: it is placed at
+// the finger's own column, and a placement the walls refuse re-seats it
+// there — apply_touch_nav_update's one-finger arm.)
 // NO RE-JOIN WINDOW is built for a panel that drops a contact mid-pinch: the
 // downgrade clears the seat and the next upgrade takes a fresh one, which is
 // the architect's explicit ruling for the second time (the first and its
@@ -1445,10 +1465,13 @@ struct ScrollDragState {
 // finger, which re-seats it. Cleared by every zoom frame, at the gesture's
 // end and with the zoom seat's own clears.
 struct TouchNavZoomState {
-    bool   seated        = false;
-    double anchor_sample = 0.0;   // the held SONG frame (active domain)
-    bool   one_finger    = false; // seated by the one-finger (ctrl) zoom
-    bool   retained      = false; // the pen's anchor, kept past its gesture's end
+    bool    seated        = false;
+    double  anchor_sample = 0.0;   // the held SONG frame (active domain)
+    double  anchor_col    = 0.0;   // its held column (the waveform's own, fractional)
+    int64_t zoom_vp       = 0;     // the camera the seat or the last zoom frame settled
+    double  zoom_level    = 0.0;
+    bool    one_finger    = false; // seated by the one-finger (ctrl) zoom
+    bool    retained      = false; // the pen's anchor, kept past its gesture's end
     bool    pan_seated        = false;
     double  pan_anchor_sample = 0.0;  // the pan's held SONG frame (active domain)
     int64_t pan_vp            = 0;    // the camera the last pan frame settled

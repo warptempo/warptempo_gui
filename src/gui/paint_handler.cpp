@@ -4778,9 +4778,10 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
 // per-frame refusal asks state alone, the gesture's surface decided once at
 // its down, architect 2026-10-16, apply_touch_nav_update).
 // THE ANCHOR IS A SONG POSITION (2026-08-14, the clamped-zoom reversibility
-// ruling, contract at TouchNavZoomState): the
-// anchor column is recomputed each frame from the persisted anchor_sample
-// against the DISPLAYED viewport (wf_cache.fp_*), the same basis
+// ruling, contract at TouchNavZoomState): the input side HOLDS the
+// column (2026-10-31) and this painter PROJECTS the persisted anchor_sample,
+// which sits within half a column of it, against the DISPLAYED viewport
+// (wf_cache.fp_*), the same basis
 // paint_playheads uses, so the stem stays locked to the
 // published plate while the worker rebuilds, and the anchor lives in the active
 // display domain (viewport_start + col*spp) so no warp map is walked.

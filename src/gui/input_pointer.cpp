@@ -1999,9 +1999,10 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
     scrub_act_at(frame);
 }
 
-// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the zoom pivot's re-derived
-// column goes through, and the same bounds render_strip_anchor_stem draws the
-// stem inside.
+// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the zoom pivot's held column
+// goes through, at its seat (apply_touch_nav_update) and at its two re-seats
+// (rebind_zoom_pivot_into_waveform), and the same bounds
+// render_strip_anchor_stem draws the stem inside.
 static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
         wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
@@ -2031,27 +2032,30 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
     return new_level;
 }
 
-// THE ZOOM PIVOT'S COLUMN UNDER THE LIVE VIEWPORT, with the Ableton EDGE
-// TRICK — one owner, two readers: the pinch and the one-finger touch zoom
-// (apply_touch_nav_update), holding their SONG-FRAME pivot
-// (TouchNavZoomState::anchor_sample). The
-// deleted strip drag's own step, minus its pan term: a zoom never moves the
+// THE ZOOM PIVOT'S RE-SEAT: its column under the LIVE viewport, with the
+// Ableton EDGE TRICK — one owner, read by the pinch and the one-finger touch
+// zoom (apply_touch_nav_update) at their two RE-SEATS alone, never every
+// frame: (A) after a placement the walls refused and (B) before a placement
+// under a camera another writer moved (architect 2026-10-31; the seat holds
+// the column with the frame, contract at TouchNavZoomState). The caller
+// STORES the column it returns as the held one. A zoom never moves the
 // viewport itself, so the resting `viewport_start_sample` IS the viewport
-// the zoom will pivot against and there is no local `vp` to clamp first. The
-// pivot is a SONG FRAME, so its column is derived fresh every event; clamping
-// it into [0, W-1] and REBINDING the anchor to that edge pixel's frame is
-// what keeps the focus on screen once a wall has pushed it past an edge.
+// the column is read against and there is no local `vp` to clamp first.
+// Clamping the column into [0, W-1] and REBINDING the anchor to that edge
+// pixel's frame is what keeps the focus on screen once a wall has pushed it
+// past an edge.
 // WHAT THE REVERSIBILITY PROPERTY IS, stated exactly: THE ANCHORED FRAME IS
 // INVARIANT FOR THE PHASE, so zooming out and back in by the same travel
 // pivots about the SAME song position both ways and the gesture reverses into
-// the section it came from. AWAY FROM THE WALLS that is the strict identity —
-// the column re-derives to the value it was placed at, so the return event
-// reproduces the earlier viewport. AT A SATURATED WALL the viewport cannot
+// the section it came from. AWAY FROM THE WALLS that is the strict identity
+// BY CONSTRUCTION — the frame and its column are both held, so the return
+// event places the same frame at the same column and reproduces the earlier
+// viewport. AT A SATURATED WALL the viewport cannot
 // come back the same way (while `vp` is pinned the view is determined by the
 // level alone), and what survives is the FOCUS: the stem's column slides
 // left/right with the content and the frame under it never changes. That is
-// the case the screen column got wrong — it held the COLUMN and let the song
-// walk out from under it, so the way back zoomed into a later section
+// the case the screen column got wrong — it held the COLUMN at the wall too
+// and let the song walk out from under it, so the way back zoomed into a later section
 // entirely (TouchNavZoomState, app_state.h). WHERE
 // THE PROPERTY STOPS: the edge REBIND, the one lasting mutation here — once
 // the anchored frame has been pushed off the visible span the anchor becomes
@@ -2250,10 +2254,19 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     if ((f.two_finger || one_finger_zoom) && !app.touch_nav_zoom.seated) {
         TouchNavZoomState& z = app.touch_nav_zoom;
         // The waveform's own column (window x less the area's x, the
-        // canvas standing the column's margin in since 2026-10-09).
-        const double seat_col =
-            static_cast<double>(f.x - wf_area.x) - (one_finger_zoom ? f.dx : 0.0);
+        // canvas standing the column's margin in since 2026-10-09), CLAMPED
+        // INTO THE WAVEFORM'S COLUMNS before the frame is read under it: the
+        // second finger may join over chrome and the pen's previous point may
+        // lie off the canvas, and the seat HOLDS this column for the phase
+        // (architect 2026-10-31, contract at TouchNavZoomState). The camera
+        // the seat was taken against is recorded for re-seat (B) below.
+        const double seat_col = clamp_col_into_waveform(
+            wf_area,
+            static_cast<double>(f.x - wf_area.x) - (one_finger_zoom ? f.dx : 0.0));
         z.anchor_sample = vp + seat_col * spp_old;
+        z.anchor_col    = seat_col;
+        z.zoom_vp       = app.viewport_start_sample;
+        z.zoom_level    = app.zoom_level;
         z.seated        = true;
         z.one_finger    = one_finger_zoom;
         // THE SEAT OWES ITS FIRST FRAME'S DAMAGE —
@@ -2296,7 +2309,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // 2026-08-14 (the seated pinch; contract at TouchNavZoomState,
     // app_state.h).
     double anchor_sample = 0.0;   // active-domain song frame the pivot holds
-    double anchor_col    = 0.0;   // its column under the LIVE viewport
+    double anchor_col    = 0.0;   // the column the placement puts it at
     const bool pan = !f.two_finger && !one_finger_zoom;
     double pan_col = 0.0;   // the pan's placement column (fractional)
     if (pan) {
@@ -2351,18 +2364,28 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         anchor_col    = pan_col;
     } else {
         // A ZOOM — TWO FINGERS, OR ONE UNDER CTRL — PIVOTS ABOUT THE POINT ON
-        // THE WAVEFORM THE GESTURE GRABBED, held for the phase's life: seated
-        // above (on the phase's FIRST unrefused frame, whether or not that
-        // frame applies anything), then re-derived as a COLUMN against the
-        // live viewport every frame here. The centroid's own travel is
-        // discarded by the fork above (eff_dx is 0), so moving both fingers
-        // together still applies nothing — it only seats — while the one
-        // finger's travel is the zoom itself (zoom_dx).
+        // THE WAVEFORM THE GESTURE GRABBED, held for the phase's life: the
+        // song frame AND ITS COLUMN seated above (on the phase's FIRST
+        // unrefused frame, whether or not that frame applies anything) and
+        // placed together here, the held frame at the held column (architect
+        // 2026-10-31, the pan's absolute seat the model; contract at
+        // TouchNavZoomState). The centroid's own travel is discarded by the
+        // fork above (eff_dx is 0), so moving both fingers together still
+        // applies nothing — it only seats — while the one finger's travel is
+        // the zoom itself (zoom_dx).
         TouchNavZoomState& z = app.touch_nav_zoom;
-        // THE EDGE TRICK, through its one owner: a column pushed outside
-        // [0, W-1] pins at the edge pixel and REBINDS the held frame to that
-        // pixel's content, which is what keeps the zoom's focus on screen.
-        anchor_col    = rebind_zoom_pivot_into_waveform(z.anchor_sample);
+        // RE-SEAT (B), A CAMERA ANOTHER WRITER MOVED under the gesture: the
+        // camera the seat or the last zoom frame settled no longer stands (a
+        // following play paged the view under the pen's retained anchor, or
+        // between the seat and the first applied frame), so the held column
+        // would yank the view back to the section it left. The column is
+        // re-read from the live viewport through the edge trick's one owner,
+        // which pins a frame the page carried off the waveform at the edge
+        // pixel and rebinds it to that pixel's content.
+        if (z.zoom_vp != app.viewport_start_sample ||
+            z.zoom_level != app.zoom_level)
+            z.anchor_col = rebind_zoom_pivot_into_waveform(z.anchor_sample);
+        anchor_col    = z.anchor_col;
         anchor_sample = z.anchor_sample;
     }
 
@@ -2391,9 +2414,9 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // ONE placement carries whichever axis is live, and the fork above decided
     // both of its anchor terms: a ONE-FINGER frame places the pan's SEATED
     // frame at the CURRENT fractional centroid column, which is the pan, while
-    // a ZOOM frame places its HELD frame back at its own re-derived column,
-    // which is a pure zoom about the grabbed point (the ratio is 1.0 on the
-    // first, and the zoom's column moves only by the level). Everything downstream is the strip drag's own
+    // a ZOOM frame places its HELD frame at its HELD column, which is a pure
+    // zoom about the grabbed point (the ratio is 1.0 on the first, and the
+    // zoom's column moves only at its two re-seats). Everything downstream is the strip drag's own
     // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
     // camera chokepoint's compare on either axis, and the mid-gesture true-no-op
     // skip.
@@ -2425,6 +2448,31 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         z.pan_level      = app.zoom_level;
         z.pan_tab_view   = app.active_tab_view;
         z.pan_audio_view = app.active_audio_view;
+    } else {
+        // RE-SEAT (A), A PLACEMENT THE WALLS REFUSED — the pan's re-seat (3)
+        // in the zoom's form, the same test: a settled start other than the
+        // grid point nearest the requested one is the chokepoint's wall (or
+        // the whole-song park at 0). The viewport is pinned, so the held frame
+        // slides across the glass with the content and THE HELD COLUMN
+        // FOLLOWS IT, re-read from the settled viewport through the edge
+        // trick's one owner, which pins a frame pushed off the waveform at
+        // the edge pixel and rebinds both — the reversibility paragraph at
+        // TouchNavZoomState: at a saturated wall the focus survives. Off the
+        // walls nothing here fires and the column stays held. Every read is
+        // valid on every frame: apply_strip_drag_zoom assigns the level and
+        // the clamped start before its mid-gesture true-no-op return.
+        TouchNavZoomState& z = app.touch_nav_zoom;
+        const double spp_now = painter_samples_per_pixel(app, audio, wf_area);
+        if (spp_now > 0.0) {
+            const int64_t requested = static_cast<int64_t>(
+                std::nearbyint(anchor_sample - anchor_col * spp_now));
+            if (nearest_viewport_grid_point(requested, spp_now) !=
+                app.viewport_start_sample)
+                z.anchor_col = rebind_zoom_pivot_into_waveform(z.anchor_sample);
+        }
+        // The camera this frame settled, which re-seat (B) compares.
+        z.zoom_vp    = app.viewport_start_sample;
+        z.zoom_level = app.zoom_level;
     }
 }
 

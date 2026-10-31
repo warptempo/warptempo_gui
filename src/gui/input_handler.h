@@ -1011,9 +1011,10 @@ struct GuiInputHandler {
     //
     // THE APPLICATION IS ONE ANCHORED PLACEMENT PER FRAME, the strip drag's
     // own, and the two finger counts supply its anchor differently.
-    // ONE FINGER — PER-FRAME ANCHORED AND STATELESS: the content under the
-    // PREVIOUS centroid column is placed at the CURRENT centroid column under
-    // the new level, which is the pan, and nothing survives the frame.
+    // ONE FINGER — THE PAN'S ABSOLUTE SEAT (2026-10-22): the content under the
+    // down point is seated once per pan phase and placed at the CURRENT
+    // fractional centroid column every frame, re-seated where the finger's
+    // hold on the content breaks (the body's one-finger arm).
     // TWO FINGERS — A SEATED PIVOT, HELD FOR THE PHASE (architect 2026-08-14,
     // from the rig: "when the two-finger touch is first registered, it picks the point on the
     // waveform, and the zoom pivot stays there no matter where the two fingers
@@ -1023,7 +1024,12 @@ struct GuiInputHandler {
     //     frame seated at the centroid of the first two-finger frame that
     //     SURVIVES THE REFUSAL (not the first APPLIED one: seating is above the
     //     exact-no-op return, the ordering rule at the site) and held for the
-    //     phase, its COLUMN re-derived against the live viewport every frame.
+    //     phase WITH ITS COLUMN (architect 2026-10-31): every frame places the
+    //     held frame at the held column, so the grid snap's half-column
+    //     residue never accumulates into a walk of the stem (measured +-25 px
+    //     a pinch, 2026-10-31). The column is re-read from the live viewport
+    //     at two re-seats alone: a placement the walls refused (the wall
+    //     bullet below) and a camera another writer moved under the gesture.
     //   * MOVING BOTH FINGERS TOGETHER STILL APPLIES NOTHING: the ratio is 1
     //     and the centroid's travel is discarded, the standing zoom-only
     //     ruling — the seat changes what the zoom pivots ABOUT, not what the
@@ -1033,14 +1039,15 @@ struct GuiInputHandler {
     //   * MOVING ONE FINGER zooms about the GRABBED point rather than about
     //     the moving midpoint between the fingers.
     //   * AT A WALL — the viewport saturated at frame 0 or the right edge — the
-    //     held frame KEEPS ITS GRIP and its column slides across the glass,
-    //     which is what makes the pinch reversible; a live centroid let the
-    //     audio drift out from under the fingers, so pinching back out never
-    //     returned what it came from.
-    //   * A column pushed off the waveform CLAMPS to the edge pixel and REBINDS
-    //     the held frame to that pixel's content (the edge trick,
-    //     rebind_zoom_pivot_into_waveform), the one lasting mutation of the
-    //     anchor.
+    //     held frame KEEPS ITS GRIP and slides across the glass with the
+    //     content, and the held column follows it (re-seated from the settled
+    //     viewport after each refused placement), which is what makes the
+    //     pinch reversible; a live centroid let the audio drift out from under
+    //     the fingers, so pinching back out never returned what it came from.
+    //   * A column pushed off the waveform at a re-seat CLAMPS to the edge
+    //     pixel and REBINDS the held frame to that pixel's content (the edge
+    //     trick, rebind_zoom_pivot_into_waveform), the one lasting mutation of
+    //     the anchor.
     // WHAT THIS DOES NOT CHANGE: the fingers still zoom by their DISTANCE RATIO
     // ALONE. The level maps that ratio LOGARITHMICALLY (new_level = level -
     // log2(ratio)) — no feel constant: doubling the finger gap is exactly one
@@ -1835,11 +1842,13 @@ struct GuiInputHandler {
     // ScrollDragState's head), pre-clamped into the chokepoint's window — read
     // by apply_touch_nav_update under ctrl. Defined in input_pointer.cpp.
     double nav_drag_zoom_level(double dx) const;
-    // THE ZOOM PIVOT'S EDGE TRICK — a song-frame pivot's column under the
-    // live viewport, clamped into the waveform with the pivot REBOUND to the
-    // edge pixel's content when it clamps; returns the column. One owner for
-    // the pinch and the one-finger touch zoom; the reversibility record is at
-    // the definition (input_pointer.cpp).
+    // THE ZOOM PIVOT'S RE-SEAT AND EDGE TRICK — a song-frame pivot's column
+    // under the live viewport, clamped into the waveform with the pivot
+    // REBOUND to the edge pixel's content when it clamps; returns the column,
+    // which the caller stores as the held one. One owner for the pinch and the
+    // one-finger touch zoom, read at their two re-seats alone (2026-10-31, the
+    // column held with the frame; TouchNavZoomState); the reversibility
+    // record is at the definition (input_pointer.cpp).
     double rebind_zoom_pivot_into_waveform(double& anchor_sample) const;
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
