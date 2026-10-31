@@ -87,14 +87,6 @@ constexpr uint64_t kTouchWindowNoExpiry = UINT64_MAX;
 } // namespace
 
 // ---------------------------------------------------------------------------
-// The window
-// ---------------------------------------------------------------------------
-
-void GuiInputCore::set_surface_width(int width_px) {
-    surface_width_ = width_px;
-}
-
-// ---------------------------------------------------------------------------
 // The two software deadlines
 // ---------------------------------------------------------------------------
 
@@ -332,19 +324,9 @@ void GuiInputCore::pointer_motion(double x, double y) {
     deliver_motion(pointer_x_, pointer_y_);
 }
 
-void GuiInputCore::note_notional_pointer_x(double x) {
-    // ONE clamp body for every writer of the pointer's notional position (the
-    // contract is at the field).
-    const double max_x =
-        surface_width_ > 0 ? static_cast<double>(surface_width_ - 1) : 0.0;
-    notional_pointer_x_ = std::clamp(x, 0.0, max_x);
-}
-
 void GuiInputCore::deliver_motion(int x, int y) {
     // The funnel for every motion that carries a REAL position (the caller
-    // classes are at the declaration): the notional position follows it, then
-    // the GUI sees the ordinary delivery.
-    note_notional_pointer_x(static_cast<double>(x));
+    // classes are at the declaration): the GUI sees the ordinary delivery.
     if (on_motion_) on_motion_(x, y, current_mods());
 }
 
@@ -659,8 +641,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // state block's recorded split): it asks where the pointer now is and
     // gates no touch delivery.
     if (pointer_focused_) {
-        // The hovering pen's own position again, which is also what takes the
-        // notional position back off the finger (deliver_motion's contract).
+        // The hovering pen's own position again (deliver_motion's contract).
         deliver_motion(pointer_x_, pointer_y_);
         return;
     }

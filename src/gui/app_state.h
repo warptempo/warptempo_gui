@@ -1223,10 +1223,10 @@ struct TrimDragState {
 // LEFT IT — "out of both — we want symmetry as much as
 // possible; the horizontal zoom ... was designed to unify the motions for zoom
 // on both devices"). The two lanes are PLACEMENT SURFACES now: a press there
-// arms this same pending with `placement_only` set, so a motionless release
-// runs the placement click act — but on the playhead's head, whose drag
-// places the playhead under the pointer (`head_drag`, 2026-10-09) (the
-// fields' own contracts below). THE LOWER HALF JOINED
+// arms this same pending (arm_placement_press), so a motionless release runs
+// the placement click act and a crossed one runs nothing, as everywhere on
+// this pending — but on the playhead's head, whose drag places the playhead
+// under the pointer (`head_drag`, 2026-10-09; its contract below). THE LOWER HALF JOINED
 // when the press-time audition scrub moved to the lift (architect 2026-08-13:
 // "the playhead scrub is an outlier. We do everything on lift the finger or on
 // mouse up, but the playhead scrub, we do right on mouse down. We should remove
@@ -1269,7 +1269,8 @@ struct TrimDragState {
 // resolved nav_zoom_px_per_level(), which rides gui_scale.
 // THE ACT IS PRESS-TIME: a plain-armed press runs its click act even if ctrl
 // is down at the release — press-time modifiers arm the ACT (the rule's own
-// site is AppState::ChromePress::shift).
+// site is AppState::ChromePress::ctrl, the barrel the pointer's one press-time
+// bit, architect 2026-10-30).
 // Navigation-class: allowed in read-only. Ends: the clean release (the click
 // act, or nothing for a moved press), a lost button (an unmoved press is NOT
 // a clean click — no act, no seed), the force-end finalizer (the same: a
@@ -1297,19 +1298,15 @@ struct ScrollDragState {
     // exclusive with the two flags above by geometry, and false in the `h`
     // view, which has no scrub half.
     bool   scrub_release = false;
-    // The press landed on a PLACEMENT LANE — the ruler or the marker lane's
-    // empty stretch (architect 2026-09-25, the lanes leaving the navigation
-    // surface). The pending is the same one, so the click act, the empty-lane
-    // seed and the gesture's ownership of the held button are unchanged, and
-    // as on the navigation surface the crossing marks `moved` and begins
-    // nothing. Mutually exclusive with scrub_release (a lane is not the
-    // waveform). ITS ONE DRAG is the head drag below (2026-10-09).
-    bool   placement_only = false;
     // THE HEAD DRAG — THE PLACEMENT LANES' ONE DRAG (architect 2026-10-09
     // ~17:40, Cool Edit's cursor grabbed by its head): the plain press landed
     // on the PLAYHEAD'S HEAD as painted (point_on_playhead_head,
     // input_pointer.cpp — no flag over it, the flags' claim ranking first),
-    // set only beside placement_only. FROM THE CROSSING ON (the slop is
+    // set only by the two ruler bands' arm_placement_press. A placement lane's
+    // press is otherwise this same pending whole (architect 2026-09-25, the
+    // lanes leaving the navigation surface; 2026-10-30, the crossing beginning
+    // nothing on any surface): on_motion marks `moved` at the crossing and
+    // runs this drag's step and nothing else. FROM THE CROSSING ON (the slop is
     // jitter, the pending's own rule), EVERY MOTION EVENT runs THE PLACEMENT
     // ACT at the pointer's column — the motionless click's own act,
     // run_nav_click_act's placement arm (the play's stop, the deselect or the
@@ -3172,11 +3169,13 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // the one day of 2026-09-05 and is not: the desk's sweep moves on every
 // motion with no gate, and the glass's caret drag is the touch translation's
 // own stream, gated by the slop alone):
-//   * ScrollDragState — THE ONE NAV DRAG, the pending click whose crossing
-//     becomes the grab-pan or, with ctrl, the zoom (the capture begins at that
-//     crossing);
-//   * RegionDragState — THE SWEEP, the shift drag and the touch region hold,
-//     through apply_region_drag_motion's own gate (a direct trim write since
+//   * ScrollDragState — THE PENDING CLICK, whose crossing ends the click and
+//     begins nothing but the placement lanes' head drag (architect
+//     2026-10-30: on glass the pan and the one-finger zoom are the touch
+//     layer's, which crosses straight to Nav, or holds to Region, with no
+//     pointer press delivered);
+//   * RegionDragState — THE SWEEP, the touch region hold's, through
+//     apply_region_drag_motion's own gate (a direct trim write since
 //     2026-08-18; the overlay's move and bound drags became the trim bar's
 //     own drags, which read the grab gate);
 //   * AppState::FolderOverlayPress — the folder overlay's band press, whose
@@ -3196,21 +3195,21 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // itself: it keeps a settable slop whose default is the authored 8 and takes
 // drag_moved_threshold_px() through GuiPlatform::set_touch_slop_px at both
 // gui_scale application points (the inventory is at that setter,
-// input_core.h). One number reaches both gates at every scale, which is what
-// makes a quick finger drag cross both at once — the slop crossing delivers
-// its crossing motion in the same burst as the press, and that motion clears
-// this gate by construction.
+// input_core.h). One number reaches both gates at every scale, so a finger's
+// travel means one distance whichever side decides it: on the pan zone the
+// core's crossing makes the pan, and off it the finger is the pointer on
+// contact and this gate turns the press into its drag at the same travel
+// (the twin-gate invariant, at set_touch_slop_px).
 // UNIFIED to 8px (architect
 // 2026-07-24: region felt too hair-trigger at the old 3, and the separate
 // kMarkerDragMovedThresholdPx = 8 was folded into this one constant). Two
 // rationales, now one story:
-//  - CAPTURE-JITTER / DOUBLE-CLICK STARVATION (the captured nav drag, the
-//    waveform region): under
-//    pointer capture the relative-pointer stream delivers every sub-pixel sensor
-//    tick as a motion event, so a physical click almost always rocks the sensor a
-//    count or two; without this gate that jitter would mark every click as moved
-//    and starve double-click detection, and on the waveform a click would become
-//    a micro-region instead of plain playhead placement.
+//  - CLICK JITTER / DOUBLE-CLICK STARVATION (the number's provenance is the
+//    laptop's captured mouse drag, whose relative stream delivered every
+//    sub-pixel sensor tick; on glass the pen's tap and the finger's roll are
+//    the same wobble): without this gate that jitter would mark every click as
+//    moved and starve double-click detection, and a click would become a
+//    micro-region instead of plain playhead placement.
 //  - MARKER GRAB SLOP (the marker flag): a flag must be easy to click
 //    (select, or double-click to edit) without nudging it, and pixel-exact
 //    fine-tuning lives on the bare Left/Right nudge rather than the drag — the
@@ -3219,11 +3218,9 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 //    the sweeps and the pans.
 // One latch shape everywhere — a motion event below the threshold is ignored
 // outright (moved stays false, no apply, the drag stays armed); once a drag,
-// always a drag, so dragging back near the press has no dead zone. The NAV
-// drag leaves last_x at the press until the crossing, so the crossing
-// event folds the whole accumulated delta and no travel is lost (the
-// absolute-placement region edit folds it by
-// construction, placing per event rather than accumulating).
+// always a drag, so dragging back near the press has no dead zone. No travel
+// is lost at the crossing: the head drag and the sweep place absolutely, at
+// the crossing motion's own column, rather than accumulating a delta.
 // THE RECORDED FALLBACK (a per-surface re-split, the pre-2026-07-24 form of
 // strip/region/trim at 3 and markers at 8) WAS TAKEN THE OTHER WAY
 // (architect 2026-09-29): the split is by what the press does, not by
@@ -3338,16 +3335,16 @@ enum class DialogTrigger {
     PULL_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
-    // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button or
-    // by bare `'` inside it, the entry parked at
-    // AppState::RenderPlayer::pending_load, OK running the shared
-    // load_render_entry_in_place — and the `h` VIEW's, raised by bare `'`
-    // there on the VIEWED walk member (parked at
-    // AppState::HistoryMode::pending_load_member, OK running that walk's own
-    // load act). The two raises cannot coexist, so the answer forks on which
-    // subject is parked. RAISED WITH ITS FIRST BUTTON FOCUSED, as the revert
-    // confirmation is, so a bare Enter answers OK on both (PromptInitialFocus
-    // owns the choice and its reason). The raises and the answers live on
+    // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button,
+    // the entry parked at AppState::RenderPlayer::pending_load, OK running
+    // the shared load_render_entry_in_place — and the `h` VIEW's, raised by
+    // the view's Load in Place button (bare `'`) on the VIEWED walk member
+    // (parked at AppState::HistoryMode::pending_load_member, OK running that
+    // walk's own load act). The two raises cannot coexist, so the answer
+    // forks on which subject is parked. RAISED WITH ITS FIRST BUTTON FOCUSED,
+    // as the revert confirmation is, so OK is the painted lean on both and
+    // the buttons the one road (architect 2026-10-30; PromptInitialFocus owns
+    // the choice and its reason). The raises and the answers live on
     // GuiInputHandler (render_player_load_in_place / history_load_in_place and
     // confirm_load_in_place / cancel_load_in_place, input_key_dispatch.cpp),
     // which the prompt reaches through its input-handler back-pointer.
@@ -3357,8 +3354,9 @@ enum class DialogTrigger {
     // GuiPrompt::request_close on the Revert target (a clean session reverts
     // with no question). OK completes the close as a reopen of the project
     // already open; Cancel leaves the session standing. Raised with its FIRST
-    // button focused, the load confirmation's default, so a bare Enter
-    // answers OK (PromptInitialFocus owns the choice and its reason).
+    // button focused, the load confirmation's default, so OK is the painted
+    // lean and the buttons the one road (architect 2026-10-30;
+    // PromptInitialFocus owns the choice and its reason).
     REVERT_CONFIRM,
     // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete '<folder
     // name>'?" or "Delete all N folders?", Delete / Cancel, raised by the
@@ -3413,37 +3411,30 @@ enum class DialogTrigger {
 // what activate_response forks on) and its button's PLAIN WORD (`label` —
 // "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete"), no letter
 // underlined and never bracketed; the tooltip is the act's name alone.
-// (THE PASSIVE FOCUS BELOW HAS NO KEY READER since 2026-10-30 — no Enter or
-// Space reaches a prompt — and stands as recorded, the dialog family's one
-// focus model, the ring's own state at AppState::modal_dialog_focus.)
-// A PROMPT DOES HAVE AN ENTER ANSWER, AND IT IS THE PASSIVELY FOCUSED BUTTON
-// (architect 2026-08-13, SUPERSEDING this block's own standing ruling — "no
-// button wears the default face; this prompt system HAS no Enter answer,
-// Return is not a response key and does nothing", the decision recorded here
-// when the buttons landed and again at the focus ring). Every prompt is now
+// A PROMPT IS ANSWERED BY ITS BUTTONS ALONE (architect 2026-10-30): no Enter,
+// Space or Esc reaches it, so no answer is a key's. Every prompt is still
 // RAISED with PASSIVE focus on a button — its LAST unless the raise asks for
-// its FIRST (PromptInitialFocus below) — and bare Enter or bare Space
-// presses the focused button down and commits it on the key's release. What
-// makes that safe is not the absence of a default but two facts that were not
-// available when the old rule was written:
+// its FIRST (PromptInitialFocus below) — and that focus is PAINTED and does
+// nothing else: the face marks the answer the question leans to, the dialog
+// family's one focus model (the ring's own state at
+// AppState::modal_dialog_focus). Two facts shape it:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
 //        by construction rather than by convention. Every answer table
-//        below puts '\x1b' last (kPromptAnswerTablesValid asserts it): the unsaved-work prompt (Save / Discard /
-//        CANCEL), its save-failed restatement (Retry / Discard / CANCEL), THE
-//        PHASE RESET PASTE'S CONFIRMATION (Yes / CANCEL), THE LOAD
-//        CONFIRMATION'S TWO RAISERS (OK / CANCEL — one prompt body, two
-//        subjects: the render player's highlighted entry and the `h` view's
-//        viewed walk member) and the revert confirmation (OK / CANCEL) — SIX
-//        raises, re-grepped 2026-09-23.
-//        So on a
-//        LastButton raise the key that answers without asking answers the way
-//        Esc already does; the four confirmations that raise on their FIRST
-//        button (the load's two, the revert's and the phase reset paste's)
-//        put OK — or Yes — one Enter away by
-//        choice, each being the deliberate second step of an explicit act.
-//   (ii) THE PAINTED GATE below answers nothing until the prompt has been
-//        on screen — the exact hazard the old rule was reaching for, closed
-//        structurally instead of by leaving the ring empty.
+//        below puts '\x1b' last (kPromptAnswerTablesValid asserts it): the
+//        unsaved-work prompt (Save / Discard / CANCEL), its save-failed
+//        restatement (Retry / Discard / CANCEL), THE PHASE RESET PASTE'S
+//        CONFIRMATION (Yes / CANCEL), THE LOAD CONFIRMATION (OK / CANCEL —
+//        one prompt body, two subjects: the render player's highlighted entry
+//        and the `h` view's viewed walk member), the revert confirmation (OK
+//        / CANCEL), the pull's (OK / CANCEL), the score viewer's reset (OK /
+//        CANCEL) and the deletes and the trim preset's save (Delete or Save /
+//        CANCEL). So a LastButton raise paints the answer that changes
+//        nothing; the four confirmations that raise on their FIRST button
+//        (the load's two, the revert's and the phase reset paste's) paint OK
+//        — or Yes — by choice, each being the deliberate second step of an
+//        explicit act.
+//   (ii) THE PAINTED GATE below answers no press until the prompt has been on
+//        screen.
 // The two focus STRENGTHS (passive, assigned; active, walked onto) are at
 // AppState::modal_dialog_focus_active, which owns the model; the face ladder
 // is paint_modal_dialog's.
@@ -3481,14 +3472,16 @@ enum class DialogTrigger {
 // carries the stash that armed it (AppState::RedesignTooltip).
 // EDITOR DIALOGS ARE DELIBERATELY NOT GATED: a queued key types into the
 // buffer, which is non-destructive and self-evident the moment the field
-// paints, and the commit is a separate deliberate Enter. The destructive
-// shape is the prompt's ONE-KEY ANSWERS, which is exactly what this bit
-// guards. A frame deferral (both buffers in flight) simply keeps the bit
-// false longer — keys consumed, which is the correct answer.
+// paints, and the commit is a separate deliberate Enter or OK. The
+// destructive shape is the prompt's ONE-PRESS ANSWERS, which is exactly what
+// this bit guards. A frame deferral (both buffers in flight) simply keeps the
+// bit false longer — presses answer nothing, which is the correct answer.
 // WHICH BUTTON A RAISE FOCUSES (architect 2026-08-28). Every prompt is raised
-// with PASSIVE focus on a button — the Enter answer above — and this says
-// which one; the BUTTON ORDER is untouched by either value, so Cancel stays
-// LAST on every prompt and fact (i)'s derivation holds whichever is chosen.
+// with PASSIVE focus on a button, PAINTED and read by nothing else (architect
+// 2026-10-30: the buttons are a prompt's one road, the block above), and this
+// says which one; the BUTTON ORDER is untouched by either value, so Cancel
+// stays LAST on every prompt and fact (i)'s derivation holds whichever is
+// chosen.
 //   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
 //                 the three-way prompts — the unsaved-work prompt and its
 //                 save-failed rung (Save / Discard / Cancel, Retry / Discard
@@ -3496,14 +3489,16 @@ enum class DialogTrigger {
 //                 files, DialogTrigger::DELETE_FOLDER_CONFIRM), by the trim
 //                 presets list's Delete and Save (2026-10-28 night:
 //                 trim has no undo, TRIM_PRESET_DELETE_CONFIRM and
-//                 TRIM_PRESET_SAVE_CONFIRM) and by THE
+//                 TRIM_PRESET_SAVE_CONFIRM), by the score viewer's reset (no
+//                 undo, SCORE_RESET_CONFIRM) and by THE
 //                 PULL CONFIRMATION (OK / Cancel since 2026-10-19, whose OK
 //                 discards the session). The three-ways and the pull
 //                 interpose a question the user did not raise — the pull's
 //                 press asked for a pull, not for the session's loss — so
-//                 their Enter must commit nothing. A DELIBERATE ASYMMETRY
+//                 their painted lean is the answer that commits nothing. A
+//                 DELIBERATE ASYMMETRY
 //                 with Revert's OK / Cancel below, which discards the session
-//                 too: the Revert row asks for exactly that loss, so its
+//                 too: Revert asks for exactly that loss, so its
 //                 question is a confirmation of the act just asked for.
 //   FirstButton — THE CONFIRMATIONS: the LOAD CONFIRMATION on both its
 //                 subjects (the player's render entry and the `h` view's walk
@@ -3513,11 +3508,13 @@ enum class DialogTrigger {
 //                 PHASE RESET PASTE CONFIRMATION (architect: "align — paste
 //                 should open on the equivalent of OK"). Each
 //                 prompt is already the deliberate second step of an explicit
-//                 act — the `'` press, the Revert row or its chord, the paste
-//                 chord or its Edit row — so the question itself is the safeguard and
-//                 its Enter confirms the act just asked for; the `'` roads
-//                 answer Enter the same way rather than opposite ways, and
-//                 the revert and the phase reset paste answer it as they do.
+//                 act — the Load in Place button, Open Project's long press
+//                 (Revert), Copy Phase Resets' barrel press (the paste) — so
+//                 the question itself
+//                 is the safeguard and its painted lean is OK, the act just
+//                 asked for; the two load roads lean the same way rather than
+//                 opposite ways, and the revert and the phase reset paste
+//                 lean as they do.
 enum class PromptInitialFocus { LastButton, FirstButton };
 
 // ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
@@ -3606,8 +3603,8 @@ struct PromptState {
     // The callers own their own damage (invalidate_all — the modal's rect
     // does not exist before the first paint, which the painted gate's own
     // reasoning depends on) and the modal playback stop.
-    // `focus` is REQUIRED, not defaulted: a new raise states which button its
-    // Enter answers rather than inheriting one silently.
+    // `focus` is REQUIRED, not defaulted: a new raise states which button it
+    // paints focused rather than inheriting one silently.
     void present(std::string t,
                  std::span<const PromptAnswer> a,
                  DialogTrigger trig,
@@ -5308,8 +5305,8 @@ struct AppState {
     // Written by every plain trim-bar press, consumed by the next left release.
     TrimBarPressSeed trim_bar_press;
 
-    // The navigation surface's plain press: the pending click / grab-pan
-    // (contract at ScrollDragState). Cleared on button
+    // The navigation surface's and the placement lanes' plain press: the
+    // pending click (contract at ScrollDragState). Cleared on button
     // release / lost button, by the force-end finalizer, and file load.
     ScrollDragState scroll_drag;
 
@@ -5327,22 +5324,6 @@ struct AppState {
     // Pointer drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
-
-    // THE TOUCH CARET DRAG'S ONE RECORD (2026-09-05): the EDITING SESSION
-    // the live caret stream began on (text_editor::State::session, the
-    // process-wide id every `enter` takes), or 0 for no stream. It is an
-    // IDENTITY and not a gesture flag — nothing gates on its truthiness but
-    // the two bodies that compare it — and it holds the stream to its own
-    // editor, the caret phase being deliberately outside
-    // any_pointer_gesture_active (no road opens another editor under a
-    // finger still down since the hardware keyboard closed, architect
-    // 2026-10-30; the trio's contract says so). The
-    // begin stamps it, the update and the end refuse a session that is not
-    // it, and the end clears it on every road — the lift and the hard ends
-    // alike, since the platform fires caret_end unconditionally once the
-    // drag began. Session-only, and nothing else reads or writes it (the
-    // trio's contract is at begin_touch_caret_drag, input_handler.h).
-    uint64_t touch_caret_session = 0;
 
 
     // THE REDESIGNED ROWS' BUTTONS — hit geometry PUBLISHED BY THE PAINTER, the
@@ -6197,10 +6178,9 @@ struct AppState {
     // byte-identical); on a PROMPT -1 is nothing at all, because a prompt is
     // RAISED with a button focused (its last, or its first where the raise
     // asked for that — PromptInitialFocus) and its ring is its buttons alone,
-    // wrapping. (The "a prompt opens with NO button focused" rule and the
-    // no-focus stop in its cycle are RETIRED with the Enter answer's arrival
-    // the same day; the supersession and what makes it safe are at
-    // PromptState. -1 on a prompt is therefore a cold value only — the state
+    // wrapping, its focus painted and read by no key (architect 2026-10-30:
+    // the buttons are a prompt's one road; the rule is at PromptState). -1 on
+    // a prompt is therefore a cold value only — the state
     // between a raise and the paint that assigns the focus, which the painted
     // gate makes unreachable by input.)
     //
@@ -7007,7 +6987,7 @@ struct AppState {
     // "overengineered; I don't really need it" — there is already a way to
     // step backwards and forwards, and the member the walk stands on is the
     // one the lane is showing): the key raises the CONFIRMATION straight away,
-    // "Load '<member label>' in place?" OK / Cancel with Enter answering OK —
+    // "Load '<member label>' in place?" OK / Cancel with OK the painted lean —
     // the render player's own confirmation body, one prompt with two subjects
     // (DialogTrigger::LOAD_IN_PLACE_CONFIRM; the subject parked here is
     // `pending_load_member` below) — and OK runs the walk's own act.
@@ -16980,9 +16960,10 @@ inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
 // Trim (the barrel through the long press likewise). Everywhere else
 // ctrl+shift together spell no
 // roster chord (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home
-// and the rest are unbound on the keyboard too), so the band claims' modifier
-// gate refuses the pair on every other button and the lift's chord build
-// never sees it there. A MEMBER ADMITS ONE OF THE TWO SINGLE MODIFIERS
+// and the rest are unbound too), so the lift's long-press term adds no shift
+// beside a carried ctrl on every other button
+// (redesign_button_shift_admits_with) and the lift's chord build never sees
+// the pair there. A MEMBER ADMITS ONE OF THE TWO SINGLE MODIFIERS
 // beside the pair (the assert below): the walk and Copy Phase Resets admit
 // CTRL — the pair is the ctrl admission with a shift beside it — and Zoom to
 // Fit SHIFT ALONE, the pair its shift admission with a ctrl beside it (Ctrl+0
@@ -16994,12 +16975,13 @@ inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
            b == RedesignButton::IconCopyPhaseResets ||
            b == RedesignButton::IconZoomFitBest;
 }
-// THE SHIFT A PRESS CARRIES, ASKED IN ONE PLACE: alone it is the shift
+// THE SHIFT THE LONG PRESS ADDS, ASKED IN ONE PLACE: alone it is the shift
 // admission, and beside a carried ctrl it is the PAIR's — so beside a
 // carried ctrl a shift is admitted on the walk, Copy Phase Resets and Zoom to
-// Fit alone (the pair's three members). THREE READERS, all in
-// input_pointer.cpp: the arm's shift refusal (arm_redesign_press), the lift's
-// re-ask and its long-press term (finish_chrome_press_release).
+// Fit alone (the pair's three members). ONE READER, the lift's long-press
+// term (finish_chrome_press_release, input_pointer.cpp): no pointer press
+// carries a shift bit (architect 2026-10-30, the long press being Shift at
+// the lift), so the press arm asks nothing about shift.
 inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
                                                         bool ctrl) {
     return ctrl ? redesign_button_ctrl_shift_admits(b)

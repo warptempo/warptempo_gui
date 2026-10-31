@@ -403,9 +403,11 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // header's own standard rather than a new one: the chord flips a session
     // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
     // — the ctrl-branch membership toggle — is a SELECTION act, which this
-    // gate has never blocked. A locked tab has always been able to select
-    // markers by click, by Tab and by shift+click; this adds the one spelling
-    // of that vocabulary a keyboardless rig had no way to reach. Nothing it
+    // gate has never blocked. A locked tab selects markers by the plain flag
+    // press, by the barrel's membership toggle and by the roster's marker
+    // walk (Next / Previous Marker); this lamp is the toggle's sticky form,
+    // the one spelling of that vocabulary a finger alone can reach (architect
+    // 2026-10-30, the pen and the finger the whole input). Nothing it
     // enables writes a store: membership, focus and the playhead are all
     // navigation. Bare-exact, exactly the dispatch arm's own spelling.
     const bool is_add_to_selection =
@@ -3725,7 +3727,8 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 // only here, by the key — never by an asynchronous arrival: "Pull GitHub's
 // newer checkpoint and reload this piece?", OK / Cancel with passive focus on
 // Cancel (architect 2026-10-19: one road, OK reloads — a confirmation whose
-// OK discards the session, so its Enter commits nothing). A pull that leaves
+// OK discards the session, so its painted lean commits nothing). A pull that
+// leaves
 // the open piece alone runs at once: the face said Pull, and nothing on
 // screen changes.
 void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
@@ -7485,7 +7488,8 @@ void GuiInputHandler::revert_project(bool question_asked) {
 // members and the lane already shows the one the walk stands on, so the key
 // raises THE CONFIRMATION straight away — the render player's own prompt body
 // with the walk member as its subject, "Load '<member label>' in place?",
-// OK / Cancel with Enter answering OK.
+// OK / Cancel with OK the painted lean, the buttons its one road (architect
+// 2026-10-30).
 //
 // THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
 // caller is on_key's `'` arm under history_mode.active, which is where the
@@ -8678,13 +8682,14 @@ void GuiInputHandler::render_player_load_in_place() {
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
     // raised from its TWO subjects (architect 2026-08-28), and Revert's
     // confirmation (architect 2026-09-13) and the phase reset paste's
-    // confirmation (architect 2026-09-16) take the same default: a bare ENTER
-    // here answers OK, because the prompt is already the deliberate second
-    // step of an explicit act — the `'` press — so the question itself is the
-    // safeguard and its Enter confirms the act just asked for (the load also
-    // lands ONE undo entry, which the ordinary Ctrl+Z takes back). It is this
-    // same prompt body that the `h` view's `'` raises on its viewed member, so
-    // the two `'` load roads answer alike by construction. Through
+    // confirmation (architect 2026-09-16) take the same default: OK is the
+    // painted lean here, because the prompt is already the deliberate second
+    // step of an explicit act — the Load in place button — so the question
+    // itself is the safeguard and its lean is the act just asked for (the
+    // load also lands ONE undo entry, which Undo takes back); the buttons are
+    // its one road (architect 2026-10-30). It is this same prompt body that
+    // the `h` view's Load in Place raises on its viewed member, so the two
+    // load roads lean alike by construction. Through
     // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
                        kPromptOkCancel,

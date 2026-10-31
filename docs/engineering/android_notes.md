@@ -724,16 +724,15 @@ consumer, and the seam has no addition at all — §13.3.)*
   600, the latter being `kHoldBeatMs` itself (575 for both until 2026-09-29).
   The rate read 30 until 2026-09-02, which was nobody's convention.
 
-Stubs, each with its Wayland twin named at the site: the **clipboard's copy** is
+Stubs: the **clipboard's copy** is
 one stored string in the process with a wall-clock stamp, never a system
 clipboard write (architect 2026-10-29: Android 13+ chips every such write and
 no app can turn it off), and the paste takes the newer of that string and the
 system clip, read through `MainActivity.clipboardGet` / `clipboardTime`
-(ClipboardManager is a Java surface with no NDK door); **pointer
-capture** is a pair of no-ops (no cursor to hide, no pointer to lock, no
-relative stream — the same degraded path a compositor without the two optional
-protocols takes); **`set_cursor_kind`** still runs the core's policy and applies
-nothing; **the title setters** store nothing (fullscreen, no titlebar);
+(ClipboardManager is a Java surface with no NDK door); there is **no pointer
+capture and no cursor road** at all (architect 2026-10-30: the pen and the
+finger are the whole input; `input_core.h`'s head owns the rule);
+**the title setters** store nothing (fullscreen, no titlebar);
 **playback** was `playback_stub.cpp`, which answered `init() = true`, parked
 the cursor where `play()` was asked to start, reported `is_playing() = false`
 and gave the bound buffer's real domain extent (those are RANGE POLICY, not

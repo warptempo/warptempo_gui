@@ -60,8 +60,8 @@
 // 2026-10-01), so a surface pixel, a window pixel, a GUI pixel and a touch
 // coordinate are one grid (the rule is at width_, platform_android.h; the
 // app paints no window frame since 2026-10-24). The POLICY (the touch
-// state machine, the key-repeat synthesis, the logical pointer, the notional-x
-// bookkeeping, the containment conversion) is in GuiInputCore; every input
+// state machine, the key-repeat synthesis, the logical pointer, the
+// containment conversion) is in GuiInputCore; every input
 // event decoded below is handed to that object in plain window-pixel doubles.
 //
 // android_main lives at the bottom of this file: it is this platform's entry
@@ -680,7 +680,6 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // cold answer until a window is adopted below.
     width_  = width;
     height_ = height;
-    input_.set_surface_width(width_);
 
     // THE KEY-REPEAT CADENCE IS HARD-CODED HERE (architect ruling 2026-08-23).
     // Android advertises no repeat rate to a native activity — no system
@@ -914,7 +913,6 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     width_    = surf_w;
     height_   = surf_h;
     ensure_backbuffer(width_, height_);
-    input_.set_surface_width(width_);
     has_initial_configure_ = true;
 
     if (moved) {
@@ -2780,7 +2778,6 @@ void GuiPlatform::set_touch_nav_hooks(
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
 void GuiPlatform::set_touch_stillness_px(double px)         { input_.set_touch_stillness_px(px); }
-double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_x(); }
 
 // ---------------------------------------------------------------------------
 // android_main — this platform's entry point

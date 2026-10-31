@@ -1999,30 +1999,15 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
     scrub_act_at(frame);
 }
 
-// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional column projection
-// and the zoom pivot's re-derived column share, and the same bounds
-// render_strip_anchor_stem draws the stem inside.
+// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the zoom pivot's re-derived
+// column goes through, and the same bounds render_strip_anchor_stem draws the
+// stem inside.
 static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
         wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
     if (col < 0.0)     col = 0.0;
     if (col > col_max) col = col_max;
     return col;
-}
-
-// THE POINTER'S NOTIONAL COLUMN — A PURE PROJECTION of the platform's notional
-// pointer position into the waveform's own bounds. NO STATE, NO ACCUMULATION:
-// it only changes space — window x to waveform column — and re-clamps in the
-// bounds THIS layer owns, the platform knowing nothing about the waveform
-// (the position's own record is at GuiInputCore::notional_pointer_x_).
-// THE TWO CLAMPS COMPOSE: the platform pins into the WINDOW and this pins
-// into the WAVEFORM, whose rect starts at x 0 and is the window width floored
-// to a multiple of 16 — so the only span where they disagree is the inert
-// right gutter, at most 15 px, ZERO at the tablet's 2304.
-double GuiInputHandler::nav_notional_col() const {
-    const GuiRect wf_area = waveform_area(app);
-    return clamp_col_into_waveform(
-        wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
 // THE ONE-FINGER ZOOM'S LEVEL RULE — read by apply_touch_nav_update's ctrl
@@ -2719,16 +2704,10 @@ GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
 }
 
 void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
-    // THE STREAM'S ONE RECORD: the editing session it begins on, so the
-    // frames behind it answer for the editor under the finger alone (the
-    // contract at the declaration; AppState::touch_caret_session). Written here and nowhere
-    // else, and written UNCONDITIONALLY — a begin that finds no editor
-    // leaves a dead stream (0, which no live session can equal since the ids
-    // start at 1) rather than whatever the last one held.
-    app.touch_caret_session = 0;
+    // The stream acts on the editor active now and keeps no record of it
+    // (the contract at the declaration).
     const ActiveEditorText g = active_editor_text(app, audio);
     if (!g.valid) return;
-    app.touch_caret_session = g.ed->session;
     // A FINGER IN THE FIELD TAKES THE FOCUS BACK, the press's own rule on the
     // glass's road (return_modal_focus_to_field); the seat below restarts the
     // blink.
@@ -2745,10 +2724,10 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
 
 void GuiInputHandler::update_touch_caret_drag(int x, int y) {
     const ActiveEditorText g = active_editor_text(app, audio);
-    // THE SESSION IS THE GATE, not "is an editor open": this finger has
-    // business in the text of the editor its stream began on alone (the
-    // drag owns the one touch, so no other road opens one meanwhile).
-    if (!g.valid || g.ed->session != app.touch_caret_session) return;
+    // The editor active now is the one the stream began on: the drag owns
+    // the one touch, so no road opens another meanwhile (architect
+    // 2026-10-30; the contract at the declaration).
+    if (!g.valid) return;
     // The I-beam follows the finger and nothing selects — the anchor is
     // dropped at every seat.
     g.ed->selection_anchor = -1;
@@ -2758,15 +2737,11 @@ void GuiInputHandler::update_touch_caret_drag(int x, int y) {
 }
 
 void GuiInputHandler::end_touch_caret_drag() {
-    // The record dies here whatever the end is worth — the platform fires
-    // this hook unconditionally once the drag began, on the lift and on both
-    // hard ends, so this is the one road every stream leaves by.
-    const uint64_t began_on  = app.touch_caret_session;
-    app.touch_caret_session  = 0;
+    // The platform fires this hook unconditionally once the drag began, on
+    // the lift and on both hard ends, so this is the one road every stream
+    // leaves by; it acts on the editor active now, the update's own rule.
     const ActiveEditorText g = active_editor_text(app, audio);
-    // A foreign editor gets nothing, not even the blink restart: the update
-    // arm's reason, at the gesture's own end.
-    if (!g.valid || g.ed->session != began_on) return;
+    if (!g.valid) return;
     // THE DRAIN RULE: the caret stays where the last delivered frame seated
     // it, nothing selects, nothing commits (Enter remains the one commit
     // route), nothing seeds, and the editor stays open. What the end owes
@@ -4045,9 +4020,8 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
         // through scaled_px, the touch slop's own number — and the crossing is
         // `>=`, not `>`, because the core resolves a touch into a drag at `>=`
         // its slop and the two gates must not disagree by one pixel (the
-        // twin-gate invariant, input_core.h: a slop-crossing resolution
-        // delivers its crossing motion in the same burst as the press, and
-        // that motion has to clear this gate BY CONSTRUCTION).
+        // twin-gate invariant, input_core.h's set_touch_slop_px: a finger's
+        // travel means one distance whichever side decides it).
         //
         // IT CROSSES ON EITHER AXIS even though the scroll reads dy alone. A
         // sideways slide over a row is a drag, not a click: on glass a finger
@@ -5338,8 +5312,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         // — the WHOLE waveform and nothing else since 2026-09-25 — a PLAIN
         // press is a PENDING CLICK (arm_nav_press): a motionless
         // release runs THE HALF'S OWN ACT as the DEFERRED CLICK ACT (upper =
-        // the playhead placement, lower = the audition scrub), and crossing the
-        // 8px threshold is the GRAB-PAN in either half (the region sweep is
+        // the playhead placement, lower = the audition scrub), and a contact
+        // crossing the slop is the touch layer's pan in either half before
+        // this road sees a press (architect 2026-10-30; the region sweep is
         // the touch hold's, begin_touch_region). On the two PLACEMENT LANES —
         // the RULER and the MARKER lane's empty stretches, off the surface
         // since 2026-09-25 — a plain press is the PLACEMENT
@@ -5384,10 +5359,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
             // (architect 2026-09-25: the ruler and the marker lane left the
             // navigation surface — "out of both — we want
             // symmetry as much as possible"). The press arms ScrollDragState
-            // with placement_only (arm_placement_press) and does NOTHING ELSE;
-            // a motionless release runs the deferred click act (deselect +
-            // playhead to the column), and a drag that crosses the slop does
-            // nothing at all — no pan, and no ctrl edge turns it into a zoom.
+            // (arm_placement_press) and does NOTHING ELSE; a motionless
+            // release runs the deferred click act (deselect + playhead to the
+            // column), and a drag that crosses the slop does nothing at all —
+            // no pan, no zoom — but the head drag on the playhead's head.
             // No double-click surface here: the span-framing double-click
             // lives on the TRIM lane, and the marker-create one on the MARKER
             // lane's empty stretches — the ruler seeds nothing.
@@ -5601,8 +5576,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         // press-time scrub: "the playhead scrub is an outlier. We do everything
         // on lift the finger or on mouse up, but the playhead scrub, we do right
         // on mouse down. We should remove that"). BOTH halves arm the same
-        // PENDING CLICK / GRAB-PAN — nothing at press, a crossed drag is the
-        // captured pan — and the HALF, read once here and stashed on the
+        // PENDING CLICK — nothing at press, a crossed press runs nothing (the
+        // pan is the touch layer's, architect 2026-10-30: a waveform contact
+        // past the slop is Nav before this road sees it) — and the HALF, read
+        // once here and stashed on the
         // pending, picks which act a MOTIONLESS release runs: the UPPER half's
         // playhead placement or the LOWER half's audition scrub. That act is
         // the ONLY difference between the halves now, and it is TWO differences
@@ -5717,22 +5694,21 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
 }
 
 // ARM A PLACEMENT LANE'S PRESS (architect 2026-09-25: the ruler and the marker
-// lane left the navigation surface) — the same pending, the
-// click act and the seed unchanged, with placement_only set so that no drag
-// ever begins (contract at ScrollDragState::placement_only, app_state.h).
-// FOUR CALLERS, by grep 2026-09-25: the live router's ruler band, its empty
-// marker-lane stretch (the one that seeds), its shift claim off the waveform,
-// and the `h` view's router (its ruler, its empty lane stretch and its shift
-// claim through one arm each). `head_drag` (architect 2026-10-09 ~17:40) is
-// the two ruler bands' alone, true where the plain press landed on the
-// playhead's head as painted (point_on_playhead_head): the lanes' one drag,
-// the playhead riding the pointer past the slop (ScrollDragState::head_drag).
+// lane left the navigation surface) — the same pending, the click act and the
+// seed unchanged; a crossed press is the no-op every pending's crossing is
+// (architect 2026-10-30, on_motion's branch), so a lane's only drag is the
+// head drag. FOUR CALLERS, by grep 2026-10-30: the live router's ruler band
+// and its empty marker-lane stretch (the one that seeds), and the `h` view's
+// router's ruler and empty lane stretch. `head_drag` (architect 2026-10-09
+// ~17:40) is the two ruler bands' alone, true where the plain press landed on
+// the playhead's head as painted (point_on_playhead_head): the lanes' one
+// drag, the playhead riding the pointer past the slop
+// (ScrollDragState::head_drag).
 void GuiInputHandler::arm_placement_press(int x, int y, bool history,
                                           bool seed_empty_lane,
                                           bool head_drag) {
     arm_nav_press(x, y, history, seed_empty_lane, /*scrub_release=*/false);
-    app.scroll_drag.placement_only = true;
-    app.scroll_drag.head_drag      = head_drag;
+    app.scroll_drag.head_drag = head_drag;
 }
 
 // THE DEFERRED CLICK ACT — what a motionless navigation-surface press does at
@@ -5753,7 +5729,7 @@ void GuiInputHandler::arm_placement_press(int x, int y, bool history,
 //   then the same placement body, through the same movement owner.
 //   The empty-lane and ruler
 //   stretches take this too — PLACEMENT SURFACES since 2026-09-25, this act
-//   their one act (placement_only) — so a click on the waveform's upper half
+//   their one click act (arm_placement_press) — so a click on the waveform's upper half
 //   or on either lane moves the playhead, in the view as outside it.
 //   SCRUB arm (2026-08-13, the waveform's LOWER half): ONE scrub act at the
 //   press column and NOTHING ELSE — the act the lower half once ran at the
@@ -6126,7 +6102,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
         // the release knows it stayed a click). THE ACT IS PRESS-TIME: a
         // plain-armed press runs its act even with ctrl down at the release
         // (press-time modifiers arm the act — the statement at
-        // AppState::ChromePress::shift).
+        // AppState::ChromePress::ctrl; architect 2026-10-30).
         const bool moved     = app.scroll_drag.moved;
         const bool history   = app.scroll_drag.history;
         const bool seed_lane = app.scroll_drag.seed_empty_lane;
@@ -7011,7 +6987,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // WITH A CARRIED CTRL IT COMPOSES ONLY WHERE THE PAIR IS ADMITTED
         // (redesign_button_shift_admits_with, which asks
         // redesign_button_ctrl_shift_admits under a carried ctrl; architect
-        // 2026-09-26) — the band gate's pair rule. THE WALK IS WHERE IT
+        // 2026-09-26) — the pair's own admission. THE WALK IS WHERE IT
         // BITES: the S Pen's side button held through a long press on it
         // carries ctrl, the hold adds shift, and the lift dispatches
         // Ctrl+Shift+Tab, the paired march — the pen's road to it, the tab
@@ -7246,16 +7222,17 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //
 // THE ACTS, all pure navigation:
 //   * a PLAIN press on the NAVIGATION SURFACE arms the mode's own PENDING
-//     CLICK / GRAB-PAN (arm_nav_press with the history flag): nothing at
+//     CLICK (arm_nav_press with the history flag): nothing at
 //     press; a motionless release runs THE MODE'S LAND — clear the mode focus
 //     + selection (the deselect's mode analog, through the one pair clearer),
 //     seat the playhead at the press column (run_nav_click_act's history arm — the
 //     live recipe through the shared placement body, whose play stop has
-//     nothing to stop in the silent view); a crossed drag is the captured pan, which moves no
-//     playhead and clears nothing. The ruler and the empty lane stretches
+//     nothing to stop in the silent view); a crossed press runs nothing,
+//     moving no playhead and clearing nothing (the pan is the touch layer's,
+//     architect 2026-10-30). The ruler and the empty lane stretches
 //     take the same pending as PLACEMENT SURFACES (arm_placement_press,
 //     2026-09-25), so their motionless clicks land the playhead and a drag
-//     there does nothing.
+//     there does nothing but the ruler's head drag.
 //   * a DOUBLE-CLICK anywhere on the TRIM BAR band FRAMES THE TRIM SPAN — the
 //     span that band is displaying, the tab's own window in here as everywhere
 //     else since 2026-08-18 — through the LIVE band's own framing owner

@@ -378,11 +378,6 @@ public:
     // counter to clear the fd and then invokes the registered callback.
     void set_worker_completion_fd(int fd, std::function<void()> on_event);
 
-    // THE POINTER'S NOTIONAL POSITION (surface x, px). Contract at
-    // GuiInputCore::notional_pointer_x, input_core.h: the finger's
-    // translation and the pen's hover write it through the core.
-    double notional_pointer_x() const;
-
     // The GuiWaveformWorker's completion eventfd; same shape as the async
     // renderer's above.
     void set_waveform_worker_completion_fd(int fd, std::function<void()> on_event);

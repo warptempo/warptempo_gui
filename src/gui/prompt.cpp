@@ -55,23 +55,24 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     viewport.invalidate_all();
 }
 
-// THE REVERT CONFIRMATION (architect 2026-09-13): a dirty session's File →
-// Revert asks one question, and it is a discard-only one because a revert
+// THE REVERT CONFIRMATION (architect 2026-09-13): a dirty session's Revert
+// (Open Project's long press) asks one question, and it is a discard-only one because a revert
 // never saves — Save / Discard / Cancel would offer an answer the act does not
 // have. OK / Cancel, Cancel LAST as the escape sentinel on every prompt, and
 // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (PromptInitialFocus::
-// FirstButton), so a bare Enter answers OK — the load confirmation's default
+// FirstButton), so OK is the painted lean — the load confirmation's default
 // exactly (architect 2026-09-13: "revert should be just the same as load …
 // both should use the same default, OK"): each of the confirmations — three
 // kinds, the load's, this one and the phase reset paste's (architect
 // 2026-09-16, "align — paste should open on the equivalent of OK") — is
-// already the deliberate second step of an explicit act (the File row or its
-// chord here, the `'` press there, the paste chord or its Edit row), so the
-// question itself is the safeguard and its Enter confirms the act the user
-// just asked for; the three-way Save / Discard / Cancel prompts above and
-// below are no such confirmation and keep the last button. OK's `o` is its
-// dispatch char alone, its press the answer (no key reaches a prompt,
-// architect 2026-10-30). The stop below is every prompt's own
+// already the deliberate second step of an explicit act (Open Project's long
+// press here, the Load in Place button there, Copy Phase Resets' barrel
+// press), so the question itself is the safeguard and its lean is the act
+// the user just asked for; the three-way Save / Discard / Cancel prompts
+// above and below are no such confirmation and keep the last button. The
+// focus is painted and read by nothing else: OK's `o` is its dispatch char
+// alone, its press the answer (no key reaches a prompt, architect
+// 2026-10-30). The stop below is every prompt's own
 // opening act, not something this one adds: playback stops and an A/B audition ends, exactly as
 // raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {

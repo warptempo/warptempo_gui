@@ -5166,14 +5166,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
 //   "Delete"), no letter underlined (architect 2026-10-30: the buttons are
 //   the prompt's one road, no keyboard standing under it). ONE BUTTON
-//   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this
-//   block's "no default face: this prompt system has no Enter answer, so
-//   every button is plain") — the LAST, the Escape sentinel, on every prompt
-//   but THE FOUR CONFIRMATION RAISES — the load's two, Revert's and,
-//   since 2026-09-16, the phase reset paste's — which are raised on their
-//   FIRST (PromptState's PromptInitialFocus owns the choice); Enter answers
-//   whichever it is, the assignment site is a few dozen lines into the body
-//   below and the whole supersession is at PromptState.
+//   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13) — the LAST, the
+//   Escape sentinel, on every prompt but THE FOUR CONFIRMATION RAISES — the
+//   load's two, Revert's and, since 2026-09-16, the phase reset paste's —
+//   which are raised on their FIRST (PromptState's PromptInitialFocus owns
+//   the choice); the face is the answer the question leans to and nothing
+//   reads it but this painter (architect 2026-10-30), the assignment site a
+//   few dozen lines into the body below, the rule at PromptState.
 //   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
 //   first row on the field, and Cancel alone flush right on the controls row,
@@ -6149,19 +6148,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
     }
 
-    // A PROMPT IS RAISED WITH PASSIVE FOCUS ON A BUTTON (architect 2026-08-13,
-    // the ruling that gave this prompt system an Enter answer — PromptState
-    // owns the supersession and the two facts that make it safe, the first of
-    // which is that the last button is always the ESCAPE SENTINEL). WHICH
-    // button is the RAISE'S OWN CHOICE (PromptInitialFocus, carried on the
-    // question since 2026-08-28): the last on every prompt but THE FOUR
-    // CONFIRMATION RAISES — the load's two, Revert's and, since
+    // A PROMPT IS RAISED WITH PASSIVE FOCUS ON A BUTTON (architect 2026-08-13;
+    // PAINTED AND READ BY NOTHING ELSE since 2026-10-30, the buttons the
+    // prompt's one road — PromptState owns the rule and the two facts behind
+    // it, the first of which is that the last button is always the ESCAPE
+    // SENTINEL). WHICH button is the RAISE'S OWN CHOICE (PromptInitialFocus,
+    // carried on the question since 2026-08-28): the last on every prompt but
+    // THE FOUR CONFIRMATION RAISES — the load's two, Revert's and, since
     // 2026-09-16, THE PHASE RESET PASTE'S — which ask for
     // their FIRST, each being already the deliberate second step of an
-    // explicit act, so its Enter confirms it.
-    // The load's one prompt body carries both `'` subjects (the player's entry
-    // and the `h` view's walk member), so the two roads answer Enter alike,
-    // and the revert and the phase reset paste answer it as they do; the two
+    // explicit act, so its face leans to OK.
+    // The load's one prompt body carries both subjects (the player's entry
+    // and the `h` view's walk member), so the two roads lean alike, and the
+    // revert and the phase reset paste lean as they do; the two
     // three-way Save / Discard / Cancel prompts, which confirm no act already
     // asked for, the render player's Delete and the pull's confirmation
     // (PromptInitialFocus owns why) are what keep the last button. This is the

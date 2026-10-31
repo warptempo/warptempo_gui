@@ -362,10 +362,11 @@ struct GuiRenderPlayer {
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.
     //
-    // ITS CAUSES, SIX CALL SITES (re-grepped 2026-10-01): the modal row's
-    // Close button; bare Esc and bare `l` in the mode's key router; the `l`
-    // toggle the icon row's Play renders button shares with it; the load
-    // road's success; the root's delete leaving no folder
+    // ITS CAUSES, SIX CALL SITES (re-grepped 2026-10-30): the modal row's
+    // Close button; bare `l` in the mode's key router, which the icon row's
+    // Play renders lift spells (the player's one chord, architect
+    // 2026-10-30); the `l` toggle's own close arm; the load road's success;
+    // the root's delete leaving no folder
     // (delete_batch_folders, architect 2026-10-01); and THE CLOSE ROAD — GuiPrompt::request_close, which
     // takes the mode down at its head, so the platform's close
     // (Back; main.cpp's set_on_close)
@@ -378,19 +379,20 @@ struct GuiRenderPlayer {
     // THE OPEN ACT on row `index` of the live listing: a folder row enters
     // it, a wav row plays from its start — the two kinds a listing carries
     // since the `..` row left it (2026-09-01). Its
-    // producers are the row click's motionless lift and Enter on the
-    // highlight, both through the overlay's one row-act fork.
+    // producers (re-grepped 2026-10-30) are the row tap's motionless lift,
+    // through the overlay's one row-act fork (folder_overlay_open_row), and
+    // the Play button's two row arms (play_button_act, below; the car's
+    // toggle reaching them past its LIVE arm).
     void open_row(int index);
-    // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE since the `..`
-    // row retired (2026-09-01), and THE CAR'S OWN PREVIOUS in both of its
-    // arms: car_previous() composes this body at the band's first row AT REST
-    // and at the folder's first FILE inside the previous-track window WHILE
-    // LIVE, so the act has FOUR roads on ONE body as re-greped 2026-09-15 (the
-    // button, Backspace, and car_previous()'s two arms). NEITHER BARE Up NOR
-    // BARE Home IS ONE OF THEM: the arrow is the
-    // plain band walk and the left skip is the previous-track act, and
-    // leaving a folder is the CAR'S act and the two listed roads' (the
-    // architect's reasons are at the router's Up arm and at car_previous()).
+    // One folder up — THE MODAL ROW'S UP BUTTON since the `..` row retired
+    // (2026-09-01), and THE CAR'S OWN PREVIOUS in both of its arms:
+    // car_previous() composes this body at the band's first row AT REST and
+    // at the folder's first FILE inside the previous-track window WHILE
+    // LIVE, so the act has THREE roads on ONE body as re-grepped 2026-10-30
+    // (the button and car_previous()'s two arms). The highlight pair is the
+    // plain band walk and the Home button the previous-track act, so leaving
+    // a folder is the Up button's act and the car's (the architect's reasons
+    // are at car_previous()).
     // A SILENT consumed no-op at the root, which is `tmp/` (the wall's one
     // owner is render_player_up_actionable, app_state.h, which the button's
     // face reads too). Past that wall it UNLOADS THE ITEM (unload_item) and
@@ -432,8 +434,9 @@ struct GuiRenderPlayer {
 
     // -- The transport ------------------------------------------------------
 
-    // THE PLAY BUTTON'S ACT (and Space's, and the car's toggle past its LIVE
-    // arm).
+    // THE PLAY BUTTON'S ACT (and the car's toggle past its LIVE arm; no key
+    // reaches it, the player's one chord being its opener's, architect
+    // 2026-10-30).
     // THE HIGHLIGHT LEADS AND THE TRANSPORT FOLLOWS (architect 2026-08-31,
     // narrowing the rule "it never reads the highlight, in any state" of two
     // days before). ONE FORK, in this order:
@@ -454,20 +457,19 @@ struct GuiRenderPlayer {
     //                (resume()'s end rule, architect 2026-10-26 ~23:55).
     //     IDLE    -> nothing.
     //
-    // THE THREE ROW ARMS RUN open_row, the row click's and Enter's own body,
-    // so the acts have ONE owner and this fork walks no listing of its own;
-    // the question "which row would Space open" is
-    // render_player_highlight_act_row (app_state.h), shared with the button's
-    // face and its glyph.
+    // THE THREE ROW ARMS RUN open_row, the row tap's own body, so the acts
+    // have ONE owner and this fork walks no listing of its own; the question
+    // "which row would Play open" is render_player_highlight_act_row
+    // (app_state.h), shared with the button's face and its glyph.
     // THE BUG THAT RULE ANSWERED CANNOT RETURN, which is what makes the
     // narrowing safe: it was a band left BEHIND the transport (architect
     // 2026-08-28 — a Next advanced the item but not the band, and the live
     // button then PLAYED the row still highlighted behind it instead of
     // pausing what sounded), and THE BAND FOLLOWS THE ITEM since 2026-08-28,
     // so a highlight anywhere else is one the user walked there deliberately.
-    // ENTER AND SPACE DIFFER IN EXACTLY ONE CASE: on the transport's own item
-    // with a session standing, Enter (the click act) restarts it from 0 while
-    // Space toggles it; everywhere else the two agree.
+    // THE ROW TAP AND PLAY DIFFER IN EXACTLY ONE CASE: on the transport's own
+    // item with a session standing, the row's tap (open_row) restarts it from
+    // 0 while Play toggles it; everywhere else the two agree.
     void play_button_act();
     // THE TRANSPORT'S OWN TOGGLE — play_button_act's tail PAST the highlight
     // fork, in a body of its own since 2026-08-31 (the round-B conversion). It

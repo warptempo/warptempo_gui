@@ -131,7 +131,9 @@
 // render player (the model for standing), PAUSING a live soundtrack as the
 // render player's Delete question pauses its transport, and it opens with
 // CANCEL FOCUSED as that question does (a destructive act with no undo behind
-// it), so a bare Enter cancels. The three are AUTHORING and grey on a
+// it), so Cancel is the painted lean and only OK's own press resets (the
+// buttons are a prompt's one road, architect 2026-10-30). The three are
+// AUTHORING and grey on a
 // read-only tab and under grid iterations (score_viewer_range_locked);
 // viewing, paging, playing and the position's write are not, and stay live
 // under both. The shown page is always inside the range, so START and END can

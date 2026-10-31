@@ -1250,35 +1250,21 @@ struct GuiInputHandler {
     // collapses the selection — no selection handles, no magnifier, no
     // toolbar and no free-form sweep by finger. These three are the GUI's
     // answer to the
-    // platform's caret trio. They arm no drag record and nothing joins
-    // any_pointer_gesture_active; what they DO keep is ONE NUMBER, the
-    // EDITING SESSION THE STREAM BEGAN ON (AppState::touch_caret_session,
-    // stamped from text_editor::State::session at the begin), and the update
-    // and the end are NO-OPS unless the editor active right now is that same
-    // session. The caret phase is deliberately outside
-    // any_pointer_gesture_active; since the hardware keyboard closed
-    // (architect 2026-10-30) no road commits or opens an editor while the
-    // finger is down — the touch window has one owner and the on-screen
-    // keyboard needs a touch of its own — so the compare answers true on
-    // every delivered frame, and the identity is the stream's record of the
-    // editor it belongs to. Were the editor closed under the stream, the
-    // rest of it would be a no-op WHATEVER opened
-    // behind it — the session id names one raise of one surface for the life
-    // of the process (text_editor::next_session_id), so a reopen of the SAME
-    // editor on the same marker is a different stream too. The end clears
-    // the record on every road, its own and the hard ends' alike.
+    // platform's caret trio. They arm no drag record, keep no state of their
+    // own and nothing joins any_pointer_gesture_active: each acts on the
+    // editor active now, which IS the editor the stream began on (architect
+    // 2026-10-30: no road commits or opens an editor while the finger is
+    // down — the touch window has one owner and the on-screen keyboard needs
+    // a touch of its own), and with no editor active each is a no-op.
     //
-    // begin_touch_caret_drag(x, y): the down point — record the session,
-    //                               clear the double-click
+    // begin_touch_caret_drag(x, y): the down point — clear the double-click
     // seed (a caret drag is motion, and motion between two taps breaks a
     // candidate; the stream's own end never seeds), drop any selection, seat
     // the caret under x through THE ONE POINTER SEAT (set_editor_caret_from_x,
     // which restarts the blink) and damage the editor's surface.
     // update_touch_caret_drag(x, y): the same seat per delivered frame,
-    // nothing selecting — the I-beam follows the finger; a foreign session
-    // (or none) is a no-op.
-    // end_touch_caret_drag(): the record is cleared FIRST, so a foreign
-    // session leaves nothing behind; then THE DRAIN RULE — the caret stays where it was
+    // nothing selecting — the I-beam follows the finger.
+    // end_touch_caret_drag(): THE DRAIN RULE — the caret stays where it was
     // last seated, nothing selects, nothing commits, nothing seeds, the
     // editor stays open and Enter remains its one commit route; the body
     // restarts the blink so the resting caret is lit the instant the finger
@@ -1830,22 +1816,16 @@ struct GuiInputHandler {
                        bool scrub_release);
 
     // THE PLACEMENT LANES' PRESS (architect 2026-09-25: the ruler and the
-    // marker lane left the navigation surface): arm_nav_press
-    // with placement_only set, so the motionless release runs the click act
-    // (and the empty-lane seed when `seed_empty_lane`) and a drag does
-    // nothing (contract at ScrollDragState::placement_only, app_state.h) —
-    // but for the HEAD DRAG
+    // marker lane left the navigation surface): arm_nav_press, so the
+    // motionless release runs the click act (and the empty-lane seed when
+    // `seed_empty_lane`) and a crossed press runs nothing, the no-op every
+    // pending's crossing is (architect 2026-10-30; contract at
+    // ScrollDragState, app_state.h) — but for the HEAD DRAG
     // (`head_drag`, a plain press on the playhead's head as painted, architect
     // 2026-10-09 ~17:40): past the slop each motion runs the click act at the
     // pointer's column (ScrollDragState::head_drag).
     void arm_placement_press(int x, int y, bool history, bool seed_empty_lane,
                              bool head_drag = false);
-
-    // THE POINTER'S NOTIONAL COLUMN — its clamped position in waveform
-    // columns, A PURE PROJECTION of the platform's notional pointer position,
-    // held nowhere and computed at each read; the contract is at the
-    // definition (input_pointer.cpp) and at GuiInputCore::notional_pointer_x_.
-    double nav_notional_col() const;
 
     // THE ONE-FINGER ZOOM'S LEVEL RULE — `zoom_level - dx/rate` at the
     // gui_scale-resolved rate (nav_zoom_px_per_level(), whose scaling argument
@@ -4053,8 +4033,9 @@ private:
     // deliverable left the listings (the reasoning is at the raise) — and
     // otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
-    // the highlighted entry — the one prompt raised with its FIRST button
-    // focused, so a bare Enter answers OK (the reason is at the raise). The
+    // the highlighted entry — raised with its FIRST button focused, so OK is
+    // the painted lean (the reason is at the raise; the buttons are the
+    // prompt's one road, architect 2026-10-30). The
     // prompt's OK runs confirm_load_in_place's player arm (the shared act
     // load_render_entry_in_place, WHICH SAYS ITS OWN REFUSAL on a card and on
     // stderr since 2026-08-30 — the caller's vague "Load refused" is gone —
@@ -4064,8 +4045,9 @@ private:
     // the record is at load_render_entry_in_place, which has this one caller.
     void render_player_load_in_place();
     // THE `h` VIEW'S OWN LOAD ROAD (architect 2026-08-29, retiring the one-day
-    // history picker): bare `'` there raises THE SAME PROMPT on the VIEWED
-    // walk member — "Load '<member label>' in place?", Enter answering OK —
+    // history picker): bare `'` there (the view's Load in Place button) raises
+    // THE SAME PROMPT on the VIEWED walk member — "Load '<member label>' in
+    // place?", OK the painted lean —
     // and the OK runs that walk's own act (the fork is at
     // confirm_load_in_place, the one site of it). Its guards are the picker's
     // former ones: the mode standing, no prompt or editor, no player and no

@@ -8,8 +8,7 @@
 // GuiInputCore: the product's PLATFORM-NEUTRAL INPUT POLICY, in one object.
 // It owns the touch translation state machine, the key-repeat synthesis, the
 // ctrl bit, the logical pointer (position, focus and the touch translation's
-// left hold), the pointer's notional x, and the one fractional->pixel
-// conversion the whole product converts through (containing_pixel below).
+// left hold), and the one fractional->pixel conversion the whole product converts through (containing_pixel below).
 //
 // THE PEN AND THE FINGER ARE THE WHOLE INPUT (architect 2026-10-30: the
 // hardware keyboard and the mouse are closed on the tablet, the one platform —
@@ -175,14 +174,6 @@ public:
     // none of them names a protocol type. The backend decodes units, protocol
     // enums and keymap state on its own side and calls in.
 
-    // THE WINDOW'S CURRENT WIDTH IN PIXELS, told by the backend at startup and
-    // at every resize. Its ONE consumer is the notional position's clamp
-    // (note_notional_pointer_x), which is why the HEIGHT is deliberately absent:
-    // there is no notional y to clamp (the reason is recorded at
-    // notional_pointer_x_), and a field nothing reads is a field that goes
-    // stale unnoticed.
-    void set_surface_width(int width_px);
-
     // ONE KEY EVENT, already translated. `key` is the GuiKey the backend's own
     // keymap translation produced — an X11 keysym, ASCII case-folded, with
     // standalone modifier keysyms and F1..F35 already dropped — or 0 when this
@@ -313,8 +304,8 @@ public:
 
     // THE PLATFORM'S ADVERTISED KEY-REPEAT INTERVAL, in milliseconds (the
     // field's contract is at repeat_period_us_). A platform truth handed out
-    // the way notional_pointer_x() is: the GUI holds this class by reference
-    // and reads it directly, no hook.
+    // as a query: the GUI holds this class by reference and reads it
+    // directly, no hook.
     //
     // ITS ONE APPLICATION CONSUMER is the CHROME BUTTON HOLD-REPEAT
     // (tick_chrome_press_repeat, input_pointer.cpp), which paces a held
@@ -641,17 +632,6 @@ public:
         return touch_owner_tool_;
     }
 
-
-
-    // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
-    // ANSWER TO "WHERE IS THE POINTER?", live for the whole process. The full
-    // contract is at notional_pointer_x_ below. The GUI's one projection of it
-    // into waveform columns is nav_notional_col (input_pointer.cpp) — the
-    // projection is the GUI's because the platform knows nothing about the
-    // waveform; the POSITION is the platform's because that is where the
-    // events are.
-    double notional_pointer_x() const { return notional_pointer_x_; }
-
     // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
     // callback is built from: the tracked ctrl bit and the touch translation's
     // left hold; shift and alt are never raised here (set_ctrl's contract).
@@ -703,15 +683,6 @@ private:
     // THE BACKEND'S CODEPOINT REFILL (contract at set_codepoint_probe): asked
     // once per synthesized repeat, with the held key's stable code.
     std::function<uint32_t(uint32_t)> codepoint_probe_;
-
-    // THE POINTER'S NOTIONAL POSITION, live for the whole process:
-    // surface-local x, CLAMPED INTO THE SURFACE AT EVERY WRITE, so it is
-    // always a position inside the window. ITS WRITERS ARE EVERY DELIVERY THAT
-    // CARRIES A REAL POSITION, through the one funnel deliver_motion
-    // (pointer_enter, the pen's hover motion, and all four touch-translation
-    // deliveries), and its reader is notional_pointer_x(). THERE IS NO
-    // NOTIONAL Y: nothing reads a vertical position here.
-    double notional_pointer_x_ = 0.0;
 
     // THE HOVERING PEN'S FOCUS AND LAST-KNOWN POSITION. The backend hands over
     // the pen's surface-local hover position as a fractional DOUBLE and
@@ -1139,10 +1110,6 @@ private:
     // Positions moved this touch frame (compute + deliver at the frame).
     bool       touch_nav_frame_dirty_ = false;
 
-    // The window's width in pixels, told by the backend (contract at
-    // set_surface_width). Read only by the notional position's clamp.
-    int surface_width_ = 0;
-
     // -- Callbacks --
     KeyCallback          on_key_;
     KeyReleaseCallback   on_key_release_;
@@ -1185,19 +1152,13 @@ private:
     void maybe_fire_repeat();
 
     // DELIVER A MOTION THAT CARRIES A REAL POINTER POSITION — the one funnel
-    // for every such delivery, and therefore the one place the pointer's
-    // notional position is kept current (contract at notional_pointer_x_).
-    // Its callers are pointer_enter, the pen's hover pointer_motion, and the
-    // FOUR touch-translation deliveries (the resolution's entry motion and
-    // its queued motion, the touch frame flush, and the translation end's
+    // for every such delivery, each built with current_mods(). Its callers
+    // are pointer_enter, the pen's hover pointer_motion, and the FOUR
+    // touch-translation deliveries (the resolution's entry motion and its
+    // queued motion, the touch frame flush, and the translation end's
     // re-delivery at the hovering pen's spot) — touch is the pointer by
-    // ruling, and its deliveries move the notional position for the same
-    // reason the pen's hover does.
+    // ruling, so its deliveries are the pen's hover's kind.
     void deliver_motion(int x, int y);
-
-    // Clamp x into the surface and store it as the pointer's notional
-    // position — the ONE clamp body, so every source clamps identically.
-    void note_notional_pointer_x(double x);
 
     // -- The touch machine's internals (the phase machine and the edge
     // inventory are at the touch state block above) --

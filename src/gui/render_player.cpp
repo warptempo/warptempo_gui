@@ -797,11 +797,11 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
 }
 
 void GuiRenderPlayer::play_button_act() {
-    // THE HIGHLIGHT LEADS (architect 2026-08-31 — SPACE IS HIGHLIGHT-
+    // THE HIGHLIGHT LEADS (architect 2026-08-31 — PLAY IS HIGHLIGHT-
     // DRIVEN IN THE PLAYER, narrowing the rule "the Play button never reads the
     // highlight, in any state" of two days before). A folder or
     // a wav that is NOT the transport's item under the band is somewhere to
-    // GO, and Space goes there whatever is playing; the transport's own item
+    // GO, and Play goes there whatever is playing; the transport's own item
     // and an empty band fall through to transport_toggle_act below — the tail
     // this body used to hold inline, which the IMPOSED INTERRUPTS reach
     // WITHOUT this fork (the reasons are at that body). THE CAR'S TOGGLE
@@ -818,12 +818,12 @@ void GuiRenderPlayer::play_button_act() {
     // somewhere the user WALKED it, deliberately, and going there is what he
     // asked for.
     //
-    // ONE ACTIVATION ROAD: open_row is the row click's and Enter's own body,
-    // so the three row acts have one owner and this fork adds no second walk
-    // of the listing. THE RESIDUAL DIFFERENCE BETWEEN ENTER AND SPACE is one
+    // ONE ACTIVATION ROAD: open_row is the row tap's own body, so the three
+    // row acts have one owner and this fork adds no second walk of the
+    // listing. THE RESIDUAL DIFFERENCE BETWEEN THE ROW TAP AND PLAY is one
     // case and it is deliberate: on the TRANSPORT'S OWN ITEM with a session
-    // standing, Enter (the click act) restarts it from 0 and Space toggles it
-    // — everywhere else the two keys agree exactly.
+    // standing, the tap restarts it from 0 and Play toggles it — everywhere
+    // else the two agree exactly.
     if (const int row = render_player_highlight_act_row(app); row >= 0) {
         open_row(row);
         return;
