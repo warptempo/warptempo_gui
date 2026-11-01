@@ -135,13 +135,14 @@ constexpr const char* kCanvasFragmentShader =
 //     them.
 //   * THE COLUMNS: a base at subcolumn t reads the columns of the
 //     subcolumns t − 2 .. t + 2 (its own and the nearer neighbor's, whose
-//     nearest subcolumn is within two), and the full path's bases span the
-//     subcolumns 4i − 4 − GROW .. 4i + 7 + GROW (the inner's reach), so it
-//     texelFetches the columns i − D .. i + D, D = (GROW + 9) / 4 =
-//     ceil((GROW + 6) / 4) (2 at GROW 0 .. 2, 3 at 3 .. 6, 4 at 7 and 8;
+//     nearest subcolumn is within two), and the inner's bases span the
+//     subcolumns 4i − 4 − GROW .. 4i + 7 + GROW (its erosion's reach), so
+//     its road texelFetches the columns i − D .. i + D, D = (GROW + 9) / 4
+//     = ceil((GROW + 6) / 4) (2 at GROW 0 .. 2, 3 at 3 .. 6, 4 at 7 and 8;
 //     col[0 .. 8], the own column at 4, each clamped into the record's
-//     width); the fast paths fetch i − L .. i + L first (L below) and the
-//     rest are fetched only past them.
+//     width); every pixel fetches i − L .. i + L first (L below), which
+//     serve the fast paths and the outer's bases whole, and the rest are
+//     fetched only on a road that runs the inner.
 //   * THE BASE of subcolumn j of a column (base_bits): its bar's subrows
 //     [T, B − 1] UNION the contour's — the contour's top at the subcolumn's
 //     center interpolates this column's T and the NEARER neighbor's in
@@ -201,30 +202,69 @@ constexpr const char* kCanvasFragmentShader =
 //     or 1) the factors are exactly 1 and 0 and the word lands exactly;
 //     where nothing covers (n_o = 0) the fragment discards and the plate
 //     stays transparent there.
-//   * TWO EXACT FAST PATHS, each a provable subset of the rule above:
-//     (a) DISCARD where no bar can reach the pixel — its subrows lie more
-//     than GROW subrows outside the hull of the outer bars of columns
-//     i − L .. i + L and outside the hull of their present inner bars, L =
-//     (GROW + 5) / 4 (the dilation at the pixel's four subcolumns reads the
-//     bases within GROW, 4i − GROW .. 4i + 3 + GROW, and a base at
-//     subcolumn t reads the columns of t − 2 .. t + 2, so the hull's
-//     columns are those of the subcolumns 4i − GROW − 2 .. 4i + 5 + GROW:
-//     i − ceil((GROW + 2) / 4) .. i + floor((GROW + 5) / 4), the one L both
-//     sides, 1 at GROW 0 .. 2, 2 at 3 .. 6, 3 at 7 and 8; the contour
-//     between two columns lies within their two extents, and the dilation
-//     reaches GROW subrows); (b) THE CORE — the pixel's subrows inside its
-//     own column's outer bar give cov_o = 1 (the base is inside the
-//     dilated), and cov_ol = 0 when no inner is present among i − L .. i + L
-//     (n_i = 0), or when the square of four subrows and four subcolumns
-//     round the pixel lies inside the own and both in-record neighbors'
-//     inner bars (the square contains the erosion's disc of radius 4; a
-//     neighbor beyond the edge counts as set): the ink is written opaque.
-//   The whole — the window, the level-indexed schemes, the fast paths — is
-//   modeled bit for bit in Python against the brief's forward model
-//   (tmp/grow/make_grow_mag.py's mask / morph / down at SS = 4) at every
-//   grow 0 .. 8, 2026-10-31; at GROW 2 the base rule, the disc shapes and
-//   the composite are the 2026-10-30 shader's (2f26b882), so its picture is
-//   that build's byte for byte.
+//   * THE EXACT FAST PATHS (2026-10-31 night: smooth coarse zoom and pan
+//     with the magnify lamp lit outranks everything but the picture's
+//     bytes, which these paths leave untouched — each is a provable subset
+//     of the rule above, every pixel's word the rule's byte for byte at
+//     every grow). Every pixel first fetches the columns i − L .. i + L, L
+//     = (GROW + 5) / 4: the dilation at the pixel's four subcolumns reads
+//     the bases within GROW, 4i − GROW .. 4i + 3 + GROW, and a base at
+//     subcolumn t reads the columns of t − 2 .. t + 2, so the columns
+//     reached are those of the subcolumns 4i − GROW − 2 .. 4i + 5 + GROW,
+//     i − ceil((GROW + 2) / 4) .. i + floor((GROW + 5) / 4), the one L
+//     both sides (1 at GROW 0 .. 2, 2 at 3 .. 6, 3 at 7 and 8). THE REACH
+//     LEMMA under them all: a base lies within its own and its neighbor's
+//     bars (the contour between two columns lies within their two
+//     extents), a dilation grows it by at most GROW subrows and the window
+//     only ever drops bits, so where the pixel's subrows lie more than GROW
+//     subrows outside the hull of the outer bars of i − L .. i + L
+//     (reach_o false) no dilated outer bit is at the pixel, and outside the
+//     hull of their present inner bars (reach_i false; the hull empty, so
+//     reach_i false, where no inner is present) no dilated inner bit is —
+//     `outside` and the all-ones words never touch the pixel's own
+//     subrows, which lie inside the band and the record — so n_i = n_t = 0.
+//     In the arm's order:
+//     (a) DISCARD when neither reaches: n_o = 0.
+//     (b) THE INNER SQUARE, the ink opaque: the square of four subrows and
+//     four subcolumns round the pixel inside the own and both in-record
+//     neighbors' inner bars (a neighbor beyond the edge counts as set)
+//     contains the erosion's disc of radius 4, so n_t = n_i = 16 and n_o =
+//     16 — whether or not the own outer bar holds the pixel (a column
+//     wholly on one side of zero has its outer pushed outward with a gap,
+//     render.h's "THE OUTER IS A DILATION ABOUT THE CENTRE ROW").
+//     (c) THE FULL OUTER: where the own outer bar grown vertically by GROW
+//     holds the pixel's four subrows, the outer's sixteen bits are set, wo
+//     = 0xFFFF with no base or dilation computed — the disc's dx = 0 column
+//     stands g(0) = GROW rows, so each own subcolumn's dilation holds its
+//     base grown by GROW, and the own bar's subrows are in every own
+//     subcolumn's base (the outer is always present, bot >= top + 1).
+//     (d) THE CORE, the ink opaque: the full outer with reach_i false,
+//     cov_o = 1 by (c) and cov_ol = 0 by the lemma. It holds the dark
+//     lamp's whole solid, and it exists for the gap the 2026-10-31 night
+//     consult found: with the lamp lit every solid pixel between the
+//     outer's edge and the inner's square — on the magnified coarse picture
+//     a large area, the outer levelled and expanded toward the lane edge,
+//     the inner at most half of it — took the full path though its answer
+//     is the ink.
+//     (e) THE ROADS past them: reach_i false, the outer's bases and
+//     dilation alone, wi = wt = 0 (the lemma: the inner's words would be
+//     zero) and the columns past L unfetched (they serve the inner's halo
+//     alone); reach_o false, the inner alone with wo starting at 0 (the
+//     lemma for the outer: the outer's word would be zero, and full_o
+//     implies reach_o); both reaching, both, the outer's work replaced by
+//     (c) where the full outer holds. Every road ends in the one composite,
+//     and the ink written opaque is the composite's own result at cov_o =
+//     1, cov_ol = 0 (x · 1.0 = x, x + 0.0 = x and 1 − 0 · 1 = 1 in IEEE).
+//     A road is a branch on reach_o, reach_i and full_o, uniform across a
+//     column's run of pixels in practice but no constant of the source: the
+//     specialization rule holds inside every road.
+//   The window and the level-indexed schemes are modeled bit for bit in
+//   Python against the brief's forward model (tmp/grow/make_grow_mag.py's
+//   mask / morph / down at SS = 4) at every grow 0 .. 8, 2026-10-31; the
+//   fast paths, each a subset of the rule, change no result the model
+//   computes. At GROW 2 the base rule, the disc shapes and the composite
+//   are the 2026-10-30 shader's (2f26b882), so its picture is that build's
+//   byte for byte.
 // A word is cairo's 0xAARRGGBB with A = 255, written as (R, G, B, 1) at
 // k / 255 per channel for every record but the plate's fringe, which the
 // RGBA8 framebuffer stores as k — the texture triangle's own channel order.
@@ -378,8 +418,9 @@ constexpr const char* kListFragmentShader =
     "        int i = px - v_rect.x;\n"
     "        int y = py - v_param.z;\n"
     "        int k0 = 4 * y - PIX0;\n"
-    // The columns' reach (the head's columns paragraph): the fast paths read
-    // i − L .. i + L, the full path i − D .. i + D; col[4] is the own.
+    // The columns' reach (the head's columns paragraph): the fast paths and
+    // the outer read i − L .. i + L, the inner's road i − D .. i + D; col[4]
+    // is the own.
     "        const int L = (GROW + 5) / 4;\n"
     "        const int D = (GROW + 9) / 4;\n"
     "        ivec4 col[9];\n"
@@ -397,83 +438,92 @@ constexpr const char* kListFragmentShader =
     "        int bmax_o = -(1 << 20);\n"
     "        int tmin_i = 1 << 20;\n"
     "        int bmax_i = -(1 << 20);\n"
-    "        bool any_lit = false;\n"
     "        UNROLL for (int d = 4 - L; d <= 4 + L; ++d) {\n"
     "            tmin_o = min(tmin_o, col[d].x);\n"
     "            bmax_o = max(bmax_o, col[d].y);\n"
     "            if (lit[d]) {\n"
-    "                any_lit = true;\n"
     "                tmin_i = min(tmin_i, col[d].z);\n"
     "                bmax_i = max(bmax_i, col[d].w);\n"
     "            }\n"
     "        }\n"
     "        bool reach_o = yhi >= tmin_o - GROW && ylo <= bmax_o - 1 + GROW;\n"
     "        bool reach_i = yhi >= tmin_i - GROW && ylo <= bmax_i - 1 + GROW;\n"
+    // The fast paths in the head's order: (a) the discard; (b) the inner
+    // square and (d) the core, the ink opaque; (c) the full outer.
     "        if (!reach_o && !reach_i) discard;\n"
-    "        if (col[4].x <= ylo && yhi <= col[4].y - 1) {\n"
-    "            bool core = !any_lit;\n"
-    "            if (!core) {\n"
-    "                core = true;\n"
-    "                UNROLL for (int d = 3; d <= 5; ++d) {\n"
-    "                    if (inp[d])\n"
-    "                        core = core && lit[d] && col[d].z <= ylo - 4 &&\n"
-    "                               yhi + 4 <= col[d].w - 1;\n"
-    "                }\n"
-    "            }\n"
-    "            if (core) {\n"
-    "                o_color = vec4(word_rgb(v_words.x), 1.0);\n"
-    "                return;\n"
-    "            }\n"
+    "        bool square = true;\n"
+    "        UNROLL for (int d = 3; d <= 5; ++d) {\n"
+    "            if (inp[d])\n"
+    "                square = square && lit[d] && col[d].z <= ylo - 4 &&\n"
+    "                         yhi + 4 <= col[d].w - 1;\n"
     "        }\n"
-    "        UNROLL for (int d = 4 - D; d <= 4 + D; ++d) {\n"
-    "            if (d < 4 - L || d > 4 + L) {\n"
-    "                int c = i + d - 4;\n"
-    "                inp[d] = c >= 0 && c < W;\n"
-    "                col[d] = texelFetch(u_columns, ivec2(clamp(c, 0, W - 1), v_param.y), 0);\n"
-    "                lit[d] = inp[d] && col[d].w > col[d].z;\n"
-    "            }\n"
+    "        if (square) {\n"
+    "            o_color = vec4(word_rgb(v_words.x), 1.0);\n"
+    "            return;\n"
     "        }\n"
+    "        bool full_o = col[4].x - GROW <= ylo && yhi <= col[4].y - 1 + GROW;\n"
+    "        if (full_o && !reach_i) {\n"
+    "            o_color = vec4(word_rgb(v_words.x), 1.0);\n"
+    "            return;\n"
+    "        }\n"
+    // (e) The roads: the outer's work where it reaches and the full outer
+    // does not hold (full_o implies reach_o), the inner's where it reaches;
+    // every road ends in the one composite below.
+    "        uint wo = full_o ? 0xFFFFu : 0u;\n"
+    "        uint wi = 0u;\n"
+    "        uint wt = 0u;\n"
+    "        if (reach_o && !full_o) {\n"
     // The outer's bases over 4i − GROW .. 4i + 3 + GROW (sp the offset from
     // 4i; the column d and its subcolumn j of sp + 16, every operand
-    // non-negative), its dilation at the pixel's four subcolumns (bo's
-    // index m + GROW) folded at once into the count word wo (four pixel
-    // nibbles).
-    "        uint wo = 0u;\n"
-    "        UNROLL for (int t = 0; t < NO; ++t) {\n"
-    "            int sp = t - GROW;\n"
-    "            int d = (sp + 16) / 4;\n"
-    "            int j = (sp + 16) & 3;\n"
-    "            int e = d + ((j < 2) ? -1 : 1);\n"
-    "            bo[t] = inp[d] ? base_bits(col[d].xy, inp[e] ? col[e].xy : col[d].xy, j, k0)\n"
-    "                           : 0u;\n"
+    // non-negative; every d and e within 4 − L .. 4 + L), its dilation at
+    // the pixel's four subcolumns (bo's index m + GROW) folded at once into
+    // the count word wo (four pixel nibbles).
+    "            UNROLL for (int t = 0; t < NO; ++t) {\n"
+    "                int sp = t - GROW;\n"
+    "                int d = (sp + 16) / 4;\n"
+    "                int j = (sp + 16) & 3;\n"
+    "                int e = d + ((j < 2) ? -1 : 1);\n"
+    "                bo[t] = inp[d] ? base_bits(col[d].xy, inp[e] ? col[e].xy : col[d].xy, j, k0)\n"
+    "                               : 0u;\n"
+    "            }\n"
+    "            UNROLL for (int m = 0; m < 4; ++m)\n"
+    "                wo |= pix4(dilate_o(m + GROW)) << (4 * m);\n"
     "        }\n"
-    "        UNROLL for (int m = 0; m < 4; ++m)\n"
-    "            wo |= pix4(dilate_o(m + GROW)) << (4 * m);\n"
+    "        if (reach_i) {\n"
+    // The columns past L, the inner's erosion halo: fetched on this road
+    // alone.
+    "            UNROLL for (int d = 4 - D; d <= 4 + D; ++d) {\n"
+    "                if (d < 4 - L || d > 4 + L) {\n"
+    "                    int c = i + d - 4;\n"
+    "                    inp[d] = c >= 0 && c < W;\n"
+    "                    col[d] = texelFetch(u_columns, ivec2(clamp(c, 0, W - 1), v_param.y), 0);\n"
+    "                    lit[d] = inp[d] && col[d].w > col[d].z;\n"
+    "                }\n"
+    "            }\n"
     // The inner's bases over 4i − 4 − GROW .. 4i + 7 + GROW, dilated into
     // mi over 4i − 4 .. 4i + 7 (bi's index q + GROW), the outside set
     // beyond the band's rows and the record's side edges.
-    "        UNROLL for (int t = 0; t < NI; ++t) {\n"
-    "            int sp = t - 4 - GROW;\n"
-    "            int d = (sp + 16) / 4;\n"
-    "            int j = (sp + 16) & 3;\n"
-    "            int e = d + ((j < 2) ? -1 : 1);\n"
-    "            bi[t] = lit[d] ? base_bits(col[d].zw, lit[e] ? col[e].zw : col[d].zw, j, k0)\n"
-    "                           : 0u;\n"
-    "        }\n"
-    "        int band_lo = 4 * (v_rect.y - v_param.z);\n"
-    "        int band_hi = 4 * (v_rect.y + v_rect.w - v_param.z);\n"
-    "        uint outside = range_bits(0, band_lo - 1 - k0) | range_bits(band_hi - k0, 31);\n"
-    "        UNROLL for (int q = 0; q < 12; ++q) {\n"
-    "            int s = 4 * i - 4 + q;\n"
-    "            mi[q] = (s >= 0 && s < 4 * W) ? (dilate_i(q + GROW) | outside) : 0xFFFFFFFFu;\n"
-    "        }\n"
-    "        uint wi = 0u;\n"
-    "        uint wt = 0u;\n"
-    "        UNROLL for (int m = 0; m < 4; ++m) {\n"
-    "            uint i4 = pix4(mi[4 + m]);\n"
-    "            wo |= i4 << (4 * m);\n"
-    "            wi |= i4 << (4 * m);\n"
-    "            wt |= pix4(erode(4 + m)) << (4 * m);\n"
+    "            UNROLL for (int t = 0; t < NI; ++t) {\n"
+    "                int sp = t - 4 - GROW;\n"
+    "                int d = (sp + 16) / 4;\n"
+    "                int j = (sp + 16) & 3;\n"
+    "                int e = d + ((j < 2) ? -1 : 1);\n"
+    "                bi[t] = lit[d] ? base_bits(col[d].zw, lit[e] ? col[e].zw : col[d].zw, j, k0)\n"
+    "                               : 0u;\n"
+    "            }\n"
+    "            int band_lo = 4 * (v_rect.y - v_param.z);\n"
+    "            int band_hi = 4 * (v_rect.y + v_rect.w - v_param.z);\n"
+    "            uint outside = range_bits(0, band_lo - 1 - k0) | range_bits(band_hi - k0, 31);\n"
+    "            UNROLL for (int q = 0; q < 12; ++q) {\n"
+    "                int s = 4 * i - 4 + q;\n"
+    "                mi[q] = (s >= 0 && s < 4 * W) ? (dilate_i(q + GROW) | outside) : 0xFFFFFFFFu;\n"
+    "            }\n"
+    "            UNROLL for (int m = 0; m < 4; ++m) {\n"
+    "                uint i4 = pix4(mi[4 + m]);\n"
+    "                wo |= i4 << (4 * m);\n"
+    "                wi |= i4 << (4 * m);\n"
+    "                wt |= pix4(erode(4 + m)) << (4 * m);\n"
+    "            }\n"
     "        }\n"
     "        int n_o = pop16(wo);\n"
     "        int n_i = pop16(wi);\n"
