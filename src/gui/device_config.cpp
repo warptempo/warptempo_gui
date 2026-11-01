@@ -20,7 +20,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (FOURTEEN keys since 2026-10-31, the
+// REQUIRED SET, every one of them (FIFTEEN keys since 2026-10-31 night, the
+// project voice's level `audio_level` placed before the noise's three;
+// FOURTEEN that day, the
 // plate's grow `waveform_grow` placed after `true_colors`; THIRTEEN
 // 2026-10-30, `role`
 // retired with the laptop GUI — one device, no mirror; FOURTEEN 2026-10-29
@@ -75,8 +77,13 @@ namespace {
 // scaling concession (device_config.h's head), so it stands among the
 // permanent keys and not with the tuning keys at the end.
 //
+// THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night): `audio_level`
+// FOLLOWS `waveform_grow` and stands immediately BEFORE the noise's three —
+// "audio out versus noise", the two voices' levels read together on the
+// Settings page, audio out first; a permanent key.
+//
 // THE NOISE'S THREE (architect 2026-10-28): `noise`, `noise_level` and
-// `noise_crossfade_s` FOLLOW `true_colors`, the permanent keys' end, the
+// `noise_crossfade_s` FOLLOW `audio_level`, the permanent keys' end, the
 // folder before its loudness and its crossfade.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
@@ -103,6 +110,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform",
     "true_colors",
     "waveform_grow",
+    "audio_level",
     "noise",
     "noise_level",
     "noise_crossfade_s",
@@ -123,8 +131,15 @@ std::string format_gui_scale_percent(int percent) {
     return std::string(buf);
 }
 
-// The two noise integers' canonical spellings (2026-10-28): `%d`, exactly
-// what parse_canonical_config_int admits back (device_config.h).
+// The audio level's canonical spelling (2026-10-31 night) and the two noise
+// integers' (2026-10-28): `%d`, exactly what parse_canonical_config_int
+// admits back (device_config.h).
+std::string format_audio_level(int db) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", db);
+    return std::string(buf);
+}
+
 std::string format_noise_level(int db) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", db);
@@ -223,6 +238,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
             s += format_waveform_grow(cfg.waveform_grow_quarters);
+        } else if (k == "audio_level") {
+            // The project voice's canonical integer (format_audio_level).
+            s += format_audio_level(cfg.audio_level);
         } else if (k == "noise") {
             // The folder's name verbatim (is_noise_folder_name's grammar).
             s += cfg.noise;
@@ -373,6 +391,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kWaveformGrowGrammarReason);
             }
             out.waveform_grow_quarters = *quarters;
+            return {};
+        }
+        // THE PROJECT VOICE'S LEVEL (2026-10-31 night, a permanent key):
+        // under its one grammar owner (parse_audio_level, device_config.h),
+        // required like every key; any other spelling the launch's hard fail.
+        if (key == "audio_level") {
+            const std::optional<int> db = parse_audio_level(value);
+            if (!db) {
+                return bad_value(ln, key, value, kAudioLevelGrammarReason);
+            }
+            out.audio_level = *db;
             return {};
         }
         if (key == "noise_level") {

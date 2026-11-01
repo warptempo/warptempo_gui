@@ -10,6 +10,7 @@
 #include "undo.h"
 #include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
 #include "materials.h"
+#include "playback.h"          // the audio_level arm's live act
 #include "score_pages.h"     // the score_path commit's read
 #include "score_viewer.h"      // score_folder_changed
 #include "score_viewer_file.h" // the score's five keys: grammar, recall, write-through
@@ -348,10 +349,10 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
     return *value;
 }
 
-// THE VALUE LISTS' ROWS (the five domains at the declaration). Each arm is
+// THE VALUE LISTS' ROWS (the domains at the declaration). Each arm is
 // its key's own domain owner read whole — the presets' table, the switch's
-// words, the folder listing the noise completer reads, the two integer
-// grammars' ranges — with every value in the writer's spelling, so the row
+// words, the folder listing the noise completer reads, the grow's quarters,
+// the three integer grammars' ranges — with every value in the writer's spelling, so the row
 // the tap commits is a line the typed commit would take byte for byte. A
 // row's text carries NO UNIT (architect 2026-10-28 night: "the units are not
 // present in the setup main page, so let's remove it from the lists.
@@ -380,6 +381,11 @@ std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
     } else if (key == "waveform_grow") {
         for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n) {
             const std::string v = format_waveform_grow(n);
+            out.push_back({v, v});
+        }
+    } else if (key == "audio_level") {
+        for (int db = kAudioLevelMaxDb; db >= kAudioLevelMinDb; --db) {
+            const std::string v = format_audio_level(db);
             out.push_back({v, v});
         }
     } else if (key == "noise_level") {
@@ -1201,7 +1207,8 @@ void GuiSettingsEditor::commit() {
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it, `waveform_grow` (2026-10-31) the same, its arm after
-// that, `noise`, `noise_level` and `noise_crossfade_s`
+// that, `audio_level` (2026-10-31 night) the same, its arm after that,
+// `noise`, `noise_level` and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it, and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
 // `osk_font_px` (2026-10-29) the same, their arms last
@@ -1211,7 +1218,7 @@ void GuiSettingsEditor::commit() {
 // 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
-// with its key.) The commit is the OK's or Enter's, and for the five keys
+// with its key.) The commit is the OK's or Enter's, and for the seven keys
 // with a value list (kSettingsValueListKeys, settings_editor.h) also a
 // list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
 // the choice rows' list rows of 2026-10-07..10-14, which showed a value and
@@ -1219,8 +1226,9 @@ void GuiSettingsEditor::commit() {
 //
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
-// with its text selected, or the editor closed. (The five keys with a value
-// list are six since 2026-10-31, `waveform_grow` among them.)
+// with its text selected, or the editor closed. (The keys with a value list
+// are seven since 2026-10-31 night, `waveform_grow` and `audio_level` among
+// them.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1357,6 +1365,27 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
             return unchanged();
         app.device_config->waveform_grow_quarters = *quarters;
         input->apply_waveform_grow(*quarters);
+        (void)persist();
+        return applied();
+    }
+
+    // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night, a permanent
+    // key; playback_common.h's head owns the order): an integer under its
+    // one grammar owner (parse_audio_level, device_config.h), APPLIED LIVE AT
+    // THE COMMIT — the live struct, then the open project's engine
+    // (GuiPlayback::set_audio_level_db, reached through the input handler's
+    // `playback`; the gain read by the audio thread at its next fill, a play
+    // under way taking it at once) — and persisted, so NO CARD: the sound is
+    // the answer. The next project's engine is seated from the struct
+    // (run_project). The page opens its VALUE LIST (31 values,
+    // kSettingsValueListKeys); Tab completes no value; stage 2's recall is
+    // the writer's spelling (recall_gui_setting_value).
+    if (key == "audio_level") {
+        const std::optional<int> db = parse_audio_level(value);
+        if (!db) return reject(kAudioLevelGrammarReason);
+        if (*db == app.device_config->audio_level) return unchanged();
+        app.device_config->audio_level = *db;
+        input->playback.set_audio_level_db(*db);
         (void)persist();
         return applied();
     }
@@ -1621,7 +1650,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's eighteen and
+        // one key does — any key the recall knows, the table's nineteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

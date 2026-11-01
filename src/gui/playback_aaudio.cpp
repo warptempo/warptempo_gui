@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <thread>
@@ -227,7 +228,8 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
                               kPlaybackOutputChannels, frames, channel_count);
     }
     // THE SECOND VOICE AND THE CLIP, ON BOTH ARMS (2026-10-28,
-    // playback_common.h's head): the noise summed under what the arm wrote —
+    // playback_common.h's head): the noise summed under what the arm wrote
+    // (the render arm's block already scaled by the audio level) —
     // the stream runs between plays, so the bed plays there too — then every
     // sample clamped.
     if (impl->state.noise != nullptr)
@@ -630,6 +632,13 @@ GuiPlayback::~GuiPlayback() { shutdown(); }
 // callback exists to race the store.
 void GuiPlayback::attach_noise(GuiNoiseVoice* voice) {
     impl_->state.noise = voice;
+}
+
+// The forward (contract at the declaration): one relaxed store the render
+// body reads at its next fill (GuiPlaybackState::audio_gain).
+void GuiPlayback::set_audio_level_db(int db) {
+    impl_->state.audio_gain.store(static_cast<float>(std::pow(10.0, db / 20.0)),
+                                  std::memory_order_relaxed);
 }
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,

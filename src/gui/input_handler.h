@@ -2642,7 +2642,8 @@ private:
     //   down would make it quicker, because I don't like having to type it
     //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
     //   night for `true_colors`, `noise`, `noise_level` and
-    //   `noise_crossfade_s`, the same shape; 2026-10-31 for `waveform_grow`)
+    //   `noise_crossfade_s`, the same shape; 2026-10-31 for `waveform_grow`
+    //   and that night `audio_level`)
     //   — THE SETTINGS PAGE'S ROW'S
     //   CONTENT for a key of kSettingsValueListKeys, its one road, and A
     //   SUB-PAGE OF THE SETTINGS PAGE (architect 2026-10-28 night: "the

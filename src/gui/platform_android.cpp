@@ -579,6 +579,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key),
     // spelled: half a device px, 2 quarters (device_config.h's head).
     cfg.waveform_grow_quarters = kWaveformGrowDefaultQuarters;
+    // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night, a permanent
+    // key), spelled: 0 dB, the files as they are (device_config.h's head).
+    cfg.audio_level       = 0;
     // THE NOISE'S THREE (architect 2026-10-28), spelled: the folder `rain`
     // under noise/ beside the config, the level -9 dB, his "the rain is a
     // masker", and the crossfade 4 s (device_config.h's head).

@@ -6881,8 +6881,9 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // NOTHING (its lift never reaches here and the highlight never stands on
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
-// (settings_key_has_value_list — `waveform`, `true_colors`, `noise`,
-// `noise_level`, `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
+// (settings_key_has_value_list — `waveform`, `true_colors`,
+// `waveform_grow`, `audio_level`, `noise`, `noise_level`,
+// `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
 // sub-page whose commit and Cancel return to this page
 // (return_to_settings_page). On every other row THE PAGE

@@ -21,6 +21,8 @@ struct GuiNoiseVoice;   // noise.h
 // the sum clipped to [-1, 1] (playback_common.h's head). The two output
 // channels carry both; the noise reads its own bank and never the bound
 // buffer, so every clause below about the bound buffer stands as written.
+// The engine's own voice is scaled by THE AUDIO LEVEL before the sum
+// (set_audio_level_db below, 2026-10-31 night).
 //
 // One bind API, and the domain offset travels with the buffer: init() and
 // rebind_buffer() take the bound buffer's domain offset — the displayed-domain
@@ -238,6 +240,16 @@ public:
     // can run. Main thread only; null attaches nothing. The device forwards it
     // to the engine state (GuiPlaybackState::noise).
     void attach_noise(GuiNoiseVoice* voice);
+
+    // THE AUDIO LEVEL (architect 2026-10-31 night; the `audio_level` device
+    // key, device_config.h): the project voice — everything this engine
+    // plays from its bound buffer — scaled by 10^(db/20) before the noise is
+    // summed and the sum clipped (playback_common.h's head). Main thread
+    // only, any time, playing or not: the render body reads the gain once per
+    // fill, so the change sounds at the next fill. Seated by run_project from
+    // the config before init, written live by the settings editor's
+    // `audio_level` arm (GuiSettingsEditor::apply_device_setting).
+    void set_audio_level_db(int db);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
     // passes `end_sample` (exclusive). PLAYS THE WINDOW ONCE AND STOPS — no

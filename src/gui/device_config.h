@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fourteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Fifteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -95,6 +95,24 @@
 //                            (neighboring pixels spread the weight exactly
 //                            at .5), 0.625 the exact analog of Ableton at
 //                            125 % Windows scale
+//   audio_level=<dB>         THE PROJECT VOICE'S LEVEL (architect
+//                            2026-10-31 night: "it should be audio out
+//                            versus noise, and I should be able to adjust
+//                            them to avoid clipping. So then I can turn up
+//                            the volume on the tablet itself"): everything
+//                            the program itself plays — the source and the
+//                            target, the A/B audition, the render player,
+//                            the score's audio — scaled by one level, an
+//                            integer in [-30, 0] in canonical spelling (the
+//                            noise_level grammar), dB applied to the
+//                            files as they are, the noise summed after it
+//                            at its own level and the clip last
+//                            (playback_common.h's head); live at the
+//                            settings editor's OK and at the settings
+//                            page's value list's tap
+//                            (GuiPlayback::set_audio_level_db); PERMANENT
+//                            and REQUIRED; both templates spell 0, the files
+//                            as they are
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -268,7 +286,9 @@
 // evening, and the keyboard's cap size `osk_font_px` after them that
 // night; the plate's grow `waveform_grow` placed after `true_colors`
 // 2026-10-31, the display keys' end, a permanent key before the noise's
-// three);
+// three; the project voice's level `audio_level` placed before the noise's
+// three 2026-10-31 night, the two voices' levels read together, audio out
+// then the noise);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -407,7 +427,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fourteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fifteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -443,8 +463,8 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors`, since 2026-10-31 `waveform_grow`, since
-// 2026-10-28 `noise`, `noise_level`
+// `waveform`, `true_colors`, since 2026-10-31 `waveform_grow` and
+// `audio_level`, since 2026-10-28 `noise`, `noise_level`
 // and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
 // `osk_key_w` and `osk_key_h` and that night `osk_font_px` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
@@ -507,6 +527,9 @@ struct DeviceConfig {
     // head's list; a permanent key): required; the construction state is
     // the template's 0.5 (kWaveformGrowDefaultQuarters below).
     int         waveform_grow_quarters = 2;
+    // THE PROJECT VOICE'S LEVEL in dB (2026-10-31 night, the head's list; a
+    // permanent key): required; the construction state is the templates' 0.
+    int         audio_level       = 0;
     // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in seconds
     // (2026-10-28, the head's list): required; the construction state is the
     // templates' values (`rain`, -9, 4).
@@ -695,12 +718,13 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
 }
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the two noise integers' shared
-// lexis, and since 2026-10-29 the key's height's and the keyboard's key
-// box's): an optional `-`, then digits with no leading zero, and no `-0` —
-// exactly what `%d` prints, so the reader admits back only the writer's
-// spelling. At most nine digits, which every range below sits far inside, so
-// the accumulation cannot overflow. The one lexer the four integer grammars
-// read; each owns its own range.
+// lexis, since 2026-10-29 the key's height's and the keyboard's key
+// box's, and since 2026-10-31 night the audio level's): an optional `-`,
+// then digits with no leading zero, and no `-0` — exactly what `%d` prints,
+// so the reader admits back only the writer's spelling. At most nine digits,
+// which every range below sits far inside, so the accumulation cannot
+// overflow. The one lexer the integer grammars read; each owns its own
+// range.
 inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     bool neg = false;
     if (!v.empty() && v.front() == '-') {
@@ -716,6 +740,27 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
         n = n * 10 + (c - '0');
     }
     return neg ? -n : n;
+}
+
+// THE audio_level GRAMMAR (architect 2026-10-31 night) — the noise_level
+// grammar's twin below: an integer in [-30, 0] dB in canonical spelling; the
+// one owner the reader, the writer, the settings editor's commit and its
+// recall, and the settings page's value list read (format_audio_level,
+// parse_audio_level; the list's 31 rows are this range in 1 dB steps, as
+// the noise's). 0 is the files as they are; the level scales the project
+// voice before the noise is summed (playback_common.h's head), so the two
+// levels together keep the sum clear of the clip and the tablet's own
+// volume sets the loudness.
+inline constexpr int kAudioLevelMinDb = -30;
+inline constexpr int kAudioLevelMaxDb = 0;
+inline constexpr const char* kAudioLevelGrammarReason =
+    "must be an integer in [-30, 0] in canonical spelling";
+std::string format_audio_level(int db);
+inline std::optional<int> parse_audio_level(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kAudioLevelMinDb || *n > kAudioLevelMaxDb)
+        return std::nullopt;
+    return n;
 }
 
 // THE noise_level GRAMMAR (architect 2026-10-28) — an integer in [-30, 0] dB
@@ -1012,11 +1057,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves twelve keys —
+// the settings editor's ONE device-key body, which serves thirteen keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
 // until 2026-10-21, beside `caption=` until then), since 2026-10-21
 // `true_colors=`, since 2026-10-31 `waveform_grow=` (its live act
-// GuiInputHandler::apply_waveform_grow), and since 2026-10-28 the noise's three, `noise=`,
+// GuiInputHandler::apply_waveform_grow) and that night `audio_level=` (its
+// live act GuiPlayback::set_audio_level_db), and since 2026-10-28 the noise's three, `noise=`,
 // `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
 // keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
@@ -1048,7 +1094,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // it stamps `waveform=default` (the default spelled, every key
 // required since 2026-10-14), `true_colors=on` (the struct's own value),
 // `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultQuarters),
-// `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
+// `audio_level=0` (2026-10-31 night, the files as they are), `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`
 // (2026-10-29, kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,
 // kOskKeyHDefaultAt300, kOskFontPxDefaultAt300), kDefaultProjectsRepo and

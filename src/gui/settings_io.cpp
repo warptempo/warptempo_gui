@@ -395,6 +395,11 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_waveform_grow, device_config.h), the writer's own spelling.
     if (key == "waveform_grow" && app.device_config != nullptr)
         return format_waveform_grow(app.device_config->waveform_grow_quarters);
+    // THE PROJECT VOICE'S LEVEL (2026-10-31 night): through its one
+    // formatter (format_audio_level, device_config.h), the writer's own
+    // spelling.
+    if (key == "audio_level" && app.device_config != nullptr)
+        return format_audio_level(app.device_config->audio_level);
     // THE NOISE'S THREE (2026-10-28): the folder's name verbatim, as the
     // writer writes it, and the two integers each through its one formatter
     // (format_noise_level, format_noise_crossfade_s, device_config.h), the

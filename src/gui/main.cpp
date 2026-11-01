@@ -1429,6 +1429,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // app's, so it survives this project's end and the next engine's init
     // picks the voice up where it stood (GuiNoiseVoice's thread note).
     playback.attach_noise(noise.voice());
+    // THE AUDIO LEVEL, SEATED FROM THE LIVE CONFIG (2026-10-31 night; the
+    // `audio_level` device key, playback_common.h's head): this project's
+    // engine scales everything it plays by the level the loop's one struct
+    // holds now — a value committed in an earlier project carries over —
+    // and the settings editor's `audio_level` arm sets it live from here on
+    // (GuiPlayback::set_audio_level_db).
+    playback.set_audio_level_db(device_config.audio_level);
     WaveformCache wf_cache;
     // Top-strip flag rects live on their own surface, rebuilt
     // synchronously from on_tick. Constructed alongside wf_cache so they share
