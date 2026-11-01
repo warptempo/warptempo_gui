@@ -249,7 +249,9 @@ struct ProgramSpec {
     // box occludes an earlier label, render.h's overlap rule, 2026-10-10.)
     int  cue_fill_pad;
     int  cue_segment_gap;
-    // THE CANVAS DOTS, ONE DEVICE PX SQUARE, COUNTED IN
+    // THE CANVAS DOTS, ONE DEVICE ROW TALL (and the stem's width across,
+    // waveform_stem_span, 2026-11-01: one device px square at the
+    // `waveform_column_px` key's 1), COUNTED IN
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and

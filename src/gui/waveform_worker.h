@@ -79,6 +79,12 @@ struct WaveformJob {
     // produces a picture, and the gain reaches no sample anywhere.
     uint64_t  gain_hash = 0;
 
+    // THE COLUMN WIDTH (the `waveform_column_px` key's seat, render.h;
+    // 2026-11-01): the blocks the worker reads the tips over
+    // (WaveformBasis::column_px), the job's snapshot like the divider's
+    // height, and the FINGERPRINT field (WaveformCache::fp_column_px).
+    int       column_px = 1;
+
     // Frame-map snapshot the worker dereferences during the render. Populated
     // for target view from the memoized target display map (an owned copy taken
     // at job submission, so the worker never races a cache rebuild). Empty in
@@ -213,5 +219,6 @@ void render_waveform_to_plate_columns(
     int64_t vp_start,
     int64_t lattice_origin,
     double  painter_spp,
+    int     column_px,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

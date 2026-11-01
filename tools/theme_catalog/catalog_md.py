@@ -52,10 +52,12 @@ def head(default_name, default_key):
 
 PRESETS_PROVENANCE = (
     'The color presets of Cool Edit Pro 2.1, the program the waveform\'s look comes from: its twenty presets under '
-    'its own names, each as it is, listed alphabetically.')
+    'its own names, each as it is, and one more, Ableton (`ableton`), Ableton Live\'s own waveform colors (its '
+    'near-black waveform on its grey canvas) — twenty-one, listed alphabetically.')
 PRESETS_RULES = [
-    'The waveform\'s outline is each preset\'s waveform color darkened, the same hue at a fixed lightness (the '
-    'lightness of Cool Edit Pro 2.1\'s view bar shadows).',
+    'The waveform\'s outline is each preset\'s waveform color at a fixed lightness, the same hue (the lightness of '
+    'Cool Edit Pro 2.1\'s view bar shadows): darker on every preset but Ableton, whose near-black waveform it '
+    'lightens.',
     'The scanner (the line that moves during playback) and the zoom\'s anchor line are white in every preset, as Cool '
     'Edit\'s scanner is on every one of its presets.',
 ]

@@ -12,10 +12,11 @@ python3 -I tools/theme_catalog/catalog_md.py           # -> docs/themes/catalog.
 
 ## The presets — warptempo_presets.txt (architect 2026-10-26)
 
-`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's twenty presets, Cool Edit Pro 2.1's twenty
+`warptempo_presets.txt` is THE ONE SOURCE, committed: the program's twenty-one presets, Cool Edit Pro 2.1's twenty
 color presets under its own display names, each as it is — "I am quite sure that I want to just trim down to just the
-cool edit themes" (its head is their provenance: the registry Cool Edit writes, under Wine), each values line followed
-by its display name, in Cool Edit Pro 2.1's value grammar. THE ORDER is alphabetical by display name, case-insensitive,
+cool edit themes" (its head is their provenance: the registry Cool Edit writes, under Wine) — and the architect's one
+exception, "Ableton" (2026-11-01: "make a theme that uses Ableton's exact colors"; the provenance of its colors at
+the file's head), each values line followed by its display name, in Cool Edit Pro 2.1's value grammar. THE ORDER is alphabetical by display name, case-insensitive,
 Default among the names (architect 2026-10-27); `gen_presets.py` fails the run on the first name line out of it.
 
 `gen_presets.py` transcribes each into the ten program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read

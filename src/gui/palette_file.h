@@ -15,7 +15,7 @@
 // materials.h):
 //   THE WAVEFORM PRESET (identifiers: palette) — THE PROGRAM'S TEN
 //     (kGuiPaletteRoles below) and nothing else: one of the built-in
-//     presets (kGuiBuiltinPalettes, the program's own twenty), the
+//     presets (kGuiBuiltinPalettes, the program's own twenty-one), the
 //     `waveform` device key (named
 //     for what it sets since 2026-10-21 — `palette` until 2026-10-14,
 //     `chrome` until 2026-10-21, when the preset's Face drove the whole
@@ -78,7 +78,7 @@
 // outline and the one flag label stood 2026-10-07 to 2026-10-09; git
 // history.)
 //
-// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY, COMPILED IN —
+// THE BUILT-IN PALETTES ARE THE PROGRAM'S TWENTY-ONE, COMPILED IN —
 // kGuiBuiltinPalettes below, GENERATED into palette_presets.inc by
 // tools/theme_catalog/gen_presets.py from one committed text,
 // tools/theme_catalog/warptempo_presets.txt (whose head is their design and
@@ -86,7 +86,12 @@
 // regenerate, never hand-edit), in its order: COOL EDIT PRO 2.1'S TWENTY
 // COLOR PRESETS, each AS IT IS under Cool Edit's own display name, a closed
 // set (architect 2026-10-26: "I am quite sure that I want to just trim down
-// to just the cool edit themes"), ALPHABETICAL BY DISPLAY NAME,
+// to just the cool edit themes"), AND HIS ONE EXCEPTION, "Ableton"
+// (`ableton`; architect 2026-11-01: "make a theme that uses Ableton's exact
+// colors" — Live's ink 191919 on its canvas 393939, the provenance of the
+// rest at the text's head; its ink neutral, so its outline is LIGHTER than
+// the ink, 515151, and its accent the hue-0 round trip, a red lamp,
+// DC4646), ALPHABETICAL BY DISPLAY NAME,
 // case-insensitive, Default among the names (architect 2026-10-27; the
 // generator checks the text's order, and the waveform value list shows the
 // table in it).
@@ -224,7 +229,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE BUILT-IN PALETTES (the head) — the program's twenty in their
+// THE BUILT-IN PALETTES (the head) — the program's twenty-one in their
 // text's order, GENERATED (palette_presets.inc; never hand-edited): the key, the display
 // name and the ten in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the key grammar, the

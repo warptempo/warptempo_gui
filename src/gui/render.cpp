@@ -518,9 +518,16 @@ bool render_waveform_columns(GuiRect area,
     // slope crosses a stride threshold and adjacent target-view columns read
     // different levels, the picture shows no seam, and a zoom across a rung
     // changes nothing but the read's cost.
+    // UNDER BLOCKS (the `waveform_column_px` key's N, the declaration's THE
+    // BLOCKS) the read is the block's, so the width is the block's: N · spp
+    // in source view (exactly spp at N = 1: a double times 1.0), the block's
+    // own mapped span in target view.
+    const int column_px = basis.column_px;
+    assert(column_px >= 1);
     const auto level_for_column = [&](double src_width) {
-        return audio.level_for_span(warp_frame_map ? src_width
-                                                   : samples_per_pixel);
+        return audio.level_for_span(
+            warp_frame_map ? src_width
+                           : samples_per_pixel * static_cast<double>(column_px));
     };
 
     const double y_center = area.y + area.h * 0.5;
@@ -551,8 +558,9 @@ bool render_waveform_columns(GuiRect area,
     // over the outer, both in the ink, the inner's one-px outline — the
     // erosion of the grown inner, on the GPU — in the outline). This
     // function reads no neighbor and holds no interior: every column is its
-    // own tips, so a column's tips are a pure function of its own span and
-    // the picture a pure function of the plate's tips.
+    // BLOCK's tips (its own at the `waveform_column_px` key's 1; THE BLOCKS,
+    // the declaration), so a column's tips are a pure function of its
+    // block's span and the picture a pure function of the plate's tips.
     //
     // THE ANTIALIASING RETURNED 2026-10-30 IN ANOTHER FORM — exact coverage
     // on the GPU from these tips; what the 2026-08-01 deletion took (the Wu
@@ -585,7 +593,8 @@ bool render_waveform_columns(GuiRect area,
     if (col_hi > plate_w) col_hi = plate_w;
     if (col_hi <= col_lo) return false;
 
-    // Global column c's display-domain edge, AS THE LATTICE POINT ITSELF:
+    // THE EDGE OF GLOBAL LATTICE INDEX k (edge_of), AS THE LATTICE POINT
+    // ITSELF — global column c's left edge at k = k0 + c:
     // g(k0+c) = origin + nearbyint((k0+c)*spp), bit-for-bit the integer
     // the chokepoint's snap produces (origin + viewport_grid_point(k0+c, q);
     // the origin a whole frame, added after the rounding, so the edge stays
@@ -599,13 +608,15 @@ bool render_waveform_columns(GuiRect area,
     // fraction would have rounded up, with ties following truncation instead of
     // banker's rounding. The pan invariant held either way (floor of a lattice
     // point is still a pure function of the global index), but the geometry sat
-    // off the lattice this contract declares.
-    const auto edge_at = [&](long long c) {
+    // off the lattice this contract declares. Under blocks (THE BLOCKS,
+    // below) a block's two ends are edge(N · b) and edge(N · b + N); at N = 1
+    // the index is k0 + c, the column's own edge as ever.
+    const auto edge_of = [&](long long k) {
         return static_cast<double>(basis.origin) +
-               std::nearbyint(static_cast<double>(k0 + c) * samples_per_pixel);
+               std::nearbyint(static_cast<double>(k) * samples_per_pixel);
     };
     // Display-domain lattice point -> source frame. `f` arrives INTEGRAL from
-    // edge_at, so the size_t cast below is exact, not a second quantization.
+    // edge_of, so the size_t cast below is exact, not a second quantization.
     // Source view is the identity: the value is already g(k0+c), and the
     // caller's nearbyint on it is idempotent. Target view maps exactly that same
     // g(k0+c) through the warp_frame_map, so the pyramid read lands at the
@@ -619,13 +630,24 @@ bool render_waveform_columns(GuiRect area,
                    : f;
     };
 
+    // THE BLOCKS (architect 2026-11-01; the rule at the declaration): global
+    // column k = k0 + c lies in BLOCK b = k / N (k >= 0, so the division is
+    // the floor), whose display-domain span is [edge(N · b), edge(N · b +
+    // N)) — a pure function of the origin and the global index, so a pan
+    // shifts blocks as it shifts columns, and a block partly outside the
+    // record reads its FULL span (an on-screen column's picture never
+    // depends on where the record's edge falls). Every column of a block
+    // takes the block's tips.
+    const long long first_block =
+        (k0 + static_cast<long long>(col0)) / column_px;
+
     // THE RUNNING LEFT EDGE in SOURCE frames, and the carried-endpoint chain it
-    // serves: column i's left edge IS column i-1's right edge, so each edge is
+    // serves: block b's left edge IS block b-1's right edge, so each edge is
     // translated through the map once rather than twice. It seeds at the FIRST
-    // DRAWN column's own left edge — the halo column that used to seed it one
+    // DRAWN block's own left edge — the halo column that used to seed it one
     // step earlier is gone with the segments (the deletion note is at the top of
     // this function).
-    double g_prev = to_source(edge_at(static_cast<long long>(col0)));
+    double g_prev = to_source(edge_of(first_block * column_px));
 
     // THE BAR'S TIPS IN QUARTER ROWS (architect 2026-10-30). The column's
     // tips — its maximum -> top tip, its minimum -> bottom tip, in float rows
@@ -694,9 +716,22 @@ bool render_waveform_columns(GuiRect area,
     std::vector<BarTips> inner_tips;
     if (gain_or_null) inner_tips.resize(static_cast<size_t>(area.w));
 
-    for (int i = 0; i < area.w; i++) {
-        const long long c  = static_cast<long long>(col0) + i;
-        const double    f1 = edge_at(c + 1);
+    // ONE BLOCK A STEP, its tips written into each of its columns in this
+    // call. AT N = 1 EVERY EXPRESSION IS TODAY'S: the block is the column (b
+    // = k0 + col0 + i, its columns [i, i + 1)), its right edge edge(b + 1) is
+    // the column's right edge on the same double, the chain seeded at
+    // edge(k0 + col0), the first drawn column's left edge, the level's width
+    // spp · 1.0 = spp — no rounding added and no arithmetic reordered, so the
+    // tips are the one-column picture's bit for bit.
+    for (int i = 0; i < area.w;) {
+        const long long b  = (k0 + static_cast<long long>(col0) + i) / column_px;
+        // The block's columns in this call: [i, i_end).
+        const long long block_end_c =
+            (b + 1) * column_px - k0 - static_cast<long long>(col0);
+        const int i_end = static_cast<int>(
+            block_end_c < static_cast<long long>(area.w) ? block_end_c
+                                                         : area.w);
+        const double    f1 = edge_of((b + 1) * column_px);
         const double    g0 = g_prev;
         const double    g1 = to_source(f1);
 
@@ -719,25 +754,30 @@ bool render_waveform_columns(GuiRect area,
         // themselves are untouched, here and everywhere.
         // DARK: the raw bar at scale 1.0, where the clamp is a no-op (raw
         // peaks already rest in range).
+        BarTips outer_b{};
+        BarTips inner_b{};
         if (gain_or_null) {
             const int64_t centre = (s0 + s1) / 2;
             const double e = static_cast<double>(
                 waveform_expander_multiplier_over(*gain_or_null, s0, s1));
             const double outer = waveform_gain_at(*gain_or_null, centre) * e;
             const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
-            outer_tips[static_cast<size_t>(i)] =
-                bar_tips(magnified_tip(mm.first, outer),
-                         magnified_tip(mm.second, outer));
-            inner_tips[static_cast<size_t>(i)] =
-                bar_tips(magnified_tip(mm.first, inner),
-                         magnified_tip(mm.second, inner));
+            outer_b = bar_tips(magnified_tip(mm.first, outer),
+                               magnified_tip(mm.second, outer));
+            inner_b = bar_tips(magnified_tip(mm.first, inner),
+                               magnified_tip(mm.second, inner));
         } else {
-            outer_tips[static_cast<size_t>(i)] =
-                bar_tips(magnified_tip(mm.first, 1.0),
-                         magnified_tip(mm.second, 1.0));
+            outer_b = bar_tips(magnified_tip(mm.first, 1.0),
+                               magnified_tip(mm.second, 1.0));
+        }
+        // ALL N COLUMNS OF THE BLOCK TAKE THE IDENTICAL TIPS.
+        for (int j = i; j < i_end; ++j) {
+            outer_tips[static_cast<size_t>(j)] = outer_b;
+            if (gain_or_null) inner_tips[static_cast<size_t>(j)] = inner_b;
         }
 
         g_prev = g1;
+        i = i_end;
     }
 
     // EACH OWNED COLUMN'S TIPS (WaveformColumnRows, render.h): the outer's
@@ -745,6 +785,13 @@ bool render_waveform_columns(GuiRect area,
     // absent inner (the dark lamp's) 0, 0 — the bounds the GL canvas's plate
     // rasterizes.
     const int ncols = col_hi - col_lo;
+    // THE RECORD'S BLOCK PHASE (the declaration's THE BLOCKS): the offset in
+    // its block of the record's first column, global column k0 + col0 +
+    // (col_lo − area.x) — the plate shader's φ, so its record column c sits
+    // at offset (φ + c) mod N (kListFragmentShader's COLPX arm). 0 at N = 1.
+    out.block_phase = static_cast<int>(
+        (k0 + static_cast<long long>(col0) +
+         static_cast<long long>(col_lo - area.x)) % column_px);
     out.y_lo   = y_lo;
     out.y_hi   = y_hi;
     out.col_lo = col_lo;
@@ -770,19 +817,21 @@ bool render_waveform_columns(GuiRect area,
 }
 
 namespace {
-// ONE SOLID CANVAS LINE IN THE TWO WELLS: the waveform_line_px()-wide line
-// at column `col` (its column gate and right-edge clip, waveform_line_width)
-// as one rect per non-empty well (waveform_well_rows), so the stereo
-// divider's rows carry none — the scanner's and the zoom anchor's one form,
-// one sink fill.
+// ONE SOLID CANVAS LINE IN THE TWO WELLS: the waveform_stem_px()-wide line
+// centered on column `col` (its own-column gate and both edges' clip,
+// waveform_stem_span, 2026-11-01) as one rect per non-empty well
+// (waveform_well_rows), so the stereo divider's rows carry none — the
+// scanner's and the zoom anchor's one form, one sink fill.
 void well_line_rects(GuiCanvasSink& sink, const GuiRect& area, int col,
                      GuiColor color) {
-    const int width = waveform_line_width(area.w, col);
-    if (width <= 0) return;
+    const WaveformStemSpan span = waveform_stem_span(area.w, col);
+    if (span.x1 <= span.x0) return;
     std::array<GuiRect, 2> rs{};
     std::size_t n = 0;
     for (const WaveformWellRows& w : waveform_well_rows(area))
-        if (w.y1 > w.y0) rs[n++] = GuiRect{area.x + col, w.y0, width, w.y1 - w.y0};
+        if (w.y1 > w.y0)
+            rs[n++] = GuiRect{area.x + span.x0, w.y0, span.x1 - span.x0,
+                              w.y1 - w.y0};
     if (n > 0) sink.rects(std::span<const GuiRect>(rs.data(), n), color);
 }
 } // namespace
@@ -831,22 +880,26 @@ void render_playhead(GuiCanvasSink& sink,
     // alternative that was declined.
     const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
-    // The waveform_line_px()-wide line (render.h) paints whenever its column
-    // is onscreen (gated on its own column and clipped at the right edge), so
-    // it never leaks into an adjacent region, straight over whatever it
-    // crosses — waveform ink included. THE CANVAS'S TWO WELLS (2026-10-09;
-    // the stereo divider's rows left to it since 2026-10-16,
-    // waveform_well_rows): the scanner solid, the resting cursor Cool Edit's
-    // dotted column on its own phase (the declaration), one run per well.
+    // The waveform_stem_px()-wide line (render.h's waveform_stem_span)
+    // paints whenever its column is onscreen (gated on its own column,
+    // centered on it and clipped at both edges), so it never leaks into an
+    // adjacent region, straight over whatever it crosses — waveform ink
+    // included. THE CANVAS'S TWO WELLS (2026-10-09; the stereo divider's
+    // rows left to it since 2026-10-16, waveform_well_rows): the scanner
+    // solid, the resting cursor Cool Edit's dotted column on its own phase
+    // (the declaration), one run per well and per column of the span.
     if (form == PlayheadForm::Dotted) {
-        GuiCanvasDotRun runs[2];
-        const int n = dotted_waveform_line_runs(
-            area, col, kProgramSpec.dot_period,
-            kProgramSpec.playhead_dot_phase, runs);
-        if (n > 0)
-            sink.dots(std::span<const GuiCanvasDotRun>(runs,
-                                                       static_cast<std::size_t>(n)),
-                      color);
+        const WaveformStemSpan span = waveform_stem_span(area.w, col);
+        for (int x = span.x0; x < span.x1; ++x) {
+            GuiCanvasDotRun runs[2];
+            const int n = dotted_waveform_line_runs(
+                area, x, kProgramSpec.dot_period,
+                kProgramSpec.playhead_dot_phase, runs);
+            if (n > 0)
+                sink.dots(std::span<const GuiCanvasDotRun>(
+                              runs, static_cast<std::size_t>(n)),
+                          color);
+        }
     } else {
         well_line_rects(sink, area, col, color);
     }
@@ -856,9 +909,10 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a
     // song edge pins to the edge column, so the stem draws exactly there.
-    // The line is waveform_line_px() wide (render.h), its left edge on the
-    // column, clipped at the right edge (fill_waveform_line), so an anchor
-    // pinned to the last column paints that one column.
+    // The line is waveform_stem_px() wide (render.h), centered on the
+    // column and clipped at both edges (waveform_stem_span, 2026-11-01), so
+    // an anchor pinned to an edge column paints the half of its stem inside
+    // the canvas.
     if (col < 0)          col = 0;
     if (col >= area.w)    col = area.w - 1;
 
@@ -2388,6 +2442,11 @@ namespace {
     // set_waveform_grow_quarters from the same two application points; the
     // template's value as construction state.
     int    g_waveform_grow_quarters = kWaveformGrowDefaultQuarters;
+    // THE WAVEFORM'S COLUMN WIDTH in device px (render.h's
+    // `waveform_column_px` seat, a tuning key), set by set_waveform_column_px
+    // from the same two application points; the templates' value as
+    // construction state.
+    int    g_waveform_column_px = kWaveformColumnPxDefault;
 } // namespace
 // A QUARTER OF A DEVICE PX IS ONE SUBCELL: the key's lattice is the grid's,
 // so the seat's number is the plate shader's GROW with no conversion.
@@ -2411,6 +2470,8 @@ void   set_waveform_grow_quarters(int quarters) {
     g_waveform_grow_quarters = quarters;
 }
 int    waveform_grow_quarters() { return g_waveform_grow_quarters; }
+void   set_waveform_column_px(int px) { g_waveform_column_px = px; }
+int    waveform_column_px() { return g_waveform_column_px; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

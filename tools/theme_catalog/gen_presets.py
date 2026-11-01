@@ -3,8 +3,9 @@
 # INCLUDE, src/gui/palette_presets.inc (the rows of kGuiBuiltinPalettes, src/gui/palette_file.h, which owns what a
 # palette is and does).
 # ONE SOURCE: THE PROGRAM'S PRESETS, warptempo_presets.txt's, in its order (that file's head is their design and
-# provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is); the value grammar and the
-# outline's lightness below are Cool Edit's.
+# provenance: since 2026-10-26 Cool Edit Pro 2.1's twenty color presets, each as it is, and since 2026-11-01 his one
+# exception, Ableton's colors in the same grammar — twenty-one); the value grammar and the outline's lightness below
+# are Cool Edit's.
 # THE ORDER IS ALPHABETICAL BY DISPLAY NAME, case-insensitive (str.lower()), Default sorted among the names (architect
 # 2026-10-27): the text's order is the include's and so the waveform value list's, and a name line out of that order is the
 # run's hard fail, the first such row named — the text is reordered by hand, never sorted here.

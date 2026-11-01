@@ -352,7 +352,7 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 // THE VALUE LISTS' ROWS (the domains at the declaration). Each arm is
 // its key's own domain owner read whole — the presets' table, the switch's
 // words, the folder listing the noise completer reads, the grow's quarters,
-// the three integer grammars' ranges — with every value in the writer's spelling, so the row
+// the four integer grammars' ranges — with every value in the writer's spelling, so the row
 // the tap commits is a line the typed commit would take byte for byte. A
 // row's text carries NO UNIT (architect 2026-10-28 night: "the units are not
 // present in the setup main page, so let's remove it from the lists.
@@ -381,6 +381,11 @@ std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
     } else if (key == "waveform_grow") {
         for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n) {
             const std::string v = format_waveform_grow(n);
+            out.push_back({v, v});
+        }
+    } else if (key == "waveform_column_px") {
+        for (int px = kWaveformColumnPxMin; px <= kWaveformColumnPxMax; ++px) {
+            const std::string v = format_waveform_column_px(px);
             out.push_back({v, v});
         }
     } else if (key == "audio_level") {
@@ -1207,7 +1212,8 @@ void GuiSettingsEditor::commit() {
 // until then): AT ONCE, live, no card — its arm below;
 // `true_colors` (2026-10-21, the popup's command row made a key) the same,
 // its arm after it, `waveform_grow` (2026-10-31) the same, its arm after
-// that, `audio_level` (2026-10-31 night) the same, its arm after that,
+// that, the tuning key `waveform_column_px` (2026-11-01) the same, its arm
+// after that, `audio_level` (2026-10-31 night) the same, its arm after that,
 // `noise`, `noise_level` and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it, and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
@@ -1218,7 +1224,7 @@ void GuiSettingsEditor::commit() {
 // 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
-// with its key.) The commit is the OK's or Enter's, and for the seven keys
+// with its key.) The commit is the OK's or Enter's, and for the eight keys
 // with a value list (kSettingsValueListKeys, settings_editor.h) also a
 // list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
 // the choice rows' list rows of 2026-10-07..10-14, which showed a value and
@@ -1227,8 +1233,8 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. (The keys with a value list
-// are seven since 2026-10-31 night, `waveform_grow` and `audio_level` among
-// them.)
+// are eight since 2026-11-01, `waveform_grow`, `waveform_column_px` and
+// `audio_level` among them.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1365,6 +1371,25 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
             return unchanged();
         app.device_config->waveform_grow_quarters = *quarters;
         input->apply_waveform_grow(*quarters);
+        (void)persist();
+        return applied();
+    }
+
+    // THE WAVEFORM'S COLUMN WIDTH (architect 2026-11-01, a tuning key;
+    // render.h's `waveform_column_px` seat): an integer in device px under
+    // its one grammar owner (parse_waveform_column_px, device_config.h),
+    // APPLIED LIVE AT THE COMMIT — the live struct, then the one live act
+    // (GuiInputHandler::apply_waveform_column_px: the renderer's seat, the
+    // plate re-rendered over the new blocks, the window repainted) — and
+    // persisted, so NO CARD: the waveform is the answer. The page opens its
+    // VALUE LIST (4 values, kSettingsValueListKeys); Tab completes no value;
+    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    if (key == "waveform_column_px") {
+        const std::optional<int> px = parse_waveform_column_px(value);
+        if (!px) return reject(kWaveformColumnPxGrammarReason);
+        if (*px == app.device_config->waveform_column_px) return unchanged();
+        app.device_config->waveform_column_px = *px;
+        input->apply_waveform_column_px(*px);
         (void)persist();
         return applied();
     }
@@ -1650,7 +1675,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's nineteen and
+        // one key does — any key the recall knows, the table's twenty and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

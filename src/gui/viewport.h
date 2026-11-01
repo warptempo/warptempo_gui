@@ -199,6 +199,11 @@ struct Viewport {
     //    and the new flags land in the act's frame rather than a paint ahead
     //    of the next tick — a CONTENT change with no geometry behind it, the
     //    gain's shape.
+    //  - THE PLATE'S COLUMN WIDTH (2026-11-01): the `waveform_column_px`
+    //    key's live act (GuiInputHandler::apply_waveform_column_px) moves the
+    //    blocks the tips are read over, a plate fingerprint field
+    //    (fp_column_px), and kicks so the re-read plate lands in the frame
+    //    whose draw list carries the new width — the gain's shape again.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries

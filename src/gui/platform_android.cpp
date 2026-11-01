@@ -579,6 +579,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key),
     // spelled: half a device px, 2 quarters (device_config.h's head).
     cfg.waveform_grow_quarters = kWaveformGrowDefaultQuarters;
+    // THE WAVEFORM'S COLUMN WIDTH (architect 2026-11-01, a tuning key),
+    // spelled: one device px, today's picture byte for byte
+    // (device_config.h's head).
+    cfg.waveform_column_px = kWaveformColumnPxDefault;
     // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night, a permanent
     // key), spelled: 0 dB, the files as they are (device_config.h's head).
     cfg.audio_level       = 0;

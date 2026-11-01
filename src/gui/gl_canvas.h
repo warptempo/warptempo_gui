@@ -54,8 +54,8 @@ public:
     void bind_fixed_state();
     // THE THREE PROGRAMS, built at the first make current (each a no-op once
     // made): the texture triangle's, the canvas list's — at the plate's
-    // default grow, the source being specialized per grow (build_list_program
-    // below) — with its vertex array, its instance buffer and the plate's
+    // default grow and column width, the source being specialized per pair
+    // (build_list_program below) — with its vertex array, its instance buffer and the plate's
     // bounds texture, and the GPU page's (2026-10-27).
     void ensure_programs();
     // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER (the definition): remade at
@@ -83,14 +83,15 @@ public:
     void forget();
 
 private:
-    // THE LIST PROGRAM AT A GROW (2026-10-31; the specialization rule at
-    // kListFragmentShader's head, gl_canvas.cpp): linked from the source
-    // assembled with `grow` as its GROW constant, its sampler bound to unit
-    // 1, its two uniforms fetched, and the grow recorded as
-    // list_program_grow_. ensure_programs builds it once at the default
-    // grow; present_frame rebuilds it — the old program deleted — before a
-    // draw whose list carries another grow.
-    void build_list_program(int grow);
+    // THE LIST PROGRAM AT A GROW AND A COLUMN WIDTH (2026-10-31; the width
+    // 2026-11-01; the specialization rule at kListFragmentShader's head,
+    // gl_canvas.cpp): linked from the source assembled with `grow` as its
+    // GROW constant and `column_px` as its COLPX, its sampler bound to unit
+    // 1, its two uniforms fetched, and the pair recorded as
+    // list_program_grow_ and list_program_column_px_. ensure_programs builds
+    // it once at the defaults; present_frame rebuilds it — the old program
+    // deleted — before a draw whose list carries another grow or width.
+    void build_list_program(int grow, int column_px);
     void upload_list(const GuiCanvasDrawList& list);
     void reconcile_pages(GuiCanvasPage& page);
     void draw_page(GuiCanvasPage& page, const int clip[4]);
@@ -105,11 +106,13 @@ private:
     int          texture_h_      = 0;
     // THE CANVAS LIST'S OBJECTS (the draw at present_frame, the records at
     // canvas_sink.h): the program with its two uniforms (the size and the
-    // height) and THE GROW IT WAS COMPILED FOR (list_program_grow_, −1 while
-    // no program stands: the plate's grow is a constant of the shader's
-    // source, never a uniform — the specialization rule at
-    // kListFragmentShader's head — so a list whose plate_grow differs has
-    // the program rebuilt at its draw, build_list_program), its own vertex
+    // height) and THE GROW AND THE COLUMN WIDTH IT WAS COMPILED FOR
+    // (list_program_grow_ and list_program_column_px_, −1 while no program
+    // stands: the plate's grow and width are constants of the shader's
+    // source, never uniforms — the specialization rule at
+    // kListFragmentShader's head — so a list whose plate_grow or
+    // plate_column_px differs has the program rebuilt at its draw,
+    // build_list_program), its own vertex
     // array over the instance buffer (independent of the program: the
     // attribute locations are the vertex shader's layout qualifiers, so a
     // rebuild keeps it), the plate's bounds texture and its size — made with
@@ -124,6 +127,7 @@ private:
     int          list_size_uniform_   = -1;
     int          list_height_uniform_ = -1;
     int          list_program_grow_   = -1;
+    int          list_program_column_px_ = -1;
     unsigned int list_vao_            = 0;
     unsigned int list_vbo_            = 0;
     int          list_instances_      = 0;

@@ -19,7 +19,8 @@
 // the marker stems, the cursor's dots, the scanner and the zoom anchor's
 // stem, in that order (build_canvas_list, paint_handler.cpp, after
 // on_redraw's paint-order block). Each but the plate is a solid converted
-// color on whole device pixels (ON WAVEFORM → UNSCALED, waveform_line_px;
+// color on whole device pixels (in device px on the waveform, waveform_line_px
+// and, for the vertical stems, waveform_stem_px since 2026-11-01;
 // the divider's rows scaled chrome, but solid integral rects all the same),
 // and the plate is the antialiased waveform (architect 2026-10-30,
 // render_waveform_columns' head), so the sink's vocabulary is three
@@ -96,7 +97,9 @@
 // run's first cell; THE PLATE blends, per cell of r, the exact coverage of
 // its columns' tips (the waveform's antialiasing, render_waveform_columns'
 // head) — `period` the index of r's first column in the
-// list's `columns`, `origin` the plate's row 0 (the canvas's first row) —
+// list's `columns`, `origin` the plate's row 0 (the canvas's first row),
+// `phase` the block phase of r's first column (2026-11-01, the
+// `waveform_column_px` key's blocks; 0 at its 1) —
 // `word` the ink and `word2` the outline, nothing where no bar covers.
 enum class GuiCanvasKind : int { Rect = 0, DotsColumn = 1, DotsRow = 2, Plate = 3 };
 struct GuiCanvasPrimitive {
@@ -221,6 +224,16 @@ struct GuiCanvasDrawList {
     // with it — so a commit of the key is a rebuild of the records and of
     // the program, nothing else.
     int      plate_grow = 0;
+    // THE PLATE'S COLUMN WIDTH in device px (2026-11-01; the
+    // `waveform_column_px` tuning key's seat, waveform_column_px, render.h):
+    // stamped by the sink at every rebuild beside the grow and, like it, A
+    // CONSTANT OF THE PLATE SHADER'S SOURCE (COLPX, kListFragmentShader's
+    // specialization rule): the GL canvas rebuilds its list program when
+    // either number differs from the program's. The plate's own tips were
+    // read under the same number (the plate fingerprint's fp_column_px,
+    // paint_handler.h): the key's commit re-renders the plate before the
+    // next frame (GuiInputHandler::apply_waveform_column_px).
+    int      plate_column_px = 1;
     std::vector<GuiCanvasPrimitive>  prims;
     std::vector<WaveformColumnRows>  columns;
     // THE GPU PAGE (above): while `page.stands` the clip is the box's
@@ -237,7 +250,8 @@ GuiCanvasDrawList& gui_canvas_frame();
 // display_color applied here); stem_dots a marker stem's dotted column (rows
 // [y, y + len) at column x, the phase counted from y); plate the cache's
 // published plate at `area` from its `columns` (not rendered: nothing),
-// `inks` the published inks, the grow the seat's (plate_grow).
+// `inks` the published inks, the grow and the column width the seats'
+// (plate_grow, plate_column_px).
 class GuiCanvasSink {
 public:
     explicit GuiCanvasSink(GuiCanvasDrawList& list);
