@@ -240,12 +240,14 @@ constexpr const char* kCanvasFragmentShader =
 //     subcolumn's base (the outer is always present, bot >= top + 1).
 //     (d) THE CORE, the ink opaque: the full outer with reach_i false,
 //     cov_o = 1 by (c) and cov_ol = 0 by the lemma. It holds the dark
-//     lamp's whole solid, and it exists for the gap the 2026-10-31 night
-//     consult found: with the lamp lit every solid pixel between the
-//     outer's edge and the inner's square — on the magnified coarse picture
-//     a large area, the outer levelled and expanded toward the lane edge,
-//     the inner at most half of it — took the full path though its answer
-//     is the ink.
+//     lamp's solid within the own bar grown by GROW (a pixel the contour's
+//     part of a base covers beyond it takes the outer's road to the same
+//     ink: the certificates are sufficient, not complete), and it exists
+//     for the gap the 2026-10-31 night consult found: with the lamp lit
+//     every solid pixel between the outer's edge and the inner's square —
+//     on the magnified coarse picture a large area, the outer levelled and
+//     expanded toward the lane edge, the inner at most half of it — took
+//     the full path though its answer is the ink.
 //     (e) THE ROADS past them: reach_i false, the outer's bases and
 //     dilation alone, wi = wt = 0 (the lemma: the inner's words would be
 //     zero) and the columns past L unfetched (they serve the inner's halo
