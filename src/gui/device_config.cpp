@@ -75,9 +75,11 @@ namespace {
 // the tuning keys keep the end where they leave from.
 //
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
-// `true_colors`, the display keys' end — a permanent key, the canvas's one
-// scaling concession (device_config.h's head), so it stands among the
-// permanent keys and not with the tuning keys at the end.
+// `true_colors`, the display keys' end — a permanent device-px key of the
+// waveform's, one of its two since 2026-11-01 (the column width, a tuning
+// key, the other; device_config.h's head, render.h's kWaveformSubcells), so
+// it stands among the permanent keys and not with the tuning keys at the
+// end.
 //
 // THE WAVEFORM'S COLUMN WIDTH (architect 2026-11-01): `waveform_column_px`
 // FOLLOWS `waveform_grow`, the waveform's two device-px keys read together

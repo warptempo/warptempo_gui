@@ -124,8 +124,9 @@
 // (the default's red, F34B58) and `range` its RngM (its blue, 4B82F3) —
 // Cool Edit's two cue colors, the flag in red and the range in blue
 // (architect 2026-10-26: "the default Cool Edit markers contrast well") —
-// `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on every built-in but
-// CEPro 1.2's FFFF6C),
+// `playhead_stem` its Curs (Cool Edit's yellow FFFF00 on every Cool Edit
+// built-in but CEPro 1.2's FFFF6C, and on the `ableton` preset, his one
+// exception, Live's light selection blue 8CB4FF, architect 2026-11-01),
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color", 626C7B
 // in the default: the record, since the panel is a material's mean on every
 // surface since 2026-10-21 — the brushed ground's since 2026-10-23 — the

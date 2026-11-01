@@ -46,8 +46,9 @@
 // color and 000000 alternating, is not drawn: architect 2026-10-09 ~14:30.)
 // THE PLAYHEAD'S OWN COLOR — the head and its dots in the canvas — is the
 // palette's `playhead_stem`
-// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 on every built-in but
-// the CEPro 1.2 pair's FFFF6C (palette_file.h's role table), as the cues'
+// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 on every Cool Edit built-in but
+// the CEPro 1.2 pair's FFFF6C, and the `ableton` preset's light blue 8CB4FF
+// (architect 2026-11-01; palette_file.h's role table), as the cues'
 // two colors are the
 // palette's `cue` and `range`; the triangles' shadow is the derived
 // `ce_cue_shadow`. THE RULER'S INK IS NO TONE OF FACE AND NEVER SWAPS

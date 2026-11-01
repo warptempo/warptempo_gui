@@ -598,7 +598,8 @@ void install_true_colors(bool on);
 // triangle's cell one device px, architect 2026-10-26 ~10:10: "All
 // triangles unscaled", cue_triangle_unit_px) — in THE PALETTE'S
 // `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
-// FFFF00 on every built-in but the CEPro 1.2 pair's FFFF6C) over the same
+// FFFF00 on every Cool Edit built-in but the CEPro 1.2 pair's FFFF6C, and
+// the `ableton` preset's light blue 8CB4FF, architect 2026-11-01) over the same
 // triangle one label quantum right and down (2026-10-26 ~13:05, the head's
 // paint clipped to its own rows, so the shadow's bottom rows are cut)
 // in `ce_cue_shadow`, ON THE RULER'S LAST `rows` DEVICE ROWS, the apex on
