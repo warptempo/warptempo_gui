@@ -225,13 +225,32 @@ constexpr const char* kCanvasFragmentShader =
 //     subrows, which lie inside the band and the record — so n_i = n_t = 0.
 //     In the arm's order:
 //     (a) DISCARD when neither reaches: n_o = 0.
-//     (b) THE INNER SQUARE, the ink opaque: the square of four subrows and
-//     four subcolumns round the pixel inside the own and both in-record
-//     neighbors' inner bars (a neighbor beyond the edge counts as set)
-//     contains the erosion's disc of radius 4, so n_t = n_i = 16 and n_o =
-//     16 — whether or not the own outer bar holds the pixel (a column
-//     wholly on one side of zero has its outer pushed outward with a gap,
-//     render.h's "THE OUTER IS A DILATION ABOUT THE CENTRE ROW").
+//     (b) THE INNER SQUARE ON THE GROWN BARS, the ink opaque (2026-10-31
+//     night): the pixel's subrows ± 4 lie inside the inner bar grown by
+//     GROW, T − GROW <= 4y − 4 and 4y + 7 <= B − 1 + GROW, of the own and
+//     both in-record neighbors below GROW 4 (a neighbor beyond the edge
+//     counts as set), of the own column alone from GROW 4 (SQ, a constant
+//     of the source). Either form gives n_t = n_i = 16 and n_o = 16 (wo
+//     takes mi's nibbles) — whether or not the own outer bar holds the
+//     pixel (a column wholly on one side of zero has its outer pushed
+//     outward with a gap, render.h's "THE OUTER IS A DILATION ABOUT THE
+//     CENTRE ROW"). THREE COLUMNS: the disc's dx = 0 column stands g(0) =
+//     GROW rows and the own bar is in every own subcolumn's base, so mi
+//     holds subrows 4y − 4 .. 4y + 7 at all twelve subcolumns of i − 1 ..
+//     i + 1 (an out-of-record word all ones), a square holding the
+//     erosion's disc about each of the pixel's subcells. THE OWN COLUMN
+//     ALONE, GROW >= 4: a pixel subcell (s, r) lies within GROW − 4 rows of
+//     the own bar's cell (s, clamp(r, T, B − 1)), a base bit; each point of
+//     the erosion's disc about (s, r) is within 4 + GROW − 4 = GROW of that
+//     cell (the triangle inequality), so inside the dilation's disc about
+//     it, and the dilated bit there is set. The rows read are 4y − 4 .. 4y
+//     + 7, bits 10 .. 21, inside the dilated masks' honest bits at every
+//     grow, and a base bit a shift brings there lies between it and the
+//     bar. BELOW GROW 4 the own column alone does not serve (the reviewer's
+//     witness: the own inner [140, 180), the neighbors' [200, 201), GROW 2,
+//     the row 40 passes the own test, and the erosion's horizontal
+//     neighbors are missing, n_i = 16, n_t = 0, the outline). At GROW 0
+//     the test is the ungrown square.
 //     (c) THE FULL OUTER: where the own outer bar grown vertically by GROW
 //     holds the pixel's four subrows, the outer's sixteen bits are set, wo
 //     = 0xFFFF with no base or dilation computed — the disc's dx = 0 column
@@ -453,11 +472,15 @@ constexpr const char* kListFragmentShader =
     // The fast paths in the head's order: (a) the discard; (b) the inner
     // square and (d) the core, the ink opaque; (c) the full outer.
     "        if (!reach_o && !reach_i) discard;\n"
+    // The square on the grown bars: the own and both neighbors below GROW
+    // 4, the own alone from 4 (SQ a constant expression, so the loop's
+    // bounds stay constants).
+    "        const int SQ = (GROW >= 4) ? 0 : 1;\n"
     "        bool square = true;\n"
-    "        UNROLL for (int d = 3; d <= 5; ++d) {\n"
+    "        UNROLL for (int d = 4 - SQ; d <= 4 + SQ; ++d) {\n"
     "            if (inp[d])\n"
-    "                square = square && lit[d] && col[d].z <= ylo - 4 &&\n"
-    "                         yhi + 4 <= col[d].w - 1;\n"
+    "                square = square && lit[d] && col[d].z - GROW <= ylo - 4 &&\n"
+    "                         yhi + 4 <= col[d].w - 1 + GROW;\n"
     "        }\n"
     "        if (square) {\n"
     "            o_color = vec4(word_rgb(v_words.x), 1.0);\n"
