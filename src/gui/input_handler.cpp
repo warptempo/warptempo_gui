@@ -396,10 +396,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 1 / 2 / 3 / 4, which run the S/T and column chokepoint BODIES and so
     // carry the column with them (the individual bare `t`/`p` keys were deleted
     // whole with their view lamps 2026-09-15, so the selectors are the axis's
-    // only road); the mode is lit for the column you are in —
-    // MINUS THE Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10; the
-    // ruling's reason at iteration_lock_key_blocked's header; Ctrl+Tab stays
-    // admitted in every state, the two tabs sharing both stores) — MINUS BARE `o` ON A WRITABLE TAB, the
+    // only road); the mode is lit for the column you are in (Ctrl+Tab and
+    // the Ctrl+Shift+Tab paired march stay admitted in every state, the two
+    // tabs sharing both stores; the march was subtracted 2026-09-10 to
+    // 2026-11-02, iteration_lock_key_blocked's header) — MINUS BARE `o` ON A WRITABLE TAB, the
     // read-only toggle's lock direction (architect 2026-09-10; narrowed
     // 2026-10-13: the padlock cannot lock the tab the lamp stands lit on, and
     // its unlock is admitted) —
@@ -611,13 +611,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // every button whose chord — or any modifier twin it can spell — the
         // READ-ONLY list drops greys on that same lock (redesign_button_
         // enabled's read-only arm, the mirror at read_only_key_blocked's
-        // head), so the roster never meets the read-only sentence here. Two
-        // producers still do: THE CAR'S Previous / Next on a locked tab, which
-        // build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
-        // the read-only card naming Undo or Redo, and the ITERATION sentence's
-        // lit buttons whose long-press or barrel twin is the Ctrl+Shift+Tab
-        // march, which the iteration list subtracts (the walk, Previous
-        // Marker, Switch Tab). The bare literal kTabReadOnlyCard stays the
+        // head), so the roster never meets the read-only sentence here. One
+        // producer still does: THE CAR'S Previous / Next on a locked tab,
+        // which build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and
+        // take the read-only card naming Undo or Redo. (The march roads — the
+        // walk, Previous Marker and Switch Tab, whose long-press or barrel
+        // twin is the Ctrl+Shift+Tab march — met the ITERATION sentence here
+        // until the iteration list admitted the march, 2026-11-02.) The bare literal kTabReadOnlyCard stays the
         // word of the sites that KNOW THEIR ACT and say the tab instead (its
         // readers at notifications.h).
         //

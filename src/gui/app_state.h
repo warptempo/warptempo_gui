@@ -2754,9 +2754,8 @@ enum class RedesignButton {
     // press is CTRL+SHIFT+TAB, the paired march (a modified press spells the
     // button's own key under those modifiers; on glass the S Pen's side
     // button). It admits nothing else. THE TWIN RULE DECIDES ITS FACE: the
-    // march acts in every state but under a lit grid iterations (the lock
-    // refuses it on its card), so the face greys only where that lock stands
-    // AND the reverse step (marker_walk_landing) would land nothing.
+    // march acts in every state the roster is live in (under a lit grid
+    // iterations too since 2026-11-02), so the face never greys.
     TransportWalkPrevious,
     // NEXT MARKER — THE WALK — IS UNCHANGED (architect 2026-09-22, merging
     // Previous marker and Next marker, two buttons over two chords since
@@ -12489,19 +12488,11 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         case RedesignButton::ViewWarp:
         case RedesignButton::ViewPhase:
         // (WALK BOTH TABS WAS A MEMBER from 2026-09-10 until its deletion on
-        // 2026-09-14: the march is refused under the lock, the ruling's
-        // reason at iteration_lock_key_blocked's header. The march's pointer
-        // roads are the OTHER TAB's shifted press and the walk button's
-        // ctrl-shift press, and neither button is a member: the tab's plain
-        // press is Ctrl+Tab, live under the lock, and the walk's plain and
-        // shifted presses walk the markers, live under the lock, while its
-        // ctrl form is that same Ctrl+Tab — so under
-        // the twin rule both stay lit and the march's lift reaches the key's
-        // own refusal and its card. THE TWO MARCH ROADS OF 2026-09-29 ARE NO
-        // MEMBERS EITHER: Switch Tab's plain press is that live Ctrl+Tab, and
-        // Previous Marker's plain Shift+Tab walks the markers — its arm in
-        // redesign_button_enabled greys it only where that reverse step lands
-        // nothing too, a fork a membership answer cannot spell.)
+        // 2026-09-14, and the march itself is admitted under the lock since
+        // 2026-11-02, iteration_lock_key_blocked's header: every march road —
+        // the walk's ctrl-shift press, Switch Tab's shifted press, Previous
+        // Marker's ctrl press — is live under the lamp, so none is a
+        // member.)
         // EVERY MEMBER ABOVE GREYS OUTRIGHT, whatever cell is addressed: the
         // gate refuses their chords ahead of its bound-axis admission
         // (iteration_lock_key_blocked), so a Lower or Upper cell buys them
@@ -15024,30 +15015,25 @@ inline bool redesign_button_enabled(const AppState& a,
         // locked tab admits it. A button with a live modified twin greys
         // only when every variant would change nothing, so the walk's face
         // greys only where the head gates above grey every button; the bare
-        // and shifted walks, and the march under the lock, answer at their
-        // own arms when pressed, a plain lift at the cycle's end being the
-        // key's silent refusal (cycle_marker_focus, and the `h` view's
+        // and shifted walks answer at their own arms when pressed, a plain
+        // lift at the cycle's end being the key's silent refusal
+        // (cycle_marker_focus, and the `h` view's
         // cycle_history_diff_flag_focus).
         //
         // SWITCH TAB JOINS IT (architect 2026-09-29): its plain press IS
-        // Ctrl+Tab, so it never greys, its shifted press (the march) under a
-        // lit grid iterations reaching the key's own card.
+        // Ctrl+Tab, so it never greys.
+        //
+        // PREVIOUS MARKER JOINS THEM TOO (architect 2026-09-29, the twin
+        // rule): its plain press is Shift+Tab and its ctrl press
+        // Ctrl+Shift+Tab, the paired march, which acts in every state the
+        // roster is live in — its two `c`s centre whatever the steps find,
+        // live and in the `h` view alike, and under a lit grid iterations as
+        // outside it since 2026-11-02 (the lock's delta (a) admits it) — so
+        // the face is lit wherever the roster is.
         case RedesignButton::TransportWalk:
         case RedesignButton::TransportSwitchTab:
-            return true;
-        // PREVIOUS MARKER (architect 2026-09-29) UNDER THE TWIN RULE: its
-        // plain press is Shift+Tab and its ctrl press Ctrl+Shift+Tab, the
-        // paired march, which acts in every state but one — under a lit grid
-        // iterations the lock refuses it on its card (iteration_lock_key_-
-        // blocked's delta (a)). So the face greys only where that lamp stands
-        // AND the reverse step would land nothing: marker_walk_landing, the
-        // act's own gate (cycle_marker_focus), asked backwards — markers
-        // only, under the lamp as outside it (2026-11-02). Outside the lamp the march always
-        // acts (its two `c`s centre whatever the steps find), live and in the
-        // `h` view alike, so the face is lit wherever the roster is.
         case RedesignButton::TransportWalkPrevious:
-            return !a.iteration_mode_enabled ||
-                   marker_walk_landing(a, audio, /*forward=*/false) >= 0;
+            return true;
         // CENTER MIRRORS NOTHING (2026-08-12): `c` always frames on a loaded
         // file. It stood in the icon row's zoom group beside Zoom to Fit
         // until 2026-09-29 and is the bottom row's since (the walk group's
@@ -17607,14 +17593,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
                     "other tab; hold with the barrel to walk both tabs"};
         // PREVIOUS MARKER (architect 2026-09-29): its own chord is Shift+Tab,
         // and its one admission is ctrl, the paired march — "walk
-        // both tabs" being the march's own words. The stateful overload
-        // drops the line under a lit grid iterations, where the march refuses.
+        // both tabs" being the march's own words; the line stands in every
+        // state, the march acting in every state (2026-11-02).
         case RedesignButton::TransportWalkPrevious:
             return {"Previous Marker",
                     "Barrel button to walk both tabs"};
         // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the act's name, and
         // its one admission, shift, the paired march in the march's own
-        // words. The overload drops the line under a lit grid iterations.
+        // words; the line stands in every state.
         case RedesignButton::TransportSwitchTab:
             return {"Switch Tab",
                     "Hold to walk both tabs"};
@@ -18054,12 +18040,11 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // drop a line but never rewrite
 // one, a line naming several forms cannot be shortened to its live ones: it
 // stands whole while any of its forms would act, and drops only where none
-// would. So Next Marker's stands under a lit grid iterations, where its
-// barrel-through-the-hold form is the refused march (its barrel form switches
-// the tab in every state, so it never drops). A
-// greyed-out half of a sentence has no face to carry it. The single-form
-// march lines (Previous Marker's and Switch Tab's) are rule (2)'s
-// plain case and drop under that lamp.
+// would. A greyed-out half of a sentence has no face to carry it. (Next
+// Marker's line was the case while the lock refused its
+// barrel-through-the-hold form, the march, 2026-09-29 to 2026-11-02; every
+// one of its forms acts in every state since, as Previous Marker's and
+// Switch Tab's single-form march lines do.)
 //
 // THE REASON-AND-STATE FORKS ARE DELETED WHOLE (the same ruling): the lock's
 // and the lamps' "Turn off … first" lines went on 2026-09-12 with the class's
@@ -18427,18 +18412,10 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {left ? "Hop Left" : "Hop Right", nullptr};
             break;
         }
-        // THE MARCH ROADS (architect 2026-09-29): Previous Marker's ctrl
-        // press and Switch Tab's shifted press are both the paired march,
-        // which the grid-iterations lock refuses on its card
-        // (iteration_lock_key_blocked's delta (a), asked on the lamp exactly
-        // as authoring_lock_drops_chord asks it), so under a lit lamp the
-        // modified press does nothing the plain one does and the line drops.
-        // The first line never forks.
-        case RedesignButton::TransportWalkPrevious:
-        case RedesignButton::TransportSwitchTab:
-            if (a.iteration_mode_enabled)
-                return {redesign_button_tooltip(b).line1, nullptr};
-            break;
+        // (THE MARCH ROADS' LINES — Previous Marker's ctrl press and Switch
+        // Tab's shifted press, both the paired march — dropped under a lit
+        // grid iterations 2026-09-29 to 2026-11-02, while the lock refused
+        // the march; they stand in every state since, the march admitted.)
         // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on
         // the member the bare press ALREADY reaches — one step from a wall,
         // where `,` and Shift+`,` both choose count − 1 and `.` and Shift+`.`
@@ -18499,9 +18476,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // since 2026-09-02 UP / DOWN'S BARREL
 // LINE where the bare and the barrel
 // step refuse alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
-// from a wall, where the jump names the member the step already reaches, and
-// since 2026-09-29 the MARCH LINE of PREVIOUS MARKER, SWITCH TAB and the two
-// TABS under a lit grid iterations, where the lock refuses the march,
+// from a wall, where the jump names the member the step already reaches,
 // since 2026-10-11 SAVE's
 // publish line in the `h` view, where the plain press is already the publish
 // chord, and since 2026-10-14 JUMP TO DEFINING MARKER's

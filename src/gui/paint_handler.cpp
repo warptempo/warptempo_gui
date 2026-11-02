@@ -2028,8 +2028,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // (Home / End, its own absolute jumps, are keys alone since 2026-10-12, the
 // two skip buttons gone; Play / Stop is the transport's one button and is not
 // painted in the view). PREVIOUS
-// MARKER greys only under a lit grid iterations with no reverse step left
-// (its twin, the march, refusing there too). Outside the view the four VERBS
+// MARKER never greys (its twin, the march, acting in every state since
+// 2026-11-02). Outside the view the four VERBS
 // and OPEN TEXT EDITOR grey on a locked tab, their own
 // gate — JUMP TO DEFINING MARKER, seated among them, does NOT, its chord being
 // navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT PLAY /

@@ -569,8 +569,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // read_only_key_blocked above).
 //
 // DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, and
-// THREE MEMBERS wide since 2026-09-19 (bare `k` left it that day, the
-// paragraph below carrying its record; bare `t`/`p`, the individual axis
+// TWO MEMBERS wide since 2026-11-02 (bare `k` left it 2026-09-19 and the
+// paired march 2026-11-02, the paragraphs below carrying their records; bare `t`/`p`, the individual axis
 // toggles, were deleted whole with their view lamps on 2026-09-15, so the
 // column switch's only remaining road is the selectors below — see the S/T
 // paragraph's retirement note further down): THE COLUMN SWITCH's four chords — the
@@ -578,12 +578,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // BODIES (unchanged; only their bare keys are gone) and so carry the column
 // with them (architect 2026-09-10: the mode is lit for the column you are IN,
 // which is also what retired the stamped column that stood beside the mode
-// bit for a few hours of that day) — THE
-// Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10: its tab switch clears
-// the selection and re-seats the payload, ruled while the walk stepped the
-// bound cells, so its second tab could not repeat the first; the walk
-// steps markers alone since 2026-11-02, cycle_marker_focus, and the refusal
-// stands as ruled) — and BARE `o`, THE READ-ONLY TOGGLE, IN ITS LOCK
+// bit for a few hours of that day) — and BARE `o`, THE READ-ONLY TOGGLE, IN ITS LOCK
 // DIRECTION ALONE (architect 2026-09-10, that morning; narrowed 2026-10-13).
 // The padlock is the odd one out in what it protects: a lock writes no store
 // and pushes nothing, so the undo domain has no interest in it. What it keeps
@@ -596,6 +591,16 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // authoring cards name — and an unlock only widens what is reachable, the
 // settings editor's typed `tab_X_read_only=false` committing under the lamp
 // on the same reason.
+//
+// (THE Ctrl+Shift+Tab PAIRED MARCH WAS A MEMBER from 2026-09-10 until
+// 2026-11-02: its tab switch clears the selection and re-seats the payload,
+// so while the walk stepped the bound cells its second tab could not repeat
+// the first. The walk steps markers alone since 2026-11-02 (architect, R4:
+// "as they do outside grid view"; cycle_marker_focus), so nothing was left
+// for the refusal to protect and the march is admitted under the lamp as
+// the read-only list admits it — its keyboard chord, its two pointer roads
+// (the other tab's shifted press, the walk buttons' ctrl-shift and Previous
+// Marker's ctrl press) and the faces and lines that read this gate.)
 //
 // (BARE `k`, ADD TO SELECTION, WAS A FOURTH MEMBER from 2026-09-10 until
 // 2026-09-19, and the architect retired it by NARROWING THE MODE instead. The
@@ -777,18 +782,16 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // column switch, every press moving its axis since the pop of 2026-10-23
     // night, the key for the standing value selecting the other; bare `t`/`p`, the two individual axis toggles, were
     // deleted whole with their view lamps on 2026-09-15, so the selectors are
-    // the only road now), BARE `o` ON A WRITABLE TAB (the lock direction alone, the
-    // header; on a locked tab it falls through to the base, which admits the
-    // unlock) and the paired march. Bare-exact on all four and
-    // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
-    // them. (BARE `k` STOOD HERE TOO until 2026-09-19, and the header carries
-    // why it left.)
+    // the only road now) and BARE `o` ON A WRITABLE TAB (the lock direction
+    // alone, the header; on a locked tab it falls through to the base, which
+    // admits the unlock). Bare-exact on every one, exactly as their dispatch
+    // arms spell them. (BARE `k` STOOD HERE TOO until 2026-09-19 and the paired march
+    // until 2026-11-02, and the header carries why each left.)
     if (!alt && !ctrl && !shift &&
         ((key == GuiKeys::O && !active_view_state(app).read_only) ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
          key == GuiKeys::Digit3 || key == GuiKeys::Digit4))
         return true;
-    if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) return false;
     // The undo pair, admitted for its own card (the whole family, alt binding
@@ -8894,14 +8897,13 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // both of its switches since 2026-10-18, ab_audition.h.) The playback
     // stop is the switch's own (switch_active_tab_view_to).
     //
-    // IT NEVER RUNS WHILE GRID ITERATIONS IS LIT (architect 2026-09-10): the
-    // march is one of delta (a)'s members at the authoring lock's keyboard
-    // gate, refused on kIterationLockCard (iteration_lock_key_blocked, above,
-    // whose header carries the ruling's reason) — the march's two pointer
-    // roads, the other tab's shifted press and the walk button's ctrl-shift
-    // press, dispatching this chord and meeting the same card. Both steps
-    // here are ordinary MARKER steps, as every walk step is (2026-11-02,
-    // cycle_marker_focus).
+    // IT RUNS UNDER GRID ITERATIONS AS OUTSIDE IT (architect 2026-11-02, R4;
+    // iteration_lock_key_blocked's header carries the record of its refusal
+    // there, 2026-09-10 to 2026-11-02): both steps here are ordinary MARKER
+    // steps, as every walk step is (cycle_marker_focus), and the tab switch
+    // and `c` it composes are admitted under the lamp themselves. Its pointer
+    // roads — the other tab's shifted press and the walk buttons' ctrl-shift
+    // (Previous Marker's ctrl) press — dispatch this chord.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
