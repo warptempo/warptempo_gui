@@ -12,15 +12,16 @@
 // onscreen_keyboard::waveform_paint_area within it — goes through ONE sink,
 // and every canvas painter is written once against it: render_canvas (the
 // ground and the grid), the plate (paint_waveform_plate),
-// render_center_lines, render_waveform_divider (the stereo divider's three
-// rows — chrome on the canvas, 2026-10-16, render.h's waveform_divider — over
-// the plate, so a plate from before a resize never crosses them), the
+// render_center_lines, render_waveform_divider (the stereo divider's row —
+// chrome on the canvas, 2026-10-16, render.h's waveform_divider — over the
+// plate, so a plate from before a resize never crosses it, and under every
+// vertical line after it, each crossing it, 2026-11-02), the
 // phase-reset lead-in ring, the nudged pairs' runs,
 // the marker stems, the cursor's dots, the scanner and the zoom anchor's
 // stem, in that order (build_canvas_list, paint_handler.cpp, after
 // on_redraw's paint-order block). Each but the plate is a solid converted
 // color on whole device pixels (ON WAVEFORM → UNSCALED, waveform_line_px;
-// the divider's rows scaled chrome, but solid integral rects all the same),
+// the divider's row scaled chrome, but a solid integral rect all the same),
 // and the plate is the antialiased waveform (architect 2026-10-30,
 // render_waveform_columns' head), so the sink's vocabulary is three
 // records: a RECT, a DOTTED RUN (GuiCanvasDotRun,
@@ -235,8 +236,7 @@ GuiCanvasDrawList& gui_canvas_frame();
 // are the caller's), the generation moved at construction; the plate's
 // columns are kept while their revision holds (GuiCanvasDrawList's plate
 // payload). rects and dots append in `color` (an authored color,
-// display_color applied here); stem_dots a marker stem's dotted column (rows
-// [y, y + len) at column x, the phase counted from y); plate the cache's
+// display_color applied here); plate the cache's
 // published plate at `area` from its `columns` (not rendered: nothing),
 // `inks` the published inks, the grow the seat's (plate_grow).
 class GuiCanvasSink {
@@ -244,8 +244,6 @@ public:
     explicit GuiCanvasSink(GuiCanvasDrawList& list);
     void rects(std::span<const GuiRect> rs, GuiColor color);
     void dots(std::span<const GuiCanvasDotRun> runs, GuiColor color);
-    void stem_dots(int x, int y, int len, int period, int phase,
-                   GuiColor color);
     void plate(const GuiRect& area, const GuiPlateColumns& columns,
                WaveformPlateInks inks);
 

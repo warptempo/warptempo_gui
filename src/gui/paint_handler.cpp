@@ -4379,9 +4379,9 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //   THE RIGHT SIDE on the band's last column, the stem's rule exactly
 //     (program_spec.h's dot fields: the canvas rows ≡
 //     range_dot_phase and ≡ cue_dot_phase, mod cue_dot_period,
-//     counted from the canvas's first row), down both wells and not across
-//     the stereo divider's rows (2026-10-16) — the dotted line's runs
-//     (dotted_waveform_line_runs, render.h), the stem's own rule. A band
+//     counted from the canvas's first row), down the canvas's whole height,
+//     the stereo divider's row crossed (architect 2026-11-02) — the dotted
+//     line's run (dotted_waveform_line_run, render.h), the stem's own rule. A band
 //     clipped at the area's right edge draws it there, flush, as the trim
 //     bridge's clipped fill reads.
 //   THE TOP RUN on the canvas's first row and THE BOTTOM RUN on its last:
@@ -4398,9 +4398,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // integers off the area's x).
 // THE CANVAS'S ROWS (architect 2026-10-06; the area whole since
 // 2026-10-09): the runs land on the canvas's first and last rows — the upper
-// well's first and the lower well's last, the two wells' rings staying whole
-// under a reset's span and the right side skipping the stereo divider's rows
-// (2026-10-16). No
+// well's first and the lower well's last — and the right side crosses the
+// stereo divider's row as any vertical line (architect 2026-11-02). No
 // other reader takes the ring's cells: it is no hit target, and its damage
 // is the whole waveform area's (the flag cache's rebuild and
 // Selection::damage_overlay_on_subject_change), which holds it whole.
@@ -4434,15 +4433,12 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
             GuiCanvasDotRun{false, x0, y_bot, x1 - x0, period, stem, phase},
         };
         sink.dots(runs, color);
-        // The right side on the band's last column, one run per well (the
-        // stereo divider's rows carry none, 2026-10-16).
-        GuiCanvasDotRun side[2];
-        const int n = dotted_waveform_line_runs(area, x1 - t - area.x, period,
-                                                phase, side);
-        if (n > 0)
-            sink.dots(std::span<const GuiCanvasDotRun>(
-                          side, static_cast<std::size_t>(n)),
-                      color);
+        // The right side on the band's last column, one run down the
+        // canvas's whole height (the divider's row crossed, 2026-11-02).
+        GuiCanvasDotRun side;
+        if (dotted_waveform_line_run(area, x1 - t - area.x, period, phase,
+                                     side))
+            sink.dots(std::span<const GuiCanvasDotRun>(&side, 1), color);
     };
     if (dots.range_phase_dots != GuiCueDot::None)
         paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
@@ -4607,10 +4603,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
 // 2026-10-09; the two colors ~11:50; every cue's since 2026-10-26;
 // render.h's marker-lane paragraph): one-device-px dots on the
-// CANVAS'S device rows counted from its top row (the canvas sink's
-// stem_dots, one run per well, waveform_well_rows) — none on the canvas's
-// frame row, none on the stereo divider's rows (2026-10-16) and none in the
-// lane — on
+// CANVAS'S device rows counted from its top row (dotted_waveform_line_run,
+// one run down the canvas's whole height, the stereo divider's row crossed
+// as any grid line, architect 2026-11-02) — none in the lane — on
 // rows ≡ cue_dot_phase and on rows ≡ range_dot_phase (mod cue_dot_period,
 // program_spec.h), each phase in the role the stash names for it
 // (GuiCueDot, cue_dot_color; resolve_flag_face's table: every live cue,
@@ -4626,7 +4621,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // The full sequence is the paint-order block in on_redraw.
 //
 // THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): the list takes
-// each stem's phase as a dotted column, one run per well.
+// each stem's phase as a dotted column, one run.
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                                          const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
@@ -4638,25 +4633,18 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
     // here — the stash's two phases are the marker's resolved face (its
     // class and its selection), the whole answer, and the colors the
     // palette's live roles.
-    // THE TWO WELLS (the canvas's rows less the stereo divider's,
-    // 2026-10-16): each stem one run per non-empty well, its phase counted
-    // from the canvas's first row, so a dot keeps its row and the divider
-    // carries none. The dots are the dotted line's rule (render.h's
-    // dotted_waveform_line_runs) — rows ≡ phase (mod period) from the
-    // canvas's top, one device px, at the stem's column, in the two wells.
-    const std::array<WaveformWellRows, 2> wells = waveform_well_rows(area);
+    // THE CANVAS'S WHOLE HEIGHT (architect 2026-11-02: "the divider is just
+    // another grid line now"): each stem one run, the stereo divider's row
+    // crossed, its phase counted from the canvas's first row with no
+    // re-phasing. The dots are the dotted line's rule (render.h's
+    // dotted_waveform_line_run, the one road) — rows ≡ phase (mod period)
+    // from the canvas's top, one device px, at the stem's column.
     const ProgramSpec& ps = kProgramSpec;
     const auto dotted_stem = [&](int col, int phase, GuiColor color) {
-        if (col < 0 || col >= area.w || ps.cue_dot_period <= 0) return;
-        for (const WaveformWellRows& w : wells) {
-            if (w.y1 <= w.y0) continue;
-            // stem_dots counts its phase from the run's first row: the
-            // canvas-top phase restated from this well's first row.
-            const int p = ps.cue_dot_period;
-            const int well_phase = ((phase - (w.y0 - area.y)) % p + p) % p;
-            sink.stem_dots(area.x + col, w.y0, w.y1 - w.y0, p, well_phase,
-                           color);
-        }
+        GuiCanvasDotRun run;
+        if (dotted_waveform_line_run(area, col, ps.cue_dot_period, phase,
+                                     run))
+            sink.dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
     };
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
@@ -8158,8 +8146,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      2026-10-16; likewise here and not at step 2 with audio loaded,
         //      OVER THE PLATE so a plate from before a resize, standing at its
         //      old bands until the worker republishes, never crosses the live
-        //      divider — in the steady state nothing paints there, so the
-        //      order changes no pixel) -> phase-reset overlay ring.
+        //      divider — in the steady state no ink stands there, so the
+        //      order changes no pixel; UNDER every vertical line, steps 4's
+        //      ring through 11, each crossing it as any grid line, architect
+        //      2026-11-02) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
         //      the bar, ~14:30).

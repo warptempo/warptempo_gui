@@ -71,12 +71,6 @@ void GuiCanvasSink::dots(std::span<const GuiCanvasDotRun> runs,
     }
 }
 
-void GuiCanvasSink::stem_dots(int x, int y, int len, int period, int phase,
-                              GuiColor color) {
-    const GuiCanvasDotRun run{true, x, y, len, period, y, phase};
-    dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
-}
-
 // THE PLATE'S RECORDS: one per STORED band (GuiPlateColumns::Band: the
 // bands whose bounds are whole; the plate is transparent elsewhere), each
 // placed at the band's own columns and rows off the area's origin — at the

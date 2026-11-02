@@ -193,7 +193,8 @@ struct ProgramSpec {
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
-    // dotted_waveform_line_runs): THE PLAYHEAD'S every `dot_period`
+    // dotted_waveform_line_run, the stereo divider's row crossed with no
+    // re-phasing, 2026-11-02): THE PLAYHEAD'S every `dot_period`
     // rows on its phase; A CUE'S TWO PHASES each every `cue_dot_period` rows
     // (architect 2026-10-09 ~11:50, Cool Edit's cue and range dots) — the
     // cue's on `cue_dot_phase` 7, the range's on `range_dot_phase`

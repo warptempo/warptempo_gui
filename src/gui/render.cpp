@@ -302,15 +302,17 @@ void paint_canvas_skirt(cairo_t* cr, const GuiRect& area, int column_x,
 // CHROME ON THE CANVAS, painted through the sink so the GL canvas draws it
 // from its list (canvas_sink.h's head), the skirts' share being
 // paint_canvas_skirt's. ITS OWN PASS, AFTER THE PLATE AND THE CENTER
-// LINES (build_canvas_list's order): nothing
-// legitimate paints on these rows — the plate's bands and the lines stand
-// inside the wells, every vertical run is cut per well (waveform_well_rows)
-// and every input leaves them alone (point_on_waveform_divider: chrome,
-// inert) — so in the steady state the order changes no pixel; it is there
+// LINES and BEFORE EVERY VERTICAL LINE (build_canvas_list's order): the
+// plate's bands and the horizontal lines stand inside the wells and every
+// input leaves the row alone (point_on_waveform_divider: chrome, inert), so
+// over the plate the order changes no pixel in the steady state; it is there
 // for A PLATE FROM BEFORE A RESIZE, which stands at its old bands until the
 // worker republishes (paint_waveform_plate draws whatever plate is
-// published), and whose ink would otherwise cross the live divider's rows.
-// Painted last of the two, the live divider is on top whatever plate stands.
+// published), and whose ink would otherwise cross the live divider's row.
+// Painted after the plate, the live divider is on top whatever plate stands;
+// painted before the lead-in ring, the stems, the cursor, the scanner and
+// the anchor, it lies UNDER them, each crossing it as any grid line
+// (architect 2026-11-02: "the divider is just another grid line now").
 void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     const GuiRect r = canvas_divider_rect(area);
@@ -726,20 +728,17 @@ bool render_waveform_columns(GuiRect area,
 }
 
 namespace {
-// ONE SOLID CANVAS LINE IN THE TWO WELLS: the waveform_line_px()-wide line
-// at column `col` (its column gate and right-edge clip, waveform_line_width)
-// as one rect per non-empty well (waveform_well_rows), so the stereo
-// divider's rows carry none — the scanner's and the zoom anchor's one form,
-// one sink fill.
-void well_line_rects(GuiCanvasSink& sink, const GuiRect& area, int col,
-                     GuiColor color) {
+// ONE SOLID CANVAS LINE DOWN THE AREA: the waveform_line_px()-wide line at
+// column `col` (its column gate and right-edge clip, waveform_line_width) as
+// one rect over the area's whole height, the stereo divider's row crossed
+// (architect 2026-11-02, render.h's waveform_divider) — the scanner's and
+// the zoom anchor's one form, one sink fill.
+void canvas_line_rect(GuiCanvasSink& sink, const GuiRect& area, int col,
+                      GuiColor color) {
     const int width = waveform_line_width(area.w, col);
-    if (width <= 0) return;
-    std::array<GuiRect, 2> rs{};
-    std::size_t n = 0;
-    for (const WaveformWellRows& w : waveform_well_rows(area))
-        if (w.y1 > w.y0) rs[n++] = GuiRect{area.x + col, w.y0, width, w.y1 - w.y0};
-    if (n > 0) sink.rects(std::span<const GuiRect>(rs.data(), n), color);
+    if (width <= 0 || area.h <= 0) return;
+    const GuiRect r{area.x + col, area.y, width, area.h};
+    sink.rects(std::span<const GuiRect>(&r, 1), color);
 }
 } // namespace
 
@@ -790,21 +789,17 @@ void render_playhead(GuiCanvasSink& sink,
     // The waveform_line_px()-wide line (render.h) paints whenever its column
     // is onscreen (gated on its own column and clipped at the right edge), so
     // it never leaks into an adjacent region, straight over whatever it
-    // crosses — waveform ink included. THE CANVAS'S TWO WELLS (2026-10-09;
-    // the stereo divider's rows left to it since 2026-10-16,
-    // waveform_well_rows): the scanner solid, the resting cursor Cool Edit's
-    // dotted column on its own phase (the declaration), one run per well.
+    // crosses — waveform ink included. THE CANVAS'S WHOLE HEIGHT, the stereo
+    // divider's row crossed (architect 2026-11-02, render.h's
+    // waveform_divider): the scanner solid, the resting cursor Cool Edit's
+    // dotted column on its own phase (the declaration), one run.
     if (form == PlayheadForm::Dotted) {
-        GuiCanvasDotRun runs[2];
-        const int n = dotted_waveform_line_runs(
-            area, col, kProgramSpec.dot_period,
-            kProgramSpec.playhead_dot_phase, runs);
-        if (n > 0)
-            sink.dots(std::span<const GuiCanvasDotRun>(runs,
-                                                       static_cast<std::size_t>(n)),
-                      color);
+        GuiCanvasDotRun run;
+        if (dotted_waveform_line_run(area, col, kProgramSpec.dot_period,
+                                     kProgramSpec.playhead_dot_phase, run))
+            sink.dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
     } else {
-        well_line_rects(sink, area, col, color);
+        canvas_line_rect(sink, area, col, color);
     }
 }
 
@@ -827,10 +822,10 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     // playhead paragraph). It is
     // deliberately as loud as a marker stem, a solid line where the cues'
     // and the cursor's are dotted.
-    // The canvas's two wells (2026-10-09: no line crosses the row of ground
-    // above the canvas; the stereo divider's row likewise since 2026-10-16,
-    // waveform_well_rows).
-    well_line_rects(sink, area, col, palette().scanner);
+    // The canvas's whole height (2026-10-09: no line crosses the row of
+    // ground above the canvas; the stereo divider's row it crosses, architect
+    // 2026-11-02).
+    canvas_line_rect(sink, area, col, palette().scanner);
 }
 
 // -- Trim bound geometry owners -------------------------------------------
