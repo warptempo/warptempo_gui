@@ -500,8 +500,10 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 //                  (2026-11-02), 65 % toward the lane — "blended further …
 //                  a faded, opaque sort of look", the text legible least of
 //                  the two: 5F5F5F.
-// A selected inert segment keeps the selected label color (the chrome's
-// `label`) so its selection still shows; a disabled cue has no dots.
+// A selected inert segment keeps the faded label (the selection shows on the
+// canvas, never in the label, architect 2026-11-02; a disabled cue's only
+// selection mark the focus's triangle, render.h's SELECTED DISABLED row); a
+// disabled cue has no dots.
 inline constexpr double kDisabledTriangleMix = 0.45;
 inline constexpr double kDisabledLabelMix    = 0.65;
 

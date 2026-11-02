@@ -941,8 +941,7 @@ struct EditorTextDragState {
 // the pressed cell decides two things. THE ADDRESSED CELL: every marker press
 // writes AppState::addressed_cell from the cell it landed on, inside
 // run_marker_click_act on all three click shapes and behind the selection
-// mutator that reset it, so the bright cell, the vertical arrows and Enter
-// all follow the press. THE DOUBLE-CLICK'S EDITOR: each cell opens its own —
+// mutator that reset it, so the vertical arrows and Enter follow the press. THE DOUBLE-CLICK'S EDITOR: each cell opens its own —
 // the payload editor on the flag box (warp only, its own gates), the bound
 // editor on a bound cell (both columns, both views). It is resolved from the
 // painter's own published boundaries (FlagHitRect::iter_lower_boundary_x /
@@ -5096,14 +5095,18 @@ struct AppState {
     // STEMS NEVER APPEAR OR VANISH WITH THE SELECTION (row 5, architect). Every
     // ENABLED marker of the active column stems, always
     // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash); a
-    // disabled marker stems never. A selected marker's stem wears its flag's
-    // bright fill (architect 2026-09-23), so selection's cue is the flags'
-    // bright colour pair and the stems beneath them. The successive apparatus this
+    // disabled marker stems never. A selected marker's stem wears the
+    // playhead's color interspersed with its own dots, and the focus's
+    // triangle the playhead's color (architect 2026-11-02, M10 rule 1;
+    // render.h's SELECTED row), so selection's cue is on the canvas: its
+    // stems and the focus's triangle, the labels unchanged. The successive apparatus this
     // replaces is worth naming once, because each layer was deleted for the same
     // reason the next one was: the conditional stem's hover/pin arms
     // (harvested 2026-07-25 for always-on-for-a-singleton), then the singleton
     // model's subject-change damage pair on Selection (deleted with row 5 —
-    // stems no longer key on selection, so no selection mutation can move one).
+    // no stem appears or vanishes with the selection; a selected stem's color
+    // rides the flag cache's selection fingerprint, whose rebuild damages the
+    // waveform).
 
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
     // 'P' = phase reset markers (a third, M, left with the magnification
@@ -7424,9 +7427,10 @@ struct AppState {
         // stands for both (HistoryDiffFlag::cue_frame). EVERY SETTER OF
         // `focus` WRITES IT BESIDE: the plain click and the ctrl click the
         // half of the rect they hit (FlagHitRect::diff_half), the Tab cycle
-        // its stop's (history_diff_cycle_target). It never changes the
-        // picture — the selected look is the whole item's, both cues — so no
-        // fingerprint keys it. Cleared with the focus
+        // its stop's (history_diff_cycle_target). IT IS PAINTED (architect
+        // 2026-11-02, M10 rule 1): both cues of a selected pair take the
+        // selected stem, the focused cue's triangle alone the playhead's
+        // color, so the flag cache keys it (fp_history_focus_half). Cleared with the focus
         // (clear_history_mode_focus) and by the whole-struct reset.
         HistoryDiffHalf focus_half = HistoryDiffHalf::Removed;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
@@ -8467,8 +8471,10 @@ struct AppState {
     // "a lit lamp seen from the other column is the reminder" mechanism went
     // with it — there is no other column to stand on while lit.)
 
-    // THE ADDRESSED CELL: which cell of the FOCUSED marker is the bright one,
-    // the one the vertical arrows step and the one Enter opens (MarkerCell,
+    // THE ADDRESSED CELL: which cell of the FOCUSED marker
+    // the vertical arrows step and Enter opens — NOT PAINTED since
+    // 2026-11-02 (the selected look is the cue's, on the canvas, never a
+    // segment's: render.h's SELECTED row) (MarkerCell,
     // warpmarkers.h; architect 2026-09-04 for the axis, 2026-09-05 for its
     // reach over every cell and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
@@ -8514,8 +8520,7 @@ struct AppState {
     //
     // READERS: the Up/Down dispatch's fork (input_handler.cpp — THE VALUE
     // STEP, one body per cell: the tempo, a bound), the Return arm's
-    // editor fork, the flag painter's bright cell (render_flags through the
-    // flag cache's fp_addressed_cell), THE TAB WALK'S OWN STEP
+    // editor fork, THE TAB WALK'S OWN STEP
     // (marker_walk_step, which reads the axis as the box it is standing in),
     // the Up/Down buttons'
     // face and tooltip (redesign_button_enabled / redesign_button_tooltip)
@@ -16498,8 +16503,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // Toggle Value Drag the other since 2026-10-11, below), on the
         // same toggle pattern as the two above: it reads the live bit bare `k`
         // flips, so the lit face and the sticky ctrl cannot drift. IT IS THE
-        // ONLY CUE THE MODE GETS, by ruling — the flags' own brightened face
-        // already says which markers are selected, so there is no badge and no
+        // ONLY CUE THE MODE GETS, by ruling — the selected stems (render.h's
+        // SELECTED row) already say which markers are selected, so there is no badge and no
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared face expressions already handle: the disabled blend mixes

@@ -2295,7 +2295,8 @@ private:
     // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
     // seat's boxes in painted order, then the next marker — and this
     // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
-    // and damages the marker lane, and does NOTHING else: no select, no
+    // and does NOTHING else (no picture: the axis paints nothing since
+    // 2026-11-02, render.h's SELECTED row): no select, no
     // playhead land, no framing and no zoom, so `frame` governs
     // marker-to-marker steps alone. A marker step runs the
     // gate, the select and the jump as it always has and then seats the step's
@@ -2304,8 +2305,7 @@ private:
     // marker steps whatever the mode, and nothing reads the step back.
     void cycle_marker_focus(bool forward, MarkerLandingFrame frame);
 
-    // The addressed-cell write and the damage it owes, spelled once for the
-    // walk (input_handler.cpp).
+    // The addressed-cell write, spelled once for the walk (input_handler.cpp).
     void write_addressed_cell(MarkerCell cell);
 
     // Jump the playhead directly onto the currently focused marker

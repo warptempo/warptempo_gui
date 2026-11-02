@@ -2132,17 +2132,14 @@ bool GuiInputHandler::car_play_refused_by_key_gates() {
     return false;
 }
 
-// THE ADDRESSED-CELL WRITE AND ITS DAMAGE, spelled once for the walk: the
-// bright cell moves, and the flag cache keys the axis (fp_addressed_cell,
-// waveform_cache.cpp), so the marker lane must be damaged wherever the axis
-// moves — including where the MEMBERSHIP stood still, which on a same-marker
-// step is every time (that arm's collapse re-seats the same singleton). This
-// is the marker press's own write (run_marker_click_act, input_pointer.cpp),
-// guard included: a write that changes nothing damages nothing.
+// THE ADDRESSED-CELL WRITE, spelled once for the walk. It owes NO DAMAGE
+// (architect 2026-11-02, M10 rule 1): the selected look is the cue's, on the
+// canvas, never a segment's (render.h's SELECTED row), so the axis paints
+// nothing in the lane; the Up / Down keys' faces that read it are repaired by
+// the roster's staleness comparator (main.cpp). This is the marker press's
+// own write (run_marker_click_act, input_pointer.cpp).
 void GuiInputHandler::write_addressed_cell(MarkerCell cell) {
-    if (app.addressed_cell == cell) return;
     app.addressed_cell = cell;
-    viewport.invalidate_top_strip();
 }
 
 void GuiInputHandler::cycle_marker_focus(bool forward,
@@ -2183,8 +2180,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // selection stood would address a bound the arrows could only step for one
     // marker of it. set_single_selection on the seat is the cheapest spelling
     // of that — it is a no-op on the store's membership when the seat is
-    // already the singleton, and it damages the top strip either way, which
-    // this arm owes for the moved bright cell in any case. It runs BEFORE the
+    // already the singleton. It runs BEFORE the
     // axis write for the family's own reason: the seat resets the axis to the
     // payload (Selection::seat_focus), so the cell is written behind it, as
     // the marker press and the two cell editors' opens write theirs.

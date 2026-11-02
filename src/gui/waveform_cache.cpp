@@ -1160,10 +1160,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // field is the verdict rather than the bare bit — a stamp that no longer
     // names this column reads as "off" here, and fp_active_markers_view above
     // is what keeps the two readings apart across a switch.
-    // See fp_iteration_mode — and fp_addressed_cell for the focus's bright cell,
-    // which the same pass paints in the selected pair.
+    // See fp_iteration_mode. (The addressed cell is no input: the selected
+    // look is the cue's, on the canvas, never a segment's — architect
+    // 2026-11-02, render.h's SELECTED row — and the focus it belongs to is
+    // keyed by sel_hash above.)
     const bool      iter_on    = iteration_column_lit(app, mv);
-    const int       addressed  = static_cast<int>(app.addressed_cell);
     // THE STANDING EDITOR'S SUPPRESSION — which marker, and which of its boxes
     // the pass below does not paint — off THE ONE DERIVATION
     // (suppressed_flag_box, render.cpp), which the editor's own painter reads
@@ -1177,7 +1178,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const SuppressedBox suppressed = suppressed_flag_box(app);
     const int suppressed_cell = static_cast<int>(suppressed.cell);
 
-    // THE HISTORY MODE'S NINE INPUTS (contract at the FlagCache fields). The
+    // THE HISTORY MODE'S TEN INPUTS (contract at the FlagCache fields). The
     // GENERATION is the one that is not about the shown commit but about WHICH
     // SESSION is showing it: two visits open in the same shape and a close plus
     // a reopen can reach this check as one edge, so without it the new session's
@@ -1192,6 +1193,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const bool               history_active = app.history_mode.active;
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
+    // THE FOCUSED CUE OF A NUDGED PAIR (2026-11-02): its triangle alone wears
+    // the `playhead_stem`, and the Tab walk between a pair's two cues moves
+    // this and no other field (contract at FlagCache::fp_history_focus_half).
+    const HistoryDiffHalf    history_focus_half = app.history_mode.focus_half;
     const unsigned long long history_generation = app.history_mode.generation;
     // The READING is the session's own bit since 2026-08-08 (it moved off
     // HistoryMode onto AppState so a mode edge cannot reset it); the fingerprint
@@ -1234,12 +1239,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_iteration_mode          == iter_on &&
-        flag_cache.fp_addressed_cell          == addressed &&
         flag_cache.fp_suppressed_box_index    == suppressed.marker_index &&
         flag_cache.fp_suppressed_box_cell     == suppressed_cell &&
         flag_cache.fp_history_active          == history_active &&
         flag_cache.fp_history_index           == history_index &&
         flag_cache.fp_history_focus           == history_focus &&
+        flag_cache.fp_history_focus_half      == history_focus_half &&
         flag_cache.fp_history_generation      == history_generation &&
         flag_cache.fp_history_compare         == history_compare &&
         flag_cache.fp_history_selection_hash  == history_sel_hash &&
@@ -1381,6 +1386,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.history_mode.flags,
             vp_start, vp_end,
             history_focus,
+            history_focus_half,
             app.history_mode.selection,
             &app.staged_flag_hit_rects,
             &app.staged_marker_stems,
@@ -1404,11 +1410,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             // CELLS (its hop bracket) exactly as the warp column's are painted
             // when the lamp was lit there instead.
             iter_on,
-            // The focus and its addressed cell — the bright cell, which on
-            // this column can be the payload or a bound cell
-            // (render_flags' declaration).
+            // The focus — its triangle the `playhead_stem` (render_flags'
+            // declaration).
             app.last_selected_marker,
-            app.addressed_cell,
             &app.staged_flag_hit_rects,
             &app.staged_marker_stems,
             tmap_arg,
@@ -1428,10 +1432,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      app.selected_markers,
                      warp_red,
                      iter_on,
-                     // The focus and its addressed cell — the bright cell
+                     // The focus — its triangle the `playhead_stem`
                      // (render_flags' declaration).
                      app.last_selected_marker,
-                     app.addressed_cell,
                      &app.staged_flag_hit_rects,
                      &app.staged_marker_stems,
                      tmap_arg,
@@ -1463,12 +1466,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_iteration_mode          = iter_on;
-    flag_cache.fp_addressed_cell          = addressed;
     flag_cache.fp_suppressed_box_index    = suppressed.marker_index;
     flag_cache.fp_suppressed_box_cell     = suppressed_cell;
     flag_cache.fp_history_active          = history_active;
     flag_cache.fp_history_index           = history_index;
     flag_cache.fp_history_focus           = history_focus;
+    flag_cache.fp_history_focus_half      = history_focus_half;
     flag_cache.fp_history_generation      = history_generation;
     flag_cache.fp_history_compare         = history_compare;
     flag_cache.fp_history_selection_hash  = history_sel_hash;

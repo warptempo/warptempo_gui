@@ -4296,8 +4296,10 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
 // cannot drift: the `cue` on both phases, a
 // coincident reset's too (its struck label the mark, architect 2026-10-26;
-// the invalid color alone 2026-10-11 to 2026-10-26); resting whether the
-// reset is selected or not, as the stem is.
+// the invalid color alone 2026-10-11 to 2026-10-26); THE RESTING PAIR
+// WHETHER THE RESET IS SELECTED OR NOT (architect 2026-11-02, M10 rule 1:
+// a selected reset's stem takes the playhead's dots, its ring keeps the
+// `cue`).
 //   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
 //     the reset's stem already stands there (paint_marker_stems, after this
 //     pass), and a playhead on the reset interleaves its dots there as on
@@ -4541,8 +4543,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // program_spec.h), each phase in the role the stash names for it
 // (GuiCueDot, cue_dot_color; resolve_flag_face's table: every live cue,
 // warp or phase reset, the `cue` on both phases, one dot every four rows,
-// the history's two halves alike) — the playhead's dots on rows ≡ 1 of 4,
-// so neither shares a row with them. (The solid stem
+// the history's two halves alike; A SELECTED CUE the `playhead_stem` on its
+// range phase, architect 2026-11-02, M10 rule 1) — the playhead's dots on
+// rows ≡ 1 of 4, so neither shares a row with them. (The solid stem
 // through the well's top lines between its flanks stood 2026-10-02 to
 // 2026-10-09; git history.)
 //
@@ -4560,8 +4563,9 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
     // refused commit recolors nothing, so no paint-time override stands
-    // here — the stash's two phases are the marker's resolved class, the
-    // whole answer, and the colors the palette's live roles.
+    // here — the stash's two phases are the marker's resolved face (its
+    // class and its selection), the whole answer, and the colors the
+    // palette's live roles.
     // THE TWO WELLS (the canvas's rows less the stereo divider's,
     // 2026-10-16): each stem one run per non-empty well, its phase counted
     // from the canvas's first row, so a dot keeps its row and the divider
@@ -4607,8 +4611,9 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // one device px a dot (waveform_line_px, "on waveform → unscaled"), the
 // `cue` on columns left stem + range_dot_phase + k · cue_dot_period
 // and on left stem + cue_dot_phase + k · cue_dot_period (a
-// live cue's stem pair, live_cue_stem_dots — so the runs' density is a
-// stem's, architect 2026-10-26), through the right stem's column,
+// live cue's RESTING stem pair, live_cue_stem_dots — so the runs' density is
+// a stem's, architect 2026-10-26; the `cue` on both phases whether the pair
+// is selected or not, 2026-11-02), through the right stem's column,
 // aliased integer cells, clipped to the area. Read as published, before
 // the stems paint their sides (paint_marker_stems), whose dots never share
 // a row with these (the stems' phases are rows 3 and 7 of 8).
@@ -8149,9 +8154,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     stem pattern (2026-10-09 ~17:40) — painted AFTER the plate,
         //     over the ink like the stems' dots, and before them.
         //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
-        //     program is Cool Edit): a SELECTION adds no playhead-like mark of
-        //     its own, its whole cue being its members' selected LABELS with
-        //     the landed cursor on the focus; the cursor's dots paint over the
+        //     program is Cool Edit): a SELECTION's cue is its members' stems,
+        //     the playhead's color interspersed with their dots, and the
+        //     focus's triangle in that color (architect 2026-11-02, M10 rule
+        //     1), with the landed cursor on the focus; the cursor's dots paint over the
         //     marker stems' (2026-09-23) and the two phases interleave, so a
         //     playhead resting on a marker's column shows both and neither
         //     yields; its head in the ruler and the cue's triangle in the

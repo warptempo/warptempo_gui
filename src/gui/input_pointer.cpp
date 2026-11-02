@@ -3425,20 +3425,17 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
     // doctrine is at the head of position_nudge.h): a click on a member of a
     // 2+ selection single-selects and lands like a click on any other marker,
     // and the drag it may become is an ordinary singleton drag. The clicked
-    // marker's flag BRIGHTENS here — set_single_selection damages the top
-    // strip, where the flags live; stems are class-colored and always on, so
-    // no stem work is owed.
+    // marker takes THE SELECTED LOOK here (its stem and its triangle,
+    // render.h's SELECTED row) — set_single_selection damages the top strip,
+    // and the flag cache's rebuild on the selection's fingerprint damages
+    // the waveform with it, so no stem work is owed.
     selection.set_single_selection(hit);
     // THE LAND IS THE MOVEMENT OWNER HERE, as it is on the modified arms.
     land_playhead_on_marker(app, audio, viewport, hit);
     // THE ADDRESSED CELL, written AFTER the select because the select resets
     // the axis to the payload as it seats the focus (Selection::seat_focus);
-    // a changed axis damages the marker lane even where the selection stood
-    // still.
-    if (app.addressed_cell != cell) {
-        app.addressed_cell = cell;
-        viewport.invalidate_top_strip();
-    }
+    // it paints nothing (2026-11-02), so it owes no damage.
+    app.addressed_cell = cell;
 }
 
 // THE MARKER CLICK ACT — the whole flag click, AT THE PRESS (architect
@@ -3562,9 +3559,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
             land_playhead_on_marker(app, audio, viewport,
                                     app.last_selected_marker);
         // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
-        // bound cells; every cell since 2026-09-05 — "light the colour of only
-        // the flag that's clicked"): the cell the press landed on becomes the
-        // focus's addressed cell — the bright one, the one the arrows step, the
+        // bound cells; every cell since 2026-09-05): the cell the press landed
+        // on becomes the focus's addressed cell — the one the arrows step, the
         // one Enter opens — on BOTH click shapes, because the press already
         // selects and lands on every shape and the axis is one more thing the
         // press says. Written AFTER the fork, because every mutator above resets
@@ -3574,13 +3570,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
         // the others, each writing behind its own selection write; a focus reached
         // by none of them is addressed at its payload. Read-only does not refuse
         // it: the axis is navigation, as the selection is, and the act it
-        // addresses meets the lock at its own gate. The bright cell moves with
-        // it, so a changed axis damages the marker lane even where the selection
-        // stood still (a re-press of the focused flag's other cell).
-        if (app.addressed_cell != cell) {
-            app.addressed_cell = cell;
-            viewport.invalidate_top_strip();
-        }
+        // addresses meets the lock at its own gate. The axis paints nothing
+        // (2026-11-02, render.h's SELECTED row), so it owes no damage.
+        app.addressed_cell = cell;
     }
     // THE TOGGLE CLICK ENDS HERE: it has no double-click meaning and no drag
     // to become, and its click has just committed whole — so it arms
@@ -5221,8 +5213,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         // the waveform-height clamp (main.cpp's layout owner) keeps the flag
         // lane in easy reach on every display, which is what the removal was
         // waiting for — marker work happens in the flag lane, and the
-        // waveform is purely trim / playhead / pan / zoom. The stems still PAINT
-        // exactly as before: class-colored, always on, disabled-no-stem.
+        // waveform is purely trim / playhead / pan / zoom. The stems still PAINT:
+        // always on, disabled-no-stem, a selected one's dots interspersed with
+        // the playhead's color (2026-11-02).
         // The plain DRAG never selects markers either
         // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
         // longer selects its contents; it leaves the selection empty).
@@ -7592,13 +7585,14 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
                 app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the focused label's ink moves, the text tone to the chrome's selected
-    // `label` and back; the triangle, the stem and its column stay put),
-    // and none when it did
-    // not — a re-click on the focused flag re-lands a playhead that is
-    // already there, and the land owner is itself idempotent. A DROPPED
-    // SELECTION is that same label-ink change over more flags, so it damages
-    // too.
+    // (the selected look moves — the stems' playhead dots and the focused
+    // triangle, render.h's SELECTED row; the columns stay put), and none when
+    // it did not — a re-click on the focused flag re-lands a playhead that is
+    // already there, and the land owner is itself idempotent; a press on a
+    // nudged pair's other cue moves focus_half alone, whose triangle the flag
+    // cache's rebuild repaints with its own damage (fp_history_focus_half). A
+    // DROPPED SELECTION is that same stem change over more flags, so it
+    // damages too.
     if (was != app.history_mode.focus || had_selection) viewport.invalidate_all();
 }
 

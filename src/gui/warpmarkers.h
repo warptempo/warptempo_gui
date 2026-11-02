@@ -396,8 +396,8 @@ inline std::string format_signed_hops(int hops) {
 // bracket in whole lattice hops since 2026-09-09). It answers three questions
 // with one value: WHICH BOX a press landed on (hit_test_flag_cell,
 // app_state.cpp, off the painter's published boundaries), WHICH CELL OF THE
-// FOCUS IS ADDRESSED (AppState::addressed_cell — the bright cell, the cell the
-// vertical arrows step, the cell Enter opens) and WHICH EDITOR a double-click
+// FOCUS IS ADDRESSED (AppState::addressed_cell — the cell the vertical arrows
+// step, the cell Enter opens) and WHICH EDITOR a double-click
 // or Enter opens (the Payload editor, the bound editor on Lower or Upper). The
 // type lives here, beside the bracket two of its members
 // address, because the painter (render.h) needs it and render.h cannot see

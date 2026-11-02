@@ -69,8 +69,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // (run_marker_click_act), and nothing mutates the store between press and
     // crossing, which is what keeps the drag subject exactly the grabbed
     // marker.
-    // The selection is not read by any arithmetic here; it is what BRIGHTENS the
-    // dragged flag, which is why the press owes it.
+    // The selection is not read by any arithmetic here; it is what gives the
+    // dragged marker its selected look (its stem and its triangle, render.h's
+    // SELECTED row), which is why the press owes it.
     // The one-element vectors below are the DragOverlay's storage contract
     // (paint matches a store index against dragging_markers), not a group: slot 0
     // is the dragged marker everywhere in this file.
@@ -515,8 +516,8 @@ void MarkerDragOps::commit_drag() {
     app.drag = DragState{};
     if (net_changed) {
         // The position-DRAG commit (both columns). A restore owes no stem bit:
-        // stems key on the MARKER (always on, class-colored), never on the
-        // selection, so the restore's own damage carries them.
+        // stems are published by the flag cache's rebuild, keyed on the store
+        // and the selection, so the restore's own damage carries them.
         if (phase_reset) {
             undo.push_undo_phase_reset(std::move(snap_t),
                                        std::move(touched_snapshot),

@@ -117,8 +117,9 @@ struct Selection {
     // selected-marker stem, because that stem was a SELECTION visual that could
     // appear, move or vanish with no other repaint. Every enabled marker stems,
     // always, so no stem appears or vanishes with the selection; a selected
-    // marker's stem BRIGHTENS with its flag (architect 2026-09-23), and that
-    // colour change needs no owner here: the flag cache's selection fingerprint
+    // marker's stem takes the playhead's dots (architect 2026-11-02, render.h's
+    // SELECTED row), and that
+    // color change needs no owner here: the flag cache's selection fingerprint
     // rebuilds the stash and its rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp). The overlay owner above
     // stands.

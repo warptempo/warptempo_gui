@@ -413,14 +413,10 @@ struct FlagCache {
     // switch being locked while the lamp is on — and the other paints no
     // cells, so this field says what this surface shows.
     bool      fp_iteration_mode           = false;
-    // THE ADDRESSED CELL (MarkerCell, stored as its integer value): the
-    // focused marker's addressed cell is the one that wears the selected
-    // pair, and a marker press moves the axis without necessarily moving
-    // the selection (a re-press of the focused flag's other cell), so the
-    // axis is a content fact of this surface in its own right. The marker
-    // the bright cell sits on is the focus, already keyed by
-    // fp_selection_hash.
-    int       fp_addressed_cell           = 0;
+    // (NO ADDRESSED CELL: the selected look is the cue's, on the canvas, not
+    // a segment's (architect 2026-11-02, render.h's SELECTED row), so the
+    // axis paints nothing here; the focus it belongs to is keyed by
+    // fp_selection_hash.)
     // THE STANDING MARKER-LANE EDITOR'S SUPPRESSION — WHICH MARKER and WHICH
     // OF ITS BOXES the cached pass does not paint (SuppressedBox, render.h,
     // where the one model is stated). Both halves are content facts of this
@@ -437,13 +433,14 @@ struct FlagCache {
     // derivation's (suppressed_flag_box), read here and by the painter alike.
     int       fp_suppressed_box_index     = -1;
     int       fp_suppressed_box_cell      = 0;
-    // THE HISTORY MODE'S SIX INPUTS (the `h` view — AppState::HistoryMode).
+    // THE HISTORY MODE'S TEN INPUTS (the `h` view — AppState::HistoryMode).
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
     // stands at all (entering and leaving both swap the whole lane), WHICH
     // commit is shown (`,` / `.` step it), WHICH READING of it is shown (the two
     // compare modes, the Cumulative toggle switching them), which diff flag holds the mode's
-    // focus and WHICH ARE SELECTED (colour swaps, exactly as the live selection
+    // focus, which of its cues (a nudged pair's two), and WHICH ARE SELECTED
+    // (color swaps, exactly as the live selection
     // hash is a field for the live lane), and WHICH SESSION those are indices
     // into.
     //
@@ -468,7 +465,7 @@ struct FlagCache {
     // this field does not know that and does not need to.)
     //
     // AND THE MULTI-SELECTION IS THE SIXTH (2026-08-05): the mode's own selected
-    // set brightens its flags exactly as the focus brightens one, so a click
+    // set gives its flags the selected stem exactly as the focus does, so a click
     // that changes membership changes what this surface must contain — the live
     // lane's fp_selection_hash applied to the mode's own list. Hashed rather
     // than counted, since a range replace can leave the size untouched while
@@ -491,9 +488,16 @@ struct FlagCache {
     // walk's SIZE needs no field beside them: it is built from the two undo
     // stacks' sizes, captured at entry and frozen for the visit, unlike the
     // commit walk's streaming one.
+    //
+    // AND THE FOCUSED HALF IS THE TENTH (2026-11-02, M10 rule 1): the focused
+    // cue's triangle alone wears the `playhead_stem`, and on a nudged pair the
+    // Tab walk or a press steps the focus between the pair's two cues while
+    // the focused flag, the selection and every other field here stand
+    // (HistoryMode::focus_half; render_history_diff_flags).
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
+    HistoryDiffHalf    fp_history_focus_half = HistoryDiffHalf::Removed;
     unsigned long long fp_history_generation = 0;
     GuiHistoryCompare  fp_history_compare    = GuiHistoryCompare::Iterative;
     uint64_t           fp_history_selection_hash = 0;
@@ -647,16 +651,16 @@ struct GuiPaintHandler {
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;
-    //   - CONTENT, four more: fp_iteration_mode (it changes what the flags
-    //     SHOW — the bound cells), fp_addressed_cell (which cell of the focus
-    //     is the bright one), and the standing editor's suppression in its two
-    //     halves, fp_suppressed_box_index and fp_suppressed_box_cell (which
+    //   - CONTENT, three more: fp_iteration_mode (it changes what the flags
+    //     SHOW — the bound cells), and the standing editor's suppression in its
+    //     two halves, fp_suppressed_box_index and fp_suppressed_box_cell (which
     //     marker, and which of its boxes this pass skips along with everything
     //     right of it);
-    //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth
-    //     2026-08-05, the seventh, eighth and ninth 2026-08-07):
+    //   - THE HISTORY MODE, TEN (four 2026-08-04, the fifth and sixth
+    //     2026-08-05, the seventh, eighth and ninth 2026-08-07, the tenth
+    //     2026-11-02):
     //     fp_history_active, fp_history_index, fp_history_focus,
-    //     fp_history_generation, fp_history_compare,
+    //     fp_history_focus_half, fp_history_generation, fp_history_compare,
     //     fp_history_selection_hash, fp_history_commit_count,
     //     fp_history_source and fp_history_local_index — the `h` view replaces
     //     the lane's whole content, so these decide it as completely as the five
@@ -668,9 +672,10 @@ struct GuiPaintHandler {
     //     what distinguishes THE TWO WALKS (the committed history and the
     //     session's own STATE TIMELINE — the model is GuiHistoryLocalWalk's,
     //     history_diff.h — whose positions are two different fields),
-    //     and the selection hash what distinguishes two membership states of one
-    //     shown delta (the mode's multi-selection, whose members wear the focus's
-    //     own brightened face).
+    //     the selection hash what distinguishes two membership states of one
+    //     shown delta (the mode's multi-selection, whose members wear the
+    //     focus's own selected stem), and the focused half which of a nudged
+    //     pair's two triangles wears the `playhead_stem`.
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a
@@ -1061,7 +1066,9 @@ private:
     // part.
     //
     // NO PAINT-TIME COLOR OVERRIDE (architect 2026-10-03): the stem paints
-    // the stash's class. The open flag editor's refusal recolors nothing.
+    // the stash's face — its class and its selection (2026-11-02, the
+    // playhead's dots on a selected stem). The open flag editor's refusal
+    // recolors nothing.
     // It paints the `h` view's nudged pairs' ring runs first
     // (paint_marker_stem_runs, AppState::marker_stem_runs), the stems their
     // sides.

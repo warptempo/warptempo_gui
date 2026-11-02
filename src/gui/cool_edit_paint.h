@@ -16,7 +16,8 @@
 // part); the colors the flat look's constants (materials.h's THE WELL) and
 // the palette's. THE PLAYHEAD'S OWN COLOR — the head in the ruler and its
 // dots in the canvas — is the palette's `playhead_stem` (Live's cyan 03C3D5
-// since 2026-11-01, palette_file.h's role table), as the cues' one color is
+// since 2026-11-01, palette_file.h's role table), lent to the selection
+// alone (2026-11-02, render.h's SELECTED row), as the cues' one color is
 // the palette's `cue`.
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this
 // size the staircase is the truthful drawing and the antialiasing only
@@ -93,7 +94,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads);
 // its rows [top, top + rows·u). `color` is the `cue` for a live cue, the
 // faded `ce_off_cue` for a disabled one (2026-10-10, cool_edit_derive.h's
-// faded look), the `playhead_stem` for the playhead's head. TWO ROADS, ONE
+// faded look), the `playhead_stem` for the playhead's head and the focused
+// selected cue's (2026-11-02, render.h's SELECTED row). TWO ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words
 // straight into the target where direct_pixel_target takes it, else cairo
 // fills the same cells as whole-pixel rectangles, antialias NONE. The

@@ -226,7 +226,7 @@ void Selection::collapse_to_focused() {
     // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
     // can collapse then REFUSE and full-invalidate nothing — but no stem appears
     // or vanishes with the selection any more, and the selected stem's
-    // brightening rides the flag cache rebuild's waveform damage.)
+    // playhead dots ride the flag cache rebuild's waveform damage.)
     damage_overlay_on_subject_change(old_subject);
 }
 

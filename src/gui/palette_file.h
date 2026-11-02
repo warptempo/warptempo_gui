@@ -52,11 +52,13 @@
 //                            "one color for all markers") — warp and phase
 //                            reset alike, the coincident marker's, the `h`
 //                            view's halves: the triangle and both of the
-//                            stem's dot phases (render.h's GuiCueDot), the
-//                            orange of Live's start marker
-//   playhead_stem    03C3D5  THE PLAYHEAD'S HEAD AND DOTS ALONE, Live's
-//                            playhead triangle (render.h's playhead
-//                            paragraph)
+//                            stem's dot phases at rest (render.h's
+//                            GuiCueDot), the orange of Live's start marker
+//   playhead_stem    03C3D5  THE PLAYHEAD'S HEAD AND DOTS, Live's playhead
+//                            triangle (render.h's playhead paragraph), LENT
+//                            TO THE SELECTION alone (architect 2026-11-02,
+//                            M10 rule 1): a selected cue's range-phase dots
+//                            and the focused cue's triangle
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems

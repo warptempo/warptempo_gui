@@ -1945,8 +1945,8 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
         // The warp POSITION NUDGE (the receiving marker's own image slides). A
-        // restore owes no stem bit: stems key on the MARKER (always on,
-        // class-colored), never on the selection.
+        // restore owes no stem bit: stems are published by the flag cache's
+        // rebuild, keyed on the store and the selection.
         undo.push_undo_warp(std::move(pre_state),
                             std::move(touched_snapshot),
                             std::move(touched_live));
