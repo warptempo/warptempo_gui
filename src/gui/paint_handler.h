@@ -328,9 +328,9 @@ struct WaveformCache {
 // (paint_flag_annotations) lands the surface at (top_strip.x, origin_y),
 // clipped to the top strip — AND ONLY WHILE ITS BAND IS THE LIVE BAND
 // (2026-10-14): origin_y and height equal to the ruler lane's live top and
-// the rows from it through the strip's bottom. A gui_scale commit moves the
-// band before the next tick rebuilds the surface, and a surface blitted at
-// its old origin would stamp the old scale's cues into the toolbar band,
+// the rows from it through the strip's bottom. A gui_scale or key_height
+// commit moves the band before the next tick rebuilds the surface, and a
+// surface blitted at its old origin would stamp the old layout's cues into the toolbar band,
 // above every lane the rebuild's damage repaints; the reasoning is at the
 // blit.
 // IDENTITY RESTS ON (2026-10-13) — the bytes are the whole-strip surface's
@@ -350,10 +350,12 @@ struct FlagCache {
     // THE SURFACE'S ORIGIN (2026-10-13): the first client row it holds, the
     // ruler lane's top — row 0 of the surface is this client row. Written at
     // every rebuild with the surface it describes; read by the blit, which
-    // refuses a surface whose origin or height is not the live band's. A
-    // function of the scale alone (the lanes above the ruler are scaled
-    // lengths and gap 1 is zero, the top lanes outweighing the bottom's), so
-    // fp_gui_scale_percent keys it and the rebuild asserts as much at a match.
+    // refuses a surface whose origin or height is not the live band's. KEYED
+    // BY ITS OWN FIELD, fp_origin_y below: the rows above the ruler are the
+    // scale's lengths AND THE KEY CASE'S HEIGHT (the `key_height` tuning key,
+    // architect 2026-10-29, live through GuiInputHandler::apply_key_height),
+    // which moves the ruler's top while the band's height and every other
+    // field here stand.
     int              origin_y = 0;
 
     int64_t   fp_vp_start            = 0;
@@ -361,6 +363,13 @@ struct FlagCache {
     int64_t   fp_lattice_origin      = 0;
     int       fp_area_w              = 0;
     int       fp_area_h              = 0;
+    // THE BAND'S ORIGIN ROW these pixels were laid out at (origin_y above,
+    // top_ruler_row_area's y), keyed BY FIELD: every painter works in client
+    // coordinates through the -origin_y translation, and the hit rects and
+    // stems this rebuild stages are client rows, so a moved origin is a new
+    // surface even where the band's width and height stand — a key_height
+    // commit moves it so (architect 2026-10-29; origin_y's comment).
+    int       fp_origin_y            = 0;
     bool      fp_target              = false;
     uint64_t  fp_warp_frame_map_hash        = 0;
     // THE GUI SCALE THESE PIXELS WERE LAID OUT AT, as an integer PERCENT
@@ -379,7 +388,7 @@ struct FlagCache {
     // render.h — architect 2026-10-03; the palette's roles since
     // 2026-10-07): every flag pixel is a palette color (the cue triangle,
     // the faded triangle of a disabled cue, the label inks; the lane's face
-    // boxes a constant), so an install (a materials bake, install_palette; a True
+    // boxes a constant), so an install (install_palette, at startup alone; a True
     // Colors flip, install_true_colors) re-renders the surface BY FIELD, the scale's
     // shape. (No axis or side colors a cue, so no color needs a field beyond
     // this generation: fp_active_markers_view keys the lane's CONTENT — which
@@ -625,7 +634,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (27 fields, RE-DERIVED 2026-10-31 off the compare in
+    // (28 fields, RE-DERIVED 2026-11-02 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, five fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash, and
@@ -634,11 +643,13 @@ struct GuiPaintHandler {
     //     rebuild STAGES the displayed basis, the lattice origin with the
     //     span (AppState::displayed_lattice_origin), so a plate that moved
     //     its lattice alone must re-stage;
-    //   - GEOMETRY, two fields off the LIVE surface band (not the plate —
+    //   - GEOMETRY, three fields off the LIVE surface band (not the plate —
     //     this surface holds strip rows, not the waveform): fp_area_w the
     //     window's width (top_strip_area's), fp_area_h the band's height, the
     //     ruler lane's top through the top strip's bottom (2026-10-13,
-    //     FlagCache's head; its origin keyed through fp_gui_scale_percent);
+    //     FlagCache's head), and fp_origin_y that top's client row, which the
+    //     key case's height moves while the other two stand (the `key_height`
+    //     tuning key, architect 2026-10-29; 2026-11-02);
     //   - THE SCALE, one field read live off render.h: fp_gui_scale_percent —
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move

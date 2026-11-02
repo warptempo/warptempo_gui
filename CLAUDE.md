@@ -62,7 +62,7 @@ There is NO automated test suite and that is a constraint. Do not propose automa
 
 | Topic | Where |
 |---|---|
-| The skin (the flat look): the ground, the key, the lit fill, the group gap, the text tones; the hi-fi constants the well and the overlays still read | `src/gui/materials.h`, `materials.cpp`, `cool_edit_paint.h` |
+| The skin (the flat look): the ground, the key, the lit fill, the group gap, the text tones, the well's tones, the pane faces, the selection pair; the time field's painter | `src/gui/materials.h`, `materials.cpp`, `cool_edit_paint.h` |
 | Lanes and lengths: the top strip, logo lane, band runs, row 8's groups, the canvas column | `src/gui/program_spec.h`, `render.h` (`well_columns`, the LOGO LANE block), `src/gui/main.cpp`'s lane table |
 | Buttons: the roster, legends, enabled / selected predicates, tooltips | `RedesignButton` and its tables (`app_state.h`), `paint_handler.{h,cpp}` |
 | The faces and sizes | `src/gui/gui_font.h`, `text_shape.{h,cpp}`, `fonts/README.md` |

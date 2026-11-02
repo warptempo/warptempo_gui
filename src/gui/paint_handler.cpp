@@ -172,7 +172,8 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // ONLY ONTO THE ROWS IT WAS LAID OUT FOR (2026-10-14, ON SCREEN IS AS
     // PAINTED): a surface whose band — its origin row and its height — is
     // not the live band (top_ruler_row_area's top through the strip's
-    // bottom) is not blitted. A live gui_scale commit (apply_gui_scale)
+    // bottom) is not blitted. A live gui_scale or key_height commit
+    // (apply_gui_scale, apply_key_height; both through relayout_window)
     // moves the band at once and repaints the whole window, while the
     // surface is rebuilt only at the next tick (maybe_rebuild_flag_cache);
     // a frame painted between the two blitted the old scale's cues at the

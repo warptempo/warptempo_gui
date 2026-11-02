@@ -8,7 +8,6 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -1229,6 +1228,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_lattice_origin          == lattice_origin &&
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
+        flag_cache.fp_origin_y                == origin_y &&
         flag_cache.fp_gui_scale_percent       == gui_scale &&
         flag_cache.fp_palette_generation      == pal_gen &&
         flag_cache.fp_target                  == is_target &&
@@ -1252,10 +1252,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_source          == history_source &&
         flag_cache.fp_history_local_index     == history_local_index;
 
-    // THE ORIGIN NEEDS NO FIELD (FlagCache::origin_y): it moves with the
-    // scale alone, which fp_gui_scale_percent keys. A tripwire, not a key —
-    // an origin that moved under an unchanged fingerprint is a program bug.
-    assert(!matches || flag_cache.origin_y == origin_y);
+    // THE ORIGIN IS KEYED (FlagCache::fp_origin_y): the key case's height
+    // moves it while the band's width, height and the scale stand (the
+    // `key_height` tuning key, architect 2026-10-29, live through
+    // apply_key_height's relayout).
     if (matches) return;
 
     if (!flag_cache.surface ||
@@ -1456,6 +1456,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_lattice_origin          = lattice_origin;
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
+    flag_cache.fp_origin_y                = origin_y;
     flag_cache.fp_gui_scale_percent       = gui_scale;
     flag_cache.fp_palette_generation      = pal_gen;
     flag_cache.fp_target                  = is_target;
@@ -1488,7 +1489,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // deleting that duplicate is safe exactly because THIS rebuild remains the
     // stage owner on every viewport/map/dimension change — every one of those
     // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
-    // target bit, the surface band's dims, the scale; wave_w is the PLATE's width
+    // target bit, the surface band's dims and origin, the scale; wave_w is the PLATE's width
     // now and cannot move without moving the fp_vp span with it — the
     // derivation is at wave_w — and the window width moves surface_w besides),
     // so the rebuild fires and re-stages. A trim-only
