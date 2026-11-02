@@ -301,7 +301,8 @@ inline int content_height_px(const AppState& a) {
 // first preset is saved or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
-// eighteen key rows, the BPM form its four, and every other value list its key's
+// twenty key rows (the eighteen editable keys plus the inert `scale` and
+// `bpm`, under two group rows), the BPM form its four, and every other value list its key's
 // whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.

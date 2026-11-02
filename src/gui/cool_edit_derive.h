@@ -10,19 +10,17 @@
 #include <tuple>
 #include <utility>
 
-// COOL EDIT DERIVES ITS PANEL'S TONES FROM ONE COLOR (architect 2026-10-09,
-// the program is Cool Edit: one source color, the tones its arithmetic) —
-// AND SINCE 2026-10-10 THE CHROME'S TOO (architect 2026-10-10, "the chrome
-// color should just be the Cool Edit theme color … even the font color, all
-// of that would be inherited from Cool Edit": every chrome role is one of
-// the tones below, chrome_derive.h the mapping — the caption's six, a
-// scheme's, the exception until they left with the captions 2026-10-21).
-// The program's panel — the toolbar band, row 8 and the well's margins —
-// takes ONE color, GuiPalette's `face` (Cool Edit's "Dockable
-// Window 3D Color", its scheme key `Face`; the flat ground since
-// 2026-11-01, materials.h's kGround — no palette role, the palette giving
-// no panel color since its presets went, 2026-11-01), and every other tone
-// the panel puts down is derived from it HERE, the one owner. The
+// WHAT THIS HEADER HOLDS NOW (the flat look, architect 2026-11-01 /
+// 2026-11-02): the program's panel is the flat ground (materials.h's
+// kGround) and every chrome role is a constant of the flat look
+// (chrome_derive.h), so NO PANEL OR CHROME TONE IS DERIVED HERE any more; the
+// one live use is the two DISABLED-CUE helpers at the foot (disabled_triangle,
+// disabled_cue_label, and kDisabledCueMemberCount). Everything else below is
+// THE RECORD of how Cool Edit derived its panel's tones from one color
+// (architect 2026-10-09, the program is Cool Edit: one source color, the
+// tones its arithmetic; the chrome's too from 2026-10-10, "the chrome color
+// should just be the Cool Edit theme color … even the font color"): its
+// "Dockable Window 3D Color", scheme key `Face`, was the source. The
 // measurements below were taken off Cool Edit's own presets and stand as
 // the rules' proofs.
 //

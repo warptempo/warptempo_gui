@@ -2964,8 +2964,8 @@ private:
     // ANSWER "NONE" while the latch stands, and since 2026-10-09 they answer
     // none at every moment (the program's cases have no hover face under any
     // chrome, program_spec.h's case_hot_face), so the face painted at the
-    // lift is the tapped button's RESTING face BY CONSTRUCTION — Cool Edit's
-    // down face of a checked toggle or the lit radio, a plain act's rest
+    // lift is the tapped button's RESTING face BY CONSTRUCTION — the lit
+    // fill of a checked toggle or the lit radio, a plain act's rest
     // (architect 2026-10-07: "withholding the color change until the pen
     // moves away makes it too slow"; the new state must read right after the
     // tap). Their answer is kept so a hot face, were one ruled back, would
@@ -3690,10 +3690,10 @@ private:
     //
     // What it does: writes the named band's bit, and invalidates the top strip
     // when that band is the active one. The damage is for the icon row's
-    // Read-Only button, whose lamp and glyph (the padlock pair, architect
-    // 2026-10-14) move with the flag: both ride the tick comparator's stashed
-    // bits (redesign_button_selected, redesign_button_glyph), and the damage
-    // repaints them with the write rather than a tick after, the toolbar
+    // Read-Only button, whose lit fill (its one Lock glyph never swaps) moves
+    // with the flag: it rides the tick comparator's stashed
+    // bit (redesign_button_selected), and the damage
+    // repaints it with the write rather than a tick after, the toolbar
     // faces that also move with the flag arriving on the comparator. A write to the parked band
     // changes no painted pixel and so takes no damage at all.
     //

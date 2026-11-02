@@ -1061,9 +1061,11 @@ private:
     // ≡ 3 and ≡ 7 (mod 8), each where the cue wears it, warp or phase reset,
     // the canvas alone (render.h's marker-lane paragraph); a DISABLED marker
     // stems never.
-    // Which colors stand is the cue's class whether the marker is selected
-    // or not (the cue never changes when selected); it is resolved in the
-    // painter (resolve_flag_face) and published in the stash. The stems paint
+    // Which colors stand is resolved in the painter (resolve_flag_face) and
+    // published in the stash: the `cue` orange on both dot phases at rest,
+    // and on a SELECTED cue the range phase in the playhead's cyan
+    // (architect 2026-11-02, M10 rule 1; the resolver owns the focused
+    // triangle's rule). The stems paint
     // under the playhead's dots (architect 2026-09-23), which stand on rows
     // ≡ 1 (mod 4), so a playhead on a marker's column interleaves with it.
     //

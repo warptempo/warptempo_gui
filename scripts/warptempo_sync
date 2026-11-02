@@ -275,7 +275,8 @@ ADDED_LINES="true_colors=on waveform_grow=0.5 audio_level=0 noise=rain noise_lev
 # the triangle) at 8 rows authored at 300 %, the staircase, 22 and a gap
 # of 8 (src/gui/render.h, src/gui/gui_font.h, src/gui/cool_edit_paint.h);
 # the lit LED's glow tuning key of 2026-10-23, settled 2026-10-26 at 4
-# device px and a constant in the program since (src/gui/materials.cpp);
+# device px and a constant in the program until the LED itself went with the
+# flat look, 2026-11-01;
 # the noise's two fade tuning keys of 2026-10-28, rain_fade_in_ms and
 # rain_fade_out_ms, settled the same day at 200 and 40 ms and constants in
 # the program since (src/gui/noise.h); rain_level and rain_crossfade_ms

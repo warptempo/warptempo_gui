@@ -168,6 +168,16 @@
 //                            Live's numbers, palette_file.h); an old
 //                            `waveform=` line is the ordinary unknown-key
 //                            hard fail, the sync script's setup removing it)
+//   (waveform_column_px=<n>, THE WAVEFORM'S COLUMN WIDTH, a tuning key in
+//                            [1, 4] with a Settings row, required for part
+//                            of 2026-11-01, RETIRED that night (architect
+//                            2026-11-01 night: "Ableton uses grow instead
+//                            of column pixels"): every column and stem of
+//                            the waveform is one device px at every scale,
+//                            the grow (`waveform_grow`) its one length of
+//                            its own; an old line is the ordinary
+//                            unknown-key hard fail, the sync script's setup
+//                            removing it on the tablet)
 //   (role=<author|mirror>, THE DEVICE'S PART IN THE PROJECTS REPOSITORY,
 //                            a required key 2026-10-10 to 2026-10-30,
 //                            RETIRED with the laptop GUI (architect
@@ -201,8 +211,8 @@
 //   (bevel_light=<percent>, bevel_dark=<percent>, THE FORTEPIANO CHROME'S
 //                            two bevel weights, tuning keys with Settings
 //                            rows 2026-10-21 to 2026-10-23, RETIRED with that
-//                            chrome — the rings that remain are the two ring
-//                            tones off the flat ground, materials.h; an old
+//                            chrome (no bevel or ring remains in the flat
+//                            look, materials.h); an old
 //                            line is the ordinary unknown-key hard fail, the
 //                            planner editing both devices' configs at the
 //                            install)
@@ -266,7 +276,8 @@
 // 2026-10-31, the display keys' end, a permanent key before the noise's
 // three; the project voice's level `audio_level` placed before the noise's
 // three 2026-10-31 night, the two voices' levels read together, audio out
-// then the noise; `waveform` gone 2026-11-01, `true_colors` after
+// then the noise; `waveform_column_px` appended at the end and gone within
+// 2026-11-01, `waveform` gone 2026-11-01, `true_colors` after
 // `last_project` since);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -1030,7 +1041,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
 // 2026-10-23, the LED glow's 2026-10-23 to 2026-10-26, `waveform=` until
-// 2026-11-01)
+// 2026-11-01, `waveform_column_px=` for part of 2026-11-01)
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the path arm joined 2026-09-02); and
 // gui_main's `last_project` write on the success path

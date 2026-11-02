@@ -91,8 +91,8 @@ struct ToolbarChord {
     // roster button, and the selector's arm in GuiInputHandler::on_key
     // resolves a press on the standing value to its axis's other value, so
     // the button and its key are one rule with no flag here. The hold paints
-    // the pressed face over the lit one, Cool Edit's one down face for both,
-    // paint_roster_case.)
+    // the key lit as a press lights it, the lit fill of a checked member
+    // unchanged, paint_roster_case.)
     // (EVERY CASE ROW PAINTS A PRESSED INTERIOR — the icon row's and the
     // bottom row's click face; row 1's anchors carry no chord row at all.
     // The face
@@ -993,7 +993,7 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 //
 // LESS THE STEREO DIVIDER'S ROWS (architect 2026-10-16, "chrome is not
 // waveform, for any surface"): the divider is drawn at the chrome's scale in
-// the chrome's bevel, so it is chrome, and its rows answer the pen and the
+// the flat ground (render.h's stereo divider paragraph), so it is chrome, and its rows answer the pen and the
 // finger exactly as the margins do: no claim, no pan zone
 // (point_on_waveform_divider, render.h, read here for every claim). A gesture
 // that began in a well runs on when it crosses them.
@@ -1087,7 +1087,7 @@ struct ActiveEditorText {
     const AppState::DialogEditorText* wrap = nullptr;
     // THE FIELD'S ONE RECT — where a press seats a caret: the dialog editor's
     // edit control, the modal family's box's interior (modal_dialog.field,
-    // the painter's published rect; the ring round it is chrome) or the
+    // the painter's published rect; the ground round it is chrome) or the
     // marker lane's whole published box
     // (flag_editor_box.box — the unrolled flag under the payload editor, the
     // cell under a bound editor, pads included: the box is
@@ -4044,7 +4044,8 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // shift-hold is elsewhere). A press on the pad or on a gap between rows
     // arms nothing — the claim is this SURFACE rect (the modal family's
     // panel), while row_at contains against the content rect (the box's
-    // interior inside its ring, folder_overlay.h), so the ring, the margins,
+    // interior inside its outer rows and columns of ground, folder_overlay.h),
+    // so those, the margins,
     // the foot and the pad are claimed and inert by construction at every
     // scroll offset.
     //
@@ -4951,7 +4952,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         if (g.valid) {
             // THE FIELD IS ONE RECT (ActiveEditorText::field): the dialog
             // editor's edit control, the modal family's box's interior — the
-            // ring round it is chrome, and its buttons were
+            // ground round it is chrome, and its buttons were
             // claimed above, so claiming more would map a chrome press to an
             // editor byte — or the marker lane's whole published box, pads
             // included. Any press OUTSIDE it is consumed by the veil

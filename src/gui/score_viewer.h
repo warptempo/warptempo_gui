@@ -167,8 +167,8 @@
 // page change costs a frame and nothing more once the range is resident.
 // THE GRAY STORE (AppState::ScoreViewer::gray; architect 2026-10-26 ~22:10:
 // every page of the viewing range "decoded once", held as 8-bit gray —
-// about 2.2 MB a page fit to 1975 x 1111 in the tablet's box, 310 MB for all
-// of K.550, about 80 MB for a delineated movement): each page of the range
+// about 2.5 MB a page fit to 2103 x 1183 in the tablet's box, 350 MB for all
+// of K.550, about 90 MB for a delineated movement): each page of the range
 // at the fit box, one byte a pixel, keyed by page and box (the bytes are the
 // authored sRGB page, the window's byte under either conversion bit,
 // score_page_worker.h's proof). ITS RAM BYTES LIVE ONLY UNTIL THE PAGE'S
@@ -430,7 +430,7 @@ inline bool score_viewer_button_enabled(const AppState& a,
     return false;
 }
 
-// THE KEYS' PRINTED LEGENDS (the hi-fi skin's, in capitals under the key).
+// THE KEYS' PRINTED LEGENDS (in capitals under the key, since 2026-10-23).
 // PLAY / PAUSE's is the render player's Play key's, by its face
 // (render_player_button_legend, paint_handler.cpp, which the painter asks).
 // The skips print BACK and FWD (architect 2026-10-27), one print for both

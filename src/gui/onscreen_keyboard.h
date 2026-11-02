@@ -351,7 +351,8 @@ inline constexpr Page page_of_key_index(int index) {
 }
 
 // THE HELD FACE IS A SLOT, NOT AN INDEX (architect 2026-10-29 night, on the
-// glass: the page key never sank to its second depth). Two key indices name
+// glass: the page key never sank to its second depth; it lights, 2026-11-02,
+// by the same held test). Two key indices name
 // the same SLOT when they differ in the page term alone — the same row and
 // column, which on these pages is the same rect, role and width, since
 // nothing moves between them (pages_are_well_formed pins it). The painter's

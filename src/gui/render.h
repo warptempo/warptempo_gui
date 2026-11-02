@@ -107,9 +107,9 @@ struct TrimRange {
 // grammar kept), no choice of color left; THE LIT KEY'S FILL is the flat
 // look's constant (materials.h's kLitFill); THE PANEL'S
 // FACE is the flat ground (materials.h's kGround, the flat look, architect
-// 2026-11-01), and THE CHROME'S ROLES are the flat look's constants and the
-// two ring tones off that ground (chrome_derive.h's head, the per-role
-// table; Cool Edit's tones off the Face 2026-10-10 to 2026-10-23). The chrome's roles and their order are
+// 2026-11-01), and THE CHROME'S ROLES are the flat look's constants alone
+// (chrome_derive.h's head, the per-role table; Cool Edit's tones off the
+// Face 2026-10-10 to 2026-10-23). The chrome's roles and their order are
 // the role table (kGuiThemeRoles, theme_file.h). THE APP PAINTS NO CAPTION
 // since 2026-10-24 (THE CAPTION's note, below): its six roles, the
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
@@ -117,20 +117,19 @@ struct TrimRange {
 // The palette's roles and their words are kGuiPaletteRoles (palette_file.h).
 // There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
-// (2026-10-08). The app computes no color but the ring tones (materials.h)
-// and Cool Edit's tones off the Face for
-// what the program still derives (cool_edit_derive.h, the COOL EDIT BLOCK).
+// (2026-10-08). The app computes no panel or chrome color: the only tones it
+// still derives are the two disabled-cue tones (cool_edit_derive.h, the
+// COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or THE FLAT LOOK'S CONSTANTS (materials.h,
 // 2026-11-01: the ground, the key's face and lit fill, the text tones, the
 // well's tones — the trim bar, its frame, the ruler, its ticks, the marker
-// lane — the selection pair, and the hi-fi skin's field ground the overlays
-// still read) — or
-// THE ICONS' OWN INKS
-// (architect 2026-10-06): the drawings' colors as each file names them
-// (icons.h), artwork, not roles, so a drawing is never recolored by a
-// theme — the one place an antialiased picture is copied whole; NO KEY
-// DRAWS ONE since 2026-10-23, and no drawing is ever shown disabled.
+// lane — and the selection pair) — or
+// THE BREEZE GLYPHS (architect 2026-11-01, M7: every drawing a Breeze glyph):
+// each file is recolored to `currentColor` and painted in a TEXT TONE the
+// caller passes (kTextInk, kTextDimInk on a disabled key, kTextOnLit on a lit
+// one; icons.h's THE BOUND DRAWING) — the one place an antialiased picture is
+// copied whole.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role: the text tone over the ground, the field, the resting keys and the
 // selection's grey, kTextOnLit over a lit key.
@@ -986,9 +985,9 @@ inline int scaled_px(double authored, int floor_px) {
     const int v = scaled_px(authored);
     return v < floor_px ? floor_px : v;
 }
-// THE HI-FI SKIN'S DEVICE-PX LENGTHS (architect 2026-10-23, the amendment to
-// the skin's brief: "the sizes are authored at the tablet's 300 % … and
-// scale with gui_scale"): a length measured in device
+// THE DEVICE-PX LENGTHS (architect 2026-10-23, the amendment to the hi-fi
+// skin's brief, kept by the flat look 2026-11-01: "the sizes are authored at
+// the tablet's 300 % … and scale with gui_scale"): a length measured in device
 // px at 300 % on the approved frame — the logo lane's, the clock field's, the type's — through the
 // scaled_px road, its W the device px over 3, rounded at the element.
 inline int skin_px(double device_px_at_300, int floor_px = 0) {
@@ -1210,8 +1209,8 @@ inline int hairline_px() { return 1; }
 // WHAT STANDS OVER THE PROGRAM (architect 2026-10-14; the simple layout
 // 2026-10-22): every modal — the render player, the picker, a prompt, a
 // dialog editor — is the modal family's box and controls row (modal_box.h),
-// the box wearing its ring from the trim lane's first row to the well's
-// foot and the controls row on row 8's rows; the on-screen keyboard's
+// the box (one flat pane, no ring) from the trim lane's first row to the
+// well's foot and the controls row on row 8's rows; the on-screen keyboard's
 // band stands on the window's foot across the lanes (onscreen_keyboard.h's
 // placement block), a dialog editor's controls row on it.
 
@@ -1241,8 +1240,9 @@ inline int hairline_px() { return 1; }
 // skin_px (key_height_at300, its seat above) — at key_height 33, 33 device
 // px at 300 %, 22 at 200 %, 16 at 150 %, 15 at 138 %, 40 at 360 %. The
 // width stays the W sum.
-// No key wears a glyph (2026-10-23): the old glyph seat is the key's middle
-// slot alone.
+// Every key carries a Breeze glyph centered on its face (paint_key_glyph,
+// paint_handler.cpp; icons.h's THE KEYS), its ink box the larger side 20 px
+// at 300 % — the old 20-W glyph seat is only the case's width term.
 //
 // THE BAND (architect 2026-10-22, the simple layout; its upper pad the
 // logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, its block
@@ -1702,7 +1702,7 @@ WellColumns well_columns(const AppState& a);
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12): the clock in
-// its ringed time field, the active tab's name and the state line on the
+// its flat time field, the active tab's name and the state line on the
 // ground beside it at the left (architect 2026-10-02 / 2026-10-03 /
 // 2026-10-05; the name 2026-10-22), and the skips (Go to Start, Go to End;
 // 2026-10-24), the MARKER-VERB GROUP, the step and
@@ -2369,7 +2369,7 @@ void paint_canvas_skirt(cairo_t* cr, const GuiRect& area, int column_x,
 // (THE RELIEF HELPERS — the Windows-95 edge family of 2026-10-02 and the
 // one-device-px mitred ring that replaced it 2026-10-23 — are retired: the
 // palette block's NO RELIEF AND NO RING.)
-// One cell rect in `c` — a surface: the ground, a lane, a field, a ring's
+// One cell rect in `c` — a surface: the ground, a lane, a field, a frame's
 // line (set_palette_source; every surface is flat since the flat look,
 // materials.h).
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);

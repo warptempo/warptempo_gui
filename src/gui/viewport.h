@@ -796,7 +796,7 @@ struct Viewport {
     // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY, the tablet's window the whole
     // panel with no border or title bar, so invalidate_all covers
     // everything the app paints; the pre-paint hook's whole-client damage
-    // after a materials bake is invalidate_all's.)
+    // after a palette install or a gui_scale change is invalidate_all's.)
 
     // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
     // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs

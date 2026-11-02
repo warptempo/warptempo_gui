@@ -28,8 +28,8 @@
 # past the new count or misspelled (stale_pages). A refusal (one line, exit 1) writes nothing. Nothing about the pages
 # is the user's to set: what a page is and where its range runs are read off the video (WHAT A PAGE IS).
 #   --fit W:H   THE VIEWER'S BOX in device px (default PAGE_FIT, the tablet's): each page is scaled, down or up, to
-#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 1975x1111
-#               from any 16:9 video at the default; a PDF's slice is the box's height and its page's width at THE
+#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2103x1183
+#               from any 16:9 video at the default (k = min(2256/1920, 1183/1080)); a PDF's slice is the box's height and its page's width at THE
 #               DOCUMENT SCALE. The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
 #               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
 #               another screen or gui_scale.
@@ -86,7 +86,7 @@
 #   (mean 254.0, no bar lines), the 6-frame fill of page 071 before it. Its run: 141 pages, page 001 the
 #   first page of music (Molto Allegro, bars 1-5) from frame 0, page 045 the Andante's first at 6:00.333, page 141 the
 #   finale's last (bars 303-308) to the video's end, 1381.033 s (the soundtrack runs 8 ms longer); bar lines 4 to 13 a
-#   page; audio.wav 265 MB. Its pages at the default fit are 1975x1111.
+#   page; audio.wav 265 MB. Its pages at the default fit then (the 2026-10 box, 1111 rows) were 1975x1111.
 # - THE JUPITER RIP, youtube gAmw8ATln68, "Wolfgang Amadeus Mozart: Symphony No. 41 in C major "Jupiter" K. 551
 #   (1788) [gAmw8ATln68].webm": 1920x1080 VP9 at 25/1 fps, opus 48000 Hz stereo, 2384.4 s, 183 MB, the score
 #   pillarboxed (217 px of black either side). The scan finds 199 cuts, one crossfade (one frame, 38:34.200), and
@@ -101,7 +101,7 @@
 #   page 194 not at all, so it is 195's. Its run: 200 pages, page 001 the first page of music from frame 0
 #   (the cover and both its fades its fill), page 173 the 1.8 s volta page (35:38.440), page 200 the finale's last to
 #   the video's end, 2384.360 s (the soundtrack runs 16 ms longer); bar lines 4 to 16 a page; audio.wav 458 MB.
-#   Its pages at the default fit are 1975x1111, enlarged about 3 %.
+#   Its pages at the default fit then (the 2026-10 box, 1111 rows) were 1975x1111, enlarged about 3 %.
 #
 # THE MEASURED COSTS on this laptop, 2026-10-26 night, the grabs then PNG at 2304 px wide. The Jupiter rip: 2 min 54 s wall from nothing, of which the
 # 1080p scan is about 1 min 27 s; 1 min 28 s on its cached scan (the page test's 204 midpoint decodes with their
@@ -213,7 +213,8 @@
 #   gray at PDF_SUPERSAMPLE times the size wanted and Pillow box-averages it down, so both the analysis render and the
 #   slice's are area-scaled as the video road's frames are.
 #
-# THE PDF ROAD'S INSTANCES (measured 2026-10-27 at the default box, PAD 26, the staff test, the extent, the rise and the
+# THE PDF ROAD'S INSTANCES (measured 2026-10-27 at the default box then, the 2026-10 box of 1111 rows, so every
+# "x 1111" slice height below is that box's, not today's 1183; PAD 26, the staff test, the extent, the rise and the
 # average rows; "rows" are canonical, "systems" the rule's sure ones, "slices" the pages written; "sure", "average" and
 # "dropped" count the PDF pages by outcome). K.550 is the one the rule was ruled on; the ten others are the test set of
 # tmp/research/mozart_pdfs/, and where their rule's systems are not the printed ones is listed below.
@@ -325,18 +326,21 @@ DIFF_W, DIFF_H = 480, 270
 # modal_box_interior_rect(app, 0) (src/gui/modal_box.h) on the Galaxy Tab S10 FE's 2304 x 1440 at gui_scale 300,
 # derived from the program's layout (2026-10-26) and printed by the viewer itself at its open (score_viewer.cpp's
 # feed_decoder), the line the pair is checked against:
-#   ACROSS (re-derived 2026-10-28, the canvas's frame column one hairline): the canvas interior (waveform_area,
-#   src/gui/main.cpp) stands column_inner_x_px in from each side, the column margin's 6 W plus the frame column's
-#   one device px, 18 + 1 = 19 px; the room 2304 - 38 = 2266 floors to the 16-px grid step, 2256, its slack of 10
-#   split, so x = 24; the well's outer columns (well_columns, render.h) one column outside it, 23 and 2281, the
-#   box's x and width 2258; the interior one hairline_px (1 at every scale) in from each side: x 24, WIDTH 2256 —
-#   the canvas's own columns.
-#   DOWN: the box runs from the view bar's top row (top_trim_row_area) to the controls row's top
-#   (modal_controls_row_rect, the bottom row's lane). The band above the view bar is the logo lane's 72, the case's
-#   69 (1 + 20 + 1 + 1 W) and the strip pad's 39 (13 W), 180 rows, the flexible gap 0 (the waveform takes the
-#   whole leftover); the bottom row is the strip, 39 + 69 + 39 = 147 rows on the window's foot from row
-#   1440 - 147 = 1293. So the box is rows 180..1292, 1113 rows, and its interior one hairline in: y 181, HEIGHT 1111.
-PAGE_FIT = (2256, 1111)
+#   ACROSS (re-derived 2026-11-02 in the flat well's terms): the canvas interior (waveform_area,
+#   src/gui/main.cpp) stands column_inner_x_px in from each side, the column margin's 6 W plus the well's edge
+#   column's one device px, 18 + 1 = 19 px; the room 2304 - 38 = 2266 floors to the 16-px grid step, 2256, its slack
+#   of 10 split, so the canvas is x 24 .. 2279; the well's edge columns (well_columns, render.h: x = 23 and end =
+#   2281, one past the right edge column 2280) stand one column outside it, and the modal box stands on them
+#   (modal_box_rect: x 23 .. 2280, width 2258, those two columns ground); the interior (the flat pane) one
+#   hairline_px (1 at every scale) in from each side: x 24, WIDTH 2256 — the canvas's own columns.
+#   DOWN (re-derived 2026-11-02, key_height 33): the box (modal_box_rect) runs from the trim lane's first row
+#   (top_trim_row_area) to the controls row's top (modal_controls_row_rect, the bottom row's lane). The band above the
+#   trim lane is the logo lane's 72, the key's 33 (the `key_height` key) and the strip pad's 39 (13 W), 144 rows, the
+#   flexible gap 0 (the waveform takes the whole leftover); the bottom row is the strip, 39 + 33 + 39 = 111 rows on the
+#   window's foot from row 1440 - 111 = 1329. So the box is rows 144..1328 (its last row the well's foot), 1185 rows,
+#   those outer rows ground, and its interior (modal_box_interior_rect) one hairline in: y 145..1327, HEIGHT 1183 —
+#   the viewer's printed box 2256x1183. (The 2026-10 box, with the 69-px case and the lanes then, was 2256x1111.)
+PAGE_FIT = (2256, 1183)
 # THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
 # A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no
 # gray JPEG (its pixel formats are yuvj420p, 422p and 444p alone), so the grab pipes ffmpeg's gray rawvideo to Pillow,

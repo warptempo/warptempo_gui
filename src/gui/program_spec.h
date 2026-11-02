@@ -24,8 +24,9 @@
 // program is Cool Edit, not a chrome — the 24-W seat is ReactOS's large
 // toolbar glyph, the base's seat for a chrome vocabulary (chrome_spec.h's
 // head, where it stays the chrome's rule), and the program takes no
-// chrome's toolbar. (No key draws a glyph since the hi-fi skin, 2026-10-23:
-// the seat is the key's middle slot alone.) THE SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the
+// chrome's toolbar. (The seat is a WIDTH term of the case alone; the key's
+// Breeze glyph is centered on its face by its own ink-box road, paint_key_glyph,
+// 2026-11-02, whatever this seat.) THE SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the
 // glyph at the 72 device px the 24-W seat drew at 300; the device's choice,
 // never this header's).
 //

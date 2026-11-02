@@ -2247,7 +2247,7 @@ enum class RedesignButton {
     IconScore,
     // THE NOISE (architect 2026-10-28), the band's third run's LAST, directly
     // after the Score key: BARE `w`, A LAMP LIKE FOLLOW — the fixed legend
-    // NOISE, the LED lit while the bed plays (GuiNoise::lit, noise.h, the one
+    // NOISE, the key lit while the bed plays (GuiNoise::lit, noise.h, the one
     // owner of the sound: a continuous second voice under everything the
     // engine plays, at one level, never ducked). Its press is
     // GuiNoise::toggle, the chokepoint bare `w` reaches too. It GREYS WITH NO
@@ -2306,7 +2306,7 @@ enum class RedesignButton {
     // cannot come to mean different things.
     //
     // The lamp lights AWAY FROM HOME: the committed checkpoints are the
-    // walk's default reading, so the LED is LIT IN SESSION. Its arm answers
+    // walk's default reading, so the key is LIT IN SESSION. Its arm answers
     // DEAD outside the view, the same answer its neighbours give — bare `g`
     // is bound in exactly one place in the product and it is inside the
     // view — and DEAD on a visit that opened on the local fallback (the
@@ -2370,8 +2370,8 @@ enum class RedesignButton {
     // night, "pushing a button in, I would expect always to cause it to pop
     // out"; the consumed nothing of 2026-10-14 reversed) — its bare digit's
     // own resolution in GuiInputHandler::on_key, so the key and the button
-    // are one rule; never greyed for it, the hold showing the pressed face
-    // over the lit one. LIVE in the
+    // are one rule; never greyed for it, the key staying lit under the
+    // hold. LIVE in the
     // `h` view (the four are on the mode's allowlist) and on a locked tab
     // (navigation); DEAD under the grid iterations lamp
     // (iteration_lock_greys).
@@ -2383,8 +2383,8 @@ enum class RedesignButton {
     // detection. NINETEEN buttons in four groups (2 + 8 + 4 + 5, kRow8Groups,
     // since 2026-10-25 — 2 + 9 + 4 + 5 on 2026-10-24, Copy Phase Resets
     // gone up to the band's first run; the clock at the row's left with the
-    // tab name and the state line after it), the block ending at the program ring's
-    // outer right column (architect 2026-09-29, the right-handed tablet's
+    // tab name and the state line after it), the block ending at the well's
+    // right edge column (architect 2026-09-29, the right-handed tablet's
     // layout). The enum lists the
     // marker group, the old walk group and the arrows (the painted order
     // until 2026-10-18), and THE ONE PLAY/STOP BUTTON (bare Space) before
@@ -6168,17 +6168,18 @@ struct AppState {
     // feint first had it (arm_modal_dialog_press, the one site).
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it:
-    //   pointer ON the armed button   -> the PRESSED face, its LED lit;
+    //   pointer ON the armed button   -> the key LIT (kLitFill, materials.h:
+    //                                    a standing press lights it, 2026-11-02);
     //                                    the release COMMITS
     //   pointer OFF it                -> the button rests (the passive
     //                                    focus the press gave it, unpainted
     //                                    since 2026-10-23); the release
     //                                    commits NOTHING and leaves the
     //                                    button PASSIVELY FOCUSED
-    // Sliding back on restores the pressed face and a release there DOES
+    // Sliding back on lights the key again and a release there DOES
     // commit — the arm never died, so there is nothing to re-arm. The reason
-    // is in the ruling itself: a button that keeps a lit face while held away
-    // is still engaged, and a dead arm could not light anything.
+    // is in the ruling itself: a button still engaged while held away must
+    // be able to light again, and a dead arm could not.
     //
     // Its edges: the press claims write it through arm_modal_dialog_press
     // (on_button_press's two dialog gates and the player's and the picker's
@@ -9166,7 +9167,7 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // empty waveform"): on_key's head gate, which no key reaches there (the
 // hold drops every press) and which consumes whatever could; the
 // roster's face, which greys every button there (redesign_button_enabled's
-// head) and lights no LED (redesign_button_selected's head); row 8's clock
+// head) and lights no key (redesign_button_selected's head); row 8's clock
 // and tab name, blank there (clock_time_text and
 // paint_bottom_row_buttons_and_clock, paint_handler.cpp); and bare `0`'s
 // fork, the no-op (overview_command_target). It takes the frame
@@ -14950,7 +14951,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // is Ctrl+O, which the picker's router answers with close_picker, the
     // act its Cancel key runs — and its shifted press, the long press on the
     // glass, is Ctrl+Alt+O, which that router answers with Revert
-    // (2026-10-25); while the SETTINGS PAGE or the PRESET PICKER it swaps in
+    // (2026-10-25); while the SETTINGS PAGE or the VALUE LIST it swaps in
     // stands (2026-10-28), Settings stays live and its lift, bare `;`, is
     // answered by the picker's router with close_picker; while the TRIM
     // PRESETS LIST stands (2026-10-28 night), Trim Presets stays live and its
@@ -16034,8 +16035,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
         // permanent there, value_drag_armed): the press could change nothing,
         // so the face is the view selectors' under the same mode — the
-        // checked face still saying the drag is armed over the embossed
-        // glyph (iteration_lock_greys' account) — and bare `[`, which the
+        // checked face still saying the drag is armed with the glyph and
+        // legend dimmed (iteration_lock_greys' account) — and bare `[`, which the
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
         // hides it through the derived partition above (its allowlist does
@@ -16120,8 +16121,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // scoped this way: the reading is a session preference
         // (AppState::history_cumulative) that outlives every visit, so the lamp
         // reports it wherever the button is painted — inside the view only,
-        // since 2026-10-05 (a dead checked key would stay down with its LED
-        // lit and its legend dimmed, the shared face's own composition).
+        // since 2026-10-05 (a dead checked key would stay lit with its legend
+        // dimmed, materials.h's disabled composition).
         //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.
@@ -16387,7 +16388,7 @@ inline std::string view_pair_label(char audio, char column) {
 inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
                                      RedesignButton b) {
     // NO PIECE, NO LAMP (architect 2026-10-27, the open's hold's one frame —
-    // platform.h's head — "the LEDs dark"): with nothing to dispatch on the
+    // platform.h's head — "the LEDs dark", his word then for the lit keys): with nothing to dispatch on the
     // frame carries no state of either project, and a lamp lit off a fresh
     // set's defaults (the S+W view pair) would name views no piece is shown
     // in. The one owner the roster's grey reads (no_audio_to_dispatch_on).
@@ -16433,8 +16434,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // SELECTED row) already say which markers are selected, so there is no badge and no
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
-        // shared face expressions already handle: the disabled blend mixes
-        // fill and line toward the ground rather than dropping them.
+        // shared key painter already handles: a disabled checked key keeps
+        // its lit fill with the dim legend and glyph (materials.h).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
@@ -16448,9 +16449,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // THE READ-ONLY LAMP (2026-08-14), the same toggle pattern over the
         // ACTIVE TAB's own bit — which is exactly what bare `o` flips, so the
         // lamp and the lock cannot drift. The lit fill says the bit, as every
-        // toggle's does, and the glyph swaps with it (architect 2026-10-14:
-        // the open padlock unlocked, the closed one locked,
-        // redesign_button_glyph).
+        // toggle's does, and the key wears one Lock glyph in both states
+        // (redesign_button_icon; the open / closed pair of 2026-10-14 was
+        // reversed 2026-10-21).
         case RedesignButton::IconReadOnly:
             return active_view_state(a).read_only;
         // THE TOOLTIP LAMP (architect 2026-09-29): the same toggle pattern,
@@ -16460,7 +16461,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
             return a.show_tooltips;
         // THE NOISE LAMP (architect 2026-10-28): the same toggle pattern over
         // a bit that is not AppState's — GuiNoise::lit, the voice's `target`
-        // bare `w` flips (noise.h) — so the LED lights at the press, before
+        // bare `w` flips (noise.h) — so the key lights at the press, before
         // the load lands and the fade-in begins, and the lit face and the lamp
         // cannot drift. A failed load (GuiNoise::tick), a route drop
         // (noise_voice_reset_on_dead_stream, at the poll or a reopen) and a
@@ -16729,7 +16730,7 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // strip's lit tab until then), so the glyph no longer does. Its swap to
         // TabDetachB on tab B stood 2026-10-12 to 2026-10-18.)
         // (THE READ-ONLY TOGGLE WEARS ONE GLYPH, ReadOnly, in both states
-        // since 2026-10-21 — the lock is the lamp's lit / sunken face alone,
+        // since 2026-10-21 — the lock is the lamp's lit face alone,
         // redesign_button_selected, as every toggle's; the padlock pair of
         // 2026-10-14 reversed, architect: the padlock "is not supposed to
         // have an open and closed state".)
@@ -17700,7 +17701,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE ROSTER'S LEGEND COLUMN (architect 2026-10-23, the hi-fi skin: "there's
 // no icons in these consoles … just a little label underneath"; the table
 // of legends, in the painter's roster
-// order): each button's act cut to a hi-fi legend in capitals, printed UNDER
+// order): each button's act cut to a legend in capitals, printed UNDER
 // its key (paint_handler.cpp's key_legend_seat, the one placement), the
 // key's Breeze glyph on its face since 2026-11-02 (redesign_button_icon,
 // below, "the legend kept under the glyph"). The
@@ -17801,7 +17802,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // Toggle-named key (MAGNIFY, FOLLOW, TIPS, LOCK, DRAG, ADD SEL, DISABLE,
 // INHERIT outside the grid lamp, SESSION and CUMUL in the `h` view since
 // 2026-10-26), the lamps (NOISE among them, 2026-10-28) and the two radio pairs keep
-// their words, the depth and the LED being the state. DISABLE KEEPS ITS
+// their words, the lit fill being the state. DISABLE KEEPS ITS
 // SHORTHAND (architect 2026-10-25: "we already use shorthand, like ADD SEL
 // … a lot of these stereo interfaces didn't use the exact English"). A key
 // whose next press is a different act than its last prints that act, each

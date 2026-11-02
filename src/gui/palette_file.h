@@ -21,11 +21,11 @@
 // the controls' white; each ruled on his mocks that evening.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the well, and THE MATERIALS
-// every chrome role — the flat look's constants and the ring tones off the
-// flat ground (chrome_derive.h, 2026-11-01). GuiPalette (render.h) keeps
+// every chrome role — the flat look's constants (chrome_derive.h,
+// 2026-11-01). GuiPalette (render.h) keeps
 // every member; install_palette (render.h) fills the program members off
 // this file's table (kGuiPaletteRoles), the panel's `face` member and THE
-// COOL EDIT BLOCK off the flat ground, and the chrome members off the
+// COOL EDIT BLOCK (the two disabled-cue tones) off the flat ground, and the chrome members off the
 // theme's role table (kGuiThemeRoles) by the one derivation (chrome_derive.h's
 // live_chrome_words), so every painter reads palette() and no painter knows
 // which source a color came from.

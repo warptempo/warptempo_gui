@@ -434,8 +434,8 @@ int strip_total_h(bool top_strip) {
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
 // gui_scale 300, the strip pad's 13 W and key_height 33 the lanes leave
 // 1440 − 236 − 112 = 1092 device rows (the flat well, 2026-11-02; 1075
-// under the hi-fi well, 2026-10-29). A COLOR
-// moves no lane (the key's height, a tuning key, moves them). May
+// under the hi-fi well, 2026-10-29). No color
+// moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
