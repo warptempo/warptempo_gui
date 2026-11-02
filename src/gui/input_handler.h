@@ -2643,7 +2643,7 @@ private:
     //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
     //   night for `true_colors`, `noise`, `noise_level` and
     //   `noise_crossfade_s`, the same shape; 2026-10-31 for `waveform_grow`
-    //   and that night `audio_level`; 2026-11-01 for `waveform_column_px`)
+    //   and that night `audio_level`)
     //   — THE SETTINGS PAGE'S ROW'S
     //   CONTENT for a key of kSettingsValueListKeys, its one road, and A
     //   SUB-PAGE OF THE SETTINGS PAGE (architect 2026-10-28 night: "the
@@ -3660,25 +3660,6 @@ private:
     // callers; it gates the no-op, assigns the live config and persists it;
     // the launch seeds the grow before the window exists (main.cpp).
     void apply_waveform_grow(int quarters);
-
-    // THE WAVEFORM'S COLUMN WIDTH'S ONE LIVE ACT (the `waveform_column_px`
-    // tuning key, architect 2026-11-01; render.h's seat): push the width to
-    // the renderer (set_waveform_column_px), kick the synchronous plate
-    // rebuild — the width is a plate fingerprint field (fp_column_px): the
-    // tips are read over N-column blocks (render_waveform_columns' THE
-    // BLOCKS), so unlike the grow THE PLATE IS RE-RENDERED, owed and paid
-    // before the next frame paints (Viewport::kick_waveform_sync) — then
-    // invalidate the whole window: the next frame's draw list carries the
-    // width (GuiCanvasDrawList::plate_column_px), the GL canvas rebuilds the
-    // plate's program with it as the shader's COLPX constant, once
-    // (GuiGlCanvas::present_frame), and every vertical stem repaints at its
-    // new width (waveform_stem_span). NO RELAYOUT AND NO BAKE: nothing off
-    // the canvas reads it. The settings editor's `waveform_column_px=`
-    // commit and its value list's tap (one body, apply_device_setting) are
-    // the sole callers; it gates the no-op, assigns the live config and
-    // persists it; the launch seeds the width before the window exists
-    // (main.cpp).
-    void apply_waveform_column_px(int px);
 
     // THE RELAYOUT TAIL, the three live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):

@@ -185,10 +185,9 @@ shopt -s nocaseglob
 #      (2026-10-29, the keyboard's two tuning keys), the osk_font_px=24
 #      line (2026-10-29 night, the keyboard's cap size, a tuning key) and
 #      the waveform_grow=0.5 line (2026-10-31, the waveform's antialiasing
-#      grow, a permanent key), the audio_level=0 line (2026-10-31 night,
-#      the level of the program's own sound, a permanent key) and the
-#      waveform_column_px=1 line (2026-11-01, the waveform's column width,
-#      a tuning key) the same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
+#      grow, a permanent key) and the audio_level=0 line (2026-10-31 night,
+#      the level of the program's own sound, a permanent key) the
+#      same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
@@ -259,12 +258,10 @@ WAVEFORM_LINE="waveform=default"
 # while it stands since 2026-10-29 night, 24 device px at 300 %; and THE
 # WAVEFORM'S ANTIALIASING GROW, a permanent key required since 2026-10-31,
 # half a device px; and THE AUDIO LEVEL, the program's own sound's level, a
-# permanent key required since 2026-10-31 night, 0 dB, the files as they are;
-# and THE WAVEFORM'S COLUMN WIDTH, a tuning key required while it stands
-# since 2026-11-01, one device px, the one-pixel picture
+# permanent key required since 2026-10-31 night, 0 dB, the files as they are
 # (src/gui/device_config.h records each). A value tuned on the
 # tablet is kept: a line already there is never touched.
-ADDED_LINES="true_colors=on waveform_grow=0.5 waveform_column_px=1 audio_level=0 noise=rain noise_level=-9 noise_crossfade_s=4 key_height=33 osk_key_w=48 osk_key_h=60 osk_font_px=24"
+ADDED_LINES="true_colors=on waveform_grow=0.5 audio_level=0 noise=rain noise_level=-9 noise_crossfade_s=4 key_height=33 osk_key_w=48 osk_key_h=60 osk_font_px=24"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -306,7 +303,8 @@ RETIRED_KEYS=(sync_path theme_level
               cue_lead led_glow
               rain_fade_in_ms rain_fade_out_ms
               rain_level rain_crossfade_ms
-              noise_crossfade_ms role)
+              noise_crossfade_ms role
+              waveform_column_px)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE key reads.
@@ -1245,8 +1243,7 @@ apply_setup() {
     # 5. THE SETTINGS FILE: projects_repo made right, a chrome line
     # renamed waveform (its value kept; dropped where a waveform line stands),
     # waveform given its default where neither stands, true_colors,
-    # waveform_grow, waveform_column_px, audio_level, noise, noise_level,
-    # noise_crossfade_s,
+    # waveform_grow, audio_level, noise, noise_level, noise_crossfade_s,
     # key_height, osk_key_w, osk_key_h and osk_font_px their lines where absent
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
@@ -1280,7 +1277,7 @@ apply_setup() {
                                 if (had_waveform == 0) print (had_chrome ? renamed : waveform)
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, true_colors, waveform_grow, waveform_column_px, audio_level, noise, noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, true_colors, waveform_grow, audio_level, noise, noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no chrome line and no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"

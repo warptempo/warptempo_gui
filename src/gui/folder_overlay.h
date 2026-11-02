@@ -4,7 +4,7 @@
 // keyboard slot's band until 2026-10-14, the modal family's box since,
 // modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
-// SETTINGS PAGE's twenty keys as `key=value` lines under two group rows
+// SETTINGS PAGE's nineteen keys as `key=value` lines under two group rows
 // (architect 2026-10-28, on a mock he verified on the glass: "yes" to the
 // list, "keep" to the group rows), `scale` and `bpm` among the piece's lines
 // as disabled rows (architect 2026-10-29), and THE VALUE LIST, one listed key's
@@ -18,8 +18,7 @@
 // we don't have the responsibility" — "brief it as a scrolling list", "Yes";
 // this widget as it stands, no new chrome), and since 2026-10-28 night the
 // same for `true_colors`, `noise`, `noise_level` and `noise_crossfade_s`,
-// and since 2026-10-31 for `waveform_grow` and that night `audio_level`,
-// and since 2026-11-01 for `waveform_column_px`
+// and since 2026-10-31 for `waveform_grow` and that night `audio_level`
 // (kSettingsValueListKeys, settings_editor.h) — a SUB-PAGE of the settings
 // page, whose Cancel, Esc and commit return to the page on that key's row
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
@@ -307,7 +306,7 @@ inline int content_height_px(const AppState& a) {
 // first preset is saved or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
-// twenty rows, the BPM form its four, and every other value list its key's
+// nineteen rows, the BPM form its four, and every other value list its key's
 // whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.

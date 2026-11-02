@@ -395,11 +395,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_waveform_grow, device_config.h), the writer's own spelling.
     if (key == "waveform_grow" && app.device_config != nullptr)
         return format_waveform_grow(app.device_config->waveform_grow_quarters);
-    // THE WAVEFORM'S COLUMN WIDTH (2026-11-01, a tuning key): through its
-    // one formatter (format_waveform_column_px, device_config.h), the
-    // writer's own spelling.
-    if (key == "waveform_column_px" && app.device_config != nullptr)
-        return format_waveform_column_px(app.device_config->waveform_column_px);
     // THE PROJECT VOICE'S LEVEL (2026-10-31 night): through its one
     // formatter (format_audio_level, device_config.h), the writer's own
     // spelling.

@@ -20,9 +20,7 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (SIXTEEN keys since 2026-11-01, the
-// waveform's column width `waveform_column_px` placed after `waveform_grow`;
-// FIFTEEN 2026-10-31 night, the
+// REQUIRED SET, every one of them (FIFTEEN keys since 2026-10-31 night, the
 // project voice's level `audio_level` placed before the noise's three;
 // FOURTEEN that day, the
 // plate's grow `waveform_grow` placed after `true_colors`; THIRTEEN
@@ -75,19 +73,12 @@ namespace {
 // the tuning keys keep the end where they leave from.
 //
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
-// `true_colors`, the display keys' end — a permanent device-px key of the
-// waveform's, one of its two since 2026-11-01 (the column width, a tuning
-// key, the other; device_config.h's head, render.h's kWaveformSubcells), so
-// it stands among the permanent keys and not with the tuning keys at the
-// end.
-//
-// THE WAVEFORM'S COLUMN WIDTH (architect 2026-11-01): `waveform_column_px`
-// FOLLOWS `waveform_grow`, the waveform's two device-px keys read together
-// on the Settings page — a TUNING key standing among the permanent ones by
-// that pairing, the one exception to the tuning keys' end.
+// `true_colors`, the display keys' end — a permanent key, the canvas's one
+// scaling concession (device_config.h's head), so it stands among the
+// permanent keys and not with the tuning keys at the end.
 //
 // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night): `audio_level`
-// FOLLOWS `waveform_column_px` and stands immediately BEFORE the noise's three —
+// FOLLOWS `waveform_grow` and stands immediately BEFORE the noise's three —
 // "audio out versus noise", the two voices' levels read together on the
 // Settings page, audio out first; a permanent key.
 //
@@ -119,7 +110,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform",
     "true_colors",
     "waveform_grow",
-    "waveform_column_px",
     "audio_level",
     "noise",
     "noise_level",
@@ -181,14 +171,6 @@ std::string format_osk_key_size(int px) {
 // The keyboard's cap size's canonical spelling (2026-10-29 night): `%d`,
 // the noise integers' road.
 std::string format_osk_font_px(int px) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", px);
-    return std::string(buf);
-}
-
-// The waveform's column width's canonical spelling (2026-11-01): `%d`, the
-// noise integers' road.
-std::string format_waveform_column_px(int px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", px);
     return std::string(buf);
@@ -256,10 +238,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
             s += format_waveform_grow(cfg.waveform_grow_quarters);
-        } else if (k == "waveform_column_px") {
-            // The column width's canonical integer
-            // (format_waveform_column_px).
-            s += format_waveform_column_px(cfg.waveform_column_px);
         } else if (k == "audio_level") {
             // The project voice's canonical integer (format_audio_level).
             s += format_audio_level(cfg.audio_level);
@@ -413,18 +391,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kWaveformGrowGrammarReason);
             }
             out.waveform_grow_quarters = *quarters;
-            return {};
-        }
-        // THE WAVEFORM'S COLUMN WIDTH (2026-11-01, a tuning key): under its
-        // one grammar owner (parse_waveform_column_px, device_config.h),
-        // required like every key; any other spelling the launch's hard fail.
-        if (key == "waveform_column_px") {
-            const std::optional<int> px = parse_waveform_column_px(value);
-            if (!px) {
-                return bad_value(ln, key, value,
-                                 kWaveformColumnPxGrammarReason);
-            }
-            out.waveform_column_px = *px;
             return {};
         }
         // THE PROJECT VOICE'S LEVEL (2026-10-31 night, a permanent key):

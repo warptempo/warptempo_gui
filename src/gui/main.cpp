@@ -1244,7 +1244,7 @@ double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     // (playhead_scanner_precise) rather than the quantized integer sample, so a
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
     // smoothly instead of jittering on integer-frame steps. The line still
-    // paints as a hard waveform_stem_px()-wide rect centered on the rounded pixel
+    // paints as a hard waveform_line_px()-wide rect at the rounded pixel
     // (render_playhead); only its basis is continuous.
     return (a.playhead_scanner_precise - static_cast<double>(vp_start)) / spp;
 }
@@ -1281,24 +1281,17 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // device px, the rows and the shadow's offset scaled, 2026-10-26) — its
 // rows the whole band from the window's top below, so the shadow's offset
 // down is inside it too — which also
-// holds the line of the scanner and the dots — WIDENED TO THE STEM'S
-// COLUMNS where they reach past it (waveform_stem_span's extent,
-// [col − N / 2, col + (N + 1) / 2) at the `waveform_column_px` key's N,
-// 2026-11-01; the min and the max make the box right by construction,
-// whatever the scale makes the head) — so a move repaints
-// every column the head and the stem stood on and no shadow column is left
-// behind.
+// holds the one-px
+// line of the scanner and the dots, so a move repaints every column the head
+// stood on and no shadow column is left behind.
 // `px_x` is the waveform's own column (offset from area.x, as every
 // playhead pixel is), so the box is placed at area.x + col — the canvas
 // standing the column's margin in from the window's side since 2026-10-09.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = area.x + static_cast<int>(std::nearbyint(px_x));
-    const int stem_n = waveform_stem_px();
-    const int x0 = std::max(area.x, std::min(col - cue_triangle_half_w_px(),
-                                             col - stem_n / 2));
+    const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
     const int x1 = std::min(area.x + area.w,
-                            std::max(col + cue_triangle_reach_right_px(),
-                                     col + (stem_n + 1) / 2));
+                            col + cue_triangle_reach_right_px());
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's dots inside the waveform AND
@@ -3560,12 +3553,6 @@ int gui_main() {
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
-    // THE WAVEFORM'S COLUMN WIDTH THE SAME (the `waveform_column_px` tuning
-    // key, architect 2026-11-01; render.h's seat): seeded before the first
-    // plate render and the first frame's draw list; the other road is the
-    // settings editor's commit and its value list's tap
-    // (GuiInputHandler::apply_waveform_column_px).
-    set_waveform_column_px(device_config.waveform_column_px);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an

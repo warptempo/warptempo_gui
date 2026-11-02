@@ -160,8 +160,7 @@ struct WaveformCache {
     // completion-swap and synchronous-publish sites copy exactly these):
     // vp_start, the LATTICE ORIGIN (fp_lattice_origin below, 2026-10-31),
     // vp_end, area_w, area_h, divider_px, the plate's two
-    // INKS, the GAIN field, the COLUMN WIDTH (fp_column_px below,
-    // 2026-11-01), target, and the warp_frame_map hash. Every one is
+    // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
     // an input the plate's PIXELS depend on (the inks through its
     // publication), and each is keyed BY FIELD rather than through whatever else happens
     // to move with it. THE AREA'S TWO DIMENSIONS AND THE STEREO DIVIDER'S
@@ -206,12 +205,6 @@ struct WaveformCache {
     // re-render — no basis freeze and no map term rides with it. PIXELS ONLY —
     // this cache holds a picture, and the gain reaches no sample anywhere.
     uint64_t  fp_gain_hash = 0;
-    // THE COLUMN WIDTH the live tips were read under (the
-    // `waveform_column_px` key, render.h's seat; 2026-11-01): the N device
-    // columns of a block take one pair of tips (render_waveform_columns'
-    // THE BLOCKS), so a commit of the key re-renders the plate BY FIELD,
-    // keyed directly like the gain field.
-    int       fp_column_px = 1;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -245,7 +238,6 @@ struct WaveformCache {
     int       pending_fp_divider_px  = -1;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
-    int       pending_fp_column_px = 1;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -270,7 +262,6 @@ struct WaveformCache {
     int       supersede_divider_px  = 0;   // GUI-captured divider height
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
-    int       supersede_column_px   = 1;   // GUI-captured column width
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -886,10 +877,6 @@ private:
         // tip mapping and nothing else, so nothing else would move if it
         // changed alone.
         uint64_t gain_hash = 0;
-        // THE COLUMN WIDTH (waveform_column_px(), render.h; 2026-11-01): the
-        // blocks the tips are read over, both the render input and the
-        // fingerprint field, like the gain field above.
-        int      column_px     = 1;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in

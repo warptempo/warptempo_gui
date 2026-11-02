@@ -607,9 +607,8 @@ void install_true_colors(bool on);
 // ~21:00)
 // (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
-// CANVAS a DOTTED COLUMN, one device row every four device rows in the same
-// color (2026-10-09 ~14:25, "on waveform → unscaled"), waveform_stem_px()
-// columns wide centered on its column (2026-11-01, waveform_stem_span), on the canvas's rows
+// CANVAS a DOTTED COLUMN, one device px every four device rows in the same
+// color (2026-10-09 ~14:25, "on waveform → unscaled") on the canvas's rows
 // ≡ 1 (mod 4), the cues' two colors on rows ≡ 3 and
 // ≡ 7 (mod 8), so they interleave on one column (paint_playheads,
 // dotted_waveform_line_runs; the stereo divider's rows carry none). Across the view bar (architect 2026-10-09
@@ -636,12 +635,11 @@ void install_true_colors(bool on);
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
 // playhead is yellow"): THE SCANNER — the moving playback line,
-// paint_scanner, its own role since 2026-10-05 — a SOLID line over the
-// canvas (Cool Edit's playback cursor is a solid 1-px line, measured
-// 2026-10-09; in device px on the canvas since ~14:25), waveform_stem_px()
-// wide centered on its column since 2026-11-01 (waveform_stem_span: one
-// device px at the key's 1), and THE ZOOM ANCHOR'S STEM
-// (render_strip_anchor_stem), the same solid line at the pivot;
+// paint_scanner, its own role since 2026-10-05 — a SOLID line one device px
+// wide over the canvas (Cool Edit's playback cursor is a solid 1-px line,
+// measured 2026-10-09; unscaled on the canvas since ~14:25,
+// waveform_line_px's rule), and THE ZOOM ANCHOR'S STEM
+// (render_strip_anchor_stem), the same solid one-px line at the pivot;
 // WHITE in every built-in palette — COOL EDIT'S OWN CONSTANT (architect
 // 2026-10-16, observed in Cool Edit Pro 2.1 under Wine on the laptop: the
 // scanner is white on every preset he tried, so its preset text records no
@@ -686,10 +684,8 @@ void install_true_colors(bool on);
 // the triangle's rows 43 .. 50 — THE LANE 17 W, the product's own
 // (architect 2026-10-09 ~16:50 / ~21:00, Cool Edit's 11 grown by the six the
 // ruler gave; program_spec.h's marker-lane fields); and THE STEM —
-// DOTS ONE DEVICE ROW TALL on the canvas's device rows (2026-10-09 ~14:25,
-// "on waveform → unscaled") and waveform_stem_px() columns wide, CENTERED
-// on the marker's column (architect 2026-11-01: "they should be centered";
-// waveform_stem_span; one device px square at the key's 1), the canvas alone (no dot
+// DOTS ONE DEVICE PX SQUARE on the canvas's device rows (2026-10-09 ~14:25,
+// "on waveform → unscaled"), the canvas alone (no dot
 // in the lane or on the frame row; paint_marker_stems). No box, no outline,
 // no stem through the frame row.
 //
@@ -1102,30 +1098,6 @@ int  osk_font_px_at300();
 // three tuning seats above: this pair stays.
 void set_waveform_grow_quarters(int quarters);
 int  waveform_grow_quarters();
-
-// THE WAVEFORM'S COLUMN WIDTH, THE `waveform_column_px` TUNING KEY'S SEAT
-// (architect 2026-11-01: "make this work like Ableton does to some extent,
-// and take it as far as we can and then leave it at that"; the grammar
-// device_config.h's parse_waveform_column_px): the live width N in DEVICE PX,
-// 1 .. 4, of ONE WAVEFORM BLOCK — the N device columns of a block take one
-// pair of tips read over the block's whole span (render_waveform_columns'
-// head, THE BLOCKS), the plate shader's contour runs between block centers
-// (kListFragmentShader's COLPX, gl_canvas.cpp) — and the width of every
-// vertical line the canvas draws through the waveform (waveform_stem_px and
-// waveform_stem_span below). Read by the plate's render inputs
-// (compute_waveform_render_inputs, a fingerprint field: a commit re-renders
-// the plate), by the canvas sink, which stamps it on the frame's draw list
-// (GuiCanvasDrawList::plate_column_px; the GL canvas rebuilds its list
-// program for it, the grow's road), and by the stems. The grow seat's shape
-// exactly — file-scope state in render.cpp, pushed by gui_main's startup
-// read of the device config before the window exists and by the settings
-// editor's `waveform_column_px=` commit and its value list's tap
-// (GuiInputHandler::apply_waveform_column_px). The construction state is
-// the templates' 1 (kWaveformColumnPxDefault), today's picture byte for
-// byte. A TUNING KEY like the three seats above: it settles into a
-// constexpr once he rules the number, and this pair goes.
-void set_waveform_column_px(int px);
-int  waveform_column_px();
 
 // A FACE AT THE LIVE SCALE AND SIZE (gui_font.h): what every painter and
 // every seat asks for its text — each use at the face-size table's size
@@ -2083,13 +2055,14 @@ inline int scrub_thumb_above_px() {
 // matches" — the rule of 2026-10-06 that a period technique is drawn at the
 // device's resolution, one device px a cell, as the checker and the dither
 // are). EVERYTHING PAINTED ON THE CANVAS stands at the plate's own
-// resolution, in DEVICE PX: THE READERS OF THIS ONE DEVICE PX — the one
-// inventory of the class, each an ALIASED INTEGER RECT one device px across
-// the line, clipped to the waveform's columns [0, w) — the dots' ROWS (every
-// dot of the scanner's, the resting cursor's, the cues' and the lead-in
-// ring's right side one device row tall), the phase-reset lead-in ring's
-// top and bottom runs (paint_phase_reset_overlay_ring) and the `h` view's
-// nudged pairs' (paint_marker_stem_runs), the lit plate's inner OUTLINE,
+// resolution, the plate column being one device px by rule: THE READERS —
+// the one inventory of the class, each an ALIASED INTEGER RECT [col, col +
+// 1) whose left edge is the item's own column, clipped to the waveform's
+// columns [0, w) — the scanner and the resting cursor's dots
+// (render_playhead), the cues' dots (paint_marker_stems), the zoom anchor's
+// stem (render_strip_anchor_stem), the phase-reset lead-in ring's dots
+// (its right side and its top and bottom runs, paint_phase_reset_overlay_ring;
+// its left side is the reset's stem), the lit plate's inner OUTLINE,
 // an erosion at distance 1 — THE ONE OF THESE THAT IS NOT AN ALIASED RECT
 // since 2026-10-30: the GPU erodes the antialiased inner bar at the 4x
 // grid and the line is antialiased with its shape, its distance this one
@@ -2098,14 +2071,7 @@ inline int scrub_thumb_above_px() {
 // (render_canvas, render_center_lines) — AND ONE AREA OFF IT, THE CUES'
 // TRIANGLES AND THE PLAYHEAD'S HEAD (paint_ce_cue_triangle), whose unit is
 // this one device px (cue_triangle_unit_px, architect 2026-10-26: Cool
-// Edit's stem/flag relation at 1:1). THE VERTICAL STEMS' WIDTH IS NOT THIS
-// ONE'S since 2026-11-01 (architect: "the marker stems and the playhead
-// scale with it — do it right the first time"): the scanner and the resting
-// cursor's dots (render_playhead), the cues' dots (paint_marker_stems), the
-// zoom anchor's stem (render_strip_anchor_stem) and the lead-in ring's right
-// side (its left side is the reset's stem) are waveform_stem_px() wide,
-// centered on the item's own column (waveform_stem_span, below the line's
-// paint). EVERYTHING ELSE OFF THE CANVAS keeps
+// Edit's stem/flag relation at 1:1). EVERYTHING ELSE OFF THE CANVAS keeps
 // THE PROGRAM'S QUANTUM u = scaled_px(1, 1) for its areas (the cue label's
 // placing, cue_label_unit_px), while its LINES, THE STEREO DIVIDER (chrome standing on the canvas,
 // waveform_divider; "scaled" 2026-10-16) and the ruler's ticks
@@ -2115,17 +2081,9 @@ inline int scrub_thumb_above_px() {
 // head", until this ruling every canvas line was one Windows px, scaled.)
 // Constexpr: it is also the lit outline's erosion distance, which the GL
 // shader spells as a literal and gl_canvas.cpp static_asserts against it.
-// (THE CUE TRIANGLE'S APEX and the playhead's head stand on the item's own
-// column, the center of its stem at every stem width.)
 constexpr int waveform_line_px() {
     return 1;
 }
-// THE VERTICAL STEMS' WIDTH (architect 2026-11-01): the `waveform_column_px`
-// key's live value (the seat above), one width for every vertical line the
-// canvas draws through the waveform and the waveform's own blocks, so a
-// stem stands as wide as the block it marks. 1 is the one device px of
-// before, byte for byte.
-inline int waveform_stem_px() { return waveform_column_px(); }
 // THE WAVEFORM PLATE'S ANTIALIASING GRID AND GROW (architect 2026-10-30, on
 // his glass against Ableton; the grow's key 2026-10-31; the rule is
 // render_waveform_columns' head, the shader kListFragmentShader,
@@ -2145,15 +2103,13 @@ inline int waveform_stem_px() { return waveform_column_px(); }
 // THE GROW IS A DEVICE KEY, `waveform_grow`, IN QUARTERS OF A DEVICE PX
 // (architect 2026-10-31; device_config.h's grammar, the seat
 // waveform_grow_quarters above, the plate shader's GROW): a multiple of 1/4
-// device px in [0, 2], and it STAYS A KEY for good, a PERMANENT one: the rest
-// of the GUI scales with gui_scale as one tied set of lengths while the
-// waveform keeps lengths of its own in device px, and a replacement panel
-// may not come at this density — the grow is the device-px number whose
-// right value depends most on the panel's density. THE WAVEFORM CARRIES TWO
-// DEVICE-PX KEYS OF ITS OWN since 2026-11-01 (architect: "yes, okay to
-// re-rule the scaling of the waveform"): this grow, permanent, and the
-// column width, a TUNING key (waveform_column_px, its seat above), which
-// widens the waveform's blocks and its vertical stems together.
+// device px in [0, 2], and it STAYS A KEY — ON THE WAVEFORM NOTHING IS SCALED,
+// every line and dot of the canvas one device px at every scale while the
+// rest of the GUI scales with gui_scale as one tied set of lengths, so the
+// waveform needs one tuning key of its own and the grow is the appropriate
+// one, THE CANVAS'S ONE SCALING CONCESSION, kept for good because a
+// replacement panel may not come at this density: the grow is the
+// device-px number whose right value depends most on the panel's density.
 // (The 2026-10-30 ruling that made it a reasoned constexpr — "neighboring
 // pixels spread the weight exactly at .5; at 0 they are thin, at 1 they are
 // overly thick", a one-px stroke centered on the contour being the shape
@@ -2206,52 +2162,20 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
                     static_cast<double>(width), y1 - y0);
     cairo_fill(cr);
 }
-// THE STEM'S COLUMNS (architect 2026-11-01): the area-local columns [x0, x1)
-// a vertical line through the waveform paints for an item at column `col`
-// of a strip whose columns are [0, area_w) — waveform_stem_px() = N columns
-// CENTERED ON THE ITEM'S OWN COLUMN, [col − N / 2, col + (N + 1) / 2) in
-// integer division, so ON A TIE THE LEFT EDGE WINS (his ruling: "at 200 you
-// get 2 device pixels, so the left should win"): N 1 is [col, col + 1), the
-// one device px of before; 2 is col − 1 .. col; 3 is col − 1 .. col + 1; 4
-// is col − 2 .. col + 1. THE TWO EDGE RULES are the line's above, the gate
-// on the OWN column (col outside [0, area_w) paints nothing — a line
-// belongs to its column) and the span CLIPPED AT BOTH EDGES, so nothing
-// reaches the face beside the canvas. The one owner every vertical line on
-// the canvas reads: render_playhead's two forms, render_strip_anchor_stem,
-// paint_marker_stems and the lead-in ring's right side; the playhead's
-// damage box covers it (playhead_invalidate_rect, main.cpp). Empty (x1 <=
-// x0) where the gate refuses.
-struct WaveformStemSpan {
-    int x0 = 0;
-    int x1 = 0;
-};
-inline WaveformStemSpan waveform_stem_span(int area_w, int col) {
-    if (col < 0 || col >= area_w) return {};
-    const int n = waveform_stem_px();
-    int x0 = col - n / 2;
-    int x1 = col + (n + 1) / 2;
-    if (x0 < 0) x0 = 0;
-    if (x1 > area_w) x1 = area_w;
-    return WaveformStemSpan{x0, x1};
-}
 // THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns),
 // A PERIOD TECHNIQUE AT THE DEVICE'S RESOLUTION
 // (~14:20 / ~14:25, waveform_line_px's rule: "on waveform → unscaled"): the
 // line's own column and edge rules (fill_waveform_line), its rows the two
 // wells' (waveform_well_rows: the stereo divider's rows carry none, 2026-10-16)
-// counted in DEVICE ROWS from the canvas's first row, a dot one device ROW tall on every row k
+// counted in DEVICE ROWS from the canvas's first row, a dot one device px square on every row k
 // with k ≡ `phase` (mod `period`) — Cool Edit's own 1-px dot every 4 rows at
-// 1:1, at every gui_scale — and waveform_stem_px() columns wide
-// (waveform_stem_span, 2026-11-01: one device px square at the key's 1) —
-// the cues' red on 7 and blue on 3 of 8 and the
+// 1:1, at every gui_scale — the cues' red on 7 and blue on 3 of 8 and the
 // playhead on 1 of 4 (program_spec.h's dot fields), so they interleave on one
-// column. The column is the item's own painted column, the stem centered on
-// it — the stem the cue's triangle and the playhead's head stand centred on
+// column. The column is the item's own painted column, the dot one px on it
+// — the stem the cue's triangle and the playhead's head stand centred on
 // (paint_ce_cue_triangle, ~14:35). Painted through the canvas sink
 // (2026-10-13): dotted_waveform_line_runs (after waveform_well_rows) makes
-// the runs of one column, one per well, and GuiCanvasSink::dots records
-// them; a stem wider than one column is one such column per column of its
-// span.
+// the line's runs, one per well, and GuiCanvasSink::dots records them.
 //
 // ONE DOTTED RUN ON THE CANVAS (2026-10-13, the canvas sink's record,
 // canvas_sink.h): the one-device-px cells of a column (`vertical`, rows
@@ -2933,11 +2857,6 @@ struct WaveformBasis {
     long long origin     = 0;   // its lattice's origin (whole frames), 0 at every landing
     double    spp        = 0.0; // painter_samples_per_pixel — the lattice step
     int       full_width = 0;   // full-plate column count
-    // THE BLOCK WIDTH N in columns (the `waveform_column_px` key, 2026-11-01;
-    // render_waveform_columns' THE BLOCKS): the job's snapshot of the seat,
-    // so the render stays a pure function of its inputs. 1 is the
-    // one-column picture.
-    int       column_px  = 1;
 };
 
 
@@ -2980,14 +2899,12 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // neighbors — at each of the column's four subcolumns the top and bottom
 // interpolate linearly between this column's tips and the NEARER
 // neighbor's, from center to center, so a steep rise is a diagonal between
-// the two bars rather than a gap (under blocks, THE BLOCKS below, the
-// block's tips and the nearer neighbor BLOCK's, from block center to block
-// center). THE WHOLE SHAPE (the bars' union with the
+// the two bars rather than a gap. THE WHOLE SHAPE (the bars' union with the
 // contour) IS GROWN BY THE `waveform_grow` KEY on every side — a disc
 // dilation of that many quarters of a device px on the 4x grid, 0.5 by
-// default (architect 2026-10-31; the key's reason at kWaveformSubcells: a
-// permanent device-px key of the waveform's own, one of its two since
-// 2026-11-01) — and each device pixel takes EXACT
+// default (architect 2026-10-31; the key's reason at kWaveformSubcells: ON
+// THE WAVEFORM NOTHING IS SCALED, and the grow is the canvas's one scaling
+// concession, a device key for good) — and each device pixel takes EXACT
 // COVERAGE, its set subcells over sixteen; the lit inner bar's OUTLINE is
 // the one-px border of the grown inner shape, an erosion at distance
 // waveform_line_px() (THE LIT OUTLINE, below), antialiased with its shape.
@@ -2998,38 +2915,11 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // any other. The dark lamp's raw bar takes the same rule.
 //
 // THE ANTIALIASING RETURNED 2026-10-30 IN ANOTHER FORM: exact coverage of
-// one grown shape, computed on the GPU from the column bounds, the canvas's
-// lines untouched by it — whole cells: the horizontal lines (the grid, the
-// center lines, the divider) and the dots' rows one device px, the
-// vertical stems (the cues' dots, the playhead, the scanner, the anchor)
-// waveform_stem_px() wide since 2026-11-01 (waveform_stem_span: the
-// `waveform_column_px` key, the blocks' width) — so placement reads as
-// before; the full-ink core keeps every block its own extent.
-//
-// THE BLOCKS (architect 2026-11-01: "make this work like Ableton does to
-// some extent, and take it as far as we can and then leave it at that";
-// Ableton draws one min/max polyline through wider columns' centers): with
-// N = basis.column_px (the `waveform_column_px` key, 1 .. 4), global column
-// k = k0 + c lies in BLOCK b = k / N, and the N device columns of a block
-// take THE SAME TIPS, read over the block's whole span [edge(N · b),
-// edge(N · b + N)) — edge(k) = origin + nearbyint(k · spp), the lattice
-// point below — mapped through to source at both ends as a column's are,
-// s0 and s1 the same nearbyint and the same s1 >= s0 + 1 floor, the
-// carried-endpoint chain running per block (block b's left edge is block b
-// − 1's right edge, seeded at the first drawn block's own). DARK: the raw
-// extrema over the block's span; LIT: the gains at the block's centre frame
-// (s0 + s1) / 2 and the expander over [s0, s1); the pyramid level from the
-// block's source width. The GPU's contour then runs between BLOCK centers
-// (kListFragmentShader's block arm, gl_canvas.cpp), the record's block
-// phase riding the band (WaveformBandColumns::block_phase). THE LATTICE,
-// THE VIEWPORT, THE BOUNDS TEXTURE'S LAYOUT AND EVERY HIT TEST ARE
-// UNTOUCHED: columns stay device px, only the tips are the block's. AT N = 1
-// THE ARITHMETIC IS TODAY'S, expression for expression (the loop's note),
-// so the picture is the one-column picture byte for byte. A block partly
-// outside the record (its first and last) still reads its full span, so an
-// on-screen column's picture never depends on where the record's edge
-// falls (get_peak_range clamps a span past the song's end, as the last
-// column's always has). What the 2026-08-01
+// one grown shape, computed on the GPU from the column bounds, the
+// one-device-px lines of the canvas untouched (the grid, the center lines,
+// the divider, the dots, the playhead, the scanner, the anchor stay whole
+// cells: ON THE WAVEFORM NOTHING IS SCALED), so placement reads as before —
+// the full-ink core keeps every column its own extent. What the 2026-08-01
 // deletion took (the Wu tip polylines, their max-coverage compositing, the
 // fractional boundary rows, the coverage table, the edge halos) stays in
 // git and in docs/engineering/waveform_antialiasing_retired.md; none of it
@@ -3051,14 +2941,13 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // subrow center and would otherwise rasterize to nothing; the contour needs
 // none, since it only ever joins two bars that exist.
 //
-// PAN INVARIANCE: a column's tips are a pure function of its block's span
-// (its own (k0+c) span at N = 1) — the AUTHORING LATTICE below is what makes
-// that span depend on the global index alone, the block being the global
-// index over N — and its picture reads the tips of the columns within reach
-// of it (the contour toward its nearer neighbor block, the dilation of up
-// to two device px and the erosion of one across them), so two full
+// PAN INVARIANCE: a column's tips are a pure function of its own (k0+c)
+// span — the AUTHORING LATTICE below is what makes that span depend on the
+// global index alone — and its picture reads the tips of the columns
+// within four of it (the contour toward its two neighbors, the dilation of
+// up to two device px and the erosion of one across them), so two full
 // renders of the same columns at the same basis agree exactly. At the plate's two side edges the missing
-// neighbor is the column's own block for the contour (the shape runs flat to the
+// neighbor is the column itself for the contour (the shape runs flat to the
 // edge) and counts as inside for the erosion (no vertical outline at the
 // area's sides), so an edge column can differ from the same audio rendered
 // interior; every plate is a full render since the shift-and-strip pan's
@@ -3141,9 +3030,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE LIT OUTLINE (architect 2026-09-27; antialiased with its shape since
 // 2026-10-30) — THE INNER BAR'S TRUE CONTOUR, waveform_line_px() THICK: ONE
 // DEVICE PX AT EVERY SCALE since 2026-10-09 ("on waveform → unscaled",
-// waveform_line_px's rule) — the one device px the horizontal lines and
-// the dots' rows keep (the vertical stems' width is waveform_stem_px's
-// since 2026-11-01). The GROWN INNER SHAPE (the inner bars of all columns with their
+// waveform_line_px's rule) — the plate column's own width, as the stems'
+// dots are. The GROWN INNER SHAPE (the inner bars of all columns with their
 // contour, dilated by the `waveform_grow` key) is ERODED BY A DISC of radius
 // kWaveformSubcells · waveform_line_px() = 4 subcells for its INTERIOR; the
 // outline's coverage at a pixel is the grown inner's coverage less the
@@ -3271,15 +3159,10 @@ struct WaveformColumnRows {
 // region the bounds cover, rows [y_lo, y_hi) and columns [col_lo, col_hi)
 // of the plate (the band clamped to it), `cols` one entry per column from
 // col_lo, and whether that region is the asked area whole (`whole`).
-// `block_phase` (2026-11-01, THE BLOCKS) is the offset of the region's
-// first column in its block, (k0 + col0 + col_lo − area.x) mod N, in [0, N):
-// the plate shader's φ (the plate record's `phase`, GuiCanvasSink::plate),
-// 0 at N = 1.
 struct WaveformBandColumns {
     int  y_lo = 0, y_hi = 0;
     int  col_lo = 0, col_hi = 0;
     bool whole = false;
-    int  block_phase = 0;
     std::vector<WaveformColumnRows> cols;
 };
 // THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is THE PLATE'S
@@ -3333,17 +3216,17 @@ struct GuiPlateColumns {
     Band band[2];
 };
 
-// Draws a waveform_stem_px()-wide vertical LINE down the CANVAS, its two
+// Draws a waveform_line_px()-wide vertical LINE down the CANVAS, its two
 // wells (row 6's canvas paragraph; waveform_well_rows, the stereo divider's
-// rows left to the divider, 2026-10-16), centered on the column nearest `playhead_pixel_x` (offset
-// from area.x), waveform_stem_span's columns (2026-11-01), in `color`, in the FORM the caller picks
+// rows left to the divider, 2026-10-16), at the column nearest `playhead_pixel_x` (offset
+// from area.x), [col, col + t), in `color`, in the FORM the caller picks
 // (architect 2026-10-09, the program is Cool Edit): THE SCANNER SOLID
 // (PlayheadForm::Solid, Cool Edit's playback cursor a solid 1-px line), THE
 // RESTING CURSOR DOTTED (PlayheadForm::Dotted, dotted_waveform_line_runs on
 // the playhead's phase through the sink's dots, its dots interleaving with the cues'), painted
 // straight over whatever it crosses — waveform ink included. No-op if
-// outside; the line is gated on its own column and clipped at both
-// edges, so it never leaks into an adjacent region.
+// outside; the line is gated on its own column and clipped at the right
+// edge, so it never leaks into an adjacent region.
 //
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02): the cursor's head is
 // paint_ruler_row's (the `playhead_stem` triangle in the ruler since
@@ -3378,9 +3261,8 @@ void render_playhead(GuiCanvasSink& sink,
 // visible (the Ableton affordance). It paints ONE solid
 // color straight over the waveform ink it crosses — the ink-notch overdraw and
 // its plate parameter are retired (architect 2026-07-26, with the polarity
-// inversion). The line is an aliased integer rect waveform_stem_px() wide,
-// centered on the clamped column and clipped at both edges
-// (waveform_stem_span, 2026-11-01).
+// inversion). The line is an aliased integer rect waveform_line_px() wide,
+// [col, col + t), clipped at the right edge (fill_waveform_line).
 void render_strip_anchor_stem(GuiCanvasSink& sink,
                               GuiRect area,
                               int col);

@@ -1,7 +1,7 @@
 #include "gl_canvas.h"
 
 #include "canvas_sink.h"   // GuiCanvasDrawList, GuiCanvasPrimitive
-#include "device_config.h" // kWaveformGrowMaxQuarters, the key's lattice (the plate's asserts); the column width's range
+#include "device_config.h" // kWaveformGrowMaxQuarters, the key's lattice (the plate's asserts)
 
 #include <GLES3/gl3.h>
 
@@ -101,24 +101,15 @@ constexpr const char* kCanvasFragmentShader =
 // device key's quarters of a device px, one subcell each, 0 .. 8
 // (kWaveformGrowMaxQuarters; the key's seat is render.h's
 // waveform_grow_quarters, the list carries it as
-// GuiCanvasDrawList::plate_grow), AND THE COLUMN WIDTH A CONSTANT OF THE
-// SOURCE TOO — COLPX, the `waveform_column_px` tuning key's device px, 1 .. 4
-// (architect 2026-11-01; the seat render.h's waveform_column_px, the list's
-// GuiCanvasDrawList::plate_column_px):
-//   * THE SPECIALIZATION RULE (2026-10-31 afternoon; the second constant
-//     2026-11-01): the grow and the column width are baked into the shader's
-//     text as `#define GROW <r>` and `#define COLPX <n>`
-//     (list_fragment_source: each literal's one substitution point) and THE
-//     PROGRAM IS REBUILT WHEN EITHER KEY CHANGES — ensure_programs builds it
-//     at the defaults, present_frame compares the list's plate_grow and
-//     plate_column_px with the pair the standing program was compiled for
-//     and rebuilds before the draw (build_list_program), once per commit of
-//     a key, tens of ms, no frame-to-frame cost. `#if COLPX == 1` KEEPS THE
-//     ONE-COLUMN ARM AS IT STOOD (the key's off value is today's picture byte
-//     for byte by construction: the preprocessed source at COLPX 1 is the
-//     one-column shader's of before the key token for token, checked at
-//     every grow 2026-11-01), `#else` the BLOCK ARM (THE BLOCKS, below). WHY: every loop
-//     bound below is then a constant
+// GuiCanvasDrawList::plate_grow):
+//   * THE SPECIALIZATION RULE (2026-10-31 afternoon): the grow is baked into
+//     the shader's text as `#define GROW <r>` (list_fragment_source: the
+//     literal's one substitution point) and THE PROGRAM IS REBUILT WHEN THE
+//     KEY CHANGES — ensure_programs builds it at the default grow,
+//     present_frame compares the list's plate_grow with the grow the
+//     standing program was compiled for and rebuilds before the draw
+//     (build_list_program), once per commit of the key, tens of ms, no
+//     frame-to-frame cost. WHY: every loop bound below is then a constant
 //     expression (GROW, 4, 4 + 2 · GROW, 12 + 2 · GROW), every disc
 //     condition a comparison of constants and every array index a loop
 //     variable, so after unrolling no array is indexed by a runtime value
@@ -142,8 +133,7 @@ constexpr const char* kCanvasFragmentShader =
 //     every grow of the key; the static_asserts after the source). The
 //     shifts are by one (grow1, shrink1), every grow or shrink a count of
 //     them.
-//   * THE COLUMNS (the one-column arm; the block arm's are THE BLOCKS'): a
-//     base at subcolumn t reads the columns of the
+//   * THE COLUMNS: a base at subcolumn t reads the columns of the
 //     subcolumns t − 2 .. t + 2 (its own and the nearer neighbor's, whose
 //     nearest subcolumn is within two), and the inner's bases span the
 //     subcolumns 4i − 4 − GROW .. 4i + 7 + GROW (its erosion's reach), so
@@ -153,60 +143,7 @@ constexpr const char* kCanvasFragmentShader =
 //     width); every pixel fetches i − L .. i + L first (L below), which
 //     serve the fast paths and the outer's bases whole, and the rest are
 //     fetched only on a road that runs the inner.
-//   * THE BLOCKS (the block arm, COLPX > 1; architect 2026-11-01, Ableton's
-//     one min/max polyline through wider columns' centers; the tips' rule at
-//     render_waveform_columns' head, render.h, THE BLOCKS): the COLPX = N
-//     columns of a block hold the block's one pair of tips (the CPU wrote
-//     them into every column), and THE CONTOUR RUNS BETWEEN BLOCK CENTERS.
-//     φ = k0 mod N, the record's first column's offset in its block, rides
-//     the record's `phase` (v_param.w, which the plate read nothing from
-//     before; the dots' kinds 1 and 2 read their own), so record column c
-//     sits at block offset p = (φ + c) mod N (the operand made non-negative
-//     with 4N, c >= −4) and its subcolumn j at the block-local u = 4p + j in
-//     [0, 4N). THE BASE (base_bits_n) at u: the column's own bar — the
-//     block's — union the contour toward the NEARER NEIGHBOR BLOCK, the left
-//     for u < 2N (its nearest column c − p − 1) and the right for u >= 2N (c
-//     + N − p), the weight toward it w = |2u + 1 − 4N| in 1 / (8N) (the
-//     subcolumn center's distance from the block center over the two
-//     centers' 4N): X = (8N − w) · T + w · T_nb, Y likewise from the
-//     bottoms, subrow k in it iff X <= 8N · k + 4N <= Y, i.e. (X + 4N − 1) /
-//     (8N) <= k <= (Y − 4N) / (8N), every operand non-negative so / is floor;
-//     at N = 1 it is base_bits exactly (u = j; w = 3, 1, 1, 3; (8T + 3) / 8
-//     and (8B − 4) / 8). A NEIGHBOR BLOCK WITH NO COLUMN IN THE RECORD IS THE
-//     OWN BLOCK, the contour flat to the edge, BY THE CLAMP ALONE: the
-//     neighbor's nearest column lies outside [0, W) only when the own
-//     block's edge column is the record's edge column, so clamp(·, 0, W − 1)
-//     lands in the own block, whose texels are its tips; an absent inner
-//     neighbor is the own, as ever. THE FETCHES (fetch_block_col): each
-//     column the arm reads takes its own texel and, where one of its four
-//     subcolumns needs it, the left block's (4p < 2N) and the right block's
-//     (4p + 3 >= 2N) — one neighbor a column but the center column of an odd
-//     N — each texelFetch at a clamped runtime coordinate, the arrays
-//     indexed by loop variables alone. THE COLUMNS: the outer's bases (and
-//     the inner's dilated at the pixel's subcolumns) read the own columns i −
-//     R .. i + R, R = (GROW + 3) / 4, the first fetch i − LB .. i + LB, LB =
-//     max(R, 1) for the square's i ± 1, the inner's road i − RI .. i + RI, RI
-//     = (GROW + 7) / 4, its erosion halo, the neighbor blocks' texels beside
-//     each. THE FAST PATHS STAND, re-derived for blocks (THE EXACT FAST
-//     PATHS, below): the reach lemma holds with the nearer neighbor BLOCK (a
-//     base's contour lies between its own bar and that block's bar, X and Y
-//     being convex combinations), so the hull is taken over the own texels of
-//     i − R .. i + R and their fetched neighbor blocks' (an unfetched one is
-//     the own texel, so the hull stays every bar a base reads); the inner
-//     square, the full outer and the core read the own columns' bars alone —
-//     each column's bar is in every one of its subcolumns' bases whatever the
-//     contour — so their certificates hold as written, on col[i − 1 .. i +
-//     1]'s own texels, not the block neighbors'. The one-column arm's
-//     window, dilation, erosion, coverage and composite are the block arm's
-//     unchanged (the vertical reach is the grow's and the erosion's alone).
-//     Modeled bit for bit in Python 2026-11-01 (tmp/colpx/model.py: the arm
-//     as written against the full rule over the record, at every grow 0 .. 8
-//     and every N 1 .. 4; the block base against a rational forward model
-//     of the contour between block centers; the edge clamp's claim): no
-//     mismatch over about 2.08 million pixels of random, waveform-shaped and
-//     thin bars, about 58,000 a (grow, N).
-//   * THE BASE of subcolumn j of a column (base_bits; the one-column arm —
-//     the block arm's is THE BLOCKS' above): its bar's subrows
+//   * THE BASE of subcolumn j of a column (base_bits): its bar's subrows
 //     [T, B − 1] UNION the contour's — the contour's top at the subcolumn's
 //     center interpolates this column's T and the NEARER neighbor's in
 //     eighths (j = 0..3: 3:5, 1:7, 7:1, 5:3; the left neighbor for j < 2,
@@ -378,11 +315,9 @@ constexpr const char* kListVertexShader =
 
 constexpr const char* kListFragmentShader =
     "#version 300 es\n"
-    // THE TWO SUBSTITUTION POINTS (list_fragment_source): the grow's digits
-    // and the column width's land here, so GROW and COLPX are preprocessor
-    // constants of the whole source.
+    // THE ONE SUBSTITUTION POINT (list_fragment_source): the grow's digits
+    // land here, so GROW is a preprocessor constant of the whole source.
     "#define GROW @GROW@\n"
-    "#define COLPX @COLPX@\n"
     // THE UNROLL HINT: where the driver knows GL_EXT_control_flow_attributes
     // (the macro is predefined iff it does) every loop below carries
     // [[unroll]]; elsewhere UNROLL is empty and the text is plain ES 3.00.
@@ -428,48 +363,6 @@ constexpr const char* kListFragmentShader =
     "    return range_bits((t8 + 3) / 8 - k0, (b8 - 4) / 8 - k0) |\n"
     "           range_bits(own.x - k0, own.y - 1 - k0);\n"
     "}\n"
-    // THE BLOCK ARM'S BASE (the head's blocks paragraph; COLPX > 1 alone): at
-    // the block-local subcolumn u in [0, 4 · COLPX), the own block's bar
-    // union the contour toward the nearer neighbor block `nb`, the weight
-    // toward it w = |2u + 1 − 4 · COLPX| in 1 / (8 · COLPX) — base_bits at
-    // COLPX = 1, u = j (w = 3, 1, 1, 3; the divisor 8 and the offsets 3 and
-    // 4), every operand non-negative so / is floor.
-    "#if COLPX != 1\n"
-    "uint base_bits_n(ivec2 own, ivec2 nb, int u, int k0) {\n"
-    "    int w = abs(2 * u + 1 - 4 * COLPX);\n"
-    "    int wc = 8 * COLPX - w;\n"
-    "    int t8 = w * nb.x + wc * own.x;\n"
-    "    int b8 = w * nb.y + wc * own.y;\n"
-    "    return range_bits((t8 + 4 * COLPX - 1) / (8 * COLPX) - k0,\n"
-    "                      (b8 - 4 * COLPX) / (8 * COLPX) - k0) |\n"
-    "           range_bits(own.x - k0, own.y - 1 - k0);\n"
-    "}\n"
-    // THE BLOCK ARM'S COLUMNS (window index d, the own column at 4): the own
-    // texel bc, the nearer-neighbor blocks' texels bl (the left block's
-    // nearest column c − p − 1) and br (the right's, c + COLPX − p), each
-    // fetched only where a subcolumn of the column needs it and else the own
-    // texel, the block offset bp = p, and whether the column is in the record
-    // and its inner present. Globals, indexed by a loop variable of a
-    // constant-bounded loop, as the masks are.
-    "ivec4 bc[9];\n"
-    "ivec4 bl[9];\n"
-    "ivec4 br[9];\n"
-    "int bp[9];\n"
-    "bool binp[9];\n"
-    "bool blit[9];\n"
-    "void fetch_block_col(int d, int i, int W, int phi, int row) {\n"
-    "    int c = i + d - 4;\n"
-    "    binp[d] = c >= 0 && c < W;\n"
-    "    bc[d] = texelFetch(u_columns, ivec2(clamp(c, 0, W - 1), row), 0);\n"
-    "    blit[d] = binp[d] && bc[d].w > bc[d].z;\n"
-    "    int p = (phi + c + 4 * COLPX) % COLPX;\n"
-    "    bp[d] = p;\n"
-    "    bl[d] = (binp[d] && 4 * p < 2 * COLPX)\n"
-    "        ? texelFetch(u_columns, ivec2(clamp(c - p - 1, 0, W - 1), row), 0) : bc[d];\n"
-    "    br[d] = (binp[d] && 4 * p + 3 >= 2 * COLPX)\n"
-    "        ? texelFetch(u_columns, ivec2(clamp(c + COLPX - p, 0, W - 1), row), 0) : bc[d];\n"
-    "}\n"
-    "#endif\n"
     // THE MASK ARRAYS, SIZED TO THE REACH (the head's specialization rule):
     // the outer's bases bo over the subcolumns 4i − GROW .. 4i + 3 + GROW
     // (index t the subcolumn 4i − GROW + t), the inner's bi over 4i − 4 −
@@ -542,10 +435,6 @@ constexpr const char* kListFragmentShader =
     "        int c = ((kind == 1) ? py : px) - v_param.z;\n"
     "        if (c % v_param.y != v_param.w) discard;\n"
     "    } else if (kind == 3) {\n"
-    // THE ONE-COLUMN ARM at COLPX 1 (the column width's off value, the
-    // one-column picture byte for byte by construction: this text is that
-    // arm unchanged); the BLOCK ARM after #else.
-    "#if COLPX == 1\n"
     "        int W = v_rect.z;\n"
     "        int i = px - v_rect.x;\n"
     "        int y = py - v_param.z;\n"
@@ -671,158 +560,24 @@ constexpr const char* kListFragmentShader =
     "                       word_rgb(v_words.y) * cov_ol,\n"
     "                       1.0 - (1.0 - cov_o) * (1.0 - cov_ol));\n"
     "        return;\n"
-    "#else\n"
-    // THE BLOCK ARM (the head's blocks paragraph): the one-column arm's
-    // rule and fast paths with the base between BLOCK centers. φ rides the
-    // record's phase (v_param.w); record column c's block offset is (φ + c)
-    // mod COLPX.
-    "        int W = v_rect.z;\n"
-    "        int i = px - v_rect.x;\n"
-    "        int y = py - v_param.z;\n"
-    "        int k0 = 4 * y - PIX0;\n"
-    "        int phi = v_param.w;\n"
-    // The columns' reach: the outer's bases (and the dilated inner at the
-    // pixel's subcolumns) read the own columns i − R .. i + R and their
-    // nearer-neighbor blocks' texels; the first fetch is i − LB .. i + LB,
-    // LB = max(R, 1) for the inner square's i ± 1; the inner's road adds
-    // i − RI .. i + RI.
-    "        const int R = (GROW + 3) / 4;\n"
-    "        const int LB = (R > 1) ? R : 1;\n"
-    "        const int RI = (GROW + 7) / 4;\n"
-    "        UNROLL for (int d = 4 - LB; d <= 4 + LB; ++d)\n"
-    "            fetch_block_col(d, i, W, phi, v_param.y);\n"
-    "        int ylo = 4 * y;\n"
-    "        int yhi = ylo + 3;\n"
-    "        int tmin_o = 1 << 20;\n"
-    "        int bmax_o = -(1 << 20);\n"
-    "        int tmin_i = 1 << 20;\n"
-    "        int bmax_i = -(1 << 20);\n"
-    // The hull: every bar a base of i − R .. i + R reads, the own and the
-    // fetched neighbor blocks' (an unfetched neighbor is the own texel).
-    "        UNROLL for (int d = 4 - R; d <= 4 + R; ++d) {\n"
-    "            tmin_o = min(tmin_o, min(bc[d].x, min(bl[d].x, br[d].x)));\n"
-    "            bmax_o = max(bmax_o, max(bc[d].y, max(bl[d].y, br[d].y)));\n"
-    "            if (blit[d]) {\n"
-    "                tmin_i = min(tmin_i, bc[d].z);\n"
-    "                bmax_i = max(bmax_i, bc[d].w);\n"
-    "            }\n"
-    "            if (binp[d] && bl[d].w > bl[d].z) {\n"
-    "                tmin_i = min(tmin_i, bl[d].z);\n"
-    "                bmax_i = max(bmax_i, bl[d].w);\n"
-    "            }\n"
-    "            if (binp[d] && br[d].w > br[d].z) {\n"
-    "                tmin_i = min(tmin_i, br[d].z);\n"
-    "                bmax_i = max(bmax_i, br[d].w);\n"
-    "            }\n"
-    "        }\n"
-    "        bool reach_o = yhi >= tmin_o - GROW && ylo <= bmax_o - 1 + GROW;\n"
-    "        bool reach_i = yhi >= tmin_i - GROW && ylo <= bmax_i - 1 + GROW;\n"
-    "        if (!reach_o && !reach_i) discard;\n"
-    // The square on the grown bars and the full outer read the own columns'
-    // bars alone (each column's bar is in every one of its subcolumns'
-    // bases, the contour aside), so they stand as in the one-column arm.
-    "        const int SQ = (GROW >= 4) ? 0 : 1;\n"
-    "        bool square = true;\n"
-    "        UNROLL for (int d = 4 - SQ; d <= 4 + SQ; ++d) {\n"
-    "            if (binp[d])\n"
-    "                square = square && blit[d] && bc[d].z - GROW <= ylo - 4 &&\n"
-    "                         yhi + 4 <= bc[d].w - 1 + GROW;\n"
-    "        }\n"
-    "        if (square) {\n"
-    "            o_color = vec4(word_rgb(v_words.x), 1.0);\n"
-    "            return;\n"
-    "        }\n"
-    "        bool full_o = bc[4].x - GROW <= ylo && yhi <= bc[4].y - 1 + GROW;\n"
-    "        if (full_o && !reach_i) {\n"
-    "            o_color = vec4(word_rgb(v_words.x), 1.0);\n"
-    "            return;\n"
-    "        }\n"
-    "        uint wo = full_o ? 0xFFFFu : 0u;\n"
-    "        uint wi = 0u;\n"
-    "        uint wt = 0u;\n"
-    "        if (reach_o && !full_o) {\n"
-    // The outer's bases over 4i − GROW .. 4i + 3 + GROW: the column d, its
-    // subcolumn j, the block-local u = 4 · bp + j, the left block's texel
-    // for u < 2 · COLPX and the right's past it.
-    "            UNROLL for (int t = 0; t < NO; ++t) {\n"
-    "                int sp = t - GROW;\n"
-    "                int d = (sp + 16) / 4;\n"
-    "                int j = (sp + 16) & 3;\n"
-    "                int u = 4 * bp[d] + j;\n"
-    "                ivec2 nb = (u < 2 * COLPX) ? bl[d].xy : br[d].xy;\n"
-    "                bo[t] = binp[d] ? base_bits_n(bc[d].xy, nb, u, k0) : 0u;\n"
-    "            }\n"
-    "            UNROLL for (int m = 0; m < 4; ++m)\n"
-    "                wo |= pix4(dilate_o(m + GROW)) << (4 * m);\n"
-    "        }\n"
-    "        if (reach_i) {\n"
-    "            UNROLL for (int d = 4 - RI; d <= 4 + RI; ++d) {\n"
-    "                if (d < 4 - LB || d > 4 + LB)\n"
-    "                    fetch_block_col(d, i, W, phi, v_param.y);\n"
-    "            }\n"
-    // The inner's bases over 4i − 4 − GROW .. 4i + 7 + GROW, an absent
-    // inner neighbor block the own (the contour flat), dilated into mi.
-    "            UNROLL for (int t = 0; t < NI; ++t) {\n"
-    "                int sp = t - 4 - GROW;\n"
-    "                int d = (sp + 16) / 4;\n"
-    "                int j = (sp + 16) & 3;\n"
-    "                int u = 4 * bp[d] + j;\n"
-    "                ivec4 nb = (u < 2 * COLPX) ? bl[d] : br[d];\n"
-    "                bi[t] = blit[d] ? base_bits_n(bc[d].zw, (nb.w > nb.z) ? nb.zw : bc[d].zw, u, k0)\n"
-    "                                : 0u;\n"
-    "            }\n"
-    "            int band_lo = 4 * (v_rect.y - v_param.z);\n"
-    "            int band_hi = 4 * (v_rect.y + v_rect.w - v_param.z);\n"
-    "            uint outside = range_bits(0, band_lo - 1 - k0) | range_bits(band_hi - k0, 31);\n"
-    "            UNROLL for (int q = 0; q < 12; ++q) {\n"
-    "                int s = 4 * i - 4 + q;\n"
-    "                mi[q] = (s >= 0 && s < 4 * W) ? (dilate_i(q + GROW) | outside) : 0xFFFFFFFFu;\n"
-    "            }\n"
-    "            UNROLL for (int m = 0; m < 4; ++m) {\n"
-    "                uint i4 = pix4(mi[4 + m]);\n"
-    "                wo |= i4 << (4 * m);\n"
-    "                wi |= i4 << (4 * m);\n"
-    "                wt |= pix4(erode(4 + m)) << (4 * m);\n"
-    "            }\n"
-    "        }\n"
-    "        int n_o = pop16(wo);\n"
-    "        int n_i = pop16(wi);\n"
-    "        int n_t = pop16(wt);\n"
-    "        if (n_o == 0) discard;\n"
-    "        float cov_o  = float(n_o) / 16.0;\n"
-    "        float cov_ol = float(n_i - n_t) / 16.0;\n"
-    "        o_color = vec4(word_rgb(v_words.x) * (cov_o * (1.0 - cov_ol)) +\n"
-    "                       word_rgb(v_words.y) * cov_ol,\n"
-    "                       1.0 - (1.0 - cov_o) * (1.0 - cov_ol));\n"
-    "        return;\n"
-    "#endif\n"
     "    }\n"
     "    o_color = vec4(word_rgb(v_words.x), 1.0);\n"
     "}\n";
 
-// THE SOURCE AT A GROW AND A COLUMN WIDTH (the specialization rule, the
-// head): the literal with the grow's digits at GROW's one substitution point
-// and the column width's at COLPX's, each token occurring exactly once.
-constexpr bool list_shader_has_one(std::string_view token) {
+// THE SOURCE AT A GROW (the specialization rule, the head): the literal
+// with the grow's digits at its one substitution point, GROW's definition.
+std::string list_fragment_source(int grow) {
+    constexpr std::string_view token = "@GROW@";
     constexpr std::string_view literal = kListFragmentShader;
-    const std::size_t at = literal.find(token);
-    return at != std::string_view::npos &&
-           literal.find(token, at + token.size()) == std::string_view::npos;
-}
-static_assert(list_shader_has_one("@GROW@"),
-              "kListFragmentShader has exactly one GROW substitution point");
-static_assert(list_shader_has_one("@COLPX@"),
-              "kListFragmentShader has exactly one COLPX substitution point");
-std::string list_fragment_source(int grow, int colpx) {
+    constexpr std::size_t at = literal.find(token);
+    static_assert(at != std::string_view::npos &&
+                      literal.find(token, at + token.size()) ==
+                          std::string_view::npos,
+                  "kListFragmentShader has exactly one substitution point");
     assert(grow >= 0 && grow <= kWaveformGrowMaxQuarters);
-    assert(colpx >= kWaveformColumnPxMin && colpx <= kWaveformColumnPxMax);
-    std::string source(kListFragmentShader);
-    const auto put = [&](std::string_view token, int value) {
-        const std::size_t at = source.find(token);
-        source.replace(at, token.size(), std::to_string(value));
-    };
-    put("@GROW@", grow);
-    put("@COLPX@", colpx);
+    std::string source(literal.substr(0, at));
+    source += std::to_string(grow);
+    source += literal.substr(at + token.size());
     return source;
 }
 
@@ -960,8 +715,8 @@ GLuint link_canvas_program(const GuiGlCanvasHost& host, const char* vs_source,
 // THE LIST PROGRAM AT A GROW (the declaration's rule, gl_canvas.h): the
 // specialized source linked, the sampler on unit 1, the two uniforms, and
 // the grow kept beside the program as the key present_frame compares.
-void GuiGlCanvas::build_list_program(int grow, int column_px) {
-    const std::string source = list_fragment_source(grow, column_px);
+void GuiGlCanvas::build_list_program(int grow) {
+    const std::string source = list_fragment_source(grow);
     const GLuint prog =
         link_canvas_program(host_, kListVertexShader, source.c_str());
     glUseProgram(prog);
@@ -970,7 +725,6 @@ void GuiGlCanvas::build_list_program(int grow, int column_px) {
     list_height_uniform_ = glGetUniformLocation(prog, "u_height");
     list_program_        = prog;
     list_program_grow_   = grow;
-    list_program_column_px_ = column_px;
 }
 
 // THE CONTEXT'S FIXED STATE, set at each make current (the platform's
@@ -1010,8 +764,7 @@ void GuiGlCanvas::ensure_programs() {
     // an integer texture with a filtering minifier is incomplete), seeded
     // 1 x 1 so the sampler is complete before the first plate.
     if (!list_program_) {
-        build_list_program(kWaveformGrowDefaultQuarters,
-                           kWaveformColumnPxDefault);
+        build_list_program(kWaveformGrowDefaultQuarters);
         glGenVertexArrays(1, &list_vao_);
         glGenBuffers(1, &list_vbo_);
         glBindVertexArray(list_vao_);
@@ -1228,22 +981,18 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         if (!list_uploaded_ || list->generation != list_generation_)
             upload_list(*list);
         if (list_instances_ > 0) {
-            // THE GROW AND THE COLUMN WIDTH RIDE THE LIST
-            // (GuiCanvasDrawList::plate_grow, the `waveform_grow` key in
-            // subcells; plate_column_px, the `waveform_column_px` key,
-            // 2026-11-01) AND ARE CONSTANTS OF THE PROGRAM
-            // (kListFragmentShader's specialization rule): a list at a grow
-            // or a width the standing program was not compiled for has the
-            // program rebuilt here, once — the sink stamps the keys' seats
-            // on every list, so either moves only at a commit of its key and
-            // the compare is false at every other frame — and a commit of
-            // the grow is then the next frame's picture with no upload (the
-            // tips do not move); a commit of the width arrives with the
-            // plate re-rendered over its blocks (a new revision, uploaded).
-            if (list->plate_grow != list_program_grow_ ||
-                list->plate_column_px != list_program_column_px_) {
+            // THE GROW RIDES THE LIST (GuiCanvasDrawList::plate_grow, the
+            // `waveform_grow` key in subcells) AND IS A CONSTANT OF THE
+            // PROGRAM (kListFragmentShader's specialization rule): a list
+            // at a grow the standing program was not compiled for has the
+            // program rebuilt here, once — the sink stamps the key's seat
+            // on every list, so the grow moves only at a commit of the key
+            // and the compare is false at every other frame — and a commit
+            // of the key is then the next frame's picture with no upload
+            // (the tips do not move).
+            if (list->plate_grow != list_program_grow_) {
                 glDeleteProgram(list_program_);
-                build_list_program(list->plate_grow, list->plate_column_px);
+                build_list_program(list->plate_grow);
             }
             glEnable(GL_SCISSOR_TEST);
             glScissor(clip[0], texture_h_ - (clip[1] + clip[3]),
@@ -1284,7 +1033,6 @@ void GuiGlCanvas::forget() {
     list_size_uniform_   = -1;
     list_height_uniform_ = -1;
     list_program_grow_   = -1;
-    list_program_column_px_ = -1;
     list_vao_            = 0;
     list_vbo_            = 0;
     list_instances_      = 0;

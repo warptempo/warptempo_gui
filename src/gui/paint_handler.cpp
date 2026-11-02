@@ -3968,8 +3968,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // FFFF00 by default, 2026-10-09) over the same triangle one label
     // quantum right and down in `ce_cue_shadow` (2026-10-26 ~13:05, the
     // label's own offset), ON THE GROUND'S LAST `rows` DEVICE ROWS, its
-    // apex — the bottom centre of the playhead's column, its stem's center
-    // at every stem width — on the
+    // apex — the bottom centre of the playhead's one-px column — on the
     // ground's bottom row (2026-10-09 ~21:00, the 11-W ground). It is OPAQUE over the ticks and digits the walk above laid
     // down, covering whatever stands under it (every cell whole, no edge
     // blended over them). NO SNAP, NO
@@ -4386,9 +4385,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //     pass), and a playhead on the reset interleaves its yellow there as on
 //     any stem — "yellow, blue, yellow, red all the way around". A stem off
 //     the area's left edge leaves the clipped band with no left side.
-//   THE RIGHT SIDE on the band's last column, the stem's rule exactly —
-//     its width the stem's, centered on that column (waveform_stem_span,
-//     2026-11-01) —
+//   THE RIGHT SIDE on the band's last column, the stem's rule exactly
 //     (program_spec.h's dot fields: the blue on the canvas rows ≡
 //     range_dot_phase and the red on ≡ cue_dot_phase, mod cue_dot_period,
 //     counted from the canvas's first row), down both wells and not across
@@ -4447,20 +4444,14 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
         };
         sink.dots(runs, color);
         // The right side on the band's last column, one run per well (the
-        // stereo divider's rows carry none, 2026-10-16), a stem's width
-        // centered on that column as the left side's stem is (2026-11-01,
-        // waveform_stem_span), one run pair per column of the span.
-        const WaveformStemSpan span =
-            waveform_stem_span(area.w, x1 - t - area.x);
-        for (int x = span.x0; x < span.x1; ++x) {
-            GuiCanvasDotRun side[2];
-            const int n = dotted_waveform_line_runs(area, x, period, phase,
-                                                    side);
-            if (n > 0)
-                sink.dots(std::span<const GuiCanvasDotRun>(
-                              side, static_cast<std::size_t>(n)),
-                          color);
-        }
+        // stereo divider's rows carry none, 2026-10-16).
+        GuiCanvasDotRun side[2];
+        const int n = dotted_waveform_line_runs(area, x1 - t - area.x, period,
+                                                phase, side);
+        if (n > 0)
+            sink.dots(std::span<const GuiCanvasDotRun>(
+                          side, static_cast<std::size_t>(n)),
+                      color);
     };
     if (dots.range_phase_dots != GuiCueDot::None)
         paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
@@ -4631,8 +4622,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 //
 // THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
 // 2026-10-09; the two colors ~11:50; every cue's since 2026-10-26;
-// render.h's marker-lane paragraph): dots one device row tall and
-// waveform_stem_px() columns wide, centered on the column (2026-11-01), on the
+// render.h's marker-lane paragraph): one-device-px dots on the
 // CANVAS'S device rows counted from its top row (the canvas sink's
 // stem_dots, one run per well, waveform_well_rows) — none on the canvas's
 // frame row, none on the stereo divider's rows (2026-10-16) and none in the
@@ -4668,27 +4658,19 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
     // from the canvas's first row, so a dot keeps its row and the divider
     // carries none. The dots are the dotted line's rule (render.h's
     // dotted_waveform_line_runs) — rows ≡ phase (mod period) from the
-    // canvas's top, one device row, across the stem's columns, in the two
-    // wells.
+    // canvas's top, one device px, at the stem's column, in the two wells.
     const std::array<WaveformWellRows, 2> wells = waveform_well_rows(area);
     const ProgramSpec& ps = kProgramSpec;
-    // THE STEM'S WIDTH (architect 2026-11-01): waveform_stem_px() columns
-    // CENTERED on the marker's column, the left edge winning a tie
-    // (waveform_stem_span, render.h, which gates on the own column and clips
-    // at both edges), one dotted column per column of the span, each with
-    // the same rows.
     const auto dotted_stem = [&](int col, int phase, GuiColor color) {
-        if (ps.cue_dot_period <= 0) return;
-        const WaveformStemSpan span = waveform_stem_span(area.w, col);
+        if (col < 0 || col >= area.w || ps.cue_dot_period <= 0) return;
         for (const WaveformWellRows& w : wells) {
             if (w.y1 <= w.y0) continue;
             // stem_dots counts its phase from the run's first row: the
             // canvas-top phase restated from this well's first row.
             const int p = ps.cue_dot_period;
             const int well_phase = ((phase - (w.y0 - area.y)) % p + p) % p;
-            for (int x = span.x0; x < span.x1; ++x)
-                sink.stem_dots(area.x + x, w.y0, w.y1 - w.y0, p, well_phase,
-                               color);
+            sink.stem_dots(area.x + col, w.y0, w.y1 - w.y0, p, well_phase,
+                           color);
         }
     };
     for (const MarkerStem& stem : app.marker_stems) {
@@ -4877,10 +4859,9 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 //
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
 // (architect 2026-10-05), WHITE in every built-in palette (architect
-// 2026-10-07: "let's go back to a white scanner") — SOLID, in device px at
-// every scale (architect 2026-10-09 ~14:25, "on waveform → unscaled"),
-// waveform_stem_px() wide centered on its column since 2026-11-01
-// (waveform_stem_span, render.h; one device px at the key's 1), the canvas's rows alone
+// 2026-10-07: "let's go back to a white scanner") — SOLID, ONE DEVICE PX
+// wide at every scale (architect 2026-10-09 ~14:25, "on waveform →
+// unscaled", waveform_line_px's rule, render.h), the canvas's rows alone
 // (PlayheadForm::Solid; Cool Edit's playback cursor is a solid 1-px line,
 // measured 2026-10-09).
 //

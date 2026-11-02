@@ -65,7 +65,6 @@ void render_waveform_to_plate_columns(
     int64_t vp_start,
     int64_t lattice_origin,
     double  painter_spp,
-    int     column_px,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     dest.rendered = true;
@@ -100,11 +99,8 @@ void render_waveform_to_plate_columns(
     const WaveformChannelBand b0 = waveform_channel_band(area_h, divider_px, 0);
     const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) return;
-    // The full render IS the basis: global column 0 at the plate's own width,
-    // the blocks at the job's column width (the `waveform_column_px` key's
-    // snapshot, 2026-11-01).
-    const WaveformBasis basis{vp_start, lattice_origin, painter_spp, area_w,
-                              column_px};
+    // The full render IS the basis: global column 0 at the plate's own width.
+    const WaveformBasis basis{vp_start, lattice_origin, painter_spp, area_w};
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the divider's height does: the worker must read no live
     // GUI state. The curve it names is the audio object's own, immutable once
@@ -189,11 +185,6 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     // viewport geometry in that same fingerprint, so every rebuild re-renders
     // under one set of inputs.
     in.gain_hash     = waveform_gain_fingerprint(app);
-    // THE COLUMN WIDTH (the `waveform_column_px` key's seat, render.h;
-    // 2026-11-01): the blocks the tips are read over, a render input and a
-    // fingerprint field by field, captured here so the worker reads no
-    // live state.
-    in.column_px     = waveform_column_px();
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
     in.warp_frame_map       = std::move(target_warp_frame_map);
@@ -277,7 +268,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         int     fp_div,
         WaveformPlateInks fp_ink,
         uint64_t fp_gain,
-        int     fp_colpx,
         bool    fp_t,
         uint64_t fp_h) -> bool {
         if (fp_vp_s != in.vp_start)        return true;
@@ -288,7 +278,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_div  != in.divider_px)      return true;
         if (fp_ink   != in.inks)           return true;
         if (fp_gain != in.gain_hash) return true;
-        if (fp_colpx != in.column_px)      return true;
         if (fp_t    != in.is_target)       return true;
         if (fp_h    != in.warp_frame_map_hash) return true;
         return false;
@@ -303,7 +292,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_divider_px,
         wf_cache.pending_fp_inks,
         wf_cache.pending_fp_gain_hash,
-        wf_cache.pending_fp_column_px,
         wf_cache.pending_fp_target,
         wf_cache.pending_fp_warp_frame_map_hash);
 
@@ -324,7 +312,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_divider_px  = in.divider_px;
         wf_cache.supersede_inks        = in.inks;
         wf_cache.supersede_gain_hash = in.gain_hash;
-        wf_cache.supersede_column_px   = in.column_px;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
@@ -345,7 +332,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.area_h         = in.area_h;
     job.divider_px     = in.divider_px;
     job.gain_hash = in.gain_hash;
-    job.column_px      = in.column_px;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
     // Stash a copy of the warp_frame_map on the pending slot so the flag cache —
@@ -366,7 +352,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_divider_px  = in.divider_px;
     wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
-    wf_cache.pending_fp_column_px   = in.column_px;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
 
@@ -428,7 +413,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_divider_px          = wf_cache.fp_divider_px;
         wf_cache.pending_fp_inks                = wf_cache.fp_inks;
         wf_cache.pending_fp_gain_hash   = wf_cache.fp_gain_hash;
-        wf_cache.pending_fp_column_px           = wf_cache.fp_column_px;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
         wf_cache.pending_fp_warp_frame_map      = wf_cache.fp_warp_frame_map;
@@ -473,7 +457,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.divider_px     = wf_cache.supersede_divider_px;
         job.gain_hash = wf_cache.supersede_gain_hash;
-        job.column_px      = wf_cache.supersede_column_px;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
         // Thread the supersede warp_frame_map into both the job and
@@ -495,7 +478,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_divider_px  = wf_cache.supersede_divider_px;
         wf_cache.pending_fp_inks     = wf_cache.supersede_inks;
         wf_cache.pending_fp_gain_hash = wf_cache.supersede_gain_hash;
-        wf_cache.pending_fp_column_px   = wf_cache.supersede_column_px;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
 
@@ -525,7 +507,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_divider_px   = wf_cache.pending_fp_divider_px;
     wf_cache.fp_inks     = wf_cache.pending_fp_inks;
     wf_cache.fp_gain_hash = wf_cache.pending_fp_gain_hash;
-    wf_cache.fp_column_px    = wf_cache.pending_fp_column_px;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
@@ -594,7 +575,6 @@ bool GuiPaintHandler::live_plate_published() const {
            wf_cache.fp_divider_px          == in.divider_px &&
            wf_cache.fp_inks                == in.inks &&
            wf_cache.fp_gain_hash           == in.gain_hash &&
-           wf_cache.fp_column_px           == in.column_px &&
            wf_cache.fp_target              == in.is_target &&
            wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
 }
@@ -748,8 +728,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         wf_cache.columns,
         in.area_w, in.area_h, in.divider_px,
         *in.audio,
-        in.vp_start, in.lattice_origin, in.painter_spp, in.column_px,
-        in.gain_hash != 0,
+        in.vp_start, in.lattice_origin, in.painter_spp, in.gain_hash != 0,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
     // The live slot rewritten in place is a new plate: a revision of its own
     // (the completion swap's rule).
@@ -769,7 +748,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_divider_px   = in.divider_px;
     wf_cache.fp_inks     = in.inks;
     wf_cache.fp_gain_hash = in.gain_hash;
-    wf_cache.fp_column_px    = in.column_px;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -782,7 +760,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_divider_px   = in.divider_px;
     wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
-    wf_cache.pending_fp_column_px    = in.column_px;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;

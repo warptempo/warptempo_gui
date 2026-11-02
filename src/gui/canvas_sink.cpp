@@ -25,16 +25,14 @@ GuiCanvasDrawList& gui_canvas_frame() {
 
 // THE COLUMNS ARE NOT CLEARED HERE (2026-10-14): they belong to the plate's
 // revision, not to the rebuild (plate, below).
-// THE GROW AND THE COLUMN WIDTH ARE STAMPED AT EVERY REBUILD
-// (GuiCanvasDrawList::plate_grow, plate_column_px): the two keys' live
-// seats, whether or not a plate follows — the GL canvas compares them with
-// its program's at every list draw, so a list without a plate must carry
-// the same numbers as one with.
+// THE GROW IS STAMPED AT EVERY REBUILD (GuiCanvasDrawList::plate_grow):
+// the key's live seat, in subcells, whether or not a plate follows — the GL
+// canvas compares it with its program's at every list draw, so a list
+// without a plate must carry the same number as one with.
 GuiCanvasSink::GuiCanvasSink(GuiCanvasDrawList& list) : list_(list) {
     list_.prims.clear();
     ++list_.generation;
-    list_.plate_grow      = waveform_grow_quarters();
-    list_.plate_column_px = waveform_column_px();
+    list_.plate_grow = waveform_grow_quarters();
 }
 
 void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
@@ -89,10 +87,7 @@ void GuiCanvasSink::stem_dots(int x, int y, int len, int period, int phase,
 // held copy — the same bands' bounds, since the live slot changes only at a
 // publication and every publication takes a new revision — and each record's
 // offset into it is the running sum of the stored bands' widths either way,
-// the offsets the copy made. EACH RECORD'S `phase` IS ITS BAND'S BLOCK
-// PHASE (WaveformBandColumns::block_phase, 2026-11-01): the offset of its
-// first column in its block, the plate shader's φ (kListFragmentShader's
-// COLPX arm; 0 at the column width's 1, the arm that reads none).
+// the offsets the copy made.
 void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
                           WaveformPlateInks inks) {
     if (!columns.rendered) return;
@@ -114,7 +109,6 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
         p.r      = GuiRect{area.x + c.col_lo, area.y + c.y_lo, w, h};
         p.period = static_cast<int>(offset);
         p.origin = area.y;
-        p.phase  = c.block_phase;
         p.word   = ink;
         p.word2  = outline;
         if (copy)
