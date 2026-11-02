@@ -7,12 +7,11 @@
 // A small card stacked top-right from the icon row (the live chrome
 // vocabulary's card seat, notification_stack_bound), newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
-// the one sans, THE CLASS GLYPH AT THE LEFT AGAIN since 2026-10-24 — the
-// planner's i (CardNormal) and X (CardCritical), BOXED GLYPHS in the
-// folder's and the quaver's form (icons.h's THE BOXED GLYPHS; architect: "a
-// very simple basic small rectangle with a larger rectangle below, that's
-// the i, and then an X … for the error … Spartan and minimalist … sit
-// nicely with the other icons, the note and the folder"), and ONE PAD of plain face between the border and the
+// the one sans, THE CLASS GLYPH AT THE LEFT AGAIN since 2026-10-24 (the
+// planner's i and X then) — BREEZE'S since 2026-11-02 (architect
+// 2026-11-01, M7: Breeze only, everywhere): HelpAbout, an i in a ring, on a
+// normal card and DialogClose, the dialogs' X, on a critical one, on the
+// ink-box road (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
 // 2026-10-24), ON THE CARD FACE — the tooltip's look, a flat
 // `card_ground` box under `card_text` inside a one-device-px `card_frame`
@@ -415,6 +414,8 @@
 #include "app_state.h"
 #include "viewport.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -680,7 +681,7 @@ inline std::string lowercase_initial(std::string_view s) {
 // 272, so the clamp still answers the floor for both and they still paint
 // at one width; the width rule was not part of either ruling and the floor
 // keeps the number it was measured at. NOR DID THE GLYPH'S RETURN
-// (2026-10-24): the chrome ring + pad + the glyph's box + the gap + pad +
+// (2026-10-24): the chrome ring + pad + the glyph's seat + the gap + pad +
 // ring is 1 + 18 + 34 + 10 + 18 + 1 = 82 device px at 300 %, and the pair
 // shapes to about 237 and 232 device px in the body face's 22, both near
 // 320 against the floor's 594. NOR DID THE FACES' CHANGES: under
@@ -754,16 +755,30 @@ int notification_pad_px();
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
 // 2026-10-24): the inside height pad + cap + pad,
 // and the ratio the retired caption's (21 of its 40-px lane) and the list rows'
-// (27 of their 51-px row) — the one proportion every boxed glyph keeps to
-// its line. Its box is that ink's 40 / 27, rounded at the box
-// (icons::icon_box_live_px: the ink is already live px, derived from the
-// live pad and cap).
+// (27 of their 51-px row) — the one proportion every off-key glyph keeps to
+// its line. Since 2026-11-02 (Breeze's HelpAbout and DialogClose, M7) it is
+// the ink box's LARGER SIDE on the ink-box road (icons.h), rounded at the
+// element (the ink is already live px, derived from the live pad and cap).
 inline constexpr double kNotificationGlyphRatio = 0.525;
 
-// THE GAP FROM THE GLYPH'S BOX TO THE TEXT'S PEN is the logo lane's brand
+// THE GLYPH'S SEAT WIDTH, device px, for an ink of `ink_px` live device px
+// (2026-11-02): the box the retired boxed glyph stood in — the ink's 40 / 27
+// rounded at the box, floored at 1, then the box's 34 / 40 rounded — kept
+// as the seat so THE TEXT'S COLUMN did not move when Breeze's drawing,
+// placed by its own ink, replaced the planner's i and X (the column derived
+// from the same ink length, never from the new drawing's width). The
+// card's text pen stands this seat plus the brand gap past ring + pad
+// (paint_notifications).
+inline int notification_glyph_seat_w_px(double ink_px) {
+    const int box_h = std::max(
+        1, static_cast<int>(std::nearbyint(ink_px * 40.0 / 27.0)));
+    return static_cast<int>(std::nearbyint(box_h * 34.0 / 40.0));
+}
+
+// THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN is the logo lane's brand
 // gap, kLogoBrandGapAt300 (render.h: 10 px at 300 %, skin_px; the retired
 // caption's title gap, which it was until the caption went the same day) —
-// the same seat, a boxed glyph then words, so one number (architect
+// the same seat, a glyph then words, so one number (architect
 // 2026-10-24).
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's

@@ -222,37 +222,13 @@ std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
     return out;
 }
 
-cairo_surface_t* rasterise(const Document& doc, int px) {
-    // A new image surface is cleared to transparent, which resvg's render
-    // composites onto. Its stride is exactly 4 * px: cairo aligns ARGB32
-    // rows to 4 bytes, and resvg's pixmap is packed rows of 4 bytes.
-    cairo_surface_t* s =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, px, px);
-    assert(cairo_image_surface_get_stride(s) == 4 * px);
-    cairo_surface_flush(s);
-    unsigned char* data = cairo_image_surface_get_data(s);
-
-    const resvg_size size = resvg_get_image_size(doc.tree.get());
-    const double k = std::min(px / static_cast<double>(size.width),
-                              px / static_cast<double>(size.height));
-    const resvg_transform fit{
-        static_cast<float>(k), 0.0f, 0.0f, static_cast<float>(k),
-        static_cast<float>((px - size.width * k) / 2.0),
-        static_cast<float>((px - size.height * k) / 2.0)};
-    resvg_render(doc.tree.get(), fit, static_cast<uint32_t>(px),
-                 static_cast<uint32_t>(px), reinterpret_cast<char*>(data));
-
-    rgba_bytes_to_argb_words(data, px * px);
-    cairo_surface_mark_dirty(s);
-    return s;
-}
-
 cairo_surface_t* rasterise_zoom(const Document& doc, double zoom) {
     const resvg_size size = resvg_get_image_size(doc.tree.get());
     const int w = std::max(1, static_cast<int>(std::ceil(size.width * zoom)));
     const int h = std::max(1, static_cast<int>(std::ceil(size.height * zoom)));
-    // A new image surface is cleared to transparent; its stride is exactly
-    // 4 * w (rasterise's reason).
+    // A new image surface is cleared to transparent, which resvg's render
+    // composites onto. Its stride is exactly 4 * w: cairo aligns ARGB32 rows
+    // to 4 bytes, and resvg's pixmap is packed rows of 4 bytes.
     cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
     assert(cairo_image_surface_get_stride(s) == 4 * w);
     cairo_surface_flush(s);

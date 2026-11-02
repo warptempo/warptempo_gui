@@ -114,9 +114,10 @@ for f in $FONT_FILES; do
 done
 # THE BUNDLED ICONS: every `.svg` of the repository's assets/icons/ copied
 # into the package's assets/icons/, which aapt2 link's -A packs (deflated) as
-# the APK's `icons/` asset directory. A REPEAT IS A SYMLINK in the repository
-# (icons.h's kIconNames: AppIcon.svg and WavRow.svg -> Quaver.svg); cp -L
-# copies the file it names, so the APK holds regular files alone. The app
+# the APK's `icons/` asset directory. THE ONE SYMLINK in the repository
+# (icons.h's kIconNames: AppIcon.svg -> MusicNote16th.svg, the launcher's
+# drawing, which the app does not read); cp -L copies the file it names, so
+# the APK holds regular files alone. The app
 # reads them in place at launch, never copying them out (icons.h's load_set;
 # GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is a
 # build defect and stops the script here.
@@ -175,18 +176,20 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # PNG layers per density, RENDERED HERE AT EVERY BUILD from the drawing
 # into a staged copy of res/ under the package tree,
 # which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.svg, read
-# through its link: THE QUAVER, AppIcon.svg -> Quaver.svg (architect
-# 2026-10-23: "the new note glyph on the caption's color"). THE FRAMING
+# through its link: BREEZE'S NOTE, AppIcon.svg -> MusicNote16th.svg (the
+# logo lane's note; architect 2026-11-01, M7: Breeze only, everywhere —
+# the project's quaver of 2026-10-23 retired), a `currentColor` drawing
+# painted LAUNCHER_INK, the logo's text tone, through resvg's user
+# stylesheet (below). THE FRAMING
 # (Android's adaptive mask demands a full-bleed square): the FOREGROUND the
 # drawing fitted to the 52 dp art square
 # (architect 2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp
 # series on the glass: the 64 dp art filled ~86 % of the launcher's visible
 # tile and nearly touched its corners) -- an SVG rendered by RESVG, the
 # product's own renderer (svg_icon.cpp), at the art's height, its width the
-# viewBox's (the quaver's 34 x 40: 45 / 67 / 89 / 133 / 177 px wide, resvg
-# rounding up), never rasterised small and upscaled (magick's own delegate
-# renders the SVG at its 34 x 40 user size and blurs at -resize) --
-# centered on the transparent 108 dp canvas; the
+# viewBox's (the note's 22 x 22: a 52 dp square), never rasterised small and
+# upscaled (magick's own delegate renders the SVG at its user size and
+# blurs at -resize) -- centered on the transparent 108 dp canvas; the
 # BACKGROUND that canvas FLAT IN THE LAUNCHER'S OWN GROUND #141415 (the color
 # the caption wore when the icon was framed, architect 2026-10-23; owned by
 # LAUNCHER_GROUND below alone), one color over the whole square,
@@ -196,20 +199,27 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # it). Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
 # Byte-stable: -strip drops the date chunks. Cairo paints the
-# chrome and the icons onto the backbuffer (assets/icons/'s SVGs rasterised by
-# resvg, svg_icon.cpp, each copied by cairo); the canvas interior and the
+# chrome and the glyphs onto the backbuffer (assets/icons/'s SVGs rasterised
+# by resvg, svg_icon.cpp, each copied by cairo); the canvas interior and the
 # score page are the GPU's (canvas_sink.h); the app declares no @string, no style, no res/values. aapt2 compile turns the
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
-[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to Quaver.svg)"
+[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
 LAUNCHER_GROUND="#141415"   # the launcher's own ground; the one owner of the color
+LAUNCHER_INK="#B5B5B5"      # the note's ink, the logo lane's text tone (materials.h's kTextInk)
+# THE INK IS GIVEN AS resvg's USER STYLESHEET, the app's own road
+# (svg_icon::parse): the drawing paints in `currentColor` and the one-rule
+# sheet sets the root's `color`. The sheet is a build product under the
+# package tree, never a file in the repository.
+LAUNCHER_CSS="$PKGDIR/launcher_ink.css"
+printf 'svg { color: %s; }\n' "$LAUNCHER_INK" > "$LAUNCHER_CSS"
 RES_STAGE="$PKGDIR/res"
 cp -r "$APPDIR/res" "$RES_STAGE"
 for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432; do
     IFS=: read -r density art canvas <<< "$row"
     dir="$RES_STAGE/mipmap-$density"
     mkdir -p "$dir"
-    resvg -h "$art" "$APP_ICON" -c | magick - \
+    resvg --stylesheet "$LAUNCHER_CSS" -h "$art" "$APP_ICON" -c | magick - \
         -background none -gravity center -extent "${canvas}x${canvas}" -strip \
         -define png:compression-level=9 -define png:compression-filter=5 \
         "PNG32:$dir/ic_launcher_foreground.png"

@@ -1501,8 +1501,15 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     const double space = text_shape::memoized_run(body, " ")->width_px;
     l.clock = text_shape::memoized_run(body, legend.clock);
     l.clock_x = static_cast<double>(well.end) - text_shape::ink_right_px(*l.clock);
-    const int cell_w = skin_px(kLogoGlyphCellWAt300, 1);
-    const int cell_h = skin_px(kLogoGlyphCellHAt300, 1);
+    // THE CELL: the two drawings' common ink box at the one length, the
+    // larger of the two on each axis (render.h's logo lane block).
+    const int glyph_ink = skin_px(kLogoGlyphInkAt300, 1);
+    const icons::InkSize on =
+        icons::glyph_ink_size(icons::Icon::Battery000Charging, glyph_ink);
+    const icons::InkSize off =
+        icons::glyph_ink_size(icons::Icon::Battery000, glyph_ink);
+    const int cell_w = std::max(on.w, off.w);
+    const int cell_h = std::max(on.h, off.h);
     const int cell_right = static_cast<int>(std::nearbyint(
         l.clock_x + text_shape::ink_left_px(*l.clock) - space));
     const int cap_rows = std::max(
@@ -1525,8 +1532,8 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     // the lowest ink stands well inside them — the face's descent
     // (gui_font_descent_px, about .21 em, an upper bound for the clock's
     // '|', the legend's one descender) under the cap-centered baseline ends
-    // about 48 rows down the 72-row lane at 300 %; the glyph cell, one row
-    // below the baseline, less.
+    // about 48 rows down the 72-row lane at 300 %; the glyph cell, centered
+    // on the cap, less.
     l.extent = GuiRect{first, l.lane.y, std::max(0, well.end + 1 - first),
                        l.lane.h};
     return l;
@@ -1539,10 +1546,10 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend) {
 
 void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // THE LOGO LANE (render.h's logo lane block, every length skin_px):
-    // the quaver, the brand, the legend and its glyph, on the band's ground
+    // the note, the brand, the legend and its glyph, on the band's ground
     // paint_icon_row already put down — nothing else on the lane. NO SHADOW
-    // (the flat look, architect 2026-11-01): the words and the glyph in the
-    // text tone kTextInk (M13, 2026-11-02), the quaver in its file's own ink.
+    // (the flat look, architect 2026-11-01): the words and the drawings in
+    // the text tone kTextInk (M13, 2026-11-02; Breeze's, M7).
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, logo_lane_h_px())};
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -1551,26 +1558,25 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
-    // THE QUAVER: its first ink column on the well's left edge column and
-    // its ink rows centered on the lane, both off the raster's own alpha
-    // (icons::boxed_ink), in the file's own ink.
-    const int box_h = icons::icon_box_px(kLogoQuaverInkAt300);
-    const icons::BoxedInk ink = icons::boxed_ink(icons::Icon::Quaver, box_h);
-    const int box_x = well.x - ink.left;
-    const int box_y =
-        lane.y +
-        static_cast<int>(std::nearbyint((lane.h - (ink.bottom - ink.top)) * 0.5)) -
-        ink.top;
-    icons::draw_boxed(cr, icons::Icon::Quaver, box_x, box_y, box_h);
+    // THE NOTE (MusicNote16th on the ink-box road): its ink box's first
+    // column on the well's left edge column and its rows centered on the
+    // lane.
+    const int note_ink = skin_px(kLogoNoteInkAt300, 1);
+    const icons::InkSize note =
+        icons::glyph_ink_size(icons::Icon::MusicNote16th, note_ink);
+    const int note_y =
+        lane.y + static_cast<int>(std::nearbyint((lane.h - note.h) * 0.5));
+    icons::draw_glyph(cr, icons::Icon::MusicNote16th, well.x, note_y,
+                      note_ink, kTextInk);
 
-    // THE BRAND, a constant: its first ink the gap past the quaver's last
+    // THE BRAND, a constant: its first ink the gap past the note's last
     // ink column, its cap band centered on the lane.
     set_palette_source(cr, text);
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
         const text_shape::SharedRun brand =
             text_shape::memoized_run(bold, kLogoBrand);
-        const double x = static_cast<double>(box_x + ink.right +
+        const double x = static_cast<double>(well.x + note.w +
                                              skin_px(kLogoBrandGapAt300)) -
                          text_shape::ink_left_px(*brand);
         text_shape::show_shaped_run(
@@ -1587,56 +1593,20 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     if (l.percent)
         text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
 
-    // THE GLYPH, artwork filled with cairo's own antialiasing: ONE PATH in
-    // the text tone.
-    const double cx = static_cast<double>(l.cell.x);
-    const double cy = static_cast<double>(l.cell.y);
-    const double cw = static_cast<double>(l.cell.w);
-    const double ch = static_cast<double>(l.cell.h);
-    const auto trace_glyph = [&] {
-        cairo_new_path(cr);
-        if (app.logo_legend.glyph == GuiLogoGlyph::Bolt) {
-            // THE BOLT: kLogoBolt over the cell's unit box.
-            cairo_move_to(cr, cx + kLogoBolt[0].x * cw,
-                          cy + kLogoBolt[0].y * ch);
-            for (std::size_t i = 1; i < std::size(kLogoBolt); ++i)
-                cairo_line_to(cr, cx + kLogoBolt[i].x * cw,
-                              cy + kLogoBolt[i].y * ch);
-            cairo_close_path(cr);
-        } else {
-            // THE BATTERY: its box centered in the cell (the spare columns
-            // halved, the odd one on the right — the floor;
-            // the rows centered on the cap's center), the nub up.
-            const int bw = skin_px(kLogoBatteryWAt300, 1);
-            const int bh = skin_px(kLogoBatteryHAt300, 1);
-            const double bx =
-                static_cast<double>(l.cell.x + (l.cell.w - bw) / 2);
-            const double by = static_cast<double>(l.cap_center - (bh - 1) / 2);
-            const double w = static_cast<double>(bw);
-            const double h = static_cast<double>(bh);
-            const double nub = kLogoBatteryNubH * h;
-            cairo_rectangle(cr, bx + kLogoBatteryNubX0 * w, by,
-                            (kLogoBatteryNubX1 - kLogoBatteryNubX0) * w,
-                            nub + static_cast<double>(hairline_px()));
-            const double x0 = bx + kLogoBatteryBodyX0 * w;
-            const double x1 = bx + kLogoBatteryBodyX1 * w;
-            const double y0 = by + nub;
-            const double y1 = by + h;
-            const double r =
-                static_cast<double>(skin_px(kLogoBatteryRadiusAt300, 1));
-            constexpr double kPi = 3.14159265358979323846;
-            cairo_new_sub_path(cr);
-            cairo_arc(cr, x1 - r, y0 + r, r, -kPi / 2, 0.0);
-            cairo_arc(cr, x1 - r, y1 - r, r, 0.0, kPi / 2);
-            cairo_arc(cr, x0 + r, y1 - r, r, kPi / 2, kPi);
-            cairo_arc(cr, x0 + r, y0 + r, r, kPi, 3 * kPi / 2);
-            cairo_close_path(cr);
-        }
-    };
-    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
-    trace_glyph();
-    set_palette_source(cr, text);
-    cairo_fill(cr);
+    // THE GLYPH, Breeze's battery by the plug state (GuiLogoGlyph's rule),
+    // its ink box centered in the cell (the floor of the spare; one box for
+    // both today, so flush), in the text tone.
+    {
+        const icons::Icon glyph =
+            app.logo_legend.glyph == GuiLogoGlyph::Charging
+                ? icons::Icon::Battery000Charging
+                : icons::Icon::Battery000;
+        const int glyph_ink = skin_px(kLogoGlyphInkAt300, 1);
+        const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
+        icons::draw_glyph(cr, glyph, l.cell.x + (l.cell.w - s.w) / 2,
+                          l.cell.y + (l.cell.h - s.h) / 2, glyph_ink,
+                          kTextInk);
+    }
 
     cairo_restore(cr);
 }
@@ -3387,8 +3357,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // border ONE PAD of plain face on all four sides (P18, architect
 // 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
 // between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
-// the planner's i or X, a BOXED GLYPH (icons.h), its ink .525 of the first
-// line's inside height (kNotificationGlyphRatio) — then the logo lane's brand
+// Breeze's HelpAbout or DialogClose (icons.h's ink-box road, 2026-11-02),
+// its ink .525 of the first line's inside height (kNotificationGlyphRatio),
+// at its seat (notification_glyph_seat_w_px) — then the logo lane's brand
 // gap, then THE SENTENCE (the layout block in the body).
 // (A window-close X stood in a second button box at the right from
 // 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
@@ -3440,21 +3411,26 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kNotificationGapPx, 1);
-    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1): the border
-    // (`ring`, one device px), ONE PAD of plain face (notifications.h, every
-    // side), the class glyph's box, the logo lane's brand gap, the text's
-    // pen; the wrap's room ends one pad short of the right border. The
-    // first line's INSIDE rows are pad + cap + pad; the glyph's ink is
-    // kNotificationGlyphRatio of them, its box the ink's 40 / 27 rounded
-    // (icons::icon_box_live_px), the box's rows centered on the inside rows
-    // (rounded down), its left edge at ring + pad.
+    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the glyph Breeze's
+    // since 2026-11-02): the border (`ring`, one device px), ONE PAD of
+    // plain face (notifications.h, every side), the class glyph's SEAT, the
+    // logo lane's brand gap, the text's pen; the wrap's room ends one pad
+    // short of the right border. The first line's INSIDE rows are pad + cap
+    // + pad; the glyph's ink box's larger side is kNotificationGlyphRatio of
+    // them (icons.h's THE INK BOX), its first ink column at ring + pad and
+    // its rows centered on the inside rows (the floor of the spare). THE
+    // SEAT'S WIDTH, which places the text, is notification_glyph_seat_w_px
+    // (notifications.h) — the same ink length's retired box, so the text's
+    // column did not move with the drawing.
     const int ring     = hairline_px();
     const int pad      = notification_pad_px();
     const int cap      = notification_cap_px();
     const int inside_h = pad + cap + pad;
-    const int glyph_h  = icons::icon_box_live_px(
-        kNotificationGlyphRatio * static_cast<double>(inside_h));
-    const int glyph_w  = icons::icon_box_w_px(glyph_h);
+    const double glyph_ink_px =
+        kNotificationGlyphRatio * static_cast<double>(inside_h);
+    const int glyph_ink = std::max(
+        1, static_cast<int>(std::nearbyint(glyph_ink_px)));
+    const int glyph_w   = notification_glyph_seat_w_px(glyph_ink_px);
     const int glyph_gap = skin_px(kLogoBrandGapAt300);
     const int lead_w   = ring + pad + glyph_w + glyph_gap;
     const int tail_w   = pad + ring;
@@ -3536,15 +3512,21 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const int text_x    = c.text_x;
         const int text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
-        // The box, then the class glyph in its box on the first line's
-        // inside rows (the layout block above).
+        // The box, then the class glyph at its seat on the first line's
+        // inside rows (the layout block above): Breeze's HelpAbout on a
+        // normal card, DialogClose on a critical one (2026-11-02, M7 / M11),
+        // in the card text's tone (the chrome's `card_text`, kTextInk).
         paint_popup_chrome(cr, card);
-        icons::draw_boxed(cr,
-                          n.cls == AppState::NotificationClass::Critical
-                              ? icons::Icon::CardCritical
-                              : icons::Icon::CardNormal,
-                          card.x + ring + pad,
-                          card.y + ring + (inside_h - glyph_h) / 2, glyph_h);
+        {
+            const icons::Icon glyph =
+                n.cls == AppState::NotificationClass::Critical
+                    ? icons::Icon::DialogClose
+                    : icons::Icon::HelpAbout;
+            const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
+            icons::draw_glyph(cr, glyph, card.x + ring + pad,
+                              card.y + ring + (inside_h - s.h) / 2,
+                              glyph_ink, kTextInk);
+        }
 
         if (text_room > 0) {
             cairo_save(cr);
@@ -7250,7 +7232,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // THE BAND IS LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; a
 // Windows 95 list view in a sunken field 2026-10-06 to then): THE MODAL
 // FAMILY'S PANE (paint_modal_box), no frame and no row separators, the
-// names in the FIELD TEXT, each row 17 Windows px with its BOXED GLYPH
+// names in the FIELD TEXT, each row 17 Windows px with its Breeze GLYPH
 // (the walk's glyph block below; folder_overlay.h's row box), and the
 // faces:
 //   a RESTING row         -> NO FILL AT ALL: the pane shows through
@@ -7273,14 +7255,17 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // STATE-AXIS: the face is decided ONCE per row from the highlight and the
 // press arm, and the glyph from the row's kind alone; there is no second
 // list of what a row looks like anywhere.
-// THE LIST ROWS' BOXED GLYPH AND NAME (architect 2026-10-23; the walk's
-// glyph block below): the glyph's ink height, its box's x and the name's x
-// past the modal box's outer left edge, device px at 300 % (skin_px) — the
-// name's x in a listing with glyph rows; a glyph-less listing's names stand
-// at the glyph's x (the names' column, paint_folder_overlay, 2026-10-28
-// night). THE GLYPH'S x IS THE BOX'S TEXT SEAT (modal_box.h's
-// kModalBoxTextSeatAt300, the one owner, M8b), so a glyph-less list's names
-// and a dialog's text stand on one column.
+// THE LIST ROWS' GLYPH AND NAME (architect 2026-10-23; Breeze's drawings on
+// the ink-box road since 2026-11-02; the walk's glyph block below): the
+// glyph's ink length (the ink box's larger side), its first ink column and
+// the name's x past the modal box's outer left edge, device px at 300 %
+// (skin_px) — the name's x in a listing with glyph rows; a glyph-less
+// listing's names stand at the glyph's x (the names' column,
+// paint_folder_overlay, 2026-10-28 night). THE GLYPH'S x IS THE BOX'S TEXT
+// SEAT (modal_box.h's kModalBoxTextSeatAt300, the one owner, M8b), so a
+// glyph-less list's names, a dialog's text and a glyph's first ink stand on
+// one column. The name's x is its own constant, never derived from the
+// drawing, so it stood still when Breeze's drawings came.
 static constexpr double kListGlyphInkAt300 = 27.0;
 static constexpr double kListGlyphXAt300   = kModalBoxTextSeatAt300;
 static constexpr double kListNameXAt300    = 64.0;
@@ -7331,7 +7316,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // the padding?" — "agree all"): A LISTING IN WHICH NO ROW WEARS A GLYPH
     // (every row Plain, Group or Disabled: the settings page, every value
     // list, the trim presets list, the BPM form) starts its text at kListGlyphXAt300, the column the
-    // glyph's box would begin at, the group rows moving with their key lines
+    // glyph's first ink would stand on, the group rows moving with their key lines
     // so the page stays aligned within itself; a listing with glyph rows (the
     // render player's and the project picker's, which carry Folder and Wav
     // rows alone — no Plain row stands among them today) keeps
@@ -7381,18 +7366,17 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // 2026-10-23, read as a bevel on the flat field.
 
             // THE ROW'S GLYPH (architect 2026-10-23: "use the logo in the
-            // render player, but then we need a folder icon as well … more
-            // squares to match the buttons"; "the same proportion as the
-            // caption"): BY THE ROW'S KIND through the icon road — WavRow
-            // (the quaver, Quaver.svg's link) on a wav row, FolderRow (the
-            // square with its tab) on a folder or project row — a BOXED
-            // GLYPH (icons.h's THE BOXED GLYPHS): its ink kListGlyphInkAt300
-            // = 27 px, .525 of the 51-px row, so its box icon_box_px(27) (40
-            // px at 300 %), the box's rows centered on the row (rounded
-            // down), its left edge kListGlyphXAt300 = 18 px past the box's
-            // outer left edge (the text seat); the name at kListNameXAt300 =
-            // 64 (the names'
-            // column above). THE PLAYING
+            // render player, but then we need a folder icon as well"; Breeze
+            // only since 2026-11-01, M7): BY THE ROW'S KIND — MusicNote16th
+            // (the logo lane's note) on a wav row, Folder on a folder or
+            // project row — on the ink-box road (icons.h): its ink box's
+            // larger side kListGlyphInkAt300 = 27 px, .525 of the 51-px row,
+            // its rows centered on the row (the floor of the spare), its
+            // first ink column kListGlyphXAt300 = 18 px past the box's outer
+            // left edge (the text seat), in the row text's tone — kTextInk
+            // at rest, kSelectionText 111111 on the lit row (the selection
+            // pair, materials.h); the name at kListNameXAt300 = 64 (the
+            // names' column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
             // renders row looks good now" — the clock and the scrub say
             // which item plays). (The paint_quaver vector of the morning, and
@@ -7410,13 +7394,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const int x0 = modal_box_rect(app, 0).x;
             if (row.kind == AppState::FolderOverlayRow::Kind::Folder ||
                 row.kind == AppState::FolderOverlayRow::Kind::Wav) {
-                const int gh = icons::icon_box_px(kListGlyphInkAt300);
-                icons::draw_boxed(
-                    cr,
+                const icons::Icon glyph =
                     row.kind == AppState::FolderOverlayRow::Kind::Wav
-                        ? icons::Icon::WavRow
-                        : icons::Icon::FolderRow,
-                    x0 + skin_px(kListGlyphXAt300), r.y + (r.h - gh) / 2, gh);
+                        ? icons::Icon::MusicNote16th
+                        : icons::Icon::Folder;
+                const int ink = skin_px(kListGlyphInkAt300, 1);
+                const icons::InkSize s = icons::glyph_ink_size(glyph, ink);
+                icons::draw_glyph(cr, glyph, x0 + skin_px(kListGlyphXAt300),
+                                  r.y + (r.h - s.h) / 2, ink,
+                                  lit ? kSelectionText : kTextInk);
             }
             const int text_x = x0 + skin_px(text_x_at300);
 
@@ -7550,7 +7536,7 @@ static bool floating_surface_stands(const AppState& app) {
 //     read;
 //   * THE LOGO LANE (paint_logo_lane, the band's upper pad since
 //     2026-10-24): the legend the tick composed (AppState::logo_legend);
-//     the quaver, the brand, the well's columns and the lane's rect are the
+//     the note, the brand, the well's columns and the lane's rect are the
 //     globals' and the band's;
 //   * THE TOOLBAR BAND (paint_icon_row): its lane (the strip pad among the
 //     lane's inputs, its rect moving with it); the `h` view; the standing

@@ -947,7 +947,7 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_icon_row(cairo_t* cr);
     // THE LOGO LANE (architect 2026-10-24; render.h's logo lane block): the
-    // band's upper pad — the quaver, the brand and the battery + clock
+    // band's upper pad — the note, the brand and the battery + clock
     // legend with its glyph — painted by paint_icon_row over the band's
     // ground; publishes the legend's rect (AppState::logo_legend_rect).
     void paint_logo_lane(cairo_t* cr, const GuiRect& band);

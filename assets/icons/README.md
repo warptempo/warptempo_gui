@@ -4,20 +4,25 @@ The drawings the program paints, one SVG per `icons::Icon` enumerator (`src/gui/
 enumerator, in this one flat folder. The program reads them at launch, through resvg (`src/gui/svg_icon.h`), from the
 APK's `icons/` assets, the one bundle (`apk/build_apk.sh` copies this folder's drawings there, each link as the file it
 names). A missing file, or one that is not well-formed SVG, fails the launch, naming the file. Files of other names
-here (this README, the licence text) are not read. Two kinds stand here: the keys' glyphs, KDE's Breeze drawings, and
-the project's own four drawings for the seats off the keys.
+here (this README, the licence text, the launcher's `AppIcon.svg`) are not read.
 
-## The key glyphs: Breeze, recolored
+## Breeze, recolored
 
-Every key carries a glyph centered on its face, the act's name printed under the key (architect 2026-11-01, his
-rulings on M4, M5 and M7: "Breeze is committed", one visual size, the legend kept under the glyph, Breeze only,
-monochrome re-coloring allowed). The drawings are breeze-icons 6.31.0's (KDE Frameworks,
-https://invent.kde.org/frameworks/breeze-icons), as Arch Linux installs them under `/usr/share/icons/breeze-dark/`,
-the 22-px folders. The roster below is the DRAFT the architect picks from (2026-11-02, part 5 of the Ableton parity);
-which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
+EVERY DRAWING HERE IS KDE'S BREEZE (architect 2026-11-01, his rulings on M4, M5 and M7: "Breeze is committed", one
+visual size, the legend kept under the glyph; "we should use breeze glyphs only. ok to modify eg to make them
+monochrome"). The drawings are breeze-icons 6.31.0's (KDE Frameworks, https://invent.kde.org/frameworks/breeze-icons),
+as Arch Linux installs them under `/usr/share/icons/breeze-dark/`, the 22-px folders. The roster is the DRAFT the
+architect picks from (2026-11-02). Every key carries a glyph centered on its face, the act's name printed under the
+key; which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
 `render_player_button_icon` and `modal_word_icon` in `src/gui/paint_handler.cpp`, `score_viewer_button_icon` in
-`src/gui/score_viewer.h`). Folder, HelpAbout and the two batteries are imported for the seats off the keys, which still
-wear the project's own drawings (below) until the next step moves them onto Breeze.
+`src/gui/score_viewer.h`). OFF THE KEYS (`src/gui/icons.h`'s head): the logo lane's note is MusicNote16th (the BPM
+key's drawing too) and its battery legend's glyph Battery000Charging while on power, Battery000 otherwise; the list
+rows wear Folder on a folder or project row and MusicNote16th on a wav row; a normal card wears HelpAbout and a
+critical one DialogClose.
+
+THE LAUNCHER ICON is `AppIcon.svg`, a relative symlink to `MusicNote16th.svg` — the one symlink here — which
+`apk/build_apk.sh` renders at every build in the logo's text tone B5B5B5 over the launcher's flat ground
+(`apk/res/mipmap-anydpi-v26/ic_launcher.xml`); the app itself does not read it.
 
 THE IMPORTER, `tools/icons/import_breeze.py` (standalone, stdlib only, no link path from any product target), holds the
 one table, enumerator to source file, and writes each `<Enumerator>.svg` here; a re-pick is a row of its table and a
@@ -33,13 +38,14 @@ dropped; the path data and each drawing's own viewBox are kept verbatim. The imp
 literal color, a class or a style block, or a shape with no fill on it or an ancestor (resvg's default black). So
 `currentColor` resolves against the color THE PROGRAM SUPPLIES: each file is parsed per color with resvg's user
 stylesheet `svg { color: #RRGGBB; }` (`svg_icon::parse`; the road at `src/gui/icons.h`'s head), the color one of the
-three text tones (`src/gui/materials.h`): B5B5B5 at rest, 757575 on a disabled key, 111111 on a lit key. What the colors
-told apart is lost, as the ruling accepts: Render's red half-disc, Delete's red, the lift's red bar and the battery's
-red and green are the glyph's one color.
+text tones (`src/gui/materials.h`): B5B5B5 at rest, 757575 on a disabled key, 111111 on a lit key or a list's lit row.
+What the colors told apart is lost, as the ruling accepts: Render's red half-disc, Delete's red, the lift's red bar and
+the battery's red and green are the glyph's one color.
 
-ONE VISUAL SIZE. A glyph is scaled by its INK BOX, not its viewBox: the drawing's antialiased ink (alpha > 0) is fitted
-so that its larger side is 20 device px at 300 %, scaled with the window as every chrome length, and the ink box is
-centered in the key (`icons::glyph_ink_size` / `icons::draw_glyph`, `paint_key_glyph` in `src/gui/paint_handler.cpp`).
+ONE ROAD, THE INK BOX. A glyph is scaled by its INK BOX, not its viewBox: the drawing's antialiased ink (alpha > 0) is
+fitted so that its larger side is the seat's own length — 20 device px at 300 % on every key, 21 for the logo lane's
+note, 19 for the battery glyph, 27 on a list row, .525 of a card's first line inside the border — scaled with the
+window as every chrome length (`icons::glyph_ink_size` / `icons::draw_glyph`; each seat's placement at its painter).
 
 ### Provenance
 
@@ -127,32 +133,13 @@ transcriptions, with no path data changed.
 | `Battery000` | `status/22/battery-000.svg` | `5d6e18e0d0de0b25a31840ab145836600ee49f9ea303cf9cfffab7480f4bbecb` |
 | `Battery000Charging` | `status/22/battery-000-charging.svg` | `cf32f3a179b10791c7489706c1ede044b4bd4ece16eb7b86e2be87024e3e1e16` |
 
-## The project's own drawings (the seats off the keys)
-
-Each is the project's own, drawn in the bone F0F0F0 on a 34 x 40-unit viewBox with its ink on rows 7..34 — a BOXED
-GLYPH, placed by its box (`src/gui/icons.h`, THE BOXED GLYPHS) — and painted in its own ink. They stand until the
-next step of the arc puts Breeze drawings in their seats too (the architect's M7 ruling: Breeze only, everywhere).
-
-| File | Drawing | Where it shows |
-|---|---|---|
-| `Quaver.svg` | the quaver: Gemini Argon's one-path conversion of a bitmap the planner drew, at the architect's prompt | the logo lane's note; the wav rows (`WavRow.svg`); the program icon (`AppIcon.svg`) |
-| `FolderRow.svg` | the folder, a square with a tab at the top, drawn by the planner | the folder and project rows |
-| `CardNormal.svg` | the i, a small rectangle over a larger one, drawn by the planner | a normal card's glyph |
-| `CardCritical.svg` | the X, two crossed strokes, drawn by the planner | a critical card's glyph |
-
-### The symlinks
-
-A drawing with two uses is one file and a relative symlink in this folder:
-
-- `WavRow.svg` -> `Quaver.svg` (the wav rows wear the quaver);
-- `AppIcon.svg` -> `Quaver.svg` (the program's one icon outside the window: the Android launcher icon, rendered from it
-  at every APK build, `apk/build_apk.sh`).
+The symlink: `AppIcon.svg` -> `MusicNote16th.svg` (the launcher's drawing, above).
 
 ## Licence
 
 Breeze's icons are licensed under the GNU Lesser General Public License, version 3 or (at your option) any later
 version — LGPL-3.0-or-later; copyright the breeze-icons authors (KDE). The files here are modified copies (the recolor
-rule above). The project's own four drawings are licensed under the GNU Lesser General Public License v3. The licence
-text is `LICENSE-LGPL-3.txt`, which supplements the GNU GPL v3 in the repository's `LICENSE`. The drawings are data,
+rule above). The licence text is `LICENSE-LGPL-3.txt`, which supplements the GNU GPL v3 in the repository's
+`LICENSE`. The drawings are data,
 read at run time and never linked or compiled into the program's code; the repository distributes source only
 (`THIRD_PARTY.md`).

@@ -4135,7 +4135,7 @@ struct GuiIconRowFingerprint {
 // (The tab strip's fingerprint, its lane, lit tab and two enabled bits,
 // left with the strip, 2026-10-22.)
 // The logo lane (paint_logo_lane, the band's upper pad since 2026-10-24):
-// the legend the tick composed (AppState::logo_legend) — the quaver and the
+// the legend the tick composed (AppState::logo_legend) — the note and the
 // brand are constants, the lane's rect the band's.
 struct GuiUpperRowsFingerprint {
     GuiChromeGlobalsFingerprint globals;

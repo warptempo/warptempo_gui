@@ -32,21 +32,23 @@ struct GuiBattery {
 
 // THE LEGEND'S GLYPH, ALWAYS ONE OF THE TWO (architect 2026-10-24: "I prefer
 // not to use nothing … the glyph always there taking up space so that the
-// clock doesn't move"): THE BOLT while any power source is attached, 100 %
+// clock doesn't move"): CHARGING while any power source is attached, 100 %
 // INCLUDED ("the charging one on even at 100 %"), and on a host with no
-// battery (power is attached); THE BATTERY while discharging — and while
+// battery (power is attached); DISCHARGING while discharging — and while
 // the plug state is UNKNOWN (the cold answer before the tablet's first
-// broadcast, an unreadable sysfs node): the bolt claims power, so a state
-// that cannot claim it takes the battery. The drawings are render.h's logo
-// lane block.
-enum class GuiLogoGlyph : uint8_t { Bolt, Battery };
+// broadcast, an unreadable sysfs node): the charging glyph claims power, so
+// a state that cannot claim it takes the other. The drawings are Breeze's
+// battery outline with and without its plug (Battery000Charging /
+// Battery000, 2026-11-02; the drawn bolt and battery of 2026-10-24 retired),
+// render.h's logo lane block.
+enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 
 // THE LEGEND — "92% <glyph> | 2:12 PM" — AS THREE PARTS, laid right to left
 // by the painter (render.h's logo lane block): THE CLOCK RUN with its pipe,
 // the glyph, and the PERCENT RUN.
 struct GuiLogoLegend {
     std::string  percent;   // "92%", or empty: no battery, or no level read
-    GuiLogoGlyph glyph = GuiLogoGlyph::Bolt;
+    GuiLogoGlyph glyph = GuiLogoGlyph::Charging;
     std::string  clock;     // "| 2:12 PM"
     bool operator==(const GuiLogoLegend&) const = default;
 };
@@ -81,7 +83,7 @@ inline GuiLogoLegend compose_logo_legend(const GuiBattery& battery,
         legend.percent = std::to_string(battery.percent) + "%";
     legend.glyph = (!battery.has_battery ||
                     battery.plugged == GuiBattery::Plugged::Plugged)
-                       ? GuiLogoGlyph::Bolt
-                       : GuiLogoGlyph::Battery;
+                       ? GuiLogoGlyph::Charging
+                       : GuiLogoGlyph::Discharging;
     return legend;
 }

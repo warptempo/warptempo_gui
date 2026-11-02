@@ -1051,8 +1051,8 @@ constexpr int kMinWindowHeightPx = 480;
 
 // THE LOGO LANE — THE BAND'S UPPER PAD (architect 2026-10-24, the go "Okay
 // to proceed with the build"; the approved logo frame;
-// the legend's glyphs are the bolt and the battery, his picks B1-19 and T1-17
-// off his glyph sheets): with the
+// the legend's glyphs Breeze's battery outline with and without its plug
+// since 2026-11-02, M7): with the
 // tablet's caption gone ("give that height to the waveform, so the buttons
 // run from the top with equal padding"), THE LOGO GOES INTO THE TOP PAD AND
 // THAT PAD ALONE GROWS — kLogoLaneAt300, 72 px at 300 % through skin_px
@@ -1066,24 +1066,23 @@ constexpr int kMinWindowHeightPx = 480;
 // rounded at the element, EVERYTHING ON IT IN THE TEXT TONE kTextInk WITH NO
 // SHADOW (the flat look, architect 2026-11-01 "no shadow anywhere", M13's
 // tone 2026-11-02; materials.h's head) — the brand and the legend's runs,
-// the quaver, the glyph (logo_legend_extent, paint_handler.cpp, the
+// the note, the glyph (logo_legend_extent, paint_handler.cpp, the
 // legend's damage rect):
-//   ON THE LEFT, THE QUAVER: Icon::Quaver through the boxed-glyph road
-//     (icons::draw_boxed), its ink kLogoQuaverInkAt300 = 21 px tall (the
-//     retired caption's icon's: the box icon_box_px(21), 31 at
-//     300 %), ITS FIRST INK COLUMN ON THE WELL'S LEFT EDGE COLUMN
-//     (well_columns — the first key's outline column: "the glyph
-//     flush with the icons"), measured off the raster's alpha at that size
-//     (icons::boxed_ink, alpha >= 128, once per size — the mocks' measure,
-//     never the file's box), ITS INK ROWS CENTERED ON THE LANE (the spare
-//     rounded half to even, the mock's rint). THEN THE BRAND, "Warptempo"
+//   ON THE LEFT, THE NOTE: Breeze's MusicNote16th (architect 2026-11-01,
+//     M7: Breeze only — the BPM key's own drawing; the project's quaver
+//     retired 2026-11-02) on the ink-box road (icons.h's THE INK BOX), the
+//     ink box's larger side kLogoNoteInkAt300 = 21 px (the retired
+//     caption's icon's ink, the quaver's before it), ITS FIRST INK COLUMN ON
+//     THE WELL'S LEFT EDGE COLUMN (well_columns — the first key's column:
+//     "the glyph flush with the icons"), ITS INK ROWS CENTERED ON THE LANE
+//     (the spare rounded half to even, the mock's rint). THEN THE BRAND, "Warptempo"
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
 //     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the text
-//     tone kTextInk, its first ink kLogoBrandGapAt300 = 10 px after the quaver's
+//     tone kTextInk, its first ink kLogoBrandGapAt300 = 10 px after the note's
 //     last ink column (text_shape::ink_left_px), its cap band centered on
 //     the lane (redesign_baseline). (The gap is the retired caption's
-//     title gap; the cards' glyph-to-text gap reads it too, a boxed glyph
+//     title gap; the cards' glyph-seat-to-text gap reads it too, a glyph
 //     then words, notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
@@ -1100,56 +1099,30 @@ constexpr int kMinWindowHeightPx = 480;
 //     cell's edge rounded to a whole column.
 //   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
-//     move"): kLogoGlyphCellHAt300 = 19 rows tall and kLogoGlyphCellWAt300 =
-//     15 wide (rint(12 · 19 / 15), the bolt's proportion), its rows
-//     CENTERED ON THE CAP'S CENTER — the body face's cap rows at the
+//     move"): THE TWO DRAWINGS are Breeze's (2026-11-02, M7: Breeze only;
+//     the drawn bolt and battery of 2026-10-24 retired) — Battery000Charging
+//     (CHARGING: any power source attached, 100 % included, and a host with
+//     no battery; GuiLogoGlyph's rule) and Battery000 (DISCHARGING, or the
+//     plug state unknown) — ONE OUTLINE, a horizontal battery with its nub
+//     to the right, the charging one carrying a plug inside it, so their ink
+//     boxes are one box. THE CELL IS THAT BOX on the ink-box road (icons.h's
+//     THE INK BOX) at ONE LENGTH for both, kLogoGlyphInkAt300 = 19 px its
+//     larger side (the drawn cell's height before; the outline is wider
+//     than tall, so the cell is 19 wide and about 12 rows tall at 300 %),
+//     the larger of the two drawings' ink boxes on each axis so no state
+//     can move it, each drawing centered in it (the floor of the spare); its
+//     rows CENTERED ON THE CAP'S CENTER — the body face's cap rows at the
 //     legend's baseline (gui_font_cap_px, rounded: 15 rows at 300 %, its
-//     center 8 rows above the baseline), so the 19-row cell spans 17 rows
-//     above the baseline to 1 below, two past the cap top and two past the
-//     baseline; derived from the live face's cap, never a constant. THE TWO
-//     DRAWINGS are ARTWORK and scale as artwork (hairline_px's stated
-//     exception), filled in the text tone with cairo's own antialiasing:
-//     * THE BOLT (charging — any power source attached, 100 % included, and
-//       a host with no battery; GuiLogoGlyph's rule): one filled polygon
-//       over the cell's unit box (x over its width, y over its rows),
-//       kLogoBolt.
-//     * THE BATTERY (discharging, or the plug state unknown), UPRIGHT, THE
-//       NUB UP, solid: a kLogoBatteryWAt300 x kLogoBatteryHAt300 = 12 x 15
-//       box CENTERED IN THE CELL (architect 2026-10-24, his pick T15 off
-//       his battery sheet: "the battery needs to go down a little bit, but
-//       make sure that it occupies the same width as the bolt still" — the
-//       denser drawing read larger than the bolt; the numbers
-//       below are the record; the 14 x 17
-//       box of his T1-17 stood 38c1102a alone): its rows centered on the
-//       cap's center — 15 above the baseline to 1 above at 300 %, the cap's
-//       own rows — its columns the cell's spare halved, the odd column on
-//       the right (the floor: 1 left, 2 right at 300 %); the cell,
-//       the bolt and the legend's layout unchanged. The nub a rectangle x .37 ..
-//       .63 of the box's width, y 0 to .14 of its height plus one device px,
-//       the body a rounded rectangle x .18 .. .82, y .14 to the foot,
-//       corner radius kLogoBatteryRadiusAt300 = 1.2 px (skin_px, floor 1).
+//     center 8 rows above the baseline), the cell's odd row below; derived
+//     from the live face's cap, never a constant. Painted in the text tone.
 //   (Liberation's own arrows ↑ / ↓ as the glyphs, a drawn pipe and
 //   "nothing" as the discharging glyph were judged on the same sheets and
 //   not taken, docs/engineering/closed_questions.md.)
 inline constexpr double kLogoLaneAt300           = 72.0;
-inline constexpr double kLogoQuaverInkAt300      = 21.0;
+inline constexpr double kLogoNoteInkAt300        = 21.0;
 inline constexpr double kLogoBrandGapAt300       = 10.0;
-inline constexpr double kLogoGlyphCellHAt300     = 19.0;
-inline constexpr double kLogoGlyphCellWAt300     = 15.0;
-inline constexpr double kLogoBatteryWAt300       = 12.0;
-inline constexpr double kLogoBatteryHAt300       = 15.0;
-inline constexpr double kLogoBatteryRadiusAt300  = 1.2;
+inline constexpr double kLogoGlyphInkAt300       = 19.0;
 inline constexpr const char* kLogoBrand = "Warptempo";
-struct GuiUnitPoint {
-    double x = 0.0, y = 0.0;
-};
-inline constexpr GuiUnitPoint kLogoBolt[6] = {
-    {0.82, 0.0}, {0.0, 0.62}, {0.47, 0.62},
-    {0.24, 1.0}, {1.0, 0.38}, {0.53, 0.38},
-};
-inline constexpr double kLogoBatteryNubX0 = 0.37, kLogoBatteryNubX1 = 0.63;
-inline constexpr double kLogoBatteryBodyX0 = 0.18, kLogoBatteryBodyX1 = 0.82;
-inline constexpr double kLogoBatteryNubH = 0.14;
 inline int logo_lane_h_px() {
     return skin_px(kLogoLaneAt300, 1);
 }
@@ -1218,9 +1191,9 @@ inline int logo_lane_h_px() {
 // dialog text's seat, the keyboard's pad and key gap), the flags' triangles and the
 // cue boxes. ARTWORK IS AN AREA IN THIS SENSE (2026-10-23): a drawing's
 // stroke weight is part of the drawing, so it scales with the drawing — the
-// icons, the faces' strokes, the quaver and the logo lane's bolt and
-// battery (the retired caption buttons' procedural glyphs too, matched to
-// the quaver's stem), never a chrome line.
+// icons (the keys', the logo lane's note and battery glyph, the lists' and
+// the cards', Breeze's every one) and the faces' strokes, never a chrome
+// line.
 inline int hairline_px() { return 1; }
 
 // (THE PROGRAM'S FRAME — Cool Edit's frame window round the program, one
@@ -1286,7 +1259,7 @@ inline int hairline_px() { return 1; }
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
 // case is not one row's: paint_handler.cpp's three rows read it. THE CARD AND THE FOLDER OVERLAY'S LIST
-// ROWS ARE NOT THE CASE: a card's boxed glyph stands at its own pad and
+// ROWS ARE NOT THE CASE: a card's glyph stands at its own pad and
 // ratio (notifications.h's kNotificationPadAt300 and
 // kNotificationGlyphRatio, 2026-10-24), and a list row's at the painter's
 // own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).

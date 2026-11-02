@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture (architect 2026-10-23: "the new note glyph
-     on the caption's color"): THE QUAVER,
-     assets/icons/AppIcon.svg (a symlink to Quaver.svg, bone F0F0F0 on a
-     34 x 40 viewBox), rendered by resvg at the art's height and centered
-     over THE LAUNCHER'S OWN GROUND, FLAT: #141415 (the color the caption
-     wore when the icon was framed; owned by apk/build_apk.sh's
-     LAUNCHER_GROUND alone), one color over the whole canvas, so the mask
-     shows a dark shape carrying the note. An
+     recents card). Its picture (architect 2026-11-01, M7: Breeze only,
+     everywhere; the project's quaver of 2026-10-23 retired 2026-11-02):
+     BREEZE'S NOTE, assets/icons/AppIcon.svg (a symlink to
+     MusicNote16th.svg, the logo lane's note, a `currentColor` drawing on a
+     22 x 22 viewBox), rendered by resvg at the art's height in the logo's
+     text tone #B5B5B5 (apk/build_apk.sh's LAUNCHER_INK, given as resvg's
+     user stylesheet) and centered over THE LAUNCHER'S OWN GROUND, FLAT:
+     #141415 (the color the caption wore when the icon was framed; owned by
+     apk/build_apk.sh's LAUNCHER_GROUND alone), one color over the whole
+     canvas, so the mask shows a dark shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
@@ -16,21 +18,22 @@
      copy of res/:
        ic_launcher_background.png  the full 108 dp canvas flat in #141415;
        ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
-                                   the viewBox's (44.2 dp for the quaver),
-                                   centred on a transparent canvas of the
-                                   density's full 108 dp.
+                                   the viewBox's (52 dp: the note's viewBox
+                                   is square), centred on a transparent
+                                   canvas of the density's full 108 dp.
 
      THE 66 dp SAFE ZONE: an adaptive foreground's art should sit inside the
      mask's guaranteed-visible inner circle, Android's own 66 dp of the 108 dp
      canvas. The art 52 dp tall (architect 2026-10-16, his pick off a 60 /
      56 / 52 / 48 / 44 / 40 dp series on the glass: at 64 dp the art filled
      ~86 % of the launcher's visible tile and nearly touched its corners):
-     the quaver's 40-unit viewBox at 1.3 dp a unit, 44.2 x 52 dp. Its
-     farthest ink (the head's lower left) lies 16.5 units, 21.4 dp, from the
-     viewBox's center, inside the 33 dp circle with 11.6 dp to spare. The
-     same 52 dp at every density (the per-density PNG pixel size scales with
-     the density factor f alone; the quaver's width 45 / 67 / 89 / 133 /
-     177 px, resvg rounding up):
+     the note's 22-unit viewBox at 52 / 22 = 2.36 dp a unit. Its ink spans
+     x 6 .. 16 and y 3 .. 19 units (23.6 x 37.8 dp, measured off the path
+     data); its farthest ink (the head's lower left, the ellipse about
+     (9, 16.5) with radii 3 x 2.5) lies about 8.4 units, 19.9 dp, from the
+     viewBox's center (11, 11), inside the 33 dp circle with about 13 dp to
+     spare. The same 52 dp at every density (the per-density PNG pixel size
+     scales with the density factor f alone):
 
        density  f    canvas C=108f  art 52f  offset (C-52f)/2
        mdpi     1    108            52       28
@@ -41,8 +44,8 @@
 
      A BUILD PRODUCT, NEVER COMMITTED: this file is the one tracked file of
      res/, and build_apk.sh writes the PNGs beside it in the package tree
-     (byte-stable, -strip) from assets/icons/AppIcon.svg, the quaver, at
-     the build. The safe-zone figure above is the quaver's. -->
+     (byte-stable, -strip) from assets/icons/AppIcon.svg, Breeze's note, at
+     the build. The safe-zone figure above is the note's. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

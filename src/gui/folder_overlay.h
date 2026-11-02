@@ -202,7 +202,7 @@ namespace folder_overlay {
 // -- The geometry ------------------------------------------------------------
 //
 // THE ROW IS WINDOWS' LIST ROW (the ruling above): the panel owns its row
-// height, its pad and its row gap; the row's boxed glyph and its name stand
+// height, its pad and its row gap; the row's glyph and its name stand
 // at the painter's own constants (paint_handler.cpp's kListGlyphInkAt300,
 // kListGlyphXAt300, kListNameXAt300, 2026-10-23).
 
@@ -220,9 +220,10 @@ inline constexpr double kRowGapPx = 1.0;
 
 // THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
-// first hours), the panel's row gap, the row's boxed glyph (the painter's,
-// 2026-10-23; Windows' small 16-px icon until then). A folder row wears
-// icons::Icon::FolderRow and a wav row icons::Icon::WavRow; a plain, a group
+// first hours), the panel's row gap, the row's glyph (the painter's,
+// 2026-10-23; Windows' small 16-px icon until then; Breeze's since
+// 2026-11-02). A folder row wears icons::Icon::Folder and a wav row
+// icons::Icon::MusicNote16th; a plain, a group
 // and a disabled row wear none, and a listing of them alone starts its text at the
 // glyph's column (paint_folder_overlay's names' column, 2026-10-28 night).
 // (The glyph-less
@@ -243,8 +244,8 @@ inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
 // top row.
 inline int row_inset_px()         { return modal_box_content_pad_px(); }
 // (THE ROW'S GLYPH AT WINDOWS' SMALL 16-W ICON, its 3-W lead and its 6-W
-// gap to the name stood 2026-10-02 to 2026-10-23; the boxed glyph's
-// geometry is the painter's since, paint_handler.cpp's kListGlyph*.)
+// gap to the name stood 2026-10-02 to 2026-10-23; the glyph's geometry is
+// the painter's since, paint_handler.cpp's kListGlyph*.)
 
 // (THE BAND OWNS NO LINE OF ITS OWN — its one edge is the modal family's
 // pane meeting the ground, modal_box.h.)

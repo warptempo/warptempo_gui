@@ -144,7 +144,7 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // the line's origin is pulled back by this bearing — a placement off the
 // origin would read wider by whatever bearing the line's first glyph
 // carries; and THE LOGO LANE (architect 2026-10-24, render.h's logo lane
-// block): the brand's first ink a gap past the quaver's last, and the
+// block): the brand's first ink a gap past the note's last, and the
 // legend's runs and its glyph cell spaced off each other's ink. Every other
 // layout wants a reserved CELL, which is `width_px`'s job.
 double ink_left_px(const ShapedRun& run);

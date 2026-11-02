@@ -8,7 +8,7 @@
 // resvg itself at its own size, the score viewer's pages its reader
 // (score_page_worker.h). This file is a thin wrapper: the parse (a bound
 // drawing's under its color, 2026-11-02), the size, one render per (drawing,
-// device px) or per zoom, the raster decode, the channel order cairo wants.
+// zoom), the raster decode, the channel order cairo wants.
 // The one file
 // that includes <resvg.h> is svg_icon.cpp.
 //
@@ -19,7 +19,7 @@
 // and no window). A construct resvg does not draw is SKIPPED SILENTLY, as
 // SVG's own error handling prescribes, so the launch cannot vouch for a
 // drawing's picture: a drawing is checked by eye when it is added.
-// rasterise() cannot fail.
+// rasterise_zoom() cannot fail.
 //
 // THREADS: a parsed tree is immutable and a render writes only the caller's
 // surface, so any thread may render any tree; the icons parse and render on
@@ -67,17 +67,12 @@ std::expected<Document, std::string> parse(
     std::string_view bytes,
     std::optional<uint32_t> current_color = std::nullopt);
 
-// The drawing at `px` device px a side (px > 0) into a NEW ARGB32 surface the
-// caller owns (cairo_surface_destroy): scaled uniformly by the smaller of
-// px / its width and px / its height and centred (a square drawing fills the
-// cell), the offset unsnapped, the antialiasing resvg's.
-cairo_surface_t* rasterise(const Document& doc, int px);
-
 // The drawing at `zoom` device px per user unit, its origin on the surface's
-// top-left, into a NEW ARGB32 surface the caller owns of the drawing's size
-// times `zoom`, each side rounded up (resvg's own `--zoom`, the approved M5
-// mock's render). THE KEY GLYPH'S
-// RASTER (icons.h's THE INK BOX), whose ink the caller crops.
+// top-left, into a NEW ARGB32 surface the caller owns (cairo_surface_destroy)
+// of the drawing's size times `zoom`, each side rounded up (resvg's own
+// `--zoom`, the approved M5 mock's render), the antialiasing resvg's. EVERY
+// GLYPH'S RASTER (icons.h's THE INK BOX), whose ink the caller crops.
+// Cannot fail.
 cairo_surface_t* rasterise_zoom(const Document& doc, double zoom);
 
 // -- THE RASTER ROAD (architect 2026-10-21; the score viewer's pages its
@@ -126,7 +121,7 @@ std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
 // raster time — cairo's premultiplied word un-premultiplied, converted and
 // premultiplied again (display_transform::display_premultiplied, which keeps
 // a neutral's word whole); off a P3 window it touches nothing. The
-// conversion keeps every pixel's alpha (icons::boxed_ink reads it).
+// conversion keeps every pixel's alpha.
 void convert_to_display(cairo_surface_t* s);
 
 } // namespace svg_icon

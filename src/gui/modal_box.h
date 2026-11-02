@@ -230,7 +230,7 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 //     its 1-W gap), and THE FOOT the seat over its bottom row (the text
 //     room's clip, one past row 1310);
 //   THE LISTS' TEXT COLUMN — paint_handler.cpp's kListGlyphXAt300, the
-//     glyph's box in a listing with glyph rows and the names' column in a
+//     glyph's first ink column in a listing with glyph rows and the names' column in a
 //     glyph-less one (the settings page, the value lists, the trim presets,
 //     the BPM form), the same seat in from the box's left column. (The
 //     lists keep their rows: the folder overlay's row box, 17 W, at the

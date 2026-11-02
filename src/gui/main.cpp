@@ -1341,7 +1341,7 @@ struct GuiProjectOutcome {
 // UTC), and DAMAGES THE LEGEND'S RECT ALONE, only when the composed legend
 // changed — the rect the painter last published united with the new
 // legend's own layout (logo_legend_extent), so a percent growing leftward
-// ("99%" to "100%") repaints its new columns too. The quaver and the brand
+// ("99%" to "100%") repaints its new columns too. The note and the brand
 // never change and are never damaged here.
 void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
     const std::time_t now    = std::time(nullptr);
