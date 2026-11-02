@@ -21,11 +21,11 @@
 // the controls' white; each ruled on his mocks that evening.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the well, and THE MATERIALS
-// every chrome role — the hi-fi skin's constants and the ring tones off the
-// ground's mean (chrome_derive.h, 2026-10-23). GuiPalette (render.h) keeps
+// every chrome role — the flat look's constants and the ring tones off the
+// flat ground (chrome_derive.h, 2026-11-01). GuiPalette (render.h) keeps
 // every member; install_palette (render.h) fills the program members off
 // this file's table (kGuiPaletteRoles), the panel's `face` member and THE
-// COOL EDIT BLOCK off the ground's mean, and the chrome members off the
+// COOL EDIT BLOCK off the flat ground, and the chrome members off the
 // theme's role table (kGuiThemeRoles) by the one derivation (chrome_derive.h's
 // live_chrome_words), so every painter reads palette() and no painter knows
 // which source a color came from.
@@ -63,8 +63,8 @@
 //                            that are related to the controls should be
 //                            white"; kept 2026-11-01, tunable later)
 // The stereo divider between the channels wears the panel's tones; nothing
-// else in the well has a role. THE LIT LEDS' ACCENT is the skin's, not the
-// palette's (materials.h's kAccent).
+// else in the well has a role. THE LIT KEY'S FILL is the flat look's, not
+// the palette's (materials.h's kLitFill).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).

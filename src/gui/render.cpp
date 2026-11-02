@@ -9,8 +9,8 @@
 #include "palette_file.h"   // kGuiPaletteRoles
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "chrome_derive.h"  // live_chrome_words (the chrome off the ground's mean)
-#include "materials.h"      // the surface chokepoint's materials
+#include "chrome_derive.h"  // live_chrome_words (the chrome's roles)
+#include "materials.h"      // the flat look's ground, key and text tones
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -350,9 +350,8 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out) {
 
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     if (r.w <= 0 || r.h <= 0) return;
-    // The path first: the surface chokepoint reads it (render.h).
     cairo_rectangle(cr, r.x, r.y, r.w, r.h);
-    set_surface_source(cr, c);
+    set_palette_source(cr, c);
     cairo_fill(cr);
 }
 
@@ -418,7 +417,7 @@ void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
     cairo_line_to(cr, x0 + lw, y1);
     cairo_line_to(cr, x0, y1);
     cairo_close_path(cr);
-    set_surface_source(cr, top_left);
+    set_palette_source(cr, top_left);
     cairo_fill(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
     cairo_move_to(cr, x1, y0);
@@ -428,7 +427,7 @@ void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
     cairo_line_to(cr, x1 - lw, y1 - lw);
     cairo_line_to(cr, x1 - lw, y0 + lw);
     cairo_close_path(cr);
-    set_surface_source(cr, bottom_right);
+    set_palette_source(cr, bottom_right);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -446,11 +445,12 @@ void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
 // hi-fi skin's caption and border that replaced them went 2026-10-24,
 // render.h's caption note.)
 
-// THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): a key at rest,
-// no LED, on its box — its size's patch (materials.h's KEYS).
+// THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key at
+// rest on its box (materials.h's paint_key) — never lit: it is dragged, not
+// pressed on or off.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     if (box.w <= 0 || box.h <= 0) return;
-    paint_key(cr, box, false, GuiKeyLed::None);
+    paint_key(cr, box, false);
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
@@ -1020,7 +1020,6 @@ void render_trim_flags(cairo_t* cr,
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     {
-        const GuiMaterialScope flat(GuiMaterialRegion::Flat);
         paint_cell_rect(cr, GuiRect{lane_x - cw, lane_y, lane_w + 2 * cw, lane_h},
                         hex(kCeViewBarField));
         paint_cell_rect(cr, GuiRect{lane_x - cw, lane_y, lane_w + 2 * cw, px},
@@ -1405,8 +1404,8 @@ enum class GuiFlagSide { Live, Added, Removed };
 // render.h, owns the look): the triangle's color and its shadow's, the dots
 // on each of the stem's two phases (none at all on a disabled cue), and
 // whether its label is STRUCK (show_cue_label's bar). The label's other
-// looks are the segment's own (selected, inert or the bone, materials.h's
-// kBoneInk).
+// looks are the segment's own (selected, inert or the text tone,
+// materials.h's kTextInk).
 struct FlagFace {
     GuiColor  triangle;
     GuiColor  shadow;
@@ -1453,10 +1452,10 @@ struct FlagFace {
 // Cool Edit's cue and range dots re-counted from its canvas top
 // (program_spec.h's dot fields, the derivation's owner), a point cue's
 // range start and end superimposed;
-// "bone" the bone (materials.h's kBoneInk, the words'
-// and the flags' one ink since 2026-10-22); the selected text the chrome's
-// `label`, the bone F0F0F0 (chrome_derive.h's role table,
-// 2026-10-22) — every label on the panel's face with no fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
+// "bone" the text tone (materials.h's kTextInk B5B5B5 since the flat look's
+// M13, 2026-11-02, the words' and the flags' one ink); the selected text the
+// chrome's `label`, the same text tone (chrome_derive.h's role table) —
+// every label on the panel's face with no fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
 // SELECTION (Cool Edit's never do): the label carries the selection — ITS
 // TEXT ALONE, the chrome's `label` on the panel's face, no fill (architect
 // 2026-10-09 ~23:30: "clicking on a flag to select it makes the text turn
@@ -1475,7 +1474,7 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red) {
 // memo's shared handle, CueRun — null exactly when the segment is absent),
 // its face box [x0, x1) in window x (the text at x0 plus the pad quantum),
 // and its look — the chrome's selected text on the face, the faded inert
-// label, or the bone — and whether it is STRUCK.
+// label, or the text tone — and whether it is STRUCK.
 struct CueSegment {
     bool   present  = false;
     CueRun run;
@@ -1504,10 +1503,9 @@ struct CueSegment {
 // meaningless for a shadow, so it should be 3 device px at 300 %"; ~11:30,
 // "the shadow looks scaled right but not down — check the offset"): THE
 // PLANNER'S READING, 2026-10-26, the panel's own label convention, right
-// and down, CONFIRMED ON THE GLASS 2026-10-26 ~12:10 (the panel label's "one line right and down", whose painter
-// show_ce_label now paints row 8's tab name and state line through this
-// same offset and color), so the
-// label's shadow steps one quantum each way — and since 2026-10-26 ~13:05
+// and down, CONFIRMED ON THE GLASS 2026-10-26 ~12:10 (the panel label's
+// "one line right and down"; row 8's and the logo lane's words wear no
+// shadow since the flat look, 2026-11-01), so the label's shadow steps one quantum each way — and since 2026-10-26 ~13:05
 // the triangle's shadow the same, one rule (paint_ce_cue_triangle's head).
 // Cool Edit draws no shadow under its cue labels, so this
 // is the product's own departure. One shadow under every look, the faded
@@ -1686,12 +1684,10 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
         // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
         // changing color.
-        // THE BOX IS THE LANE'S FLAT FACE (materials.h's marker lane rule,
-        // 2026-10-29): the Flat scope fills the palette's `face` flat, the
-        // one color of every pixel of the lane, so the box masks earlier
+        // THE BOX IS THE LANE'S FLAT FACE (2026-10-29): the palette's `face`,
+        // the one color of every pixel of the lane, so the box masks earlier
         // text exactly.
         {
-            const GuiMaterialScope flat(GuiMaterialRegion::Flat);
             for (const auto& sp : spans)
                 paint_cell_rect(cr,
                                 GuiRect{sp.first, lane.y, sp.second - sp.first,
@@ -1704,13 +1700,13 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                 s.x0 + kProgramSpec.cue_fill_pad * u);
             // The label's ink (resolve_flag_face's table): a selected
             // segment the chrome's text on the face, else the faded inert
-            // label, or the bone — a selected inert segment the chrome's
+            // label, or the text tone — a selected inert segment the chrome's
             // text, so its selection shows; a struck segment's bar in the
             // same ink (show_cue_label).
             show_cue_label(cr, *s.run, tx, base,
                            s.selected ? pal.label
                            : s.inert  ? pal.ce_off_label
-                                      : hex(kBoneInk),
+                                      : hex(kTextInk),
                            c.face.shadow, s.struck);
         }
         cairo_restore(cr);
@@ -2422,9 +2418,6 @@ void set_palette_source(cairo_t* cr, GuiColor c) {
     const GuiColor d = display_color(c);
     cairo_set_source_rgb(cr, d.r, d.g, d.b);
 }
-void set_surface_source(cairo_t* cr, GuiColor c) {
-    if (!materials::set_source(cr, c)) set_palette_source(cr, c);
-}
 void set_waveform_source(cairo_t* cr, GuiColor c) {
     const GuiColor d = display_color(c);
     cairo_set_source_rgb(cr, d.r, d.g, d.b);
@@ -2459,52 +2452,51 @@ WaveformPlateInks waveform_plate_inks() {
 
 namespace {
 // THE PROGRAM'S EIGHT into the installed struct (palette_file.h's role
-// table) — the install's first half (the chrome's members, derived from the
-// same Face, are the other's) — with THE PANEL'S FACE THE GROUND'S MEAN
-// (materials.h's TONE RULE, 2026-10-23: the ring tones and the chrome's
-// roles off it; its estimate before the first bake, construction state no
-// frame paints), and the Cool Edit block off that face.
+// table) — the install's first half (the chrome's members are the other's)
+// — with THE PANEL'S FACE THE FLAT GROUND (materials.h's kGround, the flat
+// look, 2026-11-01), and the Cool Edit block off that face.
 void fill_program_palette() {
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
         g_palette.*(r.member) = hex(r.word);
     // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
     // rule (cool_edit_derive.h); no painted tone derives from the ink (the
     // view bar's span is materials.h's neutral trio since 2026-10-25).
-    const uint32_t face = materials::face();
+    const uint32_t face = kGround;
     g_palette.face = hex(face);
     for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
         if (t.member != nullptr)
             g_palette.*(t.member) =
                 hex(cool_edit_derive::tone_of(t, face, kPaletteInk));
-    // THE HI-FI SKIN'S TONES OVER THE COOL EDIT BLOCK (materials.h's TONE
-    // RULE, 2026-10-23): every ring, line and edge the two ring tones off
-    // the ground's mean — the program ring, the clock's ring, the divider,
-    // the fields' rings — and the ruler's ground the flat kRulerGround.
-    g_palette.ce_hilight     = hex(ring_light_of(face));
-    g_palette.ce_dark        = hex(ring_dark_of(face));
-    g_palette.ce_field_light = hex(ring_light_of(face));
-    g_palette.ce_field_dark  = hex(ring_dark_of(face));
+    // THE RING TONES OVER THE COOL EDIT BLOCK (materials.h's kRingLight /
+    // kRingDark, off the flat ground): the rings the well and the overlays
+    // still wear until their parts of the flat arc — the program ring, the
+    // time fields' rings, the divider, the modal box's ring — and the
+    // ruler's ground the flat kRulerGround.
+    g_palette.ce_hilight     = hex(kRingLight);
+    g_palette.ce_dark        = hex(kRingDark);
+    g_palette.ce_field_light = hex(kRingLight);
+    g_palette.ce_field_dark  = hex(kRingDark);
     g_palette.ce_mid         = hex(kRulerGround);
     // The panel label's pair, swapping past its own threshold (2026-10-10).
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
     // The disabled cue's faded triangle, shadow and label (2026-10-10): the
-    // label from the bone, ALL THREE MIXED TOWARD THE MARKER LANE'S FACE, the
-    // ground the cues stand on (architect 2026-10-22, truthful to the
-    // surface) — the lane flat in the ground's face since 2026-10-29
-    // (materials.h), so the one `face` above.
+    // label from the text tone, ALL THREE MIXED TOWARD THE MARKER LANE'S
+    // FACE, the ground the cues stand on (architect 2026-10-22, truthful to
+    // the surface) — the lane flat in the ground's color (2026-10-29), so the
+    // one `face` above.
     {
         using namespace cool_edit_derive;
         g_palette.ce_off_cue = hex(disabled_triangle(kPaletteCue, face));
         g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(face));
-        g_palette.ce_off_label = hex(disabled_cue_label(kBoneInk, face));
+        g_palette.ce_off_label = hex(disabled_cue_label(kTextInk, face));
     }
 }
-// THE CHROME'S MEMBERS off the ground's mean (live_chrome_words,
-// chrome_derive.h: the hi-fi skin's constants and the ring tones off the
-// mean, 2026-10-23) — the install's other half.
+// THE CHROME'S MEMBERS (live_chrome_words, chrome_derive.h: the flat look's
+// constants and the ring tones off the flat ground) — the install's other
+// half.
 void fill_chrome_palette() {
-    const GuiThemeWords w = live_chrome_words(materials::face());
+    const GuiThemeWords w = live_chrome_words();
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
 }
@@ -2512,7 +2504,7 @@ void fill_chrome_palette() {
 
 void install_palette() {
     // The program's fields off the palette's constants, then the chrome's
-    // off the ground's mean (live_chrome_words, chrome_derive.h, which never
+    // off the flat ground (live_chrome_words, chrome_derive.h, which never
     // misses), the tables covering the struct exactly (palette_file.cpp), so
     // a role cannot be valued and not painted.
     fill_program_palette();
@@ -2805,7 +2797,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MARKER'S OWN STATE for the segments riding the field's right edge,
     // which keep their resting look: the faded inert label, a tie follower's
-    // cells faded (2026-09-19), else the bone — struck on a coincident
+    // cells faded (2026-09-19), else the text tone — struck on a coincident
     // marker (below).
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
@@ -3013,9 +3005,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // only by what is typed.
     //
     // Each segment wears its resting look — its box in the panel face (the
-    // lane's flat face over the canvas's columns, the panel's brushed ground
+    // lane's flat face over the canvas's columns, the panel's flat ground
     // past them), the text
-    // in the bone or the faded inert label, struck on a coincident marker —
+    // in the text tone or the faded inert label, struck on a coincident marker —
     // and none takes
     // the selected look while the field stands, each open having seated the
     // selection axis on the cell it edits.
@@ -3086,32 +3078,27 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int w  = pad_l + seg_w + pad_r;
             // The face box over the gap and the segment, as the resting
             // label's one box covers its gaps — the lane's flat face
-            // (paint_cues' box, materials.h's marker lane rule) over the
-            // canvas's columns, THE PANEL'S BRUSHED GROUND past them (the run
-            // is not clipped, so a ride near the right edge reaches the
-            // margin, materials.h's REGIONS).
+            // (paint_cues' box) over the canvas's columns, the panel's flat
+            // ground past them (the run is not clipped, so a ride near the
+            // right edge reaches the margin).
             const int fx = std::max(cursor_x, face_x0);
             const int fx1 = x0 + w;
             const int lane1 = std::clamp(canvas_cols.x + canvas_cols.w, fx, std::max(fx, fx1));
-            if (lane1 > fx) {
-                const GuiMaterialScope flat(GuiMaterialRegion::Flat);
+            if (lane1 > fx)
                 paint_cell_rect(cr, GuiRect{fx, lane.y, lane1 - fx, fill_h},
                                 pal.face);
-            }
-            if (fx1 > lane1) {
-                const GuiMaterialScope ground(GuiMaterialRegion::Ground);
+            if (fx1 > lane1)
                 paint_cell_rect(cr, GuiRect{lane1, lane.y, fx1 - lane1, fill_h},
                                 pal.face);
-            }
             const double tx = static_cast<double>(x0 + pad_l);
-            // The resting label's ink: the faded inert label, else the bone
-            // (resolve_flag_face's table; materials.h's INKS), struck on a
+            // The resting label's ink: the faded inert label, else the text
+            // tone (resolve_flag_face's table; materials.h's text tones), struck on a
             // coincident marker. Its shadow the marker's triangle's, as the
             // resting cell's (c.face.shadow in the lane pass): faded on a
             // disabled marker alone, a tie follower's cells over the live
             // one.
             show_cue_label(cr, seg_run, tx, baseline,
-                           cell_dis ? pal.ce_off_label : hex(kBoneInk),
+                           cell_dis ? pal.ce_off_label : hex(kTextInk),
                            dis ? pal.ce_off_cue_shadow : pal.ce_cue_shadow,
                            struck);
             cursor_x = x0 + w;

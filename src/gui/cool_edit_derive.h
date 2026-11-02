@@ -19,8 +19,8 @@
 // scheme's, the exception until they left with the captions 2026-10-21).
 // The program's panel — the toolbar band, row 8 and the canvas column's
 // frames — takes ONE color, GuiPalette's `face` (Cool Edit's "Dockable
-// Window 3D Color", its scheme key `Face`; the brushed ground's mean since
-// 2026-10-23, materials.h's TONE RULE — no palette role, the palette giving
+// Window 3D Color", its scheme key `Face`; the flat ground since
+// 2026-11-01, materials.h's kGround — no palette role, the palette giving
 // no panel color since its presets went, 2026-11-01), and every other tone
 // the panel puts down is derived from it HERE, the one owner. The
 // measurements below were taken off Cool Edit's own presets and stand as
@@ -90,9 +90,9 @@
 // missed the other Faces by 19–34. NOT FOLLOWING FACE (cool_edit_paint.h's
 // constants): the black outer line and the pressed and checked rings,
 // byte-identical on every captured Face. (THE CASE'S
-// FITS BELOW ARE THE PROGRAM'S HISTORY since 2026-10-23: the hi-fi skin's
-// keys are flat constants, cool_edit_paint.h's paint_key; the fits stay as
-// the record their static_asserts prove.)
+// FITS BELOW ARE THE PROGRAM'S HISTORY since 2026-10-23: the keys are flat
+// constants, materials.h's paint_key; the fits stay as the record their
+// static_asserts prove.)
 //
 // THE TEXT TONES (2026-10-10; his Cool Edit preset metrics,
 // eleven captures over nine Faces, §2–§3): Cool Edit's PROGRAM TEXT — the
@@ -111,7 +111,7 @@
 // OWN TIME FIELD (row 8's clock, the render player's two fields: the
 // `ce_field_text` member, architect 2026-10-10, "whatever Cool Edit seems to
 // be doing as far as the dark text, we do that as well") until the
-// fortepiano chrome's amber on black, 2026-10-21 (materials.h's INKS).
+// fortepiano chrome's amber on black, 2026-10-21.
 //
 // THE PANEL LABEL AND ITS OWN SWAP (2026-10-10, the same ruling; §2c, §2e,
 // §3a, §3c): the label's ink on a dark Face is `label`, L' = .244·L + .750
@@ -119,8 +119,9 @@
 // not the program text's rule), its (+1, +1) shadow `dark`; ABOVE A LATER
 // THRESHOLD of its own (kLabelSwapLightness, in (.663, .739]) Cool Edit
 // ENGRAVES it — the ink the `dark` tone and the shadow the `hilight` tone,
-// within one on Arctic Freeze and Grape. label_ink / label_shadow below; the
-// state line and every show_ce_label reader. THE RULER'S DIGITS AND TICKS
+// within one on Arctic Freeze and Grape. label_ink / label_shadow below
+// (unread by any painter since the flat look: row 8's and the logo lane's
+// words are the text tone, materials.h). THE RULER'S DIGITS AND TICKS
 // are no tone of Face: Cool Edit's E0E0E0 on every preset, never swapping
 // (§2d; kCeRulerTick, cool_edit_paint.h).
 //
@@ -609,15 +610,15 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // of the palette so a new Face moves
 // them live; render.cpp's fill_program_palette). THE FACE HERE IS THE MARKER
 // LANE'S (architect 2026-10-22: truthful to the surface — the cues stand on
-// the marker lane), and the lane is flat in the ground's face since
-// 2026-10-29 (materials.h's head), so it is the one number
-// materials::face(), the baked ground's mean:
+// the marker lane), and the lane is flat in the ground's color since
+// 2026-10-29, so it is the one number materials.h's kGround, the flat
+// ground (2026-11-01):
 //   the TRIANGLE   the live triangle's color, the `cue` (every cue's,
 //                  warp or phase reset), 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;
 //   the LABEL      the resting label's ink (Cool Edit's cue-label ink
 //                  `hilight`, re-verified on three captures 2026-10-10; the
-//                  bone F0F0F0 since 2026-10-21, kBoneInk) 65 % toward
+//                  text tone kTextInk B5B5B5 since 2026-11-02) 65 % toward
 //                  the Face — "blended further … a faded, opaque sort of
 //                  look", the text legible least of the three.
 // A selected inert segment keeps the selected label color (the chrome's
@@ -647,9 +648,9 @@ constexpr uint32_t disabled_cue_shadow(uint32_t face) {
     return mix_toward(tone_of(named_tone("cue_shadow"), face, 0), face,
                       kDisabledShadowMix);
 }
-// The resting label's ink `label` faded toward `face` — the bone F0F0F0
-// since 2026-10-21 (materials.h's INKS, the near-white that day; Cool Edit's
-// `hilight` tone of the Face until then).
+// The resting label's ink `label` faded toward `face` — the text tone
+// kTextInk B5B5B5 since 2026-11-02 (materials.h; Cool Edit's `hilight` tone
+// of the Face until 2026-10-21).
 constexpr uint32_t disabled_cue_label(uint32_t label, uint32_t face) {
     return mix_toward(label, face, kDisabledLabelMix);
 }

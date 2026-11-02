@@ -1200,7 +1200,8 @@ void GuiSettingsEditor::commit() {
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
-// 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
+// 2026-10-26, the glow settled at a constant, then retired with the LED,
+// 2026-11-01).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key; `waveform`, the color presets' key, 2026-10-14..11-01.) The
@@ -1270,8 +1271,8 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // (parse_true_colors, device_config.h), APPLIED LIVE AT THE COMMIT, which
     // is the OK's (or Enter's) or the value list's row tap, through
     // the toggle's own apply shape (GuiInputHandler::apply_true_colors — the
-    // switch's bit, the icon rasters, the materials' bake, the plate or the
-    // flag cache, the whole window), so NO CARD: the colors on screen are the
+    // switch's bit, the icon rasters, the plate or the flag cache, the whole
+    // window), so NO CARD: the colors on screen are the
     // answer; a failed write keeps the live value for the session, the card
     // saying the persist failed, and a value that leaves the file as it
     // stands is the unchanged no-op.
@@ -1429,7 +1430,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // owner (parse_osk_font_px, device_config.h), APPLIED LIVE AT THE COMMIT
     // — the live struct, then the one live act
     // (GuiInputHandler::apply_osk_font_px: the renderer's seat and the
-    // window repainted, no relayout and no bake) — and persisted, so NO
+    // window repainted, no relayout) — and persisted, so NO
     // CARD: the keyboard standing under this very editor is the answer. The
     // page opens the line editor on it (no value list, 37 values no short
     // domain); Tab completes no value; stage 2's recall is the writer's

@@ -98,7 +98,7 @@ struct GuiInputHandler;
 // same evening the on-screen keyboard's key box's two tuning keys osk_key_w
 // and osk_key_h, and that night its cap size's tuning key osk_font_px (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
-// the glow settled at a constant, materials.cpp's kLedGlowPx; the
+// the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
 // settled at a constant, program_spec.h's strip_pad_px; the
 // two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable

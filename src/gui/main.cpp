@@ -24,7 +24,6 @@
 #include "audio.h"
 #include "device_config.h"
 #include "icons.h"         // the icon set's launch load
-#include "materials.h"     // the pre-paint bake
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -153,7 +152,7 @@ namespace {
 // (THE LOGO LANE — the band's upper pad, 72
 // device px at 300 % since 2026-10-24, render.h's logo lane block — the
 // key, 23 W wide and the `key_height` tuning key's device px at 300 % tall
-// since 2026-10-29, the strip pad on the brushed ground — render.h's
+// since 2026-10-29, the strip pad on the flat ground — render.h's
 // program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
 // BLOCK's four, THE PROGRAM'S CANVAS COLUMN inside the program ring
@@ -773,7 +772,7 @@ GuiRect bottom_canvas_frame_area(const AppState& a) {
 
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
 // render.h's bottom-row block) — THE STRIP since the simple layout
-// (2026-10-22): the strip pad, the key, the strip pad on the brushed ground,
+// (2026-10-22): the strip pad, the key, the strip pad on the flat ground,
 // the clock at the left in its ringed dark time field with the active tab's
 // name and THE STATE LINE on the ground right of it, and, packed against the
 // right edge, the skips (Go to Start, Go to End; 2026-10-24), the
@@ -2166,15 +2165,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // pointer pauses.
         notifications.fire_if_due();
 
-        // THE MATERIALS' SETTLE GATE, ON EVERY TICK for the same reason
-        // (materials.h's BAKE RULE, 2026-10-21): a size change a frame found
-        // and did not bake is armed once it has held kBakeSettle, and the
-        // client damaged so a frame comes — its pre-paint hook bakes and
-        // widens the damage to the whole surface (the hook's materials
-        // block below).
-        if (materials::settle_due())
-            gui.invalidate_region(0, 0, app.width, app.height);
-
         // THE LOGO LANE'S LEGEND, ON EVERY TICK for the same reason: the
         // wall clock and the battery move whatever the project is doing
         // (refresh_logo_legend, its rule and its damage).
@@ -2195,7 +2185,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Background Sounds toggle goes off when the route changes). A route
         // drop (headphones connected or taken off) kills the AAudio stream,
         // and the bed sounds only through the running stream's callback, so a
-        // lit LED would say the noise plays while nothing does. ONE QUESTION
+        // lit lamp would say the noise plays while nothing does. ONE QUESTION
         // per tick — the latch (GuiPlayback::stream_dead), LIT OR NOT — and
         // the answer DARKENS the lamp and RESETS the voice
         // (GuiNoise::reset_on_dead_stream, whose precondition is this very
@@ -3328,24 +3318,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     };
     gui.set_on_pre_paint([&]() {
         pre_paint_advance();
-        // THE MATERIALS FOR THIS GEOMETRY (materials.h's BAKE RULE,
-        // 2026-10-21): a compare of the key when nothing moved; the first
-        // bake, or a size change's once the settle gate has armed it. HERE,
-        // AHEAD OF THE BACKEND'S PAINT WALK, so every rect the walk hands
-        // on_redraw paints from this geometry's tiles. After ANY bake — this
-        // one, or a gui_scale commit's or True Colors' at its act
-        // (materials::ensure) — the frame's damage is the whole client (the
-        // bake's palette install moves every chrome tone in it; nothing of
-        // the window stands outside it since 2026-10-24), and the flag cache is rebuilt at once
-        // from the new palette's generation, so this frame's cue face boxes
-        // wear the new bake's face rather than waiting a tick for the cache
-        // to notice. Before the owed plate rebuild below, whose tail
-        // reaches the same flag cache.
-        materials::ensure_settled(app);
-        if (materials::take_bake_landed()) {
-            viewport.invalidate_all();
-            paint_handler.maybe_rebuild_flag_cache();
-        }
         // THE OWED PLATE REBUILD, ONCE PER FRAME (architect 2026-10-13; the
         // rule at Viewport::kick_waveform_sync): every kick since the last
         // frame owed it, and it runs here from the latest state — AFTER the
@@ -3553,11 +3525,9 @@ int gui_main() {
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
     // THE PALETTE, before there is a window: the one palette's constants
     // (palette_file.h, architect 2026-11-01; no key names a color) and the
-    // chrome derived off the ground's mean (live_chrome_words,
-    // chrome_derive.h); installed here and again at the materials' first
-    // bake, whose ground's Face, its baked tile's mean, the panel's face
-    // becomes, the chrome's roles derived off it (materials.h's BAKE RULE).
-    // Every painter reads it through palette() (render.h's palette block).
+    // chrome's roles off the flat look's constants (live_chrome_words,
+    // chrome_derive.h; materials.h's head), installed once. Every painter
+    // reads it through palette() (render.h's palette block).
     install_palette();
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the

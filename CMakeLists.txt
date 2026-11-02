@@ -108,8 +108,7 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the icons (icons.cpp: the load, the raster cache, the
     # draws) and the wrapper over resvg it reads the bundled drawings through
-    # (svg_icon.cpp, the one file that includes <resvg.h>; it also decodes
-    # the materials' pictures) are a painting
+    # (svg_icon.cpp, the one file that includes <resvg.h>) are a painting
     # concern and exist only here, so like text_shape.cpp they are
     # deliberately in none of the four shared per-directory source lists —
     # warptempo_cli must never carry them, nor resvg. resvg is the
@@ -117,11 +116,8 @@ set(WARPTEMPO_GUI_SOURCES
     # branch below.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
-    # GUI-ONLY, for svg_icon.cpp's reason: THE HI-FI SKIN'S GROUNDS
-    # (architect 2026-10-23, materials.h) — the procedural brushed panel and
-    # marker strip, or a picture dropped beside the config decoded and scaled
-    # through svg_icon's road, baked once per window geometry and painted as
-    # the chrome's surfaces.
+    # GUI-ONLY, a painting concern: THE FLAT LOOK's key painter and the
+    # group gap (architect 2026-11-01, materials.h).
     src/gui/materials.cpp
     src/gui/render.cpp
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its

@@ -201,8 +201,8 @@
 //   (bevel_light=<percent>, bevel_dark=<percent>, THE FORTEPIANO CHROME'S
 //                            two bevel weights, tuning keys with Settings
 //                            rows 2026-10-21 to 2026-10-23, RETIRED with that
-//                            chrome — the hi-fi skin's rings are the two ring
-//                            tones off the ground's mean, materials.h; an old
+//                            chrome — the rings that remain are the two ring
+//                            tones off the flat ground, materials.h; an old
 //                            line is the ordinary unknown-key hard fail, the
 //                            planner editing both devices' configs at the
 //                            install)
@@ -215,16 +215,18 @@
 //                            script's setup removing it on the tablet)
 //   (THE LIT LED'S GLOW in device px, an optional tuning key with a
 //                            Settings row 2026-10-23 to 2026-10-26, SETTLED
-//                            AT 4 — materials.cpp's kLedGlowPx (architect
-//                            2026-10-26: "it stays on"); an old line is the
+//                            AT 4 (architect 2026-10-26: "it stays on"; the
+//                            glow retired with the LED, 2026-11-01, the flat
+//                            look); an old line is the
 //                            ordinary unknown-key hard fail, the sync
 //                            script's setup removing it on the tablet)
 //   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
 //                            with a Settings row 2026-10-21 to 2026-10-22,
 //                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
-//                            every word, materials.h's INKS — architect: "I
-//                            would think that everything should be one
-//                            Windows pixel"; an old `text_shadow=` line is
+//                            every word — architect: "I would think that
+//                            everything should be one Windows pixel" (no
+//                            word outside the well wears a shadow since the
+//                            flat look, materials.h); an old `text_shadow=` line is
 //                            the ordinary unknown-key hard fail)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;

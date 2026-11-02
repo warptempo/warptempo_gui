@@ -32,7 +32,7 @@
 // THE SIMPLE LAYOUT (architect 2026-10-22, "the bevels are def part of the
 // problem … redesign with dead simple layout", the mocks at 300 %): ONE SUNKEN RING round the
 // canvas column and one round row 8's clock are the program's only strokes
-// on the ground (the hi-fi skin's brushed panel since 2026-10-23, every
+// on the ground (the flat ground since 2026-11-01, materials.h; every
 // stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (its upper pad since
 // 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,

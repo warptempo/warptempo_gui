@@ -2,7 +2,6 @@
 
 #include "app_state.h"
 #include "audio.h"
-#include "materials.h"   // GuiKeySeat, program_key_seats' element
 #include "playback.h"
 #include "render.h"
 #include "platform.h"
@@ -47,25 +46,10 @@ struct GuiTargetRender;
 //   - GuiPlayback& is non-const because on_resize calls
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
-// THE PROGRAM'S KEYS, ONE LIST FOR THE MATERIALS' BAKE (2026-10-21; the
-// key sizes the KEY PATCHES are baked for, materials.h's KEYS): every key
-// size the geometry lays out — the band's and row 8's IN BOTH STATES OF THE
-// `h` VIEW (its hide and stand-ins move the band's left runs and row 8's
-// block), the controls row's key (the render player's nine and every
-// word button), the scrub's thumb and, on a platform with the on-screen
-// keyboard, every key of its two pages — each a seat of its size, its lamp
-// and the depths it can stand at, one seat a size, each row's own layout
-// function the painter reads too (paint_handler.cpp: icon_row_seats and
-// icon_row_walk, row8_block and row8_block_walk, modal_controls_seats,
-// onscreen_keyboard::for_each_key). A function of the client size, the
-// scale, the key's height and the keyboard's key box, which are in the
-// bake's key; the sizes alone are read, never a position.
-std::vector<GuiKeySeat> program_key_seats(const AppState& app);
 // THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
 // logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
 // layout): the lane's rows from the legend's first ink column through the
-// program ring's outer right column and the shadow's offset past it (the
-// clock's shadow, 2026-10-28). The tick's damage for a changed legend
+// program ring's outer right edge and one column of slack. The tick's damage for a changed legend
 // (main.cpp's refresh_logo_legend) is this rect united with the one the
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
@@ -624,10 +608,6 @@ struct GuiPaintHandler {
     //     inside the load (GuiAudio::load), before this can be asked.
     //   * THE SCORE PAGE: the viewer is closed at every open (its opener is
     //     the one writer of its standing bit); its pages decode when it opens.
-    //   * THE MATERIALS: the process's first bake runs in the hold's one
-    //     frame's pre-paint hook (platform.h's head), ahead of the load
-    //     (materials.h's BAKE RULE); a bake's palette reinstall moves no
-    //     plate ink (the inks are the palette's constants, not the ground's).
     //   * NO WAVEFORM ROWS (2026-10-28, Sol's round): where waveform_area has
     //     no rows or no columns (compute_waveform_render_inputs's empty-area
     //     arm; a schema-legal lane stack past the window, waveform_area's

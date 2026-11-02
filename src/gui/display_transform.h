@@ -19,9 +19,7 @@
 // the waveform plate's two inks, converted on the GUI thread as
 // waveform_plate_inks hands them to the job, so the worker writes them
 // as they come); the icon rasters (icons.cpp, through
-// svg_icon::convert_to_display); the materials' baked tiles (materials.cpp's
-// convert, once per bake, through p3_word_from_srgb_fast). THE CONVERSION IS AT THE
-// SOURCE, never a frame-level pass: the window buffer is copied byte for
+// svg_icon::convert_to_display). THE CONVERSION IS AT THE SOURCE, never a frame-level pass: the window buffer is copied byte for
 // byte, every flat color is exact, and an antialiased edge or a ramp's
 // in-between level is the renderer's blend of converted colors (render.h's
 // standing clause: such edges are the renderer's and are not colors).
@@ -86,13 +84,8 @@
 //     every cached converted pixel.
 // BOTH ARE PLAIN FLAGS, WRITTEN ON THE GUI THREAD ALONE AND READ THERE OR
 // UNDER IT: every reader above runs on the GUI thread (the waveform worker
-// is handed the plate's inks already converted) but one — the materials'
-// three bake workers, whose convert reads active() (materials.cpp's bake,
-// 2026-10-21). They are SAFE BY THE JOIN: the GUI thread starts them and
-// joins them inside the one bake call, the flags read at their start as
-// the GUI thread left them, and no toggle can run until that call returns
-// (the table p3_word_from_srgb_fast reads is built before they start, the
-// same reason). So the flip between two frames needs no synchronization.
+// is handed the plate's inks already converted), so the flip between two
+// frames needs no synchronization.
 //
 // GUI-ONLY: warptempo_cli paints nothing and never includes this header.
 
@@ -198,34 +191,6 @@ inline uint32_t encode_byte(double linear) {
         std::upper_bound(lv.begin(), lv.end(), linear) - lv.begin());
 }
 
-// THE BAKE'S ENCODE (2026-10-21; the materials' bake converts every pixel it
-// keeps, materials.h's BAKE RULE): encode_byte's answer EXACTLY, by a
-// 4096-entry table instead of a binary search. Bucket i holds the byte
-// encode_byte gives the bucket's floor i / 4096; a value inside the bucket is
-// that byte or a few above it, walked up while the next decision level is at
-// or below the value — at most two steps anywhere on the curve (the levels
-// are 0.0003 apart at the dark end, wider above, the buckets 0.000244), so
-// the answer is encode_byte's to the bit (verified over every sRGB word,
-// 2026-10-21). The curve never changes, so the table is built once per
-// process, on first use; outside [0, 1) the search's own answer.
-inline const std::array<uint8_t, 4096>& encode_lut() {
-    static const std::array<uint8_t, 4096> t = [] {
-        std::array<uint8_t, 4096> e{};
-        for (int i = 0; i < 4096; ++i)
-            e[static_cast<size_t>(i)] =
-                static_cast<uint8_t>(encode_byte(i / 4096.0));
-        return e;
-    }();
-    return t;
-}
-inline uint32_t encode_byte_fast(double linear) {
-    if (!(linear >= 0.0 && linear < 1.0)) return encode_byte(linear);
-    const auto& lv = decision_levels();
-    uint32_t b = encode_lut()[static_cast<size_t>(linear * 4096.0)];
-    while (b < 255 && lv[b] <= linear) ++b;
-    return b;
-}
-
 // One 0xRRGGBB word through the matrix: decode, multiply, encode.
 inline uint32_t transform_word(const Mat3& m, uint32_t rgb) {
     const auto& d = decode_table();
@@ -244,22 +209,6 @@ inline uint32_t transform_word(const Mat3& m, uint32_t rgb) {
 // the same color.
 inline uint32_t p3_word_from_srgb(uint32_t srgb) {
     return transform_word(kSrgbToP3, srgb);
-}
-// THE SAME TRANSFORM FOR THE MATERIALS' BAKE (encode_byte_fast above): the
-// one decode, the one matrix, the table's encode — p3_word_from_srgb's word
-// exactly. Every per-color site keeps transform_word; this is the bake's.
-inline uint32_t p3_word_from_srgb_fast(uint32_t srgb) {
-    const auto& d = decode_table();
-    const Mat3& m = kSrgbToP3;
-    const double in[3] = {d[(srgb >> 16) & 0xFF], d[(srgb >> 8) & 0xFF],
-                          d[srgb & 0xFF]};
-    uint32_t out = 0;
-    for (int i = 0; i < 3; ++i) {
-        const double l =
-            m.m[i][0] * in[0] + m.m[i][1] * in[1] + m.m[i][2] * in[2];
-        out |= encode_byte_fast(l) << (16 - 8 * i);
-    }
-    return out;
 }
 // THE INVERSE (the head: the one-time conversion of a P3-picked color).
 inline uint32_t srgb_word_from_p3(uint32_t p3) {

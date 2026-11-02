@@ -38,12 +38,13 @@
 //      (strip_h_px) — on the ground,
 //      no line, bar or border, its outermost cases or buttons FLUSH WITH THE
 //      RING'S OUTER EDGES; on the window's foot.
-// IN THE HI-FI SKIN (architect 2026-10-23): THE PANEL'S MARGINS AND
-// THE CONTROLS ROW are the brushed ground (materials.h's GROUND); THE BOX IS
+// THE PANEL'S MARGINS AND THE CONTROLS ROW are the flat ground (materials.h,
+// the flat look 2026-11-01); THE BOX (architect 2026-10-23; the overlays'
+// part of the flat arc restyles it) IS
 // ONE SUNKEN FLAT FIELD, kFieldGround, under a ONE-DEVICE-PX RING in the
 // ring tones on its outer edge (render.h's line rule) — every member's, a
 // prompt's question included ("the user shouldn't be typing on a non-flat
-// color"); EVERY BUTTON A KEY with its legend under it, the word
+// color"); EVERY BUTTON THE FLAT KEY with its legend under it, the word
 // buttons' words in capitals (paint_handler.cpp's modal_word_buttons and
 // paint_key_legend) (paint_modal_box). (The earlier word buttons and a
 // prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
@@ -88,7 +89,7 @@
 // row's top 1102), the controls row 977–1087 (its case rows 1016–1048), the
 // ring's bottom row 976, the interior y 145..975.
 //
-// THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (the hi-fi skin, above):
+// THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (2026-10-23, above):
 // the lists, a dialog editor's line, a prompt's question and the progress
 // modal's sentence alike. (The Field / Face choice by what the surface is,
 // ModalBoxGround, 2026-10-14 to 2026-10-23, is git history.)

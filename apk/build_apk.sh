@@ -128,10 +128,8 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
-# (THE BUNDLED MATERIALS -- the fortepiano chrome's three covers under
-# assets/tiles/, 2026-10-21 to 2026-10-23 -- are no longer packed: the hi-fi
-# skin's ground is procedural, baked at launch (materials.h's head), and no
-# picture replaces it.)
+# (No picture is packed for the chrome: the ground is one flat color,
+# materials.h's head.)
 
 # --- 2/3. configure + build ----------------------------------------------
 bash "$APPDIR/configure.sh"

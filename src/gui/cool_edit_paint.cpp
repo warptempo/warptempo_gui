@@ -1,6 +1,6 @@
 #include "cool_edit_paint.h"
 
-#include "materials.h"   // the key's constants, the accent, the inks
+#include "materials.h"   // the flat look's constants
 #include "text_shape.h"
 
 #include <algorithm>
@@ -12,106 +12,11 @@
 // the approved mock's, each W of it a
 // rounded part here.
 
-namespace {
-
-// The mean of two words, per channel, truncated (numpy's integer mean of
-// the mock's two rows).
-uint32_t mean_word(uint32_t a, uint32_t b) {
-    uint32_t out = 0;
-    for (int s = 0; s <= 16; s += 8)
-        out |= ((((a >> s) & 0xFF) + ((b >> s) & 0xFF)) / 2) << s;
-    return out;
-}
-
-} // namespace
-
-GuiRect key_led_rect(const GuiRect& r, int depth) {
-    const int left = scaled_px(2, 1);
-    const int up   = scaled_px(2, 1);
-    const int w    = scaled_px(2, 1);
-    const int h    = scaled_px(1, 1);
-    const int y1   = r.y + r.h - 1;   // the outline's bottom row
-    const GuiRect led{r.x + left, y1 - up - h + 1, w, h};
-    // Inside the outline and above the foot at rest, or nothing.
-    if (led.x + led.w > r.x + r.w - 2 || led.y < r.y + 3 ||
-        led.y + led.h > r.y + r.h - 3)
-        return GuiRect{};
-    // THE LED RIDES WITH THE FACE, `depth` device px (the declaration).
-    const int ride = depth * hairline_px();
-    return GuiRect{led.x + ride, led.y + ride, led.w, led.h};
-}
-
-void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth,
-                     GuiKeyLed led) {
-    if (r.w <= 0 || r.h <= 0) return;
-    const int px = hairline_px();
-    const bool down = depth > 0;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // EVERY TONE OF THE KEY IS FLAT, never a ground's (materials.h's KEY).
-    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
-    const uint32_t face = down ? kKeyFacePressed : kKeyFace;
-    paint_ink_rect(cr, r, hex(kKeyOutline));
-    const GuiRect in{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px};
-    if (in.w > 0 && in.h > 0) {
-        paint_ink_rect(cr, in, hex(face));
-        if (down) {
-            // THE HOLE'S WALL: `depth` device px of the foot tone along the
-            // top row and the left column inside the outline, the face
-            // filling the rest (the declaration's CHECKED and HELD rows).
-            const int wall = std::min({depth * px, in.w, in.h});
-            paint_ink_rect(cr, GuiRect{in.x, in.y, in.w, wall}, hex(kKeyFoot));
-            paint_ink_rect(cr, GuiRect{in.x, in.y, wall, in.h}, hex(kKeyFoot));
-        } else {
-            // THE LIGHT TOP EDGE, the foot and the right column (the
-            // declaration's order), each one device px a row or column.
-            paint_ink_rect(cr, GuiRect{in.x, in.y, in.w, px}, hex(kKeyTopLight));
-            if (in.h > 2 * px)
-                paint_ink_rect(cr, GuiRect{in.x, in.y + px, in.w, px},
-                               hex(mean_word(kKeyTopLight, face)));
-            if (in.h > 4 * px)
-                paint_ink_rect(cr, GuiRect{in.x, in.y + in.h - 2 * px, in.w, 2 * px},
-                               hex(kKeyFoot));
-            paint_ink_rect(cr, GuiRect{in.x + in.w - px, in.y, px, in.h},
-                           hex(kKeyFoot));
-        }
-    }
-    if (led != GuiKeyLed::None) {
-        const GuiRect l = key_led_rect(r, depth);
-        if (l.w > 0 && l.h > 0)
-            paint_ink_rect(cr, l,
-                           hex(led == GuiKeyLed::Lit ? kAccent : kLedUnlit));
-    }
-    cairo_restore(cr);
-}
-
-int key_depth(bool pressed, bool checked) {
-    return pressed ? 2 : checked ? 1 : 0;
-}
-
-void paint_key_at_depth(cairo_t* cr, const GuiRect& r, int depth,
-                        GuiKeyLed led) {
-    // A lamp key's patch carries its LED by depth (dead at rest, lit down,
-    // the declaration's rows), so the lamp is the patch's key with the depth.
-    if (materials::paint_key_patch(cr, r, depth, led != GuiKeyLed::None))
-        return;
-    paint_key_plain(cr, r, depth, led);
-}
-
-void paint_key(cairo_t* cr, const GuiRect& r, bool pressed, GuiKeyLed led) {
-    // THE LED LIGHTS WHILE HELD (the declaration's HELD row); the depth from
-    // the press arm first, then the lit LED (the CHECKED row).
-    const int depth = key_depth(pressed, led == GuiKeyLed::Lit);
-    if (pressed && led == GuiKeyLed::Unlit) led = GuiKeyLed::Lit;
-    paint_key_at_depth(cr, r, depth, led);
-}
-
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,
                          GuiColor light) {
     if (f.w <= 0 || f.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    const GuiMaterialScope flat(GuiMaterialRegion::Flat);
     // THE GROUND BLACK (kTimeFieldGround), then the one-device-px sunken
     // ring, mitred (the head's rule).
     paint_ink_rect(cr, f, hex(kTimeFieldGround));
@@ -249,15 +154,4 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
     pass.begin(cr);
     pass.triangle(col, top, color, shadow);
     pass.end();
-}
-
-void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
-                   double baseline) {
-    // The cue label's shadow (the declaration's rule; show_cue_label,
-    // render.cpp, paints the same pair under the cues).
-    const double t = static_cast<double>(cue_label_shadow_offset_px());
-    set_palette_source(cr, palette().ce_cue_shadow);
-    text_shape::show_shaped_run(cr, run, x + t, baseline + t);
-    set_palette_source(cr, hex(kBoneInk));
-    text_shape::show_shaped_run(cr, run, x, baseline);
 }

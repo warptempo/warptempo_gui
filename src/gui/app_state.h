@@ -5514,8 +5514,8 @@ struct AppState {
         // `contains`, never `rect` alone: the press, the lift, the band's
         // modifier gate, the armed press's inside bit and the tooltip's
         // owner. A press on the field arms the ordinary Roster press on
-        // Play, so the KEY wears the held depth and its LED while the clock
-        // is held (the key shows the act; the clock paints nothing).
+        // Play, so the KEY wears the lit fill while the clock is held (the
+        // key shows the act; the clock paints nothing).
         GuiRect field{0, 0, 0, 0};
         bool contains(int x, int y) const {
             return rect_contains(rect, x, y) || rect_contains(field, x, y);
@@ -8704,7 +8704,7 @@ struct AppState {
     // NONE, AND IT IS INERT
     // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
     // highlighted, never opened, stepped over by the walk, its text in the
-    // dead key's print (kDimInk); and DISABLED NONE, INERT AS GROUP IS
+    // dead key's print (kTextDimInk); and DISABLED NONE, INERT AS GROUP IS
     // (architect 2026-10-29, the settings page's `scale` and `bpm`: "bpm and
     // scale should be viewable but disabled. they are useful for notes"):
     // a key line in the dead key's print, never highlighted, never opened,
@@ -14285,10 +14285,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 bool history_mode_hides_button(const AppState& app, RedesignButton b);
 // THE SAME ANSWER FOR THE VIEW WHETHER OR NOT IT STANDS (2026-10-21): true
 // iff the button would be absent INSIDE the `h` view — the chord walk alone,
-// which needs no session. Read where a toolbar's layout is wanted in both
-// states at once (program_key_seats, paint_handler.cpp: the materials' case
-// patches seat every case either state paints); history_mode_hides_button
-// is this under the live view's bit.
+// which needs no session. Read where a toolbar's layout is walked under a
+// view bit the caller hands in (icon_row_walk and row8_block,
+// paint_handler.cpp); history_mode_hides_button is this under the live
+// view's bit.
 bool history_view_hides_button(RedesignButton b);
 
 // (THE MENU ANCHOR'S VERDICT — menu_anchor_live, the menu row's File, Edit
@@ -16571,8 +16571,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // page and closes either), TRIM PRESETS the trim presets list's
         // (2026-10-28 night: bare `t` opens and closes it), BPM the BPM
         // form's (2026-10-29: Ctrl+B opens and closes it). So
-        // the key sits down at the
-        // checked depth with its LED lit while its overlay stands — the
+        // the key stands lit (the checked key's fill, materials.h) while its
+        // overlay stands — the
         // history opener's face over its view — the one key the overlay
         // leaves live (redesign_button_enabled's overlay arm). The per-tick
         // comparator carries the edge. (All three were momentary, no lamp,

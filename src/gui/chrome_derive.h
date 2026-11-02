@@ -2,7 +2,7 @@
 
 #include "theme_file.h"        // GuiThemeWords, the role table
 #include "cool_edit_derive.h"  // the tones the chrome wears
-#include "materials.h"         // the selection pair's constants
+#include "materials.h"         // the flat look's constants
 
 #include <array>
 #include <cstddef>
@@ -10,26 +10,26 @@
 #include <iterator>
 #include <string_view>
 
-// THE CHROME'S ROLES IN THE HI-FI PANEL SKIN (architect 2026-10-23;
-// materials.h's head). This header is THE ONE OWNER OF EVERY CHROME ROLE'S
-// SOURCE: every role that was a tone of the panel's Face (Cool Edit's
-// arithmetic, 2026-10-10 to 2026-10-23 — "the chrome inherits Cool Edit")
-// is A CONSTANT OF THE SKIN or ONE OF THE TWO RING TONES OFF THE GROUND'S
-// MEAN (materials.h's TONE RULE; the install hands the mean in,
-// materials::face), re-derived at every install of the palette
-// (render.cpp's install_palette). THE CAPTION HAS NO ROLE: the app paints
-// none since 2026-10-24 (render.h's caption note).
+// THE CHROME'S ROLES IN THE FLAT LOOK (architect 2026-11-01; materials.h's
+// head). This header is THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: every
+// role is A CONSTANT OF THE FLAT LOOK or ONE OF THE TWO RING TONES OFF THE
+// FLAT GROUND (materials.h's kRingLight / kRingDark, which the well and the
+// overlays still wear until their parts of the flat arc), installed at
+// every install of the palette (render.cpp's install_palette). THE CAPTION
+// HAS NO ROLE: the app paints none since 2026-10-24 (render.h's caption
+// note).
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 15, each decided
 // once — the build proves every role is listed exactly once):
-//   ground, light_3d                     = the Face, the ground's mean
+//   ground, light_3d                     = the flat ground kGround 242424
 //   hilight                              = the ring's LIGHT tone
 //   shadow, card_frame                   = the ring's DARK tone (the cards'
 //                                          and the tooltip's ring, render.h's
 //                                          card face)
 //   dk_shadow                            = black
 //   label, clock_text, card_text,
-//   field_text                           = THE BONE kBoneInk
+//   field_text                           = THE TEXT TONE kTextInk B5B5B5
+//                                          (M13, 2026-11-02)
 //   field_ground, clock_ground,
 //   card_ground                          = THE FIELD kFieldGround 0A0A0C
 //                                          (every field, the cards, the
@@ -38,11 +38,11 @@
 //                                          3E4044, the grey bar (architect
 //                                          2026-10-23: "the grey everywhere")
 //   selected_text                        = THE CONSTANT kSelectionText, the
-//                                          bone
+//                                          text tone
 namespace chrome_derive {
 
 enum class Source {
-    Face, RingLight, RingDark, Black, Bone, Field, SelectionFill,
+    Ground, RingLight, RingDark, Black, Text, Field, SelectionFill,
     SelectionText,
 };
 struct ChromeRole {
@@ -50,20 +50,20 @@ struct ChromeRole {
     Source      source;
 };
 inline constexpr ChromeRole kChromeRoles[] = {
-    {"ground",                    Source::Face},
-    {"label",                     Source::Bone},
+    {"ground",                    Source::Ground},
+    {"label",                     Source::Text},
     {"hilight",                   Source::RingLight},
-    {"light_3d",                  Source::Face},
+    {"light_3d",                  Source::Ground},
     {"shadow",                    Source::RingDark},
     {"dk_shadow",                 Source::Black},
     {"selected_fill",             Source::SelectionFill},
     {"selected_text",             Source::SelectionText},
     {"field_ground",              Source::Field},
-    {"field_text",                Source::Bone},
+    {"field_text",                Source::Text},
     {"clock_ground",              Source::Field},
-    {"clock_text",                Source::Bone},
+    {"clock_text",                Source::Text},
     {"card_ground",               Source::Field},
-    {"card_text",                 Source::Bone},
+    {"card_text",                 Source::Text},
     {"card_frame",                Source::RingDark},
 };
 
@@ -91,19 +91,17 @@ constexpr bool every_chrome_role_decided() {
 }
 static_assert(every_chrome_role_decided());
 
-// THE DERIVATION: every role off `mean` (the ground's mean, 0xRRGGBB) and
-// the skin's constants.
-constexpr GuiThemeWords derive_chrome(uint32_t mean) {
-    const uint32_t face = mean & 0xFFFFFFu;
+// THE DERIVATION: every role off the flat look's constants.
+constexpr GuiThemeWords derive_chrome() {
     GuiThemeWords w{};
     for (std::size_t i = 0; i < std::size(kChromeRoles); ++i) {
         uint32_t v = 0;
         switch (kChromeRoles[i].source) {
-            case Source::Face:          v = face;               break;
-            case Source::RingLight:     v = ring_light_of(face); break;
-            case Source::RingDark:      v = ring_dark_of(face);  break;
+            case Source::Ground:        v = kGround;            break;
+            case Source::RingLight:     v = kRingLight;         break;
+            case Source::RingDark:      v = kRingDark;          break;
             case Source::Black:         v = 0x000000u;          break;
-            case Source::Bone:          v = kBoneInk;           break;
+            case Source::Text:          v = kTextInk;           break;
             case Source::Field:         v = kFieldGround;       break;
             case Source::SelectionFill: v = kSelectionFill;     break;
             case Source::SelectionText: v = kSelectionText;     break;
@@ -115,30 +113,23 @@ constexpr GuiThemeWords derive_chrome(uint32_t mean) {
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE SKIN ON THE SHIPPED GROUND'S MEAN (about 212123, materials.h's TONE
-// RULE): the rings 49494D and 0D0D0E (pinned beside ring_light_of), the
-// constants as listed.
-inline constexpr GuiThemeWords kDefaultCheck = derive_chrome(0x212123);
-static_assert(kDefaultCheck[theme_role_index("ground")] == 0x212123);
-static_assert(kDefaultCheck[theme_role_index("hilight")] == ring_light_of(0x212123));
-static_assert(kDefaultCheck[theme_role_index("shadow")] == ring_dark_of(0x212123));
+// THE ROLES AS LISTED.
+inline constexpr GuiThemeWords kDefaultCheck = derive_chrome();
+static_assert(kDefaultCheck[theme_role_index("ground")] == 0x242424);
+static_assert(kDefaultCheck[theme_role_index("hilight")] == kRingLight);
+static_assert(kDefaultCheck[theme_role_index("shadow")] == kRingDark);
 static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
-static_assert(kDefaultCheck[theme_role_index("label")] == 0xF0F0F0);
+static_assert(kDefaultCheck[theme_role_index("label")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x0A0A0C);
-static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xF0F0F0);
+static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x3E4044);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xF0F0F0);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x0A0A0C);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == ring_dark_of(0x212123));
-// The ring tones' provenance: on 212123 each within two per channel of the
-// approved mock's 48484B / 0C0C0D, the frames the rule was fitted to.
-static_assert(cool_edit_derive::within_two(ring_light_of(0x212123), 0x48484B));
-static_assert(cool_edit_derive::within_two(ring_dark_of(0x212123), 0x0C0C0D));
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == kRingDark);
 } // namespace chrome_derive
 
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads
-// (install_palette, render.cpp): the derivation over the ground's mean it
-// hands in (materials::face).
-inline GuiThemeWords live_chrome_words(uint32_t mean) {
-    return chrome_derive::derive_chrome(mean);
+// (install_palette, render.cpp).
+inline GuiThemeWords live_chrome_words() {
+    return chrome_derive::derive_chrome();
 }

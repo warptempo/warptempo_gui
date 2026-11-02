@@ -3616,9 +3616,8 @@ private:
     // tuning keys, architect 2026-10-29; render.h's seat): push the box to
     // the renderer (set_osk_key_size_at300) and run the RELAYOUT TAIL
     // (relayout_window below) — the box moves the keyboard's band, and with
-    // it the modal stack standing on the band, the waveform's painted rect
-    // and the key patches the materials bake (the bake's key carries the
-    // box), so the commit re-lays the window out at once, the key_height
+    // it the modal stack standing on the band and the waveform's painted
+    // rect, so the commit re-lays the window out at once, the key_height
     // act's shape. The settings editor's `osk_key_w=` and `osk_key_h=`
     // commits are the sole callers, each passing the live pair; each gates
     // the no-op, assigns the live config and persists it
@@ -3631,13 +3630,10 @@ private:
     // renderer (set_osk_font_px_at300), then invalidate the whole window —
     // the caps are the keyboard band's alone (paint_onscreen_keyboard, the
     // Keys face's one reader), but the full invalidate is the live acts'
-    // shared first step and the cheapest truthful one. NO RELAYOUT AND NO
-    // BAKE: the size moves no lane and no patch (the keyboard's geometry is
-    // the key box's alone, onscreen_keyboard.h; the key patches the
-    // materials bake are the bare faces, no cap among them, materials.h's
-    // KEYS paragraph — materials.cpp shapes no text at all), and every
-    // cache a cap's run passes through keys on the size (gui_font.h's
-    // GuiFont), so nothing is dropped. The settings editor's `osk_font_px=`
+    // shared first step and the cheapest truthful one. NO RELAYOUT: the
+    // size moves no lane (the keyboard's geometry is the key box's alone,
+    // onscreen_keyboard.h), and every cache a cap's run passes through keys
+    // on the size (gui_font.h's GuiFont), so nothing is dropped. The settings editor's `osk_font_px=`
     // commit is the sole caller; it gates the no-op, assigns the live config
     // and persists it (apply_device_setting); the launch seeds the size
     // before the window exists (main.cpp).
@@ -3651,7 +3647,7 @@ private:
     // canvas rebuilds the plate's program with it as the shader's GROW
     // constant, once (GuiGlCanvas::present_frame; tens of ms, the key's
     // commit alone pays it). NO PLATE RE-RENDER,
-    // NO CACHE DROPPED, NO RELAYOUT AND NO BAKE: the grow is the GPU's
+    // NO CACHE DROPPED AND NO RELAYOUT: the grow is the GPU's
     // alone — the plate's tips are a function of the audio and the view,
     // not of the grow (render_waveform_columns' head) — and nothing off the
     // canvas reads it. The settings editor's `waveform_grow=` commit and
@@ -3663,19 +3659,17 @@ private:
     // THE RELAYOUT TAIL, the three live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):
     // the full-window
-    // invalidate, the resize-path geometry-and-cache rebuild
-    // (GuiPaintHandler::on_resize) and the materials' bake at once
-    // (materials.h's BAKE RULE: one act, one bake — the settle gate is a
-    // frame drag's alone). Run after the new length is pushed to the
-    // renderer, which every step reads.
+    // invalidate and the resize-path geometry-and-cache rebuild
+    // (GuiPaintHandler::on_resize). Run after the new length is pushed to
+    // the renderer, which every step reads.
     void relayout_window();
 
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
     // settings editor's `true_colors=` commit sets the conversion's bit to
     // `on` through install_true_colors and runs the apply shape its
-    // declaration owes (render.h): the icon rasters dropped, the materials
-    // baked again, the plate kicked when its inks moved and the flag cache
+    // declaration owes (render.h): the icon rasters dropped, the plate
+    // kicked when its inks moved and the flag cache
     // refreshed otherwise, the whole window invalidated. It cards nothing:
     // the screen is the answer. The commit gates the no-op and writes the
     // device config; the launch sets the bit from the config before the

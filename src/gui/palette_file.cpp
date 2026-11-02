@@ -25,7 +25,7 @@ constexpr bool palette_members_disjoint() {
 }
 static_assert(palette_members_disjoint());
 // THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled off the
-// ground's mean, render.cpp) are the struct's third part — the table's
+// flat ground, render.cpp) are the struct's third part — the table's
 // painted tones and the panel label's swapping pair: distinct, and neither a
 // chrome role's member nor a program role's nor the panel's `face` — and the
 // disabled cue's three faded colors (kDisabledCueMemberCount) after them.
@@ -52,7 +52,7 @@ constexpr bool cool_edit_tones_disjoint() {
 }
 static_assert(cool_edit_tones_disjoint());
 // The struct's members: the chrome's roles, the program's roles, the
-// panel's `face` (the ground's mean, one member of its own), the Cool Edit
+// panel's `face` (the flat ground, one member of its own), the Cool Edit
 // block's painted tones and label pair, and the disabled cue's three.
 static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1 +

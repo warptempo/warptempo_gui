@@ -19,7 +19,7 @@
 // below; its caps' size the `osk_font_px` key since 2026-10-29 night,
 // cap_word's paragraph), the block of keys CENTERED in a band that runs the
 // window's width
-// on the window's foot, in the brushed ground, nothing beside the block (the
+// on the window's foot, on the flat ground, nothing beside the block (the
 // placement block below), no line of its own, row 8 and the waveform area's
 // lower part under it and nothing moved — the waveform's own passes then not
 // painting under it at all (waveform_paint_area, below). It stands while ANY
@@ -358,9 +358,9 @@ inline constexpr Page page_of_key_index(int index) {
 // held test is this one: THE PAGE KEY IS THE ONE KEY WHOSE OWN PRESS MOVES
 // THE LIVE PAGE OUT FROM UNDER ITS INDEX before the paint, so an index test
 // against the new page's walk finds no held key and the page key paints its
-// checked or rest depth under the finger; the held face must follow the
-// finger (paint_key's HELD row, cool_edit_paint.h), and the finger is on the
-// slot.
+// armed or rest face under the finger; the pressed face must follow the
+// finger (the flat look's pressed key, materials.h's paint_key), and the
+// finger is on the slot.
 // A negative index — `pressed_key`'s "nothing held" — is on no slot.
 inline constexpr bool same_slot(int a, int b) {
     constexpr int base  = static_cast<int>(kStableCodeBase);
@@ -451,9 +451,10 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // "Paste" overhangs below osk_key_w 41.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
-// what says the arm is the key's ARMED FACE — the key DOWN one device px, its
-// checked depth (paint_key, 2026-10-23), which this key and the page key
-// (while the symbols page stands) wear off their lamps — and the letter caps
+// what says the arm is the key's ARMED FACE — the lit fill, its cap
+// kTextOnLit (materials.h's paint_key, the flat look 2026-11-01), which this
+// key and the page key (while the symbols page stands) wear off their lamps
+// — and the letter caps
 // themselves, every one of which turns capital while the arm stands.
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {
@@ -586,11 +587,9 @@ inline bool stands(const AppState& a) {
 // THE BLOCK OF KEYS IS CENTERED ACROSS IT (architect 2026-10-29, the compact
 // keyboard: "small, centered, like a phone"), the edge pad above and below
 // it (edge_pad_px), the band's ground beside it and nothing else there, and
-// NO LINE OF ITS OWN. ITS GROUND IS THE BRUSHED GROUND, ITS KEYS THE HI-FI
-// SKIN'S KEYS WITH NO LED, THE CAP PRINTED ON THE FACE (architect
-// 2026-10-23) —
-// paint_onscreen_keyboard,
-// materials.h's GROUND and KEY. Under a dialog editor the modal
+// NO LINE OF ITS OWN. ITS GROUND IS THE FLAT GROUND, ITS KEYS THE FLAT
+// LOOK'S KEYS, THE CAP PRINTED ON THE FACE (architect 2026-10-23; the flat
+// look 2026-11-01) — paint_onscreen_keyboard, materials.h's head. Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit
 // and the controls row lifted onto the band, the space between the row's
 // cases and the first key row the strip pad plus this band's edge pad,

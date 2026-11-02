@@ -7592,7 +7592,7 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
                 app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the focused label's ink moves, the bone to the chrome's selected
+    // (the focused label's ink moves, the text tone to the chrome's selected
     // `label` and back; the triangle, the stem and its column stay put),
     // and none when it did
     // not — a re-click on the focused flag re-lands a playhead that is

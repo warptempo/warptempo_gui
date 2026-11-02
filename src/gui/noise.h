@@ -17,7 +17,7 @@
 // (architect 2026-10-28, the iPhone's Background Sounds the precedent: its
 // toggle goes off when the route changes): a route drop (a headphone
 // connected or taken off) DARKENS the lamp and resets the voice, lit or not,
-// at THE FIRST MAIN-THREAD ACT THAT READS THE DROP'S LATCH — a lit LED says
+// at THE FIRST MAIN-THREAD ACT THAT READS THE DROP'S LATCH — a lit lamp says
 // the noise plays, and on a dead stream it does not. THE RESET'S TWO ROADS
 // (2026-10-28, one body, noise_voice_reset_on_dead_stream below):
 //   1. THE POLL — gui_main's beside tick() (GuiPlayback::stream_dead,
@@ -63,7 +63,7 @@
 // a later sound may want another value); a lit press starts a fresh
 // random segment from its start (his "random start = the segment road, no
 // mid-segment offset"). The bed FADES IN over kNoiseFadeInMs at the lit press
-// — from when the load lands, the LED lighting at once — and OUT over
+// — from when the load lands, the lamp lighting at once — and OUT over
 // kNoiseFadeOutMs at the dark press, both linear amplitude ramps; a press
 // during either fade reverses from the current level, no restart. The two
 // fades are SETTLED (architect 2026-10-28, on the glass, after one day as
@@ -254,7 +254,8 @@ public:
     // THE KEY'S ENABLED PREDICATE: the probe admitted the folder and no load
     // has failed.
     bool available() const;
-    // THE LED: the voice's `target`, true from the lit press — before the
+    // THE LAMP (its key's lit fill): the voice's `target`, true from the lit
+    // press — before the
     // load lands.
     bool lit() const;
 

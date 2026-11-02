@@ -19,11 +19,10 @@
 // should just be the Cool Edit theme color … we're getting rid of chrome
 // inside the body … even the font color, all of that would be inherited
 // from Cool Edit"; "whatever luminous rules we previously had are
-// superseded by the Cool Edit follow") — and SINCE 2026-10-23 THE HI-FI
-// SKIN'S: every chrome role a constant of the skin or one of the two ring
-// tones off the PANEL'S FACE, the brushed ground's mean (materials.h's TONE
-// RULE; the per-role mapping is chrome_derive.h's, the one owner),
-// re-derived at every install. THE CAPTION HAS NO ROLE: the app paints none
+// superseded by the Cool Edit follow") — and SINCE 2026-11-01 THE FLAT
+// LOOK'S: every chrome role a constant of the flat look or one of the two
+// ring tones off the flat ground (materials.h; the per-role mapping is
+// chrome_derive.h's, the one owner), installed at every install. THE CAPTION HAS NO ROLE: the app paints none
 // since 2026-10-24 (render.h's caption note); its six roles — the active and inactive
 // title's start, gradient end and text, a scheme's keys — were removed
 // 2026-10-21 with the 42 built-in captions and the `caption` key

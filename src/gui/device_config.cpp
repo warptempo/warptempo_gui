@@ -38,7 +38,7 @@ namespace {
 // rename and the folder key's arrival; ELEVEN for part of that day, two fade
 // tuning keys appended after the crossfade at ~11:30 and settled the same
 // day at 200 and 40 ms, noise.h's constexprs; SEVEN 2026-10-26, the LED
-// glow settled to a constant, materials.cpp's kLedGlowPx; EIGHT 2026-10-23,
+// glow settled to a constant (retired with the LED, 2026-11-01); EIGHT 2026-10-23,
 // `strip_pad` settled to a constant, program_spec.h; nine that day, the
 // bevel pair gone and the LED glow's key appended; TEN 2026-10-21 evening,
 // `true_colors` placed after `waveform`, below; nine that afternoon, the three
@@ -91,7 +91,7 @@ namespace {
 // (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
 // 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
 // kNoiseFadeOutMs; the LED glow's stood there 2026-10-23 to 2026-10-26,
-// settled at 4 device px, materials.cpp's kLedGlowPx; `strip_pad` before it
+// settled at 4 device px (retired with the LED, 2026-11-01); `strip_pad` before it
 // 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's strip_pad_px;
 // `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23, `text_shadow`
 // beside them until 2026-10-22; the cues' seven after it 2026-10-26, settled
