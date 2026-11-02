@@ -406,12 +406,14 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
     return render_player_button_legend(act);
 }
 
-// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7, Breeze's draft
-// roster of 2026-11-02), by the act each key runs, beside its legends: the
-// transport triple PREV MediaSkipBackward, PLAY MediaPlaybackStart, NEXT
-// MediaSkipForward; REPEAT MediaRepeatSingle (the row's one lamp); DOWN /
-// UP GoDown / GoUp; FOLDER GoParentFolder; LOAD DocumentImport; DELETE
-// EditDelete; CLOSE DialogClose. THE PLAY KEY'S GLYPH FOLLOWS ITS LEGEND'S
+// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7, Breeze's
+// roster as ruled, 2026-11-02, R12 / R14), by the act each key runs, beside
+// its legends: the transport triple PREV MediaSkipBackward, PLAY
+// MediaPlaybackStart, NEXT MediaSkipForward (the band's START / END's two,
+// R14's transport rule: "two arrows with a bar" on every to-the-end step);
+// REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
+// FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's, the
+// same act); DELETE EditDelete; CLOSE WindowClose. THE PLAY KEY'S GLYPH FOLLOWS ITS LEGEND'S
 // FACE (render_player_play_face): PAUSE MediaPlaybackPause, OPEN over a
 // folder row DocumentOpen — the legend's repaint is its (the row's one
 // damage owner, the play face's writers damaging the row whole). No glyph
@@ -434,9 +436,9 @@ std::optional<icons::Icon> render_player_button_icon(
         case Act::HighlightDown: return Icon::GoDown;
         case Act::HighlightUp:   return Icon::GoUp;
         case Act::Up:            return Icon::GoParentFolder;
-        case Act::LoadInPlace:   return Icon::DocumentImport;
+        case Act::LoadInPlace:   return Icon::DialogOkApply;
         case Act::Delete:        return Icon::EditDelete;
-        case Act::Close:         return Icon::DialogClose;
+        case Act::Close:         return Icon::WindowClose;
         case Act::None:          break;
     }
     return std::nullopt;
@@ -1559,7 +1561,9 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
-    // THE NOTE (MusicNote16th on the ink-box road): its ink box's first
+    // THE NOTE (MusicNote16th on the ink-box road — the launcher's and the
+    // BPM key's drawing too, a deliberate share, architect 2026-11-02, R14
+    // (4): "the logo, the launcher and BPM keep the single note"): its ink box's first
     // column on the well's left edge column and its rows centered on the
     // lane.
     const int note_ink = skin_px(kLogoNoteInkAt300, 1);
@@ -1862,7 +1866,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         paint_roster_case(cr, key, face.selected, pressed);
 
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
-        // draft roster): redesign_button_icon's stateful overload, which
+        // roster as ruled): redesign_button_icon's stateful overload, which
         // follows the legend's, centered on the face in its tone
         // (paint_key_glyph's one seat) — and THE LEGEND stands UNDER it, the
         // roster's legend column (redesign_button_legend's stateful
@@ -3364,7 +3368,8 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // border ONE PAD of plain face on all four sides (P18, architect
 // 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
 // between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
-// Breeze's HelpAbout or DialogClose (icons.h's ink-box road, 2026-11-02),
+// Breeze's cut-out DialogInformation or DialogError (icons.h's ink-box
+// road; architect 2026-11-02, R14),
 // its ink .525 of the first line's inside height (kNotificationGlyphRatio),
 // at its seat (notification_glyph_seat_w_px) — then the logo lane's brand
 // gap, then THE SENTENCE (the layout block in the body).
@@ -3520,15 +3525,17 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const int text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
         // The box, then the class glyph at its seat on the first line's
-        // inside rows (the layout block above): Breeze's HelpAbout on a
-        // normal card, DialogClose on a critical one (2026-11-02, M7 / M11),
-        // in the card text's tone (the chrome's `card_text`, kTextInk).
+        // inside rows (the layout block above): Breeze's cut-out
+        // DialogInformation on a normal card, DialogError on a critical one
+        // (architect 2026-11-02, R14: the 10-10 transcriptions, the mark cut
+        // out of the filled square), in the card text's tone (the chrome's
+        // `card_text`, kTextInk).
         paint_popup_chrome(cr, card);
         {
             const icons::Icon glyph =
                 n.cls == AppState::NotificationClass::Critical
-                    ? icons::Icon::DialogClose
-                    : icons::Icon::HelpAbout;
+                    ? icons::Icon::DialogError
+                    : icons::Icon::DialogInformation;
             const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
             icons::draw_glyph(cr, glyph, card.x + ring + pad,
                               card.y + ring + (inside_h - s.h) / 2,
@@ -5257,27 +5264,28 @@ constexpr std::string_view kModalCancelLabel = "Cancel";
 constexpr std::string_view kModalCloseLabel  = "Close";
 
 // THE WORD BUTTONS' GLYPHS (architect 2026-11-01 / 2026-11-02, Breeze's
-// draft roster: a word button is a key, so it carries a glyph over its
+// roster: a word button is a key, so it carries a glyph over its
 // printed word) — BY THE WORD, the one vocabulary every word row shares:
 // the prompts' answer tables (kPromptAnswerTables, app_state.h), the
 // editors' and the field-less owners' words above, the trim presets list's
-// four and the BPM form's two. OK and YES DialogOkApply; CANCEL
-// DialogCancel; CLOSE DialogClose; SAVE DocumentSave; SAVE AS
-// DocumentSaveAs; DISCARD EditClear; RETRY ViewRefresh; DELETE EditDelete;
-// RENDER PreviewRenderOn (the band's RENDER key's). A word outside the
+// four and the BPM form's two (the roster as ruled, architect 2026-11-02,
+// R12 / R14). OK and YES TaskComplete; CANCEL DialogCancel; CLOSE
+// WindowClose; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
+// EditClear; RETRY ViewRefresh; DELETE EditDelete; RENDER MediaRecord (the
+// band's RENDER key's: the word follows the key). A word outside the
 // vocabulary is a program bug (a new answer table's word not added here):
 // no glyph, and the debug build's assert.
 std::optional<icons::Icon> modal_word_icon(std::string_view word) {
     using icons::Icon;
-    if (word == kModalOkLabel || word == "Yes") return Icon::DialogOkApply;
+    if (word == kModalOkLabel || word == "Yes") return Icon::TaskComplete;
     if (word == kModalCancelLabel)              return Icon::DialogCancel;
-    if (word == kModalCloseLabel)               return Icon::DialogClose;
+    if (word == kModalCloseLabel)               return Icon::WindowClose;
     if (word == "Save")                         return Icon::DocumentSave;
     if (word == "Save As")                      return Icon::DocumentSaveAs;
     if (word == "Discard")                      return Icon::EditClear;
     if (word == "Retry")                        return Icon::ViewRefresh;
     if (word == "Delete")                       return Icon::EditDelete;
-    if (word == "Render")                       return Icon::PreviewRenderOn;
+    if (word == "Render")                       return Icon::MediaRecord;
     assert(false && "a word button's word with no glyph");
     return std::nullopt;
 }
@@ -6809,7 +6817,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // owners publish it).
         paint_roster_case(cr, key, plan[i].lit, pressed);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
-        // draft roster; paint_key_glyph's one seat, in the face's tone): by
+        // roster as ruled; paint_key_glyph's one seat, in the face's tone): by
         // the act vocabulary's own owner beside its legend's — the player's
         // keys render_player_button_icon (the Play key's by its face), the
         // score viewer's score_viewer_button_icon (its PLAY / PAUSE the
@@ -7379,10 +7387,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // ring's light tone round the highlighted row, 2026-10-02 to
             // 2026-10-23, read as a bevel on the flat field.
 
-            // THE ROW'S GLYPH (architect 2026-10-23: "use the logo in the
-            // render player, but then we need a folder icon as well"; Breeze
-            // only since 2026-11-01, M7): BY THE ROW'S KIND — MusicNote16th
-            // (the logo lane's note) on a wav row, Folder on a folder or
+            // THE ROW'S GLYPH (architect 2026-10-23, a folder icon beside
+            // the audio's; Breeze only since 2026-11-01, M7): BY THE ROW'S
+            // KIND — ViewMediaTrack, the double notes, on a wav row (SOURCE's
+            // drawing, architect 2026-11-02, R14 (4) / R15 (Q4); the logo's
+            // single note no longer), Folder on a folder or
             // project row — on the ink-box road (icons.h): its ink box's
             // larger side kListGlyphInkAt300 = 27 px, .525 of the 51-px row,
             // its rows centered on the row (the floor of the spare), its
@@ -7410,7 +7419,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                 const icons::Icon glyph =
                     row.kind == AppState::FolderOverlayRow::Kind::Wav
-                        ? icons::Icon::MusicNote16th
+                        ? icons::Icon::ViewMediaTrack
                         : icons::Icon::Folder;
                 const int ink = skin_px(kListGlyphInkAt300, 1);
                 const icons::InkSize s = icons::glyph_ink_size(glyph, ink);

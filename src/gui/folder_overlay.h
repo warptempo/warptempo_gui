@@ -223,7 +223,9 @@ inline constexpr double kRowGapPx = 1.0;
 // first hours), the panel's row gap, the row's glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then; Breeze's since
 // 2026-11-02). A folder row wears icons::Icon::Folder and a wav row
-// icons::Icon::MusicNote16th; a plain, a group
+// icons::Icon::ViewMediaTrack, the double notes — SOURCE's drawing, a
+// deliberate share (architect 2026-11-02, R14 (4) / R15 (Q4): "keep just
+// one"); a plain, a group
 // and a disabled row wear none, and a listing of them alone starts its text at the
 // glyph's column (paint_folder_overlay's names' column, 2026-10-28 night).
 // (The glyph-less

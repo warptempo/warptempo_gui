@@ -9,9 +9,12 @@
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, THE CLASS GLYPH AT THE LEFT AGAIN since 2026-10-24 (the
 // planner's i and X then) — BREEZE'S since 2026-11-02 (architect
-// 2026-11-01, M7: Breeze only, everywhere): HelpAbout, an i in a ring, on a
-// normal card and DialogClose, the dialogs' X, on a critical one, on the
-// ink-box road (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
+// 2026-11-01, M7: Breeze only, everywhere; the drawings ruled 2026-11-02,
+// R14): DialogInformation, the i cut out of a filled square, on a normal
+// card and DialogError, the X cut out of one, on a critical one — Breeze's
+// dialog-information and dialog-error as the 10-10 cut-out transcriptions,
+// the mark showing the card's face through one color — on the ink-box road
+// (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
 // 2026-10-24), ON THE CARD FACE — the tooltip's look, a flat
 // `card_ground` box under `card_text` inside a one-device-px `card_frame`
@@ -756,7 +759,8 @@ int notification_pad_px();
 // 2026-10-24): the inside height pad + cap + pad,
 // and the ratio the retired caption's (21 of its 40-px lane) and the list rows'
 // (27 of their 51-px row) — the one proportion every off-key glyph keeps to
-// its line. Since 2026-11-02 (Breeze's HelpAbout and DialogClose, M7) it is
+// its line. Since 2026-11-02 (Breeze's cut-out DialogInformation and
+// DialogError, M7 / R14) it is
 // the ink box's LARGER SIDE on the ink-box road (icons.h), rounded at the
 // element (the ink is already live px, derived from the live pad and cap).
 inline constexpr double kNotificationGlyphRatio = 0.525;

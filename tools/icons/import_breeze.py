@@ -40,8 +40,13 @@ ROOT = '/usr/share/icons/breeze-dark'
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(REPO, 'assets', 'icons')
 
-# ENUMERATOR -> <context>/22/<name>, in icons.h's enum order (the draft roster
-# for the architect's final picking, 2026-11-02).
+# ENUMERATOR -> <context>/22/<name>, in icons.h's enum order (THE ROSTER AS
+# RULED, architect 2026-11-02, R12 / R14 / R15). EVERY PICK IS A DISTINCT
+# DRAWING BY realpath AND PATH DATA — many Breeze names are symlinks to one
+# file (dialog-close is window-close, so one enumerator, WindowClose) — save
+# the one deliberate share R15 records: the score viewer's page PREV / NEXT
+# (GoPreviousViewPage / GoNextViewPage) resolve to go-previous / go-next, the
+# chevrons LEFT / RIGHT wear ("the left/right arrows mean 'step 1'").
 ROSTER = [
     ('DocumentOpen', 'actions/22/document-open'),
     ('DocumentSave', 'actions/22/document-save'),
@@ -51,21 +56,21 @@ ROSTER = [
     ('VcsCommit', 'actions/22/vcs-commit'),
     ('EditUndo', 'actions/22/edit-undo'),
     ('EditRedo', 'actions/22/edit-redo'),
-    ('PreviewRenderOn', 'actions/22/preview-render-on'),
+    ('MediaRecord', 'actions/22/media-record'),
     ('DialogCancel', 'actions/22/dialog-cancel'),
     ('EditCopy', 'actions/22/edit-copy'),
-    ('ZoomInY', 'actions/22/zoom-in-y'),
-    ('ZoomOutY', 'actions/22/zoom-out-y'),
+    ('ZoomIn', 'actions/22/zoom-in'),
+    ('ZoomOut', 'actions/22/zoom-out'),
     ('ZoomFitBest', 'actions/22/zoom-fit-best'),
     ('ZoomPrevious', 'actions/22/zoom-previous'),
-    ('Zoom', 'actions/22/zoom'),
-    ('ChronometerStart', 'actions/22/chronometer-start'),
+    ('ZoomInY', 'actions/22/zoom-in-y'),
+    ('GoJump', 'actions/22/go-jump'),
     ('TimelineUseZoneOn', 'actions/22/timeline-use-zone-on'),
-    ('TransformCrop', 'actions/22/transform-crop'),
+    ('EditCut', 'actions/22/edit-cut'),
     ('MusicNote16th', 'actions/22/music-note-16th'),
     ('Mathmode', 'actions/22/mathmode'),
     ('Merge', 'actions/22/merge'),
-    ('MediaPlaylistPlay', 'actions/22/media-playlist-play'),
+    ('AudioHeadphones', 'devices/22/audio-headphones'),
     ('Lock', 'actions/22/lock'),
     ('SettingsConfigure', 'actions/22/settings-configure'),
     ('HelpWhatsthis', 'actions/22/help-whatsthis'),
@@ -73,15 +78,15 @@ ROSTER = [
     ('Raindrop', 'actions/22/raindrop'),
     ('ShallowHistory', 'actions/22/shallow-history'),
     ('DeepHistory', 'actions/22/deep-history'),
-    ('GnumericAutosum', 'actions/22/gnumeric-autosum'),
+    ('BlackSum', 'actions/22/black_sum'),
     ('DocumentRevert', 'actions/22/document-revert'),
-    ('ArrowLeft', 'actions/22/arrow-left'),
-    ('ArrowRight', 'actions/22/arrow-right'),
-    ('DocumentImport', 'actions/22/document-import'),
+    ('KeyframePrevious', 'actions/22/keyframe-previous'),
+    ('KeyframeNext', 'actions/22/keyframe-next'),
+    ('DialogOkApply', 'actions/22/dialog-ok-apply'),
     ('ViewMediaTrack', 'actions/22/view-media-track'),
     ('ViewMediaVisualization', 'actions/22/view-media-visualization'),
-    ('LabplotXyCurve', 'actions/22/labplot-xy-curve'),
-    ('ViewRefresh', 'actions/22/view-refresh'),
+    ('Speedometer', 'actions/22/speedometer'),
+    ('ChronometerStart', 'actions/22/chronometer-start'),
     ('MediaPlaybackStart', 'actions/22/media-playback-start'),
     ('MediaPlaybackStop', 'actions/22/media-playback-stop'),
     ('MediaPlaybackPause', 'actions/22/media-playback-pause'),
@@ -91,18 +96,19 @@ ROSTER = [
     ('MediaSeekForward', 'actions/22/media-seek-forward'),
     ('MediaRepeatSingle', 'actions/22/media-repeat-single'),
     ('ListAdd', 'actions/22/list-add'),
+    ('ListRemove', 'actions/22/list-remove'),
     ('EditDelete', 'actions/22/edit-delete'),
     ('ViewHidden', 'actions/22/view-hidden'),
     ('InsertLink', 'actions/22/insert-link'),
     ('Link', 'actions/22/link'),
-    ('GoJump', 'actions/22/go-jump'),
+    ('GoJumpDeclaration', 'actions/22/go-jump-declaration'),
     ('DocumentEdit', 'actions/22/document-edit'),
     ('EditSelect', 'actions/22/edit-select'),
-    ('TimelineLift', 'actions/22/timeline-lift'),
+    ('TransformMoveVertical', 'actions/22/transform-move-vertical'),
     ('GoDown', 'actions/22/go-down'),
     ('GoUp', 'actions/22/go-up'),
-    ('KeyframePrevious', 'actions/22/keyframe-previous'),
-    ('KeyframeNext', 'actions/22/keyframe-next'),
+    ('BboxPrev', 'actions/22/bboxprev'),
+    ('BboxNext', 'actions/22/bboxnext'),
     ('TabDetach', 'actions/22/tab-detach'),
     ('ZoomOriginal', 'actions/22/zoom-original'),
     ('GoPrevious', 'actions/22/go-previous'),
@@ -113,14 +119,23 @@ ROSTER = [
     ('EditReset', 'actions/22/edit-reset'),
     ('ZoneIn', 'actions/22/zone-in'),
     ('ZoneOut', 'actions/22/zone-out'),
-    ('DialogClose', 'actions/22/dialog-close'),
-    ('DialogOkApply', 'actions/22/dialog-ok-apply'),
+    ('WindowClose', 'actions/22/window-close'),
+    ('TaskComplete', 'status/22/task-complete'),
     ('EditClear', 'actions/22/edit-clear'),
+    ('ViewRefresh', 'actions/22/view-refresh'),
     ('Folder', 'places/22/folder'),
-    ('HelpAbout', 'actions/22/help-about'),
     ('Battery000', 'status/22/battery-000'),
     ('Battery000Charging', 'status/22/battery-000-charging'),
 ]
+
+# THE HAND TRANSCRIPTIONS (architect 2026-11-02, R14 (3)): the two cards'
+# class glyphs are not Breeze's plain recolor — dialog-error and
+# dialog-information fill a square in one color with the mark in another,
+# so one color would fill the square whole. Their files are the 10-10
+# CUT-OUT transcriptions (the mark cut out of the filled square, even-odd),
+# kept by hand in assets/icons/ and NEVER WRITTEN HERE: the importer checks
+# them by the recolor rule's own check and leaves their bytes alone.
+HAND = ('DialogError', 'DialogInformation')
 
 PAINT_PROPS = ('fill', 'stroke', 'stop-color', 'color', 'flood-color',
                'lighting-color')
@@ -193,6 +208,9 @@ def check(name, text):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    for enum in HAND:
+        with open(os.path.join(OUT, enum + '.svg'), encoding='utf-8') as f:
+            check(enum, f.read())
     rows = []
     for enum, rel in ROSTER:
         src = os.path.join(ROOT, rel + '.svg')

@@ -18,10 +18,19 @@
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
 //   (MusicNote16th, BPM's glyph too) and its battery legend's glyph
 //   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'
-//   folder and note (Folder / MusicNote16th, paint_folder_overlay), the
-//   cards' class glyphs (HelpAbout / DialogClose, paint_notifications).
-// The roster is a draft for the architect's final picking (2026-11-02: "tmp
-// icons fine"); a re-pick is a row of the importer's table and a rerun.
+//   folder and double note (Folder / ViewMediaTrack, SOURCE's glyph too,
+//   paint_folder_overlay), the cards' class glyphs (DialogInformation /
+//   DialogError, paint_notifications).
+// THE ROSTER IS AS RULED (architect 2026-11-02, R12 / R14 / R15); a re-pick
+// is a row of the importer's table and a rerun. EVERY FILE IS A DISTINCT
+// DRAWING (by realpath and path data; Breeze's names are often symlinks, so
+// one drawing is one enumerator — WindowClose is dialog-close too) SAVE THE
+// ONE DELIBERATE SHARE R15 records: GoPreviousViewPage / GoNextViewPage, the
+// score viewer's page keys, are GoPrevious's / GoNext's drawings. THE TWO
+// CARDS ARE THE ONE PAIR NOT IMPORTED: DialogError and DialogInformation are
+// the 10-10 hand transcriptions, the mark CUT OUT of the filled square
+// (even-odd) so one color shows it (R14 (3)); the importer checks them and
+// never writes them (its HAND list; assets/icons/README.md's provenance).
 // THE LAUNCHER ICON is assets/icons/AppIcon.svg, a relative symlink to
 // MusicNote16th.svg, which apk/build_apk.sh renders at every build; no
 // enumerator names it (no painter draws it, and the load reads only the
@@ -62,40 +71,36 @@
 namespace icons {
 
 // THE DRAWINGS, Breeze's, in the importer's table order
-// (tools/icons/import_breeze.py's ROSTER, which writes `<Name>.svg` for each):
+// (tools/icons/import_breeze.py's ROSTER, which writes `<Name>.svg` for each;
+// the two hand-transcribed cards, its HAND list, after Folder):
 // ONE LIST, spelled once, from which the enumerators and their file names
 // are both made (Icon and kIconNames below), so the two cannot part. Which
 // seat wears which is its owner's: the keys' act vocabularies
 // (redesign_button_icon, app_state.h; render_player_button_icon,
 // score_viewer_button_icon, modal_word_icon, paint_handler.cpp /
 // score_viewer.h) and the off-key seats' painters (the head).
-#define WARPTEMPO_BREEZE_ICONS(X)                                           \
-    X(DocumentOpen) X(DocumentSave) X(DocumentSaveAs)                       \
-    X(VcsPull) X(NetworkConnect) X(VcsCommit)                               \
-    X(EditUndo) X(EditRedo) X(PreviewRenderOn)                              \
-    X(DialogCancel) X(EditCopy) X(ZoomInY)                                  \
-    X(ZoomOutY) X(ZoomFitBest) X(ZoomPrevious)                              \
-    X(Zoom) X(ChronometerStart) X(TimelineUseZoneOn)                        \
-    X(TransformCrop) X(MusicNote16th) X(Mathmode)                           \
-    X(Merge) X(MediaPlaylistPlay) X(Lock)                                   \
-    X(SettingsConfigure) X(HelpWhatsthis) X(ViewMediaLyrics)                \
-    X(Raindrop) X(ShallowHistory) X(DeepHistory)                            \
-    X(GnumericAutosum) X(DocumentRevert) X(ArrowLeft)                       \
-    X(ArrowRight) X(DocumentImport) X(ViewMediaTrack)                       \
-    X(ViewMediaVisualization) X(LabplotXyCurve) X(ViewRefresh)              \
-    X(MediaPlaybackStart) X(MediaPlaybackStop) X(MediaPlaybackPause)        \
-    X(MediaSkipBackward) X(MediaSkipForward) X(MediaSeekBackward)           \
-    X(MediaSeekForward) X(MediaRepeatSingle) X(ListAdd)                     \
-    X(EditDelete) X(ViewHidden) X(InsertLink)                               \
-    X(Link) X(GoJump) X(DocumentEdit)                                       \
-    X(EditSelect) X(TimelineLift) X(GoDown)                                 \
-    X(GoUp) X(KeyframePrevious) X(KeyframeNext)                             \
-    X(TabDetach) X(ZoomOriginal) X(GoPrevious)                              \
-    X(GoNext) X(GoParentFolder) X(GoPreviousViewPage)                       \
-    X(GoNextViewPage) X(EditReset) X(ZoneIn)                                \
-    X(ZoneOut) X(DialogClose) X(DialogOkApply)                              \
-    X(EditClear) X(Folder) X(HelpAbout)                                     \
-    X(Battery000) X(Battery000Charging)
+#define WARPTEMPO_BREEZE_ICONS(X)                                        \
+    X(DocumentOpen) X(DocumentSave) X(DocumentSaveAs) X(VcsPull)         \
+    X(NetworkConnect) X(VcsCommit) X(EditUndo) X(EditRedo)               \
+    X(MediaRecord) X(DialogCancel) X(EditCopy) X(ZoomIn) X(ZoomOut)      \
+    X(ZoomFitBest) X(ZoomPrevious) X(ZoomInY) X(GoJump)                  \
+    X(TimelineUseZoneOn) X(EditCut) X(MusicNote16th) X(Mathmode)         \
+    X(Merge) X(AudioHeadphones) X(Lock) X(SettingsConfigure)             \
+    X(HelpWhatsthis) X(ViewMediaLyrics) X(Raindrop) X(ShallowHistory)    \
+    X(DeepHistory) X(BlackSum) X(DocumentRevert) X(KeyframePrevious)     \
+    X(KeyframeNext) X(DialogOkApply) X(ViewMediaTrack)                   \
+    X(ViewMediaVisualization) X(Speedometer) X(ChronometerStart)         \
+    X(MediaPlaybackStart) X(MediaPlaybackStop) X(MediaPlaybackPause)     \
+    X(MediaSkipBackward) X(MediaSkipForward) X(MediaSeekBackward)        \
+    X(MediaSeekForward) X(MediaRepeatSingle) X(ListAdd) X(ListRemove)    \
+    X(EditDelete) X(ViewHidden) X(InsertLink) X(Link)                    \
+    X(GoJumpDeclaration) X(DocumentEdit) X(EditSelect)                   \
+    X(TransformMoveVertical) X(GoDown) X(GoUp) X(BboxPrev) X(BboxNext)   \
+    X(TabDetach) X(ZoomOriginal) X(GoPrevious) X(GoNext)                 \
+    X(GoParentFolder) X(GoPreviousViewPage) X(GoNextViewPage)            \
+    X(EditReset) X(ZoneIn) X(ZoneOut) X(WindowClose) X(TaskComplete)     \
+    X(EditClear) X(ViewRefresh) X(Folder) X(DialogInformation)           \
+    X(DialogError) X(Battery000) X(Battery000Charging)
 
 // The drawings, one per file of assets/icons/ (each file named by its
 // enumerator — kIconNames below).
@@ -113,10 +118,10 @@ inline constexpr int kIconCount = 0 WARPTEMPO_BREEZE_ICONS(WARPTEMPO_ICON_ONE);
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.svg`. A misspelling is a missing file at
-// the next launch, which fails it. (Breeze's own repeats — ArrowLeft and
-// GoPreviousViewPage are GoPrevious's drawing, ArrowRight and
-// GoNextViewPage GoNext's — are separate files, each written by the
-// importer from its own source name. The folder's one symlink,
+// the next launch, which fails it. (The one repeat — GoPreviousViewPage
+// is GoPrevious's drawing, GoNextViewPage GoNext's, the head's deliberate
+// share — is two files, each written by the importer from its own source
+// name. The folder's one symlink,
 // AppIcon.svg -> MusicNote16th.svg, is the launcher's and no enumerator's;
 // the bundle's road dereferences it, build_apk.sh's cp -L.)
 inline constexpr const char* kIconNames[] = {

@@ -17830,8 +17830,12 @@ inline const char* redesign_button_legend(const AppState& a,
 }
 
 // THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity:
-// "Breeze is committed", the legend kept under the key; part 5's DRAFT
-// ROSTER, his final picking pending) — the Breeze drawing centered on each
+// "Breeze is committed", the legend kept under the key; THE ROSTER AS
+// RULED, architect 2026-11-02, R12 / R14 / R15: the draft won on EDIT,
+// HISTORY, SOURCE, TARGET, SESSION and LOCK — one glyph, no state swap —
+// the last Breeze drawing elsewhere, PLAYER the headphones; BPM shares the
+// logo's single note and SOURCE the wav rows' double notes, both
+// deliberate) — the Breeze drawing centered on each
 // roster key's face (paint_handler.cpp's paint_key_glyph, icons.h's head),
 // in the legend's column order. THIS TABLE IS EACH KEY'S RESTING GLYPH; THE
 // PAINTERS READ THE STATEFUL OVERLOAD BELOW, the glyph following the
@@ -17844,18 +17848,18 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::Save:                      return Icon::DocumentSave;
         case RedesignButton::Undo:                      return Icon::EditUndo;
         case RedesignButton::Redo:                      return Icon::EditRedo;
-        case RedesignButton::Render:                    return Icon::PreviewRenderOn;
-        case RedesignButton::IconZoomIn:                return Icon::ZoomInY;
-        case RedesignButton::IconZoomOut:               return Icon::ZoomOutY;
+        case RedesignButton::Render:                    return Icon::MediaRecord;
+        case RedesignButton::IconZoomIn:                return Icon::ZoomIn;
+        case RedesignButton::IconZoomOut:               return Icon::ZoomOut;
         case RedesignButton::IconZoomFitBest:           return Icon::ZoomFitBest;
-        case RedesignButton::IconWaveformMagnification: return Icon::Zoom;
-        case RedesignButton::IconFollow:                return Icon::ChronometerStart;
+        case RedesignButton::IconWaveformMagnification: return Icon::ZoomInY;
+        case RedesignButton::IconFollow:                return Icon::GoJump;
         case RedesignButton::IconRestrict:              return Icon::TimelineUseZoneOn;
-        case RedesignButton::IconTrimPresets:           return Icon::TransformCrop;
+        case RedesignButton::IconTrimPresets:           return Icon::EditCut;
         case RedesignButton::IconBpm:                   return Icon::MusicNote16th;
         case RedesignButton::IconIter:                  return Icon::Mathmode;
         case RedesignButton::IconFlatten:               return Icon::Merge;
-        case RedesignButton::IconListen:                return Icon::MediaPlaylistPlay;
+        case RedesignButton::IconListen:                return Icon::AudioHeadphones;
         case RedesignButton::IconReadOnly:              return Icon::Lock;
         case RedesignButton::IconSettings:              return Icon::SettingsConfigure;
         case RedesignButton::IconTooltips:              return Icon::HelpWhatsthis;
@@ -17863,29 +17867,29 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconNoise:                 return Icon::Raindrop;
         case RedesignButton::IconHistory:               return Icon::ShallowHistory;
         case RedesignButton::SessionHistory:            return Icon::DeepHistory;
-        case RedesignButton::HistoryCumulative:         return Icon::GnumericAutosum;
+        case RedesignButton::HistoryCumulative:         return Icon::BlackSum;
         case RedesignButton::HistoryRevert:             return Icon::DocumentRevert;
-        case RedesignButton::HistoryOlder:              return Icon::ArrowLeft;
-        case RedesignButton::HistoryNewer:              return Icon::ArrowRight;
-        case RedesignButton::IconLoadInPlace:           return Icon::DocumentImport;
+        case RedesignButton::HistoryOlder:              return Icon::KeyframePrevious;
+        case RedesignButton::HistoryNewer:              return Icon::KeyframeNext;
+        case RedesignButton::IconLoadInPlace:           return Icon::DialogOkApply;
         case RedesignButton::ViewSource:                return Icon::ViewMediaTrack;
         case RedesignButton::ViewTarget:                return Icon::ViewMediaVisualization;
-        case RedesignButton::ViewWarp:                  return Icon::LabplotXyCurve;
-        case RedesignButton::ViewPhase:                 return Icon::ViewRefresh;
+        case RedesignButton::ViewWarp:                  return Icon::Speedometer;
+        case RedesignButton::ViewPhase:                 return Icon::ChronometerStart;
         case RedesignButton::TransportPlayStop:         return Icon::MediaPlaybackStart;
         case RedesignButton::TransportSkipBack:         return Icon::MediaSkipBackward;
         case RedesignButton::TransportSkipForward:      return Icon::MediaSkipForward;
         case RedesignButton::IconMarkerDrop:            return Icon::ListAdd;
-        case RedesignButton::IconMarkerDelete:          return Icon::EditDelete;
+        case RedesignButton::IconMarkerDelete:          return Icon::ListRemove;
         case RedesignButton::IconMarkerDisable:         return Icon::ViewHidden;
         case RedesignButton::IconMarkerInherit:         return Icon::InsertLink;
-        case RedesignButton::IconJumpToDefiningMarker:  return Icon::GoJump;
+        case RedesignButton::IconJumpToDefiningMarker:  return Icon::GoJumpDeclaration;
         case RedesignButton::IconOpenTextEditor:        return Icon::DocumentEdit;
         case RedesignButton::IconAddToSelection:        return Icon::EditSelect;
         case RedesignButton::IconCopyPhaseResets:       return Icon::EditCopy;
-        case RedesignButton::IconValueDrag:             return Icon::TimelineLift;
-        case RedesignButton::TransportWalkPrevious:     return Icon::KeyframePrevious;
-        case RedesignButton::TransportWalk:             return Icon::KeyframeNext;
+        case RedesignButton::IconValueDrag:             return Icon::TransformMoveVertical;
+        case RedesignButton::TransportWalkPrevious:     return Icon::BboxPrev;
+        case RedesignButton::TransportWalk:             return Icon::BboxNext;
         case RedesignButton::IconZoomOriginal:          return Icon::ZoomOriginal;
         case RedesignButton::TransportSwitchTab:        return Icon::TabDetach;
         case RedesignButton::TransportDown:             return Icon::GoDown;

@@ -452,11 +452,13 @@ inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
     return "";
 }
 
-// THE KEYS' GLYPHS (architect 2026-11-01, M9; Breeze's draft roster of
+// THE KEYS' GLYPHS (architect 2026-11-01, M9; Breeze's roster as ruled
 // 2026-11-02), beside the legends: PREV / NEXT GoPreviousViewPage /
 // GoNextViewPage (the page road), BACK / FWD MediaSeekBackward /
 // MediaSeekForward, RESET EditReset, START ZoneIn, END ZoneOut, CLOSE
-// DialogClose. PLAY / PAUSE's is the render player's Play key's, by its
+// WindowClose (architect 2026-11-02, R15: the viewer's icons stay as they
+// are; the page PREV / NEXT keep the chevrons LEFT / RIGHT wear, a
+// deliberate share — "the left/right arrows mean 'step 1'"). PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
 // asks, as for the legend); this table's PlayPause the resting
 // MediaPlaybackStart. No glyph for None.
@@ -473,7 +475,7 @@ inline std::optional<icons::Icon> score_viewer_button_icon(
         case Act::Reset:       return Icon::EditReset;
         case Act::SetStart:    return Icon::ZoneIn;
         case Act::SetEnd:      return Icon::ZoneOut;
-        case Act::Close:       return Icon::DialogClose;
+        case Act::Close:       return Icon::WindowClose;
         case Act::None:        break;
     }
     return std::nullopt;
