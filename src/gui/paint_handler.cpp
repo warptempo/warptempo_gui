@@ -1750,8 +1750,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (key_legend_layout, which names the legend's face; this row selects
     // none of its own) — THE BAND'S SEATS the one layout (icon_row_seats,
     // above, where the right run's place and the left runs' limit are
-    // stated). THE CELL IS THE HIT BOX (the published rect), the key and its
-    // legend the painted extent.
+    // stated). THE PAINTED KEY IS THE HIT BOX (the published rect, cut at
+    // the clip's column; architect 2026-11-02, R5: the group gap is not
+    // pressable, point_on_key, materials.h), the key and its legend the
+    // painted extent.
     const IconRowSeats seats = icon_row_seats(app, lane);
     const int btn_w    = seats.btn_w;
     const int btn_h    = seats.btn_h;
@@ -1767,9 +1769,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // by `clip_x2` — the left runs' limit, the column the overflow clip
     // ends at (the right run paints whole: INT_MAX).
     const auto paint_member = [&](const IconRowDef& def, int bx, int i, int n,
-                                  const GuiRect& published, int clip_x2) {
+                                  int clip_x2) {
         const GuiRect key = key_in_cell(GuiRect{bx, btn_y, btn_w, btn_h},
                                         i > 0, i < n - 1);
+        // THE PUBLISHED HIT BOX: the key, its columns past the clip cut.
+        const GuiRect published{
+            key.x, key.y,
+            std::clamp(clip_x2 - key.x, 0, key.w), key.h};
         // THE LEGEND NAMES THE NEXT PRESS'S ACT (2026-10-25,
         // redesign_button_legend's stateful overload), stashed with the
         // extent it paints over (publish_button_face).
@@ -1898,16 +1904,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const int n = static_cast<int>(run.size());
         for (int i = 0; i < n; ++i) {
             const int bx = seats.case_x(x, i);
-            const int shown_w = std::clamp(left_limit - bx, 0, btn_w);
             paint_member(run[static_cast<std::size_t>(i)], bx, i, n,
-                         GuiRect{bx, btn_y, shown_w, btn_h}, left_limit);
+                         left_limit);
         }
         x = seats.next_run_x(x, n);
     }
     cairo_restore(cr);
 
     // THE RIGHT RUN, PAINTED LAST AND WHOLE, each member publishing the full
-    // case it paints: the history opener at one x in both states, Source /
+    // key it paints: the history opener at one x in both states, Source /
     // Target and Warp / Phase Reset abutting behind it (kIconRowRightRun).
     // NONE IS EVER HIDDEN (history_mode_hides_button): bare `h` is the
     // view's own vocabulary and bare 1 / 2 / 3 / 4 its admitted selectors,
@@ -1916,8 +1921,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     for (int i = 0; i < right_n; ++i) {
         const int bx = seats.case_x(seats.right_x, i);
         paint_member(kIconRowRightRun[static_cast<std::size_t>(i)], bx, i,
-                     right_n, GuiRect{bx, btn_y, btn_w, btn_h},
-                     std::numeric_limits<int>::max());
+                     right_n, std::numeric_limits<int>::max());
     }
 
     cairo_restore(cr);
@@ -2625,7 +2629,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE GROUPS ARE PLAIN RUNS (the simple layout, 2026-10-22): the cells
     // abutting inside a group, each key its cell less the group gap
     // (key_in_cell, materials.h: two device px of ground between two keys,
-    // the cell the hit box), the run gap of bare ground between two groups
+    // the painted key the hit box, architect 2026-11-02, R5), the run gap
+    // of bare ground between two groups
     // (row8_block;
     // the bars between groups 2026-10-21 to 2026-10-22, Cool Edit's grippers
     // and end bars before).
@@ -2646,10 +2651,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const char* legend = redesign_button_legend(app, audio, def.id);
         // THE PAINTED EXTENT, the key and its legend (key_legend_layout,
         // 2026-10-23): the publication's coverage and the gate below; the
-        // cell the published hit box.
+        // painted key the published hit box (2026-11-02, R5).
         const GuiRect painted = key_legend_layout(key, legend).extent;
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id, cell, painted,
+            cr, app, audio, playback, target_render, def.id, key, painted,
             legend);
 
         // A case the clip does not reach is skipped, its face published
@@ -6738,13 +6743,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    second painter. --
     for (size_t i = 0; i < plan.size(); ++i) {
         const int x = plan[i].x;
-        // THE CELL (the published hit box, out.rect below) and THE KEY
-        // painted in it: the cell less the group gap on each side that abuts
-        // a neighbor's cell (key_in_cell, materials.h; architect 2026-11-01,
-        // M5 / M7: two device px of ground between two abutting keys) — the
-        // gap read off the plan's own x's, so every owner's arrangement (the
-        // player's runs, the word clusters) takes it with no table of its
-        // own.
+        // THE CELL and THE KEY painted in it, the published hit box
+        // (out.rect below; architect 2026-11-02, R5: the group gap is not
+        // pressable, point_on_key, materials.h): the cell less the group gap
+        // on each side that abuts a neighbor's cell (key_in_cell; architect
+        // 2026-11-01, M5 / M7: two device px of ground between two abutting
+        // keys) — the gap read off the plan's own x's, so every owner's
+        // arrangement (the player's runs, the word clusters) takes it with
+        // no table of its own.
         const GuiRect r{x, btn_y, plan[i].w, btn_h};
         const bool joined_left =
             i > 0 && plan[i - 1].x + plan[i - 1].w == x;
@@ -6853,7 +6859,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             paint_key_legend(cr, key, legend, enabled);
         }
         AppState::ModalDialogButton out;
-        out.rect         = r;
+        out.rect         = key;
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;

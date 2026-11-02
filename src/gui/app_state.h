@@ -7,6 +7,7 @@
 #include "gui_input.h"
 #include "history_diff.h"
 #include "icons.h"           // the keys' glyphs (redesign_button_icon)
+#include "materials.h"       // point_on_key, the keys' one hit predicate
 #include "playback.h"
 #include "render_pipeline.h"
 #include "render.h"
@@ -5452,8 +5453,11 @@ struct AppState {
         // Play, so the KEY wears the lit fill while the clock is held (the
         // key shows the act; the clock paints nothing).
         GuiRect field{0, 0, 0, 0};
+        // `rect` IS THE PAINTED KEY (architect 2026-11-02, R5: the group
+        // gap is not pressable; key_in_cell, materials.h), asked through the
+        // keys' one predicate, point_on_key; the clock's field is no key.
         bool contains(int x, int y) const {
-            return rect_contains(rect, x, y) || rect_contains(field, x, y);
+            return point_on_key(rect, x, y) || rect_contains(field, x, y);
         }
         // The rect a point on the face lies in — the field where the point
         // is on it, the key otherwise: the tooltip's flip seat over the
@@ -5912,6 +5916,8 @@ struct AppState {
     // answer. The faces are bpm_form_button_enabled's.
     enum class BpmFormButtonAct { None, Render, Cancel };
     struct ModalDialogButton {
+        // The PAINTED key — the hit box (point_on_key, materials.h; the
+        // group gap not pressable, architect 2026-11-02, R5).
         GuiRect     rect{0, 0, 0, 0};
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel

@@ -44,10 +44,12 @@
 // OF GROUND at every gui_scale — the group's outer extents stay, each key
 // giving up one device px on every side that abuts a neighbor
 // (key_in_cell): at 300 % a 69-px case reads 68 at a group's two ends, 67
-// inside, 69 alone. THE HIT BOX STAYS THE CELL: each neighbor owns the gap's
-// one px on its own side, so the pressable surface tiles the group exactly
-// as before and no column answers twice (the painted key and its legend are
-// the key's; the gap is ground).
+// inside, 69 alone. THE GAP IS NOT PRESSABLE (architect 2026-11-02, R5: "2px
+// gap should not be pressable - ground is not a button"): THE PAINTED KEY IS
+// THE HIT BOX (point_on_key below), so a press, a lift, the lit look and the
+// tooltip answer on the key alone and the ground between two keys answers
+// nothing — the on-screen keyboard's gaps alike (R11), under its own gap
+// rule (onscreen_keyboard.h).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two, kTextInk B5B5B5 on every word, digit and
@@ -130,6 +132,23 @@ void paint_key(cairo_t* cr, const GuiRect& r, bool lit);
 // THE KEY INSIDE ITS CELL (the head's THE GROUP GAP): the cell `cell` less
 // one device px on each side that abuts a neighbor of its group —
 // `joined_left` / `joined_right` — so two abutting keys stand kKeyGapPx
-// apart. The cell stays the hit box; the painted key and its legend's seat
-// are this.
+// apart. The painted key, its legend's seat and its hit box are this.
 GuiRect key_in_cell(const GuiRect& cell, bool joined_left, bool joined_right);
+
+// A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
+// GROUP GAP; architect 2026-11-02, R5 / R11): `key` the PAINTED key —
+// key_in_cell's answer for every grouped key (the band, row 8, the modal
+// family's controls rows), the on-screen keyboard's walk rect for its own
+// (onscreen_keyboard::for_each_key, its gap already outside it). THE ONE
+// PREDICATE every key hit test asks: the roster's face
+// (AppState::RedesignButtonFace::contains — the press, the lift, the band's
+// modifier gate, the armed press's inside bit, the tooltip's owner), the
+// modal family's buttons (GuiInputHandler::modal_dialog_button_hit — the
+// press, the walk's inside bit, the lift) and the keyboard's
+// (onscreen_keyboard::key_at). Each painter PUBLISHES the key it paints, so
+// a reader re-shapes nothing. A gesture already begun keeps its rules: a
+// press that slides off its key reads "outside" as ever, the key now being
+// what "on" means.
+inline bool point_on_key(const GuiRect& key, int x, int y) {
+    return rect_contains(key, x, y);
+}
